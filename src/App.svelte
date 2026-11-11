@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { LessonPack } from './model/types';
-  import packJson from './packs/set-06-m1.json';
+  import packJson from './packs/set-06.json';
+  import { PROFILES } from './model/profiles';
   import { validate } from './engine/lessons';
   import { deviceStore } from './store/device';
   import { BUILD } from './build';
@@ -12,8 +13,10 @@
   const q = new URLSearchParams(location.search);
   const role = q.get('role');
   const code = (q.get('room') || 'TEST').toUpperCase();
-  const mid = 'm1';
   const S = deviceStore();
+  // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름
+  let modeKey = $state<'class' | 'test'>(q.get('mode') === 'class' ? 'class' : 'test');
+  const P = $derived(PROFILES[modeKey]);
 
   // 학생 탭마다 따로인 이름표 (탭을 닫으면 사라짐)
   function tabId(): { uid: string; num: number } {
@@ -36,16 +39,22 @@
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
-    <Hall {S} {L} {code} {mid} />
+    <Hall {S} {L} {code} {P} />
   {:else if role === 'student' && me}
-    <Student {S} {L} {code} {mid} uid={me.uid} num={me.num} />
+    <Student {S} {L} {code} uid={me.uid} num={me.num} />
   {:else}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
-      <p>첫 한 바퀴: {L.no}차시 {L.monsters[mid]?.title} · 같은 브라우저에서 탭 두 개</p>
-      <p><a class="big" href="?role=hall&room={code}" target="_blank">🖥 탭 A · 종합실 열기</a></p>
-      <p><a class="big" href="?role=student&room={code}" target="_blank">📱 탭 B · 학생 폰 열기</a></p>
-      <p class="sub">학생 탭을 더 열면 인원이 늘고 체력도 커져요.</p>
+      <p>{L.no}차시 {L.title} · 같은 브라우저에서 탭 두 개</p>
+      <fieldset class="modes">
+        <legend>던전</legend>
+        {#each Object.values(PROFILES) as p (p.key)}
+          <label><input type="radio" name="mode" value={p.key} bind:group={modeKey} /> {p.label} <small>정찰 {p.scoutSec}초</small></label>
+        {/each}
+      </fieldset>
+      <p><a class="big" href="?role=hall&mode={modeKey}&room={code}" target="_blank">🖥 종합실</a></p>
+      <p><a class="big" href="?role=student&room={code}" target="_blank">📱 학생</a></p>
+      <p class="sub">종합실을 먼저 열고 「▶ 시작」 · 학생 탭을 더 열면 인원 · 체력이 늘어요.</p>
     </section>
   {/if}
 </main>
@@ -69,5 +78,7 @@
   .home { max-width: 480px; margin: 0 auto; text-align: center; }
   .big { display: block; padding: 14px; border: 2px solid var(--accent); border-radius: 12px; text-decoration: none; font-weight: 700; }
   .sub { color: var(--sub); }
+  .modes { border: 1px solid var(--muted); border-radius: 12px; display: grid; gap: 6px; text-align: left; margin-bottom: 12px; }
+  .modes small { color: var(--sub); }
   .err { color: var(--hp); }
 </style>

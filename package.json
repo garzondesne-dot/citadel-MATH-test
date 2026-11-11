@@ -1,7 +1,7 @@
 {
   "name": "citadel-math-test",
   "private": true,
-  "version": "0.0.0-b1",
+  "version": "0.0.0-b2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,7 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.1.0",
     "@tsconfig/svelte": "^5.0.4",
+    "@types/node": "^22.20.5",
     "svelte": "^5.38.0",
     "svelte-check": "^4.3.0",
     "typescript": "~5.9.2",

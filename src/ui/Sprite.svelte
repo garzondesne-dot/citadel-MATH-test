@@ -12,6 +12,7 @@
   style:background-image="url({sp.url})"
   style:background-size="{sp.sheet.cols * size}px {sp.sheet.rows * size}px"
   style:background-position="-{col * size}px -{sp.row * size}px"
+  style:filter={sp.hue ? `hue-rotate(${sp.hue}deg)` : null}
   aria-label={sp.sheet.names[sp.row]}
 ></i>
 

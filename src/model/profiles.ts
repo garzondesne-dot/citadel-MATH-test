@@ -5,12 +5,17 @@ import type { DungeonProfile } from './types';
 export const PROFILES: Record<DungeonProfile['key'], DungeonProfile> = {
   class: {
     key: 'class', label: '📚 차시 던전(수업)', players: 'class', concept: true,
-    retries: 3, pct: null, scoutSec: 60, timeLimit: true,
+    retries: 3, healMax: 2, bossTries: 4, pct: null, scoutSec: 60, timeLimit: true,
     reward: { gem: 'earn', scroll: 'earn' }, storage: 'server',
   },
   test: {
     key: 'test', label: '🧪 테스트 모드', players: 'class', concept: true,
-    retries: 3, pct: null, scoutSec: 5, timeLimit: false,
+    retries: 3, healMax: 2, bossTries: 4, pct: null, scoutSec: 5, timeLimit: false,
     reward: { gem: 9999, scroll: 30 }, storage: 'device',
   },
 };
+
+/** 다른 점 표 → 방 규칙 (방을 만들 때 한 번) */
+export const rulesOf = (p: DungeonProfile) => ({
+  profile: p.key, retries: p.retries, healMax: p.healMax, bossTries: p.bossTries, solve: p.scoutSec, ...(p.pct != null ? { pct: p.pct } : {}),
+});

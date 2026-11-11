@@ -44,6 +44,18 @@ export interface Step {
   title: string;
   say?: string;
   img?: string;
+  /** 다음 판에서 만들 자리 (b2: 소레이드 u4~u7) — 단계 목록에 보이고 진행은 건너뜀 */
+  later?: boolean;
+}
+
+/** 👑 보스(형성평가): 문항마다 시도 0 = 원문 · 1~ = 생성기 새 값 · 체력 = hpItems 기준 */
+export interface BossPack {
+  title: string;
+  sprite: string;
+  items: number;
+  hpItems: number;
+  /** 이름 등록 보스 생성기 (문항 번호, 시도, 난수) */
+  gen: string;
 }
 
 export interface LessonPack {
@@ -57,6 +69,7 @@ export interface LessonPack {
   videos?: Record<string, string>;
   steps: Step[];
   monsters: Record<string, MonsterPack>;
+  boss?: BossPack;
 }
 
 // ── 던전 「다른 점 표」 (설계서 5절 · 이번엔 수업 · 테스트 모드 두 값) ──
@@ -68,6 +81,10 @@ export interface DungeonProfile {
   concept: boolean;
   /** 재도전 횟수 (기회 = +1) */
   retries: number;
+  /** 💚 힐로 받는 기회 상한 (몬스터마다) */
+  healMax: number;
+  /** 👑 보스 문항마다 기회 */
+  bossTries: number;
   /** 체력 기준 % (null = 차시 팩 defaultPct) */
   pct: number | null;
   /** 정찰 초 */
@@ -90,10 +107,25 @@ export interface Store {
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──
 export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean }
+/** 방을 만들 때 다른 점 표에서 옮겨 적는 값 — 엔진은 이 값만 읽는다 (모드 이름으로 가르지 않음) */
+export interface RoomRules {
+  profile: DungeonProfile['key'];
+  retries: number;
+  healMax: number;
+  bossTries: number;
+  /** 정찰 초 (모든 몬스터 · 보스 앞) */
+  solve: number;
+  pct?: number;
+}
 export interface Room {
-  meta: { code: string; lesson: string; version: number; created: number; pct?: number };
-  state: { step: number; headcount?: number };
+  meta: { code: string; lesson: string; version: number; created: number } & RoomRules;
+  /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
+  state: { step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number> };
   players?: Record<string, RoomPlayer>;
   /** subs[mid][uid][attempt] = 학생 답 배열 */
   subs?: Record<string, Record<string, Record<string, Given[]>>>;
+  /** heals[mid][준 학생][k] = 받는 학생 (💚 힐 · 정식과 같은 꼴) */
+  heals?: Record<string, Record<string, Record<string, string>>>;
+  /** bossTry[uid][문항][시도] = 답 */
+  bossTry?: Record<string, Record<string, Record<string, Given>>>;
 }
