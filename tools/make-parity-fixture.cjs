@@ -6,7 +6,7 @@ const fs = require('fs'), path = require('path');
 const root = process.argv[2];
 if (!root) { console.error('정식 저장소 경로를 주세요'); process.exit(1); }
 const load = require(path.join(path.resolve(root), 'tests/load.js'));
-const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'lessons/set-03.js', 'js/raid/model.js', 'js/raid/combo.js', 'js/engine/symtalk.js']);
+const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'lessons/set-03.js', 'js/raid/model.js', 'js/raid/combo.js', 'js/engine/symtalk.js', 'js/engine/fx.js', 'js/raid/gem.js', 'js/raid/grow.js']);
 const L = DS.Lessons.get('set-06'), RA = DS.Raid;
 const head = require('child_process').execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim();
 const pickQ = (q) => JSON.parse(JSON.stringify({ type: q.type, question: q.question, options: q.options, choices: q.choices, answer: q.answer, answerIndex: q.answerIndex, solution: q.solution, groups: q.groups, empty: q.empty, say: q.say, why: q.why, problem: q.problem }));
@@ -135,7 +135,12 @@ for (let i = 0; i < 6; i++) for (let a = 0; a <= 1; a++) texts.add(RA.bossItem(L
 L.steps.forEach((s) => s.say && texts.add(s.say));
 const symOut = { rows: DS.SymTalk.ROWS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo })), concepts: DS.SymTalk.CONCEPTS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo })),
   picks: [...texts].map((t) => ({ t, hits: [...t].map((_, i) => i).map((i) => [i, DS.SymTalk.pick(t, i)]).filter(([, id]) => id) })) };
-const out = { from: `Citadel-MATH ${head}`, sym: symOut, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
+// ⑬ 용사 · 사다리 · 값 · 강화 · 오라 · 레벨 (캠프 정보판)
+const lad0 = DS.FX.ladder(0);
+const heroOut = { fams: DS.FX.FAMS.map(({ id, name, ids }) => ({ id, name, ids })), tierNames: DS.FX.TIER_NAMES, ladder0: lad0, ladder16: DS.FX.ladder(16), names: Object.fromEntries(lad0.map((k) => [k, DS.FX.NAMES[k]])),
+  price: Object.fromEntries(lad0.map((k) => [k, DS.Gem.price('fx', k)])), scroll: Object.fromEntries(lad0.map((k) => [k, DS.Gem.scrollOf('fx', k)])), enh: DS.Gem.ENH, aura: DS.Gem.AURA_NAMES,
+  levels: [0, 39, 40, 99, 100, 160, 1000, 5000].map((t) => DS.Grow.level(t)) };
+const out = { from: `Citadel-MATH ${head}`, hero: heroOut, sym: symOut, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
 const dest = path.join(__dirname, '..', 'tests', 'fixtures', 'parity-set06.json');
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.writeFileSync(dest, JSON.stringify(out));

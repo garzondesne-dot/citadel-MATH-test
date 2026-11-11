@@ -7,6 +7,7 @@
   import { BUILD } from './build';
   import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
+  import Camp from './ui/camp/Camp.svelte';
 
   const L = packJson as LessonPack;
   const errs = validate(L);
@@ -34,12 +35,14 @@
   const me = role === 'student' ? tabId() : null;
 </script>
 
-{#if role === 'student'}<div class="beta-pill" aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
-<main class:full={role === 'student'}>
+{#if role === 'student' || role === 'camp'}<div class="beta-pill" class:low={role === 'camp'} aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+<main class:full={role === 'student' || role === 'camp'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
     <Hall {S} {L} {code} {P} />
+  {:else if role === 'camp'}
+    <Camp {S} {L} {code} />
   {:else if role === 'student' && me}
     <Student {S} {L} {code} uid={me.uid} num={me.num} />
   {:else}
@@ -54,6 +57,7 @@
       </fieldset>
       <p><a class="big" href="?role=hall&mode={modeKey}&room={code}" target="_blank">🖥 종합실</a></p>
       <p><a class="big" href="?role=student&room={code}" target="_blank">📱 학생</a></p>
+      <p><a class="big" href="?role=camp&room={code}" target="_blank">🏕 학생 캠프</a></p>
       <p class="sub">종합실을 먼저 열고 「▶ 시작」 · 학생 탭을 더 열면 인원 · 체력이 늘어요.</p>
     </section>
   {/if}
@@ -65,6 +69,7 @@
   :global(a) { color: var(--accent); }
   :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
   .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
+  .beta-pill.low { top: 62px; left: var(--s4); transform: none; }
   .beta-pill { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; height: 26px; padding: 0 10px; border-radius: 13px; background: rgba(8, 9, 12, 0.55); color: var(--accent); font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; }
   main { padding: var(--s4); }
   main.full { padding: 0; }

@@ -12,6 +12,7 @@ import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterH
 import { chainItems as packChainItems } from '../src/engine/lessons';
 import { chipToggle, runeNext } from '../src/engine/input';
 import { CONCEPTS, pick, ROWS } from '../src/engine/symtalk';
+import { AURA_NAMES, ENH, FAMS, ladder, level, SKILL_NAMES, SKILL_PRICE, SKILL_SCROLL, TIER_NAMES } from '../src/model/hero';
 
 const L = pack as LessonPack;
 type AnyQ = Question & { options?: string[]; choices?: string[]; answer?: unknown; answerIndex?: number };
@@ -116,5 +117,17 @@ describe(`정식과 같음 (${fx.from})`, () => {
     expect(CONCEPTS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo }))).toEqual(fx.sym.concepts);
     // #108 ④ = 정식 #109 (형광펜 = 연산 기호만) — 정식 기준값 그대로
     for (const c of fx.sym.picks) expect([...c.t].map((_, i) => i).map((i) => [i, pick(c.t, i)]).filter(([, id]) => id), c.t).toEqual(c.hits);
+  });
+
+  it('캠프 정보판 값: 속성 갈래 · 검사 사다리 · 값 · 📜 · 강화 · 오라 · 레벨', () => {
+    const h = fx.hero;
+    expect(FAMS).toEqual(h.fams);
+    expect(TIER_NAMES).toEqual(h.tierNames);
+    expect(ladder(0)).toEqual(h.ladder0);
+    expect(ladder(16)).toEqual(h.ladder16);
+    for (const k of h.ladder0) { expect(SKILL_NAMES[k], k).toBe((h.names as Record<string, string>)[k]); expect(SKILL_PRICE[k] ?? null, k).toBe((h.price as Record<string, number | null>)[k]); expect(SKILL_SCROLL[k] ?? 0, k).toBe((h.scroll as Record<string, number>)[k]); }
+    expect(ENH).toEqual(h.enh);
+    expect(AURA_NAMES).toEqual(h.aura);
+    for (const l of h.levels) expect(level(l.total)).toEqual(l);
   });
 });

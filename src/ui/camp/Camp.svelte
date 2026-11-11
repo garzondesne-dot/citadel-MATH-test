@@ -1,0 +1,210 @@
+<script lang="ts">
+  import { onDestroy, untrack } from 'svelte';
+  import type { LessonPack, Room, Store } from '../../model/types';
+  import { PROFILES } from '../../model/profiles';
+  import { AURA_NAMES, famOfHero, HERO_NAMES, level, rungs, TIER_NAMES } from '../../model/hero';
+  import { isEnd } from '../../raid/raid';
+  import { CAMP, HERO, heroUrl } from '../manifest';
+  import { useMe } from '../../store/me.svelte';
+  import { liveRoom } from '../room.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
+  import Sheet from '../battle/Sheet.svelte';
+
+  // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
+  //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
+  //   이름표 = 상황에 따라: 차시 던전 = 늘(열림 금빛 반짝 · 닫힘 흐림) · 새 소식 = 이름 + 빨간 숫자 · 모루 = ★n · 처음 = 흰 이름표 · 써 봤고 소식 없음 = 숨김 · 빈 땅 = 2초 모두
+  const { S, L, code }: { S: Store; L: LessonPack; code: string } = $props();
+  const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
+  const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0);
+  const me = M.me;
+  const live = untrack(() => liveRoom(S, code));
+  onDestroy(live.stop);
+  const R = $derived(live.v.room as Room | null);
+  const open = $derived(!!R && !isEnd(L, R));
+
+  // 장면 움직임: 모닥불 8프레임(0.12초) · 앉은 용사 2프레임(0.8초) — 이 화면 안 시계 하나
+  let frame = $state(0);
+  const t = setInterval(() => { frame = (frame + 1) % 40; }, CAMP.fire.ms);
+  onDestroy(() => clearInterval(t));
+  const fireF = $derived(frame % CAMP.fire.frames);
+  const sitF = $derived(Math.floor(frame / 7) % 2);
+
+  // 소식 수 (#111 ②) — 성채 새 방 · 허수아비 복습 · 우편 안 읽음 = 그 기능이 생기는 판에서 · 모루 ★ = 찜
+  const news: Record<string, number> = { castle: 0, dummy: 0, mail: 0 };
+  let showAll = $state(false);
+  let allTimer: ReturnType<typeof setTimeout> | null = null;
+  function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
+  type LabelState = 'gold' | 'dim' | 'news' | 'star' | 'new' | 'hide';
+  function lab(id: string): LabelState {
+    if (id === 'gate') return open ? 'gold' : 'dim';
+    if ((news[id] ?? 0) > 0) return 'news';
+    if (id === 'anvil' && me.wish > 0) return 'star';
+    if (!me.seen[id]) return 'new';
+    return showAll ? 'new' : 'hide';
+  }
+  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '허수아비', mail: '우편함', hero: '내 용사' };
+  const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
+
+  let sheet = $state<string | null>(null);
+  function tap(id: string, e?: Event) {
+    e?.stopPropagation();
+    M.mark(id);
+    if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
+    sheet = id;
+  }
+
+  // 정보판 (#111 ④)
+  const fam = $derived(famOfHero(me.hero));
+  const lv = $derived(level(me.xp));
+  const ladderRows = $derived(rungs(me.hero, me.owned, me.equip, me.wallet));
+  const hero = $derived(HERO_NAMES[me.hero] ?? { name: '용사', job: '' });
+  const nextLine = $derived.by(() => {
+    const b = ladderRows.find((r) => r.state === 'buy');
+    if (b) return `🪜 ${TIER_NAMES[b.tier]} ${b.name.replace(/^\S+ /, '')}를 열 수 있어요 · 💎 ${b.gem}${b.scroll ? ` + 📜 ${b.scroll}` : ''}`;
+    return `⭐ Lv.${lv.lv + 1} 까지 EXP ${lv.next - lv.into}`;
+  });
+  const pct = (v: number, tot: number) => `${((100 * v) / tot).toFixed(2)}%`;
+  const [W, H] = CAMP.size;
+  const zoneStyle = (k: string) => { const z = CAMP.zones[k] as [number, number, number, number]; return `left:${pct(z[0], W)};top:${pct(z[1], H)};width:${pct(z[2] - z[0], W)};height:${pct(z[3] - z[1], H)}`; };
+  const objStyle = (o: { x: number; y: number; w: number }) => `left:${pct(o.x, W)};top:${pct(o.y, H)};width:${pct(o.w, W)}`;
+  const propStyle = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
+  const sheetBg = (src: string, cols: number, col: number) => `background-image:url(${src});background-size:${cols * 100}% 100%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% 0`;
+  const HS = 1; // 정보판 용사 = 칸 80 × 64 그대로(정수 배율)
+</script>
+
+<div class="camp">
+  <div class="stage" role="presentation" onclick={ground} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
+    <img class="obj" alt="" src={CAMP.castle.src} style={objStyle(CAMP.castle)} />
+    <img class="obj lit" class:on={sheet === 'castle'} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
+    <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
+    <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
+    <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
+    <i class="sp hero" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl()});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(8 / (HERO.rows - 1)) * 100}%"></i>
+
+    {#each ['castle', 'tent', 'gate'] as k (k)}
+      {@const st = lab(k)}
+      <button type="button" class="zone" style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
+        <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
+      </button>
+    {/each}
+    {#each [['anvil', CAMP.anvil, 3], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const as [k, p, cols] (k)}
+      {@const st = lab(k)}
+      <button type="button" class="prop" style={propStyle(p)} aria-label={NAME[k]} onclick={(e) => tap(k, e)}>
+        <i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>
+        <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{me.wish}</b>{/if}</span>
+      </button>
+    {/each}
+
+    <div class="top">
+      <b class="ttl">내 캠프</b><span class="sp2"></span>
+      <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
+      <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
+    </div>
+  </div>
+
+  <section class="info">
+    <button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
+      <span class="pic"><i class="hsp" style="width:{HERO.w * HS}px;height:{HERO.h * HS}px;background-image:url({heroUrl()});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:0 0"></i>{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
+      <span class="who">
+        <span class="nm">{#if me.title}<em class="tt">{me.title}</em>{/if}<b>{me.nick}</b></span>
+        <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
+        <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
+      </span>
+    </button>
+    <div class="ladder" role="group" aria-label="스킬 사다리">
+      {#each ladderRows as r (r.id)}
+        <button type="button" class="rung {r.state}" onclick={() => tap('hero')} aria-label="{TIER_NAMES[r.tier]} {r.name} {r.state === 'equip' ? '장착' : r.state === 'own' ? '가짐' : r.state === 'buy' ? `살 수 있음 💎 ${r.gem}` : `잠김 ${r.why ?? ''}`}">
+          <b>{(TIER_NAMES[r.tier] ?? '').split(' ')[0]}</b>
+          <span>{r.name.replace(/^\S+ /, '')}</span>
+          <small>{r.state === 'equip' ? '장착' : r.state === 'own' ? '✔' : `💎${r.gem}${r.scroll ? ` 📜${r.scroll}` : ''}`}</small>
+          {#if r.state === 'buy'}<i class="bdot" aria-hidden="true"></i>{/if}
+        </button>
+      {/each}
+    </div>
+    <p class="next">{nextLine}</p>
+  </section>
+  <BottomAction disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel="{L.no}차시 던전 입장">
+    {#snippet main()}<span>{open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
+  </BottomAction>
+</div>
+
+{#if sheet === 'castle'}
+  <Sheet onclose={() => (sheet = null)} mainText="닫기">
+    {#snippet title()}🏰 성채 던전{/snippet}
+    <div class="floor"><span class="no">1</span><span><b>1층 · 집합 중단원</b><span>방은 다음 판에서 열려요</span></span></div>
+    <div class="floor off"><span class="no">2</span><span><b>2층 · 명제 중단원</b><span>잠김 · 명제 차시 진도를 나가면 열려요</span></span></div>
+    <div class="floor off"><span class="no">3</span><span><b>3층 · 대단원</b><span>잠김 · 2층을 다 깨면 열려요</span></span></div>
+  </Sheet>
+{:else if sheet}
+  <Sheet onclose={() => (sheet = null)} mainText="닫기">
+    {#snippet title()}{sheet === 'gate' ? '차시 던전' : NAME[sheet ?? '']}{/snippet}
+    <div class="empty"><span class="ic" aria-hidden="true">{sheet === 'gate' ? '🌀' : sheet === 'dummy' ? '🎯' : sheet === 'mail' ? '📮' : sheet === 'tent' ? '✏' : sheet === 'anvil' ? '⚒' : '🧙'}</span>
+      <p>{sheet === 'gate' ? '지금은 닫혀 있어요 · 선생님이 수업을 열면 빛이 들어와요' : '다음 판에서 열려요'}</p></div>
+  </Sheet>
+{/if}
+
+<style>
+  .camp { max-width: 430px; margin: 0 auto; }
+  .stage { position: relative; width: 100%; background-size: 100% 100%; overflow: hidden; }
+  .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(transparent, var(--bg)); pointer-events: none; z-index: 4; }
+  .obj { position: absolute; z-index: 1; pointer-events: none; }
+  .obj.lit { opacity: 0; transition: opacity 0.4s; }
+  .obj.lit.on { opacity: 1; }
+  .obj.gate-on { opacity: 0; transition: opacity 1.2s; }
+  .obj.gate-on.on { opacity: 1; }
+  .sp { position: absolute; z-index: 2; display: block; background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; }
+  .fire { filter: drop-shadow(0 0 18px #ff9a2a); }
+  .zone { position: absolute; z-index: 5; background: none; border: 0; padding: 0; }
+  .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+  .prop .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+  .label { position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%); white-space: nowrap; height: 26px; padding: 0 9px; border-radius: 13px; background: var(--surface-2); color: var(--text); font: 700 var(--fs-small) var(--font); display: flex; align-items: center; gap: var(--s1); box-shadow: 0 3px 0 #000; z-index: 5; transition: opacity var(--t); }
+  .zone .label { bottom: 4px; transform: translate(-50%, 0); }
+  .label.new { background: #f2f3f5; color: #14161b; }
+  .label.gold { background: var(--accent); color: var(--on-accent); animation: glow 1.6s ease-in-out infinite; }
+  .label.dim { opacity: 0.7; color: var(--text-2); }
+  .label.hide { opacity: 0; pointer-events: none; }
+  .dot { min-width: 18px; height: 18px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 12px; display: grid; place-items: center; padding: 0 4px; }
+  .star { color: var(--accent); }
+  @keyframes glow { 50% { box-shadow: 0 3px 0 #000, 0 0 0 4px rgba(245, 184, 74, 0.35); } }
+  @media (prefers-reduced-motion: reduce) { .label.gold { animation: none; } }
+  .zone::before, .prop::before { content: ''; position: absolute; inset: -6px; }
+  .top { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
+  .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); }
+  .sp2 { flex: 1; }
+  .pill { display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .info { padding: var(--s2) var(--s4) 0; display: flex; flex-direction: column; gap: var(--s3); }
+  .card { display: flex; gap: var(--s3); align-items: center; text-align: left; padding: var(--s3); border-radius: 14px; border: 0; background: var(--surface); color: var(--text); font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .card:active { transform: translateY(2px); box-shadow: none; }
+  .pic { position: relative; flex: none; display: grid; place-items: center; width: 96px; height: 80px; }
+  .hsp { display: block; image-rendering: pixelated; background-repeat: no-repeat; }
+  .enh { position: absolute; right: 0; top: 0; padding: 0 6px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-size: var(--fs-small); }
+  .who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .nm { display: flex; gap: var(--s1); align-items: baseline; flex-wrap: wrap; }
+  .nm b { font-size: 17px; }
+  .tt { font-style: normal; font-size: var(--fs-small); color: var(--accent); }
+  .sub { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
+  .lv { display: flex; align-items: center; gap: var(--s1); font-size: var(--fs-small); }
+  .lv small { color: var(--text-2); }
+  .xp { flex: 1; min-width: 40px; height: 8px; border-radius: 4px; background: var(--surface-2); display: block; }
+  .xp i { display: block; height: 8px; border-radius: 4px; background: var(--accent); }
+  .ladder { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .rung { position: relative; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: var(--s1); border-radius: var(--r); border: 2px solid var(--surface-2); background: var(--surface); color: var(--text); font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .rung b { font-size: var(--fs-small); color: var(--text-2); }
+  .rung span { font-size: var(--fs-small); font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+  .rung small { font-size: var(--fs-small); color: var(--text-2); }
+  .rung.equip { border-color: var(--accent); }
+  .rung.equip small { color: var(--accent); font-weight: 700; }
+  .rung.own small { color: var(--ok); }
+  .rung.buy { border-style: dashed; border-color: var(--gem); }
+  .rung.lock { opacity: 0.45; box-shadow: none; }
+  .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
+  .next { margin: 0; font-size: var(--fs-small); color: var(--text-2); text-align: center; }
+  .floor { min-height: 64px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s3); padding: 0 14px; }
+  .floor.off { opacity: 0.55; }
+  .floor .no { width: 38px; height: 38px; border-radius: 10px; background: var(--bg); display: grid; place-items: center; font-weight: 700; flex: none; }
+  .floor b { display: block; }
+  .floor span span { font-size: var(--fs-small); color: var(--text-2); }
+  .empty { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s5) 0; color: var(--text-2); }
+  .empty .ic { font-size: 40px; }
+  .empty p { margin: 0; }
+</style>
