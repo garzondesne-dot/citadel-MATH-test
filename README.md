@@ -20,3 +20,7 @@ npm run dev
 ```
 
 정식과 같은지 기준값 다시 만들기: `node tools/make-parity-fixture.cjs <정식 저장소 경로>`
+
+## 앞으로 만들 때 지킬 것 (머리 방 지침)
+- 💰 지갑 · 상점: 산 것마다 `{ id, ver: 산 때의 경제 판 }` 로 저장 · 규칙 표에 `migrate[ver] = 옛 칸 → 새 칸` · 학생이 접속하면 게임이 **자기 기록만** 새 판으로 한 번 옮김(기록 · 우편함 한 줄) · 관리자 일괄 도구 없음 · 값이 바뀐 것은 옮기지 않음 (hero-v2 DECISIONS 「💰 경제 변경 규칙」 · V1-DESIGN 7절)
+- 📱 화면: 스킬 `ui-senior` (토큰 = `src/theme/tokens.css` · 5절 스스로 검사)
