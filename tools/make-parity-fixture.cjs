@@ -6,7 +6,7 @@ const fs = require('fs'), path = require('path');
 const root = process.argv[2];
 if (!root) { console.error('정식 저장소 경로를 주세요'); process.exit(1); }
 const load = require(path.join(path.resolve(root), 'tests/load.js'));
-const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'lessons/set-03.js', 'js/raid/model.js', 'js/raid/combo.js']);
+const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'lessons/set-03.js', 'js/raid/model.js', 'js/raid/combo.js', 'js/engine/symtalk.js']);
 const L = DS.Lessons.get('set-06'), RA = DS.Raid;
 const head = require('child_process').execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim();
 const pickQ = (q) => JSON.parse(JSON.stringify({ type: q.type, question: q.question, options: q.options, choices: q.choices, answer: q.answer, answerIndex: q.answerIndex, solution: q.solution, groups: q.groups, empty: q.empty, say: q.say, why: q.why, problem: q.problem }));
@@ -127,7 +127,15 @@ const runeOut = [];
 for (const len of [2, 4]) for (const cur of [null, '', 0, 7, 42, 99, 1234, '-', -5, -12]) for (const key of ['0', '3', '9', 'x', 'm']) runeOut.push({ len, cur, key, v: DS.UI.runeNext(cur, key, { len }) });
 const cq = { type: 'multi', options: ['1', '2', '3', '∅ (공집합)', '4', '5', '∅'], answer: [], groups: [{ label: 'A', n: 4 }, { label: 'B', n: 3 }], empty: [3, 6] };
 const chipOut = []; for (const g of [[], [0], [0, 1], [3], [0, 3], [4, 6], [6], [0, 4]]) for (let n = 0; n < 7; n++) chipOut.push({ g, n, v: DS.Quiz.chipToggle(cq, g, n) });
-const out = { from: `Citadel-MATH ${head}`, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
+// ⑫ 기호 톡: 문구 표 · 6차시 모든 문제 글에서 기호 고르기(정식 pick)
+const texts = new Set();
+for (const mid of [...MIDS, ...UNITS]) for (let v = 0; v <= 1; v++) L.items(mid, 'T|u1', v).forEach((q) => texts.add(q.question));
+for (const mid of UNITS) for (let p = 0; p <= 1; p++) L.chainItems(mid, 'T|u1', p).forEach((q) => { texts.add(q.question); if (q.say) texts.add(q.say); if (q.problem) texts.add(q.problem); });
+for (let i = 0; i < 6; i++) for (let a = 0; a <= 1; a++) texts.add(RA.bossItem(L, { meta: { code: 'T', version: 3 } }, 'u1', i, a).question);
+L.steps.forEach((s) => s.say && texts.add(s.say));
+const symOut = { rows: DS.SymTalk.ROWS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo })), concepts: DS.SymTalk.CONCEPTS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo })),
+  picks: [...texts].map((t) => ({ t, hits: [...t].map((_, i) => i).map((i) => [i, DS.SymTalk.pick(t, i)]).filter(([, id]) => id) })) };
+const out = { from: `Citadel-MATH ${head}`, sym: symOut, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
 const dest = path.join(__dirname, '..', 'tests', 'fixtures', 'parity-set06.json');
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.writeFileSync(dest, JSON.stringify(out));

@@ -34,8 +34,8 @@
   const me = role === 'student' ? tabId() : null;
 </script>
 
-<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>
-<main>
+{#if role === 'student'}<div class="beta-pill" aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+<main class:full={role === 'student'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
@@ -60,25 +60,19 @@
 </main>
 
 <style>
-  :global(:root) {
-    --bg: #f6f4ef; --fg: #1d1b18; --sub: #6b665d; --card: #ffffff; --muted: #ddd8cc; --accent: #7a3fd1; --hp: #d64545; --band: #f2c94c;
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme='light'])) {
-      --bg: #17161a; --fg: #ece9e3; --sub: #a59f94; --card: #23212a; --muted: #3a3742; --accent: #b48cff; --hp: #ef6a6a; --band: #8a6d12;
-      color-scheme: dark;
-    }
-  }
-  :global(body) { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, 'Noto Sans KR', sans-serif; }
-  :global(button) { cursor: pointer; border-radius: 10px; border: 1px solid var(--muted); background: var(--card); color: var(--fg); padding: 8px 14px; }
+  :global(html), :global(body) { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: var(--fs-body); -webkit-text-size-adjust: 100%; }
+  :global(button) { cursor: pointer; font-family: var(--font); }
   :global(a) { color: var(--accent); }
-  .beta { background: var(--band); color: var(--fg); text-align: center; font-weight: 700; padding: 4px 8px; font-size: 0.85rem; }
-  main { padding: 16px; }
-  .home { max-width: 480px; margin: 0 auto; text-align: center; }
-  .big { display: block; padding: 14px; border: 2px solid var(--accent); border-radius: 12px; text-decoration: none; font-weight: 700; }
-  .sub { color: var(--sub); }
-  .modes { border: 1px solid var(--muted); border-radius: 12px; display: grid; gap: 6px; text-align: left; margin-bottom: 12px; }
-  .modes small { color: var(--sub); }
-  .err { color: var(--hp); }
+  :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
+  .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
+  .beta-pill { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; height: 26px; padding: 0 10px; border-radius: 13px; background: rgba(8, 9, 12, 0.55); color: var(--accent); font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; }
+  main { padding: var(--s4); }
+  main.full { padding: 0; }
+  .home { max-width: 430px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; gap: var(--s3); }
+  .big { display: block; padding: 14px; min-height: var(--tap); border-radius: 14px; text-decoration: none; font-weight: 700; background: var(--surface); color: var(--text); border: 1px solid var(--line); box-shadow: 0 3px 0 var(--press-sh); }
+  .sub { color: var(--text-2); }
+  .modes { border: 1px solid var(--line); border-radius: var(--r); display: grid; gap: 6px; text-align: left; padding: var(--s3); }
+  .modes label { min-height: 40px; display: flex; align-items: center; gap: var(--s2); }
+  .modes small { color: var(--text-2); }
+  .err { color: var(--bad); }
 </style>

@@ -143,6 +143,8 @@ export interface Room {
   bossTry?: Record<string, Record<string, Record<string, Given>>>;
   /** chain[mid][uid][k] = 소레이드 답 줄 */
   chain?: Record<string, Record<string, Record<string, ChainSub>>>;
+  /** ready[몬스터 · boss][uid] = 정찰 「준비 완료」 */
+  ready?: Record<string, Record<string, boolean>>;
   /** chainOk[mid][uid] = 선생님 「✔ 풀어주기」 */
   chainOk?: Record<string, Record<string, boolean>>;
 }

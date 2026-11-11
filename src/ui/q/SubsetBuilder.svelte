@@ -28,14 +28,16 @@
 </div>
 
 <style>
-  .sb { display: grid; gap: 8px; }
-  .made { display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; padding: 6px; border: 1px dashed var(--muted); border-radius: 10px; }
-  .set { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; background: var(--muted); }
-  .x { padding: 0 6px; min-height: 28px; border: none; background: transparent; color: var(--fg); }
-  .ph { color: var(--sub); font-size: 0.9rem; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { min-width: 44px; min-height: 44px; border-radius: 22px; border: 2px solid var(--muted); background: var(--card); color: var(--fg); font-size: 1.05rem; }
-  .chip.on { border-color: var(--accent); background: var(--accent); color: var(--card); }
-  .chip.empty { border-style: dashed; }
-  .put { min-height: 44px; }
+  .sb { display: grid; gap: var(--s2); }
+  .made { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; padding: 6px; border: 1px dashed var(--line); border-radius: var(--r); }
+  .set { display: inline-flex; align-items: center; gap: var(--s1); padding: 2px 8px; border-radius: 12px; background: var(--surface-2); font-weight: 700; }
+  .x { position: relative; padding: 0 6px; min-height: 28px; border: none; background: transparent; color: var(--text-2); }
+  .x::before { content: ''; position: absolute; inset: -10px; }
+  .ph { color: var(--text-3); font-size: var(--fs-small); }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 6px; }
+  .chip { min-height: 50px; border-radius: var(--r); border: 2px solid var(--surface-2); background: var(--surface-2); color: var(--text); font: 700 18px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-sh); }
+  .chip.empty { border-style: dashed; border-color: var(--line); font-size: 15px; }
+  .put { min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); }
+  .put:disabled { opacity: 0.4; }
 </style>

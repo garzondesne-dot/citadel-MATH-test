@@ -25,14 +25,15 @@
 </div>
 
 <style>
-  .runepad { display: grid; gap: 6px; margin-top: 6px; }
+  .runepad { display: grid; gap: 6px; }
   .rune-row { display: flex; gap: 6px; align-items: stretch; }
-  .rune-slot { flex: 1; min-width: 0; min-height: 44px; display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; border: 2px solid var(--accent); border-radius: 10px; background: var(--card); }
-  .rune-slot.empty { border-style: dashed; border-color: var(--muted); }
-  .ph { font-size: 0.85rem; font-weight: 400; color: var(--sub); }
+  .rune-slot { flex: 1; min-width: 0; min-height: 46px; display: grid; place-items: center; font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; border: 2px solid var(--accent); border-radius: var(--r); background: var(--surface-2); }
+  .rune-slot.empty { border-style: dashed; border-color: var(--line); }
+  .ph { font-size: var(--fs-small); font-weight: 500; color: var(--text-3); }
   .rune-keys { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-  .rune { min-height: 44px; min-width: 0; padding: 0; font-size: 1.15rem; font-weight: 700; border-radius: 10px; border: 1px solid var(--muted); background: var(--card); color: var(--fg); transition: box-shadow 0.2s; }
-  .rune.del { flex: 0 0 52px; }
+  .rune { min-height: var(--tap); min-width: 0; padding: 0; font: 700 18px var(--font); border-radius: 10px; border: 0; background: var(--surface-2); color: var(--text); box-shadow: 0 3px 0 var(--press-sh); }
+  .rune:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .rune.del { flex: 0 0 56px; }
   .rune.lit { box-shadow: 0 0 0 3px var(--accent); }
-  .rune:disabled { opacity: 0.5; }
+  .rune:disabled { opacity: 0.4; box-shadow: none; }
 </style>

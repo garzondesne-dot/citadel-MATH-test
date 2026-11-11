@@ -11,6 +11,7 @@ import { grade } from '../src/engine/grade';
 import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterHp, plainRecord, pracUsed, solveLock } from '../src/raid/raid';
 import { chainItems as packChainItems } from '../src/engine/lessons';
 import { chipToggle, runeNext } from '../src/engine/input';
+import { CONCEPTS, pick, ROWS } from '../src/engine/symtalk';
 
 const L = pack as LessonPack;
 type AnyQ = Question & { options?: string[]; choices?: string[]; answer?: unknown; answerIndex?: number };
@@ -108,5 +109,11 @@ describe(`정식과 같음 (${fx.from})`, () => {
     // (JSON 기준값은 −0 을 0 으로 적음 → === 로 비교)
     for (const c of fx.rune) { const v = runeNext(c.cur as number | string | null, c.key, { len: c.len }); expect(v === c.v, `len ${c.len} · ${c.cur} + ${c.key}: ${v} ≠ ${c.v}`).toBe(true); }
     for (const c of fx.chip) expect(chipToggle(fx.chipQ as unknown as Extract<Question, { type: 'multi' }>, c.g, c.n), `${c.g} + ${c.n}`).toEqual(c.v);
+  });
+
+  it(`기호 톡: 문구 ${fx.sym.rows.length}줄 · 6차시 문제 글 ${fx.sym.picks.length}개에서 기호 고르기`, () => {
+    expect(ROWS).toEqual(fx.sym.rows);
+    expect(CONCEPTS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo }))).toEqual(fx.sym.concepts);
+    for (const c of fx.sym.picks) expect([...c.t].map((_, i) => i).map((i) => [i, pick(c.t, i)]).filter(([, id]) => id), c.t).toEqual(c.hits);
   });
 });

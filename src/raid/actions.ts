@@ -88,3 +88,8 @@ export function pracStart(S: Store, L: LessonPack, code: string, mid: string, ui
 export function chainRelease(S: Store, code: string, mid: string, uid: string): void {
   S.set(`${roomPath(code)}/chainOk/${mid}/${uid}`, true);
 }
+
+/** 🌫 정찰 「✋ 준비 완료」 (정식 scoutReady · ready/{id}/{uid}) — 종합실이 준비한 학생 수를 봄 */
+export function scoutReady(S: Store, code: string, id: string, uid: string): void {
+  S.set(`${roomPath(code)}/ready/${id}/${uid}`, true);
+}

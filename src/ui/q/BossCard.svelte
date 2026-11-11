@@ -4,6 +4,8 @@
   import { bossItem, bossState, bossTries } from '../../raid/raid';
   import { bossSubmit } from '../../raid/actions';
   import QItem from './QItem.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
+  import Hearts from '../battle/Hearts.svelte';
 
   // 👑 형성평가 = 문항 하나씩 한 장 (#99 ① · 옛 문제 창 없앰 · 점수 · 재도전 규칙은 정식 그대로)
   //   문항마다 첫 시도 = 학습지 · 틀리면 생각 시간 뒤 숫자 바뀐 문제 · 기회 meta.bossTries · 맞히면 도달 = 보스 1 데미지
@@ -24,7 +26,6 @@
   let toast = $state('');
   const thinkLeft = $derived(Math.max(0, Math.ceil((thinkUntil - now) / 1000)));
   const lastSol = $derived(s && !s.ok && s.left <= 0 ? bossTries(L, R, uid).filter((t) => t.i === cur).pop()?.q?.solution : '');
-  const lab = (x: (typeof st)[number]) => (x.ok ? '✔' : !x.n ? '' : x.left ? `✘${x.left}` : '📖');
   function send() {
     if (!q || !s || locked || thinkLeft > 0 || !filled(q, given)) return;
     const i = cur;
@@ -36,43 +37,24 @@
   }
 </script>
 
-<div class="tabs" role="tablist" aria-label="형성평가 문항">
-  {#each st as x, i (i)}
-    <button role="tab" class="tab" class:on={i === cur} class:ok={x.ok} class:spent={!x.ok && x.n > 0 && !x.left} aria-selected={i === cur} onclick={() => { cur = i; toast = ''; }}>{i + 1}번 {lab(x)}</button>
-  {/each}
-</div>
+{#if toast}<p class="toast" role="status">{toast}</p>{/if}
 {#if s && q}
-  <div class="paper">
-    <div class="paper-h"><b>👑 형성평가 {cur + 1}번</b><small>{a === 0 ? '첫 시도 · 학습지 그대로' : `🔄 숫자가 바뀌었어요 · 재도전 ${a} / ${R.meta.bossTries - 1}`}</small></div>
+  {#if !s.ok && s.n > 0 && s.left > 0}<div class="bad" role="status"><b>{cur + 1}번이 아직이에요</b><span>숫자가 바뀐 문제로 다시 · 공격 단추의 하트가 하나 줄었어요</span></div>{/if}
+  <div class="bcard" class:badline={!s.ok && s.n > 0 && s.left > 0}>
+    <div class="head"><span class="lab acc">형성평가 {cur + 1}번 · {a === 0 ? '첫 시도' : `재도전 ${a} / ${R.meta.bossTries - 1}`}</span>
+      <span class="dots" aria-label="형성평가 문항">{#each st as x, i (i)}<button type="button" class:on={i === cur} class:ok={i !== cur && x.ok} class:bad2={i !== cur && !x.ok && x.n > 0} aria-label="{i + 1}번{x.ok ? ' 도달' : ''}" onclick={() => { cur = i; toast = ''; }}>{x.ok ? '✓' : i + 1}</button>{/each}</span>
+    </div>
     {#if s.ok}
-      <p class="okc">✔ {cur + 1}번 도달 {s.first ? '(첫 시도)' : ''}</p>
+      <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{cur + 1}번 도달 {s.first ? '(첫 시도)' : ''}</b><span>보스에게 1 데미지</span></span></div>
     {:else if s.left <= 0}
-      <p class="note">📖 기회를 모두 썼어요 — {lastSol || '해설을 보며 학습지에 정리해요'}</p>
+      <p class="muted">📖 기회를 모두 썼어요 — {lastSol || '해설을 보며 학습지에 정리해요'}</p>
     {:else}
-      <QItem {q} i={cur} value={given} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given = v)} />
+      {#key key}<QItem {q} i={cur} value={given} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given = v)} />{/key}
     {/if}
   </div>
-  {#if toast}<p class="toast" role="status">{toast}</p>{/if}
   {#if !s.ok && s.left > 0}
-    <div class="dock"><span class="slots">기회 {s.left}/{R.meta.bossTries}</span>
-      <button class="go" disabled={locked || thinkLeft > 0 || !filled(q, given)} onclick={send}>{thinkLeft > 0 ? `🤔 ${thinkLeft}초 생각하기` : `⚔ ${cur + 1}번 내기`}</button></div>
+    <BottomAction disabled={locked || thinkLeft > 0 || !filled(q, given)} why={thinkLeft > 0 ? `🤔 ${thinkLeft}초 — 학습지에서 다시 살펴봐요` : !filled(q, given) && !locked ? '답을 고르면 낼 수 있어요' : ''} onmain={send} mainLabel="{cur + 1}번 내기 (도전 기회 {s.left}번)">
+      {#snippet main()}<span>{cur + 1}번 공격</span><Hearts total={R.meta.bossTries} left={s.left} />{/snippet}
+    </BottomAction>
   {/if}
 {/if}
-
-<style>
-  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-  .tab { min-height: 40px; padding: 4px 10px; }
-  .tab.on { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-  .tab.ok { background: var(--muted); }
-  .tab.spent { opacity: 0.6; }
-  .paper { background: var(--card); border: 1px solid var(--muted); border-radius: 12px; padding: 10px 12px; min-width: 0; }
-  .paper-h { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: space-between; align-items: baseline; }
-  .paper-h small { color: var(--sub); }
-  .okc { color: var(--accent); font-weight: 700; }
-  .note { font-size: 0.9rem; background: var(--muted); border-radius: 8px; padding: 6px 8px; overflow-wrap: anywhere; }
-  .toast { font-weight: 700; text-align: center; margin: 8px 0 0; overflow-wrap: anywhere; }
-  .dock { position: sticky; bottom: 0; display: flex; gap: 8px; align-items: center; padding: 8px 0; background: var(--bg); }
-  .slots { color: var(--sub); font-size: 0.9rem; white-space: nowrap; }
-  .go { flex: 1; min-height: 48px; font-size: 1.05rem; font-weight: 700; border-color: var(--accent); }
-  .go:disabled { opacity: 0.5; }
-</style>

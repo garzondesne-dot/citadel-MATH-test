@@ -5,15 +5,16 @@
 
 <div class="opts" class:col>
   {#each opts as o, k (k)}
-    <button type="button" class="opt" class:on={value === k} {disabled} onclick={() => onpick(k)}>{o}</button>
+    <button type="button" class="opt" class:on={value === k} aria-pressed={value === k} {disabled} onclick={() => onpick(k)}>{o}</button>
   {/each}
 </div>
 
 <style>
-  .opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opts { display: flex; flex-wrap: wrap; gap: var(--s2); }
   .opts.col { flex-direction: column; }
-  .opt { min-height: 44px; min-width: 52px; text-align: left; border-radius: 10px; border: 2px solid var(--muted); background: var(--card); color: var(--fg); font-size: 1rem; overflow-wrap: anywhere; }
+  .opt { min-height: var(--tap); min-width: 56px; padding: var(--s2) var(--s3); text-align: left; border-radius: var(--r); border: 2px solid var(--surface-2); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); overflow-wrap: anywhere; }
   .opts:not(.col) .opt { text-align: center; }
-  .opt.on { border-color: var(--accent); background: var(--accent); color: var(--card); }
-  .opt:disabled { opacity: 0.5; }
+  .opt:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .opt.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-sh); }
+  .opt:disabled { opacity: 0.4; box-shadow: none; }
 </style>

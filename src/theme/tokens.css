@@ -1,0 +1,23 @@
+/* 🎨 디자인 토큰 (스킬 ui-senior 2절 · 2-1절 = 원본 · 2026-11-12 선생님 컨펌 금빛 던전)
+   테마 = 이 묶음만 바꿔 끼움 · 의미 색(맞음 · 틀림 · 💎 · 📜 · 체력)은 모든 테마 같음 · 지금은 gold 하나만 켬 */
+:root {
+  /* 공통 (테마와 상관없음) */
+  --ok: #4cc38a; --bad: #f0605d; --gem: #6cc6ff; --scroll: #c79bff; --hp: #e5484d;
+  --font: Pretendard, 'Noto Sans KR', system-ui, sans-serif;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --r-sm: 8px; --r: 12px; --r-lg: 20px;
+  --tap: 48px; --bar-top: 56px; --bar-bottom: 72px;
+  --t: 160ms ease-out;
+  --fs-title: 20px; --fs-body: 16px; --fs-small: 14px;
+}
+:root[data-theme='gold'] {
+  --bg: #0f1115; --surface: #181b22; --surface-2: #222632;
+  --text: #f2f3f5; --text-2: #b4b8c2; --text-3: #8a8f9c;
+  --accent: #f5b84a; --on-accent: #1a1300; --accent-sh: #9a6a1c; --line: #2f3440;
+  --press-sh: #0a0b0e; --bad-bg: #2a1718;
+  color-scheme: dark;
+}
+/* 옛 이름 (b1~b3 화면) → 토큰 */
+:root {
+  --fg: var(--text); --sub: var(--text-2); --card: var(--surface); --muted: var(--surface-2); --band: var(--accent);
+}
