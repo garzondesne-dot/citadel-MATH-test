@@ -1,5 +1,7 @@
 <script lang="ts">
   import { dungeonOf, HERO, heroUrl, spriteOf } from '../manifest';
+  import { heroOf } from '../../model/hero';
+  import { savedLook } from '../../store/me.svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
   //   위 = ‹ 뒤로 + 💎 (흰 글씨 + 그림자 · 검은 띠 없음) · 남은 시간 칩 = 마지막 5분부터
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
@@ -38,7 +40,7 @@
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
-    style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {HERO.name}"></i>
+    style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
 </div>
 
 <style>

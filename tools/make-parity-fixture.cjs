@@ -139,7 +139,11 @@ const symOut = { rows: DS.SymTalk.ROWS.map(({ id, sym, easy, def, memo }) => ({ 
 const lad0 = DS.FX.ladder(0);
 const heroOut = { fams: DS.FX.FAMS.map(({ id, name, ids }) => ({ id, name, ids })), tierNames: DS.FX.TIER_NAMES, ladder0: lad0, ladder16: DS.FX.ladder(16), names: Object.fromEntries(lad0.map((k) => [k, DS.FX.NAMES[k]])),
   price: Object.fromEntries(lad0.map((k) => [k, DS.Gem.price('fx', k)])), scroll: Object.fromEntries(lad0.map((k) => [k, DS.Gem.scrollOf('fx', k)])), enh: DS.Gem.ENH, aura: DS.Gem.AURA_NAMES,
-  levels: [0, 39, 40, 99, 100, 160, 1000, 5000].map((t) => DS.Grow.level(t)) };
+  levels: [0, 39, 40, 99, 100, 160, 1000, 5000].map((t) => DS.Grow.level(t)),
+  // b7 내 용사: 모든 용사의 사다리 · 모든 스킬 이름 · 값 · 📜 (정식 함수 그대로)
+  ladders: Object.fromEntries([...Array(16).keys(), ...Array.from({ length: 16 }, (_, i) => 18 + i)].map((id) => [id, DS.FX.ladder(id)])),
+  allFx: Object.fromEntries(DS.FX.FAMS.flatMap((f) => f.ids).map((k) => [k, [DS.FX.NAMES[k], DS.Gem.price('fx', k), DS.Gem.scrollOf('fx', k)]])),
+  heroPrice: Object.fromEntries(Array.from({ length: 34 }, (_, id) => [id, DS.Gem.price('hero', id)])) };
 const out = { from: `Citadel-MATH ${head}`, hero: heroOut, sym: symOut, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
 const dest = path.join(__dirname, '..', 'tests', 'fixtures', 'parity-set06.json');
 fs.mkdirSync(path.dirname(dest), { recursive: true });

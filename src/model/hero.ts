@@ -1,37 +1,39 @@
-// 🧙 용사 · 스킬 사다리 · 강화 · 레벨 — 정식 값 그대로 (fx.js FAMS · NAMES · AFFINITY/NEXT · gem.js SHOP.fx · SCROLL_NEED · ENH · AURA_NAMES · grow.js level · HERO-LORE 이름)
-//   기준값 시험 = tests/parity.test.ts (정식 코드가 만든 값과 같음)
+// 🧙 용사 · 스킬 사다리 · 강화 · 레벨 · 호칭 — 정식 값 그대로
+//   표 = hero-data.json (tools/make-hero-data.cjs 가 정식 코드에서 뽑음 · 손으로 고치지 않음)
+//   기준값 시험 = tests/parity.test.ts (정식 함수가 만든 사다리 · 값 · 레벨과 같음)
+import DATA from './hero-data.json';
+
+export type HeroInfo = (typeof DATA.heroes)[number];
+export const HEROES: HeroInfo[] = DATA.heroes;
+export const heroOf = (id: number): HeroInfo => HEROES.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo);
 export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설'];
-export const FAMS: { id: string; name: string; ids: string[] }[] = [
-  { id: 'cut', name: '⚔ 베기', ids: ['cut', 'moon', 'slash', 'twin'] },
-  { id: 'smash', name: '🔨 강타', ids: ['bash', 'upper', 'hammer', 'quake'] },
-  { id: 'sweep', name: '🌪 연격', ids: ['thrust', 'sweep', 'spin', 'reap'] },
-  { id: 'wind', name: '🌬 바람', ids: ['wblade', 'gale', 'leaf', 'cyclone'] },
-  { id: 'fire', name: '🔥 불', ids: ['flame', 'ring', 'fire', 'pillar'] },
-  { id: 'spark', name: '⚡ 번개', ids: ['spark', 'chain', 'lightning', 'thunder'] },
-  { id: 'frost', name: '❄ 얼음', ids: ['frost', 'spikes', 'ice', 'nova'] },
-  { id: 'star', name: '✨ 별', ids: ['twinkle', 'mana', 'stars', 'meteor'] },
-  { id: 'magic', name: '🔮 마법', ids: ['orb', 'crit', 'vortex', 'void'] },
-  { id: 'math', name: '📐 수식', ids: ['ruler', 'compass', 'venn', 'qed'] },
-  { id: 'sun', name: '☀ 빛', ids: ['radiant', 'bulwark', 'holysword', 'skylance'] },
-  { id: 'dark', name: '🌑 어둠', ids: ['shade', 'claw', 'phantom', 'eclipse'] },
-  { id: 'gear', name: '⚙ 기계', ids: ['wrench', 'cog', 'piston', 'drill'] },
-  { id: 'water', name: '🌊 물', ids: ['aqua', 'wave', 'anchor', 'tsunami'] },
-];
-export const SKILL_NAMES: Record<string, string> = {
-  cut: '⚔ 베기', moon: '⚔ 달빛 베기', slash: '⚔ 삼연 참격', twin: '⚔ 쌍월 참',
-};
-const AFFINITY: Record<number, string> = { 0: 'cut', 16: 'cut' };
-const NEXT: Record<number, string> = {};
-export const attrOf = (hero: number) => (NEXT[hero] && FAMS.some((f) => f.id === NEXT[hero]) ? NEXT[hero] : AFFINITY[hero]) as string;
+export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
+export const FAMS: { id: string; name: string; ids: string[] }[] = DATA.fams;
+const FX = DATA.fx as Record<string, { name: string; fam: string; tier: number; price: number | null; scroll: number }>;
+export const SKILL_NAMES: Record<string, string> = Object.fromEntries(Object.entries(FX).map(([k, v]) => [k, v.name]));
+export const SKILL_PRICE: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.price != null).map(([k, v]) => [k, v.price as number]));
+export const SKILL_SCROLL: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.scroll).map(([k, v]) => [k, v.scroll]));
+/** 「⚔ 달빛 베기」 → 「달빛 베기」 */
+export const skillName = (id: string) => (SKILL_NAMES[id] ?? id).replace(/^\S+\s/, '');
+export const attrOf = (hero: number) => HEROES.find((h) => h.id === hero)?.attr ?? 'cut'; // 16 각성한 로안 = 로안과 같은 ⚔
 export const famOfHero = (hero: number) => FAMS.find((f) => f.id === attrOf(hero)) ?? (FAMS[0] as (typeof FAMS)[number]);
 /** 🪜 #96: 쓸 수 있는 스킬 = 지금 용사 사다리 4칸(내 속성 Ⅰ~Ⅳ) */
 export const ladder = (hero: number) => famOfHero(hero).ids.slice();
-/** 정식 SHOP.fx (사다리 Ⅱ~Ⅳ 값) · Ⅰ = 처음부터 가짐 */
-export const SKILL_PRICE: Record<string, number> = { moon: 20, slash: 60, twin: 80 };
-export const SKILL_SCROLL: Record<string, number> = { twin: 2 };
-export const ENH: ({ g: number; s?: number } | null)[] = [null, { g: 10 }, { g: 15 }, { g: 20 }, { g: 25 }, { g: 30 }, { g: 40 }, { g: 50, s: 1 }, { g: 60, s: 1 }, { g: 80, s: 2 }, { g: 100, s: 2 }];
-export const AURA_NAMES = ['', '은은한 흰빛', '새싹 초록', '맑은 하늘', '깊은 바다', '보랏빛 신비', '벚꽃 분홍', '황금 태양', '진홍 불꽃', '별빛 은하', '성스러운 후광'];
-export const HERO_NAMES: Record<number, { name: string; job: string }> = { 0: { name: '로안', job: '검사' } };
+export const ENH: ({ g: number; s?: number } | null)[] = DATA.enh;
+export const ENH_MAX = ENH.length - 1;
+export const AURA_NAMES: string[] = DATA.aura as string[];
+/** 정식 style.css .aura-1 ~ .aura-10 (빛 색 · 둘째 빛 · 번짐) */
+export const AURA_CSS: [string, string, number][] = [['', '', 0], ['#e8eef8', '#ffffff', 3], ['#7dff9a', '#e6ffe9', 4], ['#6fd8ff', '#e6f8ff', 4], ['#3a7bff', '#cfe0ff', 5], ['#b06bff', '#f0e2ff', 5], ['#ff7ac8', '#ffe6f4', 6], ['#ffc23a', '#fff3c0', 6], ['#ff4a3a', '#ffd0b0', 7], ['#8a6bff', '#5ae8ff', 7], ['#ffd86a', '#fffbe6', 8]];
+/** 🌟 강화 대성공 10% = 그 단계 💎 절반 돌려받기 (정식 gem.js GREAT) */
+export const GREAT = 0.1;
+export const HERO_NAMES: Record<number, { name: string; job: string }> = Object.fromEntries(HEROES.map((h) => [h.id, { name: h.name, job: h.job }]));
+export const TITLES = DATA.titles as { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[];
+export const titleOf = (id: string) => TITLES.find((t) => t.id === id) ?? null;
+export const STATS = DATA.stats;
+export const PORTRAITS = DATA.portraits as unknown as { src: string; cols: number; rows: number; list: Record<string, [number, number]> };
+export const SHEET = DATA.sheet;
+/** 정식 Unit.CARDS 수 (도감 칸) */
+export const CARD_TOTAL = 54;
 const LV_TITLES = ['견습 용사', '풋내기 용사', '용사', '숙련 용사', '기사', '정예 기사', '기사단장', '수호자', '영웅', '전설의 용사'];
 const need = (lv: number) => 40 + 20 * (lv - 1);
 /** 정식 grow.js level: Lv.L → L+1 에 필요한 EXP = 40 + 20 × (L − 1) */
@@ -50,6 +52,8 @@ export function rungs(hero: number, owned: string[], equip: string, wallet: { ge
     const gem = SKILL_PRICE[id] ?? 0, scroll = SKILL_SCROLL[id] ?? 0, name = SKILL_NAMES[id] ?? id;
     if (have.has(id)) return { id, tier, name, gem, scroll, state: id === equip ? 'equip' : 'own' };
     if (tier === nextIdx) return wallet.gem >= gem && wallet.scroll >= scroll ? { id, tier, name, gem, scroll, state: 'buy' } : { id, tier, name, gem, scroll, state: 'lock', why: wallet.gem < gem ? `💎 ${gem - wallet.gem} 모자람` : `📜 ${scroll - wallet.scroll} 모자람` };
-    return { id, tier, name, gem, scroll, state: 'lock', why: `${TIER_NAMES[tier - 1] ?? ''} 먼저` };
+    return { id, tier, name, gem, scroll, state: 'lock', why: `${TN[tier - 1] ?? ''} 먼저` };
   });
 }
+/** 필살기 판정 한 줄 (정식 camp.js verdict) */
+export const verdict = (tier: number) => (tier === 3 ? '⚡ 필살기 · 🌟 진필살기 모두 가능' : tier === 2 ? '⚡ 필살기 가능 · 🌟 진필살기는 Ⅳ 부터' : '필살기 없음 · ⚡ 는 Ⅲ 부터');

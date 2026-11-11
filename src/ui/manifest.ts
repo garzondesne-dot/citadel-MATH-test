@@ -21,9 +21,14 @@ export const DUNGEONS: Record<string, string> = {
 };
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;
 
-// 용사 (정식 heroesV2 · 칸 80 × 64 · 4열 × 12줄 · 0줄 = idle) — b4 는 검사(로안) 하나
-export const HERO = { src: 'art/hero-sword-v3c.webp', w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, name: '검사' };
-export const heroUrl = () => `${import.meta.env.BASE_URL}${HERO.src}`;
+// 용사 (정식 heroesV2 · 칸 80 × 64 · 4열 × 12줄 · 0줄 = idle · 2줄 = 공격 · 8줄 = 앉기) — b7: 31명 (그림 파일 이름 = hero-data.json sprite)
+import { heroOf, PORTRAITS } from '../model/hero';
+import { savedLook } from '../store/me.svelte';
+export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, sitRow: 8 };
+/** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */
+export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BASE_URL}art/heroes/${heroOf(id).sprite || 'hero-sword-v3c.webp'}`;
+/** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */
+export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
 
 // 🏕 캠프 (정식 manifest.camp · 원본 픽셀 1182 × 1330 · 자리 = 정식 cs-v2 캠프 그대로)
 const A = (f: string) => `${import.meta.env.BASE_URL}art/camp/${f}`;

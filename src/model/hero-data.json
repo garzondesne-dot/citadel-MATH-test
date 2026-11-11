@@ -1,0 +1,1552 @@
+{
+ "from": "Citadel-MATH 8c28af0",
+ "fancy": [
+  "fire",
+  "lightning",
+  "ice",
+  "stars",
+  "slash",
+  "vortex"
+ ],
+ "unlock": [
+  1,
+  2,
+  4,
+  6,
+  8,
+  10
+ ],
+ "heroes": [
+  {
+   "id": 0,
+   "name": "로안",
+   "job": "검사",
+   "nick": "기본기의 검",
+   "a": "화려한 기술은 없다. 같은 베기를 만 번 연습했을 뿐.",
+   "b": "만 한 번째 베기가 통하는지 보려고 던전 문을 열었다.",
+   "say": "만 번 했어. 만 한 번째도 할 수 있어.",
+   "attr": "cut",
+   "ranged": false,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-sword-v3c.webp"
+  },
+  {
+   "id": 1,
+   "name": "누아",
+   "job": "마녀",
+   "nick": "밤샘 주문 연구가",
+   "a": "주문을 틀리게 외워 솥을 열두 번 태웠다.",
+   "b": "열세 번째 주문은 진짜 몬스터 앞에서 시험해 보기로 했다.",
+   "say": "이번엔 안 터져. …아마도.",
+   "attr": "magic",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-witch-v2c.webp"
+  },
+  {
+   "id": 2,
+   "name": "리아넬",
+   "job": "엘프 궁수",
+   "nick": "숲의 먼 눈",
+   "a": "숲 끝의 나뭇잎 하나도 놓치지 않는 눈을 가졌다.",
+   "b": "숲 밖에는 뭐가 있는지 궁금해서, 화살통 하나 메고 나왔다.",
+   "say": "저 끝에 뭐가 있는지 보여?",
+   "attr": "wind",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-elf-v2c.webp"
+  },
+  {
+   "id": 3,
+   "name": "시엔",
+   "job": "닌자",
+   "nick": "발소리 없는 그림자",
+   "a": "발소리도, 그림자도, 흔적도 남기지 않는다.",
+   "b": "아무도 못 찾은 던전 지름길을 제일 먼저 찾고 싶어서 왔다.",
+   "say": "쉿. 이쪽이 지름길이야. 분명히.",
+   "attr": "wind",
+   "ranged": false,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-ninja-v2c.webp"
+  },
+  {
+   "id": 4,
+   "name": "루멘",
+   "job": "사제",
+   "nick": "넘어진 곳의 등불",
+   "a": "싸움은 서툴지만, 넘어진 사람은 그냥 못 지나친다.",
+   "b": "던전은 모두가 한 번씩 넘어지는 곳이라, 거기로 간다.",
+   "say": "넘어져도 괜찮아. 내가 있잖아.",
+   "attr": "sun",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-priest-v2c.webp"
+  },
+  {
+   "id": 5,
+   "name": "하스타",
+   "job": "창술사",
+   "nick": "한 걸음 먼 창끝",
+   "a": "남들보다 딱 한 걸음 멀리 닿는 창을 쓴다.",
+   "b": "그 한 걸음으로 뒤에 선 친구를 지킬 수 있는지 확인하러 왔다.",
+   "say": "내 뒤에 있어. 한 걸음이면 닿아.",
+   "attr": "sweep",
+   "ranged": false,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-lancer-v2c.webp"
+  },
+  {
+   "id": 6,
+   "name": "보르간",
+   "job": "드워프",
+   "nick": "망치 든 광부",
+   "a": "키는 제일 작고, 망치는 제일 크다.",
+   "b": "던전 깊은 곳에 잠든 광석을 두드려 보려고 수염을 땋고 내려왔다.",
+   "say": "두드려 봐야 알지!",
+   "attr": "smash",
+   "ranged": false,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": true,
+   "cond": "",
+   "sprite": "hero-dwarf-v2c.webp"
+  },
+  {
+   "id": 8,
+   "name": "발도르",
+   "job": "성기사",
+   "nick": "앞줄의 방패",
+   "a": "제일 앞에 서는 게 버릇이 된 방패잡이.",
+   "b": "누군가는 첫 공격을 받아 내야 하니까, 오늘도 앞줄에 선다.",
+   "say": "첫 방은 내가 맞을게.",
+   "attr": "sun",
+   "ranged": false,
+   "price": 60,
+   "card": true,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "1~3차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
+   "sprite": "hero-paladin-v2c.webp"
+  },
+  {
+   "id": 9,
+   "name": "바루",
+   "job": "격투가",
+   "nick": "맨주먹 수련생",
+   "a": "무기 살 돈으로 밥을 사 먹었다. 후회는 없다.",
+   "b": "주먹만으로 어디까지 가나 보려고 빈손으로 들어왔다.",
+   "say": "이기면 밥 먹으러 가자.",
+   "attr": "smash",
+   "ranged": false,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "🎁 첫 레이드를 마치면 열려요",
+   "sprite": "hero-monk-v2c.webp"
+  },
+  {
+   "id": 10,
+   "name": "셰라",
+   "job": "무희",
+   "nick": "칼끝의 춤",
+   "a": "춤인지 칼싸움인지, 본인도 가끔 헷갈린다.",
+   "b": "던전 바닥이 무대로 딱 좋다는 소문을 듣고 왔다.",
+   "say": "박자 놓치지 마. 지금이야!",
+   "attr": "sweep",
+   "ranged": false,
+   "price": 60,
+   "card": true,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "4~6차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
+   "sprite": "hero-dancer-v2c.webp"
+  },
+  {
+   "id": 11,
+   "name": "리라",
+   "job": "음유시인",
+   "nick": "노래하는 기록꾼",
+   "a": "싸움보다 노래를 잘하고, 노래보다 구경을 잘한다.",
+   "b": "오늘의 레이드를 노래로 남기려면 맨 앞에서 봐야 하니까.",
+   "say": "방금 그거, 노래로 만들게.",
+   "attr": "spark",
+   "ranged": true,
+   "price": 60,
+   "card": true,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "8~11차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
+   "sprite": "hero-bard-v2c.webp"
+  },
+  {
+   "id": 12,
+   "name": "파셀",
+   "job": "연금술사",
+   "nick": "실패 수집가",
+   "a": "실험 노트의 절반은 「실패」, 나머지 절반은 「거의 성공」.",
+   "b": "던전 재료로 마지막 한 줄 「성공」을 채우러 왔다.",
+   "say": "실패? 아니, 거의 성공이야.",
+   "attr": "fire",
+   "ranged": true,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-alchemist-v2c.webp"
+  },
+  {
+   "id": 13,
+   "name": "바르코",
+   "job": "해적",
+   "nick": "땅 위의 선장",
+   "a": "배는 없지만 선장이다. 일단 모자가 있으니까.",
+   "b": "바다 보물은 남들이 다 찾았다길래, 땅 밑 보물로 갈아탔다.",
+   "say": "선장이라 불러. 배는 곧 생겨.",
+   "attr": "water",
+   "ranged": false,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-pirate-v2c.webp"
+  },
+  {
+   "id": 14,
+   "name": "글라세",
+   "job": "빙결 마법사",
+   "nick": "얼음 같은 침착",
+   "a": "화가 나면 주변이 얼어붙는다. 그래서 웬만하면 참는다.",
+   "b": "마음껏 얼려도 되는 상대를 찾다 보니 던전이었다.",
+   "say": "…하나, 둘, 셋. 좋아, 안 얼렸어.",
+   "attr": "frost",
+   "ranged": true,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-frost-v2c.webp"
+  },
+  {
+   "id": 15,
+   "name": "타미",
+   "job": "조련사",
+   "nick": "몬스터의 친구 지망생",
+   "a": "길고양이도 까마귀도, 어쩐지 다 따라온다.",
+   "b": "몬스터와도 친해질 수 있나 궁금해서 왔다. 안 되면 그때 싸운다.",
+   "say": "저 몬스터, 방금 웃은 것 같지 않아?",
+   "attr": "frost",
+   "ranged": false,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-tamer-v2c.webp"
+  },
+  {
+   "id": 18,
+   "name": "녹스",
+   "job": "흑기사",
+   "nick": "말 없는 갑옷",
+   "a": "투구를 벗은 얼굴을 본 사람이 없다.",
+   "b": "무언가를 찾는 중이라는데, 뭔지는 말해 주지 않는다. 다만 누구보다 깊이 내려간다.",
+   "say": "…간다.",
+   "attr": "dark",
+   "ranged": false,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-dknight-v2c.webp"
+  },
+  {
+   "id": 19,
+   "name": "한수",
+   "job": "수식 책사(남)",
+   "nick": "풀이로 싸우는 참모",
+   "a": "한국에서 떨어진 고등학생. 검 대신 펜, 방패 대신 풀이 과정.",
+   "b": "답만 적어서는 몬스터가 안 쓰러진다는 걸 알아채고, 풀이를 들고 왔다.",
+   "say": "답은 알겠는데… 풀이부터 쓸게.",
+   "attr": "math",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": true,
+   "chal": null,
+   "open": false,
+   "cond": "📷 성채 서술형 문제를 풀이 사진까지 통과하면 열려요",
+   "sprite": "hero-mathboy-v2c.webp"
+  },
+  {
+   "id": 20,
+   "name": "미지",
+   "job": "수식 책사(여)",
+   "nick": "한 줄씩 쌓는 전략가",
+   "a": "한국에서 떨어진 고등학생. 여기서는 풀이 한 줄이 곧 작전 한 줄.",
+   "b": "끝까지 써 내려간 풀이가 가장 센 주문인지 증명하러 왔다.",
+   "say": "천천히 써도 돼. 끝까지 쓰면 돼.",
+   "attr": "math",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": true,
+   "chal": null,
+   "open": false,
+   "cond": "📷 성채 서술형 문제를 풀이 사진까지 통과하면 열려요",
+   "sprite": "hero-mathgirl-v2c.webp"
+  },
+  {
+   "id": 21,
+   "name": "볼트",
+   "job": "메카닉",
+   "nick": "고쳐 쓰는 손",
+   "a": "고장 난 건 뭐든 고친다. 멀쩡한 것도 가끔 뜯어 본다.",
+   "b": "던전 깊은 곳에서 들리는 낡은 기계 소리가 궁금해서 공구함을 들고 왔다.",
+   "say": "고장 난 건 없어. 아직 안 고친 것뿐이야.",
+   "attr": "gear",
+   "ranged": false,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-mechanic-v2c.webp"
+  },
+  {
+   "id": 22,
+   "name": "핑",
+   "job": "해커",
+   "nick": "빈틈 찾기 선수",
+   "a": "잠긴 문을 보면 열쇠보다 빈틈부터 찾는다.",
+   "b": "던전에 규칙이 있다면 빈틈도 있을 거라 믿고 들어왔다.",
+   "say": "규칙이 있으면, 빈틈도 있어.",
+   "attr": "spark",
+   "ranged": true,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-hacker-v2c.webp"
+  },
+  {
+   "id": 23,
+   "name": "이그니",
+   "job": "용기사",
+   "nick": "용과 약속한 기사",
+   "a": "어린 용과 한 약속이 하나 있다.",
+   "b": "용이 다 자랄 때까지 같이 강해지기로 해서, 던전을 훈련장으로 삼았다.",
+   "say": "조금만 기다려. 같이 날자.",
+   "attr": "fire",
+   "ranged": false,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-dragoon-v2c.webp"
+  },
+  {
+   "id": 24,
+   "name": "케라운",
+   "job": "마검사",
+   "nick": "둘 다 고른 검",
+   "a": "한 손엔 검, 한 손엔 번개 마법진.",
+   "b": "둘 중 하나만 고르라는 말이 제일 싫어서, 둘 다 익혔다.",
+   "say": "왜 하나만 골라야 해?",
+   "attr": "spark",
+   "ranged": false,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-spellblade-v2c.webp"
+  },
+  {
+   "id": 25,
+   "name": "칼시",
+   "job": "해골 소환사",
+   "nick": "뼈다귀들의 반장",
+   "a": "무섭게 생긴 해골들이 사실은 말을 제일 잘 듣는다.",
+   "b": "혼자 가긴 심심해서, 친구들을 불러내 같이 왔다.",
+   "say": "얘들아, 출석 부른다!",
+   "attr": "dark",
+   "ranged": true,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-bone-v2c.webp"
+  },
+  {
+   "id": 26,
+   "name": "아르발",
+   "job": "석궁 사냥꾼",
+   "nick": "한 발의 사냥꾼",
+   "a": "석궁은 한 번 쏘면 다시 감는 데 오래 걸린다. 그래서 한 발을 아낀다.",
+   "b": "아낀 한 발을 쓸 만한 큰 사냥감을 찾아 던전까지 왔다.",
+   "say": "숨 세 번. 그리고 한 발.",
+   "attr": "wind",
+   "ranged": true,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-crossbow-v2c.webp"
+  },
+  {
+   "id": 27,
+   "name": "아바쿠",
+   "job": "주판 술사",
+   "nick": "틀림없는 셈",
+   "a": "주판알 튕기는 소리가 곧 주문이다.",
+   "b": "계산이 한 번도 안 틀린 날을 만들어 보려고, 오늘도 알을 튕긴다.",
+   "say": "검산 한 번 더. 틀림없게.",
+   "attr": "gear",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": {
+    "need": 3
+   },
+   "open": false,
+   "cond": "👑 형성평가 만점 3번 (서로 다른 차시 · 수업이나 🎯 재대결)",
+   "sprite": "hero-abacus-v2c.webp"
+  },
+  {
+   "id": 28,
+   "name": "콤파",
+   "job": "기하 마도사",
+   "nick": "자와 컴퍼스의 마법사",
+   "a": "원 하나, 삼각형 하나면 마법진이 완성된다.",
+   "b": "성채의 방들이 어떤 모양으로 이어지는지 지도로 그리러 왔다.",
+   "say": "원 하나만 그리면 길이 보여.",
+   "attr": "magic",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": {
+    "need": 10
+   },
+   "open": false,
+   "cond": "🏰 성채 방 10개 처치 (보스 방 포함)",
+   "sprite": "hero-geometry-v2c.webp"
+  },
+  {
+   "id": 29,
+   "name": "마진",
+   "job": "상인",
+   "nick": "던전 앞 좌판 주인",
+   "a": "싸움보다 흥정이 특기. 손해 보는 장사는 안 한다.",
+   "b": "던전 안 물건이 밖에서는 열 배라길래, 직접 떼러 들어왔다.",
+   "say": "손해 보는 장사는 안 해. 너만 빼고.",
+   "attr": "star",
+   "ranged": true,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-merchant-v2c.webp"
+  },
+  {
+   "id": 30,
+   "name": "호버",
+   "job": "드론 조종사",
+   "nick": "먼저 가 보는 눈",
+   "a": "직접 가기 전에 드론부터 띄운다.",
+   "b": "아무도 못 가 본 던전 구석까지 제일 먼저 배달하는 게 꿈이다.",
+   "say": "먼저 보내 볼게. 드론을.",
+   "attr": "gear",
+   "ranged": true,
+   "price": 30,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 30 조각으로 해금",
+   "sprite": "hero-drone-v2c.webp"
+  },
+  {
+   "id": 31,
+   "name": "에이라",
+   "job": "발키리",
+   "nick": "내려온 날개",
+   "a": "높은 곳에서 싸움터를 내려다보던 날개 달린 전사.",
+   "b": "구경만 하기엔 아래가 너무 재밌어 보여서, 창을 들고 내려왔다.",
+   "say": "위에서 보는 것보다 훨씬 재밌네!",
+   "attr": "sun",
+   "ranged": false,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-valkyrie-v2c.webp"
+  },
+  {
+   "id": 32,
+   "name": "칸델",
+   "job": "정령사",
+   "nick": "불씨의 단짝",
+   "a": "어깨 위 불씨 정령과 하루에 세 번은 말다툼을 한다.",
+   "b": "정령이 「던전 구경 가자」고 졸라서 왔다. 정말이다.",
+   "say": "내가 가자고 한 거 아니야. 얘가 졸랐어.",
+   "attr": "water",
+   "ranged": true,
+   "price": 60,
+   "card": false,
+   "photo": false,
+   "chal": null,
+   "open": false,
+   "cond": "💎 60 조각으로 해금",
+   "sprite": "hero-elemental-v2c.webp"
+  },
+  {
+   "id": 33,
+   "name": "폴라",
+   "job": "별점술사",
+   "nick": "별을 다시 읽는 사람",
+   "a": "별점이 자주 틀린다. 그래서 다시 본다. 맞을 때까지.",
+   "b": "틀린 예언을 하나씩 고쳐 쓰려고 던전의 별자리를 읽는다.",
+   "say": "틀렸네. 좋아, 다시 읽자.",
+   "attr": "star",
+   "ranged": true,
+   "price": null,
+   "card": false,
+   "photo": false,
+   "chal": {
+    "need": 15
+   },
+   "open": false,
+   "cond": "🎯 오답노트 빨간 칸 15개 해결",
+   "sprite": "hero-astro-v2c.webp"
+  }
+ ],
+ "fams": [
+  {
+   "id": "cut",
+   "name": "⚔ 베기",
+   "ids": [
+    "cut",
+    "moon",
+    "slash",
+    "twin"
+   ]
+  },
+  {
+   "id": "smash",
+   "name": "🔨 강타",
+   "ids": [
+    "bash",
+    "upper",
+    "hammer",
+    "quake"
+   ]
+  },
+  {
+   "id": "sweep",
+   "name": "🌪 연격",
+   "ids": [
+    "thrust",
+    "sweep",
+    "spin",
+    "reap"
+   ]
+  },
+  {
+   "id": "wind",
+   "name": "🌬 바람",
+   "ids": [
+    "wblade",
+    "gale",
+    "leaf",
+    "cyclone"
+   ]
+  },
+  {
+   "id": "fire",
+   "name": "🔥 불",
+   "ids": [
+    "flame",
+    "ring",
+    "fire",
+    "pillar"
+   ]
+  },
+  {
+   "id": "spark",
+   "name": "⚡ 번개",
+   "ids": [
+    "spark",
+    "chain",
+    "lightning",
+    "thunder"
+   ]
+  },
+  {
+   "id": "frost",
+   "name": "❄ 얼음",
+   "ids": [
+    "frost",
+    "spikes",
+    "ice",
+    "nova"
+   ]
+  },
+  {
+   "id": "star",
+   "name": "✨ 별",
+   "ids": [
+    "twinkle",
+    "mana",
+    "stars",
+    "meteor"
+   ]
+  },
+  {
+   "id": "magic",
+   "name": "🔮 마법",
+   "ids": [
+    "orb",
+    "crit",
+    "vortex",
+    "void"
+   ]
+  },
+  {
+   "id": "math",
+   "name": "📐 수식",
+   "ids": [
+    "ruler",
+    "compass",
+    "venn",
+    "qed"
+   ]
+  },
+  {
+   "id": "sun",
+   "name": "☀ 빛",
+   "ids": [
+    "radiant",
+    "bulwark",
+    "holysword",
+    "skylance"
+   ]
+  },
+  {
+   "id": "dark",
+   "name": "🌑 어둠",
+   "ids": [
+    "shade",
+    "claw",
+    "phantom",
+    "eclipse"
+   ]
+  },
+  {
+   "id": "gear",
+   "name": "⚙ 기계",
+   "ids": [
+    "wrench",
+    "cog",
+    "piston",
+    "drill"
+   ]
+  },
+  {
+   "id": "water",
+   "name": "🌊 물",
+   "ids": [
+    "aqua",
+    "wave",
+    "anchor",
+    "tsunami"
+   ]
+  }
+ ],
+ "fx": {
+  "cut": {
+   "name": "⚔ 베기",
+   "fam": "cut",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "moon": {
+   "name": "⚔ 달빛 베기",
+   "fam": "cut",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "slash": {
+   "name": "⚔ 삼연 참격",
+   "fam": "cut",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "twin": {
+   "name": "⚔ 쌍월 참",
+   "fam": "cut",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "bash": {
+   "name": "🔨 강타",
+   "fam": "smash",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "upper": {
+   "name": "🔨 올려치기",
+   "fam": "smash",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "hammer": {
+   "name": "🔨 망치 내려치기",
+   "fam": "smash",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "quake": {
+   "name": "🔨 대지 분쇄",
+   "fam": "smash",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "thrust": {
+   "name": "🌪 찌르기",
+   "fam": "sweep",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "sweep": {
+   "name": "🌪 휩쓸기",
+   "fam": "sweep",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "spin": {
+   "name": "🌪 회전 베기",
+   "fam": "sweep",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "reap": {
+   "name": "🌪 사신의 낫",
+   "fam": "sweep",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "wblade": {
+   "name": "🌬 바람 칼날",
+   "fam": "wind",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "gale": {
+   "name": "🌬 질풍",
+   "fam": "wind",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "leaf": {
+   "name": "🌬 나뭇잎 폭풍",
+   "fam": "wind",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "cyclone": {
+   "name": "🌬 대선풍",
+   "fam": "wind",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "flame": {
+   "name": "🔥 불꽃",
+   "fam": "fire",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "ring": {
+   "name": "🔥 불꽃 고리",
+   "fam": "fire",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "fire": {
+   "name": "🔥 화염 폭발",
+   "fam": "fire",
+   "tier": 2,
+   "price": 40,
+   "scroll": 0
+  },
+  "pillar": {
+   "name": "🔥 화염 기둥",
+   "fam": "fire",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "spark": {
+   "name": "⚡ 번개",
+   "fam": "spark",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "chain": {
+   "name": "⚡ 연쇄 번개",
+   "fam": "spark",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "lightning": {
+   "name": "⚡ 천둥 낙뢰",
+   "fam": "spark",
+   "tier": 2,
+   "price": 40,
+   "scroll": 0
+  },
+  "thunder": {
+   "name": "⚡ 뇌명",
+   "fam": "spark",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "frost": {
+   "name": "❄ 얼음",
+   "fam": "frost",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "spikes": {
+   "name": "❄ 얼음 가시",
+   "fam": "frost",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "ice": {
+   "name": "❄ 얼음 파쇄",
+   "fam": "frost",
+   "tier": 2,
+   "price": 40,
+   "scroll": 0
+  },
+  "nova": {
+   "name": "❄ 서리 폭발",
+   "fam": "frost",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "twinkle": {
+   "name": "✨ 별",
+   "fam": "star",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "mana": {
+   "name": "✨ 마나 폭발",
+   "fam": "star",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "stars": {
+   "name": "✨ 별빛 폭죽",
+   "fam": "star",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "meteor": {
+   "name": "✨ 유성우",
+   "fam": "star",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "orb": {
+   "name": "🔮 마법탄",
+   "fam": "magic",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "crit": {
+   "name": "🔮 치명 섬광",
+   "fam": "magic",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "vortex": {
+   "name": "🌀 차원 소용돌이",
+   "fam": "magic",
+   "tier": 2,
+   "price": 80,
+   "scroll": 0
+  },
+  "void": {
+   "name": "🌀 블랙홀",
+   "fam": "magic",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "ruler": {
+   "name": "📐 눈금 베기",
+   "fam": "math",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "compass": {
+   "name": "📐 컴퍼스 원",
+   "fam": "math",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "venn": {
+   "name": "📐 벤 다이어그램",
+   "fam": "math",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "qed": {
+   "name": "📐 증명 완료 ∎",
+   "fam": "math",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "radiant": {
+   "name": "☀ 빛 베기",
+   "fam": "sun",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "bulwark": {
+   "name": "☀ 방패 강타",
+   "fam": "sun",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "holysword": {
+   "name": "☀ 성검 낙하",
+   "fam": "sun",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "skylance": {
+   "name": "☀ 천상의 창",
+   "fam": "sun",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "shade": {
+   "name": "🌑 그림자 베기",
+   "fam": "dark",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "claw": {
+   "name": "🌑 어둠 손톱",
+   "fam": "dark",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "phantom": {
+   "name": "🌑 그림자 분신",
+   "fam": "dark",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "eclipse": {
+   "name": "🌑 월식 참",
+   "fam": "dark",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "wrench": {
+   "name": "⚙ 스패너 치기",
+   "fam": "gear",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "cog": {
+   "name": "⚙ 톱니 던지기",
+   "fam": "gear",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "piston": {
+   "name": "⚙ 증기 해머",
+   "fam": "gear",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "drill": {
+   "name": "⚙ 드릴 돌파",
+   "fam": "gear",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  },
+  "aqua": {
+   "name": "🌊 물 베기",
+   "fam": "water",
+   "tier": 0,
+   "price": null,
+   "scroll": 0
+  },
+  "wave": {
+   "name": "🌊 파도 치기",
+   "fam": "water",
+   "tier": 1,
+   "price": 20,
+   "scroll": 0
+  },
+  "anchor": {
+   "name": "🌊 닻 내려찍기",
+   "fam": "water",
+   "tier": 2,
+   "price": 60,
+   "scroll": 0
+  },
+  "tsunami": {
+   "name": "🌊 해일 베기",
+   "fam": "water",
+   "tier": 3,
+   "price": 80,
+   "scroll": 2
+  }
+ },
+ "enh": [
+  null,
+  {
+   "g": 10
+  },
+  {
+   "g": 15
+  },
+  {
+   "g": 20
+  },
+  {
+   "g": 25
+  },
+  {
+   "g": 30
+  },
+  {
+   "g": 40
+  },
+  {
+   "g": 50,
+   "s": 1
+  },
+  {
+   "g": 60,
+   "s": 1
+  },
+  {
+   "g": 80,
+   "s": 2
+  },
+  {
+   "g": 100,
+   "s": 2
+  }
+ ],
+ "aura": [
+  "",
+  "은은한 흰빛",
+  "새싹 초록",
+  "맑은 하늘",
+  "깊은 바다",
+  "보랏빛 신비",
+  "벚꽃 분홍",
+  "황금 태양",
+  "진홍 불꽃",
+  "별빛 은하",
+  "성스러운 후광"
+ ],
+ "titles": [
+  {
+   "id": "none",
+   "name": "달지 않기",
+   "tier": "w",
+   "cond": ""
+  },
+  {
+   "id": "dawn",
+   "name": "새벽의 개척자",
+   "tier": "p",
+   "cond": "첫 접속 (모두)"
+  },
+  {
+   "id": "first",
+   "name": "첫 출정",
+   "tier": "b",
+   "cond": "첫 레이드 클리어"
+  },
+  {
+   "id": "slayer",
+   "name": "보스 토벌자",
+   "tier": "b",
+   "cond": "보스 격파에 함께하기"
+  },
+  {
+   "id": "smith",
+   "name": "첫 연성",
+   "tier": "b",
+   "cond": "모루에서 첫 카드 만들기"
+  },
+  {
+   "id": "collector",
+   "name": "카드 수집가",
+   "tier": "b",
+   "cond": "카드 5장 모으기"
+  },
+  {
+   "id": "magic",
+   "name": "매직 연성사",
+   "tier": "p",
+   "cond": "매직(파랑) 카드 만들기"
+  },
+  {
+   "id": "rare",
+   "name": "레어 연성사",
+   "tier": "p",
+   "cond": "레어(보라) 카드 만들기"
+  },
+  {
+   "id": "grit",
+   "name": "끈기의 용사",
+   "tier": "p",
+   "cond": "재도전으로 고친 문제 모두 10개"
+  },
+  {
+   "id": "sage",
+   "name": "도감 수집가",
+   "tier": "o",
+   "cond": "연성 도감 30장"
+  },
+  {
+   "id": "king",
+   "name": "집합의 지배자",
+   "tier": "o",
+   "cond": "🏰 성채던전 1층 👑 보스 방 처치"
+  },
+  {
+   "id": "detective",
+   "name": "논리의 탐정",
+   "tier": "o",
+   "cond": "🏰 성채던전 2층 👑 보스 방(11번) 처치"
+  },
+  {
+   "id": "sovereign",
+   "name": "집합과 명제의 군주",
+   "tier": "o",
+   "cond": "🏰 성채던전 3층 👑 보스 방(17번) 처치"
+  },
+  {
+   "id": "gambler",
+   "name": "쉼터의 승부사",
+   "tier": "b",
+   "cond": "🎖 쉼터 놀이 우승 메달 3개"
+  },
+  {
+   "id": "nunchi",
+   "name": "눈치 백단",
+   "tier": "p",
+   "cond": "🙊 눈치 게임 우승"
+  },
+  {
+   "id": "oxsurv",
+   "name": "OX 서바이버",
+   "tier": "p",
+   "cond": "🎖 수학 OX 우승 메달 3개"
+  },
+  {
+   "id": "steady",
+   "name": "꾸준한 용사",
+   "tier": "b",
+   "cond": "🔁 10차시 연속 참여"
+  },
+  {
+   "id": "quester",
+   "name": "출제자",
+   "tier": "p",
+   "cond": "✏ 출제 공방에서 만든 문제가 처음 출제됨"
+  },
+  {
+   "id": "writer",
+   "name": "서술의 현자",
+   "tier": "p",
+   "cond": "📸 서술형 사진 채점 통과 3번 (선생님 확인 인정 포함)"
+  },
+  {
+   "id": "hunter",
+   "name": "오답 사냥꾼",
+   "tier": "b",
+   "cond": "📕 오답노트 빨간 칸(틀림 · 안 풂)을 수업 밖에서 10개 해결"
+  },
+  {
+   "id": "wall",
+   "name": "성벽의 수호자",
+   "tier": "b",
+   "cond": "🏰 디펜스 한 판 처치 30"
+  },
+  {
+   "id": "awake",
+   "name": "각성한 자",
+   "tier": "o",
+   "cond": "🔨 강화 +10"
+  },
+  {
+   "id": "slash10k",
+   "name": "만 번째 베기",
+   "tier": "o",
+   "cond": "🏆 업적 3개"
+  },
+  {
+   "id": "lv1",
+   "name": "견습 용사",
+   "tier": "w",
+   "cond": "Lv.1"
+  },
+  {
+   "id": "lv2",
+   "name": "풋내기 용사",
+   "tier": "w",
+   "cond": "Lv.2"
+  },
+  {
+   "id": "lv3",
+   "name": "용사",
+   "tier": "w",
+   "cond": "Lv.3"
+  },
+  {
+   "id": "lv4",
+   "name": "숙련 용사",
+   "tier": "w",
+   "cond": "Lv.4"
+  },
+  {
+   "id": "lv5",
+   "name": "기사",
+   "tier": "w",
+   "cond": "Lv.5"
+  },
+  {
+   "id": "lv6",
+   "name": "정예 기사",
+   "tier": "w",
+   "cond": "Lv.6"
+  },
+  {
+   "id": "lv7",
+   "name": "기사단장",
+   "tier": "w",
+   "cond": "Lv.7"
+  },
+  {
+   "id": "lv8",
+   "name": "수호자",
+   "tier": "w",
+   "cond": "Lv.8"
+  },
+  {
+   "id": "lv9",
+   "name": "영웅",
+   "tier": "w",
+   "cond": "Lv.9"
+  },
+  {
+   "id": "lv10",
+   "name": "전설의 용사",
+   "tier": "w",
+   "cond": "Lv.10"
+  }
+ ],
+ "stats": [
+  {
+   "id": "str",
+   "ic": "⚔",
+   "name": "힘"
+  },
+  {
+   "id": "grit",
+   "ic": "🛡",
+   "name": "끈기"
+  },
+  {
+   "id": "focus",
+   "ic": "🎯",
+   "name": "집중"
+  },
+  {
+   "id": "brave",
+   "ic": "👑",
+   "name": "용기"
+  },
+  {
+   "id": "explore",
+   "ic": "🧭",
+   "name": "탐험"
+  },
+  {
+   "id": "craft",
+   "ic": "⚒",
+   "name": "연성"
+  }
+ ],
+ "portraits": {
+  "src": "hero-portraits-v2.webp",
+  "cols": 6,
+  "rows": 6,
+  "list": {
+   "0": [
+    0,
+    0
+   ],
+   "1": [
+    0,
+    2
+   ],
+   "2": [
+    0,
+    4
+   ],
+   "3": [
+    1,
+    4
+   ],
+   "4": [
+    1,
+    5
+   ],
+   "5": [
+    5,
+    0
+   ],
+   "6": [
+    5,
+    3
+   ],
+   "7": [
+    5,
+    1
+   ],
+   "8": [
+    4,
+    0
+   ],
+   "9": [
+    0,
+    5
+   ],
+   "10": [
+    4,
+    4
+   ],
+   "11": [
+    5,
+    4
+   ],
+   "12": [
+    1,
+    2
+   ],
+   "13": [
+    2,
+    3
+   ],
+   "14": [
+    3,
+    2
+   ],
+   "15": [
+    3,
+    4
+   ],
+   "16": [
+    1,
+    0
+   ],
+   "17": [
+    2,
+    1
+   ],
+   "18": [
+    0,
+    1
+   ],
+   "19": [
+    3,
+    1
+   ],
+   "20": [
+    4,
+    1
+   ],
+   "21": [
+    4,
+    2
+   ],
+   "22": [
+    5,
+    2
+   ],
+   "23": [
+    2,
+    0
+   ],
+   "24": [
+    3,
+    0
+   ],
+   "25": [
+    3,
+    5
+   ],
+   "26": [
+    2,
+    4
+   ],
+   "27": [
+    4,
+    3
+   ],
+   "28": [
+    0,
+    3
+   ],
+   "29": [
+    3,
+    3
+   ],
+   "30": [
+    1,
+    3
+   ],
+   "31": [
+    1,
+    1
+   ],
+   "32": [
+    2,
+    2
+   ],
+   "33": [
+    2,
+    5
+   ]
+  }
+ },
+ "sheet": {
+  "cols": 4,
+  "rows": 12,
+  "w": 80,
+  "h": 64
+ }
+}

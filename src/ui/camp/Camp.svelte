@@ -2,7 +2,10 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
-  import { AURA_NAMES, famOfHero, HERO_NAMES, level, rungs, TIER_NAMES } from '../../model/hero';
+  import { AURA_NAMES, famOfHero, HERO_NAMES, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
+  import { emptyPlan, equipOf, ownsSkill } from '../../model/draft';
+  import HeroSprite from './HeroSprite.svelte';
+  import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
   import { CAMP, HERO, heroUrl } from '../manifest';
   import { useMe } from '../../store/me.svelte';
@@ -15,7 +18,7 @@
   //   이름표 = 상황에 따라: 차시 던전 = 늘(열림 금빛 반짝 · 닫힘 흐림) · 새 소식 = 이름 + 빨간 숫자 · 모루 = ★n · 처음 = 흰 이름표 · 써 봤고 소식 없음 = 숨김 · 빈 땅 = 2초 모두
   const { S, L, code }: { S: Store; L: LessonPack; code: string } = $props();
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
-  const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0);
+  const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true);
   const me = M.me;
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
@@ -56,7 +59,8 @@
   // 정보판 (#111 ④)
   const fam = $derived(famOfHero(me.hero));
   const lv = $derived(level(me.xp));
-  const ladderRows = $derived(rungs(me.hero, me.owned, me.equip, me.wallet));
+  const ladderRows = $derived(rungs(me.hero, ladder(me.hero).filter((id) => ownsSkill(me.wallet, emptyPlan(), me.hero, id)), equipOf({ hero: me.hero, enh: me.enh, socket: me.socket, title: me.title }), me.wallet));
+  const ttl = $derived(me.title && me.title !== 'none' ? titleOf(me.title) : null);
   const hero = $derived(HERO_NAMES[me.hero] ?? { name: '용사', job: '' });
   const nextLine = $derived.by(() => {
     const b = ladderRows.find((r) => r.state === 'buy');
@@ -79,7 +83,7 @@
     <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
-    <i class="sp hero" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl()});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(8 / (HERO.rows - 1)) * 100}%"></i>
+    <i class="sp hero" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
     {#each ['castle', 'tent', 'gate'] as k (k)}
       {@const st = lab(k)}
@@ -104,9 +108,9 @@
 
   <section class="info">
     <button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
-      <span class="pic"><i class="hsp" style="width:{HERO.w * HS}px;height:{HERO.h * HS}px;background-image:url({heroUrl()});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:0 0"></i>{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
+      <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if me.title}<em class="tt">{me.title}</em>{/if}<b>{me.nick}</b></span>
+        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{me.nick}</b></span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>
@@ -135,6 +139,8 @@
     <div class="floor off"><span class="no">2</span><span><b>2층 · 명제 중단원</b><span>잠김 · 명제 차시 진도를 나가면 열려요</span></span></div>
     <div class="floor off"><span class="no">3</span><span><b>3층 · 대단원</b><span>잠김 · 2층을 다 깨면 열려요</span></span></div>
   </Sheet>
+{:else if sheet === 'hero'}
+  <MyHero {me} persist={M.save} onclose={() => (sheet = null)} />
 {:else if sheet}
   <Sheet onclose={() => (sheet = null)} mainText="닫기">
     {#snippet title()}{sheet === 'gate' ? '차시 던전' : NAME[sheet ?? '']}{/snippet}

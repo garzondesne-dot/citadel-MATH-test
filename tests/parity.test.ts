@@ -12,7 +12,7 @@ import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterH
 import { chainItems as packChainItems } from '../src/engine/lessons';
 import { chipToggle, runeNext } from '../src/engine/input';
 import { CONCEPTS, pick, ROWS } from '../src/engine/symtalk';
-import { AURA_NAMES, ENH, FAMS, ladder, level, SKILL_NAMES, SKILL_PRICE, SKILL_SCROLL, TIER_NAMES } from '../src/model/hero';
+import { AURA_NAMES, ENH, FAMS, HEROES, ladder, level, SKILL_NAMES, SKILL_PRICE, SKILL_SCROLL, TIER_NAMES } from '../src/model/hero';
 
 const L = pack as LessonPack;
 type AnyQ = Question & { options?: string[]; choices?: string[]; answer?: unknown; answerIndex?: number };
@@ -129,5 +129,12 @@ describe(`정식과 같음 (${fx.from})`, () => {
     expect(ENH).toEqual(h.enh);
     expect(AURA_NAMES).toEqual(h.aura);
     for (const l of h.levels) expect(level(l.total)).toEqual(l);
+  });
+
+  it('내 용사 값 (b7): 모든 용사 사다리 · 모든 스킬 이름 · 💎 · 📜 · 용사 💎', () => {
+    const h = fx.hero as unknown as { ladders: Record<string, string[]>; allFx: Record<string, [string, number | null, number]>; heroPrice: Record<string, number | null> };
+    for (const id of HEROES.map((x) => x.id)) expect(ladder(id), `용사 ${id}`).toEqual(h.ladders[id]);
+    for (const [k, [nm, g, s]] of Object.entries(h.allFx)) { expect(SKILL_NAMES[k], k).toBe(nm); expect(SKILL_PRICE[k] ?? null, k).toBe(g); expect(SKILL_SCROLL[k] ?? 0, k).toBe(s); }
+    for (const x of HEROES) expect(x.price, `용사 ${x.id} 💎`).toBe(h.heroPrice[x.id] ?? null);
   });
 });
