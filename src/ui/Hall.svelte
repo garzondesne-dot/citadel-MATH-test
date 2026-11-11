@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
   import type { DungeonProfile, LessonPack, Store } from '../model/types';
-  import { activeIds, atkClock, bossHp, isEnd, isLobby, monsterHp, record, solveLock, stepIdx, stepOf, mastery } from '../raid/raid';
-  import { appearNow, nextStep, openRoom, resetRoom } from '../raid/actions';
+  import { activeIds, atkClock, bossHp, chainDown, chainRecord, isChain, isEnd, isLobby, monsterHp, plainRecord, solveLock, stepIdx, stepOf, mastery } from '../raid/raid';
+  import { appearNow, chainRelease, nextStep, openRoom, resetRoom } from '../raid/actions';
   import { liveRoom } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Sprite from './Sprite.svelte';
+  import Demo from './Demo.svelte';
 
   // 🖥 종합실 (탭 A) — 단계 진행 「다음 ▶」 · 정답 글자는 띄우지 않음(수업 규칙)
   const { S, L, code, P }: { S: Store; L: LessonPack; code: string; P: DungeonProfile } = $props();
@@ -24,6 +25,9 @@
   const down = $derived(!!hp && hp.max > 0 && hp.left <= 0);
   const studentUrl = $derived(`?role=student&room=${encodeURIComponent(code)}`);
   const bar = (left: number, max: number) => (max ? (left / max) * 100 : 0);
+  const chain = $derived(!!R && step?.kind === 'monster' && isChain(L, R, step.id));
+  const downs = $derived(R && chain && step ? chainDown(L, R, step.id, now) : []);
+  let demo = $state(false);
 </script>
 
 <section class="hall">
@@ -31,7 +35,7 @@
   {#if R}
     <ol class="steps">
       {#each L.steps as s, i (s.id)}
-        <li class:now={stepIdx(R) === i} class:done={stepIdx(R) > i} class:later={s.later}>{s.title}{s.later ? ' · 다음 판에서' : ''}</li>
+        <li class:now={stepIdx(R) === i} class:done={stepIdx(R) > i} class:later={s.later}>{s.title}{s.later ? ' · 다음 판에서' : ''}{s.kind === 'monster' && L.monsters[s.id]?.chain ? ' ⚔' : ''}</li>
       {/each}
     </ol>
 
@@ -48,7 +52,8 @@
       <div class="stage" class:down><Sprite ref={L.monsters[step.id]?.sprite ?? ''} pose={down ? 'down' : 'idle'} size={180} /></div>
       {#if down}<p class="ko">💥 쓰러졌다!</p>{/if}
       <div class="bar" aria-label="공동 체력"><div class="fill" style:width="{bar(hp.left, hp.max)}%"></div><span>{hp.left} / {hp.max}</span></div>
-      <p class="formula">체력 = ⌊인원 {ids.length || 1} × 소문제 {hp.items} × {hp.pct}%⌋ = {hp.max} · 데미지 {hp.dmg}</p>
+      <p class="formula">체력 = ⌊인원 {ids.length || 1} × {chain ? '단계' : '소문제'} {hp.items} × {hp.pct}%⌋ = {hp.max} · 데미지 {hp.dmg}</p>
+      {#if chain}<p class="mins">⚔ 소레이드 · 졸개 {#each downs as d (d.k)}<span class:dn={d.down}>{d.down ? '💀' : ''}{'①②③④⑤'[d.k]} {d.past}/{d.need}</span>{/each} · 👑 대장 = 체력 0</p>{/if}
     {:else if step?.kind === 'boss' && bhp && L.boss}
       <h1>👑 {L.boss.title}</h1>
       <div class="stage" class:down={bhp.won}><Sprite ref={L.boss.sprite} pose={bhp.won ? 'down' : 'idle'} size={220} /></div>
@@ -68,17 +73,22 @@
         {#each ids as u (u)}
           <li>
             {R.players?.[u]?.nick} ·
-            {#if step.kind === 'boss'}도달 {mastery(L, R, u).filter(Boolean).length}/{L.boss?.items}{:else}{@const rec = record(L, R, step.id, u)}데미지 {rec.best}/{rec.total} {rec.perfect ? '⭐' : ''}{/if}
+            {#if step.kind === 'boss'}도달 {mastery(L, R, u).filter(Boolean).length}/{L.boss?.items}
+            {:else if chain}{@const cr = chainRecord(L, R, step.id, u)}{cr.done ? (cr.perfect ? '🌟 퍼펙트' : '👑 처치') : cr.fail ? '못 맞힘' : `단계 ${cr.stage}/${cr.n} · 기회 ${cr.left}`}
+              {#if cr.locked}<button class="rel" onclick={() => chainRelease(S, code, step.id, u)}>✔ 풀어주기</button>{/if}
+            {:else}{@const rec = plainRecord(L, R, step.id, u)}데미지 {rec.best}/{rec.total} {rec.perfect ? '⭐' : ''}{/if}
           </li>
         {/each}
       </ul>
     {/if}
 
     <p class="tools">
+      {#if step && (step.kind === 'monster' || step.kind === 'boss')}<button onclick={() => (demo = true)}>🎮 시연</button>{/if}
       {#if !isEnd(L, R)}<button class="next" onclick={() => nextStep(S, L, code)}>{isLobby(R) ? '▶ 시작' : '다음 ▶'}</button>{/if}
       <a href={studentUrl} target="_blank">➕ 학생 탭</a>
       <button onclick={() => resetRoom(S, L, code, P)}>↻ 처음부터</button>
     </p>
+    {#if demo && step}<Demo {L} {step} {code} onclose={() => (demo = false)} />{/if}
   {/if}
 </section>
 
@@ -103,5 +113,8 @@
   .scout { font-weight: 700; }
   .who { list-style: none; padding: 0; }
   .tools { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .mins { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 0.9rem; }
+  .mins .dn { opacity: 0.6; }
+  .rel { margin-left: 6px; padding: 2px 8px; border-color: var(--accent); }
   .next { font-size: 1.1rem; font-weight: 700; border-color: var(--accent); }
 </style>

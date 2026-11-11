@@ -7,23 +7,140 @@
   "theme": "01-burrow",
   "defaultPct": 90,
   "steps": [
-    { "kind": "concept", "id": "c1", "title": "개념 1 · 드모르간의 법칙", "say": "(먼저 말로: 급식에서 「둘 다 안 먹는」 친구 · 지난 시간 Aᶜ, A − B 복습) (A ∪ B)ᶜ = Aᶜ ∩ Bᶜ, (A ∩ B)ᶜ = Aᶜ ∪ Bᶜ · 괄호를 풀 때 ᶜ 이 각각 붙고 ∪ ↔ ∩ 가 바뀐다!" },
-    { "kind": "monster", "id": "m1", "title": "문제 1" },
-    { "kind": "concept", "id": "c2", "title": "개념 2 · 여집합 · 차집합의 원소의 개수", "say": "n(Aᶜ) = n(U) − n(A) · n(A − B) = n(A) − n(A ∩ B) = n(A ∪ B) − n(B)" },
-    { "kind": "monster", "id": "m2", "title": "문제 2" },
-    { "kind": "concept", "id": "c3", "title": "개념 3 · 생활 속 문제", "say": "벤 다이어그램 칸에 숫자를 직접 써 넣기 — 「둘 다」 칸부터!" },
-    { "kind": "monster", "id": "m3", "title": "문제 3" },
-    { "kind": "concept", "id": "c4", "title": "개념 4 · 집합 한 장 정리 (중단원 마무리)", "say": "포함: 원소 n 개 → 부분집합 2ⁿ 개 · 서로소 A ∩ B = ∅ · A ∩ B = B ⇔ B ⊂ A · A ∪ B = B ⇔ A ⊂ B · n(A ∪ B) = n(A) + n(B) − n(A ∩ B) · 드모르간 — 오늘 문제 4~7 은 교과서 78~79쪽 그대로!" },
-    { "kind": "monster", "id": "u4", "title": "문제 4 · 조건을 만족하는 X", "later": true },
-    { "kind": "monster", "id": "u5", "title": "문제 5 · 미지수 x", "later": true },
-    { "kind": "monster", "id": "u6", "title": "문제 6 · 겹침의 최대 · 최소", "later": true },
-    { "kind": "monster", "id": "u7", "title": "문제 7 · 「~이 아니거나」", "later": true },
-    { "kind": "boss", "id": "boss", "title": "형성평가 · 그림자 드래곤" }
+    {
+      "kind": "concept",
+      "id": "c1",
+      "title": "개념 1 · 드모르간의 법칙",
+      "say": "(먼저 말로: 급식에서 「둘 다 안 먹는」 친구 · 지난 시간 Aᶜ, A − B 복습) (A ∪ B)ᶜ = Aᶜ ∩ Bᶜ, (A ∩ B)ᶜ = Aᶜ ∪ Bᶜ · 괄호를 풀 때 ᶜ 이 각각 붙고 ∪ ↔ ∩ 가 바뀐다!"
+    },
+    {
+      "kind": "monster",
+      "id": "m1",
+      "title": "문제 1"
+    },
+    {
+      "kind": "concept",
+      "id": "c2",
+      "title": "개념 2 · 여집합 · 차집합의 원소의 개수",
+      "say": "n(Aᶜ) = n(U) − n(A) · n(A − B) = n(A) − n(A ∩ B) = n(A ∪ B) − n(B)"
+    },
+    {
+      "kind": "monster",
+      "id": "m2",
+      "title": "문제 2"
+    },
+    {
+      "kind": "concept",
+      "id": "c3",
+      "title": "개념 3 · 생활 속 문제",
+      "say": "벤 다이어그램 칸에 숫자를 직접 써 넣기 — 「둘 다」 칸부터!"
+    },
+    {
+      "kind": "monster",
+      "id": "m3",
+      "title": "문제 3"
+    },
+    {
+      "kind": "concept",
+      "id": "c4",
+      "title": "개념 4 · 집합 한 장 정리 (중단원 마무리)",
+      "say": "포함: 원소 n 개 → 부분집합 2ⁿ 개 · 서로소 A ∩ B = ∅ · A ∩ B = B ⇔ B ⊂ A · A ∪ B = B ⇔ A ⊂ B · n(A ∪ B) = n(A) + n(B) − n(A ∩ B) · 드모르간 — 오늘 문제 4~7 은 교과서 78~79쪽 그대로!"
+    },
+    {
+      "kind": "monster",
+      "id": "u4",
+      "title": "문제 4 · 조건을 만족하는 X"
+    },
+    {
+      "kind": "monster",
+      "id": "u5",
+      "title": "문제 5 · 미지수 x"
+    },
+    {
+      "kind": "monster",
+      "id": "u6",
+      "title": "문제 6 · 겹침의 최대 · 최소"
+    },
+    {
+      "kind": "monster",
+      "id": "u7",
+      "title": "문제 7 · 「~이 아니거나」"
+    },
+    {
+      "kind": "boss",
+      "id": "boss",
+      "title": "형성평가 · 그림자 드래곤"
+    }
   ],
   "monsters": {
-    "m1": { "title": "문제 1", "sprite": "mimic:0", "retry": { "gen": "set06.m1" } },
-    "m2": { "title": "문제 2", "sprite": "mimic:0@h120", "retry": { "gen": "set06.m2" } },
-    "m3": { "title": "문제 3", "sprite": "mimic:0@h200", "retry": { "gen": "set06.m3" } }
+    "m1": {
+      "title": "문제 1",
+      "sprite": "mimic:0",
+      "retry": {
+        "gen": "set06.m1"
+      }
+    },
+    "m2": {
+      "title": "문제 2",
+      "sprite": "mimic:0@h120",
+      "retry": {
+        "gen": "set06.m2"
+      }
+    },
+    "m3": {
+      "title": "문제 3",
+      "sprite": "mimic:0@h200",
+      "retry": {
+        "gen": "set06.m3"
+      }
+    },
+    "u4": {
+      "title": "문제 4 · 조건을 만족하는 X",
+      "sprite": "mimic:0@h60",
+      "retry": {
+        "gen": "set06.u4"
+      },
+      "chain": {
+        "gen": "set06.u4"
+      }
+    },
+    "u5": {
+      "title": "문제 5 · 미지수 x",
+      "sprite": "mimic:0@h160",
+      "noteText": "B 의 원소가 모두 A 에 있어야 해요 — x 가 A 의 어느 원소와 같을 수 있을까? (B 의 두 원소는 서로 달라야 해요)",
+      "retry": {
+        "gen": "set06.u5"
+      },
+      "chain": {
+        "gen": "set06.u5"
+      }
+    },
+    "u6": {
+      "title": "문제 6 · 겹침의 최대 · 최소",
+      "sprite": "mimic:0@h300",
+      "retry": {
+        "gen": "set06.u6"
+      },
+      "chain": {
+        "gen": "set06.u6"
+      }
+    },
+    "u7": {
+      "title": "문제 7 · 「~이 아니거나」",
+      "sprite": "mimic:0@h220",
+      "retry": {
+        "gen": "set06.u7"
+      },
+      "chain": {
+        "gen": "set06.u7"
+      }
+    }
   },
-  "boss": { "title": "6·7차시 형성평가 · 그림자 드래곤", "sprite": "mimic:0@h250", "items": 6, "hpItems": 6, "gen": "set06.boss" }
+  "boss": {
+    "title": "6·7차시 형성평가 · 그림자 드래곤",
+    "sprite": "mimic:0@h250",
+    "items": 6,
+    "hpItems": 6,
+    "gen": "set06.boss"
+  }
 }

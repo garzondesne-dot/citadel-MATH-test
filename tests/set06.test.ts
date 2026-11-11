@@ -134,7 +134,8 @@ describe('6차시 (드모르간 · 원소의 개수 · 생활 속 · 형성평�
   it('차시 팩이 올바름 · 단계 차례 = 정식 STEPS', () => {
     expect(validate(L)).toEqual([]);
     expect(L.steps.map((s) => s.id).join(' ')).toBe('c1 m1 c2 m2 c3 m3 c4 u4 u5 u6 u7 boss');
-    expect(L.steps.filter((s) => s.later).map((s) => s.id)).toEqual(['u4', 'u5', 'u6', 'u7']);
+    expect(L.steps.filter((s) => s.later)).toEqual([]); // b3: 문제 4~7 = ⚔ 소레이드로 채움
+    expect(['u4', 'u5', 'u6', 'u7'].every((id) => !!L.monsters[id]?.chain)).toBe(true);
   });
 
   it('첫 시도 = 학습지 ★ 칸 (정식 sheet 값)', () => {

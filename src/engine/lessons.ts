@@ -1,6 +1,6 @@
 import type { LessonPack, Question } from '../model/types';
 import { makeRng } from './rng';
-import { getBossGen, getGen } from '../gens/registry';
+import { getBossGen, getChainGen, getGen } from '../gens/registry';
 
 // 차시 팩 → 문항 만들기. 정식 차시 파일의 items(id, seed, attempt) 와 같은 시드 규칙:
 //   난수 = Rng(`${seed}|${몬스터}|${판}`) · seed = `${방코드}|${학생}` (raid.ts seedOf)
@@ -32,6 +32,13 @@ export function items(L: LessonPack, mid: string, seed: string, variant: number)
   });
 }
 
+/** ⚔ 소레이드 단계 문항 (판 pass · 정식 L.chainItems: 난수 = Rng(`${seed}|${mid}|chain|${pass}`)) */
+export function chainItems(L: LessonPack, mid: string, seed: string, pass: number): Question[] {
+  const c = L.monsters[mid]?.chain;
+  if (!c) return [];
+  return remember(`${L.id}|chain|${mid}|${seed}|${pass}`, () => getChainGen(c.gen)(pass, makeRng(`${seed}|${mid}|chain|${pass}`)));
+}
+
 /** 보스 문항 i 의 시도 a (시도 0 = 원문 · 모든 학생 같음) */
 export function bossItem(L: LessonPack, seed: string, i: number, a: number): Question | null {
   const b = L.boss;
@@ -51,6 +58,7 @@ export function validate(L: LessonPack): string[] {
   for (const [id] of Object.entries(L.monsters)) {
     try {
       if (!items(L, id, 'check', 0).length) err.push(`${id}: 문항 0개`);
+      if (L.monsters[id]?.chain && chainItems(L, id, 'check', 0).length < 2) err.push(`${id}: 소레이드 단계 2개 미만`);
     } catch (e) {
       err.push(`${id}: ${(e as Error).message}`);
     }

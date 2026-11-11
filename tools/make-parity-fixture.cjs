@@ -6,17 +6,17 @@ const fs = require('fs'), path = require('path');
 const root = process.argv[2];
 if (!root) { console.error('정식 저장소 경로를 주세요'); process.exit(1); }
 const load = require(path.join(path.resolve(root), 'tests/load.js'));
-const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'js/raid/model.js', 'js/raid/combo.js']);
+const DS = load(['assets/manifest.js', 'js/engine/ui.js', 'js/engine/setgen.js', 'js/engine/quiz.js', 'js/engine/lessons.js', 'lessons/set-06.js', 'lessons/set-03.js', 'js/raid/model.js', 'js/raid/combo.js']);
 const L = DS.Lessons.get('set-06'), RA = DS.Raid;
 const head = require('child_process').execSync('git rev-parse --short HEAD', { cwd: root }).toString().trim();
-const pickQ = (q) => ({ type: q.type, question: q.question, options: q.options, choices: q.choices, answer: q.answer, answerIndex: q.answerIndex, solution: q.solution });
-const MIDS = ['m1', 'm2', 'm3'];
+const pickQ = (q) => JSON.parse(JSON.stringify({ type: q.type, question: q.question, options: q.options, choices: q.choices, answer: q.answer, answerIndex: q.answerIndex, solution: q.solution, groups: q.groups, empty: q.empty, say: q.say, why: q.why, problem: q.problem }));
+const MIDS = ['m1', 'm2', 'm3'], UNITS = ['u4', 'u5', 'u6', 'u7'];
 
 // ① 난수
 const rng = ['ABCD|u1|m1|0', 's1', 'x'].map((seed) => { const r = DS.Rng(seed); return { seed, seq: [r(), r(), r(), r(), r()] }; });
 // ② 몬스터 문항: 몬스터 3 × 시드 30 × 판 0~3
 const itemsOut = [];
-for (const mid of MIDS) for (let s = 0; s < 30; s++) for (let v = 0; v <= 3; v++) {
+for (const mid of [...MIDS, ...UNITS]) for (let s = 0; s < 30; s++) for (let v = 0; v <= 3; v++) {
   const seed = `R${s}|u${s % 7}`;
   itemsOut.push({ mid, seed, v, items: L.items(mid, seed, v).map(pickQ) });
 }
@@ -36,7 +36,7 @@ for (let s = 0; s < 10; s++) {
   for (let i = 0; i < 6; i++) { const q = RA.bossItem(L, R, 'u1', i, 1); for (const given of tryAns(q)) gradeOut.push({ kind: 'boss', seed: `G${s}`, i, question: q.question, given, ok: DS.Quiz.grade(q, given) }); }
 }
 // ⑤ 기록(재도전 v3 · 💚 받은 힐): 시도 줄 → 기록 · 다음 문제 · 체력 (학생 u1 · u2 · 둘 다 접속)
-const meta = (code) => ({ code, lesson: 'set-06', version: 3, retries: 3, healMax: 2, bossTries: 4, solve: 60, profile: 'class' });
+const meta = (code) => ({ code, lesson: 'set-06', version: 3, retries: 3, healMax: 2, bossTries: 4, solve: 60, think: 5, profile: 'class' });
 const R0 = (mid, subs, heals) => ({ meta: meta('PAR'), state: { step: 1, stepAt: 0 }, players: { u1: { num: 1 }, u2: { num: 2 } }, active: { u1: true, u2: true }, subs: { [mid]: { u1: subs } }, ...(heals ? { heals: { [mid]: heals } } : {}) });
 const recOut = [];
 for (const mid of MIDS) {
@@ -87,8 +87,48 @@ for (const c of cases) {
   const sl = RA.solveLock(L, R, c.now), ac = RA.atkClock(L, R, c.now);
   clockOut.push({ ...c, solve: sl ? { id: sl.id, sec: sl.sec, end: sl.end, left: sl.left, on: sl.on } : null, atk: ac ? { kind: ac.kind, mid: ac.mid, per: ac.per, lock: ac.lock, phase: ac.phase, paused: ac.paused, t: ac.t, k: ac.k, p: ac.p } : null });
 }
-const out = { from: `Citadel-MATH ${head}`, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut };
+// ⑧ 소레이드 단계 문항: 문제 4~7 × 학생 시드 20 × 판 0~2 (정식 L.chainItems)
+const chainOut = [];
+for (const mid of UNITS) for (let s = 0; s < 20; s++) for (let p = 0; p <= 2; p++) { const seed = `C${s}|u${s % 5}`; chainOut.push({ mid, seed, p, items: L.chainItems(mid, seed, p).map(pickQ) }); }
+// ⑨ 소레이드 기록: 단계 답 줄 → chainRecord · 체력 · 졸개 쓰러짐 (학생 u1 · u2 · u3)
+const CR = (mid, chain, extra) => ({ meta: meta('CH'), state: { step: 7, stepAt: 0 }, players: { u1: { num: 1 }, u2: { num: 2 }, u3: { num: 3 }, ...(extra && extra.players) }, active: { u1: true, u2: true, u3: true }, chain: { [mid]: chain }, ...(extra && extra.chainOk ? { chainOk: { [mid]: extra.chainOk } } : {}), ...(extra && extra.heals ? { heals: { [mid]: extra.heals } } : {}) });
+const rightG = (q) => (q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.answer);
+const wrongG = (q) => (q.type === 'multi' ? [] : q.type === 'choice' ? (q.answerIndex + 1) % q.choices.length : q.answer + 1);
+const chainRecOut = [];
+for (const mid of UNITS) {
+  const its = (u, p) => RA.chainItems(L, { meta: meta('CH') }, mid, u, p);
+  const run = (u, plan) => { const out = {}; let k = 0; for (const [s, p, good, w] of plan) { const q = its(u, p)[s]; out[k++] = w ? { s, p, g: good ? q.why.answer : (q.why.answer + 1) % 3, w: 1 } : { s, p, g: good ? rightG(q) : wrongG(q) }; } return out; };
+  const n = its('u1', 0).length, all = (p) => Array.from({ length: n }, (_, s) => [s, p, true]);
+  const whyAt = (p) => its('u1', p).map((q, i) => (q.why ? i : -1)).filter((i) => i >= 0);
+  const pracPlan = (p, wrongWhy) => { const out = []; for (let s = 0; s < n; s++) { out.push([s, p, true]); if (whyAt(p).includes(s)) { if (wrongWhy) out.push([s, p, false, 1]); out.push([s, p, true, 1]); } } return out; };
+  const scen = {
+    '퍼펙트': [{ u1: run('u1', all(0)) }],
+    '졸개1 틀림 → 끝까지': [{ u1: run('u1', [[0, 0, false], ...all(0)]) }],
+    '대장 틀림 1번': [{ u1: run('u1', [...all(0).slice(0, n - 1), [n - 1, 0, false], [n - 1, 0, true]]) }],
+    '잠김(1칸 남음)': [{ u1: run('u1', [[0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false]]) }],
+    '잠김 → 풀어주기 → 끝까지': [{ u1: run('u1', [[0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], ...all(0)]) }, { chainOk: { u1: true } }],
+    '풀어주기 뒤 못 맞힘(fail)': [{ u1: run('u1', [...Array.from({ length: 6 }, () => [0, 0, false]), [0, 0, false], [0, 0, false]]) }, { chainOk: { u1: true } }],
+    '퍼펙트 → 한 판 더(근거 틀렸다 맞힘)': [{ u1: run('u1', [...all(0), ...pracPlan(1, true)]) }, { players: { u1: { num: 1, pr: { [mid]: 1 } } } }],
+    '한 판 더 기회 다 씀': [{ u1: run('u1', [...all(0), ...Array.from({ length: 8 }, () => [0, 1, false])]) }],
+    '셋 진행(졸개 쓰러짐)': [{ u1: run('u1', all(0)), u2: run('u2', all(0).slice(0, 2)), u3: run('u3', [[0, 0, false]]) }],
+    '받은 힐 1': [{ u1: run('u1', [[0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false], [0, 0, false]]) }, { heals: { u2: { 0: 'u1' } } }],
+  };
+  for (const [name, [chain, extra]] of Object.entries(scen)) {
+    const R = CR(mid, chain, extra), rec = RA.record(L, R, mid, 'u1');
+    const pick = (({ items, pItems, ...rest }) => rest)(rec);
+    chainRecOut.push({ mid, name, chain, extra: extra || null, rec: JSON.parse(JSON.stringify(pick)), hp: RA.monsterHp(L, R, mid), down: RA.chainDown(L, R, mid), pracUsed: RA.pracUsed(R, mid, 'u1', rec) });
+  }
+}
+// ⑩ 부분집합 모두 쓰기 (정식 3차시 형성평가 4번 · set-03) 채점
+const L3 = DS.Lessons.get('set-03'), sq = (L3.boss.sets[1] || []).find((q) => q.type === 'subsets');
+const subsOut = sq ? { q: pickQ(Object.assign({}, sq, { base: sq.base })), base: sq.base, tries: [[[], [5], [7], [5, 7]], [[5], [7], [5, 7]], [[], [5], [7], [5, 7], [5]], [[7, 5], [5], [], [7]], [[], [5], [7], [5, 7], [9]]].map((g) => ({ g, ok: DS.Quiz.grade(sq, g) })) } : null;
+// ⑪ 룬 키패드 계산 (정식 DS.UI.runeNext) · 원소 칩 ∅ 단추 (정식 DS.Quiz.chipToggle)
+const runeOut = [];
+for (const len of [2, 4]) for (const cur of [null, '', 0, 7, 42, 99, 1234, '-', -5, -12]) for (const key of ['0', '3', '9', 'x', 'm']) runeOut.push({ len, cur, key, v: DS.UI.runeNext(cur, key, { len }) });
+const cq = { type: 'multi', options: ['1', '2', '3', '∅ (공집합)', '4', '5', '∅'], answer: [], groups: [{ label: 'A', n: 4 }, { label: 'B', n: 3 }], empty: [3, 6] };
+const chipOut = []; for (const g of [[], [0], [0, 1], [3], [0, 3], [4, 6], [6], [0, 4]]) for (let n = 0; n < 7; n++) chipOut.push({ g, n, v: DS.Quiz.chipToggle(cq, g, n) });
+const out = { from: `Citadel-MATH ${head}`, rune: runeOut, chipQ: cq, chip: chipOut, rng, items: itemsOut, boss: bossOut, grade: gradeOut, record: recOut, bossRec, clock: clockOut, chain: chainOut, chainRec: chainRecOut, subsets: subsOut };
 const dest = path.join(__dirname, '..', 'tests', 'fixtures', 'parity-set06.json');
 fs.mkdirSync(path.dirname(dest), { recursive: true });
 fs.writeFileSync(dest, JSON.stringify(out));
-console.log('기준값', path.relative(process.cwd(), dest), '· 정식', head, '· 문항', itemsOut.length, '· 보스', bossOut.length, '· 채점', gradeOut.length, '· 기록', recOut.length, '· 보스 기록', bossRec.length, '· 시계', clockOut.length);
+console.log('기준값', path.relative(process.cwd(), dest), '· 정식', head, '· 문항', itemsOut.length, '· 보스', bossOut.length, '· 채점', gradeOut.length, '· 기록', recOut.length, '· 보스 기록', bossRec.length, '· 시계', clockOut.length, '· 소레이드 문항', chainOut.length, '· 소레이드 기록', chainRecOut.length, '· 부분집합', subsOut ? subsOut.tries.length : 0);

@@ -9,7 +9,10 @@ interface QBase {
   problem?: string;
   /** 독립 검산용 정보 (시험만 읽음 · 화면은 안 씀) */
   check?: Record<string, unknown>;
+  /** ⚔ 소레이드: 맞힌 뒤 「📜 나의 풀이」에 붙는 한 줄 */
   say?: string;
+  /** 💡 근거 줄 (그 단계를 맞힌 뒤 · 첫 판 = 완성 문장 · 한 판 더 = 빈칸 고르기) */
+  why?: { pre: string; post: string; choices: string[]; answer: number; text: string };
   tag?: string;
 }
 export type Question =
@@ -17,7 +20,7 @@ export type Question =
   | (QBase & { type: 'ox'; answer: boolean })
   | (QBase & { type: 'number'; answer: number })
   | (QBase & { type: 'text'; answers: string[] })
-  | (QBase & { type: 'multi'; options: string[]; answer: number[] })
+  | (QBase & { type: 'multi'; options: string[]; answer: number[]; /** 두 칸 고르기 (칸 제목 · 보기 수) */ groups?: { label: string; n: number }[]; /** ∅ 단추 자리 (P8) */ empty?: number[] })
   | (QBase & { type: 'blanks'; items: { left?: string; right?: string; answer: string }[]; options: string[] })
   | (QBase & { type: 'subsets'; base: number[] });
 
@@ -36,6 +39,10 @@ export interface MonsterPack {
   /** 판 0 = 학습지 원문 · 판 1~ = 숫자 바꾼 문제. gen 이면 판 0 도 생성기가 만든다(정식과 같은 값) */
   first?: Question[];
   retry: Retry;
+  /** ⚔ 소레이드 (졸개 → 대장 단계) — 방 version ≥ 3 이면 이 꼴로 진행 */
+  chain?: { gen: string };
+  /** 문제 화면 위 💡 한 줄 */
+  noteText?: string;
 }
 
 export interface Step {
@@ -44,7 +51,7 @@ export interface Step {
   title: string;
   say?: string;
   img?: string;
-  /** 다음 판에서 만들 자리 (b2: 소레이드 u4~u7) — 단계 목록에 보이고 진행은 건너뜀 */
+  /** 다음 판에서 만들 자리 — 단계 목록에 보이고 진행은 건너뜀 */
   later?: boolean;
 }
 
@@ -89,6 +96,8 @@ export interface DungeonProfile {
   pct: number | null;
   /** 정찰 초 */
   scoutSec: number;
+  /** 틀린 뒤 생각 시간 초 */
+  thinkSec: number;
   timeLimit: boolean;
   reward: { gem: number | 'earn'; scroll: number | 'earn' };
   storage: 'server' | 'device' | 'memory';
@@ -106,7 +115,9 @@ export interface Store {
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──
-export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean }
+export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean; /** 🔥 한 판 더 시작한 판 수 (소레이드) */ pr?: Record<string, number> }
+/** ⚔ 소레이드 답 한 줄: s = 단계 · p = 판(0 진짜 · 1~ 연습) · g = 답 · w = 근거 빈칸 · ph = 서술형 통과 */
+export interface ChainSub { s: number; p: number; g: Given | ''; w?: 1; ph?: 1 }
 /** 방을 만들 때 다른 점 표에서 옮겨 적는 값 — 엔진은 이 값만 읽는다 (모드 이름으로 가르지 않음) */
 export interface RoomRules {
   profile: DungeonProfile['key'];
@@ -115,6 +126,8 @@ export interface RoomRules {
   bossTries: number;
   /** 정찰 초 (모든 몬스터 · 보스 앞) */
   solve: number;
+  /** 틀린 뒤 생각 시간 초 (정식 meta.think 기본 5) */
+  think: number;
   pct?: number;
 }
 export interface Room {
@@ -128,4 +141,8 @@ export interface Room {
   heals?: Record<string, Record<string, Record<string, string>>>;
   /** bossTry[uid][문항][시도] = 답 */
   bossTry?: Record<string, Record<string, Record<string, Given>>>;
+  /** chain[mid][uid][k] = 소레이드 답 줄 */
+  chain?: Record<string, Record<string, Record<string, ChainSub>>>;
+  /** chainOk[mid][uid] = 선생님 「✔ 풀어주기」 */
+  chainOk?: Record<string, Record<string, boolean>>;
 }

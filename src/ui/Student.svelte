@@ -1,15 +1,17 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import type { Given, LessonPack, Question, Store } from '../model/types';
-  import { atkClock, atkTrack, bossHp, bossItem, bossState, isEnd, isLobby, itemsFor, monsterHp, record, resultOf, solveLock, stepOf } from '../raid/raid';
-  import { bossSubmit, heartbeat, leave, submit } from '../raid/actions';
+  import type { LessonPack, Store } from '../model/types';
+  import { atkClock, atkTrack, bossHp, isChain, isEnd, isLobby, monsterHp, resultOf, solveLock, stepOf } from '../raid/raid';
+  import { heartbeat, leave } from '../raid/actions';
   import { liveRoom } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Sprite from './Sprite.svelte';
-  import QuestionInput from './QuestionInput.svelte';
+  import MonsterForm from './q/MonsterForm.svelte';
+  import ChainView from './q/ChainView.svelte';
+  import BossCard from './q/BossCard.svelte';
 
-  // 📱 학생 폰 (탭 B) — 종합실이 정한 지금 단계를 따라감
-  //   몬스터: 문제 · 답 · 내기 · 재도전(정식 v3: 틀리면 같은 문제 · 다 맞히면 새 숫자) / 보스: 문항마다 기회 · 맞히면 도달 / 끝: 맞힌 수
+  // 📱 학생 폰 (탭 B) — 종합실이 정한 지금 단계를 따라감 · 문제 화면은 부품(q/)을 조합만
+  //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
   const { S, L, code, uid, num }: { S: Store; L: LessonPack; code: string; uid: string; num: number } = $props();
   const nick = untrack(() => `학생 ${String(num).padStart(2, '0')}`);
   const live = untrack(() => {
@@ -26,18 +28,12 @@
   const R = $derived(live.v.room);
   const now = $derived(clock.now);
   const step = $derived(R ? stepOf(L, R) : null);
-  const mid = $derived(step?.kind === 'monster' && !step.later && L.monsters[step.id] ? step.id : null);
-  const rec = $derived(R && mid ? record(L, R, mid, uid) : null);
+  const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
+  const chain = $derived(!!R && !!mid && isChain(L, R, mid));
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : null);
+  const bhp = $derived(R && L.boss ? bossHp(L, R, now) : null);
   const down = $derived(!!hp && hp.max > 0 && hp.left <= 0);
   const scout = $derived(R ? solveLock(L, R, now) : null);
-  /** 지금 풀 문제 = 다음 시도의 문항 */
-  const qs = $derived(R && rec && mid ? itemsFor(L, R, mid, uid, rec.nextAttempt) : []);
-  const last = $derived(rec?.tries[rec.tries.length - 1] ?? null);
-  const lastQs = $derived(R && last && mid ? itemsFor(L, R, mid, uid, last.attempt) : []);
-  const canAnswer = $derived(!!rec && (!rec.submitted || rec.canRetry));
-  const bst = $derived(R && step?.kind === 'boss' ? bossState(L, R, uid) : []);
-  const bhp = $derived(R && L.boss ? bossHp(L, R, now) : null);
 
   // 👾 몬스터 공격: 모든 기기가 같은 시계로 같은 순간에 맞음 → 문제 화면이면 lock 초 멈춤 (정식 monsterStrike)
   let stunUntil = $state(0);
@@ -46,29 +42,10 @@
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    const tr = atkTrack(memo, c, `${c.kind}|${c.mid}`);
-    if (tr.strike) stunUntil = now + c.lock * 1000;
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike) stunUntil = now + c.lock * 1000;
   });
   const stunned = $derived(stunUntil > now);
   const locked = $derived(!!scout?.on || stunned);
-
-  // 몬스터 답 (문항마다) — 문제가 바뀌면 비움
-  let given = $state<Given[]>([]);
-  let qKey = '';
-  $effect(() => {
-    const k = qs.map((q) => q.question).join('|');
-    if (k !== qKey) { qKey = k; given = qs.map(() => null); }
-  });
-  let showLast = $state(false);
-  function send() {
-    if (mid && submit(S, L, code, mid, uid, given.map((g) => (Array.isArray(g) ? g.slice() : g)) as Given[])) showLast = true;
-  }
-  // 보스 답 (문항마다)
-  let bossGiven = $state<Record<number, Given>>({});
-  const bossQ = (i: number): Question | null => (R ? bossItem(L, R, uid, i, bst[i]?.next ?? 0) : null);
-  function bossSend(i: number) {
-    if (bossSubmit(S, L, code, uid, i, bossGiven[i] ?? null)) bossGiven[i] = null;
-  }
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
 </script>
 
@@ -76,7 +53,6 @@
   <header>
     <b>{nick}</b>
     {#if hp}<span>👾 {hp.left}/{hp.max}</span>{:else if step?.kind === 'boss' && bhp}<span>👑 {bhp.left}/{bhp.max}</span>{/if}
-    {#if rec}<span>기회 {rec.submitted ? rec.left : rec.slots}/{rec.slots}</span>{/if}
   </header>
 
   {#if !R}
@@ -95,67 +71,35 @@
     <h2>{step.title}</h2>
     <p class="say">{step.say}</p>
     <p class="sub">선생님 설명을 들어요.</p>
-  {:else if mid && rec}
-    {@const mon = L.monsters[mid]}
-    <div class="mon"><Sprite ref={mon?.sprite ?? ''} pose={down ? 'down' : 'idle'} size={96} /> <b>{step?.title}</b></div>
+  {:else if (mid || step?.kind === 'boss') && step}
+    {@const sprite = step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
+    <div class="scene">
+      <Sprite ref={sprite} pose={(step.kind === 'boss' ? bhp?.won : down) ? 'down' : 'idle'} size={64} />
+      <b>{step.kind === 'boss' ? `👑 ${L.boss?.title}` : step.title}</b>
+    </div>
     {#if scout?.on}<p class="banner">🌫 정찰 {Math.ceil(scout.left / 1000)}초 — 학습지에 먼저 풀어요</p>{/if}
-    {#if stunned}<p class="banner hit">💥 몬스터의 공격! {Math.ceil((stunUntil - now) / 1000)}초 멈춤</p>{/if}
-    {#if down}<p class="ko">💥 몬스터가 쓰러졌어요! (데미지 {rec.best})</p>{/if}
-
-    {#if showLast && last}
-      <div class="result">
-        <p><b>{last.correct} / {last.total}</b> 맞힘 · 데미지(가장 많이 맞힌 수) {rec.best}</p>
-        <ol>
-          {#each lastQs as q, i (i)}<li>{last.marks[i] ? '⭕' : '❌'} <small>{q.question.replace(/^.* 일 때 |^.*이다\. /, '')}</small></li>{/each}
-        </ol>
-        {#if rec.perfect && !rec.practice}<p>⭐ 다 맞혔어요! 남은 기회로 숫자 바뀐 문제를 연습할 수 있어요(데미지는 그대로).</p>{/if}
-        {#if !rec.perfect && rec.left > 0}<p>같은 문제를 다시 풀어요 (남은 기회 {rec.left}).</p>{/if}
-        {#if rec.left <= 0}<p>기회를 다 썼어요. 벌은 없어요.</p>{/if}
-        {#if canAnswer}<button onclick={() => (showLast = false)}>🔁 다시 풀기</button>{/if}
-      </div>
-    {:else if canAnswer}
-      {#each qs as q, i (i)}
-        <QuestionInput {q} value={given[i] ?? null} disabled={locked} onchange={(v) => (given[i] = v)} />
-      {/each}
-      <button class="go" disabled={locked} onclick={send}>⚔ 공격 (답 내기)</button>
-    {:else}
-      <p>이 몬스터는 끝! 데미지 {rec.best}.</p>
-    {/if}
-  {:else if step?.kind === 'boss' && L.boss}
-    <div class="mon"><Sprite ref={L.boss.sprite} pose={bhp?.won ? 'down' : 'idle'} size={96} /> <b>👑 {L.boss.title}</b></div>
-    {#if scout?.on}<p class="banner">🌫 정찰 {Math.ceil(scout.left / 1000)}초 — 학습지에 먼저 풀어요</p>{/if}
-    {#if stunned}<p class="banner hit">💥 보스의 공격! {Math.ceil((stunUntil - now) / 1000)}초 멈춤</p>{/if}
-    {#if bhp?.won}<p class="ko">🏆 승리! 보스를 쓰러뜨렸어요.</p>{/if}
-    {#each bst as s, i (i)}
-      {@const q = bossQ(i)}
-      <div class="bq" class:ok={s.ok}>
-        {#if s.ok}
-          <p>✅ {i + 1}번 도달 {s.first ? '(첫 시도)' : ''}</p>
-        {:else if s.left <= 0}
-          <p>{i + 1}번: 기회를 다 썼어요. 벌은 없어요.</p>
-        {:else if q}
-          {#if s.n > 0}<p class="sub">❌ 아직 · 숫자 바뀐 문제로 다시 (남은 기회 {s.left})</p>{/if}
-          <QuestionInput {q} value={bossGiven[i] ?? null} disabled={locked} onchange={(v) => (bossGiven[i] = v)} />
-          <button class="send" disabled={locked} onclick={() => bossSend(i)}>⚔ {i + 1}번 내기</button>
-        {/if}
-      </div>
-    {/each}
+    {#if stunned}<p class="banner hit">💥 {step.kind === 'boss' ? '보스' : '몬스터'}의 공격! {Math.ceil((stunUntil - now) / 1000)}초 멈춤</p>{/if}
+    {#if step.kind === 'boss' && bhp?.won}<p class="ko">🏆 승리! 남은 문항도 풀어 볼 수 있어요.</p>{:else if down}<p class="ko">💥 몬스터는 쓰러졌어요! 그래도 풀어서 공격할 수 있어요.</p>{/if}
+    {#key `${step.id}`}
+      {#if step.kind === 'boss'}
+        <BossCard {S} {L} {R} {code} {uid} {now} {locked} />
+      {:else if mid && chain}
+        <ChainView {S} {L} {R} {code} {mid} {uid} {now} {locked} title={step.title} />
+      {:else if mid}
+        <MonsterForm {S} {L} {R} {code} {mid} {uid} {now} {locked} title={step.title} />
+      {/if}
+    {/key}
   {/if}
 </section>
 
 <style>
-  .phone { max-width: 440px; margin: 0 auto; }
+  .phone { max-width: 440px; margin: 0 auto; min-width: 0; }
   header { display: flex; gap: 12px; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--muted); }
-  .mon { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .scene { display: flex; align-items: center; gap: 8px; margin: 6px 0; min-width: 0; overflow-wrap: anywhere; }
   .ko { color: var(--accent); font-weight: 700; }
   .banner { font-weight: 700; padding: 6px 10px; border-radius: 10px; background: var(--muted); }
   .banner.hit { background: var(--hp); color: var(--card); }
-  .say { line-height: 1.6; }
+  .say { line-height: 1.6; overflow-wrap: anywhere; }
   .sub { color: var(--sub); }
   .big { font-size: 1.3rem; }
-  .go { width: 100%; min-height: 48px; margin-top: 12px; font-size: 1.1rem; }
-  .result ol { padding-left: 1.2rem; }
-  .result li small { color: var(--sub); display: block; }
-  .bq { border-top: 1px solid var(--muted); padding: 8px 0; }
-  .bq.ok { color: var(--sub); }
 </style>
