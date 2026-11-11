@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "id": "set-06",
+  "no": 6,
+  "title": "드모르간의 법칙 · 집합 중단원 마무리 (첫 한 바퀴: 문제 1만)",
+  "unit": "집합",
+  "theme": "01-burrow",
+  "defaultPct": 90,
+  "steps": [
+    { "kind": "monster", "id": "m1", "title": "문제 1" }
+  ],
+  "monsters": {
+    "m1": { "title": "문제 1", "sprite": "mimic:0", "retry": { "gen": "set06.m1" } }
+  }
+}
