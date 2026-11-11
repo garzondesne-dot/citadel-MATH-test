@@ -114,6 +114,8 @@ describe(`정식과 같음 (${fx.from})`, () => {
   it(`기호 톡: 문구 ${fx.sym.rows.length}줄 · 6차시 문제 글 ${fx.sym.picks.length}개에서 기호 고르기`, () => {
     expect(ROWS).toEqual(fx.sym.rows);
     expect(CONCEPTS.map(({ id, sym, easy, def, memo }) => ({ id, sym, easy, def, memo }))).toEqual(fx.sym.concepts);
-    for (const c of fx.sym.picks) expect([...c.t].map((_, i) => i).map((i) => [i, pick(c.t, i)]).filter(([, id]) => id), c.t).toEqual(c.hits);
+    // #108 ④ (정식 #109 가 오기 전): 정식 기준값에서 「연산 기호만」 규칙으로 뺀 것 = { } · | (list · build) · U · 오른쪽이 { 인 = (U = {…})
+    const v2 = (t: string, hits: [number, string][]) => hits.filter(([i, id]) => !['list', 'build', 'U'].includes(id) && !(id === 'eq' && /^\s*\{/.test(t.slice(i + 1))));
+    for (const c of fx.sym.picks) expect([...c.t].map((_, i) => i).map((i) => [i, pick(c.t, i)]).filter(([, id]) => id), c.t).toEqual(v2(c.t, c.hits as [number, string][]));
   });
 });

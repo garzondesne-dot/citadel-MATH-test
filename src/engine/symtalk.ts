@@ -30,7 +30,8 @@ const inNum = (t: string, i: number) => /n\(\s*[^()]*$/.test(t.slice(0, i));
 const isDisj = (t: string, i: number) => { const m = /[A-Z](?:ᶜ)?\s*∩\s*[A-Z](?:ᶜ)?\s*=\s*∅/g; let x; while ((x = m.exec(t))) { if (i >= x.index && i < x.index + x[0].length) return true; } return false; };
 const setLeft = (t: string, i: number) => { const b = before(t, i); if (!SETR.test(b)) return false; if (/\)$/.test(b)) { const k = b.lastIndexOf('('); if (k > 0 && /n$/.test(b.slice(0, k).replace(/\s+$/, ''))) return false; } return true; };
 const setRight = (t: string, i: number, n = 1) => /^[A-Z(∅{]/.test(after(t, i, n)) && !/^n\(/.test(after(t, i, n));
-/** 정식 pick: 줄 t 의 i 번째 글자가 어떤 기호인지 (null = 누를 수 없음) */
+/** 기호 고르기 (정식 pick → #108 ④ / 정식 #109 「형광펜 = 연산 기호만」): 줄 t 의 i 번째 글자가 어떤 기호인지 (null = 칠하지 않음 · 누를 수 없음)
+ *  바뀐 점: 집합을 정의하는 { } · | · 「U = {…}」 의 = 와 U 는 칠하지 않음 · 집합끼리의 = (A = B · A ∩ B = ∅)만 칠함 */
 export function pick(t: string, i: number): string | null {
   const c = t[i];
   if (c === '∈') return 'in';
@@ -41,15 +42,14 @@ export function pick(t: string, i: number): string | null {
   if (c === '∩') return isDisj(t, i) ? 'disj' : 'cap';
   if (c === '∪') return inNum(t, i) ? 'ncup' : 'cup';
   if (c === 'ᶜ') return 'compl';
-  if (c === '=') { if (isDisj(t, i)) return 'disj'; return setLeft(t, i) && !inNum(t, i) && setRight(t, i) && !/^\{[^}]*\|/.test(after(t, i)) ? 'eq' : null; }
+  if (c === '=') { if (isDisj(t, i)) return 'disj'; return setLeft(t, i) && !inNum(t, i) && /^[A-Z(∅]/.test(after(t, i)) && !/^n\(/.test(after(t, i)) ? 'eq' : null; }
   if (c === '−') return setLeft(t, i) && setRight(t, i) && !inNum(t, i) ? 'diff' : null;
-  if (c === 'U') return /[A-Za-z가-힣]/.test(t[i - 1] || '') || /[A-Za-z]/.test(t[i + 1] || '') ? null : 'U';
+  if (c === 'U') return null; // 전체집합 이름 = 연산 기호 아님 (#108 ④)
   if (c === 'n' && t[i + 1] === '(' && !/[A-Za-z]/.test(t[i - 1] || '')) { const close = t.indexOf(')', i); return /∪/.test(t.slice(i, close < 0 ? undefined : close)) ? 'ncup' : 'n'; }
-  if (c === '{') { const close = t.indexOf('}', i), inner = t.slice(i + 1, close < 0 ? undefined : close); if (/\|/.test(inner)) return 'build'; return /,/.test(inner) || /^\s*[0-9a-z]/.test(inner) ? 'list' : null; }
-  if (c === '|') { const o = t.lastIndexOf('{', i), cl = t.lastIndexOf('}', i); return o > cl ? 'build' : null; }
+  if (c === '{' || c === '|') return null; // 집합을 정의하는 { } · | 는 칠하지 않음 (#108 ④)
   return null;
 }
-const CH = /[∈∉⊂⊄∅∩∪=−U{|ᶜ]|n(?=\()/g;
+const CH = /[∈∉⊂⊄∅∩∪=−ᶜ]|n(?=\()/g;
 export type Seg = { text: string; id?: string };
 /** 문제 글 → 글 조각 · 기호 조각 (기호 = 한 글자 · ᶜ 는 앞 글자와 함께 「Aᶜ」 로 묶어 누르는 칸을 넓힘) · 끝에 개념 톡 칩 */
 export function segments(t: string): Seg[] {

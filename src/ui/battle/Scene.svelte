@@ -5,9 +5,10 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?' }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle' }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' } = $props();
+  const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
   const sp = $derived(spriteOf(sprite));
   const hpLabel = $derived(hpL || sp.sheet.names[sp.row] || '몬스터');
   const MON = 128; // 몬스터 칸 256 → 정확히 ½
@@ -35,8 +36,9 @@
     </div>
   {/if}
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
-  <i class="hero" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
-    style:background-position="0 -{HERO.idleRow * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {HERO.name}"></i>
+  {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
+  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
+    style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {HERO.name}"></i>
 </div>
 
 <style>
@@ -59,5 +61,8 @@
   .mini { display: block; image-rendering: pixelated; background-repeat: no-repeat; border-radius: var(--r-sm); }
   .mini.dead { opacity: 0.3; }
   .mini.now { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .hero { position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
+  .hero.lunge { transform: translateX(28px); }
+  .hero.whiff { transform: translateX(14px); opacity: 0.75; }
+  .miss { position: absolute; z-index: 2; left: 150px; top: 150px; color: #fff; font-weight: 700; font-size: var(--fs-small); text-shadow: 0 1px 2px #000; }
+  .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
 </style>

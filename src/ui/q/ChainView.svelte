@@ -6,6 +6,7 @@
   import ChainStage from './ChainStage.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Hearts from '../battle/Hearts.svelte';
+  import { swing } from '../battle/fx.svelte';
 
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
@@ -42,6 +43,7 @@
     if (err) { toast = err; return; }
     const r2 = chainRecord(L, S.get<Room>(`rooms/${code}`) as Room, mid, uid);
     const okNow = prac ? r2.pass === pass && r2.pStage > before : r2.stage > before;
+    swing(okNow);
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
       : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 하트 −${before === pItems.length - 1 ? 1 : 0.5}`)
       : r2.locked ? '🙋 하트 1칸 — 선생님 확인을 기다려요' : r2.fail ? '기회를 다 썼어요' : `✘ 틀렸어요 · 하트 −${before === rec.n - 1 ? 1 : 0.5}`;

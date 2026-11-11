@@ -1,4 +1,4 @@
-// b4 한 판: 🧪 테스트 모드 · 종합실 1 + 학생 2 (360px) · 6차시 처음부터 형성평가까지 · 캡처 4장(문제 · 정찰 · 소레이드 · 틀렸을 때)
+// b5 한 판 (b4 + 답안 줄 · 채점 연출): 🧪 테스트 모드 · 종합실 1 + 학생 2 (360px) · 6차시 처음부터 형성평가까지 · 캡처 4장(문제 · 정찰 · 소레이드 · 틀렸을 때)
 // 사용: npm run build → npx vite preview --port 4173 → node tools/e2e/round6.cjs <그림 저장 폴더> (playwright 필요)
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.';
@@ -26,8 +26,8 @@ const log = (...a) => console.log(...a);
   await hall.waitForTimeout(1200);
   const shot = async (p, name) => { await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(150); await p.screenshot({ path: `${SHOTS}/${name}` }); };
   const overflow = async (p, where) => { const o = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); if (o > 0) errs.push(`가로 넘침 ${o}px · ${where}`); };
-  // 누르는 칸 48px (스킬 5절 3): 보이는 단추 · 칩 높이 · 단계 점(.dots)은 보이는 28 + 투명 여백(::before)으로 48 — 1-1절 히트박스
-  const taps = async (p, where) => { const small = await p.$$eval('.bcard button, .act .btn, .chip, .rune, .opt', (bs) => bs.filter((x) => x.offsetParent && !x.closest('.dots') && x.getBoundingClientRect().height < 44).map((x) => `${x.className}:${Math.round(x.getBoundingClientRect().height)}`)); if (small.length) errs.push(`누름 칸 작음 ${where}: ${small.slice(0, 3).join(' ')}`); };
+  // 누르는 칸 48px (스킬 5절 3): 보이는 단추 · 칩 · 답안 줄 칸 높이
+  const taps = async (p, where) => { const small = await p.$$eval('.bcard button, .act .btn, .chip, .rune, .opt, .row .cell', (bs) => bs.filter((x) => x.offsetParent && x.getBoundingClientRect().height < 44).map((x) => `${x.className}:${Math.round(x.getBoundingClientRect().height)}`)); if (small.length) errs.push(`누름 칸 작음 ${where}: ${small.slice(0, 3).join(' ')}`); };
   const next = async () => { await hall.click('.next'); await hall.waitForTimeout(250); };
   const appear = async () => { const b2 = await hall.$('.scout button'); if (b2) await b2.click(); await hall.waitForTimeout(250); };
   const mainBtn = (p) => p.$('.act .btn');
@@ -41,7 +41,7 @@ const log = (...a) => console.log(...a);
   // 일반 몬스터: 소문제 하나씩 (다음 소문제 ▶ → 마지막에 공격)
   async function solveMonster(p, ans, wrongAt = -1) {
     for (let i = 0; i < ans.length; i++) {
-      await p.click(`.dots button:nth-child(${i + 1})`).catch(() => {});
+      await p.click(`.row .cell:nth-child(${i + 1})`).catch(() => {});
       const item = await p.$('.bcard .item');
       if (i === wrongAt) { const c = await item.$('.chip'); await c.click(); } else await answer(item, ans[i]);
     }
@@ -65,7 +65,7 @@ const log = (...a) => console.log(...a);
       for (const [k, p] of st.entries()) {
         for (let i = 0; i < 6; i++) {
           if (await hall.$('.ko')) break;
-          await p.click(`.dots button:nth-child(${i + 1})`); await p.waitForTimeout(100);
+          await p.click(`.row .cell:nth-child(${i + 1})`); await p.waitForTimeout(100);
           const item = await p.$('.bcard .item'); if (!item) continue;
           if (k === 0 && i === 1) {
             for (const d of '99') await (await item.$(`.rune[aria-label="룬 ${d}"]`)).click();
@@ -77,7 +77,7 @@ const log = (...a) => console.log(...a);
           } else await answer(item, A.boss[i]);
           await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(150);
         }
-        log(`  학생${k + 1} 도달:`, (await p.$$eval('.dots button', (bs) => bs.filter((x) => x.textContent.trim() === '✓').length)), '/ 6 · 종합실', (await hall.textContent('.bar span')).trim());
+        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.ok', (bs) => bs.length)), '/ 6 · 종합실', (await hall.textContent('.bar span')).trim());
       }
       await overflow(st[0], '형성평가'); await taps(st[0], '형성평가');
       log('  보스:', (await hall.$('.ko')) ? (await hall.textContent('.ko')).trim() : '아직');
@@ -85,7 +85,7 @@ const log = (...a) => console.log(...a);
     }
     if (id.startsWith('u')) {
       for (const [k, p] of st.entries()) {
-        await p.waitForSelector('.steps');
+        await p.waitForSelector('.row .cell');
         for (let s = 0; s < A[id].length; s++) {
           if (k === 0 && s === 0 && id === 'u4') {
             await answer(await p.$('.bcard .item'), { groups: [['1', '2', '4'], []] }); await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(250);
@@ -98,7 +98,7 @@ const log = (...a) => console.log(...a);
         log(`  학생${k + 1}:`, (await p.textContent('.okline b')).trim(), '| 나의 풀이 줄', (await p.$$('.story li')).length);
         await overflow(p, `${id} 끝`);
       }
-      if (id === 'u4') { const p = st[1]; await p.waitForTimeout(1600); await (await mainBtn(p)).click(); await p.waitForSelector('.steps'); log('  한 판 더: 📜 원문', !!(await p.$('details.story')), '|', (await p.textContent('.bcard .lab.acc')).trim()); }
+      if (id === 'u4') { const p = st[1]; await p.waitForTimeout(1600); await (await mainBtn(p)).click(); await p.waitForSelector('.row .cell'); log('  한 판 더: 📜 원문', !!(await p.$('details.story')), '|', (await p.textContent('.bcard .lab.acc')).trim()); }
       log('  쓰러짐:', !!(await hall.$('.ko')));
       await next(); continue;
     }
@@ -106,11 +106,18 @@ const log = (...a) => console.log(...a);
     if (id === 'm1') {
       const p = st[0]; await p.waitForSelector('.bcard .item');
       await answer(await p.$('.bcard .item'), A.m1[0]); await shot(p, 'b4-problem-360.png'); await overflow(p, '문제'); await taps(p, '문제');
-      await solveMonster(p, [{}, ...A.m1.slice(1)], 2); // 소문제 1 은 위에서 · 소문제 3 틀림
+      // 답안 줄 채우는 중 (소문제 1 · 2 채움)
+      await p.click('.row .cell:nth-child(2)'); await answer(await p.$('.bcard .item'), A.m1[1]); await shot(p, 'b5-answer-row-360.png');
+      log('  답안 줄:', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.textContent.trim()).join(' | '))));
+      for (let i = 2; i < 4; i++) { await p.click(`.row .cell:nth-child(${i + 1})`); const it = await p.$('.bcard .item'); if (i === 2) await (await it.$('.chip')).click(); else await answer(it, A.m1[i]); }
+      await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(380);
+      await p.screenshot({ path: `${SHOTS}/b5-grading-360.png` });
+      log('  채점 중:', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.className.replace(/svelte-\S+/g, '').trim()).join(' | '))), '| 단추', (await p.textContent('.act .why')).trim());
+      await p.waitForTimeout(900);
       await shot(p, 'b4-wrong-360.png'); await overflow(p, '틀렸을 때');
-      log('  학생1 틀림:', (await p.textContent('.bad b')).trim(), '| 지난 답 칸', (await p.textContent('.ans small')).trim(), '| 단추', (await p.textContent('.act .btn')).trim());
+      log('  학생1 틀림:', (await p.textContent('.bad b')).trim(), '| 답안 줄', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.className.replace(/svelte-\S+/g, '').replace('cell', '').trim()).join(' | '))), '| 지난 답 칸', (await p.textContent('.ans small')).trim(), '| 단추', (await p.textContent('.act .btn')).trim());
       await waitMain(p); // 생각 시간 뒤
-      await p.click('.dots button:nth-child(3)'); const it = await p.$('.bcard .item'); for (const c of await it.$$('.chip.on')) await c.click(); await answer(it, A.m1[2]);
+      const it = await p.$('.bcard .item'); for (const c of await it.$$('.chip.on')) await c.click(); await answer(it, A.m1[2]);
       await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(250);
       log('  학생1 다시:', (await p.textContent('.okline b')).trim());
       await solveMonster(st[1], A.m1);
