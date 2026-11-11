@@ -39,7 +39,7 @@
   function cGo() {
     const q = cItems[cStage]; if (!q) return;
     if (grade(q, finalOf(q, cGiven))) { cSays = [...cSays, q.say || '', ...(q.why ? [q.why.text] : [])]; cStage += 1; cWrong = false; cGiven = cItems[cStage] ? emptyOf(cItems[cStage] as Question) : null; msg = cStage >= cItems.length ? '👑 대장 처치! (시연)' : '✔ 졸개 처치!'; }
-    else { cWrong = true; msg = '✘ 다시 — 같은 문제예요 (시연은 기회를 세지 않음)'; }
+    else { cWrong = true; cGiven = emptyOf(q); msg = '✘ 다시 — 같은 문제 · 빈칸으로 (시연은 기회를 세지 않음)'; }
   }
   function bGo() { if (!bQ) return; msg = grade(bQ, finalOf(bQ, bGiven)) ? `✔ ${bi + 1}번 정답 (시연)` : `✘ ${bi + 1}번 아직 (시연)`; }
 </script>

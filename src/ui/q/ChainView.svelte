@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Given, LessonPack, Room, Store } from '../../model/types';
-  import { emptyOf, filled, finalOf } from '../../engine/input';
+  import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed } from '../../raid/raid';
   import { chainSubmit, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
@@ -37,13 +37,16 @@
   $effect(() => { const k = `${pass}|${pracShown}`; if (pracShown && k !== armKey) { armKey = k; armAt = Date.now() + 1500; } });
   let toast = $state('');
   const stName = (i: number, n: number) => (i === n - 1 ? '대장' : `졸개 ${'①②③④⑤⑥'[i]}`);
+  let flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | null = null;
   function go() {
-    if (!q || !ready || locked) return;
+    if (!q || !ready || locked || flip) return;
+    const l0 = penLine(q, given, 0), sent = l0 ? stripNo(l0) : null;
     const before = stage, err = chainSubmit(S, L, code, mid, uid, stage, pass, finalOf(q, given));
     if (err) { toast = err; return; }
     const r2 = chainRecord(L, S.get<Room>(`rooms/${code}`) as Room, mid, uid);
     const okNow = prac ? r2.pass === pass && r2.pStage > before : r2.stage > before;
     swing(okNow);
+    flip = { i: before, ok: okNow, text: sent }; if (flipT) clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); // #116 그 칸만 뒤집힘
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
       : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 하트 −${before === pItems.length - 1 ? 1 : 0.5}`)
       : r2.locked ? '🙋 하트 1칸 — 선생님 확인을 기다려요' : r2.fail ? '기회를 다 썼어요' : `✘ 틀렸어요 · 하트 −${before === rec.n - 1 ? 1 : 0.5}`;
@@ -76,7 +79,7 @@
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
 {:else}
-  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} disabled={locked} onchange={(v) => (given = v)} />
+  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} />
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 {#if needWhy}
@@ -92,7 +95,7 @@
     {#snippet main()}<span>🙋 선생님 확인 기다림</span>{/snippet}
   </BottomAction>
 {:else}
-  <BottomAction disabled={!ready || locked} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
+  <BottomAction disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? '연습 ' : ''}공격</span><Hearts total={hearts.total} left={hearts.left} />{/snippet}
   </BottomAction>
 {/if}

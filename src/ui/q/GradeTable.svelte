@@ -10,7 +10,7 @@
 <div class="gt" class:gold class:still role="list" aria-label="채점표">
   {#each rows as r, i (i)}
     {@const pick = !!onpick && r.state === 'bad'}
-    <svelte:element this={pick ? 'button' : 'div'} type={pick ? 'button' : undefined} role={pick ? undefined : 'listitem'} class="r {r.state}" onclick={pick ? () => onpick?.(i) : undefined}
+    <svelte:element this={pick ? 'button' : 'div'} type={pick ? 'button' : undefined} role={pick ? undefined : 'listitem'} class="r g-{r.state}" onclick={pick ? () => onpick?.(i) : undefined}
       aria-label="{label(i)} {r.q} · 내 답 {r.a ?? '빈 칸'}{r.state === 'ok' || r.state === 'keep' ? ' · 맞음' : r.state === 'bad' ? ' · 틀림' : ''}">
       <span class="n">{label(i)}</span><span class="q">{r.q}</span><span class="a">{r.a ?? '＿'}</span>
       <span class="m" aria-hidden="true">{r.state === 'ok' || r.state === 'keep' ? '✔' : r.state === 'bad' ? '✘' : ''}</span>
@@ -25,14 +25,14 @@
   .q { font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .a { font-size: 16px; font-weight: 700; justify-self: end; text-align: right; overflow-wrap: anywhere; max-width: 100%; }
   .m { width: 22px; height: 22px; border-radius: 11px; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; }
-  .ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); animation: flip 0.25s ease-out 1; }
-  .ok .m, .keep .m { background: var(--ok); }
-  .keep { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); }
-  .bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 22%, var(--surface)); animation: flip 0.25s ease-out 1; }
-  .bad .m { background: var(--bad); }
+  .g-ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); animation: flip 0.25s ease-out 1; }
+  .g-ok .m, .g-keep .m { background: var(--ok); }
+  .g-keep { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); }
+  .g-bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 22%, var(--surface)); animation: flip 0.25s ease-out 1; }
+  .g-bad .m { background: var(--bad); }
   button.r { cursor: pointer; }
   .gt.gold .r { border-color: var(--accent); }
   @keyframes flip { 0% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
   .still .r { animation: none; }
-  @media (prefers-reduced-motion: reduce) { .ok, .bad { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .g-ok, .g-bad { animation: none; } }
 </style>

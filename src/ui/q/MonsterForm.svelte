@@ -5,6 +5,7 @@
   import type { Room as RoomT } from '../../model/types';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
+  import { shortQ } from './short';
   import { fx, swing } from '../battle/fx.svelte';
   import { onDestroy } from 'svelte';
   import { submit } from '../../raid/actions';
@@ -63,13 +64,6 @@
   });
   const no = $derived((/문제 \d+/.exec(title) || [title])[0]);
   const textOf = (x: Question, g: Given | undefined, i: number) => { const l = penLine(x, g ?? null, i); return l ? stripNo(l) : null; };
-  // 채점표의 「문제 짧게」 = 묻는 부분만(「… 일 때」 앞 조건 · (n) 번호 뺌) · 넘치면 표가 … 으로 줄임
-  const shortQ = (x: Question) => {
-    if (x.type === 'blanks') return `${x.items[0]?.left ?? ''} □ ${x.items[0]?.right ?? ''}`.trim();
-    const t = x.question.replace(/^\s*\(\d+\)\s*/, ''), k = t.lastIndexOf(' 일 때 ');
-    const ask = k > 0 ? t.slice(k + 5) : t, head = ask.replace(/\s+(의|을|를|은|는)\s.*$/, '');
-    return head.length >= 2 ? head : ask; // 「Aᶜ ∩ Bᶜ 의 원소를 모두 고르시오.」 → 「Aᶜ ∩ Bᶜ」
-  };
   function onMain() {
     if (locked || thinkLeft > 0 || reveal) return;
     if (tableHold) { tableHold = false; const w = wrongIdx.find((i) => !filled(items[i] as Question, given[i] ?? null)); cur = w ?? wrongIdx[0] ?? 0; return; }
