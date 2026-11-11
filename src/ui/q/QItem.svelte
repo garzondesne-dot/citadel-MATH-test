@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Given, Question } from '../../model/types';
   import { needNeg, normFor, penLine, stripNo } from '../../engine/input';
-  import RunePad from './RunePad.svelte';
-  import Chips from './Chips.svelte';
+  import RuneKeypad from './RuneKeypad.svelte';
+  import Chip from './Chip.svelte';
   import Choices from './Choices.svelte';
   import SubsetBuilder from './SubsetBuilder.svelte';
 
@@ -24,13 +24,13 @@
   {:else}
     <p class="qt">{#if showNo && qno}<b class="no">{qno}</b> {/if}{q.question}</p>
     {#if q.type === 'multi'}
-      <Chips {q} value={(value as number[]) || []} {disabled} onchange={(v) => onchange(v)} />
+      <Chip {q} value={(value as number[]) || []} {disabled} onchange={(v) => onchange(v)} />
     {:else if q.type === 'choice'}
       <Choices opts={q.choices} value={value as number | null} col {disabled} onpick={(k) => onchange(k)} />
     {:else if q.type === 'ox'}
       <Choices opts={['O', 'X']} value={value === true ? 0 : value === false ? 1 : null} {disabled} onpick={(k) => onchange(k === 0)} />
     {:else if q.type === 'number'}
-      <RunePad value={value as number | string | null} len={runeLen} neg={needNeg(q)} {disabled} onchange={(v) => onchange(v)} />
+      <RuneKeypad value={value as number | string | null} len={runeLen} neg={needNeg(q)} {disabled} onchange={(v) => onchange(v)} />
     {:else if q.type === 'subsets'}
       <SubsetBuilder base={q.base} value={(value as number[][]) || []} {disabled} onchange={(v) => onchange(v)} />
     {:else if q.type === 'text'}
