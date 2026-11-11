@@ -109,16 +109,26 @@ const log = (...a) => console.log(...a);
       // 답안 줄 채우는 중 (소문제 1 · 2 채움)
       await p.click('.row .cell:nth-child(2)'); await answer(await p.$('.bcard .item'), A.m1[1]); await shot(p, 'b5-answer-row-360.png');
       log('  답안 줄:', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.textContent.trim()).join(' | '))));
-      for (let i = 2; i < 4; i++) { await p.click(`.row .cell:nth-child(${i + 1})`); const it = await p.$('.bcard .item'); if (i === 2) await (await it.$('.chip')).click(); else await answer(it, A.m1[i]); }
+      for (let i = 2; i < 4; i++) { await p.click(`.row .cell:nth-child(${i + 1})`); const it = await p.$('.bcard .item'); if (i === 2) { for (const c of await it.$$('.chip')) await c.click(); } else await answer(it, A.m1[i]); } // ③ = 칩 모두(긴 오답)
       await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(380);
       await p.screenshot({ path: `${SHOTS}/b5-grading-360.png` });
-      log('  채점 중:', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.className.replace(/svelte-\S+/g, '').trim()).join(' | '))), '| 단추', (await p.textContent('.act .why')).trim());
-      await p.waitForTimeout(900);
-      await shot(p, 'b4-wrong-360.png'); await overflow(p, '틀렸을 때');
-      log('  학생1 틀림:', (await p.textContent('.bad b')).trim(), '| 답안 줄', (await p.$$eval('.row .cell', (cs) => cs.map((c) => c.className.replace(/svelte-\S+/g, '').replace('cell', '').trim()).join(' | '))), '| 지난 답 칸', (await p.textContent('.ans small')).trim(), '| 단추', (await p.textContent('.act .btn')).trim());
-      await waitMain(p); // 생각 시간 뒤
-      const it = await p.$('.bcard .item'); for (const c of await it.$$('.chip.on')) await c.click(); await answer(it, A.m1[2]);
-      await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(250);
+      const rows = (pp) => pp.$$eval('.gt .r', (cs) => cs.map((c) => `${c.querySelector('.n').textContent}${c.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').trim()}`).join(' | '));
+      log('  채점 중(채점표):', await rows(p), '| 단추', (await p.textContent('.act .why')).trim());
+      await p.waitForTimeout(1400);
+      await shot(p, 'r113-table-360.png'); await overflow(p, '채점표 결과');
+      log('  채점표 결과:', await rows(p), '|', (await p.textContent('.bcard .lab.acc')).trim(), '| 내 답 전체', await p.$$eval('.gt .r .a', (as) => as.map((a) => a.textContent).join(' / ')));
+      await waitMain(p); // 생각 시간 뒤 「다음 틀린 문제 ▶」
+      log('  단추:', (await p.textContent('.act .btn')).trim()); await (await mainBtn(p)).click(); await p.waitForSelector('.row .cell');
+      await shot(p, 'r113-retry-blank-360.png'); await overflow(p, '재도전 빈칸');
+      const cellInfo = await p.$$eval('.row .cell', (cs) => cs.map((c) => `${c.querySelector('b').textContent}${c.className.replace(/svelte-\S+/g, '').replace('cell', '').trim()}${c.disabled ? '·잠김' : ''}:${c.querySelector('.tx').textContent}`).join(' | '));
+      const it0 = await p.$('.bcard .item'), on0 = (await it0.$$('.chip.on')).length;
+      log('  재도전:', (await p.textContent('.bad b')).trim(), '| 답안 칸', cellInfo, '| 지금', (await p.textContent('.bcard .lab.acc')).trim(), '| 선택된 칩', on0, '| 단추', (await p.textContent('.act .btn')).trim());
+      if (on0) errs.push('재도전 ✘ 소문제에 지난 선택이 남음');
+      if (!(await p.$('.row .cell:disabled'))) errs.push('✔ 칸이 잠기지 않음');
+      await answer(it0, A.m1[2]);
+      await waitMain(p); log('  고친 뒤 단추:', (await p.textContent('.act .btn')).trim()); await (await mainBtn(p)).click(); await p.waitForTimeout(200);
+      log('  재채점(고친 줄만):', await rows(p));
+      await p.waitForTimeout(1200);
       log('  학생1 다시:', (await p.textContent('.okline b')).trim());
       await solveMonster(st[1], A.m1);
     } else if (id === 'm2') { // 다시 그려도 입력 · 스크롤 그대로
