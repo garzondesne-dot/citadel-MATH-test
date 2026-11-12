@@ -171,9 +171,9 @@
   .team { position: fixed; top: 52px; left: max(8px, calc(50% - 207px)); z-index: 30; display: flex; gap: 4px; }
   .team span { display: flex; flex-direction: column; align-items: center; min-width: 40px; padding: 2px 4px; border-radius: 10px; background: rgba(8, 9, 12, 0.6); color: #fff; font-size: 13px; line-height: 1.2; }
   .team span.me { box-shadow: 0 0 0 2px var(--accent); } .team small { font-size: 10.5px; max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tools { position: fixed; top: 112px; left: max(8px, calc(50% - 207px)); z-index: 30; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
-  .tools button { height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.7); color: #fff; font: 700 13px var(--font); position: relative; }
-  .tools button::before { content: ''; position: absolute; inset: -6px 0; }
+  .tools { position: fixed; top: 10px; right: max(96px, calc(50% - 119px)); z-index: 30; display: flex; flex-direction: row; gap: 6px; align-items: center; }
+  .tools button { height: 32px; padding: 0 10px; border-radius: 16px; white-space: nowrap; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.7); color: #fff; font: 700 13px var(--font); position: relative; }
+  .tools button::before { content: ''; position: absolute; inset: -8px -2px; }
   .tools button.on { background: var(--accent); color: var(--on-accent); }
   .tools button:disabled { opacity: 0.45; }
   .hcard { position: fixed; left: max(12px, calc(50% - 203px)); right: max(12px, calc(50% - 203px)); bottom: 104px; z-index: 29; padding: 10px 40px 10px 12px; border-radius: var(--r); background: var(--surface-2); border-left: 4px solid var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }

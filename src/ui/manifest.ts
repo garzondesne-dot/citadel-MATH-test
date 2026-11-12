@@ -72,3 +72,10 @@ export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp'
 export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
 export const BGM: Record<string, string> = { rest: 'bgm/rest-v1.mp3', bal: 'bgm/bal-v1.mp3', rev: 'bgm/rev-v1.mp3', quiz: 'bgm/ox-v1.mp3', nun: 'bgm/nun-v1.mp3', td: 'bgm/td-v1.mp3' };
 export const artUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;
+
+// ⌨ 룬 키패드 (머리 방 그림 2026-11-12 · ui-rune-key · ui-rune-slot · 마젠타 풀고 정수 배율 · 9-slice) — 단추 = 평소 · 빛남 / 답 칸 = 빈 칸 · 입력 중
+//   CSS 변수(url) 로 넘기므로 절대 주소 (상대 주소는 그 변수를 쓰는 스타일 파일 기준으로 풀려 assets/ 아래를 가리킴)
+const abs = (p: string) => (typeof document !== 'undefined' ? new URL(artUrl(p), document.baseURI).href : artUrl(p));
+export const RUNE = { key: abs('art/ui/ui-rune-key-v1.webp'), lit: abs('art/ui/ui-rune-key-lit-v1.webp'), slot: abs('art/ui/ui-rune-slot-v1.webp'), slotOn: abs('art/ui/ui-rune-slot-on-v1.webp') };
+// ✏ 출제 책상 (obj-quest · 캠프 물건 꼴 192 × 96 · 칸 96 · ① 평소 ② 새 소식) — 캠프 자리 · 기능은 출제 공방 시안 컨펌 뒤
+export const QUEST_DESK = { src: artUrl('art/camp/obj-quest-v1.webp'), cols: 2 };
