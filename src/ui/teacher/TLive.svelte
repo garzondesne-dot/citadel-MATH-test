@@ -9,6 +9,8 @@
   import { liveRoom } from '../room.svelte';
   import QR from '../QR.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import { driveFun, endRest, funOf, GAMES, restMinDef, restOn, startFun, stopFun, type Game } from '../../rest/run';
+  import { status as funStatus, norm, type Fun } from '../../rest/fun';
 
   // ⑬ 대기실 · ⑭ 리모컨 (#119 · DECISIONS 「대기실 확정」 「리모컨 칸 고정」 「도구 두 줄 맞춤」) — 같은 틀: 위 막대 · 가운데(스크롤 없음) · 주요 단추 68 · 수업 중 막대 62
   //   리모컨 칸 고정: 지금 단계 카드 = 배지 한 줄 · 제출 n / m · 미제출 · 높이 48 칸(정찰 중 −30초 · 등장까지 · +30초 → 등장 뒤 −5% · 체력 · +5%) · 🔒 · 🔄 칩 자리 늘 2줄 · 도구 여섯 칸 52 · 「다음 ▶」
@@ -64,7 +66,23 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr'>('');
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest'>('');
+  // 🏕 쉼터 (#142 ①): 🏕 = 쉼터 켜고(지난 분) 놀이 고르기 시트 · 놀이 5칸 · ⭕ = 지난 · 오늘 · 분 −/＋ = 다음 쉼터 기본으로 기억 · 이 폰도 놀이 시계를 맡음(TV 가 없을 때)
+  const stopDrive = untrack(() => driveFun(S, live.code, 'tp'));
+  onDestroy(stopDrive);
+  let game = $state<Game>('bal'), oxWhich = $state<'prev' | 'now'>('now'), rmin = $state(untrack(() => restMinDef(S)));
+  const fun = $derived(funOf(R));
+  const funOn = $derived(!!fun && fun.phase !== 'end');
+  const funLine = $derived(!fun ? '' : fun.kind === 'nun' ? `🙊 눈치게임 · ${fun.phase === 'end' ? '끝' : `${(fun as unknown as { round: number }).round}판 · 생존 ${Object.keys(fun.alive || {}).length}명`}` : funStatus(norm(fun as Fun)));
+  const gameOf = (k: Game) => GAMES.find((g) => g.k === k)!;
+  function openRest() { if (!R) return; if (!R.state.rest) restOn(S, code, R, rmin); sheet = 'rest'; }
+  function setMin(d: number) { if (!R) return; rmin = Math.max(1, Math.min(20, rmin + d)); restOn(S, code, R, rmin); }
+  function goGame() {
+    if (!R) return;
+    if (funOn) { stopFun(S, code); return; }
+    const err = startFun(S, code, R, game, { which: oxWhich, no: L.no, me: 'tp' });
+    if (err) say(err); else sheet = '';
+  }
   // 🚪 입장 (#138 ③): 코드 크게 + QR(주소 ?join=코드 · 로그인한 폰은 바로 · 아니면 로그인 뒤 그 수업) · 교실 TV 주소
   const site = `${location.origin}${import.meta.env.BASE_URL}`;
   const joinUrl = $derived(`${site}?join=${encodeURIComponent(code)}`);
@@ -83,6 +101,7 @@
     if (!R) return;
     if (scout?.on) { appearNow(S, L, code); return; }
     if (isEnd(L, R)) { sheet = 'ask'; return; }
+    if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「다음 ▶」 = 쉼터 끝 + 수업으로
     nextStep(S, L, code);
   }
   const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
@@ -133,7 +152,7 @@
       <div class="pace fold"><span>끝 예상 <b>{hhmm(endAt)}</b></span>{#if bell}<span class:late={late > 0}>종 {hhmm(bell)}{late > 0 ? ` · ${late}분 늦음` : ' · 맞춰 가요'}</span>{/if}</div>
       <div class="card rstat">
         <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리 · 학급 결과' : `지금 · ${step?.title ?? ''}`}</span>
-          {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 문을 닫아요 · <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰 중</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 쉼터</span>{/if}
+          {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 문을 닫아요 · <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰 중</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
         </div>
         <div class="rs2"><div class="big2"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b><span>/ {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span></div>
           <span class="unsub">{#if mid || step?.kind === 'boss'}{#if !unsub.length}미제출 없음{:else if unsub.length <= 4}미제출 <b>{unsub.map(numOf).join(' · ')}번</b>{:else}미제출 <b>{unsub.length}명</b>{/if}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
@@ -154,7 +173,7 @@
       </div>
     </div>
     <div class="rdock" role="group" aria-label="도구">
-      <button type="button" class:on={!!R.state.rest} aria-pressed={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}><b>🏕 쉼터</b></button>
+      <button type="button" class:on={!!R.state.rest} aria-pressed={!!R.state.rest} onclick={openRest}><b>🏕 쉼터</b></button>
       <button type="button" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><b>🎬 영상</b></button>
       <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><b>📄 문제</b></button>
       <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><b>💎 선물</b></button>
@@ -189,6 +208,16 @@
       <div class="gquick"><button type="button" onclick={() => quick(ids)}>모두 {ids.length}</button><button type="button" disabled={!stuck.length} onclick={() => quick(stuck.map((x) => x.u))}>🔒 막힌 학생 {stuck.length}</button><button type="button" disabled={!perfectIds.length} onclick={() => quick(perfectIds)}>✨ 퍼펙트 {perfectIds.length}</button><button type="button" onclick={() => quick(subd.length ? subd : ids)}>미제출 빼고</button></div>
       <div class="ggrid">{#each ids as u (u)}<button type="button" class="gn" class:on={!!picked[u]} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
       <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === ids.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
+    </Sheet>
+  {:else if sheet === 'rest'}
+    <Sheet onclose={() => (sheet = '')}>
+      {#snippet title()}🏕 놀이 고르기{/snippet}
+      {#snippet act()}<div class="rsact"><div class="row"><button type="button" class="btn2" onclick={() => { endRest(S, code); sheet = ''; }}>쉼터 끝</button><button type="button" class="btn rbig" disabled={!funOn && game === 'td'} onclick={goGame}>{funOn ? `■ 놀이 그만 · ${funLine}` : game === 'td' ? '🏰 디펜스는 다음 판에서' : `▶ ${gameOf(game).ic} ${gameOf(game).name}${game === 'quiz' ? (oxWhich === 'prev' ? ' · 지난' : ' · 오늘') : ''} 시작`}</button></div></div>{/snippet}
+      <div class="games" role="group" aria-label="놀이">
+        {#each GAMES as g (g.k)}<button type="button" class="game" class:on={game === g.k} aria-pressed={game === g.k} disabled={funOn} onclick={() => (game = g.k)}><i>{g.ic}</i>{g.name}{#if g.k === 'td'}<small>다음 판</small>{/if}</button>{/each}
+        {#if game === 'quiz'}<div class="oxw" role="group" aria-label="OX 문장"><button type="button" class:on={oxWhich === 'prev'} onclick={() => (oxWhich = 'prev')}>지난 차시</button><button type="button" class:on={oxWhich === 'now'} onclick={() => (oxWhich = 'now')}>오늘</button></div>{/if}
+      </div>
+      <div class="rstep"><button type="button" aria-label="1분 줄이기" onclick={() => setMin(-1)}>−</button><b>{rmin}분<small>{R.state.rest ? `남은 ${mmss(Math.max(0, R.state.rest.at + R.state.rest.min * 60e3 - now))}` : ''}</small></b><button type="button" aria-label="1분 늘리기" onclick={() => setMin(1)}>＋</button></div>
     </Sheet>
   {:else if sheet === 'qr'}
     <Sheet onclose={() => (sheet = '')} mainText="닫기">
@@ -293,6 +322,19 @@
   .rdock .glow { border: 2px solid var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(245, 184, 74, 0.25); }
   @media (prefers-reduced-motion: no-preference) { .rdock .glow { animation: glow 1.6s ease-in-out infinite; } }
   @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(245, 184, 74, 0.35); } }
+  .games { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .game { height: 84px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 var(--press-sh); }
+  .game i { font-style: normal; font-size: 26px; line-height: 1.1; } .game small { font-size: 11px; color: var(--text-3); }
+  .game.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh); } .game.on small { color: var(--on-accent); }
+  .game:disabled:not(.on) { opacity: 0.4; box-shadow: none; }
+  .oxw { height: 84px; display: flex; flex-direction: column; gap: 6px; }
+  .oxw button { flex: 1; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px var(--font); }
+  .oxw button.on { border: 2px solid var(--accent); background: var(--surface-2); color: var(--accent); }
+  .rstep { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; gap: var(--s2); }
+  .rstep button { height: 52px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 24px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .rstep b { text-align: center; font-size: 24px; display: flex; flex-direction: column; } .rstep b small { font-size: 12px; color: var(--text-2); font-weight: 500; }
+  .rsact { padding-bottom: 59px; } /* 주요 단추 68 · 바닥 75 (리모컨 주요 단추와 같은 자리) */
+  :global(.sheet .act .btn.rbig) { min-height: 68px; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .qk { display: flex; flex-direction: column; gap: var(--s2); }
   .qk button { min-height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: left; padding: 0 var(--s3); }
   .qk button.on { border: 2px solid var(--accent); }

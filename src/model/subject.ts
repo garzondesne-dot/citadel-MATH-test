@@ -33,6 +33,8 @@ export interface Subject {
   lessonList: { id: string; no: number; title: string; concs: string[] }[];
   /** 과목 칭호 (엔진 칭호 목록의 after 뒤에 끼움) */
   titles: { after: string; list: { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[] };
+  /** ⭕ 쉼터 수학 OX 문장 (차시 · 문장 · 참 · 한 줄 해설) — 없으면 OX 놀이 안 보임 */
+  funOx?: { no: number; t: string; a: boolean; why: string }[];
   /** 스킬 이름 (용사 스킬 도감 · 엔진 기본 이름 대신) — 과목 팩 subject.json 의 skillNames */
   skillNames?: Record<string, string>;
   /** 캠프 · TV 이름표 글자 */

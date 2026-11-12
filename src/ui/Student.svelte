@@ -19,6 +19,7 @@
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
+  import FunPhone from './rest/FunPhone.svelte';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -43,9 +44,9 @@
   const R = $derived(live.v.room);
   $effect(() => { const t = R?.state.reload?.[uid]; if (t && t > loadedAt) location.reload(); });
   // 🎁 수업 중 선생님 선물 = 받은 학생 폰에만 한 줄 (지갑에는 캠프에서 들어감 · #119 덧붙임)
-  const gv = untrack(() => liveValue<Record<string, { g: number; at: number; mail?: boolean }>>(S, `gifts/${uid}`));
+  const gv = untrack(() => liveValue<Record<string, { g: number; at: number; mail?: boolean; fun?: string }>>(S, `gifts/${uid}`));
   onDestroy(gv.stop);
-  const giftNew = $derived(Object.values(gv.v.val || {}).filter((x) => x && !x.mail && x.at > loadedAt && clock.now - x.at < 4000));
+  const giftNew = $derived(Object.values(gv.v.val || {}).filter((x) => x && !x.mail && !x.fun && x.at > loadedAt && clock.now - x.at < 4000));
   // ✉ 수업 중 선생님 메시지 · 답장 (#130) = 받은 학생 폰에만 한 줄 (💎 는 캠프에서 지갑에)
   const mv = untrack(() => liveValue<Record<string, Mail>>(S, `mail/${uid}`));
   onDestroy(mv.stop);
@@ -137,10 +138,11 @@
 </section>
 <SymSheet />
 {#if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
-{#if R && !R.state.closed && (R.state.focus || R.state.rest)}
+{#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
+{#if R && !R.state.closed && R.state.focus}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
   <div class="cover" role="status" aria-live="polite">
-    {#if R.state.focus}<b>📣 선생님에게 주목</b><p>게임은 멈춰 있어요 · 끝나면 그 자리에서 이어가요</p>{:else}<b>🏕 쉼터</b><p>잠깐 쉬어요 · 게임은 멈춰 있어요</p>{/if}
+    <b>📣 선생님에게 주목</b><p>{R.state.rest ? '놀이 시계도 멈춰 있어요' : '게임은 멈춰 있어요'} · 끝나면 그 자리에서 이어가요</p>
   </div>
 {/if}
 

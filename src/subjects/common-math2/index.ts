@@ -29,6 +29,7 @@ const SUBJECT: Subject = {
   titles: DATA.titles as Subject['titles'],
   camp: DATA.camp,
   skillNames: DATA.skillNames,
+  funOx: DATA.funOx,
   seteuk: DATA.seteuk,
   rich: { parts: (t) => richParts(t).map((p) => ('venn' in p ? { fig: { venn: p.venn } } : { text: p.text })), opt: (o) => toPart(optOf(o)), plain, Figure },
   formats: FORMATS,

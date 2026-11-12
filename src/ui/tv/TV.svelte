@@ -17,6 +17,9 @@
   import MyHero from '../camp/MyHero.svelte';
   import SymText from '../q/SymText.svelte';
   import Ink from './Ink.svelte';
+  import { driveFun, endRest, funOf, GAMES, startFun, stopFun, type Game } from '../../rest/run';
+  import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
+  import type { Nun } from '../../rest/nunchi';
 
   // 🖥 교실 TV = 종합실 (#119 ⑮ · DECISIONS 「✅ ⑮ 교실 TV 컨펌」) — 정식 배치 그대로 + v1.0 색 · 글꼴
   //   위 막대 = 차시 · 단계 이름 · 단계 알약 · 시간 막대(👑 = 문 닫는 시각) · 🚪 코드 · 오른쪽 끝 🧙 · ⚙ 없음
@@ -27,6 +30,8 @@
   const lr = untrack(() => (code ? liveRoom(S, code) : null));
   onDestroy(() => lr?.stop());
   const R = $derived((lr?.v.room ?? null) as Room | null);
+  const stopDrive = untrack(() => (code ? driveFun(S, code, 'tv') : () => {})); // 🏕 놀이 시계는 TV 가 먼저 맡음 (#142)
+  onDestroy(stopDrive);
   const M = useMe(9999, 30, true); // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
   const pupils = $derived(live ? roster(live.cls, S) : []);
   const ids = $derived(R ? activeIds(R, now) : []);
@@ -57,9 +62,30 @@
   let hero = $state(false);
   $effect(() => { void i; untrack(() => { demo = false; zoom = 0; }); }); // 단계가 바뀌면 시연 · 크게 보기 닫힘 (필기는 Ink 가 지움)
 
+  // ── 🏕 쉼터 놀이 (#142 ⑤) ──
+  const fun = $derived(funOf(R));
+  const ff = $derived(fun && fun.kind !== 'nun' ? norm(fun as Fun) : null);
+  const nn = $derived(fun && fun.kind === 'nun' ? (fun as unknown as Nun) : null);
+  const fnow = $derived(fun?.frz != null ? Number(fun.frz) : now);
+  const funSec = $derived(fun && fun.phase !== 'end' ? Math.max(0, Math.ceil(((fun.phase === 'show' ? (ff?.until ?? nn?.to ?? 0) : fun.to) - fnow) / 1000)) : 0);
+  const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
+  let funErr = $state(''), errT: ReturnType<typeof setTimeout> | null = null;
+  function playGame(k: Game) {
+    if (!R) return;
+    if (fun && fun.kind === k && fun.phase !== 'end') { stopFun(S, code); return; }
+    const e = startFun(S, code, R, k, { which: 'now', no: L.no, me: 'tv' });
+    funErr = e ?? ''; if (errT) clearTimeout(errT); if (e) errT = setTimeout(() => (funErr = ''), 3000);
+  }
+
   // ── 왼쪽 위 숫자 한 칸 ──
   const box = $derived.by(() => {
-    if (!R || view === 'concept') return null;
+    if (!R) return null;
+    if (R.state.rest && view !== 'camp' && fun) {
+      if (fun.kind === 'quiz') return { ic: '⭕', lab: '고른 학생', n: Object.keys((R as unknown as { fv?: Record<string, Record<string, string>> }).fv?.[ff?.rk ?? ''] || {}).length, m: Object.keys(fun.alive || {}).length, sub: '' };
+      return { ic: '🧍', lab: '살아남음', n: Object.keys(fun.alive || {}).length, m: nn ? Object.keys(nn.alive || {}).length + Object.keys(nn.zz || {}).length : ff?.total ?? 0, sub: '' };
+    }
+    if (R.state.rest && view !== 'camp') return { ic: '📱', lab: '입장', n: ids.length, m: expected.length, sub: '' };
+    if (view === 'concept') return null;
     if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: ids.length, m: expected.length, sub: '' };
     if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
     if (scout?.on) return { ic: '✋', lab: '준비 완료', n: Object.keys(R.ready?.[scout.id] || {}).length, m: ids.length, sub: '' };
@@ -93,6 +119,7 @@
     if (!R) return;
     campPeek = false;
     if (view === 'camp' && isLobby(R)) { hallLobby(S, code); return; }
+    if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「앞으로 ▶」 = 쉼터 끝 + 수업으로 (#142)
     nextStep(S, L, code);
   }
   function full() { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.().catch(() => {}); }
@@ -138,7 +165,7 @@
 
   <!-- 왼쪽 위 숫자 한 칸 -->
   {#if box}
-    <div class="nbox" aria-label="{box.lab} {box.n} / {box.m}"><small>{box.ic} {box.lab}</small><b>{box.n}<span> / {box.m}</span></b>{#if box.sub}<em>{box.sub}</em>{/if}</div>
+    <div class="nbox" class:over={!!R?.state.rest && !R?.state.focus} aria-label="{box.lab} {box.n} / {box.m}"><small>{box.ic} {box.lab}</small><b>{box.n}<span> / {box.m}</span></b>{#if box.sub}<em>{box.sub}</em>{/if}</div>
   {/if}
 
   {#if view === 'camp'}
@@ -200,7 +227,31 @@
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->
   {#if R?.state.sheet && sheetQs.length}<div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b>{#each sheetQs.slice(0, 6) as q, k (k)}<p><SymText text={q.question} /></p>{/each}</div>{/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><video src={L.videos[R.state.video]} autoplay controls muted={!sound}></video></div>{/if}
-  {#if R?.state.rest}<div class="ov rest"><b>🏕 쉼터</b><p>{mmss(restLeft)} · 게임 시계는 멈춰 있어요</p></div>{/if}
+  {#if R?.state.rest}
+    <div class="ov rest fun" class:still={fun?.frz != null}>
+      {#if !fun}
+        <b>🏕 쉼터</b><p>{mmss(restLeft)} · 선생님이 놀이를 고르는 중</p>
+      {:else if nn}
+        <h3>🙊 눈치게임 · {nn.round}판</h3>
+        {#if nn.phase === 'end'}<p class="big">🏆 우승 {(nn.win || []).length}명</p><div class="crowd">{#each nn.win || [] as u (u)}<span><HeroSprite id={R.players?.[u]?.hero ?? 0} scale={2} /><em>{nameOf(u)}</em></span>{/each}</div>
+        {:else}<p class="s">1부터 차례로 · 둘이 같이 누르면 💥 · 마지막 1명도 탈락</p><div class="cd">{nn.phase === 'ready' ? funSec : nn.n}</div>
+          <div class="evs">{#each (nn.ev || []).slice(-4) as e, k (k)}<span>{e.k === 'say' ? `🗣 ${e.n} ${e.u.map(nameOf).join('')}` : e.k === 'clash' ? `💥 동시! ${e.u.map(nameOf).join(' · ')}` : e.k === 'last' ? `⌛ 마지막! ${e.u.map(nameOf).join('')}` : `⏳ 시간 끝 ${e.u.length}명`}</span>{/each}</div>{/if}
+      {:else if ff}
+        <h3>{KIND[ff.kind as Kind].short}{ff.kind === 'quiz' ? ` · ${ff.n} / ${Math.min(QN, ff.queue.length)}` : ` · ${ff.n}판`}</h3>
+        {#if ff.phase === 'end'}
+          <p class="big">{ff.kind === 'quiz' ? '⭕ OX 타임 끝 · 결과는 폰에' : `🏆 우승 ${(ff.win || []).length}명`}</p>
+          {#if ff.kind !== 'quiz'}<div class="crowd">{#each ff.win || [] as u (u)}<span><HeroSprite id={R.players?.[u]?.hero ?? 0} scale={2} /><em>{nameOf(u)}</em></span>{/each}</div>{/if}
+        {:else}
+          <p class="s">{ff.s ? '' : funCat ? `${funCat} · ` : ''}{ff.rps ? '✊✌️✋ 선생님 손에 지면 탈락 · 안 내면 💤' : KIND[ff.kind].rule}</p>
+          {#if ff.s}<p class="q">{ff.s}</p>{/if}
+          <div class="vs">{#each ff.q as t, k (k)}<span class="o{k}">{t}</span>{/each}</div>
+          {#if ff.phase === 'show'}<p class="ver">{verdict(ff)}</p>{:else}<div class="cd">{funSec}</div>{/if}
+        {/if}
+      {/if}
+      {#if funErr}<p class="err">{funErr}</p>{/if}
+      {#if fun?.frz != null}<p class="frz">⏸ 집중 · 놀이 시계 멈춤</p>{/if}
+    </div>
+  {/if}
   {#if R?.state.focus}<div class="ov fo"><b>⏸ 집중</b><p>선생님을 보세요 · 게임은 멈춰 있어요</p></div>{/if}
   {#if door && door.ask && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫으려 한다!</p><small>⏰ 선생님, 5분 연장할까요? <b>{askLeft}</b></small><button type="button" class="ext" onclick={() => extendTime(S, code)}>⏰ +5분</button></div>
   {:else if door && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫았다!</p></div>{/if}
@@ -212,7 +263,11 @@
   <nav class="dock" class:on={dockOn} aria-label="조작 막대">
     <button type="button" class="t" class:off={!sound} aria-pressed={!sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<small>{sound ? '소리' : '꺼짐'}</small></button>
     <button type="button" class="t" onclick={full}>⛶<small>전체</small></button>
-    {#if R && !isLobby(R) && !R.state.closed && view !== 'camp'}
+    {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
+      <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
+      <span class="sep"></span>
+      {#each GAMES as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} disabled={g.k === 'td'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
+    {:else if R && !isLobby(R) && !R.state.closed && view !== 'camp'}
       <span class="sep"></span>
       <button type="button" class="t" class:on={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}>🏕<small>쉼터</small></button>
       <button type="button" class="t" disabled={!step || !L.videos?.[step.id]} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}>🎬<small>영상</small></button>
@@ -268,6 +323,7 @@
   .tlt.start { transform: translateX(-10%); }
   .tlt.red { border-color: #e5484d; color: #ffb3b0; }
   .nbox { position: absolute; left: 1.5cqw; top: 14cqh; z-index: 3; width: 17cqw; height: 15cqh; border-radius: 1.6cqh; background: rgba(8, 9, 12, 0.75); border: 1px solid rgba(255, 255, 255, 0.18); padding: 1.2cqh 1.2cqw; display: flex; flex-direction: column; gap: 0.4cqh; overflow: hidden; }
+  .nbox.over { z-index: 7; }
   .nbox small { font-size: 2cqh; font-weight: 700; color: #d6d9e0; }
   .nbox b { font-size: 6cqh; line-height: 1; color: var(--accent); }
   .nbox b span { font-size: 3cqh; color: #fff; }
@@ -325,6 +381,20 @@
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
   .ov b { font-size: 9cqh; text-shadow: 0 4px 0 #000; }
   .ov p { margin: 0; font-size: 3.4cqh; font-weight: 700; }
+  .ov.fun { background: linear-gradient(#1b2a22, #13201a) !important; top: 7.4cqw; z-index: 6; bottom: 0; gap: 1.4cqh; padding: 0 6cqw 12cqh; }
+  .ov.fun h3 { margin: 0; font-size: 7cqh; }
+  .ov.fun .s { font-size: 3cqh; color: #cfd3db; font-weight: 500; }
+  .ov.fun .q { font-size: 5cqh; max-width: 80cqw; line-height: 1.35; }
+  .ov.fun .vs { display: flex; gap: 2cqw; }
+  .ov.fun .vs span { min-width: 22cqw; padding: 2cqh 2cqw; border-radius: 2cqh; font-size: 4.6cqh; font-weight: 700; background: #2f5f9e; box-shadow: 0 0.6cqh 0 rgba(0, 0, 0, 0.45); }
+  .ov.fun .vs .o1 { background: #9e3f3f; } .ov.fun .vs .o2 { background: #4a7a3a; }
+  .ov.fun .cd { font-size: 12cqh; font-weight: 700; color: #f5b84a; font-variant-numeric: tabular-nums; line-height: 1; }
+  .ov.fun .ver, .ov.fun .big { font-size: 4.6cqh; color: #f5b84a; }
+  .ov.fun .crowd { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.4cqw; max-width: 84cqw; }
+  .ov.fun .crowd span { display: flex; flex-direction: column; align-items: center; } .ov.fun .crowd em { font-style: normal; font-size: 2.4cqh; font-weight: 700; }
+  .ov.fun .evs { display: flex; gap: 1cqw; flex-wrap: wrap; justify-content: center; } .ov.fun .evs span { background: rgba(24, 27, 34, 0.9); border-radius: 99px; padding: 0.8cqh 1.6cqw; font-size: 2.8cqh; font-weight: 700; }
+  .ov.fun .err { color: #ffb4ae; font-size: 3cqh; } .ov.fun .frz { color: #ffb4ae; font-size: 3cqh; }
+  .ov.fun.still .cd { opacity: 0.5; }
   .ov small { font-size: 2.2cqh; color: #d6d9e0; }
   .ov.sheet { background: rgba(251, 248, 241, 0.97); color: #1b1a17; align-items: flex-start; justify-content: flex-start; padding: 12cqh 6cqw; text-align: left; }
   .ov.sheet b { font-size: 4cqh; text-shadow: none; }
