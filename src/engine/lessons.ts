@@ -44,6 +44,7 @@ export function chainItems(L: LessonPack, mid: string, seed: string, pass: numbe
 export function bossItem(L: LessonPack, seed: string, i: number, a: number): Question | null {
   const b = L.boss;
   if (!b) return null;
+  i += b.first || 0; // #149 나눈 형성평가 = 원래 번호
   const k = a ? `${L.id}|boss|${seed}|${i}|${a}` : `${L.id}|boss|0|${i}`;
   if (!b.gen) { // 미리 쓴 판 (#135 ③): 시도 0 = 세트 1 · 1~ = pool 차례로
     const first = b.sets?.['1']?.[i], ps = b.pool?.[i] || [];

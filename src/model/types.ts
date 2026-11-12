@@ -75,6 +75,8 @@ export interface BossPack {
   pool?: Question[][];
   /** 문항별 개념 (개인 결과 · 복습 추천) */
   tags?: string[];
+  /** 형성평가를 두 수업으로 나눌 때 이 수업의 첫 문항 번호 (원래 번호 i = first + 이 수업 번호 · 생성기 · 세트 · 재도전은 원래 번호 그대로) */
+  first?: number;
   /** 정식 세트 (1 = 학습지 · 2 = 숫자 바꿈) — 데이터만 · 시도 0 = 세트 1 */
   sets?: Record<string, Question[]>;
 }
@@ -92,7 +94,8 @@ export interface LessonPack {
   sheet?: string;
   goal?: string;
   std?: string;
-  parts?: { no: number; from: string; title: string }[];
+  /** 한 팩을 두 수업으로 (#132 · #149): from = 뒷수업 첫 칸 · boss = 형성평가를 나눌 때 뒷수업이 가질 문항 [시작, 끝) (앞수업 = [0, 시작)) */
+  parts?: { no: number; from: string; title: string; boss?: number[] }[];
   /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = 6차시 팩의 문제 4부터) */
   partOf?: string;
   next?: { title: string; ask?: string; link?: string };

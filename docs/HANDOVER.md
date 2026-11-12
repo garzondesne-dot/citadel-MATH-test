@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b33 · 2026-11-12
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b37 · 2026-11-12
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -11,6 +11,8 @@
 | b28 | #145 | 엑셀 이름 · 캠프 360 × 640 겹침 0 |
 | b29 · b31 | #142-2 · #146 | 🏰 디펜스(정식 td.js 계산 · 타워 힘 모두 같음) · 교환 · 업그레이드 고르기 · 용사 바꾸기 · 컷인 · 🎵 쉼터 곡 · 놀이 그림 |
 | b30 · b32 · b33 | #143 · #147 | 📋 게시판 던전 1인 · 팀(모집 · 합류 · 대기실 · 수호자 · 힌트 · 멈춤 · 순위) · 🔁 진행 이어받기 |
+| b34 ~ b36 | #148 · #150 | 룬 키패드 그림 · ⚒ 모루(정식 연성 · 카드 54 · 도감 · 특전) |
+| b37 | #149 | ✂ 6차시 = 문제 1 ~ 3 + 형성평가 1 ~ 3 · 7차시 = 문제 4 ~ 7 + 형성평가 4 ~ 6 (`parts[].boss` · 재도전 = 원래 번호) |
 
 ## 2. 서버 칸 (이 판이 쓰는 곳)
 | 칸 | 쓰는 곳 | 내용 |
@@ -25,7 +27,7 @@
 | `bonus/{반}/{번호}/review/{차시}/{문제}` | 📕 복습 완료 기록 | ⚠ 정식 꼴과 다름(아래 메모 3) |
 
 ## 3. 시험
-- 단위: `npm test`(148) · 화면: `npm run build` → `npx vite preview --port 4173` → `NODE_PATH=$(npm root -g) node tools/e2e/<이름>.cjs <그림 폴더>`
+- 단위: `npm test`(153) · 화면: `npm run build` → `npx vite preview --port 4173` → `NODE_PATH=$(npm root -g) node tools/e2e/<이름>.cjs <그림 폴더>`
 - 에뮬레이터가 필요한 것: `rest` · `td` · `team` · `team-drv` · `me` · `gate` · `server` (`cd firebase && firebase emulators:start --only database,auth --project demo-citadel-test`)
 - 이 기기만: `board` · `theme` · `camp` · `myhero` · `tabs`(한글 파일 이름 = 브라우저 `LANG=ko_KR.UTF-8`)
 - 화면 시험 고리(학생 화면엔 안 보임): `window.__board`(지금 단계 맞히기 · 틀리기) · `__BOARD_SEC` · `__TD_PICK` · `__TD_SPEED` · `__bgm`
@@ -43,3 +45,4 @@
 7. **팀 진행 이어받기**: 남은 팀원이 모두 끊기면 진행이 멈춤(다시 들어오면 이어짐) · 진행 폰이 바뀌는 순간 「다음 ▶」가 1 ~ 2초 늦을 수 있음
 8. **디펜스 계산**: 시작 때 난이도 맞추기(calibrate)로 TV 가 1 ~ 2초 멈칫(정식과 같은 계산) · 균형 시험은 하지 않음(확정안)
 9. **에셋**: 클래식(`public/classic`) · 쉼터 곡(`public/bgm` · JDSherbert 표기) · 놀이 · 디펜스 그림(`public/art/fun · td`) = 정식 저장소에서 복사 · 출처 `public/bgm/CREDITS.md` · Galmuri OFL
+10. **6 · 7차시 나누기 (#149)**: 정식 6차시 기록의 u4 ~ u7 · 보스(형성평가 4 ~ 6) = v1.0 7차시로 옮겨 셈 (records 옮길 때 · 보스 items 0 ~ 2 = 6차시 · 3 ~ 5 = 7차시 0 ~ 2)
