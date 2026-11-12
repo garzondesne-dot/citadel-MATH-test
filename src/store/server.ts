@@ -23,12 +23,14 @@ export interface NetState { connected: boolean; uid: string | null }
 export interface ServerStore extends Store { net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub }
 export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null }
 
+/** 기다리되 ms 넘으면 그냥 넘어감 (서버가 안 닿거나 규칙 게시 전이어도 화면이 멈추지 않게) */
+const within = <T>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<void>((r) => setTimeout(r, ms))]);
 export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const app = initializeApp(o.firebase, `citadel-${Date.now()}`);
   const db = getDatabase(app), auth = getAuth(app);
   if (o.emulator) { connectDatabaseEmulator(db, o.emulator.host, o.emulator.db); connectAuthEmulator(auth, `http://${o.emulator.host}:${o.emulator.auth}`, { disableWarnings: true }); }
   // 로그인 (규칙 = 로그인한 사람만) — 이미 계정으로 들어와 있으면 그대로
-  await new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), () => res()); }); });
+  await within(new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), (e) => { console.error('시험 서버 로그인 실패', e); res(); }); }); }), 8000);
   const mirror: Tree = {};
   const subs = new Set<{ path: string; fn: (v: unknown) => void; last: string }>();
   const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = getIn(mirror, split(s.path)), j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
@@ -40,10 +42,10 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   onValue(ref(db, '.info/connected'), (s) => { net.connected = !!s.val(); tell(); });
   onAuthStateChanged(auth, (u) => { net.uid = u?.uid ?? null; tell(); });
   // 맨 윗칸 실시간 → 거울 (첫 값이 모두 올 때까지 기다림 = get 이 바로 답할 수 있게)
-  await Promise.all(ROOTS.map((k) => new Promise<void>((res) => {
+  await within(Promise.all(ROOTS.map((k) => new Promise<void>((res) => {
     let first = true;
-    onValue(ref(db, k), (snap) => { const v = snap.val(); if (v == null) delete mirror[k]; else mirror[k] = v; fire(k); if (first) { first = false; res(); } }, () => res());
-  })));
+    onValue(ref(db, k), (snap) => { const v = snap.val(); if (v == null) delete mirror[k]; else mirror[k] = v; fire(k); if (first) { first = false; res(); } }, (e) => { console.error('시험 서버 읽기 막힘', k, e); res(); });
+  }))), 10000);
   return {
     kind: 'server', net, auth, db,
     onNet(fn) { netSubs.add(fn); fn({ ...net }); return () => netSubs.delete(fn); },

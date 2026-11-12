@@ -5,7 +5,7 @@ import { deviceStore } from './device';
 // 🔌 「어느 서버」 설정 하나 (#137 · V1-DESIGN 7절 · L0 ④) — 값은 코드에 박지 않고 사이트의 server.json 한 곳
 //   server.json = { "mode": "device" }                                   ← 이 기기(두 탭 시험 · 기본)
 //               = { "mode": "server", "firebase": { apiKey, authDomain, databaseURL, projectId, appId } }  ← 시험 서버
-//   시험(에뮬레이터): 주소에 ?emu=127.0.0.1 → 이 브라우저에 기억 · ?emu=off 로 끔 (Firebase 에뮬레이터 · 프로젝트 demo-citadel-test)
+//   내 컴퓨터(localhost)에서는 늘 이 기기(?server=on 으로만 서버) · 시험(에뮬레이터): 주소에 ?emu=127.0.0.1 → 이 브라우저에 기억 · ?emu=off 로 끔 (Firebase 에뮬레이터 · 프로젝트 demo-citadel-test)
 //   ⚠ 운영 프로젝트(citadel-math)는 절대 연결하지 않음 → 이 기기로 돌아가고 붉은 띠
 export const FORBIDDEN_PROJECTS = ['citadel-math'];
 export type Where = { kind: 'device' | 'server' | 'emulator'; label: string; blocked?: string };
@@ -25,7 +25,9 @@ export async function chooseStore(): Promise<{ S: Store; where: Where }> {
   let emu: string | null = null;
   try { emu = localStorage.getItem(EMU_KEY); } catch { /* 무시 */ }
   let cfg: ServerJson = { mode: 'device' };
-  if (!emu) { try { const r = await fetch(`./server.json?t=${Date.now()}`, { cache: 'no-store' }); if (r.ok) cfg = (await r.json()) as ServerJson; } catch { /* 없음 = 이 기기 */ } }
+  // 내 컴퓨터(localhost) = 늘 이 기기 (개발 · 시험이 진짜 서버에 닿지 않게) · ?server=on 이면 그래도 서버
+  const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && q.get('server') !== 'on';
+  if (!emu && !local) { try { const r = await fetch(`./server.json?t=${Date.now()}`, { cache: 'no-store' }); if (r.ok) cfg = (await r.json()) as ServerJson; } catch { /* 없음 = 이 기기 */ } }
   if (emu) {
     const { serverStore } = await import('./server');
     const S = await serverStore({ firebase: { apiKey: 'demo-key', projectId: 'demo-citadel-test', databaseURL: `http://${emu}:9000/?ns=demo-citadel-test-default-rtdb`, authDomain: 'demo-citadel-test.firebaseapp.com' }, emulator: { host: emu, db: 9000, auth: 9099 } });
