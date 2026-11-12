@@ -15,7 +15,7 @@
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
   //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
-  type End = { right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
+  type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
   const { L0, uid, num, nick, cls, team = null, onend, onquit }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string;
     team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string> } | null;
@@ -25,8 +25,30 @@
   const solo = untrack(() => !team);
   const S: Store = untrack(() => team?.S ?? { ...memoryStore(), kind: 'memory' as const });
   const code = untrack(() => team?.code ?? `B${Date.now() % 1e6}`);
-  const drv = untrack(() => solo || !!team?.host);
-  const sec = () => Number((globalThis as { __BOARD_SEC?: number }).__BOARD_SEC) || SEC_PER_ITEM; // __BOARD_SEC = 화면 시험만
+  // 🔁 진행 맡기 (#147 · 교사 폰 → TV 이어받기와 같은 꼴): rooms/{코드}/bdrv/{uid} = { at, since, from } · 맡은 폰이 1초마다 at
+  //   맡은 폰 = 소식이 10초 안인 칸 중 since 가 가장 늦은 칸(가장 최근에 이어받은 폰) → 끊겼다 되살아난 폰이 밀린 소식을 써도 뺏지 못함
+  //   아무도 없으면 남은 팀원 중 차례대로(2초씩 늦게) 이어받음 · 처음 = 글 올린 폰 · 다시 들어온 폰 = 그대로 팀원 · 끊긴 폰은 맡지 않음
+  const LEASE = 10000;
+  const online = () => (S as Store & { net?: { connected: boolean } }).net?.connected !== false;
+  type Lease = { at: number; since: number; from?: string };
+  const leases = (RR: Room | null) => ((RR as unknown as { bdrv?: Record<string, Lease> } | null)?.bdrv) || {};
+  function leader(RR: Room | null, t: number): { u: string; l: Lease } | null {
+    const fresh = Object.entries(leases(RR)).filter(([, l]) => l && t - l.at <= LEASE).sort((a, b) => b[1].since - a[1].since || (a[0] < b[0] ? -1 : 1));
+    return fresh[0] ? { u: fresh[0][0], l: fresh[0][1] } : null;
+  }
+  let leaseAt = 0;
+  function amDrv(RR: Room): boolean {
+    if (solo) return true;
+    if (!online()) return false;
+    const t = S.now(), L0 = leader(RR, t), all = leases(RR);
+    if (L0?.u === uid) { if (t - leaseAt > 1000) { leaseAt = t; S.set(`${roomPath(code)}/bdrv/${uid}`, { ...L0.l, at: t }); } return true; }
+    if (L0) return false;
+    const last = Object.entries(all).sort((a, b) => b[1].at - a[1].at)[0];
+    if (!last) { if (!team?.host) return false; S.set(`${roomPath(code)}/bdrv/${uid}`, { at: t, since: t }); leaseAt = t; return true; }
+    const live = activeIds(RR, t).filter((u) => ids.includes(u) && u !== last[0]).sort(), rank = live.indexOf(uid);
+    if (rank < 0 || t - last[1].at <= LEASE + rank * 2000) return false;
+    S.set(`${roomPath(code)}/bdrv/${uid}`, { at: t, since: t, from: last[0] }); leaseAt = t; return true;
+  }  const sec = () => Number((globalThis as { __BOARD_SEC?: number }).__BOARD_SEC) || SEC_PER_ITEM; // __BOARD_SEC = 화면 시험만
   if (solo) untrack(() => {
     openRoom(S, L, code, PROFILES.board);
     S.set(`${roomPath(code)}/meta/fresh`, freshAll(L));
@@ -42,7 +64,7 @@
   let ended = false;
   // ── 진행 (맡은 폰) ──
   const drive = setInterval(() => {
-    const RR = S.get<Room>(roomPath(code)); if (!RR || !drv) return;
+    const RR = S.get<Room>(roomPath(code)); if (!RR || !amDrv(RR)) return;
     const m = bMeta(RR);
     if (isLobby(RR)) {
       const here = activeIds(RR, S.now());
@@ -63,9 +85,10 @@
     untrack(() => {
       const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
       const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
-      onend({ right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L });
+      onend({ drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L });
     });
   });
+  const amDrvNow = (RR: Room) => solo || leader(RR, S.now())?.u === uid;
   const elapsedOf = (RR: Room) => { const m = bMeta(RR); return m ? (m.limit || 0) - timeLeft(RR, S.now()) : 0; };
   // 🧪 화면 시험만: 지금 단계를 다 맞히기 · 다 틀리기 (e2e team.cjs · 답 입력 화면 자체는 레이드 e2e 가 시험)
   const hook = {
@@ -101,6 +124,9 @@
   let hintSheet = $state(false), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2000); };
   const others = $derived(ids.filter((u) => u !== uid).sort((a, b) => Number(!!help[b]) - Number(!!help[a])));
+  // 「🔁 진행을 ○○가 이어받았어요」 한 줄 (3초)
+  let took = $state(''), tookFor = '';
+  $effect(() => { const L1 = leader(R, now), d = L1 ? { u: L1.u, from: L1.l.from } : null; if (!d || !d.from) return; const k = `${d.u}|${d.from}`; if (k === tookFor) return; tookFor = k; untrack(() => { took = `🔁 진행을 ${d.u === uid ? '내가' : `${name(d.u)}가`} 이어받았어요`; setTimeout(() => (took = ''), 3500); }); });
   const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
 </script>
 
@@ -126,7 +152,7 @@
     <div class="cover" role="status"><span class="ic">{bp.think ? '⏸' : '🛡'}</span><b>{bp.think ? '생각 시간' : '수호자가 설명 중'}</b><em>{mmss(bpLeft)}</em><p>시간이 멈췄어요 · 같은 문제를 함께 봐요</p>
       {#if bp.by === uid}<button type="button" class="btn" onclick={() => R && pauseOff(S, code, R)}>▶ 다시 시작</button>{/if}</div>
   {/if}
-  {#if toast}<p class="toast2" role="status">{toast}</p>{/if}
+  {#if toast || took}<p class="toast2" role="status">{toast || took}</p>{/if}
 </div>
 {#if hintSheet}
   <Sheet onclose={() => (hintSheet = false)}>

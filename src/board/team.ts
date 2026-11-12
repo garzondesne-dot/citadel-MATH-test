@@ -42,7 +42,8 @@ export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boole
   return '';
 }
 export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0]) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec), at: S.now(), ready: false }); }
-export const leavePost = (S: Store, p: Post, uid: string) => (p.host === uid ? S.set(`${POSTS}/${p.pid}`, null) : S.set(`${POSTS}/${p.pid}/mem/${uid}`, null));
+/** 나가기: 출발 전 글 올린 사람 = 글 내림 · 그 밖(출발 뒤 글 올린 사람도) = 나만 빠짐 (#147 · 팀 진행은 남은 팀원이 이어받음) */
+export const leavePost = (S: Store, p: Post, uid: string) => (p.host === uid && p.phase === 'wait' ? S.set(`${POSTS}/${p.pid}`, null) : S.set(`${POSTS}/${p.pid}/mem/${uid}`, null));
 export const setReady = (S: Store, p: Post, uid: string, v: boolean) => S.set(`${POSTS}/${p.pid}/mem/${uid}/ready`, v);
 export const canStart = (p: Post) => mems(p).every((m) => m.uid === p.host || m.ready);
 

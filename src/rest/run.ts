@@ -134,7 +134,7 @@ export const tdCheer = (S: Store, code: string, wave: number) => S.set(P(code, `
 export const tvBeat = (S: Store, code: string) => S.set(P(code, 'tvAt'), S.now());
 /** 🎁 디펜스 보상 (정식 · 하루 💎 최대 3 · 이기면 3 · 지면 1 · 같은 날 진 뒤 이긴 판은 3 까지 채움) = gifts/{uid}/td{날짜}… */
 export function payTd(S: Store, uid: string, win: boolean, code: string): number {
-  const d = new Date(S.now() + 9 * 3600e3), day = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+  const day = new Date(S.now() + 9 * 3600e3).toISOString().slice(0, 10); // KST · 정식 today() 꼴
   const G = (S.get<Record<string, { g: number }>>(`gifts/${uid}`)) || {}, had = Object.entries(G).filter(([k]) => k.startsWith(`td${day}`)).reduce((a, [, x]) => a + (Number(x.g) || 0), 0), want = win ? 3 : 1;
   if (had >= want) return 0;
   S.set(`gifts/${uid}/td${day}_${had}`, { g: want - had, at: S.now(), code, fun: '🏰 디펜스' });

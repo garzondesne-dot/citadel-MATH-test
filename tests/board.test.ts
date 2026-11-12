@@ -7,7 +7,7 @@ import { bossSubmit, chainSubmit, heartbeat, nextStep, openRoom, roomPath, submi
 import { answerOf, bossItem, bossState, chainRecord, isChain, isEnd, itemsFor, plainRecord, stepOf } from '../src/raid/raid';
 import { items as packItems } from '../src/engine/lessons';
 import { packOf } from '../src/engine/packs';
-import { boardPack, firstTry, freshAll, gemsOf, gradeOf, itemCount, stepDone } from '../src/board/board';
+import { boardPack, firstTry, freshAll, gemsOf, gradeOf, itemCount, kstDay, stepDone } from '../src/board/board';
 import { earnDaily } from '../src/model/wallet';
 
 const L0 = packOf('set-06')!;
@@ -46,9 +46,10 @@ describe('📋 게시판 던전 1인 (#143)', () => {
     const f = firstTry(L, R(), 'me');
     expect(f.bad + f.none).toBe(0); expect(gradeOf(f)).toBe('S');
     expect(gemsOf({ right: f.ok, clear: true, n: 1 })).toEqual({ base: 16, team: 0, total: 16 });
-    const w = { gem: 0, scroll: 0, buys: [], ver: 1, day: { '20261112': 90 } };
-    expect(earnDaily(w, 16, '20261112', 100)).toBe(10); expect(w.gem).toBe(10); expect(earnDaily(w, 5, '20261112', 100)).toBe(0);
-    expect(earnDaily(w, 5, '20261113', 100)).toBe(5); expect(w.day).toEqual({ '20261113': 5 });
+    const w = { gem: 0, scroll: 0, buys: [], ver: 1, day: { '2026-11-12': 90 } };
+    expect(earnDaily(w, 16, '2026-11-12', 100)).toBe(10); expect(w.gem).toBe(10); expect(earnDaily(w, 5, '2026-11-12', 100)).toBe(0);
+    expect(earnDaily(w, 5, '2026-11-13', 100)).toBe(5); expect(w.day).toEqual({ '2026-11-12': 100, '2026-11-13': 5 });
+    expect(kstDay(Date.UTC(2026, 10, 12, 15, 30))).toBe('2026-11-13'); // KST 자정 넘김
   });
   it('틀림 2번 → 기회 끝 = 다음으로 · 첫 시도 틀림 · 안 푼 문제 = 미제출 → 등급 C', () => {
     const { L, S, R } = setup(), s = stepOf(L, R())!;

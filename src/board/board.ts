@@ -52,5 +52,5 @@ export function gemsOf(o: { right: number; clear: boolean; n: number }): { base:
   const team = Math.round(base * x) - base;
   return { base, team, total: base + team };
 }
-/** 오늘 날짜 (KST · 정식 today) */
-export const kstDay = (t: number) => { const d = new Date(t + 9 * 3600e3); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`; };
+/** 오늘 날짜 (KST · 정식 gem.js today() 와 같은 꼴 YYYY-MM-DD = gem.day 칸 이름) */
+export const kstDay = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(0, 10);

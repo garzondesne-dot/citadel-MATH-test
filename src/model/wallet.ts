@@ -7,7 +7,7 @@ export interface Wallet { gem: number; scroll: number; buys: Buy[]; ver: number;
 export function earnDaily(w: Wallet, n: number, day: string, cap: number): number {
   const used = Number(w.day?.[day]) || 0, g = Math.max(0, Math.min(Math.floor(n), cap - used));
   if (!g) return 0;
-  w.gem += g; w.day = { [day]: used + g }; // 지난 날짜는 버림
+  w.gem += g; w.day = { ...(w.day || {}), [day]: used + g }; // 정식 gem.day 와 같이 날짜마다 남김
   return g;
 }
 /** 판별 이전 표: MIGRATE[옛 판] = { 옛 칸 id: 새 칸 id } (지금은 1판뿐 → 빈 표) */

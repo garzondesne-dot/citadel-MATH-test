@@ -51,7 +51,7 @@
   const tag = (p: Post) => [...new Set(membersOf(p).map((m) => m.cls))];
   function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } joinPost(S, p, meM, recs[p.lesson] ?? null); }
   // ── 결과 (1인 · 팀 같은 꼴) ──
-  function ended(r: { right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack }, team: Post | null) {
+  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;
     const n = team ? membersOf(team).length : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
     const base = Math.min(GEM.itemMax, r.right * GEM.perItem) + (r.clear ? GEM.clear : 0), mult = TEAM_X[Math.max(1, Math.min(4, n))] ?? 1, bonus = bonusOf(role, n, guard, r.clear);
@@ -63,11 +63,11 @@
     let rank: Res['rank'] = null;
     const key = team ? team.pid : `s${uid.replace(/[.#$/[\]]/g, '_')}${S.now().toString(36)}`, path = `${RANK}/${L.id}/${weekOf(S.now())}`;
     if (S.kind !== 'memory') {
-      if (!team || team.host === uid) { const rr = r.tf.total ? r.tf.ok / r.tf.total : 0, baseR = (() => { const ms = team ? membersOf(team) : [{ cls, num }], xs = ms.map((m) => S.get<{ right?: number; total?: number }>(`records/${m.cls}/${m.num}/${L.id}`)).filter((x) => x && x.total) as { right: number; total: number }[]; return xs.length ? xs.reduce((a, x) => a + x.right / x.total, 0) / xs.length : rr; })();
+      if (!team || r.drv) { const rr = r.tf.total ? r.tf.ok / r.tf.total : 0, baseR = (() => { const ms = team ? membersOf(team) : [{ cls, num }], xs = ms.map((m) => S.get<{ right?: number; total?: number }>(`records/${m.cls}/${m.num}/${L.id}`)).filter((x) => x && x.total) as { right: number; total: number }[]; return xs.length ? xs.reduce((a, x) => a + x.right / x.total, 0) / xs.length : rr; })();
         S.set(`${path}/${key}`, { s: Math.round(rr * 1000), g: Math.round((rr - baseR) * 1000), c: r.hints, at: S.now() } satisfies RankRow); }
       rank = { lesson: L.id, week: weekOf(S.now()), key };
     }
-    if (team && team.host === uid) S.set(`${POSTS}/${team.pid}/phase`, 'done');
+    if (team && r.drv) S.set(`${POSTS}/${team.pid}/phase`, 'done');
     res = { ...r, L, n, role, mult, bonus, base, total2, got, rank };
   }
   const rk = $derived(res?.rank ? rankOf(rkv.v.val?.[res.rank.lesson]?.[res.rank.week] ?? null, res.rank.key) : null);
