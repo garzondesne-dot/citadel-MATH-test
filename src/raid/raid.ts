@@ -222,7 +222,7 @@ export function bossHp(L: LessonPack, R: Room, now: number) {
 // ── ⏱ 시계 두 갈래 (#118 · 선생님 11/12 바로잡음) ─────────────
 //   벽시계(clock.now · S.now) 하나에서 두 갈래로만 파생 — 화면 · 규칙은 둘 중 하나만 읽는다 (따로 타이머를 두지 않음)
 //   ① 수업 시계 classNow = 실제 시각 · 집중이어도 멈추지 않음 → 남은 수업 시간 · (앞으로) 보스 문 닫기 · 접속 판정
-//   ② 게임 시계 gameNow = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합 → 정찰 · 몬스터 공격 · 생각 시간 · (앞으로) 박쥐 · 콤보 창 · 놀이 · 연출 반복
+//   ② 게임 시계 gameNow = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합 → 정찰 · 몬스터 공격 · 생각 시간 · 한 판 더 대기 · (앞으로) 박쥐 · 콤보 창 · 놀이 · 연출 반복
 //      집중이면 함께 멈추고 끄면 그 자리에서 이어감 · 단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로)
 export const classNow = (_R: Room | null, wall: number): number => wall;
 export const focusOn = (R: Room) => !!R.state.focus;
