@@ -13,7 +13,7 @@
 
 <span class="hs" class:aura={aura > 0} style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:--a1={a[0]} style:--a2={a[1]} style:--ar="{a[2]}px" role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}>
   {#if i8}
-    <i class="i8" class:dim style:left="0" style:top="0" style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:translate="{(IDLE8.dx[id] ?? 0) * scale}px 0" style:background-image="url({i8})" style:background-size="{IDLE8.frames * 100}% {IDLE8.rows * 100}%" style:background-position-y="{(id / (IDLE8.rows - 1)) * 100}%" style:animation-duration="{IDLE8.ms}ms"></i>
+    <i class="i8" class:dim style:left="0" style:top="0" style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:translate="{(IDLE8.nd[id]?.[0] ?? 0) * scale}px {(IDLE8.nd[id]?.[1] ?? 0) * scale}px" style:background-image="url({i8})" style:background-size="{IDLE8.frames * 100}% {IDLE8.rows * 100}%" style:background-position-y="{(id / (IDLE8.rows - 1)) * 100}%" style:animation-duration="{IDLE8.ms}ms"></i>
   {:else}
     <i class:play class:dim style:left="{g.dx * scale}px" style:top="{g.dy * scale}px" style:width="{g.w * scale}px" style:height="{g.h * scale}px" style:translate="{nd.dx * scale}px {nd.dy * scale}px" style:background-image="url({heroUrl(id)})" style:background-size="{HERO.cols * 100}% {HERO.rows * 100}%" style:background-position-y="{(row / (HERO.rows - 1)) * 100}%"></i>
   {/if}

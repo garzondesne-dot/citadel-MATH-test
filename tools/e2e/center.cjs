@@ -17,8 +17,9 @@ const CLEAN = `*{background-color:transparent!important;box-shadow:none!importan
     const box = await el.boundingBox(); if (!box) return;
     const handle = await p.addStyleTag({ content: CLEAN + extra });
     let u = null;
-    for (const f of [0, 1, 2, 3]) {
-      await el.evaluate((e, k) => { const i = e.querySelector('i'); i.style.backgroundPositionX = `${(k / 3) * 100}%`; }, f);
+    const n = await el.evaluate((e) => (e.querySelector('i.i8') ? 8 : 4)); // 🫁 #170 대기 8프레임 칸 = 8칸 모두
+    for (let f = 0; f < n; f++) {
+      await el.evaluate((e, [k, n]) => { const i = e.querySelector('i'); i.style.animation = 'none'; i.style.backgroundPositionX = `${(k / (n - 1)) * 100}%`; }, [f, n]);
       const png = await el.screenshot({ omitBackground: true }); // 그 칸만 (옆 글자의 이모지가 섞이지 않게)
       const bb = await p.evaluate(async (b64) => {
         const img = new Image(); img.src = `data:image/png;base64,${b64}`; await img.decode();
