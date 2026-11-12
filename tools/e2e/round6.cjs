@@ -30,7 +30,8 @@ const log = (...a) => console.log(...a);
   // 누르는 칸 48px (스킬 5절 3): 보이는 단추 · 칩 · 답안 줄 칸 높이
   const taps = async (p, where) => { const small = await p.$$eval('.bcard button, .act .btn, .chip, .rune, .opt, .row .cell', (bs) => bs.filter((x) => x.offsetParent && x.getBoundingClientRect().height < 44).map((x) => `${x.className}:${Math.round(x.getBoundingClientRect().height)}`)); if (small.length) errs.push(`누름 칸 작음 ${where}: ${small.slice(0, 3).join(' ')}`); };
   const next = async () => { await hall.click('.dock .go'); await hall.waitForTimeout(250); };
-  const ko = async () => { const t = await hall.$('.arena .hp span:last-child'); return !!t && /^0 \//.test((await t.textContent()).trim()); };
+  const tvHp = () => hall.evaluate(() => window.__arena?.hp || ''); // #157 TV 장면 = 캔버스 → 시험 고리로 체력 읽기
+  const ko = async () => /^0 \//.test(await tvHp());
   const appear = async () => { await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 9000 }); await hall.waitForTimeout(250); }; // TV 에는 「등장」 단추 없음 (⑮) · 테스트 정찰 5초
   const mainBtn = (p) => p.$('.act .btn');
   const waitMain = (p) => p.waitForFunction(() => { const g = document.querySelector('.act .btn'); return g && !g.disabled; }, null, { timeout: 9000 });
@@ -84,8 +85,8 @@ const log = (...a) => console.log(...a);
           else await answer(item, A.boss[i]);
           await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(150);
         }
-        if (k === 0) { await p.waitForSelector('.gt .r'); await p.waitForTimeout(200); log('  학생1 채점표:', await p.$$eval('.gt .r', (rs) => rs.map((r) => `${r.querySelector('.n').textContent}${r.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').replace(/\bg-/g, '').trim()} ${r.querySelector('.a').textContent}`).join(' | ')), '|', (await p.textContent('.bcard .lab')).trim()); await shot(p, 'r116-boss-table-360.png'); await overflow(p, '형성평가 채점표'); log('  학생1 도달: 6 / 6 · 종합실', (await hall.textContent('.arena .hp span:last-child')).trim()); continue; }
-        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '/ 6 · 종합실', (await hall.textContent('.arena .hp span:last-child')).trim());
+        if (k === 0) { await p.waitForSelector('.gt .r'); await p.waitForTimeout(200); log('  학생1 채점표:', await p.$$eval('.gt .r', (rs) => rs.map((r) => `${r.querySelector('.n').textContent}${r.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').replace(/\bg-/g, '').trim()} ${r.querySelector('.a').textContent}`).join(' | ')), '|', (await p.textContent('.bcard .lab')).trim()); await shot(p, 'r116-boss-table-360.png'); await overflow(p, '형성평가 채점표'); log('  학생1 도달: 6 / 6 · 종합실', await tvHp()); continue; }
+        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '/ 6 · 종합실', await tvHp());
       }
       await overflow(st[0], '형성평가'); await taps(st[0], '형성평가');
       log('  보스:', (await ko()) ? '🏆 승리!' : '아직');

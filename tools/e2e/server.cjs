@@ -55,7 +55,7 @@ const log = (...a) => console.log(...a);
   await t.waitForTimeout(1500);
   const hpT = (await t.textContent('.hpl small')).trim(), subs = await rest(`rooms/${live.code}/subs/m1`);
   const hpP = await Promise.all(phones.map((p) => p.textContent('.edge').then((x) => (/체력\s*([\d]+\s*\/\s*\d+)/.exec(x) || ['', '?'])[1]).catch(() => '?')));
-  const hpTV = await tv.evaluate(() => document.querySelector('.arena .hp span:last-child')?.textContent?.trim() ?? '?');
+  const hpTV = await tv.evaluate(() => window.__arena?.hp || '?');
   log('문제 1 제출 → 서버 subs:', Object.keys(subs || {}).length, '명 | 리모컨', hpT, '| TV', hpTV, '| 폰', hpP.join(' · '));
   await t.screenshot({ path: `${SHOTS}/b20-remote-m1.png` }); await tv.screenshot({ path: `${SHOTS}/b20-tv-m1.png` }); await phones[2].screenshot({ path: `${SHOTS}/b20-phone3-m1.png` });
   // 폰 3 끊었다 다시 들어오기 (창 닫기 → 새 창 · 같은 학생)

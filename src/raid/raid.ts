@@ -109,7 +109,7 @@ export const CHAIN_SLOTS = 4;
 export const PRAC_MAX = 3;
 export const isChain = (L: LessonPack, R: Room, mid: string) => NEWR(R) && !!L.monsters[mid]?.chain;
 export const chainItems = (L: LessonPack, R: Room, mid: string, uid: string, pass: number) => packChainItems(L, mid, seedOf(R, uid), (pass || 0) + shiftOf(R, mid));
-const chainSubs = (R: Room, mid: string, uid: string) => { const a = R.chain?.[mid]?.[uid] || {}; return keys(a).map(Number).sort((x, y) => x - y).map((k) => ({ k, ...(a[k] as ChainSub) })); };
+export const chainSubs = (R: Room, mid: string, uid: string) => { const a = R.chain?.[mid]?.[uid] || {}; return keys(a).map(Number).sort((x, y) => x - y).map((k) => ({ k, ...(a[k] as ChainSub) })); };
 export const whyStages = (its: Question[]) => (its || []).map((q, i) => (q && q.why ? i : -1)).filter((i) => i >= 0);
 export const pracUsed = (R: Room, mid: string, uid: string, rec?: { pass?: number }) => Math.max(Number(R.players?.[uid]?.pr?.[mid]) || 0, (rec && rec.pass) || 0);
 /** 소레이드 단계 정답 (서술형 통과로 채울 값 · 시연 정답 펼치기) */

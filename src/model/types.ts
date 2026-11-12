@@ -140,6 +140,8 @@ export interface Store {
   /** path 아래(자신 포함)가 바뀌면 부름. 처음 한 번 바로 부름 */
   watch<T = unknown>(path: string, fn: (v: T | null) => void): Unsub;
   now(): number;
+  /** 한 번 받아 오기 — 실시간 거울 밖 칸(prep 학습지 그림 등 · 서버만) · 없으면 get 과 같음 */
+  fetch?<T = unknown>(path: string): Promise<T | null>;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──

@@ -7,9 +7,9 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, note = '' }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, note = '', onconcept }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; note?: string } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; note?: string; onconcept?: () => void } = $props();
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
   const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
@@ -24,6 +24,7 @@
 <div class="edge" class:hit style:background-image="url({dungeonOf(theme)})">
   <div class="top">
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
+    {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}
     <span class="sp"></span>
     {#if timeLeftMs != null && timeLeftMs <= 5 * 60000}<span class="pill time" aria-label="남은 시간">⏱ {mm(Math.max(0, timeLeftMs))}</span>{/if}
     <span class="pill" aria-label="마정석 {gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{gem}</span>
@@ -35,7 +36,7 @@
   {#if minions}
     <div class="minions">
       {#each Array.from({ length: minions.n }) as _, k (k)}
-        <i class="mini" class:dead={k < minions.stage || minions.downs.includes(k)} class:now={k === minions.stage} style={monBg(44, k < minions.stage ? 'down' : 'idle')} aria-label="졸개 {k + 1}"></i>
+        <i class="mini" class:dead={k < minions.stage || minions.downs.includes(k)} class:now={k === minions.stage} style={monBg(40, k < minions.stage ? 'down' : 'idle')} aria-label="졸개 {k + 1}"></i>
       {/each}
     </div>
   {/if}
@@ -54,6 +55,7 @@
   .sp { flex: 1; }
   .pill { display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pill.time { color: var(--accent); }
+  .pill.cpt { border: 0; height: 36px; font: 700 var(--fs-small) var(--font); cursor: pointer; }
   .buffs { position: absolute; z-index: 2; left: var(--s3); top: 64px; display: flex; flex-direction: column; gap: 6px; }
   .buff { height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(8, 9, 12, 0.72); border: 1px solid rgba(255, 255, 255, 0.18); color: #fff; font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; }
   .buff.on { border-color: var(--accent); color: var(--accent); }
@@ -61,10 +63,12 @@
   .mhp .b { height: 10px; border-radius: 5px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); }
   .mhp .b i { display: block; height: 8px; border-radius: 4px; background: var(--hp); transition: width 0.4s; }
   .mon { position: absolute; z-index: 1; right: 24px; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
-  .mon.minboss { right: 6px; top: 118px; }
-  .minions { position: absolute; z-index: 1; left: 96px; top: 182px; display: flex; gap: var(--s2); }
+  /* ⚔ 소레이드 (#160 · 정식 소레이드 1단계 배치): 대장 = 오른쪽 뒤(조금 위) · 졸개 셋 = 대장 앞 한 줄(오른쪽 정렬 · 간격 8) · 용사 = 왼쪽 · 용사 칸(160)과 겹침 0 */
+  .mon.minboss { right: 8px; top: 90px; }
+  .minions { position: absolute; z-index: 2; right: 16px; top: 194px; display: flex; gap: var(--s2); }
   .mini { display: block; image-rendering: pixelated; background-repeat: no-repeat; border-radius: var(--r-sm); }
-  .mini.dead { opacity: 0.3; }
+  .mini { transition: transform 0.2s ease-out, opacity 0.2s; }
+  .mini.dead { opacity: 0.3; transform: translateY(6px); }
   .mini.now { outline: 3px solid var(--accent); outline-offset: 2px; }
   .hero.lunge { transform: translateX(28px); }
   .hero.whiff { transform: translateX(14px); opacity: 0.75; }

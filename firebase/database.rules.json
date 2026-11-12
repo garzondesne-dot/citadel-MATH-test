@@ -5,6 +5,7 @@
     "school": { ".write": "auth != null" },
     "gifts": { ".write": "auth != null" },
     "mail": { ".write": "auth != null" },
+    "prep": { ".write": "auth != null" },
     "accounts": {
       "$cls": {
         "$num": {

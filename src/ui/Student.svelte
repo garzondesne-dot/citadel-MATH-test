@@ -14,6 +14,9 @@
   import BossCard from './q/BossCard.svelte';
   import SymText from './q/SymText.svelte';
   import { fx } from './battle/fx.svelte';
+  import Sheet from './battle/Sheet.svelte';
+  import PrepImg from './q/PrepImg.svelte';
+  import { conceptOf } from '../school/prep';
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
@@ -91,12 +94,16 @@
   $effect(() => { const b = meBound(); if (!result || !b || board) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items, ...(bhp?.won ? { won: true } : {}) } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
+  // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
+  let cpt = $state(false);
+  const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
 </script>
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
     hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={stunned && !scout?.on}
+    onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {/if}
@@ -154,6 +161,12 @@
   {/if}
 </section>
 <SymSheet />
+{#if cpt && cptId}
+  <Sheet onclose={() => (cpt = false)} mainText="문제로 돌아가기" tall>
+    {#snippet title()}📘 이 문제의 개념{/snippet}
+    <PrepImg {S} {L} id={cptId} alt="개념"><p class="say"><SymText text={L.steps.find((s) => s.id === cptId)?.say ?? ''} /></p></PrepImg>
+  </Sheet>
+{/if}
 {#if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
 {#if R && !R.state.closed && R.state.focus && !board}

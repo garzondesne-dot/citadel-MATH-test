@@ -24,7 +24,7 @@
   const recs = untrack(() => (cls && num ? S.get<Record<string, { right?: number; total?: number; boss?: { ok?: number; items?: number } }>>(`records/${cls}/${num}`) : null)) || {};
   // 반 진도 = 그 반이 마지막으로 연 차시(school/last · 🧪 테스트 school/lastTest) · 내 수업 기록 중 큰 것
   const reach = Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(untrack(() => (cls ? lastClass(S, cls)?.no : 0))) || 0, Number(untrack(() => (cls ? lastTest(S, cls)?.no : 0))) || 0);
-  const LESSONS = PACKS.filter((p) => !p.partOf && (p.steps.some((s) => s.kind === 'monster') || p.boss));
+  const LESSONS = PACKS.filter((p) => (p.steps.some((s) => s.kind === 'monster') || p.boss));
   const isOpen = (p: LessonPack | null | undefined) => !!p && (!cls || !!recs[p.id] || p.no <= reach);
   const lessonOf = (id: string) => PACKS.find((p) => p.id === id) ?? null;
   // ⑬ 서버 연결 (시험 서버 = .info/connected · 이 기기 = 늘 됨)

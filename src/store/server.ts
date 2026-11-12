@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
-import { connectDatabaseEmulator, getDatabase, onValue, ref, set as fbSet, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, get as fbGet, getDatabase, onValue, ref, set as fbSet, type Database } from 'firebase/database';
 import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
 
@@ -62,5 +62,10 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       return () => subs.delete(s);
     },
     now: () => Date.now() + offset,
+    // 📄 거울 밖 칸 한 번 받기 (#158 prep/{차시}/img/{칸} · 그 단계에서만 한 장씩) · 거울 안 칸이면 거울에서
+    async fetch<T>(path: string) {
+      if (ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) return clone(getIn(mirror, split(path))) as T | null;
+      try { const s = await within(fbGet(ref(db, split(path).join('/'))), 8000); return (s && 'val' in s ? (s.val() as T) : null) ?? null; } catch (e) { console.warn('시험 서버 받기 실패', path, e); return null; }
+    },
   };
 }

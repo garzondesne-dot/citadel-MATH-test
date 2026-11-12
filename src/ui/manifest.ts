@@ -46,6 +46,11 @@ export function monNudge(src: string, row: number, col: number, cell: number): {
   const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
   return b ? { dx: (cell / 2 - (b[0] + b[2]) / 2) / cell, dy: (cell - b[3]) / cell } : { dx: 0, dy: 0 };
 }
+/** 몬스터 칸의 보이는 높이 (칸 대비 비율 · 체력 막대를 머리 바로 위에 놓을 때) */
+export function monVis(src: string, row: number, col: number, cell: number): number {
+  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  return b ? (b[3] - b[1]) / cell : 1;
+}
 /** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */
 export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BASE_URL}art/heroes/${heroOf(id).sprite || 'hero-sword-v3c.webp'}`;
 /** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */
@@ -73,10 +78,7 @@ export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.web
 export const BGM: Record<string, string> = { rest: 'bgm/rest-v1.mp3', bal: 'bgm/bal-v1.mp3', rev: 'bgm/rev-v1.mp3', quiz: 'bgm/ox-v1.mp3', nun: 'bgm/nun-v1.mp3', td: 'bgm/td-v1.mp3' };
 export const artUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 
-// ⌨ 룬 키패드 (머리 방 그림 2026-11-12 · ui-rune-key · ui-rune-slot · 마젠타 풀고 정수 배율 · 9-slice) — 단추 = 평소 · 빛남 / 답 칸 = 빈 칸 · 입력 중
 //   CSS 변수(url) 로 넘기므로 절대 주소 (상대 주소는 그 변수를 쓰는 스타일 파일 기준으로 풀려 assets/ 아래를 가리킴)
 export const absArt = (p: string) => (typeof document !== 'undefined' ? new URL(artUrl(p), document.baseURI).href : artUrl(p));
-const abs = absArt;
-export const RUNE = { key: abs('art/ui/ui-rune-key-v1.webp'), lit: abs('art/ui/ui-rune-key-lit-v1.webp'), slot: abs('art/ui/ui-rune-slot-v1.webp'), slotOn: abs('art/ui/ui-rune-slot-on-v1.webp') };
 // ✏ 출제 책상 (obj-quest · 캠프 물건 꼴 192 × 96 · 칸 96 · ① 평소 ② 새 소식) — 캠프 자리 · 기능은 출제 공방 시안 컨펌 뒤
 export const QUEST_DESK = { src: artUrl('art/camp/obj-quest-v1.webp'), cols: 2 };

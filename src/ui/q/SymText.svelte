@@ -15,8 +15,9 @@
 
 <style>
   .vq { display: block; margin: var(--s2) 0; }
-  .sy { position: relative; cursor: pointer; border-radius: 3px; padding: 0 1px;
-    background: linear-gradient(transparent 55%, rgba(245, 184, 74, 0.45) 55%, rgba(245, 184, 74, 0.45) 95%, transparent 95%); }
+  /* #160 형광펜 = 기호 글자는 그대로 밝게 · 아래 ⅓ 만 옅게 + 금빛 밑줄 (기호를 덮지 않음 · 정식 #105 밑줄 꼴) · 글자 크기 · 굵기 = 문제 글 그대로 */
+  .sy { position: relative; cursor: pointer; padding: 0 1px; font: inherit; color: inherit;
+    background: linear-gradient(transparent 72%, rgba(245, 184, 74, 0.22) 72%); text-decoration: underline 2px rgba(245, 184, 74, 0.9); text-underline-offset: 4px; }
   .sy::before { content: ''; position: absolute; left: -8px; right: -8px; top: -12px; bottom: -12px; }
-  .sy.seen { background: linear-gradient(transparent 60%, rgba(140, 150, 170, 0.35) 60%, rgba(140, 150, 170, 0.35) 92%, transparent 92%); }
+  .sy.seen { background: linear-gradient(transparent 72%, rgba(140, 150, 170, 0.18) 72%); text-decoration-color: rgba(140, 150, 170, 0.7); }
 </style>
