@@ -1,4 +1,4 @@
-import { CARD_KIT, UNIT } from './forge';
+import { CARD_KIT, PERKS, UNIT } from './forge';
 import type { LessonPack, Question } from '../../model/types';
 import type { Subject } from '../../model/subject';
 import DATA from './subject.json';
@@ -24,7 +24,7 @@ const SUBJECT: Subject = {
   generators: { gens: GENS, chains: CHAIN_GENS, boss: BOSS_GENS },
   symtalk: { BY, segments },
   cards: { bySym: SYM_CARD, wishLeft },
-  forge: { unit: UNIT, kit: CARD_KIT },
+  forge: { unit: UNIT, kit: CARD_KIT, perks: PERKS },
   misconceptions: MIS,
   standards: DATA.standards,
   lessonList: DATA.lessonList,

@@ -18,20 +18,23 @@ const log = (...a) => console.log(...a);
   const fit = await p.evaluate(() => { const f = document.querySelector('.fg'); return { over: f.scrollHeight - f.clientHeight, x: document.documentElement.scrollWidth - innerWidth, ops: document.querySelectorAll('.shelf.ops .tile').length, mats: document.querySelectorAll('.shelf.mats .tile').length, wish: [...document.querySelectorAll('.wishes button')].map((x) => x.textContent).join(' ') }; });
   log('① 모루:', JSON.stringify(fit)); if (fit.over > 0 || fit.x > 0) errs.push('모루 넘침'); if (fit.ops !== 24 || fit.mats !== 13) errs.push('재료 13 · 연산 24');
   await p.screenshot({ path: `${SHOTS}/b35-anvil.png` });
+  const Y = {}; const yOf = async (k) => { Y[k] = await p.$eval('.btn.main', (x) => { const r = x.getBoundingClientRect(); return `${Math.round(r.top)}/${Math.round(r.height)}`; }); };
+  await yOf('① 두드리기');
+  const order = await p.evaluate(() => { const y = (s) => document.querySelector('.fg ' + s).getBoundingClientRect().top; return y('.shelf.ops') < y('.stage') && y('.stage') < y('.shelf.mats') && y('.shelf.mats') < y('.row2') && y('.row2') < y('.btn.main'); }); log('   줄 순서 (찜 → 연산 → 모루 → 재료 → 💡 📖 → 🔨):', order); if (!order) errs.push('줄 순서');
   // ⭐ 찜 칩 → 💡 목록 맨 위
   await p.click('.wishes button'); await p.waitForSelector('.hr'); const top = await p.$eval('.hr', (x) => x.textContent.replace(/\s+/g, ' ').trim()); log('③ 💡 목록 맨 위:', top); if (!/⭐ 부분집합 · A ⊂ B/.test(top)) errs.push('찜 맨 위');
-  await p.screenshot({ path: `${SHOTS}/b35-anvil-list.png` });
+  await p.screenshot({ path: `${SHOTS}/b35-anvil-list.png` }); await yOf('③ 모루로');
   await p.click('.hr button'); await p.waitForTimeout(200); const sh = await p.$eval('.hr .shape', (x) => x.textContent.replace(/\s+/g, ' ').trim()); log('   🧩 재료 보기 →', sh); if (!/A/.test(sh)) errs.push('조각 공개');
-  await p.click('.sheet .x');
+  await p.click('.fg .act .btn.main');
   // 틀린 순서 → 실수 메시지 + 🧩 +1
   const pts0 = await p.$eval('.row2 .btn2 b', (x) => +x.textContent);
-  await p.click('.shelf.ops .tile:has-text("∈")'); await p.click('.shelf.mats .tile >> nth=2'); await p.click('.shelf.mats .tile >> nth=0'); await p.click('.fg .act .btn'); await p.waitForTimeout(300);
+  await p.click('.shelf.ops .tile:has-text("∈")'); await p.click('.shelf.mats .tile >> nth=2'); await p.click('.shelf.mats .tile >> nth=0'); await p.click('.fg .act .btn.main'); await p.waitForTimeout(300);
   const m1 = await p.textContent('.msg'), pts1 = await p.$eval('.row2 .btn2 b', (x) => +x.textContent); log('   [A] ∈ [a] →', m1.trim(), '| 🧩', pts0, '→', pts1); if (!/거꾸로/.test(m1) || pts1 !== pts0 + 1) errs.push('엄격 연성 실패');
   // 바른 순서 → 마력 예제
   for (const k of ['l', 'r']) await p.click(`.slots .tile >> nth=${k === 'l' ? 0 : 2}`);
   await p.click('.slots .tile >> nth=0'); await p.click('.shelf.mats .tile >> nth=0'); await p.click('.shelf.mats .tile >> nth=2'); await p.waitForTimeout(150);
   log('   모루 칸:', await p.$$eval('.slots .tile', (xs) => xs.map((x) => x.textContent.trim()).join(' | ')));
-  await p.click('.fg .act .btn'); await p.waitForSelector('.ov .qc'); await p.screenshot({ path: `${SHOTS}/b35-anvil-example.png` });
+  await p.click('.fg .act .btn.main'); await p.waitForSelector('.ov .qc'); await yOf('② 마력 넣기'); await p.screenshot({ path: `${SHOTS}/b35-anvil-example.png` });
   log('② 예제:', (await p.textContent('.ov .q')).trim());
   await p.click('.chs button >> nth=1'); await p.click('.ov .act .btn'); await p.waitForTimeout(200); const wr = await p.$('.wr'); log('   틀린 답 → 해설 · 다시:', !!wr); if (!wr) errs.push('예제 틀림');
   await p.click('.chs button >> nth=0'); await p.click('.ov .act .btn'); await p.waitForSelector('.ov.rv', { timeout: 5000 }); await p.screenshot({ path: `${SHOTS}/b35-anvil-new.png` });
@@ -41,7 +44,9 @@ const log = (...a) => console.log(...a);
   await p.click('.row2 .btn2 >> nth=1'); await p.waitForSelector('.book'); await p.waitForTimeout(300);
   log('④ 도감:', (await p.textContent('.bk-h')).trim(), '| 첫 묶음:', (await p.textContent('.book h3')).trim()); if (!/1 \/ 54/.test(await p.textContent('.bk-h'))) errs.push('도감 수');
   const fb = await p.evaluate(() => ({ book: document.querySelector('.book').scrollHeight > document.querySelector('.book').clientHeight, fg: document.querySelector('.fg').scrollHeight - document.querySelector('.fg').clientHeight })); log('   가운데만 스크롤:', JSON.stringify(fb)); if (fb.fg > 0) errs.push('도감 넘침');
-  await p.screenshot({ path: `${SHOTS}/b35-anvil-book.png` });
+  await p.screenshot({ path: `${SHOTS}/b35-anvil-book.png` }); await yOf('④ 모루로');
+  const pk = await p.$$eval('.perk', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim())); log('   도감 특전:', pk.join(' | ')); if (pk.length !== 3) errs.push('특전 3줄');
+  log('주요 단추 위치(top/높이):', JSON.stringify(Y)); if (new Set(Object.values(Y)).size !== 1) errs.push('주요 단추 자리 다름');
   await p.click('.cw >> nth=0'); await p.waitForSelector('.zm'); log('   카드 시트:', (await p.textContent('.zm p')).trim()); await p.click('.sheet .x');
   // 11 테마 넘침
   const rows = [];

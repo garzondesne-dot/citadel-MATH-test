@@ -9,6 +9,9 @@
   import Sheet from '../battle/Sheet.svelte';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import ForgeCard from './ForgeCard.svelte';
+  import HeroSprite from '../camp/HeroSprite.svelte';
+  import { heroOf } from '../../model/hero';
+  import { ECON_VER } from '../../model/wallet';
 
   // ⚒ 모루 (#148 · 정식 js/raid/forge.js 「C안」 + 시안 44dEkAKGELJTBPUs2gkwnD ①~④) — 정식 그림 · 틀 그대로(forgec 바탕 · 모루 · 재료 흰 틀 · 연산 검은 틀 · 고른 칸 푸른 빛 · 망치)
   //   엄격 연성 · 모두 열림(진도 상관없음) · 처음 만든 카드 = 마력 예제를 맞혀야 완성 · 실패 = 💡 힌트 조각 +1(최대 9 · 처음 2) · 첫 카드 💎 +3(하루 한도 밖) · 카드는 공격에 안 씀
@@ -74,13 +77,34 @@
     const c = exam; exam = null;
     strike().then(() => (reveal = { c, first: true }));
   }
+  // 📖 도감 특전 (정식 PERKS · 문구 · 값 그대로): 그 차시 카드를 다 모으면 용사 열림 · 💎 로 먼저 열기 → 다 모으면 돌려받음(되팔기 아님)
+  const PERKS = SUBJ.forge!.perks ?? [];
+  const perkCards = (p: { a: number; b: number; skip?: string }) => U.CARDS.filter((c) => c.no >= p.a && c.no <= p.b && c.id !== p.skip);
+  const heroName = (id: number) => `${heroOf(id).job} ${heroOf(id).name}`;
+  const bought = (id: number) => me.wallet.buys.some((b) => b.id === `hero_${id}`);
+  const logHas = (k: string) => (me.wallet.log || []).includes(k);
+  let ptoast = $state('');
+  function buyPerk(id: number) {
+    const price = heroOf(id).price ?? 0;
+    if (me.wallet.gem < price || !window.confirm(`💎 ${price} 로 🧑 ${heroName(id)}를 먼저 열까요?\n그 차시 카드를 다 모으면 💎 ${price} 를 돌려받아요 (되팔기는 안 돼요).`)) return;
+    me.wallet.gem -= price; me.wallet.buys = [...me.wallet.buys, { id: `hero_${id}`, ver: ECON_VER, at: Date.now() }]; save();
+    ptoast = `🧑 ${heroName(id)} 열림! 🧙 내 용사에서 골라요`; setTimeout(() => (ptoast = ''), 3000);
+  }
+  function perkCheck(newId: string) {
+    const p = PERKS.find((x) => perkCards(x).some((c) => c.id === newId)); if (!p || logHas(`perk_${p.id}`)) return;
+    if (!perkCards(p).every((c) => me.cards?.[c.id])) return;
+    const price = heroOf(p.id).price ?? 0, was = bought(p.id);
+    if (was) me.wallet.gem += price; else me.wallet.buys = [...me.wallet.buys, { id: `hero_${p.id}`, ver: ECON_VER, at: Date.now() }];
+    me.wallet.log = [...(me.wallet.log || []), `perk_${p.id}`]; save();
+    ptoast = `🎉 🧑 ${heroName(p.id)} 열림!${was ? ` · 💎 ${price} 돌려받았어요` : ''}`; setTimeout(() => (ptoast = ''), 4500);
+  }
   function keep() {
     if (!reveal) return;
-    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; me.wallet.gem += 3; save(); } // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
+    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; me.wallet.gem += 3; save(); perkCheck(reveal.c.id); } // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
     reveal = null; slots = { l: null, op: null, r: null }; pickK = 'l'; msg = '연산을 고르고 재료 · 연산 · 재료를 올려 두드려요';
   }
   // ── ③ 💡 목록 · ④ 도감 ──
-  let view = $state<'forge' | 'book'>('forge'), listOpen = $state(false), focusId = $state('');
+  let view = $state<'forge' | 'list' | 'book'>('forge'), focusId = $state('');
   const haveN = $derived(U.CARDS.filter((c) => owned[c.id]).length);
   const nos = [...new Set(U.CARDS.map((c) => c.no))].sort((a, b) => a - b);
   const secOf = (n: number) => [...new Set(U.CARDS.filter((c) => c.no === n).map((c) => c.sec))].join(' · ');
@@ -91,9 +115,10 @@
 </script>
 
 <div class="fg" role="dialog" aria-label="모루" style:--bg="url({IMG.bg})" style:--mat="url({IMG.mat})" style:--op="url({IMG.op})" style:--pick="url({IMG.pick})">
-  <div class="bar"><button type="button" class="back" aria-label={view === 'book' ? '모루로' : '캠프로'} onclick={() => (view === 'book' ? (view = 'forge') : onclose())}>‹</button><b class="t">{view === 'book' ? '📖 도감' : '⚒ 모루'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
+  <div class="bar"><button type="button" class="back" aria-label={view !== 'forge' ? '모루로' : '캠프로'} onclick={() => (view !== 'forge' ? (view = 'forge') : onclose())}>‹</button><b class="t">{view === 'book' ? '📖 도감' : view === 'list' ? '💡 만들 수 있는 카드' : '⚒ 모루'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
   {#if view === 'forge'}
-    {#if wishCards.length}<div class="wishes" role="group" aria-label="찜한 카드">{#each wishCards as c (c.id)}<button type="button" onclick={() => { focusId = c.id; listOpen = true; }}>⭐ {c.short || c.name}</button>{/each}</div>{/if}
+    {#if wishCards.length}<div class="wishes" role="group" aria-label="찜한 카드">{#each wishCards as c (c.id)}<button type="button" onclick={() => { focusId = c.id; view = 'list'; }}>⭐ {c.short || c.name}</button>{/each}</div>{/if}
+    <div class="shelf ops" role="group" aria-label="연산">{#each U.OPS as o (o.id)}<button type="button" class="tile op mini" class:on={slots.op === o.id} class:long={o.sym.length > 3} onclick={() => putOp(o.id)}>{o.sym}</button>{/each}</div>
     <div class="stage" class:impact bind:this={stage}>
       <img class="anvil" src={IMG.anvil} alt="" />
       <div class="slots" class:shake>
@@ -105,37 +130,44 @@
       {#each sparks as s, k (k)}<i class="spark" style:left="{s.x}%" style:--dx="{s.dx}px" style:--dy="{s.dy}px"></i>{/each}
     </div>
     <p class="msg" class:bad>{msg}</p>
-    <div class="shelf ops" role="group" aria-label="연산">{#each U.OPS as o (o.id)}<button type="button" class="tile op mini" class:on={slots.op === o.id} class:long={o.sym.length > 3} onclick={() => putOp(o.id)}>{o.sym}</button>{/each}</div>
     <div class="shelf mats" role="group" aria-label="재료">{#each U.MATS as m (m.id)}<button type="button" class="tile mat mini" class:long={m.sym.length > 3} title={m.tip} onclick={() => put(m.id)}>{m.sym}</button>{/each}{#each putCards as c (c.id)}<button type="button" class="tile mat mini card long" title={c.name} onclick={() => put(`card:${c.id}`)}>{cardFm(c)}</button>{/each}</div>
     <div class="act">
-      <button type="button" class="btn" disabled={!full || busy} onclick={hit}>🔨 두드리기</button>
-      <div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; listOpen = true; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {U.CARDS.length}</button></div>
+      <div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; view = 'list'; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {U.CARDS.length}</button></div>
+      <button type="button" class="btn main" disabled={!full || busy} onclick={hit}>🔨 두드리기</button>
     </div>
+  {:else if view === 'list'}
+    <!-- ③ 💡 만들 수 있는 카드 -->
+    <div class="book">
+      <p class="why lt">🧩 힌트 조각 <b>{hint.pts}</b> · 두드리기에 실패하면 +1 (벌이 아니라 단서) · 조각으로 재료 → 연산 순서로 열어요</p>
+      {#each [...wishCards.filter((c) => !focusId || c.id === focusId), ...wishCards.filter((c) => focusId && c.id !== focusId)] as c (c.id)}{@render row(c, true)}{/each}
+      {#each nos as n (n)}{@const todo = U.CARDS.filter((c) => c.no === n && !owned[c.id] && !wishIds.has(c.id))}
+        <details class="grp" open={!focusId && n === nos.find((x) => U.CARDS.some((c) => c.no === x && !owned[c.id]))}><summary><b>{n}차시</b> <small>{secOf(n)}</small><span class:done={!todo.length}>해금 {U.CARDS.filter((c) => c.no === n && owned[c.id]).length} / {U.CARDS.filter((c) => c.no === n).length}</span></summary>
+          {#each todo as c (c.id)}{@render row(c, false)}{:else}<p class="why lt">🎉 이 차시 카드를 모두 만들었어요!</p>{/each}</details>
+      {/each}
+    </div>
+    <div class="act"><button type="button" class="btn main" onclick={() => (view = 'forge')}>⚒ 모루로</button></div>
   {:else}
     <!-- ④ 도감 -->
     <div class="bk-h"><b>모은 카드 {haveN} / {U.CARDS.length}</b><i class="bar2"><i style:width="{(haveN / U.CARDS.length) * 100}%"></i></i></div>
     <div class="chips" role="group" aria-label="거르기"><button type="button" class:on={chip === 'all'} onclick={() => (chip = 'all')}>전체</button><button type="button" class:on={chip === 'wish'} onclick={() => (chip = 'wish')}>⭐ 찜</button>{#each nos as n (n)}<button type="button" class:on={chip === n} onclick={() => (chip = n)}>{n}</button>{/each}</div>
     <div class="book">
+      {#if chip === 'all'}{@render perks()}{/if}
       {#each nos as n (n)}{@const cs = bookCards(n)}{#if cs.length}
         <h3>{n}차시 · {secOf(n)} · <em>{U.CARDS.filter((c) => c.no === n && owned[c.id]).length} / {U.CARDS.filter((c) => c.no === n).length}</em></h3>
         <div class="grid">{#each cs as c (c.id)}<button type="button" class="cw" aria-label={owned[c.id] || wishIds.has(c.id) ? c.name : '아직 못 만든 카드'} onclick={() => (zoom = c)}><ForgeCard card={c} w={100} unknown={!owned[c.id]} wish={!owned[c.id] && wishIds.has(c.id)} /></button>{/each}</div>
       {/if}{/each}
     </div>
+    <div class="act"><button type="button" class="btn main" onclick={() => (view = 'forge')}>⚒ 모루로</button></div>
   {/if}
 </div>
 
-{#if listOpen}
-  <!-- ③ 💡 만들 수 있는 카드 -->
-  <Sheet onclose={() => (listOpen = false)} tall mainText="닫기">
-    {#snippet title()}💡 만들 수 있는 카드 · 🧩 {hint.pts}{/snippet}
-    <p class="why">두드리기에 실패하면 🧩 힌트 조각 +1 (벌이 아니라 단서) · 조각으로 재료 → 연산 순서로 열어요</p>
-    {#each [...wishCards.filter((c) => !focusId || c.id === focusId), ...wishCards.filter((c) => focusId && c.id !== focusId)] as c (c.id)}{@render row(c, true)}{/each}
-    {#each nos as n (n)}{@const todo = U.CARDS.filter((c) => c.no === n && !owned[c.id] && !wishIds.has(c.id))}
-      <details class="grp" open={!focusId && n === nos.find((x) => U.CARDS.some((c) => c.no === x && !owned[c.id]))}><summary><b>{n}차시</b> <small>{secOf(n)}</small><span class:done={!todo.length}>해금 {U.CARDS.filter((c) => c.no === n && owned[c.id]).length} / {U.CARDS.filter((c) => c.no === n).length}</span></summary>
-        {#each todo as c (c.id)}{@render row(c, false)}{:else}<p class="why">🎉 이 차시 카드를 모두 만들었어요!</p>{/each}</details>
-    {/each}
-  </Sheet>
-{/if}
+
+{#snippet perks()}
+  <div class="perks">{#each PERKS as p (p.id)}{@const cs = perkCards(p)}{@const got = cs.filter((c) => owned[c.id]).length}{@const done = cs.length > 0 && got === cs.length}{@const price = heroOf(p.id).price}
+    <div class="perk" class:done><span class="ph"><HeroSprite id={p.id} scale={1} /></span><span class="tx"><b>🧑 {heroName(p.id)}</b><small>{p.a}~{p.b}차시 카드 {got} / {cs.length}</small><i class="pb"><i style:width="{cs.length ? (100 * got) / cs.length : 0}%"></i></i></span>
+      {#if done || logHas(`perk_${p.id}`)}<span class="ok">✔ 열림</span>{:else if bought(p.id)}<span class="ok sm">💎 로 열림 · 다 모으면 돌려받음</span>{:else if price != null}<button type="button" onclick={() => buyPerk(p.id)}>💎 {price} 먼저 열기</button>{/if}</div>
+  {/each}</div>
+{/snippet}
 {#snippet row(c: Card, wished: boolean)}
   {@const lv = hint.lv[c.id] || 0}
   {@const op = U.opOf(c.op)}
@@ -159,9 +191,10 @@
         {#if exWrong}<p class="wr">❌ 마력이 모자라요… 해설: {exQ.solution} · 다시 골라요 (벌 없음)</p>{/if}
       </div>
     </div>
-    <div class="act"><button type="button" class="btn" disabled={exAns == null} onclick={exSubmit}>✨ 마력 넣기</button></div>
+    <div class="act"><button type="button" class="btn main" disabled={exAns == null} onclick={exSubmit}>✨ 마력 넣기</button></div>
   </div>
 {/if}
+{#if ptoast}<p class="ptoast" role="status">{ptoast}</p>{/if}
 {#if reveal}
   <div class="ov rv" role="dialog" aria-label="카드 완성">
     <b class="new">{reveal.first ? 'NEW CARD!' : '이미 가진 카드'}</b>
@@ -232,7 +265,10 @@
   .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; justify-items: center; }
   .cw { border: 0; background: none; padding: 0; }
   .why { margin: 0; font-size: 13px; color: var(--text-2); }
+  .lt { color: #e8dcc0; text-shadow: 0 1px 2px #000; margin: 4px 0 8px; } .lt b { color: #ffd98a; }
+  .grp { background: rgba(20, 16, 12, 0.85); border-radius: var(--r); padding: 0 10px; margin-bottom: 6px; color: var(--text); }
   .grp summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; } .grp summary small { flex: 1; color: var(--text-2); } .grp summary span { font-size: 12.5px; color: var(--text-2); } .grp summary span.done { color: var(--ok); }
+  .book > .hr { background: rgba(20, 16, 12, 0.9); color: var(--text); }
   .hr { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; padding: 8px 10px; border-radius: var(--r); background: var(--surface-2); margin-bottom: 6px; }
   .hr.wished { border: 2px solid var(--accent); } .hr.focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
   .hr .tx { display: flex; flex-direction: column; gap: 2px; } .hr .tx small { font-size: 12.5px; color: var(--text-2); }
@@ -249,5 +285,12 @@
   .wr { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--bad-bg); font-size: 13.5px; }
   .new { font-size: 26px; color: #ffd25a; letter-spacing: 2px; text-shadow: 0 0 12px #ff9a2a; } .nm { font-size: 20px; color: #fff; } .gem3 { color: var(--gem); }
   .rv .btn { width: 100%; max-width: 360px; }
+  .perks { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+  .perk { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r); background: rgba(20, 16, 12, 0.88); border: 1px solid #6b5a3a; color: var(--text); }
+  .perk.done { border-color: #f5b84a; } .perk .ph { flex: none; } .perk .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .perk small { font-size: 12px; color: var(--text-2); }
+  .pb { display: block; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, 0.5); } .pb i { display: block; height: 6px; border-radius: 3px; background: #f5b84a; }
+  .perk .ok { flex: none; font-size: 12.5px; font-weight: 700; color: var(--ok); } .perk .ok.sm { max-width: 92px; font-size: 11.5px; color: var(--gem); }
+  .perk button { flex: none; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--gem); background: none; color: var(--gem); font: 700 12.5px var(--font); }
+  .ptoast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface); font-weight: 700; white-space: nowrap; }
   .zm { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; } .zm p { margin: 0; }
 </style>
