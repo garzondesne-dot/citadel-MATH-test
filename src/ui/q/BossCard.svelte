@@ -79,7 +79,7 @@
     <p class="muted">{st.every((x) => x.ok) ? '모든 문항 도달!' : '못 맞힌 문항은 해설을 보며 학습지에 정리해요 · 벌은 없어요'}</p>
   </div>
   {#if !st.every((x) => x.ok)}
-    <BottomAction onmain={() => { showTable = false; if (st[cur]?.ok) { const k = st.findIndex((x) => !x.ok); if (k >= 0) cur = k; } }} mainLabel="문항 보기" why={allDone ? '✘ 줄을 누르면 그 문항 해설' : ''}>{#snippet main()}<span>{allDone ? '못 맞힌 문항 보기' : '문항으로 돌아가기'}</span>{/snippet}</BottomAction>
+    <BottomAction battle onmain={() => { showTable = false; if (st[cur]?.ok) { const k = st.findIndex((x) => !x.ok); if (k >= 0) cur = k; } }} mainLabel="문항 보기" why={allDone ? '✘ 줄을 누르면 그 문항 해설' : ''}>{#snippet main()}<span>{allDone ? '못 맞힌 문항 보기' : '문항으로 돌아가기'}</span>{/snippet}</BottomAction>
   {/if}
 {:else if s && q}
   <AnswerRow {cells} {cur} label={(i) => `${i + 1}번`} onpick={flip ? undefined : pick} />
@@ -96,12 +96,12 @@
   </div>
   {#if !s.ok && s.left > 0}
     {@const ready = filled(q, given)}
-    <BottomAction disabled={locked || thinkLeft > 0 || !!flip || (!ready && nextOpen < 0)} why={thinkLeft > 0 ? `🤔 ${thinkLeft}초 — 학습지에서 다시 살펴봐요` : !ready && !locked ? (nextOpen >= 0 ? '답을 고르면 공격 · 다른 문항부터 풀어도 돼요' : '답을 고르면 낼 수 있어요') : ''} onmain={send} mainLabel={ready ? `${cur + 1}번 내기 (도전 기회 ${s.left}번)` : '다음 안 푼 문항'}>
+    <BottomAction battle disabled={locked || thinkLeft > 0 || !!flip || (!ready && nextOpen < 0)} why={thinkLeft > 0 ? `🤔 ${thinkLeft}초 — 학습지에서 다시 살펴봐요` : !ready && !locked ? (nextOpen >= 0 ? '답을 고르면 공격 · 다른 문항부터 풀어도 돼요' : '답을 고르면 낼 수 있어요') : ''} onmain={send} mainLabel={ready ? `${cur + 1}번 내기 (도전 기회 ${s.left}번)` : '다음 안 푼 문항'}>
       {#snippet main()}{#if ready}<span>{cur + 1}번 공격</span><Hearts total={R.meta.bossTries} left={s.left} />{:else}<span>다음 안 푼 문항 ▶</span>{/if}{/snippet}
     </BottomAction>
   {:else if nextOpen >= 0}
-    <BottomAction onmain={() => pick(nextOpen)} mainLabel="다음 안 푼 문항">{#snippet main()}<span>다음 안 푼 문항 ▶</span>{/snippet}</BottomAction>
+    <BottomAction battle onmain={() => pick(nextOpen)} mainLabel="다음 안 푼 문항">{#snippet main()}<span>다음 안 푼 문항 ▶</span>{/snippet}</BottomAction>
   {:else if allDone}
-    <BottomAction onmain={() => (showTable = true)} mainLabel="채점표 보기">{#snippet main()}<span>📋 채점표 보기</span>{/snippet}</BottomAction>
+    <BottomAction battle onmain={() => (showTable = true)} mainLabel="채점표 보기">{#snippet main()}<span>📋 채점표 보기</span>{/snippet}</BottomAction>
   {/if}
 {/if}

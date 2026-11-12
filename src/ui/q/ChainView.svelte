@@ -86,17 +86,17 @@
 {#if needWhy}
   <span></span>
 {:else if pracShown}
-  <BottomAction disabled={pLeftN <= 0 || armAt > now} why={pLeftN > 0 ? '' : `🔥 연습 ${PRAC_MAX}번 끝!`} onmain={again} mainLabel="한 판 더">
+  <BottomAction battle disabled={pLeftN <= 0 || armAt > now} why={pLeftN > 0 ? '' : `🔥 연습 ${PRAC_MAX}번 끝!`} onmain={again} mainLabel="한 판 더">
     {#snippet main()}<span>🔥 한 판 더 {pLeftN}/{PRAC_MAX}</span>{/snippet}
   </BottomAction>
 {:else if rec.fail}
   <span></span>
 {:else if rec.locked && !prac}
-  <BottomAction disabled why="🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요">
+  <BottomAction battle disabled why="🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요">
     {#snippet main()}<span>🙋 선생님 확인 기다림</span>{/snippet}
   </BottomAction>
 {:else}
-  <BottomAction disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
+  <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? '연습 ' : ''}공격</span><Hearts total={hearts.total} left={hearts.left} />{/snippet}
   </BottomAction>
 {/if}

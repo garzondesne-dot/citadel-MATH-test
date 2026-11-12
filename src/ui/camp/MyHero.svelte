@@ -6,6 +6,7 @@
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
 
   // 🧙 내 용사 시트 (#114 · 시안 ⑪ · 정식 #98 구조 + 머리 방 진단 6줄)
   //   맨 위 카드(도트 · 오라 · +n · [호칭] 이름 · 테스터 배지 · 용사 · 속성 · Lv · 「용사 바꾸기 >」) → 탭 3 = 🔨 강화(처음) · ⚔ 스킬 · 🏅 기록
@@ -183,21 +184,20 @@
   </div>
 
   <!-- 아래 = 할 일 (#121 시안 ⑪ ①~③): 바뀐 것이 있으면 「바뀐 것 2줄 + ↺ 되돌리기(48)」 + 💾 저장(56) · 없으면 탭마다 주요 단추 하나 · 저장 = ✔ 1초 -->
-  <div class="act">
-    {#if isDirty}
-      <div class="savebar">
+  {#if isDirty}
+    <BottomAction dock={false} text="💾 저장{c.g || c.s ? ` · 💎 ${c.g}${c.s ? ` · 📜 ${c.s}` : ''}` : ''}" onmain={trySave} mainLabel="저장">
+      {#snippet aux()}<div class="savebar">
         <span class="chg2">바뀐 것 · <b>{changes.join(' · ')}</b>{c.g ? ` · 💎 −${c.g}` : ''}{c.s ? ` · 📜 −${c.s}` : ''}<small>저장하기 전까진 되돌릴 수 있어요</small></span>
         <button type="button" class="btn2 undo" onclick={undo}>↺ 되돌리기</button>
-      </div>
-      <button type="button" class="btn main" onclick={trySave}>💾 저장{c.g || c.s ? ` · 💎 ${c.g}${c.s ? ` · 📜 ${c.s}` : ''}` : ''}</button>
-    {:else if savedFlash}
-      <button type="button" class="btn main" disabled>✔ 저장했어요</button>
-    {:else if tab === 'enh'}
-      <button type="button" class="btn main" disabled={!nx} onclick={enh}>{nx ? `+${lv + 1}으로 강화 · 💎 ${nx.g}${nx.s ? ` · 📜 ${nx.s}` : ''}` : '🌈 최고 단계'}</button>
-    {:else}
-      <button type="button" class="btn main" disabled>{tab === 'sk' ? '스킬 칸을 눌러 고르세요' : '호칭 · 기록 보기'}</button>
-    {/if}
-  </div>
+      </div>{/snippet}
+    </BottomAction>
+  {:else if savedFlash}
+    <BottomAction dock={false} text="✔ 저장했어요" />
+  {:else if tab === 'enh'}
+    <BottomAction dock={false} disabled={!nx} onmain={enh} text={nx ? `+${lv + 1}으로 강화 · 💎 ${nx.g}${nx.s ? ` · 📜 ${nx.s}` : ''}` : '🌈 최고 단계'} mainLabel="강화" />
+  {:else}
+    <BottomAction dock={false} text={tab === 'sk' ? '스킬 칸을 눌러 고르세요' : '호칭 · 기록 보기'} />
+  {/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 </div>
 
@@ -226,11 +226,11 @@
       {/each}
     </div>
     {#if ownsPick}
-      <button type="button" class="btn main" disabled={pickH === look.hero} onclick={useHero}>{pickH === look.hero ? '✔ 지금 출전 중' : `⚔ ${pick.name}${ro(pick.name)} 출전`}{#if pickH !== look.hero}<small> · 고름 · 저장하면 바뀜</small>{/if}</button>
+      <BottomAction dock={false} disabled={pickH === look.hero} onmain={useHero} mainLabel="출전">{#snippet main()}{pickH === look.hero ? '✔ 지금 출전 중' : `⚔ ${pick.name}${ro(pick.name)} 출전`}{#if pickH !== look.hero}<small> · 고름 · 저장하면 바뀜</small>{/if}{/snippet}</BottomAction>
     {:else if pick.price != null}
-      <button type="button" class="btn main" disabled={lf.gem < pick.price} onclick={buyHero}>💎 {pick.price} 사기{#if lf.gem < pick.price}<small> · 💎 {pick.price - lf.gem} 모자람</small>{/if}</button>
+      <BottomAction dock={false} disabled={lf.gem < pick.price} onmain={buyHero} mainLabel="사기">{#snippet main()}💎 {pick.price} 사기{#if lf.gem < pick.price}<small> · 💎 {pick.price - lf.gem} 모자람</small>{/if}{/snippet}</BottomAction>
     {:else}
-      <button type="button" class="btn main" disabled>🔒 조건으로 열어요</button>
+      <BottomAction dock={false} text="🔒 조건으로 열어요" />
     {/if}
   </div>
 {/if}
@@ -337,16 +337,15 @@
   .row { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); text-align: left; }
   .row span:first-child { flex: 1; }
   .row em { font-style: normal; font-size: var(--fs-small); }
-  .act { flex: none; padding: var(--s2) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); background: var(--bg); display: flex; flex-direction: column; gap: var(--s2); }
-  .act .main, .hsw .main { width: 100%; }
-  .main small { font-size: 13px; opacity: 0.75; }
+  .savebar { flex: 1; min-width: 0; }
   .btn:disabled { opacity: 0.45; box-shadow: none; }
   .savebar { display: flex; align-items: center; gap: var(--s2); }
   .chg2 { flex: 1; min-width: 0; margin: 0; font-size: 13px; color: var(--text-2); overflow: hidden; }
   .chg2 b { color: var(--text); }
   .chg2 small { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; }
   .swbg { position: fixed; left: 0; right: 0; bottom: 0; z-index: 16; max-width: 430px; margin: 0 auto; background: rgba(0, 0, 0, 0.45); }
-  .hsw { position: fixed; left: 0; right: 0; bottom: 0; z-index: 17; max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); padding: 0 var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
+  .hsw { position: fixed; left: 0; right: 0; bottom: 0; z-index: 17; max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); padding: 0 var(--s4); display: flex; flex-direction: column; gap: 10px; }
+  .hsw > :global(.act) { margin: 0 calc(-1 * var(--s4)); background: var(--surface); }
   .grab { height: 14px; display: grid; place-items: center; } .grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line); display: block; }
   .hswh { display: flex; align-items: center; gap: var(--s2); } .hswh b { font-size: 18px; } .hswh span { flex: 1; font-size: 13px; color: var(--text-2); }
   .hswh button { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text-2); font-size: 18px; }

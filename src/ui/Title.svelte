@@ -3,6 +3,7 @@
   import type { Store } from '../model/types';
   import { CLASSES, enter, hasAccount, pupil, roster, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
+  import BottomAction from './battle/BottomAction.svelte';
 
   // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v71 「⓪」 · 선생님 「이 정도는 살리자」)
   //   정식 첫 화면 그림 brand-bg(용사 넷이 문을 엶 · 위치 center 30% · 아래 46% 어둡게) + 정식 로고 menu-logo(폭 80% · 최대 320 · 위 3%) · 반 ▾ · 번호 ▾ → 「n번 · 이름 맞나요?」 → 비밀번호 4칸(숫자 키패드 · 시스템 키보드 안 띄움) → 금빛 「⚔ 모험 시작」
@@ -64,13 +65,12 @@
       </button>
     {/if}
     {#if err}<p class="err" role="alert">{err}</p>{/if}
-    <button type="submit" class="go" disabled={!ready}>{join ? '⚔ 가입하고 모험 시작' : '⚔ 모험 시작'}</button>
-    <p class="why">{why}</p>
     <div class="links">
       <button type="button" class="lk" onclick={() => { join = !join; pw = ''; pw2 = ''; err = ''; }}>{join ? '가입했어요 · 로그인' : '처음이에요 · 가입'}</button>
       <button type="button" class="lk" onclick={() => (more = true)}>교사 · 종합실 ›</button>
     </div>
   </form>
+  <BottomAction dock={false} disabled={!ready} onmain={() => { if (ready) go(); }} {why} text={join ? '⚔ 가입하고 모험 시작' : '⚔ 모험 시작'} mainLabel="모험 시작" />
 </div>
 
 {#if pad}
@@ -98,7 +98,8 @@
   .title::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: linear-gradient(rgba(15, 17, 21, 0), rgba(15, 17, 21, 0.9) 34%, var(--bg)); pointer-events: none; }
   .logo { position: absolute; top: 3%; left: 0; right: 0; margin: 0; text-align: center; z-index: 1; }
   .logo img { width: 80%; max-width: 320px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
-  .form { position: relative; z-index: 1; padding: 0 var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: var(--s2); }
+  .title > :global(.act) { position: relative; z-index: 1; background: none; }
+  .form { position: relative; z-index: 1; padding: 0 var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
   .row { display: flex; gap: var(--s2); }
   .sel { flex: 1; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -113,10 +114,6 @@
   .pw:disabled { opacity: 0.45; }
   .pw small { position: absolute; right: 0; font-size: var(--fs-small); color: var(--text-3); }
   .err { margin: 0; text-align: center; color: var(--bad); font-size: var(--fs-small); font-weight: 700; }
-  .go { height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
-  .go:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-  .go:disabled { opacity: 0.45; box-shadow: none; }
-  .why { margin: 0; min-height: 20px; text-align: center; font-size: var(--fs-small); color: var(--text-3); }
   .links { display: flex; justify-content: space-between; }
   .lk { height: var(--tap); padding: 0 var(--s1); border: 0; background: none; color: var(--text-3); font: 700 var(--fs-small) var(--font); }
   .padbg { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.45); }

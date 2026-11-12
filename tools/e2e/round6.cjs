@@ -65,7 +65,7 @@ const log = (...a) => console.log(...a);
     await appear();
     if (id === 'boss') {
       for (const [k, p] of st.entries()) {
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0, nC = await p.$$eval('.row .cell', (x) => x.length); i < nC; i++) { /* #149 6차시 형성평가 = 3문항 */
           if (await ko()) break;
           await p.click(`.row .cell:nth-child(${i + 1})`); await p.waitForTimeout(100);
           const item = await p.$('.bcard .item'); if (!item) continue;

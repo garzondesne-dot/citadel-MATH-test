@@ -19,7 +19,7 @@ const log = (...a) => console.log(...a);
     if (join) await p.click('.links button:has-text("가입")');
     await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.waitForTimeout(150); if (join && (await p.$('.pad'))) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
-    await p.click('button.go'); await p.waitForTimeout(2500);
+    await p.click('.title .pmain'); await p.waitForTimeout(2500);
   };
   const gemText = (p) => p.$eval('.pill', (x) => x.textContent.trim()).catch(() => '?');
   // 폰 A 가입

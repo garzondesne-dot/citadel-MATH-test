@@ -18,7 +18,7 @@ const log = (...a) => console.log(...a);
     await p.waitForSelector('select'); await p.selectOption('select >> nth=0', cls); await p.waitForTimeout(200); await p.selectOption('select >> nth=1', String(num)); await p.waitForTimeout(200);
     await p.click('.links button:has-text("가입")'); await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.waitForTimeout(150); if (await p.$('.pad')) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
-    await p.click('button.go'); await p.waitForTimeout(2500);
+    await p.click('.title .pmain'); await p.waitForTimeout(2500);
   };
   // 학생 둘이 먼저 캠프에 (수업 전 = 차원문 닫힘)
   const s1 = await open(`?${E}`); await signup(s1, '1-3', 1);

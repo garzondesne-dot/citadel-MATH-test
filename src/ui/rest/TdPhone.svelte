@@ -6,6 +6,7 @@
   import { emptyPlan, ownsHero } from '../../model/draft';
   import { useMe } from '../../store/me.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import Cutin from './Cutin.svelte';
   import { payTd, tdAccept, tdHero, tdPick, tdReject, tdSkill, tdSwap, tdUp } from '../../rest/run';
@@ -86,7 +87,6 @@
       <div class="stat"><span><b>{tw.s}번</b>자리</span><span><b>{L.kills?.[uid] ?? 0}</b>처치</span><span><b>⭐{L.stars?.[uid] ?? 0}</b>{nextStar ? `다음 ⭐${nextStar}` : '업그레이드 끝'}</span></div>
       {#if need > 0}<p class="me">⬆ 업그레이드! 하나를 골라요 <small>(12초 안에 안 고르면 저절로)</small></p><div class="ups">{#each ['a', 'b', 'c'] as const as k (k)}<button type="button" onclick={() => tdUp(S, code, f.g, uid, Math.max(upsTxt.length, mineUp), k)}>{UPN[k]}</button>{/each}</div>
       {:else if upsTxt}<p class="why">업그레이드: {upsTxt.split('').map((k) => UPN[k]?.split(' ')[0]).join(' ')}</p>{/if}
-      <button type="button" class="btn sk" disabled={used || cd > 0 || !!R.state.focus} onclick={useSkill}>{used ? '⚡ 기술을 썼어요' : tier >= 2 ? '⚡ 필살기 (주변 광역 × 5)' : '💥 기술 (주변 광역 × 3)'}<small>{used ? '다음 판에 또!' : '한 판에 한 번 · 몬스터가 몰렸을 때!'}</small></button>
     {:else}
       <p class="me">👀 이번 판은 구경해요 — 다음 판에 함께!</p>
     {/if}
@@ -95,6 +95,14 @@
     {#if tw}<p class="pay">{paid ? `💎 +${paid} · 캠프에서 받아요` : '💎 오늘 디펜스 보상은 다 받았어요'}</p>{/if}
   {:else}
     <p class="me">🏰 결과 계산 중…</p>
+  {/if}
+  <!-- 🟡 주요 단추 = BottomAction 한 자리(#151) · 기술 = 싸우는 동안의 주요 단추 -->
+  {#if f?.phase === 'play' && tw}
+    <BottomAction disabled={used || cd > 0 || !!R.state.focus} onmain={useSkill} why={used ? '다음 판에 또!' : '한 판에 한 번 · 몬스터가 몰렸을 때!'} text={used ? '⚡ 기술을 썼어요' : tier >= 2 ? '⚡ 필살기 (주변 광역 × 5)' : '💥 기술 (주변 광역 × 3)'} mainLabel="기술" />
+  {:else if f?.phase === 'pick'}
+    <BottomAction text={mine ? `✔ ${mine}번 자리` : '지도에서 자리를 골라요'} why="교실 TV 에서 싸워요" />
+  {:else}
+    <BottomAction text="🏰 교실 TV 를 봐요" why={f?.phase === 'end' ? '다음 놀이를 기다려요' : '계산 · 그림은 교실 TV 에서'} />
   {/if}
 </div>
 {#if heroSheet}
@@ -127,9 +135,5 @@
   .why { margin: 0; font-size: 13px; color: var(--text-3); }
   .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .stat span { background: var(--surface); border-radius: 10px; padding: 8px 0; display: flex; flex-direction: column; font-size: 12.5px; color: var(--text-2); } .stat b { font-size: 20px; color: var(--text); }
-  .btn.sk { min-height: 96px; border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); font: 700 22px var(--font); box-shadow: 0 3px 0 var(--accent-sh); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-  .btn.sk small { font-size: 13px; font-weight: 700; opacity: 0.8; }
-  .btn.sk:disabled { background: var(--surface-2); color: var(--text-3); box-shadow: none; }
-  .btn.sk:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .pay { margin: 0; font-weight: 700; color: var(--gem); }
 </style>

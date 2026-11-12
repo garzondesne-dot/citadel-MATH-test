@@ -80,6 +80,11 @@
     if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike) stunUntil = gnow + c.lock * 1000;
   });
   const stunned = $derived(stunUntil > gnow);
+  // 화면 시험 고리(#151 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음
+  (globalThis as { __strike?: (ms?: number) => void }).__strike = (ms = 3000) => { stunUntil = gnow + ms; };
+  let stunLen = $state(1);
+  $effect(() => { if (stunned) untrack(() => { stunLen = Math.max(1, stunUntil - gnow); }); });
+  $effect(() => { fx.block = stunned && !scout?.on; return () => { fx.block = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
@@ -91,25 +96,30 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={stunned && !scout?.on}
+    note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {/if}
 <section class="body" class:battle>
   {#if R?.state.closed && !result}
-    <div class="bcard"><span class="lab acc">수업이 끝났어요</span><p class="muted">캠프로 돌아가요.</p><a class="camp" href="?">🏕 내 캠프로</a></div>
+    <div class="bcard"><span class="lab acc">수업이 끝났어요</span><p class="muted">캠프로 돌아가요.</p></div>
+    <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
   {:else if !R}
     <div class="bcard"><span class="lab acc">기다리는 중</span><p class="muted">종합실이 아직 열리지 않았어요. 선생님 화면을 먼저 여세요.</p></div>
+    <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
   {:else if isLobby(R)}
     <div class="bcard"><span class="lab acc">{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p></div>
+    <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
     <div class="bcard">
       <div class="okline"><span class="ic">{bhp?.won ? '🏆' : '🏁'}</span><span><b>{bhp?.won ? '승리!' : '수업 끝'}</b><span>{nick}</span></span></div>
       <p class="big">{result.right} <small class="muted">/ {result.total} 맞힘</small></p>
       <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
-      {#if R.state.closed}<a class="camp" href="?">🏕 내 캠프로</a>{/if}
     </div>
+    {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
   {:else if step?.kind === 'concept'}
-    <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p><p class="muted">선생님 설명을 들어요.</p></div>
+    <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p></div>
+    <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
     {#if scout?.on}
       <div class="bcard">
@@ -122,8 +132,8 @@
         {#snippet main()}<span>{readyNow ? '✋ 준비 완료!' : '준비 완료'}</span>{/snippet}
       </BottomAction>
     {:else}
-      {#if stunned}<div class="bad" role="status"><b>💥 {step.kind === 'boss' ? '보스' : '몬스터'}의 공격! {Math.ceil((stunUntil - gnow) / 1000)}초 멈춤</b><span>잠깐 기다리면 다시 풀 수 있어요</span></div>{/if}
-      {#if step.kind === 'boss' && bhp?.won}<p class="toast">🏆 승리! 남은 문항도 풀어 볼 수 있어요</p>{:else if down}<p class="toast">💥 몬스터는 쓰러졌어요! 그래도 풀어서 공격할 수 있어요</p>{/if}
+      <!-- 💥 피격 = 움직임 0 (#151): 알림은 장면 띠 안 · 문제 카드 위 덮개 + 줄어드는 원 · 고른 답 그대로 · 끝나면 덮개만 사라짐 -->
+      <div class="qwrap">
       {#key `${stepIdx(R)}|${step.id}`}
         {#if step.kind === 'boss'}
           <BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />
@@ -133,6 +143,13 @@
           <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
         {/if}
       {/key}
+      {#if stunned}
+        <div class="block" role="status" aria-live="polite">
+          <svg viewBox="0 0 44 44" width="56" height="56" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ring0" /><circle cx="22" cy="22" r="18" class="ring" style:animation-duration="{stunLen}ms" /></svg>
+          <b>잠깐! 막는 중</b><span>{Math.ceil((stunUntil - gnow) / 1000)}초 · 고른 답은 그대로예요</span>
+        </div>
+      {/if}
+      </div>
     {/if}
   {/if}
 </section>
@@ -154,9 +171,14 @@
   .say { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
   .res { margin: 0; padding-left: 1.2rem; }
   .big small { font-size: var(--fs-small); }
-  .camp { display: flex; align-items: center; justify-content: center; min-height: var(--btn-h); font-size: var(--btn-fs); border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--accent-sh); }
   .gift.mail { border-color: var(--accent); }
   .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
+  .qwrap { position: relative; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+  .block { position: absolute; inset: 0; padding-top: 40px; justify-content: flex-start !important; z-index: 3; border-radius: var(--r); background: rgba(8, 9, 12, 0.62); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s1); text-align: center; backdrop-filter: blur(1px); }
+  .block b { font-size: 20px; color: #fff; } .block span { font-size: var(--fs-small); color: var(--text-2); }
+  .ring0 { fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 4; }
+  .ring { fill: none; stroke: var(--bad); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: 22px 22px; animation: ringd linear forwards; }
+  @keyframes ringd { to { stroke-dashoffset: 113.1; } }
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }
   .cover p { margin: 0; color: var(--text-2); }

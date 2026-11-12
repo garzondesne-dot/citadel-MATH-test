@@ -128,7 +128,7 @@
     <div class="aux3"><button class="btn2" disabled>친구 힐</button><button class="btn2" disabled>묶기</button><button class="btn2" disabled>진필살기</button></div>
     <p class="muted">힐 · 묶기 · 진필살기는 다음 판에서 열려요</p>
   </div>
-  <BottomAction disabled={!rec.canRetry || !!reveal} why={reveal ? '채점 중… (화면을 누르면 바로 결과)' : rec.canRetry ? '숫자가 바뀐 새 문제 · 데미지는 그대로' : '연습 기회를 다 썼어요'} onmain={() => { practice = true; tableHold = false; }} mainLabel="연습 공격 (도전 기회 {rec.left}번)">
+  <BottomAction battle disabled={!rec.canRetry || !!reveal} why={reveal ? '채점 중… (화면을 누르면 바로 결과)' : rec.canRetry ? '숫자가 바뀐 새 문제 · 데미지는 그대로' : '연습 기회를 다 썼어요'} onmain={() => { practice = true; tableHold = false; }} mainLabel="연습 공격 (도전 기회 {rec.left}번)">
     {#snippet main()}<span>🔥 연습 공격</span><Hearts total={rec.slots} left={rec.left} />{/snippet}
   </BottomAction>
 {:else if spent}
@@ -137,6 +137,7 @@
     <span class="lab acc">{no} · 기회를 다 썼어요</span>
     <p class="muted">벌은 없어요 — 학습지에 풀이를 정리해요. 데미지 {rec.best}</p>
   </div>
+  <BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />
 {:else if reveal || tableHold}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={!!reveal?.flash} still={!reveal} onpick={reveal ? undefined : pickCell} />
   <div class="bcard">
@@ -147,7 +148,7 @@
       <p class="muted">맞힌 것은 그대로 잠기고, 틀린 것만 빈칸으로 다시 풀어요 · 공격 단추의 하트가 하나 줄었어요</p>
     {/if}
   </div>
-  <BottomAction disabled={mainOff} {why} onmain={onMain} mainLabel="다음 틀린 문제">
+  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel="다음 틀린 문제">
     {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{/snippet}
   </BottomAction>
 {:else if q}
@@ -164,7 +165,7 @@
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
     {/key}
   </div>
-  <BottomAction disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (도전 기회 ${rec.submitted ? rec.left : rec.slots}번)` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
+  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (도전 기회 ${rec.submitted ? rec.left : rec.slots}번)` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
     {#snippet main()}
       {#if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Hearts total={rec.slots} left={rec.submitted ? rec.left : rec.slots} />
       {:else}<span>{fixing ? '다음 틀린 문제 ▶' : '다음 소문제 ▶'}</span>{/if}

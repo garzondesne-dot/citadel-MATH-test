@@ -6,6 +6,7 @@
   import { funOf, nunCheer, nunPress, payFun, pick, type AnyFun } from '../../rest/run';
   import FUNQ from '../../rest/funq.json';
   import TdPhone from './TdPhone.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
 
   // 📱 학생 폰 · 쉼터 (#142 · 시안 ② ③ ④): 위 = 놀이 이름 · 🧍 살아 있는 인원 / 가운데 = 남은 초 고리 · 문제 / 아래 = 고르기(두 선택지가 곧 주요 단추)
   //   ② 놀이 전 = 🏕 · 남은 쉼터 시간(흐린 고리) · 주요 단추 흐림 「놀이를 기다리는 중」
@@ -106,28 +107,30 @@
     {/if}
     {#if paid && (paid.gem || paid.xp)}<p class="pay">💎 +{paid.gem}{paid.xp ? ` · EXP +${paid.xp}` : ''} <small>캠프에서 받아요</small></p>{/if}
   </div>
-  <div class="act">
-    {#if !f}
-      <button type="button" class="btn" disabled>놀이를 기다리는 중</button>
-    {:else if nn && nn.phase !== 'end'}
-      <button type="button" class="btn big" disabled={nn.phase !== 'play' || !alive || !!myPress || !!cover} onclick={() => nunPress(S, code, nn.g, nn.round, uid)}>{nn.phase === 'play' && alive && !myPress ? `🙊 ${nn.n}!` : nn.phase === 'ready' ? '준비…' : nunMine || '기다려요'}</button>
-    {:else if ff && ff.phase !== 'end'}
-      <div class="vs" class:three={opts.length === 3}>
+  <!-- 🟡 주요 단추 = BottomAction 한 자리(#151) · 고르기 칸은 그 위 · 주요 단추가 없는 때 = 흐린 단추 + 이유 -->
+  {#if cover && !isTd}
+    <!-- 덮개(관전 · 탈락 · 관객석) 때도 주요 단추는 같은 자리 · 덮개 위 -->
+    {#if cover === 'zz'}<BottomAction dock={false} text="🙋 다음 판부터 참여" onmain={back} />{:else}<BottomAction dock={false} text="👀 구경 중" why="다음 놀이에서 함께해요" />{/if}
+  {:else if !f}
+    <BottomAction dock={false} text="놀이를 기다리는 중" />
+  {:else if nn && nn.phase !== 'end'}
+    <BottomAction dock={false} text={nn.phase === 'play' && alive && !myPress ? `🙊 ${nn.n}!` : nn.phase === 'ready' ? '준비…' : nunMine || '기다려요'} disabled={nn.phase !== 'play' || !alive || !!myPress || !!cover} onmain={() => nunPress(S, code, nn.g, nn.round, uid)} />
+  {:else if ff && ff.phase !== 'end'}
+    <BottomAction dock={false} text={ff.phase === 'pick' ? (mine ? '✓ 골랐어요' : '위에서 골라요') : '다음 판을 기다려요'} why={ff.phase === 'pick' ? (ff.kind === 'quiz' ? '탈락 없는 복습 · 시간 안엔 바꿔도 돼요' : '안 고르면 💤 관전') : ''}>
+      {#snippet aux()}<div class="vs" class:three={opts.length === 3}>
         {#each opts as o (o.v)}<button type="button" class="opt {o.v}" class:on={mine === o.v} aria-pressed={mine === o.v} disabled={ff.phase !== 'pick' || (!!cover && cover !== 'zz')} onclick={() => choose(o.v)}>{o.t}{#if mine === o.v} ✓{/if}</button>{/each}
-      </div>
-      <p class="why">{ff.phase === 'pick' ? (ff.kind === 'quiz' ? '탈락 없는 복습 · 시간 안엔 바꿔도 돼요' : '안 고르면 💤 관전') : '다음 판을 기다려요'}</p>
-    {:else if isTd}
-      <p class="why">🏰 계산 · 그림은 교실 TV 에서</p>
-    {:else}
-      <p class="why">{f.kind === 'quiz' ? '맞힌 문장 × 2 EXP' : '선생님이 다음 놀이를 골라요'}</p>
-    {/if}
-  </div>
+      </div>{/snippet}
+    </BottomAction>
+  {:else if isTd}
+    <!-- 🏰 디펜스 = TdPhone 이 주요 단추를 그림 -->
+  {:else}
+    <BottomAction dock={false} text="다음 놀이를 기다려요" why={f.kind === 'quiz' ? '맞힌 문장 × 2 EXP' : '선생님이 다음 놀이를 골라요'} />
+  {/if}
   {#if cover}
     <div class="cover" role="status">
       <div class="ic">{cover === 'zz' ? '💤' : cover === 'out' ? '👀' : '👀'}</div>
       <b class="h">{cover === 'zz' ? '관전 중' : cover === 'out' ? '탈락 · 끝까지 구경해요' : '관객석'}</b>
       <p class="sub">{cover === 'zz' ? '지난 판에 고르지 않았어요' : cover === 'out' ? '다음 놀이에서 다시 만나요' : '이번 놀이가 끝나면 함께해요'}</p>
-      {#if cover === 'zz'}<button type="button" class="btn" onclick={back}>🙋 다음 판부터 참여</button>{/if}
     </div>
   {/if}
 </div>
@@ -153,12 +156,7 @@
   .ev { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; font-size: 14px; color: var(--text-2); }
   .ev li { background: var(--surface); border-radius: 999px; padding: 4px 10px; }
   .pay { margin: 0; font-weight: 700; color: var(--gem); } .pay small { color: var(--text-3); font-weight: 500; }
-  .act { flex: none; padding: var(--s2) var(--s4) calc(var(--s4) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: var(--s2); position: relative; z-index: 2; }
-  .btn { width: 100%; min-height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
-  .btn.big { min-height: 96px; font-size: 28px; }
-  .btn:disabled { background: var(--surface-2); color: var(--text-3); box-shadow: none; }
-  .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-  .vs { display: flex; flex-direction: column; gap: 10px; }
+  .vs { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
   .vs.three { flex-direction: row; } .vs.three .opt { flex: 1; height: 96px; font-size: 18px; }
   .opt { flex: none; height: 88px; border: 3px solid transparent; border-radius: 16px; color: #fff; font: 700 21px var(--font); box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45); padding: 0 var(--s2); }
   .opt.a { background: #2f5f9e; } .opt.b { background: #9e3f3f; } .opt.c { background: #4a7a3a; }
@@ -168,5 +166,4 @@
   .why { margin: 0; text-align: center; font-size: 13px; color: var(--text-3); }
   .cover { position: absolute; inset: 0; z-index: 3; background: rgba(8, 9, 12, 0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover .sub { margin: 0; color: var(--text-2); font-size: 14px; }
-  .cover .btn { position: absolute; left: var(--s4); right: var(--s4); bottom: calc(var(--s4) + env(safe-area-inset-bottom, 0px)); width: auto; }
 </style>

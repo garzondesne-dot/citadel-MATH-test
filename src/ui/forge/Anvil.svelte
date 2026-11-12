@@ -7,6 +7,7 @@
   import { grade } from '../../engine/grade';
   import { absArt } from '../manifest';
   import Sheet from '../battle/Sheet.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import ForgeCard from './ForgeCard.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
@@ -131,10 +132,9 @@
     </div>
     <p class="msg" class:bad>{msg}</p>
     <div class="shelf mats" role="group" aria-label="재료">{#each U.MATS as m (m.id)}<button type="button" class="tile mat mini" class:long={m.sym.length > 3} title={m.tip} onclick={() => put(m.id)}>{m.sym}</button>{/each}{#each putCards as c (c.id)}<button type="button" class="tile mat mini card long" title={c.name} onclick={() => put(`card:${c.id}`)}>{cardFm(c)}</button>{/each}</div>
-    <div class="act">
-      <div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; view = 'list'; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {U.CARDS.length}</button></div>
-      <button type="button" class="btn main" disabled={!full || busy} onclick={hit}>🔨 두드리기</button>
-    </div>
+    <BottomAction dock={false} disabled={!full || busy} onmain={hit} text="🔨 두드리기">
+      {#snippet aux()}<div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; view = 'list'; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {U.CARDS.length}</button></div>{/snippet}
+    </BottomAction>
   {:else if view === 'list'}
     <!-- ③ 💡 만들 수 있는 카드 -->
     <div class="book">
@@ -145,7 +145,7 @@
           {#each todo as c (c.id)}{@render row(c, false)}{:else}<p class="why lt">🎉 이 차시 카드를 모두 만들었어요!</p>{/each}</details>
       {/each}
     </div>
-    <div class="act"><button type="button" class="btn main" onclick={() => (view = 'forge')}>⚒ 모루로</button></div>
+    <BottomAction dock={false} onmain={() => (view = 'forge')} text="⚒ 모루로" />
   {:else}
     <!-- ④ 도감 -->
     <div class="bk-h"><b>모은 카드 {haveN} / {U.CARDS.length}</b><i class="bar2"><i style:width="{(haveN / U.CARDS.length) * 100}%"></i></i></div>
@@ -157,7 +157,7 @@
         <div class="grid">{#each cs as c (c.id)}<button type="button" class="cw" aria-label={owned[c.id] || wishIds.has(c.id) ? c.name : '아직 못 만든 카드'} onclick={() => (zoom = c)}><ForgeCard card={c} w={100} unknown={!owned[c.id]} wish={!owned[c.id] && wishIds.has(c.id)} /></button>{/each}</div>
       {/if}{/each}
     </div>
-    <div class="act"><button type="button" class="btn main" onclick={() => (view = 'forge')}>⚒ 모루로</button></div>
+    <BottomAction dock={false} onmain={() => (view = 'forge')} text="⚒ 모루로" />
   {/if}
 </div>
 
@@ -191,17 +191,19 @@
         {#if exWrong}<p class="wr">❌ 마력이 모자라요… 해설: {exQ.solution} · 다시 골라요 (벌 없음)</p>{/if}
       </div>
     </div>
-    <div class="act"><button type="button" class="btn main" disabled={exAns == null} onclick={exSubmit}>✨ 마력 넣기</button></div>
+    <BottomAction dock={false} disabled={exAns == null} onmain={exSubmit} text="✨ 마력 넣기" />
   </div>
 {/if}
 {#if ptoast}<p class="ptoast" role="status">{ptoast}</p>{/if}
 {#if reveal}
   <div class="ov rv" role="dialog" aria-label="카드 완성">
-    <b class="new">{reveal.first ? 'NEW CARD!' : '이미 가진 카드'}</b>
-    <ForgeCard card={reveal.c} w={220} />
-    <b class="nm">{reveal.c.name}</b>
-    {#if reveal.first}<b class="gem3">💎 +3 · 마정석을 받았어요</b>{/if}
-    <button type="button" class="btn" onclick={keep}>{reveal.first ? '🃏 내 카드에 넣기' : '확인'}</button>
+    <div class="rvc">
+      <b class="new">{reveal.first ? 'NEW CARD!' : '이미 가진 카드'}</b>
+      <ForgeCard card={reveal.c} w={220} />
+      <b class="nm">{reveal.c.name}</b>
+      {#if reveal.first}<b class="gem3">💎 +3 · 마정석을 받았어요</b>{/if}
+    </div>
+    <BottomAction dock={false} onmain={keep} text={reveal.first ? '🃏 내 카드에 넣기' : '확인'} />
   </div>
 {/if}
 {#if zoom}
@@ -215,7 +217,7 @@
 
 <style>
   .fg, .ov { position: fixed; inset: 0; z-index: 19; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; background: #171410 var(--bg) center / cover no-repeat; color: #f2e9d8; }
-  .ov { z-index: 22; } .ov.rv { background: rgba(10, 8, 6, 0.92); align-items: center; justify-content: center; gap: 12px; padding: 16px; }
+  .ov { z-index: 22; } .ov.rv { background: rgba(10, 8, 6, 0.92); align-items: stretch; padding: 16px 0 0; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); background: color-mix(in srgb, var(--bg-solid, var(--bg)) 0%, transparent); }
   .back { width: 44px; height: 48px; border: 0; background: rgba(8, 9, 12, 0.5); border-radius: 22px; color: #fff; font-size: 24px; }
   .t { flex: 1; font-size: 18px; color: #fff; text-shadow: 0 1px 2px #000; } .wal { height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.6); display: flex; align-items: center; font: 700 14px var(--font); color: var(--gem); }
@@ -248,9 +250,9 @@
   .shelf { flex: none; display: grid; gap: 4px; padding: 0 12px; margin-bottom: 6px; }
   .shelf.ops { grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .shelf.mats { grid-template-columns: repeat(7, minmax(0, 1fr)); max-height: 88px; overflow-y: auto; }
-  .act { margin-top: auto; flex: none; padding: 6px 12px calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; background: linear-gradient(transparent, rgba(10, 8, 6, 0.85) 30%); }
-  .btn { min-height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
-  .btn:disabled { opacity: 0.45; box-shadow: none; }
+  .fg > :global(.act), .ov > :global(.act) { margin-top: auto; padding-top: 2px; gap: 6px; background: linear-gradient(transparent, rgba(10, 8, 6, 0.85) 30%); }
+  .row2 { flex: 1; }
+  .rvc { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .btn2 { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 13.5px var(--font); }
   .btn2 b { color: var(--accent); }
@@ -284,7 +286,6 @@
   .chs button.on { border: 2px solid var(--accent); }
   .wr { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--bad-bg); font-size: 13.5px; }
   .new { font-size: 26px; color: #ffd25a; letter-spacing: 2px; text-shadow: 0 0 12px #ff9a2a; } .nm { font-size: 20px; color: #fff; } .gem3 { color: var(--gem); }
-  .rv .btn { width: 100%; max-width: 360px; }
   .perks { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
   .perk { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r); background: rgba(20, 16, 12, 0.88); border: 1px solid #6b5a3a; color: var(--text); }
   .perk.done { border-color: #f5b84a; } .perk .ph { flex: none; } .perk .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .perk small { font-size: 12px; color: var(--text-2); }

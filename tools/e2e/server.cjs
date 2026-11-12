@@ -29,7 +29,7 @@ const log = (...a) => console.log(...a);
   await p1.click('.links button:has-text("가입")'); await p1.waitForTimeout(200);
   await p1.click('button.pw >> nth=0'); for (const d of '1234') await p1.click(`.pad .keys button:has-text("${d}")`);
   await p1.waitForTimeout(200); if (await p1.$('.pad')) for (const d of '1234') await p1.click(`.pad .keys button:has-text("${d}")`);
-  await p1.waitForTimeout(200); await p1.click('button.go'); await p1.waitForTimeout(2500);
+  await p1.waitForTimeout(200); await p1.click('.title .pmain'); await p1.waitForTimeout(2500);
   log('폰 1 가입 뒤 화면:', (await p1.textContent('body')).replace(/\s+/g, ' ').slice(0, 60));
   const acc = await rest('accounts/1-3/1'); log('가입 → 서버 accounts/1-3/1:', JSON.stringify(acc), '| 비밀번호 칸 없음', acc && !('pw' in acc));
   if (!acc || !acc.uid || 'pw' in acc) errs.push('가입이 서버 계정(uid · 비밀번호 없음)으로 안 됨');

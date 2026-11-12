@@ -50,7 +50,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   for (let k = 0; k < 40 && !(await ph[0].$('.tdp .ups button')); k++) await wait(500);
   const upOk = !!(await ph[0].$('.tdp .ups button')); if (upOk) { await ph[0].screenshot({ path: `${SHOTS}/b31-td-up.png` }); await ph[0].click('.tdp .ups button >> nth=1'); await wait(1500); const L1 = await rest(`rooms/${code}/tdl/${f.g}`); if (!String((L1.ups || {}).s1_3_1 || '').includes('b')) errs.push('고른 업그레이드 반영'); }
   log('⬆ 업그레이드:', upOk ? 'ok' : '안 뜸', '| tdu', JSON.stringify(await rest(`rooms/${code}/tdu/${f.g}`)), '| 반영', JSON.stringify((await rest(`rooms/${code}/tdl/${f.g}`) || {}).ups)); if (!upOk) errs.push('업그레이드 고르기');
-  await ph[0].click('.tdp .btn.sk'); await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.tdc'); await t.click('.tdc button:has-text("방패")'); await t.click('.tdc button:has-text("응원")'); await t.screenshot({ path: `${SHOTS}/b31-td-remote.png` });
+  await ph[0].click('.tdp .pmain'); await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.tdc'); await t.click('.tdc button:has-text("방패")'); await t.click('.tdc button:has-text("응원")'); await t.screenshot({ path: `${SHOTS}/b31-td-remote.png` });
   const sh = await t.evaluate(() => { const bd = document.querySelector('.sheet .body'); return bd.scrollHeight > bd.clientHeight + 1; }); if (sh) errs.push('리모컨 시트 스크롤');
   await t.click('.sheet .x'); await wait(1500);
   f = await fun(); log('   🛡', !!f.sh, '· ✨', JSON.stringify(f.ch || {}), '· 기술', JSON.stringify(await rest(`rooms/${code}/tdt/${f.g}`)));

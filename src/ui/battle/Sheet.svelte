@@ -1,7 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import BottomAction from './BottomAction.svelte';
   // Sheet (3절 · 2-1절 「알림 · 팝업 = 모두 아래 시트」): 위 손잡이 · 바깥 누르면 닫힘 · 아래 주요 단추 1 (act 를 주면 그 단추 줄로 바꿈)
-  const { title, children, onclose, mainText = '닫기', act, tall = false }: { title: Snippet; children: Snippet; onclose: () => void; mainText?: string; act?: Snippet; tall?: boolean } = $props();
+  //   학생 시트 주요 단추 = BottomAction(#151 · 폰 바닥에서 20 · 56) — onmain 이 없으면 「닫기」 · act = 교사 시트만(그 화면 단추 줄)
+  const { title, children, onclose, mainText = '닫기', onmain, mainDisabled = false, why = '', act, tall = false }:
+    { title: Snippet; children: Snippet; onclose: () => void; mainText?: string; onmain?: () => void; mainDisabled?: boolean; why?: string; act?: Snippet; tall?: boolean } = $props();
 </script>
 
 <div class="bg" role="presentation" onclick={onclose}></div>
@@ -9,7 +12,7 @@
   <div class="grab"><i></i></div>
   <div class="bar"><div class="t">{@render title()}</div><button type="button" class="x" aria-label="닫기" onclick={onclose}>✕</button></div>
   <div class="body">{@render children()}</div>
-  <div class="act">{#if act}{@render act()}{:else}<button type="button" class="btn" onclick={onclose}>{mainText}</button>{/if}</div>
+  {#if act}<div class="act">{@render act()}</div>{:else}<BottomAction dock={false} text={mainText} disabled={mainDisabled} {why} onmain={onmain ?? onclose} mainLabel={mainText} />{/if}
 </div>
 
 <style>

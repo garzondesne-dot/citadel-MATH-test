@@ -10,6 +10,7 @@
   import { liveValue } from '../room.svelte';
   import { lastClass, lastTest } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
 
@@ -92,7 +93,7 @@
       </div>
       <p class="why">벌은 없어요 · 한 번 더 = 숫자가 새로 바뀌어요</p>
     </div>
-    <div class="act"><button type="button" class="btn" onclick={() => { pick = res!.L; sheet = 'solo'; go(); }}>🔥 한 번 더</button><button type="button" class="btn2" onclick={() => (res = null)}>📋 게시판으로</button></div>
+    <BottomAction dock={false} text="🔥 한 번 더" onmain={() => { pick = res!.L; sheet = 'solo'; go(); }}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => (res = null)}>📋 게시판으로</button>{/snippet}</BottomAction>
   {:else if mine && mine.phase === 'wait'}
     <!-- ⑧ 팀 대기실 -->
     {@const ms = membersOf(mine)}
@@ -102,11 +103,12 @@
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
     </div>
-    <div class="act">
-      {#if host}<button type="button" class="btn" disabled={!canStart(mine) || !online} onclick={() => { const L = lessonOf(mine.lesson); if (L) startTeam(S, L, mine, 0); }}>⚔ 출발 ({ms.length}명)</button><button type="button" class="btn2" onclick={() => leavePost(S, mine, uid)}>모집 글 내리기</button>
-        <p class="why">{!online ? '서버와 끊겼어요' : canStart(mine) ? '함께할 친구를 기다리거나 바로 출발해요' : '친구가 「준비 완료」를 누르면 출발할 수 있어요'}</p>
-      {:else}<button type="button" class="btn" onclick={() => setReady(S, mine, uid, !mine.mem[uid]?.ready)}>{mine.mem[uid]?.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료'}</button><button type="button" class="btn2" onclick={() => leavePost(S, mine, uid)}>나가기</button>{/if}
-    </div>
+    {#if host}
+      <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) startTeam(S, L, mine, 0); }}
+        why={!online ? '서버와 끊겼어요' : canStart(mine) ? '함께할 친구를 기다리거나 바로 출발해요' : '친구가 「준비 완료」를 누르면 출발할 수 있어요'}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>모집 글 내리기</button>{/snippet}</BottomAction>
+    {:else}
+      <BottomAction dock={false} text={mine.mem[uid]?.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료'} onmain={() => setReady(S, mine, uid, !mine.mem[uid]?.ready)}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>나가기</button>{/snippet}</BottomAction>
+    {/if}
   {:else}
     <!-- ⑥ 전체 게시판 -->
     <div class="chips" role="group" aria-label="차시 거르기">
@@ -128,19 +130,15 @@
       {/if}
       <p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>
     </div>
-    <div class="act">
-      <button type="button" class="btn" onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}>⚔ 혼자 시작 ›</button>
-      <button type="button" class="btn2" disabled={open || !online} onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'post'; }}>＋ 모집 글 올리기</button>
-      {#if open || !online}<p class="why">{open ? '수업 중엔 모집 글을 못 올려요' : '서버와 끊겨서 팀은 잠깐 쉬어요'}</p>{/if}
-    </div>
+    <BottomAction dock={false} text="⚔ 혼자 시작 ›" onmain={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}
+      why={open || !online ? (open ? '수업 중엔 모집 글을 못 올려요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" disabled={open || !online} onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'post'; }}>＋ 모집 글 올리기</button>{/snippet}</BottomAction>
   {/if}
   {#if toast}<p class="toast3" role="status">{toast}</p>{/if}
 </div>
 
 {#if sheet}
-  <Sheet onclose={() => (sheet = '')}>
+  <Sheet onclose={() => (sheet = '')} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 혼자 시작`) : '차시를 골라요'} mainDisabled={!pick} onmain={go}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
-    {#snippet act()}<button type="button" class="btn" disabled={!pick} onclick={go}>{pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 혼자 시작`) : '차시를 골라요'}</button>{/snippet}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
   </Sheet>
 {/if}
@@ -175,11 +173,8 @@
   .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-3); text-align: center; }
   .empty span { font-size: 48px; } .empty b { font-size: 15px; color: var(--text-2); } .empty small { font-size: 13px; }
   .why { margin: 0; text-align: center; font-size: 13px; color: var(--text-3); }
-  .act { flex: none; padding: var(--s2) var(--s4) calc(var(--s4) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: var(--s2); }
-  .btn { min-height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
-  .btn:disabled { opacity: 0.45; box-shadow: none; }
-  .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .btn2 { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .btn2.wide { flex: 1; }
   .btn2:disabled { color: var(--text-3); box-shadow: none; border-style: dashed; }
   .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .slot { background: var(--surface); border-radius: var(--r); padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 120px; justify-content: center; text-align: center; }

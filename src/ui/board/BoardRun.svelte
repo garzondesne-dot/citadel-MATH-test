@@ -10,6 +10,7 @@
   import { liveRoom } from '../room.svelte';
   import Student from '../Student.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import BottomAction from '../battle/BottomAction.svelte';
   import { clock } from '../clock.svelte';
 
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
@@ -150,7 +151,7 @@
   {/if}
   {#if bp}
     <div class="cover" role="status"><span class="ic">{bp.think ? '⏸' : '🛡'}</span><b>{bp.think ? '생각 시간' : '수호자가 설명 중'}</b><em>{mmss(bpLeft)}</em><p>시간이 멈췄어요 · 같은 문제를 함께 봐요</p>
-      {#if bp.by === uid}<button type="button" class="btn" onclick={() => R && pauseOff(S, code, R)}>▶ 다시 시작</button>{/if}</div>
+      {#if bp.by === uid}<BottomAction text="▶ 다시 시작" onmain={() => R && pauseOff(S, code, R)} />{:else}<BottomAction text="⏸ 멈춤 중" why="멈춘 친구가 다시 시작해요" />{/if}</div>
   {/if}
   {#if toast || took}<p class="toast2" role="status">{toast || took}</p>{/if}
 </div>
@@ -181,7 +182,6 @@
   .hcard button { position: absolute; top: 4px; right: 4px; width: 36px; height: 36px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .cover { position: fixed; inset: 0; z-index: 32; background: rgba(8, 9, 12, 0.82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; color: #fff; }
   .cover .ic { font-size: 40px; } .cover b { font-size: 22px; } .cover em { font-style: normal; font-size: 40px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; } .cover p { margin: 0; color: #cfd3db; }
-  .cover .btn { position: absolute; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 398px; margin: 0 auto; min-height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .toast2 { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 33; margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface); font-weight: 700; white-space: nowrap; }
   .why2 { margin: 0; font-size: 13px; color: var(--text-2); }
   .who { display: flex; flex-direction: column; gap: 6px; }
