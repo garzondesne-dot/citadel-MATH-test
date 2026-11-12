@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await rest('school/sched', 'PUT', W);
   const b = await chromium.launch(), errs = [];
   const open = async (url, vp = { width: 360, height: 640 }) => { const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); await p.goto(B + url); return p; };
-  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 });
+  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
   const code = (await rest('school/live')).code;
   const ph = []; for (let n = 1; n <= 3; n++) ph.push(await open(`?role=student&room=${code}&as=1-3:${n}&${E}`));
@@ -25,7 +25,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await t.click('.rdock button:has-text("쉼터")'); await t.click('.games .game:has-text("디펜스")'); await t.click('.sheet .act .btn.rbig'); await wait(700);
   const toast = await t.textContent('.toast').catch(() => ''); log('TV 없이 🏰:', toast.trim(), '| fun', await fun()); if (!/교실 TV/.test(toast)) errs.push('TV 없이 시작 안내');
   // TV 켬
-  const tv = await open(`?role=hall&${E}`, { width: 1280, height: 720 }); await tv.evaluate(() => { window.__TD_SPEED = 6; }); await wait(4000);
+  const tv = await open(`?role=hall&${E}`, { width: 1280, height: 720 }); await tv.evaluate(() => { window.__TD_SPEED = 6; }); await wait(4000); await require('./_emu.cjs').asHost(tv, code); // 🔐 TV = 종합실 키로 hosts
   const bgm0 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 쉼터 곡:', JSON.stringify(bgm0)); if (!bgm0 || bgm0.k !== 'rest') errs.push('쉼터 곡');
   await t.click('.sheet .act .btn.rbig'); await wait(1500);
   let f = await fun(); log('🏰 시작:', f && f.kind, f && f.map, f && f.phase); if (!f || f.kind !== 'td') errs.push('디펜스 시작');

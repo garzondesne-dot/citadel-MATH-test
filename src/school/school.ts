@@ -43,7 +43,9 @@ export const pupilOf = (uid: string) => { const m = /^s(\d+)_(\d+)_(\d+)$/.exec(
 // 경로 = 정식 accounts/{반}/{번호} (V1-DESIGN 7절 · #137) · 이 기기 = { pw, at } · 시험 서버 = { uid, at } (비밀번호는 Firebase 로그인에만 · DB 에 안 씀)
 const accPath = (cls: string, num: number) => `accounts/${cls}/${num}`;
 export const hasAccount = (S: Store, cls: string, num: number) => !!S.get<object>(accPath(cls, num));
-type AuthStore = Store & { auth?: import('firebase/auth').Auth };
+type AuthStore = Store & { auth?: import('firebase/auth').Auth; preload?: (cls: string, num: number) => Promise<void> };
+/** 🔐 #163-① 로그인한 학생의 자기 칸(💎 · EXP · 카드 · 기록)을 먼저 받아 둠 → 그다음 화면 */
+const ready = async (S: Store, cls: string, num: number) => { await (S as AuthStore).preload?.(cls, num); return null; };
 /** 시험 서버 로그인 이름 · 비밀번호 (Firebase 는 6자 이상 · 학생이 쓰는 건 숫자 4자리 그대로) */
 export const authEmail = (cls: string, num: number) => `${uidOf(cls, num)}@citadel-test.local`;
 const authPw = (pw: string) => `cdm-${pw}`;
@@ -57,16 +59,16 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
     if (hasAccount(S, cls, num) && !S.get<boolean>(`${accPath(cls, num)}/reset`)) return '이미 가입한 번호예요 · 로그인해요';
     if (!/^\d{4}$/.test(pw)) return '비밀번호는 숫자 4자리예요';
     if (pw !== pw2) return '두 번 쓴 비밀번호가 달라요';
-    if (hasAccount(S, cls, num)) { try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return null; } catch { return '이미 가입한 번호예요 · 로그인해요'; } } // 옮긴 계정 = 칸은 그대로 두고 잇기
-    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); S.set(accPath(cls, num), { uid: c.user.uid, at: S.now() }); return null; }
+    if (hasAccount(S, cls, num)) { try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); } catch { return '이미 가입한 번호예요 · 로그인해요'; } } // 옮긴 계정 = 칸은 그대로 두고 잇기
+    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); S.set(accPath(cls, num), { uid: c.user.uid, at: S.now() }); return ready(S, cls, num); }
     catch (e) { return /email-already/.test(String((e as { code?: string }).code)) ? '이미 가입한 번호예요 · 로그인해요' : '가입하지 못했어요 · 잠시 뒤 다시'; }
   }
   if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
-  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); if (S.get<boolean>(`${accPath(cls, num)}/reset`)) claim(S, cls, num, A.currentUser?.uid); return null; }
+  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); if (S.get<boolean>(`${accPath(cls, num)}/reset`)) claim(S, cls, num, A.currentUser?.uid); return ready(S, cls, num); }
   catch (e) {
     // 🔁 #163 정식에서 옮긴 계정(reset: true · 정식 「선생님 초기화」와 같은 뜻) = 이 서버 로그인이 아직 없음 → 지금 친 4자리로 새로 만들고 그 학생 칸에 이어짐
     if (S.get<boolean>(`${accPath(cls, num)}/reset`) && /^\d{4}$/.test(pw) && /user-not-found|invalid-credential|invalid-login/.test(String((e as { code?: string }).code))) {
-      try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return null; } catch { /* 이미 만든 로그인 = 비밀번호 다름 */ }
+      try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); } catch { /* 이미 만든 로그인 = 비밀번호 다름 */ }
     }
     return '비밀번호가 달라요 · 잊었으면 선생님께';
   }
@@ -110,7 +112,10 @@ export const setLast = (S: Store, cls: string, v: LastClass) => S.set(`school/la
 export const lastTest = (S: Store, cls: string) => S.get<LastClass>(`school/lastTest/${cls}`);
 export const setLastTest = (S: Store, cls: string, v: LastClass) => S.set(`school/lastTest/${cls}`, v);
 /** 지금 열린 수업 (교사 폰이 열면 · 교실 TV · 학생 캠프가 따라감) */
-export interface Live { code: string; cls: string; lesson: string; key: string; test?: boolean }
+export interface Live { code: string; cls: string; lesson: string; key?: string; test?: boolean }
+/** 🔐 #163-① 종합실 키(고정) = 교사만 읽는 칸 · 수업마다 secrets/{방}/hallKey 에 옮겨 적음 */
+export const HALLKEY = 'secrets/fixed/hallKey';
+export const hallKeyOf = (S: Store, code: string) => S.get<string>(`secrets/${code}/hallKey`) || S.get<string>(HALLKEY) || '';
 export const liveNow = (S: Store) => S.get<Live>('school/live');
 export const setLive = (S: Store, v: Live | null) => S.set('school/live', v);
 export const liveOfCls = (S: Store, cls: string) => { const v = liveNow(S); return v && v.cls === cls ? v : null; };

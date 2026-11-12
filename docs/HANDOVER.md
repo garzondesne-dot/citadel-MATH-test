@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b42 · 2026-11-12
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b43 · 2026-11-12
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -12,6 +12,7 @@
 | b29 · b31 | #142-2 · #146 | 🏰 디펜스(정식 td.js 계산 · 타워 힘 모두 같음) · 교환 · 업그레이드 고르기 · 용사 바꾸기 · 컷인 · 🎵 쉼터 곡 · 놀이 그림 |
 | b30 · b32 · b33 | #143 · #147 | 📋 게시판 던전 1인 · 팀(모집 · 합류 · 대기실 · 수호자 · 힌트 · 멈춤 · 순위) · 🔁 진행 이어받기 |
 | b34 ~ b36 | #148 · #150 | 룬 키패드 그림 · ⚒ 모루(정식 연성 · 카드 54 · 도감 · 특전) |
+| b43 | #163-① | 🔐 규칙 좁히기(교사 = admins + 비번 로그인 · TV = 종합실 키로 hosts · 학생 = 자기 기록만 · 명단 = 교사 · 비번 로그인 학생 · prep 쓰기 = 교사 · 복사 도구 uid) · 앱 = 칸마다 받기(교사만 통째로) |
 | b42 | #157 덧붙임 · #166 · #167 | TV 용사단 = 조작 막대 위까지 · 🧙 새 화풍 세밀 시트(0 로안 · 4 루멘 사제) · 칸 192 × 144 |
 | b41 | #152 | 💥 몬스터 공격 6종(등록 표 raid/attacks.ts · 차시 팩 attack · 보스 번갈아 · 짝 표 tools/pack-from-release/attacks.json) · ▢ 도전 칸(✔ · 노랑 · −) · ⚡ 기력(충전 · ⛓ 묶기 · 💚 친구 힐 · 🌟 필살기 조건) |
 | b40 | #163 ②③④ | 🔁 정식 칸 꼴(수업 기록 mons o·f·x·-·n · bossM · boss · bossN · won / 💎 · EXP · 카드 = 칸마다 써서 정식 칸 안 지움 · buy 지도 → 경제 0판 이전 / 명단 roster · rosterMask · 시험 계정 tester) · 복사 도구 `tools/copy-from-release` · 옮긴 계정 = 처음 로그인으로 잇기 · ⏸ 수업 중 새 판 알림 미룸 |
@@ -42,11 +43,12 @@
 - 단위: `npm test`(153) · 화면: `npm run build` → `npx vite preview --port 4173` → `NODE_PATH=$(npm root -g) node tools/e2e/<이름>.cjs <그림 폴더>`
 - 에뮬레이터가 필요한 것: `rest` · `td` · `team` · `team-drv` · `me` · `gate` · `server` (`cd firebase && firebase emulators:start --only database,auth --project demo-citadel-test`)
 - 이 기기만: `board` · `theme` · `camp` · `myhero` · `tabs`(한글 파일 이름 = 브라우저 `LANG=ko_KR.UTF-8`)
-- 화면 시험 고리(학생 화면엔 안 보임): `window.__board`(지금 단계 맞히기 · 틀리기) · `__BOARD_SEC` · `__TD_PICK` · `__TD_SPEED` · `__bgm` · `__strike(ms, 종류)`(몬스터 공격 한 번 · pause · glitch · fog · ice · fire · smash) · `__tvFake(n)`(TV 방에 가상 학생 n) · `__arena`(TV 장면 그리기 방식 · 배치 · 체력)
+- 🔐 에뮬레이터 시험 = 좁힌 규칙: 교사 폰 · TV 는 `tools/e2e/_emu.cjs` asAdmin · asHost 로 표시 · 규칙만 따로 = `node tools/e2e/rules.cjs`(26가지) · 교사 로그인 화면 = `tlogin`
+- 화면 시험 고리(학생 화면엔 안 보임): `window.__board`(지금 단계 맞히기 · 틀리기) · `__BOARD_SEC` · `__TD_PICK` · `__TD_SPEED` · `__bgm` · `__strike(ms, 종류)`(몬스터 공격 한 번 · pause · glitch · fog · ice · fire · smash) · `__tvFake(n)`(TV 방에 가상 학생 n) · `__arena`(TV 장면 그리기 방식 · 배치 · 체력) · `__uid`(로그인 uid)
 - 🟡 주요 단추 시험: `mainbtn`(이 기기 · 학생 화면 17곳 × 360 × 640 · 390 × 844 · 830 × 900 · 교사 폰 68 · 피격 전후 rect) — 학생 화면의 노란 주요 단추는 `src/ui/battle/BottomAction.svelte` 하나로만(`dock` = 화면 바닥 고정 · `dock={false}` = 바닥에 붙은 판 안 마지막 줄)
 
 ## 4. 📌 출시 전 메모 (아직 안 함 · 머리 방 · 선생님 결정 필요한 것 포함)
-1. **규칙 좁히기** (`firebase/database.rules.json`): 지금 `rooms` · `school` · `gifts` · `mail` = 로그인(익명 포함)이면 누구나 씀 → 출시 전에
+1. ✅ (b43) **규칙 좁히기** — 남은 것: 학생 칸(players · subs · fv · nun · td* 등)은 아직 「로그인이면 누구나」(학생 앱 uid 와 로그인 uid 가 달라서) · 옛 메모: 지금 `rooms` · `school` · `gifts` · `mail` = 로그인(익명 포함)이면 누구나 씀 → 출시 전에
    - `school/board/posts/{pid}/mem/{uid}` = 그 학생만 · 글 지우기 = 글 올린 학생만 · `school/board/rank` = 새로 쓰기만
    - `gifts/{uid}` = 그 학생(쉼터 · 디펜스 보상) · 교사 계정(선물)만 · `school/teacher/*` · `school/sched` · `school/last*` = 교사만
    - `rooms/{코드}/players/{uid}` · `subs/*/{uid}` = 그 학생만 · 방 meta · state = 교사 · TV · 팀 진행 폰만

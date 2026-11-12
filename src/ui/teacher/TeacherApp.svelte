@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { HALLKEY } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import './teacher.css';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -29,14 +30,14 @@
   let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
 
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
-    const code = newCode(), key = S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲)
+    const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
     openRoom(S, L, code, test ? PROFILES.test : PROFILES.class);
     const pr = S.get<Record<string, number>>(`school/prep/${L.id}`); // 📋 차시 준비 기본값 (⑰) → 방에 옮겨 적음
     if (pr && !test) Object.entries(pr).forEach(([k, v]) => S.set(`${roomPath(code)}/meta/${k}`, v));
-    S.set(`${roomPath(code)}/meta/cls`, cls); S.set(`${roomPath(code)}/meta/key`, key);
+    S.set(`${roomPath(code)}/meta/cls`, cls); S.set(`secrets/${code}/hallKey`, key); // 🔐 TV 는 이 키를 쳐서 hosts 에 등록 (방 meta · school/live 에는 키를 안 둠)
     if (from) { S.set(`${roomPath(code)}/meta/resumeFrom`, from.step); if (from.fresh) S.set(`${roomPath(code)}/meta/fresh/${from.fresh}`, true); } // ⏯ 이어서
     if (!test) S.set(`${roomPath(code)}/meta/limit`, true);
-    setLive(S, { code, cls, lesson: L.id, key, ...(test ? { test: true } : {}) });
+    setLive(S, { code, cls, lesson: L.id, ...(test ? { test: true } : {}) });
     (test ? setLastTest : setLast)(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code }); // ⏯ 🧪 테스트도 이어서 (#133 · 따로 저장)
     page = 'live';
   }

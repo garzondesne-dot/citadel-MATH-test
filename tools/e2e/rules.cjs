@@ -1,0 +1,42 @@
+// 🔐 #163-① 좁힌 규칙 시험 (에뮬레이터 · 화면 없이 REST): firebase/database.rules.json
+//   학생 = 자기 gem · records 만 / 익명 = 명단(roster) ✗ · 가린 명단 ○ / 교사 = 처음 비번 계정만 admins / TV = 키가 맞아야 hosts · 그다음 방 진행 칸
+const NS = 'demo-citadel-test-default-rtdb', DBU = 'http://127.0.0.1:9000', AU = 'http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1';
+const log = (...a) => console.log(...a);
+const owner = (path, method = 'GET', body) => fetch(`${DBU}/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
+const as = (tok, path, method = 'GET', body) => fetch(`${DBU}/${path}.json?ns=${NS}&auth=${tok}`, { method, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.status);
+const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key=fake`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(email ? { email, password: 'pw123456', returnSecureToken: true } : { returnSecureToken: true }) }).then((r) => r.json()); return { tok: r.idToken, uid: r.localId }; };
+(async () => {
+  await owner('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' });
+  const A = await sign('a@t.local'), B = await sign('b@t.local'), anon = await sign(null), T1 = await sign('t1@t.local'), T2 = await sign('t2@t.local');
+  await owner('', 'PATCH', { accounts: { '1-3': { 1: { uid: A.uid }, 2: { uid: B.uid } } }, gem: { '1-3': { 1: { total: 5 }, 2: { total: 9 } } }, records: { '1-3': { 2: { x: { no: 6 } } } }, roster: { '1-3': { 1: '가나다' } }, rosterMask: { '1-3': { 1: '가*다' } }, rooms: { 111111: { meta: { lesson: 'set-06' }, state: { step: 0 } } }, secrets: { 111111: { hallKey: '4321' } } });
+  const rows = [], errs = [];
+  const want = (name, got, ok) => { const pass = ok ? got === 200 : got >= 400; rows.push(`${pass ? '○' : '✗'} ${name} → ${got}`); if (!pass) errs.push(name); };
+  want('학생 A 내 💎 읽기', await as(A.tok, 'gem/1-3/1'), true);
+  want('학생 A 남(2번) 💎 읽기', await as(A.tok, 'gem/1-3/2'), false);
+  want('학생 A 남 기록 읽기', await as(A.tok, 'records/1-3/2'), false);
+  want('학생 A 💎 통째 읽기', await as(A.tok, 'gem'), false);
+  want('학생 A 내 💎 쓰기', await as(A.tok, 'gem/1-3/1/total', 'PUT', 6), true);
+  want('학생 A 남 💎 쓰기', await as(A.tok, 'gem/1-3/2/total', 'PUT', 0), false);
+  want('익명 명단(이름) 읽기', await as(anon.tok, 'roster'), false);
+  want('익명 가린 명단 읽기', await as(anon.tok, 'rosterMask'), true);
+  want('익명 school/live 쓰기', await as(anon.tok, 'school/live', 'PUT', { code: 'x' }), false);
+  want('익명 학습지 칸 쓰기(prep)', await as(anon.tok, 'prep/set-06/img/c1', 'PUT', 'data:image/webp;base64,AA'), false);
+  want('교사 1 = 처음 비번 계정 admins', await as(T1.tok, `admins/${T1.uid}`, 'PUT', true), true);
+  want('교사 2 = 이미 교사 있음', await as(T2.tok, `admins/${T2.uid}`, 'PUT', true), false);
+  want('익명 admins 만들기', await as(anon.tok, `admins/${anon.uid}`, 'PUT', true), false);
+  want('교사 남 💎 읽기', await as(T1.tok, 'gem/1-3/2'), true);
+  want('교사 secrets 읽기', await as(T1.tok, 'secrets/111111'), true);
+  want('교사 학습지 칸 쓰기', await as(T1.tok, 'prep/set-06/img/c1', 'PUT', 'data:image/webp;base64,AA'), true);
+  want('익명 secrets 읽기', await as(anon.tok, 'secrets/111111'), false);
+  want('TV(익명) 키 전 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), false);
+  want('TV 틀린 키로 hosts', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '0000'), false);
+  want('TV 맞는 키로 hosts', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '4321'), true);
+  want('TV hosts 뒤 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), true);
+  want('학생 방 접속 신호(players)', await as(B.tok, `rooms/111111/players/s1_3_2/seen`, 'PUT', 1), true);
+  want('학생 방 진행 쓰기', await as(B.tok, 'rooms/111111/state/step', 'PUT', 9), false);
+  want('학생 팀 방(T…) 진행', await as(B.tok, 'rooms/Tabc/state/step', 'PUT', 1), true);
+  want('옮긴 계정 잇기(reset)', (await owner('accounts/1-3/3', 'PUT', { uid: 'OLD', reset: true }), await as(B.tok, 'accounts/1-3/3/uid', 'PUT', B.uid)), true);
+  want('남의 계정 가로채기', await as(B.tok, 'accounts/1-3/1/uid', 'PUT', B.uid), false);
+  log('🔐 규칙:'); rows.forEach((r) => log('  ' + r));
+  log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
+})();

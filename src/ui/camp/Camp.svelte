@@ -129,10 +129,10 @@
   const HS = 1; // 정보판 용사 = 칸 80 × 64 그대로(정수 배율)
   // 🚪 코드로 들어가기 (#138 · 정식 codeGate): 6자리 · 열려 있는 방이어야 함
   let codeIn = $state(''), codeErr = $state('');
-  function enterCode() {
+  async function enterCode() {
     const c = codeIn.trim();
     if (!/^\d{6}$/.test(c)) { codeErr = '수업 코드 6자리를 넣어 주세요'; return; }
-    const R0 = S.get<Room>(`rooms/${c}`);
+    const R0 = (S.fetch ? await S.fetch<Room>(`rooms/${c}`) : S.get<Room>(`rooms/${c}`)); // 🔐 #163-① 방은 필요할 때 받음 → 한 번 기다림
     if (!R0) { codeErr = '그 코드의 수업이 없어요 · 선생님께 다시 물어봐요'; return; }
     if (R0.state?.closed) { codeErr = '이미 끝난 수업이에요'; return; }
     location.href = `?role=student&room=${encodeURIComponent(c)}`;

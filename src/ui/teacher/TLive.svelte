@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { hallKeyOf } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
@@ -115,7 +116,7 @@
   <div class="tbar">
     <button type="button" class="back" aria-label="수업 열기로" onclick={onhome}>‹</button>
     <div class="t">{live.cls}반 · {L.no}차시{live.test ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
-    <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {live.key}"><b>코드 {code}</b><small>종합실 키 {live.key}</small></span>
+    <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
 
   {#if isLobby(R)}
