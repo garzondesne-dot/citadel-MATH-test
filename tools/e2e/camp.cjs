@@ -24,7 +24,7 @@ const base = 'http://localhost:4173/';
   log('성채 시트:', (await c0.textContent('.sheet')).replace(/\s+/g, ' ').slice(0, 140));
   await c0.click('.sheet .btn');
   // 다른 물건 다 눌러 봄 → 익숙한 학생
-  for (const n of ['출제 공방', '모루', '우편함']) { /* 📋 게시판(#143) = 따로 화면 · board.cjs */ await c0.click(`button[aria-label="${n}"]`); await c0.waitForSelector('.sheet'); await c0.click('.sheet .btn'); await c0.waitForTimeout(100); }
+  for (const n of ['출제 공방', '우편함']) { /* 📋 게시판(#143) · ⚒ 모루(#148) = 따로 화면 · board.cjs · anvil.cjs */ await c0.click(`button[aria-label="${n}"]`); await c0.waitForSelector('.sheet'); await c0.click('.sheet .btn'); await c0.waitForTimeout(100); }
   await c0.click('button[aria-label="내 용사 보기"]'); await c0.waitForSelector('.mh'); log('내 용사 시트(b7):', (await c0.textContent('.mh .top')).replace(/\s+/g, ' ').trim()); await c0.click('.mh .back');
   await c0.reload(); await c0.waitForSelector('.stage'); await c0.waitForTimeout(400);
   log('익숙함:', await labels(c0));
