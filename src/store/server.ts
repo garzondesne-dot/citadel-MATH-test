@@ -8,7 +8,7 @@ import type { Store, Unsub } from '../model/types';
 //   시계 = 서버 시각(.info/serverTimeOffset) · 끊김 = .info/connected · 로그인 = 처음엔 익명(TV · 교사 · 둘러보기) · 학생은 계정으로 바꿔 탐
 //   ⚠ 시험 전용: 운영 프로젝트에는 연결하지 않음(config.ts 가 막음) · 맨 윗칸 통째로 받으므로 시험 규모용(출시 때 방 단위로 나눔)
 type Tree = Record<string, unknown>;
-const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts'] as const;
+const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus'] as const; // #141 학생 기록 칸(V1-DESIGN 7절)
 const split = (p: string) => p.split('/').filter(Boolean);
 function getIn(t: unknown, parts: string[]): unknown { let cur = t; for (const k of parts) { if (cur == null || typeof cur !== 'object') return null; cur = (cur as Tree)[k]; } return cur === undefined ? null : cur; }
 function setIn(t: Tree, parts: string[], v: unknown): void {
@@ -21,12 +21,12 @@ const clone = <T>(v: T): T => (v == null ? v : (JSON.parse(JSON.stringify(v)) as
 
 export interface NetState { connected: boolean; uid: string | null }
 export interface ServerStore extends Store { net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub }
-export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null }
+export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null; /** 앱 이름 (같은 이름 = 새로 고침해도 로그인 그대로 · 시험에서 여러 명을 한 곳에 띄울 때만 다르게) */ name?: string }
 
 /** 기다리되 ms 넘으면 그냥 넘어감 (서버가 안 닿거나 규칙 게시 전이어도 화면이 멈추지 않게) */
 const within = <T>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<void>((r) => setTimeout(r, ms))]);
 export async function serverStore(o: ServerOpts): Promise<ServerStore> {
-  const app = initializeApp(o.firebase, `citadel-${Date.now()}`);
+  const app = initializeApp(o.firebase, o.name ?? 'citadel'); // #141: 이름이 늘 같아야 새로 고침 뒤에도 그 학생 로그인이 남음
   const db = getDatabase(app), auth = getAuth(app);
   if (o.emulator) { connectDatabaseEmulator(db, o.emulator.host, o.emulator.db); connectAuthEmulator(auth, `http://${o.emulator.host}:${o.emulator.auth}`, { disableWarnings: true }); }
   // 로그인 (규칙 = 로그인한 사람만) — 이미 계정으로 들어와 있으면 그대로

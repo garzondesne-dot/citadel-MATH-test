@@ -7,6 +7,7 @@
   import { validate } from './engine/lessons';
   import type { Store } from './model/types';
   import type { Where } from './store/config';
+  import { bindMe } from './store/meSync';
   import { BUILD } from './build';
   import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
@@ -47,6 +48,9 @@
   }
   // ⓪ 로그인한 폰 = 그 학생 (반 + 번호) · 아니면 탭마다 따로인 이름표(시험 · 두 탭 체험)
   let login = $state<Pupil | null>(savedLogin(S));
+  // 🧑 학생 기록 = 그 학생으로 로그인한 폰이면 시험 서버 정식 경로에 (#141 · ?as 시험 · 교사 · TV 는 이 기기)
+  const bindFor = (p: Pupil | null) => { if (p && !q.get('as') && where.kind !== 'device') bindMe(S, p.cls, p.num); };
+  bindFor(untrack(() => login));
   // 🚪 QR 입장 (#138 ③): ?join=코드 → 로그인한 폰은 바로 그 수업 · 아니면 로그인 뒤 그 수업
   const joinCode = (q.get('join') || '').trim();
   if (joinCode && !role && untrack(() => login)) location.replace(`?role=student&room=${encodeURIComponent(joinCode)}`);
@@ -79,7 +83,7 @@
   {:else if !role && login}
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
-    <Title {S} onin={(p) => { login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
+    <Title {S} onin={(p) => { bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
   {:else if role === 'dev'}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>

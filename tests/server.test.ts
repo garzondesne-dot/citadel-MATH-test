@@ -15,7 +15,7 @@ import { SUBJ } from '../src/engine/subject';
 
 const NS = 'demo-citadel-test-default-rtdb';
 const up = await fetch(`http://127.0.0.1:9000/.json?ns=${NS}&shallow=true`, { headers: { Authorization: 'Bearer owner' } }).then(() => true, () => false);
-const mk = () => serverStore({ firebase: { apiKey: 'demo-key', projectId: 'demo-citadel-test', databaseURL: `http://127.0.0.1:9000/?ns=${NS}`, authDomain: 'x' }, emulator: { host: '127.0.0.1', db: 9000, auth: 9099 } });
+const mk = () => serverStore({ firebase: { apiKey: 'demo-key', projectId: 'demo-citadel-test', databaseURL: `http://127.0.0.1:9000/?ns=${NS}`, authDomain: 'x' }, emulator: { host: '127.0.0.1', db: 9000, auth: 9099 }, name: `t${Math.random()}` });
 const until = async (f: () => boolean, ms = 8000) => { const t0 = Date.now(); while (!f() && Date.now() - t0 < ms) await new Promise((r) => setTimeout(r, 50)); return f(); };
 
 describe.skipIf(!up)('시험 서버 · 동시에 30명 (#137)', () => {
@@ -42,4 +42,21 @@ describe.skipIf(!up)('시험 서버 · 동시에 30명 (#137)', () => {
     const k0 = kids[0]!; await until(() => Object.keys(getRoom(k0, code)?.subs?.[mid] || {}).length === 30);
     expect(monsterHp(L, getRoom(k0, code)!, mid, now).dmg).toBe(hp.dmg);
   }, 60000);
+});
+
+describe.skipIf(!up)('시험 서버 규칙 · 학생 기록 칸은 그 학생만 (#141)', () => {
+  it('익명 · 다른 학생 = 남의 💎 쓰기 거부 · 그 학생 = 됨', async () => {
+    const { ref, set } = await import('firebase/database');
+    const fa = await import('firebase/auth');
+    const cls = '1-7', n1 = Math.floor(Math.random() * 1e6), n2 = n1 + 1;
+    const own = await mk(), other = await mk(), anon = await mk();
+    const c1 = await fa.createUserWithEmailAndPassword(own.auth, `r${n1}@t.local`, 'cdm-1234');
+    await set(ref(own.db, `accounts/${cls}/${n1}`), { uid: c1.user.uid, at: 1 });
+    const c2 = await fa.createUserWithEmailAndPassword(other.auth, `r${n2}@t.local`, 'cdm-1234');
+    await set(ref(other.db, `accounts/${cls}/${n2}`), { uid: c2.user.uid, at: 1 });
+    await expect(set(ref(own.db, `gem/${cls}/${n1}`), { total: 5 })).resolves.toBeUndefined();
+    await expect(set(ref(other.db, `gem/${cls}/${n1}`), { total: 99999 })).rejects.toThrow();
+    await expect(set(ref(anon.db, `gem/${cls}/${n1}`), { total: 99999 })).rejects.toThrow();
+    await expect(set(ref(anon.db, `records/${cls}/${n1}/x`), { right: 9 })).rejects.toThrow();
+  }, 30000);
 });

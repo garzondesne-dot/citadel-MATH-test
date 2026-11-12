@@ -11,6 +11,11 @@
           ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid || newData.child('uid').val() === auth.uid)"
         }
       }
-    }
+    },
+    "gem": { "$cls": { "$num": { ".write": "auth != null && root.child('accounts').child($cls).child($num).child('uid').val() === auth.uid" } } },
+    "xp": { "$cls": { "$num": { ".write": "auth != null && root.child('accounts').child($cls).child($num).child('uid').val() === auth.uid" } } },
+    "cards": { "$cls": { "$num": { ".write": "auth != null && root.child('accounts').child($cls).child($num).child('uid').val() === auth.uid" } } },
+    "records": { "$cls": { "$num": { ".write": "auth != null && root.child('accounts').child($cls).child($num).child('uid').val() === auth.uid" } } },
+    "bonus": { "$cls": { "$num": { ".write": "auth != null && root.child('accounts').child($cls).child($num).child('uid').val() === auth.uid" } } }
   }
 }

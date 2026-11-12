@@ -18,6 +18,7 @@
   import { savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
+  import { meBound } from '../store/meSync';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -80,6 +81,8 @@
   const stunned = $derived(stunUntil > gnow);
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
+  // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
+  $effect(() => { const b = meBound(); if (!result || !b) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
