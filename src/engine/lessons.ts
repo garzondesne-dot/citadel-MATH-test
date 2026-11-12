@@ -36,6 +36,7 @@ export function items(L: LessonPack, mid: string, seed: string, variant: number)
 export function chainItems(L: LessonPack, mid: string, seed: string, pass: number): Question[] {
   const c = L.monsters[mid]?.chain;
   if (!c) return [];
+  if ('pool' in c) return c.pool.length ? (c.pool[pass % c.pool.length] as Question[]) : []; // 미리 쓴 판 (#135 ③)
   return remember(`${L.id}|chain|${mid}|${seed}|${pass}`, () => getChainGen(c.gen)(pass, makeRng(`${seed}|${mid}|chain|${pass}`), seed));
 }
 
@@ -44,7 +45,13 @@ export function bossItem(L: LessonPack, seed: string, i: number, a: number): Que
   const b = L.boss;
   if (!b) return null;
   const k = a ? `${L.id}|boss|${seed}|${i}|${a}` : `${L.id}|boss|0|${i}`;
-  return (remember(k, () => [getBossGen(b.gen)(i, a, makeRng(`${seed}|boss|${i}|${a}`))])[0]) ?? null;
+  if (!b.gen) { // 미리 쓴 판 (#135 ③): 시도 0 = 세트 1 · 1~ = pool 차례로
+    const first = b.sets?.['1']?.[i], ps = b.pool?.[i] || [];
+    if (!a) return first ?? ps[0] ?? null;
+    return ps.length ? (ps[(a - 1) % ps.length] as Question) : first ?? null;
+  }
+  const gen = b.gen;
+  return (remember(k, () => [getBossGen(gen)(i, a, makeRng(`${seed}|boss|${i}|${a}`))])[0]) ?? null;
 }
 
 /** 팩 확인: 모든 생성기가 등록돼 있고 판 0 이 문항을 만드는지 */

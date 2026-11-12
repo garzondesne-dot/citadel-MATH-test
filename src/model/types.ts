@@ -40,7 +40,8 @@ export interface MonsterPack {
   first?: Question[];
   retry: Retry;
   /** ⚔ 소레이드 (졸개 → 대장 단계) — 방 version ≥ 3 이면 이 꼴로 진행 */
-  chain?: { gen: string };
+  /** 판 0 = 첫 판 · 1~ = 한 판 더. gen = 이름 등록 생성기 · pool = 미리 쓴 판(엑셀 · 가벼운 판 #135 ③) */
+  chain?: { gen: string } | { pool: Question[][] };
   /** 문제 화면 위 💡 한 줄 */
   noteText?: string;
   special?: boolean;
@@ -68,8 +69,10 @@ export interface BossPack {
   sprite: string;
   items: number;
   hpItems: number;
-  /** 이름 등록 보스 생성기 (문항 번호, 시도, 난수) */
-  gen: string;
+  /** 이름 등록 보스 생성기 (문항 번호, 시도, 난수) — 없으면 pool */
+  gen?: string;
+  /** 미리 쓴 재도전 판 (#135 ③ · 문항마다 판 목록 · 시도 a = pool[문항][(a − 1) % 판 수]) · 시도 0 = sets['1'] (없으면 pool[문항][0]) */
+  pool?: Question[][];
   /** 문항별 개념 (개인 결과 · 복습 추천) */
   tags?: string[];
   /** 정식 세트 (1 = 학습지 · 2 = 숫자 바꿈) — 데이터만 · 시도 0 = 세트 1 */
