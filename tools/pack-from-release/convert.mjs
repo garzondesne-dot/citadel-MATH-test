@@ -145,6 +145,23 @@ for (const id of ONLY) {
 fs.writeFileSync(path.join(OFF, 'package.json'), '{ "type": "commonjs" }\n'); // 정식 시험 = require 꼴 그대로
 fs.writeFileSync(path.join(OFF, 'README.md'), `# 정식 독립 검산 시험 (자동 복사 · 손으로 고치지 않음)\n\ntools/pack-from-release/convert.mjs 가 정식 @ ${commit} 에서 복사함. tests/officialLessons.test.ts 가 차시마다 \`node tests/official/tests/<시험>\` 을 돌려 통과(종료 0)를 확인함.\n차시 파일(lessons/)은 src/gens/official/ 과 같은 원문. assets/video/*.mp4 = 빈 자리 파일(정식 시험의 「파일 있음」 확인용 · 실제 영상은 정식 사이트).\n`);
 
+// ── ④″ 입력판 그림 · 영상 (media/{id} · #132 덧붙임): 정식 값이 기본 · 선생님이 바꾼 칸은 덮지 않고 보고만 ──
+//   url 은 아티팩트 자산(/_blob/…)이라 내용 비교 대신 ① 칸 목록(더함 · 뺌) ② 영상 묶음(정식에서 같은 파일을 쓰는 칸끼리 같은 자산인가) ③ 문서를 고친 때로 가림
+const MEDIA = BOARD && path.join(path.dirname(BOARD), 'media');
+report.media = [];
+if (MEDIA && fs.existsSync(MEDIA)) for (const id of ONLY) {
+  const f = path.join(MEDIA, `${id}.json`); if (!fs.existsSync(f)) continue;
+  const M = JSON.parse(fs.readFileSync(f, 'utf8')), L = loadOfficial(path.join(REL, 'lessons', `${id}.js`));
+  const offImg = Object.keys(L.crops || {}).filter((k) => k !== 'review'), offVid = L.videos || {}, mi = M.img || {}, mv = M.vid || {};
+  const add = (a, b) => Object.keys(a).filter((k) => !b.includes(k)), miss = (a, b) => a.filter((k) => !(k in b));
+  const lines = [];
+  add(mi, [...offImg, 'review']).forEach((k) => lines.push(`그림 ＋${k}`)); miss(offImg, mi).forEach((k) => lines.push(`그림 −${k}`));
+  add(mv, Object.keys(offVid)).forEach((k) => lines.push(`영상 ＋${k}`)); miss(Object.keys(offVid), mv).forEach((k) => lines.push(`영상 −${k}`));
+  const ks = Object.keys(offVid).filter((k) => k in mv);
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) { const a = ks[i], b = ks[j]; if ((offVid[a] === offVid[b]) !== (mv[a] === mv[b])) lines.push(`영상 ${a} · ${b} 묶음 다름(정식 ${offVid[a] === offVid[b] ? '같은 파일' : '다른 파일'})`); }
+  report.media.push(`${id} (고친 때 ${M.updatedAt || '?'}): ${lines.length ? lines.join(' · ') : '정식과 같음(칸 · 묶음)'}`);
+}
+
 // ── ⑤ 생성기 이름 등록 (index.ts) — 판 0 · 1~ 모두 정식 make(판, 난수) 그대로 ──
 const ids = [...new Set(reg.map((r) => r[1]))];
 fs.writeFileSync(path.join(OUT_GEN, 'index.ts'), `// ⚠ 자동 생성 — tools/pack-from-release/convert.mjs · 정식 @ ${commit} · 손으로 고치지 않음
@@ -176,5 +193,6 @@ if (cuts.length) execFileSync('python3', [path.join(path.dirname(new URL(import.
 console.log(`✅ 정식 @ ${commit} → ${ONLY.join(' · ')} · 생성기 ${reg.length} · 그림 ${cuts.length}장`);
 console.log(`입력판 읽은 때: ${JSON.stringify(report.boardAt)}`);
 console.log(`📝 입력판 메모 ${report.memos.length}개${report.memos.length ? '\n  ' + report.memos.join('\n  ') : ''}`);
+console.log(`🖼 입력판 그림 · 영상 (반영 안 함 · 보고만): ${report.media.length ? '\n  ' + report.media.join('\n  ') : '없음'}`);
 if (report.added.length) console.log(`➕ 입력판에만 있는 단계(반영 안 함 · 정식에 없음): ${report.added.join(' | ')}`);
 if (report.dropped.length) console.log(`➖ 입력판에서 뺀 단계: ${report.dropped.join(' | ')}`);
