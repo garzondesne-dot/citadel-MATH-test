@@ -7,6 +7,7 @@
   import { hhmm } from '../../school/bells';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
+  import QR from '../QR.svelte';
   import Sheet from '../battle/Sheet.svelte';
 
   // ⑬ 대기실 · ⑭ 리모컨 (#119 · DECISIONS 「대기실 확정」 「리모컨 칸 고정」 「도구 두 줄 맞춤」) — 같은 틀: 위 막대 · 가운데(스크롤 없음) · 주요 단추 68 · 수업 중 막대 62
@@ -63,7 +64,11 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask'>('');
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr'>('');
+  // 🚪 입장 (#138 ③): 코드 크게 + QR(주소 ?join=코드 · 로그인한 폰은 바로 · 아니면 로그인 뒤 그 수업) · 교실 TV 주소
+  const site = `${location.origin}${import.meta.env.BASE_URL}`;
+  const joinUrl = $derived(`${site}?join=${encodeURIComponent(code)}`);
+  const spaced = (c: string) => c.replace(/^(\d{3})(\d{3})$/, '$1 $2');
   let bub = $state('');
   const QUICK = $derived([`${L.no}차시 던전에 온 걸 환영하네!`, '오늘 목표 = 보스 쓰러뜨리기!', '늦게 온 친구는 코드 보고 들어와']);
   // 💎 선물
@@ -95,6 +100,7 @@
   {#if isLobby(R)}
     <!-- ⑬ 대기실 -->
     <div class="mid lob">
+      <button type="button" class="join" onclick={() => (sheet = 'qr')} aria-label="수업 코드 {code} · QR 보기"><span>🚪 코드</span><b>{spaced(code)}</b><em>📱 QR ›</em></button>
       <div class="card">
         <div class="hd"><span class="lab">들어온 학생 · 판 확인</span><b class="cnt">{ids.length} <small>/ {expected.length}</small></b></div>
         <div class="nums" role="group" aria-label="번호 칸">
@@ -184,6 +190,13 @@
       <div class="ggrid">{#each ids as u (u)}<button type="button" class="gn" class:on={!!picked[u]} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
       <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === ids.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
     </Sheet>
+  {:else if sheet === 'qr'}
+    <Sheet onclose={() => (sheet = '')} mainText="닫기">
+      {#snippet title()}🚪 수업 입장{/snippet}
+      <div class="qrbox"><QR text={joinUrl} size={220} /><b class="qcode">{spaced(code)}</b>
+        <p>휴대폰 카메라로 QR → 로그인한 폰은 바로 대기실 · 처음이면 반 · 번호로 로그인 뒤 들어와요<br />QR 이 안 되면 캠프 「🚪 코드」에 위 6자리</p>
+        <p class="tvu">🖥 교실 TV 주소 · <b>{site}?role=hall</b></p></div>
+    </Sheet>
   {:else if sheet === 'ask'}
     <div class="askbg" role="presentation" onclick={() => (sheet = '')}></div>
     <div class="ask" role="alertdialog" aria-modal="true" aria-label="정말?">
@@ -196,6 +209,11 @@
 {/if}
 
 <style>
+  .join { flex: none; display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press-sh); }
+  .join span { font-size: 13px; font-weight: 700; color: var(--text-2); } .join b { flex: 1; text-align: left; font-size: 24px; letter-spacing: 2px; color: var(--accent); font-variant-numeric: tabular-nums; } .join em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--text-2); }
+  .qrbox { display: flex; flex-direction: column; align-items: center; gap: var(--s2); text-align: center; }
+  .qcode { font-size: 34px; letter-spacing: 4px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .qrbox p { margin: 0; font-size: 14px; color: var(--text-2); line-height: 1.5; } .qrbox .tvu { font-size: 13px; word-break: break-all; } .qrbox .tvu b { color: var(--text); }
   .cnt { font-size: 20px; }
   .cnt small { font-size: 13px; color: var(--text-2); }
   .nums { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }

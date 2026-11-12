@@ -1,6 +1,7 @@
 // #138 시험 서버(에뮬레이터)에서 학생 캠프 → 수업 입장 두 길 (브라우저 3개 · 창마다 저장 따로)
 //   ① 교사가 1-3반 🧪 테스트로 열기 → 1-3반 1번(가입) 캠프 차원문이 저절로 열림 → 「n차시 던전 입장」 → 대기실 1명
 //   ② 1-4반 1번(가입 · 다른 반이라 차원문 닫힘) → 「🚪 코드」 → 수업 코드 6자리 → 대기실 2명 · 틀린 코드 = 한 줄 안내
+//   ③ 교사 대기실 맨 위 「🚪 코드 ### ###」 → QR 시트(주소 ?join=코드 · TV 주소) → 새 폰이 그 주소로 → 1-5반 1번 가입 → 바로 대기실 3명
 // 사용: 에뮬레이터 + npm run build → npx vite preview --port 4173 → NODE_PATH=$(npm root -g) node tools/e2e/gate.cjs <그림 폴더>
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.';
@@ -37,10 +38,19 @@ const log = (...a) => console.log(...a);
   await s2.fill('.cin', '999999'); await s2.click('.cgo'); const e2 = (await s2.textContent('.cerr')).trim();
   log('   틀린 코드:', e1, '|', e2); await s2.fill('.cin', live.code); await s2.screenshot({ path: `${SHOTS}/b22-code.png` }); await s2.click('.cgo'); await s2.waitForTimeout(2500);
   await t.waitForTimeout(1500);
+  // ③ 교사 대기실 🚪 코드 · QR 시트 → 새 폰 ?join= → 가입 → 바로 대기실
+  const jt = (await t.textContent('.join')).replace(/\s+/g, ' ').trim(); await t.click('.join'); await t.waitForTimeout(300);
+  const qr = await t.$eval('.qrbox', (x) => ({ svg: !!x.querySelector('svg path'), txt: x.textContent.replace(/\s+/g, ' ').trim() }));
+  log('③ 교사 대기실:', jt, '| QR 시트 그림', qr.svg, '|', qr.txt.slice(0, 120)); await t.screenshot({ path: `${SHOTS}/b22-qr.png` });
+  await t.click('.sheet .act .btn').catch(() => {});
+  const s3 = await open(`?join=${live.code}&${E}`); await signup(s3, '1-5', 1); await s3.waitForTimeout(1500);
+  log('   새 폰 ?join= → 가입 뒤 주소:', new URL(s3.url()).search);
+  if (!s3.url().includes(`room=${live.code}`)) errs.push('③ ?join= 로그인 뒤 수업으로 안 감');
+  await t.waitForTimeout(1500);
   const players = Object.values((await rest(`rooms/${live.code}/players`)) || {}).map((x) => `${x.cls}:${x.num}`);
   const lobby = ((await t.textContent('.mid')).match(/(\d+)\s*\/\s*\d+/) || ['?'])[0];
   log('대기실: 서버 players', players.join(' · '), '| 리모컨', lobby);
-  if (players.length !== 2) errs.push(`대기실 ${players.length}명`);
+  if (players.length !== 3) errs.push(`대기실 ${players.length}명`);
   await t.screenshot({ path: `${SHOTS}/b22-lobby.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();

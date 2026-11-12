@@ -47,6 +47,9 @@
   }
   // ⓪ 로그인한 폰 = 그 학생 (반 + 번호) · 아니면 탭마다 따로인 이름표(시험 · 두 탭 체험)
   let login = $state<Pupil | null>(savedLogin(S));
+  // 🚪 QR 입장 (#138 ③): ?join=코드 → 로그인한 폰은 바로 그 수업 · 아니면 로그인 뒤 그 수업
+  const joinCode = (q.get('join') || '').trim();
+  if (joinCode && !role && untrack(() => login)) location.replace(`?role=student&room=${encodeURIComponent(joinCode)}`);
   // 시험 · 두 탭 체험: ?as=1-3:5 = 그 반 · 번호 학생으로 (로그인 없이)
   const asP = (() => { const m = /^(\d-\d):(\d+)$/.exec(q.get('as') || ''); return m ? pupil(m[1] as string, Number(m[2]), S) : null; })();
   const me = untrack(() => (role === 'student' ? asP ? { uid: asP.uid, num: asP.num, nick: asP.name, cls: asP.cls } : (login && !q.get('tab') ? { uid: login.uid, num: login.num, nick: login.name, cls: login.cls } : { ...tabId(), nick: '', cls: '' }) : null));
@@ -76,7 +79,7 @@
   {:else if !role && login}
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
-    <Title {S} onin={(p) => (login = p)} />
+    <Title {S} onin={(p) => { login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
   {:else if role === 'dev'}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
