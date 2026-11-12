@@ -116,6 +116,16 @@
   const propStyle = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
   const sheetBg = (src: string, cols: number, col: number) => `background-image:url(${src});background-size:${cols * 100}% 100%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% 0`;
   const HS = 1; // 정보판 용사 = 칸 80 × 64 그대로(정수 배율)
+  // 🚪 코드로 들어가기 (#138 · 정식 codeGate): 6자리 · 열려 있는 방이어야 함
+  let codeIn = $state(''), codeErr = $state('');
+  function enterCode() {
+    const c = codeIn.trim();
+    if (!/^\d{6}$/.test(c)) { codeErr = '수업 코드 6자리를 넣어 주세요'; return; }
+    const R0 = S.get<Room>(`rooms/${c}`);
+    if (!R0) { codeErr = '그 코드의 수업이 없어요 · 선생님께 다시 물어봐요'; return; }
+    if (R0.state?.closed) { codeErr = '이미 끝난 수업이에요'; return; }
+    location.href = `?role=student&room=${encodeURIComponent(c)}`;
+  }
 </script>
 
 <div class="camp">
@@ -171,6 +181,7 @@
     <p class="next">{nextLine}</p>
   </section>
   <BottomAction disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel="{L.no}차시 던전 입장">
+    {#snippet aux()}{#if !open}<button type="button" class="codebtn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}
     {#snippet main()}<span>{open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
   </BottomAction>
 </div>
@@ -185,12 +196,26 @@
 {:else if sheet}
   <Sheet onclose={() => (sheet = null)} mainText="닫기">
     {#snippet title()}{sheet === 'gate' ? '차시 던전' : NAME[sheet ?? '']}{/snippet}
+    {#if sheet === 'gate'}
+      <!-- 🚪 코드로 들어가기 (#138 · 정식 camp.js codeGate 그대로: 수업 코드 6자리 → 던전 대기실) -->
+      <p class="cg">아직 문이 닫혀 있어요. 선생님이 알려 준 <b>수업 코드 6자리</b>를 넣으면 던전 대기실로 넘어가요.</p>
+      <input class="cin" inputmode="numeric" maxlength="6" placeholder="6자리" autocomplete="off" aria-label="수업 코드 6자리" bind:value={codeIn} oninput={() => (codeErr = '')} />
+      {#if codeErr}<p class="cerr" role="alert">{codeErr}</p>{/if}
+      <button type="button" class="cgo" onclick={enterCode}>⚔ 던전으로</button>
+    {:else}
     <div class="empty"><span class="ic" aria-hidden="true">{sheet === 'gate' ? '🌀' : sheet === 'dummy' ? '🎯' : sheet === 'mail' ? '📮' : sheet === 'tent' ? '✏' : sheet === 'anvil' ? '⚒' : '🧙'}</span>
       <p>{sheet === 'gate' ? '지금은 닫혀 있어요 · 선생님이 수업을 열면 빛이 들어와요' : '다음 판에서 열려요'}</p></div>
+    {/if}
   </Sheet>
 {/if}
 
 <style>
+  .codebtn { flex: none; min-height: var(--btn-h); padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .cg { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text-2); } .cg b { color: var(--text); }
+  .cin { width: 100%; box-sizing: border-box; height: 56px; border-radius: var(--r); border: 2px solid var(--line); background: var(--bg); color: var(--text); font: 700 26px var(--font); letter-spacing: 6px; text-align: center; }
+  .cin:focus { border-color: var(--accent); outline: none; }
+  .cerr { margin: 0; color: var(--bad); font-size: 14px; font-weight: 700; }
+  .cgo { min-height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .camp { max-width: 430px; margin: 0 auto; }
   .stage { position: relative; width: 100%; background-size: 100% 100%; overflow: hidden; }
   .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(transparent, var(--bg)); pointer-events: none; z-index: 4; }

@@ -52,7 +52,8 @@
   const me = untrack(() => (role === 'student' ? asP ? { uid: asP.uid, num: asP.num, nick: asP.name, cls: asP.cls } : (login && !q.get('tab') ? { uid: login.uid, num: login.num, nick: login.name, cls: login.cls } : { ...tabId(), nick: '', cls: '' }) : null));
   // 학생 캠프 = 내 반에 열린 수업 (없으면 닫힌 문)
   const lvApp = liveValue<Live>(S, 'school/live');
-  const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && !lvApp.v.val.test ? lvApp.v.val.code : '');
+  // 🧪 테스트로 연 수업도 시험 서버에서는 그 반 학생 캠프 차원문을 엶 (#138 · 이 기기 두 탭 시험은 그대로)
+  const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && (!lvApp.v.val.test || where.kind !== 'device') ? lvApp.v.val.code : '');
   // 🔄 #134 ① 이 화면이 최신 판인지: 사이트 version.json(캐시 안 씀)과 BUILD 비교 → 같으면 「BETA · b15 ✔」 · 다르면 빨간 「b14 → b15 ↻」(누르면 새로 고침)
   let site = $state('');
   if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {});
