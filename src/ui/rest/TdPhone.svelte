@@ -1,0 +1,81 @@
+<script lang="ts">
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  import { untrack } from 'svelte';
+  import type { Room, Store } from '../../model/types';
+  import { heroOf } from '../../model/hero';
+  import { payTd, tdPick, tdSkill } from '../../rest/run';
+  import * as TD from '../../rest/td';
+  import { artUrl, TD_ART } from '../manifest';
+
+  // 📱 학생 폰 · 🏰 디펜스 (#142-2): 폰 = 자리 고르기(선착순 · 한 번) · 기술 단추(한 판 한 번)만 · 계산 · 그림은 교실 TV
+  //   타워 힘 = 모두 같음(레벨 · 강화 · 스킬 · 속성 안 셈) · 근접 / 원거리 = 내 용사 모양 · 판 안 업그레이드 = 저절로
+  const { S, R, code, uid, now }: { S: Store; R: Room; code: string; uid: string; now: number } = $props();
+  const f = $derived((R as any).fun as any);
+  const map = $derived(TD.mapGet(f?.map ?? 'forest'));
+  const sl = $derived(TD.slots(map));
+  const picks = $derived((((R as any).tdp || {})[f?.g] || {}) as Record<string, string>);
+  const mine = $derived(Object.keys(picks).find((k) => picks[k] === uid));
+  const left = $derived(f?.phase === 'pick' ? Math.max(0, Math.ceil((f.to - now) / 1000)) : 0);
+  const L = $derived((((R as any).tdl || {})[f?.g] || {}) as any);
+  const tw = $derived((f?.tw ? (Array.isArray(f.tw) ? f.tw : Object.values(f.tw)) : []).find((t: any) => t.u === uid) as any);
+  const used = $derived(!!((R as any).tdt || {})[f?.g]?.[uid] || !!L.used?.[uid]);
+  const cd = $derived(f?.phase === 'play' ? Math.ceil((f.t0 - now) / 1000) : 0);
+  const ranged = $derived(!!heroOf(Number(R.players?.[uid]?.hero) || 0).ranged);
+  let msg = $state('');
+  function pick(no: number) { if (mine || f?.phase !== 'pick') return; msg = tdPick(S, code, f.g, no, uid) ? '' : '다른 친구가 먼저 잡았어요!'; }
+  // 🎁 결과 = 하루 💎 최대 3 (이기면 3 · 지면 1)
+  let paid = $state(0), paidFor = 0;
+  $effect(() => { if (f?.phase === 'end' && f.res && tw && paidFor !== f.g) { paidFor = f.g; paid = untrack(() => payTd(S, uid, !!f.res.win, code)); } });
+  const u = 22;
+</script>
+
+<div class="tdp">
+  {#if f?.phase === 'pick'}
+    <div class="card"><b class="h">🏰 자리 고르기 <em>{left}초</em></b><small>{map.name} · 선착순 · 한 번 · ★ = 명당</small></div>
+    <svg viewBox="0 0 {16 * u} {9 * u}" class="mini" role="group" aria-label="지도">
+      <rect width={16 * u} height={9 * u} fill={map.theme.bg[0]} />
+      {#if TD_ART[map.id]}<image href={artUrl(TD_ART[map.id]!)} x="0" y="0" width={16 * u} height={9 * u} preserveAspectRatio="none" />{/if}
+      {#each sl as p (p.no)}
+        {@const who = picks[p.no]}
+        <g class="slot" class:me={who === uid} class:taken={!!who && who !== uid} role="button" tabindex="0" aria-label="{p.no}번 자리{who ? (who === uid ? ' · 내 자리' : ' · 찼음') : ''}" onclick={() => pick(p.no)} onkeydown={(e) => e.key === 'Enter' && pick(p.no)}>
+          <circle cx={p.x * u} cy={p.y * u} r="14" fill="transparent" />
+          <circle cx={p.x * u} cy={p.y * u} r={p.star ? 10 : 8.5} fill={who === uid ? '#3c8a5a' : who ? '#444' : '#000a'} stroke={p.star ? '#ffd25a' : '#fff9'} stroke-width={p.star ? 2.5 : 1.4} />
+          <text x={p.x * u} y={p.y * u + 3.5} font-size="9" text-anchor="middle" fill={p.star ? '#ffd25a' : '#fff'} font-weight="700">{who === uid ? '나' : who ? '✖' : p.no}</text>
+        </g>
+      {/each}
+    </svg>
+    <p class="me">{mine ? `✔ ${mine}번 자리를 잡았어요! 웨이브를 기다려요` : msg || (ranged ? '🏹 원거리 = 어디든 좋아요 · 빈 칸을 눌러요' : '🗡 근접 = 길 가까운 칸이 좋아요 · 빈 칸을 눌러요')}</p>
+    <p class="why">타워 힘은 모두 같아요 · 안 고르면 빈 자리에 저절로</p>
+  {:else if f?.phase === 'play'}
+    <div class="card"><b class="h">🏰 {map.name}</b><small>{cd > 0 ? `${cd}초 뒤 시작!` : `🌊 웨이브 ${L.wave ?? 1} / 5 · ❤ ${L.life ?? TD.LIFE}`}</small></div>
+    {#if tw}
+      <div class="stat"><span><b>{tw.s}번</b>자리</span><span><b>{L.kills?.[uid] ?? 0}</b>처치</span><span><b>{tw.r ? '🏹' : '🗡'}</b>{tw.r ? '원거리' : '근접'}</span></div>
+      <button type="button" class="btn sk" disabled={used || cd > 0 || !!R.state.focus} onclick={() => tdSkill(S, code, f.g, uid)}>{used ? '⚡ 기술을 썼어요' : '💥 기술 (주변 광역 × 3)'}<small>{used ? '다음 판에 또!' : '한 판에 한 번 · 몬스터가 몰렸을 때!'}</small></button>
+    {:else}
+      <p class="me">👀 이번 판은 구경해요 — 다음 판에 함께!</p>
+    {/if}
+  {:else if f?.phase === 'end' && f.res}
+    <div class="card end" class:win={f.res.win}><b class="h">{f.res.win ? '🏆 승리! 성을 지켰어요' : '💥 아쉽게 졌어요'}</b>{#if tw}<small>내 처치 {L.kills?.[uid] ?? 0}마리</small>{/if}</div>
+    {#if tw}<p class="pay">{paid ? `💎 +${paid} · 캠프에서 받아요` : '💎 오늘 디펜스 보상은 다 받았어요'}</p>{/if}
+  {:else}
+    <p class="me">🏰 결과 계산 중…</p>
+  {/if}
+</div>
+
+<style>
+  .tdp { width: 100%; display: flex; flex-direction: column; gap: var(--s3); align-items: stretch; text-align: center; }
+  .card { background: var(--surface); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+  .card .h { font-size: 18px; } .card .h em { font-style: normal; color: var(--accent); } .card small { font-size: 13px; color: var(--text-2); }
+  .card.end.win .h { color: var(--accent); }
+  .mini { width: 100%; height: auto; border-radius: var(--r); display: block; }
+  .slot { cursor: pointer; } .slot.taken { cursor: default; }
+  .me { margin: 0; font-size: 15px; font-weight: 700; }
+  .why { margin: 0; font-size: 13px; color: var(--text-3); }
+  .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .stat span { background: var(--surface); border-radius: 10px; padding: 8px 0; display: flex; flex-direction: column; font-size: 12.5px; color: var(--text-2); } .stat b { font-size: 20px; color: var(--text); }
+  .btn.sk { min-height: 96px; border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); font: 700 22px var(--font); box-shadow: 0 3px 0 var(--accent-sh); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .btn.sk small { font-size: 13px; font-weight: 700; opacity: 0.8; }
+  .btn.sk:disabled { background: var(--surface-2); color: var(--text-3); box-shadow: none; }
+  .btn.sk:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .pay { margin: 0; font-weight: 700; color: var(--gem); }
+</style>

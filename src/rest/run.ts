@@ -3,6 +3,7 @@ import { activeIds } from '../raid/raid';
 import { roomPath, setRest } from '../raid/actions';
 import { KIND, MIN, norm, oxPool, queue, round, step, type Fun, type Kind } from './fun';
 import { startNun, stepNun, MIN as NUN_MIN, type Nun } from './nunchi';
+import { MAPS, PICK_MS } from './td';
 
 // 🏕 쉼터 놀이 진행 (#142 · 정식 fun.js start · stop · drive · hold 를 Store 위로)
 //   시계를 맡는 기기 = 교실 TV(먼저) 또는 교사 폰 · 4초(눈치 3초) 넘게 소식이 없으면 다른 기기가 이어받음 (fun.drv)
@@ -12,7 +13,7 @@ export const GAMES: { k: Game; ic: string; name: string }[] = [{ k: 'bal', ic: '
 const P = (code: string, s: string) => `${roomPath(code)}/${s}`;
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
 export const studentsIn = (R: Room, now: number) => activeIds(R, now).filter((u) => !R.players?.[u]?.teacher);
-export type AnyFun = (Fun | Nun) & { kind: Game };
+export type AnyFun = (Omit<Fun, 'kind'> & { kind: Game }) | (Omit<Nun, 'kind'> & { kind: Game });
 export const funOf = (R: Room | null): AnyFun | null => ((R as unknown as { fun?: AnyFun })?.fun ?? null);
 /** 쉼터 분 기본값 = 지난번 값 (정식 restMinDef · 1 ~ 20 · 처음 5) */
 export const restMinDef = (S: Store) => { const m = Number(S.get<number>('school/teacher/restMin')); return m >= 1 && m <= 20 ? m : 5; };
@@ -21,7 +22,15 @@ export const saveRestMin = (S: Store, m: number) => S.set('school/teacher/restMi
 /** 놀이 시작 → 오류 글 또는 null */
 export function startFun(S: Store, code: string, R: Room, kind: Game, opt: { which?: 'prev' | 'now'; no: number; me: string }): string | null {
   const now = S.now(), alive = studentsIn(R, now);
-  if (kind === 'td') return '🏰 디펜스는 다음 판(#142-2)에서 열려요';
+  if (kind === 'td') { // 🏰 디펜스 (#142-2 · 정식 start): 교실 TV 가 계산 · 그림을 맡음 → TV 가 켜져 있어야 · 지도 = 반마다 차례대로
+    if (!(now - Number((R as unknown as { tvAt?: number }).tvAt || 0) < 9000)) return '🏰 디펜스는 교실 TV 를 켜야 시작돼요 — TV 가 계산과 그림을 맡아요';
+    if (!alive.length) return '입장한 학생이 없어요';
+    const cls = R.meta.cls as string | undefined, idx = cls ? Number(S.get(`school/funUsed/${ck(cls)}/td`)) || 0 : 0;
+    if (cls) S.set(`school/funUsed/${ck(cls)}/td`, idx + 1);
+    S.set(P(code, 'fv'), null);
+    S.set(P(code, 'fun'), { kind: 'td', g: now, map: MAPS[idx % MAPS.length]!.id, phase: 'pick', to: now + (Number((globalThis as { __TD_PICK?: number }).__TD_PICK) || PICK_MS), total: alive.length }); // __TD_PICK = 화면 시험만(정식 DS_TD.pick)
+    return null;
+  }
   if (kind === 'nun') { if (alive.length < NUN_MIN) return `🙊 눈치 게임은 ${NUN_MIN}명 이상일 때 할 수 있어요 (지금 ${alive.length}명)`; S.set(P(code, 'fv'), null); S.set(P(code, 'fun'), { ...startNun(alive, now), drv: { u: opt.me, at: now } }); return null; }
   const k = KIND[kind];
   if (kind !== 'quiz' && alive.length < MIN) return `${k.name}은 ${MIN}명 이상일 때 할 수 있어요 (지금 ${alive.length}명)`;
@@ -37,7 +46,7 @@ export function startFun(S: Store, code: string, R: Room, kind: Game, opt: { whi
   if (cls) S.set(`school/funUsed/${ck(cls)}/${k.pre}${q[0]}`, true);
   return null;
 }
-export const stopFun = (S: Store, code: string) => { S.set(P(code, 'fun'), null); S.set(P(code, 'fv'), null); };
+export const stopFun = (S: Store, code: string) => { S.set(P(code, 'fun'), null); ['fv', 'tdp', 'tdt', 'tdl'].forEach((k) => S.set(P(code, k), null)); };
 /** 학생: 고르기 · 다시 참여 · 누르기 · 응원 */
 export const pick = (S: Store, code: string, rk: string, uid: string, v: string) => S.set(P(code, `fv/${rk}/${uid}`), v);
 export const nunPress = (S: Store, code: string, g: number, rd: number, uid: string) => S.set(P(code, `nun/${g}/${rd}/${uid}`), S.now());
@@ -108,4 +117,20 @@ export function payFun(S: Store, f: AnyFun, uid: string, code: string): { gem: n
   const k = `gifts/${uid}/fun${f.g}`;
   if (!S.get(k)) S.set(k, { g: r.gem, ...(r.xp ? { x: r.xp } : {}), at: S.now(), code, fun: r.why });
   return r;
+}
+
+// ── 🏰 디펜스: 폰 = 자리(선착순 · 한 번) · 기술(한 판 한 번) / 교사 = 🛡 수호 방패(한 판 한 번) · ✨ 응원(웨이브마다) ──
+export const tdPick = (S: Store, code: string, g: number, no: number, uid: string) => { const k = P(code, `tdp/${g}/${no}`); if (S.get(k)) return false; S.set(k, uid); return true; };
+export const tdSkill = (S: Store, code: string, g: number, uid: string) => S.set(P(code, `tdt/${g}/${uid}`), S.now());
+export const tdShield = (S: Store, code: string) => S.set(P(code, 'fun/sh'), S.now());
+export const tdCheer = (S: Store, code: string, wave: number) => S.set(P(code, `fun/ch/${wave}`), S.now());
+/** 교실 TV 가 켜져 있음 (3초마다) — 디펜스 시작 조건 */
+export const tvBeat = (S: Store, code: string) => S.set(P(code, 'tvAt'), S.now());
+/** 🎁 디펜스 보상 (정식 · 하루 💎 최대 3 · 이기면 3 · 지면 1 · 같은 날 진 뒤 이긴 판은 3 까지 채움) = gifts/{uid}/td{날짜}… */
+export function payTd(S: Store, uid: string, win: boolean, code: string): number {
+  const d = new Date(S.now() + 9 * 3600e3), day = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+  const G = (S.get<Record<string, { g: number }>>(`gifts/${uid}`)) || {}, had = Object.entries(G).filter(([k]) => k.startsWith(`td${day}`)).reduce((a, [, x]) => a + (Number(x.g) || 0), 0), want = win ? 3 : 1;
+  if (had >= want) return 0;
+  S.set(`gifts/${uid}/td${day}_${had}`, { g: want - had, at: S.now(), code, fun: '🏰 디펜스' });
+  return want - had;
 }

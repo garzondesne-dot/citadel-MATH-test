@@ -66,3 +66,9 @@ export const CAMP = {
   mail: { src: A('camp-mail-v2.webp'), cols: 2, left: 37, bottom: 33, width: 10 },
   hero: { left: 30, bottom: 15 },
 };
+
+// 🏕 쉼터 놀이 그림 · 배경음 (#142-2 · 정식 manifest fun · td · bgm 에서 옮김) — 교실 TV 에서만
+export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp' };
+export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
+export const BGM: Record<string, string> = { rest: 'bgm/rest-v1.mp3', bal: 'bgm/bal-v1.mp3', rev: 'bgm/rev-v1.mp3', quiz: 'bgm/ox-v1.mp3', nun: 'bgm/nun-v1.mp3', td: 'bgm/td-v1.mp3' };
+export const artUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;

@@ -5,6 +5,7 @@
   import type { Nun } from '../../rest/nunchi';
   import { funOf, nunCheer, nunPress, payFun, pick, type AnyFun } from '../../rest/run';
   import FUNQ from '../../rest/funq.json';
+  import TdPhone from './TdPhone.svelte';
 
   // 📱 학생 폰 · 쉼터 (#142 · 시안 ② ③ ④): 위 = 놀이 이름 · 🧍 살아 있는 인원 / 가운데 = 남은 초 고리 · 문제 / 아래 = 고르기(두 선택지가 곧 주요 단추)
   //   ② 놀이 전 = 🏕 · 남은 쉼터 시간(흐린 고리) · 주요 단추 흐림 「놀이를 기다리는 중」
@@ -18,7 +19,8 @@
   const cats = FUNQ.cats as Record<string, string>;
 
   // ── 고르기 놀이 (⚖ 🔄 ⭕) ──
-  const ff = $derived(f && f.kind !== 'nun' ? norm(f as Fun) : null);
+  const isTd = $derived((f?.kind as string) === 'td');
+  const ff = $derived(f && f.kind !== 'nun' && !isTd ? norm(f as Fun) : null);
   const fv = $derived((R as unknown as { fv?: Record<string, Record<string, string>> }).fv);
   const mine = $derived(ff ? fv?.[ff.rk]?.[uid] ?? '' : '');
   const alive = $derived(!!f && !!(f.alive || {})[uid]);
@@ -27,14 +29,14 @@
   const outN = $derived(ff ? (ff.outAt || {})[uid] : undefined);
   let wake = $state(''); // 🙋 누른 판 (덮개 걷음)
   const cover = $derived.by(() => {
-    if (!f || f.phase === 'end') return '';
+    if (!f || f.phase === 'end' || isTd) return '';
     if (f.kind === 'quiz') return alive ? '' : 'see';
     if (alive) return '';
     if (zz) return wake === `${f.g}|${(f as Fun).n ?? (f as Nun).round}` ? '' : 'zz';
     return outN != null || f.kind === 'nun' ? 'out' : 'see';
   });
   const secs = $derived(f && f.phase !== 'end' ? Math.max(0, Math.ceil(((f.phase === 'show' ? (ff?.until ?? (f as Nun).to) : f.to) - fnow) / 1000)) : 0);
-  const title = $derived(!f ? '🏕 쉼터' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
+  const title = $derived(!f ? '🏕 쉼터' : isTd ? '🏰 디펜스' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
   const card = $derived.by(() => {
     if (!ff) return '';
     if (ff.s) return ff.s;
@@ -57,7 +59,7 @@
 
   // ── 끝 = 보상 한 번 ──
   let paid = $state<{ gem: number; xp: number } | null>(null);
-  $effect(() => { const x = f && f.phase === 'end' ? (f as AnyFun) : null; paid = x ? untrack(() => payFun(S, x, uid, code)) : null; });
+  $effect(() => { const x = f && f.phase === 'end' && !isTd ? (f as AnyFun) : null; paid = x ? untrack(() => payFun(S, x, uid, code)) : null; });
   const won = $derived(!!f && ((f as { win?: string[] }).win || []).includes(uid));
   const wrongs = $derived.by(() => {
     if (!ff || ff.kind !== 'quiz' || ff.phase !== 'end') return [];
@@ -70,12 +72,14 @@
 </script>
 
 <div class="fun" role="region" aria-label="쉼터">
-  <div class="bar"><div class="tt">{title}</div>{#if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
+  <div class="bar"><div class="tt">{title}</div>{#if isTd}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
   <div class="mid" class:dimd={!!cover}>
     {#if !f}
       <div class="ic">🏕</div><b class="h">잠깐 쉬어 가요</b>
       <div class="ring rdim">{mmss(restLeft)}</div>
       <p class="bub">선생님이 놀이를 고르는 중</p>
+    {:else if isTd}
+      <TdPhone {S} {R} {code} {uid} {now} />
     {:else if nn}
       {#if nn.phase === 'end'}
         <div class="ic">{won ? '🏆' : '🙊'}</div><b class="h">{won ? '우승! 끝까지 살아남았어요' : `우승 ${(nn.win || []).length}명`}</b>
@@ -112,6 +116,8 @@
         {#each opts as o (o.v)}<button type="button" class="opt {o.v}" class:on={mine === o.v} aria-pressed={mine === o.v} disabled={ff.phase !== 'pick' || (!!cover && cover !== 'zz')} onclick={() => choose(o.v)}>{o.t}{#if mine === o.v} ✓{/if}</button>{/each}
       </div>
       <p class="why">{ff.phase === 'pick' ? (ff.kind === 'quiz' ? '탈락 없는 복습 · 시간 안엔 바꿔도 돼요' : '안 고르면 💤 관전') : '다음 판을 기다려요'}</p>
+    {:else if isTd}
+      <p class="why">🏰 계산 · 그림은 교실 TV 에서</p>
     {:else}
       <p class="why">{f.kind === 'quiz' ? '맞힌 문장 × 2 EXP' : '선생님이 다음 놀이를 골라요'}</p>
     {/if}

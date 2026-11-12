@@ -18,7 +18,10 @@
   import SymText from '../q/SymText.svelte';
   import Ink from './Ink.svelte';
   import { applyTheme, isTheme } from '../../theme/theme';
-  import { driveFun, endRest, funOf, GAMES, startFun, stopFun, type Game } from '../../rest/run';
+  import { driveFun, endRest, funOf, GAMES, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
+  import TdTV from '../rest/TdTV.svelte';
+  import { tvBgm, tvBgmNow } from './bgm';
+  import { artUrl, FUN_BG } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import type { Nun } from '../../rest/nunchi';
 
@@ -33,6 +36,9 @@
   const R = $derived((lr?.v.room ?? null) as Room | null);
   const stopDrive = untrack(() => (code ? driveFun(S, code, 'tv') : () => {})); // 🏕 놀이 시계는 TV 가 먼저 맡음 (#142)
   onDestroy(stopDrive);
+  // 🏰 TV 가 켜져 있음 (디펜스 시작 조건 · 3초마다)
+  const beatT = untrack(() => (code ? setInterval(() => tvBeat(S, code), 3000) : 0)); if (code) untrack(() => tvBeat(S, code));
+  onDestroy(() => clearInterval(beatT));
   const M = useMe(9999, 30, true);
   // 🎨 교실 TV = 선생님이 고른 테마의 색만 (#144 · 도트 테두리 · 바탕 그림 없음)
   const tth = untrack(() => liveValue<string>(S, 'school/teacher/theme'));
@@ -75,6 +81,10 @@
   const funSec = $derived(fun && fun.phase !== 'end' ? Math.max(0, Math.ceil(((fun.phase === 'show' ? (ff?.until ?? nn?.to ?? 0) : fun.to) - fnow) / 1000)) : 0);
   const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
   let funErr = $state(''), errT: ReturnType<typeof setTimeout> | null = null;
+  // 🎵 TV 배경음 (#142-2): 🏕 쉼터 화면 · 놀이마다 곡 · 🔊 끄면 멈춤 · 쉼터 밖 = 없음(다른 장면 곡은 다음 판)
+  $effect(() => { tvBgm(R?.state.rest && !R.state.closed ? (fun && fun.phase !== 'end' ? fun.kind : fun?.kind === 'td' ? 'td' : 'rest') : null, sound); });
+  onDestroy(() => tvBgm(null, false));
+  if (typeof window !== 'undefined') (window as unknown as { __bgm: unknown }).__bgm = tvBgmNow;
   function playGame(k: Game) {
     if (!R) return;
     if (fun && fun.kind === k && fun.phase !== 'end') { stopFun(S, code); return; }
@@ -85,6 +95,11 @@
   // ── 왼쪽 위 숫자 한 칸 ──
   const box = $derived.by(() => {
     if (!R) return null;
+    if (R.state.rest && view !== 'camp' && fun && (fun.kind as string) === 'td') { // 🏰 디펜스: 자리 고름 · ❤ 생명
+      const tf = fun as unknown as { g: number; phase: string; res?: { life: number } }, X = R as unknown as { tdp?: Record<string, Record<string, string>>; tdl?: Record<string, { life?: number }> };
+      if (tf.phase === 'pick') return { ic: '🏰', lab: '자리 고름', n: Object.keys(X.tdp?.[tf.g] || {}).length, m: ids.length, sub: '' };
+      return { ic: '❤', lab: '성 생명', n: tf.phase === 'end' ? tf.res?.life ?? 0 : X.tdl?.[tf.g]?.life ?? 30, m: 30, sub: '' };
+    }
     if (R.state.rest && view !== 'camp' && fun) {
       if (fun.kind === 'quiz') return { ic: '⭕', lab: '고른 학생', n: Object.keys((R as unknown as { fv?: Record<string, Record<string, string>> }).fv?.[ff?.rk ?? ''] || {}).length, m: Object.keys(fun.alive || {}).length, sub: '' };
       return { ic: '🧍', lab: '살아남음', n: Object.keys(fun.alive || {}).length, m: nn ? Object.keys(nn.alive || {}).length + Object.keys(nn.zz || {}).length : ff?.total ?? 0, sub: '' };
@@ -233,8 +248,10 @@
   {#if R?.state.sheet && sheetQs.length}<div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b>{#each sheetQs.slice(0, 6) as q, k (k)}<p><SymText text={q.question} /></p>{/each}</div>{/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><video src={L.videos[R.state.video]} autoplay controls muted={!sound}></video></div>{/if}
   {#if R?.state.rest}
-    <div class="ov rest fun" class:still={fun?.frz != null}>
-      {#if !fun}
+    <div class="ov rest fun" class:still={fun?.frz != null} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
+      {#if fun?.kind === 'td'}
+        <TdTV {S} {code} R={R as Room} {now} {nameOf} />
+      {:else if !fun}
         <b>🏕 쉼터</b><p>{mmss(restLeft)} · 선생님이 놀이를 고르는 중</p>
       {:else if nn}
         <h3>🙊 눈치게임 · {nn.round}판</h3>
@@ -255,6 +272,7 @@
       {/if}
       {#if funErr}<p class="err">{funErr}</p>{/if}
       {#if fun?.frz != null}<p class="frz">⏸ 집중 · 놀이 시계 멈춤</p>{/if}
+      {#if fun?.kind === 'nun' && sound}<small class="credit">♪ Music by JDSherbert</small>{/if}
     </div>
   {/if}
   {#if R?.state.focus}<div class="ov fo"><b>⏸ 집중</b><p>선생님을 보세요 · 게임은 멈춰 있어요</p></div>{/if}
@@ -271,7 +289,7 @@
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
       <span class="sep"></span>
-      {#each GAMES as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} disabled={g.k === 'td'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
+      {#each GAMES as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
     {:else if R && !isLobby(R) && !R.state.closed && view !== 'camp'}
       <span class="sep"></span>
       <button type="button" class="t" class:on={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}>🏕<small>쉼터</small></button>
@@ -386,7 +404,8 @@
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
   .ov b { font-size: 9cqh; text-shadow: 0 4px 0 #000; }
   .ov p { margin: 0; font-size: 3.4cqh; font-weight: 700; }
-  .ov.fun { background: linear-gradient(#1b2a22, #13201a) !important; top: 7.4cqw; z-index: 6; bottom: 0; gap: 1.4cqh; padding: 0 6cqw 12cqh; }
+  .ov.fun .credit { position: absolute; right: 1.6cqw; bottom: 1.2cqh; font-size: 1.8cqh; color: #cfd3db; }
+  .ov.fun { background-color: #13201a !important; background-size: cover !important; background-position: center !important; top: 7.4cqw; z-index: 6; bottom: 0; gap: 1.4cqh; padding: 0 6cqw 12cqh; }
   .ov.fun h3 { margin: 0; font-size: 7cqh; }
   .ov.fun .s { font-size: 3cqh; color: #cfd3db; font-weight: 500; }
   .ov.fun .q { font-size: 5cqh; max-width: 80cqw; line-height: 1.35; }
