@@ -17,6 +17,7 @@
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
+  import { mailLine, type Mail } from '../school/mail';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -41,9 +42,13 @@
   const R = $derived(live.v.room);
   $effect(() => { const t = R?.state.reload?.[uid]; if (t && t > loadedAt) location.reload(); });
   // 🎁 수업 중 선생님 선물 = 받은 학생 폰에만 한 줄 (지갑에는 캠프에서 들어감 · #119 덧붙임)
-  const gv = untrack(() => liveValue<Record<string, { g: number; at: number }>>(S, `gifts/${uid}`));
+  const gv = untrack(() => liveValue<Record<string, { g: number; at: number; mail?: boolean }>>(S, `gifts/${uid}`));
   onDestroy(gv.stop);
-  const giftNew = $derived(Object.values(gv.v.val || {}).filter((x) => x && x.at > loadedAt && clock.now - x.at < 4000));
+  const giftNew = $derived(Object.values(gv.v.val || {}).filter((x) => x && !x.mail && x.at > loadedAt && clock.now - x.at < 4000));
+  // ✉ 수업 중 선생님 메시지 · 답장 (#130) = 받은 학생 폰에만 한 줄 (💎 는 캠프에서 지갑에)
+  const mv = untrack(() => liveValue<Record<string, Mail>>(S, `mail/${uid}`));
+  onDestroy(mv.stop);
+  const mailNew = $derived(Object.values(mv.v.val || {}).filter((x) => x && x.at > loadedAt && clock.now - x.at < 4000).sort((a, b) => b.at - a.at)[0] ?? null);
   const now = $derived(clock.now); // ① 수업 시계 = 접속 · 체력 머릿수 · (b8) 남은 수업 시간
   const gnow = $derived(R ? gameNow(R, now) : now); // ② 게임 시계 (#118) = 공격 멈춤 초 · 생각 시간 — 집중이면 멈춤
   const step = $derived(R ? stepOf(L, R) : null);
@@ -128,7 +133,7 @@
   {/if}
 </section>
 <SymSheet />
-{#if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
+{#if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && (R.state.focus || R.state.rest)}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
   <div class="cover" role="status" aria-live="polite">
@@ -145,6 +150,7 @@
   .res { margin: 0; padding-left: 1.2rem; }
   .big small { font-size: var(--fs-small); }
   .camp { display: flex; align-items: center; justify-content: center; min-height: var(--btn-h); font-size: var(--btn-fs); border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--accent-sh); }
+  .gift.mail { border-color: var(--accent); }
   .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }

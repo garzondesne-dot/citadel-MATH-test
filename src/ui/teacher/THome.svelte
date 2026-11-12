@@ -5,15 +5,18 @@
   import { isLobby, isEnd, stepOf } from '../../raid/raid';
   import { roomPath } from '../../raid/actions';
   import { short } from './flow';
+  import { LESSON_LIST } from '../../school/dash';
   import Sheet from '../battle/Sheet.svelte';
 
   // ⑫ 교사 첫 화면 = 「수업 열기」 (#119 · DECISIONS 「📱 ⑫ 교사 첫 화면 컨펌」)
   //   ① 반 = 오늘 시간표 칸(지금 교시 금빛 테두리 · 누를 때만 골라짐) · 「다른 반 ›」 · 비어 있으면 「시간표 넣기 ›」 · 고른 반 마지막 수업 한 줄
   //   ② 차시 칸(「지난」) · 「이어서」(끝나지 않은 수업이 있을 때) · 금빛 「▶ 반 · 차시 수업 열기」(둘 다 골라야 켜짐)
-  const { S, packs, now, live, liveRoom, onopen, onresume, ontest }: {
+  //   ＋ 목록에 있지만 차시 팩이 안 된 차시 = 점선 칸 + 가운데 ＋ + 「n차시 · 준비 안 됨」 · 누르면 ⑰ 준비 탭 그 차시 (고르기는 안 됨 · #130 ③)
+  const { S, packs, now, live, liveRoom, onopen, onresume, ontest, onprep }: {
     S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null;
-    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack) => void;
+    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack) => void; onprep: (id: string) => void;
   } = $props();
+  const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
   let cls = $state('');
   let lessonId = $state('');
   let sheet = $state<'' | 'cls' | 'sched'>('');
@@ -65,8 +68,12 @@
   <div class="card">
     <span class="lab">② 차시</span>
     <div class="pk3" role="group" aria-label="차시">
-      {#each packs as p (p.id)}
-        <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} onclick={() => (lessonId = p.id)}><b>{p.no}차시</b><small>{p.title.split(' · ')[0]}</small></button>
+      {#each cells as p (p.id)}
+        {#if p.p}
+          <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} onclick={() => (lessonId = p.id)}><b>{p.no}차시</b><small>{p.title.split(' · ')[0]}</small></button>
+        {:else}
+          <button type="button" class="pk add" aria-label="{p.no}차시 준비 안 됨 · 차시 준비로" onclick={() => onprep(p.id)}><b>＋</b><small>{p.no}차시 · 준비 안 됨</small></button>
+        {/if}
       {/each}
     </div>
   </div>
@@ -125,6 +132,10 @@
   .pk small { font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .pk.on { border: 2px solid var(--accent); background: var(--surface); }
   .pk.last::after { content: '지난'; position: absolute; top: -7px; right: -4px; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); }
+  .pk.add { border: 2px dashed var(--line); background: none; box-shadow: none; gap: 0; }
+  .pk.add b { color: var(--accent); font-size: 20px; line-height: 1; }
+  .pk.add small { color: var(--text-3); }
+  .pk.add:active { border-color: var(--accent); }
   .item.none { border: 1px dashed var(--line); background: none; box-shadow: none; color: var(--text-2); }
   .sub2 { display: flex; gap: var(--s2); }
   .sub2 .chipbtn { flex: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; height: 40px; }

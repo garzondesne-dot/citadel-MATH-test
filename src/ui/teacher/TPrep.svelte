@@ -5,13 +5,18 @@
   import { CLASSES, isBeta, setSlot, week } from '../../school/school';
   import { DOW, kst, PERIODS } from '../../school/bells';
   import Sheet from '../battle/Sheet.svelte';
+  import { LESSON_LIST } from '../../school/dash';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
   //   차시 준비 = 기본값 네 칸(체력 기준 · 재도전 · 생각 시간 · 정찰 · 누르면 바꾸기 → 그 차시 수업을 열 때 방에 옮겨 적음) · 학습지 PDF · 영상 · 단계별 그림 n/m
   //   시간표 = 주간 표(교시 × 요일 · 칸에 반 · 누르면 반 고르기) + 진도 맞추기(반마다 다음 차시 · ±) / 도구 = 테스트 판은 준비 중
-  const { S, packs, now, ontest }: { S: Store; packs: LessonPack[]; now: number; ontest: (L: LessonPack) => void } = $props();
-  let lid = $state(untrack(() => packs[0]?.id ?? ''));
-  const L = $derived(packs.find((p) => p.id === lid) ?? packs[0]);
+  //   ＋ 준비 안 된 차시(목록에만 있음 · #130 ③) = 차시 ▾ 에 「(준비 안 됨)」 · 차시 준비 = 빈 상태 + 「📦 차시 팩 올리기」 · 테스트 단추 흐림
+  const { S, packs, now, ontest, want = '' }: { S: Store; packs: LessonPack[]; now: number; ontest: (L: LessonPack) => void; want?: string } = $props();
+  const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id));
+  const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
+  let lid = $state(untrack(() => want || packs[0]?.id || ''));
+  const L = $derived(packs.find((p) => p.id === lid) ?? null);
+  const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
   let seg = $state<'lesson' | 'week' | 'tools'>('lesson');
   let ver = $state(0);
   type Prep = { pct: number; retries: number; think: number; solve: number };
@@ -29,11 +34,14 @@
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
-  <label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each packs as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}</option>{/each}</select></label>
+  <label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>
   <div class="seg3" role="tablist">{#each [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
-  {#if seg === 'lesson' && L}
+  {#if seg === 'lesson' && T}
+    <div class="empty"><b class="plus">＋</b><span><b>{T.no}차시 {T.title}</b> · 준비 안 됨</span><small>차시 팩을 올리면 수업 열기에 생겨요</small></div>
+    <button type="button" class="item" disabled><span class="ic">📦</span><span class="tx"><b>차시 팩 올리기</b><small>테스트 판 · 준비 중</small></span></button>
+  {:else if seg === 'lesson' && L}
     <p class="lab">기본값 · 이 차시</p>
     <div class="four">{#each Object.keys(STEP) as k (k)}{@const kk = k as keyof Prep}<button type="button" onclick={() => (edit = kk)}><small>{STEP[kk][4]}</small><b>{prep[kk]}{STEP[kk][3]}</b></button>{/each}</div>
     <button type="button" class="item" disabled><span class="ic">📄</span><span class="tx"><b>학습지 PDF · 한 번에 넣기</b><small>테스트 판 · 준비 중</small></span></button>
@@ -65,7 +73,7 @@
     </div>
   {/if}
 </div>
-<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>🧪 {L?.no}차시 테스트 해 보기</button></div>
+<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : '차시를 골라요'}</small>{/if}</button></div>
 
 {#if edit}
   {@const k = edit}
@@ -111,6 +119,8 @@
   .g4 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .g4 button { height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
   .g4 button.on { border: 2px solid var(--accent); }
+  .plus { width: 56px; height: 56px; border-radius: 14px; border: 2px dashed var(--line); color: var(--accent); display: grid; place-items: center; font-size: 28px !important; }
+  .empty small { font-size: 13px; color: var(--text-3); }
   .lab { margin: var(--s2) 0 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
   .hint { margin: 0; font-size: 12.5px; color: var(--text-3); }
 </style>

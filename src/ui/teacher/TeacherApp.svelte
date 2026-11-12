@@ -26,6 +26,7 @@
   const liveL = $derived(live ? packs.find((p) => p.id === live.lesson) ?? null : null);
   let page = $state<'home' | 'live'>(untrack(() => (liveNow(S) ? 'live' : 'home')));
   let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>('class');
+  let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
 
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
     const code = newCode(), key = S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲)
@@ -53,11 +54,11 @@
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}
-      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from) => open(c, L, false, from)} onresume={() => (page = 'live')} ontest={(L) => open('1-1', L, true)} />
+      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from) => open(c, L, false, from)} onresume={() => (page = 'live')} ontest={(L) => open('1-1', L, true)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
     {:else if tab === 'pupil'}
       <TPupils {S} ondash={(w) => (wideDash = w)} />
     {:else if tab === 'prep'}
-      <TPrep {S} {packs} {now} ontest={(L) => open('1-1', L, true)} />
+      {#key prepWant}<TPrep {S} {packs} {now} want={prepWant} ontest={(L) => open('1-1', L, true)} />{/key}
     {:else if tab === 'news'}
       <TNews {S} {packs} onread={() => (unread = unreadN(S))} />
     {:else}

@@ -10,7 +10,8 @@
   import { isEnd } from '../../raid/raid';
   import { CAMP, HERO, heroNudge, heroUrl } from '../manifest';
   import { useMe } from '../../store/me.svelte';
-  import { liveRoom } from '../room.svelte';
+  import { liveRoom, liveValue } from '../room.svelte';
+  import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
   import type { Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
@@ -28,8 +29,8 @@
   let giftToast = $state('');
   {
     const u = untrack(() => pupil)?.uid;
-    const G = u ? untrack(() => S).get<Record<string, { g: number; got?: boolean }>>(`gifts/${u}`) || {} : {};
-    const fresh = Object.entries(G).filter(([, x]) => x && !x.got);
+    const G = u ? untrack(() => S).get<Record<string, { g: number; got?: boolean; mail?: boolean }>>(`gifts/${u}`) || {} : {};
+    const fresh = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail); // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
     if (u && fresh.length) {
       const sum = fresh.reduce((a, [, x]) => a + (Number(x.g) || 0), 0);
       me.wallet.gem += sum; M.save();
@@ -38,6 +39,27 @@
       setTimeout(() => (giftToast = ''), 2600);
     }
   }
+  // ✉ 선생님 메시지 · 답장 (#130 · 테스트 판 = 학생 우편함 대신 폰 알림 한 줄) — 안 본 것을 읽음으로 · 붙은 💎 는 지갑에
+  let mailToast = $state('');
+  const mu = untrack(() => pupil)?.uid ?? '';
+  const mv = untrack(() => liveValue<Record<string, Mail>>(S, mu ? `mail/${mu}` : 'mail/_none'));
+  onDestroy(mv.stop);
+  $effect(() => {
+    const fresh = Object.entries(mv.v.val || {}).filter(([, x]) => x && !x.got).sort((a, b) => a[1].at - b[1].at);
+    if (!mu || !fresh.length) return;
+    untrack(() => {
+      let g = 0;
+      for (const [k] of fresh) {
+        S.set(`mail/${mu}/${k}/got`, true);
+        const gf = S.get<{ g: number; got?: boolean }>(`gifts/${mu}/${k}m`);
+        if (gf && !gf.got) { g += Number(gf.g) || 0; S.set(`gifts/${mu}/${k}m/got`, true); }
+      }
+      if (g) { me.wallet.gem += g; M.save(); }
+      const last = fresh[fresh.length - 1]![1];
+      mailToast = mailLine(last, g) + (fresh.length > 1 ? ` 외 ${fresh.length - 1}` : '');
+      setTimeout(() => (mailToast = ''), 3200);
+    });
+  });
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
   const R = $derived(code ? (live.v.room as Room | null) : null); // 코드 없음 = 열린 수업 없음 (rooms/ 전체를 방으로 읽지 않게)
@@ -123,7 +145,7 @@
       <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
       <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
     </div>
-    {#if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
+    {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
 
   <section class="info">
@@ -194,6 +216,7 @@
   @keyframes glow { 50% { box-shadow: 0 3px 0 #000, 0 0 0 4px rgba(245, 184, 74, 0.35); } }
   @media (prefers-reduced-motion: reduce) { .label.gold { animation: none; } }
   .zone::before, .prop::before { content: ''; position: absolute; inset: -6px; }
+  .gtoast.mail { border-color: var(--accent); }
   .gtoast { position: absolute; top: 60px; left: var(--s4); right: var(--s4); z-index: 7; margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); color: var(--text); font-weight: 700; text-align: center; }
   .top { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
   .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); }
