@@ -106,7 +106,7 @@ export interface LessonPack {
 
 // ── 던전 「다른 점 표」 (설계서 5절 · 이번엔 수업 · 테스트 모드 두 값) ──
 export interface DungeonProfile {
-  key: 'class' | 'test';
+  key: 'class' | 'test' | 'board';
   label: string;
   /** 인원: 'class' = 접속한 학생 수 */
   players: 'class' | { fixed: number };

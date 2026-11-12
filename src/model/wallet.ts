@@ -2,7 +2,14 @@
 //   경제 판이 바뀌면 접속 때 게임이 자기 기록만 MIGRATE[ver] 로 새 판으로 한 번 옮김(기록 남김) · 값이 바뀐 것은 옮기지 않음
 export const ECON_VER = 1;
 export type Buy = { id: string; ver: number; at: number };
-export interface Wallet { gem: number; scroll: number; buys: Buy[]; ver: number; log?: string[] }
+export interface Wallet { gem: number; scroll: number; buys: Buy[]; ver: number; log?: string[]; /** 💎 하루 한도 (#143 · 정식 gem.day · KST 날짜 → 그날 받은 💎) */ day?: Record<string, number> }
+/** 하루 한도 안에서 💎 받기 → 실제로 받은 수 (정식 Gem.add · free 아님) */
+export function earnDaily(w: Wallet, n: number, day: string, cap: number): number {
+  const used = Number(w.day?.[day]) || 0, g = Math.max(0, Math.min(Math.floor(n), cap - used));
+  if (!g) return 0;
+  w.gem += g; w.day = { [day]: used + g }; // 지난 날짜는 버림
+  return g;
+}
 /** 판별 이전 표: MIGRATE[옛 판] = { 옛 칸 id: 새 칸 id } (지금은 1판뿐 → 빈 표) */
 export const MIGRATE: Record<number, Record<string, string>> = {};
 export function migrate(w: Wallet): Wallet {

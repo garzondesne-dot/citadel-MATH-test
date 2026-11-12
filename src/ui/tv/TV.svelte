@@ -154,7 +154,7 @@
   const restLeft = $derived(R?.state.rest ? Math.max(0, R.state.rest.at + R.state.rest.min * 60e3 - now) : 0);
   const mmss = (ms: number) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   // 물건 이름표 (늘 보임 · 캠프 그림 안 % 자리) — 열린 것 한 줄 = 복습 유도
-  const OBJ = $derived([['🏰 성채던전', SUBJ.camp.castleSub, 50, 21], ['🌀 차원문', R && !R.state.closed ? `${L.no}차시 던전 · 열림` : `${L.no}차시 던전`, 85, 50], ['📮 우편함', '', 42, 60], ['🎯 허수아비', `복습! ${L.no}차시`, 72, 72], ['⚒ 모루', SUBJ.camp.anvilSub, 16, 84], ['🔥 모닥불', '', 52, 78]] as const);
+  const OBJ = $derived([['🏰 성채던전', SUBJ.camp.castleSub, 50, 21], ['🌀 차원문', R && !R.state.closed ? `${L.no}차시 던전 · 열림` : `${L.no}차시 던전`, 85, 50], ['📮 우편함', '', 42, 60], ['📋 게시판', '게시판 던전', 72, 72], ['⚒ 모루', SUBJ.camp.anvilSub, 16, 84], ['🔥 모닥불', '', 52, 78]] as const);
   let hk = $state(1);
   const fit = () => (hk = Math.min(1.3, (innerHeight * 0.86) / 760));
   const [CW, CH] = CAMP.size;

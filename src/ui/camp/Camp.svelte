@@ -17,6 +17,7 @@
   import type { Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
+  import Board from '../board/Board.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound } from '../../store/meSync';
 
@@ -96,7 +97,7 @@
     if (!me.seen[id]) return 'new';
     return showAll ? 'new' : 'hide';
   }
-  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '허수아비', mail: '우편함', hero: '내 용사' };
+  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', mail: '우편함', hero: '내 용사' };
   const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   let sheet = $state<string | null>(null);
@@ -210,6 +211,9 @@
     <span class="slab">🎨 테마</span>
     <ThemePicker now={theme} {feats} onpick={pickTheme} />
   </Sheet>
+{:else if sheet === 'dummy'}
+  <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
+  <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} onclose={() => (sheet = null)} />
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} />
 {:else if sheet}

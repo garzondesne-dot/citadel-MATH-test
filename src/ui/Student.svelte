@@ -23,7 +23,7 @@
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
-  const { S, L, code, uid, num, nick: nick0 = '', cls = '' }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string } = $props();
+  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean } = $props();
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
   const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
@@ -83,7 +83,7 @@
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items, ...(bhp?.won ? { won: true } : {}) } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
+  $effect(() => { const b = meBound(); if (!result || !b || board) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items, ...(bhp?.won ? { won: true } : {}) } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
