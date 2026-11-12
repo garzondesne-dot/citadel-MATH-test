@@ -13,7 +13,7 @@ const log = (...a) => console.log(...a);
   await p.goto(B + '?role=camp&room=BD1'); await p.waitForSelector('.stage');
   const lab = await p.$eval('button[aria-label="📋 게시판"]', (x) => x.textContent.trim()).catch(() => ''); log('캠프 물건:', lab); if (!/게시판/.test(lab)) errs.push('캠프 게시판 이름');
   await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(300);
-  log('⑥ 게시판:', (await p.textContent('.bd .empty')).replace(/\s+/g, ' ').trim(), '| 칩', await p.$$eval('.bd .chips button', (xs) => xs.map((x) => x.textContent.trim()).join(' ')), '| 모집', await p.$eval('.bd .btn2', (x) => x.disabled), (await p.textContent('.bd .act .why')).trim());
+  log('⑥ 게시판:', (await p.textContent('.bd .empty')).replace(/\s+/g, ' ').trim(), '| 칩', await p.$$eval('.bd .chips button', (xs) => xs.map((x) => x.textContent.trim()).join(' ')), '| 모집', await p.$eval('.bd .btn2', (x) => x.disabled), await p.$eval('.bd .act .why', (x) => x.textContent.trim()).catch(() => ''));
   await p.screenshot({ path: `${SHOTS}/b30-board.png` }); await over('게시판');
   await p.click('.bd .chips button:has-text("6")'); await p.click('.bd .act .btn'); await p.waitForSelector('.lgrid'); await p.waitForTimeout(250);
   log('⑥-1 시트:', await p.$$eval('.lgrid .lg', (xs) => xs.length), '칸 · 고른', (await p.textContent('.lg.on')).trim(), '·', (await p.textContent('.sheet .act .btn')).trim());

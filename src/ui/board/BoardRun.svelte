@@ -1,52 +1,164 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
-  import type { LessonPack, Room } from '../../model/types';
+  import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
   import { memoryStore } from '../../store/device';
-  import { nextStep, openRoom, roomPath } from '../../raid/actions';
-  import { isEnd, isLobby, resultOf } from '../../raid/raid';
+  import { bossSubmit, chainSubmit, nextStep, openRoom, roomPath, submit } from '../../raid/actions';
+  import { activeIds, answerOf, bossItem, bossState, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord, resultOf, stepOf } from '../../raid/raid';
   import { boardPack, firstTry, freshAll, gradeOf, itemCount, SEC_PER_ITEM, stepDone } from '../../board/board';
+  import { bMeta, bPause, helpOn, hintKey, hintOf, pauseMax, pauseOff, pauseOn, pausesLeft, sendHint, solvedStep, stuckItem, thinkUsed, timeLeft, type Role } from '../../board/team';
+  import { liveRoom } from '../room.svelte';
   import Student from '../Student.svelte';
+  import Sheet from '../battle/Sheet.svelte';
   import { clock } from '../clock.svelte';
 
-  // 📋 게시판 던전 1인 (#143 ⑨ · 「게시판 던전 1인」 = 허수아비 이어받기): 이 폰 안(메모리)에 방 하나 → 레이드 전투 화면(Student) 그대로
-  //   개념 없이 문제 → 형성평가 · 숫자 바뀐 판 · 하트 2 · 다 하면 저절로 다음 · 시간 = 소문제 × 90초(위 막대 밑 선 하나) · 서버가 끊겨도 계속(이 폰 안)
-  const { L0, uid, num, nick, cls, onend, onquit }: { L0: LessonPack; uid: string; num: number; nick: string; cls: string; onend: (r: { right: number; total: number; f: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number }) => void; onquit: () => void } = $props();
+  // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
+  //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
+  //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
+  type End = { right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
+  const { L0, uid, num, nick, cls, team = null, onend, onquit }: {
+    L0: LessonPack; uid: string; num: number; nick: string; cls: string;
+    team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string> } | null;
+    onend: (r: End) => void; onquit: () => void;
+  } = $props();
   const L = untrack(() => boardPack(L0));
-  const M = memoryStore(), code = `B${Date.now() % 1e6}`;
-  const S = { ...M, kind: 'memory' as const };
-  untrack(() => {
+  const solo = untrack(() => !team);
+  const S: Store = untrack(() => team?.S ?? { ...memoryStore(), kind: 'memory' as const });
+  const code = untrack(() => team?.code ?? `B${Date.now() % 1e6}`);
+  const drv = untrack(() => solo || !!team?.host);
+  const sec = () => Number((globalThis as { __BOARD_SEC?: number }).__BOARD_SEC) || SEC_PER_ITEM; // __BOARD_SEC = 화면 시험만
+  if (solo) untrack(() => {
     openRoom(S, L, code, PROFILES.board);
     S.set(`${roomPath(code)}/meta/fresh`, freshAll(L));
+    S.set(`${roomPath(code)}/meta/board`, { t0: S.now(), limit: 0, n: 1, guard: false });
   });
-  const R0 = () => S.get<Room>(roomPath(code)) as Room;
-  let limit = $state(0), t0 = $state(0), done = false;
+  const lr = untrack(() => liveRoom(S, code));
+  const R = $derived(lr.v.room as Room | null);
+  const now = $derived(clock.now);
+  const roles = untrack(() => team?.roles ?? { [uid]: 'c' as Role });
+  const myRole = roles[uid] ?? 'c';
+  const guardTeam = Object.values(roles).includes('g');
+  const ids = Object.keys(roles);
+  let ended = false;
+  // ── 진행 (맡은 폰) ──
   const drive = setInterval(() => {
-    const R = R0(); if (!R || done) return;
-    if (isLobby(R)) { if (R.players?.[uid]) { nextStep(S, L, code); limit = itemCount(L, R0()) * (Number((globalThis as { __BOARD_SEC?: number }).__BOARD_SEC) || SEC_PER_ITEM) * 1000; t0 = Date.now(); /* __BOARD_SEC = 화면 시험만 */ } return; }
-    const over = limit && Date.now() - t0 > limit;
-    if (!isEnd(L, R) && stepDone(L, R, uid) && !over) { nextStep(S, L, code); return; }
-    if (isEnd(L, R) || over) {
-      done = true; const RR = R0(), f = firstTry(L, RR, uid), res = resultOf(L, RR, uid);
-      onend({ right: res.right, total: res.total, f, grade: gradeOf(f), clear: !over, sec: Math.round((Date.now() - t0) / 1000) });
+    const RR = S.get<Room>(roomPath(code)); if (!RR || !drv) return;
+    const m = bMeta(RR);
+    if (isLobby(RR)) {
+      const here = activeIds(RR, S.now());
+      if (ids.every((u) => here.includes(u)) || (team && m && S.now() > m.t0 + 8000)) { nextStep(S, L, code); if (m && !m.limit) { S.set(`${roomPath(code)}/meta/board/limit`, itemCount(L, RR) * sec() * 1000); S.set(`${roomPath(code)}/meta/board/t0`, S.now()); } }
+      return;
     }
+    const bp = bPause(RR); if (bp && S.now() - bp.at > pauseMax(bp)) { pauseOff(S, code, RR); return; }
+    if ((RR.state as unknown as { bend?: unknown }).bend) return;
+    const over = !!m?.limit && timeLeft(RR, S.now()) <= 0 && !bp;
+    const here = activeIds(RR, S.now()), who = ids.filter((u) => here.includes(u));
+    if (!isEnd(L, RR) && !over && (who.length ? who : [uid]).every((u) => stepDone(L, RR, u))) { nextStep(S, L, code); return; }
+    if (isEnd(L, RR) || over) S.set(`${roomPath(code)}/state/bend`, { at: S.now(), clear: !over });
   }, 300);
-  onDestroy(() => clearInterval(drive));
-  const leftMs = $derived(limit ? Math.max(0, limit - (clock.now - t0)) : 0);
+  // ── 끝 (모든 폰) ──
+  $effect(() => {
+    const RR = R, be = RR && (RR.state as unknown as { bend?: { clear: boolean } }).bend; if (!RR || !be || ended) return;
+    ended = true;
+    untrack(() => {
+      const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
+      const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
+      onend({ right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L });
+    });
+  });
+  const elapsedOf = (RR: Room) => { const m = bMeta(RR); return m ? (m.limit || 0) - timeLeft(RR, S.now()) : 0; };
+  // 🧪 화면 시험만: 지금 단계를 다 맞히기 · 다 틀리기 (e2e team.cjs · 답 입력 화면 자체는 레이드 e2e 가 시험)
+  const hook = {
+    solve: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s) return;
+      if (s.kind === 'boss') bossState(L, RR, uid).forEach((x, i) => { if (!x.ok && x.left > 0) bossSubmit(S, L, code, uid, i, answerOf(bossItem(L, RR, uid, i, x.next)!)); });
+      else if (isChain(L, RR, s.id)) { for (let k = 0; k < 12; k++) { const r = chainRecord(L, S.get<Room>(roomPath(code))!, s.id, uid); if (r.done || r.fail || r.locked) break; chainSubmit(S, L, code, s.id, uid, r.stage, 0, answerOf(r.items[r.stage]!)); } }
+      else { const r = plainRecord(L, RR, s.id, uid); if (!r.perfect && (r.canRetry || !r.submitted)) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map(answerOf)); } },
+    miss: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s || s.kind !== 'monster' || isChain(L, RR, s.id)) return; const r = plainRecord(L, RR, s.id, uid); if (r.canRetry || !r.submitted) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map((q) => (q.type === 'multi' ? [] : -999)) as never); },
+  };
+  (globalThis as unknown as { __board?: typeof hook }).__board = hook;
+  onDestroy(() => { clearInterval(drive); lr.stop(); });
+  // ── 시간 · 멈춤 ──
+  const meta = $derived(R ? bMeta(R) : null);
+  const bp = $derived(R ? bPause(R) : null);
+  const leftMs = $derived(R && meta?.limit ? timeLeft(R, now) : 0);
   const mmss = (ms: number) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const bpLeft = $derived(bp ? Math.max(0, pauseMax(bp) - (now - bp.at)) : 0);
+  // ── 팀 줄 (✔ 냄 · ✏ 푸는 중 · 🙋 도와줘 · 💡 힌트 받음) ──
+  const help = $derived(((R as unknown as { help?: Record<string, number> })?.help) || {});
+  const bh = $derived(((R as unknown as { bh?: Record<string, Record<string, { from: string; at: number }>> })?.bh) || {});
+  const statusOf = (u: string) => (!R || isLobby(R) ? '…' : stepDone(L, R, u) ? '✔' : help[u] ? '🙋' : '✏');
+  // ── 💡 힌트 ──
+  const stuck = $derived(R && !isLobby(R) && !isEnd(L, R) ? stuckItem(L, R, uid) : null);
+  const gotHint = $derived(stuck && bh[uid]?.[hintKey(stuck.mid, stuck.k)] ? hintOf(stuck.q) : '');
+  let autoHint = $state(''), autoUsed = false, hintOpen = $state(true);
+  $effect(() => { // 길잡이: 수호자 없는 팀 · 1인 = 처음 틀렸을 때 💡 한 번 저절로
+    if (guardTeam || autoUsed || !R || !stuck) return;
+    const tried = (R.subs?.[stuck.mid]?.[uid] && Object.keys(R.subs[stuck.mid]![uid]!).length) || 0;
+    if (tried >= 1) { autoUsed = true; autoHint = hintOf(stuck.q); hintOpen = true; }
+  });
+  $effect(() => { void gotHint; hintOpen = true; });
+  const canHint = $derived(!!R && myRole === 'g' && !isLobby(R) && solvedStep(L, R, uid));
+  let hintSheet = $state(false), toast = $state('');
+  const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2000); };
+  const others = $derived(ids.filter((u) => u !== uid).sort((a, b) => Number(!!help[b]) - Number(!!help[a])));
+  const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
 </script>
 
 <div class="run">
-  <div class="tline" aria-label="남은 시간 {mmss(leftMs)}"><i style:width="{limit ? (leftMs / limit) * 100 : 100}%"></i></div>
+  <div class="tline" aria-label="남은 시간 {mmss(leftMs)}"><i style:width="{meta?.limit ? (leftMs / meta.limit) * 100 : 100}%"></i></div>
   <button type="button" class="quit" aria-label="그만하기" onclick={onquit}>‹</button>
-  <span class="tleft">⏱ {mmss(leftMs)}</span>
+  <span class="tleft">⏱ {meta?.limit ? mmss(leftMs) : '—'}</span>
+  {#if !solo}<div class="team" aria-label="팀">{#each ids as u (u)}<span class:me={u === uid}><b>{roles[u] === 'g' ? '🛡' : '🌱'}</b>{statusOf(u)}<small>{u === uid ? '나' : name(u)}</small></span>{/each}</div>{/if}
+  <div class="tools">
+    {#if myRole === 'g'}
+      <button type="button" disabled={!R || !!bp || pausesLeft(R, uid) <= 0} onclick={() => R && pauseOn(S, code, R, uid)}>⏸ 설명 {R ? pausesLeft(R, uid) : 2}</button>
+      <button type="button" disabled={!canHint} onclick={() => (hintSheet = true)}>💡 힌트</button>
+    {:else}
+      {#if !solo}<button type="button" class:on={!!help[uid]} onclick={() => helpOn(S, code, uid, !help[uid])}>🙋 {help[uid] ? '도움 요청 중' : '도와줘'}</button>{/if}
+      {#if !guardTeam}<button type="button" disabled={!R || !!bp || thinkUsed(R)} onclick={() => R && pauseOn(S, code, R, uid, true)}>⏸ 생각 1분</button>{/if}
+    {/if}
+  </div>
   <Student {S} {L} {code} {uid} {num} {nick} {cls} board />
+  {#if (gotHint || autoHint) && hintOpen && !bp}
+    <div class="hcard" role="status"><b>{gotHint ? '🛡 수호자의 힌트' : '🧭 길잡이 힌트'}</b><p>{gotHint || autoHint}</p><button type="button" aria-label="힌트 닫기" onclick={() => (hintOpen = false)}>✕</button></div>
+  {/if}
+  {#if bp}
+    <div class="cover" role="status"><span class="ic">{bp.think ? '⏸' : '🛡'}</span><b>{bp.think ? '생각 시간' : '수호자가 설명 중'}</b><em>{mmss(bpLeft)}</em><p>시간이 멈췄어요 · 같은 문제를 함께 봐요</p>
+      {#if bp.by === uid}<button type="button" class="btn" onclick={() => R && pauseOff(S, code, R)}>▶ 다시 시작</button>{/if}</div>
+  {/if}
+  {#if toast}<p class="toast2" role="status">{toast}</p>{/if}
 </div>
+{#if hintSheet}
+  <Sheet onclose={() => (hintSheet = false)}>
+    {#snippet title()}💡 힌트 보내기{/snippet}
+    <p class="why2">차시 팩 풀이 한 줄을 그 친구의 숫자로 보내요 · 답은 안 보여요 · 친구마다 문제당 1번</p>
+    <div class="who">{#each others as u (u)}{@const it = R ? stuckItem(L, R, u) : null}<button type="button" disabled={!it} onclick={() => { if (!R) return; const e = sendHint(S, code, R, L, uid, u); say(e ?? `💡 ${name(u)}에게 보냈어요`); hintSheet = false; }}><b>{help[u] ? '🙋 ' : ''}{name(u)}</b><small>{it ? (help[u] ? '도와줘 요청 · 막힌 문제 있음' : '푸는 중') : '막힌 문제 없음'}</small></button>{/each}</div>
+  </Sheet>
+{/if}
 
 <style>
-  .run { position: fixed; inset: 0; z-index: 26; background: var(--bg); overflow: auto; }
+  .run { position: fixed; inset: 0; z-index: 18; background: var(--bg); overflow: auto; }
   .tline { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 30; background: rgba(255, 255, 255, 0.12); max-width: 430px; margin: 0 auto; }
   .tline i { display: block; height: 3px; background: var(--accent); transition: width 0.3s linear; }
   .quit { position: fixed; top: 6px; left: max(4px, calc(50% - 211px)); z-index: 30; width: 44px; height: 44px; border: 0; border-radius: 22px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: 22px; }
   .tleft { position: fixed; top: 14px; right: max(12px, calc(50% - 203px)); z-index: 30; height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(8, 9, 12, 0.6); color: #fff; font: 700 13px var(--font); display: flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .team { position: fixed; top: 52px; left: max(8px, calc(50% - 207px)); z-index: 30; display: flex; gap: 4px; }
+  .team span { display: flex; flex-direction: column; align-items: center; min-width: 40px; padding: 2px 4px; border-radius: 10px; background: rgba(8, 9, 12, 0.6); color: #fff; font-size: 13px; line-height: 1.2; }
+  .team span.me { box-shadow: 0 0 0 2px var(--accent); } .team small { font-size: 10.5px; max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tools { position: fixed; top: 112px; left: max(8px, calc(50% - 207px)); z-index: 30; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  .tools button { height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.7); color: #fff; font: 700 13px var(--font); position: relative; }
+  .tools button::before { content: ''; position: absolute; inset: -6px 0; }
+  .tools button.on { background: var(--accent); color: var(--on-accent); }
+  .tools button:disabled { opacity: 0.45; }
+  .hcard { position: fixed; left: max(12px, calc(50% - 203px)); right: max(12px, calc(50% - 203px)); bottom: 104px; z-index: 29; padding: 10px 40px 10px 12px; border-radius: var(--r); background: var(--surface-2); border-left: 4px solid var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+  .hcard b { font-size: 13px; color: var(--accent); } .hcard p { margin: 4px 0 0; font-size: 15px; line-height: 1.5; }
+  .hcard button { position: absolute; top: 4px; right: 4px; width: 36px; height: 36px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
+  .cover { position: fixed; inset: 0; z-index: 32; background: rgba(8, 9, 12, 0.82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 24px; color: #fff; }
+  .cover .ic { font-size: 40px; } .cover b { font-size: 22px; } .cover em { font-style: normal; font-size: 40px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; } .cover p { margin: 0; color: #cfd3db; }
+  .cover .btn { position: absolute; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 398px; margin: 0 auto; min-height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
+  .toast2 { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 33; margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface); font-weight: 700; white-space: nowrap; }
+  .why2 { margin: 0; font-size: 13px; color: var(--text-2); }
+  .who { display: flex; flex-direction: column; gap: 6px; }
+  .who button { min-height: 56px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 0 14px; }
+  .who button:disabled { opacity: 0.45; } .who small { font-size: 12.5px; color: var(--text-2); }
 </style>

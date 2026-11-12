@@ -139,7 +139,7 @@
 <SymSheet />
 {#if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
-{#if R && !R.state.closed && R.state.focus}
+{#if R && !R.state.closed && R.state.focus && !board}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
   <div class="cover" role="status" aria-live="polite">
     <b>📣 선생님에게 주목</b><p>{R.state.rest ? '놀이 시계도 멈춰 있어요' : '게임은 멈춰 있어요'} · 끝나면 그 자리에서 이어가요</p>
