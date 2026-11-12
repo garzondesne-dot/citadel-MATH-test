@@ -91,28 +91,32 @@
    "sprite": "base0:0",
    "retry": {
     "gen": "set03.m1"
-   }
+   },
+   "attack": "pause"
   },
   "m2": {
    "title": "문제 2",
    "sprite": "base1:0",
    "retry": {
     "gen": "set03.m2"
-   }
+   },
+   "attack": "smash"
   },
   "m3": {
    "title": "문제 3",
    "sprite": "base0:0",
    "retry": {
     "gen": "set03.m3"
-   }
+   },
+   "attack": "ice"
   },
   "m4": {
    "title": "문제 4",
    "sprite": "extra4:0",
    "retry": {
     "gen": "set03.m4"
-   }
+   },
+   "attack": "glitch"
   }
  },
  "boss": {
@@ -453,7 +457,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "fire",
+   "smash"
+  ]
  },
  "crops": {
   "intro": [

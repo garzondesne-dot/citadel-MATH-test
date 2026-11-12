@@ -7,9 +7,9 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, note = '', onconcept }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; note?: string; onconcept?: () => void } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void } = $props();
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
   const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
@@ -41,7 +41,7 @@
     </div>
   {/if}
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
-  {#if hit}<span class="tag hitTag" role="status">💥 몬스터 공격!</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
+  {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{heroNudge(savedLook().hero, 0).dx * HS}px {heroNudge(savedLook().hero, 0).dy * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
     style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>

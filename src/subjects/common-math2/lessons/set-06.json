@@ -113,21 +113,24 @@
    "sprite": "extra3:0",
    "retry": {
     "gen": "set06.m1"
-   }
+   },
+   "attack": "fog"
   },
   "m2": {
    "title": "문제 2",
    "sprite": "extra6:0",
    "retry": {
     "gen": "set06.m2"
-   }
+   },
+   "attack": "ice"
   },
   "m3": {
    "title": "문제 3",
    "sprite": "extra7:0",
    "retry": {
     "gen": "set06.m3"
-   }
+   },
+   "attack": "pause"
   },
   "u4": {
    "title": "문제 4 · 조건을 만족하는 X",
@@ -137,7 +140,8 @@
    },
    "chain": {
     "gen": "set06.u4"
-   }
+   },
+   "attack": "smash"
   },
   "u5": {
    "title": "문제 5 · 미지수 x",
@@ -148,7 +152,8 @@
    },
    "chain": {
     "gen": "set06.u5"
-   }
+   },
+   "attack": "ice"
   },
   "u6": {
    "title": "문제 6 · 겹침의 최대 · 최소",
@@ -158,7 +163,8 @@
    },
    "chain": {
     "gen": "set06.u6"
-   }
+   },
+   "attack": "pause"
   },
   "u7": {
    "title": "문제 7 · 「~이 아니거나」",
@@ -168,42 +174,48 @@
    },
    "chain": {
     "gen": "set06.u7"
-   }
+   },
+   "attack": "pause"
   },
   "m4": {
    "title": "문제 4 (v2 명제)",
    "sprite": "crown6:0",
    "retry": {
     "gen": "set06.m4"
-   }
+   },
+   "attack": "pause"
   },
   "m42": {
    "title": "문제 4-2 · 삼단논법 · 명제 고르기 (v2)",
    "sprite": "crown6:0@h120",
    "retry": {
     "gen": "set06.m42"
-   }
+   },
+   "attack": "pause"
   },
   "m5": {
    "title": "문제 5 (v2 명제의 부정)",
    "sprite": "crown9:0",
    "retry": {
     "gen": "set06.m5"
-   }
+   },
+   "attack": "pause"
   },
   "m6": {
    "title": "문제 6 · 사각형 명제 (v2)",
    "sprite": "extra6:0@h300",
    "retry": {
     "gen": "set06.m6"
-   }
+   },
+   "attack": "pause"
   },
   "b1": {
    "title": "보강 ① · 색칠한 부분의 원소 개수",
    "sprite": "extra3:0@h150",
    "retry": {
     "gen": "set06.b1"
-   }
+   },
+   "attack": "pause"
   }
  },
  "boss": {
@@ -467,7 +479,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "glitch",
+   "fog"
+  ]
  },
  "crops": {
   "c1": [

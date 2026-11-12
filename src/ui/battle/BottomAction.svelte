@@ -11,6 +11,11 @@
     { main?: Snippet; text?: string; disabled?: boolean; why?: string; onmain?: () => void; aux?: Snippet; mainLabel?: string; href?: string; dock?: boolean; battle?: boolean } = $props();
   let h = $state(0);
   const block = $derived(battle && fx.block);
+  // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
+  const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire);
+  let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
+  const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; }, 1000); };
+  const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
 </script>
 
 {#if dock}<div class="spacer" style:height="{h}px" aria-hidden="true"></div>{/if}
@@ -19,6 +24,10 @@
   {#if aux}<div class="row">{@render aux()}</div>{/if}
   {#if block}
     <button type="button" class="btn pmain" disabled aria-label="막는 중">⏳ 막는 중…</button>
+  {:else if ice}
+    <button type="button" class="btn pmain ice" aria-label="얼음 깨기" onclick={() => (fx.ice = Math.max(0, fx.ice - 1))}>🧊 톡톡 깨기 · {fx.ice}</button>
+  {:else if fire}
+    <button type="button" class="btn pmain fire" class:holding aria-label="불 끄기" onpointerdown={holdOn} onpointerup={holdOff} onpointerleave={holdOff} onpointercancel={holdOff} oncontextmenu={(e) => e.preventDefault()}>🧯 꾹 눌러 끄기</button>
   {:else if href}
     <a class="btn pmain" {href} aria-label={mainLabel}>{#if main}{@render main()}{:else}{text}{/if}</a>
   {:else}
@@ -35,6 +44,10 @@
   .btn :global(small) { font-size: 13px; font-weight: 500; opacity: 0.85; }
   .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .btn:disabled { opacity: 0.4; box-shadow: none; }
+  .btn.ice { background: linear-gradient(135deg, #cfeaff, #8fc9f2 60%, #e8f6ff); color: #0d3550; box-shadow: inset 0 0 0 2px #fff, 0 3px 0 #4f8fbf; }
+  .btn.fire { background: #3a1a12; color: #ffd7b0; box-shadow: inset 0 0 0 2px #ff7a3a, 0 3px 0 #000; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .btn.fire.holding { background: linear-gradient(90deg, #ff7a3a 0%, #3a1a12 0%); animation: hold 1s linear forwards; }
+  @keyframes hold { from { background-size: 0% 100%; } to { background: #ff7a3a; } }
   .row :global(.btn2) { min-height: var(--btn-h); min-width: 92px; padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); }
   .row :global(.btn2:disabled) { opacity: 0.4; }
   .why { margin: 0; text-align: center; font-size: var(--fs-small); color: var(--text-3); }

@@ -33,6 +33,8 @@ export type Retry = { pool: Question[][] } | { gen: string; params?: Record<stri
 
 export interface MonsterPack {
   title: string;
+  /** 💥 몬스터 공격 종류 (#152 · 공격 등록 표 raid/attacks.ts 의 id · 없으면 pause) */
+  attack?: string;
   /** 배치표 이름:칸 (예: 'mimic:0') — 그림 파일 이름을 직접 쓰지 않음 */
   sprite: string;
   note?: string;
@@ -66,6 +68,8 @@ export interface Step {
 /** 👑 보스(형성평가): 문항마다 시도 0 = 원문 · 1~ = 생성기 새 값 · 체력 = hpItems 기준 */
 export interface BossPack {
   title: string;
+  /** 💥 보스 공격 = 차례로 돌아감 (#152) */
+  attack?: string[];
   sprite: string;
   items: number;
   hpItems: number;

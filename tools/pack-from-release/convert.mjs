@@ -15,6 +15,8 @@ import { execFileSync } from 'node:child_process';
 
 // #149 v1.0 만: 형성평가를 앞수업 · 뒷수업으로 나눔 (차시 id → 뒷수업 첫 문항 번호 · 정식은 뒷수업 끝에 전부 그대로)
 const V1_BOSS_SPLIT = { 'set-06': 3 };
+// 💥 #152 몬스터 ↔ 공격 짝 표 (선생님 「이대로」 · 다시 변환해도 남게)
+const ATTACKS = JSON.parse(fs.readFileSync(new URL('./attacks.json', import.meta.url), 'utf8'));
 const args = process.argv.slice(2);
 const REL = path.resolve(args[0] || '.');
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
@@ -105,7 +107,7 @@ for (const id of ONLY) {
   const monsters = {};
   for (const [mid, m] of Object.entries(L.monsters)) {
     const ch = (L.chain || []).includes(mid);
-    monsters[mid] = { title: m.title, sprite: spriteRef(m.sprite), ...(m.note ? { noteText: m.note } : {}), ...(m.special ? { special: true } : {}), ...(m.review ? { review: true } : {}), retry: { gen: `${p}.${mid}` }, ...(ch ? { chain: { gen: `${p}.${mid}` } } : {}) };
+    monsters[mid] = { title: m.title, sprite: spriteRef(m.sprite), ...(m.note ? { noteText: m.note } : {}), ...(m.special ? { special: true } : {}), ...(m.review ? { review: true } : {}), retry: { gen: `${p}.${mid}` }, ...(ch ? { chain: { gen: `${p}.${mid}` } } : {}), attack: (ATTACKS[id] || {})[mid] || 'pause' };
     reg.push([`${p}.${mid}`, id, mid]);
     if (ch) chains.push([`${p}.${mid}`, id, mid]);
   }
@@ -118,7 +120,7 @@ for (const id of ONLY) {
     source: { file: `lessons/${id}.js`, commit, board: D ? D.updatedAt : null },
     steps: steps.map((s) => ({ kind: s.kind, id: s.id, title: s.title, ...(s.say ? { say: s.say } : {}), ...(s.img ? { img: s.img } : {}), ...(s.min ? { min: s.min } : {}), ...(s.special ? { special: true } : {}), ...(s.review ? { review: true } : {}) })),
     monsters,
-    ...(bo ? { boss: { title: bo.title, sprite: spriteRef(bo.sprite), items: bo.items || bo.sets[1].length, hpItems: bo.hpItems || bo.items, tags: bo.tags || [], gen: `${p}.boss`, sets: bo.sets } } : {}),
+    ...(bo ? { boss: { title: bo.title, sprite: spriteRef(bo.sprite), items: bo.items || bo.sets[1].length, hpItems: bo.hpItems || bo.items, tags: bo.tags || [], gen: `${p}.boss`, sets: bo.sets, ...((ATTACKS[id] || {}).boss ? { attack: ATTACKS[id].boss } : {}) } } : {}),
     ...(L.crops ? { crops: L.crops } : {}),
     ...(L.videos ? { videos: Object.fromEntries(Object.entries(L.videos).map(([k, v]) => [k, /^https?:/.test(v) ? v : OFFICIAL_SITE + v])) } : {}),
   };

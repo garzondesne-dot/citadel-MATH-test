@@ -91,28 +91,32 @@
    "sprite": "extra1:0",
    "retry": {
     "gen": "set05.m1"
-   }
+   },
+   "attack": "fire"
   },
   "m2": {
    "title": "문제 2",
    "sprite": "new7:0",
    "retry": {
     "gen": "set05.m2"
-   }
+   },
+   "attack": "smash"
   },
   "m3": {
    "title": "문제 3 · 4",
    "sprite": "extra2:0",
    "retry": {
     "gen": "set05.m3"
-   }
+   },
+   "attack": "pause"
   },
   "m5": {
    "title": "문제 5",
    "sprite": "extra8:0",
    "retry": {
     "gen": "set05.m5"
-   }
+   },
+   "attack": "glitch"
   },
   "b1": {
    "title": "보강 ① · 법칙으로 간단히",
@@ -120,21 +124,24 @@
    "noteText": "포함 관계를 떠올려 봐요 (A ⊂ A ∪ B, A ∩ B ⊂ A)",
    "retry": {
     "gen": "set05.b1"
-   }
+   },
+   "attack": "pause"
   },
   "b2": {
    "title": "보강 ② · 여집합의 성질",
    "sprite": "extra4:0",
    "retry": {
     "gen": "set05.b2"
-   }
+   },
+   "attack": "pause"
   },
   "b3": {
    "title": "보강 ③ · 색칠해서 확인하기",
    "sprite": "new8:0",
    "retry": {
     "gen": "set05.b3"
-   }
+   },
+   "attack": "pause"
   }
  },
  "boss": {
@@ -480,7 +487,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "smash",
+   "fire"
+  ]
  },
  "crops": {
   "c1": [

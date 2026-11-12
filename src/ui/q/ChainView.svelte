@@ -1,4 +1,6 @@
 <script lang="ts">
+  // ▢ 소레이드 도전 칸 (#152): 쓴 칸 = 빨강 − · 졸개 오답 ½ = 노랑 반 칸
+  const chainMarks = (t: number, l: number): Mark[] => { const used = Math.max(0, t - l), full = Math.floor(used + 1e-9); return [...Array.from({ length: full }, () => 'bad' as Mark), ...(used - full > 0.01 ? ['part' as Mark] : [])]; };
   import { untrack } from 'svelte';
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
@@ -6,7 +8,8 @@
   import { chainSubmit, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
-  import Hearts from '../battle/Hearts.svelte';
+  import Slots, { type Mark } from '../battle/Slots.svelte';
+  import EnergyCard from './EnergyCard.svelte';
   import { swing } from '../battle/fx.svelte';
 
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
@@ -75,8 +78,9 @@
   <div class="bcard">
     <div class="okline"><span class="ic" aria-label="맞음">{pFail ? '✘' : '✔'}</span><span><b>{pFail ? '이번 연습 판은 기회를 다 썼어요' : pDone ? '연습 사슬 완성!' : rec.perfect ? '퍼펙트 사슬!' : '대장 처치!'}</b><span>{prac ? '데미지 없음 · 수업 기록 그대로' : `데미지 ${rec.best}`}</span></span></div>
     <div class="story"><b>📜 나의 풀이</b><ol>{#each pFail ? pItems.map((x) => x.say || '') : says as t, k (k)}<li>{t}</li>{/each}</ol></div>
-    <p class="muted">숫자만 바뀐 새 문제 · 판마다 하트 4칸 · 데미지 0</p>
+    <p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>
   </div>
+  {#if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
 {:else}
@@ -97,7 +101,7 @@
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
-    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? '연습 ' : ''}공격</span><Hearts total={hearts.total} left={hearts.left} />{/snippet}
+    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? '연습 ' : ''}공격</span><Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/snippet}
   </BottomAction>
 {/if}
 

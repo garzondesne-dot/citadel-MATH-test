@@ -93,7 +93,8 @@
    "noteText": "화살표가 나가는 쪽 = 충분 · 받는 쪽 = 필요",
    "retry": {
     "gen": "set10.m1"
-   }
+   },
+   "attack": "fog"
   },
   "m2": {
    "title": "문제 2 · 어떤 조건인지 판정",
@@ -101,7 +102,8 @@
    "noteText": "P ⊂ Q → 충분 · Q ⊂ P → 필요 · P = Q → 필요충분",
    "retry": {
     "gen": "set10.m2"
-   }
+   },
+   "attack": "smash"
   },
   "m3": {
    "title": "문제 3 · 세 조건 (생각 넓히기)",
@@ -109,7 +111,8 @@
    "noteText": "필요조건 = 바깥 집합 · 충분조건 = 안쪽 집합",
    "retry": {
     "gen": "set10.m3"
-   }
+   },
+   "attack": "pause"
   },
   "m4": {
    "title": "문제 4 · 어떤 조건인지 (중단원)",
@@ -120,7 +123,8 @@
    },
    "chain": {
     "gen": "set10.m4"
-   }
+   },
+   "attack": "fog"
   }
  },
  "boss": {
@@ -288,7 +292,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "smash",
+   "fog"
+  ]
  },
  "crops": {
   "review": [

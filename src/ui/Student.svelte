@@ -14,6 +14,9 @@
   import BossCard from './q/BossCard.svelte';
   import SymText from './q/SymText.svelte';
   import { fx } from './battle/fx.svelte';
+  import AttackFx from './battle/AttackFx.svelte';
+  import { attackDef, attackOf, type AttackDef } from '../raid/attacks';
+  import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
   import { conceptOf } from '../school/prep';
@@ -74,21 +77,28 @@
     return hp ? { hp: { left: hp.left, max: hp.max }, label: chain ? '대장' : '' } : null;
   });
 
-  // 👾 몬스터 공격: 모든 기기가 같은 시계로 같은 순간에 맞음 → 문제 화면이면 lock 초 멈춤 (정식 monsterStrike)
-  let stunUntil = $state(0);
+  // 👾 몬스터 공격: 모든 기기가 같은 시계로 같은 순간에 맞음 → 문제 화면이면 lock 초 동안 공격 효과 (정식 monsterStrike · #152 공격 종류 = 차시 팩 attack)
+  //   멈춤 · 파지직 = 입력 막힘 / 안개 · 얼음 · 화염 = 손풀기로 일찍 풀림 / 강타 = 흔들기만 · 모두 lock 초 지나면 저절로
+  let atk = $state<{ def: AttackDef; at: number; until: number } | null>(null);
   const memo = {};
+  function strike(def: AttackDef, ms: number) {
+    atk = { def, at: gnow, until: gnow + ms };
+    fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire';
+  }
   $effect(() => {
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike) stunUntil = gnow + c.lock * 1000;
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => strike(attackOf(L, step, c.k), c.lock * 1000));
   });
-  const stunned = $derived(stunUntil > gnow);
-  // 화면 시험 고리(#151 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음
-  (globalThis as { __strike?: (ms?: number) => void }).__strike = (ms = 3000) => { stunUntil = gnow + ms; };
-  let stunLen = $state(1);
-  $effect(() => { if (stunned) untrack(() => { stunLen = Math.max(1, stunUntil - gnow); }); });
-  $effect(() => { fx.block = stunned && !scout?.on; return () => { fx.block = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
+  const atkOn = $derived(!!atk && atk.until > gnow && !scout?.on);
+  const stunned = $derived(atkOn && !!atk?.def.lockInput);
+  // 손풀기로 풀림 (얼음 4번 · 화염 꾹 1초) · 시간이 지나면 저절로
+  $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
+  $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; }); });
+  // 화면 시험 고리(#151 · #152 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음 (종류 = 등록 표 id)
+  (globalThis as { __strike?: (ms?: number, id?: string) => void }).__strike = (ms = 3000, id = 'pause') => strike(attackDef(id), ms);
+  $effect(() => { fx.block = stunned; return () => { fx.block = false; fx.ice = 0; fx.fire = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
@@ -103,7 +113,7 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={stunned && !scout?.on}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk?.def.tag ?? ''}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
@@ -151,11 +161,8 @@
           <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
         {/if}
       {/key}
-      {#if stunned}
-        <div class="block" role="status" aria-live="polite">
-          <svg viewBox="0 0 44 44" width="56" height="56" aria-hidden="true"><circle cx="22" cy="22" r="18" class="ring0" /><circle cx="22" cy="22" r="18" class="ring" style:animation-duration="{stunLen}ms" /></svg>
-          <b>잠깐! 막는 중</b><span>{Math.ceil((stunUntil - gnow) / 1000)}초 · 고른 답은 그대로예요</span>
-        </div>
+      {#if atkOn && atk}
+        {#key atk.at}<AttackFx kind={atk.def.id} len={atk.until - atk.at} left={atk.until - gnow} onclear={() => { if (atk) atk = { ...atk, until: gnow }; }} />{/key}
       {/if}
       </div>
     {/if}
@@ -188,11 +195,6 @@
   .gift.mail { border-color: var(--accent); }
   .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
   .qwrap { position: relative; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
-  .block { position: absolute; inset: 0; padding-top: 40px; justify-content: flex-start !important; z-index: 3; border-radius: var(--r); background: rgba(8, 9, 12, 0.62); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s1); text-align: center; backdrop-filter: blur(1px); }
-  .block b { font-size: 20px; color: #fff; } .block span { font-size: var(--fs-small); color: var(--text-2); }
-  .ring0 { fill: none; stroke: rgba(255, 255, 255, 0.15); stroke-width: 4; }
-  .ring { fill: none; stroke: var(--bad); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: 22px 22px; animation: ringd linear forwards; }
-  @keyframes ringd { to { stroke-dashoffset: 113.1; } }
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }
   .cover p { margin: 0; color: var(--text-2); }

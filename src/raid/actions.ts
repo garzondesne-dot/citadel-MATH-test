@@ -1,6 +1,6 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf } from './raid';
+import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -186,4 +186,15 @@ export function chainRelease(S: Store, code: string, mid: string, uid: string): 
 /** 🌫 정찰 「✋ 준비 완료」 (정식 scoutReady · ready/{id}/{uid}) — 종합실이 준비한 학생 수를 봄 */
 export function scoutReady(S: Store, code: string, id: string, uid: string): void {
   S.set(`${roomPath(code)}/ready/${id}/${uid}`, true);
+}
+
+// ⚡ 기력 쓰기 (#152 · 정식 heals 칸 그대로): 💚 친구 힐 = heals/{몬스터}/{나}/{k} = 받는 친구 uid (그 친구 도전 칸 +1 · 상한 healMax)
+//   ⛓ 묶기 = heals/{몬스터}/{나}/{k} = '!bind@시각' (몬스터 공격 3초 늦춤) · 둘 다 기력 하나 (healsGiven 으로 셈)
+export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
+  const R = getRoom(S, code); if (!R) return false;
+  const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
+  if (rec.tokLeft <= 0) return false;
+  if (to !== 'bind' && (to === me || healsReceived(R, mid, to) >= R.meta.healMax)) return false;
+  S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);
+  return true;
 }

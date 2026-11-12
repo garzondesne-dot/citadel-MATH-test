@@ -105,14 +105,16 @@
    "sprite": "mirror0:0",
    "retry": {
     "gen": "set08.m1"
-   }
+   },
+   "attack": "glitch"
   },
   "m2": {
    "title": "문제 3 · 진리집합",
    "sprite": "mirror1:0",
    "retry": {
     "gen": "set08.m2"
-   }
+   },
+   "attack": "smash"
   },
   "m3": {
    "title": "문제 4 · U 에 따라 바뀌는 진리집합",
@@ -120,7 +122,8 @@
    "noteText": "⚠ 같은 조건이라도 U 가 다르면 진리집합이 달라져요 · ⛺ 이 몬스터 뒤 = 쉼터",
    "retry": {
     "gen": "set08.m3"
-   }
+   },
+   "attack": "fog"
   },
   "m4": {
    "title": "문제 5 · 6 · 조건의 부정",
@@ -128,7 +131,8 @@
    "noteText": "> 의 부정은 ≤ (같다도 들어가요!) · ~p 의 진리집합 = Pᶜ",
    "retry": {
     "gen": "set08.m4"
-   }
+   },
+   "attack": "pause"
   },
   "m5": {
    "title": "문제 7 · 8 · ‘모든’과 ‘어떤’",
@@ -136,7 +140,8 @@
    "noteText": "모든 = 하나라도 안 되면 거짓 · 어떤 = 하나만 되어도 참 · 부정: 모든 ↔ 어떤",
    "retry": {
     "gen": "set08.m5"
-   }
+   },
+   "attack": "pause"
   }
  },
  "boss": {
@@ -391,7 +396,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "glitch",
+   "ice"
+  ]
  },
  "crops": {
   "review": [

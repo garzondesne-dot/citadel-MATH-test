@@ -84,35 +84,40 @@
    "sprite": "crown0:0",
    "retry": {
     "gen": "set04.r1"
-   }
+   },
+   "attack": "pause"
   },
   "m1": {
    "title": "문제 1",
    "sprite": "crown1:0",
    "retry": {
     "gen": "set04.m1"
-   }
+   },
+   "attack": "fire"
   },
   "m2": {
    "title": "문제 2",
    "sprite": "crown2:0",
    "retry": {
     "gen": "set04.m2"
-   }
+   },
+   "attack": "ice"
   },
   "m3": {
    "title": "문제 3",
    "sprite": "crown4:0",
    "retry": {
     "gen": "set04.m3"
-   }
+   },
+   "attack": "fog"
   },
   "b1": {
    "title": "보강 ① · 한 걸음 더 (∪ ∩)",
    "sprite": "crown8:0",
    "retry": {
     "gen": "set04.b1"
-   }
+   },
+   "attack": "pause"
   },
   "b2": {
    "title": "보강 ② · 서로소 한 걸음 더",
@@ -120,14 +125,16 @@
    "noteText": "먼저 원소나열법으로!",
    "retry": {
     "gen": "set04.b2"
-   }
+   },
+   "attack": "pause"
   },
   "b3": {
    "title": "보강 ③ · 이런 표현도 같은 뜻",
    "sprite": "crown5:0",
    "retry": {
     "gen": "set04.b3"
-   }
+   },
+   "attack": "pause"
   }
  },
  "boss": {
@@ -397,7 +404,11 @@
      }
     }
    ]
-  }
+  },
+  "attack": [
+   "ice",
+   "smash"
+  ]
  },
  "crops": {
   "intro": [

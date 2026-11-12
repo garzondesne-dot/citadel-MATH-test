@@ -106,14 +106,16 @@
    "review": true,
    "retry": {
     "gen": "set02.r0"
-   }
+   },
+   "attack": "pause"
   },
   "m1": {
    "title": "문제 1 · 조건제시법",
    "sprite": "new2:0",
    "retry": {
     "gen": "set02.m1"
-   }
+   },
+   "attack": "glitch"
   },
   "s1": {
    "title": "보강 · 한 걸음 더",
@@ -122,28 +124,32 @@
    "special": true,
    "retry": {
     "gen": "set02.s1"
-   }
+   },
+   "attack": "pause"
   },
   "m2": {
    "title": "문제 2 · 벤 다이어그램",
    "sprite": "new5:0",
    "retry": {
     "gen": "set02.m2"
-   }
+   },
+   "attack": "pause"
   },
   "m3": {
    "title": "문제 3 · 원소의 개수",
    "sprite": "new1:0",
    "retry": {
     "gen": "set02.m3"
-   }
+   },
+   "attack": "smash"
   },
   "m4": {
    "title": "문제 4 · 공집합",
    "sprite": "new4:0",
    "retry": {
     "gen": "set02.m4"
-   }
+   },
+   "attack": "ice"
   },
   "s2": {
    "title": "보강 · 원소의 개수 한 걸음 더",
@@ -152,7 +158,8 @@
    "special": true,
    "retry": {
     "gen": "set02.s2"
-   }
+   },
+   "attack": "pause"
   }
  },
  "boss": {
@@ -337,7 +344,11 @@
      "solution": "{1, 2} → 2개, ∅ → 0개"
     }
    ]
-  }
+  },
+  "attack": [
+   "fire",
+   "smash"
+  ]
  },
  "crops": {
   "c1": [

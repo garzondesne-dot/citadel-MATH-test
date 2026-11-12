@@ -381,7 +381,6 @@
   .rows { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2cqh 1.4cqw; max-width: 76cqw; }
   .h { display: flex; flex-direction: column; align-items: center; gap: 0.3cqh; }
   .h span { font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.2cqh 0.7cqw; border-radius: 999px; white-space: nowrap; }
-  .h span.ok { color: var(--ok); }
   .h.nin { opacity: 0.4; }
   .split { position: absolute; left: 2cqw; right: 2cqw; top: 13cqh; bottom: 3cqh; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw; }
   .split.z1 { grid-template-columns: 1fr 0fr; } .split.z2 { grid-template-columns: 0fr 1fr; }

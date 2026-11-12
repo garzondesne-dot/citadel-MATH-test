@@ -5,7 +5,7 @@
   import { bossSubmit } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
-  import Hearts from '../battle/Hearts.svelte';
+  import Slots, { type Mark } from '../battle/Slots.svelte';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
   import { shortQ } from './short';
@@ -97,7 +97,7 @@
   {#if !s.ok && s.left > 0}
     {@const ready = filled(q, given)}
     <BottomAction battle disabled={locked || thinkLeft > 0 || !!flip || (!ready && nextOpen < 0)} why={thinkLeft > 0 ? `🤔 ${thinkLeft}초 — 학습지에서 다시 살펴봐요` : !ready && !locked ? (nextOpen >= 0 ? '답을 고르면 공격 · 다른 문항부터 풀어도 돼요' : '답을 고르면 낼 수 있어요') : ''} onmain={send} mainLabel={ready ? `${cur + 1}번 내기 (도전 기회 ${s.left}번)` : '다음 안 푼 문항'}>
-      {#snippet main()}{#if ready}<span>{cur + 1}번 공격</span><Hearts total={R.meta.bossTries} left={s.left} />{:else}<span>다음 안 푼 문항 ▶</span>{/if}{/snippet}
+      {#snippet main()}{#if ready}<span>{cur + 1}번 공격</span><Slots total={R.meta.bossTries} marks={Array.from({ length: Math.max(0, R.meta.bossTries - s.left) }, (_, k) => (s.ok && k === R.meta.bossTries - s.left - 1 ? 'ok' : 'bad') as Mark)} />{:else}<span>다음 안 푼 문항 ▶</span>{/if}{/snippet}
     </BottomAction>
   {:else if nextOpen >= 0}
     <BottomAction battle onmain={() => pick(nextOpen)} mainLabel="다음 안 푼 문항">{#snippet main()}<span>다음 안 푼 문항 ▶</span>{/snippet}</BottomAction>

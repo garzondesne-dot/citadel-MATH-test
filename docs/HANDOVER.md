@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b40 · 2026-11-12
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b41 · 2026-11-12
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -12,6 +12,7 @@
 | b29 · b31 | #142-2 · #146 | 🏰 디펜스(정식 td.js 계산 · 타워 힘 모두 같음) · 교환 · 업그레이드 고르기 · 용사 바꾸기 · 컷인 · 🎵 쉼터 곡 · 놀이 그림 |
 | b30 · b32 · b33 | #143 · #147 | 📋 게시판 던전 1인 · 팀(모집 · 합류 · 대기실 · 수호자 · 힌트 · 멈춤 · 순위) · 🔁 진행 이어받기 |
 | b34 ~ b36 | #148 · #150 | 룬 키패드 그림 · ⚒ 모루(정식 연성 · 카드 54 · 도감 · 특전) |
+| b41 | #152 | 💥 몬스터 공격 6종(등록 표 raid/attacks.ts · 차시 팩 attack · 보스 번갈아 · 짝 표 tools/pack-from-release/attacks.json) · ▢ 도전 칸(✔ · 노랑 · −) · ⚡ 기력(충전 · ⛓ 묶기 · 💚 친구 힐 · 🌟 필살기 조건) |
 | b40 | #163 ②③④ | 🔁 정식 칸 꼴(수업 기록 mons o·f·x·-·n · bossM · boss · bossN · won / 💎 · EXP · 카드 = 칸마다 써서 정식 칸 안 지움 · buy 지도 → 경제 0판 이전 / 명단 roster · rosterMask · 시험 계정 tester) · 복사 도구 `tools/copy-from-release` · 옮긴 계정 = 처음 로그인으로 잇기 · ⏸ 수업 중 새 판 알림 미룸 |
 | b39 | #157 · #158 · #159 · #160 | 📺 TV 전투 장면 = PixiJS 8.6.6 캔버스(TV 에서만 불러옴 · WebGL 없으면 같은 배치 DOM · `?dom`) · TV 글자 4 크기 · 2 굵기 · 🎮 시연 = 학생 폰 화면 그대로(메모리 방) · 📄 학습지 칸 그림(prep) · ⌨ 정식 룬 · ⚔ 졸개 자리 · 형광펜 · 게시판 7차시 |
 | b38 | #151 | 🟡 주요 단추 = 모든 학생 화면 한 자리(BottomAction 하나 · 56 · 바닥 20 · 폭 양옆 16) · 💥 피격 = 장면 띠 안 알림 + 문제 카드 덮개(움직임 0) |
@@ -35,7 +36,7 @@
 - 단위: `npm test`(153) · 화면: `npm run build` → `npx vite preview --port 4173` → `NODE_PATH=$(npm root -g) node tools/e2e/<이름>.cjs <그림 폴더>`
 - 에뮬레이터가 필요한 것: `rest` · `td` · `team` · `team-drv` · `me` · `gate` · `server` (`cd firebase && firebase emulators:start --only database,auth --project demo-citadel-test`)
 - 이 기기만: `board` · `theme` · `camp` · `myhero` · `tabs`(한글 파일 이름 = 브라우저 `LANG=ko_KR.UTF-8`)
-- 화면 시험 고리(학생 화면엔 안 보임): `window.__board`(지금 단계 맞히기 · 틀리기) · `__BOARD_SEC` · `__TD_PICK` · `__TD_SPEED` · `__bgm` · `__strike`(몬스터 공격 한 번) · `__tvFake(n)`(TV 방에 가상 학생 n) · `__arena`(TV 장면 그리기 방식 · 배치 · 체력)
+- 화면 시험 고리(학생 화면엔 안 보임): `window.__board`(지금 단계 맞히기 · 틀리기) · `__BOARD_SEC` · `__TD_PICK` · `__TD_SPEED` · `__bgm` · `__strike(ms, 종류)`(몬스터 공격 한 번 · pause · glitch · fog · ice · fire · smash) · `__tvFake(n)`(TV 방에 가상 학생 n) · `__arena`(TV 장면 그리기 방식 · 배치 · 체력)
 - 🟡 주요 단추 시험: `mainbtn`(이 기기 · 학생 화면 17곳 × 360 × 640 · 390 × 844 · 830 × 900 · 교사 폰 68 · 피격 전후 rect) — 학생 화면의 노란 주요 단추는 `src/ui/battle/BottomAction.svelte` 하나로만(`dock` = 화면 바닥 고정 · `dock={false}` = 바닥에 붙은 판 안 마지막 줄)
 
 ## 4. 📌 출시 전 메모 (아직 안 함 · 머리 방 · 선생님 결정 필요한 것 포함)

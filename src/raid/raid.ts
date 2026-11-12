@@ -58,11 +58,14 @@ export function gradeAttempt(L: LessonPack, R: Room, mid: string, uid: string, a
 const healsOf = (R: Room, mid: string) => R.heals?.[mid] || {};
 export const healsGiven = (R: Room, mid: string, uid: string) => keys(healsOf(R, mid)[uid]).length;
 const num = (R: Room, uid: string) => R.players?.[uid]?.num || 0;
-function healsTo(R: Room, mid: string, uid: string) {
+export function healsTo(R: Room, mid: string, uid: string) {
   const out: { from: string; k: number }[] = [];
   Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.entries(byK || {}).forEach(([k, to]) => { if (to === uid) out.push({ from, k: Number(k) }); }));
   return out.sort((a, b) => num(R, a.from) - num(R, b.from) || a.k - b.k);
 }
+/** ⛓ 묶기 (정식 v3 · heals 칸 「!bind@시각」 · 하나 = 3초) */
+export const BIND_SEC = 3;
+export const bindSec = (R: Room, mid: string) => Object.values(healsOf(R, mid)).reduce((a, byK) => a + Object.values(byK || {}).filter((v) => typeof v === 'string' && v.startsWith('!bind')).length, 0) * BIND_SEC;
 export const healsReceived = (R: Room, mid: string, uid: string) => Math.min(R.meta.healMax, healsTo(R, mid, uid).length);
 
 export interface Rec {
@@ -91,6 +94,7 @@ export function plainRecord(L: LessonPack, R: Room, mid: string, uid: string): R
     const prac = perfectAt >= 0 ? tries.slice(perfectAt + 1) : [];
     const ok = prac.filter((t) => t.total > 0 && t.correct === t.total).length;
     const used = (perfectAt >= 0 ? perfectAt + 1 : tries.length) + (prac.length - ok), left = Math.max(0, slots - used);
+    // ⚡ 기력 = 정식 v3 그대로: 퍼펙트 뒤 새 문제를 맞힌 수(기회를 안 씀) · 묶기 · 힐에 하나씩 씀 (소레이드 = 대장 처치 때 남은 칸 · chainRecord)
     const tokens = ok, tokLeft = Math.max(0, tokens - healsGiven(R, mid, uid));
     const fix = perfectAt >= 0 && !!last && prac.length > 0 && last.correct < last.total;
     return { tries, best, total, perfect: perfectAt >= 0, perfectAt, practice, submitted: tries.length > 0, slots, left, healed, fix, tokens, tokLeft,
@@ -285,7 +289,7 @@ export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const g = gameNow(R, now), focus = focusOn(R);
   const sl = solveLock(L, R, now), slHeld = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
   const start = R.state.stepAt != null ? R.state.stepAt : g;
-  const t = Math.max(0, (g - start - slHeld) / 1000);
+  const t = Math.max(0, (g - start - slHeld) / 1000 - bindSec(R, kind === 'boss' ? BOSS_ID : step.id)); // ⛓ 묶기 = 반 전체 묶기 × 3초만큼 공격이 늦어짐 (#152 · 정식 BIND_TOKEN)
   return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || held(R), focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
 }
 /** 게이지 진행 (기기마다 memo 를 들고 같은 규칙으로) — 주기가 바뀌어도 거꾸로 튀지 않게 (정식 atkTrack) */

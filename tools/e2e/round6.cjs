@@ -99,7 +99,7 @@ const log = (...a) => console.log(...a);
           if (k === 0 && s === 0 && id === 'u4') {
             await answer(await p.$('.bcard .item'), { groups: [['1', '2', '4'], []] }); await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(250);
             const fl = await p.$eval('.row .cell:nth-child(1)', (c) => c.className.replace(/svelte-\S+/g, '').trim()); await p.waitForTimeout(700);
-            log('  학생1 졸개① 틀림:', (await p.textContent('.bad b')).trim(), '| 하트', await p.$eval('.bh', (x) => x.getAttribute('aria-label')), '| 뒤집힘', fl, '→', await p.$eval('.row .cell:nth-child(1)', (c) => `${c.className.replace(/svelte-\S+/g, '').trim()}:${c.querySelector('.tx').textContent}`), '| 고른 칩', (await p.$$('.bcard .chip.on')).length);
+            log('  학생1 졸개① 틀림:', (await p.textContent('.bad b')).trim(), '| 도전 칸', await p.$eval('.pmain .sl', (x) => x.getAttribute('aria-label')).catch(() => ''), '| 뒤집힘', fl, '→', await p.$eval('.row .cell:nth-child(1)', (c) => `${c.className.replace(/svelte-\S+/g, '').trim()}:${c.querySelector('.tx').textContent}`), '| 고른 칩', (await p.$$('.bcard .chip.on')).length);
             if ((await p.$$('.bcard .chip.on')).length) errs.push('소레이드 ✘ 단계에 지난 선택이 남음');
             await shot(p, 'r116-soraid-retry-360.png'); await overflow(p, '소레이드 재도전');
           }

@@ -1,0 +1,11 @@
+{
+ "_": "💥 몬스터 ↔ 공격 짝 표 (#152 · 선생님 「이대로」 · 차시 팩 monsters[id].attack · boss.attack = 둘 번갈아 · 없으면 pause)",
+ "set-02": { "r0": "pause", "m1": "glitch", "m2": "pause", "m3": "smash", "m4": "ice", "boss": ["fire", "smash"] },
+ "set-03": { "m1": "pause", "m2": "smash", "m3": "ice", "m4": "glitch", "boss": ["fire", "smash"] },
+ "set-04": { "r1": "pause", "m1": "fire", "m2": "ice", "m3": "fog", "boss": ["ice", "smash"] },
+ "set-05": { "m1": "fire", "m2": "smash", "m3": "pause", "m5": "glitch", "boss": ["smash", "fire"] },
+ "set-06": { "m1": "fog", "m2": "ice", "m3": "pause", "u4": "smash", "u5": "ice", "u6": "pause", "u7": "pause", "boss": ["glitch", "fog"] },
+ "set-08": { "m1": "glitch", "m2": "smash", "m3": "fog", "m4": "pause", "m5": "pause", "boss": ["glitch", "ice"] },
+ "set-09": { "m1": "pause", "m2": "smash", "m3": "glitch", "m4": "pause", "m5": "glitch", "boss": ["smash", "glitch"] },
+ "set-10": { "m1": "fog", "m2": "smash", "m3": "pause", "m4": "fog", "boss": ["smash", "fog"] }
+}
