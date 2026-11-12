@@ -115,7 +115,7 @@ export interface Store {
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──
-export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean; /** 🔥 한 판 더 시작한 판 수 (소레이드) */ pr?: Record<string, number> }
+export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean; /** 반 · 들어온 판(BUILD) — 🔄 옛 판 확인 */ cls?: string; ver?: string; /** 출전 용사 (TV 이름표 그림) */ hero?: number; /** 🔥 한 판 더 시작한 판 수 (소레이드) */ pr?: Record<string, number> }
 /** ⚔ 소레이드 답 한 줄: s = 단계 · p = 판(0 진짜 · 1~ 연습) · g = 답 · w = 근거 빈칸 · ph = 서술형 통과 */
 export interface ChainSub { s: number; p: number; g: Given | ''; w?: 1; ph?: 1 }
 /** 방을 만들 때 다른 점 표에서 옮겨 적는 값 — 엔진은 이 값만 읽는다 (모드 이름으로 가르지 않음) */
@@ -131,9 +131,21 @@ export interface RoomRules {
   pct?: number;
 }
 export interface Room {
-  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null } & RoomRules;
+  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean } & RoomRules;
   /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
-  state: { step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>; /** ⏸ 집중 (정식과 같은 이름) · 켠 시각 · 이 단계에서 멈춘 합(ms) */ focus?: boolean; focusAt?: number | null; pauseMs?: number | null; /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름) */ deadline?: number | null; extend?: number };
+  state: {
+    step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>;
+    /** 🌫 정찰 늘리고 줄인 합(ms · 리모컨 ±30초) */ solveAdd?: Record<string, number>;
+    /** ⏸ 집중 · 🏕 쉼터 = 게임 시계 멈춤 (#118) · holdAt = 멈추기 시작한 시각 · pauseMs = 이 단계에서 멈춘 합 */
+    focus?: boolean; rest?: { at: number; min: number } | null; holdAt?: number | null; pauseMs?: number | null;
+    /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름 · 한 번) · 문 닫기 장면 */ deadline?: number | null; extend?: number; door?: { at: number; ask: boolean } | null; doorExt?: number | null;
+    /** 🎬 영상 · 📄 문제 창 (단계 id) · 💬 TV 대기실 선생님 말 · 🎁 마지막 선물(TV 표시) · 🔄 새로 고침 보낸 시각 */
+    video?: string | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
+    /** 수업 끝 (닫힘) */ closed?: boolean;
+    /** 교실 TV: 교사 캠프 → 「⚔ 던전 입장」 누르면 던전 대기실 */ hall?: 'lobby' | null;
+  };
+  /** absent[uid] = 결석 (대기실에서 안 온 번호를 누름 · 인원에서 빠짐) */
+  absent?: Record<string, boolean>;
   players?: Record<string, RoomPlayer>;
   /** subs[mid][uid][attempt] = 학생 답 배열 */
   subs?: Record<string, Record<string, Record<string, Given[]>>>;

@@ -14,14 +14,20 @@
   import BossCard from './q/BossCard.svelte';
   import SymText from './q/SymText.svelte';
   import { fx } from './battle/fx.svelte';
+  import { BUILD } from '../build';
+  import { savedLook } from '../store/me.svelte';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
-  const { S, L, code, uid, num }: { S: Store; L: LessonPack; code: string; uid: string; num: number } = $props();
-  const nick = untrack(() => `학생 ${String(num).padStart(2, '0')}`);
+  const { S, L, code, uid, num, nick: nick0 = '', cls = '' }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string } = $props();
+  const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
+  // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
+  const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
+  const loadedAt = Date.now();
   const live = untrack(() => {
-    heartbeat(S, code, uid, num, nick);
-    const beat = setInterval(() => heartbeat(S, code, uid, num, nick), 3000);
+    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero });
+    hb();
+    const beat = setInterval(hb, 3000);
     const bye = () => leave(S, code, uid);
     addEventListener('pagehide', bye);
     const lr = liveRoom(S, code);
@@ -31,6 +37,7 @@
   onDestroy(() => { live.stop(); stopClock(); });
 
   const R = $derived(live.v.room);
+  $effect(() => { const t = R?.state.reload?.[uid]; if (t && t > loadedAt) location.reload(); });
   const now = $derived(clock.now); // ① 수업 시계 = 접속 · 체력 머릿수 · (b8) 남은 수업 시간
   const gnow = $derived(R ? gameNow(R, now) : now); // ② 게임 시계 (#118) = 공격 멈춤 초 · 생각 시간 — 집중이면 멈춤
   const step = $derived(R ? stepOf(L, R) : null);
@@ -73,7 +80,9 @@
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {/if}
 <section class="body" class:battle>
-  {#if !R}
+  {#if R?.state.closed && !result}
+    <div class="bcard"><span class="lab acc">수업이 끝났어요</span><p class="muted">캠프로 돌아가요.</p><a class="camp" href="?">🏕 내 캠프로</a></div>
+  {:else if !R}
     <div class="bcard"><span class="lab acc">기다리는 중</span><p class="muted">종합실이 아직 열리지 않았어요. 선생님 화면을 먼저 여세요.</p></div>
   {:else if isLobby(R)}
     <div class="bcard"><span class="lab acc">{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p></div>
@@ -82,6 +91,7 @@
       <div class="okline"><span class="ic">{bhp?.won ? '🏆' : '🏁'}</span><span><b>{bhp?.won ? '승리!' : '수업 끝'}</b><span>{nick}</span></span></div>
       <p class="big">{result.right} <small class="muted">/ {result.total} 맞힘</small></p>
       <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
+      {#if R.state.closed}<a class="camp" href="?">🏕 내 캠프로</a>{/if}
     </div>
   {:else if step?.kind === 'concept'}
     <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p><p class="muted">선생님 설명을 들어요.</p></div>
@@ -112,6 +122,12 @@
   {/if}
 </section>
 <SymSheet />
+{#if R && !R.state.closed && (R.state.focus || R.state.rest)}
+  <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
+  <div class="cover" role="status" aria-live="polite">
+    {#if R.state.focus}<b>📣 선생님에게 주목</b><p>게임은 멈춰 있어요 · 끝나면 그 자리에서 이어가요</p>{:else}<b>🏕 쉼터</b><p>잠깐 쉬어요 · 게임은 멈춰 있어요</p>{/if}
+  </div>
+{/if}
 
 <style>
   .body { max-width: 430px; margin: 0 auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
@@ -121,4 +137,8 @@
   .say { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
   .res { margin: 0; padding-left: 1.2rem; }
   .big small { font-size: var(--fs-small); }
+  .camp { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--accent-sh); }
+  .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
+  .cover b { font-size: 28px; color: var(--accent); }
+  .cover p { margin: 0; color: var(--text-2); }
 </style>

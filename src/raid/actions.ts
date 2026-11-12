@@ -1,6 +1,7 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, bossState, chainRecord, gameNow, isChain, isEnd, nextIdx, plainRecord, PRAC_MAX, pracUsed, stepOf } from './raid';
+import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf } from './raid';
+import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
 export const roomPath = (code: string) => `rooms/${code}`;
@@ -20,20 +21,96 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
   openRoom(S, L, code, P);
 }
 
-/** 종합실 「다음 ▶」: 다음 단계로 (「다음 판에서」 자리는 건너뜀) */
+/** 단계 옮기기 (리모컨 ◀ · 「다음 ▶」 · TV 「앞으로 ▶」 · 「« 뒤로」) — 새 단계 = 멈춘 합 0 · 집중 · 쉼터 중이면 지금부터 멈춤 · 문제 창 · 영상은 닫힘
+ *  입장 → 첫 단계(수업 시작) 때 마감 시각을 잡음: 방에 limit 가 있으면 그 교시 끝(교시 밖이면 지금 + 50분) — 정식 go() */
+function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
+  const t = S.now(), st = R.state;
+  const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? (periodEnd(t) ?? t + 50 * 60e3) : st.deadline ?? null;
+  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl });
+}
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || isEnd(L, R)) return;
-  const t = S.now(); // 새 단계 = 멈춘 합 0 · 집중이 켜져 있으면 지금부터 멈춤
-  S.set(`${roomPath(code)}/state`, { ...R.state, step: nextIdx(L, R), stepAt: t, pauseMs: 0, focusAt: R.state.focus ? t : null });
+  goTo(S, L, code, R, nextIdx(L, R));
 }
-/** ⏸ 집중 켜기 · 끄기 (#118): 켜면 그 시각 · 끄면 멈춘 시간을 pauseMs 에 더함 → 게임 시계가 멈춘 자리에서 이어감 */
+/** ◀ 앞 단계 (「다음 판에서」 자리는 건너뜀 · 입장 화면까지는 안 돌아감) */
+export function prevStep(S: Store, L: LessonPack, code: string): void {
+  const R = getRoom(S, code);
+  if (!R || isLobby(R)) return;
+  let i = Math.min(stepIdx(R), L.steps.length) - 1;
+  while (i > 0 && L.steps[i]?.later) i--;
+  if (i < 0 || i === stepIdx(R)) return;
+  goTo(S, L, code, R, i);
+}
+/** 멈춤(집중 · 쉼터)을 바꿀 때 시계 맞추기: 멈춤이 시작되면 holdAt · 풀리면 멈춘 시간을 pauseMs 에 더함 */
+function setHold(S: Store, code: string, R: Room, patch: Partial<Room['state']>): void {
+  const t = S.now(), st = R.state, before = held(R), next = { ...st, ...patch } as Room['state'];
+  const after = !!next.focus || !!next.rest;
+  if (!before && after) next.holdAt = t;
+  if (before && !after) { next.pauseMs = Number(st.pauseMs || 0) + Math.max(0, t - Number(st.holdAt ?? t)); next.holdAt = null; }
+  S.set(`${roomPath(code)}/state`, next);
+}
+/** ⏸ 집중 켜기 · 끄기 (#118): 게임 시계가 멈추고 끄면 멈춘 자리에서 이어감 · 수업 시계(남은 시간 · 문 닫기)는 그대로 */
 export function setFocus(S: Store, code: string, on: boolean): void {
   const R = getRoom(S, code);
   if (!R || !!R.state.focus === on) return;
-  const t = S.now(), st = R.state;
-  if (on) S.set(`${roomPath(code)}/state`, { ...st, focus: true, focusAt: t });
-  else S.set(`${roomPath(code)}/state`, { ...st, focus: false, focusAt: null, pauseMs: Number(st.pauseMs || 0) + Math.max(0, t - Number(st.focusAt ?? t)) });
+  setHold(S, code, R, { focus: on });
+}
+/** 🏕 쉼터 켜기 · 끄기 (정식 setRest · 기본 5분) — 쉬는 동안 게임 시계 멈춤 */
+export function setRest(S: Store, code: string, on: boolean, min = 5): void {
+  const R = getRoom(S, code);
+  if (!R || !!R.state.rest === on) return;
+  setHold(S, code, R, { rest: on ? { at: S.now(), min } : null });
+}
+/** 🎬 영상 · 📄 문제 창 (TV) — 단계 id 또는 끄기 */
+export function setVideo(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/video`, id); }
+export function setSheet(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/sheet`, id); }
+/** 🏛 교실 TV 「⚔ 던전 입장」: 교사 캠프 → 던전 대기실 */
+export function hallLobby(S: Store, code: string): void { S.set(`${roomPath(code)}/state/hall`, 'lobby'); }
+/** 💬 TV 대기실 선생님 말풍선 (20자) */
+export function setBubble(S: Store, code: string, text: string): void { S.set(`${roomPath(code)}/state/bubble`, text.slice(0, 20) || null); }
+/** 체력 기준 % (리모컨 ±5% · 대기실 설정) · 10 ~ 100 */
+export function setPct(S: Store, code: string, pct: number): void { S.set(`${roomPath(code)}/meta/pct`, Math.max(10, Math.min(100, Math.round(pct)))); }
+/** 정찰 초 · 생각 초 (대기실 설정 · 다음 몬스터부터) */
+export function setSolveSec(S: Store, code: string, sec: number): void { S.set(`${roomPath(code)}/meta/solve`, Math.max(0, Math.min(300, Math.round(sec)))); }
+export function setThink(S: Store, code: string, sec: number): void { S.set(`${roomPath(code)}/meta/think`, Math.max(0, Math.min(30, Math.round(sec)))); }
+/** 🌫 정찰 ±초 (정식 setSolve add): 늘리면 끝이 뒤로 · 남은 시간보다 많이 줄이면 바로 등장 */
+export function scoutAdd(S: Store, L: LessonPack, code: string, sec: number): void {
+  const R = getRoom(S, code), lk = R && solveLock(L, R, S.now());
+  if (!R || !lk || !lk.on) return;
+  if (sec < 0 && lk.left <= -sec * 1000) { appearNow(S, L, code); return; }
+  S.set(`${roomPath(code)}/state/solveAdd/${lk.id}`, Number(R.state.solveAdd?.[lk.id] || 0) + sec * 1000);
+}
+/** ⏰ +5분 (정식 extendTime · 수업 하나에 한 번) — 문 닫기 장면에서 누르면 「선생님이 문을 밀어 열었다」 */
+export function extendTime(S: Store, code: string): string | null {
+  const R = getRoom(S, code);
+  if (!R) return '방이 없어요';
+  if (R.state.extend) return '연장은 한 번만 할 수 있어요';
+  S.set(`${roomPath(code)}/state`, { ...R.state, extend: 5, ...(R.state.door ? { door: null, doorExt: S.now() } : {}) });
+  return null;
+}
+/** 👑 문 닫기 장면 시작 (마감 순간 · 여러 기기가 불러도 한 번) · ask = +5분을 아직 안 썼으면 30초 묻기 */
+export function doorStart(S: Store, code: string): void {
+  const R = getRoom(S, code);
+  if (!R || R.state.door || R.state.closed) return;
+  S.set(`${roomPath(code)}/state/door`, { at: S.now(), ask: !R.state.extend });
+}
+/** 수업 끝 (리모컨 「수업 끝」 · 문이 닫힘) */
+export function endClass(S: Store, code: string): void {
+  const R = getRoom(S, code);
+  if (!R) return;
+  S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null });
+}
+/** 대기실: 안 온 번호를 눌러 결석 (다시 누르면 풂) · 🔄 옛 판 학생에게 새로 고침 보내기 */
+export function setAbsent(S: Store, code: string, uid: string, on: boolean): void { S.set(`${roomPath(code)}/absent/${uid}`, on ? true : null); }
+export function sendReload(S: Store, code: string, uids: string[]): void { const t = S.now(); uids.forEach((u) => S.set(`${roomPath(code)}/state/reload/${u}`, t)); }
+/** 💎 선생님 선물 (정식 Gem.gift · 하루 한도 밖 · 학생 캠프 「🎁 선생님 선물」): gifts/{uid}/{k} = { g, at, code } · TV 에 「🎁 선생님 선물!」 (받은 이름은 띄우지 않음) */
+export function giveGift(S: Store, code: string, uids: string[], g: number): number {
+  const t = S.now(), n = Math.max(0, Math.round(g));
+  if (!n || !uids.length) return 0;
+  uids.forEach((u, i) => S.set(`gifts/${u}/${t}_${i}`, { g: n, at: t, code }));
+  S.set(`${roomPath(code)}/state/gift`, { at: t, n: uids.length, g: n });
+  return uids.length;
 }
 /** 종합실 「⚔ 등장!」: 정찰을 일찍 끝냄 */
 export function appearNow(S: Store, L: LessonPack, code: string): void {
@@ -44,9 +121,12 @@ export function appearNow(S: Store, L: LessonPack, code: string): void {
 }
 
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */
-export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string): void {
+export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number }): void {
   const base = `${roomPath(code)}/players/${uid}`;
   S.set(`${base}/num`, num); S.set(`${base}/nick`, nick); S.set(`${base}/seen`, S.now());
+  if (more?.cls) S.set(`${base}/cls`, more.cls);
+  if (more?.ver) S.set(`${base}/ver`, more.ver);
+  if (more?.hero != null) S.set(`${base}/hero`, more.hero);
 }
 export function leave(S: Store, code: string, uid: string): void {
   S.set(`${roomPath(code)}/players/${uid}`, null);

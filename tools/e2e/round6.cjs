@@ -21,15 +21,17 @@ const log = (...a) => console.log(...a);
   const open = async (url) => { const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); await p.goto(base + url); return p; };
   const hall = await open('?role=hall&mode=test&room=B4');
   await hall.setViewportSize({ width: 1000, height: 900 });
-  await hall.waitForSelector('.next');
+  await hall.waitForSelector('.dock');
   const st = [await open('?role=student&room=B4'), await open('?role=student&room=B4')];
   await hall.waitForTimeout(1200);
+  await hall.mouse.move(500, 400); await hall.click('.dock .t:has-text("고정")'); // 📌 조작 막대 고정 (b8 교실 TV)
   const shot = async (p, name) => { await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(150); await p.screenshot({ path: `${SHOTS}/${name}` }); };
   const overflow = async (p, where) => { const o = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); if (o > 0) errs.push(`가로 넘침 ${o}px · ${where}`); };
   // 누르는 칸 48px (스킬 5절 3): 보이는 단추 · 칩 · 답안 줄 칸 높이
   const taps = async (p, where) => { const small = await p.$$eval('.bcard button, .act .btn, .chip, .rune, .opt, .row .cell', (bs) => bs.filter((x) => x.offsetParent && x.getBoundingClientRect().height < 44).map((x) => `${x.className}:${Math.round(x.getBoundingClientRect().height)}`)); if (small.length) errs.push(`누름 칸 작음 ${where}: ${small.slice(0, 3).join(' ')}`); };
-  const next = async () => { await hall.click('.next'); await hall.waitForTimeout(250); };
-  const appear = async () => { const b2 = await hall.$('.scout button'); if (b2) await b2.click(); await hall.waitForTimeout(250); };
+  const next = async () => { await hall.click('.dock .go'); await hall.waitForTimeout(250); };
+  const ko = async () => { const t = await hall.$('.arena .hp span:last-child'); return !!t && /^0 \//.test((await t.textContent()).trim()); };
+  const appear = async () => { await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 9000 }); await hall.waitForTimeout(250); }; // TV 에는 「등장」 단추 없음 (⑮) · 테스트 정찰 5초
   const mainBtn = (p) => p.$('.act .btn');
   const waitMain = (p) => p.waitForFunction(() => { const g = document.querySelector('.act .btn'); return g && !g.disabled; }, null, { timeout: 9000 });
   async function answer(item, a) {
@@ -48,12 +50,12 @@ const log = (...a) => console.log(...a);
     await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(250);
   }
   let mi = 0;
-  await next();
+  await next(); await next(); // 교사 캠프 → ⚔ 던전 입장 → ▶ 수업 시작
   for (let guard = 0; guard < 20; guard++) {
-    const title = (await hall.textContent('h1')).trim();
-    if (/승리|수업 끝/.test(title)) break;
+    if (await hall.$('.endv')) break;
+    const title = (await hall.textContent('.ttl')).replace(/^\d+차시 · /, '').trim();
     if (/개념/.test(title)) { await next(); continue; }
-    const id = title.startsWith('👑') ? 'boss' : ['m1', 'm2', 'm3', 'u4', 'u5', 'u6', 'u7'][mi++];
+    const id = /형성평가/.test(title) ? 'boss' : ['m1', 'm2', 'm3', 'u4', 'u5', 'u6', 'u7'][mi++];
     log(`— ${title} (${id})`);
     if (id === 'm1') { // 정찰 카드 · 준비 완료
       await st[0].waitForSelector('.bcard'); await shot(st[0], 'b4-scout-360.png'); await overflow(st[0], '정찰'); await taps(st[0], '정찰');
@@ -64,7 +66,7 @@ const log = (...a) => console.log(...a);
     if (id === 'boss') {
       for (const [k, p] of st.entries()) {
         for (let i = 0; i < 6; i++) {
-          if (await hall.$('.ko')) break;
+          if (await ko()) break;
           await p.click(`.row .cell:nth-child(${i + 1})`); await p.waitForTimeout(100);
           const item = await p.$('.bcard .item'); if (!item) continue;
           if (k === 0 && i === 1) {
@@ -82,11 +84,11 @@ const log = (...a) => console.log(...a);
           else await answer(item, A.boss[i]);
           await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(150);
         }
-        if (k === 0) { await p.waitForSelector('.gt .r'); await p.waitForTimeout(200); log('  학생1 채점표:', await p.$$eval('.gt .r', (rs) => rs.map((r) => `${r.querySelector('.n').textContent}${r.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').replace(/\bg-/g, '').trim()} ${r.querySelector('.a').textContent}`).join(' | ')), '|', (await p.textContent('.bcard .lab')).trim()); await shot(p, 'r116-boss-table-360.png'); await overflow(p, '형성평가 채점표'); log('  학생1 도달: 6 / 6 · 종합실', (await hall.textContent('.bar span')).trim()); continue; }
-        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '/ 6 · 종합실', (await hall.textContent('.bar span')).trim());
+        if (k === 0) { await p.waitForSelector('.gt .r'); await p.waitForTimeout(200); log('  학생1 채점표:', await p.$$eval('.gt .r', (rs) => rs.map((r) => `${r.querySelector('.n').textContent}${r.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').replace(/\bg-/g, '').trim()} ${r.querySelector('.a').textContent}`).join(' | ')), '|', (await p.textContent('.bcard .lab')).trim()); await shot(p, 'r116-boss-table-360.png'); await overflow(p, '형성평가 채점표'); log('  학생1 도달: 6 / 6 · 종합실', (await hall.textContent('.arena .hp span:last-child')).trim()); continue; }
+        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '/ 6 · 종합실', (await hall.textContent('.arena .hp span:last-child')).trim());
       }
       await overflow(st[0], '형성평가'); await taps(st[0], '형성평가');
-      log('  보스:', (await hall.$('.ko')) ? (await hall.textContent('.ko')).trim() : '아직');
+      log('  보스:', (await ko()) ? '🏆 승리!' : '아직');
       await next(); continue;
     }
     if (id.startsWith('u')) {
@@ -108,7 +110,7 @@ const log = (...a) => console.log(...a);
         await overflow(p, `${id} 끝`);
       }
       if (id === 'u4') { const p = st[1]; await p.waitForTimeout(1600); await (await mainBtn(p)).click(); await p.waitForSelector('.row .cell'); log('  한 판 더: 📜 원문', !!(await p.$('details.story')), '|', (await p.textContent('.bcard .lab.acc')).trim(), '|', (await p.textContent('.bad b')).trim(), '| 칸', await p.$$eval('.row .cell', (cs) => cs.map((c) => c.querySelector('.tx').textContent).join(' '))); }
-      log('  쓰러짐:', !!(await hall.$('.ko')));
+      log('  쓰러짐:', await ko());
       await next(); continue;
     }
     // 일반 몬스터
@@ -152,11 +154,11 @@ const log = (...a) => console.log(...a);
       await solveMonster(p, [{}, A.m2[1], A.m2[2]]);
     } else { for (const p of st) await solveMonster(p, A[id]); }
     for (const [k, p] of st.entries()) log(`  학생${k + 1}:`, (await p.textContent('.okline b').catch(() => '?')).trim());
-    log('  쓰러짐:', !!(await hall.$('.ko')));
+    log('  쓰러짐:', await ko());
     await next();
   }
   await hall.waitForTimeout(400);
-  log('끝 종합실:', (await hall.textContent('h1')).trim(), '| 학생1:', (await st[0].textContent('.big')).trim(), '| 학생2:', (await st[1].textContent('.big')).trim());
+  log('끝 종합실:', (await hall.textContent('.endv b')).trim(), '| 학생1:', (await st[0].textContent('.big')).trim(), '| 학생2:', (await st[1].textContent('.big')).trim());
   await overflow(st[0], '결과');
   log('오류', errs);
   await b.close();

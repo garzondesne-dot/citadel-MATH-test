@@ -174,7 +174,7 @@ export function chainDown(L: LessonPack, R: Room, mid: string, now: number) {
 /** 접속한 학생 (선생님 · 종합실 빼고 · 최근 PRESENCE_MS 안에 소식) — 번호 순 */
 export function activeIds(R: Room, now: number): string[] {
   const P = R.players || {};
-  return keys(P).filter((u) => !P[u]?.teacher && classNow(R, now) - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
+  return keys(P).filter((u) => !P[u]?.teacher && !R.absent?.[u] && classNow(R, now) - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
 }
 export const headcount = (R: Room, now: number) => R.state.headcount || Math.max(1, activeIds(R, now).length);
 export const pctOf = (L: LessonPack, R: Room) => R.meta.pct ?? L.defaultPct ?? 90;
@@ -226,8 +226,11 @@ export function bossHp(L: LessonPack, R: Room, now: number) {
 //      집중이면 함께 멈추고 끄면 그 자리에서 이어감 · 단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로)
 export const classNow = (_R: Room | null, wall: number): number => wall;
 export const focusOn = (R: Room) => !!R.state.focus;
+export const restOn = (R: Room) => !!R.state.rest;
+/** 게임 시계를 멈추는 것 = ⏸ 집중 · 🏕 쉼터 (둘이 겹쳐도 멈춘 시간은 한 번만 셈) */
+export const held = (R: Room) => focusOn(R) || restOn(R);
 export function gameNow(R: Room, wall: number): number {
-  const st = R.state, at = st.focus && st.focusAt != null ? Math.min(wall, Number(st.focusAt)) : wall;
+  const st = R.state, at = held(R) && st.holdAt != null ? Math.min(wall, Number(st.holdAt)) : wall;
   return at - Number(st.pauseMs || 0);
 }
 
@@ -242,7 +245,7 @@ export function solveLock(L: LessonPack, R: Room, now: number) {
   const id = step.kind === 'boss' ? BOSS_ID : step.id, sec = NEWR(R) ? Number(R.meta.solve) : 0;
   if (!(sec > 0)) return null;
   const g = gameNow(R, now), t0 = R.state.stepAt != null ? Number(R.state.stepAt) : g;
-  const end = Math.min(t0 + sec * 1000, Number(R.state.solveEnd?.[id]) || Infinity);
+  const end = Math.min(t0 + sec * 1000 + Number(R.state.solveAdd?.[id] || 0), Number(R.state.solveEnd?.[id]) || Infinity);
   return { id, sec, t0, end, left: Math.max(0, end - g), on: g < end };
 }
 
@@ -266,10 +269,10 @@ export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const per = a[0] + (a[1] - a[0]) * (1 - ratio);
   const phase = kind === 'boss' ? bossPhase(ratio) : null, lock = phase ? phase.lock : a[2];
   const g = gameNow(R, now), focus = focusOn(R);
-  const sl = solveLock(L, R, now), held = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
+  const sl = solveLock(L, R, now), slHeld = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
   const start = R.state.stepAt != null ? R.state.stepAt : g;
-  const t = Math.max(0, (g - start - held) / 1000);
-  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || focus, focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
+  const t = Math.max(0, (g - start - slHeld) / 1000);
+  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || held(R), focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
 }
 /** 게이지 진행 (기기마다 memo 를 들고 같은 규칙으로) — 주기가 바뀌어도 거꾸로 튀지 않게 (정식 atkTrack) */
 export function atkTrack(memo: { key?: string; start?: number; hit?: boolean }, c: Atk, key: string) {

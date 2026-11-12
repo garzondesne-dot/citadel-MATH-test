@@ -14,7 +14,7 @@ const base = 'http://localhost:4173/';
   const c0 = await open('?role=camp&room=CP'); await c0.waitForSelector('.stage'); await c0.waitForTimeout(400);
   log('닫힘:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim(), '|', (await c0.textContent('.act .why')).trim());
   // 수업 열기
-  const hall = await open('?role=hall&mode=test&room=CP'); await hall.waitForSelector('.next'); await c0.waitForTimeout(500);
+  const hall = await open('?role=hall&mode=test&room=CP'); await hall.waitForSelector('.dock'); await c0.waitForTimeout(500);
   log('열림:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim());
   await c0.screenshot({ path: `${SHOTS}/b6-camp-first-360.png` }); await over(c0, '처음');
   log('정보판:', (await c0.textContent('.hero-card')).replace(/\s+/g, ' ').trim(), '| 사다리', await c0.$$eval('.rung', (rs) => rs.map((r) => `${r.textContent.replace(/\s+/g, ' ').trim()}[${[...r.classList].filter((c) => !/svelte|rung/.test(c)).join('')}]`).join(' / ')), '|', (await c0.textContent('.next')).trim());

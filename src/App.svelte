@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
   import packJson from './packs/set-06.json';
   import { PROFILES } from './model/profiles';
@@ -8,6 +9,10 @@
   import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
+  import Title from './ui/Title.svelte';
+  import TeacherApp from './ui/teacher/TeacherApp.svelte';
+  import { pupil, savedLogin, type Live, type Pupil } from './school/school';
+  import { liveValue } from './ui/room.svelte';
 
   const L = packJson as LessonPack;
   const errs = validate(L);
@@ -32,20 +37,33 @@
     try { sessionStorage.setItem('citadel-v1-tab', JSON.stringify(me)); } catch { /* 무시 */ }
     return me;
   }
-  const me = role === 'student' ? tabId() : null;
+  // ⓪ 로그인한 폰 = 그 학생 (반 + 번호) · 아니면 탭마다 따로인 이름표(시험 · 두 탭 체험)
+  let login = $state<Pupil | null>(savedLogin());
+  // 시험 · 두 탭 체험: ?as=1-3:5 = 그 반 · 번호 학생으로 (로그인 없이)
+  const asP = (() => { const m = /^(\d-\d):(\d+)$/.exec(q.get('as') || ''); return m ? pupil(m[1] as string, Number(m[2])) : null; })();
+  const me = untrack(() => (role === 'student' ? asP ? { uid: asP.uid, num: asP.num, nick: asP.name, cls: asP.cls } : (login && !q.get('tab') ? { uid: login.uid, num: login.num, nick: login.name, cls: login.cls } : { ...tabId(), nick: '', cls: '' }) : null));
+  // 학생 캠프 = 내 반에 열린 수업 (없으면 닫힌 문)
+  const lvApp = liveValue<Live>(S, 'school/live');
+  const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && !lvApp.v.val.test ? lvApp.v.val.code : '');
 </script>
 
-{#if role === 'student' || role === 'camp'}<div class="beta-pill" class:low={role === 'camp'} aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
-<main class:full={role === 'student' || role === 'camp'}>
+{#if role !== 'dev'}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+<main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
-    <Hall {S} {L} {code} {P} />
+    <Hall {S} {L} {code} {P} fixed={!!q.get('room')} />
   {:else if role === 'camp'}
     <Camp {S} {L} {code} />
+  {:else if role === 'teacher'}
+    <TeacherApp {S} packs={[L]} />
   {:else if role === 'student' && me}
-    <Student {S} {L} {code} uid={me.uid} num={me.num} />
-  {:else}
+    <Student {S} {L} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
+  {:else if !role && login}
+    {#key campCode}<Camp {S} {L} code={campCode} pupil={login} />{/key}
+  {:else if !role}
+    <Title {S} onin={(p) => (login = p)} />
+  {:else if role === 'dev'}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
       <p>{L.no}차시 {L.title} · 같은 브라우저에서 탭 두 개</p>
@@ -69,6 +87,8 @@
   :global(a) { color: var(--accent); }
   :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
   .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
+  .beta-pill.hall { top: auto; bottom: 8px; left: 8px; transform: none; }
+  .beta-pill.tpill { top: 0; left: 2px; transform: none; height: 16px; font-size: 11px; padding: 0 6px; opacity: 0.7; }
   .beta-pill.low { top: 62px; left: var(--s4); transform: none; }
   .beta-pill { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; height: 26px; padding: 0 10px; border-radius: 13px; background: rgba(8, 9, 12, 0.55); color: var(--accent); font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; }
   main { padding: var(--s4); }

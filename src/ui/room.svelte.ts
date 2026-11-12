@@ -7,3 +7,9 @@ export function liveRoom(S: Store, code: string) {
   const stop = S.watch<Room>(roomPath(code), (r) => { v.room = r; });
   return { v, stop };
 }
+/** 저장소 한 갈래를 반응형으로 (school/live · gifts 등) */
+export function liveValue<T>(S: Store, path: string) {
+  const v = $state<{ val: T | null }>({ val: S.get<T>(path) });
+  const stop = S.watch<T>(path, (x) => { v.val = x; });
+  return { v, stop };
+}
