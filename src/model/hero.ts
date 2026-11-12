@@ -11,7 +11,8 @@ export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설
 export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
 export const FAMS: { id: string; name: string; ids: string[] }[] = DATA.fams;
 const FX = DATA.fx as Record<string, { name: string; fam: string; tier: number; price: number | null; scroll: number }>;
-export const SKILL_NAMES: Record<string, string> = Object.fromEntries(Object.entries(FX).map(([k, v]) => [k, v.name]));
+// 스킬 이름 = 엔진 기본 이름 · 과목 팩이 정한 이름이 있으면 그것 (#140 · SUBJ.skillNames)
+export const SKILL_NAMES: Record<string, string> = Object.fromEntries(Object.entries(FX).map(([k, v]) => [k, SUBJ.skillNames?.[k] ?? v.name]));
 export const SKILL_PRICE: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.price != null).map(([k, v]) => [k, v.price as number]));
 export const SKILL_SCROLL: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.scroll).map(([k, v]) => [k, v.scroll]));
 /** 「⚔ 달빛 베기」 → 「달빛 베기」 */

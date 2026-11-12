@@ -236,5 +236,8 @@
   "photoWhere": "6차시 문제 4",
   "surveyLesson": "6차시",
   "surveyHard": "드모르간 · 차집합 개수"
+ },
+ "skillNames": {
+  "venn": "📐 벤 다이어그램"
  }
 }
