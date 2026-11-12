@@ -14,18 +14,24 @@
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
-  import type { Pupil } from '../../school/school';
+  import { saveLogin, type Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Board from '../board/Board.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
-  import { meBound } from '../../store/meSync';
+  import { meBound, unbindMe } from '../../store/meSync';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
   //   이름표 = 상황에 따라: 차시 던전 = 늘(열림 금빛 반짝 · 닫힘 흐림) · 새 소식 = 이름 + 빨간 숫자 · 모루 = ★n · 처음 = 흰 이름표 · 써 봤고 소식 없음 = 숨김 · 빈 땅 = 2초 모두
   const { S, L, code, pupil = null }: { S: Store; L: LessonPack; code: string; pupil?: Pupil | null } = $props();
+  async function logout() {
+    saveLogin(null); unbindMe();
+    const A = (S as Store & { auth?: import('firebase/auth').Auth }).auth;
+    if (A) { try { const fa = await import('firebase/auth'); await fa.signOut(A); } catch { /* 무시 */ } }
+    location.replace(`${location.pathname}`);
+  }
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
   const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true);
   const me = M.me;
@@ -211,6 +217,8 @@
     {#snippet title()}⚙ 설정{/snippet}
     <span class="slab">🎨 테마</span>
     <ThemePicker now={theme} {feats} onpick={pickTheme} />
+    <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
+    {#if pupil}<button type="button" class="out" onclick={logout}>↪ 로그아웃 · 첫 화면으로 <small>{pupil.cls}반 {pupil.num}번</small></button>{/if}
   </Sheet>
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
@@ -237,6 +245,8 @@
 {/if}
 
 <style>
+  .out { margin-top: var(--s3); min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); display: flex; align-items: center; justify-content: center; gap: var(--s2); }
+  .out small { color: var(--text-3); font-weight: 500; }
   .codebtn { flex: 1; min-height: var(--btn-h); padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .cg { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text-2); } .cg b { color: var(--text); }
   .cin { width: 100%; box-sizing: border-box; height: 56px; border-radius: var(--r); border: 2px solid var(--line); background: var(--bg); color: var(--text); font: 700 26px var(--font); letter-spacing: 6px; text-align: center; }
