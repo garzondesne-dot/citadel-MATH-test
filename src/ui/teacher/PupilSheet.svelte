@@ -71,6 +71,7 @@
   .hd b { font-size: 19px; } .hd small { flex: 1; color: var(--text-2); font-size: 13px; }
   .x { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text-2); font-size: 18px; align-self: center; }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4) var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
+  .body > * { flex-shrink: 0; } /* 스크롤 A (#131) */
   .four { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .four div, .row3 div { border-radius: var(--r); background: var(--surface-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .four small, .row3 small { font-size: 12px; color: var(--text-2); font-weight: 700; }

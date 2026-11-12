@@ -5,18 +5,20 @@
   import { CLASSES, isBeta } from '../../school/school';
   import { download, makeXlsx } from '../../school/xlsx';
   import Sheet from '../battle/Sheet.svelte';
+  import { untrack } from 'svelte';
 
-  // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 840)
-  //   폰 = 위 고정(묶음 3 → 보기 칩 · 가로 밀기 · ⬇ 엑셀) + 가운데만 넘김 / 펼친 화면 = 왼쪽 묶음 · 보기 목록 + 오른쪽 내용
+  // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
+  //   폰 = 위 고정(묶음 3칸 → 보기 칩 · 가로 밀기) + 가운데만 넘김 · ⬇ 엑셀 = 학생 탭 [명단 · 대시보드] 줄 오른쪽 끝(#131)
+//   스크롤 A(#131 덧붙임): 세로 스크롤 = 가운데 내용 하나 · 표 · 목록은 내용만큼(세로 제한 없음) · 표는 가로 밀기만 · 머리 줄 고정 없음(첫 열만 고정) / 펼친 화면 = 왼쪽 묶음 · 보기 목록 + 오른쪽 내용
   //   넓은 표 = 「번호 · 이름」 첫 열 고정 + 가로 밀기 · 색 + 글자 함께 · 이름 누름 = 학생 한 명 시트
-  const { S, cls, wide = false, onpick, onclass }: { S: Store; cls: string; wide?: boolean; onpick: (s: Stud) => void; onclass: (c: string) => void } = $props();
+  let { S, cls, wide = false, xl = $bindable(false), onpick, onclass }: { S: Store; cls: string; wide?: boolean; xl?: boolean; onpick: (s: Stud) => void; onclass: (c: string) => void } = $props();
   let vid = $state('grid');
   let lastCls = '';
   $effect(() => { if (cls !== lastCls) { lastCls = cls; vid = cls === ALL ? 'cmp' : vid === 'cmp' ? 'grid' : vid; } });
   const grp = $derived(GROUPS.findIndex((g) => g.views.some((x) => x[0] === vid)));
   const V = $derived(view(S, cls, vid));
   const sc = $derived(scope(S, cls));
-  let xl = $state(false), withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
+  let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   function excel() {
     const name = `모두의던전_대시보드_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
@@ -27,6 +29,7 @@
     download(makeXlsx(sheets), name);
     xl = false; toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600);
   }
+  $effect(() => { if (xl) xlPick = untrack(() => (cls === ALL ? 'all' : 'cls')); });
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); toast = '📋 복사했어요'; } catch { toast = '복사가 막혔어요'; } setTimeout(() => (toast = ''), 1600); }
 </script>
 
@@ -34,7 +37,6 @@
   <div class="nav">
     <div class="grp" role="tablist" aria-label="묶음">{#each GROUPS as g, k (g.name)}<button type="button" role="tab" class:on={grp === k} aria-selected={grp === k} onclick={() => (vid = g.views.find((x) => cls === ALL || x[0] !== 'cmp')?.[0] ?? g.views[0]![0])}>{g.name}</button>{/each}</div>
     <div class="vws" role="tablist" aria-label="보기">{#each wide ? GROUPS.flatMap((g) => g.views) : GROUPS[grp]?.views ?? [] as [k, t] (k)}<button type="button" role="tab" class:on={vid === k} aria-selected={vid === k} disabled={k === 'cmp' && cls !== ALL} onclick={() => (vid = k)}>{t}</button>{/each}</div>
-    <button type="button" class="xlb" onclick={() => { xlPick = cls === ALL ? 'all' : 'cls'; xl = true; }}>⬇ 엑셀</button>
   </div>
   <div class="body">
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
@@ -72,15 +74,15 @@
 <style>
   .dash { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .nav { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: 6px; position: relative; }
-  .grp, .vws { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
-  .grp { padding-right: 72px; }
-  .grp button { flex: none; height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 13px var(--font); white-space: nowrap; }
+  .grp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .vws { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .grp button { min-width: 0; min-height: 36px; padding: 2px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 12.5px/1.2 var(--font); word-break: keep-all; } /* 3칸 · 좁으면 두 줄 (#131) */
   .grp button.on { color: var(--text); border-color: var(--accent); background: var(--surface-2); }
   .vws button { flex: none; height: 32px; padding: 0 11px; border-radius: 16px; border: 1px solid var(--line); background: none; color: var(--text-2); font: 700 12.5px var(--font); white-space: nowrap; }
   .vws button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .vws button:disabled { opacity: 0.35; }
-  .xlb { position: absolute; right: var(--s4); top: 0; height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--gem); background: var(--bg); color: var(--gem); font: 700 13px var(--font); }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4) var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+  .body > * { flex-shrink: 0; }
   .excl { margin: 0; align-self: flex-start; font-size: 12px; color: var(--text-2); padding: 2px 10px; border-radius: 12px; border: 1px dashed var(--line); }
   .vh { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
   .vh b { font-size: 16px; flex: none; } .vh .ib { flex: none; color: var(--text-3); }
@@ -88,10 +90,10 @@
   .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .kp { border-radius: var(--r); background: var(--surface); padding: 8px 10px; display: flex; flex-direction: column; min-width: 0; }
   .kp small { font-size: 12px; color: var(--text-2); font-weight: 700; } .kp b { font-size: 20px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .kp em { font-style: normal; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tw { overflow-x: auto; border-radius: var(--r); border: 1px solid var(--line); }
+  .tw { overflow-x: auto; overflow-y: hidden; border-radius: var(--r); border: 1px solid var(--line); }
   table { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%; }
   th, td { padding: 7px 8px; white-space: nowrap; text-align: center; border-bottom: 1px solid var(--line); background: var(--surface); }
-  th { font-size: 12px; color: var(--text-2); position: sticky; top: 0; }
+  th { font-size: 12px; color: var(--text-2); }
   .sk { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--surface-2); font-weight: 700; }
   tr.click { cursor: pointer; } tr.sum td { background: var(--surface-2); font-weight: 700; }
   td.ok { color: var(--ok); } td.md { color: #f0a24a; } td.ng { color: var(--bad); } td.na { color: var(--text-3); } td.bo { color: var(--gem); }
@@ -120,13 +122,12 @@
   .xo.on { border: 2px solid var(--accent); } .xo:disabled { opacity: 0.4; }
   .ck { display: flex; align-items: center; gap: var(--s2); font-size: 14px; min-height: 44px; } .ck input { width: 22px; height: 22px; }
   .fn { font-size: 12px; color: var(--text-3); }
-  /* 펼친 화면 (≥ 840): 왼쪽 묶음 · 보기 목록 + 오른쪽 내용 · 목록 = 한 줄 */
+  /* 펼친 화면 (≥ 720): 왼쪽 묶음 · 보기 목록 + 오른쪽 내용 · 목록 = 한 줄 */
   .dash.wide { flex-direction: row; }
   .wide .nav { width: 230px; padding: 0 var(--s3); border-right: 1px solid var(--line); overflow: auto; }
   .wide .grp { display: none; }
   .wide .vws { flex-direction: column; overflow: visible; }
   .wide .vws button { height: 40px; border-radius: 10px; text-align: left; }
-  .wide .xlb { position: static; height: 40px; }
   .wide .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wide .charts { grid-template-columns: 1fr 1fr; }
   .wide .nm { flex-direction: row; gap: var(--s3); align-items: baseline; }

@@ -3,7 +3,7 @@
 :root {
   /* 공통 (테마와 상관없음) */
   --ok: #4cc38a; --bad: #f0605d; --gem: #6cc6ff; --scroll: #c79bff; --hp: #e5484d;
-  --font: Pretendard, 'Noto Sans KR', system-ui, sans-serif;
+  --font: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --r-sm: 8px; --r: 12px; --r-lg: 20px;
   --tap: 48px; --bar-top: 56px; --bar-bottom: 72px;
@@ -19,6 +19,9 @@
   --press-sh: #0a0b0e; --bad-bg: #2a1718;
   color-scheme: dark;
 }
+/* 🌐 #131 브라우저 · 기기 통일: 강제 다크 · 글자 크기 자동 키움 끄기 (밝은 테마는 그 묶음에 color-scheme: light) */
+:root { color-scheme: dark; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* 옛 이름 (b1~b3 화면) → 토큰 */
 :root {
   --fg: var(--text); --sub: var(--text-2); --card: var(--surface); --muted: var(--surface-2); --band: var(--accent);

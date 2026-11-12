@@ -2,8 +2,13 @@
    위 막대 56 · 가운데 = 남는 높이를 흡수(스크롤 없음 · overflow hidden) · 주요 단추 칸 92(단추 68 · 위아래 12) · 아래 탭 / 수업 중 막대 62
    → 주요 단추 = 폰 크기와 상관없이 폰 바닥에서 74px 위 · 같은 자리 */
 .tp, .tp * { box-sizing: border-box; }
-.tp { height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text); position: relative; }
-.tp.wide { max-width: none; }
+.tp { height: 100dvh; max-width: none; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text); position: relative; }
+/* 🌐 #131 바깥 틀 = 화면 전체(옛 430 기둥 · 양옆 검정 없앰) · 안쪽 열 = 가운데 최대 640(늘어지지 않게) · 펼친 대시보드(.wide · 720 이상) = 열 제한 없음 */
+.tp > :is(.tbar, .fixed, .mid, .tact, .tabs, .lbar, .dash, .rflow, .rdock) { width: 100%; max-width: 640px; margin-left: auto; margin-right: auto; }
+.tp > :is(.toast, .ps) { max-width: 640px; margin-left: auto; margin-right: auto; }
+.tp.wide > :is(.tbar, .fixed, .mid, .tact, .tabs, .lbar, .dash, .ps) { max-width: none; }
+/* 스크롤 A: 세로로 넘기는 칸은 가운데 하나 · 안의 표 · 목록 상자는 내용만큼(줄어들어 제 안에서 세로로 넘기지 않게) */
+.tp .mid.scroll > * { flex-shrink: 0; }
 .tp .tbar { height: var(--bar-top); flex: none; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
 .tp .tbar .t { flex: 1; min-width: 0; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tp .tbar .t small { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); }

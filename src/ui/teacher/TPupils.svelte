@@ -15,7 +15,8 @@
   let who = $state<Stud | null>(null);
   let paste = $state(false), text = $state(''), ver = $state(0), toast = $state('');
   let iw = $state(400);
-  const wide = $derived(seg === 'dash' && iw >= 840); // 📊 펼친 화면 (기준 너비 840)
+  const wide = $derived(seg === 'dash' && iw >= 720); // 📊 펼친 화면 (기준 너비 720 · #131 펼친 Fold7 ≈ 830)
+  let xl = $state(false); // ⬇ 엑셀 = [명단 · 대시보드] 줄 오른쪽 끝 (#131 · 시안 v85 자리)
   const data = $derived.by(() => { void ver; return fakeClass(S, cls === ALL ? '1-1' : cls); });
   const live = $derived(liveOfCls(S, cls));
   const absentToday = (uid: string) => !!live && !!S.get<boolean>(`rooms/${live.code}/absent/${uid}`);
@@ -27,7 +28,7 @@
 <div class="tbar"><div class="t">학생</div><button type="button" class="tlink plus" onclick={() => { text = ''; paste = true; }}>＋ 명단</button></div>
 <div class="fixed">
   <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...CLASSES] : CLASSES as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
-  <div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>
+  <div class="segrow"><div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>{#if seg === 'dash'}<button type="button" class="xlb" onclick={() => (xl = true)}>⬇ 엑셀</button>{/if}</div>
 </div>
 {#if seg === 'list'}
   <div class="mid scroll">
@@ -40,7 +41,7 @@
     <p class="hint">번호를 누르면 그 학생 · 금빛 테 = 막힘 많음 · 흐림 = 오늘 결석{isBeta(S, cls) ? ' · 🧪 베타 반 = 통계에서 빠짐' : ''}</p>
   </div>
 {:else}
-  <Dash {S} {cls} {wide} onpick={(s) => (who = s)} onclass={(c) => (cls = c)} />
+  <Dash {S} {cls} {wide} bind:xl onpick={(s) => (who = s)} onclass={(c) => (cls = c)} />
 {/if}
 
 {#if who}<PupilSheet {S} s={who} onclose={() => (who = null)} />{/if}
@@ -56,6 +57,8 @@
 
 <style>
   .plus { color: var(--accent); }
+  .segrow { display: flex; gap: 6px; align-items: stretch; } .segrow .seg { flex: 1; min-width: 0; }
+  .xlb { flex: none; padding: 0 12px; border-radius: 12px; border: 1px solid var(--gem); background: var(--bg); color: var(--gem); font: 700 13.5px var(--font); white-space: nowrap; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
   .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
   .chips button { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 13.5px var(--font); white-space: nowrap; }
