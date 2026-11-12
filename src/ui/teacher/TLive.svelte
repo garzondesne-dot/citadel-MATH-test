@@ -17,7 +17,7 @@
   const R = $derived(lr.v.room as Room | null);
   $effect(() => { if (R?.state.closed) untrack(onclose); }); // 교실 TV 에서 문이 닫혀 끝나도 교사 폰이 따라감
   const code = $derived(live.code);
-  const pupils = $derived(roster(live.cls));
+  const pupils = $derived(roster(live.cls, S));
   const ids = $derived(R ? activeIds(R, now) : []);
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));

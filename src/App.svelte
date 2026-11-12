@@ -38,9 +38,9 @@
     return me;
   }
   // ⓪ 로그인한 폰 = 그 학생 (반 + 번호) · 아니면 탭마다 따로인 이름표(시험 · 두 탭 체험)
-  let login = $state<Pupil | null>(savedLogin());
+  let login = $state<Pupil | null>(savedLogin(S));
   // 시험 · 두 탭 체험: ?as=1-3:5 = 그 반 · 번호 학생으로 (로그인 없이)
-  const asP = (() => { const m = /^(\d-\d):(\d+)$/.exec(q.get('as') || ''); return m ? pupil(m[1] as string, Number(m[2])) : null; })();
+  const asP = (() => { const m = /^(\d-\d):(\d+)$/.exec(q.get('as') || ''); return m ? pupil(m[1] as string, Number(m[2]), S) : null; })();
   const me = untrack(() => (role === 'student' ? asP ? { uid: asP.uid, num: asP.num, nick: asP.name, cls: asP.cls } : (login && !q.get('tab') ? { uid: login.uid, num: login.num, nick: login.name, cls: login.cls } : { ...tabId(), nick: '', cls: '' }) : null));
   // 학생 캠프 = 내 반에 열린 수업 (없으면 닫힌 문)
   const lvApp = liveValue<Live>(S, 'school/live');

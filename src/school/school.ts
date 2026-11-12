@@ -27,7 +27,7 @@ export function pasteRoster(S: Store, cls: string, text: string): number {
   if (n) S.set(`school/roster/${cls}`, cur);
   return n;
 }
-export const pupil = (cls: string, num: number) => roster(cls).find((p) => p.num === num) ?? null;
+export const pupil = (cls: string, num: number, S?: Store | null) => roster(cls, S).find((p) => p.num === num) ?? null;
 export const isBeta = (S: Store | null, cls: string): boolean => { const v = S?.get<boolean>(`school/cls/${cls}/beta`); return v == null ? BETA_DEFAULT.includes(cls) : !!v; };
 /** 🧪 학생 한 명 시험 계정 (#67) — school/test/{반}/{번호} */
 export const isTester = (S: Store | null, cls: string, num: number) => !!S?.get<boolean>(`school/test/${cls}/${num}`);
@@ -40,7 +40,7 @@ export const pupilOf = (uid: string) => { const m = /^s(\d+)_(\d+)_(\d+)$/.exec(
 const accPath = (cls: string, num: number) => `school/acc/${cls}/${num}`;
 export const hasAccount = (S: Store, cls: string, num: number) => !!S.get<{ pw: string }>(accPath(cls, num));
 export function signUp(S: Store, cls: string, num: number, pw: string, pw2: string): string | null {
-  if (!pupil(cls, num)) return '명단에 없는 번호예요';
+  if (!pupil(cls, num, S)) return '명단에 없는 번호예요';
   if (hasAccount(S, cls, num)) return '이미 가입한 번호예요 · 로그인해요';
   if (!/^\d{4}$/.test(pw)) return '비밀번호는 숫자 4자리예요';
   if (pw !== pw2) return '두 번 쓴 비밀번호가 달라요';
@@ -58,7 +58,7 @@ export function resetPw(S: Store, cls: string, num: number): void { if (hasAccou
 
 // ── 이 폰의 로그인 (한 번 하면 다음부터 바로 캠프) ──
 const LOGIN = 'citadel-v1-login';
-export function savedLogin(): Pupil | null { try { const v = JSON.parse(localStorage.getItem(LOGIN) || 'null') as { cls: string; num: number } | null; return v ? pupil(v.cls, v.num) : null; } catch { return null; } }
+export function savedLogin(S?: Store | null): Pupil | null { try { const v = JSON.parse(localStorage.getItem(LOGIN) || 'null') as { cls: string; num: number } | null; return v ? pupil(v.cls, v.num, S) : null; } catch { return null; } }
 export function saveLogin(p: Pupil | null): void { try { if (p) localStorage.setItem(LOGIN, JSON.stringify({ cls: p.cls, num: p.num })); else localStorage.removeItem(LOGIN); } catch { /* 무시 */ } }
 
 // ── 시간표 (요일 → 교시 → 반) · 비어 있으면 「시간표 넣기」 ──

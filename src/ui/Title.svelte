@@ -17,7 +17,7 @@
   let pad = $state<0 | 1 | 2>(0); // 키패드: 0 닫힘 · 1 비밀번호 · 2 한 번 더
   let err = $state('');
   let more = $state(false);
-  const who = $derived(cls && num ? pupil(cls, num) : null);
+  const who = $derived(cls && num ? pupil(cls, num, S) : null);
   const ready = $derived(!!who && pw.length === 4 && (!join || pw2.length === 4));
   $effect(() => { if (who && !join && !hasAccount(S, who.cls, who.num)) join = true; });
   function key(k: string) {
@@ -48,7 +48,7 @@
       <label class="sel"><span class="sr">번호</span>
         <select bind:value={num} disabled={!cls} onchange={() => { pw = ''; pw2 = ''; err = ''; join = false; }}>
           <option value={0} disabled>번호 ▾</option>
-          {#each cls ? roster(cls) : [] as p (p.num)}<option value={p.num}>{p.num}번</option>{/each}
+          {#each cls ? roster(cls, S) : [] as p (p.num)}<option value={p.num}>{p.num}번</option>{/each}
         </select>
       </label>
     </div>

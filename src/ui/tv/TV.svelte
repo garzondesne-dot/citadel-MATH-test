@@ -27,7 +27,7 @@
   onDestroy(() => lr?.stop());
   const R = $derived((lr?.v.room ?? null) as Room | null);
   const M = useMe(9999, 30, true); // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
-  const pupils = $derived(live ? roster(live.cls) : []);
+  const pupils = $derived(live ? roster(live.cls, S) : []);
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});
