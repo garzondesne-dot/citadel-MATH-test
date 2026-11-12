@@ -1,0 +1,113 @@
+[debug] [2026-11-12T10:06:17.110Z] ----------------------------------------------------------------------
+[debug] [2026-11-12T10:06:17.113Z] Command:       /opt/node22/bin/node /tmp/claude-0/-home-user-Citadel-MATH/46742af4-ec79-5cb0-b4c9-6dbf2d2e15ff/scratchpad/fbtools/node_modules/.bin/firebase emulators:start --only database,auth --project demo-citadel-test
+[debug] [2026-11-12T10:06:17.114Z] CLI Version:   15.0.0
+[debug] [2026-11-12T10:06:17.114Z] Platform:      linux
+[debug] [2026-11-12T10:06:17.114Z] Node Version:  v22.23.4
+[debug] [2026-11-12T10:06:17.115Z] Time:          Thu Nov 12 2026 10:06:17 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-11-12T10:06:17.115Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-11-12T10:06:17.118Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-11-12T10:06:17.923Z] Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41127 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+
+[debug] [2026-11-12T10:06:17.961Z] openjdk version "21.0.12.1" 2026-08-18
+OpenJDK Runtime Environment (build 21.0.12.1+1-1-24.04.4-Ubuntu)
+
+[debug] [2026-11-12T10:06:17.961Z] OpenJDK 64-Bit Server VM (build 21.0.12.1+1-1-24.04.4-Ubuntu, mixed mode, sharing)
+
+[debug] [2026-11-12T10:06:17.965Z] Parsed Java major version: 21
+[info] i  emulators: Starting emulators: auth, database {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: auth, database"}}
+[info] i  emulators: Detected demo project ID "demo-citadel-test", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail. {"metadata":{"emulator":{"name":"hub"},"message":"Detected demo project ID \"demo-citadel-test\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail."}}
+[warn] ⚠  hub: Error when trying to check port 4400 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4400 {"metadata":{"emulator":{"name":"hub"},"message":"Error when trying to check port 4400 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4400"}}
+[warn] ⚠  hub: Port 4400 is available on 127.0.0.1 but not ::1. This may cause issues with some clients. {"metadata":{"emulator":{"name":"hub"},"message":"Port 4400 is available on 127.0.0.1 but not ::1. This may cause issues with some clients."}}
+[warn] ⚠  hub: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json {"metadata":{"emulator":{"name":"hub"},"message":"If you encounter connectivity issues, consider switching to a different port or explicitly specifying \"host\": \"<ip address>\" instead of hostname in firebase.json"}}
+[warn] ⚠  logging: Error when trying to check port 4500 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4500 {"metadata":{"emulator":{"name":"logging"},"message":"Error when trying to check port 4500 on ::1: Error: listen EAFNOSUPPORT: address family not supported ::1:4500"}}
+[warn] ⚠  logging: Port 4500 is available on 127.0.0.1 but not ::1. This may cause issues with some clients. {"metadata":{"emulator":{"name":"logging"},"message":"Port 4500 is available on 127.0.0.1 but not ::1. This may cause issues with some clients."}}
+[warn] ⚠  logging: If you encounter connectivity issues, consider switching to a different port or explicitly specifying "host": "<ip address>" instead of hostname in firebase.json {"metadata":{"emulator":{"name":"logging"},"message":"If you encounter connectivity issues, consider switching to a different port or explicitly specifying \"host\": \"<ip address>\" instead of hostname in firebase.json"}}
+[debug] [2026-11-12T10:06:17.972Z] assigned listening specs for emulators {"user":{"auth":[{"address":"127.0.0.1","family":"IPv4","port":9099}],"database":[{"address":"127.0.0.1","family":"IPv4","port":9000}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-11-12T10:06:17.975Z] Emulator locator file path: /tmp/hub-demo-citadel-test.json
+[debug] [2026-11-12T10:06:17.975Z] [hub] writing locator at /tmp/hub-demo-citadel-test.json
+[debug] [2026-11-12T10:06:17.979Z] No OAuth tokens found
+[debug] [2026-11-12T10:06:17.979Z] No OAuth tokens found
+[debug] [2026-11-12T10:06:17.979Z] Unable to refresh auth: not yet authenticated.
+[debug] [2026-11-12T10:06:17.979Z] Failed to retrieve default database instance: {"name":"FirebaseError","children":[],"exit":2,"message":"Failed to get Firebase project demo-citadel-test. Please make sure the project exists and your account has permission to access it.","original":{"name":"FirebaseError","children":[],"exit":1,"message":"Unable to refresh auth: not yet authenticated.","status":500},"status":500} {"metadata":{"emulator":{"name":"database"},"message":"Failed to retrieve default database instance: {\"name\":\"FirebaseError\",\"children\":[],\"exit\":2,\"message\":\"Failed to get Firebase project demo-citadel-test. Please make sure the project exists and your account has permission to access it.\",\"original\":{\"name\":\"FirebaseError\",\"children\":[],\"exit\":1,\"message\":\"Unable to refresh auth: not yet authenticated.\",\"status\":500},\"status\":500}"}}
+[debug] [2026-11-12T10:06:17.980Z] database rules config:  [{"instance":"demo-citadel-test-default-rtdb","rules":"/home/user/citadel-math-test/firebase/database.rules.json"}]
+[debug] [2026-11-12T10:06:17.982Z] Ignoring unsupported arg: projectId {"metadata":{"emulator":{"name":"database"},"message":"Ignoring unsupported arg: projectId"}}
+[debug] [2026-11-12T10:06:17.982Z] Ignoring unsupported arg: auto_download {"metadata":{"emulator":{"name":"database"},"message":"Ignoring unsupported arg: auto_download"}}
+[debug] [2026-11-12T10:06:17.982Z] Ignoring unsupported arg: rules {"metadata":{"emulator":{"name":"database"},"message":"Ignoring unsupported arg: rules"}}
+[debug] [2026-11-12T10:06:17.982Z] Starting Database Emulator with command {"binary":"java","args":["-Duser.language=en","-jar","/root/.cache/firebase/emulators/firebase-database-emulator-v4.11.2.jar","--host","127.0.0.1","--port",9000,"--single_project_mode","Warning"],"optionalArgs":["port","host","functions_emulator_port","functions_emulator_host","single_project_mode"],"joinArgs":false,"shell":false,"port":9000} {"metadata":{"emulator":{"name":"database"},"message":"Starting Database Emulator with command {\"binary\":\"java\",\"args\":[\"-Duser.language=en\",\"-jar\",\"/root/.cache/firebase/emulators/firebase-database-emulator-v4.11.2.jar\",\"--host\",\"127.0.0.1\",\"--port\",9000,\"--single_project_mode\",\"Warning\"],\"optionalArgs\":[\"port\",\"host\",\"functions_emulator_port\",\"functions_emulator_host\",\"single_project_mode\"],\"joinArgs\":false,\"shell\":false,\"port\":9000}"}}
+[info] i  database: Database Emulator logging to database-debug.log {"metadata":{"emulator":{"name":"database"},"message":"Database Emulator logging to database-debug.log"}}
+[debug] [2026-11-12T10:06:17.990Z] Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41127 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+ {"metadata":{"emulator":{"name":"database"},"message":"Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41127 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=\n"}}
+[debug] [2026-11-12T10:06:18.133Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 403
+[debug] [2026-11-12T10:06:18.133Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json "request blocked: no rule or allowlist entry allows host \"firebase-public.firebaseio.com\""
+[warn] ⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-11-12T10:06:18.133Z] Failed to fetch MOTD FirebaseError: Unable to parse JSON: SyntaxError: Unexpected token 'r', "request bl"... is not valid JSON
+[debug] [2026-11-12T10:06:19.383Z] 10:06:19.380 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO akka.event.slf4j.Slf4jLogger - Slf4jLogger started
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:19.380 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO akka.event.slf4j.Slf4jLogger - Slf4jLogger started\n"}}
+[debug] [2026-11-12T10:06:19.550Z] 10:06:19.549 [main] INFO com.firebase.server.forge.App$ - Listening at 127.0.0.1:9000
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:19.549 [main] INFO com.firebase.server.forge.App$ - Listening at 127.0.0.1:9000\n"}}
+[warn] ⚠  emulators: The Emulator UI is not starting because none of the running emulators have a UI component. {"metadata":{"emulator":{"name":"hub"},"message":"The Emulator UI is not starting because none of the running emulators have a UI component."}}
+[debug] [2026-11-12T10:06:26.903Z] >>> [apiv2][query] PUT http://127.0.0.1:9000/.settings/rules.json ns=demo-citadel-test-default-rtdb
+[debug] [2026-11-12T10:06:26.903Z] >>> [apiv2][body] PUT http://127.0.0.1:9000/.settings/rules.json "{\n  \"rules\": {\n    \".read\": \"auth != null\",\n    \"rooms\": { \".write\": \"auth != null\" },\n    \"school\": { \".write\": \"auth != null\" },\n    \"gifts\": { \".write\": \"auth != null\" },\n    \"mail\": { \".write\": \"auth != null\" },\n    \"accounts\": {\n      \"$cls\": {\n        \"$num\": {\n          \".write\": \"auth != null && (!data.exists() || data.child('uid').val() === auth.uid || newData.child('uid').val() === auth.uid)\"\n        }\n      }\n    }\n  }\n}\n"
+[debug] [2026-11-12T10:06:27.184Z] 10:06:27.183 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test-default-rtdb successfully activated FBKV (SurveyIdle(0)) wait: 119ms, init: 0ms
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:27.183 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test-default-rtdb successfully activated FBKV (SurveyIdle(0)) wait: 119ms, init: 0ms\n"}}
+[debug] [2026-11-12T10:06:27.280Z] 10:06:27.279 [NamespaceSystem-blocking-namespace-operation-dispatcher-7] INFO com.firebase.core.namespace.StateManager - Namespace demo-citadel-test-default-rtdb status Active to Active
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:27.279 [NamespaceSystem-blocking-namespace-operation-dispatcher-7] INFO com.firebase.core.namespace.StateManager - Namespace demo-citadel-test-default-rtdb status Active to Active\n"}}
+[debug] [2026-11-12T10:06:27.326Z] <<< [apiv2][status] PUT http://127.0.0.1:9000/.settings/rules.json 200
+[debug] [2026-11-12T10:06:27.326Z] <<< [apiv2][body] PUT http://127.0.0.1:9000/.settings/rules.json {"status":"ok"}
+[debug] [2026-11-12T10:06:27.329Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: connect ECONNREFUSED 127.0.0.1:40001. If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+└─────────────────────────────────────────────────────────────┘
+
+┌────────────────┬────────────────┐
+│ Emulator       │ Host:Port      │
+├────────────────┼────────────────┤
+│ Authentication │ 127.0.0.1:9099 │
+├────────────────┼────────────────┤
+│ Database       │ 127.0.0.1:9000 │
+└────────────────┴────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
+[debug] [2026-11-12T10:06:39.474Z] 10:06:39.473 [FirebaseWorkerPool-1-3] WARN com.firebase.core.persistence.backend.dummy.EmulatorMetadataPersistence - Multiple projectIds are not recommended in single project mode. Requested 
+namespace demo-citadel-test, but the emulator is configured for demo-citadel-test-default-rtdb. To 
+opt-out of single project mode add/set the singleProjectMode: false property in 
+the firebase.json emulators config. 
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:39.473 [FirebaseWorkerPool-1-3] WARN com.firebase.core.persistence.backend.dummy.EmulatorMetadataPersistence - Multiple projectIds are not recommended in single project mode. Requested \nnamespace demo-citadel-test, but the emulator is configured for demo-citadel-test-default-rtdb. To \nopt-out of single project mode add/set the singleProjectMode: false property in \nthe firebase.json emulators config. \n"}}
+[debug] [2026-11-12T10:06:39.481Z] 10:06:39.480 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test successfully activated FBKV (SurveyIdle(0)) wait: 3ms, init: 0ms
+ {"metadata":{"emulator":{"name":"database"},"message":"10:06:39.480 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test successfully activated FBKV (SurveyIdle(0)) wait: 3ms, init: 0ms\n"}}
+[debug] [2026-11-12T10:10:28.977Z] 10:10:28.977 [NamespaceSystem-akka.actor.default-dispatcher-6] INFO com.firebase.core.namespace.DeadLetterResponder - Message DataPush(List(rooms, 234526, players, s1_3_2, hero),com.firebase.util.data.SnapshotPutRenderable@283378056) meant for other actor akka://NamespaceSystem/user/demo-citadel-test-default-rtdb/$l from akka://NamespaceSystem/deadLetters went to deadletter actor
+ {"metadata":{"emulator":{"name":"database"},"message":"10:10:28.977 [NamespaceSystem-akka.actor.default-dispatcher-6] INFO com.firebase.core.namespace.DeadLetterResponder - Message DataPush(List(rooms, 234526, players, s1_3_2, hero),com.firebase.util.data.SnapshotPutRenderable@283378056) meant for other actor akka://NamespaceSystem/user/demo-citadel-test-default-rtdb/$l from akka://NamespaceSystem/deadLetters went to deadletter actor\n"}}
+[debug] [2026-11-12T10:11:22.835Z] 10:11:22.834 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:22.834 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:22.918Z] 10:11:22.909 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:22.910 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:22.909 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n10:11:22.910 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:22.962Z] 10:11:22.961 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:22.961 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:28.084Z] 10:11:28.084 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:28.084 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:28.178Z] 10:11:28.166 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:28.167 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:28.166 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n10:11:28.167 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:28.221Z] 10:11:28.219 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:28.219 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:34.143Z] 10:11:34.142 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:34.142 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:34.239Z] 10:11:34.236 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:34.236 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:34.244Z] 10:11:34.240 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:34.240 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:11:34.288Z] 10:11:34.287 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:11:34.287 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:12:17.912Z] 10:12:17.911 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:12:17.911 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:12:18.060Z] 10:12:18.052 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:12:18.058 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:12:18.052 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n10:12:18.058 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}
+[debug] [2026-11-12T10:12:18.143Z] 10:12:18.143 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+ {"metadata":{"emulator":{"name":"database"},"message":"10:12:18.143 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.\n"}}

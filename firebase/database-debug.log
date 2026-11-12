@@ -1,0 +1,27 @@
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=41127 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+10:06:19.380 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO akka.event.slf4j.Slf4jLogger - Slf4jLogger started
+10:06:19.549 [main] INFO com.firebase.server.forge.App$ - Listening at 127.0.0.1:9000
+10:06:27.183 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test-default-rtdb successfully activated FBKV (SurveyIdle(0)) wait: 119ms, init: 0ms
+10:06:27.279 [NamespaceSystem-blocking-namespace-operation-dispatcher-7] INFO com.firebase.core.namespace.StateManager - Namespace demo-citadel-test-default-rtdb status Active to Active
+10:06:39.473 [FirebaseWorkerPool-1-3] WARN com.firebase.core.persistence.backend.dummy.EmulatorMetadataPersistence - Multiple projectIds are not recommended in single project mode. Requested 
+namespace demo-citadel-test, but the emulator is configured for demo-citadel-test-default-rtdb. To 
+opt-out of single project mode add/set the singleProjectMode: false property in 
+the firebase.json emulators config. 
+10:06:39.480 [NamespaceSystem-akka.actor.default-dispatcher-5] INFO com.firebase.core.namespace.NamespaceActor - demo-citadel-test successfully activated FBKV (SurveyIdle(0)) wait: 3ms, init: 0ms
+10:10:28.977 [NamespaceSystem-akka.actor.default-dispatcher-6] INFO com.firebase.core.namespace.DeadLetterResponder - Message DataPush(List(rooms, 234526, players, s1_3_2, hero),com.firebase.util.data.SnapshotPutRenderable@283378056) meant for other actor akka://NamespaceSystem/user/demo-citadel-test-default-rtdb/$l from akka://NamespaceSystem/deadLetters went to deadletter actor
+10:11:22.834 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:22.909 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:22.910 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:22.961 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:28.084 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:28.166 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:28.167 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:28.219 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:34.142 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:34.236 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:34.240 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:11:34.287 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:12:17.911 [FirebaseWorkerPool-1-4] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:12:18.052 [FirebaseWorkerPool-1-1] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:12:18.058 [FirebaseWorkerPool-1-2] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.
+10:12:18.143 [FirebaseWorkerPool-1-3] WARN com.firebase.server.forge.App$ - Received service account token eyJh...In0., assuming ownership.

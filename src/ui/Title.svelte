@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SUBJ } from '../engine/subject';
   import type { Store } from '../model/types';
-  import { CLASSES, hasAccount, logIn, pupil, roster, saveLogin, signUp, type Pupil } from '../school/school';
+  import { CLASSES, enter, hasAccount, pupil, roster, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
 
   // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v71 「⓪」 · 선생님 「이 정도는 살리자」)
@@ -27,9 +27,10 @@
     if (pad === 2) pw2 = next; else pw = next;
     if (next.length === 4 && k !== '⌫') pad = join && pad === 1 && pw2.length < 4 ? 2 : 0;
   }
-  function go() {
-    if (!who) return;
-    const e = join ? signUp(S, who.cls, who.num, pw, pw2) : logIn(S, who.cls, who.num, pw);
+  let busy = $state(false);
+  async function go() {
+    if (!who || busy) return;
+    busy = true; const e = await enter(S, who.cls, who.num, pw, pw2, join); busy = false; // 🔌 시험 서버면 Firebase 로그인 (#137)
     if (e) { err = e; pw = ''; pw2 = ''; return; }
     saveLogin(who); onin(who);
   }

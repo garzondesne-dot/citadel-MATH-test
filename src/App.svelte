@@ -5,7 +5,8 @@
   import { SUBJ } from './engine/subject';
   import { PROFILES } from './model/profiles';
   import { validate } from './engine/lessons';
-  import { deviceStore } from './store/device';
+  import type { Store } from './model/types';
+  import type { Where } from './store/config';
   import { BUILD } from './build';
   import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
@@ -18,7 +19,11 @@
   const q = new URLSearchParams(location.search);
   const role = q.get('role');
   const code = (q.get('room') || 'TEST').toUpperCase();
-  const S = deviceStore();
+  const props: { S: Store; where: Where } = $props(); // 🔌 「어느 서버」 = main.ts 가 고름 (#137) · 한 번 정하면 그대로
+  const S = untrack(() => props.S), where = untrack(() => props.where);
+  let netOk = $state(true);
+  const sv = S as Store & { onNet?: (fn: (s: { connected: boolean }) => void) => () => void };
+  sv.onNet?.((s) => (netOk = s.connected));
   // 🧩 #132 차시 = 방이 기억한 차시(meta.lesson) → 지금 열린 수업 → 6차시 · 팩은 src/packs 모두
   const DEF = packOf(SUBJ.defaultLesson) ?? PACKS[0]!;
   const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
@@ -53,6 +58,8 @@
   if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {});
 </script>
 
+{#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
+{#if role !== 'dev'}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
 {#if role !== 'dev'}{#if site && site !== BUILD}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
@@ -93,6 +100,11 @@
   :global(a) { color: var(--accent); }
   :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
   .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
+  .blocked { position: fixed; top: 0; left: 0; right: 0; z-index: 99; padding: 8px 12px; background: var(--bad); color: #fff; font-weight: 700; font-size: 14px; text-align: center; }
+  .srv { position: fixed; top: 42px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; height: 20px; padding: 0 8px; border-radius: 10px; background: rgba(8, 9, 12, 0.55); color: var(--text-3); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; }
+  .srv.server { color: var(--ok); } .srv.off { color: #fff; background: var(--bad); }
+  .srv.tsrv { top: 0; left: auto; right: 2px; transform: none; height: 16px; font-size: 10.5px; opacity: 0.8; }
+  .srv.hsrv { top: auto; bottom: 8px; left: 120px; transform: none; }
   .beta-pill.old { pointer-events: auto; border: 1px solid var(--bad); color: #fff; background: var(--bad-bg); font: inherit; font-weight: 700; cursor: pointer; }
   .beta-pill.tpill.old { height: 22px; opacity: 1; }
   .beta-pill.hall { top: auto; bottom: 8px; left: 8px; transform: none; }

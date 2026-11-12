@@ -37,8 +37,32 @@ export const clsLabel = (S: Store | null, cls: string) => `${cls}반${isBeta(S, 
 export const pupilOf = (uid: string) => { const m = /^s(\d+)_(\d+)_(\d+)$/.exec(uid); return m ? pupil(`${m[1]}-${m[2]}`, Number(m[3])) : null; };
 
 // ── 계정 ──
-const accPath = (cls: string, num: number) => `school/acc/${cls}/${num}`;
-export const hasAccount = (S: Store, cls: string, num: number) => !!S.get<{ pw: string }>(accPath(cls, num));
+// 경로 = 정식 accounts/{반}/{번호} (V1-DESIGN 7절 · #137) · 이 기기 = { pw, at } · 시험 서버 = { uid, at } (비밀번호는 Firebase 로그인에만 · DB 에 안 씀)
+const accPath = (cls: string, num: number) => `accounts/${cls}/${num}`;
+export const hasAccount = (S: Store, cls: string, num: number) => !!S.get<object>(accPath(cls, num));
+type AuthStore = Store & { auth?: import('firebase/auth').Auth };
+/** 시험 서버 로그인 이름 · 비밀번호 (Firebase 는 6자 이상 · 학생이 쓰는 건 숫자 4자리 그대로) */
+export const authEmail = (cls: string, num: number) => `${uidOf(cls, num)}@citadel-test.local`;
+const authPw = (pw: string) => `cdm-${pw}`;
+/** 가입 · 로그인 (시험 서버면 Firebase 로그인까지) → 오류 글 또는 null */
+export async function enter(S: Store, cls: string, num: number, pw: string, pw2: string, join: boolean): Promise<string | null> {
+  const A = (S as AuthStore).auth;
+  if (!A) return join ? signUp(S, cls, num, pw, pw2) : logIn(S, cls, num, pw);
+  const fa = await import('firebase/auth');
+  if (join) {
+    if (!pupil(cls, num, S)) return '명단에 없는 번호예요';
+    if (hasAccount(S, cls, num)) return '이미 가입한 번호예요 · 로그인해요';
+    if (!/^\d{4}$/.test(pw)) return '비밀번호는 숫자 4자리예요';
+    if (pw !== pw2) return '두 번 쓴 비밀번호가 달라요';
+    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); S.set(accPath(cls, num), { uid: c.user.uid, at: S.now() }); return null; }
+    catch (e) { return /email-already/.test(String((e as { code?: string }).code)) ? '이미 가입한 번호예요 · 로그인해요' : '가입하지 못했어요 · 잠시 뒤 다시'; }
+  }
+  if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
+  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); return null; }
+  catch { return '비밀번호가 달라요 · 잊었으면 선생님께'; }
+}
+/** 선생님 0000 초기화가 되는 저장인가 (시험 서버 = 관리 도구가 필요 · 다음 판) */
+export const canResetPw = (S: Store) => !(S as AuthStore).auth;
 export function signUp(S: Store, cls: string, num: number, pw: string, pw2: string): string | null {
   if (!pupil(cls, num, S)) return '명단에 없는 번호예요';
   if (hasAccount(S, cls, num)) return '이미 가입한 번호예요 · 로그인해요';

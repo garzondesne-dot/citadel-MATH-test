@@ -1,0 +1,16 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    "rooms": { ".write": "auth != null" },
+    "school": { ".write": "auth != null" },
+    "gifts": { ".write": "auth != null" },
+    "mail": { ".write": "auth != null" },
+    "accounts": {
+      "$cls": {
+        "$num": {
+          ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid || newData.child('uid').val() === auth.uid)"
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
   import { achieve, band, LESSON_LIST, MIS, memoParts, type Stud } from '../../school/dash';
-  import { resetPw, hasAccount, liveOfCls } from '../../school/school';
+  import { resetPw, hasAccount, liveOfCls, canResetPw } from '../../school/school';
   import { giveGift, setAbsent } from '../../raid/actions';
   import { uidOf } from '../../school/school';
 
@@ -47,7 +47,7 @@
     <p class="fake">🧪 테스트 판 가짜 기록 (반 · 번호로 늘 같은 값)</p>
   </div>
   <div class="acts">
-    <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
+    <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 시험 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
     <button type="button" onclick={() => (gift = true)}>💎 선물</button>
     <button type="button" disabled={!live} title={live ? '' : '수업 중에만'} onclick={() => { if (live) { setAbsent(S, live.code, uidOf(s.cls, s.n), true); say('🚫 오늘 결석으로'); } }}>🚫 결석</button>
     <button type="button" onclick={() => (memo = true)}>📝 세특</button>
