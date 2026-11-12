@@ -16,6 +16,7 @@
   import { fx } from './battle/fx.svelte';
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
+  import { isExcluded } from '../school/school';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -25,7 +26,8 @@
   const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
   const loadedAt = Date.now();
   const live = untrack(() => {
-    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero });
+    const x = untrack(() => !!cls && isExcluded(S, cls, num));
+    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, x });
     hb();
     const beat = setInterval(hb, 3000);
     const bye = () => leave(S, code, uid);

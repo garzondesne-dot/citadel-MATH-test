@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { CLASSES, lastClass, setSlot, week, type Live } from '../../school/school';
+  import { CLASSES, isBeta, lastClass, setSlot, week, type Live } from '../../school/school';
   import { DOW, kst, PERIODS, periodNow } from '../../school/bells';
   import { isLobby, isEnd, stepOf } from '../../raid/raid';
   import { roomPath } from '../../raid/actions';
@@ -56,7 +56,7 @@
         {@const c = today[String(p)] || ''}
         {@const has = (PERIODS[k.dow] || []).includes(p)}
         <button type="button" class="tt" class:empty={!c} class:now={pNow === p} class:on={!!c && c === cls} disabled={!c} aria-pressed={!!c && c === cls} onclick={() => (cls = c)}>
-          <small>{p}교시</small><b>{c || (has ? '—' : '·')}</b>
+          <small>{p}교시</small><b>{c || (has ? '—' : '·')}{c && isBeta(S, c) ? '🧪' : ''}</b>
         </button>
       {/each}
     </div>
@@ -91,7 +91,7 @@
 {#if sheet === 'cls'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}다른 반{/snippet}
-    <div class="grid4">{#each CLASSES as c (c)}<button type="button" class="pk" class:on={cls === c} onclick={() => { cls = c; sheet = ''; }}><b>{c}반</b></button>{/each}</div>
+    <div class="grid4">{#each CLASSES as c (c)}<button type="button" class="pk" class:on={cls === c} onclick={() => { cls = c; sheet = ''; }}><b>{c}반{isBeta(S, c) ? ' 🧪' : ''}</b>{#if isBeta(S, c)}<small>베타 · 통계 빠짐</small>{/if}</button>{/each}</div>
     <button type="button" class="tlink" onclick={() => (sheet = 'sched')}>시간표 고치기 ›</button>
   </Sheet>
 {:else if sheet === 'sched'}

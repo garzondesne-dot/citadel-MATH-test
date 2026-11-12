@@ -4,7 +4,7 @@
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { doorStart, endClass, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
-  import { isOld, roster, type Live } from '../../school/school';
+  import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
   import { liveRoom } from '../room.svelte';
   import { CAMP, dungeonOf } from '../manifest';
@@ -120,7 +120,7 @@
 
   <!-- 위 막대 (#119 덧붙임 3 · 7 · 9): 반 칩 · n차시 + 소단원 주제 · 흐름도(리모컨 단계 막대와 같은 함수) · 🚪 코드 · ⛺ 내 캠프 / 아래 가장자리 = 남은 시간 선 -->
   <header class="top">
-    <span class="ttl">{#if live}<span class="cls">{live.cls}반</span>{/if}{#if view === 'camp'}🏛 교사 캠프 · {/if}{L.no}차시 <b>{topic}</b></span>
+    <span class="ttl">{#if live}<span class="cls">{clsLabel(S, live.cls)}</span>{/if}{#if view === 'camp'}🏛 교사 캠프 · {/if}{L.no}차시 <b>{topic}</b></span>
     <div class="tflow" class:dim={view === 'lobby'} class:hide={view === 'camp'} aria-label="오늘 흐름">
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>

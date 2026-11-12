@@ -178,7 +178,8 @@ export function activeIds(R: Room, now: number): string[] {
   const P = R.players || {};
   return keys(P).filter((u) => !P[u]?.teacher && !R.absent?.[u] && classNow(R, now) - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
 }
-export const headcount = (R: Room, now: number) => R.state.headcount || Math.max(1, activeIds(R, now).length);
+/** 체력 머릿수 = 접속한 학생 중 🧪(베타 반 · 시험 계정 · players.x)을 뺀 수 · 공격 데미지는 그대로 (정식 #67 tester · #123) */
+export const headcount = (R: Room, now: number) => R.state.headcount || Math.max(1, activeIds(R, now).filter((u) => !R.players?.[u]?.x).length);
 export const pctOf = (L: LessonPack, R: Room) => R.meta.pct ?? L.defaultPct ?? 90;
 
 /** 공동 체력 = ⌊인원 × 소문제 × 기준% ⌋ · 데미지 = 접속한 학생마다 best 합 (정식 monsterHp) */

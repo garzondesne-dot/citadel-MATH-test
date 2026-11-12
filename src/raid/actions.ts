@@ -125,12 +125,13 @@ export function appearNow(S: Store, L: LessonPack, code: string): void {
 }
 
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */
-export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number }): void {
+export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number; x?: boolean }): void {
   const base = `${roomPath(code)}/players/${uid}`;
   S.set(`${base}/num`, num); S.set(`${base}/nick`, nick); S.set(`${base}/seen`, S.now());
   if (more?.cls) S.set(`${base}/cls`, more.cls);
   if (more?.ver) S.set(`${base}/ver`, more.ver);
   if (more?.hero != null) S.set(`${base}/hero`, more.hero);
+  if (more?.x != null) S.set(`${base}/x`, more.x || null);
 }
 export function leave(S: Store, code: string, uid: string): void {
   S.set(`${roomPath(code)}/players/${uid}`, null);
