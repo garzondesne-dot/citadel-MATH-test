@@ -21,6 +21,11 @@
 }
 /* 🌐 #131 브라우저 · 기기 통일: 강제 다크 · 글자 크기 자동 키움 끄기 (밝은 테마는 그 묶음에 color-scheme: light) */
 :root { color-scheme: dark; }
+/* 🌐 #134 삼성 인터넷: 「이 사이트는 다크 테마를 직접 가짐」 신호 = prefers-color-scheme 묶음(값은 금빛 던전 그대로 · 밝은 시스템이어도 같은 색)
+   삼성 인터넷 13.2+ 는 이 신호 + color-scheme 이 있으면 강제 다크 대신 사이트 색을 쓰는 설정이 있음(실험실 「웹사이트 다크 테마 사용」 · 판마다 다름) */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='gold'] { --bg: #0f1115; --surface: #181b22; --surface-2: #222632; --text: #f2f3f5; --accent: #f5b84a; color-scheme: dark; }
+}
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* 옛 이름 (b1~b3 화면) → 토큰 */
 :root {

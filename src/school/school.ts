@@ -70,6 +70,9 @@ export const setSlot = (S: Store, dow: number, p: number, cls: string | null) =>
 export interface LastClass { lesson: string; no: number; at: number; done: boolean; code: string }
 export const lastClass = (S: Store, cls: string) => S.get<LastClass>(`school/last/${cls}`);
 export const setLast = (S: Store, cls: string, v: LastClass) => S.set(`school/last/${cls}`, v);
+/** 🧪 테스트로 연 수업의 이어서 자리 (#133 · 학생과 같은 과정 = 테스트도 이어서 · 실제 반 기록 school/last 와 따로) */
+export const lastTest = (S: Store, cls: string) => S.get<LastClass>(`school/lastTest/${cls}`);
+export const setLastTest = (S: Store, cls: string, v: LastClass) => S.set(`school/lastTest/${cls}`, v);
 /** 지금 열린 수업 (교사 폰이 열면 · 교실 TV · 학생 캠프가 따라감) */
 export interface Live { code: string; cls: string; lesson: string; key: string; test?: boolean }
 export const liveNow = (S: Store) => S.get<Live>('school/live');

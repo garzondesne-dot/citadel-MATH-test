@@ -4,7 +4,7 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
   import { openRoom, roomPath } from '../../raid/actions';
-  import { liveNow, newCode, newKey, setLast, setLive, type Live } from '../../school/school';
+  import { liveNow, newCode, newKey, setLast, setLastTest, setLive, type Live } from '../../school/school';
   import { clock, useClock } from '../clock.svelte';
   import { liveValue } from '../room.svelte';
   import THome from './THome.svelte';
@@ -37,11 +37,11 @@
     if (from) { S.set(`${roomPath(code)}/meta/resumeFrom`, from.step); if (from.fresh) S.set(`${roomPath(code)}/meta/fresh/${from.fresh}`, true); } // ⏯ 이어서
     if (!test) S.set(`${roomPath(code)}/meta/limit`, true);
     setLive(S, { code, cls, lesson: L.id, key, ...(test ? { test: true } : {}) });
-    if (!test) setLast(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code });
+    (test ? setLastTest : setLast)(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code }); // ⏯ 🧪 테스트도 이어서 (#133 · 따로 저장)
     page = 'live';
   }
   function closed() {
-    if (live && !live.test && liveL) { const R2 = S.get<Room>(roomPath(live.code)); if (R2) setLast(S, live.cls, { lesson: live.lesson, no: liveL.no, at: S.now(), done: !!R2.state.stop?.done, code: live.code }); } // ⏯ 닫힌 그때 자리 = 방 state.stop
+    if (live && liveL) { const R2 = S.get<Room>(roomPath(live.code)); if (R2) (live.test ? setLastTest : setLast)(S, live.cls, { lesson: live.lesson, no: liveL.no, at: S.now(), done: !!R2.state.stop?.done, code: live.code }); } // ⏯ 닫힌 그때 자리 = 방 state.stop
     setLive(S, null); page = 'home';
   }
   let wideDash = $state(false); // 📊 대시보드 펼친 화면이면 교사 폰 기둥(430) 대신 화면 전체
@@ -54,7 +54,7 @@
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}
-      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from) => open(c, L, false, from)} onresume={() => (page = 'live')} ontest={(L) => open('1-1', L, true)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
+      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from) => open(c, L, false, from)} onresume={() => (page = 'live')} ontest={(L, c, from) => open(c || '1-1', L, true, from)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
     {:else if tab === 'pupil'}
       <TPupils {S} ondash={(w) => (wideDash = w)} />
     {:else if tab === 'prep'}

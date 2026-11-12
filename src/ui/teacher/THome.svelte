@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { CLASSES, isBeta, lastClass, setSlot, week, type Live } from '../../school/school';
+  import { CLASSES, isBeta, lastClass, lastTest, setSlot, week, type Live } from '../../school/school';
   import { DOW, kst, PERIODS, periodNow } from '../../school/bells';
   import { isLobby, isEnd, stepOf } from '../../raid/raid';
   import { roomPath } from '../../raid/actions';
@@ -14,7 +14,7 @@
   //   ＋ 목록에 있지만 차시 팩이 안 된 차시 = 점선 칸 + 가운데 ＋ + 「n차시 · 준비 안 됨」 · 누르면 ⑰ 준비 탭 그 차시 (고르기는 안 됨 · #130 ③)
   const { S, packs, now, live, liveRoom, onopen, onresume, ontest, onprep }: {
     S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null;
-    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack) => void; onprep: (id: string) => void;
+    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack, cls?: string, from?: { step: number; fresh: string | null }) => void; onprep: (id: string) => void;
   } = $props();
   const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
   let cls = $state('');
@@ -33,7 +33,9 @@
   // 이어서 = 이 폰이 열어 둔 수업이 아직 안 끝났을 때 (그 반)
   const resume = $derived(live && liveRoom && !liveRoom.state.closed ? { live, room: liveRoom } : null);
   // ⏯ 이어서 (#119 덧붙임 2): 고른 반의 지난 수업이 닫힌 그때 자리(방 state.stop) · 다 끝났으면 없음
-  const saved = $derived.by(() => { if (!cls || !last || last.done) return null; const Rl = S.get<Room>(roomPath(last.code)); const st = Rl?.state.stop; const Lp = packs.find((p) => p.id === last.lesson); return st && !st.done && Lp ? { L: Lp, st } : null; });
+  //   🧪 테스트로 연 수업도 같은 규칙(#133) · 실제 반 기록과 따로 저장 · 둘 다 있으면 나중 것
+  const savedOf = (lc: typeof last, test: boolean) => { if (!lc || lc.done) return null; const Rl = S.get<Room>(roomPath(lc.code)); const st = Rl?.state.stop; const Lp = packs.find((p) => p.id === lc.lesson); return st && !st.done && Lp ? { L: Lp, st, test, at: lc.at } : null; };
+  const saved = $derived.by(() => { void now; if (!cls) return null; const a = savedOf(last, false), b = savedOf(lastTest(S, cls), true); return a && b ? (b.at > a.at ? b : a) : a || b; });
   const resumeText = $derived.by(() => {
     if (!resume) return '';
     const Lr = packs.find((p) => p.id === resume.live.lesson), st = Lr ? stepOf(Lr, resume.room) : null;
@@ -80,12 +82,12 @@
   {#if resume}
     <button type="button" class="item" onclick={onresume}><span class="ic">▶</span><span class="tx"><b>{resumeText}</b><small>끝나지 않은 수업 · 누르면 그 자리로</small></span></button>
   {:else if saved}
-    <button type="button" class="item" onclick={() => onopen(cls, saved.L, saved.st)}><span class="ic">⏯</span><span class="tx"><b>{saved.L.no}차시 · {short(saved.L.steps[saved.st.step])}부터 이어서</b><small>{cls}반 지난 수업{saved.st.fresh ? ' · 숫자 바꾼 판' : ''}</small></span></button>
+    <button type="button" class="item" onclick={() => (saved.test ? ontest(saved.L, cls, saved.st) : onopen(cls, saved.L, saved.st))}><span class="ic">⏯</span><span class="tx"><b>{saved.test ? '🧪 ' : ''}{saved.L.no}차시 · {short(saved.L.steps[saved.st.step])}부터 이어서</b><small>{cls}반 {saved.test ? '테스트' : '지난 수업'}{saved.st.fresh ? ' · 숫자 바꾼 판' : ''}</small></span></button>
   {:else}
     <div class="item none fold"><span class="ic">이어</span><span class="tx"><b>끝나지 않은 수업 없음</b><small>있으면 여기에 「n차시 · 문제 4부터 이어서」</small></span></div>
   {/if}
   <div class="sub2">
-    <button type="button" class="chipbtn" disabled={!L} onclick={() => L && ontest(L)}>🧪 테스트로 열기</button>
+    <button type="button" class="chipbtn" disabled={!L} onclick={() => L && ontest(L, cls)}>🧪 테스트로 열기</button>
     <a class="chipbtn" href="?role=hall" target="_blank">🏛 교사 캠프 (TV)</a>
   </div>
 </div>

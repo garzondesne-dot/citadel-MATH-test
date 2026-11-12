@@ -45,9 +45,12 @@
   // 학생 캠프 = 내 반에 열린 수업 (없으면 닫힌 문)
   const lvApp = liveValue<Live>(S, 'school/live');
   const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && !lvApp.v.val.test ? lvApp.v.val.code : '');
+  // 🔄 #134 ① 이 화면이 최신 판인지: 사이트 version.json(캐시 안 씀)과 BUILD 비교 → 같으면 「BETA · b15 ✔」 · 다르면 빨간 「b14 → b15 ↻」(누르면 새로 고침)
+  let site = $state('');
+  if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {});
 </script>
 
-{#if role !== 'dev'}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}">BETA · {BUILD}</div>{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if role !== 'dev'}{#if site && site !== BUILD}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
@@ -87,6 +90,8 @@
   :global(a) { color: var(--accent); }
   :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
   .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
+  .beta-pill.old { pointer-events: auto; border: 1px solid var(--bad); color: #fff; background: var(--bad-bg); font: inherit; font-weight: 700; cursor: pointer; }
+  .beta-pill.tpill.old { height: 22px; opacity: 1; }
   .beta-pill.hall { top: auto; bottom: 8px; left: 8px; transform: none; }
   .beta-pill.tpill { top: 0; left: 2px; transform: none; height: 16px; font-size: 11px; padding: 0 6px; opacity: 0.7; }
   .beta-pill.low { top: 62px; left: var(--s4); transform: none; }
