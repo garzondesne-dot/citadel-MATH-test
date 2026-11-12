@@ -22,6 +22,8 @@ const log = (...a) => console.log(...a);
   for (const t of IDS) {
     const r = [];
     for (const [nm, p] of [['캠프', camp], ['전투', st], ['교사', tp]]) { await set(p, t); const o = await over(p); r.push(`${nm} ${o.x}`); if (o.x > 0) errs.push(`${t} ${nm} 가로 넘침 ${o.x}`); if (o.th !== t) errs.push(`${t} ${nm} 테마 안 켜짐(${o.th})`); }
+    const lap = await camp.evaluate(() => { const a = document.querySelector('.act').getBoundingClientRect().top, xs = [...document.querySelectorAll('.info > *')].map((x) => x.getBoundingClientRect().bottom); return Math.round(Math.max(...xs) - a); });
+    r.push(`캠프 겹침 ${Math.max(0, lap)}`); if (lap > 0) errs.push(`${t} 캠프 정보판 ↔ 주요 단추 겹침 ${lap}`);
     rows.push(`${t}: ${r.join(' · ')}`);
     if (['gold', 'cloud', 'classic', 'parchment'].includes(t)) { await camp.screenshot({ path: `${SHOTS}/b27-camp-${t}.png` }); await st.screenshot({ path: `${SHOTS}/b27-battle-${t}.png` }); }
   }

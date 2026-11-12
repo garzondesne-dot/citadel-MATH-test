@@ -5,7 +5,7 @@ const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.';
 const B = 'http://localhost:4173/';
 (async () => {
-  const b = await chromium.launch();
+  const b = await chromium.launch({ env: { ...process.env, LANG: 'ko_KR.UTF-8', LC_ALL: 'C.UTF-8' } }); // 한글 파일 이름 = UTF-8 언어 설정 필요(없으면 받은 이름이 「download」 · 실제 폰과 상관없음)
   const errs = [], log = (...a) => console.log(...a);
   const ctx = await b.newContext({ viewport: { width: 360, height: 640 }, acceptDownloads: true });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
@@ -33,7 +33,7 @@ const B = 'http://localhost:4173/';
   await p.click('.tw tbody tr >> nth=2'); await p.waitForTimeout(150); log('반 누름 →', await p.$eval('.chips button.on', (e) => e.textContent.trim()), (await p.textContent('.vh b')).trim());
   await p.click('.tw tbody tr >> nth=0'); await p.waitForSelector('.ps'); log('이름 누름 → 시트', (await p.textContent('.ps .hd b')).trim()); await p.click('.ps .x');
   await p.click('.xlb'); const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.sheet .act .btn')]);
-  log('⬇ 엑셀:', dl.suggestedFilename()); if (!/^모두의던전_대시보드_\S+_\d{4}-\d\d-\d\d\.xlsx$/.test(dl.suggestedFilename())) errs.push('엑셀 파일 이름'); await dl.saveAs(`${SHOTS}/dash-sample.xlsx`).catch(() => {});
+  log('⬇ 엑셀:', dl.suggestedFilename()); if (!/^모두의던전_\S+_\d{4}-\d\d-\d\d\.xlsx$/.test(dl.suggestedFilename())) errs.push('엑셀 파일 이름'); await dl.saveAs(`${SHOTS}/dash-sample.xlsx`).catch(() => {});
   // ⑰ 준비
   await p.click('.seg button:has-text("명단")'); await tab('준비'); await fixedOk('⑰ 준비');
   await p.click('.four button >> nth=0'); await p.click('.stp button[aria-label="줄이기"]'); await p.click('.sheet .act .btn');

@@ -21,7 +21,7 @@
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   function excel() {
-    const name = `모두의던전_대시보드_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
+    const name = `모두의던전_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
     let sheets;
     if (xlPick === 'all') sheets = [toSheet(view(S, ALL, 'cmp', withX), withX), ...CLASSES.filter((c) => withX || !isBeta(S, c)).map((c) => ({ ...toSheet(view(S, c, 'grid', withX), withX), name: `${c}반` }))];
     else if (xlPick === 'cls') sheets = ALL_VIEWS.filter((v) => cls === ALL || v !== 'cmp').map((v) => toSheet(view(S, cls, v, withX), withX));
@@ -66,7 +66,7 @@
     <button type="button" class="xo" class:on={xlPick === 'cls'} disabled={cls === ALL} onclick={() => (xlPick = 'cls')}><span>{cls === ALL ? '—' : cls}</span><span><b>지금 반만</b><small>{cls === ALL ? '반 칩을 고르면' : `${cls}반 보기 11개를 시트로`}</small></span></button>
     <button type="button" class="xo" class:on={xlPick === 'view'} onclick={() => (xlPick = 'view')}><span>📄</span><span><b>지금 보는 표만</b><small>{V.title} · 시트 1개</small></span></button>
     <label class="ck"><input type="checkbox" bind:checked={withX} /> 🧪 베타 반 · 시험 계정도 넣기 (「구분」 열)</label>
-    <small class="fn">파일 · 모두의던전_대시보드_{xlPick === 'all' ? '전체' : cls}_{ymd()}.xlsx · 기기 안에서 바로 만들어요(서버로 안 보냄)</small>
+    <small class="fn">파일 · 모두의던전_{xlPick === 'all' ? '전체' : cls}_{ymd()}.xlsx · 기기 안에서 바로 만들어요(서버로 안 보냄)</small>
   </Sheet>
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}

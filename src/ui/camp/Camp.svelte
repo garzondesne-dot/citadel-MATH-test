@@ -138,6 +138,8 @@
 </script>
 
 <div class="camp">
+  <!-- #145 ② 짧은 화면(360 × 640 등): 장면만 비율 그대로 줄여 가운데 · 정보판 · 주요 단추는 늘 같은 자리(겹침 0) -->
+  <div class="stagebox" style:--ar={W / H}>
   <div class="stage" role="presentation" onclick={ground} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
     <img class="obj" alt="" src={CAMP.castle.src} style={objStyle(CAMP.castle)} />
     <img class="obj lit" class:on={sheet === 'castle'} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
@@ -167,6 +169,7 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
+  </div>
   </div>
 
   <section class="info">
@@ -232,8 +235,11 @@
   .cin:focus { border-color: var(--accent); outline: none; }
   .cerr { margin: 0; color: var(--bad); font-size: 14px; font-weight: 700; }
   .cgo { min-height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
-  .camp { max-width: 430px; margin: 0 auto; }
-  .stage { position: relative; width: 100%; background-size: 100% 100%; overflow: hidden; }
+  .camp { max-width: 430px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  .stagebox { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+  .camp > :global(.act) { flex: none; }
+  .info { flex: none; }
+  .stage { position: relative; width: min(100cqw, 100cqh * var(--ar)); flex: none; background-size: 100% 100%; overflow: hidden; }
   .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40px; background: linear-gradient(transparent, var(--bg)); pointer-events: none; z-index: 4; }
   .obj { position: absolute; z-index: 1; pointer-events: none; }
   .obj.lit { opacity: 0; transition: opacity 0.4s; }
@@ -259,7 +265,7 @@
   .gtoast.mail { border-color: var(--accent); }
   .gtoast { position: absolute; top: 60px; left: var(--s4); right: var(--s4); z-index: 7; margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); color: var(--text); font-weight: 700; text-align: center; }
   .top { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
-  .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); }
+  .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); white-space: nowrap; flex: none; }
   .sp2 { flex: 1; }
   .gear { width: 40px; height: 40px; margin: 0 -4px 0 0; position: relative; border: 0; border-radius: 20px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: 18px; display: grid; place-items: center; }
   .gear::before { content: ''; position: absolute; inset: -4px; }
