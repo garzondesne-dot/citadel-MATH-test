@@ -1,6 +1,11 @@
 <script lang="ts">
   // 🧩 부분집합 모두 쓰기 = 새 칸 (#99 ③): 원소 칩으로 집합 하나를 만들어 「➕ 넣기」 · ∅ 단추 따로 · 만든 집합은 ✕ 로 뺌
-  const { base, value, disabled = false, onchange }: { base: number[]; value: number[][]; disabled?: boolean; onchange: (v: number[][]) => void } = $props();
+  import type { Given, Question } from '../../../model/types';
+  // 엔진 문항 칸 꼴(SUBJ.formats.subsets.Widget): { q, value, disabled, onchange }
+  const { q, value: v0, disabled = false, onchange: on }: { q: Question; value: Given; disabled?: boolean; onchange: (v: Given) => void } = $props();
+  const base = $derived(q.type === 'subsets' ? q.base : []);
+  const value = $derived((v0 as number[][]) || []);
+  const onchange = (v: number[][]) => on(v);
   let cur = $state<number[]>([]);
   const key = (s: number[]) => s.slice().sort((a, b) => a - b).join(',');
   const label = (s: number[]) => (s.length ? `{${s.slice().sort((a, b) => a - b).join(', ')}}` : '∅');

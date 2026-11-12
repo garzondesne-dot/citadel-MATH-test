@@ -3,7 +3,8 @@
 // 끝에 '@h120' = 색 변형 (hue-rotate · 정식과 같은 꼴) — b2 는 그림 하나로 몬스터 · 보스를 색만 바꿔 씀
 export interface Sheet { src: string; cols: number; rows: number; cell: number; poses: Record<'idle' | 'attack' | 'down', number>; names: string[] }
 
-import GEN from './sheets.gen.json';
+import { SUBJ } from '../engine/subject';
+const GEN = SUBJ.themes; // 몬스터 줄 · 던전 배경 표 = 과목 팩 (#132 · #136)
 export const SHEETS: Record<string, Sheet> = {
   mimic: { src: 'art/monster-mimic-v1.webp', cols: 3, rows: 1, cell: 256, poses: { idle: 0, attack: 1, down: 2 }, names: ['이끼 미믹'] },
   // 🧩 #132 정식 차시가 쓰는 몬스터 줄만 잘라 온 것 (tools/pack-from-release · 'new2:0' = 정식 'new:2')

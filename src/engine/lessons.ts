@@ -1,6 +1,6 @@
 import type { LessonPack, Question } from '../model/types';
 import { makeRng } from './rng';
-import { getBossGen, getChainGen, getGen } from '../gens/registry';
+import { getBossGen, getChainGen, getGen } from './registry';
 
 // 차시 팩 → 문항 만들기. 정식 차시 파일의 items(id, seed, attempt) 와 같은 시드 규칙:
 //   난수 = Rng(`${seed}|${몬스터}|${판}`) · seed = `${방코드}|${학생}` (raid.ts seedOf)

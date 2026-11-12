@@ -1,7 +1,7 @@
 // 📱 b8 교사 쪽 엔진 동작 (#119): 정찰 ±30초 · 체력 ±5% · 집중 + 쉼터 겹침 · +5분 한 번 · ◀ 앞 단계 · 결석 · 선물 · 수업 시작 마감
 import { describe, expect, it } from 'vitest';
 import type { LessonPack, Room, Store } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
 import { appearNow, doorStart, endClass, extendTime, giveGift, heartbeat, nextStep, openRoom, prevStep, roomPath, scoutAdd, setAbsent, setFocus, setPct, setRest, submit } from '../src/raid/actions';

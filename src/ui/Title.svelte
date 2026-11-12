@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SUBJ } from '../engine/subject';
   import type { Store } from '../model/types';
   import { CLASSES, hasAccount, logIn, pupil, roster, saveLogin, signUp, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
@@ -36,7 +37,7 @@
 </script>
 
 <div class="title" style:background-image="url({ART})">
-  <h1 class="logo"><img src={LOGO} alt="모두의 던전 · 공통수학2" /></h1>
+  <h1 class="logo"><img src={LOGO} alt="모두의 던전 · {SUBJ.name}" /></h1>
   <form class="form" onsubmit={(e) => { e.preventDefault(); if (ready) go(); }}>
     <div class="row">
       <label class="sel"><span class="sr">반</span>

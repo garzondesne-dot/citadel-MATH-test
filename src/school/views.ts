@@ -1,3 +1,4 @@
+import { SUBJ } from '../engine/subject';
 import type { Store } from '../model/types';
 import { CLASSES, isBeta } from './school';
 import { achieve, fakeClass, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
@@ -24,7 +25,7 @@ const tone = (v: number | null): Tone => (v == null ? 'na' : v >= 80 ? 'ok' : v 
 const p = (v: number | null) => (v == null ? '—' : `${v}%`);
 const pv = (v: number | null): Cell => (v == null ? null : { pct: v / 100 });
 const avg = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : 0);
-const SYMS: [string, string][] = [['A ⊂ B', 'A 가 B 안에 쏙 들어간다'], ['A ∩ B', 'A 와 B 가 겹친 곳'], ['A ∪ B', 'A 와 B 를 합친 것'], ['A ∩ B = ∅', '하나도 안 겹친다 (서로소)'], ['A = B', '원소가 똑같은 두 집합'], ['n(A ∪ B)', '더하고 겹친 만큼 빼기'], ['a ∈ A', 'a 는 A 팀 소속!'], ['Aᶜ', 'U 안에서 A 밖 전부']];
+const SYMS = SUBJ.demo.syms; // 테스트 판 가짜 기호 표 = 과목 팩 (#136)
 
 /** 반 하나 또는 「전체」(ALL) 의 학생 · 수업한 차시 · 빠진 수 */
 export const ALL = '전체';
@@ -97,11 +98,11 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
     case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
-    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name} · 6차시 문제 4`, sub: s.extra.photoRe ? '다시 · 근거 빠짐' : '통과 · 근거 3줄', pc: s.extra.photoRe ? '다시' : '통과', pick: s })) };
+    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name} · ${SUBJ.demo.photoWhere}`, sub: s.extra.photoRe ? '다시 · 근거 빠짐' : '통과 · 근거 3줄', pc: s.extra.photoRe ? '다시' : '통과', pick: s })) };
     case 'survey': {
       const n = studs.length, r = Math.round(n * 0.85), fun = Math.round(r * 0.82);
-      return { id, title: '설문', info: '수업 설문 응답', kpis: [{ lab: '6차시 응답', big: `${r} / ${n}`, sub: cls }, { lab: '「재밌었다」', big: p(pct(fun, r)), sub: `${fun}명` }],
-        list: [{ rk: '💬', nm: '가장 좋았던 것', sub: '박쥐 · 콤보 · 친구랑 같이', pc: '' }, { rk: '💬', nm: '어려웠던 것', sub: '드모르간 · 차집합 개수', pc: '' }, { rk: '💬', nm: '바라는 것', sub: '쉼터 놀이 더 · 보스 더 세게', pc: '' }] };
+      return { id, title: '설문', info: '수업 설문 응답', kpis: [{ lab: `${SUBJ.demo.surveyLesson} 응답`, big: `${r} / ${n}`, sub: cls }, { lab: '「재밌었다」', big: p(pct(fun, r)), sub: `${fun}명` }],
+        list: [{ rk: '💬', nm: '가장 좋았던 것', sub: '박쥐 · 콤보 · 친구랑 같이', pc: '' }, { rk: '💬', nm: '어려웠던 것', sub: SUBJ.demo.surveyHard, pc: '' }, { rk: '💬', nm: '바라는 것', sub: '쉼터 놀이 더 · 보스 더 세게', pc: '' }] };
     }
   }
   return { id, title: id, info: '' };

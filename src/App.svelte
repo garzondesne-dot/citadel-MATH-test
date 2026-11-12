@@ -1,7 +1,8 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
-  import { PACKS, packOf } from './packs';
+  import { PACKS, packOf } from './engine/packs';
+  import { SUBJ } from './engine/subject';
   import { PROFILES } from './model/profiles';
   import { validate } from './engine/lessons';
   import { deviceStore } from './store/device';
@@ -19,7 +20,7 @@
   const code = (q.get('room') || 'TEST').toUpperCase();
   const S = deviceStore();
   // 🧩 #132 차시 = 방이 기억한 차시(meta.lesson) → 지금 열린 수업 → 6차시 · 팩은 src/packs 모두
-  const DEF = packOf('set-06') ?? PACKS[0]!;
+  const DEF = packOf(SUBJ.defaultLesson) ?? PACKS[0]!;
   const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
   const lessonOf = (c: string): LessonPack => packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? DEF;
   // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름

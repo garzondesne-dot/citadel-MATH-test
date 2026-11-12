@@ -12,10 +12,10 @@ npx vitest run tests/packs.test.ts   # 정식 독립 검산 원문 + 정식 출�
 
 | 만드는 것 | 내용 |
 |---|---|
-| `src/gens/official/set-NN.js` · `shim.js` | 정식 차시 파일 · DS.Rng · DS.SetGen 원문(모듈로 감쌈) |
-| `src/gens/official/index.ts` | 생성기 이름 등록 (`set02.m1` · `set02.boss`) — 팩에는 이름만 |
-| `src/packs/set-NN.json` | 팩 데이터 (단계 · 분 · 몬스터 · 형성평가 세트 · crops · videos · source) |
-| `public/art/mon-*.webp` · `dg-*-v1h.webp` · `src/ui/sheets.gen.json` | 쓰는 몬스터 줄 · 던전 배경만 |
+| `src/subjects/common-math2/gens/official/set-NN.js` · `shim.js` | 정식 차시 파일 · DS.Rng · DS.SetGen 원문(모듈로 감쌈) |
+| `src/subjects/common-math2/gens/official/index.ts` | 생성기 이름 등록 (`set02.m1` · `set02.boss`) — 팩에는 이름만 |
+| `src/subjects/common-math2/lessons/set-NN.json` | 팩 데이터 (단계 · 분 · 몬스터 · 형성평가 세트 · crops · videos · source) |
+| `public/art/mon-*.webp` · `dg-*-v1h.webp` · `src/subjects/common-math2/themes.json` | 쓰는 몬스터 줄 · 던전 배경만 |
 | `tests/official/` · `tests/fixtures/packs/` | 정식 독립 검산 시험 원문 · 정식 출력 기준값 |
 
 입력판에서 반영하는 것: 단계 순서 · 제목 · 말할 거리 · 분 · 이름표(title · goal · theme · pct · next · std). 메모(memo)는 반영하지 않고 「📝 입력판 메모 n개」로 출력(문제를 바꾸는 일 = 학습지 컨펌 흐름). 입력판에만 있는 단계 · 뺀 단계도 출력.

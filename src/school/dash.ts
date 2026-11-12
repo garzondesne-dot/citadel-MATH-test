@@ -1,3 +1,4 @@
+import { SUBJ } from '../engine/subject';
 import { makeRng } from '../engine/rng';
 import type { Store } from '../model/types';
 import { CLASSES, isExcluded, roster } from './school';
@@ -19,21 +20,10 @@ export interface Extra { days: number[]; solves: number; fixes: number; gem: num
   /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
-export const STANDARDS = [
-  { id: '10공수2-02-01', name: '집합의 뜻 · 포함 관계', lessons: [2, 3] },
-  { id: '10공수2-02-02', name: '집합의 연산', lessons: [4, 5, 6] },
-  { id: '10공수2-02-03', name: '명제와 조건', lessons: [7, 8, 9, 10] },
-];
+export const STANDARDS = SUBJ.standards; // 과목 팩 (#136)
 const stdOf = (no: number) => STANDARDS.find((s) => s.lessons.includes(no))?.id ?? null;
 export { MIS } from './seteuk';
-const LESSONS = [
-  { id: 'set-02', no: 2, title: '집합의 표현', concs: ['원소', '조건제시법', '원소의 개수'] },
-  { id: 'set-03', no: 3, title: '포함 관계', concs: ['부분집합', '진부분집합', '부분집합의 개수'] },
-  { id: 'set-04', no: 4, title: '교집합 · 합집합', concs: ['교집합', '합집합', '서로소'] },
-  { id: 'set-05', no: 5, title: '여집합 · 차집합', concs: ['연산 법칙', '여집합', '차집합'] },
-  { id: 'set-06', no: 6, title: '드모르간', concs: ['드모르간', '원소의 개수', '생활 속'] },
-  { id: 'set-07', no: 7, title: '명제', concs: ['명제', '조건', '진리집합'] },
-];
+const LESSONS = SUBJ.lessonList; // 과목 팩 (#136)
 export const LESSON_LIST = LESSONS;
 const level = (xp: number) => Math.max(1, Math.min(20, Math.floor(Math.sqrt(xp / 40)) + 1));
 

@@ -1,6 +1,6 @@
 // 채점표 「문제 짧게」 (#113 · #116): 묻는 부분만
 import { expect, it } from 'vitest';
-import { boss1 } from '../src/gens/set06';
+import { boss1 } from '../src/subjects/common-math2/gens/set06';
 import { shortQ } from '../src/ui/q/short';
 
 it('6차시 형성평가 6문항 → 짧게', () => {

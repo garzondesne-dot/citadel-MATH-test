@@ -1,11 +1,11 @@
 // 🧩 #132 차시 팩 변환기 — 정식 저장소의 lessons/set-NN.js → v1.0 차시 팩
 //   사용: node tools/pack-from-release/convert.mjs <정식 저장소 폴더> [--board <입력판 폴더>] [--only set-02,set-03]
 //   만드는 것 (손으로 고치지 않음 · 정식에서 새 차시가 오면 이 도구로 다시 뽑음):
-//     src/gens/official/shim.js          = 정식 DS.Rng · DS.SetGen 원문 (차시 파일이 쓰는 도구)
-//     src/gens/official/set-NN.js        = 정식 차시 파일 원문 + 앞뒤 몇 줄(모듈로 감쌈) — 숫자 생성기 코드는 여기에만
-//     src/gens/official/index.ts         = 생성기 이름 등록 ('set02.m1' · 'set02.boss' …)
-//     src/packs/set-NN.json              = 차시 팩(데이터만 · 코드 없음 · 생성기는 이름으로)
-//     public/art/mon-<시트><줄>-v1.webp · dg-<테마>-v1h.webp + src/ui/sheets.gen.json = 쓰는 몬스터 줄 · 던전 배경만 잘라 옴
+//     src/subjects/<과목>/gens/official/shim.js          = 정식 DS.Rng · DS.SetGen 원문 (차시 파일이 쓰는 도구)
+//     src/subjects/<과목>/gens/official/set-NN.js        = 정식 차시 파일 원문 + 앞뒤 몇 줄(모듈로 감쌈) — 숫자 생성기 코드는 여기에만
+//     src/subjects/<과목>/gens/official/index.ts         = 생성기 이름 등록 ('set02.m1' · 'set02.boss' …)
+//     src/subjects/<과목>/lessons/set-NN.json              = 차시 팩(데이터만 · 코드 없음 · 생성기는 이름으로)
+//     public/art/mon-<시트><줄>-v1.webp · dg-<테마>-v1h.webp + src/subjects/<과목>/themes.json = 쓰는 몬스터 줄 · 던전 배경만 잘라 옴
 //   입력판(--board · 아티팩트 db packs/{id} 를 내려받은 JSON 폴더): 단계 순서 · 제목 · 말할 거리 · 분(min) · 이름표(title · goal · theme · pct · next · std)
 //     문제 · 정답은 늘 정식 코드에서 · 형성평가 메모(memo)는 반영하지 않고 보고만
 import fs from 'node:fs';
@@ -19,7 +19,8 @@ const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : nu
 const BOARD = opt('--board');
 const ONLY = (opt('--only') || 'set-02,set-03,set-04,set-05').split(',');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
-const OUT_GEN = path.join(ROOT, 'src/gens/official'), OUT_PACK = path.join(ROOT, 'src/packs'), OUT_ART = path.join(ROOT, 'public/art');
+const SUBJECT = opt('--subject') || 'common-math2', SUB = path.join(ROOT, 'src/subjects', SUBJECT); // #136 과목 팩 폴더
+const OUT_GEN = path.join(SUB, 'gens/official'), OUT_PACK = path.join(SUB, 'lessons'), OUT_ART = path.join(ROOT, 'public/art');
 const commit = (() => { try { return execFileSync('git', ['-C', REL, 'rev-parse', '--short', 'HEAD']).toString().trim(); } catch { return '?'; } })();
 fs.mkdirSync(OUT_GEN, { recursive: true });
 
@@ -49,7 +50,7 @@ const SHEET_FILE = { base: 'monsters-v2', extra: 'monsters-extra-v2', new: 'mons
 const man = fs.readFileSync(path.join(REL, 'assets/manifest.js'), 'utf8');
 const namesOf = (file) => { const m = new RegExp(`src: '${file}\\.webp'[^\\n]*?names: \\[([^\\]]*)\\]`, 's').exec(man) || new RegExp(`src: '${file}\\.webp'[\\s\\S]*?names: \\[([^\\]]*)\\]`).exec(man); return m ? [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]) : []; };
 const findAsset = (name) => { for (const d of ['assets', 'assets/art', 'assets/img']) { const p = path.join(REL, d, name); if (fs.existsSync(p)) return p; } throw new Error(`정식 그림 없음: ${name}`); };
-const sheetsGen = fs.existsSync(path.join(ROOT, 'src/ui/sheets.gen.json')) ? JSON.parse(fs.readFileSync(path.join(ROOT, 'src/ui/sheets.gen.json'), 'utf8')) : { sheets: {}, dungeons: {} };
+const sheetsGen = fs.existsSync(path.join(SUB, 'themes.json')) ? JSON.parse(fs.readFileSync(path.join(SUB, 'themes.json'), 'utf8')) : { sheets: {}, dungeons: {} };
 const cuts = [];
 function spriteRef(ref) { // 'new:2@h120' → 'new2:0@h120' (그 줄만 자른 시트)
   const [base, h] = String(ref).split('@h');
@@ -143,7 +144,7 @@ for (const id of ONLY) {
   for (const v of Object.values(L.videos || {})) if (/^assets\//.test(v)) { const to = path.join(OFF, v); fs.mkdirSync(path.dirname(to), { recursive: true }); if (!fs.existsSync(to)) fs.writeFileSync(to, ''); }
 }
 fs.writeFileSync(path.join(OFF, 'package.json'), '{ "type": "commonjs" }\n'); // 정식 시험 = require 꼴 그대로
-fs.writeFileSync(path.join(OFF, 'README.md'), `# 정식 독립 검산 시험 (자동 복사 · 손으로 고치지 않음)\n\ntools/pack-from-release/convert.mjs 가 정식 @ ${commit} 에서 복사함. tests/officialLessons.test.ts 가 차시마다 \`node tests/official/tests/<시험>\` 을 돌려 통과(종료 0)를 확인함.\n차시 파일(lessons/)은 src/gens/official/ 과 같은 원문. assets/video/*.mp4 = 빈 자리 파일(정식 시험의 「파일 있음」 확인용 · 실제 영상은 정식 사이트).\n`);
+fs.writeFileSync(path.join(OFF, 'README.md'), `# 정식 독립 검산 시험 (자동 복사 · 손으로 고치지 않음)\n\ntools/pack-from-release/convert.mjs 가 정식 @ ${commit} 에서 복사함. tests/packs.test.ts 가 차시마다 \`node tests/official/tests/<시험>\` 을 돌려 통과(종료 0)를 확인함.\n차시 파일(lessons/)은 src/subjects/<과목>/gens/official/ 과 같은 원문. assets/video/*.mp4 = 빈 자리 파일(정식 시험의 「파일 있음」 확인용 · 실제 영상은 정식 사이트).\n`);
 
 // ── ④″ 입력판 그림 · 영상 (media/{id} · #132 덧붙임): 정식 값이 기본 · 선생님이 바꾼 칸은 덮지 않고 보고만 ──
 //   url 은 아티팩트 자산(/_blob/…)이라 내용 비교 대신 ① 칸 목록(더함 · 뺌) ② 영상 묶음(정식에서 같은 파일을 쓰는 칸끼리 같은 자산인가) ③ 문서를 고친 때로 가림
@@ -165,8 +166,8 @@ if (MEDIA && fs.existsSync(MEDIA)) for (const id of ONLY) {
 // ── ⑤ 생성기 이름 등록 (index.ts) — 판 0 · 1~ 모두 정식 make(판, 난수) 그대로 ──
 const ids = [...new Set(reg.map((r) => r[1]))];
 fs.writeFileSync(path.join(OUT_GEN, 'index.ts'), `// ⚠ 자동 생성 — tools/pack-from-release/convert.mjs · 정식 @ ${commit} · 손으로 고치지 않음
-import type { Question } from '../../model/types';
-import type { Rng } from '../../engine/rng';
+import type { Question } from '../../../../model/types';
+import type { Rng } from '../../../../engine/rng';
 ${ids.map((id) => `// @ts-ignore 원문 모듈(js)\nimport ${id.replace('-', '')} from './${id}.js';`).join('\n')}
 type Off = { monsters: Record<string, { make: (a: number, r: Rng) => Question[] }>; boss?: { sets: Record<number, Question[]>; make?: (i: number, a: number, r: Rng) => Question } };
 const O: Record<string, Off> = { ${ids.map((id) => `'${id}': ${id.replace('-', '')}`).join(', ')} };
@@ -187,7 +188,7 @@ export const OFFICIAL_COMMIT = '${commit}';
 `);
 
 // ── ⑥ 그림 자르기 (python PIL) ──
-fs.writeFileSync(path.join(ROOT, 'src/ui/sheets.gen.json'), JSON.stringify(sheetsGen, null, 1) + '\n');
+fs.writeFileSync(path.join(SUB, 'themes.json'), JSON.stringify(sheetsGen, null, 1) + '\n');
 if (cuts.length) execFileSync('python3', [path.join(path.dirname(new URL(import.meta.url).pathname), 'cut.py'), JSON.stringify(cuts)], { stdio: 'inherit' });
 
 console.log(`✅ 정식 @ ${commit} → ${ONLY.join(' · ')} · 생성기 ${reg.length} · 그림 ${cuts.length}장`);

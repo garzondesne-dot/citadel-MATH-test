@@ -1,3 +1,4 @@
+import { SUBJ } from '../engine/subject';
 // 🧙 용사 · 스킬 사다리 · 강화 · 레벨 · 호칭 — 정식 값 그대로
 //   표 = hero-data.json (tools/make-hero-data.cjs 가 정식 코드에서 뽑음 · 손으로 고치지 않음)
 //   기준값 시험 = tests/parity.test.ts (정식 함수가 만든 사다리 · 값 · 레벨과 같음)
@@ -27,7 +28,10 @@ export const AURA_CSS: [string, string, number][] = [['', '', 0], ['#e8eef8', '#
 /** 🌟 강화 대성공 10% = 그 단계 💎 절반 돌려받기 (정식 gem.js GREAT) */
 export const GREAT = 0.1;
 export const HERO_NAMES: Record<number, { name: string; job: string }> = Object.fromEntries(HEROES.map((h) => [h.id, { name: h.name, job: h.job }]));
-export const TITLES = DATA.titles as { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[];
+type Title = { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string };
+// 칭호 = 엔진 칭호 + 과목 칭호(SUBJ.titles · after 뒤에 끼움 · #136)
+const BASE_T = DATA.titles as Title[], AT = BASE_T.findIndex((t) => t.id === SUBJ.titles.after) + 1;
+export const TITLES: Title[] = [...BASE_T.slice(0, AT), ...SUBJ.titles.list, ...BASE_T.slice(AT)];
 export const titleOf = (id: string) => TITLES.find((t) => t.id === id) ?? null;
 export const STATS = DATA.stats;
 export const PORTRAITS = DATA.portraits as unknown as { src: string; cols: number; rows: number; list: Record<string, [number, number]> };

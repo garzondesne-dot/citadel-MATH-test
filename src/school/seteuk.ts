@@ -1,4 +1,5 @@
-import MIS_CODES from './mis-codes.json';
+import { SUBJ } from '../engine/subject';
+const MIS_CODES = SUBJ.misconceptions; // 오개념 사전 = 과목 팩 (#136)
 
 // 📝 세특 초안 = 생기부 낱말 (#127 · DECISIONS 「📝 세특 초안 = 생기부 낱말」 cf64373 = 원본 표)
 //   정식 #126 js/raid/dash.js memoParts 를 같은 문장으로 옮김 (같은 기록 = 같은 초안 · tests/fixtures/memo126.json 로 비교)
@@ -8,7 +9,7 @@ import MIS_CODES from './mis-codes.json';
 export const MEMO_MAX = 6, MEMO_LEN = 500;
 /** 쓰지 않는 낱말 (상수 하나 · 시험이 초안 전체에 0개인지 확인) */
 export const SETEUK_BAN = ['레이드', '몬스터', '보스', '던전', '성채', '허수아비', '모루', '용사', '마정석', '서술 조각', '레벨', 'EXP', '콤보', '랭킹', '처치', '💎', '📜', '등수', 'Lv'] as const;
-export const MIS: Record<string, { name: string; seteuk: string }> = MIS_CODES;
+export const MIS = MIS_CODES as Record<string, { name: string; seteuk: string }>;
 /** 세특에 쓰는 기록 (정식 build() 학생 꼴 중 필요한 칸) */
 export interface SeteukIn {
   went: number; heldN?: number; conc?: Record<string, { name: string; ok: number; total: number }>; std?: Record<string, [number, number]>; boss?: number | null;
@@ -27,7 +28,7 @@ export function seteukDraft(s: SeteukIn, stdName: (id: string) => string | null 
   if (!s || !s.went) return { main: '저장된 수업 기록이 없음.', more: [] };
   const S: [number, string][] = [];
   // ① 참여
-  S.push([1, `모둠 협동학습 형태의 수학 수업(집합과 명제 단원) ${s.heldN}차시 중 ${s.went}차시에 참여함${s.went === s.heldN ? '(전 차시 참여)' : ''}`]);
+  S.push([1, `모둠 협동학습 형태의 수학 수업(${SUBJ.seteuk.unit}) ${s.heldN}차시 중 ${s.went}차시에 참여함${s.went === s.heldN ? '(전 차시 참여)' : ''}`]);
   // ② 이해
   const cs = Object.values(s.conc || {}).filter((c) => c.total >= 2).map((c) => ({ ...c, p: pct(c.ok, c.total) }));
   const best = cs.filter((c) => c.p >= 80).sort((a, b) => b.p - a.p || b.total - a.total)[0];
@@ -46,7 +47,7 @@ export function seteukDraft(s: SeteukIn, stdName: (id: string) => string | null 
   else if (s.photoN) S.push([4, `풀이 과정을 근거와 함께 서술함(${s.photoN}회)`]);
   if (s.hints) S.push([4, '교사가 제시한 단서를 활용해 풀이를 보완함']);
   // ⑤ 자기주도
-  if (s.tryEval) S.push([5, `수업 외 시간에 단원 평가 문항에 ${s.tryEval}회 도전하며 스스로 단원을 정리함`]);
+  if (s.tryEval) S.push([5, `수업 외 시간에 ${SUBJ.seteuk.evalWord} 문항에 ${s.tryEval}회 도전하며 스스로 단원을 정리함`]);
   if (s.trySet) S.push([5, `배운 내용을 유사 문항으로 반복 연습함(${s.trySet}회)`]);
   if (s.noteDone) S.push([5, `오답을 다시 풀어 보완을 완료함(${s.noteDone}문항)`]);
   if (s.cards) S.push([5, `기호와 개념의 뜻을 연결하여 정리하는 활동을 ${s.cards}회 완료함`]);

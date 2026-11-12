@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Question } from '../../model/types';
   import { chipToggle } from '../../engine/input';
-  // 🔘 원소 칩 · 여러 개 고르기 (정식 P8 · #41 두 칸 고르기 groups · ∅ 단추 q.empty)
+  // 🔘 칩 · 여러 개 고르기 (정식 P8 · #41 두 칸 고르기 groups · ∅ 단추 q.empty)
   type Multi = Extract<Question, { type: 'multi' }>;
   const { q, value, disabled = false, onchange }: { q: Multi; value: number[]; disabled?: boolean; onchange: (v: number[]) => void } = $props();
   const on = $derived(new Set(value || []));

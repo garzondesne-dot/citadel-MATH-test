@@ -1,6 +1,6 @@
-import type { Question } from '../model/types';
-import { makeRng, type Rng } from '../engine/rng';
-import { comp, inter, range, setStr, sorted, union } from '../engine/sets';
+import type { Question } from '../../../model/types';
+import { makeRng, type Rng } from '../../../engine/rng';
+import { comp, inter, range, setStr, sorted, union } from '../sets';
 
 // 6차시 문제 1 (드모르간 · U 의 원소 골라 담기) — 정식 lessons/set-06.js m1Make · m1Retry · KEEP 그대로
 const st = (a: number[]) => (a.length ? setStr(a) : '∅');

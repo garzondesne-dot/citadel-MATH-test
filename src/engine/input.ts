@@ -1,4 +1,7 @@
-import { plain } from './venn';
+import { SUBJ } from './subject';
+const plain = (t: string) => (SUBJ.rich ? SUBJ.rich.plain(t) : t);
+/** 과목 고유 꼴 (SUBJ.formats · #136) */
+const fmt = (q: Question) => SUBJ.formats[q.type];
 import type { Given, Question } from '../model/types';
 
 // 답 칸 계산 (화면과 분리 · 시험에서 그대로 씀)
@@ -15,7 +18,7 @@ export function runeNext(cur: number | string | null | undefined, key: string, o
   return Number((nn ? '-' : '') + nd);
 }
 
-/** 🔘 원소 칩 (정식 DS.Quiz.chipToggle · P8): ∅ 단추(q.empty)와 다른 칩은 같은 칸 안에서 서로 지움 */
+/** 🔘 칩 (정식 DS.Quiz.chipToggle · P8): ∅ 단추(q.empty)와 다른 칩은 같은 칸 안에서 서로 지움 */
 export function chipToggle(q: Extract<Question, { type: 'multi' }>, given: number[] | null | undefined, n: number): number[] {
   const s = new Set(given || []), E = new Set(q.empty || []);
   const span = (k: number): [number, number] => { if (!q.groups || !q.groups.length) return [0, q.options.length]; let b0 = 0; for (const g of q.groups) { if (k < b0 + g.n) return [b0, b0 + g.n]; b0 += g.n; } return [0, q.options.length]; };
@@ -24,24 +27,26 @@ export function chipToggle(q: Extract<Question, { type: 'multi' }>, given: numbe
   return [...s].sort((a, b) => a - b);
 }
 
-/** 빈 답 (정식: 숫자 칸 = null · 고르기 = [] · 글 = '' · 부분집합 = []) */
-export const emptyOf = (q: Question): Given => (q.type === 'multi' || q.type === 'subsets' ? [] : q.type === 'text' ? '' : null);
+/** 빈 답 (정식: 숫자 칸 = null · 고르기 = [] · 글 = '' · 과목 꼴 = 그 꼴이 정함) */
+export const emptyOf = (q: Question): Given => (fmt(q) ? fmt(q)!.empty() : q.type === 'multi' ? [] : q.type === 'text' ? '' : null);
 /** 그 꼴에 맞는 답만 통과 (문항이 바뀌는 순간 앞 문항의 답이 새 칸에 들어가 깨지지 않게) */
 export function normFor(q: Question, g: Given): Given {
+  const f = fmt(q); if (f) return f.norm(g);
   switch (q.type) {
     case 'multi': return Array.isArray(g) && g.every((x) => typeof x === 'number') ? g : [];
-    case 'subsets': return Array.isArray(g) && g.every((x) => Array.isArray(x)) ? g : [];
     case 'choice': return typeof g === 'number' && g >= 0 && g < q.choices.length ? g : null;
     case 'ox': return typeof g === 'boolean' ? g : null;
     case 'number': return typeof g === 'number' || g === '-' ? g : null;
     case 'blanks': return Array.isArray(g) && typeof g[0] === 'string' ? g : null;
     case 'text': return typeof g === 'string' ? g : '';
+    default: return null;
   }
 }
 /** 다 채웠나 (빈 칸 내기 막음) */
 export function filled(q: Question, g0: Given): boolean {
   const g = normFor(q, g0);
-  if (q.type === 'multi' || q.type === 'subsets') return Array.isArray(g) && g.length > 0;
+  const f = fmt(q); if (f) return f.filled(g);
+  if (q.type === 'multi') return Array.isArray(g) && g.length > 0;
   if (q.type === 'text') return String(g ?? '').trim() !== '';
   if (q.type === 'number') return g != null && g !== '-' && g !== '';
   if (q.type === 'blanks') return Array.isArray(g) && g[0] != null;
@@ -62,11 +67,11 @@ export function penLine(q: Question, g: Given, i: number): string | null {
     const pick = (ks: number[]) => { const o = ks.map((k) => q.options[k] as string); return o.some((x) => /^∅/.test(x)) ? '∅' : `{${o.join(', ')}}`; };
     if (q.groups && q.groups.length) { let b0 = 0; v = q.groups.map((gr) => { const ks = arr.filter((k) => k >= b0 && k < b0 + gr.n); b0 += gr.n; return ks.length ? `${gr.label} → ${pick(ks)}` : ''; }).filter(Boolean).join(' · '); }
     else v = pick(arr);
-  } else if (q.type === 'choice') { if (g == null) return null; v = plain(String(q.choices[g as number])); } // 🟣 벤 그림 보기 = 글로 (#132)
+  } else if (q.type === 'choice') { if (g == null) return null; v = plain(String(q.choices[g as number])); } // 그림 보기 = 글로 (#132 · SUBJ.rich)
   else if (q.type === 'ox') { if (g == null) return null; v = g ? 'O' : 'X'; }
   else if (q.type === 'blanks') { const a = g as string[] | null; if (!a || a[0] == null) return null; v = String(a[0]); }
   else if (q.type === 'text') { if (!String(g || '').trim()) return null; v = String(g).trim(); }
-  else if (q.type === 'subsets') { const a = g as number[][] | null; if (!a || !a.length) return null; v = a.map((s) => (s.length ? `{${s.join(', ')}}` : '∅')).join(', '); }
+  else if (fmt(q)) { const t = fmt(q)!.pen(q, g); if (t == null) return null; v = t; }
   else { if (g == null || g === '-') return null; v = String(g).replace('-', '−'); }
   return `${no} ${v}`;
 }

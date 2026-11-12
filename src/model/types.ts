@@ -24,7 +24,7 @@ export type Question =
   | (QBase & { type: 'blanks'; items: { left?: string; right?: string; answer: string }[]; options: string[] })
   | (QBase & { type: 'subsets'; base: number[] });
 
-/** 학생 답 (형식별): choice = 번호 · ox = 참거짓 · number = 수 · text = 글 · multi = 번호 배열 · blanks = 기호 배열 · subsets = 부분집합 배열 */
+/** 학생 답 (형식별): choice = 번호 · ox = 참거짓 · number = 수 · text = 글 · multi = 번호 배열 · blanks = 기호 배열 · 과목 꼴 = 그 꼴이 정함(SUBJ.formats) */
 export type Given = number | boolean | string | number[] | string[] | number[][] | null;
 
 // ── 🧩 차시 팩 (설계서 6절 · 조사 #101 후보 1안) ──────────────
@@ -93,7 +93,7 @@ export interface LessonPack {
   goal?: string;
   std?: string;
   parts?: { no: number; from: string; title: string }[];
-  /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = set-06 의 문제 4부터) */
+  /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = 6차시 팩의 문제 4부터) */
   partOf?: string;
   next?: { title: string; ask?: string; link?: string };
   crops?: Record<string, unknown>;

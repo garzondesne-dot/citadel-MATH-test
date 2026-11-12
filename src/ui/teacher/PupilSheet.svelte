@@ -31,7 +31,7 @@
     </div>
     <p class="lab">수업 기록</p>
     <div class="recs">
-      {#each LESSON_LIST.filter((l) => l.no <= 7) as l (l.id)}
+      {#each LESSON_LIST as l (l.id)}
         {@const m = mark(l.id)}
         <span class="rc {m.c}"><small>{l.no}차시</small><b>{m.t}</b>{#if s.rec[l.id]?.star}<i>⭐</i>{/if}{#if s.rec[l.id]?.fixedBy}<i>→ ■</i>{/if}</span>
       {/each}

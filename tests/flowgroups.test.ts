@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { LessonPack } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { groups, total } from '../src/ui/teacher/flow';
 it('오늘 흐름 묶음 (6차시)', () => {
   const g = groups(pack as LessonPack, null);

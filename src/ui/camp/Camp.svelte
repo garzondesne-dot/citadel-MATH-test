@@ -5,7 +5,8 @@
   import { AURA_NAMES, famOfHero, HERO_NAMES, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
   import { emptyPlan, equipOf, ownsSkill } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
-  import { wishLeft } from '../../model/symcard';
+  import { SUBJ } from '../../engine/subject';
+  const wishLeft: (w: Record<string, true> | undefined, m: Record<string, true> | undefined) => number = SUBJ.cards?.wishLeft ?? (() => 0);
   import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
   import { CAMP, HERO, heroNudge, heroUrl } from '../manifest';
@@ -177,9 +178,7 @@
 {#if sheet === 'castle'}
   <Sheet onclose={() => (sheet = null)} mainText="닫기">
     {#snippet title()}🏰 성채 던전{/snippet}
-    <div class="floor"><span class="no">1</span><span><b>1층 · 집합 중단원</b><span>방은 다음 판에서 열려요</span></span></div>
-    <div class="floor off"><span class="no">2</span><span><b>2층 · 명제 중단원</b><span>잠김 · 명제 차시 진도를 나가면 열려요</span></span></div>
-    <div class="floor off"><span class="no">3</span><span><b>3층 · 대단원</b><span>잠김 · 2층을 다 깨면 열려요</span></span></div>
+    {#each SUBJ.camp.floors as f (f.no)}<div class="floor" class:off={!!f.off}><span class="no">{f.no}</span><span><b>{f.name}</b><span>{f.sub}</span></span></div>{/each}
   </Sheet>
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} />

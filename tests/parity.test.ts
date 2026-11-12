@@ -3,7 +3,7 @@
 // 방 모양 차이: 정식은 R.active 로 접속을 셈 → 여기서는 「방금 소식이 온 학생」(players[u].seen = 지금)으로 같은 사람을 넣음
 import { describe, expect, it } from 'vitest';
 import type { Given, LessonPack, Question, Room } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import fx from './fixtures/parity-set06.json';
 import { makeRng } from '../src/engine/rng';
 import { bossItem as packBossItem, items } from '../src/engine/lessons';
@@ -11,7 +11,7 @@ import { grade } from '../src/engine/grade';
 import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterHp, plainRecord, pracUsed, solveLock } from '../src/raid/raid';
 import { chainItems as packChainItems } from '../src/engine/lessons';
 import { chipToggle, runeNext } from '../src/engine/input';
-import { CONCEPTS, pick, ROWS } from '../src/engine/symtalk';
+import { CONCEPTS, pick, ROWS } from '../src/subjects/common-math2/symtalk';
 import { AURA_NAMES, ENH, FAMS, HEROES, ladder, level, SKILL_NAMES, SKILL_PRICE, SKILL_SCROLL, TIER_NAMES } from '../src/model/hero';
 
 const L = pack as LessonPack;

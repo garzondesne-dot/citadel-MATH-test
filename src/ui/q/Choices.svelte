@@ -1,13 +1,14 @@
 <script lang="ts">
   // 고르기 · OX · 기호 칸 보기 (정식 itemHtml choice · ox · blanks)
-  import { optOf } from '../../engine/venn';
-  import Venn from './Venn.svelte';
+  import { SUBJ } from '../../engine/subject';
+  const F = SUBJ.rich?.Figure;
+  const optOf = (o: string) => (SUBJ.rich ? SUBJ.rich.opt(o) : { text: o });
   const { opts, value, col = false, disabled = false, onpick }: { opts: string[]; value: number | null; col?: boolean; disabled?: boolean; onpick: (i: number) => void } = $props();
 </script>
 
 <div class="opts" class:col>
   {#each opts as o, k (k)}
-    <button type="button" class="opt" class:on={value === k} aria-pressed={value === k} {disabled} onclick={() => onpick(k)}>{#if 'text' in optOf(o)}{o}{:else}{@const v = optOf(o)}<Venn venn={'venn' in v ? v.venn : null} shade={'shade' in v ? v.shade : null} />{/if}</button>
+    <button type="button" class="opt" class:on={value === k} aria-pressed={value === k} {disabled} onclick={() => onpick(k)}>{#if F && 'fig' in optOf(o)}<F fig={(optOf(o) as { fig: unknown }).fig} />{:else}{o}{/if}</button>
   {/each}
 </div>
 

@@ -4,7 +4,7 @@
   import RuneKeypad from './RuneKeypad.svelte';
   import Chip from './Chip.svelte';
   import Choices from './Choices.svelte';
-  import SubsetBuilder from './SubsetBuilder.svelte';
+  import { SUBJ } from '../../engine/subject';
   import SymText from './SymText.svelte';
 
   // 문항 하나 = 문제 글 + 그 꼴의 답 칸 + 「✍ 나의 답」 한 줄 (꼴 하나 = 부품 하나 · 학생 · 성채 · 허수아비 · 선생님 시연이 같이 씀)
@@ -35,8 +35,8 @@
       <Choices opts={['O', 'X']} value={value === true ? 0 : value === false ? 1 : null} {disabled} onpick={(k) => onchange(k === 0)} />
     {:else if q.type === 'number'}
       <RuneKeypad value={value as number | string | null} len={runeLen} neg={needNeg(q)} {disabled} onchange={(v) => onchange(v)} />
-    {:else if q.type === 'subsets'}
-      <SubsetBuilder base={q.base} value={(value as number[][]) || []} {disabled} onchange={(v) => onchange(v)} />
+    {:else if SUBJ.formats[q.type]}
+      {@const W = SUBJ.formats[q.type]!.Widget}<W {q} {value} {disabled} onchange={(v) => onchange(v)} /> <!-- 과목 고유 꼴 (#136) -->
     {:else if q.type === 'text'}
       <input class="txt" maxlength="40" placeholder="답을 입력하세요" autocomplete="off" value={String(value ?? '')} {disabled} oninput={(e) => onchange((e.currentTarget as HTMLInputElement).value)} />
     {/if}

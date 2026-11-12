@@ -3,11 +3,11 @@
 // (3) 형성평가 6문항 + 재도전 생성기 300 시드 × 3번 — 차시 팩 · 생성기의 계산 결과를 쓰지 않는다
 import { describe, expect, it } from 'vitest';
 import type { LessonPack, Question } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { bossItem, items, validate } from '../src/engine/lessons';
 import { grade } from '../src/engine/grade';
 import { makeRng } from '../src/engine/rng';
-import { set06boss } from '../src/gens/set06';
+import { set06boss } from '../src/subjects/common-math2/gens/set06';
 
 const L = pack as LessonPack;
 type Multi = Extract<Question, { type: 'multi' }>;

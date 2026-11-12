@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { BY } from '../../engine/symtalk';
-  import { SYM_CARD } from '../../model/symcard';
+  import { SUBJ } from '../../engine/subject';
+  const BY = SUBJ.symtalk?.BY ?? {}, SYM_CARD = SUBJ.cards?.bySym ?? {}; // 과목 팩 (#136)
   import { useMe } from '../../store/me.svelte';
   import { closeSym, symState } from './symsheet.svelte';
   import Sheet from './Sheet.svelte';

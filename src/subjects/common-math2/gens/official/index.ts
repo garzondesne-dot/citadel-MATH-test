@@ -1,6 +1,6 @@
 // ⚠ 자동 생성 — tools/pack-from-release/convert.mjs · 정식 @ 59b40f3 · 손으로 고치지 않음
-import type { Question } from '../../model/types';
-import type { Rng } from '../../engine/rng';
+import type { Question } from '../../../../model/types';
+import type { Rng } from '../../../../engine/rng';
 // @ts-ignore 원문 모듈(js)
 import set02 from './set-02.js';
 // @ts-ignore 원문 모듈(js)

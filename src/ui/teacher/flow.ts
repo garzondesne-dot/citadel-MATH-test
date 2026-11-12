@@ -10,7 +10,7 @@ const MIN: Record<Kind, number> = { intro: 3, concept: 2, monster: 5, chain: 9, 
 /** 분 = 차시 팩의 min (#132 · 선생님 입력판) · 없으면 어림값 */
 export const minOf = (L: LessonPack, R: Room | null, s: Step) => (s.later ? 0 : s.min ?? MIN[kindOf(L, R, s)]);
 export const total = (L: LessonPack, R: Room | null) => L.steps.reduce((a, s) => a + minOf(L, R, s), 0);
-/** 짧은 이름 (막대 · 단추): 「개념 1 · 드모르간의 법칙」 → 「개념 1」 · 「형성평가 · 그림자 드래곤」 → 「형성평가」 */
+/** 짧은 이름 (막대 · 단추): 「개념 1 · ○○」 → 「개념 1」 · 「형성평가 · 그림자 드래곤」 → 「형성평가」 */
 export const short = (s: Step | null | undefined) => (s ? (s.kind === 'boss' ? '형성평가' : s.title.split(' · ')[0] ?? s.title) : '');
 const num = (s: Step) => /(\d+)/.exec(short(s))?.[1] ?? '';
 /** 흐름 묶음 (5줄 안쪽): 소레이드 · 형성평가 앞에서 끊음 */

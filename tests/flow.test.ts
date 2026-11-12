@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import type { Given, LessonPack, Question, Room, Store } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
 import { appearNow, bossSubmit, chainRelease, chainSubmit, heartbeat, nextStep, openRoom, pracStart, roomPath, setFocus, submit } from '../src/raid/actions';

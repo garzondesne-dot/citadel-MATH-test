@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
-import { PACKS, packOf } from '../src/packs';
+import { PACKS, packOf } from '../src/engine/packs';
 import { bossItem, chainItems, items, validate } from '../src/engine/lessons';
 import { SHEETS, DUNGEONS } from '../src/ui/manifest';
 

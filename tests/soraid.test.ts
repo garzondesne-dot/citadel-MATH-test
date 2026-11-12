@@ -2,10 +2,10 @@
 // 차시 팩 · 생성기의 계산 결과를 쓰지 않고 문제 글 · 숫자로 다시 계산한다
 import { describe, expect, it } from 'vitest';
 import type { LessonPack, Question } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { chainItems, items } from '../src/engine/lessons';
 import { grade } from '../src/engine/grade';
-import { u6Chain } from '../src/gens/set06';
+import { u6Chain } from '../src/subjects/common-math2/gens/set06';
 
 const L = pack as LessonPack;
 type Multi = Extract<Question, { type: 'multi' }>;

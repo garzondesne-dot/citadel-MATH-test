@@ -1,7 +1,7 @@
 // 🧪 베타 반 · 시험 계정 (#123): 함수 하나 isExcluded(반, 번호) · 체력 머릿수에서만 빠짐 (데미지 · 화면 · 규칙은 같음) · 가짜 명단 8반
 import { describe, expect, it } from 'vitest';
 import type { LessonPack, Room, Store } from '../src/model/types';
-import pack from '../src/packs/set-06.json';
+import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
 import { heartbeat, openRoom, roomPath } from '../src/raid/actions';

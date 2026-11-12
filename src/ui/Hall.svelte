@@ -6,7 +6,7 @@
   import { clock, useClock } from './clock.svelte';
   import { liveValue } from './room.svelte';
   import TV from './tv/TV.svelte';
-  import { packOf } from '../packs';
+  import { packOf } from '../engine/packs';
 
   // 🖥 교실 TV (#119 ⑮) — 교사 폰이 연 수업(school/live)을 따라감 · 수업이 없으면 교사 캠프
   //   주소에 ?room= 이 있으면 그 방(시험 · 두 탭 체험: 없으면 그 던전으로 만들고 1-1반으로 봄)

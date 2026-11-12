@@ -1,5 +1,5 @@
 // 테마 고르기는 아직 없음 (#107 ⑦) — 금빛 던전 하나만 켬 · 다른 테마 = tokens.css 에 묶음만 더하면 됨
-// 🌐 #131 글꼴 = 웹폰트 번들(Pretendard 1.3.9 · OFL-1.1 · 한글 동적 하위 집합 woff2 · 쓰는 글자 조각만 받음) → 기기 · 브라우저마다 같은 글꼴
+// 🌐 #131 글꼴 = 웹폰트 번들(Pretendard 1.3.9 · OFL-1.1 · 한글 동적 부분 글꼴 woff2 · 쓰는 글자 조각만 받음) → 기기 · 브라우저마다 같은 글꼴
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './tokens.css';
 import './ui.css';
