@@ -1,6 +1,6 @@
 import type { Store } from '../model/types';
 import { CLASSES, isBeta } from './school';
-import { achieve, fakeClass, LESSON_LIST, MIS, memoOf, pct, STANDARDS, type Stud } from './dash';
+import { achieve, fakeClass, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
 import type { Cell, SheetData } from './xlsx';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
@@ -13,7 +13,7 @@ export interface View {
   table?: { head: string[]; rows: { cells: TCell[]; pick?: Stud; cls?: string; sum?: boolean }[]; legend: [Tone, string][] };
   list?: { rk: string; nm: string; sub: string; pc: string; bar?: number; pick?: Stud }[];
   bars?: { title: string; vals: number[]; labels: string[]; foot: string }[];
-  memos?: { s: Stud; text: string }[];
+  memos?: { s: Stud; text: string; more: string[] }[];
 }
 export const GROUPS: { name: string; views: [string, string][] }[] = [
   { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡']] },
@@ -90,13 +90,13 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
       const agg: Record<string, { w: number; f: number; who: number }> = {};
       studs.forEach((s) => Object.entries(s.mis).forEach(([k, v]) => { const a = (agg[k] = agg[k] || { w: 0, f: 0, who: 0 }); a.w += v[0]; a.f += v[1]; a.who++; }));
       const xs = Object.entries(agg).sort((a, b) => b[1].w - a[1].w), mx = Math.max(1, ...xs.map((x) => x[1].w));
-      return { id, title: '오개념', info: '틀린 답의 종류 · 「바로잡음」 = 그 뒤 재도전 · 보강에서 맞힘', list: xs.map(([k, a]) => ({ rk: k, nm: MIS[k] ?? k, sub: `틀림 ${a.w} · ${a.who}명`, pc: `바로잡음 ${pct(Math.min(a.f, a.w), a.w)}%`, bar: a.w / mx })) };
+      return { id, title: '오개념', info: '틀린 답의 종류 · 「바로잡음」 = 그 뒤 재도전 · 보강에서 맞힘', list: xs.map(([k, a]) => ({ rk: k, nm: MIS[k]?.name ?? k, sub: `틀림 ${a.w} · ${a.who}명`, pc: `바로잡음 ${pct(Math.min(a.f, a.w), a.w)}%`, bar: a.w / mx })) };
     }
     case 'sym': {
       const tot = studs.reduce((a, s) => a + s.extra.sym, 0), w = [0.32, 0.16, 0.14, 0.11, 0.08, 0.07, 0.07, 0.05];
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
-    case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x).map((s) => ({ s, text: memoOf(s) })) };
+    case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
     case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name} · 6차시 문제 4`, sub: s.extra.photoRe ? '다시 · 근거 빠짐' : '통과 · 근거 3줄', pc: s.extra.photoRe ? '다시' : '통과', pick: s })) };
     case 'survey': {
       const n = studs.length, r = Math.round(n * 0.85), fun = Math.round(r * 0.82);
@@ -121,8 +121,8 @@ export function toSheet(v: View, withX = false): SheetData {
     rows.push(['순서', '이름', '내용', '값']);
     v.list.forEach((x) => rows.push([x.rk, x.nm, x.sub, x.pc]));
   } else if (v.memos) {
-    rows.push([...(withX ? ['구분'] : []), '반', '번호', '이름', '세특 초안']);
-    v.memos.forEach((m) => rows.push([...(withX ? [m.s.x ? '🧪' : ''] : []), m.s.cls, m.s.n, m.s.name, m.text]));
+    rows.push([...(withX ? ['구분'] : []), '반', '번호', '이름', '세특 초안', '더 보기']);
+    v.memos.forEach((m) => rows.push([...(withX ? [m.s.x ? '🧪' : ''] : []), m.s.cls, m.s.n, m.s.name, m.text, m.more.join(' ')]));
   } else if (v.bars) {
     rows.push(['주', ...v.bars.map((b) => b.title)]);
     (v.bars[0]?.labels ?? []).forEach((l, i) => rows.push([l, ...v.bars!.map((b) => b.vals[i] ?? 0)]));

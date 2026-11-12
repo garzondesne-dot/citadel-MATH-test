@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
-  import { achieve, band, LESSON_LIST, MIS, memoOf, type Stud } from '../../school/dash';
+  import { achieve, band, LESSON_LIST, MIS, memoParts, type Stud } from '../../school/dash';
   import { resetPw, hasAccount, liveOfCls } from '../../school/school';
   import { giveGift, setAbsent } from '../../raid/actions';
   import { uidOf } from '../../school/school';
@@ -43,7 +43,7 @@
       <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>📷 통과 {s.extra.photoOk} · 다시 {s.extra.photoRe}</em></div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
-    {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]} (${v[0]}번)`).join(' · ')}</p>{/if}
+    {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}
     <p class="fake">🧪 테스트 판 가짜 기록 (반 · 번호로 늘 같은 값)</p>
   </div>
   <div class="acts">
@@ -57,8 +57,9 @@
       <div class="row"><button type="button" class="b2" onclick={() => (gift = false)}>취소</button><button type="button" class="b1" onclick={() => { giveGift(S, live?.code ?? 'teacher', [uidOf(s.cls, s.n)], amt); gift = false; say(`🎁 💎 ${amt} 보냈어요`); }}>보내기</button></div></div>
   {/if}
   {#if memo}
-    <div class="pop"><b>📝 세특 초안 · {s.name}</b><p class="memo">{memoOf(s)}</p>
-      <div class="row"><button type="button" class="b2" onclick={() => (memo = false)}>닫기</button><button type="button" class="b1" onclick={() => copy(memoOf(s))}>📋 복사</button></div></div>
+    {@const mp = memoParts(s)}
+    <div class="pop"><b>📝 세특 초안 · {s.name}</b><p class="memo">{mp.main}</p>{#if mp.more.length}<details class="more"><summary>더 보기 {mp.more.length}</summary>{#each mp.more as t (t)}<p>{t}</p>{/each}</details>{/if}
+      <div class="row"><button type="button" class="b2" onclick={() => (memo = false)}>닫기</button><button type="button" class="b1" onclick={() => copy(memoParts(s).main)}>📋 복사</button></div></div>
   {/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 </div>
@@ -92,6 +93,7 @@
   .acts button:disabled { opacity: 0.4; }
   .pop { position: absolute; left: var(--s4); right: var(--s4); bottom: 80px; z-index: 2; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s3); display: flex; flex-direction: column; gap: var(--s2); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }
   .memo { margin: 0; font-size: 14px; line-height: 1.6; }
+  .more { font-size: 13px; color: var(--text-2); } .more summary { cursor: pointer; min-height: 32px; } .more p { margin: 4px 0; }
   .amt { display: flex; gap: 6px; } .amt button { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); } .amt button.on { background: var(--accent); color: var(--on-accent); }
   .row { display: flex; gap: var(--s2); } .b1 { flex: 1; height: 48px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent); font: 700 16px var(--font); } .b2 { width: 88px; height: 48px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px var(--font); }
   .toast { position: absolute; left: var(--s4); right: var(--s4); top: 56px; margin: 0; z-index: 3; padding: var(--s2); border-radius: var(--r); background: var(--surface-2); text-align: center; font-weight: 700; font-size: 14px; }

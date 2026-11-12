@@ -51,7 +51,7 @@
     {#if V.list}<div class="list">{#each V.list as x, i (i)}<button type="button" class="dl" disabled={!x.pick} onclick={() => x.pick && onpick(x.pick)}><span class="rk">{x.rk}</span><span class="nm"><b>{x.nm}</b><small>{x.sub}</small></span>{#if x.pc}<span class="pc">{x.pc}</span>{/if}{#if x.bar != null}<i class="bar" style:width="{x.bar * 100}%"></i>{/if}</button>{/each}</div>{/if}
     {#if V.memos}
       <div class="row"><button type="button" class="b2" onclick={() => copy(V.memos!.map((m) => `${m.s.n}번 ${m.s.name} ${m.text}`).join('\n\n'))}>📋 전체 복사</button><small>기록의 사실만으로 만든 초안 · 관찰을 더해 다듬기</small></div>
-      {#each V.memos as m (m.s.cls + m.s.n)}<div class="memo"><b>{m.s.n}번 {m.s.name}</b><p>{m.text}</p><button type="button" class="b2" onclick={() => copy(m.text)}>복사</button></div>{/each}
+      {#each V.memos as m (m.s.cls + m.s.n)}<div class="memo"><b>{m.s.n}번 {m.s.name}</b><p>{m.text}</p>{#if m.more.length}<details class="more"><summary>더 보기 {m.more.length} · 골라 붙이기</summary>{#each m.more as t (t)}<button type="button" class="mline" onclick={() => copy(t)}>＋ {t}</button>{/each}</details>{/if}<button type="button" class="b2" onclick={() => copy(m.text)}>복사</button></div>{/each}
     {/if}
   </div>
 </div>
@@ -112,6 +112,8 @@
   .bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); opacity: 0.7; }
   .row { display: flex; align-items: center; gap: var(--s2); } .row small { font-size: 12px; color: var(--text-3); }
   .memo { border-radius: var(--r); background: var(--surface); padding: 10px; display: flex; flex-direction: column; gap: 4px; } .memo p { margin: 0; font-size: 13.5px; line-height: 1.55; } .memo .b2 { align-self: flex-end; }
+  .more { font-size: 13px; color: var(--text-2); } .more summary { cursor: pointer; min-height: 32px; }
+  .mline { display: block; width: 100%; text-align: left; border: 0; background: none; color: var(--text-2); font: 500 13px var(--font); padding: 4px 0; }
   .b2 { height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 13px var(--font); }
   .xo { display: flex; align-items: center; gap: var(--s3); min-height: 56px; padding: 0 var(--s3); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; text-align: left; }
   .xo > span:first-child { flex: none; min-width: 36px; font-weight: 700; } .xo span:last-child { display: flex; flex-direction: column; } .xo small { font-size: 12.5px; color: var(--text-2); }

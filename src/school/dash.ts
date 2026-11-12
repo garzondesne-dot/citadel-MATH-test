@@ -1,6 +1,7 @@
 import { makeRng } from '../engine/rng';
 import type { Store } from '../model/types';
 import { CLASSES, isExcluded, roster } from './school';
+import { MIS, seteukDraft, type SeteukIn } from './seteuk';
 
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
 //   records[번호][차시] = { conc: { 개념: [첫 시도 맞힘, 문항] }, names, boss(형성평가 첫 시도 맞힘), bossN, mis: { 오개념 코드: [틀림, 고침] } }
@@ -14,7 +15,8 @@ export interface Stud {
   xp: number; lv: number; left: number; tries: number; x: boolean;
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
-export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[]; memo: string }
+export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
+  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
 export const STANDARDS = [
@@ -23,8 +25,7 @@ export const STANDARDS = [
   { id: '10공수2-02-03', name: '명제와 조건', lessons: [7, 8, 9, 10] },
 ];
 const stdOf = (no: number) => STANDARDS.find((s) => s.lessons.includes(no))?.id ?? null;
-/** 오개념 코드 (정식 DS.Mis) — 이름 */
-export const MIS: Record<string, string> = { M03: '원소 ↔ 부분집합', M05: '∅ 와 {∅}', M08: '여집합 범위', M11: '드모르간 방향', M14: '차집합 순서', M17: '역 · 대우 헷갈림', M20: '필요 ↔ 충분' };
+export { MIS } from './seteuk';
 const LESSONS = [
   { id: 'set-02', no: 2, title: '집합의 표현', concs: ['원소', '조건제시법', '원소의 개수'] },
   { id: 'set-03', no: 3, title: '포함 관계', concs: ['부분집합', '진부분집합', '부분집합의 개수'] },
@@ -82,16 +83,16 @@ export function fakeClass(S: Store | null, cls: string) {
     extra[p.num] = {
       days, solves: days.reduce((a, b) => a + b, 0) * 3, fixes: Math.floor(r() * 8 * diligence), gem: Math.round(40 + 260 * diligence), gemWeek: Math.round(60 * diligence), scroll: Math.floor(r() * 6),
       photoOk: Math.floor(r() * 3), photoRe: Math.floor(r() * 2), submit: Math.round(70 + 30 * diligence), stuck: Math.floor((1 - skill) * 6 * r()), sym: Math.floor(r() * 30 * diligence),
-      weekly: Array.from({ length: 6 }, (_, w) => Math.round((10 + 40 * diligence) * (0.6 + 0.1 * w) * (0.8 + 0.4 * r()))), memo: '',
+      weekly: Array.from({ length: 6 }, (_, w) => Math.round((10 + 40 * diligence) * (0.6 + 0.1 * w) * (0.8 + 0.4 * r()))),
+      hg: r() < 0.4 ? 1 + Math.floor(r() * 3) : 0, hints: Math.floor(r() * 4 * (1 - skill)), tryEval: r() < diligence ? Math.floor(r() * 12) : 0, trySet: Math.floor(r() * 6 * diligence), noteDone: Math.floor(r() * 4 * diligence), cards: Math.floor(r() * 10 * diligence), surveyed: r() < 0.8,
     };
   }
   const v = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   cache.set(k, v);
   return v;
 }
-/** 📝 세특 초안 (정식 memo 자리 · 기록에서 한 문단) */
-export function memoOf(s: Stud): string {
-  const a = achieve(s), strong = Object.values(s.conc).filter((c) => c.total && c.ok / c.total >= 0.8).map((c) => c.name).slice(0, 2);
-  const mis = Object.keys(s.mis)[0];
-  return `${s.went}차시 수업에 참여하여 형성평가 첫 시도 통과율 ${s.boss ?? 0}%를 보임. ${strong.length ? `${strong.join('·')} 개념을 정확히 이해하고 ` : ''}${s.extra.fixes ? `틀린 문제를 수업 밖에서 ${s.extra.fixes}번 다시 풀어 고치는 ` : '스스로 복습하는 '}태도가 돋보임.${mis ? ` ${MIS[mis]} 부분은 보충이 필요함.` : ''}${a != null ? ` 성취기준 평균 ${a}%(${band(a)}).` : ''}`;
-}
+/** 📝 세특 초안 (#127 · 함수 하나 seteukDraft · 학생 시트 · 대시보드 · 엑셀 모두) — 대시보드 기록 → 세특 기록 */
+export const seteukOf = (s: Stud): SeteukIn => ({ went: s.went, heldN: s.heldN, conc: s.conc, std: s.std, boss: s.boss, hg: s.extra.hg, fixed: s.extra.fixes, mis: s.mis, photoN: s.extra.photoOk + s.extra.photoRe, photoRev: s.extra.photoRe, hints: s.extra.hints, tryEval: s.extra.tryEval, trySet: s.extra.trySet, noteDone: s.extra.noteDone, cards: s.extra.cards, symN: s.extra.sym, surveyed: s.extra.surveyed });
+export const stdName = (id: string) => STANDARDS.find((d) => d.id === id)?.name ?? null;
+export const memoParts = (s: Stud) => seteukDraft(seteukOf(s), stdName);
+export const memoOf = (s: Stud) => memoParts(s).main;

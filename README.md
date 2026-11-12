@@ -40,3 +40,5 @@ npm run dev
 b9 (#119 덧붙임 · #120): 수업 끝 단추 없음 = 교사 폰 「수업 닫기」 때 그 자리를 방 `state.stop` 에 저장 → ⑫ 「이어서」(처치 못 한 몬스터 = 숫자 바꾼 판 `meta.fresh`) · 학생 폰 단추 높이 토큰 `--btn-h` 56 · `--tab-h` 48 · `--pill-h` 36.
 
 시험: `node tools/e2e/b8.cjs <그림 폴더>` = 교사 폰 세 화면 × 360 × 640 · 390 × 844 스크롤 0 · 주요 단추(높이 68 · 바닥에서 74) · 도구 · 조정 칸 좌표 고정.
+
+세특 초안 기준값(정식 #126 memoParts 출력) 다시 뽑기: 정식 release 체크아웃에서 `node tests/memo126-dump.js <테스트 저장소>/tests/fixtures/memo126.json` (스크립트 = 이 저장소 tools/memo126-dump.js 를 정식 tests/ 에 복사) · 오개념 문구 `src/school/mis-codes.json` 은 그 기준값의 misCodes 에서 옮김.
