@@ -4,7 +4,7 @@
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
 import { Application, Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
-import { HERO, heroGeo, heroNudge, monNudge, monVis, spriteOf } from '../../manifest';
+import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -49,7 +49,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const t = performance.now();
     for (const w of [...tweens]) { const p = Math.min(1, (t - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.sin(t / 520) * H() * 0.006; if (monSp && !st?.down) monSp.y = monY + bob; // 둥실
-    if (t - heroT > 180) { heroT = t; heroF = (heroF + 1) % HERO.cols; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[heroF]!; }
+    if (t - heroT > 162) { heroT = t; heroF = (heroF + 1) % 8; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
   });
 
   const visOf = (s: ArenaState) => { try { const sp = spriteOf(s.sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } };
@@ -100,9 +100,12 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         v.key = hk;
         const url = `${import.meta.env.BASE_URL}art/heroes/${heroOf(hh.hero).sprite || 'hero-sword-v3c.webp'}`, nd = heroNudge(hh.hero, 0), g = heroGeo(hh.hero);
         // 새 화풍 세밀 시트(칸 192 × 144 · k=2) · 옛 80 × 64 둘 다: 칸 자르기 = 그림 칸 · 배율 = s ÷ k · 발 = 칸 아래 base
-        void src(url).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.atk = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.atkRow * g.ch, g.cw, g.ch)); v!.sp.texture = v!.tex[0]!; });
+        const i8 = idle8Of(hh.hero); // 🫁 #169 대기 8프레임
+        if (i8) void src(i8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * HERO.w, hh.hero * HERO.h, HERO.w, HERO.h)); });
+        void src(url).then((so) => { if (v!.key !== hk) return; if (!i8) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.atk = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.atkRow * g.ch, g.cw, g.ch)); if (v!.tex) v!.sp.texture = v!.tex[0]!; });
         v.sp.anchor.set(0.5, (g.ch - g.base) / g.ch);
-        v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -nd.dx : nd.dx) * sl.s; v.sp.y = nd.dy * sl.s;
+        const ix = i8 ? (IDLE8.dx[hh.hero] ?? 0) : null; // 대기 8프레임 = 그 칸의 정중앙 값
+        v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? 0 : nd.dy) * sl.s;
       }
       v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📵 ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = hh.off ? 0.45 : 1;

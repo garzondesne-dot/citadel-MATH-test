@@ -15,7 +15,7 @@
   import SymText from './q/SymText.svelte';
   import { fx } from './battle/fx.svelte';
   import AttackFx from './battle/AttackFx.svelte';
-  import { attackDef, attackOf, type AttackDef } from '../raid/attacks';
+  import { attackDef, attackMs, attackOf, type AttackDef } from '../raid/attacks';
   import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
@@ -89,7 +89,7 @@
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => strike(attackOf(L, step, c.k), c.lock * 1000));
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => { const d = attackOf(L, step, c.k); strike(d, attackMs(d, c.lock)); });
   });
   const atkOn = $derived(!!atk && atk.until > gnow && !scout?.on);
   const stunned = $derived(atkOn && !!atk?.def.lockInput);

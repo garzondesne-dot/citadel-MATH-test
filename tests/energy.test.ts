@@ -6,7 +6,7 @@ import { PROFILES } from '../src/model/profiles';
 import { chainSubmit, heartbeat, nextStep, openRoom, roomPath, spendEnergy } from '../src/raid/actions';
 import { answerOf, bindSec, chainRecord, healsReceived, stepOf } from '../src/raid/raid';
 import { packOf } from '../src/engine/packs';
-import { attackOf, ATTACKS } from '../src/raid/attacks';
+import { attackMs, attackOf, ATTACKS } from '../src/raid/attacks';
 
 describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
   it('소레이드 다 맞힘 → 기력 = 남은 칸 · 묶기 · 힐 · 바닥나면 막힘', () => {
@@ -33,5 +33,7 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('ice');
     expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash']);
     expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch']);
+    // #168 손풀기 공격만 3초 · 나머지 = 지금 멈춤
+    expect(Object.values(ATTACKS).map((a) => attackMs(a, 1))).toEqual([1000, 1000, 3000, 3000, 3000, 1000]);
   });
 });

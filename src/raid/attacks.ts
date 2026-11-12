@@ -5,15 +5,18 @@
 //   새 공격(#161) = 여기에 한 줄 + 화면 효과(ui/battle/AttackFx.svelte) 한 갈래
 import type { LessonPack, Step } from '../model/types';
 
-export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; gesture?: 'rub' | 'tap4' | 'hold' }
+//   ms = 효과 시간(있으면 · #168 손풀기 공격 = 3초 · 손으로 풀면 일찍) · 없으면 지금 멈춤(lock) 그대로
+export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; gesture?: 'rub' | 'tap4' | 'hold'; ms?: number }
 export const ATTACKS: Record<string, AttackDef> = {
   pause: { id: 'pause', name: '멈춤', icon: '⏸', tag: '💥 몬스터 공격!', lockInput: true },
   glitch: { id: 'glitch', name: '파지직', icon: '⚡', tag: '⚡ 파지직 공격!', lockInput: true },
-  fog: { id: 'fog', name: '안개', icon: '🌫', tag: '🌫 안개 공격!', lockInput: false, gesture: 'rub' },
-  ice: { id: 'ice', name: '얼음', icon: '🧊', tag: '🧊 얼음 공격!', lockInput: false, gesture: 'tap4' },
-  fire: { id: 'fire', name: '화염', icon: '🔥', tag: '🔥 화염 공격!', lockInput: false, gesture: 'hold' },
+  fog: { ms: 3000, id: 'fog', name: '안개', icon: '🌫', tag: '🌫 안개 공격!', lockInput: false, gesture: 'rub' },
+  ice: { ms: 3000, id: 'ice', name: '얼음', icon: '🧊', tag: '🧊 얼음 공격!', lockInput: false, gesture: 'tap4' },
+  fire: { ms: 3000, id: 'fire', name: '화염', icon: '🔥', tag: '🔥 화염 공격!', lockInput: false, gesture: 'hold' },
   smash: { id: 'smash', name: '강타', icon: '💢', tag: '💢 강타!', lockInput: false },
 };
+/** 효과 시간 (ms) = 등록 표 ms · 없으면 지금 멈춤(lock 초) */
+export const attackMs = (a: AttackDef, lockSec: number) => a.ms ?? lockSec * 1000;
 export const attackDef = (id: string | undefined) => ATTACKS[id || ''] ?? ATTACKS.pause!;
 /** 이 단계 · k번째 공격의 종류 (보스 = 목록을 차례로) */
 export function attackOf(L: LessonPack, step: Step | null, k: number): AttackDef {

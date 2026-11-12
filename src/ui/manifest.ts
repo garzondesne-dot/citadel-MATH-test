@@ -40,6 +40,11 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-sword-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
   'hero-priest-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
 };
+// 🫁 대기 = PixelLab 숨쉬기 8프레임 시험 (#169 · 선생님 확인용) — 되돌리기 = on: false 한 줄 (파일 하나: 줄 = 용사 번호 · 칸 80 × 64 · 8칸)
+//   그 용사 줄에 그림이 있을 때만 · 새 화풍 세밀 시트(HERO_HD) 용사는 그 시트 그대로 · 늘이기 없이 칸만 차례로(약 1.3초에 8장)
+export const IDLE8 = { on: true, src: 'art/heroes/hero-idle8-pl-v2.webp', frames: 8, rows: 34, ms: 1300, has: [0, 1, 2, 3, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+  /** 정중앙 (#121): 첫 칸 보이는 상자 가운데 → 칸 가운데까지 (발은 이미 칸 바닥) */ dx: {0: 4, 1: 8, 2: 9, 3: 13, 14: 8, 15: 11, 16: 6, 17: 12, 18: 11, 19: 16, 20: 14, 21: 14, 22: 8, 23: 6} as Record<number, number> };
+export const idle8Of = (id: number) => (IDLE8.on && IDLE8.has.includes(id) && !HERO_HD[heroOf(id).sprite || ''] ? `${import.meta.env.BASE_URL}${IDLE8.src}` : null);
 /** 그리는 칸: cw · ch = 그림 칸 · w · h = 화면 칸 · dx · dy = 옛 80 × 64 칸 왼쪽 위에서 그릴 상자까지(배율 1 기준) */
 export function heroGeo(id: number) {
   const f = heroOf(id).sprite || 'hero-sword-v3c.webp', hd = HERO_HD[f];
