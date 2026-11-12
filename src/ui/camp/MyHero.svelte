@@ -181,7 +181,7 @@
     <div class="savebar">
       <p class="chg2">바뀐 것 · {changes.join(' · ')}</p>
       <div class="row2">
-        <button type="button" class="btn2" onclick={undo}>↺ 되돌리기</button>
+        <button type="button" class="btn2 undo" onclick={undo}>↺ 되돌리기</button>
         <button type="button" class="btn" onclick={trySave}>💾 저장{c.g || c.s ? ` · 💎 ${c.g}${c.s ? ` · 📜 ${c.s}` : ''}` : ''}</button>
       </div>
     </div>
@@ -278,10 +278,10 @@
   .tt { font-style: normal; font-size: var(--fs-small); padding: 1px 6px; border-radius: 8px; background: var(--surface-2); }
   .tester { font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--text-3); font-weight: 700; }
   .sub { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
-  .chg { position: relative; align-self: flex-start; font-size: var(--fs-small); font-weight: 700; color: var(--text); padding: 4px 10px; border-radius: 14px; background: var(--surface-2); }
+  .chg { position: relative; align-self: flex-start; min-height: var(--pill-h); display: inline-flex; align-items: center; font-size: var(--fs-small); font-weight: 700; color: var(--text); padding: 0 14px; border-radius: 18px; background: var(--surface-2); }
   .bdot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 5px; background: var(--gem); box-shadow: 0 0 0 2px var(--bg); }
   .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .tabs button { position: relative; min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
+  .tabs button { position: relative; min-height: var(--tab-h); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 16px var(--font); }
   .tabs button.on { border: 2px solid var(--accent); color: var(--text); background: var(--surface-2); }
   .enhbox { border-radius: 16px; background: var(--surface); border: 1px solid var(--line); padding: var(--s4); display: flex; flex-direction: column; gap: var(--s2); align-items: center; }
   .enhrow { display: flex; align-items: center; gap: var(--s4); }
@@ -292,8 +292,11 @@
   .aname { margin: var(--s2) 0 0; font-weight: 700; }
   .muted { margin: 0; font-size: var(--fs-small); color: var(--text-2); text-align: center; }
   .wide { width: 100%; }
-  .btn { min-height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); padding: 0 var(--s3); }
-  .btn2 { min-height: 52px; border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); padding: 0 var(--s3); }
+  .row2 { align-items: center; }
+  .row2 .btn { flex: 1; }
+  .btn2.undo { min-height: var(--tab-h); }
+  .btn { min-height: var(--btn-h); flex: none; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); padding: 0 var(--s3); }
+  .btn2 { min-height: var(--btn-h); border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); padding: 0 var(--s3); }
   .btn:active, .btn2:active { transform: translateY(2px); box-shadow: none; }
   .tip { margin: 0; font-size: var(--fs-small); color: var(--gem); padding: var(--s2) var(--s3); border-radius: 12px; border: 1px dashed var(--gem); }
   .prev { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); border-radius: 12px; background: var(--surface-2); animation: pop 0.2s ease-out; }

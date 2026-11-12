@@ -53,7 +53,7 @@ const log = (...a) => console.log(...a);
   await next(); await next(); // 교사 캠프 → ⚔ 던전 입장 → ▶ 수업 시작
   for (let guard = 0; guard < 20; guard++) {
     if (await hall.$('.endv')) break;
-    const title = (await hall.textContent('.ttl')).replace(/^\d+차시 · /, '').trim();
+    const title = (await hall.$('.split')) ? '개념' : (await hall.textContent('.fs.now em')).trim(); // b9: 위 막대 흐름도의 지금 단계
     if (/개념/.test(title)) { await next(); continue; }
     const id = /형성평가/.test(title) ? 'boss' : ['m1', 'm2', 'm3', 'u4', 'u5', 'u6', 'u7'][mi++];
     log(`— ${title} (${id})`);

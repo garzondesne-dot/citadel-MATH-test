@@ -15,6 +15,7 @@
   const lr = untrack(() => liveRoom(S, live.code));
   onDestroy(lr.stop);
   const R = $derived(lr.v.room as Room | null);
+  $effect(() => { if (R?.state.closed) untrack(onclose); }); // 교실 TV 에서 문이 닫혀 끝나도 교사 폰이 따라감
   const code = $derived(live.code);
   const pupils = $derived(roster(live.cls));
   const ids = $derived(R ? activeIds(R, now) : []);
@@ -71,15 +72,15 @@
   const pickN = $derived(Object.values(picked).filter(Boolean).length);
   const perfectIds = $derived(R && mid ? ids.filter((u) => (chain ? chainRecord(L, R, mid, u).perfect : plainRecord(L, R, mid, u).perfect)) : []);
   const quick = (xs: string[]) => { picked = Object.fromEntries(xs.map((u) => [u, true])); };
-  function sendGift() { const us = Object.keys(picked).filter((u) => picked[u]); const n = giveGift(S, code, us, amt); sheet = ''; picked = {}; say(`🎁 ${n}명에게 💎 ${amt} 보냈어요`); }
+  function sendGift() { const us = Object.keys(picked).filter((u) => picked[u]); const all = ids.length > 0 && ids.every((u) => picked[u]); const n = giveGift(S, code, us, amt, all); sheet = ''; picked = {}; say(`🎁 ${n}명에게 💎 ${amt} 보냈어요`); }
 
   function main() {
     if (!R) return;
     if (scout?.on) { appearNow(S, L, code); return; }
-    if (isEnd(L, R)) { endClass(S, code); onclose(); return; }
+    if (isEnd(L, R)) { sheet = 'ask'; return; }
     nextStep(S, L, code);
   }
-  const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 끝' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
+  const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
   function plus5() { const e = extendTime(S, code); say(e ? `⏰ ${e}` : '⏰ 5분 늘렸어요'); }
   const flex = (s: { s: { id: string } }) => Math.max(1, minOf(L, R, s.s as never));
 </script>
@@ -155,7 +156,7 @@
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><b>⏰ +5분</b></button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
-    <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 끝</button></div>
+    <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
@@ -181,13 +182,13 @@
       <div class="gamt">{#each [5, 10, 20, 50] as a (a)}<button type="button" class:on={amt === a} onclick={() => (amt = a)}>{a}</button>{/each}<span class="gpm"><button type="button" aria-label="5 줄이기" onclick={() => (amt = Math.max(5, amt - 5))}>−5</button><b>💎 {amt}</b><button type="button" aria-label="5 늘리기" onclick={() => (amt = Math.min(100, amt + 5))}>+5</button></span></div>
       <div class="gquick"><button type="button" onclick={() => quick(ids)}>모두 {ids.length}</button><button type="button" disabled={!stuck.length} onclick={() => quick(stuck.map((x) => x.u))}>🔒 막힌 학생 {stuck.length}</button><button type="button" disabled={!perfectIds.length} onclick={() => quick(perfectIds)}>✨ 퍼펙트 {perfectIds.length}</button><button type="button" onclick={() => quick(subd.length ? subd : ids)}>미제출 빼고</button></div>
       <div class="ggrid">{#each ids as u (u)}<button type="button" class="gn" class:on={!!picked[u]} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
-      <p class="gnote">하루 한도와 상관없이 바로 들어가요 · 학생 캠프에 「🎁 선생님 선물」</p>
+      <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === ids.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
     </Sheet>
   {:else if sheet === 'ask'}
     <div class="askbg" role="presentation" onclick={() => (sheet = '')}></div>
     <div class="ask" role="alertdialog" aria-modal="true" aria-label="정말?">
-      <b>정말 {isLobby(R) ? '수업을 닫을까요?' : '수업을 끝낼까요?'}</b><p>{isLobby(R) ? '학생들은 캠프로 돌아가요' : '학생들은 결과를 보고 캠프로 돌아가요'}</p>
-      <div class="row"><button type="button" class="btn2" onclick={() => (sheet = '')}>아니요</button><button type="button" class="btn" onclick={() => { endClass(S, code); sheet = ''; onclose(); }}>{isLobby(R) ? '수업 닫기' : '수업 끝'}</button></div>
+      <b>정말 수업을 닫을까요?</b><p>{isLobby(R) ? '학생들은 캠프로 돌아가요' : isEnd(L, R) ? '오늘 차시를 다 했어요 · 학생들은 캠프로' : '지금 자리를 기억해요 · 다음 수업 「이어서」'}</p>
+      <div class="row"><button type="button" class="btn2" onclick={() => (sheet = '')}>아니요</button><button type="button" class="btn" onclick={() => { endClass(S, L, code); sheet = ''; onclose(); }}>수업 닫기</button></div>
     </div>
   {/if}
 {:else}

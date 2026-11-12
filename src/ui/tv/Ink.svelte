@@ -32,7 +32,7 @@
 
 <style>
   .ink { position: absolute; inset: 0; z-index: 7; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
-  .inkbar { position: absolute; left: 50%; top: 10cqh; transform: translateX(-50%); z-index: 9; display: flex; gap: 0.8cqw; align-items: center; padding: 0.8cqh 1cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.2); }
+  .inkbar { position: absolute; left: 50%; top: 14cqh; transform: translateX(-50%); z-index: 9; display: flex; gap: 0.8cqw; align-items: center; padding: 0.8cqh 1cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.2); }
   .inkbar button { height: 6cqh; min-width: 6cqh; border-radius: 999px; border: 2px solid rgba(255, 255, 255, 0.2); background: var(--c, rgba(255, 255, 255, 0.06)); color: #fff; font: 700 2.2cqh var(--font); cursor: pointer; }
   .inkbar button.tx { padding: 0 1.2cqw; }
   .inkbar button.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3); }

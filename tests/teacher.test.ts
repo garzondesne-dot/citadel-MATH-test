@@ -4,8 +4,9 @@ import type { LessonPack, Room, Store } from '../src/model/types';
 import pack from '../src/packs/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
-import { appearNow, doorStart, endClass, extendTime, giveGift, heartbeat, nextStep, openRoom, prevStep, roomPath, scoutAdd, setAbsent, setFocus, setPct, setRest } from '../src/raid/actions';
-import { activeIds, atkClock, gameNow, isChain, monsterHp, solveLock, stepIdx, stepOf, timeLeft } from '../src/raid/raid';
+import { appearNow, doorStart, endClass, extendTime, giveGift, heartbeat, nextStep, openRoom, prevStep, roomPath, scoutAdd, setAbsent, setFocus, setPct, setRest, submit } from '../src/raid/actions';
+import { items } from '../src/engine/lessons';
+import { activeIds, atkClock, seedOf, gameNow, isChain, itemsFor, monsterHp, solveLock, stepIdx, stepOf, timeLeft } from '../src/raid/raid';
 
 const L = pack as LessonPack;
 function setup() {
@@ -35,7 +36,7 @@ describe('교사 쪽 엔진 (#119)', () => {
     nextStep(S, L, 'T'); S.tick(45 * 60e3);
     doorStart(S, 'T'); expect(R().state.door?.ask).toBe(true);
     extendTime(S, 'T'); expect(R().state.door).toBeNull(); expect(R().state.doorExt).toBe(S.now());
-    endClass(S, 'T'); expect(R().state.closed).toBe(true);
+    endClass(S, L, 'T'); expect(R().state.closed).toBe(true);
   });
   it('정찰 +30 · −30 (남은 것보다 많이 줄이면 바로 등장)', () => {
     const { S, R } = setup();
@@ -70,11 +71,62 @@ describe('교사 쪽 엔진 (#119)', () => {
     prevStep(S, L, 'T'); expect(stepIdx(R())).toBe(0);
     prevStep(S, L, 'T'); expect(stepIdx(R())).toBe(0);
   });
-  it('결석 = 인원에서 빠짐 · 선물 = 학생마다 gifts 한 줄 + TV 표시(이름 없음)', () => {
+  it('결석 = 인원에서 빠짐 · 선물 = 학생마다 gifts 한 줄 · TV 는 반 전체일 때만', () => {
     const { S, R } = setup();
     setAbsent(S, 'T', 'u3', true); expect(activeIds(R(), S.now())).toEqual(['u1', 'u2']);
-    expect(giveGift(S, 'T', ['u1', 'u2'], 10)).toBe(2);
-    expect(Object.values(S.get<Record<string, { g: number }>>('gifts/u1') || {})[0]?.g).toBe(10);
+    expect(giveGift(S, 'T', ['u1'], 5)).toBe(1);
+    expect(R().state.gift ?? null).toBeNull(); // 몇 명만 = TV 없음
+    expect(giveGift(S, 'T', ['u1', 'u2'], 10, true)).toBe(2);
+    expect(Object.values(S.get<Record<string, { g: number }>>('gifts/u1') || {}).map((x) => x.g).sort()).toEqual([10, 5]);
     expect(R().state.gift).toMatchObject({ n: 2, g: 10 });
+  });
+});
+
+// ⏯ 수업 닫기 = 이어서 자리 저절로 기억 (#119 덧붙임 2): 처치 · 미처치 · 개념 · 마무리 네 경우 → 다음 수업 시작 단계
+describe('이어서 자리 (#119 덧붙임 2)', () => {
+  const play = (S: Store, R: () => Room, beat: () => void, id: string) => { // 접속한 셋이 그 몬스터를 모두 맞힘
+    for (const u of ['u1', 'u2', 'u3']) { const qs = itemsFor(L, R(), id, u, 0); submit(S, L, 'T', id, u, qs.map((q) => (q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.type === 'number' ? q.answer : null)) as never); }
+    beat();
+  };
+  const reopen = (S: Store, R: () => Room) => { // 새 방 = 저장된 자리부터
+    const st = R().state.stop!;
+    openRoom(S, L, 'N', PROFILES.class);
+    S.set(`${roomPath('N')}/meta/resumeFrom`, st.step);
+    if (st.fresh) S.set(`${roomPath('N')}/meta/fresh/${st.fresh}`, true);
+    nextStep(S, L, 'N');
+    return S.get<Room>(roomPath('N')) as Room;
+  };
+  it('처치됨 → 다음 단계부터', () => {
+    const { S, R, beat } = setup();
+    toPlain(S, R); appearNow(S, L, 'T');
+    const id = stepOf(L, R())!.id; play(S, R, beat, id);
+    expect(monsterHp(L, R(), id, S.now()).left).toBe(0);
+    const i = stepIdx(R()); endClass(S, L, 'T');
+    expect(R().state.stop).toEqual({ step: i + 1, fresh: null, done: false });
+    expect(stepIdx(reopen(S, R))).toBe(i + 1);
+  });
+  it('처치 안 됨 → 그 몬스터부터 · 숫자 바꾼 판 (첫 시도가 학습지 원문이 아님)', () => {
+    const { S, R } = setup();
+    toPlain(S, R);
+    const id = stepOf(L, R())!.id, i = stepIdx(R());
+    endClass(S, L, 'T');
+    expect(R().state.stop).toEqual({ step: i, fresh: id, done: false });
+    const N = reopen(S, R);
+    expect(stepIdx(N)).toBe(i);
+    const orig = itemsFor(L, R(), id, 'u1', 0).map((q) => q.question).join('|'); // 지난 방 첫 시도(원문)
+    expect(itemsFor(L, N, id, 'u1', 0).map((q) => q.question).join('|')).not.toBe(orig);
+    expect(itemsFor(L, N, id, 'u1', 0)).toEqual(items(L, id, seedOf(N, 'u1'), 1)); // = 판 1 (숫자 바꾼 판)
+  });
+  it('개념 단계 → 그 단계부터', () => {
+    const { S, R } = setup();
+    nextStep(S, L, 'T'); expect(stepOf(L, R())!.kind).toBe('concept');
+    endClass(S, L, 'T');
+    expect(R().state.stop).toEqual({ step: 0, fresh: null, done: false });
+  });
+  it('마무리까지 감 → 다 끝남 (이어서 없음)', () => {
+    const { S, R } = setup();
+    for (let k = 0; k < 30; k++) nextStep(S, L, 'T');
+    endClass(S, L, 'T');
+    expect(R().state.stop?.done).toBe(true);
   });
 });

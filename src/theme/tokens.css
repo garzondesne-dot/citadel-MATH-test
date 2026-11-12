@@ -7,6 +7,8 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --r-sm: 8px; --r: 12px; --r-lg: 20px;
   --tap: 48px; --bar-top: 56px; --bar-bottom: 72px;
+  /* 학생 폰 단추 높이 (#120 · 선생님 「강화 버튼 더 크게 · 다른 버튼들도 통일」): 주요 · 보조 단추 56 / 탭 · 되돌리기 48 / 작은 알약 36 — 교사 폰(68 · 도구 52)은 따로 */
+  --btn-h: 56px; --btn-fs: 18px; --tab-h: 48px; --pill-h: 36px;
   --t: 160ms ease-out;
   --fs-title: 20px; --fs-body: 16px; --fs-small: 14px;
 }

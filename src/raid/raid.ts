@@ -12,6 +12,8 @@ const keys = (o: object | undefined | null) => Object.keys(o || {});
 export const seedOf = (R: Room, uid: string) => `${R.meta.code}|${uid}`;
 /** 🔁 재도전 규칙 v3 (정식 2026-11-09): 방 version ≥ 3 → 숫자는 「다 맞혔을 때만」 바뀜 · 틀리면 같은 문제 그대로 */
 const NEWR = (R: Room) => Number(R.meta.version || 0) >= 3;
+/** ⏯ 이어서 수업 (#119 덧붙임 2): 지난 수업에서 처치 못 한 몬스터 = meta.fresh[id] → 판 · 시도 번호를 1 밀어 숫자 바꾼 판부터 (첫 시도 = 학습지 원문을 쓰지 않음) */
+export const shiftOf = (R: Room, mid: string) => (R.meta.fresh?.[mid] ? 1 : 0);
 
 // ── 단계 ─────────────────────────────────────────────────
 export const stepIdx = (R: Room) => R.state.step ?? -1;
@@ -36,14 +38,14 @@ export function variantOf(L: LessonPack, R: Room, mid: string, uid: string, atte
   let v = 0;
   for (const t of attemptsOf(R, mid, uid)) {
     if (t.attempt >= attempt) break;
-    const its = items(L, mid, seed, v);
+    const its = items(L, mid, seed, v + shiftOf(R, mid));
     const ok = its.length > 0 && its.every((q, i) => t.given != null && t.given[i] != null && grade(q, t.given[i] as Given));
     if (ok) v = t.attempt + 1;
   }
   return v;
 }
 export const itemsFor = (L: LessonPack, R: Room, mid: string, uid: string, attempt: number): Question[] =>
-  items(L, mid, seedOf(R, uid), variantOf(L, R, mid, uid, attempt));
+  items(L, mid, seedOf(R, uid), variantOf(L, R, mid, uid, attempt) + shiftOf(R, mid));
 
 /** 한 번의 시도 채점: 소문제마다 정답 여부 (정식 Model.gradeAttempt) */
 export function gradeAttempt(L: LessonPack, R: Room, mid: string, uid: string, attempt: number, given: Given[] | null) {
@@ -106,7 +108,7 @@ export function plainRecord(L: LessonPack, R: Room, mid: string, uid: string): R
 export const CHAIN_SLOTS = 4;
 export const PRAC_MAX = 3;
 export const isChain = (L: LessonPack, R: Room, mid: string) => NEWR(R) && !!L.monsters[mid]?.chain;
-export const chainItems = (L: LessonPack, R: Room, mid: string, uid: string, pass: number) => packChainItems(L, mid, seedOf(R, uid), pass || 0);
+export const chainItems = (L: LessonPack, R: Room, mid: string, uid: string, pass: number) => packChainItems(L, mid, seedOf(R, uid), (pass || 0) + shiftOf(R, mid));
 const chainSubs = (R: Room, mid: string, uid: string) => { const a = R.chain?.[mid]?.[uid] || {}; return keys(a).map(Number).sort((x, y) => x - y).map((k) => ({ k, ...(a[k] as ChainSub) })); };
 export const whyStages = (its: Question[]) => (its || []).map((q, i) => (q && q.why ? i : -1)).filter((i) => i >= 0);
 export const pracUsed = (R: Room, mid: string, uid: string, rec?: { pass?: number }) => Math.max(Number(R.players?.[uid]?.pr?.[mid]) || 0, (rec && rec.pass) || 0);
@@ -194,7 +196,7 @@ export const cleared = (L: LessonPack, R: Room, mid: string, now: number) => {
 
 // ── 👑 보스 (형성평가 · 정식 2026-11-05 「나」) ─────────────
 //   문항마다 시도 0(원문) + 재도전 = 기회 meta.bossTries · 문항을 한 번이라도 맞히면 도달 · 체력 = ⌊인원 × hpItems × 기준%⌋ · 0 = 즉시 승리
-export const bossItem = (L: LessonPack, R: Room, uid: string, i: number, a: number) => packBossItem(L, seedOf(R, uid), i, a);
+export const bossItem = (L: LessonPack, R: Room, uid: string, i: number, a: number) => packBossItem(L, seedOf(R, uid), i, a + shiftOf(R, BOSS_ID));
 export function bossTries(L: LessonPack, R: Room, uid: string) {
   const out: { i: number; a: number; given: Given; q: Question | null; ok: boolean }[] = [];
   Object.entries(R.bossTry?.[uid] || {}).forEach(([i, byA]) => Object.entries(byA || {}).forEach(([a, given]) => {
@@ -232,6 +234,17 @@ export const held = (R: Room) => focusOn(R) || restOn(R);
 export function gameNow(R: Room, wall: number): number {
   const st = R.state, at = held(R) && st.holdAt != null ? Math.min(wall, Number(st.holdAt)) : wall;
   return at - Number(st.pauseMs || 0);
+}
+
+/** ⏯ 이어서 자리 (#119 덧붙임 2 · 선생님 「수업 끝 = 저절로 기억」): 수업이 닫히거나 시간이 끝난 그때 단계
+ *  몬스터 · 보스: 처치됨 → 다음 단계부터 / 처치 안 됨 → 그 단계부터(fresh = 숫자 바꾼 판) · 개념 · 도입 → 그 단계부터 · 마무리까지 감(또는 마지막 처치) → done */
+export function stopOf(L: LessonPack, R: Room, now: number): { step: number; fresh: string | null; done: boolean } {
+  if (isLobby(R)) return { step: 0, fresh: null, done: false };
+  if (isEnd(L, R)) return { step: L.steps.length, fresh: null, done: true };
+  const st = stepOf(L, R) as Step, i = stepIdx(R);
+  const killed = st.kind === 'monster' ? !!L.monsters[st.id] && cleared(L, R, st.id, now) : st.kind === 'boss' ? bossHp(L, R, now).won : false;
+  if (killed) { const n = nextIdx(L, R); return { step: n, fresh: null, done: n >= L.steps.length }; }
+  return { step: i, fresh: st.kind === 'monster' || st.kind === 'boss' ? (st.kind === 'boss' ? BOSS_ID : st.id) : null, done: false };
 }
 
 /** ⏱ 남은 수업 시간 (정식 deadline · timeLeft) — ① 수업 시계: 집중 중에도 줄어듦 */

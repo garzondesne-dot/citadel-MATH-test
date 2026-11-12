@@ -3,11 +3,12 @@
   import { CLASSES, hasAccount, logIn, pupil, roster, saveLogin, signUp, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
 
-  // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v70 「title」)
-  //   대표 그림 key-1 위 제목 · 반 ▾ · 번호 ▾ → 「n번 · 이름 맞나요?」 → 비밀번호 4칸(숫자 키패드 · 시스템 키보드 안 띄움) → 금빛 「⚔ 모험 시작」
+  // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v71 「⓪」 · 선생님 「이 정도는 살리자」)
+  //   정식 첫 화면 그림 brand-bg(용사 넷이 문을 엶 · 위치 center 30% · 아래 46% 어둡게) + 정식 로고 menu-logo(폭 80% · 최대 320 · 위 3%) · 반 ▾ · 번호 ▾ → 「n번 · 이름 맞나요?」 → 비밀번호 4칸(숫자 키패드 · 시스템 키보드 안 띄움) → 금빛 「⚔ 모험 시작」
   //   「처음이에요 · 가입」 = 같은 화면(비밀번호 두 번) · 교사 · 종합실 = 맨 아래 작은 글자 링크 · 한 번 로그인한 폰은 다음부터 바로 캠프(App 이 고름)
   const { S, onin }: { S: Store; onin: (p: Pupil) => void } = $props();
-  const ART = `${import.meta.env.BASE_URL}art/key-1-v1.webp`;
+  const ART = `${import.meta.env.BASE_URL}art/brand-bg-v1.webp`;
+  const LOGO = `${import.meta.env.BASE_URL}art/menu-logo-v1.webp`;
   let cls = $state('');
   let num = $state(0);
   let join = $state(false);
@@ -35,7 +36,7 @@
 </script>
 
 <div class="title" style:background-image="url({ART})">
-  <div class="logo"><b>모두의 던전</b><small>공통수학2</small></div>
+  <h1 class="logo"><img src={LOGO} alt="모두의 던전 · 공통수학2" /></h1>
   <form class="form" onsubmit={(e) => { e.preventDefault(); if (ready) go(); }}>
     <div class="row">
       <label class="sel"><span class="sr">반</span>
@@ -91,11 +92,10 @@
 {/if}
 
 <style>
-  .title { position: relative; height: 100dvh; max-width: 430px; margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; background-color: var(--bg); background-position: center top; background-size: auto 62%; background-repeat: no-repeat; }
-  .title::before { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(15, 17, 21, 0) 30%, rgba(15, 17, 21, 0.92) 52%, var(--bg) 62%); pointer-events: none; }
-  .logo { position: absolute; top: 7%; left: 0; right: 0; text-align: center; z-index: 1; text-shadow: 0 3px 0 #000, 0 0 18px rgba(0, 0, 0, 0.8); }
-  .logo b { display: block; font-size: 40px; letter-spacing: 2px; color: #ffd77a; }
-  .logo small { display: inline-block; margin-top: var(--s2); padding: 2px var(--s3); border-radius: var(--r); background: rgba(8, 9, 12, 0.7); color: var(--text); font-size: var(--fs-small); font-weight: 700; }
+  .title { position: relative; height: 100dvh; max-width: 430px; margin: 0 auto; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; background-color: var(--bg); background-position: center 30%; background-size: cover; background-repeat: no-repeat; image-rendering: pixelated; }
+  .title::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 46%; background: linear-gradient(rgba(15, 17, 21, 0), rgba(15, 17, 21, 0.9) 34%, var(--bg)); pointer-events: none; }
+  .logo { position: absolute; top: 3%; left: 0; right: 0; margin: 0; text-align: center; z-index: 1; }
+  .logo img { width: 80%; max-width: 320px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7)); }
   .form { position: relative; z-index: 1; padding: 0 var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: var(--s2); }
   .row { display: flex; gap: var(--s2); }
   .sel { flex: 1; }
@@ -111,7 +111,7 @@
   .pw:disabled { opacity: 0.45; }
   .pw small { position: absolute; right: 0; font-size: var(--fs-small); color: var(--text-3); }
   .err { margin: 0; text-align: center; color: var(--bad); font-size: var(--fs-small); font-weight: 700; }
-  .go { height: 60px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 20px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
+  .go { height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .go:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .go:disabled { opacity: 0.45; box-shadow: none; }
   .why { margin: 0; min-height: 20px; text-align: center; font-size: var(--fs-small); color: var(--text-3); }

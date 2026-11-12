@@ -131,7 +131,7 @@ export interface RoomRules {
   pct?: number;
 }
 export interface Room {
-  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean } & RoomRules;
+  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean; /** ⏯ 이어서: 수업 시작 단계 · 숫자 바꾼 판으로 시작할 몬스터 */ resumeFrom?: number; fresh?: Record<string, boolean> } & RoomRules;
   /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
   state: {
     step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>;
@@ -141,7 +141,7 @@ export interface Room {
     /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름 · 한 번) · 문 닫기 장면 */ deadline?: number | null; extend?: number; door?: { at: number; ask: boolean } | null; doorExt?: number | null;
     /** 🎬 영상 · 📄 문제 창 (단계 id) · 💬 TV 대기실 선생님 말 · 🎁 마지막 선물(TV 표시) · 🔄 새로 고침 보낸 시각 */
     video?: string | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
-    /** 수업 끝 (닫힘) */ closed?: boolean;
+    /** 수업 끝 (닫힘) · ⏯ 닫힌 그때 이어서 자리 */ closed?: boolean; stop?: { step: number; fresh: string | null; done: boolean } | null;
     /** 교실 TV: 교사 캠프 → 「⚔ 던전 입장」 누르면 던전 대기실 */ hall?: 'lobby' | null;
   };
   /** absent[uid] = 결석 (대기실에서 안 온 번호를 누름 · 인원에서 빠짐) */

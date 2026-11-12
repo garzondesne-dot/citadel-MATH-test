@@ -4,7 +4,7 @@
   import { PROFILES } from '../model/profiles';
   import { atkClock, atkTrack, bossHp, chainDown, chainRecord, gameNow, isChain, isEnd, isLobby, monsterHp, resultOf, solveLock, stepIdx, stepOf } from '../raid/raid';
   import { heartbeat, leave, scoutReady } from '../raid/actions';
-  import { liveRoom } from './room.svelte';
+  import { liveRoom, liveValue } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Scene from './battle/Scene.svelte';
   import BottomAction from './battle/BottomAction.svelte';
@@ -38,6 +38,10 @@
 
   const R = $derived(live.v.room);
   $effect(() => { const t = R?.state.reload?.[uid]; if (t && t > loadedAt) location.reload(); });
+  // 🎁 수업 중 선생님 선물 = 받은 학생 폰에만 한 줄 (지갑에는 캠프에서 들어감 · #119 덧붙임)
+  const gv = untrack(() => liveValue<Record<string, { g: number; at: number }>>(S, `gifts/${uid}`));
+  onDestroy(gv.stop);
+  const giftNew = $derived(Object.values(gv.v.val || {}).filter((x) => x && x.at > loadedAt && clock.now - x.at < 4000));
   const now = $derived(clock.now); // ① 수업 시계 = 접속 · 체력 머릿수 · (b8) 남은 수업 시간
   const gnow = $derived(R ? gameNow(R, now) : now); // ② 게임 시계 (#118) = 공격 멈춤 초 · 생각 시간 — 집중이면 멈춤
   const step = $derived(R ? stepOf(L, R) : null);
@@ -122,6 +126,7 @@
   {/if}
 </section>
 <SymSheet />
+{#if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && (R.state.focus || R.state.rest)}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
   <div class="cover" role="status" aria-live="polite">
@@ -137,7 +142,8 @@
   .say { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
   .res { margin: 0; padding-left: 1.2rem; }
   .big small { font-size: var(--fs-small); }
-  .camp { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--accent-sh); }
+  .camp { display: flex; align-items: center; justify-content: center; min-height: var(--btn-h); font-size: var(--btn-fs); border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; box-shadow: 0 3px 0 var(--accent-sh); }
+  .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }
   .cover p { margin: 0; color: var(--text-2); }

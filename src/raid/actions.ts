@@ -1,6 +1,6 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf } from './raid';
+import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -31,7 +31,8 @@ function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || isEnd(L, R)) return;
-  goTo(S, L, code, R, nextIdx(L, R));
+  // ⏯ 이어서 수업: 입장 → 저장된 단계부터 (정식 go() resumeFrom)
+  goTo(S, L, code, R, isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R));
 }
 /** ◀ 앞 단계 (「다음 판에서」 자리는 건너뜀 · 입장 화면까지는 안 돌아감) */
 export function prevStep(S: Store, L: LessonPack, code: string): void {
@@ -95,21 +96,24 @@ export function doorStart(S: Store, code: string): void {
   if (!R || R.state.door || R.state.closed) return;
   S.set(`${roomPath(code)}/state/door`, { at: S.now(), ask: !R.state.extend });
 }
-/** 수업 끝 (리모컨 「수업 끝」 · 문이 닫힘) */
-export function endClass(S: Store, code: string): void {
+/** 수업 닫기 (교사 폰 「수업 닫기」 · 문이 닫힘 · 시간 끝) — 그때 단계를 이어서 자리로 저장 (#119 덧붙임 2 · 「수업 끝」 단추 없음) */
+export function endClass(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
-  if (!R) return;
-  S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null });
+  if (!R || R.state.closed) return;
+  const stop = isLobby(R) && R.meta.resumeFrom != null ? { step: R.meta.resumeFrom, fresh: Object.keys(R.meta.fresh || {})[0] ?? null, done: false } : stopOf(L, R, S.now());
+  S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null, stop });
 }
 /** 대기실: 안 온 번호를 눌러 결석 (다시 누르면 풂) · 🔄 옛 판 학생에게 새로 고침 보내기 */
 export function setAbsent(S: Store, code: string, uid: string, on: boolean): void { S.set(`${roomPath(code)}/absent/${uid}`, on ? true : null); }
 export function sendReload(S: Store, code: string, uids: string[]): void { const t = S.now(); uids.forEach((u) => S.set(`${roomPath(code)}/state/reload/${u}`, t)); }
-/** 💎 선생님 선물 (정식 Gem.gift · 하루 한도 밖 · 학생 캠프 「🎁 선생님 선물」): gifts/{uid}/{k} = { g, at, code } · TV 에 「🎁 선생님 선물!」 (받은 이름은 띄우지 않음) */
-export function giveGift(S: Store, code: string, uids: string[], g: number): number {
+/** 💎 선생님 선물 (정식 Gem.gift · 하루 한도 밖 · 학생 캠프 「🎁 선생님 선물」): gifts/{uid}/{k} = { g, at, code }
+ *  TV 연출 = 반 전체에게 줄 때만 「🎁 선생님 선물! 모두 💎 n」 (#119 덧붙임 · 몇 명만 = TV 에 아무것도 없음 · 받은 학생 폰에만) */
+export function giveGift(S: Store, code: string, uids: string[], g: number, all = false): number {
   const t = S.now(), n = Math.max(0, Math.round(g));
   if (!n || !uids.length) return 0;
-  uids.forEach((u, i) => S.set(`gifts/${u}/${t}_${i}`, { g: n, at: t, code }));
-  S.set(`${roomPath(code)}/state/gift`, { at: t, n: uids.length, g: n });
+  const r = Math.random().toString(36).slice(2, 6);
+  uids.forEach((u, i) => S.set(`gifts/${u}/${t}_${r}${i}`, { g: n, at: t, code }));
+  if (all) S.set(`${roomPath(code)}/state/gift`, { at: t, n: uids.length, g: n });
   return uids.length;
 }
 /** 종합실 「⚔ 등장!」: 정찰을 일찍 끝냄 */
