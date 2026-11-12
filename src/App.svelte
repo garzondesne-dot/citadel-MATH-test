@@ -69,12 +69,14 @@
   checkVer(); if (typeof window !== 'undefined') setInterval(checkVer, 5 * 60e3); // 수업 끝난 뒤에도 새 판을 알아채게 5분마다
   // ⏸ #163 ④ 수업 중 새 판 미룸(A): 내 반 수업이 열려 있는 동안(학생 = 내 반 · 교사 폰 · TV = 열린 수업이 있으면) 새 판 알림을 숨김 → 수업이 끝나면(열린 수업 칸이 비면) 보임
   const inClass = $derived(!!lvApp.v.val?.code && (role === 'teacher' || role === 'hall' || (!!login && lvApp.v.val.cls === login.cls) || (role === 'student' && !!code && lvApp.v.val.code === code)));
+  // 🫥 #162 ① · #172 학생 화면(첫 화면 · 캠프 · 수업 · 게시판)엔 「BETA · 판」 · 「시험 서버」 글자를 숨김 → 캠프 ⚙ 설정 맨 아래 작은 「판」 줄 · 끊김 붉은 띠 · 새 판 ↻ 는 그대로
+  const stuScreen = !role || role === 'student' || role === 'camp';
   const verOld = $derived(!!site && site !== BUILD && !inClass);
 </script>
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
-{#if role !== 'dev'}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if verOld}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
+{#if role !== 'dev'}{#if verOld}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>

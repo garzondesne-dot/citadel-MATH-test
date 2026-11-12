@@ -34,8 +34,14 @@ const log = (...a) => console.log(...a);
   const gate = (await s.textContent('.pmain')).trim(); log('③ 학생 가입 → 캠프 · 주요 단추:', gate); if (!/던전 입장/.test(gate)) errs.push('③ 캠프 차원문');
   await s.click('.pmain'); await s.waitForURL(/role=student/, { timeout: 10000 }).catch(() => {}); await s.waitForTimeout(2000);
   const lobby = (await s.textContent('body')).replace(/\s+/g, ' '); log('   입장:', /입장 완료|기다려요/.test(lobby) ? '대기실 ○' : `✗ ${lobby.slice(0, 80)}`); if (!/입장 완료|기다려요/.test(lobby)) errs.push('③ 대기실');
-  await s.goto(`${B}?${E}`); await s.waitForSelector('.stage', { timeout: 20000 }); await s.click('button[aria-label="설정"]'); await s.waitForSelector('.sheet .out');
-  await s.click('.sheet .out'); await s.waitForSelector('.title', { timeout: 20000 }); await s.waitForTimeout(500);
+  await s.goto(`${B}?${E}`); await s.waitForSelector('.stage', { timeout: 20000 }); await s.waitForTimeout(800);
+  const pill = await s.$('.beta-pill:not(.old)'), srv = await s.$eval('.srv', (x) => x.textContent).catch(() => null);
+  log('   캠프 BETA · 시험 서버 글자:', pill || srv ? `✗ 보임 ${srv ?? ''}` : '숨김 ○'); if (pill || srv) errs.push('#162 학생 화면 BETA 글자');
+  await s.click('button[aria-label="설정"]'); await s.waitForSelector('.sheet .build'); log('   ⚙ 설정 맨 아래:', (await s.textContent('.sheet .build')).trim()); await s.click('.sheet .pmain'); await s.waitForTimeout(300);
+  // #172 ‹ 메뉴 → 교사 폰 · 교실 TV · 로그아웃
+  await s.click('.top .back'); await s.waitForSelector('.sheet .menu'); const mi = await s.$$eval('.sheet .mi b', (xs) => xs.map((x) => x.textContent).join(' · ')); log('   ‹ 메뉴:', mi); if (!/교사 폰.*교실 TV.*로그아웃/.test(mi)) errs.push('#172 메뉴');
+  await s.screenshot({ path: `${SHOTS}/b47-camp-menu.png` });
+  await s.click('.sheet .mi:has-text("로그아웃")'); await s.waitForSelector('.title', { timeout: 20000 }); await s.waitForTimeout(500);
   const menu = await s.$('.links button:has-text("교사 · 종합실")'); log('   ⚙ 로그아웃 → 첫 화면 · 「교사 · 종합실 ›」:', menu ? '○' : '✗'); if (!menu) errs.push('③ 로그아웃 → 메뉴');
   await s.screenshot({ path: `${SHOTS}/b46-logout-title.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');

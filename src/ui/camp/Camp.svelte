@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { BUILD } from '../../build';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
@@ -171,7 +172,7 @@
     {/each}
 
     <div class="top">
-      <b class="ttl">내 캠프</b><span class="sp2"></span>
+      {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
       <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
       <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
@@ -212,6 +213,16 @@
     {#snippet title()}🏰 성채 던전{/snippet}
     {#each SUBJ.camp.floors as f (f.no)}<div class="floor" class:off={!!f.off}><span class="no">{f.no}</span><span><b>{f.name}</b><span>{f.sub}</span></span></div>{/each}
   </Sheet>
+{:else if sheet === 'menu'}
+  <!-- ‹ 메뉴 (#172 · 정식 「◀ 메뉴화면」 자리 · ui-senior TopBar = 왼쪽 위 ‹) — 내 캠프 · 교사 폰 · 교실 TV · 로그아웃 -->
+  <Sheet onclose={() => (sheet = null)} mainText="🏕 내 캠프로">
+    {#snippet title()}메뉴{/snippet}
+    <div class="menu">
+      <a class="mi" href="?role=teacher"><span>📱</span><b>교사 폰</b><small>수업 열기 · 리모컨</small></a>
+      <a class="mi" href="?role=hall"><span>🖥</span><b>교실 TV</b><small>종합실 · 교사 캠프</small></a>
+      {#if pupil}<button type="button" class="mi" onclick={logout}><span>↪</span><b>로그아웃 · 첫 화면</b><small>{pupil.cls}반 {pupil.num}번 · 기록은 그대로</small></button>{/if}
+    </div>
+  </Sheet>
 {:else if sheet === 'set'}
   <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
     {#snippet title()}⚙ 설정{/snippet}
@@ -219,6 +230,7 @@
     <ThemePicker now={theme} {feats} onpick={pickTheme} />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     {#if pupil}<button type="button" class="out" onclick={logout}>↪ 로그아웃 · 첫 화면으로 <small>{pupil.cls}반 {pupil.num}번</small></button>{/if}
+    <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? ' · 시험 서버' : ' · 이 기기'}</p>
   </Sheet>
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
@@ -245,6 +257,11 @@
 {/if}
 
 <style>
+  .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; }
+  .menu { display: flex; flex-direction: column; gap: var(--s2); }
+  .mi { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: var(--s2); min-height: 56px; padding: var(--s2) var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font: inherit; text-align: left; }
+  .mi span { grid-row: span 2; font-size: 24px; text-align: center; } .mi b { font-size: 16px; } .mi small { color: var(--text-3); font-size: 13px; }
+  .build { margin: var(--s2) 0 0; text-align: center; font-size: 13px; color: var(--text-3); }
   .out { margin-top: var(--s3); min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); display: flex; align-items: center; justify-content: center; gap: var(--s2); }
   .out small { color: var(--text-3); font-weight: 500; }
   .codebtn { flex: 1; min-height: var(--btn-h); padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
