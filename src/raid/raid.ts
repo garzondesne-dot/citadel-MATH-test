@@ -174,7 +174,7 @@ export function chainDown(L: LessonPack, R: Room, mid: string, now: number) {
 /** 접속한 학생 (선생님 · 종합실 빼고 · 최근 PRESENCE_MS 안에 소식) — 번호 순 */
 export function activeIds(R: Room, now: number): string[] {
   const P = R.players || {};
-  return keys(P).filter((u) => !P[u]?.teacher && now - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
+  return keys(P).filter((u) => !P[u]?.teacher && classNow(R, now) - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
 }
 export const headcount = (R: Room, now: number) => R.state.headcount || Math.max(1, activeIds(R, now).length);
 export const pctOf = (L: LessonPack, R: Room) => R.meta.pct ?? L.defaultPct ?? 90;
@@ -219,15 +219,21 @@ export function bossHp(L: LessonPack, R: Room, now: number) {
   return { max, dmg, left: Math.max(0, max - dmg), pct, won: max > 0 && dmg >= max };
 }
 
-// ── ⏸ 게임 시계 (#118 · 집중 = 시계 멈춤) ─────────────────
-//   벽시계(clock.now · S.now) 하나에서 파생: 게임 시각 = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합
-//   정찰 · 몬스터 공격 · 생각 시간 · 남은 시간 · (앞으로) 보스 문 닫기 · 박쥐 · 콤보 · 놀이 · 연출 반복은 모두 이 값만 읽는다 → 함께 멈춤 · 끄면 그 자리에서 이어감
-//   단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로) · 접속 판정(activeIds)만 벽시계 — 집중 중에도 학생은 접속 중
+// ── ⏱ 시계 두 갈래 (#118 · 선생님 11/12 바로잡음) ─────────────
+//   벽시계(clock.now · S.now) 하나에서 두 갈래로만 파생 — 화면 · 규칙은 둘 중 하나만 읽는다 (따로 타이머를 두지 않음)
+//   ① 수업 시계 classNow = 실제 시각 · 집중이어도 멈추지 않음 → 남은 수업 시간 · (앞으로) 보스 문 닫기 · 접속 판정
+//   ② 게임 시계 gameNow = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합 → 정찰 · 몬스터 공격 · 생각 시간 · (앞으로) 박쥐 · 콤보 창 · 놀이 · 연출 반복
+//      집중이면 함께 멈추고 끄면 그 자리에서 이어감 · 단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로)
+export const classNow = (_R: Room | null, wall: number): number => wall;
 export const focusOn = (R: Room) => !!R.state.focus;
 export function gameNow(R: Room, wall: number): number {
   const st = R.state, at = st.focus && st.focusAt != null ? Math.min(wall, Number(st.focusAt)) : wall;
   return at - Number(st.pauseMs || 0);
 }
+
+/** ⏱ 남은 수업 시간 (정식 deadline · timeLeft) — ① 수업 시계: 집중 중에도 줄어듦 */
+export const deadline = (R: Room): number | null => { const d = R.state.deadline || R.meta.deadline; return d ? d + (Number(R.state.extend) || 0) * 60e3 : null; };
+export const timeLeft = (R: Room, wall: number): number | null => { const d = deadline(R); return d == null ? null : Math.max(0, d - classNow(R, wall)); };
 
 // ── 🌫 정찰 (정식 solveLock · v3 = 모든 몬스터 · 보스 앞 meta.solve 초 · 「⚔ 등장!」으로 일찍) ──
 export function solveLock(L: LessonPack, R: Room, now: number) {

@@ -31,8 +31,8 @@
   onDestroy(() => { live.stop(); stopClock(); });
 
   const R = $derived(live.v.room);
-  const now = $derived(clock.now); // 벽시계 = 접속 · 체력 머릿수
-  const gnow = $derived(R ? gameNow(R, now) : now); // ⏸ 게임 시계 (#118) = 멈춤 · 생각 시간 · 공격 멈춤 초 — 집중이면 멈춤
+  const now = $derived(clock.now); // ① 수업 시계 = 접속 · 체력 머릿수 · (b8) 남은 수업 시간
+  const gnow = $derived(R ? gameNow(R, now) : now); // ② 게임 시계 (#118) = 공격 멈춤 초 · 생각 시간 — 집중이면 멈춤
   const step = $derived(R ? stepOf(L, R) : null);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));

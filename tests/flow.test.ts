@@ -6,7 +6,7 @@ import pack from '../src/packs/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
 import { appearNow, bossSubmit, chainRelease, chainSubmit, heartbeat, nextStep, openRoom, pracStart, roomPath, setFocus, submit } from '../src/raid/actions';
-import { atkClock, atkTrack, bossHp, gameNow, bossItem, bossState, chainDown, chainItems, chainRecord, cleared, isChain, isEnd, itemsFor, monsterHp, record, resultOf, solveLock, stepOf, variantOf } from '../src/raid/raid';
+import { atkClock, atkTrack, bossHp, classNow, gameNow, timeLeft, bossItem, bossState, chainDown, chainItems, chainRecord, cleared, isChain, isEnd, itemsFor, monsterHp, record, resultOf, solveLock, stepOf, variantOf } from '../src/raid/raid';
 
 const L = pack as LessonPack;
 const ans = (q: Question): Given => (q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.type === 'number' ? q.answer : null);
@@ -192,6 +192,23 @@ describe('⏸ 집중 = 시계 멈춤 (#118)', () => {
     expect(gameNow(R(), S.now())).toBe(R().state.stepAt);
     setFocus(S, 'T', false); S.tick(2_000);
     expect(gameNow(R(), S.now()) - R().state.stepAt).toBe(2_000);
+  });
+  it('시계 두 갈래: 집중 30초 → 공격 0 · 정찰 그대로 · 남은 수업 시간은 30초 줄어듦', () => {
+    const { S, R, beat } = setup('class');
+    toMonster(S, R); beat();
+    S.set(`${roomPath('T')}/state/deadline`, S.now() + 50 * 60e3); // 수업 50분
+    S.tick(10_000); beat();
+    const sc0 = solveLock(L, R(), S.now())!.left, tl0 = timeLeft(R(), S.now())!, memo = {};
+    setFocus(S, 'T', true);
+    let hits = 0;
+    for (let k = 0; k < 30; k++) { S.tick(1_000); beat(); const c = atkClock(L, R(), S.now())!; if (!c.paused && atkTrack(memo, c, 'm').strike) hits++; }
+    expect(hits).toBe(0);
+    expect(solveLock(L, R(), S.now())!.left).toBe(sc0);
+    expect(timeLeft(R(), S.now())).toBe(tl0 - 30_000);
+    expect(classNow(R(), S.now()) - gameNow(R(), S.now())).toBe(30_000);
+    setFocus(S, 'T', false); S.tick(1_000);
+    expect(timeLeft(R(), S.now())).toBe(tl0 - 31_000);
+    expect(solveLock(L, R(), S.now())!.left).toBe(sc0 - 1_000);
   });
   it('집중을 안 쓰면 게임 시계 = 벽시계 (정식 값 그대로)', () => {
     const { S, R } = setup('class');
