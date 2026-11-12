@@ -43,6 +43,8 @@ export interface MonsterPack {
   chain?: { gen: string };
   /** 문제 화면 위 💡 한 줄 */
   noteText?: string;
+  special?: boolean;
+  review?: boolean;
 }
 
 export interface Step {
@@ -53,6 +55,11 @@ export interface Step {
   img?: string;
   /** 다음 판에서 만들 자리 — 단계 목록에 보이고 진행은 건너뜀 */
   later?: boolean;
+  /** ⏱ 예상 분 (#132 · 선생님 입력판) — 대기실 「오늘 흐름」 · TV 흐름도 */
+  min?: number;
+  /** 보강 · 복습 몬스터 (정식 special · review) */
+  special?: boolean;
+  review?: boolean;
 }
 
 /** 👑 보스(형성평가): 문항마다 시도 0 = 원문 · 1~ = 생성기 새 값 · 체력 = hpItems 기준 */
@@ -63,6 +70,10 @@ export interface BossPack {
   hpItems: number;
   /** 이름 등록 보스 생성기 (문항 번호, 시도, 난수) */
   gen: string;
+  /** 문항별 개념 (개인 결과 · 복습 추천) */
+  tags?: string[];
+  /** 정식 세트 (1 = 학습지 · 2 = 숫자 바꿈) — 데이터만 · 시도 0 = 세트 1 */
+  sets?: Record<string, Question[]>;
 }
 
 export interface LessonPack {
@@ -74,6 +85,15 @@ export interface LessonPack {
   theme?: string;
   defaultPct: number;
   videos?: Record<string, string>;
+  /** 🧩 #132 정식 차시에서 옮긴 칸 */
+  sheet?: string;
+  goal?: string;
+  std?: string;
+  parts?: { no: number; from: string; title: string }[];
+  next?: { title: string; ask?: string; link?: string };
+  crops?: Record<string, unknown>;
+  /** 어디서 왔나: 정식 파일 · 커밋 · 입력판을 읽은 때 */
+  source?: { file: string; commit: string; board: string | null };
   steps: Step[];
   monsters: Record<string, MonsterPack>;
   boss?: BossPack;

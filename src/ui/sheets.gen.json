@@ -1,0 +1,253 @@
+{
+ "sheets": {
+  "new0": {
+   "src": "art/mon-new0-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 0,
+   "names": [
+    "수정 아홀로틀"
+   ],
+   "cell": 256
+  },
+  "new2": {
+   "src": "art/mon-new2-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 2,
+   "names": [
+    "등불 유령"
+   ],
+   "cell": 256
+  },
+  "new3": {
+   "src": "art/mon-new3-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 3,
+   "names": [
+    "번개 독수리"
+   ],
+   "cell": 256
+  },
+  "new5": {
+   "src": "art/mon-new5-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 5,
+   "names": [
+    "해바라기 정령"
+   ],
+   "cell": 256
+  },
+  "new1": {
+   "src": "art/mon-new1-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 1,
+   "names": [
+    "선인장 수호수"
+   ],
+   "cell": 256
+  },
+  "new4": {
+   "src": "art/mon-new4-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 4,
+   "names": [
+    "자수정 슬라임"
+   ],
+   "cell": 256
+  },
+  "new9": {
+   "src": "art/mon-new9-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 9,
+   "names": [
+    "별빛 해파리"
+   ],
+   "cell": 256
+  },
+  "new6": {
+   "src": "art/mon-new6-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 6,
+   "names": [
+    "흑요석 표범"
+   ],
+   "cell": 256
+  },
+  "base0": {
+   "src": "art/mon-base0-v1.webp",
+   "from": "monsters-v2.webp",
+   "row": 0,
+   "names": [
+    "수정 슬라임"
+   ],
+   "cell": 418
+  },
+  "base1": {
+   "src": "art/mon-base1-v1.webp",
+   "from": "monsters-v2.webp",
+   "row": 1,
+   "names": [
+    "바위 골렘"
+   ],
+   "cell": 418
+  },
+  "extra4": {
+   "src": "art/mon-extra4-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 4,
+   "names": [
+    "자수정 박쥐"
+   ],
+   "cell": 256
+  },
+  "base2": {
+   "src": "art/mon-base2-v1.webp",
+   "from": "monsters-v2.webp",
+   "row": 2,
+   "names": [
+    "성채 드래곤"
+   ],
+   "cell": 418
+  },
+  "crown0": {
+   "src": "art/mon-crown0-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 0,
+   "names": [
+    "에메랄드 왕관 슬라임"
+   ],
+   "cell": 340
+  },
+  "crown1": {
+   "src": "art/mon-crown1-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 1,
+   "names": [
+    "루비 박쥐"
+   ],
+   "cell": 340
+  },
+  "crown2": {
+   "src": "art/mon-crown2-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 2,
+   "names": [
+    "사파이어 뿔벌레"
+   ],
+   "cell": 340
+  },
+  "crown4": {
+   "src": "art/mon-crown4-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 4,
+   "names": [
+    "버섯 전사"
+   ],
+   "cell": 340
+  },
+  "crown8": {
+   "src": "art/mon-crown8-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 8,
+   "names": [
+    "덩굴 미믹"
+   ],
+   "cell": 340
+  },
+  "crown3": {
+   "src": "art/mon-crown3-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 3,
+   "names": [
+    "자수정 뼈뱀"
+   ],
+   "cell": 340
+  },
+  "crown5": {
+   "src": "art/mon-crown5-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 5,
+   "names": [
+    "자수정 눈알 문어"
+   ],
+   "cell": 340
+  },
+  "crown7": {
+   "src": "art/mon-crown7-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 7,
+   "names": [
+    "서리 왕관 늑대"
+   ],
+   "cell": 340
+  },
+  "extra1": {
+   "src": "art/mon-extra1-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 1,
+   "names": [
+    "화염 도마뱀"
+   ],
+   "cell": 256
+  },
+  "new7": {
+   "src": "art/mon-new7-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 7,
+   "names": [
+    "용암 게"
+   ],
+   "cell": 256
+  },
+  "extra2": {
+   "src": "art/mon-extra2-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 2,
+   "names": [
+    "장갑 외눈괴물"
+   ],
+   "cell": 256
+  },
+  "extra8": {
+   "src": "art/mon-extra8-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 8,
+   "names": [
+    "마법책 정령"
+   ],
+   "cell": 256
+  },
+  "extra0": {
+   "src": "art/mon-extra0-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 0,
+   "names": [
+    "에메랄드 멧돼지"
+   ],
+   "cell": 256
+  },
+  "new8": {
+   "src": "art/mon-new8-v1.webp",
+   "from": "monsters-new-v1.webp",
+   "row": 8,
+   "names": [
+    "황금 스카라베"
+   ],
+   "cell": 256
+  },
+  "extra9": {
+   "src": "art/mon-extra9-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 9,
+   "names": [
+    "흑요석 미노타우로스"
+   ],
+   "cell": 256
+  }
+ },
+ "dungeons": {
+  "02-deep-forest": "art/dg-02-deep-forest-v1h.webp",
+  "05-ruins": "art/dg-05-ruins-v1h.webp",
+  "06-frost": "art/dg-06-frost-v1h.webp",
+  "07-volcano": "art/dg-07-volcano-v1h.webp"
+ }
+}

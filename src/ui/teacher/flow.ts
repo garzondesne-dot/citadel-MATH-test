@@ -2,12 +2,13 @@ import type { LessonPack, Room, Step } from '../../model/types';
 import { isChain } from '../../raid/raid';
 
 // 📱 교사 폰 「오늘 흐름」 · 단계 색 막대 (#119 ⑬ ⑭) — 화면 표시만(규칙 아님)
-//   분 = 어림값(도입 3 · 개념 2 · 문제 5 · ⚔ 소레이드 9 · 👑 형성평가 6) · 색 = 묶음(도입 · 개념 · 문제 · 소레이드 · 형성평가)
+//   분 = 팩의 min(#132 · 입력판) · 없으면 어림값(도입 3 · 개념 2 · 문제 5 · ⚔ 소레이드 9 · 👑 형성평가 6) · 색 = 묶음(도입 · 개념 · 문제 · 소레이드 · 형성평가)
 export const COLOR = { intro: '#5b6478', concept: '#c9902e', monster: '#c9902e', chain: '#b8662f', boss: '#a8423f' } as const;
 export type Kind = keyof typeof COLOR;
 export const kindOf = (L: LessonPack, R: Room | null, s: Step): Kind => s.kind === 'monster' && L.monsters[s.id]?.chain && (!R || isChain(L, R, s.id)) ? 'chain' : s.kind;
 const MIN: Record<Kind, number> = { intro: 3, concept: 2, monster: 5, chain: 9, boss: 6 };
-export const minOf = (L: LessonPack, R: Room | null, s: Step) => (s.later ? 0 : MIN[kindOf(L, R, s)]);
+/** 분 = 차시 팩의 min (#132 · 선생님 입력판) · 없으면 어림값 */
+export const minOf = (L: LessonPack, R: Room | null, s: Step) => (s.later ? 0 : s.min ?? MIN[kindOf(L, R, s)]);
 export const total = (L: LessonPack, R: Room | null) => L.steps.reduce((a, s) => a + minOf(L, R, s), 0);
 /** 짧은 이름 (막대 · 단추): 「개념 1 · 드모르간의 법칙」 → 「개념 1」 · 「형성평가 · 그림자 드래곤」 → 「형성평가」 */
 export const short = (s: Step | null | undefined) => (s ? (s.kind === 'boss' ? '형성평가' : s.title.split(' · ')[0] ?? s.title) : '');

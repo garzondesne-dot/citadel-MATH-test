@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
-  import packJson from './packs/set-06.json';
+  import { PACKS, packOf } from './packs';
   import { PROFILES } from './model/profiles';
   import { validate } from './engine/lessons';
   import { deviceStore } from './store/device';
@@ -14,12 +14,14 @@
   import { pupil, savedLogin, type Live, type Pupil } from './school/school';
   import { liveValue } from './ui/room.svelte';
 
-  const L = packJson as LessonPack;
-  const errs = validate(L);
   const q = new URLSearchParams(location.search);
   const role = q.get('role');
   const code = (q.get('room') || 'TEST').toUpperCase();
   const S = deviceStore();
+  // 🧩 #132 차시 = 방이 기억한 차시(meta.lesson) → 지금 열린 수업 → 6차시 · 팩은 src/packs 모두
+  const DEF = packOf('set-06') ?? PACKS[0]!;
+  const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
+  const lessonOf = (c: string): LessonPack => packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? DEF;
   // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름
   let modeKey = $state<'class' | 'test'>(q.get('mode') === 'class' ? 'class' : 'test');
   const P = $derived(PROFILES[modeKey]);
@@ -55,21 +57,21 @@
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
-    <Hall {S} {L} {code} {P} fixed={!!q.get('room')} />
+    <Hall {S} L={lessonOf(q.get('room') ? code : '')} {code} {P} fixed={!!q.get('room')} />
   {:else if role === 'camp'}
-    <Camp {S} {L} {code} />
+    <Camp {S} L={lessonOf(code)} {code} />
   {:else if role === 'teacher'}
-    <TeacherApp {S} packs={[L]} />
+    <TeacherApp {S} packs={PACKS} />
   {:else if role === 'student' && me}
-    <Student {S} {L} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
+    <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
   {:else if !role && login}
-    {#key campCode}<Camp {S} {L} code={campCode} pupil={login} />{/key}
+    {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
     <Title {S} onin={(p) => (login = p)} />
   {:else if role === 'dev'}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
-      <p>{L.no}차시 {L.title} · 같은 브라우저에서 탭 두 개</p>
+      <p>{DEF.no}차시 {DEF.title} · 같은 브라우저에서 탭 두 개</p>
       <fieldset class="modes">
         <legend>던전</legend>
         {#each Object.values(PROFILES) as p (p.key)}

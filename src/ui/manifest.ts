@@ -3,8 +3,11 @@
 // 끝에 '@h120' = 색 변형 (hue-rotate · 정식과 같은 꼴) — b2 는 그림 하나로 몬스터 · 보스를 색만 바꿔 씀
 export interface Sheet { src: string; cols: number; rows: number; cell: number; poses: Record<'idle' | 'attack' | 'down', number>; names: string[] }
 
+import GEN from './sheets.gen.json';
 export const SHEETS: Record<string, Sheet> = {
   mimic: { src: 'art/monster-mimic-v1.webp', cols: 3, rows: 1, cell: 256, poses: { idle: 0, attack: 1, down: 2 }, names: ['이끼 미믹'] },
+  // 🧩 #132 정식 차시가 쓰는 몬스터 줄만 잘라 온 것 (tools/pack-from-release · 'new2:0' = 정식 'new:2')
+  ...Object.fromEntries(Object.entries(GEN.sheets as Record<string, { src: string; cell: number; names: string[] }>).map(([k, v]) => [k, { src: v.src, cols: 3, rows: 1, cell: v.cell, poses: { idle: 0, attack: 1, down: 2 }, names: v.names }])),
 };
 
 export function spriteOf(ref: string) {
@@ -18,6 +21,7 @@ export function spriteOf(ref: string) {
 // 던전 배경 (정식 manifest.dungeons · 차시 팩 theme) — 원본 1672 × 941 을 정확히 절반(최근접)으로 줄인 판
 export const DUNGEONS: Record<string, string> = {
   '01-burrow': 'art/dg-01-burrow-v1h.webp',
+  ...(GEN.dungeons as Record<string, string>),
 };
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;
 

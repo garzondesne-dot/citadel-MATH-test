@@ -23,7 +23,9 @@ for f in sorted(os.listdir(hd)):
         u = union([box(im, c * cw, r * ch, cw, ch) for c in range(4)])
         if u: rows[str(r)] = [round(v * 80 / cw) if i % 2 == 0 else round(v * 64 / ch) for i, v in enumerate(u)]
     out['heroes'][f] = rows
-for f, cell in (('monster-mimic-v1.webp', 256),):
+# 🧩 #132 정식 차시 몬스터 줄(mon-*.webp · 칸 = 높이) 도 함께
+import glob as _g
+for f, cell in (('monster-mimic-v1.webp', 256), *[(os.path.basename(x), Image.open(x).height) for x in sorted(_g.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'art', 'mon-*.webp')))]):
     im = Image.open(os.path.join(ART, f)).convert('RGBA')
     out['monsters'][f] = {f'{r}:{c}': box(im, c * cell, r * cell, cell, cell) for r in range(im.height // cell) for c in range(im.width // cell)}
 json.dump(out, open(os.path.join(ROOT, 'src', 'ui', 'sprite-bbox.json'), 'w'), ensure_ascii=False, indent=0)

@@ -1,3 +1,4 @@
+import { plain } from './venn';
 import type { Given, Question } from '../model/types';
 
 // 답 칸 계산 (화면과 분리 · 시험에서 그대로 씀)
@@ -61,7 +62,7 @@ export function penLine(q: Question, g: Given, i: number): string | null {
     const pick = (ks: number[]) => { const o = ks.map((k) => q.options[k] as string); return o.some((x) => /^∅/.test(x)) ? '∅' : `{${o.join(', ')}}`; };
     if (q.groups && q.groups.length) { let b0 = 0; v = q.groups.map((gr) => { const ks = arr.filter((k) => k >= b0 && k < b0 + gr.n); b0 += gr.n; return ks.length ? `${gr.label} → ${pick(ks)}` : ''; }).filter(Boolean).join(' · '); }
     else v = pick(arr);
-  } else if (q.type === 'choice') { if (g == null) return null; v = String(q.choices[g as number]); }
+  } else if (q.type === 'choice') { if (g == null) return null; v = plain(String(q.choices[g as number])); } // 🟣 벤 그림 보기 = 글로 (#132)
   else if (q.type === 'ox') { if (g == null) return null; v = g ? 'O' : 'X'; }
   else if (q.type === 'blanks') { const a = g as string[] | null; if (!a || a[0] == null) return null; v = String(a[0]); }
   else if (q.type === 'text') { if (!String(g || '').trim()) return null; v = String(g).trim(); }

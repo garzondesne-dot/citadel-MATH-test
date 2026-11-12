@@ -22,7 +22,7 @@ const B = 'http://localhost:4173/';
   const dash = await p.$eval('.pk.add', (e) => getComputedStyle(e).borderStyle + ' ' + getComputedStyle(e).borderWidth);
   log('   점선 칸 테두리:', dash); if (!dash.startsWith('dashed 2px')) errs.push('⑫ 점선 2px 아님');
   await shot(p, 'b14-home');
-  await p.click('.pk.add >> nth=1'); await p.waitForTimeout(200);
+  await p.click('.pk.add >> nth=0'); await p.waitForTimeout(200);
   const r17 = await fixed('⑰');
   log('   ＋ 누름 → 탭', (await p.textContent('.tabs button.on')).trim(), '| 차시 ▾', await p.$eval('.lsel select', (s) => s.options[s.selectedIndex].text), '|', (await p.textContent('.mid .empty')).replace(/\s+/g, ' ').trim(), '| 주요 단추', (await p.textContent('.tact .btn')).trim(), await p.$eval('.tact .btn', (e) => e.disabled), r17.btn);
   await shot(p, 'b14-prep-todo');
