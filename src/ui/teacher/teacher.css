@@ -3,6 +3,7 @@
    → 주요 단추 = 폰 크기와 상관없이 폰 바닥에서 74px 위 · 같은 자리 */
 .tp, .tp * { box-sizing: border-box; }
 .tp { height: 100dvh; max-width: 430px; margin: 0 auto; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); color: var(--text); position: relative; }
+.tp.wide { max-width: none; }
 .tp .tbar { height: var(--bar-top); flex: none; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
 .tp .tbar .t { flex: 1; min-width: 0; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tp .tbar .t small { display: block; font-size: 13px; font-weight: 500; color: var(--text-2); }

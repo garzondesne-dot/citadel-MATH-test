@@ -12,10 +12,20 @@ const GIVEN = ['민준', '서연', '도윤', '하은', '시우', '지유', '주�
 const FAMILY = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권'];
 export interface Pupil { cls: string; num: number; name: string; uid: string }
 export const uidOf = (cls: string, num: number) => `s${cls.replace('-', '_')}_${num}`;
-/** 반 명단 (번호 순) */
-export function roster(cls: string): Pupil[] {
+/** 반 명단 (번호 순) · 선생님이 「＋ 명단」으로 올린 것(school/roster/{반} = { 번호: 이름 })이 있으면 그것 · 없으면 테스트용 가짜 이름 */
+export function roster(cls: string, S?: Store | null): Pupil[] {
+  const up = S?.get<Record<string, string>>(`school/roster/${cls}`);
+  if (up && Object.keys(up).length) return Object.entries(up).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
   const k = CLASSES.indexOf(cls);
   return GIVEN.map((g, i) => ({ cls, num: i + 1, name: `${FAMILY[(i + k * 3) % FAMILY.length]}${g}`, uid: uidOf(cls, i + 1) }));
+}
+/** ＋ 명단 붙여넣기: 한 줄에 「번호 이름」(탭 · 쉼표 · 띄어쓰기) · 같은 번호는 이름만 바뀜 → 올린 수 */
+export function pasteRoster(S: Store, cls: string, text: string): number {
+  const cur = S.get<Record<string, string>>(`school/roster/${cls}`) || Object.fromEntries(roster(cls).map((p) => [p.num, p.name]));
+  let n = 0;
+  for (const line of text.split(/\r?\n/)) { const m = /^\s*(\d{1,2})[\s,\t.번]+(\S.{0,9}?)\s*$/.exec(line); if (m) { cur[String(Number(m[1]))] = (m[2] as string).trim(); n++; } }
+  if (n) S.set(`school/roster/${cls}`, cur);
+  return n;
 }
 export const pupil = (cls: string, num: number) => roster(cls).find((p) => p.num === num) ?? null;
 export const isBeta = (S: Store | null, cls: string): boolean => { const v = S?.get<boolean>(`school/cls/${cls}/beta`); return v == null ? BETA_DEFAULT.includes(cls) : !!v; };
