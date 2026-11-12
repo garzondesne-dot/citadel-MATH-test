@@ -9,6 +9,7 @@
   import * as TD from '../../rest/td';
   import { artUrl, TD_ART } from '../manifest';
   import HeroSprite from '../camp/HeroSprite.svelte';
+  import Cutin from './Cutin.svelte';
 
   // 🏰 교실 TV = 디펜스 계산 + 그림 (#142-2 · 정식 td.js hall · 이 기기 하나가 맡음)
   //   자리 고르기 40초(폰 선착순 · 안 고른 학생 = 빈 자리에 무작위) → 난이도 맞추기(calibrate) → 3초 뒤 웨이브 5 → 결과 → 60초 뒤 쉼터로
@@ -19,6 +20,16 @@
   const map = $derived(TD.mapGet(f?.map ?? 'forest'));
   const picks = $derived((((R as any).tdp || {})[f?.g] || {}) as Record<string, string>);
   const studs = $derived(activeIds(R, now));
+  const tdm = $derived((((R as any).tdm || {})[f?.g] || {}) as Record<string, { sw?: string; no?: string; hero?: number; swd?: number }>);
+  const heroOf2 = (u: string) => (tdm[u]?.hero != null ? Number(tdm[u]!.hero) : Number(R.players?.[u]?.hero) || 0);
+  // 🔁 자리 교환 (정식 pickHall): 둘이 서로 신청 = TV 가 두 자리를 맞바꿈
+  const swDone: Record<string, 1> = {};
+  $effect(() => {
+    if (f?.phase !== 'pick') return;
+    const slotOf = (u: string) => Object.keys(picks).find((k) => picks[k] === u);
+    Object.keys(tdm).forEach((a) => { const b = tdm[a]?.sw; if (!b || a >= b || tdm[b]?.sw !== a) return; const sa = slotOf(a), sb = slotOf(b), key = `${a}|${b}|${sa}|${sb}`; if (!sa || !sb || swDone[key]) return; swDone[key] = 1;
+      untrack(() => { const t = S.now(); S.set(P(`tdp/${f.g}/${sa}`), b); S.set(P(`tdp/${f.g}/${sb}`), a); S.set(P(`tdm/${f.g}/${a}/sw`), null); S.set(P(`tdm/${f.g}/${b}/sw`), null); S.set(P(`tdm/${f.g}/${a}/swd`), t); S.set(P(`tdm/${f.g}/${b}/swd`), t); }); });
+  });
   const left = $derived(f?.phase === 'pick' ? Math.max(0, Math.ceil((f.to - now) / 1000)) : 0);
   const teacherHero = 17;
 
@@ -32,7 +43,7 @@
       Object.keys(picks).map(Number).sort((a, b) => a - b).forEach((no) => { const u = picks[no]!; if (studs.includes(u) && !as[u]) as[u] = no; });
       const free = all.filter((no) => !Object.values(as).includes(no)), Rr = TD.rng(f.g);
       studs.filter((u) => !as[u]).forEach((u) => { if (!free.length) return; as[u] = free.splice(Math.floor(Rr() * free.length), 1)[0]!; });
-      const tw = studs.filter((u) => as[u]).map((u) => { const hero = Number(R.players?.[u]?.hero) || 0; return { u, s: as[u]!, hero, r: heroOf(hero).ranged ? 1 : 0 }; });
+      const tw = studs.filter((u) => as[u]).map((u) => { const hero = heroOf2(u); return { u, s: as[u]!, hero, r: heroOf(hero).ranged ? 1 : 0 }; });
       tw.push({ u: 'T', s: 0, hero: teacherHero, r: heroOf(teacherHero).ranged ? 1 : 0, T: 1 } as any);
       const hp0 = TD.calibrate({ map, seed: f.g, towers: toTowers(tw) });
       S.set(P('fun'), { ...f, phase: 'play', t0: S.now() + 3000, tw, hp0 });
@@ -41,21 +52,29 @@
   const toTowers = (tw: any[]): TD.TowerIn[] => tw.map((t) => ({ uid: t.u, slot: t.s, teacher: !!t.T, ranged: !!t.r }));
 
   // ── 놀이: 계산 (rAF) ──
-  let sim: any = null, simG = 0, simAt = 0, raf = 0, liveAt = 0, ended = 0, applied = { t: {} as Record<string, 1>, sh: false, ch: {} as Record<string, 1> };
+  let sim: any = null, simG = 0, simAt = 0, raf = 0, liveAt = 0, ended = 0, applied = { t: {} as Record<string, 1>, sh: false, ch: {} as Record<string, 1> }, pend: Record<string, number> = {};
+  let cut = $state<{ hero: number; name: string; gold: boolean } | null>(null), cutQ: { hero: number; name: string; gold: boolean }[] = [], cutT: ReturnType<typeof setTimeout> | null = null;
+  const nextCut = () => { cut = cutQ.shift() ?? null; if (cut) cutT = setTimeout(nextCut, cut.gold ? 2100 : 1600); };
+  const queueCut = (c: { hero: number; name: string; gold: boolean }) => { if (cutQ.length > 2) return; cutQ.push(c); if (!cut) nextCut(); };
   let tick = $state(0), simT = $state(0), banner = $state(''), bannerT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string) => { banner = t; if (bannerT) clearTimeout(bannerT); bannerT = setTimeout(() => (banner = ''), 2600); };
   function loop() {
     raf = requestAnimationFrame(loop);
     const ff = untrack(() => f), RR = untrack(() => R);
     if (!ff || ff.kind !== 'td' || ff.phase !== 'play' || !ff.tw) return;
-    if (!sim || simG !== ff.g) { sim = TD.create({ map: TD.mapGet(ff.map), seed: ff.g, towers: toTowers(Array.isArray(ff.tw) ? ff.tw : Object.values(ff.tw)), hp0: ff.hp0 }); simG = ff.g; simAt = performance.now(); applied = { t: {}, sh: false, ch: {} }; ended = 0; }
+    if (!sim || simG !== ff.g) { sim = TD.create({ map: TD.mapGet(ff.map), seed: ff.g, towers: toTowers(Array.isArray(ff.tw) ? ff.tw : Object.values(ff.tw)), hp0: ff.hp0 }); simG = ff.g; simAt = performance.now(); applied = { t: {}, sh: false, ch: {} }; pend = {}; ended = 0; }
     const t = performance.now(), sp = Number((globalThis as any).__TD_SPEED) || 1, dt = Math.min(0.25, (t - simAt) / 1000) * sp; simAt = t; // __TD_SPEED = 화면 시험만(정식 DS_TD.speed)
     const live = S.now() >= ff.t0 && !RR.state.focus; // 🔴 집중 = 멈춤
     if (live && !sim.done) {
-      const goal = sim.t + dt, Tt = ((RR as any).tdt || {})[ff.g] || {};
+      const goal = sim.t + dt, Tt = ((RR as any).tdt || {})[ff.g] || {}, Uu = ((RR as any).tdu || {})[ff.g] || {};
       let n = 0;
       while (sim.t < goal && !sim.done && n++ < 4000) {
-        sim.towers.forEach((T: any) => { while (TD.pending(T) > 0) TD.upgrade(sim, T.uid, TD.auto(T, sim.R)); if (Tt[T.uid] && !applied.t[T.uid]) { applied.t[T.uid] = 1; TD.skill(sim, T.uid); } });
+        sim.towers.forEach((T: any) => {
+          const mine = (Uu[T.uid] || {}) as Record<string, string>;
+          while (TD.pending(T) > 0 && mine[T.ups.length]) TD.upgrade(sim, T.uid, mine[T.ups.length]!); // ⬆ 폰이 고른 것 (n 번째 칸 = n 번째 업그레이드)
+          if (TD.pending(T) > 0) { pend[T.uid] = pend[T.uid] || sim.t; if (T.teacher || sim.t - pend[T.uid]! > 12) { TD.upgrade(sim, T.uid, TD.auto(T, sim.R)); pend[T.uid] = 0; } } else pend[T.uid] = 0; // 12초 안 고르면 저절로 (선생님 타워 = 바로)
+          if (Tt[T.uid] && !applied.t[T.uid]) { applied.t[T.uid] = 1; const k = TD.skill(sim, T.uid); if (k === 'ult' || k === 'true') { const tw0 = (Array.isArray(ff.tw) ? ff.tw : Object.values(ff.tw)).find((x: any) => x.u === T.uid) as any; queueCut({ hero: Number(tw0?.hero) || 0, name: `${k === 'true' ? '진필살기 · ' : ''}${nameOf(T.uid)}!`, gold: k === 'true' }); } }
+        });
         if (ff.sh && !applied.sh) { applied.sh = true; TD.shieldOn(sim); say('🛡 선생님의 수호 방패! 성에 닿는 몬스터 3마리를 막아요'); }
         if ((ff.ch || {})[sim.wave] && !applied.ch[sim.wave]) { applied.ch[sim.wave] = 1; TD.cheer(sim); say('✨ 선생님의 응원! 5초 동안 공격 속도 +20%'); }
         const w0 = sim.wave; TD.step(sim); if (sim.wave !== w0) say(sim.wave === 5 ? '👑 마지막 웨이브 — 보스 등장!' : `🌊 웨이브 ${sim.wave}`);
@@ -63,11 +82,11 @@
     }
     draw();
     const nw = S.now();
-    if (nw - liveAt > 1000 || (sim.done && !ended)) { liveAt = nw; const o: any = { t: Math.round(sim.t), wave: sim.wave, life: sim.life, shield: sim.shield, kills: {}, used: {} }; sim.towers.forEach((T: any) => { if (T.teacher) return; o.kills[T.uid] = T.kills; if (T.used) o.used[T.uid] = 1; }); S.set(P(`tdl/${ff.g}`), o); tick++; simT = Math.round(sim.t); }
+    if (nw - liveAt > 1000 || (sim.done && !ended)) { liveAt = nw; const o: any = { t: Math.round(sim.t), wave: sim.wave, life: sim.life, shield: sim.shield, kills: {}, used: {}, stars: {}, got: {}, ups: {}, tier: {} }; sim.towers.forEach((T: any) => { if (T.teacher) return; o.kills[T.uid] = T.kills; o.stars[T.uid] = T.stars; o.got[T.uid] = T.upGot; o.ups[T.uid] = T.ups.join(''); o.tier[T.uid] = T.tier; if (T.used) o.used[T.uid] = 1; }); S.set(P(`tdl/${ff.g}`), o); tick++; simT = Math.round(sim.t); }
     if (sim.done && !ended) { ended = ff.g; const top = sim.towers.filter((T: any) => !T.teacher).sort((a: any, b: any) => b.kills - a.kills).slice(0, 3).map((T: any) => [T.uid, T.kills]); S.set(P('fun'), { ...ff, phase: 'end', endAt: S.now(), res: { win: sim.win, life: sim.life, top, t: Math.round(sim.t) } }); }
   }
   raf = requestAnimationFrame(loop);
-  onDestroy(() => { cancelAnimationFrame(raf); if (bannerT) clearTimeout(bannerT); });
+  onDestroy(() => { cancelAnimationFrame(raf); if (bannerT) clearTimeout(bannerT); if (cutT) clearTimeout(cutT); });
   // 결과 60초 뒤 쉼터로 (정식 endHall)
   $effect(() => { if (f?.phase === 'end' && now - (f.endAt || now) > 60000) untrack(() => stopFun(S, code)); });
 
@@ -114,9 +133,9 @@
   <div class="stage" style:width="{U * 16}px" style:height="{U * 9}px">
     <canvas bind:this={cv}></canvas>
     {#if f?.phase === 'pick'}
-      {#each Object.entries(picks) as [no, u] (no)}{@const s = slotOf(Number(no))}{#if s}<div class="pk" style:left="{s.x * U}px" style:top="{s.y * U}px"><HeroSprite id={Number(R.players?.[u]?.hero) || 0} scale={hs} /><b>{nameOf(u)}</b></div>{/if}{/each}
+      {#each Object.entries(picks) as [no, u] (no)}{@const s = slotOf(Number(no))}{#if s}<div class="pk" style:left="{s.x * U}px" style:top="{s.y * U}px"><HeroSprite id={heroOf2(u)} scale={hs} /><b>{nameOf(u)}</b></div>{/if}{/each}
     {:else}
-      {#each tws as t (t.u)}{@const p = twPos(t)}{#if p}<div class="tw" class:ranged={!!t.r} style:left="{p.x * U}px" style:top="{p.y * U}px"><HeroSprite id={t.hero} scale={hs} /><b>{t.T ? '🧙' : (nameOf(t.u).split(' ')[0] ?? '')}</b><em>⚔ {t.T ? '' : (L.kills?.[t.u] ?? 0)}</em></div>{/if}{/each}
+      {#each tws as t (t.u)}{@const p = twPos(t)}{#if p}<div class="tw" class:ranged={!!t.r} style:left="{p.x * U}px" style:top="{p.y * U}px"><HeroSprite id={t.hero} scale={hs} /><b>{t.T ? '🧙' : (nameOf(t.u).split(' ')[0] ?? '')}</b><em>⚔ {t.T ? '' : (L.kills?.[t.u] ?? 0)}{String(L.ups?.[t.u] ?? '').split('').map((k) => ({ a: '⚔', b: '⚡', c: '✨' } as Record<string, string>)[k]).join('')}</em></div>{/if}{/each}
     {/if}
     <div class="hud">
       <b>🏰 {map.name}</b>
@@ -131,6 +150,7 @@
     {/if}
     {#if banner}<div class="banner">{banner}</div>{/if}
   </div>
+  {#if cut}<Cutin hero={cut.hero} name={cut.name} gold={cut.gold} big />{/if}
   <span class="tick" hidden data-tick={tick} data-t={simT} data-frz={R.state.focus ? 1 : 0}></span>
 </div>
 

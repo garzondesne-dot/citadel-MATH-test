@@ -46,7 +46,7 @@ export function startFun(S: Store, code: string, R: Room, kind: Game, opt: { whi
   if (cls) S.set(`school/funUsed/${ck(cls)}/${k.pre}${q[0]}`, true);
   return null;
 }
-export const stopFun = (S: Store, code: string) => { S.set(P(code, 'fun'), null); ['fv', 'tdp', 'tdt', 'tdl'].forEach((k) => S.set(P(code, k), null)); };
+export const stopFun = (S: Store, code: string) => { S.set(P(code, 'fun'), null); ['fv', 'tdp', 'tdt', 'tdl', 'tdm', 'tdu'].forEach((k) => S.set(P(code, k), null)); };
 /** 학생: 고르기 · 다시 참여 · 누르기 · 응원 */
 export const pick = (S: Store, code: string, rk: string, uid: string, v: string) => S.set(P(code, `fv/${rk}/${uid}`), v);
 export const nunPress = (S: Store, code: string, g: number, rd: number, uid: string) => S.set(P(code, `nun/${g}/${rd}/${uid}`), S.now());
@@ -122,6 +122,12 @@ export function payFun(S: Store, f: AnyFun, uid: string, code: string): { gem: n
 // ── 🏰 디펜스: 폰 = 자리(선착순 · 한 번) · 기술(한 판 한 번) / 교사 = 🛡 수호 방패(한 판 한 번) · ✨ 응원(웨이브마다) ──
 export const tdPick = (S: Store, code: string, g: number, no: number, uid: string) => { const k = P(code, `tdp/${g}/${no}`); if (S.get(k)) return false; S.set(k, uid); return true; };
 export const tdSkill = (S: Store, code: string, g: number, uid: string) => S.set(P(code, `tdt/${g}/${uid}`), S.now());
+// #146 정식 그대로 되살림: 🔁 1:1 자리 교환(tdm/{g}/{uid}/sw = 상대 · 서로 신청이 맞으면 TV 가 맞바꿈 · no = 거절) · ⬆ 판 안 업그레이드(tdu/{g}/{uid}/{n} = a|b|c · 12초 안 고르면 저절로) · ⚙ 용사 바꾸기(tdm/{g}/{uid}/hero · 자리 고르기 동안만 · 모양 · 근접/원거리만)
+export const tdSwap = (S: Store, code: string, g: number, uid: string, to: string | null) => S.set(P(code, `tdm/${g}/${uid}/sw`), to);
+export const tdAccept = (S: Store, code: string, g: number, uid: string, from: string) => { S.set(P(code, `tdm/${g}/${uid}/sw`), from); S.set(P(code, `tdm/${g}/${uid}/no`), null); };
+export const tdReject = (S: Store, code: string, g: number, uid: string, from: string) => S.set(P(code, `tdm/${g}/${uid}/no`), from);
+export const tdUp = (S: Store, code: string, g: number, uid: string, n: number, k: 'a' | 'b' | 'c') => S.set(P(code, `tdu/${g}/${uid}/${n}`), k);
+export const tdHero = (S: Store, code: string, g: number, uid: string, hero: number) => S.set(P(code, `tdm/${g}/${uid}/hero`), hero);
 export const tdShield = (S: Store, code: string) => S.set(P(code, 'fun/sh'), S.now());
 export const tdCheer = (S: Store, code: string, wave: number) => S.set(P(code, `fun/ch/${wave}`), S.now());
 /** 교실 TV 가 켜져 있음 (3초마다) — 디펜스 시작 조건 */

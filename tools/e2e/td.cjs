@@ -29,21 +29,32 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const bgm0 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 쉼터 곡:', JSON.stringify(bgm0)); if (!bgm0 || bgm0.k !== 'rest') errs.push('쉼터 곡');
   await t.click('.sheet .act .btn.rbig'); await wait(1500);
   let f = await fun(); log('🏰 시작:', f && f.kind, f && f.map, f && f.phase); if (!f || f.kind !== 'td') errs.push('디펜스 시작');
-  await ph[0].waitForSelector('.tdp .mini'); await ph[0].screenshot({ path: `${SHOTS}/b29-td-phone-pick.png` });
+  await ph[0].waitForSelector('.tdp .mini'); await ph[0].screenshot({ path: `${SHOTS}/b31-td-phone-pick.png` });
   await ph[0].click('.tdp .slot >> nth=2'); await ph[1].click('.tdp .slot >> nth=2'); await wait(600); await ph[1].click('.tdp .slot >> nth=5'); await wait(800);
+  // #146 🔁 1:1 교환: 폰 1 → 폰 2 자리 신청 · 폰 2 수락 → TV 가 맞바꿈
+  await ph[0].click('.tdp .slot >> nth=5'); await wait(1000); await ph[1].screenshot({ path: `${SHOTS}/b31-td-swap-in.png` });
+  await ph[1].click('.tdp .swin .ok'); await wait(2000);
+  const sw = await rest(`rooms/${code}/tdp/${f.g}`); log('🔁 교환 뒤 자리:', JSON.stringify(sw), '|', (await ph[0].textContent('.tdp .me')).trim()); if (sw['6'] !== 's1_3_1' || sw['3'] !== 's1_3_2') errs.push('자리 교환');
+  // ⚙ 용사 바꾸기 (폰 3)
+  await ph[2].click('.tdp .hbtn'); await ph[2].waitForSelector('.hgrid'); const nh = await ph[2].$$eval('.hgrid button', (x) => x.length); await ph[2].click('.hgrid button:not(.on) >> nth=0').catch(() => {}); await wait(800);
+  log('⚙ 용사 바꾸기: 고를 수 있는 용사', nh, '| tdm', JSON.stringify(await rest(`rooms/${code}/tdm/${f.g}`)));
   log('   폰 1:', (await ph[0].textContent('.tdp .me')).trim(), '| 폰 2:', (await ph[1].textContent('.tdp .me')).trim(), '| 서버 자리', JSON.stringify(await rest(`rooms/${code}/tdp/${f.g}`)));
-  await tv.screenshot({ path: `${SHOTS}/b29-td-tv-pick.png` });
+  await tv.screenshot({ path: `${SHOTS}/b31-td-tv-pick.png` });
   const bgm1 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 디펜스 곡:', JSON.stringify(bgm1)); if (!bgm1 || bgm1.k !== 'td') errs.push('디펜스 곡');
   await wait(9000);
   f = await fun(); log('   판:', f.phase, '· 타워', (Array.isArray(f.tw) ? f.tw : Object.values(f.tw || {})).map((x) => `${x.u}@${x.s}${x.r ? '🏹' : '🗡'}`).join(' '), '· 몬스터 체력 hp0', f.hp0);
   if (f.phase !== 'play' || !f.hp0) errs.push('판 시작');
   const tw = Array.isArray(f.tw) ? f.tw : Object.values(f.tw || {}); if (!tw.find((x) => x.u === 's1_3_3')) errs.push('안 고른 학생 저절로 자리');
   await wait(4000);
-  await ph[0].click('.tdp .btn.sk'); await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.tdc'); await t.click('.tdc button:has-text("방패")'); await t.click('.tdc button:has-text("응원")'); await t.screenshot({ path: `${SHOTS}/b29-td-remote.png` });
+  // ⬆ 판 안 업그레이드 고르기 (⭐ 5 모이면)
+  for (let k = 0; k < 40 && !(await ph[0].$('.tdp .ups button')); k++) await wait(500);
+  const upOk = !!(await ph[0].$('.tdp .ups button')); if (upOk) { await ph[0].screenshot({ path: `${SHOTS}/b31-td-up.png` }); await ph[0].click('.tdp .ups button >> nth=1'); await wait(1500); const L1 = await rest(`rooms/${code}/tdl/${f.g}`); if (!String((L1.ups || {}).s1_3_1 || '').includes('b')) errs.push('고른 업그레이드 반영'); }
+  log('⬆ 업그레이드:', upOk ? 'ok' : '안 뜸', '| tdu', JSON.stringify(await rest(`rooms/${code}/tdu/${f.g}`)), '| 반영', JSON.stringify((await rest(`rooms/${code}/tdl/${f.g}`) || {}).ups)); if (!upOk) errs.push('업그레이드 고르기');
+  await ph[0].click('.tdp .btn.sk'); await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.tdc'); await t.click('.tdc button:has-text("방패")'); await t.click('.tdc button:has-text("응원")'); await t.screenshot({ path: `${SHOTS}/b31-td-remote.png` });
   const sh = await t.evaluate(() => { const bd = document.querySelector('.sheet .body'); return bd.scrollHeight > bd.clientHeight + 1; }); if (sh) errs.push('리모컨 시트 스크롤');
   await t.click('.sheet .x'); await wait(1500);
   f = await fun(); log('   🛡', !!f.sh, '· ✨', JSON.stringify(f.ch || {}), '· 기술', JSON.stringify(await rest(`rooms/${code}/tdt/${f.g}`)));
-  await ph[0].screenshot({ path: `${SHOTS}/b29-td-phone-play.png` }); await tv.screenshot({ path: `${SHOTS}/b29-td-tv-play.png` });
+  await ph[0].screenshot({ path: `${SHOTS}/b31-td-phone-play.png` }); await tv.screenshot({ path: `${SHOTS}/b31-td-tv-play.png` });
   // 🔴 집중 = 계산 멈춤
   await t.click('.rdock button:has-text("집중")'); await wait(1600);
   const a1 = await tv.$eval('.td .tick', (x) => +x.dataset.t); await wait(2500); const a2 = await tv.$eval('.td .tick', (x) => +x.dataset.t);
@@ -54,14 +65,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   log('끝:', f.phase, JSON.stringify(f.res));
   if (!f.res) errs.push('결과 없음');
   await wait(1500);
-  await tv.screenshot({ path: `${SHOTS}/b29-td-tv-end.png` }); await ph[0].screenshot({ path: `${SHOTS}/b29-td-phone-end.png` });
+  await tv.screenshot({ path: `${SHOTS}/b31-td-tv-end.png` }); await ph[0].screenshot({ path: `${SHOTS}/b31-td-phone-end.png` });
   const gifts = await rest('gifts'); log('보상 gifts:', Object.entries(gifts || {}).map(([u, g]) => `${u}:${Object.values(g).map((x) => `💎${x.g}(${x.fun})`).join(',')}`).join(' | ')); if (!gifts) errs.push('보상 없음');
   const sc = await Promise.all(ph.map((p) => p.evaluate(() => { const m = document.querySelector('.fun'); return !!m && m.scrollHeight <= m.clientHeight + 1 && document.documentElement.scrollWidth <= innerWidth; }))); log('360×640 스크롤 없음:', sc.join(' ')); if (sc.some((x) => !x)) errs.push('폰 스크롤');
   // 다른 놀이 배경 그림 · 곡
   await t.click('.rdock button:has-text("쉼터")'); await wait(400); await t.click('.games .game:has-text("반대로")'); await t.click('.sheet .act .btn.rbig'); await wait(1500);
   const bgImg = await tv.$eval('.ov.fun', (x) => getComputedStyle(x).backgroundImage); const bgm2 = await tv.evaluate(() => window.__bgm && window.__bgm());
   log('🔄 반대로: 배경', /fun-dorm/.test(bgImg) ? 'fun-dorm' : bgImg.slice(0, 60), '· 곡', JSON.stringify(bgm2)); if (!/fun-dorm/.test(bgImg) || bgm2.k !== 'rev') errs.push('반대로 그림 · 곡');
-  await tv.screenshot({ path: `${SHOTS}/b29-tv-rev.png` });
+  await tv.screenshot({ path: `${SHOTS}/b31-tv-rev.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();
 })();
