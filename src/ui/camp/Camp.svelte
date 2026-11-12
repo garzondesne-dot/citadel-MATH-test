@@ -5,6 +5,7 @@
   import { AURA_NAMES, famOfHero, HERO_NAMES, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
   import { emptyPlan, equipOf, ownsSkill } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
+  import { wishLeft } from '../../model/symcard';
   import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
   import { CAMP, HERO, heroNudge, heroUrl } from '../manifest';
@@ -54,11 +55,12 @@
   let showAll = $state(false);
   let allTimer: ReturnType<typeof setTimeout> | null = null;
   function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
+  const wishN = $derived(wishLeft(me.wishes, me.cards));
   type LabelState = 'gold' | 'dim' | 'news' | 'star' | 'new' | 'hide';
   function lab(id: string): LabelState {
     if (id === 'gate') return open ? 'gold' : 'dim';
     if ((news[id] ?? 0) > 0) return 'news';
-    if (id === 'anvil' && me.wish > 0) return 'star';
+    if (id === 'anvil' && wishN > 0) return 'star'; // ⭐ 아직 안 만든 찜 = 「소식 있음」 자리 · 처음 · 익숙 숨김보다 먼저 (#129 ②)
     if (!me.seen[id]) return 'new';
     return showAll ? 'new' : 'hide';
   }
@@ -112,7 +114,7 @@
       {@const st = lab(k)}
       <button type="button" class="prop" style={propStyle(p)} aria-label={NAME[k]} onclick={(e) => tap(k, e)}>
         <i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>
-        <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{me.wish}</b>{/if}</span>
+        <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>
       </button>
     {/each}
 
