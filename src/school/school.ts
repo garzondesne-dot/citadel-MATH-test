@@ -13,24 +13,27 @@ const FAMILY = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '
 export interface Pupil { cls: string; num: number; name: string; uid: string }
 export const uidOf = (cls: string, num: number) => `s${cls.replace('-', '_')}_${num}`;
 /** 반 명단 (번호 순) · 선생님이 「＋ 명단」으로 올린 것(school/roster/{반} = { 번호: 이름 })이 있으면 그것 · 없으면 테스트용 가짜 이름 */
+//   🔁 #163 정식 칸: roster/{반}/{번호} = 이름(로그인한 학생 · 교사만 읽음) · rosterMask/{반}/{번호} = 가린 이름(김*수 · 누구나) · 옛 v1.0 school/roster 도 읽음
+export const maskName = (name: string) => { const a = [...String(name).trim()]; return a.length <= 1 ? '*' : a.length === 2 ? `${a[0]}*` : `${a[0]}${'*'.repeat(a.length - 2)}${a[a.length - 1]}`; }; // 정식 account.js mask
 export function roster(cls: string, S?: Store | null): Pupil[] {
-  const up = S?.get<Record<string, string>>(`school/roster/${cls}`);
+  const ok = (v: unknown) => (v && typeof v === 'object' && Object.keys(v).length ? (v as Record<string, string>) : null);
+  const up = ok(S?.get(`roster/${cls}`)) || ok(S?.get(`rosterMask/${cls}`)) || ok(S?.get(`school/roster/${cls}`));
   if (up && Object.keys(up).length) return Object.entries(up).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
   const k = CLASSES.indexOf(cls);
   return GIVEN.map((g, i) => ({ cls, num: i + 1, name: `${FAMILY[(i + k * 3) % FAMILY.length]}${g}`, uid: uidOf(cls, i + 1) }));
 }
 /** ＋ 명단 붙여넣기: 한 줄에 「번호 이름」(탭 · 쉼표 · 띄어쓰기) · 같은 번호는 이름만 바뀜 → 올린 수 */
 export function pasteRoster(S: Store, cls: string, text: string): number {
-  const cur = S.get<Record<string, string>>(`school/roster/${cls}`) || Object.fromEntries(roster(cls).map((p) => [p.num, p.name]));
+  const cur = S.get<Record<string, string>>(`roster/${cls}`) || S.get<Record<string, string>>(`school/roster/${cls}`) || Object.fromEntries(roster(cls).map((p) => [p.num, p.name]));
   let n = 0;
   for (const line of text.split(/\r?\n/)) { const m = /^\s*(\d{1,2})[\s,\t.번]+(\S.{0,9}?)\s*$/.exec(line); if (m) { cur[String(Number(m[1]))] = (m[2] as string).trim(); n++; } }
-  if (n) S.set(`school/roster/${cls}`, cur);
+  if (n) { S.set(`roster/${cls}`, cur); S.set(`rosterMask/${cls}`, Object.fromEntries(Object.entries(cur).map(([k, v]) => [k, maskName(v)]))); } // 정식 칸 (#163)
   return n;
 }
 export const pupil = (cls: string, num: number, S?: Store | null) => roster(cls, S).find((p) => p.num === num) ?? null;
 export const isBeta = (S: Store | null, cls: string): boolean => { const v = S?.get<boolean>(`school/cls/${cls}/beta`); return v == null ? BETA_DEFAULT.includes(cls) : !!v; };
 /** 🧪 학생 한 명 시험 계정 (#67) — school/test/{반}/{번호} */
-export const isTester = (S: Store | null, cls: string, num: number) => !!S?.get<boolean>(`school/test/${cls}/${num}`);
+export const isTester = (S: Store | null, cls: string, num: number) => !!S?.get<boolean>(`tester/${cls}/${num}`) || !!S?.get<boolean>(`school/test/${cls}/${num}`); // 정식 tester/{반}/{번호} (#163) · 옛 칸도
 /** 통계 · 체력 머릿수에서 빼는가 = 베타 반이거나 시험 계정 (#123 · 함수 하나로) — 대시보드 「전체」 · 반 비교 · 랭킹 · 대항전 · 설문 집계 · 몬스터 체력 머릿수 · 세특 초안 */
 export const isExcluded = (S: Store | null, cls: string, num: number) => isBeta(S, cls) || isTester(S, cls, num);
 export const clsLabel = (S: Store | null, cls: string) => `${cls}반${isBeta(S, cls) ? ' 🧪' : ''}`;
@@ -51,16 +54,25 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
   const fa = await import('firebase/auth');
   if (join) {
     if (!pupil(cls, num, S)) return '명단에 없는 번호예요';
-    if (hasAccount(S, cls, num)) return '이미 가입한 번호예요 · 로그인해요';
+    if (hasAccount(S, cls, num) && !S.get<boolean>(`${accPath(cls, num)}/reset`)) return '이미 가입한 번호예요 · 로그인해요';
     if (!/^\d{4}$/.test(pw)) return '비밀번호는 숫자 4자리예요';
     if (pw !== pw2) return '두 번 쓴 비밀번호가 달라요';
+    if (hasAccount(S, cls, num)) { try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return null; } catch { return '이미 가입한 번호예요 · 로그인해요'; } } // 옮긴 계정 = 칸은 그대로 두고 잇기
     try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); S.set(accPath(cls, num), { uid: c.user.uid, at: S.now() }); return null; }
     catch (e) { return /email-already/.test(String((e as { code?: string }).code)) ? '이미 가입한 번호예요 · 로그인해요' : '가입하지 못했어요 · 잠시 뒤 다시'; }
   }
   if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
-  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); return null; }
-  catch { return '비밀번호가 달라요 · 잊었으면 선생님께'; }
+  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); if (S.get<boolean>(`${accPath(cls, num)}/reset`)) claim(S, cls, num, A.currentUser?.uid); return null; }
+  catch (e) {
+    // 🔁 #163 정식에서 옮긴 계정(reset: true · 정식 「선생님 초기화」와 같은 뜻) = 이 서버 로그인이 아직 없음 → 지금 친 4자리로 새로 만들고 그 학생 칸에 이어짐
+    if (S.get<boolean>(`${accPath(cls, num)}/reset`) && /^\d{4}$/.test(pw) && /user-not-found|invalid-credential|invalid-login/.test(String((e as { code?: string }).code))) {
+      try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num), authPw(pw)); claim(S, cls, num, c.user.uid); return null; } catch { /* 이미 만든 로그인 = 비밀번호 다름 */ }
+    }
+    return '비밀번호가 달라요 · 잊었으면 선생님께';
+  }
 }
+/** 옮긴 계정 잇기: uid = 이 서버 로그인 · reset 지움 (용사 · 스킬 · 호칭 등 다른 칸은 그대로) */
+function claim(S: Store, cls: string, num: number, uid: string | undefined) { if (!uid) return; S.set(`${accPath(cls, num)}/uid`, uid); S.set(`${accPath(cls, num)}/reset`, null); }
 /** 선생님 0000 초기화가 되는 저장인가 (시험 서버 = 관리 도구가 필요 · 다음 판) */
 export const canResetPw = (S: Store) => !(S as AuthStore).auth;
 export function signUp(S: Store, cls: string, num: number, pw: string, pw2: string): string | null {

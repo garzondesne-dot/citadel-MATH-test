@@ -63,12 +63,16 @@
   const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && (!lvApp.v.val.test || where.kind !== 'device') ? lvApp.v.val.code : '');
   // 🔄 #134 ① 이 화면이 최신 판인지: 사이트 version.json(캐시 안 씀)과 BUILD 비교 → 같으면 「BETA · b15 ✔」 · 다르면 빨간 「b14 → b15 ↻」(누르면 새로 고침)
   let site = $state('');
-  if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {});
+  const checkVer = () => { if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {}); };
+  checkVer(); if (typeof window !== 'undefined') setInterval(checkVer, 5 * 60e3); // 수업 끝난 뒤에도 새 판을 알아채게 5분마다
+  // ⏸ #163 ④ 수업 중 새 판 미룸(A): 내 반 수업이 열려 있는 동안(학생 = 내 반 · 교사 폰 · TV = 열린 수업이 있으면) 새 판 알림을 숨김 → 수업이 끝나면(열린 수업 칸이 비면) 보임
+  const inClass = $derived(!!lvApp.v.val?.code && (role === 'teacher' || role === 'hall' || (!!login && lvApp.v.val.cls === login.cls) || (role === 'student' && !!code && lvApp.v.val.code === code)));
+  const verOld = $derived(!!site && site !== BUILD && !inClass);
 </script>
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev'}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if site && site !== BUILD}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if role !== 'dev'}{#if verOld}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>

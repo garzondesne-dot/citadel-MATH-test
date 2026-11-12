@@ -31,12 +31,13 @@ export function lockOf(d: ThemeDef, f: Feats | null): { open: boolean; have: num
   const have = f[d.need.k];
   return { open: have != null && have >= d.need.n, have };
 }
+import { perfectsOf, wonOf } from '../school/records';
 /** 수업 기록(records/{반}/{번호}) · 카드로 업적 세기 — 게시판 던전 · 복습 완료는 아직 기능이 없어 null(조건 줄만) */
-export function featsOf(records: Record<string, { mons?: Record<string, { perfect?: boolean }>; boss?: { won?: boolean } }> | null, cards: Record<string, unknown> | null): Feats {
+export function featsOf(records: Record<string, Parameters<typeof perfectsOf>[0]> | null, cards: Record<string, unknown> | null): Feats {
   const rs = Object.values(records || {});
   return {
-    perfect: rs.reduce((a, r) => a + Object.values(r.mons || {}).filter((m) => m?.perfect).length, 0),
-    boss: rs.filter((r) => r.boss?.won).length,
+    perfect: rs.reduce((a, r) => a + perfectsOf(r), 0), // 정식 꼴 'o' · 옛 꼴 perfect 둘 다 (#163)
+    boss: rs.filter(wonOf).length,
     classes: rs.length,
     cards: Object.keys(cards || {}).length,
     review: null, guard: null, sRank: null,

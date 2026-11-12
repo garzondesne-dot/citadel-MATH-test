@@ -54,7 +54,7 @@ export const band = (v: number | null) => (v == null ? '' : v >= 80 ? '도달' :
 /** 🧪 테스트 판 가짜 기록 — 반 · 번호로 늘 같은 값 (실제 학생 아님) */
 const cache = new Map<string, ReturnType<typeof build>>();
 export function fakeClass(S: Store | null, cls: string) {
-  const k = `${cls}|${S ? JSON.stringify(S.get(`school/roster/${cls}`) || {}) : ''}|${S ? JSON.stringify(S.get('school/test') || {}) : ''}|${S?.get('school/cls') ? JSON.stringify(S.get('school/cls')) : ''}`;
+  const k = `${cls}|${S ? JSON.stringify(S.get(`roster/${cls}`) || S.get(`school/roster/${cls}`) || {}) : ''}|${S ? JSON.stringify(S.get('tester') || S.get('school/test') || {}) : ''}|${S?.get('school/cls') ? JSON.stringify(S.get('school/cls')) : ''}`;
   const hit = cache.get(k); if (hit) return hit;
   const ci = CLASSES.indexOf(cls), held = LESSONS.slice(0, 4 + (ci % 3));
   const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {};

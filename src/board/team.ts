@@ -3,6 +3,7 @@ import { PROFILES } from '../model/profiles';
 import { openRoom, roomPath, setFocus } from '../raid/actions';
 import { chainRecord, isChain, itemsFor, plainRecord, stepOf, bossItem, bossState, chainItems, BOSS_ID } from '../raid/raid';
 import { freshAll, kstDay } from './board';
+import { bossFullOf } from '../school/records';
 
 // 📋 게시판 던전 팀 (#143 · DECISIONS 「🏕 v1.0 쉼터 · 📋 게시판 던전 확정」 · ❓ #143-a = B · #143-b = A)
 //   모집 글 = school/board/posts/{pid} · 팀 방 = rooms/T{pid}(게시판 프로필 · 서버) · 학생끼리 자유 글 없음
@@ -16,9 +17,12 @@ export interface Post { pid: string; lesson: string; no: number; at: number; hos
 
 /** 🛡 판정 (❓ #143-a B · 숫자는 여기 한 곳): 그 차시 수업 기록 정답률 ≥ 80% 또는 형성평가 만점 → 수호자 · 기록 없으면 도전자 */
 export const GUARD_RATE = 0.8;
-export function roleOf(rec: { right?: number; total?: number; boss?: { ok?: number; items?: number } } | null): { role: Role; why: string } {
-  if (!rec || !rec.total) return { role: 'c', why: '🌱 이 차시 수업 기록이 아직 없어서 도전자예요' };
-  const r = (rec.right || 0) / rec.total, bossFull = !!rec.boss && !!rec.boss.items && rec.boss.ok === rec.boss.items;
+export function roleOf(rec: { right?: number; total?: number; boss?: number | { ok?: number; items?: number }; bossN?: number; mons?: Record<string, unknown> } | null, only?: string[]): { role: Role; why: string } {
+  // 정답률 = 맞힌 소문제 / 전체(v1.0 기록) · 정식 기록(소문제 수 없음) = 다 맞힌 몬스터(o · f) / 몬스터 · only = 나눈 차시의 문제만 (#163)
+  const ms = Object.entries(rec?.mons || {}).filter(([k]) => !only || only.includes(k)).map(([, v]) => v);
+  const tot = rec?.total && !only ? rec.total : ms.length;
+  if (!rec || !tot) return { role: 'c', why: '🌱 이 차시 수업 기록이 아직 없어서 도전자예요' };
+  const r = rec.total && !only ? (rec.right || 0) / rec.total : ms.filter((v) => v === 'o' || v === 'f').length / tot, bossFull = !only && bossFullOf(rec); // 정식 꼴 boss · bossN · 옛 꼴 둘 다
   if (bossFull) return { role: 'g', why: '🛡 이 차시 형성평가를 만점 받아서 수호자예요' };
   if (r >= GUARD_RATE) return { role: 'g', why: `🛡 이 차시 수업 정답률이 ${Math.round(r * 100)}%라서 수호자예요` };
   return { role: 'c', why: `🌱 이 차시 수업 정답률 ${Math.round(r * 100)}% · 같이 풀며 키워요` };
@@ -27,8 +31,8 @@ const mems = (p: Post | null) => Object.values(p?.mem || {}).filter(Boolean).sor
 export const membersOf = mems;
 export const hasGuard = (p: Post) => mems(p).some((m) => m.role === 'g');
 /** 글 올리기 · 합류 · 나가기 · 준비 · 내리기 */
-export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0]): string {
-  const pid = `p${S.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`, r = roleOf(rec);
+export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[]): string {
+  const pid = `p${S.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`, r = roleOf(rec, only);
   S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', mem: { [me.uid]: { ...me, ...r, at: S.now(), ready: true } } });
   return pid;
 }
@@ -41,7 +45,7 @@ export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boole
   if (mems(p).length >= MAX) return '자리가 다 찼어요';
   return '';
 }
-export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0]) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec), at: S.now(), ready: false }); }
+export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[]) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), ready: false }); }
 /** 나가기: 출발 전 글 올린 사람 = 글 내림 · 그 밖(출발 뒤 글 올린 사람도) = 나만 빠짐 (#147 · 팀 진행은 남은 팀원이 이어받음) */
 export const leavePost = (S: Store, p: Post, uid: string) => (p.host === uid && p.phase === 'wait' ? S.set(`${POSTS}/${p.pid}`, null) : S.set(`${POSTS}/${p.pid}/mem/${uid}`, null));
 export const setReady = (S: Store, p: Post, uid: string, v: boolean) => S.set(`${POSTS}/${p.pid}/mem/${uid}/ready`, v);

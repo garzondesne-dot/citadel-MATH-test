@@ -21,11 +21,13 @@
   let chip = $state<number | 'all'>(untrack(() => { try { const v = localStorage.getItem(KEY); return v && v !== 'all' ? Number(v) : 'all'; } catch { return 'all'; } }));
   const setChip = (c: number | 'all') => { chip = c; try { localStorage.setItem(KEY, String(c)); } catch { /* 무시 */ } };
   // 진도: 그 차시 수업 기록이 있거나 · 기록이 있는 가장 뒤 차시까지 (반이 없는 기기 = 모두)
-  const recs = untrack(() => (cls && num ? S.get<Record<string, { right?: number; total?: number; boss?: { ok?: number; items?: number } }>>(`records/${cls}/${num}`) : null)) || {};
+  const recs = untrack(() => (cls && num ? S.get<Record<string, { right?: number; total?: number; boss?: number | { ok?: number; items?: number }; bossN?: number; mons?: Record<string, unknown> }>>(`records/${cls}/${num}`) : null)) || {};
   // 반 진도 = 그 반이 마지막으로 연 차시(school/last · 🧪 테스트 school/lastTest) · 내 수업 기록 중 큰 것
   const reach = Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(untrack(() => (cls ? lastClass(S, cls)?.no : 0))) || 0, Number(untrack(() => (cls ? lastTest(S, cls)?.no : 0))) || 0);
   const LESSONS = PACKS.filter((p) => (p.steps.some((s) => s.kind === 'monster') || p.boss));
-  const isOpen = (p: LessonPack | null | undefined) => !!p && (!cls || !!recs[p.id] || p.no <= reach);
+  // 나눈 차시(7차시)는 정식 기록이 원래 차시 칸에 있음(정식 6차시 기록의 u4 ~ u7 = v1.0 7차시 · 출시 전 메모 10)
+  const recOf = (p: LessonPack) => recs[p.id] ?? (p.partOf && Object.keys(recs[p.partOf]?.mons || {}).some((k) => p.steps.some((s) => s.id === k)) ? recs[p.partOf] : undefined);
+  const isOpen = (p: LessonPack | null | undefined) => !!p && (!cls || !!recOf(p) || p.no <= reach);
   const lessonOf = (id: string) => PACKS.find((p) => p.id === id) ?? null;
   // ⑬ 서버 연결 (시험 서버 = .info/connected · 이 기기 = 늘 됨)
   let online = $state(true);
@@ -46,11 +48,11 @@
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
     if (!pick) return;
-    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } createPost(S, pick, meM, recs[pick.id] ?? null); sheet = ''; return; }
+    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } createPost(S, pick, meM, recOf(pick) ?? null, pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined); sheet = ''; return; }
     sheet = ''; run = pick; res = null;
   }
   const tag = (p: Post) => [...new Set(membersOf(p).map((m) => m.cls))];
-  function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } joinPost(S, p, meM, recs[p.lesson] ?? null); }
+  function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
   // ── 결과 (1인 · 팀 같은 꼴) ──
   function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;

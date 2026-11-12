@@ -17,6 +17,7 @@
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
   import { conceptOf } from '../school/prep';
+  import { summaryOf } from '../school/records';
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
@@ -90,8 +91,8 @@
   $effect(() => { fx.block = stunned && !scout?.on; return () => { fx.block = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
-  // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b || board) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items, ...(bhp?.won ? { won: true } : {}) } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
+  // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
+  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
