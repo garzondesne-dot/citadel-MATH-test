@@ -65,7 +65,7 @@
       if (ok) { const nx = s2.findIndex((x, k) => k > i && open(x)); cur = nx >= 0 ? nx : firstOpen(s2); }
     }, 650);
     if (ok) toast = `✔ ${i + 1}번 도달! 보스에게 데미지`;
-    else { toast = me && me.left > 0 ? `✘ ${i + 1}번은 아직… 🤔 ${R.meta.think}초 생각하고 숫자가 바뀐 빈칸으로 다시! (기회 ${me.left})` : `✘ ${i + 1}번 기회를 모두 썼어요 — 해설을 보며 학습지에 정리해요`; if (R.meta.think > 0) thinkUntil = Date.now() + R.meta.think * 1000; }
+    else { toast = me && me.left > 0 ? `✘ ${i + 1}번은 아직… 🤔 ${R.meta.think}초 생각하고 숫자가 바뀐 빈칸으로 다시! (기회 ${me.left})` : `✘ ${i + 1}번 기회를 모두 썼어요 — 해설을 보며 학습지에 정리해요`; if (R.meta.think > 0) thinkUntil = now + R.meta.think * 1000; }
     if (s2.every((x) => !open(x))) setTimeout(() => (showTable = true), 700);
   }
   const pick = (i: number) => { if (st[i]?.ok) return; cur = i; toast = ''; showTable = false; };

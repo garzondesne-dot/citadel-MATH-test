@@ -1,6 +1,6 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, bossState, chainRecord, isChain, isEnd, nextIdx, plainRecord, PRAC_MAX, pracUsed, stepOf } from './raid';
+import { BOSS_ID, bossState, chainRecord, gameNow, isChain, isEnd, nextIdx, plainRecord, PRAC_MAX, pracUsed, stepOf } from './raid';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
 export const roomPath = (code: string) => `rooms/${code}`;
@@ -24,14 +24,23 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || isEnd(L, R)) return;
-  S.set(`${roomPath(code)}/state`, { ...R.state, step: nextIdx(L, R), stepAt: S.now() });
+  const t = S.now(); // 새 단계 = 멈춘 합 0 · 집중이 켜져 있으면 지금부터 멈춤
+  S.set(`${roomPath(code)}/state`, { ...R.state, step: nextIdx(L, R), stepAt: t, pauseMs: 0, focusAt: R.state.focus ? t : null });
+}
+/** ⏸ 집중 켜기 · 끄기 (#118): 켜면 그 시각 · 끄면 멈춘 시간을 pauseMs 에 더함 → 게임 시계가 멈춘 자리에서 이어감 */
+export function setFocus(S: Store, code: string, on: boolean): void {
+  const R = getRoom(S, code);
+  if (!R || !!R.state.focus === on) return;
+  const t = S.now(), st = R.state;
+  if (on) S.set(`${roomPath(code)}/state`, { ...st, focus: true, focusAt: t });
+  else S.set(`${roomPath(code)}/state`, { ...st, focus: false, focusAt: null, pauseMs: Number(st.pauseMs || 0) + Math.max(0, t - Number(st.focusAt ?? t)) });
 }
 /** 종합실 「⚔ 등장!」: 정찰을 일찍 끝냄 */
 export function appearNow(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code), st = R && stepOf(L, R);
   if (!R || !st) return;
   const id = st.kind === 'boss' ? BOSS_ID : st.id;
-  S.set(`${roomPath(code)}/state/solveEnd/${id}`, S.now());
+  S.set(`${roomPath(code)}/state/solveEnd/${id}`, gameNow(R, S.now())); // 정찰 끝 = 게임 시각
 }
 
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */

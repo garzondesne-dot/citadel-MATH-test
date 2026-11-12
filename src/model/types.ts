@@ -133,7 +133,7 @@ export interface RoomRules {
 export interface Room {
   meta: { code: string; lesson: string; version: number; created: number } & RoomRules;
   /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
-  state: { step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number> };
+  state: { step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>; /** ⏸ 집중 (정식과 같은 이름) · 켠 시각 · 이 단계에서 멈춘 합(ms) */ focus?: boolean; focusAt?: number | null; pauseMs?: number | null };
   players?: Record<string, RoomPlayer>;
   /** subs[mid][uid][attempt] = 학생 답 배열 */
   subs?: Record<string, Record<string, Record<string, Given[]>>>;

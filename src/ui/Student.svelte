@@ -2,7 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Store } from '../model/types';
   import { PROFILES } from '../model/profiles';
-  import { atkClock, atkTrack, bossHp, chainDown, chainRecord, isChain, isEnd, isLobby, monsterHp, resultOf, solveLock, stepIdx, stepOf } from '../raid/raid';
+  import { atkClock, atkTrack, bossHp, chainDown, chainRecord, gameNow, isChain, isEnd, isLobby, monsterHp, resultOf, solveLock, stepIdx, stepOf } from '../raid/raid';
   import { heartbeat, leave, scoutReady } from '../raid/actions';
   import { liveRoom } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
@@ -31,7 +31,8 @@
   onDestroy(() => { live.stop(); stopClock(); });
 
   const R = $derived(live.v.room);
-  const now = $derived(clock.now);
+  const now = $derived(clock.now); // 벽시계 = 접속 · 체력 머릿수
+  const gnow = $derived(R ? gameNow(R, now) : now); // ⏸ 게임 시계 (#118) = 멈춤 · 생각 시간 · 공격 멈춤 초 — 집중이면 멈춤
   const step = $derived(R ? stepOf(L, R) : null);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));
@@ -56,9 +57,9 @@
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike) stunUntil = now + c.lock * 1000;
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike) stunUntil = gnow + c.lock * 1000;
   });
-  const stunned = $derived(stunUntil > now);
+  const stunned = $derived(stunUntil > gnow);
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
@@ -96,15 +97,15 @@
         {#snippet main()}<span>{readyNow ? '✋ 준비 완료!' : '준비 완료'}</span>{/snippet}
       </BottomAction>
     {:else}
-      {#if stunned}<div class="bad" role="status"><b>💥 {step.kind === 'boss' ? '보스' : '몬스터'}의 공격! {Math.ceil((stunUntil - now) / 1000)}초 멈춤</b><span>잠깐 기다리면 다시 풀 수 있어요</span></div>{/if}
+      {#if stunned}<div class="bad" role="status"><b>💥 {step.kind === 'boss' ? '보스' : '몬스터'}의 공격! {Math.ceil((stunUntil - gnow) / 1000)}초 멈춤</b><span>잠깐 기다리면 다시 풀 수 있어요</span></div>{/if}
       {#if step.kind === 'boss' && bhp?.won}<p class="toast">🏆 승리! 남은 문항도 풀어 볼 수 있어요</p>{:else if down}<p class="toast">💥 몬스터는 쓰러졌어요! 그래도 풀어서 공격할 수 있어요</p>{/if}
       {#key `${stepIdx(R)}|${step.id}`}
         {#if step.kind === 'boss'}
-          <BossCard {S} {L} {R} {code} {uid} {now} {locked} />
+          <BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} {now} {locked} title={step.title} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
         {:else if mid}
-          <MonsterForm {S} {L} {R} {code} {mid} {uid} {now} {locked} title={step.title} />
+          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
         {/if}
       {/key}
     {/if}

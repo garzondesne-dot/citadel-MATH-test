@@ -4,7 +4,7 @@ import { bossItem as packBossItem, chainItems as packChainItems, items } from '.
 
 // 레이드 규칙 — 정식 js/raid/model.js (DS.Raid) 를 같은 동작으로 옮김 (b2 범위)
 //   모드(수업 · 테스트)로 가르지 않는다: 값은 모두 방 meta(= 다른 점 표에서 옮겨 적은 값)에서 읽는다
-//   (아직 없는 것: 💚 파티 힐 · 필살기 · ⛓ 묶기 · 🔥 콤보 · 🦇 박쥐 · 쉼터 · 집중모드 · 💡 힌트 주기 — 그 값들은 0 으로 계산)
+//   (아직 없는 것: 💚 파티 힐 · 필살기 · ⛓ 묶기 · 🔥 콤보 · 🦇 박쥐 · 쉼터 · 💡 힌트 주기 — 그 값들은 0 으로 계산)
 export const PRESENCE_MS = 8000; // 탭이 이만큼 소식이 없으면 나간 것으로
 export const BOSS_ID = 'boss';
 
@@ -219,15 +219,25 @@ export function bossHp(L: LessonPack, R: Room, now: number) {
   return { max, dmg, left: Math.max(0, max - dmg), pct, won: max > 0 && dmg >= max };
 }
 
+// ── ⏸ 게임 시계 (#118 · 집중 = 시계 멈춤) ─────────────────
+//   벽시계(clock.now · S.now) 하나에서 파생: 게임 시각 = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합
+//   정찰 · 몬스터 공격 · 생각 시간 · 남은 시간 · (앞으로) 보스 문 닫기 · 박쥐 · 콤보 · 놀이 · 연출 반복은 모두 이 값만 읽는다 → 함께 멈춤 · 끄면 그 자리에서 이어감
+//   단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로) · 접속 판정(activeIds)만 벽시계 — 집중 중에도 학생은 접속 중
+export const focusOn = (R: Room) => !!R.state.focus;
+export function gameNow(R: Room, wall: number): number {
+  const st = R.state, at = st.focus && st.focusAt != null ? Math.min(wall, Number(st.focusAt)) : wall;
+  return at - Number(st.pauseMs || 0);
+}
+
 // ── 🌫 정찰 (정식 solveLock · v3 = 모든 몬스터 · 보스 앞 meta.solve 초 · 「⚔ 등장!」으로 일찍) ──
 export function solveLock(L: LessonPack, R: Room, now: number) {
   const step = stepOf(L, R);
   if (!step || !['monster', 'boss'].includes(step.kind) || step.later) return null;
   const id = step.kind === 'boss' ? BOSS_ID : step.id, sec = NEWR(R) ? Number(R.meta.solve) : 0;
   if (!(sec > 0)) return null;
-  const t0 = R.state.stepAt != null ? Number(R.state.stepAt) : now;
+  const g = gameNow(R, now), t0 = R.state.stepAt != null ? Number(R.state.stepAt) : g;
   const end = Math.min(t0 + sec * 1000, Number(R.state.solveEnd?.[id]) || Infinity);
-  return { id, sec, t0, end, left: Math.max(0, end - now), on: now < end };
+  return { id, sec, t0, end, left: Math.max(0, end - g), on: g < end };
 }
 
 // ── 👾 몬스터 공격 시계 (정식 atkClock · 모든 기기가 같은 시각으로 같은 값) ──
@@ -239,7 +249,7 @@ export function bossPhase(ratio: number) {
   const i = BOSS_LOCK.findIndex(([p]) => pct >= p);
   return { phase: i + 1, lock: (BOSS_LOCK[i] as [number, number])[1], pct };
 }
-export interface Atk { kind: 'monster' | 'boss'; mid: string; per: number; lock: number; phase: number; paused: boolean; ratio: number; t: number; k: number; p: number }
+export interface Atk { kind: 'monster' | 'boss'; mid: string; per: number; lock: number; phase: number; paused: boolean; focus: boolean; ratio: number; t: number; k: number; p: number }
 export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const step = stepOf(L, R);
   if (!step || step.later) return null;
@@ -249,10 +259,11 @@ export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const hp = kind === 'monster' ? monsterHp(L, R, step.id, now) : bossHp(L, R, now), ratio = hp.max ? Math.max(0, Math.min(1, hp.left / hp.max)) : 1;
   const per = a[0] + (a[1] - a[0]) * (1 - ratio);
   const phase = kind === 'boss' ? bossPhase(ratio) : null, lock = phase ? phase.lock : a[2];
-  const sl = solveLock(L, R, now), held = sl ? Math.max(0, Math.min(now, sl.end) - sl.t0) : 0;
-  const start = R.state.stepAt != null ? R.state.stepAt : now;
-  const t = Math.max(0, (now - start - held) / 1000);
-  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on), ratio, t, k: Math.floor(t / per), p: (t % per) / per };
+  const g = gameNow(R, now), focus = focusOn(R);
+  const sl = solveLock(L, R, now), held = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
+  const start = R.state.stepAt != null ? R.state.stepAt : g;
+  const t = Math.max(0, (g - start - held) / 1000);
+  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || focus, focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
 }
 /** 게이지 진행 (기기마다 memo 를 들고 같은 규칙으로) — 주기가 바뀌어도 거꾸로 튀지 않게 (정식 atkTrack) */
 export function atkTrack(memo: { key?: string; start?: number; hit?: boolean }, c: Atk, key: string) {

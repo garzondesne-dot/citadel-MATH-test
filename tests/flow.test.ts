@@ -5,8 +5,8 @@ import type { Given, LessonPack, Question, Room, Store } from '../src/model/type
 import pack from '../src/packs/set-06.json';
 import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
-import { appearNow, bossSubmit, chainRelease, chainSubmit, heartbeat, nextStep, openRoom, pracStart, roomPath, submit } from '../src/raid/actions';
-import { atkClock, bossHp, bossItem, bossState, chainDown, chainItems, chainRecord, cleared, isChain, isEnd, itemsFor, monsterHp, record, resultOf, solveLock, stepOf, variantOf } from '../src/raid/raid';
+import { appearNow, bossSubmit, chainRelease, chainSubmit, heartbeat, nextStep, openRoom, pracStart, roomPath, setFocus, submit } from '../src/raid/actions';
+import { atkClock, atkTrack, bossHp, gameNow, bossItem, bossState, chainDown, chainItems, chainRecord, cleared, isChain, isEnd, itemsFor, monsterHp, record, resultOf, solveLock, stepOf, variantOf } from '../src/raid/raid';
 
 const L = pack as LessonPack;
 const ans = (q: Question): Given => (q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.type === 'number' ? q.answer : null);
@@ -151,5 +151,51 @@ describe('던전 통일 엔진', () => {
     expect(pracStart(S, L, 'T', mid, 'u2')).toBe(2);
     expect(pracStart(S, L, 'T', mid, 'u2')).toBe(3);
     expect(pracStart(S, L, 'T', mid, 'u2')).toBe(0); // 3판 끝
+  });
+});
+
+// ⏸ #118 집중 = 시계 멈춤: 엔진의 게임 시계 하나(gameNow)에서 정찰 · 공격 · 생각 시간이 모두 파생 → 함께 멈추고 그 자리에서 이어감
+describe('⏸ 집중 = 시계 멈춤 (#118)', () => {
+  const toMonster = (S: Store, R: () => Room) => { for (let g = 0; g < 20; g++) { nextStep(S, L, 'T'); const st = stepOf(L, R()); if (st?.kind === 'monster' && !isChain(L, R(), st.id) && !st.later) return st.id; } throw new Error('몬스터 없음'); };
+  it('정찰 중 집중 30초 → 남은 시간 그대로 · 끄면 이어서 줄어듦', () => {
+    const { S, R, beat } = setup('class');
+    toMonster(S, R); beat();
+    S.tick(10_000);
+    const left0 = solveLock(L, R(), S.now())!.left;
+    expect(left0).toBe(50_000);
+    setFocus(S, 'T', true);
+    for (let k = 0; k < 6; k++) { S.tick(5_000); beat(); expect(solveLock(L, R(), S.now())!.left).toBe(left0); }
+    expect(atkClock(L, R(), S.now())).toMatchObject({ paused: true, focus: true });
+    setFocus(S, 'T', false);
+    expect(solveLock(L, R(), S.now())!.left).toBe(left0);
+    S.tick(5_000); beat();
+    expect(solveLock(L, R(), S.now())!.left).toBe(45_000);
+    expect(R().state.pauseMs).toBe(30_000);
+  });
+  it('공격 게이지: 집중 30초 동안 공격 0 · 같은 진행 · 끄면 이어감 · 다음 단계는 멈춘 합 0', () => {
+    const { S, R, beat } = setup('class');
+    toMonster(S, R); beat();
+    appearNow(S, L, 'T'); S.tick(7_000); beat();
+    const c0 = atkClock(L, R(), S.now())!;
+    expect(c0.paused).toBe(false);
+    expect(c0.t).toBeCloseTo(7, 5);
+    setFocus(S, 'T', true);
+    let hits = 0; const memo = {};
+    for (let k = 0; k < 30; k++) { S.tick(1_000); beat(); const c = atkClock(L, R(), S.now())!; expect(c.t).toBeCloseTo(7, 5); if (!c.paused && atkTrack(memo, c, 'm').strike) hits++; }
+    expect(hits).toBe(0);
+    setFocus(S, 'T', false); S.tick(3_000); beat();
+    expect(atkClock(L, R(), S.now())!.t).toBeCloseTo(10, 5);
+    // 집중을 켠 채 다음 단계로 → 새 단계는 그 자리부터 멈춤 · 멈춘 합은 0 에서
+    setFocus(S, 'T', true); S.tick(4_000); nextStep(S, L, 'T');
+    expect(R().state.pauseMs).toBe(0);
+    S.tick(9_000); beat();
+    expect(gameNow(R(), S.now())).toBe(R().state.stepAt);
+    setFocus(S, 'T', false); S.tick(2_000);
+    expect(gameNow(R(), S.now()) - R().state.stepAt).toBe(2_000);
+  });
+  it('집중을 안 쓰면 게임 시계 = 벽시계 (정식 값 그대로)', () => {
+    const { S, R } = setup('class');
+    toMonster(S, R); S.tick(1234);
+    expect(gameNow(R(), S.now())).toBe(S.now());
   });
 });

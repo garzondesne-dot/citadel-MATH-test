@@ -46,7 +46,7 @@
     if (t === seenTry) return;
     const first = seenTry === null; seenTry = t;
     const l = rec.tries[t];
-    if (!first && l && l.correct < l.total && R.meta.think > 0) thinkUntil = Date.now() + R.meta.think * 1000;
+    if (!first && l && l.correct < l.total && R.meta.think > 0) thinkUntil = now + R.meta.think * 1000;
     if (!first && l && l.correct === l.total) practice = false;
   });
   const wrongIdx = $derived(sameQ && last ? last.marks.map((m, i) => (m ? -1 : i)).filter((i) => i >= 0) : []);

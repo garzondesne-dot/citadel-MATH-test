@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed } from '../../raid/raid';
@@ -34,7 +35,7 @@
   const pLeftN = $derived(Math.max(0, PRAC_MAX - used));
   let armKey = '', armAt = $state(0);
   const pracShown = $derived((!prac && rec.done) || pDone || pFail);
-  $effect(() => { const k = `${pass}|${pracShown}`; if (pracShown && k !== armKey) { armKey = k; armAt = Date.now() + 1500; } });
+  $effect(() => { const k = `${pass}|${pracShown}`; if (pracShown && k !== armKey) { armKey = k; armAt = untrack(() => now) + 1500; } });
   let toast = $state('');
   const stName = (i: number, n: number) => (i === n - 1 ? '대장' : `졸개 ${'①②③④⑤⑥'[i]}`);
   let flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | null = null;

@@ -65,7 +65,7 @@
     {#if scout?.on}
       <p class="scout">🌫 정찰 {Math.ceil(scout.left / 1000)}초 — 학습지에 먼저 풀어요 <button onclick={() => appearNow(S, L, code)}>⚔ 등장!</button></p>
     {:else if atk}
-      <div class="atk" aria-label="몬스터 공격 게이지"><div class="fill" style:width="{atk.p * 100}%"></div><span>👾 공격까지 {Math.ceil(atk.per - atk.p * atk.per)}초 · 맞으면 {atk.lock}초 멈춤</span></div>
+      <div class="atk" aria-label="몬스터 공격 게이지"><div class="fill" style:width="{atk.p * 100}%"></div><span>{atk.focus ? '⏸ 집중 — 시계 멈춤' : `👾 공격까지 ${Math.ceil(atk.per - atk.p * atk.per)}초 · 맞으면 ${atk.lock}초 멈춤`}</span></div>
     {/if}
 
     {#if step?.kind === 'monster' || step?.kind === 'boss'}
