@@ -7,7 +7,7 @@
   import HeroSprite from './HeroSprite.svelte';
   import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
-  import { CAMP, HERO, heroUrl } from '../manifest';
+  import { CAMP, HERO, heroNudge, heroUrl } from '../manifest';
   import { useMe } from '../../store/me.svelte';
   import { liveRoom } from '../room.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -100,7 +100,7 @@
     <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
-    <i class="sp hero" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
+    <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx}px {heroNudge(me.hero, HERO.sitRow).dy}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
     {#each ['castle', 'tent', 'gate'] as k (k)}
       {@const st = lab(k)}

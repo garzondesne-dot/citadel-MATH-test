@@ -4,7 +4,6 @@
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
-  import { portraitOf } from '../manifest';
   import HeroSprite from './HeroSprite.svelte';
   import Sheet from '../battle/Sheet.svelte';
 
@@ -18,8 +17,10 @@
   let look = $state<Look>(untrack(snap));
   let P = $state<Plan>(emptyPlan());
   let tab = $state<'enh' | 'sk' | 'rec'>('enh');
-  let heroSheet = $state(false), pickH = $state(untrack(() => me.hero)), showLocked = $state(false);
+  let heroSheet = $state(false), pickH = $state(untrack(() => me.hero));
   let ttlSheet = $state(false), confirm = $state(false), ask = $state(false);
+  let savedFlash = $state(false), topEl = $state<HTMLElement | null>(null), swTop = $state(160);
+  function openHeroes() { pickH = look.hero; if (topEl) swTop = topEl.offsetTop + topEl.offsetHeight + 8; heroSheet = true; }
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string, ms = 2200) => { toast = t; if (toastT) clearTimeout(toastT); toastT = setTimeout(() => (toast = ''), ms); };
   const tip96 = untrack(() => !me.seen['tip96']); // 「이제 용사마다 자기 속성…」 = 개편 뒤 한 번만
@@ -75,8 +76,12 @@
   const locked = $derived(HEROES.filter((h) => !ownsHero(W, P, h.id)));
   function buyHero() { const h = heroOf(pickH); if (h.price == null || lf.gem < h.price) { say('💎 가 모자라요'); return; } P.heroes = [...P.heroes, pickH]; }
   function useHero() { look.hero = pickH; heroSheet = false; }
+  const allHeroes = $derived([...mine, ...locked]);
+  const ownedSk = (id: number) => ladder(id).map((k) => ownsSkill(W, P, id, k));
+  const topTier = (id: number) => { const o = ownedSk(id); const n = o.lastIndexOf(true); return n >= 0 ? TN[n] : ''; };
   const famName = (id: number) => famOfHero(id).name;
-  const port = $derived(portraitOf(pickH));
+  /** 「으로 · 로」: 받침이 없거나 ㄹ 받침이면 로 */
+  const ro = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; if (c < 0 || c > 11171) return '로'; const j = c % 28; return j === 0 || j === 8 ? '로' : '으로'; };
   // ── 🏅 기록 ──
   const nextAch = $derived.by(() => {
     const seals = 0, cand: [number, string][] = [];
@@ -106,7 +111,8 @@
     me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title;
     persist();
     L0 = { ...r.look, socket: { ...r.look.socket } }; look = { ...r.look, socket: { ...r.look.socket } }; P = emptyPlan();
-    say(r.great ? `🌟 강화 대성공 ${r.great}번! 💎 ${r.back}개 돌려받았어요` : '💾 저장했어요', r.great ? 3600 : 2000);
+    if (r.great) say(`🌟 강화 대성공 ${r.great}번! 💎 ${r.back}개 돌려받았어요`, 3600);
+    savedFlash = true; setTimeout(() => (savedFlash = false), 1000); // ✔ 저장했어요 1초 뒤 처음 상태
   }
   function close() { if (isDirty) { ask = true; return; } onclose(); }
   function openTab(t: typeof tab) { tab = t; if (t === 'sk' && !me.seen['tip96']) { me.seen['tip96'] = true; persist(); } }
@@ -121,7 +127,7 @@
   </header>
 
   <div class="body">
-    <button type="button" class="top" onclick={() => { pickH = look.hero; heroSheet = true; }} aria-label="용사 바꾸기">
+    <button type="button" class="top" bind:this={topEl} onclick={openHeroes} aria-label="용사 바꾸기">
       <span class="pic"><HeroSprite id={look.hero} play aura={lv} />{#if lv}<b class="enh">+{lv}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b>{me.nick}</b>{#if me.test}<i class="tester">테스터</i>{/if}</span>
@@ -144,7 +150,6 @@
         </div>
         <p class="aname">{nx ? `다음 오라 · ${AURA_NAMES[lv + 1]}` : `🌈 최고 단계 +${lv} · ${AURA_NAMES[lv]}`}</p>
         <p class="muted">가진 용사 모두에게 함께 · 실패 없음{P.enh ? ` · 고름 +${L0.enh} → +${lv}` : ''}</p>
-        {#if nx}<button type="button" class={isDirty ? 'btn2 wide' : 'btn wide'} onclick={enh}>+{lv + 1} 으로 강화 · 💎 {nx.g}{nx.s ? ` · 📜 ${nx.s}` : ''}</button>{/if}
       </div>
     {:else if tab === 'sk'}
       {#if tip96}<p class="tip">이제 용사마다 자기 속성 스킬만 · 다른 속성은 그 용사로</p>{/if}
@@ -177,55 +182,57 @@
     {/if}
   </div>
 
-  {#if isDirty}
-    <div class="savebar">
-      <p class="chg2">바뀐 것 · {changes.join(' · ')}</p>
-      <div class="row2">
+  <!-- 아래 = 할 일 (#121 시안 ⑪ ①~③): 바뀐 것이 있으면 「바뀐 것 2줄 + ↺ 되돌리기(48)」 + 💾 저장(56) · 없으면 탭마다 주요 단추 하나 · 저장 = ✔ 1초 -->
+  <div class="act">
+    {#if isDirty}
+      <div class="savebar">
+        <span class="chg2">바뀐 것 · <b>{changes.join(' · ')}</b>{c.g ? ` · 💎 −${c.g}` : ''}{c.s ? ` · 📜 −${c.s}` : ''}<small>저장하기 전까진 되돌릴 수 있어요</small></span>
         <button type="button" class="btn2 undo" onclick={undo}>↺ 되돌리기</button>
-        <button type="button" class="btn" onclick={trySave}>💾 저장{c.g || c.s ? ` · 💎 ${c.g}${c.s ? ` · 📜 ${c.s}` : ''}` : ''}</button>
       </div>
-    </div>
-  {/if}
+      <button type="button" class="btn main" onclick={trySave}>💾 저장{c.g || c.s ? ` · 💎 ${c.g}${c.s ? ` · 📜 ${c.s}` : ''}` : ''}</button>
+    {:else if savedFlash}
+      <button type="button" class="btn main" disabled>✔ 저장했어요</button>
+    {:else if tab === 'enh'}
+      <button type="button" class="btn main" disabled={!nx} onclick={enh}>{nx ? `+${lv + 1}으로 강화 · 💎 ${nx.g}${nx.s ? ` · 📜 ${nx.s}` : ''}` : '🌈 최고 단계'}</button>
+    {:else}
+      <button type="button" class="btn main" disabled>{tab === 'sk' ? '스킬 칸을 눌러 고르세요' : '호칭 · 기록 보기'}</button>
+    {/if}
+  </div>
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 </div>
 
 {#if heroSheet}
-  <Sheet onclose={() => (heroSheet = false)} tall>
-    {#snippet title()}용사 바꾸기{/snippet}
-    <div class="intro">
-      <span class="port" class:dim={!ownsPick}>{#if port}<i style="background-image:url({port.url});background-size:{port.cols * 100}% {port.rows * 100}%;background-position:{(port.c[0] / (port.cols - 1)) * 100}% {(port.c[1] / (port.rows - 1)) * 100}%"></i>{:else}<HeroSprite id={pickH} />{/if}</span>
-      <span class="itx">
-        <b>{pick.name} · {pick.job}</b>
-        <small>{pick.ranged ? '🏹 원거리' : '🗡 근접'} · {famName(pickH)}</small>
-        <em>「{pick.nick}」</em>
-        <span class="story">{pick.a}{#if ownsPick} {pick.b}{/if}</span>
-        {#if !ownsPick}<span class="cond">🔓 {pick.cond}</span>{/if}
+  <!-- 🧑 용사 바꾸기 (#121 시안 ⑪ ④): 맨 위 내 용사 카드 아래까지 덮는 아래 시트 · 위 = 고른 용사 상세 · 아래 = 4칸 격자(격자만 넘김) · 출전 · 사기 = 「고름」 → 저장해야 바뀜(#98) -->
+  <div class="swbg" role="presentation" onclick={() => (heroSheet = false)} style:top="{swTop}px"></div>
+  <div class="hsw" role="dialog" aria-modal="true" aria-label="용사 바꾸기" style:top="{swTop}px">
+    <div class="grab"><i></i></div>
+    <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {HEROES.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
+    <div class="swd">
+      <span class="swbig" class:dim={!ownsPick}><HeroSprite id={pickH} play={ownsPick} dim={!ownsPick} aura={ownsPick ? lv : 0} />{#if ownsPick && lv}<b>+{lv}</b>{/if}</span>
+      <span class="swtx">
+        <b>{pick.name} <small>· {pick.job}</small></b>
+        <span class="tg">{famName(pickH)} · 「{pick.nick}」</span>
+        <span class="st">{ownsPick ? pick.a : pick.cond ? `🔓 ${pick.cond}` : pick.a}</span>
+        <span class="skr" aria-label="스킬">{#each ownedSk(pickH) as o, k (k)}<i class:on={o}>{TN[k]}</i>{/each}</span>
       </span>
     </div>
-    <p class="lab">가진 용사 {mine.length}</p>
-    <div class="grid">
-      {#each mine as h (h.id)}
-        <button type="button" class="hc" class:sel={h.id === pickH} class:cur={h.id === look.hero} onclick={() => (pickH = h.id)} aria-label="{h.name} · {h.job}{h.id === look.hero ? ' · 출전 중' : ''}"><HeroSprite id={h.id} /><small>{h.job}</small>{#if P.heroes.includes(h.id)}<i class="pend">고름</i>{/if}</button>
+    <div class="swg">
+      {#each allHeroes as h (h.id)}
+        {@const own = ownsHero(W, P, h.id)}
+        <button type="button" class="swc" class:cur={h.id === look.hero} class:sel={h.id === pickH && h.id !== look.hero} class:lk={!own} onclick={() => (pickH = h.id)} aria-label="{h.name} · {h.job}{h.id === look.hero ? ' · 출전 중' : ''}{own ? '' : ' · 잠김'}">
+          <span class="swi"><HeroSprite id={h.id} dim={!own} /></span><b>{h.name}</b><small>{own ? `${famName(h.id).split(' ')[0]}${topTier(h.id) ? ` 스킬 ${topTier(h.id)}` : ''}` : h.price != null ? `🔒 💎 ${h.price}` : '🔒 조건'}</small>
+          {#if h.id === look.hero}<em>출전 중</em>{:else if P.heroes.includes(h.id)}<em class="pend">고름</em>{/if}
+        </button>
       {/each}
     </div>
-    <button type="button" class="fold" aria-expanded={showLocked} onclick={() => (showLocked = !showLocked)}>잠긴 용사 ({locked.length}) {showLocked ? '▴' : '▾'}</button>
-    {#if showLocked}
-      <div class="grid">
-        {#each locked as h (h.id)}
-          <button type="button" class="hc lock" class:sel={h.id === pickH} onclick={() => (pickH = h.id)} aria-label="잠김 {h.name} · {h.job}"><HeroSprite id={h.id} dim /><small>{h.price != null ? `💎 ${h.price}` : '🔒'}</small></button>
-        {/each}
-      </div>
+    {#if ownsPick}
+      <button type="button" class="btn main" disabled={pickH === look.hero} onclick={useHero}>{pickH === look.hero ? '✔ 지금 출전 중' : `⚔ ${pick.name}${ro(pick.name)} 출전`}{#if pickH !== look.hero}<small> · 고름 · 저장하면 바뀜</small>{/if}</button>
+    {:else if pick.price != null}
+      <button type="button" class="btn main" disabled={lf.gem < pick.price} onclick={buyHero}>💎 {pick.price} 사기{#if lf.gem < pick.price}<small> · 💎 {pick.price - lf.gem} 모자람</small>{/if}</button>
+    {:else}
+      <button type="button" class="btn main" disabled>🔒 조건으로 열어요</button>
     {/if}
-    {#snippet act()}
-      {#if ownsPick}
-        <button type="button" class="btn" disabled={pickH === look.hero} onclick={useHero}>{pickH === look.hero ? '✔ 지금 출전 중' : '⚔ 이 용사로'}</button>
-      {:else if pick.price != null}
-        <button type="button" class="btn" disabled={lf.gem < pick.price} onclick={buyHero}>💎 {pick.price} · 고르기</button>
-      {:else}
-        <button type="button" class="btn" disabled>🔒 조건으로 열어요</button>
-      {/if}
-    {/snippet}
-  </Sheet>
+  </div>
 {/if}
 
 {#if ttlSheet}
@@ -330,29 +337,42 @@
   .row { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); text-align: left; }
   .row span:first-child { flex: 1; }
   .row em { font-style: normal; font-size: var(--fs-small); }
-  .savebar { flex: none; padding: var(--s2) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); background: var(--bg); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--s1); }
-  .chg2 { margin: 0; font-size: var(--fs-small); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .act { flex: none; padding: var(--s2) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); background: var(--bg); display: flex; flex-direction: column; gap: var(--s2); }
+  .act .main, .hsw .main { width: 100%; }
+  .main small { font-size: 13px; opacity: 0.75; }
+  .btn:disabled { opacity: 0.45; box-shadow: none; }
+  .savebar { display: flex; align-items: center; gap: var(--s2); }
+  .chg2 { flex: 1; min-width: 0; margin: 0; font-size: 13px; color: var(--text-2); overflow: hidden; }
+  .chg2 b { color: var(--text); }
+  .chg2 small { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; }
+  .swbg { position: fixed; left: 0; right: 0; bottom: 0; z-index: 16; max-width: 430px; margin: 0 auto; background: rgba(0, 0, 0, 0.45); }
+  .hsw { position: fixed; left: 0; right: 0; bottom: 0; z-index: 17; max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); padding: 0 var(--s4) calc(var(--s3) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
+  .grab { height: 14px; display: grid; place-items: center; } .grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line); display: block; }
+  .hswh { display: flex; align-items: center; gap: var(--s2); } .hswh b { font-size: 18px; } .hswh span { flex: 1; font-size: 13px; color: var(--text-2); }
+  .hswh button { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text-2); font-size: 18px; }
+  .swd { display: flex; gap: var(--s3); align-items: center; padding: 10px; border-radius: 14px; background: var(--surface-2); }
+  .swbig { position: relative; flex: none; width: 96px; height: 96px; border-radius: 14px; background: var(--bg); display: grid; place-items: center; }
+  .swbig b { position: absolute; right: -6px; bottom: -6px; height: 22px; padding: 0 7px; border-radius: 11px; background: var(--accent); color: var(--on-accent); font-size: 13px; display: grid; place-items: center; }
+  .swtx { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; }
+  .swtx > b { font-size: 18px; } .swtx > b small { font-size: 13px; color: var(--text-2); }
+  .swtx .tg { font-size: 13px; color: var(--accent); font-weight: 700; }
+  .swtx .st { font-size: 13px; color: var(--text-2); }
+  .skr { display: flex; gap: 4px; }
+  .skr i { font-style: normal; width: 28px; height: 24px; border-radius: 6px; background: var(--bg); color: var(--text-3); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+  .skr i.on { background: color-mix(in srgb, var(--accent) 25%, var(--bg)); color: var(--accent); }
+  .swg { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-content: start; padding-top: 8px; }
+  .swc { position: relative; min-height: 96px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); padding: 6px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; color: var(--text); font-family: var(--font); }
+  .swi { width: 64px; height: 52px; display: grid; place-items: center; overflow: visible; }
+  .swi :global(.hs) { scale: 0.8; }
+  .swc b { font-size: 13px; } .swc small { font-size: 11px; color: var(--text-2); white-space: nowrap; }
+  .swc.cur { border: 2px solid var(--accent); }
+  .swc.sel { border: 2px solid #6cc6ff; box-shadow: 0 0 0 3px rgba(108, 198, 255, 0.25); }
+  .swc.lk { opacity: 0.75; }
+  .swc em { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; background: var(--accent); color: var(--on-accent); white-space: nowrap; }
+  .swc em.pend { background: var(--gem); color: #04131f; }
   .row2 { display: flex; gap: var(--s2); }
   .row2 .btn { flex: 1; }
   .toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 30; margin: 0; padding: var(--s2) var(--s3); border-radius: 12px; background: var(--surface-2); color: var(--text); font-size: var(--fs-small); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); max-width: 90vw; text-align: center; }
-  .intro { position: sticky; top: 0; z-index: 2; display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s3); border-radius: 14px; background: var(--surface-2); box-shadow: 0 6px 0 var(--surface); }
-  .port { flex: none; width: 76px; height: 76px; border-radius: 12px; overflow: hidden; background: var(--bg); display: grid; place-items: center; }
-  .port i { display: block; width: 100%; height: 100%; background-repeat: no-repeat; }
-  .port.dim i { filter: grayscale(1) brightness(0.6); }
-  .itx { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left; }
-  .itx small { font-size: var(--fs-small); color: var(--text-2); }
-  .itx em { font-style: normal; color: var(--accent); font-size: var(--fs-small); }
-  .story { font-size: var(--fs-small); color: var(--text); }
-  .cond { font-size: var(--fs-small); color: var(--gem); }
-  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .hc { position: relative; min-height: 88px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--text); font-family: var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; overflow: hidden; }
-  .hc small { font-size: 11px; color: var(--text-2); white-space: nowrap; }
-  .hc.cur { border-color: var(--accent); }
-  .hc.sel { border-color: var(--gem); background: color-mix(in srgb, var(--gem) 14%, var(--surface)); }
-  .hc.lock { opacity: 0.8; }
-  .hc :global(.hs) { transform: scale(0.85); margin: -4px 0; }
-  .pend { position: absolute; top: 2px; right: 2px; font-style: normal; font-size: 10px; padding: 0 4px; border-radius: 6px; background: var(--gem); color: #04131f; }
-  .fold { min-height: var(--tap); border-radius: 12px; border: 1px dashed var(--line); background: none; color: var(--text-2); font: 700 15px var(--font); }
   .ttls { display: flex; flex-direction: column; gap: 6px; }
   .tp { min-height: var(--tap); display: flex; flex-direction: column; justify-content: center; padding: 4px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: left; }
   .tp.on { border: 2px solid var(--accent); }

@@ -17,10 +17,11 @@ const base = 'http://localhost:4173/';
   await p.click('button[aria-label="내 용사 보기"]'); await p.waitForSelector('.mh');
   log('맨 위 카드:', await t('.mh .top'), '| 탭 점', await p.$$eval('.tabs button', (bs) => bs.map((x) => `${x.textContent.trim()}${x.querySelector('.bdot') ? '•' : ''}`).join(' ')));
   // ① 강화
-  log('강화 탭:', await t('.enhbox'), '| 금빛', await gold('강화'));
+  log('강화 탭:', await t('.enhbox'), '| 주요 단추', await t('.mh .act .main'), '| 금빛', await gold('강화'));
   await p.screenshot({ path: `${SHOTS}/b7-enh-360.png` }); await over('강화'); await small('강화');
-  await p.click('.enhbox .btn'); await p.waitForTimeout(150);
-  log('강화 고름 뒤:', await t('.enhbox .muted'), '| 막대', await t('.savebar'), '| 💎', await t('.mh .bar .pill'), '| 금빛', await gold('강화 고름'));
+  await p.click('.mh .act .main'); await p.waitForTimeout(150);
+  log('강화 고름 뒤:', await t('.enhbox .muted'), '| 막대', await t('.savebar'), '| 주요', await t('.mh .act .main'), '| 💎', await t('.mh .bar .pill'), '| 금빛', await gold('강화 고름'));
+  await p.screenshot({ path: `${SHOTS}/b9-enh-dirty-360.png` });
   // ② 스킬
   await p.click('.tabs button:nth-child(2)'); await p.waitForTimeout(150);
   log('스킬 탭 안내:', (await p.$('.tip')) ? await t('.tip') : '(없음)', '| 칸', await p.$$eval('.lr', (ls) => ls.map((x) => `${x.querySelector('b').textContent}[${[...x.classList].filter((c) => !/svelte|lr/.test(c))}] ${x.querySelector('small').textContent}`).join(' / ')));
@@ -36,19 +37,21 @@ const base = 'http://localhost:4173/';
   await p.click('.mh .body .row'); await p.waitForSelector('.sheet'); log('호칭 시트:', (await p.$$('.tp:not(.lock)')).length, '개 얻음 (테스트 = 모두)');
   await p.click('.tp:has-text("새벽의 개척자")'); await p.waitForTimeout(150); log('호칭 고름 뒤 카드:', await t('.mh .top .nm'));
   // ④ 용사 바꾸기
-  await p.click('.mh .top'); await p.waitForSelector('.sheet'); await p.click('.fold'); await p.waitForTimeout(100);
-  await p.click('.hc[aria-label*="연금술사"]'); await p.waitForTimeout(150);
-  log('소개 카드:', await t('.intro'), '| 단추', await t('.sheet .act .btn'));
-  await p.screenshot({ path: `${SHOTS}/b7-hero-switch-360.png` }); await over('용사 바꾸기'); await small('용사 바꾸기');
-  await p.click('.sheet .act .btn'); await p.waitForTimeout(100); log('사기 고름 뒤 단추:', await t('.sheet .act .btn'));
-  await p.click('.sheet .act .btn'); await p.waitForTimeout(150); log('출전 고름 뒤 카드:', await t('.mh .top .sub'), '| 막대', await t('.savebar .chg2'));
+  await p.click('.mh .top'); await p.waitForSelector('.hsw');
+  log('용사 바꾸기 시트: 위', await p.evaluate(() => Math.round(document.querySelector('.hsw').getBoundingClientRect().top)), '| 내 카드 아래', await p.evaluate(() => Math.round(document.querySelector('.mh .top').getBoundingClientRect().bottom)), '| 칸', (await p.$$('.swc')).length, '| 출전 중', await t('.swc.cur'));
+  await p.click('.swc[aria-label*="연금술사"]'); await p.waitForTimeout(150);
+  log('상세:', await t('.swd'), '| 단추', await t('.hsw .main'));
+  await p.screenshot({ path: `${SHOTS}/b9-hero-switch-360.png` }); await over('용사 바꾸기');
+  await p.click('.hsw .main'); await p.waitForTimeout(100); log('사기 고름 뒤 단추:', await t('.hsw .main'));
+  await p.click('.hsw .main'); await p.waitForTimeout(150); log('출전 고름 뒤 카드:', await t('.mh .top .sub'), '| 막대', await t('.savebar .chg2'));
   // 💾 저장
-  await p.click('.savebar .btn'); await p.waitForSelector('.ask'); log('확인:', await t('.askbox'));
-  await p.click('.askbox .btn'); await p.waitForTimeout(250); log('저장 뒤:', (await p.$('.toast')) ? await t('.toast') : '', '| 막대', (await p.$('.savebar')) ? '남음' : '없음', '| 💎', await t('.mh .bar .pill'));
+  await p.click('.mh .act .main'); await p.waitForSelector('.ask'); log('확인:', await t('.askbox'));
+  await p.click('.askbox .btn'); await p.waitForTimeout(250); log('저장 뒤:', await t('.mh .act .main'), '| 막대', (await p.$('.savebar')) ? '남음' : '없음', '| 💎', await t('.mh .bar .pill'));
+  await p.waitForTimeout(1000); log('1초 뒤:', await t('.mh .act .main'));
   await p.click('.mh .back'); await p.waitForTimeout(150); await p.reload(); await p.waitForSelector('.stage');
   log('다시 열기(캠프 카드):', await t('.hero-card'), '| 사다리', await p.$$eval('.rung', (rs) => rs.map((r) => r.textContent.replace(/\s+/g, ' ').trim()).join(' / ')));
   // 저장 안 하고 닫기
-  await p.click('button[aria-label="내 용사 보기"]'); await p.waitForSelector('.mh'); await p.click('.enhbox .btn'); await p.click('.mh .back'); await p.waitForTimeout(100);
+  await p.click('button[aria-label="내 용사 보기"]'); await p.waitForSelector('.mh'); await p.click('.mh .act .main'); await p.click('.mh .back'); await p.waitForTimeout(100);
   log('저장 안 하고 닫기:', (await p.$('.ask')) ? await t('.askbox') : '물음 없음'); await p.click('.askbox .btn2'); await p.waitForTimeout(100); log('버리기 뒤:', (await p.$('.mh')) ? '창 남음' : '닫힘');
   // 전투 장면 = 고른 용사
   log('오류', errs);

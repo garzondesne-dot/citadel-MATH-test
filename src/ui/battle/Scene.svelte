@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dungeonOf, HERO, heroUrl, spriteOf } from '../manifest';
+  import { dungeonOf, HERO, heroNudge, heroUrl, spriteOf } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
@@ -39,7 +39,7 @@
   {/if}
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
-  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
+  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{heroNudge(savedLook().hero, 0).dx * HS}px {heroNudge(savedLook().hero, 0).dy * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
     style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
 </div>
 

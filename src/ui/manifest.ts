@@ -25,6 +25,22 @@ export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGE
 import { heroOf, PORTRAITS } from '../model/hero';
 import { savedLook } from '../store/me.svelte';
 export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, sitRow: 8 };
+// 🎯 캐릭터 정중앙 (#121): 그림 틀(80 × 64 · 256)이 아니라 보이는 부분(알파 상자 · tools/make-sprite-bbox.py) 가운데를 칸 가운데 · 발을 칸 아래 기준선에
+//   가로 = 서 있는 줄(0) 상자 가운데(공격 줄도 몸이 같은 자리 · 무기가 뻗어도 흔들리지 않게) · 앉기 줄(8)은 그 줄 상자 · 세로 = 그 줄 상자 아래
+import BBOX from './sprite-bbox.json';
+type Box = [number, number, number, number];
+export function heroNudge(id: number, row: number): { dx: number; dy: number } {
+  const f = heroOf(id).sprite || 'hero-sword-v3c.webp';
+  const rows = (BBOX.heroes as unknown as Record<string, Record<string, Box>>)[f];
+  const base = rows?.[row === HERO.sitRow ? '8' : '0'], own = rows?.[String(row)] ?? base;
+  if (!base || !own) return { dx: 0, dy: 0 };
+  return { dx: HERO.w / 2 - (base[0] + base[2]) / 2, dy: HERO.h - own[3] };
+}
+/** 몬스터 칸(줄 · 자세 열)의 보이는 부분 → 가운데 · 발 맞춤 (칸 크기 기준 비율) */
+export function monNudge(src: string, row: number, col: number, cell: number): { dx: number; dy: number } {
+  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  return b ? { dx: (cell / 2 - (b[0] + b[2]) / 2) / cell, dy: (cell - b[3]) / cell } : { dx: 0, dy: 0 };
+}
 /** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */
 export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BASE_URL}art/heroes/${heroOf(id).sprite || 'hero-sword-v3c.webp'}`;
 /** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */

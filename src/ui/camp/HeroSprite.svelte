@@ -1,15 +1,16 @@
 <script lang="ts">
   import { AURA_CSS } from '../../model/hero';
-  import { HERO, heroUrl } from '../manifest';
+  import { HERO, heroNudge, heroUrl } from '../manifest';
   // 🧙 용사 도트 한 칸 (정식 heroesV2 · 칸 80 × 64) · 정수 배율 · 강화 오라 1~10(정식 .aura-n 빛 + 발밑 빛 웅덩이)
   //   row = 줄(0 idle · 2 공격 · 8 앉기) · play = 그 줄 4칸을 돌림(움직임 줄이기 설정이면 멈춤) · dim = 잠긴 용사(그림자)
   const { id, row = 0, play = false, scale = 1, aura = 0, dim = false, label = '' }:
     { id: number; row?: number; play?: boolean; scale?: number; aura?: number; dim?: boolean; label?: string } = $props();
   const a = $derived(AURA_CSS[Math.max(0, Math.min(10, aura))] ?? ['', '', 0]);
+  const nd = $derived(heroNudge(id, row)); // 🎯 보이는 부분 정중앙 · 발 기준선 (#121)
 </script>
 
 <span class="hs" class:aura={aura > 0} style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:--a1={a[0]} style:--a2={a[1]} style:--ar="{a[2]}px" role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}>
-  <i class:play class:dim style:background-image="url({heroUrl(id)})" style:background-size="{HERO.cols * 100}% {HERO.rows * 100}%" style:background-position-y="{(row / (HERO.rows - 1)) * 100}%"></i>
+  <i class:play class:dim style:translate="{nd.dx * scale}px {nd.dy * scale}px" style:background-image="url({heroUrl(id)})" style:background-size="{HERO.cols * 100}% {HERO.rows * 100}%" style:background-position-y="{(row / (HERO.rows - 1)) * 100}%"></i>
 </span>
 
 <style>
