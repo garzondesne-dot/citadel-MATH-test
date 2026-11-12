@@ -33,3 +33,21 @@ describe('💰 지갑 자동 이전 (DECISIONS 「💰 경제 변경 규칙」 �
     } finally { delete MIGRATE[0]; }
   });
 });
+
+// 🎨 #144 테마 11개 · 업적 잠금
+import { featsOf, lockOf, THEMES } from '../src/theme/theme';
+describe('테마 (#144)', () => {
+  it('11개 · 처음부터 4개 · 업적 7개(💎 아님)', () => {
+    expect(THEMES.length).toBe(11);
+    expect(THEMES.filter((d) => !d.need).map((d) => d.id)).toEqual(['gold', 'navy', 'cloud', 'classic']);
+  });
+  it('업적 세기: 퍼펙트 · 보스 · 수업 · 카드 / 없는 기능 = 조건 줄만', () => {
+    const rec = Object.fromEntries(Array.from({ length: 10 }, (_, k) => [`set-0${k}`, { mons: { m1: { perfect: k < 5 } }, boss: { won: k < 4 } }]));
+    const f = featsOf(rec, Object.fromEntries(Array.from({ length: 9 }, (_, k) => [`c${k}`, true])));
+    const L = (id: string) => lockOf(THEMES.find((d) => d.id === id)!, f);
+    expect(L('lava').open).toBe(true); expect(L('star')).toEqual({ open: false, have: 4 });
+    expect(L('parchment').open).toBe(true); expect(L('porcelain')).toEqual({ open: false, have: 9 });
+    expect(L('sakura')).toEqual({ open: false, have: null }); expect(L('deep').open).toBe(false);
+    expect(lockOf(THEMES.find((d) => d.id === 'sand')!, null).open).toBe(true); // 교사 = 모두
+  });
+});

@@ -16,6 +16,9 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import type { Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
+  import ThemePicker from '../ThemePicker.svelte';
+  import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
+  import { meBound } from '../../store/meSync';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
@@ -24,6 +27,11 @@
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
   const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true);
   const me = M.me;
+  // 🎨 테마 (#144): 서버 accounts 에 고른 테마가 있으면(다른 폰에서 고름) 이 폰도 그 테마로
+  let theme = $state<Theme>(untrack(() => (isTheme(me.theme) ? me.theme : savedTheme())));
+  if (untrack(() => theme) !== savedTheme()) setTheme(untrack(() => theme));
+  const feats = $derived.by(() => { const b = meBound(); return featsOf(b ? b.S.get(`records/${b.cls}/${b.num}`) : null, me.cards); });
+  function pickTheme(t: Theme) { theme = t; me.theme = t; M.save(); setTheme(t); }
   // ⓪ 로그인한 학생 = 이름표 이름 (명단에서 · 학생이 쓰지 않음)
   if (untrack(() => pupil) && me.nick !== untrack(() => pupil)?.name) { me.nick = untrack(() => pupil)?.name ?? me.nick; M.save(); }
   // 🎁 선생님 선물 받기 (gifts/{uid} · 하루 한도 밖) — 캠프에 들어오면 아직 안 받은 것을 지갑에 넣고 한 줄 알림 (지급 = 기록 · 알림 = 보여 주기)
@@ -156,6 +164,7 @@
       <b class="ttl">내 캠프</b><span class="sp2"></span>
       <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
       <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
+      <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -191,6 +200,12 @@
   <Sheet onclose={() => (sheet = null)} mainText="닫기">
     {#snippet title()}🏰 성채 던전{/snippet}
     {#each SUBJ.camp.floors as f (f.no)}<div class="floor" class:off={!!f.off}><span class="no">{f.no}</span><span><b>{f.name}</b><span>{f.sub}</span></span></div>{/each}
+  </Sheet>
+{:else if sheet === 'set'}
+  <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
+    {#snippet title()}⚙ 설정{/snippet}
+    <span class="slab">🎨 테마</span>
+    <ThemePicker now={theme} {feats} onpick={pickTheme} />
   </Sheet>
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} />
@@ -246,6 +261,9 @@
   .top { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
   .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); }
   .sp2 { flex: 1; }
+  .gear { width: 40px; height: 40px; margin: 0 -4px 0 0; position: relative; border: 0; border-radius: 20px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: 18px; display: grid; place-items: center; }
+  .gear::before { content: ''; position: absolute; inset: -4px; }
+  .slab { font-size: var(--fs-small); font-weight: 700; color: var(--text-2); }
   .pill { display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
   .info { padding: var(--s2) var(--s4) 0; display: flex; flex-direction: column; gap: var(--s3); }
   .card { display: flex; gap: var(--s3); align-items: center; text-align: left; padding: var(--s3); border-radius: 14px; border: 0; background: var(--surface); color: var(--text); font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); }

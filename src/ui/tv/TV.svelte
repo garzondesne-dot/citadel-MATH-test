@@ -7,7 +7,7 @@
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
-  import { liveRoom } from '../room.svelte';
+  import { liveRoom, liveValue } from '../room.svelte';
   import { CAMP, dungeonOf } from '../manifest';
   import { useMe } from '../../store/me.svelte';
   import Sprite from '../Sprite.svelte';
@@ -17,6 +17,7 @@
   import MyHero from '../camp/MyHero.svelte';
   import SymText from '../q/SymText.svelte';
   import Ink from './Ink.svelte';
+  import { applyTheme, isTheme } from '../../theme/theme';
   import { driveFun, endRest, funOf, GAMES, startFun, stopFun, type Game } from '../../rest/run';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import type { Nun } from '../../rest/nunchi';
@@ -32,7 +33,11 @@
   const R = $derived((lr?.v.room ?? null) as Room | null);
   const stopDrive = untrack(() => (code ? driveFun(S, code, 'tv') : () => {})); // 🏕 놀이 시계는 TV 가 먼저 맡음 (#142)
   onDestroy(stopDrive);
-  const M = useMe(9999, 30, true); // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
+  const M = useMe(9999, 30, true);
+  // 🎨 교실 TV = 선생님이 고른 테마의 색만 (#144 · 도트 테두리 · 바탕 그림 없음)
+  const tth = untrack(() => liveValue<string>(S, 'school/teacher/theme'));
+  onDestroy(tth.stop);
+  $effect(() => { const t = tth.v.val; if (isTheme(t)) applyTheme(t, { tv: true }); }); // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
   const pupils = $derived(live ? roster(live.cls, S) : []);
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));

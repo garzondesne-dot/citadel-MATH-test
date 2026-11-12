@@ -6,6 +6,8 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import ThemePicker from '../ThemePicker.svelte';
+  import { savedTheme, setTheme, THEMES, type Theme } from '../../theme/theme';
 
   // 🧙 나 탭 (#124 ⑲) — 선생님 용사 카드(누르면 내 용사) · 🧙 내 용사 · ⛺ 내 캠프 · 🎨 테마 · 🖥 종합실 비밀번호 고정 · 📷 사진 채점 연결 · 🔊 소리 · 로그아웃 · 판 번호
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
@@ -16,6 +18,10 @@
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   const info = $derived(heroOf(M.me.hero));
+  // 🎨 테마 (#144): 교사 폰 = 11개 모두 · 고르면 교실 TV 도 같은 색(school/teacher/theme · TV = 색만)
+  let theme = $state<Theme>(savedTheme());
+  const themeName = $derived(THEMES.find((x) => x.id === theme)?.name ?? '');
+  function pickTheme(t: Theme) { theme = t; setTheme(t); S.set('school/teacher/theme', t); }
 </script>
 
 <div class="tbar"><div class="t">나</div></div>
@@ -27,7 +33,7 @@
   <div class="list">
     <button type="button" class="item" onclick={() => (hero = true)}><span class="ic">🧙</span><span class="tx"><b>내 용사</b><small>용사 바꾸기 · 강화 · 스킬 (학생 폰과 같은 창)</small></span></button>
     <a class="item" href="?role=hall" target="_blank"><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>교사 캠프 · 교실 TV 에서 열려요</small></span></a>
-    <button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · 금빛 던전</b><small>교사 폰 · 교실 TV 색</small></span></button>
+    <button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
     <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">🔊</span><span class="tx"><b>소리</b><small>교사 폰 · {sound}</small></span></button>
@@ -46,8 +52,7 @@
 {:else if sheet === 'theme'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🎨 테마{/snippet}
-    <div class="list"><button type="button" class="item on"><span class="ic">✔</span><span class="tx"><b>금빛 던전</b><small>교사 폰 · 교실 TV (지금 테마)</small></span></button>
-      <button type="button" class="item" disabled><span class="ic">🌋</span><span class="tx"><b>다른 테마</b><small>테스트 판 · 준비 중</small></span></button></div>
+    <ThemePicker now={theme} feats={null} onpick={pickTheme} />
   </Sheet>
 {:else if sheet === 'sound'}
   <Sheet onclose={() => (sheet = '')}>

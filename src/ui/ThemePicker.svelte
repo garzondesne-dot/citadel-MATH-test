@@ -1,0 +1,37 @@
+<script lang="ts">
+  import { lockOf, THEMES, type Feats, type Theme } from '../theme/theme';
+  // 🎨 테마 고르기 (#144): 11칸 · 고른 것 ✓ · 잠긴 테마 = 흐림 + 조건 한 줄(진행 n / m) · feats = null 이면 모두 열림(교사 폰)
+  const { now, feats, onpick }: { now: Theme; feats: Feats | null; onpick: (t: Theme) => void } = $props();
+</script>
+
+<div class="tgrid" role="group" aria-label="테마">
+  {#each THEMES as d (d.id)}
+    {@const L = lockOf(d, feats)}
+    <button type="button" class="th" data-th={d.id} class:on={now === d.id} aria-pressed={now === d.id} disabled={!L.open} onclick={() => onpick(d.id)}>
+      <span class="sw" aria-hidden="true"><i></i><i></i><i></i></span>
+      <b>{d.ic} {d.name}{#if now === d.id} ✓{/if}</b>
+      {#if !L.open && d.need}<small>🔒 {d.need.text}{L.have != null ? ` · ${Math.min(L.have, d.need.n)} / ${d.need.n}` : ' · 기능이 열리면'}</small>{/if}
+    </button>
+  {/each}
+</div>
+
+<style>
+  .tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .th { min-height: 56px; padding: 6px 10px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
+  .th.on { border: 2px solid var(--accent); }
+  .th:disabled { opacity: 0.5; box-shadow: none; }
+  .th:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .th small { font-size: 11.5px; font-weight: 500; color: var(--text-2); line-height: 1.3; }
+  .sw { display: flex; gap: 3px; } .sw i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(128, 128, 128, 0.4); }
+  /* 견본 색 = 그 테마의 바탕 · 판 · 강조 */
+  [data-th='gold'] .sw i:nth-child(1) { background: #0f1115; } [data-th='gold'] .sw i:nth-child(2) { background: #222632; } [data-th='gold'] .sw i:nth-child(3) { background: #f5b84a; }
+  :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(1) { background: #0d1530; } :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(2) { background: #15224a; } :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(3) { background: #f2c14e; }
+  [data-th='cloud'] .sw i:nth-child(1) { background: #eef1f6; } [data-th='cloud'] .sw i:nth-child(2) { background: #fff; } [data-th='cloud'] .sw i:nth-child(3) { background: #e9a23b; }
+  [data-th='lava'] .sw i:nth-child(1) { background: #140f0d; } [data-th='lava'] .sw i:nth-child(2) { background: #2b211b; } [data-th='lava'] .sw i:nth-child(3) { background: #ff8f3f; }
+  [data-th='star'] .sw i:nth-child(1) { background: #0c1020; } [data-th='star'] .sw i:nth-child(2) { background: #1e2640; } [data-th='star'] .sw i:nth-child(3) { background: #e6ebf5; }
+  [data-th='sakura'] .sw i:nth-child(1) { background: #140d12; } [data-th='sakura'] .sw i:nth-child(2) { background: #2b1e27; } [data-th='sakura'] .sw i:nth-child(3) { background: #ff9ec7; }
+  [data-th='sand'] .sw i:nth-child(1) { background: #15120c; } [data-th='sand'] .sw i:nth-child(2) { background: #2c261b; } [data-th='sand'] .sw i:nth-child(3) { background: #e9d8a6; }
+  [data-th='deep'] .sw i:nth-child(1) { background: #08131a; } [data-th='deep'] .sw i:nth-child(2) { background: #172a35; } [data-th='deep'] .sw i:nth-child(3) { background: #ffe066; }
+  [data-th='porcelain'] .sw i:nth-child(1) { background: #f6f4ef; } [data-th='porcelain'] .sw i:nth-child(2) { background: #ece8de; } [data-th='porcelain'] .sw i:nth-child(3) { background: #1f2a44; }
+  [data-th='parchment'] .sw i:nth-child(1) { background: #efe2c4; } [data-th='parchment'] .sw i:nth-child(2) { background: #e7d5ad; } [data-th='parchment'] .sw i:nth-child(3) { background: #7a4a10; }
+</style>

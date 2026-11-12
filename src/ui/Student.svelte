@@ -83,7 +83,7 @@
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
+  $effect(() => { const b = meBound(); if (!result || !b) return; untrack(() => b.S.set(`records/${b.cls}/${b.num}/${L.id}`, { mons: Object.fromEntries(result.mons.map((m) => [m.id, { best: m.best, total: m.total, ...(m.perfect ? { perfect: true } : {}) }])), ...(result.boss ? { boss: { ok: result.boss.ok, items: result.boss.items, ...(bhp?.won ? { won: true } : {}) } } : {}), right: result.right, total: result.total, no: L.no, at: S.now(), code })); });
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));

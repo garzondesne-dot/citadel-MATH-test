@@ -1,0 +1,47 @@
+/* 🏛 클래식 테마 (#144 · 초창기 정식 v0.9.10~13 옷) — 이 파일은 클래식을 고른 폰만 받음(theme.ts 지연 로드 · 다른 테마 = 그림 · 글꼴 요청 0)
+   색 = 청남 성채 토큰(tokens.css) · 판 = ui-panel-v1 9-slice · 단추 = ui-btn-v1 / gold(주요) / press / gold-press / off · 탭 = ui-tab-on-v1
+   모서리 각짐 · pixelated · 글꼴 = 제목 · 단추만 Galmuri11-Bold(문제 · 수식 · 긴 글 = v1.0 글꼴) · 자리 · 크기 · 순서는 v1.0 그대로
+   9-slice 는 클래식만의 예외 (ui-senior 「나인슬라이스」 줄) · 교실 TV(data-tv) 는 색만 따름 */
+@font-face { font-family: 'Galmuri11'; src: url('/classic/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+:root[data-theme='classic']:not([data-tv]) {
+  --k-panel: url('/classic/ui-panel-v1.webp');
+  --k-btn: url('/classic/ui-btn-v1.webp');
+  --k-gold: url('/classic/ui-btn-gold-v1.webp');
+  --k-press: url('/classic/ui-btn-press-v1.webp');
+  --k-gpress: url('/classic/ui-btn-gold-press-v1.webp');
+  --k-off: url('/classic/ui-btn-off-v1.webp');
+  --k-tab: url('/classic/ui-tab-on-v1.webp');
+  --pixel: 'Galmuri11', var(--font);
+  --r-sm: 0px; --r: 0px; --r-lg: 0px;
+}
+/* 바탕 = 가운데 기둥 바깥에 그림(세로 · 가로) · 기둥 안은 바탕색 */
+:root[data-theme='classic']:not([data-tv]) body { background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-v3b.webp') center / cover no-repeat fixed; }
+@media (orientation: landscape) { :root[data-theme='classic']:not([data-tv]) body { background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-wide-v1.webp') center / cover no-repeat fixed; } }
+
+/* 판 (카드 · 시트 · 문제 카드) */
+:root[data-theme='classic']:not([data-tv]) :is(.bcard, .card, .sheet) {
+  box-sizing: border-box; border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
+  border-image: var(--k-panel) 22 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important; image-rendering: pixelated;
+}
+:root[data-theme='classic']:not([data-tv]) .sheet { border-bottom-width: 0 !important; }
+
+/* 단추: 기본 · 누름 · 흐림 · 주요(금빛) */
+:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .tabs button, .game, .rstep button, .adj button, .codebtn) {
+  border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
+  border-image: var(--k-btn) 8 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important;
+  image-rendering: pixelated; color: #eef2fb !important; font-family: var(--pixel) !important; text-shadow: 0 1px 0 #000a;
+}
+:root[data-theme='classic']:not([data-tv]) :is(.btn, .tact .btn, .game.on, .rdock button.on, .tabs button.on) {
+  border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
+  border-image: var(--k-gold) 8 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important;
+  image-rendering: pixelated; color: #3a2204 !important; font-family: var(--pixel) !important; text-shadow: 0 1px 0 #ffefb0;
+}
+:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .game, .rstep button, .adj button):active:not(:disabled) { border-image-source: var(--k-press) !important; transform: translateY(2px); }
+:root[data-theme='classic']:not([data-tv]) .btn:active:not(:disabled) { border-image-source: var(--k-gpress) !important; transform: translateY(2px); }
+:root[data-theme='classic']:not([data-tv]) :is(.btn, .btn2, .chipbtn, .rdock button, .game, .adj button):disabled { border-image-source: var(--k-off) !important; color: #c4c8d2 !important; text-shadow: 0 1px 0 #0008; opacity: 0.8; }
+/* 탭 (선택 = ui-tab-on) */
+:root[data-theme='classic']:not([data-tv]) .tp .tabs button.on { border-image: var(--k-tab) 6 fill / 6px stretch !important; color: #ffd35a !important; text-shadow: 1px 1px 0 #000; }
+
+/* 제목 · 단추 글꼴만 Galmuri (문제 · 수식 · 긴 글은 그대로) */
+:root[data-theme='classic']:not([data-tv]) :is(.ttl, .tbar .t, .sheet .bar .t, .bar .tt, .bcard .lab, h1, h2, h3) { font-family: var(--pixel); }
+:root[data-theme='classic']:not([data-tv]) :is(.pill, .label) { border-radius: 0 !important; }
