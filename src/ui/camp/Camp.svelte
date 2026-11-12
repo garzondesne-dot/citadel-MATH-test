@@ -9,7 +9,7 @@
   const wishLeft: (w: Record<string, true> | undefined, m: Record<string, true> | undefined) => number = SUBJ.cards?.wishLeft ?? (() => 0);
   import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
-  import { CAMP, HERO, heroNudge, heroUrl } from '../manifest';
+  import { CAMP, HERO, heroGeo, heroNudge, heroUrl } from '../manifest';
   import { useMe } from '../../store/me.svelte';
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
@@ -148,7 +148,7 @@
     <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
-    <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx}px {heroNudge(me.hero, HERO.sitRow).dy}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{HERO.w}px;height:{HERO.h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
+    <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, HERO.sitRow).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
     {#each ['castle', 'tent', 'gate'] as k (k)}
       {@const st = lab(k)}

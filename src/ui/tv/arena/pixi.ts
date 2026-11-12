@@ -4,7 +4,7 @@
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
 import { Application, Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
-import { HERO, heroNudge, monNudge, monVis, spriteOf } from '../../manifest';
+import { HERO, heroGeo, heroNudge, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -98,9 +98,11 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       v.x = sl.x; v.y = sl.y; v.s = sl.s; v.c.x = sl.x; v.c.y = sl.y; v.c.zIndex = Math.round(sl.y);
       if (v.key !== hk) {
         v.key = hk;
-        const url = `${import.meta.env.BASE_URL}art/heroes/${heroOf(hh.hero).sprite || 'hero-sword-v3c.webp'}`, nd = heroNudge(hh.hero, 0);
-        void src(url).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * HERO.w, HERO.idleRow * HERO.h, HERO.w, HERO.h)); v!.atk = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * HERO.w, HERO.atkRow * HERO.h, HERO.w, HERO.h)); v!.sp.texture = v!.tex[0]!; });
-        v.sp.scale.set(sl.flip ? -sl.s : sl.s, sl.s); v.sp.x = (sl.flip ? -nd.dx : nd.dx) * sl.s; v.sp.y = nd.dy * sl.s;
+        const url = `${import.meta.env.BASE_URL}art/heroes/${heroOf(hh.hero).sprite || 'hero-sword-v3c.webp'}`, nd = heroNudge(hh.hero, 0), g = heroGeo(hh.hero);
+        // 새 화풍 세밀 시트(칸 192 × 144 · k=2) · 옛 80 × 64 둘 다: 칸 자르기 = 그림 칸 · 배율 = s ÷ k · 발 = 칸 아래 base
+        void src(url).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.atk = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.atkRow * g.ch, g.cw, g.ch)); v!.sp.texture = v!.tex[0]!; });
+        v.sp.anchor.set(0.5, (g.ch - g.base) / g.ch);
+        v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -nd.dx : nd.dx) * sl.s; v.sp.y = nd.dy * sl.s;
       }
       v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📵 ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = hh.off ? 0.45 : 1;

@@ -34,8 +34,22 @@ export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, si
 //   가로 = 서 있는 줄(0) 상자 가운데(공격 줄도 몸이 같은 자리 · 무기가 뻗어도 흔들리지 않게) · 앉기 줄(8)은 그 줄 상자 · 세로 = 그 줄 상자 아래
 import BBOX from './sprite-bbox.json';
 type Box = [number, number, number, number];
+// 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
+//   옛 80 × 64 칸과 섞여도 됨: 화면 자리(레이아웃)는 옛 칸 80 × 64 그대로 · 새 그림은 그 칸 바닥 가운데에 발을 맞춰 위 · 옆으로 넘쳐 그림
+export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: number }> = {
+  'hero-sword-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
+  'hero-priest-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
+};
+/** 그리는 칸: cw · ch = 그림 칸 · w · h = 화면 칸 · dx · dy = 옛 80 × 64 칸 왼쪽 위에서 그릴 상자까지(배율 1 기준) */
+export function heroGeo(id: number) {
+  const f = heroOf(id).sprite || 'hero-sword-v3c.webp', hd = HERO_HD[f];
+  if (!hd) return { hd: false, cw: HERO.w, ch: HERO.h, k: 1, w: HERO.w, h: HERO.h, dx: 0, dy: 0, base: 0 };
+  const w = hd.cw / hd.k, h = hd.ch / hd.k;
+  return { hd: true, cw: hd.cw, ch: hd.ch, k: hd.k, w, h, dx: (HERO.w - w) / 2, dy: HERO.h - h + hd.base / hd.k, base: hd.base };
+}
 export function heroNudge(id: number, row: number): { dx: number; dy: number } {
   const f = heroOf(id).sprite || 'hero-sword-v3c.webp';
+  if (HERO_HD[f]) return { dx: 0, dy: 0 }; // 새 화풍 = 자를 때 이미 가운데 · 발 맞춤
   const rows = (BBOX.heroes as unknown as Record<string, Record<string, Box>>)[f];
   const base = rows?.[row === HERO.sitRow ? '8' : '0'], own = rows?.[String(row)] ?? base;
   if (!base || !own) return { dx: 0, dy: 0 };

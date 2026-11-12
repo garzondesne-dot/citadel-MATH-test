@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dungeonOf, HERO, heroNudge, heroUrl, spriteOf } from '../manifest';
+  import { dungeonOf, HERO, heroGeo, heroNudge, heroUrl, spriteOf } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
@@ -16,7 +16,8 @@
   const sp = $derived(spriteOf(sprite));
   const hpLabel = $derived(hpL || sp.sheet.names[sp.row] || '몬스터');
   const MON = 128; // 몬스터 칸 256 → 정확히 ½
-  const HS = 2; // 용사 칸 80 × 64 → 정수 2배
+  const HS = 2;
+  const hg = $derived(heroGeo(savedLook().hero)); // 새 화풍(세밀 시트) = 같은 자리에서 위 · 옆으로 넘쳐 그림 // 용사 칸 80 × 64 → 정수 2배
   const mm = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
   const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
 </script>
@@ -43,8 +44,8 @@
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
-  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{heroNudge(savedLook().hero, 0).dx * HS}px {heroNudge(savedLook().hero, 0).dy * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * HERO.w * HS}px {HERO.rows * HERO.h * HS}px"
-    style:background-position="-{(pose === 'idle' ? 0 : 2) * HERO.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * HERO.h * HS}px" style:width="{HERO.w * HS}px" style:height="{HERO.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
+  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
+    style:background-position="-{(pose === 'idle' ? 0 : 2) * hg.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
 </div>
 
 <style>

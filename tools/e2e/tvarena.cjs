@@ -48,6 +48,9 @@ const FONTS = () => {
         if (a.mode !== (dom ? 'dom' : 'pixi')) errs.push(`${W} ${n}명 그리기 ${a.mode}`);
         if (a.n !== n) errs.push(`${W} ${n}명 용사 ${a.n}`);
         await hall.mouse.move(W / 2, H / 2); await hall.waitForTimeout(200); // 조작 막대 보이게
+        // 용사단(그림 + 이름표) ↔ 조작 막대 겹침 0 (#157 덧붙임)
+        const ov = await hall.evaluate(() => { const d = document.querySelector('.dock').getBoundingClientRect(), A = window.__arena; return A.party.filter((p) => { const l = p.x - 40 * p.s * 0.6, r = p.x + 40 * p.s * 0.6, t = p.y - 64 * p.s, b = p.y + A.H * 0.035; return r > d.left && l < d.right && b > d.top && t < d.bottom; }).length; });
+        if (ov) errs.push(`${W} ${n}명 조작 막대와 겹친 용사 ${ov}`);
         await hall.screenshot({ path: `${SHOTS}/b39-tv-${W}-${n}${dom ? '-dom' : ''}.png` });
         if (n === 15 && !dom) {
           const f = await hall.evaluate(FONTS); log(`   글자 크기 ${f.sz.join(' · ')}px (${f.sz.length}) · 굵기 ${f.wt.join(' · ')} (${f.wt.length})`);

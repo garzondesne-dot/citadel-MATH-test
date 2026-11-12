@@ -33,7 +33,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-sword-v3c.webp"
+   "sprite": "hero-sword-v4a.webp"
   },
   {
    "id": 1,
@@ -105,7 +105,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-priest-v2c.webp"
+   "sprite": "hero-priest-v4a.webp"
   },
   {
    "id": 5,

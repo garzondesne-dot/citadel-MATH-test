@@ -37,7 +37,8 @@ export function partyLayout(n: number, W: number, H: number, split = false): Slo
     const span = Math.min(width, cnt * slotW * 1.25); // 적으면 가운데로 모음
     const x0 = left + (width - span) / 2 + (r ? slotW * 0.3 : 0);
     const x = x0 + ((kk + 0.5) / cnt) * span;
-    const y = rows === 1 ? H * 0.86 : r ? H * 0.9 : H * 0.76; // 발 (이름표는 발 아래)
+    // 발 (이름표는 발 아래 약 3%) · 아래 조작 막대(높이 약 9.2cqh + 바닥 2cqh) 위 1.5cqh 까지만 = 이름표 아래끝 ≤ 87% (#157 덧붙임)
+    const y = rows === 1 ? H * 0.83 : r ? H * 0.84 : H * 0.7;
     out.push({ x, y, s, flip: x > (split ? W * 0.27 : W / 2) });
   }
   return out;
