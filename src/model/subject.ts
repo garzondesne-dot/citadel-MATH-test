@@ -26,6 +26,8 @@ export interface Subject {
   symtalk?: { BY: Record<string, SymRow>; segments(t: string): Seg[] };
   /** ⭐ 기호 → 모루 카드 */
   cards?: { bySym: Record<string, SymCard>; wishLeft(wishes: Record<string, true> | undefined, made: Record<string, true> | undefined): number };
+  /** ⚒ 모루 연성법 (#148 · 정식 unit-set.js 원문) · 카드 그림 틀 */
+  forge?: { unit: import('./forge').ForgeUnit; kit: import('./forge').CardKit };
   /** 오개념 사전 (세특 문구) */
   misconceptions: Record<string, { name?: string; seteuk: string; [k: string]: unknown }>;
   standards: { id: string; name: string; lessons: number[] }[];

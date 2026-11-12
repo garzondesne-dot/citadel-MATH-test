@@ -4,6 +4,7 @@
   import { useMe } from '../../store/me.svelte';
   import { closeSym, symState } from './symsheet.svelte';
   import Sheet from './Sheet.svelte';
+  import ForgeCard from '../forge/ForgeCard.svelte';
   // 기호 톡 누른 뒤 (⑧′): ① 정확한 뜻(굵게) → ② 쉽게 말하면(기울임 · 옅게) → ③ 기억 고리(작게) · 문구 = 정식 SYMBOL-TALK 그대로
   // ⭐ 기호 톡 ↔ 모루 (#129): 그 기호를 만드는 모루 카드가 있으면 「☆ 모루에 찜」 → 「⭐ 모루에 담았어요 · 캠프 모루에서 만들어요」 1.5초
   //   이미 만든 카드면 「✅ 내 카드」 + 카드 그림 크게 (#129 ⑥) · 찜 개수 제한 · 보상 · 벌 없음
@@ -25,7 +26,8 @@
   <Sheet onclose={closeSym} mainText="문제로 돌아가기">
     {#snippet title()}<span class="big">{r.sym}</span>{/snippet}
     {#if made && card}
-      <div class="mine" role="img" aria-label="내 카드 {card.name}"><small>✅ 내 카드</small><b>{card.fm}</b><span>{card.name}</span></div>
+      {@const fc = SUBJ.forge?.unit.card(card.id)}
+      <div class="mine" role="img" aria-label="내 카드 {card.name}"><small>✅ 내 카드</small>{#if fc}<ForgeCard card={fc} w={150} />{:else}<b>{card.fm}</b><span>{card.name}</span>{/if}</div>
     {/if}
     <p class="def">{r.def}</p>
     <p class="easy">쉽게 말하면 · {r.easy}</p>

@@ -18,6 +18,7 @@
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Board from '../board/Board.svelte';
+  import Anvil from '../forge/Anvil.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound } from '../../store/meSync';
 
@@ -211,6 +212,9 @@
     <span class="slab">🎨 테마</span>
     <ThemePicker now={theme} {feats} onpick={pickTheme} />
   </Sheet>
+{:else if sheet === 'anvil'}
+  <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
+  <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
   <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} onclose={() => (sheet = null)} />
