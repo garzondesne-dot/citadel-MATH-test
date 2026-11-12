@@ -90,6 +90,8 @@ export interface LessonPack {
   goal?: string;
   std?: string;
   parts?: { no: number; from: string; title: string }[];
+  /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = set-06 의 문제 4부터) */
+  partOf?: string;
   next?: { title: string; ask?: string; link?: string };
   crops?: Record<string, unknown>;
   /** 어디서 왔나: 정식 파일 · 커밋 · 입력판을 읽은 때 */

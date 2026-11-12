@@ -72,7 +72,7 @@ function theme(id) {
 }
 
 // ── ④ 팩 만들기 ──
-const reg = [], report = { memos: [], added: [], dropped: [], boardAt: {} };
+const chains = [], reg = [], report = { memos: [], added: [], dropped: [], boardAt: {} };
 const OFFICIAL_SITE = 'https://garzondesne-dot.github.io/Citadel-MATH/';
 for (const id of ONLY) {
   const file = path.join(REL, 'lessons', `${id}.js`);
@@ -101,8 +101,10 @@ for (const id of ONLY) {
   }
   const monsters = {};
   for (const [mid, m] of Object.entries(L.monsters)) {
-    monsters[mid] = { title: m.title, sprite: spriteRef(m.sprite), ...(m.note ? { note: m.note } : {}), ...(m.special ? { special: true } : {}), ...(m.review ? { review: true } : {}), retry: { gen: `${p}.${mid}` } };
+    const ch = (L.chain || []).includes(mid);
+    monsters[mid] = { title: m.title, sprite: spriteRef(m.sprite), ...(m.note ? { noteText: m.note } : {}), ...(m.special ? { special: true } : {}), ...(m.review ? { review: true } : {}), retry: { gen: `${p}.${mid}` }, ...(ch ? { chain: { gen: `${p}.${mid}` } } : {}) };
     reg.push([`${p}.${mid}`, id, mid]);
+    if (ch) chains.push([`${p}.${mid}`, id, mid]);
   }
   const bo = L.boss;
   const pack = {
@@ -123,12 +125,14 @@ for (const id of ONLY) {
 
 // ── ④′ 시험 재료: 정식 출력 기준값(첫 판 · 다시 도전 판 · 형성평가) + 정식 독립 검산 시험 원문 ──
 const FIX = path.join(ROOT, 'tests/fixtures/packs'); fs.mkdirSync(FIX, { recursive: true });
+const EXTRA_FILES = { 'set-09': ['lessons/rubrics.js'], 'set-10': ['lessons/rubrics.js'] };
 const TEST_OF = { 'set-02': 'lesson2.test.js', 'set-03': 'lesson.test.js', 'set-04': 'lesson4.test.js', 'set-05': 'lesson5.test.js', 'set-06': 'lesson6.test.js', 'set-08': 'lesson8.test.js', 'set-09': 'lesson9.test.js', 'set-10': 'lesson10.test.js' };
 const OFF = path.join(ROOT, 'tests/official'), copied = new Set();
 const cp = (rel) => { if (copied.has(rel)) return; copied.add(rel); const to = path.join(OFF, rel); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(REL, rel), to); };
 for (const id of ONLY) {
   const L = loadOfficial(path.join(REL, 'lessons', `${id}.js`)), seeds = ['A1|s1_3_1', 'B2|s1_3_7', 'C3|s1_5_12'], out = { commit, monsters: {}, boss: {} };
   for (const mid of Object.keys(L.monsters)) out.monsters[mid] = seeds.map((sd) => [0, 1, 2, 3, 5, 9].map((a) => JSON.parse(JSON.stringify(L.items(mid, sd, a)))));
+  if (L.chainItems) { out.chain = {}; for (const mid of L.chain || []) out.chain[mid] = seeds.map((sd) => [0, 1, 2, 3].map((ps) => JSON.parse(JSON.stringify(L.chainItems(mid, sd, ps))))); }
   if (L.boss) { const n = L.boss.items || L.boss.sets[1].length; out.boss = { first: JSON.parse(JSON.stringify(L.boss.sets[1].slice(0, n))), retry: seeds.map((sd) => Array.from({ length: n }, (_, i) => [1, 2, 3].map((a) => JSON.parse(JSON.stringify(L.boss.make ? L.boss.make(i, a, vm.runInNewContext(`${RNG_SRC}; DS.Rng`, { DS: {}, window: {}, Math })(`${sd}|boss|${i}|${a}`)) : (L.boss.sets[2] || L.boss.sets[1])[i]))))) }; }
   fs.writeFileSync(path.join(FIX, `${id}.json`), JSON.stringify(out) + '\n');
   const t = TEST_OF[id]; if (!t) continue;
@@ -157,6 +161,10 @@ ${reg.filter((r) => r[2]).map(([n, id, mid]) => `  '${n}': (v, r) => O['${id}']!
 const bossOf = (id: string) => (i: number, a: number, r: Rng): Question => { const b = O[id]!.boss!; return (!a ? b.sets[1]![i] : b.make ? b.make(i, a, r) : (b.sets[2] || b.sets[1])![i]) as Question; };
 export const OFFICIAL_BOSS: Record<string, (i: number, a: number, r: Rng) => Question> = {
 ${reg.filter((r) => !r[2]).map(([n, id]) => `  '${n}': bossOf('${id}'),`).join('\n')}
+};
+/** ⚔ 소레이드: 정식 chainItems(몬스터, 시드, 판) 그대로 (같은 난수 규칙: 시드|몬스터|chain|판) */
+export const OFFICIAL_CHAIN: Record<string, (pass: number, r: Rng, seed?: string) => Question[]> = {
+${chains.map(([n, id, mid]) => `  '${n}': (pass, _r, seed = '') => (O['${id}'] as unknown as { chainItems: (m: string, s: string, p: number) => Question[] }).chainItems('${mid}', seed, pass),`).join('\n')}
 };
 export const OFFICIAL_COMMIT = '${commit}';
 `);

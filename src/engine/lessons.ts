@@ -36,7 +36,7 @@ export function items(L: LessonPack, mid: string, seed: string, variant: number)
 export function chainItems(L: LessonPack, mid: string, seed: string, pass: number): Question[] {
   const c = L.monsters[mid]?.chain;
   if (!c) return [];
-  return remember(`${L.id}|chain|${mid}|${seed}|${pass}`, () => getChainGen(c.gen)(pass, makeRng(`${seed}|${mid}|chain|${pass}`)));
+  return remember(`${L.id}|chain|${mid}|${seed}|${pass}`, () => getChainGen(c.gen)(pass, makeRng(`${seed}|${mid}|chain|${pass}`), seed));
 }
 
 /** 보스 문항 i 의 시도 a (시도 0 = 원문 · 모든 학생 같음) */

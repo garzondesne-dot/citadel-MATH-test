@@ -12,7 +12,7 @@
   //   시간표 = 주간 표(교시 × 요일 · 칸에 반 · 누르면 반 고르기) + 진도 맞추기(반마다 다음 차시 · ±) / 도구 = 테스트 판은 준비 중
   //   ＋ 준비 안 된 차시(목록에만 있음 · #130 ③) = 차시 ▾ 에 「(준비 안 됨)」 · 차시 준비 = 빈 상태 + 「📦 차시 팩 올리기」 · 테스트 단추 흐림
   const { S, packs, now, ontest, want = '' }: { S: Store; packs: LessonPack[]; now: number; ontest: (L: LessonPack) => void; want?: string } = $props();
-  const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id));
+  const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id || p.no === l.no));
   const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
   let lid = $state(untrack(() => want || packs[0]?.id || ''));
   const L = $derived(packs.find((p) => p.id === lid) ?? null);

@@ -118,7 +118,7 @@
   "s1": {
    "title": "보강 · 한 걸음 더",
    "sprite": "new3:0",
-   "note": "교과서 65쪽 문제 3",
+   "noteText": "교과서 65쪽 문제 3",
    "special": true,
    "retry": {
     "gen": "set02.s1"
@@ -148,7 +148,7 @@
   "s2": {
    "title": "보강 · 원소의 개수 한 걸음 더",
    "sprite": "new9:0",
-   "note": "교과서 66쪽 문제 5",
+   "noteText": "교과서 66쪽 문제 5",
    "special": true,
    "retry": {
     "gen": "set02.s2"

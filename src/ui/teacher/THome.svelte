@@ -16,7 +16,7 @@
     S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null;
     onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack, cls?: string, from?: { step: number; fresh: string | null }) => void; onprep: (id: string) => void;
   } = $props();
-  const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
+  const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id || p.no === l.no)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
   let cls = $state('');
   let lessonId = $state('');
   let sheet = $state<'' | 'cls' | 'sched'>('');
@@ -69,7 +69,7 @@
   </div>
   <div class="card">
     <span class="lab">② 차시</span>
-    <div class="pk3" role="group" aria-label="차시">
+    <div class="pk3" class:five={cells.length > 6} role="group" aria-label="차시">
       {#each cells as p (p.id)}
         {#if p.p}
           <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} onclick={() => (lessonId = p.id)}><b>{p.no}차시</b><small>{p.title.split(' · ')[0]}</small></button>
@@ -129,6 +129,8 @@
   .tt.on { background: var(--accent); color: var(--on-accent); }
   .tt.on small { color: var(--on-accent); }
   .pk3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .pk3.five { grid-template-columns: repeat(5, minmax(0, 1fr)); } /* 차시 7개 이상 = 5칸 2줄 (#132 · 360 × 640 스크롤 0) */
+  .pk3.five .pk { padding: 4px 1px; font-size: 13.5px; }
   .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .pk { position: relative; min-height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; box-shadow: 0 3px 0 var(--press-sh); }
   .pk small { font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

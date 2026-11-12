@@ -242,12 +242,214 @@
     "흑요석 미노타우로스"
    ],
    "cell": 256
+  },
+  "extra3": {
+   "src": "art/mon-extra3-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 3,
+   "names": [
+    "이끼 미믹"
+   ],
+   "cell": 256
+  },
+  "extra6": {
+   "src": "art/mon-extra6-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 6,
+   "names": [
+    "서리 늑대"
+   ],
+   "cell": 256
+  },
+  "extra7": {
+   "src": "art/mon-extra7-v1.webp",
+   "from": "monsters-extra-v2.webp",
+   "row": 7,
+   "names": [
+    "버섯 기사"
+   ],
+   "cell": 256
+  },
+  "crown6": {
+   "src": "art/mon-crown6-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 6,
+   "names": [
+    "이끼 골렘"
+   ],
+   "cell": 340
+  },
+  "crown9": {
+   "src": "art/mon-crown9-v1.webp",
+   "from": "monsters-crown-v1.webp",
+   "row": 9,
+   "names": [
+    "청록 수정룡"
+   ],
+   "cell": 340
+  },
+  "mirror0": {
+   "src": "art/mon-mirror0-v1.webp",
+   "from": "monsters-mirror-v2.webp",
+   "row": 0,
+   "names": [
+    "거울 박쥐"
+   ],
+   "cell": 192
+  },
+  "mirror1": {
+   "src": "art/mon-mirror1-v1.webp",
+   "from": "monsters-mirror-v2.webp",
+   "row": 1,
+   "names": [
+    "반사 골렘"
+   ],
+   "cell": 192
+  },
+  "mirror3": {
+   "src": "art/mon-mirror3-v1.webp",
+   "from": "monsters-mirror-v2.webp",
+   "row": 3,
+   "names": [
+    "수정 광부 유령"
+   ],
+   "cell": 192
+  },
+  "mirror2": {
+   "src": "art/mon-mirror2-v1.webp",
+   "from": "monsters-mirror-v2.webp",
+   "row": 2,
+   "names": [
+    "뒤집힌 거미"
+   ],
+   "cell": 192
+  },
+  "mirror4": {
+   "src": "art/mon-mirror4-v1.webp",
+   "from": "monsters-mirror-v2.webp",
+   "row": 4,
+   "names": [
+    "반쪽 슬라임"
+   ],
+   "cell": 192
+  },
+  "mirrorboss80": {
+   "src": "art/mon-mirrorboss80-v1.webp",
+   "from": "monsters-mirrorboss-v3.webp",
+   "row": 0,
+   "names": [
+    "부정의 수정 여왕"
+   ],
+   "cell": 384
+  },
+  "keyvault0": {
+   "src": "art/mon-keyvault0-v1.webp",
+   "from": "monsters-keyvault-v2.webp",
+   "row": 0,
+   "names": [
+    "자물쇠 미믹"
+   ],
+   "cell": 192
+  },
+  "keyvault2": {
+   "src": "art/mon-keyvault2-v1.webp",
+   "from": "monsters-keyvault-v2.webp",
+   "row": 2,
+   "names": [
+    "사슬 기사"
+   ],
+   "cell": 192
+  },
+  "keyvault1": {
+   "src": "art/mon-keyvault1-v1.webp",
+   "from": "monsters-keyvault-v2.webp",
+   "row": 1,
+   "names": [
+    "열쇠 유령"
+   ],
+   "cell": 192
+  },
+  "keyvault3": {
+   "src": "art/mon-keyvault3-v1.webp",
+   "from": "monsters-keyvault-v2.webp",
+   "row": 3,
+   "names": [
+    "봉인 석상"
+   ],
+   "cell": 192
+  },
+  "keyvault4": {
+   "src": "art/mon-keyvault4-v1.webp",
+   "from": "monsters-keyvault-v2.webp",
+   "row": 4,
+   "names": [
+    "뒤집개 박쥐"
+   ],
+   "cell": 192
+  },
+  "keyvaultboss0": {
+   "src": "art/mon-keyvaultboss0-v1.webp",
+   "from": "monsters-keyvaultboss-v1.webp",
+   "row": 0,
+   "names": [
+    "역과 대우의 문지기"
+   ],
+   "cell": 384
+  },
+  "garden2": {
+   "src": "art/mon-garden2-v1.webp",
+   "from": "monsters-skygarden-v2.webp",
+   "row": 2,
+   "names": [
+    "충분 나비"
+   ],
+   "cell": 192
+  },
+  "garden0": {
+   "src": "art/mon-garden0-v1.webp",
+   "from": "monsters-skygarden-v2.webp",
+   "row": 0,
+   "names": [
+    "천칭 가고일"
+   ],
+   "cell": 192
+  },
+  "garden1": {
+   "src": "art/mon-garden1-v1.webp",
+   "from": "monsters-skygarden-v2.webp",
+   "row": 1,
+   "names": [
+    "필요 덩굴"
+   ],
+   "cell": 192
+  },
+  "garden3": {
+   "src": "art/mon-garden3-v1.webp",
+   "from": "monsters-skygarden-v2.webp",
+   "row": 3,
+   "names": [
+    "쌍둥이 구름 정령"
+   ],
+   "cell": 192
+  },
+  "gardenboss0": {
+   "src": "art/mon-gardenboss0-v1.webp",
+   "from": "monsters-skygardenboss-v1.webp",
+   "row": 0,
+   "names": [
+    "필요충분의 천칭 수호자"
+   ],
+   "cell": 384
   }
  },
  "dungeons": {
   "02-deep-forest": "art/dg-02-deep-forest-v1h.webp",
   "05-ruins": "art/dg-05-ruins-v1h.webp",
   "06-frost": "art/dg-06-frost-v1h.webp",
-  "07-volcano": "art/dg-07-volcano-v1h.webp"
+  "07-volcano": "art/dg-07-volcano-v1h.webp",
+  "01-burrow": "art/dg-01-burrow-v1h.webp",
+  "04-mine": "art/dg-04-mine-v1h.webp",
+  "11-keyvault": "art/dg-11-keyvault-v1h.webp",
+  "12-skygarden": "art/dg-12-skygarden-v1h.webp"
  }
 }

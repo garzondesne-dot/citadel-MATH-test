@@ -19,6 +19,7 @@ const B = 'http://localhost:4173/';
   const r12 = await fixed('⑫'); if (r12.mid > 0) errs.push(`⑫ 가운데 넘침 ${r12.mid}`); if (r12.btn !== 74) errs.push(`⑫ 주요 단추 바닥 ${r12.btn}`);
   const cells = await p.$$eval('.pk3 .pk', (bs) => bs.map((x) => `${x.classList.contains('add') ? '＋' : '▣'}${x.textContent.trim()}`));
   log('⑫ 차시 칸:', cells.join(' | '), '| 가운데 넘침', r12.mid, '| 주요 단추 바닥', r12.btn);
+  if (await p.$('.pk.add')) { // 준비 안 된 차시가 있을 때만 (#132 뒤 = 2 ~ 10차시 모두 준비됨)
   const dash = await p.$eval('.pk.add', (e) => getComputedStyle(e).borderStyle + ' ' + getComputedStyle(e).borderWidth);
   log('   점선 칸 테두리:', dash); if (!dash.startsWith('dashed 2px')) errs.push('⑫ 점선 2px 아님');
   await shot(p, 'b14-home');
@@ -28,6 +29,7 @@ const B = 'http://localhost:4173/';
   await shot(p, 'b14-prep-todo');
   // 고르기는 안 됨: 수업 탭으로 돌아가도 고른 차시 없음
   await p.click('.tabs button:has-text("수업")'); log('   돌아와 고른 차시:', (await p.$$('.pk3 .pk.on')).length);
+  } else log('   ＋ 칸 없음 = 목록의 차시가 모두 준비됨'); await shot(p, 'b14-home');
   // 학생 1-3 3번 캠프를 열어 둠 (반 전체 메시지가 바로 와야 함)
   const s3 = watch(await ctx.newPage());
   await s3.goto(B); await s3.evaluate(() => localStorage.setItem('citadel-v1-login', JSON.stringify({ cls: '1-3', num: 3 }))); await s3.reload(); await s3.waitForTimeout(600);

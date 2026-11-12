@@ -167,7 +167,7 @@ describe('6차시 (드모르간 · 원소의 개수 · 생활 속 · 형성평�
     expect(b1[2]?.question.includes('n(A) = 18, n(B) = 23, n(A ∪ B) = 30') && b1[3]?.question.includes('{1, 5, 9, 10}') && b1[4]?.question.includes('{1, 2, 4}') && b1[5]?.question.includes('24의 약수')).toBe(true);
     b1.forEach((q, i) => verifyBoss(i, q, `보스#0.${i + 1}`));
     // 시도 0 = 모든 학생 같은 문항 (시드와 상관없음)
-    for (let i = 0; i < 6; i++) expect(set06boss(i, 0, makeRng('z'))).toBe(b1[i]);
+    for (let i = 0; i < 6; i++) expect(set06boss(i, 0, makeRng('z'))).toEqual(b1[i]);
   });
 
   it('형성평가 재도전 생성기 300 시드 × 3번 독립 검산', () => {
