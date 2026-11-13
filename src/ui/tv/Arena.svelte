@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { feat } from '../../school/features.svelte';
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { LessonPack, Room, Step } from '../../model/types';
   import { arenaBox, partyLayout } from './arena/layout';
@@ -52,7 +53,7 @@
   // 🧊 몬스터 공격 = 폰과 같은 시계(atkClock) · 얼음이면 용사단 모두 얼음 덩어리 → 3초(분노 4초) 뒤 녹음 (TV 는 학생 톡을 모름 = 시간으로만)
   const amemo = {}; let iceDom = $state(0);
   $effect(() => {
-    const c = atkClock(L, R, now); if (!c || c.paused || !step) return;
+    const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
     untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k); if (d.id !== 'ice') return; const ms = attackMs(d, c.lock, attackStrong(hp)); if (A) A.freeze(ms); else domFreeze(ms); });
   });

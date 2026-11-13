@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { feat } from '../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Store } from '../model/types';
   import { PROFILES } from '../model/profiles';
@@ -96,7 +97,7 @@
   $effect(() => {
     if (!R) return;
     const c = atkClock(L, R, now);
-    if (!c || c.paused) return;
+    if (!c || c.paused || !feat('mon-attack')) return; // 🧩 💥 몬스터 공격 꺼짐 = 반격 없음
     if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => {
       // 🛡 홀리 방패 (정식 student.js 395): 켜 둔 +10 용사가 있으면 반 전체 안 멈춤 · 내가 켰으면 막은 기록(→ 🗿 석화 10초) + 날개 · 방패
       const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { guardStrike(hg, c.mid); return; }

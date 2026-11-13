@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
   import SoundToggles from '../SoundToggles.svelte';
@@ -162,13 +163,13 @@
     <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, HERO.sitRow).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
-    {#each ['castle', 'tent', 'gate'] as k (k)}
+    {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
       {@const st = lab(k)}
       <button type="button" class="zone" style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
         <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
       </button>
     {/each}
-    {#each [['anvil', CAMP.anvil, 3], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const as [k, p, cols] (k)}
+    {#each ([['anvil', CAMP.anvil, 3], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const).filter(([k]) => k !== 'anvil' || feat('forge')) as [k, p, cols] (k)}
       {@const st = lab(k)}
       <button type="button" class="prop" style={propStyle(p)} aria-label={NAME[k]} onclick={(e) => tap(k, e)}>
         <i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>
@@ -187,7 +188,7 @@
   </div>
 
   <section class="info">
-    <button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
+    {#if feat('hero')}<button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{me.nick}</b></span>
@@ -205,7 +206,7 @@
         </button>
       {/each}
     </div>
-    <p class="next">{nextLine}</p>
+    <p class="next">{nextLine}</p>{/if}
   </section>
   <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel="{L.no}차시 던전 입장">
     {#snippet aux()}{#if !open}<button type="button" class="codebtn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}
@@ -231,8 +232,8 @@
 {:else if sheet === 'set'}
   <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
     {#snippet title()}⚙ 설정{/snippet}
-    <span class="slab">🎨 테마</span>
-    <ThemePicker now={theme} {feats} onpick={pickTheme} />
+    {#if feat('theme')}<span class="slab">🎨 테마</span>
+    <ThemePicker now={theme} {feats} onpick={pickTheme} />{/if}
     <span class="slab">🔊 소리</span>
     <SoundToggles />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->

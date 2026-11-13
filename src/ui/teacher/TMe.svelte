@@ -11,13 +11,15 @@
   import MyHero from '../camp/MyHero.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
+  import FeatSettings from './FeatSettings.svelte';
+  import { BUNDLES, feat, featCfg } from '../../school/features.svelte';
   import { savedTheme, setTheme, THEMES, type Theme } from '../../theme/theme';
 
   // 🧙 나 탭 (#124 ⑲) — 선생님 용사 카드(누르면 내 용사) · 🧙 내 용사 · ⛺ 내 캠프 · 🎨 테마 · 🖥 종합실 비밀번호 고정 · 📷 사진 채점 연결 · 🔊 소리 · 로그아웃 · 판 번호
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
   const { S }: { S: Store } = $props();
   const M = useMe(9999, 30, true);
-  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login'>(''), key = $state(''), ver = $state(0), toast = $state('');
+  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat'>(''), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
@@ -57,7 +59,8 @@
     {#if srv}<button type="button" class="item" class:warn={!admin} onclick={() => (sheet = 'login')}><span class="ic">🔐</span><span class="tx"><b>{admin ? '교사로 로그인됨' : '교사 로그인'}</b><small>{admin ? who : '명단 · 기록 · 수업 열기에 필요 · 처음 한 번'}</small></span></button>{/if}
     <button type="button" class="item" onclick={() => (hero = true)}><span class="ic">🧙</span><span class="tx"><b>내 용사</b><small>용사 바꾸기 · 강화 · 스킬 (학생 폰과 같은 창)</small></span></button>
     <a class="item" href="?role=hall" target="_blank"><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>교사 캠프 · 교실 TV 에서 열려요</small></span></a>
-    <button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>
+    <button type="button" class="item" data-k="feat" onclick={() => (sheet = 'feat')}><span class="ic">⚙</span><span class="tx"><b>우리 학교 기능</b><small>{BUNDLES.find((b) => b.id === featCfg().bundle)?.ic} {BUNDLES.find((b) => b.id === featCfg().bundle)?.name} 묶음 · 켜고 끄기</small></span></button>
+    {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>{/if}
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
     <a class="item" href="?role=atk" target="_blank"><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
@@ -83,6 +86,11 @@
     {#snippet title()}🖥 종합실 비밀번호 고정{/snippet}
     {#snippet act()}<button type="button" class="btn" disabled={!!key && !/^\d{4}$/.test(key)} onclick={() => { S.set(HALLKEY, key || null); ver++; sheet = ''; say(key ? `고정 ${key}` : '수업마다 새로'); }}>{key ? '이 번호로 고정' : '비우기 (수업마다 새로)'}</button>{/snippet}
     <input class="in" inputmode="numeric" maxlength="4" placeholder="숫자 4자리 · 비우면 수업마다 새로" bind:value={key} />
+  </Sheet>
+{:else if sheet === 'feat'}
+  <Sheet onclose={() => (sheet = '')}>
+    {#snippet title()}⚙ 우리 학교 기능{/snippet}
+    <FeatSettings {S} />
   </Sheet>
 {:else if sheet === 'theme'}
   <Sheet onclose={() => (sheet = '')}>

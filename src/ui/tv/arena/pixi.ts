@@ -4,6 +4,7 @@
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
 import { Application, Assets, ColorMatrixFilter, Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
 import { ShockwaveFilter } from 'pixi-filters';
+import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
 import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
@@ -52,7 +53,8 @@ export const JUICE = {
   WAVE_MS: 300, SHARDS: 6, SHARD_MS: 900, // 💥 충격파 0.3초 안(번짐은 순간만) · 조각 6 × 6 · 0.9초
 };
 const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-export const juiceDefault = () => { if (reduceMotion()) return false; try { if (typeof location !== 'undefined' && /[?&]fancy=0\b/.test(location.search)) return false; return localStorage.getItem('citadel-fancy') !== '0'; } catch { return true; } };
+/** 🧩 ⚙ 우리 학교 기능 「✨ 화려한 연출」 + 동작 줄이기 + ?fancy=0 + 이 기기 설정 */
+export const juiceDefault = () => { if (reduceMotion() || !feat('juice')) return false; try { if (typeof location !== 'undefined' && /[?&]fancy=0\b/.test(location.search)) return false; return localStorage.getItem('citadel-fancy') !== '0'; } catch { return true; } };
 type Tween = { t0: number; ms: number; f: (p: number) => void; done?: () => void };
 const ease = (p: number) => 1 - (1 - p) * (1 - p);
 

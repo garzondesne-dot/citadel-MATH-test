@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { feat } from '../../school/features.svelte';
   import type { Store } from '../../model/types';
   import { achieve, band, LESSON_LIST, MIS, memoParts, type Stud } from '../../school/dash';
   import { resetPw, hasAccount, liveOfCls, canResetPw } from '../../school/school';
@@ -50,7 +51,7 @@
     <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 시험 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
     <button type="button" onclick={() => (gift = true)}>💎 선물</button>
     <button type="button" disabled={!live} title={live ? '' : '수업 중에만'} onclick={() => { if (live) { setAbsent(S, live.code, uidOf(s.cls, s.n), true); say('🚫 오늘 결석으로'); } }}>🚫 결석</button>
-    <button type="button" onclick={() => (memo = true)}>📝 세특</button>
+    {#if feat('seteuk')}<button type="button" onclick={() => (memo = true)}>📝 세특</button>{/if}
   </div>
   {#if gift}
     <div class="pop"><b>💎 {s.name}에게 선물</b><div class="amt">{#each [5, 10, 20, 50] as v (v)}<button type="button" class:on={amt === v} onclick={() => (amt = v)}>{v}</button>{/each}</div>

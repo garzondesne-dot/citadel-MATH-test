@@ -10,7 +10,7 @@
   import { liveRoom } from '../room.svelte';
   import QR from '../QR.svelte';
   import Sheet from '../battle/Sheet.svelte';
-  import { driveFun, endRest, funOf, GAMES, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
+  import { driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
   import { status as funStatus, norm, type Fun } from '../../rest/fun';
 
   // ⑬ 대기실 · ⑭ 리모컨 (#119 · DECISIONS 「대기실 확정」 「리모컨 칸 고정」 「도구 두 줄 맞춤」) — 같은 틀: 위 막대 · 가운데(스크롤 없음) · 주요 단추 68 · 수업 중 막대 62
@@ -217,7 +217,7 @@
       {#snippet title()}🏕 놀이 고르기{/snippet}
       {#snippet act()}<div class="rsact"><div class="row"><button type="button" class="btn2" onclick={() => { endRest(S, code); sheet = ''; }}>쉼터 끝</button><button type="button" class="btn rbig" onclick={goGame}>{funOn ? `■ 놀이 그만 · ${funLine}` : `▶ ${gameOf(game).ic} ${gameOf(game).name}${game === 'quiz' ? (oxWhich === 'prev' ? ' · 지난' : ' · 오늘') : ''} 시작`}</button></div></div>{/snippet}
       {#if !(tdf && tdf.phase === 'play')}<div class="games" role="group" aria-label="놀이">
-        {#each GAMES as g (g.k)}<button type="button" class="game" class:on={game === g.k} aria-pressed={game === g.k} disabled={funOn} onclick={() => (game = g.k)}><i>{g.ic}</i>{g.name}</button>{/each}
+        {#each gamesOn() as g (g.k)}<button type="button" class="game" class:on={game === g.k} aria-pressed={game === g.k} disabled={funOn} onclick={() => (game = g.k)}><i>{g.ic}</i>{g.name}</button>{/each}
         {#if game === 'quiz'}<div class="oxw" role="group" aria-label="OX 문장"><button type="button" class:on={oxWhich === 'prev'} onclick={() => (oxWhich = 'prev')}>지난 차시</button><button type="button" class:on={oxWhich === 'now'} onclick={() => (oxWhich = 'now')}>오늘</button></div>{/if}
       </div>{/if}
       {#if tdf && tdf.phase === 'play'}<div class="tdc"><button type="button" disabled={!!tdf.sh} onclick={() => { tdShield(S, code); say('🛡 수호 방패! 성에 닿는 몬스터 3마리를 막아요'); }}>🛡 수호 방패<small>{tdf.sh ? '썼어요' : '한 판 한 번'}</small></button><button type="button" disabled={!!tdf.ch?.[tdWave]} onclick={() => { tdCheer(S, code, tdWave); say('✨ 응원! 5초 동안 공격 속도 +20%'); }}>✨ 응원 마법<small>{tdf.ch?.[tdWave] ? '이번 웨이브 씀' : `웨이브 ${tdWave} · 한 번`}</small></button></div>{/if}

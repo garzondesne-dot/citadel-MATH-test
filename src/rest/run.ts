@@ -1,3 +1,4 @@
+import { feat, type FeatId } from '../school/features.svelte';
 import type { Room, Store } from '../model/types';
 import { activeIds } from '../raid/raid';
 import { roomPath, setRest } from '../raid/actions';
@@ -9,6 +10,9 @@ import { MAPS, PICK_MS } from './td';
 //   시계를 맡는 기기 = 교실 TV(먼저) 또는 교사 폰 · 4초(눈치 3초) 넘게 소식이 없으면 다른 기기가 이어받음 (fun.drv)
 //   🔴 집중 = 놀이 시계 멈춤: 켜진 동안 fun.frz = 멈춘 시각 · 끄면 그만큼 to · lastAt 을 뒤로 (정식 #117 hold)
 export type Game = Kind | 'nun' | 'td';
+/** 🧩 놀이마다 스위치 (⚙ 우리 학교 기능) */
+export const GAME_FEAT: Record<Game, FeatId> = { bal: 'rest-balance', rev: 'rest-flip', quiz: 'rest-ox', ox: 'rest-ox', nun: 'rest-nunchi', td: 'rest-defense' };
+export const gamesOn = () => GAMES.filter((g) => feat(GAME_FEAT[g.k]));
 export const GAMES: { k: Game; ic: string; name: string }[] = [{ k: 'bal', ic: '⚖', name: '밸런스' }, { k: 'rev', ic: '🔄', name: '반대로' }, { k: 'quiz', ic: '⭕', name: 'OX' }, { k: 'nun', ic: '🙊', name: '눈치게임' }, { k: 'td', ic: '🏰', name: '디펜스' }];
 const P = (code: string, s: string) => `${roomPath(code)}/${s}`;
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');

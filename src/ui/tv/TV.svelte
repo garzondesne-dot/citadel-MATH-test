@@ -20,7 +20,7 @@
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
   import { applyTheme, isTheme } from '../../theme/theme';
-  import { driveFun, endRest, funOf, GAMES, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
+  import { driveFun, endRest, funOf, GAMES, gamesOn, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
   import TdTV from '../rest/TdTV.svelte';
   import { tvBgm, tvBgmNow } from './bgm';
   import { soundPref } from '../sound.svelte';
@@ -306,7 +306,7 @@
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
       <span class="sep"></span>
-      {#each GAMES as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
+      {#each gamesOn() as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
     {:else if R && !isLobby(R) && !R.state.closed && view !== 'camp'}
       <span class="sep"></span>
       <button type="button" class="t" class:on={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}>🏕<small>쉼터</small></button>

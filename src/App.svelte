@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { bindFeatures } from './school/features.svelte';
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
   import { PACKS, packOf } from './engine/packs';
@@ -23,6 +24,7 @@
   const code = (q.get('room') || 'TEST').toUpperCase();
   const props: { S: Store; where: Where } = $props(); // 🔌 「어느 서버」 = main.ts 가 고름 (#137) · 한 번 정하면 그대로
   const S = untrack(() => props.S), where = untrack(() => props.where);
+  bindFeatures(S); // ⚙ 우리 학교 기능 (school/features) — 모든 화면이 feat('id') 로 읽음
   // 화면 시험 고리(#163-① · 에뮬레이터 시험이 교사 · TV 표시를 REST 로 넣을 때 · 출시 전 메모 5): 이 폰의 로그인 uid
   (globalThis as { __uid?: () => string | null }).__uid = () => (S as { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? null;
   let netOk = $state(true);
