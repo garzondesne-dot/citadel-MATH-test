@@ -1,7 +1,7 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
-import { perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
+import { bossRecord, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -150,6 +150,16 @@ export function submit(S: Store, L: LessonPack, code: string, mid: string, uid: 
   S.set(`${roomPath(code)}/subs/${mid}/${uid}/${rec.nextAttempt}`, given);
   return true;
 }
+/** 👑 v4 형성평가 한 번에 제출 (bossRecord.todo 문항 모두 · 문항마다 새 시도 번호 = 틀린 문항 = 새 숫자) */
+export function bossSubmitAll(S: Store, L: LessonPack, code: string, uid: string, given: Record<number, Given>): boolean {
+  const R = getRoom(S, code); if (!R || !L.boss || !V4(R)) return false;
+  const r = bossRecord(L, R, uid); if (!r.canSubmit || !r.todo.length) return false;
+  const k = r.subs, sub: Record<string, number> = {};
+  for (const i of r.todo) { const a = roundOpenNext(r, i); sub[i] = a; S.set(`${roomPath(code)}/bossTry/${uid}/${i}/${a}`, given[i] ?? ''); }
+  S.set(`${roomPath(code)}/bossSub/${uid}/${k}`, sub);
+  return true;
+}
+const roundOpenNext = (r: ReturnType<typeof bossRecord>, i: number) => r.next(i);
 /** 보스 문항 i 답 내기: 아직 못 맞혔고 기회가 남았을 때만 */
 export function bossSubmit(S: Store, L: LessonPack, code: string, uid: string, i: number, given: Given): boolean {
   const R = getRoom(S, code);
@@ -228,7 +238,7 @@ export function petriAward(S: Store, code: string, me: string, mid: string, n: n
 }
 export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
   const R = getRoom(S, code); if (!R) return false;
-  const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
+  const rec = mid === BOSS_ID && V4(R) ? bossRecord(L, R, me) : isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
   if (rec.tokLeft <= 0 || (V4(R) && !rec.canHeal)) return false; // v4: 🔥 재도전 판을 다 맞혀야 다음 ⚡
   if (to !== 'bind' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);

@@ -187,6 +187,8 @@ export interface Room {
   heals?: Record<string, Record<string, Record<string, string>>>;
   /** bossTry[uid][문항][시도] = 답 */
   bossTry?: Record<string, Record<string, Record<string, Given>>>;
+  /** v4 👑 형성평가 한 번 제출 = bossSub[uid][k] = { 문항: 시도 } (그 제출에 낸 문항들 · ❤ 셈 · 재도전 판) */
+  bossSub?: Record<string, Record<string, Record<string, number>>>;
   /** chain[mid][uid][k] = 소레이드 답 줄 */
   chain?: Record<string, Record<string, Record<string, ChainSub>>>;
   /** ready[몬스터 · boss][uid] = 정찰 「준비 완료」 */

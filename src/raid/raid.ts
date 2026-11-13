@@ -298,6 +298,28 @@ export function bossState(L: LessonPack, R: Room, uid: string) {
   });
 }
 export const mastery = (L: LessonPack, R: Room, uid: string) => bossState(L, R, uid).map((s) => s.ok);
+/** 👑 v4 형성평가 = 일반 몬스터 꼴 (📜 2026-11-13 밤 · 머리 🔨 하트 묶음 D): 4~7문항을 한 번에 제출 · 하나라도 틀리면 ❤ −1(⭐ 보너스 = hpItems 뒤 문항은 틀려도 ❤ 안 깎임)
+ *  틀린 문항만 숫자 바뀐 새 문제(시도 a + 1) · 맞힌 문항 잠김 · ❤ 0 = 해설 보기 · 첫 시도 기록 = 첫 제출 · 데미지 = 맞힌 문항(mastery 그대로)
+ *  다 끝내면(❤ 문항 모두 맞힘) ⚡ 3 → 기술(💚 · ⛓) → 형성평가 🔥 재도전 판(모든 문항 새 숫자 · 무료) */
+export function bossRecord(L: LessonPack, R: Room, uid: string) {
+  const n = L.boss?.items || 0, hpN = Math.min(n, L.boss?.hpItems || n), bonus = (i: number) => i >= hpN;
+  const tr = bossTries(L, R, uid), okAt = (i: number, a: number) => tr.some((t) => t.i === i && t.a === a && t.ok);
+  const subs = Object.keys(R.bossSub?.[uid] || {}).map(Number).sort((x, y) => x - y).map((k) => (R.bossSub?.[uid]?.[k] || {}) as Record<string, number>);
+  const healed = healsReceived(R, BOSS_ID, uid, L), unl = unlocksOf(R, BOSS_ID, uid), slots = R.meta.retries + 1 + healed + unl;
+  let wrong = 0, doneAt = -1; const solved = new Set<number>();
+  subs.forEach((sub, k) => {
+    const ent = Object.entries(sub).map(([i, a]) => ({ i: Number(i), ok: okAt(Number(i), Number(a)) }));
+    if (doneAt < 0) { if (ent.some((e) => !e.ok && !bonus(e.i))) wrong += 1; ent.forEach((e) => { if (e.ok) solved.add(e.i); }); if (Array.from({ length: hpN }, (_, i) => i).every((i) => solved.has(i))) doneAt = k; }
+  });
+  const left = Math.max(0, slots - wrong), done = doneAt >= 0, out = !done && subs.length > 0 && left <= 0;
+  const after = done ? subs.slice(doneAt + 1) : [], full = (sub: Record<string, number>) => Object.entries(sub).length > 0 && Object.entries(sub).every(([i, a]) => okAt(Number(i), Number(a)) || bonus(Number(i)));
+  const rounds = after.filter(full).length, spent = healsGiven(R, BOSS_ID, uid), tokens = done ? ENERGY : 0, tokLeft = Math.max(0, tokens - spent), roundOpen = spent > rounds;
+  const next = (i: number) => { const mine = tr.filter((t) => t.i === i); return mine.length ? Math.max(...mine.map((t) => t.a)) + 1 : 0; };
+  // 이번 제출에 낼 문항: 진짜 = 아직 못 맞힌 문항(보너스 포함) · 재도전 판 = 모든 문항 새 숫자
+  const todo = Array.from({ length: n }, (_, i) => i).filter((i) => (roundOpen ? true : !done && !tr.some((t) => t.i === i && t.ok)));
+  return { n, hpN, subs: subs.length, slots, left, healed, done, out, explain: out, locked: false, solved: [...solved], tokens, tokLeft, spent, rounds, roundOpen,
+    canSubmit: roundOpen || (!done && left > 0), canHeal: tokLeft > 0 && !roundOpen, todo, next, bonus, first: subs[0] ? Object.keys(subs[0]).map(Number) : [] };
+}
 export function bossHp(L: LessonPack, R: Room, now: number) {
   const pct = pctOf(L, R);
   const max = Math.floor((headcount(R, now) * (L.boss?.hpItems || 0) * pct) / 100);

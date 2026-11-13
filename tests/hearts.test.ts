@@ -85,3 +85,32 @@ describe('⚔ 소레이드 v4', () => {
     expect(chainRecord(L, R(), mid, 'a').pFail).toBe(false); expect(spendEnergy(S, L, 'C4', mid, 'a', 'bind')).toBe(false);
   });
 });
+import { bossRecord, bossItem, bossHp, BOSS_ID } from '../src/raid/raid';
+import { bossSubmitAll } from '../src/raid/actions';
+describe('👑 형성평가 v4 = 일반 몬스터 꼴', () => {
+  function bossRoom() {
+    const b = memoryStore(), S: Store = { ...b, kind: 'memory', now: () => 1_000_000 };
+    const L = packOf('set-04')!; openRoom(S, L, 'B4', PROFILES.test); heartbeat(S, 'B4', 'a', 1, 'a'); heartbeat(S, 'B4', 'b', 2, 'b');
+    const R = () => S.get<Room>(roomPath('B4')) as Room;
+    for (let g = 0; g < 60 && stepOf(L, R())?.kind !== 'boss'; g++) nextStep(S, L, 'B4');
+    const rec = (u: string) => bossRecord(L, R(), u);
+    const bad = (q: Question): Given => (q.type === 'blanks' ? q.items.map(() => '999') : q.type === 'multi' ? [] : q.type === 'choice' ? (q.answerIndex + 1) % Math.max(2, q.options?.length || 2) : '999') as Given;
+    const send = (u: string, okSet: (i: number) => boolean) => { const r = rec(u); const g: Record<number, Given> = {}; r.todo.forEach((i) => { const q = bossItem(L, R(), u, i, r.next(i))!; g[i] = okSet(i) ? answerOf(q) : bad(q); }); return bossSubmitAll(S, L, 'B4', u, g); };
+    return { S, L, R, rec, send };
+  }
+  it('한 번에 제출 · 틀리면 ❤ −1 · 틀린 문항만 다시(맞힌 문항 잠김) · ⭐ 보너스 틀려도 ❤ 그대로 · 데미지 = 맞힌 문항', () => {
+    const { L, R, rec, send } = bossRoom();
+    expect(L.boss!.hpItems).toBe(5); expect(L.boss!.items).toBe(6); // set-04 = ⭐ 1문항(6번)
+    send('a', (i) => i !== 0); expect(rec('a').left).toBe(3); expect(rec('a').todo).toEqual([0]); // 틀린 0번만
+    expect(bossHp(L, R(), 1_000_000).dmg).toBe(5);
+    send('a', () => true); expect(rec('a').done).toBe(true); expect(rec('a').tokens).toBe(ENERGY);
+    send('b', (i) => i !== 5); expect(rec('b').left).toBe(4); expect(rec('b').done).toBe(true); // ⭐ 만 틀림 = ❤ 그대로 · 끝
+  });
+  it('❤ 0 = 해설 보기 · 더 못 냄 · 다 끝내면 ⚡ → 💚 · ⛓ → 형성평가 재도전 판', () => {
+    const { S, L, rec, send } = bossRoom();
+    for (let k = 0; k < 4; k++) send('b', () => false);
+    expect(rec('b').left).toBe(0); expect(rec('b').explain).toBe(true); expect(send('b', () => true)).toBe(false);
+    send('a', () => true); expect(spendEnergy(S, L, 'B4', BOSS_ID, 'a', 'bind')).toBe(true); expect(rec('a').roundOpen).toBe(true);
+    expect(rec('a').todo.length).toBe(6); send('a', () => true); expect(rec('a').rounds).toBe(1); expect(rec('a').canHeal).toBe(true);
+  });
+});
