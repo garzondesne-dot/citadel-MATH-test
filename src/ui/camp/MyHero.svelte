@@ -137,7 +137,7 @@
       </span>
     </button>
 
-    <div class="tabs" role="tablist">
+    <div class="htabs" role="tablist">
       {#each [['enh', '🔨 강화'], ['sk', '⚔ 스킬'], ['rec', '🏅 기록']] as const as [k, n] (k)}
         <button type="button" role="tab" aria-selected={tab === k} class:on={tab === k} onclick={() => openTab(k)}>{n}{#if (k === 'enh' && dots.enh) || (k === 'sk' && dots.sk)}<i class="bdot" aria-label="살 수 있는 것 있음"></i>{/if}</button>
       {/each}
@@ -287,9 +287,9 @@
   .sub { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
   .chg { position: relative; align-self: flex-start; min-height: var(--pill-h); display: inline-flex; align-items: center; font-size: var(--fs-small); font-weight: 700; color: var(--text); padding: 0 14px; border-radius: 18px; background: var(--surface-2); }
   .bdot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 5px; background: var(--gem); box-shadow: 0 0 0 2px var(--bg); }
-  .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .tabs button { position: relative; min-height: var(--tab-h); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 16px var(--font); }
-  .tabs button.on { border: 2px solid var(--accent); color: var(--text); background: var(--surface-2); }
+  .htabs { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .htabs button { position: relative; min-height: var(--tab-h); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 16px var(--font); }
+  .htabs button.on { border: 2px solid var(--accent); color: var(--text); background: var(--surface-2); }
   .enhbox { border-radius: 16px; background: var(--surface); border: 1px solid var(--line); padding: var(--s4); display: flex; flex-direction: column; gap: var(--s2); align-items: center; }
   .enhrow { display: flex; align-items: center; gap: var(--s4); }
   .esp { position: relative; width: 104px; height: 96px; border-radius: 16px; background: var(--surface-2); display: grid; place-items: center; }
