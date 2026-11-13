@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SoundToggles from '../SoundToggles.svelte';
+  import { soundPref } from '../sound.svelte';
   import { HALLKEY } from '../../school/school';
   import type { Store } from '../../model/types';
   import { BUILD } from '../../build';
@@ -54,7 +56,7 @@
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
     <a class="item" href="?role=atk" target="_blank"><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
-    <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">🔊</span><span class="tx"><b>소리</b><small>교사 폰 · {sound}</small></span></button>
+    <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">{(!soundPref.sfx && !soundPref.bgm) || sound === '끔' ? '🔇' : '🔊'}</span><span class="tx"><b>소리</b><small>교사 폰 · {sound} · 효과음 {soundPref.sfx ? '켜짐' : '꺼짐'} · 배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}</small></span></button>
     <button type="button" class="item" disabled={!admin} onclick={teacherOut}><span class="ic">↪</span><span class="tx"><b>로그아웃</b><small>{admin ? who : '교사 로그인 뒤'}</small></span></button>
   </div>
   <p class="ver">모두의 던전 v1.0 · 테스트 {BUILD}</p>
@@ -86,6 +88,7 @@
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🔊 소리 · 교사 폰{/snippet}
     <div class="list">{#each ['보통', '작게', '끔'] as v (v)}<button type="button" class="item" class:on={sound === v} onclick={() => { S.set('school/teacher/sound', v); ver++; sheet = ''; }}><span class="ic">{v === '끔' ? '🔇' : '🔊'}</span><span class="tx"><b>{v}</b></span></button>{/each}</div>
+    <SoundToggles />
   </Sheet>
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}

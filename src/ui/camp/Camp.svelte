@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SoundToggles from '../SoundToggles.svelte';
   import { BUILD } from '../../build';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -228,6 +229,8 @@
     {#snippet title()}⚙ 설정{/snippet}
     <span class="slab">🎨 테마</span>
     <ThemePicker now={theme} {feats} onpick={pickTheme} />
+    <span class="slab">🔊 소리</span>
+    <SoundToggles />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     {#if pupil}<button type="button" class="out" onclick={logout}>↪ 로그아웃 · 첫 화면으로 <small>{pupil.cls}반 {pupil.num}번</small></button>{/if}
     <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? ' · 시험 서버' : ' · 이 기기'}</p>

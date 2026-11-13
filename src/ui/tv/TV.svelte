@@ -23,6 +23,7 @@
   import { driveFun, endRest, funOf, GAMES, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
   import TdTV from '../rest/TdTV.svelte';
   import { tvBgm, tvBgmNow } from './bgm';
+  import { soundPref } from '../sound.svelte';
   import { artUrl, FUN_BG } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import type { Nun } from '../../rest/nunchi';
@@ -84,7 +85,7 @@
   const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
   let funErr = $state(''), errT: ReturnType<typeof setTimeout> | null = null;
   // 🎵 TV 배경음 (#142-2): 🏕 쉼터 화면 · 놀이마다 곡 · 🔊 끄면 멈춤 · 쉼터 밖 = 없음(다른 장면 곡은 다음 판)
-  $effect(() => { tvBgm(R?.state.rest && !R.state.closed ? (fun && fun.phase !== 'end' ? fun.kind : fun?.kind === 'td' ? 'td' : 'rest') : null, sound); });
+  $effect(() => { tvBgm(R?.state.rest && !R.state.closed ? (fun && fun.phase !== 'end' ? fun.kind : fun?.kind === 'td' ? 'td' : 'rest') : null, sound && soundPref.bgm); }); // 🎵 B5 이 기기 배경음 끔이면 TV 🔊 켜져도 곡 없음
   onDestroy(() => tvBgm(null, false));
   if (typeof window !== 'undefined') (window as unknown as { __bgm: unknown }).__bgm = tvBgmNow;
   function playGame(k: Game) {
