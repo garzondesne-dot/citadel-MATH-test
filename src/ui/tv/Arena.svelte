@@ -15,7 +15,7 @@
   import { cutin } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
-  import { HERO, heroUrl, monBody } from '../manifest';
+  import { HERO, heroHead, heroUrl, monBody } from '../manifest';
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
@@ -155,11 +155,11 @@
   // ✨ 오라 (정식 aura.js · TV = 입자 2개까지): Pixi = 캔버스 아래 층에 용사 자리마다 · DOM 장면 = HeroSprite 가 직접
   $effect(() => {
     const lay = auraLayer; if (!lay || mode !== 'pixi' || !W) return;
-    const rows = heroes.map((h, k) => ({ sl: slots[k], lv: Number(R.players?.[h.u]?.enh) || 0 })), sig = JSON.stringify(rows);
+    const rows = heroes.map((h, k) => ({ sl: slots[k], lv: Number(R.players?.[h.u]?.enh) || 0, hero: h.hero })), sig = JSON.stringify(rows);
     if (sig === auraSig) return;
     untrack(() => {
       auraSig = sig; lay.replaceChildren();
-      for (const { sl, lv } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true); }
+      for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true, heroHead(hero, true)); }
     });
   });
   function domPop(text: string, x: number, y: number, cls: string) { const k = ++fk; domFx = [...domFx, { k, text, x, y, cls }]; setTimeout(() => (domFx = domFx.filter((f) => f.k !== k)), 1300); }

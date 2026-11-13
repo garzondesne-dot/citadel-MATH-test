@@ -21,8 +21,8 @@ function style() {
 .au-r.f{clip-path:inset(89% 0 0 0);z-index:2}
 .au-o{left:50%;bottom:calc(var(--p)*20);width:0;height:0;animation:auO var(--d) linear infinite;z-index:3}
 .au-o>.au-s{left:calc(var(--p)*-6);top:calc(var(--p)*-6);width:calc(var(--p)*12);height:calc(var(--p)*12);background:${u(a.orbs)} 0 var(--ay)/400% 1000% no-repeat;animation:auF .6s steps(4) infinite;filter:drop-shadow(0 0 2px var(--au))}
-.au-h{left:calc(50% - var(--p)*41);bottom:calc(var(--p)*-1);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
-.au-hb{left:calc(50% - var(--p)*41);bottom:calc(var(--p)*-1);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${a.haloBurst ? u(a.haloBurst) : 'none'} 0 0/600% 100% no-repeat;animation:auF6 1.2s steps(6) infinite;z-index:0;opacity:.95}
+.au-h{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
+.au-hb{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${a.haloBurst ? u(a.haloBurst) : 'none'} 0 0/600% 100% no-repeat;animation:auF6 1.2s steps(6) infinite;z-index:0;opacity:.95}
 /* 🎨 다듬기 ⑥ (2026-11-13): +4~+9 바닥 고리 = 납작한 타원(세로 줄무늬 그림 대신) · 입자 = 별 모양 */
 .au-r.el{left:calc(50% - var(--p)*30);bottom:calc(var(--p)*-3);width:calc(var(--p)*60);height:calc(var(--p)*14);background:none;border-radius:50%;border:calc(var(--p)*1.8) solid var(--au);box-shadow:0 0 calc(var(--p)*3) var(--au),inset 0 0 calc(var(--p)*3) var(--au);filter:none;animation:auEl 1.4s ease-in-out infinite alternate;box-sizing:border-box}
 .au-r.el.f{clip-path:inset(50% 0 0 0)}
@@ -37,12 +37,14 @@ function style() {
   document.head.appendChild(s);
 }
 /** 오라 붙이기 (lv 0 = 없음) · 돌려주는 값 = 지우기 */
-export function deco(art: HTMLElement, lv: number, tv = false): () => void {
+/** head = 그 상자 안 머리 자리 [가로 = 상자 가운데에서, 높이 = 상자 아래에서] (옛 칸 80 px 단위 · manifest heroHead 에 그림 칸 밀림을 더한 값) · +10 후광 · 빛살 중심 = 머리 뒤 */
+export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number]): () => void {
   art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au');
   if (!lv) return () => {};
   const w = art.getBoundingClientRect().width; if (w && w < 40) return () => {};
   style(); art.classList.add('au');
   const i = lv >= 10 ? 6 : lv - 1, col = AURA.colors[lv - 1] || '#fff';
+  if (head) { art.style.setProperty('--hx', String(head[0])); art.style.setProperty('--hy', String(head[1])); }
   art.style.setProperty('--ay', `${((i / 9) * 100).toFixed(3)}%`); art.style.setProperty('--au', col);
   const holy = lv >= 10 && !!AURA.halo;
   const el = !holy && lv >= 4 ? ' el' : '', st = !holy && lv >= 4 ? ' st' : '';
@@ -54,8 +56,8 @@ export function deco(art: HTMLElement, lv: number, tv = false): () => void {
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
 /** Svelte 액션: <i class="art" use:aura={{ lv, tv }}> */
-export function aura(node: HTMLElement, p: { lv: number; tv?: boolean }) {
-  let off = () => {}; const run = (q: { lv: number; tv?: boolean }) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv); }); };
+export function aura(node: HTMLElement, p: { lv: number; tv?: boolean; head?: [number, number] }) {
+  let off = () => {}; const run = (q: { lv: number; tv?: boolean; head?: [number, number] }) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head); }); };
   run(p);
   return { update: run, destroy: () => off() };
 }

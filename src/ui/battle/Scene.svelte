@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { artUrl, dungeonOf, ELEM_FX, HERO, heroGeo, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
+  import { artUrl, dungeonOf, ELEM_FX, HERO, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
@@ -46,6 +46,8 @@
   const hg = $derived(heroGeo(savedLook().hero)); // 새 화풍(세밀 시트) = 같은 자리에서 위 · 옆으로 넘쳐 그림 // 용사 칸 80 × 64 → 정수 2배
   const mm = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
   const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
+  // 👑 +10 후광 = 머리 뒤 중앙: 이 장면은 그림 상자(.art)가 heroNudge 만큼 밀려 있음 → 머리 자리에서 밀림을 뺌(가로) · 더함(높이)
+  const headIn = (id: number): [number, number] => { const h = heroHead(id), n = heroNudge(id, 0); return [h[0] - n.dx, h[1] + n.dy]; };
 </script>
 
 <div class="edge" bind:this={edge} class:hit class:rage class:iced={ice} style:background-image="url({dungeonOf(theme)})">
@@ -85,7 +87,7 @@
     {#if !ice}<i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>{/if}
   {/if}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
-  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" use:auraAct={{ lv: savedLook().enh }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
+  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
     style:background-position="-{heroCol * hg.w * HS}px -{heroRow * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
 </div>
 
