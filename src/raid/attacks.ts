@@ -5,7 +5,7 @@
 //   새 공격(#161) = 여기에 한 줄 + 화면 효과(ui/battle/AttackFx.svelte) 한 갈래
 import type { LessonPack, Step } from '../model/types';
 
-//   ms = 효과 시간(있으면 · #168 손풀기 공격 = 3초 · 손으로 풀면 일찍) · 없으면 지금 멈춤(lock) 그대로
+//   효과 시간 = attackMs (모두 3초 · 분노 4초 · 2026-11-13) · ms 칸은 옛 기록(쓰지 않음)
 //   elem = 속성(#161 · 정식 상태이상 8 = 장면 띠 몬스터 → 용사 이펙트 · 용사 머리 위 상태 그림 · 속성 소리) · special = 던전 특수(그 차시 보스 셋째 공격)
 //   손풀기 몸짓 = 겹치지 않게 하나씩: rub 문지르기 · tap4 톡톡 · hold 꾹 · swipe 좌우 쓸기 · dtap 두 번 톡 · touch 손가락 대기(닿은 곳만 보임 · 일찍 안 끝남) · drag 끌어다 꽂기
 export type Elem = 'stun' | 'freeze' | 'bind' | 'burn' | 'poison' | 'shock' | 'confuse' | 'sleep';
@@ -31,8 +31,9 @@ export const ATTACKS: Record<string, AttackDef> = {
 };
 /** 갤러리 · 시험 순서 (지금 6 → 새 6 → 특수 3) */
 export const ATTACK_IDS = Object.keys(ATTACKS);
-/** 효과 시간 (ms) = 등록 표 ms · 없으면 지금 멈춤(lock 초) · 분노(강) = 1.3배 · 단 멈춤 시간 상한 안(원래가 상한보다 길면 그대로) */
-export const attackMs = (a: AttackDef, lockSec: number, strong = false) => { const base = a.ms ?? lockSec * 1000; return strong ? Math.round(Math.min(base * 1.3, Math.max(base, lockSec * 1000))) : base; };
+/** 효과 시간 (ms) = 모든 공격 3초 · 😡 분노 4초 (2026-11-13 선생님 「B1」 · 정식 멈춤 시간(보스 단계마다 길어짐)은 쓰지 않음 · 손으로 푸는 공격은 풀면 그대로 일찍 끝남) */
+export const ATTACK_MS = 3000, ATTACK_MS_STRONG = 4000;
+export const attackMs = (_a?: AttackDef, _lockSec?: number, strong = false) => (strong ? ATTACK_MS_STRONG : ATTACK_MS);
 /** 세기: 몬스터 체력 50% 아래 = 강(분노) · 아니면 약 */
 export const attackStrong = (hp: { left: number; max: number } | null | undefined) => !!hp && hp.max > 0 && hp.left > 0 && hp.left / hp.max < 0.5;
 export const attackDef = (id: string | undefined) => ATTACKS[id || ''] ?? ATTACKS.pause!;

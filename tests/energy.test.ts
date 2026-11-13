@@ -33,8 +33,9 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('ice');
     expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'lock', 'scale']);
     expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch', 'bind']);
-    // #168 손풀기 공격만 3초 · 나머지 = 지금 멈춤
-    expect(Object.values(ATTACKS).slice(0, 6).map((a) => attackMs(a, 1))).toEqual([1000, 1000, 3000, 3000, 3000, 1000]);
+    // 2026-11-13 선생님 「B1」: 모든 공격 3초 · 분노 4초 (멈춤 시간 lock 과 상관없음)
+    expect(Object.values(ATTACKS).map((a) => attackMs(a, 1))).toEqual(Array(15).fill(3000));
+    expect(Object.values(ATTACKS).map((a) => attackMs(a, 9, true))).toEqual(Array(15).fill(4000));
   });
   it('#161 공격 15: 속성 8 · 몸짓 겹침 0 · 던전 특수 = 그 차시 보스 셋째 · 분노 = 50% 아래 · 멈춤 상한 안', () => {
     const els = new Set(Object.values(ATTACKS).map((a) => a.elem)); expect(els.size).toBe(8);
@@ -44,9 +45,5 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(bossAttacks(L6)).toEqual(['glitch', 'fog']);
     const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['glitch', 'ice', 'mirror', 'glitch']);
     expect(attackStrong({ left: 49, max: 100 })).toBe(true); expect(attackStrong({ left: 50, max: 100 })).toBe(false); expect(attackStrong({ left: 0, max: 100 })).toBe(false); expect(attackStrong(null)).toBe(false);
-    expect(attackMs(ATTACKS.pause!, 4, true)).toBe(4000); // 멈춤 = 이미 상한
-    expect(attackMs(ATTACKS.fog!, 5, true)).toBe(3900); // 3초 × 1.3 ≤ 5초
-    expect(attackMs(ATTACKS.fog!, 3, true)).toBe(3000); // 상한 3초
-    expect(attackMs(ATTACKS.fog!, 1, true)).toBe(3000); // 원래가 상한보다 길면 그대로
   });
 });
