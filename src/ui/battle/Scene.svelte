@@ -33,7 +33,7 @@
   const heroRow = $derived(apose ? ROW[apose] : pose === 'idle' ? HERO.idleRow : ATK_ROW), heroCol = $derived(apose ? (apose === 'attack' ? 2 : 0) : pose === 'idle' ? 0 : 2);
   let lastAtk = 0, lastGuard = guardQ.v;
   // 🛡 홀리 방패 막기 = 내 용사 날개 · 방패 (정식 Aura.guard · 장면 높이 안)
-  $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height)); });
+  $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
     untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });

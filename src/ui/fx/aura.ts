@@ -57,7 +57,8 @@ export function aura(node: HTMLElement, p: { lv: number; tv?: boolean }) {
   return { update: run, destroy: () => off() };
 }
 /** ⭐ +10 「첫 공격 막기」: 날개(6칸) · 방패(6칸) · 반환 = 방패에 맞는 순간(ms) · 0 = 그림 없음 */
-export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0): number {
+/** 🎨 다듬기 ⑦ (2026-11-13): 방패 70% 크기(몬스터 · 체력 막대 안 가림) · 맞는 순간 몬스터 쪽 섬광(mon = 몬스터 칸) */
+export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0, mon?: Element | null): number {
   const a = AURA; if (!host || !a.guardWings) return 0;
   const art = host.querySelector('.art') as HTMLElement | null; if (!art) return 0;
   const hr = host.getBoundingClientRect(), ar = art.getBoundingClientRect(); if (!ar.width) return 0;
@@ -65,7 +66,7 @@ export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0): n
   if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
   host.querySelector('.gd-fx')?.remove();
   const u = (f: string) => `url('${artUrl(`art/${f}`)}')`, mk = (f: string, w: number, h: number, bot: number, z: number) => { const e = document.createElement('span'); e.className = 'gd-fx'; e.style.cssText = `position:absolute;pointer-events:none;image-rendering:pixelated;left:${cx - (w * p) / 2}px;bottom:${by + bot * p}px;width:${w * p}px;height:${h * p}px;background:${u(f)} 0 0/600% 100% no-repeat;z-index:${z};opacity:0`; host.appendChild(e); return e; };
-  const W = mk(a.guardWings, 206, 103, -14.8, 3), S = mk(a.guardShield, 340, 170, -10.8, 6);
+  const SK = 0.7, W = mk(a.guardWings, 206, 103, -14.8, 3), S = mk(a.guardShield, 340 * SK, 170 * SK, -10.8 * SK, 6);
   W.style.filter = 'drop-shadow(0 0 4px #fff3c0aa)';
   const fr = (el: HTMLElement, f: number, o: number) => { el.style.transition = 'none'; el.style.opacity = String(o); el.style.backgroundPositionX = `${f * 20}%`; };
   const z0 = host.style.zIndex, lift = (on: boolean) => { art.style.transition = 'transform .25s ease-out'; art.style.transform = on ? `translateY(${-6 * p}px)` : ''; };
@@ -77,7 +78,7 @@ export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0): n
   at(510, () => fr(W, 4, 1));
   at(570, () => fr(W, 5, 1));
   at(620, () => fr(S, 0, 0.9)); at(710, () => fr(S, 1, 0.9)); at(800, () => fr(S, 2, 0.9));
-  at(1120, () => { fr(S, 3, 1); onHit?.(); });
+  at(1120, () => { fr(S, 3, 1); onHit?.(); flashAt(mon); });
   at(1320, () => fr(S, 4, 0.95)); at(1560, () => fr(S, 5, 0.9));
   at(1860, () => { S.style.transition = 'opacity .35s'; S.style.opacity = '0'; });
   at(2070, () => { W.style.transition = 'opacity .45s'; W.style.opacity = '0'; lift(false); });
@@ -85,3 +86,10 @@ export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0): n
   return 1120;
 }
 export const HIT_MS = 1120;
+/** 💥 맞는 순간 몬스터 쪽 흰 · 금빛 섬광 (화면 고정 · 0.4초) */
+function flashAt(mon?: Element | null) {
+  if (!mon || !mon.isConnected || typeof document === 'undefined') return; const r = mon.getBoundingClientRect(); if (!r.width) return;
+  const e = document.createElement('i'), d = Math.max(r.width, r.height) * 1.3;
+  e.style.cssText = `position:fixed;z-index:40;pointer-events:none;left:${r.left + r.width / 2 - d / 2}px;top:${r.top + r.height / 2 - d / 2}px;width:${d}px;height:${d}px;border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#fff3c0aa 38%,transparent 68%);mix-blend-mode:screen`;
+  document.body.appendChild(e); e.animate?.([{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)', offset: 0.2 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 420, easing: 'ease-out', fill: 'forwards' }); setTimeout(() => e.remove(), 450);
+}

@@ -28,7 +28,7 @@
   function look(h: number, e: number, k: string) { const m = readMe(); m.hero = h; m.enh = e; m.socket = { ...(m.socket || {}), [String(h)]: k }; try { localStorage.setItem(KEY, JSON.stringify(m)); } catch { /* 사생활 창 */ } hh = h; enh = e; sk = k; ver += 1; }
   const scene = () => document.querySelector('.edge') as HTMLElement | null;
   async function trueUlt() { await cutin(hh, sk, { gold: true }); const sc = scene(); if (sc) void ultBlast(sc, sc.querySelector('.mon'), sk); }
-  async function holy() { await cutin(hh, sk, { guard: true }); const sc = scene(); const hb = sc?.querySelector('.hb') as HTMLElement | null; guard(hb, () => (now = 'guard-hit'), sc?.getBoundingClientRect().height ?? 0); }
+  async function holy() { await cutin(hh, sk, { guard: true }); const sc = scene(); const hb = sc?.querySelector('.hb') as HTMLElement | null; guard(hb, () => (now = 'guard-hit'), sc?.getBoundingClientRect().height ?? 0, sc?.querySelector('.mon')); }
   const code = $derived(chain ? 'GAL2' : 'GAL1'), L = $derived(chain ? L7 : L6);
   function mk(c: string, L: typeof L6, id: string) { openRoom(S, L, c, PROFILES.test); const i = L.steps.findIndex((s) => s.id === id); S.set(`${roomPath(c)}/meta/solve`, 0); S.set(`${roomPath(c)}/state`, { step: i, stepAt: S.now() }); }
   untrack(() => { mk('GAL1', L6, G1.id); mk('GAL2', L7, G2.id); });

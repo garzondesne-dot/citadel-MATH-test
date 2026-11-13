@@ -144,8 +144,8 @@
       if (A) {
         const w = HERO.w * sl.s, hgt = HERO.h * sl.s, hb = document.createElement('div'); hb.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`;
         const art = document.createElement('i'); art.className = 'art hero'; art.style.cssText = `position:absolute;inset:0;background:url(${heroUrl(R.players?.[u]?.hero ?? 0)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated`;
-        hb.appendChild(art); lay.appendChild(hb); A.heroVisible(u, false); guard(hb); setTimeout(() => { hb.remove(); A?.heroVisible(u, true); }, 2650);
-      } else { const el = host.querySelector(`.hr[data-u="${CSS.escape(u)}"]`) as HTMLElement | null; if (el) guard(el); }
+        hb.appendChild(art); lay.appendChild(hb); A.heroVisible(u, false); const mb = document.createElement('div'); mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; lay.appendChild(mb); setTimeout(() => mb.remove(), 2650); guard(hb, undefined, 0, mb); setTimeout(() => { hb.remove(); A?.heroVisible(u, true); }, 2650);
+      } else { const el = host.querySelector(`.hr[data-u="${CSS.escape(u)}"]`) as HTMLElement | null; if (el) guard(el, undefined, 0, host.querySelector('.mon')); }
     });
   }
   // 🗿 석화 (진필살기 20초 · 홀리 방패 10초): 몬스터 회색 돌 · 남은 초 (정식 hall.js 94)
