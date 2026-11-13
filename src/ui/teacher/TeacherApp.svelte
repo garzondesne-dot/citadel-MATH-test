@@ -14,6 +14,7 @@
   import TPrep from './TPrep.svelte';
   import TNews from './TNews.svelte';
   import TMe from './TMe.svelte';
+  import Sheet from '../battle/Sheet.svelte';
   import { unreadN } from '../../school/inbox';
 
   // 📱 교사 폰 (#119 ⑫ ⑬ ⑭) — 수업이 없으면 아래 탭 5(수업 · 학생 · 준비 · 소식 · 나) · 수업이 열리면 탭 자리에 같은 높이 「수업 중 막대」(TLive)
@@ -31,7 +32,13 @@
   let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>((['class', 'pupil', 'prep', 'news', 'me'] as const).find((k) => k === tab0) ?? 'class');
   let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
 
+  // 🔐 시험 서버 = 교사 로그인(admins)이 있어야 방을 만들 수 있음 (🚨 2026-11-13 밤 선생님 「수업 방이 개설 안 되네?」 · 로그인 없이 누르면 서버가 거부 → 「수업 방을 찾지 못했어요」)
+  //   → 열기 전에 막고 「🔐 교사 로그인」으로 안내 (로그인 뒤 같은 반 · 차시로 다시 누름)
+  type AS = Store & { auth?: unknown; isAdmin?: () => boolean };
+  const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
+  let loginAsk = $state(false), loginGo = $state(false);
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
+    if (needAdmin()) { loginAsk = true; return; }
     const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
     openRoom(S, L, code, test ? PROFILES.test : PROFILES.class);
     const pr = S.get<Record<string, number>>(`school/prep/${L.id}`); // 📋 차시 준비 기본값 (⑰) → 방에 옮겨 적음
@@ -65,7 +72,7 @@
     {:else if tab === 'news'}
       <TNews {S} {packs} onread={() => (unread = unreadN(S))} />
     {:else}
-      <TMe {S} />
+      {#key loginGo}<TMe {S} login0={loginGo} />{/key}
     {/if}
     {#if live && liveL}
       <div class="lbar"><i class="live"></i><span>{live.cls}반 · {liveL.no}차시 · <b>{liveR && (liveR.state.step ?? -1) < 0 ? '대기실' : '수업 중'}</b></span><button type="button" onclick={() => (page = 'live')}>돌아가기 ›</button></div>
@@ -75,6 +82,15 @@
   {/if}
 </div>
 
+{#if loginAsk}
+  <Sheet onclose={() => (loginAsk = false)} mainText="🔐 교사 로그인하러" onmain={() => { loginAsk = false; loginGo = true; tab = 'me'; }}>
+    {#snippet title()}🔐 교사 로그인이 필요해요{/snippet}
+    <p class="lq" data-k="need-login">시험 서버에 수업 방을 만들려면 이 폰이 교사로 로그인되어 있어야 해요<br /><small>「나」 탭 → 🔐 교사 로그인 → 다시 「▶ 수업 열기」</small></p>
+  </Sheet>
+{/if}
+
+
 <style>
+  .lq { margin: 0; text-align: center; color: var(--text-2); font-size: 15px; line-height: 1.5; } .lq small { color: var(--text-3); font-size: 13px; }
   .rdot { position: absolute; top: 6px; left: 55%; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--bad); color: #fff; font: 700 11px var(--font); font-style: normal; display: grid; place-items: center; }
 </style>

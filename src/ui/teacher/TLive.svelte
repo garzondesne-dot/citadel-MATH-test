@@ -239,7 +239,7 @@
     </div>
   {/if}
 {:else}
-  <div class="empty"><b>🚪</b><span>수업 방을 찾지 못했어요</span><button type="button" class="chipbtn" onclick={onclose}>수업 열기로</button></div>
+  <div class="empty"><b>🚪</b><span>수업 방을 찾지 못했어요</span>{#if (S as Store & { auth?: unknown; isAdmin?: () => boolean }).auth && !(S as Store & { isAdmin?: () => boolean }).isAdmin?.()}<small>교사 로그인이 안 되어 있어 서버가 방을 만들지 못했어요 · 「나」 탭 → 🔐 교사 로그인</small>{/if}<button type="button" class="chipbtn" onclick={onclose}>수업 열기로</button></div>
 {/if}
 
 <style>
