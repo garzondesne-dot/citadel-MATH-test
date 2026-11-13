@@ -1,7 +1,7 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
-import { perfStreak, petrify, ultUsed } from './raid';
+import { perfStreak, petrify, stone, ultUsed } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -212,6 +212,12 @@ export function petriGem(S: Store, code: string, me: string, at: number, mid: st
   const k = `gifts/${me}/petri_${code}_${mid}_${at}`, had = Number(S.get<{ g?: number }>(k)?.g) || 0, tot = Math.min(3, had + gain);
   if (tot > had) S.set(k, { g: tot, at: S.now(), code, fun: '🗿 석화 찬스' });
   return tot - had;
+}
+/** 🗿 석화 중 맞힘 → 💎 (📜 2026-11-13 밤 선생님 확정 · 베타): 진짜 공격 · 🔥 한 판 더 · 연습 공격 모두 · 맞힌 소문제(단계) 하나 = 💎 1 · 석화 한 번에 학생당 합쳐 3까지 · 석화 밖 0 · 받은 수 돌려줌 */
+export function petriAward(S: Store, code: string, me: string, mid: string, n: number): number {
+  const R = getRoom(S, code); if (!R || n <= 0) return 0;
+  const pt = stone(R, mid); if (!pt || S.now() >= pt.until) return 0;
+  return petriGem(S, code, me, pt.at, mid, n);
 }
 export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
   const R = getRoom(S, code); if (!R) return false;

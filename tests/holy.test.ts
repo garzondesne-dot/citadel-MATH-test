@@ -46,3 +46,23 @@ describe('🌟 진필살기 · 🛡 홀리 방패', () => {
     expect(petriGem(S, 'H1', 'b', st.at, id, 2)).toBe(2); expect(petriGem(S, 'H1', 'b', st.at, id, 5)).toBe(1); // 석화 한 번에 💎 3까지
   });
 });
+
+// 📜 2026-11-13 밤 (선생님 확정 · 베타): 석화 중 🔥 한 판 더 · 연습 공격 맞힘도 💎 · 진짜 + 연습 합쳐 석화 한 번에 3까지 · 석화 밖 0 · 하루 한도 안
+import { petriAward } from '../src/raid/actions';
+import { earnDaily } from '../src/model/wallet';
+describe('🗿 석화 💎 = 진짜 + 한 판 더 합쳐 3 · 석화 밖 0 · 하루 한도', () => {
+  it('석화 밖 = 0 · 석화 안 = 진짜 2 + 연습 2 → 3 (넘친 1 버림) · 학생마다 따로 · 끝나면 0', () => {
+    const { S, R, id, solve, tick } = room();
+    expect(petriAward(S, 'H1', 'b', id, 2)).toBe(0); // 석화 없음
+    solve('a'); holyArm(S, 'H1', 'a', id, true); holyUse(S, 'H1', 'a', id); expect(stone(R(), id)?.holy).toBe(true);
+    expect(petriAward(S, 'H1', 'b', id, 2)).toBe(2); // 진짜 공격 2
+    expect(petriAward(S, 'H1', 'b', id, 2)).toBe(1); // 🔥 한 판 더 2 → 1만 (합쳐 3)
+    expect(petriAward(S, 'H1', 'b', id, 1)).toBe(0);
+    expect(petriAward(S, 'H1', 'c', id, 5)).toBe(3); // 학생마다 따로
+    tick(HOLY_SEC * 1000 + 1); expect(petriAward(S, 'H1', 'd', id, 1)).toBe(0); // 석화 끝
+  });
+  it('받을 때 하루 한도 100 안 (earnDaily)', () => {
+    const w = { gem: 0, scroll: 0, buys: [], ver: 1, day: { '2026-11-13': 99 } };
+    expect(earnDaily(w, 3, '2026-11-13', 100)).toBe(1); expect(w.gem).toBe(1);
+  });
+});

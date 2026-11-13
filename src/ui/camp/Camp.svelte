@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { earnDaily } from '../../model/wallet';
+  import { GEM, kstDay } from '../../board/board';
   import SoundToggles from '../SoundToggles.svelte';
   import { BUILD } from '../../build';
   import { onDestroy, untrack } from 'svelte';
@@ -53,9 +55,11 @@
     if (u && fresh.length) {
       const sum = fresh.reduce((a, [, x]) => a + (Number(x.g) || 0), 0);
       const xp = fresh.reduce((a, [, x]) => a + (Number(x.x) || 0), 0), funOnly = fresh.every(([, x]) => !!x.fun); // 🏕 쉼터 놀이 보상(#142) = 같은 칸 · EXP 도
-      me.wallet.gem += sum; me.xp += xp; M.save();
+      // 🗿 석화 찬스 💎 = 하루 한도 안 (📜 2026-11-13 밤 · 정식 DAY_CAP 100 · 넘은 몫은 버림) · 나머지 선물 = 한도 밖 그대로
+      const petri = fresh.filter(([k]) => k.startsWith('petri_')).reduce((a, [, x]) => a + (Number(x.g) || 0), 0), petriGot = earnDaily(me.wallet, petri, kstDay(untrack(() => S).now()), GEM.dayCap);
+      me.wallet.gem += sum - petri; me.xp += xp; M.save();
       fresh.forEach(([k]) => S.set(`gifts/${u}/${k}/got`, true));
-      giftToast = `${funOnly ? '🏕 쉼터 놀이' : '🎁 선생님 선물'} · 💎 +${sum}${xp ? ` · EXP +${xp}` : ''}`;
+      giftToast = `${funOnly ? '🏕 쉼터 놀이' : '🎁 선생님 선물'} · 💎 +${sum - petri + petriGot}${xp ? ` · EXP +${xp}` : ''}`;
       setTimeout(() => (giftToast = ''), 2600);
     }
   }

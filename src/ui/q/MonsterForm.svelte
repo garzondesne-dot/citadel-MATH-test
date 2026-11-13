@@ -2,7 +2,7 @@
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { itemsFor, plainRecord, stone } from '../../raid/raid';
-  import { petriGem } from '../../raid/actions';
+  import { petriAward } from '../../raid/actions';
   import type { Room as RoomT } from '../../model/types';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
@@ -82,7 +82,7 @@
     if (!l2) return;
     // ⚔ 정식 student.js: 도장(채점) 뒤 공격 한 번 · hits = 이번에 늘어난 데미지 · ⚡ 필살기 = 첫 시도에 모두 맞힘(장면이 내 속성 Ⅲ↑ 판정) · 🔥 끈기 = 두 번 넘게 틀린 뒤 다 맞힘 · 연습 = 데미지 0
     const gain = Math.max(0, r2.best - oldBest), all = l2.marks.length > 0 && l2.marks.every(Boolean);
-    { const R2 = S.get<RoomT>(`rooms/${code}`) as RoomT, pt = stone(R2, mid); if (pt && S.now() < pt.until && gain > 0 && !r2.practice) petriGem(S, code, uid, pt.at, mid, gain); } // 🗿 석화 찬스 (정식 petriGem)
+    petriAward(S, code, uid, mid, r2.practice ? l2.marks.filter(Boolean).length : gain); // 🗿 석화 찬스 (진짜 = 늘어난 데미지 · 연습 공격 = 이번에 맞힌 소문제 · 석화 한 번에 3까지)
     pendAtk = { miss: !l2.marks.some((m, i) => m && !keep[i]) && !r2.practice, hits: r2.practice ? 1 : gain || l2.marks.filter(Boolean).length, ult: !r2.practice && l2.attempt === 0 && all, finish: !r2.practice && l2.attempt >= 2 && r2.perfectAt === l2.attempt, noDmg: r2.practice };
     startReveal(qs, texts, l2.marks, keep, gain);
   }
