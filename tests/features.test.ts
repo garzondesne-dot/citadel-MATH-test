@@ -37,3 +37,14 @@ describe('📚 과목 팩으로 옮긴 것 (⚙ 스위치 틀)', () => {
   });
   it('파지직 기호 = 팩 glitchSyms', () => { expect(SUBJ.glitchSyms).toContain('∪'); });
 });
+import { applySchoolInfo, CLASSES, firstClass } from '../src/school/school';
+import { BELLS, PERIODS } from '../src/school/bells';
+describe('🏫 학교 정보 = school/info (반 목록 · 교시 · 처음 반)', () => {
+  it('바꾸면 그 자리에서 · 없으면 우리 학교 값으로 되돌림', () => {
+    const b0 = structuredClone(BELLS), p0 = structuredClone(PERIODS), base = { bells: b0, periods: p0 };
+    applySchoolInfo({ classes: ['2-1', '2-2'], bells: { 1: ['08:40', '09:25'] }, periods: { 1: [1] } }, BELLS, PERIODS, base);
+    expect(CLASSES).toEqual(['2-1', '2-2']); expect(firstClass()).toBe('2-1'); expect(BELLS[1]).toEqual(['08:40', '09:25']); expect(BELLS[2]).toBeUndefined(); expect(PERIODS[1]).toEqual([1]);
+    applySchoolInfo(null, BELLS, PERIODS, base);
+    expect(CLASSES).toHaveLength(8); expect(firstClass()).toBe('1-1'); expect(BELLS).toEqual(b0); expect(PERIODS).toEqual(p0);
+  });
+});

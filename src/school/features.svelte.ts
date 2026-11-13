@@ -5,6 +5,9 @@
 //   잠김 = 켜 놓았어도 「필요한 것」이 없으면 꺼진 것과 같이(화면에서 통째로 사라짐) + 채우는 길 한 줄
 import type { Store } from '../model/types';
 import { SUBJ } from '../engine/subject';
+import { applySchoolInfo, type SchoolInfo } from './school';
+import { BELLS, PERIODS } from './bells';
+const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 
 export type FeatId =
   | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox'
@@ -59,10 +62,16 @@ export const stateOf = (S: Store | null, c: FeatCfg | null | undefined, id: Feat
 
 // ── 화면에서 쓰는 한 입구: feat('id') (반응형 · 서버 설정이 바뀌면 바로) ──
 let cfg = $state<FeatCfg | null>(null), store: Store | null = null, stop: (() => void) | null = null;
+/** 학교 정보가 바뀐 횟수 (화면이 다시 읽게) */
+export const schoolInfo = $state({ ver: 0 });
 /** 앱 시작 때 한 번 (App.svelte) · 시험은 setFeatCfg 로 직접 */
 export function bindFeatures(S: Store) {
   stop?.(); store = S; cfg = S.get<FeatCfg>(PATH) ?? null;
-  stop = S.watch<FeatCfg>(PATH, (v) => (cfg = v ?? null));
+  const s1 = S.watch<FeatCfg>(PATH, (v) => (cfg = v ?? null));
+  // 🏫 학교 정보 (반 목록 · 교시) = school/info → 그 자리에서 바꿈
+  const info = (v: SchoolInfo | null) => { applySchoolInfo(v, BELLS, PERIODS, { bells: BELLS0, periods: PERIODS0 }); schoolInfo.ver++; };
+  info(S.get<SchoolInfo>('school/info')); const s2 = S.watch<SchoolInfo>('school/info', info);
+  stop = () => { s1(); s2(); };
   (globalThis as { __featSet?: (c: FeatCfg | null) => void }).__featSet = (c) => S.set(PATH, c); // 화면 시험 고리(시험 3판 · 교사 화면과 같은 길)
 }
 export const setFeatCfg = (c: FeatCfg | null) => { cfg = c; };

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
-  import { CLASSES, isBeta, pasteRoster, liveOfCls } from '../../school/school';
+  import { CLASSES, firstClass, isBeta, pasteRoster, liveOfCls } from '../../school/school';
   import { fakeClass, type Stud } from '../../school/dash';
   import { ALL } from '../../school/views';
   import Sheet from '../battle/Sheet.svelte';
@@ -17,7 +17,7 @@
   let iw = $state(400);
   const wide = $derived(seg === 'dash' && iw >= 720); // 📊 펼친 화면 (기준 너비 720 · #131 펼친 Fold7 ≈ 830)
   let xl = $state(false); // ⬇ 엑셀 = [명단 · 대시보드] 줄 오른쪽 끝 (#131 · 시안 v85 자리)
-  const data = $derived.by(() => { void ver; return fakeClass(S, cls === ALL ? '1-1' : cls); });
+  const data = $derived.by(() => { void ver; return fakeClass(S, cls === ALL ? firstClass() : cls); });
   const live = $derived(liveOfCls(S, cls));
   const absentToday = (uid: string) => !!live && !!S.get<boolean>(`rooms/${live.code}/absent/${uid}`);
   $effect(() => ondash?.(wide));

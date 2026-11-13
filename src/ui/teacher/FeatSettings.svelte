@@ -1,11 +1,17 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
-  import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted } from '../../school/features.svelte';
+  import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted, schoolInfo } from '../../school/features.svelte';
+  import { CLASSES } from '../../school/school';
   // ⚙ 우리 학교 기능 (V1-DESIGN 10절 · 교사 「나」 탭): 묶음(시작값) 하나 고르고 → 낱낱 스위치로 더하고 뺌
   //   🔒 잠김 = 켰지만 「필요한 것」(과목 팩 · AI 키) 없음 → 채우는 길 한 줄 · 꺼진 기능은 학생 · TV 화면에서 통째로 사라짐
   const { S }: { S: Store } = $props();
   const c = $derived(featCfg());
   const groups = [...new Set(FEATS.map((f) => f.group))];
+  // 🏫 학교 정보 · 반 목록 (school/info/classes · 처음 반 = 첫째) — 교시 시각 · 요일 교시는 같은 칸(bells · periods)에 저장 · 화면은 다음 판
+  let cls = $state((() => { void schoolInfo.ver; return CLASSES.join(', '); })());
+  const clsList = $derived(cls.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean));
+  let saved = $state('');
+  function saveCls() { S.set('school/info/classes', clsList); saved = `✔ 반 ${clsList.length}개 저장`; setTimeout(() => (saved = ''), 1600); }
 </script>
 
 <div class="fs">
@@ -31,11 +37,18 @@
       {/each}
     </ul>
   {/each}
+  <h4>🏫 학교 정보</h4>
+  <label class="cls"><span>반 목록 <small>쉼표로 · 처음 반 = 첫째</small></span><input class="in" bind:value={cls} placeholder="1-1, 1-2, 1-3" data-k="classes" /></label>
+  <button type="button" class="save" disabled={!clsList.length} onclick={saveCls}>반 목록 저장 · {clsList.length}개</button>{#if saved}<small class="ok">{saved}</small>{/if}
   <p class="foot">🦴 기본 뼈대(수업 레이드 · 엑셀 차시 · 학습지 · 결과 · 대시보드 · 복습 · 소리)는 늘 켜져 있어요</p>
 </div>
 
 <style>
   .fs { display: flex; flex-direction: column; gap: var(--s3); }
+  .cls { display: flex; flex-direction: column; gap: var(--s1); font-size: 14px; color: var(--text-2); } .cls small { color: var(--text-3); }
+  .cls .in { min-height: 48px; padding: 0 var(--s3); border-radius: var(--r); border: 1px solid #3a3f4c; background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
+  .save { min-height: 48px; border-radius: var(--r); border: 0; background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); } .save:disabled { opacity: 0.5; }
+  .ok { color: var(--ok); }
   .lead, .foot { margin: 0; color: var(--text-2); font-size: 14px; }
   .bund { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
   .b { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 88px; padding: var(--s2); border-radius: var(--r); border: 2px solid transparent; background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }

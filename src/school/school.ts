@@ -6,6 +6,17 @@ import { BUILD } from '../build';
 //   명단 = 테스트용 가짜 이름(실제 학생 아님 · 학생 명단은 저장소에 넣지 않음)
 // 🏫 반 = 명단에 올린 반만 · 1-1 ~ 1-8 까지 (DECISIONS 「🏫 반 수 · 전체 통계」) · 테스트 판 가짜 명단 = 8반 · 1-6 = 🧪 베타 반
 export const CLASSES = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8'];
+/** 🏫 그 학교 정보 (⚙ 스위치 틀 · school/info): 반 목록 · 교시 시각 · 요일마다 교시 — 없으면 지금 값(우리 학교) 그대로
+ *  같은 배열 · 표를 그 자리에서 바꿈(이 값을 읽는 모든 곳이 그대로) · 처음 반 = 반 목록 첫째 */
+export interface SchoolInfo { classes?: string[]; bells?: Record<number, [string, string]>; periods?: Record<number, number[]> }
+const BASE = { classes: [...CLASSES] };
+export function applySchoolInfo(i: SchoolInfo | null, bells: Record<number, [string, string]>, periods: Record<number, number[]>, base?: { bells: Record<number, [string, string]>; periods: Record<number, number[]> }) {
+  const cl = i?.classes?.filter((c) => /^[\w가-힣-]{1,8}$/.test(c)).slice(0, 30);
+  CLASSES.splice(0, CLASSES.length, ...(cl?.length ? cl : BASE.classes));
+  const swap = <T>(o: Record<number, T>, n: Record<number, T> | undefined, b: Record<number, T> | undefined) => { if (!n && !b) return; for (const k of Object.keys(o)) delete o[Number(k)]; Object.assign(o, n ?? b); };
+  swap(bells, i?.bells, base?.bells); swap(periods, i?.periods, base?.periods);
+}
+export const firstClass = () => CLASSES[0] ?? '1-1';
 /** 🧪 베타 반 (#123): 화면 · 규칙 · 보상 · 하루 한도 · 저장은 실제 반과 같고 통계에서만 빠짐 — 반 설정 school/cls/{반}/beta (테스트 판 기본 = 1-6) */
 const BETA_DEFAULT = ['1-6'];
 const GIVEN = ['민준', '서연', '도윤', '하은', '시우', '지유', '주원', '하린', '예준', '서준', '지아', '은우', '수아', '건우', '지호'];

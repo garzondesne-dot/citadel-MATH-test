@@ -2,7 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { DungeonProfile, LessonPack, Store } from '../model/types';
   import { openRoom } from '../raid/actions';
-  import { type Live } from '../school/school';
+  import { firstClass, type Live } from '../school/school';
   import { clock, useClock } from './clock.svelte';
   import { liveValue } from './room.svelte';
   import TV from './tv/TV.svelte';
@@ -14,7 +14,7 @@
   const stopClock = useClock();
   const lv = untrack(() => liveValue<Live>(S, 'school/live'));
   onDestroy(() => { stopClock(); lv.stop(); });
-  const devLive = untrack(() => { if (!fixed) return null; openRoom(S, L, code, P); return { code, cls: '1-1', lesson: L.id, key: '0000' } as Live; });
+  const devLive = untrack(() => { if (!fixed) return null; openRoom(S, L, code, P); return { code, cls: firstClass(), lesson: L.id, key: '0000' } as Live; });
   const live = $derived(devLive ?? lv.v.val);
   const now = $derived(clock.now);
   // 🔐 #163-① TV = 종합실 키를 한 번 쳐서 이 방의 hosts 에 등록 (방 진행 칸은 hosts · 교사만 씀) · 키는 이 TV 에 기억 → 다음 수업은 저절로
