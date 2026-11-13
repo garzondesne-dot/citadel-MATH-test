@@ -211,6 +211,14 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
     best: stage, total: n, submitted: subs.length > 0, tries: [], last: null, allRight: done, practice: pass > 0, pass, pStage, pSays, pItems, pDoneN, pWhy, whyOk, pLeft: Math.max(0, CHAIN_SLOTS - pCost), pFail: pass > 0 && pCost >= CHAIN_SLOTS && pStage < (pItems || []).length,
     healed, canRetry: false, canHeal: tokLeft > 0, nextAttempt: subs.length, nextK: subs.length ? (subs[subs.length - 1] as { k: number }).k + 1 : 0 };
 }
+/** 🔥 연습 타격 (📜 2026-11-13 밤 · 베타): 다 맞힌 뒤 🔥 한 판 더 · 연습 공격에서 맞힌 소문제(단계) 수 = 데미지 0 · 흔적만 (TV 「🔥 연습 타격 n」 · 처치 결과 한 줄) */
+export function pracHits(L: LessonPack, R: Room, mid: string, uid: string): number {
+  if (!L.monsters[mid]) return 0;
+  if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, uid, true); return r.pass > 0 ? r.pDoneN * r.n + (r.pStage >= r.n ? 0 : r.pStage) : 0; }
+  const r = plainRecord(L, R, mid, uid); return r.perfectAt >= 0 ? r.tries.slice(r.perfectAt + 1).reduce((a, t) => a + (t.correct || 0), 0) : 0;
+}
+/** 🔥 반 전체 연습 타격 합 */
+export const pracHitsAll = (L: LessonPack, R: Room, mid: string) => Object.keys(R.players || {}).reduce((a, u) => a + pracHits(L, R, mid, u), 0);
 /** 💥 졸개 쓰러짐 (정식 chainDown): 졸개 k 를 넘은 학생 ≥ ⌈살아 있는 머릿수 × 기준%⌉ · 대장은 체력 0 으로만 */
 export function chainDown(L: LessonPack, R: Room, mid: string, now: number) {
   if (!isChain(L, R, mid)) return [];

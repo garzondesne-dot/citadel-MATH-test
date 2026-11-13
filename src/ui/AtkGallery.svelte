@@ -50,6 +50,7 @@
       <div class="ids">{#each [...ladder(hh), 'wings', 'smite'] as k, i (k)}<button type="button" class="a" class:on={sk === k} data-sk={k} onclick={() => look(hh, enh, k)}>{i < 4 ? 'ⅠⅡⅢⅣ'[i] : '🪶'}<small>{k === 'wings' ? '황금 날개' : k === 'smite' ? '심판의 빛' : skillName(k)}</small></button>{/each}</div>
       <div class="ids">
         <button type="button" class="a" data-h="hit" onclick={() => heroAtk({ miss: false, hits: 3 })}>⚔<small>공격</small></button>
+        <button type="button" class="a" data-h="prac" onclick={() => heroAtk({ miss: false, hits: 1, noDmg: true, prac: 2 })}>🔥<small>한 판 더</small></button>
         <button type="button" class="a" data-h="miss" onclick={() => heroAtk({ miss: true })}>✖<small>틀림</small></button>
         <button type="button" class="a" data-h="finish" onclick={() => heroAtk({ miss: false, hits: 3, finish: true })}>🔥<small>끈기</small></button>
         <button type="button" class="a" data-h="ult" disabled={!canUlt(sk, hh)} title="내 속성 Ⅲ · Ⅳ" onclick={() => heroAtk({ miss: false, hits: 3, ult: true })}>⚡<small>필살기</small></button>

@@ -66,3 +66,15 @@ describe('🗿 석화 💎 = 진짜 + 한 판 더 합쳐 3 · 석화 밖 0 · �
     expect(earnDaily(w, 3, '2026-11-13', 100)).toBe(1); expect(w.gem).toBe(1);
   });
 });
+import { pracHits, pracHitsAll } from '../src/raid/raid';
+describe('🔥 연습 타격 = 다 맞힌 뒤 한 판 더 · 연습 공격에서 맞힌 소문제 · 데미지 0', () => {
+  it('퍼펙트 전 = 0 · 퍼펙트 뒤 연습 2판(1판 다 맞힘 · 1판 첫 칸 틀림) = 소문제 합 · 반 전체 합', () => {
+    const { R, L, id, solve } = room();
+    solve('a', false); expect(pracHits(L, R(), id, 'a')).toBe(0); // 아직 퍼펙트 아님
+    solve('a'); expect(pracHits(L, R(), id, 'a')).toBe(0); // 퍼펙트 (진짜 데미지)
+    const n = plainRecord(L, R(), id, 'a').total;
+    solve('a'); expect(pracHits(L, R(), id, 'a')).toBe(n); // 연습 다 맞힘
+    solve('a', false); expect(pracHits(L, R(), id, 'a')).toBe(n + n - 1); // 연습 첫 칸 틀림
+    solve('c'); solve('c'); expect(pracHitsAll(L, R(), id)).toBe(n + n - 1 + n);
+  });
+});

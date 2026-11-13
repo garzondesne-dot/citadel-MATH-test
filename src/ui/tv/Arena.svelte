@@ -11,7 +11,7 @@
   import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
   import { deco } from '../fx/aura';
   import { ladder } from '../../model/hero';
-  import { bossState, plainRecord, holyArmed, stone, BOSS_ID } from '../../raid/raid';
+  import { bossState, plainRecord, holyArmed, stone, BOSS_ID, pracHitsAll } from '../../raid/raid';
   import { cutin } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
@@ -153,6 +153,8 @@
   }
   // 🗿 석화 (진필살기 20초 · 홀리 방패 10초): 몬스터 회색 돌 · 남은 초 (정식 hall.js 94)
   const stoneNow = $derived(step ? stone(R, step.kind === 'boss' ? BOSS_ID : step.id) : null);
+  // 🔥 연습 타격 (📜 2026-11-13 밤): 반 전체 한 판 더 · 연습 공격 맞힘 누적 · 체력은 그대로
+  const pracN = $derived(step?.kind === 'monster' ? pracHitsAll(L, R, step.id) : 0);
   const stoneLeft = $derived(stoneNow ? Math.max(0, Math.ceil((stoneNow.until - now) / 1000)) : 0);
   $effect(() => { A?.stone(stoneLeft > 0); });
   // ✨ 오라 (정식 aura.js · TV = 입자 2개까지): Pixi = 캔버스 아래 층에 용사 자리마다 · DOM 장면 = HeroSprite 가 직접
@@ -177,7 +179,7 @@
       const d = !!hp?.down;
       if (d && !wasDown) {
         A?.armKill(); // 🎆 마지막 일격 = 느리게 · 충격파 · 조각
-        const text = boss ? '🎉 보스 격파! 모두 함께 이겼다!' : '⚔ 몬스터 격파!';
+        const pn = st0.kind === 'monster' ? pracHitsAll(L, R, st0.id) : 0, text = boss ? '🎉 보스 격파! 모두 함께 이겼다!' : `⚔ 몬스터 격파!${pn ? `\n🔥 연습 타격 ${pn}번` : ''}`;
         setTimeout(() => { if (A) A.banner(text); else domBan = text; }, 350 * (queue.length + 1));
         setTimeout(() => ids.forEach((u, k) => { const x = xpOf(L, R, st0, u); if (!x) return; setTimeout(() => { if (A) A.exp(u, `+${x} EXP`); else { const sl = partyLayout(ids.length, W, H, split)[k]; if (sl) domPop(`+${x} EXP`, sl.x, sl.y - 64 * sl.s, 'exp'); } }, (k % 6) * 120); }), 350 * (queue.length + 1) + 600);
       }
@@ -211,6 +213,7 @@
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
+  {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}
   <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
   {#if perfOut}<pre class="perf">{perfOut}</pre>{/if}
 </div>
@@ -220,6 +223,7 @@
   .mon.stoned { filter: grayscale(1) brightness(0.85) contrast(1.1); }
   .stonelab { position: absolute; z-index: 6; transform: translateX(-50%); padding: 0.5cqh 1.2cqw; border-radius: 99px; background: rgba(40, 40, 46, 0.9); border: 2px solid #c9c9d6; font-size: var(--tv-body); font-weight: 700; white-space: nowrap; }
   .perf { position: absolute; z-index: 3000; left: 2cqw; top: 12cqh; margin: 0; padding: 1cqh 1.4cqw; border-radius: 1cqh; background: rgba(0, 0, 0, 0.85); color: #fff; font-size: var(--tv-body); white-space: pre; }
+  .pracn { position: absolute; z-index: 6; transform: translateY(-50%); padding: 0.3cqh 0.9cqw; border-radius: 99px; background: rgba(32, 35, 43, 0.85); border: 1px solid #8b90a0; color: #d6d9e0; font-size: var(--tv-small, 1.8cqh); font-weight: 700; white-space: nowrap; }
   .tvaura { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .arena2 :global(canvas) { position: relative; z-index: 1; }
   .tvfx { position: absolute; inset: 0; z-index: 2000; pointer-events: none; overflow: hidden; }
@@ -245,5 +249,5 @@
   .pop { position: absolute; transform: translate(-50%, -100%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; text-shadow: 0 3px 0 #000; animation: up 1.1s ease-out forwards; pointer-events: none; }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
-  .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: nowrap; }
+  .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
 </style>

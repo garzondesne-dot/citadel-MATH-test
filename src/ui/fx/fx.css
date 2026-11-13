@@ -81,3 +81,5 @@
   .ult .u-face { width: 448px; height: 448px; }
   .ult .u-name { top: 56%; font-size: clamp(24px, 7.5vw, 44px); white-space: nowrap; }
 }
+.atk-dmg.prac { color: #c9ccd4; font-size: 24px; text-shadow: 2px 2px 0 #20232b, -1px -1px 0 #20232b; animation-name: atkDmgPrac; } /* 🔥 한 판 더 = 회색 · 진짜 데미지(빨강)와 색으로 구별 */
+@keyframes atkDmgPrac { 0% { transform: translate(-50%, 0) scale(1.4); } 15% { transform: translate(-50%, -14px) scale(1); } 100% { transform: translate(-30%, -46px); opacity: 0; } }

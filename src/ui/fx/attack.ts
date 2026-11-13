@@ -40,9 +40,9 @@ export const knock = (monBox: HTMLElement | null, d = 12) => { if (monBox?.anima
 const hitstop = (box: HTMLElement, ms: number) => { box.classList.add('hitstop'); return wait(ms).then(() => box.classList.remove('hitstop')); };
 // 🎨 다듬기 ⑧ (2026-11-13): 「−1」 크게 · 연타마다 위로 비켜 쌓기(0.7초 안에 뜬 숫자 수만큼 26px 위)
 const dmgStack = new WeakMap<HTMLElement, { n: number; t: number }>();
-function dmg(box: HTMLElement, x: number, y: number, txt = '−1') {
+function dmg(box: HTMLElement, x: number, y: number, txt = '−1', prac = false) {
   const now = performance.now(), st = dmgStack.get(box), n = st && now - st.t < 700 ? st.n + 1 : 0; dmgStack.set(box, { n, t: now });
-  const e = document.createElement('b'); e.className = 'atk-dmg'; e.textContent = txt; e.style.left = `${x}px`; e.style.top = `${y - n * 26}px`; box.appendChild(e); setTimeout(() => e.remove(), 950);
+  const e = document.createElement('b'); e.className = prac ? 'atk-dmg prac' : 'atk-dmg'; e.textContent = txt; e.style.left = `${x}px`; e.style.top = `${y - n * 26}px`; box.appendChild(e); setTimeout(() => e.remove(), 950);
 }
 /** ✖ 틀림 = 방패 불꽃 「팅」 (🔨 다듬기 ③ · 2026-11-13): 몬스터 앞 맞닿는 자리에 네모 불꽃 8 + 흰 번쩍 + 「팅!」 */
 export function ting(box: HTMLElement, x: number, y: number, dir = 1) {
@@ -55,7 +55,7 @@ function wave(box: HTMLElement, x: number, y: number) { const e = document.creat
 const FAM_SFX: Record<string, string> = { cut: 'cut', smash: 'smash', sweep: 'sweep', wind: 'wind', fire: 'fire', spark: 'spark', frost: 'frost', star: 'star', magic: 'magic', math: 'magic', sun: 'star', dark: 'cut', gear: 'smash', water: 'wind' };
 export const fxHit = (k: string) => sfx(FAM_SFX[famOf(k)?.id ?? ''] ?? 'special', 0.85);
 
-type HitO = { mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
+type HitO = { prac?: number; mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
 /** ⚔ 새 스킬 fx (TV 시제품 · slash.ts): 맞는 자리에 그림을 대신 그림 · true = 그렸음(띠 안 씀) · false = 지금 띠 */
 export type CustomFx = (B: Body, dir: number, o: { ult: boolean; finish: boolean }) => boolean;
 /** 맞는 순간: 이펙트 · 멈칫 · 흔들림 · 밀림 · −1 (처치면 충격파 + 크게) */
@@ -70,6 +70,7 @@ export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string
   o.onHit?.();
   knock(monBox, o.finish ? 24 : 12); shake(scene, Math.max(2, hit[3] || 2) * (o.finish ? 2 : 1.2), Math.max(0.14, hit[2] || 0.18) * (o.finish ? 2000 : 1000));
   if (!o.noDmg) dmg(scene, B.cx, B.y0 + 6);
+  else if (o.prac) for (let k = 0; k < o.prac; k++) setTimeout(() => { if (scene.isConnected) dmg(scene, B.cx, B.y0 + 6, '🔥 +1', true); }, k * 90); // 🔥 한 판 더 맞힘 = 데미지 0 · 회색 흔적 (📜 2026-11-13 밤)
   if (o.finish) wave(scene, B.cx, B.y1);
   if (o.finish) sfx('finish', 0.95); else fxHit(fx);
   if (!o.noDmg) setTimeout(() => sfx('hurt', 0.55), 70);
@@ -195,7 +196,7 @@ export const canUlt = (fx: string, hero: number) => tierN(fx) >= 2 && resonates(
 export const canTrue = (fx: string, hero: number) => tierN(fx) === 3 && resonates(hero, fx);
 export const preload = (hero: number, fx: string) => { fxPreload(fx); const p = projOf(hero); if (p) fxPreload(p); if (canUlt(fx, hero)) preloadFaces(); };
 
-export type PlayO = { custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
@@ -206,7 +207,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
   const H = rel(heroBox, scene), B = body(monBox, scene)!, rest = o.rest || 'think';
   const hc = { x: H.x + H.w / 2, y: H.y + H.h }, dir = hc.x <= B.cx ? 1 : -1;
   const shot = modeOf(fx) === 'shot', ranged = isRanged(hero), inPlace = shot || ranged;
-  const hitO: HitO = { mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
+  const hitO: HitO = { prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
   if (reso) { heroBox.classList.add('atk-reso'); setTimeout(() => heroBox.classList.remove('atk-reso'), 1400); }
   if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt });
   if (inPlace) {

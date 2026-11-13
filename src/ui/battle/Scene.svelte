@@ -36,7 +36,7 @@
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
-    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });
   });
   const sp = $derived(spriteOf(sprite));
   const monBB = $derived(monBody(sp.sheet.src, sp.row, sp.sheet.poses[down ? 'down' : 'idle'], sp.sheet.cell));

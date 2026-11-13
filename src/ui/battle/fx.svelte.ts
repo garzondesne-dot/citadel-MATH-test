@@ -5,7 +5,8 @@
 export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean; lock: boolean }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false, lock: false });
 export function swing(ok: boolean) { heroAtk({ miss: !ok }); }
 /** ⚔ 용사 공격 한 번 (정식 DS.Attack.play 를 장면 띠가 부름 · 🔨 용사 fx): miss = 틀림(튕겨냄) · hits = 연타 수(Ⅲ · Ⅳ 근접) · ult = ⚡ 필살기(첫 시도 퍼펙트 + 내 속성 Ⅲ↑ · 장면이 판정) · finish = 끈기의 일격 · noDmg = 연습 */
-export type HeroAtk = { id: number; miss: boolean; hits?: number; ult?: boolean; finish?: boolean; noDmg?: boolean; win?: boolean };
+/** prac = 🔥 한 판 더 · 연습 공격에서 맞힌 수 (데미지 0 · 회색 「🔥 +1」 흔적) */
+export type HeroAtk = { id: number; miss: boolean; hits?: number; ult?: boolean; finish?: boolean; noDmg?: boolean; win?: boolean; prac?: number };
 let atkN = 0;
 export const atkQ = $state<{ v: HeroAtk | null }>({ v: null });
 export function heroAtk(o: Omit<HeroAtk, 'id'>) { atkQ.v = { ...o, id: ++atkN }; fx.pose = o.miss ? 'miss' : 'attack'; fx.poseUntil = Date.now() + 320; }

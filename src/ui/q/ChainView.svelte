@@ -49,7 +49,7 @@
     if (err) { toast = err; return; }
     const r2 = chainRecord(L, S.get<Room>(`rooms/${code}`) as Room, mid, uid);
     const okNow = prac ? r2.pass === pass && r2.pStage > before : r2.stage > before;
-    heroAtk({ miss: !okNow, noDmg: prac, win: !prac && r2.done });
+    heroAtk({ miss: !okNow, noDmg: prac, win: !prac && r2.done, prac: prac && okNow ? 1 : 0 });
     if (okNow) petriAward(S, code, uid, mid, 1); // 🗿 석화 찬스 (진짜 · 🔥 한 판 더 모두 · 석화 한 번에 3까지) // ⚔ 정식 소레이드 = 단계마다 공격 한 번
     flip = { i: before, ok: okNow, text: sent }; if (flipT) clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); // #116 그 칸만 뒤집힘
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
