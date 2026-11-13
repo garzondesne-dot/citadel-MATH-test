@@ -26,7 +26,7 @@ const ease = (p: number) => 1 - (1 - p) * (1 - p);
 /** WebGL 이 없거나 실패하면 null → TV 는 DOM 장면으로 */
 export async function createArena(host: HTMLElement, font: string): Promise<Arena | null> {
   const app = new Application();
-  try { await app.init({ resizeTo: host, backgroundAlpha: 0, antialias: false, preference: 'webgl', autoDensity: true, resolution: Math.min(2, window.devicePixelRatio || 1) }); }
+  try { await app.init({ resizeTo: host, backgroundAlpha: 0, antialias: false, roundPixels: true, preference: 'webgl', autoDensity: true, resolution: Math.min(2, window.devicePixelRatio || 1) }); }
   catch (e) { console.warn('PixiJS 시작 실패 → DOM 장면', e); try { app.destroy(); } catch { /* 무시 */ } return null; }
   if ((app.renderer as { type?: number }).type == null) return null;
   const cv = app.canvas as HTMLCanvasElement; cv.style.position = 'absolute'; cv.style.inset = '0'; cv.setAttribute('aria-hidden', 'true'); cv.dataset.arena = 'pixi';
@@ -48,7 +48,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   app.ticker.add(() => {
     const t = performance.now();
     for (const w of [...tweens]) { const p = Math.min(1, (t - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
-    bob = Math.sin(t / 520) * H() * 0.006; if (monSp && !st?.down) monSp.y = monY + bob; // 둥실
+    bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
     if (t - heroT > 162) { heroT = t; heroF = (heroF + 1) % 8; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
   });
 

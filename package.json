@@ -1,7 +1,7 @@
 {
   "name": "citadel-math-test",
   "private": true,
-  "version": "0.0.0-b47",
+  "version": "0.0.0-b48",
   "type": "module",
   "scripts": {
     "dev": "vite",
