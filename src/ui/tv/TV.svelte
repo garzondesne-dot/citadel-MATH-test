@@ -183,6 +183,7 @@
 </script>
 
 <svelte:window bind:innerHeight={tvH} onmousemove={poke} ontouchstart={poke} onkeydown={poke} onresize={fit} />
+<div class="tvout" style:background-image="url({CAMP.bg})" aria-hidden="true"></div>
 <div class="tv" class:dim={!!R?.state.focus}>
   <div class="bg" style:background-image="url({view === 'camp' ? CAMP.bg : dungeonOf(L.theme)})" class:campbg={view === 'camp'}></div>
 
@@ -193,7 +194,7 @@
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>
     {#if view !== 'camp'}<span class="code">🚪 코드<b>{code}</b></span>{/if}
-    <button type="button" class="ib" class:on={view === 'camp'} aria-label="내 캠프" onclick={() => (campPeek = view !== 'camp')}>⛺</button>
+    <!-- ⛺ 둥근 캠프 단추 없앰 (선생님 「저 버튼은 없어도 돼」 · 캠프 보기 = 조작 막대 🏕) -->
     {#if tline}
       <div class="tline" class:red={!!door} style:--p="{tline.p * 100}%">
         <i></i><em class:still={!!R?.state.focus}>⏳</em>
@@ -209,7 +210,8 @@
   {/if}
 
   {#if view === 'camp'}
-    <!-- 🏛 교사 캠프: 캠프 그림 통째 + 물건 이름표 늘 · 오른쪽 QR · 코드 -->
+    <!-- 🏛 교사 캠프: 캠프 그림 통째 + 물건 이름표 늘 · 오른쪽 QR · 코드 = 가운데 한 묶음 -->
+    <div class="campwrap">
     <div class="campv" style:aspect-ratio="{CW} / {CH}">
       <img class="cl0" alt="" src={CAMP.bg} />
       <img class="obj" alt="" src={CAMP.castle.src} style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)}" />
@@ -228,6 +230,7 @@
         <div class="cc wait">수업을 열면<br />QR · 코드가 나와요</div>
         <small>교사 폰 「수업 열기」</small>
       {/if}
+    </div>
     </div>
   {:else if view === 'lobby'}
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
@@ -300,7 +303,7 @@
   {#if ink}<Ink step={i} onclose={() => (ink = false)} />{/if}
 
   <!-- 조작 막대 (#119 덧붙임 2): 🔊 · ⛶ | 🏕 · 🎬 · 📄 · 🎮 · ✏ | 🔴 집중 · « 뒤로 · 앞으로 ▶ · 📌 — 캠프 · 메뉴 · 수업 끝 단추 없음 (수업 닫기 = 교사 폰) -->
-  <nav class="dock" class:on={dockOn} aria-label="조작 막대">
+  <nav class="dock" class:on={dockOn} class:small={view === 'camp'} aria-label="조작 막대">
     <button type="button" class="t" class:off={!sound} aria-pressed={!sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<small>{sound ? '소리' : '꺼짐'}</small></button>
     <button type="button" class="t" onclick={full}>⛶<small>전체</small></button>
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
@@ -330,14 +333,16 @@
 
 <style>
   /* 📺 TV 글자 = 한 글꼴(테마 토큰 --font) · 크기 4단계 · 굵기 2단계(500 · 700) (#157 · arena/layout TV_FS 와 같은 값) */
-  .tv { position: fixed; inset: 0; container-type: size; overflow: hidden; color: #fff; font-family: var(--font); font-weight: 500; background: #0b0a08; --tv-big: 6cqh; --tv-title: 3.2cqh; --tv-body: 2.4cqh; --tv-small: 1.8cqh; }
+  /* 📺 16:9 무대 (📜 2026-11-13 밤 선생님 「화면마다 비율이 달라도 16:9 에 맞춰 정돈」): 창이 어떤 비율이든 가운데 16:9 틀 하나 · 남는 곳 = 흐린 캠프 바탕(.tvout) · 모든 TV 화면이 이 틀 */
+  .tvout { position: fixed; inset: 0; background: #0b0a08 center / cover no-repeat; filter: blur(18px) brightness(0.45); transform: scale(1.06); }
+  .tv { position: fixed; left: 50%; top: 50%; width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); translate: -50% -50%; container-type: size; overflow: hidden; color: #fff; font-family: var(--font); font-weight: 500; background: #0b0a08; --tv-big: 6cqh; --tv-title: 3.2cqh; --tv-body: 2.4cqh; --tv-small: 1.8cqh; }
   .tv :global(button) { font-family: var(--font); font-weight: 700; }
   .tv :global(b), .tv :global(strong), .tv :global(h3), .tv :global(h4) { font-weight: 700; }
   .bg { position: absolute; inset: 0; background: center 60% / cover no-repeat; image-rendering: pixelated; }
   .bg.campbg { filter: blur(14px) brightness(0.45); transform: scale(1.1); }
   .tv.dim :global(.arena2), .tv.dim .bg { filter: brightness(0.35); }
   /* 위 막대 = 테마 토큰 (#119 덧붙임 2 ①) · 장면 위 칩 · 덮개는 테마와 상관없이 어두운 칩 + 흰 글자 + 금빛(#f5b84a) */
-  .top { position: absolute; left: 0; right: 0; top: 0; height: 5.4cqw; z-index: 6; display: flex; align-items: center; gap: 1cqw; padding: 0 1.2cqw; background: var(--bg); border-bottom: 1px solid var(--line); color: var(--text); }
+  .top { position: absolute; left: 0; right: 0; top: 0; height: 3.8cqw; /* 0.7배 (선생님 「맨 위 바 0.7 정도」 · 5.4 → 3.8) */ z-index: 6; display: flex; align-items: center; gap: 1cqw; padding: 0 1.2cqw; background: var(--bg); border-bottom: 1px solid var(--line); color: var(--text); }
   .ttl { flex: none; max-width: 30cqw; font-size: var(--tv-body); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ttl b { color: var(--accent); }
   .cls { display: inline-block; margin-right: 0.7cqw; padding: 0.1cqw 0.8cqw; border-radius: 0.6cqw; background: var(--accent); color: var(--on-accent); font-size: var(--tv-body); vertical-align: 0.1cqw; }
@@ -372,7 +377,9 @@
   .nbox b { font-size: var(--tv-big); line-height: 1; color: var(--accent); }
   .nbox b span { font-size: var(--tv-title); color: #fff; }
   .nbox em { font-style: normal; font-size: var(--tv-small); color: #ffd7a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .campv { position: absolute; left: 3cqw; top: 11cqh; height: 85cqh; z-index: 1; }
+  /* 캠프 그림 + QR 카드 = 한 묶음 가운데 (높이 80% · 사이 3%) */
+  .campwrap { position: absolute; left: 0; right: 0; top: 3.8cqw; bottom: 0; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 3cqw; }
+  .campv { position: relative; flex: none; height: 80cqh; z-index: 1; }
   .campv img { position: absolute; image-rendering: pixelated; }
   .campv .cl0 { inset: 0; width: 100%; height: 100%; position: absolute; }
   .campv .obj.on { filter: brightness(1.3); }
@@ -380,8 +387,9 @@
   .ob.me2 { cursor: pointer; border-color: #6cc6ff; color: #fff; font: inherit; } .ob.me2 small { color: #6cc6ff; }
   .campv .gate { opacity: 0; } .campv .gate.on { opacity: 1; }
   .ob { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 0.5cqh 0.9cqw; border-radius: 1.4cqh; background: rgba(10, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.22); white-space: nowrap; box-shadow: 0 3px 0 #000; }
-  .ob b { font-size: var(--tv-body); } .ob small { font-size: var(--tv-small); color: #d6d9e0; }
-  .campqr { position: absolute; right: 1.5cqw; top: 25cqh; width: 26cqw; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 1.4cqh; padding: 2cqh 1.4cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.8); border: 1px solid rgba(255, 255, 255, 0.18); text-align: center; }
+  .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { display: none; } /* TV 이름표 = 절반 · 한 줄 · 아이콘 + 이름만 */
+  .ob { padding: 0.25cqh 0.5cqw !important; border-radius: 0.8cqh !important; box-shadow: 0 2px 0 #000 !important; }
+  .campqr { position: relative; flex: none; width: 26cqw; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 1.4cqh; padding: 2cqh 1.4cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.8); border: 1px solid rgba(255, 255, 255, 0.18); text-align: center; }
   .campqr :global(svg) { width: 34cqh; height: 34cqh; border-radius: 1.2cqh; }
   .campqr small { font-size: var(--tv-small); color: #d6d9e0; }
   .cc { font-size: var(--tv-body); font-weight: 700; } .cc b { display: block; font-size: var(--tv-big); color: var(--accent); letter-spacing: 0.4cqw; line-height: 1.1; }
@@ -445,6 +453,7 @@
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
+  .dock.small { scale: 0.7; transform-origin: right bottom; } /* 교사 캠프 리모컨 0.7배 (선생님) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }
   .dock button:disabled { opacity: 0.35; cursor: default; }
   .dock .t { width: 7cqh; height: 7.6cqh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2cqh; padding: 0; }
