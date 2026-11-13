@@ -4,6 +4,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
 const [OUT = '.', B = 'http://localhost:4173/', TAG = 'new', ...KINDS] = process.argv.slice(2);
 const TMP = fs.mkdtempSync('/tmp/atkcap-');
 const ACT = { // 풀기 동작 (사람이 하는 것처럼)
+  dark: async (p) => { const r = await p.$eval('.qwrap', (e) => { const b = e.getBoundingClientRect(); return { x: b.left + b.width * 0.35, y: b.top + b.height * 0.45 }; }); await p.mouse.move(r.x, r.y); await p.mouse.down(); for (let k = 0; k < 12; k++) { await p.mouse.move(r.x + k * 12, r.y + Math.sin(k) * 20, { steps: 2 }); await p.waitForTimeout(40); } await p.mouse.up(); },
   bind: async (p) => { const r = await p.$eval('.qwrap', (e) => { const b = e.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }); await p.mouse.move(r.x, r.y); await p.mouse.down(); for (let k = 0; k < 4; k++) { await p.mouse.move(r.x + 90, r.y, { steps: 4 }); await p.mouse.move(r.x - 90, r.y, { steps: 4 }); } await p.mouse.up(); },
   lock: async (p) => { const k = await p.$('.afx .key'); const b = await p.$('.act .pmain'); if (!k || !b) return; const kb = await k.boundingBox(), bb = await b.boundingBox(); await p.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2); await p.mouse.down(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 10 }); await p.mouse.up(); },
 };

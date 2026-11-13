@@ -114,7 +114,11 @@
       <i class="lid top"></i><i class="lid bot"></i><span class="zzz">Z<small>z</small><small>z</small></span><span class="hint">👆👆 두 번 톡 = 번쩍</span>
     </div>
   {:else if kind === 'dark'}
-    <div class="darkc" style:--lx="{lx}px" style:--ly="{ly}px" style:opacity={0.45 + 0.53 * p}><span class="hint">👆 손가락을 대면 그 자리가 보여요</span></div>
+    <!-- 🌑 어둠 (📜 2026-11-13 밤 다시 · 「눈앞을 가리는 거니까 느낌을 잘 살려 줘」): 검은 먹물 덩어리가 가장자리 · 귀퉁이에서 번져 들어와 덮고 연기가 일렁임 · 손가락 닿은 곳만 동그랗게 보임 -->
+    <div class="darkc" style:--lx="{lx}px" style:--ly="{ly}px" style:opacity={Math.min(1, 0.35 + 1.3 * p)}>
+      <i class="ink k1"></i><i class="ink k2"></i><i class="ink k3"></i><i class="ink k4"></i><i class="ink k5"></i><i class="ink k6"></i><i class="smoke"></i>
+    </div>
+    <span class="hint dh">👆 손가락을 대면 그 자리가 보여요</span>
   {:else if kind === 'lock'}
     {#if !inserted}<span class="key" class:drag role="button" tabindex="-1" aria-label="열쇠" style:left="{kx}px" style:top="{ky}px" onpointerdown={kdown} onpointermove={kmove} onpointerup={kup} onpointercancel={kup}>🗝</span>{/if}
   {/if}
@@ -164,8 +168,6 @@
   .lids.woke .lid.top { animation: none; transform: translateY(-100%); transition: transform 0.15s ease-out; } .lids.woke .lid.bot { animation: none; transform: translateY(100%); transition: transform 0.15s ease-out; }
   .zzz { position: absolute; right: 18%; top: 34%; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }
   .lids .hint { bottom: auto; top: 50%; transform: translate(-50%, -50%); }
-  .darkc { position: absolute; inset: 0; border-radius: var(--r); pointer-events: none; background: radial-gradient(circle 70px at var(--lx) var(--ly), transparent 0 55%, rgba(4, 4, 8, 0.97) 100%); }
-  .darkc .hint { top: 12px; bottom: auto; }
   .key { position: absolute; z-index: 7; width: 48px; height: 48px; margin: -24px 0 0 -24px; display: grid; place-items: center; font-size: 32px; pointer-events: auto; touch-action: none; cursor: grab; filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 6px rgba(245, 184, 74, 0.9)); }
   .key.drag { cursor: grabbing; transform: scale(1.15); }
   .afx.sleep { z-index: 7; }
@@ -177,4 +179,15 @@
   :global(.cswap) { position: relative; z-index: 2; animation: cswap var(--clen, 3000ms) cubic-bezier(0.5, 0, 0.4, 1) both; }
   @keyframes cswap { 0% { transform: none; } 14% { transform: translate(calc(var(--sx) * 0.15), -10px) rotate(calc(var(--sk) * -9deg)); } 30% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 5deg)); } 45% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * -4deg)); } 62% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 3deg)); } 80% { transform: translate(calc(var(--sx) * 0.4), calc(var(--sy) * 0.4 + 8px)) rotate(calc(var(--sk) * -7deg)); } 100% { transform: none; } }
   @media (prefers-reduced-motion: reduce) { :global(.qwrap.cwob), :global(.cswap) { animation: none; } }
+  /* 🌑 어둠: 먹물(가장자리 · 귀퉁이 덩어리가 0.9초 동안 번져 커짐) + 연기(느리게 일렁) · 손전등 = 덮개 전체에 구멍(mask) */
+  .darkc { position: absolute; inset: -6px; border-radius: var(--r); pointer-events: none; overflow: hidden; -webkit-mask: radial-gradient(circle 78px at calc(var(--lx) + 6px) calc(var(--ly) + 6px), transparent 0 52%, #000 88%); mask: radial-gradient(circle 78px at calc(var(--lx) + 6px) calc(var(--ly) + 6px), transparent 0 52%, #000 88%); background: rgba(3, 3, 7, 0.0); animation: dbase 0.7s 0.15s ease-in forwards; }
+  @keyframes dbase { to { background: rgba(2, 2, 5, 0.985); } }
+  .ink { position: absolute; width: 80%; aspect-ratio: 1; border-radius: 46% 54% 52% 48% / 55% 45% 55% 45%; background: radial-gradient(circle at 50% 50%, #020205 0 45%, rgba(2, 2, 5, 0.85) 60%, transparent 72%); transform: scale(0.1); animation: ink 0.9s cubic-bezier(0.3, 0.6, 0.4, 1) forwards, wob 2.4s 0.9s ease-in-out infinite alternate; filter: blur(2px); }
+  .k1 { left: -30%; top: -30%; } .k2 { right: -30%; top: -25%; animation-delay: 0.08s, 1s; } .k3 { left: -35%; bottom: -30%; animation-delay: 0.15s, 1.1s; } .k4 { right: -30%; bottom: -35%; animation-delay: 0.05s, 0.95s; } .k5 { left: 30%; top: -45%; animation-delay: 0.2s, 1.2s; } .k6 { left: 25%; bottom: -45%; animation-delay: 0.12s, 1.05s; }
+  @keyframes ink { 0% { transform: scale(0.1) rotate(0); } 55% { transform: scale(2) rotate(25deg); } 100% { transform: scale(2.9) rotate(40deg); } }
+  @keyframes wob { from { border-radius: 46% 54% 52% 48% / 55% 45% 55% 45%; } to { border-radius: 55% 45% 44% 56% / 46% 56% 44% 54%; } }
+  .smoke { position: absolute; inset: -20%; background: radial-gradient(circle at 20% 30%, rgba(60, 50, 80, 0.35), transparent 30%), radial-gradient(circle at 75% 60%, rgba(50, 40, 70, 0.3), transparent 32%), radial-gradient(circle at 40% 85%, rgba(70, 60, 90, 0.28), transparent 28%); filter: blur(10px); opacity: 0; animation: smk 6s linear infinite, sin 0.9s 0.4s forwards; }
+  @keyframes smk { to { transform: translate(8%, -6%) rotate(12deg); } } @keyframes sin { to { opacity: 1; } }
+  .hint.dh { top: 12px; bottom: auto; z-index: 2; }
+  @media (prefers-reduced-motion: reduce) { .ink, .smoke { animation: none; transform: scale(2.3); opacity: 1; } .darkc { animation: none; background: rgba(3, 3, 7, 0.94); } }
 </style>
