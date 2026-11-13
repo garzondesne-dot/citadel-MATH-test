@@ -7,7 +7,7 @@
   //   pause = 덮개 + 줄어드는 원 · glitch = 문제 글 숫자 · 기호가 2~3번 잠깐 바뀌었다 원래대로 + 색 갈라짐 · fog = 안개(문지르면 닦임)
   //   fire = 아래 불길이 보기 칸을 가림(주요 단추 자리 🧯 꾹) · smash = 카드 흔들(±6px · 기울기 · 0.8초 감쇠) · ice = 주요 단추가 얼음(BottomAction)
   //   #161 새 6 · 특수 3: confuse = 보기 칩 한 바퀴 빙글 → 제자리 · wind = 문제 글이 바람에 흩날렸다 제자리 · poison = 카드 테두리 보라 세 번 두근
-  //   bind = 사슬이 카드를 감음(입력 막힘) → 좌우로 3번 쓸면 끊김 · sleep = 눈꺼풀이 위아래에서 감김 + Zzz → 두 번 빠르게 톡 = 번쩍
+  //   bind = 사슬이 카드를 감음(입력 막힘) → 좌우로 3번 쓸면 끊김 · sleep = 화면이 흐려지며 눈 모양으로 좁아져 깜깜 + Zzz → 두 번 빠르게 톡 = 번쩍
   //   dark = 손가락 닿은 곳만 손전등 원 · 점점 밝아짐 · mirror = 문제 글 좌우 뒤집힘 → 돌아옴 · lock = 주요 단추 🔒 + 떨어진 🗝 끌어다 꽂기 · scale = 카드가 기울었다 균형
   //   strong(분노) = 같은 효과 · 테두리 붉게(장면 띠도 붉음) · 시간은 등록 표 attackMs 가 정함
   const { kind, len, left, onclear, strong = false }: { kind: string; len: number; left: number; onclear: () => void; strong?: boolean } = $props();
@@ -72,7 +72,7 @@
   function shatter() { fx.chain.broken = true; later(450, onclear); }
   // 💤 수면: 두 번 빠르게 톡(0.35초 안) = 번쩍
   let lastTap = 0, woke = $state(false);
-  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(320, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
+  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(380, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
   // 🌑 어둠: 손가락 닿은 곳만 보임 (덮개는 누름을 막지 않음 · 화면 어디를 눌러도 그 자리가 밝아짐)
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }
@@ -123,7 +123,7 @@
     </div>
   {:else if kind === 'sleep'}
     <div class="lids" class:woke role="button" tabindex="-1" aria-label="두 번 톡 눌러 깨기" onpointerdown={tap}>
-      <i class="lid top"></i><i class="lid bot"></i><span class="zzz">Z<small>z</small><small>z</small></span><span class="hint">👆👆 두 번 톡 = 번쩍</span>
+      <i class="haze"></i><i class="eye"></i><span class="zzz">Z<small>z</small><small>z</small></span><span class="hint">👆👆 두 번 톡 = 번쩍</span>
     </div>
   {:else if kind === 'dark'}
     <!-- 🌑 어둠 (📜 2026-11-13 밤 다시 · 「눈앞을 가리는 거니까 느낌을 잘 살려 줘」): 검은 먹물 덩어리가 가장자리 · 귀퉁이에서 번져 들어와 덮고 연기가 일렁임 · 손가락 닿은 곳만 동그랗게 보임 -->
@@ -166,15 +166,18 @@
   .chains { position: absolute; inset: 0; pointer-events: auto; touch-action: none; border-radius: var(--r); background: rgba(8, 9, 12, 0.35); overflow: visible; }
   .hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.8); color: #fff; font-size: var(--fs-small); font-weight: 700; white-space: nowrap; }
   .lids { position: fixed; inset: 0; z-index: 6; max-width: 430px; margin: 0 auto; pointer-events: auto; touch-action: manipulation; overflow: hidden; }
-  .lid { position: absolute; left: 0; right: 0; height: 52%; background: linear-gradient(#1a1220, #2a1d30); }
-  .lid.top { top: 0; transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 30% 30%; animation: lidT calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.45, 0, 0.6, 1) forwards; box-shadow: 0 6px 0 #0c0810, 0 12px 18px rgba(0, 0, 0, 0.5); }
-  .lid.bot { bottom: 0; transform: translateY(100%); border-radius: 50% 50% 0 0 / 30% 30% 0 0; animation: lidB calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.45, 0, 0.6, 1) forwards; box-shadow: 0 -6px 0 #0c0810, 0 -12px 18px rgba(0, 0, 0, 0.5); }
-  /* 💤 수면 (📜 2026-11-13 밤 다시 · 「감기려다 정신 차리고 올라가는 느낌」 → 스르르 한 번에 내려와 거의 감김 · 졸린 듯 살짝 들썩) */
-  @keyframes lidT { 0% { transform: translateY(-100%); } 70% { transform: translateY(-9%); } 78% { transform: translateY(-13%); } 86% { transform: translateY(-6%); } 100% { transform: translateY(-4%); } }
-  @keyframes lidB { 0% { transform: translateY(100%); } 70% { transform: translateY(9%); } 78% { transform: translateY(13%); } 86% { transform: translateY(6%); } 100% { transform: translateY(4%); } }
-  .lids.woke .lid.top { animation: none; transform: translateY(-115%); transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1); } .lids.woke .lid.bot { animation: none; transform: translateY(115%); transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1); }
-  .lids.woke::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, #fff 0 20%, rgba(255, 255, 255, 0.6) 45%, transparent 70%); animation: wkf 0.25s ease-out forwards; } /* 번쩍 */
-  @keyframes wkf { from { opacity: 1; transform: scaleY(0.2); } to { opacity: 0; transform: scaleY(1.4); } }
+  /* 💤 수면 (📜 2026-11-13 밤 선생님 참고 그림 「침대에서 폰 보다 잠듦」 · 1인칭 졸음): 화면이 뿌옇게 흐려지며 어두워짐 → 가장자리부터 눈 모양 타원이 가늘어져 실눈 → 깜깜 · 톡톡 = 실눈에서 확 뜨며 흐림이 걷힘 */
+  .haze { position: absolute; inset: 0; -webkit-backdrop-filter: blur(0) brightness(1); backdrop-filter: blur(0) brightness(1); animation: haze calc(var(--len, 3000ms) * 0.75) ease-in forwards; }
+  @keyframes haze { 0% { -webkit-backdrop-filter: blur(0) brightness(1); backdrop-filter: blur(0) brightness(1); } 45% { -webkit-backdrop-filter: blur(3px) brightness(0.75); backdrop-filter: blur(3px) brightness(0.75); } 100% { -webkit-backdrop-filter: blur(7px) brightness(0.45); backdrop-filter: blur(7px) brightness(0.45); } }
+  /* 눈 = 검은 막에서 가운데 타원만 뚫음(가장자리 부드럽게) · 타원이 위아래로 납작해지며 닫힘 */
+  .eye { position: absolute; inset: -2px; background: #05030a; --m: radial-gradient(closest-side, #000 62%, transparent 100%) 50% 50% / 240% 240% no-repeat, linear-gradient(#000, #000);
+    -webkit-mask: var(--m); -webkit-mask-composite: xor; mask: var(--m); mask-composite: exclude; animation: eyeShut calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.5, 0, 0.75, 1) forwards; }
+  @keyframes eyeShut { 0% { -webkit-mask-size: 240% 240%, auto; mask-size: 240% 240%, auto; } 40% { -webkit-mask-size: 190% 120%, auto; mask-size: 190% 120%, auto; } 75% { -webkit-mask-size: 170% 34%, auto; mask-size: 170% 34%, auto; } 90% { -webkit-mask-size: 160% 9%, auto; mask-size: 160% 9%, auto; } 100% { -webkit-mask-size: 160% 0%, auto; mask-size: 160% 0%, auto; } }
+  .lids.woke .eye { animation: eyeOpen 0.34s cubic-bezier(0.3, 0.6, 0.3, 1) forwards; }
+  @keyframes eyeOpen { 0% { -webkit-mask-size: 160% 6%, auto; mask-size: 160% 6%, auto; } 35% { -webkit-mask-size: 170% 40%, auto; mask-size: 170% 40%, auto; } 100% { -webkit-mask-size: 260% 260%, auto; mask-size: 260% 260%, auto; opacity: 0.6; } }
+  .lids.woke .haze { animation: none; transition: backdrop-filter 0.34s ease-out, -webkit-backdrop-filter 0.34s ease-out; -webkit-backdrop-filter: blur(0) brightness(1); backdrop-filter: blur(0) brightness(1); }
+  .lids.woke::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 30% at 50% 50%, rgba(255, 255, 255, 0.85), transparent 70%); animation: wkf 0.25s ease-out forwards; } /* 번쩍 */
+  @keyframes wkf { from { opacity: 1; transform: scaleY(0.2); } to { opacity: 0; transform: scaleY(1.6); } }
   .lids.woke .zzz { animation: zgone 0.2s forwards; } @keyframes zgone { to { opacity: 0; transform: translateY(-30px) scale(1.4); } }
   .zzz { position: absolute; right: 18%; top: 34%; animation: zfl 1.4s ease-in-out infinite; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }
   .lids .hint { bottom: auto; top: 50%; transform: translate(-50%, -50%); }
