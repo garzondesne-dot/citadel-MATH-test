@@ -7,7 +7,7 @@ import { ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -235,19 +235,30 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     tween(260, (p) => { const k = 0.6 + 0.4 * ease(p); c.scale.set(k); c.alpha = p; });
   }
 
-  // 🧊 얼음 (폰 IceBlock 과 같은 모양): 각진 결정 덩어리(반투명 하늘색 · 흰 테두리 · 하이라이트 · 조각) + 용사 하늘색 · ms 뒤 0.6초에 녹음
-  let ice: Graphics[] = [], iceT: ReturnType<typeof setTimeout> | undefined;
+  // 🧊 얼음 (그림 · 📜 2026-11-13 밤 🎨 ice-tv 5칸): 용사마다 ① 발밑 서리 → ② 반 → ③ 다 얼음(0.1초씩) · 하늘색 · ms 뒤 ④ 녹으며 물방울 → ⑤ 거의 녹음(0.3초씩) → 사라짐
+  //   그림을 못 받으면 = 옛 각진 덩어리 그대로(Graphics)
+  let ice: (Graphics | Sprite)[] = [], iceT: ReturnType<typeof setTimeout>[] = [];
+  const iceTex: Texture[] = [];
+  void src(ICE.tv.src).then((so) => { for (let k = 0; k < ICE.tv.cols; k++) iceTex.push(new Texture({ source: so, frame: new Rectangle(k * ICE.tv.w, 0, ICE.tv.w, ICE.tv.h) })); }).catch(() => {});
   const BLK = [[0.18, 0], [0.62, 0.03], [0.92, 0.14], [1, 0.46], [0.94, 0.82], [0.7, 1], [0.26, 0.98], [0.04, 0.8], [0, 0.4], [0.06, 0.12]];
   function unfreeze(now: boolean) {
-    clearTimeout(iceT); const gs = ice; ice = [];
+    iceT.forEach(clearTimeout); iceT = []; const gs = ice; ice = [];
     const back = () => { for (const v of heroes.values()) v.sp.tint = 0xffffff; };
     if (now) { gs.forEach((g) => g.destroy()); back(); return; }
-    tween(600, (p) => gs.forEach((g) => { g.alpha = 1 - p; g.y = p * H() * 0.008; }), () => { gs.forEach((g) => g.destroy()); back(); });
+    const sps = gs.filter((g): g is Sprite => g instanceof Sprite), grs = gs.filter((g) => !(g instanceof Sprite));
+    if (sps.length && iceTex.length >= 5) { sps.forEach((g) => (g.texture = iceTex[3]!)); back(); iceT.push(setTimeout(() => sps.forEach((g) => (g.texture = iceTex[4]!)), 300)); iceT.push(setTimeout(() => tween(250, (p) => sps.forEach((g) => (g.alpha = 1 - p)), () => sps.forEach((g) => g.destroy())), 600)); }
+    if (grs.length) tween(600, (p) => grs.forEach((g) => { g.alpha = 1 - p; g.y = p * H() * 0.008; }), () => { grs.forEach((g) => g.destroy()); back(); });
   }
   function freeze(ms: number) {
     unfreeze(true);
     for (const v of heroes.values()) {
       const b = v.sp.getBounds(), p = fx.toLocal({ x: b.x, y: b.y }), w = Math.abs(b.width), h = b.height;
+      if (iceTex.length >= 5) {
+        const sp = new Sprite(iceTex[0]!); sp.anchor.set(0.5, 1); const sc = (h * 1.12) / ICE.tv.h; sp.scale.set(sc); sp.x = p.x + w / 2; sp.y = p.y + h + h * 0.04; sp.alpha = 0.95;
+        fx.addChild(sp); ice.push(sp); v.sp.tint = 0xbfe6ff;
+        iceT.push(setTimeout(() => { if (!sp.destroyed) sp.texture = iceTex[1]!; }, 100)); iceT.push(setTimeout(() => { if (!sp.destroyed) sp.texture = iceTex[2]!; }, 200));
+        continue;
+      }
       const x0 = p.x + w * 0.22, y0 = p.y + h * 0.06, bw = w * 0.56, bh = h * 0.94, at = (a: number, c: number) => [x0 + a * bw, y0 + c * bh];
       const g = new Graphics();
       g.poly(BLK.flatMap(([a, c]) => at(a!, c!))).fill({ color: 0xcfefff, alpha: 0.42 }).stroke({ width: Math.max(1.5, h * 0.015), color: 0xffffff, alpha: 0.85 });
@@ -256,7 +267,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       for (const [a, c, k] of [[0.02, 0.92, 1], [0.96, 0.86, 0.8], [0.88, -0.02, 0.7]] as const) { const r = bw * 0.14 * k; g.poly([x0 + a * bw, y0 + c * bh - r, x0 + a * bw + r, y0 + c * bh - r * 0.2, x0 + a * bw + r * 0.4, y0 + c * bh + r, x0 + a * bw - r * 0.8, y0 + c * bh + r * 0.5]).fill({ color: 0xe6f8ff, alpha: 0.7 }); }
       fx.addChild(g); ice.push(g); v.sp.tint = 0xbfe6ff;
     }
-    iceT = setTimeout(() => unfreeze(false), ms);
+    iceT.push(setTimeout(() => unfreeze(false), ms));
   }
   let raf = 0;
   return {
@@ -272,6 +283,6 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     slash: (o, fall) => SL.add(o, fall),
     slashCfg: (c) => { if (c.fancy != null) SL.fancy = c.fancy; if (c.level !== undefined) SL.forceLevel = c.level; },
     slashStats: () => ({ fps: Math.round(SL.fps), level: SL.level, live: SL.live.length, queue: SL.queue.length }),
-    destroy() { SL.destroy(); clearTimeout(iceT); clearTimeout(killT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
+    destroy() { SL.destroy(); iceT.forEach(clearTimeout); clearTimeout(killT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }

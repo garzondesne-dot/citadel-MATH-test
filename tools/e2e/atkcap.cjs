@@ -4,6 +4,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const path
 const [OUT = '.', B = 'http://localhost:4173/', TAG = 'new', ...KINDS] = process.argv.slice(2);
 const TMP = fs.mkdtempSync('/tmp/atkcap-');
 const ACT = { // 풀기 동작 (사람이 하는 것처럼)
+  ice: async (p) => { for (let k = 0; k < 4; k++) { const b = await p.$('.act .pmain'); if (!b) return; const bb = await b.boundingBox(); await p.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.waitForTimeout(260); } },
   sleep: async (p) => { await p.mouse.click(195, 420); await p.waitForTimeout(90); await p.mouse.click(195, 420); },
   fire: async (p) => { const b = await p.$('.act .pmain'); if (!b) return; const bb = await b.boundingBox(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.mouse.down(); await p.waitForTimeout(1150); await p.mouse.up(); },
   dark: async (p) => { const r = await p.$eval('.qwrap', (e) => { const b = e.getBoundingClientRect(); return { x: b.left + b.width * 0.35, y: b.top + b.height * 0.45 }; }); await p.mouse.move(r.x, r.y); await p.mouse.down(); for (let k = 0; k < 12; k++) { await p.mouse.move(r.x + k * 12, r.y + Math.sin(k) * 20, { steps: 2 }); await p.waitForTimeout(40); } await p.mouse.up(); },
@@ -18,7 +19,7 @@ const ACT = { // 풀기 동작 (사람이 하는 것처럼)
     const clip = await p.evaluate(() => { const sc = document.querySelector('.edge, .scene'), q = document.querySelector('.qwrap').getBoundingClientRect(), a = document.querySelector('.act').getBoundingClientRect(), top = sc ? sc.getBoundingClientRect().top + 60 : q.top - 20; return { x: 0, y: Math.max(0, top), width: 390, height: Math.min(844, a.bottom) - Math.max(0, top) }; }); // 장면(용사) + 문제 칸 + 노란 단추
     await p.locator(`.ids button[data-id="${kind}"]`).evaluate((e) => e.click());
     const fr = []; const shot = async (n) => { for (let i = 0; i < n; i++) { const f = path.join(TMP, `${TAG}-${kind}-${String(fr.length).padStart(3, '0')}.png`); await p.screenshot({ path: f, clip }); fr.push(f); await p.waitForTimeout(45); } };
-    await shot(26); if (ACT[kind]) { const act = ACT[kind](p); await shot(6); await act; } await shot(18);
+    await shot(kind === "ice" ? 8 : 26); if (ACT[kind]) { const act = ACT[kind](p); await shot(6); await act; } await shot(18);
     execFileSync('python3', ['-I', '-c', `import sys\nfrom PIL import Image\nims=[Image.open(f).convert('RGB') for f in sys.argv[2:]]\nw=300;ims=[i.resize((w,round(i.height*w/i.width))) for i in ims]\nims[0].save(sys.argv[1],save_all=True,append_images=ims[1:]+[ims[-1]]*8,duration=70,loop=0,quality=72)`, path.join(OUT, `atk-${kind}-${TAG}.webp`), ...fr]);
     console.log(kind, TAG, fr.length, '칸'); await p.context().close();
   }

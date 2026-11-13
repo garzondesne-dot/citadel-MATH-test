@@ -2,6 +2,8 @@
   import type { Snippet } from 'svelte';
   import { fx } from './fx.svelte';
   import ChainFx from './ChainFx.svelte';
+  import { ICE } from '../manifest';
+  import { sfx } from '../sound.svelte';
   // 🟡 BottomAction (3절 · #151 「주요 단추 = 모든 화면 한 자리」): 학생 폰의 노란 주요 단추는 이 부품 하나로만 그림
   //   주요 단추 = 높이 56 · 폭 = 양옆 16 뺀 전체 · 폰 바닥(안전 영역 위)에서 20 · 늘 맨 아래
   //   그 위 = 이유 한 줄(why) · 보조 줄(aux: 보조 단추 · 바뀐 것 줄 …) — 주요 단추를 밀어 올리지 않고 위로 쌓임
@@ -19,9 +21,14 @@
   // 🧯 다 끄면 = 불길 자리에서 회색 연기가 뭉게뭉게 피어오름(0.9초 · 📜 2026-11-13 밤 다시)
   let smoke = $state(0);
   const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; smoke = Date.now(); setTimeout(() => (smoke = 0), 950); }, 1000); };
+  // 🧊 얼음 단추 (그림 · 📜 2026-11-13 밤 🎨): 덮임 ① → 톡마다 금 ②③④ → 4번째 톡 = ⑤ 깨져 흩어짐(0.45초 · 살짝 멈칫 · 소리) · 3초면 녹음은 그대로
+  const iceBg = (k: number) => { const B = ICE.btn; return `background-image:url(${B.src});background-size:${B.cols * 100}% 100%;background-position:${(Math.max(0, Math.min(4, k)) / (B.cols - 1)) * 100}% 0;aspect-ratio:${B.w} / ${B.h};--bc:${((B.barTop + B.barBot) / 2 / B.h) * 100}%`; };
+  let iceBreak = $state(0);
+  function iceTap() { if (fx.ice <= 1) { iceBreak = Date.now(); sfx('frost', 0.9); try { navigator.vibrate?.(40); } catch { /* 무시 */ } setTimeout(() => (iceBreak = 0), 460); } else sfx('block', 0.5); fx.ice = Math.max(0, fx.ice - 1); }
   const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
 </script>
 
+{#if iceBreak}{#key iceBreak}<div class="icebreak" aria-hidden="true"><i class="iceart brk" style="{iceBg(4)}"></i></div>{/key}{/if}
 {#if smoke}{#key smoke}<div class="smokepuff" aria-hidden="true">{#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i style:left="{6 + i * 11}%" style:animation-delay="{(i % 3) * 0.08}s"></i>{/each}</div>{/key}{/if}
 {#if dock}<div class="spacer" style:height="{h}px" aria-hidden="true"></div>{/if}
 <div class="act" class:dock bind:clientHeight={h}>
@@ -34,7 +41,7 @@
   {:else if chained}
     <button type="button" class="btn pmain chained" class:lockd disabled aria-label={lockd ? '자물쇠 · 열쇠를 끌어다 꽂기' : '사슬에 묶임 · 문제 칸을 좌우로 쓸어 끊기'}><span class="ctx">{lockd ? '🗝 열쇠를 끌어다 꽂기' : '⛓ 위 칸을 좌우로 쓸어 끊기'}</span><ChainFx thin cut={fx.chain.cut} broken={fx.chain.broken} pad={lockd} open={fx.chain.open} /></button>
   {:else if ice}
-    <button type="button" class="btn pmain ice" aria-label="얼음 깨기" onclick={() => (fx.ice = Math.max(0, fx.ice - 1))}>🧊 톡톡 깨기 · {fx.ice}</button>
+    <button type="button" class="btn pmain ice" aria-label="얼음 깨기 · {fx.ice}번 남음" onclick={iceTap}><i class="iceart" style="{iceBg(4 - fx.ice)}" aria-hidden="true"></i><span class="ict">🧊 톡톡 깨기 · {fx.ice}</span></button>
   {:else if fire}
     <button type="button" class="btn pmain fire" class:holding aria-label="불 끄기" onpointerdown={holdOn} onpointerup={holdOff} onpointerleave={holdOff} onpointercancel={holdOff} oncontextmenu={(e) => e.preventDefault()}>🧯 꾹 눌러 끄기</button>
   {:else if href}
@@ -62,7 +69,13 @@
   .btn :global(small) { font-size: 13px; font-weight: 500; opacity: 0.85; }
   .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .btn:disabled { opacity: 0.4; box-shadow: none; }
-  .btn.ice { background: linear-gradient(135deg, #cfeaff, #8fc9f2 60%, #e8f6ff); color: #0d3550; box-shadow: inset 0 0 0 2px #fff, 0 3px 0 #4f8fbf; }
+  .btn.ice { position: relative; overflow: visible; background: linear-gradient(135deg, #cfeaff, #8fc9f2 60%, #e8f6ff); color: #0d3550; box-shadow: 0 3px 0 #4f8fbf; }
+  .iceart { position: absolute; left: 50%; top: 50%; width: 108%; transform: translate(-50%, calc(var(--bc) * -1)); background-repeat: no-repeat; image-rendering: pixelated; pointer-events: none; z-index: 1; }
+  .btn.ice:active .iceart { transform: translate(-50%, calc(var(--bc) * -1)) scale(0.97); }
+  .ict { position: relative; z-index: 2; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8); }
+  .icebreak { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); height: var(--btn-h); padding: 0 var(--s4); pointer-events: none; z-index: 6; }
+  .icebreak .iceart { width: calc(108% - 2 * var(--s4) * 1.08); animation: ibk 0.45s ease-out forwards; }
+  @keyframes ibk { 0% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1); opacity: 1; } 15% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.06); } 100% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.18); opacity: 0; } }
   .btn.lockd { opacity: 1; background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
   .btn.chained { position: relative; overflow: visible; opacity: 1; background: #24262e; color: #c9ccd6; box-shadow: inset 0 0 0 2px #5a5e6b; } .btn.chained.lockd { background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
   .btn.chained .ctx { position: relative; z-index: 0; font-size: 15px; opacity: 0.8; }

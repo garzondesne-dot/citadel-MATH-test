@@ -118,6 +118,14 @@ export const propPos = (p: { left: number; bottom: number; width: number }) => `
 /** 그림 칸 한 장 (cols 칸 중 col 번째) */
 export const cellBg = (src: string, cols: number, col: number) => `background-image:url(${src});background-size:${cols * 100}% 100%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% 0`;
 
+// 🧊 얼음 공격 그림 (정식 hero-v2 12e8be3 docs/handoff/ice · 2026-11-13 밤) — 칸 5개 · 알파로 잘라 기준선 맞춤 · 가운데 반투명 그대로
+//   btn = 노란 단추: ① 멀쩡 ② 금 하나 ③ 별 금 ④ 크게 금 ⑤ 깨져 흩어짐 (bar = 단추 몸이 있는 줄 · 단추 가운데에 맞춤)
+//   tv = 용사 얼음: ① 발밑 서리 ② 반 ③ 다 얼음 ④ 녹으며 물방울 ⑤ 거의 녹음 (발 기준선 = 칸 아래)
+export const ICE = {
+  btn: { src: `${import.meta.env.BASE_URL}art/ice/ice-btn-v1.webp`, cols: 5, w: 206, h: 342, barTop: 130, barBot: 210 },
+  tv: { src: `${import.meta.env.BASE_URL}art/ice/ice-tv-v1.webp`, cols: 5, w: 202, h: 352 },
+};
+
 // 🏕 쉼터 놀이 그림 · 배경음 (#142-2 · 정식 manifest fun · td · bgm 에서 옮김) — 교실 TV 에서만
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp' };
 export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
