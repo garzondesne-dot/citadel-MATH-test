@@ -25,6 +25,13 @@
   const props: { S: Store; where: Where } = $props(); // 🔌 「어느 서버」 = main.ts 가 고름 (#137) · 한 번 정하면 그대로
   const S = untrack(() => props.S), where = untrack(() => props.where);
   bindFeatures(S); // ⚙ 우리 학교 기능 (school/features) — 모든 화면이 feat('id') 로 읽음
+  // 🚪 뒤로 가기를 계속 눌러도 첫 화면(로그인)까지는 오지 않게 (📜 2026-11-13 밤 · 실수 방지) — 처음 화면은 「🚪 처음 화면으로」 단추로만
+  //   로그인한 학생 캠프 · 교사 폰 · 교실 TV: 지금 자리에 문지기 기록 하나를 쌓고, 그 밖으로 나가려 하면 다시 쌓음
+  const gateRole = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('role') : null;
+  if (typeof history !== 'undefined' && (gateRole === 'teacher' || gateRole === 'hall' || (!gateRole && !!savedLogin()))) {
+    if (!history.state?.gate) history.pushState({ gate: 1 }, '');
+    addEventListener('popstate', (e) => { if (!(e.state as { gate?: number } | null)?.gate) history.pushState({ gate: 1 }, ''); });
+  }
   // 화면 시험 고리(#163-① · 에뮬레이터 시험이 교사 · TV 표시를 REST 로 넣을 때 · 출시 전 메모 5): 이 폰의 로그인 uid
   (globalThis as { __uid?: () => string | null }).__uid = () => (S as { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? null;
   let netOk = $state(true);

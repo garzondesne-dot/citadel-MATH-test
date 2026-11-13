@@ -226,7 +226,7 @@
     <div class="menu">
       <a class="mi" href="?role=teacher"><span>📱</span><b>교사 폰</b><small>수업 열기 · 리모컨</small></a>
       <a class="mi" href="?role=hall"><span>🖥</span><b>교실 TV</b><small>종합실 · 교사 캠프</small></a>
-      {#if pupil}<button type="button" class="mi" onclick={logout}><span>↪</span><b>로그아웃 · 첫 화면</b><small>{pupil.cls}반 {pupil.num}번 · 기록은 그대로</small></button>{/if}
+      <button type="button" class="mi" disabled={open} onclick={() => (sheet = 'out')}><span>🚪</span><b>처음 화면으로</b><small>{open ? '수업 중엔 못 나가요 · 수업이 끝나면' : pupil ? `${pupil.cls}반 ${pupil.num}번 · 기록은 그대로` : '로그인 화면으로'}</small></button>
     </div>
   </Sheet>
 {:else if sheet === 'set'}
@@ -237,8 +237,14 @@
     <span class="slab">🔊 소리</span>
     <SoundToggles />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
-    {#if pupil}<button type="button" class="out" onclick={logout}>↪ 로그아웃 · 첫 화면으로 <small>{pupil.cls}반 {pupil.num}번</small></button>{/if}
+    <button type="button" class="out" disabled={open} onclick={() => (sheet = 'out')}>🚪 처음 화면으로 <small>{open ? '수업 중엔 못 나가요' : pupil ? `${pupil.cls}반 ${pupil.num}번` : ''}</small></button>
     <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? ' · 시험 서버' : ' · 이 기기'}</p>
+  </Sheet>
+{:else if sheet === 'out'}
+  <!-- 🚪 처음 화면으로 (📜 2026-11-13 밤 · 로그아웃 = 로그인 정보만 지움 · 이 기기 테스트 · 체험 저장은 그대로) -->
+  <Sheet onclose={() => (sheet = null)} mainText="🚪 처음 화면으로" onmain={logout}>
+    {#snippet title()}처음 화면으로 갈까요?{/snippet}
+    <p class="outq">다른 반 · 번호로 다시 들어가요 · 내 기록 · 💎 는 그대로예요</p>
   </Sheet>
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
@@ -265,6 +271,8 @@
 {/if}
 
 <style>
+  .outq { margin: 0; font-size: 16px; color: var(--text-2); }
+  .out:disabled, .mi:disabled { opacity: 0.45; }
   .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; }
   .menu { display: flex; flex-direction: column; gap: var(--s2); }
   .mi { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: var(--s2); min-height: 56px; padding: var(--s2) var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font: inherit; text-align: left; }

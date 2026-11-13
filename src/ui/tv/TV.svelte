@@ -322,6 +322,7 @@
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
     <button type="button" class="t" class:on={pin} aria-pressed={pin} onclick={() => (pin = !pin)}>📌<small>고정</small></button>
+    <button type="button" class="t" data-k="out" aria-label="처음 화면으로" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<small>처음</small></button>
   </nav>
 
   {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} /></div></div>{/if}

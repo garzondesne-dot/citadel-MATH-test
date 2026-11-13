@@ -19,7 +19,7 @@
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
   const { S }: { S: Store } = $props();
   const M = useMe(9999, 30, true);
-  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat'>(''), key = $state(''), ver = $state(0), toast = $state('');
+  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out'>(''), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
@@ -46,6 +46,8 @@
     busy = false;
   }
   async function teacherOut() { const A = (S as AS).auth; if (!A) return; const fa = await import('firebase/auth'); await fa.signOut(A); location.reload(); }
+  // 🚪 처음 화면 (📜 2026-11-13 밤): 로그인 정보만 지움(이 기기 테스트 · 체험 저장 그대로) → 첫 화면(학생 로그인 · 「교사 · 종합실 ›」)
+  async function toTitle() { const A = (S as AS).auth; if (A?.currentUser) { try { const fa = await import('firebase/auth'); await fa.signOut(A); } catch { /* 무시 */ } } location.replace(location.pathname); }
   function pickTheme(t: Theme) { theme = t; setTheme(t); S.set('school/teacher/theme', t); }
 </script>
 
@@ -65,7 +67,7 @@
     <a class="item" href="?role=atk" target="_blank"><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
     <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">{(!soundPref.sfx && !soundPref.bgm) || sound === '끔' ? '🔇' : '🔊'}</span><span class="tx"><b>소리</b><small>교사 폰 · {sound} · 효과음 {soundPref.sfx ? '켜짐' : '꺼짐'} · 배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}</small></span></button>
-    <button type="button" class="item" disabled={!admin} onclick={teacherOut}><span class="ic">↪</span><span class="tx"><b>로그아웃</b><small>{admin ? who : '교사 로그인 뒤'}</small></span></button>
+    <button type="button" class="item" data-k="out" onclick={() => (sheet = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
   </div>
   <p class="ver">모두의 던전 v1.0 · 테스트 {BUILD}</p>
 </div>
@@ -87,6 +89,12 @@
     {#snippet act()}<button type="button" class="btn" disabled={!!key && !/^\d{4}$/.test(key)} onclick={() => { S.set(HALLKEY, key || null); ver++; sheet = ''; say(key ? `고정 ${key}` : '수업마다 새로'); }}>{key ? '이 번호로 고정' : '비우기 (수업마다 새로)'}</button>{/snippet}
     <input class="in" inputmode="numeric" maxlength="4" placeholder="숫자 4자리 · 비우면 수업마다 새로" bind:value={key} />
   </Sheet>
+{:else if sheet === 'out'}
+  <Sheet onclose={() => (sheet = '')}>
+    {#snippet title()}🚪 처음 화면으로 갈까요?{/snippet}
+    {#snippet act()}<button type="button" class="btn" data-k="out-go" onclick={toTitle}>🚪 로그아웃 · 처음 화면</button>{/snippet}
+    <p class="outq">교사 로그인만 끝나요 · 수업 기록 · 이 기기 저장은 그대로예요</p>
+  </Sheet>
 {:else if sheet === 'feat'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}⚙ 우리 학교 기능{/snippet}
@@ -107,6 +115,7 @@
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
+  .outq { margin: 0; font-size: 16px; color: var(--text-2); }
   .fld { height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); padding: 0 12px; font: 500 16px var(--font); }
   .lk { border: 0; background: none; color: var(--text-2); text-decoration: underline; font: 500 14px var(--font); min-height: var(--tap); }
   .err { margin: 0; color: var(--bad); font-size: 14px; } .ok { margin: 0; color: var(--ok); font-weight: 700; }
