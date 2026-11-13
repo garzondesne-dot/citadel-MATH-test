@@ -102,7 +102,11 @@
   {:else if kind === 'fog'}
     <canvas bind:this={cv} class="fogc" style:opacity={0.35 + 0.65 * p} onpointermove={rub} onpointerdown={rub}></canvas>
   {:else if kind === 'fire'}
-    <div class="flames" style:opacity={0.4 + 0.6 * p}><i></i><i></i><i></i><i></i><i></i></div>
+    <!-- 🔥 화염 (📜 2026-11-13 밤 다시 · 「너무 단조로움」): 불길 세 겹(뒤 붉은 · 가운데 주황 · 앞 노랑 · 혀마다 다른 박자로 일렁) + 불똥이 튀어 오름 + 문제 칸 가장자리 그을음 · 끄기 = 노란 단추 🧯 꾹(연기는 BottomAction) -->
+    <div class="flames" style:opacity={0.45 + 0.55 * p}>
+      {#each ['back', 'mid', 'front'] as ly (ly)}<div class="fl {ly}">{#each Array.from({ length: 7 }, (_, i) => i) as i (i)}<i style:left="{-6 + i * 15.5}%" style:animation-delay="{((i * 37) % 9) * 0.06}s" style:animation-duration="{0.38 + ((i * 13) % 5) * 0.06}s"></i>{/each}</div>{/each}
+      {#each Array.from({ length: 14 }, (_, i) => i) as i (i)}<b class="ember" style:left="{4 + ((i * 53) % 92)}%" style:animation-delay="{((i * 29) % 13) * 0.11}s" style:animation-duration="{0.9 + ((i * 7) % 5) * 0.18}s"></b>{/each}
+    </div>
   {:else if kind === 'wind'}
     <div class="gust"><i></i><i></i><i></i><i></i></div>
   {:else if kind === 'bind'}
@@ -137,10 +141,6 @@
   @keyframes rgbs { 50% { text-shadow: 2px 0 rgba(255, 40, 80, 0.8), -2px 0 rgba(40, 200, 255, 0.8); } }
   .fogc { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: var(--r); touch-action: none; }
   /* 불길 = 화면 아래(주요 단추 바로 위 · 보기 칸 자리)에 고정 · 문제 글은 그대로 보임 */
-  .flames { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); height: 30vh; pointer-events: auto; overflow: hidden; background: linear-gradient(transparent, rgba(255, 90, 20, 0.55) 30%, rgba(255, 60, 0, 0.92)); }
-  .flames i { position: absolute; bottom: -10%; width: 26%; height: 90%; border-radius: 50% 50% 20% 20%; background: radial-gradient(ellipse at 50% 80%, #ffe08a, #ff8a1c 45%, transparent 70%); animation: fl 0.5s ease-in-out infinite alternate; }
-  .flames i:nth-child(1) { left: -4%; } .flames i:nth-child(2) { left: 18%; animation-delay: 0.1s; } .flames i:nth-child(3) { left: 40%; animation-delay: 0.2s; } .flames i:nth-child(4) { left: 62%; animation-delay: 0.05s; } .flames i:nth-child(5) { left: 82%; animation-delay: 0.15s; }
-  @keyframes fl { to { transform: scaleY(0.82) translateY(4%); } }
   :global(.qwrap:has(.afx.smash)) :global(.bcard) { animation: smash 0.8s ease-out; }
   @keyframes smash { 10% { transform: translateX(-6px) rotate(-1.2deg); } 25% { transform: translateX(6px) rotate(1deg); } 45% { transform: translateX(-4px) rotate(-0.6deg); } 65% { transform: translateX(3px) rotate(0.3deg); } 100% { transform: none; } }
   /* ── #161 새 효과 ── (움직임 ≤ 효과 시간 · 레이아웃 0 = transform · 덮개만) */
@@ -190,4 +190,17 @@
   @keyframes smk { to { transform: translate(8%, -6%) rotate(12deg); } } @keyframes sin { to { opacity: 1; } }
   .hint.dh { top: 12px; bottom: auto; z-index: 2; }
   @media (prefers-reduced-motion: reduce) { .ink, .smoke { animation: none; transform: scale(2.3); opacity: 1; } .darkc { animation: none; background: rgba(3, 3, 7, 0.94); } }
+  /* 🔥 화염 */
+  .flames { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); height: 32vh; pointer-events: auto; overflow: hidden; background: linear-gradient(transparent, rgba(120, 20, 0, 0.35) 25%, rgba(255, 70, 10, 0.75) 70%, rgba(255, 120, 20, 0.95)); }
+  .fl { position: absolute; inset: 0; }
+  .fl i { position: absolute; bottom: -12%; width: 22%; height: 85%; border-radius: 50% 50% 22% 22% / 62% 62% 38% 38%; transform-origin: 50% 100%; animation: tongue 0.45s ease-in-out infinite alternate; }
+  .fl.back i { height: 100%; width: 26%; background: radial-gradient(ellipse at 50% 85%, #ff5a1a, #b3200a 50%, transparent 72%); opacity: 0.9; }
+  .fl.mid i { height: 78%; background: radial-gradient(ellipse at 50% 85%, #ffb347, #ff6a14 50%, transparent 72%); margin-left: 4%; }
+  .fl.front i { height: 52%; width: 16%; background: radial-gradient(ellipse at 50% 88%, #fffbe0, #ffe066 40%, #ff9a1c 60%, transparent 74%); margin-left: 7%; mix-blend-mode: screen; }
+  @keyframes tongue { 0% { transform: scaleY(1) skewX(-4deg) translateX(0); } 50% { transform: scaleY(0.82) skewX(5deg) translateX(3%); } 100% { transform: scaleY(1.12) skewX(-2deg) translateX(-2%); } }
+  .ember { position: absolute; bottom: 8%; width: 4px; height: 4px; border-radius: 1px; background: #ffd27a; box-shadow: 0 0 6px #ff8a1c; animation: ember 1.1s ease-out infinite; }
+  @keyframes ember { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 70% { opacity: 0.9; } 100% { transform: translate(14px, -26vh) scale(0.4); opacity: 0; } }
+  :global(.qwrap:has(.afx.fire)) :global(.bcard) { box-shadow: inset 0 -40px 40px -20px rgba(30, 8, 0, 0.85), inset 0 0 0 2px rgba(120, 40, 0, 0.6); animation: heat 0.18s steps(2) infinite; }
+  @keyframes heat { 50% { filter: brightness(1.04) contrast(1.02); } }
+  @media (prefers-reduced-motion: reduce) { .fl i, .ember { animation: none; } .ember { display: none; } :global(.qwrap:has(.afx.fire)) :global(.bcard) { animation: none; } }
 </style>

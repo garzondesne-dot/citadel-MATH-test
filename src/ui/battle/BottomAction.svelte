@@ -16,10 +16,13 @@
   // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
   const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire), lockd = $derived(battle && fx.lock); // 🔒 #161 자물쇠 = 떨어진 🗝 를 끌어다 꽂기(AttackFx)
   let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
-  const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; }, 1000); };
+  // 🧯 다 끄면 = 불길 자리에서 회색 연기가 뭉게뭉게 피어오름(0.9초 · 📜 2026-11-13 밤 다시)
+  let smoke = $state(0);
+  const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; smoke = Date.now(); setTimeout(() => (smoke = 0), 950); }, 1000); };
   const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
 </script>
 
+{#if smoke}{#key smoke}<div class="smokepuff" aria-hidden="true">{#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i style:left="{6 + i * 11}%" style:animation-delay="{(i % 3) * 0.08}s"></i>{/each}</div>{/key}{/if}
 {#if dock}<div class="spacer" style:height="{h}px" aria-hidden="true"></div>{/if}
 <div class="act" class:dock bind:clientHeight={h}>
   {#if why && !block}<p class="why">{why}</p>{/if}
@@ -69,4 +72,8 @@
   .row :global(.btn2) { min-height: var(--btn-h); min-width: 92px; padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); }
   .row :global(.btn2:disabled) { opacity: 0.4; }
   .why { margin: 0; text-align: center; font-size: var(--fs-small); color: var(--text-3); }
+  .smokepuff { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); height: 32vh; pointer-events: none; z-index: 5; overflow: hidden; }
+  .smokepuff i { position: absolute; bottom: -10%; width: 34%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(200, 200, 210, 0.75), rgba(140, 140, 150, 0.35) 55%, transparent 70%); filter: blur(4px); animation: puff 0.9s ease-out forwards; }
+  @keyframes puff { from { transform: translateY(0) scale(0.4); opacity: 0.9; } to { transform: translateY(-24vh) scale(1.6); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .smokepuff { display: none; } }
 </style>
