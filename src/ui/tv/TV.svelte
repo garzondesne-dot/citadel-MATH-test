@@ -174,6 +174,9 @@
   const zoneLab = (k: string) => { const z = CAMP.zones[k]!; return { x: ((z[0] + z[2]) / 2 / CAMP.size[0]) * 100, y: ((k === 'tent' ? z[1] + 40 : z[3]) / CAMP.size[1]) * 100 }; }; // 출제 공방 = 텐트 위 (학생 캠프와 같게)
   const ZONES = $derived([['castle', '🏰 성채던전', feat('citadel')], ['tent', '✏ 출제 공방', feat('author')], ['gate', R && !R.state.closed ? `🌀 ${L.no}차시 던전 · 열림` : `🌀 ${L.no}차시 던전`, true]].filter((z) => z[2]) as [string, string, boolean][]);
   const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
+  // 🧙 캠프 그림 속 선생님 용사 = 그림 폭에 맞춰 (그림 폭 512 = 2배 · 창이 작거나 폰으로 보면 같이 작아짐 · 🐛 2026-11-13 밤 선생님 캡처 「용사가 캠프 그림을 덮음」)
+  let campW = $state(0);
+  const heroK = $derived(campW ? Math.max(0.5, campW / 256) : 2);
   let fireF = $state(0); const fireT = setInterval(() => (fireF = (fireF + 1) % CAMP.fire.frames), CAMP.fire.ms); onDestroy(() => clearInterval(fireT));
   let hk = $state(1);
   const fit = () => (hk = Math.min(1.3, (innerHeight * 0.86) / 760));
@@ -226,12 +229,12 @@
   {#if view === 'camp'}
     <!-- 🏛 교사 캠프: 캠프 그림 통째 + 물건 이름표 늘 · 오른쪽 QR · 코드 = 가운데 한 묶음 -->
     <div class="campwrap">
-    <div class="campv" style:aspect-ratio="{CW} / {CH}">
+    <div class="campv" style:aspect-ratio="{CW} / {CH}" bind:clientWidth={campW}>
       <img class="cl0" alt="" src={CAMP.bg} />
       <img class="obj" alt="" src={CAMP.castle.src} style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)}" />
       <img class="obj" alt="" src={CAMP.tent.src} style="left:{pct(CAMP.tent.x, CW)};top:{pct(CAMP.tent.y, CH)};width:{pct(CAMP.tent.w, CW)}" />
       <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
-      <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} row={8} aura={M.me.enh} scale={2} /></span>
+      <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} row={8} aura={M.me.enh} scale={heroK} /></span>
       <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
       {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b></span></span>{/each}
       {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b></span>{/each}
