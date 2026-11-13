@@ -13,6 +13,7 @@
   import { ladder } from '../../model/hero';
   import { bossState, plainRecord, holyArmed, stone, BOSS_ID } from '../../raid/raid';
   import { cutin } from '../fx/attack';
+  import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
   import { HERO, heroUrl, monBody } from '../manifest';
   import { monVis, spriteOf } from '../manifest';
@@ -59,7 +60,7 @@
   function domFreeze(ms: number) { iceDom = 1; setTimeout(() => (iceDom = 2), ms); setTimeout(() => (iceDom = 0), ms + 650); }
   // ── 공격 사건 (단계가 바뀌면 지난 것은 다시 보이지 않음) ──
   let seen: Record<string, Snap> = {}, seenKey = '', wasDown = false, qT: ReturnType<typeof setTimeout> | undefined;
-  const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice' }[] = [];
+  const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean }[] = [];
   let domFx = $state<{ k: number; text: string; x: number; y: number; cls: string }[]>([]), domBan = $state(''), fk = 0, lunge = $state<Record<string, boolean>>({});
   function play() {
     if (qT) return;
@@ -73,6 +74,11 @@
   //   몬스터 대역 = 보이는 몸통 상자(data-bb) · 맞는 순간 = Pixi 몬스터 깜빡 · 숫자 / DOM 장면 = 그 용사 칸(.art) 그대로 · ⚡ 필살기 = 첫 시도 퍼펙트 + 내 속성 Ⅲ↑(정식 hall.js 78)
   let fxLayer = $state<HTMLDivElement | null>(null), auraLayer = $state<HTMLDivElement | null>(null), hidden = $state<Record<string, boolean>>({});
   const ulSeen = new Set<string>(); let auraSig = '';
+  // ⚔ 새 스킬 fx 시제품 (TV 만 · ?newfx 또는 이 기기 설정 · 지금은 ⚔ 베기 계열만 · 선생님 채택 전엔 기본 꺼짐)
+  const NEWFX0 = typeof location !== 'undefined' && (/[?&]newfx\b/.test(location.search) || (() => { try { return localStorage.getItem('citadel-newfx') === '1'; } catch { return false; } })());
+  let NEWFX = $state(NEWFX0);
+  const famIdOf = (k: string) => (['cut', 'moon', 'slash', 'twin'].includes(k) ? 'cut' : '');
+  const tierIdx = (k: string) => Math.max(0, ['cut', 'moon', 'slash', 'twin'].indexOf(k));
   setForce(true);
   function ultOf(u: string, fxk: string, hero: number): boolean {
     if (!step || !canUlt(fxk, hero)) return false;
@@ -82,9 +88,9 @@
     else if (step.kind === 'monster' && L.monsters[step.id] && !isChain(L, R, step.id)) { const r = plainRecord(L, R, step.id, u); ok = r.perfectAt === 0 && r.tries.length === 1; }
     if (ok) ulSeen.add(key); return ok;
   }
-  function tvAttack(h: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice' }): boolean {
+  function tvAttack(h: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean }): boolean {
     const k = ids.indexOf(h.u), sl = slots[k], lay = fxLayer; if (!sl || !lay || !step) return false;
-    const p = R.players?.[h.u], hero = p?.hero ?? 0, fxk = p?.fx || ladder(hero)[0]!, ult = h.kind === 'hit' && ultOf(h.u, fxk, hero);
+    const p = R.players?.[h.u], hero = p?.hero ?? 0, fxk = h.fx || p?.fx || ladder(hero)[0]!, ult = h.ult || (h.kind === 'hit' && ultOf(h.u, fxk, hero));
     atkPreload(hero, fxk); if (ult) preloadFaces();
     let heroBox: HTMLElement, monBox: HTMLElement, art: HTMLElement | null = null; const tmp: HTMLElement[] = [];
     const mb = document.createElement('div'); mb.className = 'tvm'; let bb = ''; try { const sp = spriteOf(sprite); bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { /* 기본 몸통 */ }
@@ -102,14 +108,31 @@
     const ROWS: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
     const pose = (q: Pose) => { if (art) art.style.backgroundPosition = `${q === 'attack' ? (2 / (HERO.cols - 1)) * 100 : 0}% ${(ROWS[q] / (HERO.rows - 1)) * 100}%`; };
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); domPop(h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
-    void attack(lay, { heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
+    const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97 }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
+    void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit'); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; });
     return true;
   }
+  // ⏱ 성능 재기 (머리 📎 기준 · 교실 PC 에서 직접): 주소에 ?perf → 가상 용사 30명 → 지금 띠 30명 동시 4초 · 새 것 30명 동시 4초 → 평균 · 최저 fps · 최장 프레임 ms 를 화면에
+  //   크롬 DevTools 「Performance → CPU 4x slowdown」을 켜고 같은 주소를 열면 기준(30명 · 50fps 이상) 확인 · GPU 없는 시험 상자에선 잴 수 없음(쉬는 장면도 2fps)
+  let perfOut = $state('');
+  async function bench() {
+    const g = globalThis as { __tvFake?: (n: number) => void }; g.__tvFake?.(30); await new Promise((r) => setTimeout(r, 4000));
+    const FXS = ['cut', 'moon', 'slash', 'twin'], rows: string[] = [];
+    for (const mode of [false, true]) {
+      NEWFX = mode; await new Promise((r) => setTimeout(r, 300));
+      const m = new Promise<string>((res) => { const ts: number[] = []; let last = performance.now(); const t0 = last; const f = (t: number) => { ts.push(t - last); last = t; if (t - t0 < 4000) requestAnimationFrame(f); else { const d = ts.slice(2), avg = 1000 / (d.reduce((a, x) => a + x, 0) / d.length), st = A?.slashStats(); res(`${mode ? '새 것' : '지금 띠'} 30명: 평균 ${Math.round(avg)}fps · 최저 ${Math.round(1000 / Math.max(...d))}fps · 최장 ${Math.round(Math.max(...d))}ms${mode && st ? ` · 덜어 낸 단계 ${st.level}` : ''}`); } }; requestAnimationFrame(f); });
+      ids.slice(0, 30).forEach((u, k) => tvAttack({ u, dmg: 2, kind: 'hit', fx: FXS[k % 4] }));
+      rows.push(await m); await new Promise((r) => setTimeout(r, 3000));
+    }
+    NEWFX = NEWFX0; perfOut = rows.join('\n'); console.log(perfOut);
+  }
+  if (typeof location !== 'undefined' && /[?&]perf\b/.test(location.search)) setTimeout(() => void bench(), 3000);
+  (globalThis as { __slash?: unknown }).__slash = { stats: () => A?.slashStats(), cfg: (c: { fancy?: boolean; level?: number | null }) => A?.slashCfg(c) };
   // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
-  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number) => void }).__tvAtk = (k, kind = 'hit', dmg = 2) => { const u = ids[k]; if (u) { queue.push({ u, dmg, kind }); play(); } };
+  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult }); else { queue.push({ u, dmg, kind, fx, ult }); play(); } };
   // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음
   let guardBusy = false;
   async function tvGuard(us: string[]) {
@@ -185,12 +208,14 @@
   {/if}
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
+  {#if perfOut}<pre class="perf">{perfOut}</pre>{/if}
 </div>
 
 <style>
   .arena2 { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
   .mon.stoned { filter: grayscale(1) brightness(0.85) contrast(1.1); }
   .stonelab { position: absolute; z-index: 6; transform: translateX(-50%); padding: 0.5cqh 1.2cqw; border-radius: 99px; background: rgba(40, 40, 46, 0.9); border: 2px solid #c9c9d6; font-size: var(--tv-body); font-weight: 700; white-space: nowrap; }
+  .perf { position: absolute; z-index: 3000; left: 2cqw; top: 12cqh; margin: 0; padding: 1cqh 1.4cqw; border-radius: 1cqh; background: rgba(0, 0, 0, 0.85); color: #fff; font-size: var(--tv-body); white-space: pre; }
   .tvaura { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .arena2 :global(canvas) { position: relative; z-index: 1; }
   .tvfx { position: absolute; inset: 0; z-index: 2000; pointer-events: none; overflow: hidden; }

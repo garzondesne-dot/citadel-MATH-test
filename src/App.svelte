@@ -93,6 +93,8 @@
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
     <Title {S} onin={(p) => { bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
+  {:else if role === 'fxbake'}
+    {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
   {:else if role === 'atk'}
     <AtkGallery />
   {:else if role === 'dev'}

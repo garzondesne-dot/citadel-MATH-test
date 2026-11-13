@@ -3,6 +3,7 @@
 //   표(fx2 · fxbb · ranged · heroFaces · aura · bodies) = fx-data.json (정식 assets/manifest.js 에서 뽑음 · 손으로 고치지 않음)
 //   계열 · 이름 = model/hero (hero-data.json · 정식 FAMS · NAMES) · 연출만 — 데미지 · 정답 판정과 무관
 import DATA from './fx-data.json';
+import NEWJ from './fx-new.json';
 import { FAMS, SKILL_NAMES } from '../../model/hero';
 import { artUrl } from '../manifest';
 import './fx.css';
@@ -25,7 +26,12 @@ export const KINDS = [...FAMS.flatMap((f) => f.ids), ...ACHV, ...Object.keys(COM
 export const NAMES: Record<string, string> = SKILL_NAMES;
 export const famOf = (k: string) => FAMS.find((f) => f.ids.includes(k)) ?? (COMBO[k] ? FAMS.find((f) => f.id === COMBO[k]!.fam) : null) ?? null;
 export const tierOf = (k: string): number | 's' => { if (COMBO[k]) return 1; const f = famOf(k); return f ? f.ids.indexOf(k) : ACHV.includes(k) ? 's' : -1; };
-export const spec = (k: string): Spec | null => FX2.fx[k] ?? (COMBO[k] ? FX2.fx[COMBO[k]!.base] ?? null : null);
+// ⚔ 새 스킬 fx 시제품 (폰 = TV 원본을 구운 띠 · tools/fxbake/bake.cjs · fx-new.json): 켜면 그 스킬만 새 띠 · 지금은 ⚔ 베기 4개 · 선생님 채택 전엔 갤러리에서만 켬
+const NEW = NEWJ as unknown as { fx: Record<string, Spec>; bb: Record<string, number[]> };
+let useNew = false;
+export const setNewFx = (on: boolean) => { useNew = on; };
+export const isNewFx = (k: string) => useNew && !!NEW.fx[k];
+export const spec = (k: string): Spec | null => (isNewFx(k) ? NEW.fx[k]! : FX2.fx[k] ?? (COMBO[k] ? FX2.fx[COMBO[k]!.base] ?? null : null));
 const url = (sp: Spec) => artUrl(`art/${sp.src}`);
 const imgs: Record<string, HTMLImageElement> = {};
 export const load = (sp: Spec) => { const u = url(sp); if (!imgs[u] && typeof Image !== 'undefined') { const im = new Image(); im.src = u; imgs[u] = im; } return imgs[u]; };
@@ -48,7 +54,7 @@ export function strip(box: HTMLElement, sp: Spec, x: number, y: number, s: numbe
 export const GROUND = ['flame', 'ring', 'fire', 'pillar', 'lightning', 'thunder', 'frost', 'spikes', 'ice', 'nova', 'mana', 'meteor', 'vortex', 'void', 'smite', 'hammer', 'quake', 'cyclone', 'leaf'];
 export const SHOT = ['orb', 'chain'];
 export const modeOf = (k: string) => (SHOT.includes(k) ? 'shot' : GROUND.includes(k) ? 'ground' : 'body');
-const bbOf = (k: string, sp: Spec) => FXBB[k] ?? [0, 0, sp.w, sp.h];
+const bbOf = (k: string, sp: Spec) => (isNewFx(k) ? NEW.bb[k] : FXBB[k]) ?? [0, 0, sp.w, sp.h];
 function stripXY(box: HTMLElement, sp: Spec, left: number, top: number, sx: number, sy: number, opt: { z?: number; rot?: number; ox?: number; oy?: number; flip?: boolean } = {}) {
   const el = document.createElement('i'); el.className = 'fx-spr';
   const W = px(sp.w * sx), H = px(sp.h * sy), dur = sp.n / sp.fps;
@@ -64,15 +70,16 @@ export function place(box: HTMLElement, kind: string, o: { body?: Body | null; f
   const sp = spec(kind), B = o.body; if (!sp || !B) return play(box, kind, o);
   if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
   const bb = bbOf(kind, sp) as [number, number, number, number], bw = Math.max(1, bb[2] - bb[0]), bh = Math.max(1, bb[3] - bb[1]), bcx = (bb[0] + bb[2]) / 2, bcy = (bb[1] + bb[3]) / 2;
-  const w = B.x1 - B.x0, h = B.y1 - B.y0, cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2, mode = o.mode || modeOf(kind);
-  const t = tierOf(kind), tier = o.flat ? 1 : t === 's' ? TIER_SCALE[3]! : TIER_SCALE[t as number] || 1, mult = (o.mult || 1) * (o.perfect ? 1.15 : 1);
-  let s = Math.min((w * (mode === 'ground' ? 1.15 : 1)) / bw, (h * (mode === 'ground' ? 1.9 : 1.4)) / bh);
+  const w = B.x1 - B.x0, h = B.y1 - B.y0, cx = (B.x0 + B.x1) / 2, cy = (B.y0 + B.y1) / 2, mode = isNewFx(kind) ? 'body' : o.mode || modeOf(kind);
+  const t = tierOf(kind), tier = o.flat || isNewFx(kind) ? 1 : t === 's' ? TIER_SCALE[3]! : TIER_SCALE[t as number] || 1, mult = (o.mult || 1) * (o.perfect ? 1.15 : 1);
+  let s = isNewFx(kind) ? w / bw : Math.min((w * (mode === 'ground' ? 1.15 : 1)) / bw, (h * (mode === 'ground' ? 1.9 : 1.4)) / bh);
   s = q4(clamp(s * tier * mult, 0.6, 8));
   let el: HTMLElement;
   if (mode === 'shot' && o.from) {
     const tx = sp.tx || bb[2], hit = { x: cx - w * 0.12, y: cy }, dx = hit.x - o.from.x, dy = hit.y - o.from.y, L = Math.max(20, Math.hypot(dx, dy));
     const sx = L / Math.max(10, tx - sp.px), sy = q4(clamp(Math.min(s, sx * 1.4), 0.6, 8));
     el = stripXY(box, sp, o.from.x - sp.px * sx, o.from.y - bcy * sy, sx, sy, { z: 21, rot: Math.atan2(dy, dx), ox: sp.px * sx, oy: bcy * sy });
+  } else if (isNewFx(kind)) { el = stripXY(box, sp, cx - bcx * s, cy - bcy * s, s, s, { flip: (o.dir || 1) < 0 }); // 새 띠 = 몸통 상자에 그대로 (단계 크기 · 방향은 구울 때)
   } else if (!o.mode && (sp.mm === 'cross' || sp.mm === 'cross-wide')) {
     const R = box.getBoundingClientRect(), dir = o.dir || 1, sx = Math.min(w * 2.4, R.width * 0.9) / bw, sy = q4(clamp(Math.min(sx, (h * (sp.mm === 'cross' ? 1.2 : 1.9)) / bh) * tier * mult, 0.6, 8));
     const left = clamp(cx + dir * w * 0.2 - (bw * sx) / 2 - bb[0] * sx, -bb[0] * sx, R.width - bb[2] * sx);

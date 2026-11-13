@@ -4,7 +4,7 @@
 //   ⚡ 필살기 컷인(1.2초 · 얼굴 · 눈빛 · 이름 · 찢김) → 💥 광역(본 이펙트 + 네 귀퉁이 + 충격파 + 어둠막) · 🌟 진필살기 = 금빛 · 「眞」 · 조금 길게
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) · 갤러리 같은 함수 — 연출만 (데미지 · 체력 · 정답 판정과 무관)
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
-import { FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
+import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
 import { heroOf } from '../../model/hero';
 import { artUrl } from '../manifest';
 import { sfx } from '../sound.svelte';
@@ -44,12 +44,15 @@ function wave(box: HTMLElement, x: number, y: number) { const e = document.creat
 const FAM_SFX: Record<string, string> = { cut: 'cut', smash: 'smash', sweep: 'sweep', wind: 'wind', fire: 'fire', spark: 'spark', frost: 'frost', star: 'star', magic: 'magic', math: 'magic', sun: 'star', dark: 'cut', gear: 'smash', water: 'wind' };
 export const fxHit = (k: string) => sfx(FAM_SFX[famOf(k)?.id ?? ''] ?? 'special', 0.85);
 
-type HitO = { mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean };
+type HitO = { mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
+/** ⚔ 새 스킬 fx (TV 시제품 · slash.ts): 맞는 자리에 그림을 대신 그림 · true = 그렸음(띠 안 씀) · false = 지금 띠 */
+export type CustomFx = (B: Body, dir: number, o: { ult: boolean; finish: boolean }) => boolean;
 /** 맞는 순간: 이펙트 · 멈칫 · 흔들림 · 밀림 · −1 (처치면 충격파 + 크게) */
 export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string, o: HitO = {}) {
   const B = body(monBox, scene); if (!B) return;
   const sp = spec(fx) ?? spec('flame'), shot = modeOf(fx) === 'shot';
-  if (o.ult) void ultBlast(scene, monBox, fx); else if (!o.cast) void place(scene, fx, { body: B, from: o.from, mode: shot && !o.from ? 'body' : undefined, mult: o.mult, perfect: o.finish, dir: o.dir });
+  const drew = !o.cast && !!o.custom?.(B, o.dir ?? (B.cx > scene.getBoundingClientRect().width / 2 ? 1 : -1), { ult: !!o.ult, finish: !!o.finish });
+  if (drew) { /* 새 그림 */ } else if (o.ult) void ultBlast(scene, monBox, fx); else if (!o.cast) void place(scene, fx, { body: B, from: o.from, mode: shot && !o.from ? 'body' : undefined, mult: o.mult, perfect: o.finish, dir: o.dir });
   const hit = sp?.hit || [0, 0.08, 0.18, 2];
   await wait((shot && o.from ? Math.min(0.9, hit[0] || 0.3) : Math.min(0.3, hit[0] || 0.06)) * 1000);
   if (!scene.isConnected) return;
@@ -181,7 +184,7 @@ export const canUlt = (fx: string, hero: number) => tierN(fx) >= 2 && resonates(
 export const canTrue = (fx: string, hero: number) => tierN(fx) === 3 && resonates(hero, fx);
 export const preload = (hero: number, fx: string) => { fxPreload(fx); const p = projOf(hero); if (p) fxPreload(p); if (canUlt(fx, hero)) preloadFaces(); };
 
-export type PlayO = { heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
@@ -192,7 +195,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
   const H = rel(heroBox, scene), B = body(monBox, scene)!, rest = o.rest || 'think';
   const hc = { x: H.x + H.w / 2, y: H.y + H.h }, dir = hc.x <= B.cx ? 1 : -1;
   const shot = modeOf(fx) === 'shot', ranged = isRanged(hero), inPlace = shot || ranged;
-  const hitO: HitO = { mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined };
+  const hitO: HitO = { mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
   if (reso) { heroBox.classList.add('atk-reso'); setTimeout(() => heroBox.classList.remove('atk-reso'), 1400); }
   if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt });
   if (inPlace) {
@@ -229,10 +232,10 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
     setPose('attack');
     const leap = !o.miss && (fx === 'hammer' || fx === 'quake') && !!heroBox.animate;
     if (leap) { heroBox.animate([{ translate: `${to.x}px ${to.y}px`, opacity: 1 }, { translate: `${to.x}px ${to.y - 150}px`, opacity: 0 }], { duration: 260, easing: 'ease-out', fill: 'forwards' }); await wait(260); }
-    if (!o.miss && !leap) trail(scene, B, dir, fx);
+    if (!o.miss && !leap && !o.custom && !isNewFx(fx)) trail(scene, B, dir, fx);
     await wait(110);
     for (let k = 0; k < hits - 1 && scene.isConnected; k++) {
-      void place(scene, fx, { body: B, mult: mult * 0.8, dir }); await wait(90);
+      if (!o.custom && !isNewFx(fx)) void place(scene, fx, { body: B, mult: mult * 0.8, dir }); await wait(90);
       o.onHit?.({ k, n: hits }); if (!o.noDmg) dmg(scene, B.cx + (k % 2 ? 14 : -14), B.y0 + 6 - k * 6); knock(monBox, 8); shake(scene, 2, 90);
       fxHit(fx); await wait(70);
     }

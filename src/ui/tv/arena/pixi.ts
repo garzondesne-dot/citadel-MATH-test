@@ -4,6 +4,7 @@
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
 import { Application, Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
+import { SlashLayer, type SlashO } from './slash';
 import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
@@ -16,6 +17,10 @@ export interface Arena {
   /** ⚔ 정식 attack.js 를 DOM 층이 그릴 때: 그 용사 그림 숨김 · 몬스터만 반응(깜빡 · 흔들 · 숫자 · 베기 선 없음) */
   heroVisible(u: string, on: boolean): void;
   monHit(dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
+  /** ⚔ 새 스킬 fx (시제품) · false = 못 받음 → 지금 띠 · 설정 · 상태(시험) */
+  slash(o: SlashO, fall: () => void): boolean;
+  slashCfg(c: { fancy?: boolean; level?: number | null }): void;
+  slashStats(): { fps: number; level: number; live: number; queue: number };
   /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
   stone(on: boolean): void;
   exp(u: string, text: string): void;
@@ -41,6 +46,10 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   const W = () => app.screen.width, H = () => app.screen.height;
   const root = new Container(), shadowG = new Graphics(), monC = new Container(), hpC = new Container(), partyC = new Container(), fx = new Container();
   root.addChild(shadowG, monC, hpC, partyC, fx); app.stage.addChild(root);
+  // ⚔ 새 스킬 fx 시제품 층 (slash.ts · 낮은 해상도 하나 · 장면 위) — 충격파 · 흔들림은 root 에
+  const slashC = new Container(); app.stage.addChild(slashC);
+  const SL = new SlashLayer(app, slashC, root, W(), H());
+  app.renderer.on('resize', (w: number, h: number) => SL.resize(w, h));
   // 글자 = TV 한 글꼴 · 4 크기 · 2 굵기 (layout.TV_FS · TV_FW)
   const txt = (s: string, k: keyof typeof TV_FS, bold: boolean, fill: string | number, stroke = true) => new Text({ text: s, style: { fontFamily: font, fontSize: Math.round(H() * TV_FS[k]), fontWeight: String(bold ? TV_FW.bold : TV_FW.normal) as '700', fill, ...(stroke ? { stroke: { color: 0x000000, width: Math.max(2, H() * 0.004) } } : {}), align: 'center' } });
 
@@ -195,6 +204,9 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
     hit, exp, banner, freeze, heroVisible, monHit, stone,
-    destroy() { clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
+    slash: (o, fall) => SL.add(o, fall),
+    slashCfg: (c) => { if (c.fancy != null) SL.fancy = c.fancy; if (c.level !== undefined) SL.forceLevel = c.level; },
+    slashStats: () => ({ fps: Math.round(SL.fps), level: SL.level, live: SL.live.length, queue: SL.queue.length }),
+    destroy() { SL.destroy(); clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }
