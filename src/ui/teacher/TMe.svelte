@@ -19,7 +19,7 @@
   // 🧙 나 탭 (#124 ⑲) — 선생님 용사 카드(누르면 내 용사) · 🧙 내 용사 · ⛺ 내 캠프 · 🎨 테마 · 🖥 종합실 비밀번호 고정 · 📷 사진 채점 연결 · 🔊 소리 · 로그아웃 · 판 번호
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
   const { S }: { S: Store } = $props();
-  const M = useMe(9999, 30, true);
+  const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
   let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app'>(''), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
@@ -74,7 +74,7 @@
   <p class="ver">모두의 던전 v1.0 · 테스트 {BUILD}</p>
 </div>
 
-{#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} />{/if}
+{#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} />{/if}
 {#if sheet === 'login'}
   <Sheet onclose={() => (sheet = '')} mainText={busy ? '…' : '로그인'} mainDisabled={busy || !email || pw.length < 6} onmain={() => teacherIn(false)}>
     {#snippet title()}🔐 교사 로그인{/snippet}

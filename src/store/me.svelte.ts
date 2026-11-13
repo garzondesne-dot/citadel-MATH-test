@@ -46,8 +46,8 @@ function toServer(b: Bound, me: Me) {
   const had = b.S.get<Record<string, unknown>>(p(b, 'cards')) || {};
   for (const id of Object.keys(me.cards || {})) if (!had[id]) S.set(`${p(b, 'cards')}/${id}`, true); // 카드 = 늘기만 (정식 cards/{카드} = true)
 }
-function load(gem: number, scroll: number, test: boolean): Me {
-  const b = meBound(), base = fresh(gem, scroll, test), loc = readLocal(localKey(b));
+function load(gem: number, scroll: number, test: boolean, teacher = false): Me {
+  const b = teacher ? null : meBound(), base = { ...fresh(gem, scroll, test), ...(teacher ? { nick: '선생님', hero: 7 } : {}) }, loc = readLocal(teacher ? TKEY : localKey(b));
   if (b) {
     const sv = fromServer(b), first = !b.S.get(p(b, 'gem'));
     const local = Object.fromEntries(LOCAL_ONLY.filter((k) => loc && k in loc).map((k) => [k, loc![k]]));
@@ -59,15 +59,20 @@ function load(gem: number, scroll: number, test: boolean): Me {
   if (loc) { const m = { ...base, ...loc, test } as Me; m.wallet = migrate(m.wallet); return m; }
   return base;
 }
-export function useMe(gem: number, scroll: number, test = false) {
-  const me = $state<Me>(load(gem, scroll, test));
-  const b = meBound();
+/** 👩‍🏫 교사 기록 = 이 기기 따로 칸 (📜 2026-11-13 밤 교사 B안 · 학생 통계 · 순위 · 대시보드와 안 섞임 · 시작 💎 9,999 · 📜 30 · 현자) */
+const TKEY = `${KEY}|teacher`;
+export function useMe(gem: number, scroll: number, test = false, teacher = false) {
+  const me = $state<Me>(load(gem, scroll, test, teacher));
+  const b = teacher ? null : meBound();
   const save = () => {
     const snap = JSON.parse(JSON.stringify(me)) as Me;
+    if (teacher) { try { localStorage.setItem(TKEY, JSON.stringify(snap)); } catch { /* 무시 */ } return; }
     if (b) { toServer(b, snap); try { localStorage.setItem(localKey(b), JSON.stringify(Object.fromEntries(LOCAL_ONLY.map((k) => [k, snap[k]])))); } catch { /* 무시 */ } return; }
     try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch { /* 무시 */ }
   };
-  return { me, save, mark(id: string) { if (!me.seen[id]) { me.seen[id] = true; save(); } } };
+  /** 👩‍🏫 교사만: ↺ 처음으로 = 스킬(산 것 · 끼운 것) · 용사(강화 · 고른 용사) 처음 상태 + 💎 · 📜 다시 채움 */
+  const reset = () => { const f = fresh(gem, scroll, test); Object.assign(me, { ...f, ...(teacher ? { nick: '선생님', hero: 7 } : {}), seen: me.seen }); save(); };
+  return { me, save, reset, teacher, mark(id: string) { if (!me.seen[id]) { me.seen[id] = true; save(); } } };
 }
 /** 출전 용사 · 강화 (전투 장면이 읽음 · 없으면 로안) — 서버에 묶였으면 서버 값 */
 export function savedLook(): { hero: number; enh: number; fx: string } {

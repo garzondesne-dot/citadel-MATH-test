@@ -28,6 +28,8 @@ const heroes = ids.map((id) => {
   return { id, name: lo.name || '', job: lo.job || '', nick: lo.nick || '', a: lo.a || '', b: lo.b || '', say: lo.say || '', attr: DS.FX.attrOf(id), ranged: PROJ ? !!PROJ[id] : false,
     price, card, photo, chal: CHAL[id] ? { need: CHAL[id].need } : null, open, cond, sprite: (DS.ASSETS.heroesV2.list[id] || {}).src || '' };
 });
+// 👩‍🏫 선생님 전용 용사 (현자 7 · 수학자 17 · 정식 art.js 「7 = 선생님 현자 · 17 = 선생님 수학자」) — 교사 로그인에서만 보임 (📜 2026-11-13 밤 교사 B안)
+for (const id of [7, 17]) { const lo = DS.Lore.of(id) || {}; heroes.push({ id, name: lo.name || '', job: lo.job || '', nick: lo.nick || '', a: lo.a || '', b: lo.b || '', say: lo.say || '', attr: DS.FX.attrOf(id), ranged: PROJ ? !!PROJ[id] : false, price: null, card: false, photo: false, chal: null, open: false, cond: '👩‍🏫 선생님 전용', teacher: true, sprite: (DS.ASSETS.heroesV2.list[id] || {}).src || '' }); }
 const fx = {};
 DS.FX.FAMS.forEach((f) => f.ids.forEach((k, t) => { fx[k] = { name: DS.FX.NAMES[k], fam: f.id, tier: t, price: DS.Gem.price('fx', k), scroll: DS.Gem.scrollOf('fx', k) }; }));
 const titles = [{ id: 'none', name: '달지 않기', tier: 'w', cond: '' }, ...DS.Titles.all().filter((t) => !/^dg-/.test(t.id)).map((t) => ({ id: t.id, name: t.name, tier: t.tier, cond: t.cond || '' }))];

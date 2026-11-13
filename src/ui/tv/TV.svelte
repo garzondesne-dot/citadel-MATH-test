@@ -47,7 +47,7 @@
   // 🏰 TV 가 켜져 있음 (디펜스 시작 조건 · 3초마다)
   const beatT = untrack(() => (code ? setInterval(() => tvBeat(S, code), 3000) : 0)); if (code) untrack(() => tvBeat(S, code));
   onDestroy(() => clearInterval(beatT));
-  const M = useMe(9999, 30, true);
+  const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
   // 🎨 교실 TV = 선생님이 고른 테마의 색만 (#144 · 도트 테두리 · 바탕 그림 없음)
   const tth = untrack(() => liveValue<string>(S, 'school/teacher/theme'));
   onDestroy(tth.stop);
@@ -344,7 +344,7 @@
     <button type="button" class="t" data-k="out" aria-label="처음 화면으로" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<small>처음</small></button>
   </nav>
 
-  {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} /></div></div>{/if}
+  {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} /></div></div>{/if}
 </div>
 
 <style>

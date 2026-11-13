@@ -5,8 +5,11 @@ import { SUBJ } from '../engine/subject';
 import DATA from './hero-data.json';
 
 export type HeroInfo = (typeof DATA.heroes)[number];
-export const HEROES: HeroInfo[] = DATA.heroes;
-export const heroOf = (id: number): HeroInfo => HEROES.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo);
+/** 학생 용사 (선생님 전용은 빠짐) */
+export const HEROES: HeroInfo[] = DATA.heroes.filter((h) => !(h as { teacher?: boolean }).teacher);
+/** 👩‍🏫 선생님 전용 용사 (현자 7 · 수학자 17 · 📜 2026-11-13 밤 교사 B안 = 교사 로그인에서만 · 모두 열림) */
+export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teacher?: boolean }).teacher);
+export const heroOf = (id: number): HeroInfo => DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo);
 export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설'];
 export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
 export const FAMS: { id: string; name: string; ids: string[] }[] = DATA.fams;
@@ -17,7 +20,7 @@ export const SKILL_PRICE: Record<string, number> = Object.fromEntries(Object.ent
 export const SKILL_SCROLL: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.scroll).map(([k, v]) => [k, v.scroll]));
 /** 「⚔ 달빛 베기」 → 「달빛 베기」 */
 export const skillName = (id: string) => (SKILL_NAMES[id] ?? id).replace(/^\S+\s/, '');
-export const attrOf = (hero: number) => HEROES.find((h) => h.id === hero)?.attr ?? 'cut'; // 16 각성한 로안 = 로안과 같은 ⚔
+export const attrOf = (hero: number) => (DATA.heroes as HeroInfo[]).find((h) => h.id === hero)?.attr ?? 'cut'; // 16 각성한 로안 = 로안과 같은 ⚔
 export const famOfHero = (hero: number) => FAMS.find((f) => f.id === attrOf(hero)) ?? (FAMS[0] as (typeof FAMS)[number]);
 /** 🪜 #96: 쓸 수 있는 스킬 = 지금 용사 사다리 4칸(내 속성 Ⅰ~Ⅳ) */
 export const ladder = (hero: number) => famOfHero(hero).ids.slice();

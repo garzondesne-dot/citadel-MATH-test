@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { Me } from '../../store/me.svelte';
-  import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
+  import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
@@ -13,14 +13,14 @@
   //   맨 위 카드(도트 · 오라 · +n · [호칭] 이름 · 테스터 배지 · 용사 · 속성 · Lv · 「용사 바꾸기 >」) → 탭 3 = 🔨 강화(처음) · ⚔ 스킬 · 🏅 기록
   //   고른 것은 저장 전까지 화면에서만(💎 가 빠져 보임) → 아래 막대 한 줄 「바뀐 것 · 되돌리기 · 💾 저장」 · 💎 를 쓰면 저장 때 가운데 확인 1번
   //   금빛 단추 늘 하나: 바뀐 것이 있으면 💾 저장 · 없으면 강화 탭의 「+n+1 으로 강화」
-  const { me, persist, onclose }: { me: Me; persist: () => void; onclose: () => void } = $props();
+  const { me, persist, onclose, teacher = false, onreset }: { me: Me; persist: () => void; onclose: () => void; /** 👩‍🏫 교사 B안 (📜 2026-11-13 밤): 용사 모두 열림(선생님 전용 포함) · 스킬은 직접 해금 · ↺ 처음으로 */ teacher?: boolean; onreset?: () => void } = $props();
   const snap = (): Look => ({ hero: me.hero, enh: me.enh, socket: { ...me.socket }, title: me.title || 'none' });
   let L0 = $state<Look>(untrack(snap));
   let look = $state<Look>(untrack(snap));
   let P = $state<Plan>(emptyPlan());
   let tab = $state<'enh' | 'sk' | 'rec'>('enh');
   let heroSheet = $state(false), pickH = $state(untrack(() => me.hero));
-  let ttlSheet = $state(false), confirm = $state(false), ask = $state(false);
+  let ttlSheet = $state(false), confirm = $state(false), ask = $state(false), resetAsk = $state(false);
   let savedFlash = $state(false), topEl = $state<HTMLElement | null>(null), swTop = $state(160);
   function openHeroes() { pickH = look.hero; if (topEl) swTop = topEl.offsetTop + topEl.offsetHeight + 8; heroSheet = true; }
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
@@ -73,9 +73,10 @@
   }
   // ── 🧑 용사 바꾸기 ──
   const pick = $derived(heroOf(pickH));
-  const ownsPick = $derived(ownsHero(W, P, pickH));
-  const mine = $derived(HEROES.filter((h) => ownsHero(W, P, h.id)));
-  const locked = $derived(HEROES.filter((h) => !ownsHero(W, P, h.id)));
+  const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id);
+  const ownsPick = $derived(ownH(pickH));
+  const mine = $derived(POOL.filter((h) => ownH(h.id)));
+  const locked = $derived(POOL.filter((h) => !ownH(h.id)));
   function buyHero() { const h = heroOf(pickH); if (h.price == null || lf.gem < h.price) { say('💎 가 모자라요'); return; } P.heroes = [...P.heroes, pickH]; }
   function useHero() { look.hero = pickH; heroSheet = false; }
   const allHeroes = $derived([...mine, ...locked]);
@@ -137,6 +138,7 @@
         <span class="chg">용사 바꾸기 ›{#if dots.hero}<i class="bdot" aria-label="살 수 있는 용사 있음"></i>{/if}</span>
       </span>
     </button>
+    {#if teacher && onreset}<button type="button" class="treset" data-k="treset" onclick={() => (resetAsk = true)}>↺ 처음으로 되돌리기 <small>스킬 · 용사 · 💎 9,999 · 📜 30</small></button>{/if}
 
     <div class="htabs" role="tablist">
       {#each [['enh', '🔨 강화'], ['sk', '⚔ 스킬'], ['rec', '🏅 기록']] as const as [k, n] (k)}
@@ -175,7 +177,7 @@
       <div class="tiles">
         <div><small>🏆 업적</small><b>0 / {DATA.unlock[DATA.unlock.length - 1]}</b></div>
         <div><small>📚 도감</small><b>0 / {CARD_TOTAL}</b></div>
-        <div><small>🧑 용사</small><b>{mine.length} / {HEROES.length}</b></div>
+        <div><small>🧑 용사</small><b>{mine.length} / {POOL.length}</b></div>
         <div><small>🎖 메달</small><b>0</b></div>
       </div>
       <div class="stats">{#each STATS as st (st.id)}<span>{st.ic} {st.name}<b>0</b></span>{/each}</div>
@@ -207,12 +209,12 @@
   <div class="swbg" role="presentation" onclick={() => (heroSheet = false)} style:top="{swTop}px"></div>
   <div class="hsw" role="dialog" aria-modal="true" aria-label="용사 바꾸기" style:top="{swTop}px">
     <div class="grab"><i></i></div>
-    <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {HEROES.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
+    <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {POOL.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
     <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
     <HeroIntro id={pickH} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
     <div class="swg">
       {#each allHeroes as h (h.id)}
-        {@const own = ownsHero(W, P, h.id)}
+        {@const own = ownH(h.id)}
         <button type="button" class="swc" class:cur={h.id === look.hero} class:sel={h.id === pickH && h.id !== look.hero} class:lk={!own} onclick={() => (pickH = h.id)} aria-label="{h.name} · {h.job}{h.id === look.hero ? ' · 출전 중' : ''}{own ? '' : ' · 잠김'}">
           <span class="swi"><HeroSprite id={h.id} dim={!own} /></span><b>{h.name}</b><small>{own ? `${famName(h.id).split(' ')[0]}${topTier(h.id) ? ` 스킬 ${topTier(h.id)}` : ''}` : h.price != null ? `🔒 💎 ${h.price}` : '🔒 조건'}</small>
           {#if h.id === look.hero}<em>출전 중</em>{:else if P.heroes.includes(h.id)}<em class="pend">고름</em>{/if}
@@ -227,6 +229,14 @@
       <BottomAction dock={false} text="🔒 조건으로 열어요" />
     {/if}
   </div>
+{/if}
+
+{#if resetAsk}
+  <Sheet onclose={() => (resetAsk = false)}>
+    {#snippet title()}↺ 처음으로 되돌릴까요?{/snippet}
+    {#snippet act()}<button type="button" class="btn pmain rgo" data-k="treset-go" onclick={() => { resetAsk = false; onreset?.(); onclose(); }}>↺ 처음으로 되돌리기</button>{/snippet}
+    <p class="rq">산 스킬 · 끼운 스킬 · 강화 · 고른 용사가 처음 상태로 돌아가요 · 💎 9,999 · 📜 30 다시 채움<br />선생님 기록만 · 학생 기록은 그대로</p>
+  </Sheet>
 {/if}
 
 {#if ttlSheet}
@@ -369,4 +379,8 @@
   .askbox b { font-size: var(--fs-title); }
   .askbox p { margin: 0; color: var(--text-2); font-size: var(--fs-small); }
   @media (prefers-reduced-motion: reduce) { .prev { animation: none; } }
+  .treset { align-self: flex-start; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px dashed var(--line); background: none; color: var(--text-2); font: 700 14px var(--font); display: inline-flex; align-items: center; gap: 6px; }
+  .treset small { font-size: 12px; font-weight: 500; color: var(--text-3); }
+  .rq { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.5; text-align: center; }
+  .rgo { width: 100%; }
 </style>
