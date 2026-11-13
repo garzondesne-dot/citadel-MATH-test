@@ -12,6 +12,12 @@ const keys = (o: object | undefined | null) => Object.keys(o || {});
 export const seedOf = (R: Room, uid: string) => `${R.meta.code}|${uid}`;
 /** 🔁 재도전 규칙 v3 (정식 2026-11-09): 방 version ≥ 3 → 숫자는 「다 맞혔을 때만」 바뀜 · 틀리면 같은 문제 그대로 */
 const NEWR = (R: Room) => Number(R.meta.version || 0) >= 3;
+// ❤ ⚡ 베타 v4 (📜 2026-11-13 밤 선생님 「진행」 · 머리 🔨 하트 묶음): ❤ 4 · 몬스터마다 ⚡ 3 · 🔥 재도전 판 — 지금 열린 v3 방은 옛 규칙 그대로(수업 중 안 바뀜)
+export const V4 = (R: Room) => Number(R.meta.version || 0) >= 4;
+/** ⚡ 몬스터마다 새로 (다 맞힌 뒤에만) */
+export const ENERGY = 3;
+/** 🙋 선생님 「풀어주기」 횟수 (v4 · unlock/{mid}/{uid} = 수 · 하나 = ❤ +1) */
+export const unlocksOf = (R: Room, mid: string, uid: string) => Number((R as { unlock?: Record<string, Record<string, number>> }).unlock?.[mid]?.[uid]) || 0;
 /** ⏯ 이어서 수업 (#119 덧붙임 2): 지난 수업에서 처치 못 한 몬스터 = meta.fresh[id] → 판 · 시도 번호를 1 밀어 숫자 바꾼 판부터 (첫 시도 = 학습지 원문을 쓰지 않음) */
 export const shiftOf = (R: Room, mid: string) => (R.meta.fresh?.[mid] ? 1 : 0);
 
@@ -74,7 +80,7 @@ export const perfStreak = (rec: { tries: { correct: number; total: number }[] })
 function perfectRaw(L: LessonPack, R: Room, mid: string, uid: string) { if (isChain(L, R, mid)) return chainRecord(L, R, mid, uid, true).perfect; return attemptsOf(R, mid, uid).some((t) => { const g = gradeAttempt(L, R, mid, uid, t.attempt, t.given); return g.total > 0 && g.correct === g.total; }); }
 export function healsTo(R: Room, mid: string, uid: string, L?: LessonPack) {
   const out: { from: string; k: number }[] = [];
-  Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.entries(byK || {}).forEach(([k, to]) => { if (to === uid || (partyLike(to) && from !== uid && !R.players?.[uid]?.teacher && !!L && !perfectRaw(L, R, mid, uid))) out.push({ from, k: Number(k) }); }));
+  Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.entries(byK || {}).forEach(([k, to]) => { if (to === uid || (partyLike(to) && !(V4(R) && isTrue(to)) && from !== uid && !R.players?.[uid]?.teacher && !!L && !perfectRaw(L, R, mid, uid))) out.push({ from, k: Number(k) }); }));
   return out.sort((a, b) => num(R, a.from) - num(R, b.from) || a.k - b.k);
 }
 /** ⛓ 묶기 (정식 v3 · heals 칸 「!bind@시각」 · 하나 = 3초) */
@@ -117,6 +123,8 @@ export interface Rec {
   best: number; total: number; perfect: boolean; perfectAt: number; practice: boolean;
   submitted: boolean; slots: number; left: number; healed: number; fix: boolean; tokens: number; tokLeft: number;
   canRetry: boolean; canHeal: boolean; nextAttempt: number;
+  /** v4: ❤ 0 → 🙋 잠김(선생님 풀어주기 기다림) · 풀어주기 뒤 = 틀린 소문제 정답 펼침 · 🔥 재도전 판 (⚡ 쓴 수 · 다 맞힌 판 · 지금 열린 판) · 🌟 켜짐 */
+  locked?: boolean; reveal?: boolean; spent?: number; rounds?: number; roundOpen?: boolean; trueOk?: boolean;
 }
 
 /** 학생 기록 (정식 record · v3) — best = 가장 많이 맞힌 수 = 데미지 · 기회 = 재도전 + 1 + 받은 힐 · 소레이드면 chainRecord */
@@ -133,6 +141,22 @@ export function plainRecord(L: LessonPack, R: Room, mid: string, uid: string): R
   const practice = perfectAt >= 0 && tries.length - 1 > perfectAt;
   const healed = healsReceived(R, mid, uid, L);
   const slots = R.meta.retries + 1 + healed;
+  if (V4(R)) {
+    // ❤ = 4 + 받은 힐 + 풀어주기 − 틀린 제출(하나라도 틀리면 −1 · 개수 상관없이) · 다 맞힌 뒤(🔥 재도전 판)는 ❤ 안 씀
+    const full = (t: { correct: number; total: number }) => t.total > 0 && t.correct === t.total;
+    const pre = perfectAt >= 0 ? tries.slice(0, perfectAt + 1) : tries, wrong = pre.filter((t) => !full(t)).length;
+    const unl = unlocksOf(R, mid, uid), hearts = R.meta.retries + 1 + healed + unl, left = Math.max(0, hearts - wrong);
+    const locked = perfectAt < 0 && tries.length > 0 && left <= 0;
+    // ⚡ 3 = 다 맞힌 뒤 · ⚡ 1 쓰면(💚 힐 · ⛓ 묶기 · 🌟) 바로 🔥 재도전 판 · 그 판을 다 맞혀야 다음 ⚡
+    const prac = perfectAt >= 0 ? tries.slice(perfectAt + 1) : [], rounds = prac.filter(full).length, spent = healsGiven(R, mid, uid);
+    const tokens = perfectAt >= 0 ? ENERGY : 0, tokLeft = Math.max(0, tokens - spent), roundOpen = spent > rounds;
+    const fix = roundOpen && prac.length > 0 && !full(prac[prac.length - 1]!);
+    // 🌟 = 첫 공격 퍼펙트 + 재도전 판 2개를 각각 한 번에 → 세 번째 ⚡ 에서만
+    const trueOk = perfectAt === 0 && spent === 2 && rounds === 2 && prac.length === 2 && prac.every(full);
+    return { tries, best, total, perfect: perfectAt >= 0, perfectAt, practice: prac.length > 0, submitted: tries.length > 0, slots: hearts, left, healed, fix, tokens, tokLeft,
+      canRetry: perfectAt >= 0 ? roundOpen : tries.length > 0 && left > 0, canHeal: tokLeft > 0 && !roundOpen, nextAttempt: tries.length,
+      locked, reveal: unl > 0 && perfectAt < 0, spent, rounds, roundOpen, trueOk };
+  }
   if (NEWR(R)) {
     const prac = perfectAt >= 0 ? tries.slice(perfectAt + 1) : [];
     const ok = prac.filter((t) => t.total > 0 && t.correct === t.total).length;
@@ -169,6 +193,7 @@ export interface ChainRec {
   whyM: number; whyN: number; whyDone: number[]; whyAll: boolean;
   best: number; total: number; submitted: boolean; tries: never[]; last: null; allRight: boolean; practice: boolean; pass: number; pStage: number; pSays: string[]; pItems: Question[] | null;
   pDoneN: number; pWhy: number; whyOk: boolean; pLeft: number; pFail: boolean; healed: number; canRetry: false; canHeal: boolean; nextAttempt: number; nextK: number;
+  spent?: number; rounds?: number; roundOpen?: boolean; trueOk?: boolean;
 }
 /** 정식 chainRecord 그대로 */
 export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, noParty = false): ChainRec {
@@ -176,7 +201,8 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
   const ok = !!R.chainOk?.[mid]?.[uid];
   let stage = 0, cost = 0, wrong = 0, lastWrong: ChainRec['lastWrong'] = null, byPh = false, leftAt = -1;
   const says: string[] = [], wrongAt: Record<number, boolean> = {};
-  const healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed;
+  const v4 = V4(R), healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed + (v4 ? unlocksOf(R, mid, uid) : 0);
+  const pWrongBy: Record<number, number> = {}; // v4 🌟: 판마다 틀린 수
   let pCost = 0, pass = 0, pStage = 0, pItems: Question[] | null = null, pSays: string[] = [], pDoneN = 0, pWhy = -1, whyOk = false;
   const whySet = new Set<number>();
   subs.forEach((t) => {
@@ -194,22 +220,24 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
       if (t.p !== pass) { pass = t.p; pStage = 0; pSays = []; pWhy = -1; pCost = 0; pItems = chainItems(L, R, mid, uid, pass); }
       const PI = pItems as Question[];
       if (t.w) { const q = PI[t.s]; if (t.s === pWhy && q && q.why && Number(raw0) === q.why.answer) { pSays.push(q.why.text); pWhy = -1; whyOk = true; whySet.add(t.s); if (pStage >= PI.length) pDoneN += 1; } return; }
-      if (pWhy >= 0 || t.s !== pStage || pStage >= PI.length || pCost >= CHAIN_SLOTS) return;
+      if (pWhy >= 0 || t.s !== pStage || pStage >= PI.length || (!v4 && pCost >= CHAIN_SLOTS)) return; // v4 🔥 재도전 판 = 무료(❤ 안 씀 · 횟수 제한 없음)
       const q = PI[pStage] as Question;
       if (grade(q, fixG(q, raw0))) { pSays.push(q.say || ''); if (q.why) pWhy = pStage; pStage += 1; if (pStage >= PI.length && pWhy < 0) pDoneN += 1; }
-      else pCost += pStage === PI.length - 1 ? 1 : 0.5;
+      else { pCost += pStage === PI.length - 1 ? 1 : 0.5; pWrongBy[pass] = (pWrongBy[pass] || 0) + 1; }
     }
   });
-  const left = Math.max(0, slots - cost), done = stage >= n, fail = !done && left <= 0;
+  const left = Math.max(0, slots - cost), done = stage >= n, fail = !v4 && !done && left <= 0; // v4: ❤ 0 = 못 맞힘이 아니라 🙋 잠김
   const given0 = keys(healsOf(R, mid)[uid]).length; // 정식: 진필살기 · 금빛 컷인 칸은 묶기 · 힐이 아님 (그 값은 아직 없음)
-  const tokens = done ? Math.floor(Math.max(0, leftAt >= 0 ? leftAt : slots - cost)) : 0, tokLeft = Math.max(0, tokens - given0);
-  const locked = !done && !fail && left <= 1 && !ok;
+  const tokens = done ? (v4 ? ENERGY : Math.floor(Math.max(0, leftAt >= 0 ? leftAt : slots - cost))) : 0, tokLeft = Math.max(0, tokens - given0);
+  const locked = v4 ? !done && left <= 0 : !done && !fail && left <= 1 && !ok;
+  // v4 ⚡ → 🔥 재도전 판: 쓴 ⚡ 수 = 열린 판 번호 · 다 맞힌 판 = pDoneN · 🌟 = 퍼펙트 + 판 1 · 2 를 각각 한 번에 · 세 번째 ⚡
+  const rounds = pDoneN, roundOpen = v4 && given0 > rounds, trueOk = v4 && done && wrong === 0 && !byPh && given0 === 2 && rounds >= 2 && !pWrongBy[1] && !pWrongBy[2];
   const whyM = whyStages(its).length, whyDone = [...whySet].sort((a, b) => a - b);
   const stOk = Array.from({ length: n }, (_, i) => i < stage), stFirst = stOk.map((v, i) => v && !wrongAt[i]);
   return { chain: true, stOk, stFirst, whyM, whyN: whyDone.length, whyDone, whyAll: whyM > 0 && whyDone.length >= whyM, items: its, n, stage, cost, left, slots, wrong, lastWrong, says, done, fail, locked, ok, byPh,
     perfect: done && wrong === 0 && !byPh, perfectAt: done && wrong === 0 && !byPh ? 0 : -1, tokens, tokLeft,
-    best: stage, total: n, submitted: subs.length > 0, tries: [], last: null, allRight: done, practice: pass > 0, pass, pStage, pSays, pItems, pDoneN, pWhy, whyOk, pLeft: Math.max(0, CHAIN_SLOTS - pCost), pFail: pass > 0 && pCost >= CHAIN_SLOTS && pStage < (pItems || []).length,
-    healed, canRetry: false, canHeal: tokLeft > 0, nextAttempt: subs.length, nextK: subs.length ? (subs[subs.length - 1] as { k: number }).k + 1 : 0 };
+    best: stage, total: n, submitted: subs.length > 0, tries: [], last: null, allRight: done, practice: pass > 0, pass, pStage, pSays, pItems, pDoneN, pWhy, whyOk, pLeft: v4 ? CHAIN_SLOTS : Math.max(0, CHAIN_SLOTS - pCost), pFail: !v4 && pass > 0 && pCost >= CHAIN_SLOTS && pStage < (pItems || []).length,
+    healed, canRetry: false, canHeal: tokLeft > 0 && !roundOpen, nextAttempt: subs.length, ...(v4 ? { spent: given0, rounds, roundOpen, trueOk } : {}), nextK: subs.length ? (subs[subs.length - 1] as { k: number }).k + 1 : 0 };
 }
 /** 🔥 연습 타격 (📜 2026-11-13 밤 · 베타): 다 맞힌 뒤 🔥 한 판 더 · 연습 공격에서 맞힌 소문제(단계) 수 = 데미지 0 · 흔적만 (TV 「🔥 연습 타격 n」 · 처치 결과 한 줄) */
 export function pracHits(L: LessonPack, R: Room, mid: string, uid: string): number {

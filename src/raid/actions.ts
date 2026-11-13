@@ -1,7 +1,7 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
-import { perfStreak, petrify, stone, ultUsed } from './raid';
+import { perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -166,7 +166,7 @@ export function chainSubmit(S: Store, L: LessonPack, code: string, mid: string, 
   const R = getRoom(S, code);
   if (!R || !isChain(L, R, mid)) return '소레이드가 아니에요';
   const rec = chainRecord(L, R, mid, uid);
-  if (p > PRAC_MAX) return `🔥 연습은 ${PRAC_MAX}번까지예요`;
+  if (V4(R) ? p > 0 && (!rec.roundOpen || p !== rec.spent) : p > PRAC_MAX) return V4(R) ? '⚡ 를 써야 🔥 재도전 판이 열려요' : `🔥 연습은 ${PRAC_MAX}번까지예요`;
   if (p && !w && rec.pass === p && rec.pFail) return '이번 연습 판은 기회를 다 썼어요';
   if (!p && (rec.locked || rec.fail || rec.done)) return rec.locked ? '🙋 선생님 확인을 기다려요' : '이 문제는 끝났어요';
   S.set(`${roomPath(code)}/chain/${mid}/${uid}/${rec.nextK}`, { s, p: p || 0, g: g == null ? '' : g, ...(w ? { w: 1 } : {}) });
@@ -176,10 +176,17 @@ export function chainSubmit(S: Store, L: LessonPack, code: string, mid: string, 
 export function pracStart(S: Store, L: LessonPack, code: string, mid: string, uid: string): number {
   const R = getRoom(S, code);
   if (!R) return 0;
-  const used = pracUsed(R, mid, uid, chainRecord(L, R, mid, uid));
+  const c = chainRecord(L, R, mid, uid);
+  if (V4(R)) return c.roundOpen ? c.spent ?? 0 : 0; // v4: 판 번호 = 쓴 ⚡ 수 (⚡ 를 쓰면 바로 열림 · 그만둬도 「🔥 이어서」)
+  const used = pracUsed(R, mid, uid, c);
   if (used >= PRAC_MAX) return 0;
   S.set(`${roomPath(code)}/players/${uid}/pr/${mid}`, used + 1);
   return used + 1;
+}
+/** 🙋 v4 「✔ 풀어주기」 (일반 몬스터 · 소레이드 · 형성평가 같이): ❤ 0 → ❤ +1 (+ 일반 몬스터 = 틀린 소문제 정답 펼침) · 누를 때마다 하나 */
+export function heartRelease(S: Store, code: string, mid: string, uid: string): void {
+  const R = getRoom(S, code); if (!R) return;
+  S.set(`${roomPath(code)}/unlock/${mid}/${uid}`, unlocksOf(R, mid, uid) + 1);
 }
 /** 🙋 종합실 「✔ 풀어주기」: 기회 1칸 남은 학생의 잠김을 풂 */
 export function chainRelease(S: Store, code: string, mid: string, uid: string): void {
@@ -197,10 +204,10 @@ export function scoutReady(S: Store, code: string, id: string, uid: string): voi
 export function trueUlt(S: Store, L: LessonPack, code: string, mid: string, me: string, canTrue: boolean): string {
   const R = getRoom(S, code); if (!R) return '방이 없어요';
   const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
-  if (perfStreak(rec as { tries: { correct: number; total: number }[] }) < 3 || ultUsed(R, mid, me)) return '3연속 퍼펙트일 때만 쓸 수 있어요';
+  if (V4(R) ? !(rec as { trueOk?: boolean }).trueOk || ultUsed(R, mid, me) : perfStreak(rec as { tries: { correct: number; total: number }[] }) < 3 || ultUsed(R, mid, me)) return V4(R) ? '첫 공격 퍼펙트 + 재도전 판 2개를 각각 한 번에 맞혔을 때 · 세 번째 ⚡ 에서만 쓸 수 있어요' : '3연속 퍼펙트일 때만 쓸 수 있어요';
   if (!canTrue) return '진필살기는 내 속성 Ⅳ 전설 스킬을 끼웠을 때만 쓸 수 있어요';
   if (petrify(R, mid)) return '이 몬스터는 이미 진필살기로 굳었어요 — 지금 맞히면 💎 가 나와요!';
-  if (rec.tokLeft <= 0) return '⚡ 기력이 없어요';
+  if (rec.tokLeft <= 0 || (V4(R) && !rec.canHeal)) return '⚡ 기력이 없어요';
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, `!true@${S.now()}`);
   return '';
 }
@@ -222,7 +229,7 @@ export function petriAward(S: Store, code: string, me: string, mid: string, n: n
 export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
   const R = getRoom(S, code); if (!R) return false;
   const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
-  if (rec.tokLeft <= 0) return false;
+  if (rec.tokLeft <= 0 || (V4(R) && !rec.canHeal)) return false; // v4: 🔥 재도전 판을 다 맞혀야 다음 ⚡
   if (to !== 'bind' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);
   return true;
