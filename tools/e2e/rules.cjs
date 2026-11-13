@@ -37,6 +37,20 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('학생 팀 방(T…) 진행', await as(B.tok, 'rooms/Tabc/state/step', 'PUT', 1), true);
   want('옮긴 계정 잇기(reset)', (await owner('accounts/1-3/3', 'PUT', { uid: 'OLD', reset: true }), await as(B.tok, 'accounts/1-3/3/uid', 'PUT', B.uid)), true);
   want('남의 계정 가로채기', await as(B.tok, 'accounts/1-3/1/uid', 'PUT', B.uid), false);
+  // 🔒 게시판 입장 암호 (2026-11-13): 해시 = boardLock(아무도 못 읽음) · 합류 = 해시가 맞아야 · 이미 들어온 학생 준비 · 암호 없는 글 그대로
+  const H = 'a'.repeat(64), P0 = 'school/board/posts/pX';
+  want('학생 A 암호 해시 올리기', await as(A.tok, 'boardLock/pX', 'PUT', { h: H, at: 1 }), true);
+  want('학생 B 남 암호 덮어쓰기', await as(B.tok, 'boardLock/pX', 'PUT', { h: 'b'.repeat(64), at: 1 }), false);
+  want('학생 B 암호 해시 읽기', await as(B.tok, 'boardLock/pX'), false);
+  want('학생 A 암호 글 올리기', await as(A.tok, P0, 'PUT', { pid: 'pX', host: A.uid, phase: 'wait', lk: true, at: 1, mem: { [A.uid]: { uid: A.uid, ready: true } } }), true);
+  want('학생 B 틀린 암호로 합류', await as(B.tok, `${P0}/mem/${B.uid}`, 'PUT', { uid: B.uid, k: 'c'.repeat(64) }), false);
+  want('학생 B 암호 없이 합류', await as(B.tok, `${P0}/mem/${B.uid}`, 'PUT', { uid: B.uid }), false);
+  want('학생 B 맞는 암호로 합류', await as(B.tok, `${P0}/mem/${B.uid}`, 'PUT', { uid: B.uid, k: H }), true);
+  want('학생 B 준비(이미 들어옴)', await as(B.tok, `${P0}/mem/${B.uid}/ready`, 'PUT', true), true);
+  want('학생 B 글 lk 지우기(덮어쓰기)', await as(B.tok, `${P0}/lk`, 'PUT', false), false);
+  want('암호 없는 글 합류 그대로', (await as(A.tok, 'school/board/posts/pY', 'PUT', { pid: 'pY', host: A.uid, phase: 'wait', at: 1, mem: { [A.uid]: { uid: A.uid } } }), await as(B.tok, `school/board/posts/pY/mem/${B.uid}`, 'PUT', { uid: B.uid })), true);
+  want('출발(phase · code)', (await as(A.tok, `${P0}/code`, 'PUT', 'TpX'), await as(A.tok, `${P0}/phase`, 'PUT', 'play')), true);
+  want('교사 암호 해시 읽기', await as(T1.tok, 'boardLock/pX'), true);
   log('🔐 규칙:'); rows.forEach((r) => log('  ' + r));
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
 })();

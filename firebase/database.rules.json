@@ -36,13 +36,29 @@
     "school": {
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "board": { ".write": "auth != null" },
+      "board": {
+        "rank": { ".write": "auth != null" },
+        "posts": {
+          "$pid": {
+            ".write": "auth != null && (!data.exists() || !newData.exists())",
+            "code": { ".write": "auth != null" },
+            "phase": { ".write": "auth != null" },
+            "mem": {
+              "$uid": { ".write": "auth != null && (data.exists() || !newData.exists() || !root.child('boardLock/' + $pid).exists() || newData.child('k').val() === root.child('boardLock/' + $pid + '/h').val())" }
+            }
+          }
+        }
+      },
       "inbox": { ".write": "auth != null" },
       "funUsed": { ".write": "auth != null" },
       "funStats": { ".write": "auth != null" },
       "survey": { ".write": "auth != null" }
     },
     "prep": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
+    "boardLock": {
+      ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
+      "$pid": { ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).val() === true)" }
+    },
     "gifts": { ".read": "auth != null", ".write": "auth != null" },
     "mail": { ".read": "auth != null", ".write": "auth != null" },
     "roster": {

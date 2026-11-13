@@ -6,13 +6,14 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, canJoin, canStart, createPost, hasGuard, joinPost, leavePost, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
+  import { bonusOf, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
   import { liveValue } from '../room.svelte';
   import { lastClass, lastTest } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
+  import RuneKeypad from '../q/RuneKeypad.svelte';
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
@@ -39,7 +40,7 @@
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? null);
   const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: me.hero });
-  let sheet = $state<'' | 'solo' | 'post'>(''), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
+  let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   const rkv = untrack(() => liveValue<Record<string, Record<string, Record<string, RankRow>>>>(S, RANK));
   onDestroy(rkv.stop);
@@ -48,11 +49,17 @@
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
     if (!pick) return;
-    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } createPost(S, pick, meM, recOf(pick) ?? null, pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined); sheet = ''; return; }
+    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } if (lockOn && !validPin(pin)) { say('암호 숫자 4자리를 넣어요'); return; } { const only = pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined; if (lockOn) void createLockedPost(S, pick, meM, recOf(pick) ?? null, only, pin); else createPost(S, pick, meM, recOf(pick) ?? null, only); } sheet = ''; lockOn = false; pin = ''; return; }
     sheet = ''; run = pick; res = null;
   }
   const tag = (p: Post) => [...new Set(membersOf(p).map((m) => m.cls))];
-  function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
+  // 🔒 암호 글 = 암호 시트 → 맞으면 대기실 · 틀리면 「암호가 달라요」 · 3번 틀리면 1분
+  async function joinPin() {
+    const p = pinPost; if (!p || busy) return; const L0 = lessonOf(p.lesson); busy = true;
+    pinErr = await joinLocked(S as Store & { trySet?: (path: string, v: unknown) => Promise<boolean> }, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined, pin);
+    busy = false; if (!pinErr) { sheet = ''; pin = ''; pinPost = null; } else pin = '';
+  }
+  function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } if (p.lk && !p.mem?.[uid]) { pinPost = p; pin = ''; pinErr = ''; sheet = 'pin'; return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
   // ── 결과 (1인 · 팀 같은 꼴) ──
   function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;
@@ -101,6 +108,7 @@
     {@const ms = membersOf(mine)}
     {@const host = mine.host === uid}
     <div class="mid">
+      {#if mine.lk}{@const pn = host ? myPin(mine.pid) : ''}<div class="card pin" class:host><b>🔒 {host ? (pn ? `입장 암호 ${pn}` : '입장 암호 · 이 기기에 없어요') : '암호가 걸린 모집 글'}</b><small>{host ? (pn ? '친구에게 말로 알려 줘요 · 다른 화면엔 안 보여요' : '다른 폰에서 만든 글이에요 · 내리고 다시 모집해요') : '모집한 친구에게 암호를 듣고 들어왔어요'}</small></div>{/if}
       <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b>{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
@@ -125,7 +133,7 @@
         {#each shown as p (p.pid)}
           {@const L = lessonOf(p.lesson)}
           {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
-          <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
+          <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
         {/each}
       {:else}
         <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>혼자 시작하거나 · 모집 글을 올려요</small></div>
@@ -138,10 +146,21 @@
   {#if toast}<p class="toast3" role="status">{toast}</p>{/if}
 </div>
 
-{#if sheet}
-  <Sheet onclose={() => (sheet = '')} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 혼자 시작`) : '차시를 골라요'} mainDisabled={!pick} onmain={go}>
+{#if sheet === 'pin' && pinPost}
+  <Sheet onclose={() => { sheet = ''; pinPost = null; }} mainText={busy ? '확인 중…' : '🔒 합류'} mainDisabled={busy || pin.length !== 4} onmain={joinPin}>
+    {#snippet title()}🔒 {pinPost?.no}차시 · 입장 암호{/snippet}
+    <p class="pinq">모집한 친구에게 들은 숫자 4자리</p>
+    <RuneKeypad value={pin} len={4} onchange={(v) => { pin = v == null || v === '-' ? '' : String(v); pinErr = ''; }} />
+    {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
+  </Sheet>
+{:else if sheet}
+  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 혼자 시작`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && !validPin(pin))} onmain={go}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
+    {#if sheet === 'post'}
+      <button type="button" class="lkt" class:on={lockOn} role="switch" aria-checked={lockOn} onclick={() => { lockOn = !lockOn; pin = ''; }}><span>🔒 암호 걸기</span><small>{lockOn ? '암호를 아는 친구만 합류' : '끔 · 누구나 합류'}</small><i class="kn" aria-hidden="true"></i></button>
+      {#if lockOn}<RuneKeypad value={pin} len={4} onchange={(v) => (pin = v == null || v === '-' ? '' : String(v))} />{/if}
+    {/if}
   </Sheet>
 {/if}
 {#if run}<BoardRun L0={run} {uid} {num} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
@@ -194,5 +213,14 @@
   .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .stat span { background: var(--surface); border-radius: 10px; padding: 8px 0; text-align: center; display: flex; flex-direction: column; font-size: 12.5px; color: var(--text-2); } .stat b { font-size: 20px; color: var(--text); }
   .rk div { display: flex; justify-content: space-between; font-size: 14.5px; } .rk em { font-style: normal; font-weight: 700; color: var(--accent); }
   .rw div { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-2); padding: 2px 0; } .rw .tot { color: var(--text); font-weight: 700; font-size: 16px; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
+  .card.pin { border: 1px solid var(--line); } .card.pin.host { border-color: var(--accent); } .card.pin.host b { font-size: 20px; color: var(--accent); letter-spacing: 1px; }
+  .post i.lk { background: var(--accent); color: var(--on-accent); }
+  .lkt { margin-top: var(--s3); width: 100%; min-height: var(--tap); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); text-align: left; }
+  .lkt span { flex: 1; } .lkt small { font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .lkt .kn { width: 40px; height: 24px; border-radius: 12px; background: var(--surface-2); position: relative; flex: none; }
+  .lkt .kn::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-3); transition: transform var(--t); }
+  .lkt.on .kn { background: var(--accent); } .lkt.on .kn::after { transform: translateX(16px); background: #fff; }
+  .pinq { margin: 0 0 var(--s2); font-size: 14px; color: var(--text-2); text-align: center; }
+  .pinerr { margin: var(--s2) 0 0; text-align: center; color: var(--bad); font-weight: 700; font-size: 15px; }
   .toast3 { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface-2); font-weight: 700; white-space: nowrap; z-index: 25; }
 </style>

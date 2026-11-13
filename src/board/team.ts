@@ -12,8 +12,8 @@ import { bossFullOf } from '../school/records';
 export const MAX = 4, PAUSE_N = 2, PAUSE_MS = 120000, THINK_MS = 60000;
 export const POSTS = 'school/board/posts';
 export type Role = 'g' | 'c';
-export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number }
-export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member> }
+export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
+export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member>; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
 
 /** 🛡 판정 (❓ #143-a B · 숫자는 여기 한 곳): 그 차시 수업 기록 정답률 ≥ 80% 또는 형성평가 만점 → 수호자 · 기록 없으면 도전자 */
 export const GUARD_RATE = 0.8;
@@ -30,11 +30,34 @@ export function roleOf(rec: { right?: number; total?: number; boss?: number | { 
 const mems = (p: Post | null) => Object.values(p?.mem || {}).filter(Boolean).sort((a, b) => a.at - b.at);
 export const membersOf = mems;
 export const hasGuard = (p: Post) => mems(p).some((m) => m.role === 'g');
+// 🔒 입장 암호 (2026-11-13 선생님 「게시판 던전은 입장 암호 기능 추가해야 돼」): 숫자 4자리 · 서버엔 해시만(boardLock/{pid} = 아무도 못 읽음 · 규칙이 합류 때 맞춰 봄)
+//   모집한 학생 = 이 기기에 암호 기억(대기실 위에만 보임) · 3번 틀리면 1분 뒤 다시(그 학생 · 그 글만 · 이 기기)
+export const LOCK = 'boardLock', PIN_TRIES = 3, PIN_WAIT = 60000;
+export const validPin = (pin: string) => /^\d{4}$/.test(pin);
+export async function pinHash(pid: string, pin: string): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`citadel-board:${pid}:${pin}`));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+export const newPid = (S: Store) => `p${S.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+type Ls = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
+const memLs = new Map<string, string>(), MEM: Ls = { getItem: (k) => memLs.get(k) ?? null, setItem: (k, v) => void memLs.set(k, v), removeItem: (k) => void memLs.delete(k) };
+const ls = (): Ls => { try { return typeof localStorage !== 'undefined' && localStorage ? localStorage : MEM; } catch { return MEM; } }; // 사생활 창 · 시험 = 이 탭 메모리
+export const myPin = (pid: string) => { try { return ls()?.getItem(`citadel-board-pin-${pid}`) ?? ''; } catch { return ''; } };
+const tryKey = (uid: string, pid: string) => `citadel-board-try-${uid}-${pid}`;
+export function pinWait(uid: string, pid: string, now: number): number { try { const v = JSON.parse(ls()?.getItem(tryKey(uid, pid)) || 'null') as { n: number; until: number } | null; return v && v.until > now ? v.until - now : 0; } catch { return 0; } }
+function pinMiss(uid: string, pid: string, now: number): number { try { const v = (JSON.parse(ls()?.getItem(tryKey(uid, pid)) || 'null') as { n: number; until: number } | null) || { n: 0, until: 0 }; const n = v.until && v.until <= now ? 1 : v.n + 1; const until = n >= PIN_TRIES ? now + PIN_WAIT : 0; ls()?.setItem(tryKey(uid, pid), JSON.stringify({ n: n >= PIN_TRIES ? 0 : n, until })); return PIN_TRIES - (n >= PIN_TRIES ? PIN_TRIES : n); } catch { return PIN_TRIES; } }
 /** 글 올리기 · 합류 · 나가기 · 준비 · 내리기 */
-export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[]): string {
-  const pid = `p${S.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`, r = roleOf(rec, only);
-  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', mem: { [me.uid]: { ...me, ...r, at: S.now(), ready: true } } });
+export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], lk = false, pid0?: string): string {
+  const pid = pid0 ?? newPid(S), r = roleOf(rec, only);
+  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', ...(lk ? { lk: true } : {}), mem: { [me.uid]: { ...me, ...r, at: S.now(), ready: true } } });
   return pid;
+}
+/** 🔒 암호 건 글: 해시를 먼저 boardLock 에 → 글 · 모집한 기기에 암호 기억 */
+export async function createLockedPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only: string[] | undefined, pin: string): Promise<string> {
+  if (!validPin(pin)) return createPost(S, L, me, rec, only);
+  const pid = newPid(S);
+  S.set(`${LOCK}/${pid}`, { h: await pinHash(pid, pin), at: S.now() }); try { ls()?.setItem(`citadel-board-pin-${pid}`, pin); } catch { /* 사생활 창 */ }
+  return createPost(S, L, me, rec, only, true, pid);
 }
 export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boolean; online: boolean }): string {
   if (!o.online) return '서버와 끊겼어요';
@@ -45,7 +68,20 @@ export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boole
   if (mems(p).length >= MAX) return '자리가 다 찼어요';
   return '';
 }
-export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[]) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), ready: false }); }
+export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], k?: string) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), ready: false, ...(k ? { k } : {}) }); }
+/** 🔒 암호 글 합류: 맞으면 '' · 틀리면 안내 · 서버 = 규칙이 판정(쓰기 성공 여부) · 이 기기 · 메모리 = 해시를 직접 비교 */
+export async function joinLocked(S: Store & { trySet?: (path: string, v: unknown) => Promise<boolean> }, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only: string[] | undefined, pin: string): Promise<string> {
+  const now = S.now(), w = pinWait(me.uid, p.pid, now);
+  if (w) return `⏳ ${Math.ceil(w / 1000)}초 뒤에 다시 해 봐요`;
+  if (!validPin(pin)) return '숫자 4자리를 넣어요';
+  const k = await pinHash(p.pid, pin), path = `${POSTS}/${p.pid}/mem/${me.uid}`, val = { ...me, ...roleOf(rec, only), at: now, ready: false, k };
+  let ok: boolean;
+  if (S.trySet) ok = await S.trySet(path, val);
+  else { ok = S.get<{ h?: string }>(`${LOCK}/${p.pid}`)?.h === k; if (ok) S.set(path, val); }
+  if (ok) { try { ls()?.removeItem(tryKey(me.uid, p.pid)); } catch { /* 무시 */ } return ''; }
+  const left = pinMiss(me.uid, p.pid, now);
+  return left > 0 ? `암호가 달라요 · ${left}번 남았어요` : '암호가 달라요 · 1분 뒤에 다시 해 봐요';
+}
 /** 나가기: 출발 전 글 올린 사람 = 글 내림 · 그 밖(출발 뒤 글 올린 사람도) = 나만 빠짐 (#147 · 팀 진행은 남은 팀원이 이어받음) */
 export const leavePost = (S: Store, p: Post, uid: string) => (p.host === uid && p.phase === 'wait' ? S.set(`${POSTS}/${p.pid}`, null) : S.set(`${POSTS}/${p.pid}/mem/${uid}`, null));
 export const setReady = (S: Store, p: Post, uid: string, v: boolean) => S.set(`${POSTS}/${p.pid}/mem/${uid}/ready`, v);

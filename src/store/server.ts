@@ -8,7 +8,7 @@ import type { Store, Unsub } from '../model/types';
 //   시계 = 서버 시각(.info/serverTimeOffset) · 끊김 = .info/connected · 로그인 = 처음엔 익명(TV · 교사 · 둘러보기) · 학생은 계정으로 바꿔 탐
 //   ⚠ 시험 전용: 운영 프로젝트에는 연결하지 않음(config.ts 가 막음) · 맨 윗칸 통째로 받으므로 시험 규모용(출시 때 방 단위로 나눔)
 type Tree = Record<string, unknown>;
-const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets'] as const; // #141 학생 기록 칸(V1-DESIGN 7절)
+const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock'] as const; // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
 const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins'];
@@ -24,7 +24,7 @@ const related = (a: string, b: string) => { const A = split(a).join('/'), B = sp
 const clone = <T>(v: T): T => (v == null ? v : (JSON.parse(JSON.stringify(v)) as T));
 
 export interface NetState { connected: boolean; uid: string | null }
-export interface ServerStore extends Store { net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean }
+export interface ServerStore extends Store { /** 쓰기 결과를 기다림(거울 먼저 바꾸지 않음 · 규칙이 막으면 false) — 🔒 게시판 암호 */ trySet(path: string, value: unknown): Promise<boolean>; net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean }
 export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null; /** 앱 이름 (같은 이름 = 새로 고침해도 로그인 그대로 · 시험에서 여러 명을 한 곳에 띄울 때만 다르게) */ name?: string }
 
 /** 기다리되 ms 넘으면 그냥 넘어감 (서버가 안 닿거나 규칙 게시 전이어도 화면이 멈추지 않게) */
@@ -86,6 +86,12 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       void ensure(path);
       setIn(mirror, split(path), v); fire(path); // 거울 먼저 (화면이 바로 바뀜)
       fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
+    },
+    async trySet(path: string, value: unknown) {
+      void ensure(path);
+      const ok = await Promise.race([fbSet(ref(db, split(path).join('/')), value == null ? null : clone(value)).then(() => true, () => false), new Promise<boolean>((r) => setTimeout(() => r(false), 8000))]);
+      if (ok) { setIn(mirror, split(path), value == null ? null : clone(value)); fire(path); }
+      return ok;
     },
     watch<T>(path: string, fn: (v: T | null) => void): Unsub {
       void ensure(path);

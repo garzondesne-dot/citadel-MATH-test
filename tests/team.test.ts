@@ -6,7 +6,7 @@ import { heartbeat, nextStep, roomPath, submit } from '../src/raid/actions';
 import { itemsFor, stepOf } from '../src/raid/raid';
 import { packOf } from '../src/engine/packs';
 import { boardPack } from '../src/board/board';
-import { bonusOf, canJoin, canStart, createPost, elapsed, hintOf, joinPost, pauseOff, pauseOn, pausesLeft, POSTS, rankOf, roleOf, sendHint, setReady, startTeam, stuckItem, thinkUsed, type Post } from '../src/board/team';
+import { bonusOf, canJoin, canStart, createLockedPost, createPost, joinLocked, LOCK, myPin, pinHash, pinWait, elapsed, hintOf, joinPost, pauseOff, pauseOn, pausesLeft, POSTS, rankOf, roleOf, sendHint, setReady, startTeam, stuckItem, thinkUsed, type Post } from '../src/board/team';
 
 function clockStore() { let t = 1_000_000; const b = memoryStore(); return { S: { ...b, kind: 'memory', now: () => t } as Store, tick: (ms: number) => { t += ms; } }; }
 const meA = { uid: 'a', cls: '1-3', num: 1, nick: '가', hero: 0 }, meB = { uid: 'b', cls: '1-5', num: 2, nick: '나', hero: 1 };
@@ -21,7 +21,7 @@ describe('🛡 역할 판정 (#143-a = B)', () => {
   });
 });
 describe('모집 · 합류 · 출발', () => {
-  it('합류 조건: 수업 중 · 진도 전 · 끊김 · 4명 다 참 · 다른 반 됨', () => {
+  it('합류 조건: 수업 중 · 진도 전 · 끊김 · 4명 다 참 · 다른 반 됨', async () => {
     const { S } = clockStore(), L = packOf('set-06')!;
     const pid = createPost(S, L, meA, { right: 9, total: 10 }), p = () => S.get<Post>(`${POSTS}/${pid}`)!;
     expect(canJoin(p(), 'b', { open: true, inClass: true, online: true })).toMatch(/수업 중/);
@@ -70,5 +70,29 @@ describe('🏆 순위 · 보너스', () => {
     const rows = { x: { s: 900, g: 10, c: 0, at: 1 }, y: { s: 700, g: 300, c: 5, at: 2 }, me: { s: 800, g: 100, c: 2, at: 3 } };
     expect(rankOf(rows, 'me')).toEqual({ n: 3, s: 2, g: 2, c: 2 });
     expect([bonusOf('g', 2, true, true), bonusOf('g', 4, true, false), bonusOf('c', 3, false, true), bonusOf('c', 3, true, true), bonusOf('c', 1, false, true)]).toEqual([0.1, 0.3, 0.5, 0, 0]);
+  });
+});
+
+describe('🔒 입장 암호 (2026-11-13)', () => {
+  it('해시만 boardLock · 글엔 lk 표시 · 맞으면 합류 · 틀리면 3번 → 1분 · 1분 뒤 다시', async () => {
+    const { S, tick } = clockStore(), L = packOf('set-06')!;
+    const pid = await createLockedPost(S, L, meA, { right: 9, total: 10 }, undefined, '4821'), p = () => S.get<Post>(`${POSTS}/${pid}`)!;
+    expect(p().lk).toBe(true); expect(JSON.stringify(p())).not.toContain('4821');
+    const lk = S.get<{ h: string }>(`${LOCK}/${pid}`)!; expect(lk.h).toBe(await pinHash(pid, '4821')); expect(JSON.stringify(lk)).not.toContain('4821');
+    expect(myPin(pid)).toBe('4821'); // 모집한 기기만 기억 (서버엔 없음)
+    expect(await joinLocked(S, p(), meB, null, undefined, '1111')).toMatch(/2번 남/);
+    expect(await joinLocked(S, p(), meB, null, undefined, '2222')).toMatch(/1번 남/);
+    expect(p().mem.b).toBeUndefined();
+    expect(await joinLocked(S, p(), meB, null, undefined, '3333')).toMatch(/1분 뒤/);
+    expect(await joinLocked(S, p(), meB, null, undefined, '4821')).toMatch(/초 뒤에 다시/); // 맞아도 1분 기다림
+    expect(pinWait('b', pid, S.now())).toBeGreaterThan(59000);
+    const meC = { ...meB, uid: 'c' }; expect(await joinLocked(S, p(), meC, null, undefined, '4821')).toBe(''); // 다른 학생은 따로
+    tick(60001); expect(pinWait('b', pid, S.now())).toBe(0);
+    expect(await joinLocked(S, p(), meB, null, undefined, '12')).toMatch(/4자리/);
+    expect(await joinLocked(S, p(), meB, null, undefined, '4821')).toBe(''); expect(p().mem.b?.k).toBe(await pinHash(pid, '4821'));
+  });
+  it('암호 없는 글 = 그대로 (lk 없음 · boardLock 없음)', async () => {
+    const { S } = clockStore(), pid = createPost(S, packOf('set-06')!, meA, null);
+    expect(S.get<Post>(`${POSTS}/${pid}`)!.lk).toBeUndefined(); expect(S.get(`${LOCK}/${pid}`)).toBeNull();
   });
 });
