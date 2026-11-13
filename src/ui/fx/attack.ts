@@ -39,6 +39,12 @@ export function shake(box: HTMLElement | null, amp = 3, ms = 180) {
 export const knock = (monBox: HTMLElement | null, d = 12) => { if (monBox?.animate) monBox.animate([{ translate: '0 0', filter: 'brightness(3)' }, { translate: `${d}px 0`, filter: 'brightness(1.2)', offset: 0.35 }, { translate: '0 0', filter: 'brightness(1)' }], { duration: 340, easing: 'ease-out' }); };
 const hitstop = (box: HTMLElement, ms: number) => { box.classList.add('hitstop'); return wait(ms).then(() => box.classList.remove('hitstop')); };
 function dmg(box: HTMLElement, x: number, y: number, txt = '−1') { const e = document.createElement('b'); e.className = 'atk-dmg'; e.textContent = txt; e.style.left = `${x}px`; e.style.top = `${y}px`; box.appendChild(e); setTimeout(() => e.remove(), 950); }
+/** ✖ 틀림 = 방패 불꽃 「팅」 (🔨 다듬기 ③ · 2026-11-13): 몬스터 앞 맞닿는 자리에 네모 불꽃 8 + 흰 번쩍 + 「팅!」 */
+export function ting(box: HTMLElement, x: number, y: number, dir = 1) {
+  if (reduce()) return; const e = document.createElement('i'); e.className = 'atk-ting'; e.style.left = `${x}px`; e.style.top = `${y}px`;
+  e.innerHTML = '<b>팅!</b>' + Array.from({ length: 8 }, (_, k) => { const a = (dir > 0 ? Math.PI : 0) + (k / 7 - 0.5) * Math.PI * 0.9; return `<s style="--x:${(Math.cos(a) * 34).toFixed(0)}px;--y:${(Math.sin(a) * 34).toFixed(0)}px"></s>`; }).join('');
+  box.appendChild(e); setTimeout(() => e.remove(), 560);
+}
 function wave(box: HTMLElement, x: number, y: number) { const e = document.createElement('i'); e.className = 'atk-wave'; e.style.left = `${x}px`; e.style.top = `${y}px`; box.appendChild(e); setTimeout(() => e.remove(), 650); }
 // 🔊 정식 audio.js FAM_SFX (계열 → 맞는 소리)
 const FAM_SFX: Record<string, string> = { cut: 'cut', smash: 'smash', sweep: 'sweep', wind: 'wind', fire: 'fire', spark: 'spark', frost: 'frost', star: 'star', magic: 'magic', math: 'magic', sun: 'star', dark: 'cut', gear: 'smash', water: 'wind' };
@@ -208,7 +214,8 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
       sfx('launch', 0.6);
       const pk = ranged ? projOf(hero) : null;
       if (pk) await fly(scene, pk, from, { x: B.cx - dir * B.w * 0.2, y: B.y0 - B.h * 0.3 }, o.ps || Math.max(1, B.w / 110), true); else await wait(200);
-      sfx('block', 0.75); monBox.animate?.([{ rotate: '0deg' }, { rotate: `${-6 * dir}deg` }, { rotate: '0deg' }], { duration: 300 });
+      sfx('block', 0.75); ting(scene, B.cx - dir * B.w * 0.32, B.cy - B.h * 0.1, dir); monBox.animate?.([{ rotate: '0deg' }, { rotate: `${-6 * dir}deg` }, { rotate: '0deg' }], { duration: 300 });
+      await dash(scene, heroBox, step, { x: step.x - dir * 22, y: step.y }, 130, false); shake(scene, 2, 120);
     } else if (shot) {
       sfx('launch', 0.6);
       await impact(scene, monBox, fx, { ...hitO, from });
@@ -220,7 +227,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
     }
     await wait(o.ultimate ? 700 : 160);
     if (!scene.isConnected) return;
-    await dash(scene, heroBox, step, { x: 0, y: 0 }, 140, false);
+    await dash(scene, heroBox, o.miss ? { x: step.x - dir * 22, y: step.y } : step, { x: 0, y: 0 }, 140, false);
   } else {
     const R = scene.getBoundingClientRect(), edge = dir > 0 ? B.x0 + B.w * 0.12 : B.x1 - B.w * 0.12, hand0 = H.x + H.w * (dir > 0 ? 0.74 : 0.26);
     const to = { x: edge - hand0, y: Math.max(-H.y, Math.min(R.height - (H.y + H.h), B.y1 - hc.y)) };
@@ -239,7 +246,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
       o.onHit?.({ k, n: hits }); if (!o.noDmg) dmg(scene, B.cx + (k % 2 ? 14 : -14), B.y0 + 6 - k * 6); knock(monBox, 8); shake(scene, 2, 90);
       fxHit(fx); await wait(70);
     }
-    if (o.miss) { sfx('block', 0.75); await dash(scene, heroBox, to, { x: to.x - dir * 18, y: to.y }, 120, false); monBox.animate?.([{ scale: '1' }, { scale: '1.08' }, { scale: '1' }], { duration: 260 }); shake(scene, 2, 120); await wait(140); }
+    if (o.miss) { sfx('block', 0.75); ting(scene, dir > 0 ? B.x0 + B.w * 0.1 : B.x1 - B.w * 0.1, B.cy - B.h * 0.05, dir); await dash(scene, heroBox, to, { x: to.x - dir * 40, y: to.y - 6 }, 160, false); monBox.animate?.([{ scale: '1' }, { scale: '1.08' }, { scale: '1' }], { duration: 260 }); shake(scene, 2, 120); await wait(140); }
     else await impact(scene, monBox, fx, { ...hitO, dir, onHit: o.onHit ? () => o.onHit!({ k: hits - 1, n: hits }) : undefined });
     if (leap) { heroBox.getAnimations().forEach((an) => an.cancel()); heroBox.animate([{ translate: `${to.x}px ${to.y - 40}px`, opacity: 0 }, { translate: `${to.x}px ${to.y}px`, opacity: 1 }], { duration: 160, easing: 'ease-in' }); }
     await wait(o.ultimate ? 700 : 140);
