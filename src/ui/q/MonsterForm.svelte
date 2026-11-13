@@ -6,7 +6,7 @@
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
   import { shortQ } from './short';
-  import { fx, swing } from '../battle/fx.svelte';
+  import { fx, heroAtk, type HeroAtk } from '../battle/fx.svelte';
   import { onDestroy } from 'svelte';
   import { submit } from '../../raid/actions';
   import QItem from './QItem.svelte';
@@ -79,8 +79,12 @@
     if (!submit(S, L, code, mid, uid, items.map((x, i) => finalOf(x, given[i] ?? null)))) return;
     const r2 = plainRecord(L, S.get<RoomT>(`rooms/${code}`) as RoomT, mid, uid), l2 = r2.tries[r2.tries.length - 1];
     if (!l2) return;
-    startReveal(qs, texts, l2.marks, keep, Math.max(0, r2.best - oldBest));
+    // ⚔ 정식 student.js: 도장(채점) 뒤 공격 한 번 · hits = 이번에 늘어난 데미지 · ⚡ 필살기 = 첫 시도에 모두 맞힘(장면이 내 속성 Ⅲ↑ 판정) · 🔥 끈기 = 두 번 넘게 틀린 뒤 다 맞힘 · 연습 = 데미지 0
+    const gain = Math.max(0, r2.best - oldBest), all = l2.marks.length > 0 && l2.marks.every(Boolean);
+    pendAtk = { miss: !l2.marks.some((m, i) => m && !keep[i]) && !r2.practice, hits: r2.practice ? 1 : gain || l2.marks.filter(Boolean).length, ult: !r2.practice && l2.attempt === 0 && all, finish: !r2.practice && l2.attempt >= 2 && r2.perfectAt === l2.attempt, noDmg: r2.practice };
+    startReveal(qs, texts, l2.marks, keep, gain);
   }
+  let pendAtk: Omit<HeroAtk, 'id'> | null = null;
   // ⚔ 채점표 (#113 ①): 위에서부터 줄당 0.25초 · ✔ = 초록 + 베기 + 체력 −1 / ✘ = 빨강 + 헛스윙 · 다 맞히면 표 금빛 · 화면을 누르면 바로 결과
   //   재채점 = 고친 줄만 다시 뒤집힘(지난번 ✔ 줄은 처음부터 초록) · 채점 · 데미지 · 기록은 이미 끝남(한 번에 냄) — 결과를 순서대로 보여 줄 뿐
   const STEP = 250;
@@ -99,8 +103,8 @@
   function tickReveal() {
     const r = reveal; if (!r) return;
     const n = r.order.length, want = Math.min(n, Math.floor((Date.now() - r.t0) / STEP) + 1);
-    while (r.shown < want) { const ok = !!r.marks[r.order[r.shown] as number]; swing(ok); if (ok && fx.hold > 0) fx.hold -= 1; r.shown += 1; }
-    if (r.shown >= n && !r.done) { r.done = true; fx.hold = 0; r.flash = r.marks.every(Boolean); setTimeout(endReveal, r.flash ? 650 : 350); }
+    while (r.shown < want) { const ok = !!r.marks[r.order[r.shown] as number]; if (ok && fx.hold > 0) fx.hold -= 1; r.shown += 1; }
+    if (r.shown >= n && !r.done) { r.done = true; if (pendAtk) { heroAtk(pendAtk); pendAtk = null; } fx.hold = 0; r.flash = r.marks.every(Boolean); setTimeout(endReveal, r.flash ? 650 : 350); }
   }
   function endReveal() { if (reveal && !reveal.flash) tableHold = true; reveal = null; fx.hold = 0; if (rtimer) clearInterval(rtimer); rtimer = null; removeEventListener('pointerdown', skip, true); }
   onDestroy(() => { reveal = null; fx.hold = 0; if (rtimer) clearInterval(rtimer); removeEventListener('pointerdown', skip, true); });

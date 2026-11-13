@@ -1,3 +1,4 @@
+import { equipOf, type Look } from '../model/draft';
 import { ECON_VER, migrate, type Wallet } from '../model/wallet';
 import { meBound, p, type Bound } from './meSync';
 // 🧑 학생 한 명의 기록 — 이 기기(서버 없음 · 시험 · 교사 · TV) 또는 시험 서버(#141 · 그 학생으로 로그인한 폰 = store/meSync.ts 정식 경로)
@@ -69,9 +70,9 @@ export function useMe(gem: number, scroll: number, test = false) {
   return { me, save, mark(id: string) { if (!me.seen[id]) { me.seen[id] = true; save(); } } };
 }
 /** 출전 용사 · 강화 (전투 장면이 읽음 · 없으면 로안) — 서버에 묶였으면 서버 값 */
-export function savedLook(): { hero: number; enh: number } {
+export function savedLook(): { hero: number; enh: number; fx: string } {
   const b = meBound();
-  if (b) { const sv = fromServer(b); return { hero: Number(sv.hero) || 0, enh: Number(sv.enh) || 0 }; }
-  const m = readLocal(KEY);
-  return { hero: Number(m?.hero) || 0, enh: Number(m?.enh) || 0 };
+  if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return { hero, enh: Number(sv.enh) || 0, fx: equipOf({ hero, socket: sv.socket || {} } as Look) }; }
+  const m = readLocal(KEY), hero = Number(m?.hero) || 0;
+  return { hero, enh: Number(m?.enh) || 0, fx: equipOf({ hero, socket: m?.socket || {} } as Look) }; // ⚔ 끼운 스킬 (빈 칸 = 내 속성 Ⅰ)
 }

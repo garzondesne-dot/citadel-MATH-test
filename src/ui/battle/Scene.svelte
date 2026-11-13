@@ -4,6 +4,11 @@
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
   import IceBlock from './IceBlock.svelte';
+  import { atkQ } from './fx.svelte';
+  import { attack, canUlt, preload as atkPreload, type Pose } from '../fx/attack';
+  import { monBody } from '../manifest';
+  import { aura as auraAct } from '../fx/aura';
+  import { untrack } from 'svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
   //   위 = ‹ 뒤로 + 💎 (흰 글씨 + 그림자 · 검은 띠 없음) · 남은 시간 칩 = 마지막 5분부터
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
@@ -21,7 +26,17 @@
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
   const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
+  // ⚔ 정식 DS.Attack.play (🔨 용사 fx · 2026-11-13): 장면 = .edge · heroBox = .hb · monBox = .mon(보이는 몸통 data-bb) · 자세 = 정식 anims 줄(idle 0 · walk 1 · attack 2 · win 4 · think 10)
+  const ROW: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
+  let edge = $state<HTMLDivElement | null>(null), heroBox = $state<HTMLSpanElement | null>(null), monEl = $state<HTMLElement | null>(null), apose = $state<Pose | ''>('');
+  const heroRow = $derived(apose ? ROW[apose] : pose === 'idle' ? HERO.idleRow : ATK_ROW), heroCol = $derived(apose ? (apose === 'attack' ? 2 : 0) : pose === 'idle' ? 0 : 2);
+  let lastAtk = 0;
+  $effect(() => {
+    const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });
+  });
   const sp = $derived(spriteOf(sprite));
+  const monBB = $derived(monBody(sp.sheet.src, sp.row, sp.sheet.poses[down ? 'down' : 'idle'], sp.sheet.cell));
   const hpLabel = $derived(hpL || sp.sheet.names[sp.row] || '몬스터');
   const MON = 128; // 몬스터 칸 256 → 정확히 ½
   const HS = 2;
@@ -30,7 +45,7 @@
   const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
 </script>
 
-<div class="edge" class:hit class:rage class:iced={ice} style:background-image="url({dungeonOf(theme)})">
+<div class="edge" bind:this={edge} class:hit class:rage class:iced={ice} style:background-image="url({dungeonOf(theme)})">
   <div class="top">
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
     {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}
@@ -49,7 +64,7 @@
       {/each}
     </div>
   {/if}
-  <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
+  <i class="mon art monster" bind:this={monEl} data-bb={monBB} class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   {#if iceMode !== 'off'}
@@ -64,8 +79,9 @@
     {/key}
     {#if !ice}<i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>{/if}
   {/if}
-  <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
-    style:background-position="-{(pose === 'idle' ? 0 : 2) * hg.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
+  <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
+  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" use:auraAct={{ lv: savedLook().enh }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
+    style:background-position="-{heroCol * hg.w * HS}px -{heroRow * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
 </div>
 
 <style>
@@ -112,5 +128,7 @@
   .edge.rage { box-shadow: inset 0 0 48px rgba(229, 72, 77, 0.75); }
   .edge.rage .mon { filter: drop-shadow(0 0 6px rgba(229, 72, 77, 0.9)); }
   @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status { animation: none; } }
+  .hb { position: absolute; z-index: 1; left: 0; top: 140px; display: block; }
+  .hb .hero { top: 0; }
   .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
 </style>

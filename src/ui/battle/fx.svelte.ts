@@ -3,4 +3,9 @@
 //   block = 💥 몬스터 공격으로 입력 멈춤(#151 · 주요 단추 = 같은 자리 흐린 「⏳ 막는 중…」)
 //   ice = 🧊 얼음 공격으로 주요 단추가 얼어 있는 동안 남은 톡 수(0 = 없음) · fire = 🔥 화염 공격 중(주요 단추 자리 = 🧯 꾹 눌러 끄기) (#152)
 export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean; lock: boolean }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false, lock: false });
-export function swing(ok: boolean) { fx.pose = ok ? 'attack' : 'miss'; fx.poseUntil = Date.now() + 320; }
+export function swing(ok: boolean) { heroAtk({ miss: !ok }); }
+/** ⚔ 용사 공격 한 번 (정식 DS.Attack.play 를 장면 띠가 부름 · 🔨 용사 fx): miss = 틀림(튕겨냄) · hits = 연타 수(Ⅲ · Ⅳ 근접) · ult = ⚡ 필살기(첫 시도 퍼펙트 + 내 속성 Ⅲ↑ · 장면이 판정) · finish = 끈기의 일격 · noDmg = 연습 */
+export type HeroAtk = { id: number; miss: boolean; hits?: number; ult?: boolean; finish?: boolean; noDmg?: boolean; win?: boolean };
+let atkN = 0;
+export const atkQ = $state<{ v: HeroAtk | null }>({ v: null });
+export function heroAtk(o: Omit<HeroAtk, 'id'>) { atkQ.v = { ...o, id: ++atkN }; fx.pose = o.miss ? 'miss' : 'attack'; fx.poseUntil = Date.now() + 320; }

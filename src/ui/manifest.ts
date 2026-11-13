@@ -66,6 +66,11 @@ export function monNudge(src: string, row: number, col: number, cell: number): {
   const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
   return b ? { dx: (cell / 2 - (b[0] + b[2]) / 2) / cell, dy: (cell - b[3]) / cell } : { dx: 0, dy: 0 };
 }
+/** ⚔ 몬스터 보이는 몸통 (칸 비율 「x0,y0,x1,y1」 · 정식 bodies 자리 · fx/attack.ts body) */
+export function monBody(src: string, row: number, col: number, cell: number): string {
+  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  return b ? b.map((v) => (v / cell).toFixed(3)).join(',') : '';
+}
 /** 몬스터 칸의 보이는 높이 (칸 대비 비율 · 체력 막대를 머리 바로 위에 놓을 때) */
 export function monVis(src: string, row: number, col: number, cell: number): number {
   const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
@@ -114,4 +119,4 @@ export const ELEM_FX: Record<string, { src: string; w: number; h: number; n: num
   confuse: { src: 'art/pfx/fx-vortex-v1.webp', w: 150, h: 114, n: 22, fps: 15, sfx: 'wind' },
   sleep: { src: 'art/pfx/fx-twinkle-v1.webp', w: 110, h: 110, n: 16, fps: 15, sfx: 'magic' },
 };
-export const SFX: Record<string, string> = { smash: 'sfx/smash-v2.mp3', frost: 'sfx/frost-v2.mp3', block: 'sfx/block-v2.mp3', fire: 'sfx/fire-v2.mp3', magic: 'sfx/magic-v2.mp3', spark: 'sfx/spark-v2.mp3', wind: 'sfx/wind-v2.mp3', hurt: 'sfx/hurt-v2.mp3', click: 'sfx/click-v2.mp3' };
+export const SFX: Record<string, string> = { swing: 'sfx/swing-v2.mp3', launch: 'sfx/launch-v2.mp3', cut: 'sfx/cut-v2.mp3', sweep: 'sfx/sweep-v2.mp3', star: 'sfx/star-v2.mp3', special: 'sfx/special-v2.mp3', finish: 'sfx/finish-v2.mp3', finish2: 'sfx/finish-v2b.mp3', holy: 'sfx/holy-v2.mp3', correct: 'sfx/correct-v2.mp3', smash: 'sfx/smash-v2.mp3', frost: 'sfx/frost-v2.mp3', block: 'sfx/block-v2.mp3', fire: 'sfx/fire-v2.mp3', magic: 'sfx/magic-v2.mp3', spark: 'sfx/spark-v2.mp3', wind: 'sfx/wind-v2.mp3', hurt: 'sfx/hurt-v2.mp3', click: 'sfx/click-v2.mp3' };

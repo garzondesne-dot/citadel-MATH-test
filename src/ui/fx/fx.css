@@ -1,0 +1,70 @@
+/* ⚔ 정식 css/style.css 의 공격 · 필살기 · 이펙트 부분 그대로 (#⚔ 용사 fx 옮기기 · 2026-11-13) — 손으로 고치지 않음 */
+.raid2.fin-flash { animation: finFlash 1.2s ease-out, quakeBig 0.45s 3; }
+@keyframes finFlash { 0% { filter: brightness(3.2) saturate(1.6); } 100% { filter: none; } }
+.scene.fin-flash { animation: finFlash 1.2s ease-out; }
+@keyframes finMe { 0% { transform: scale(1.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.fx-spr { position: absolute; pointer-events: none; image-rendering: pixelated; background-repeat: no-repeat; background-position: 0 0; animation-name: fxStrip; animation-fill-mode: forwards; z-index: 20; }
+.fx-spr.loop { animation-iteration-count: infinite; animation-fill-mode: none; }
+@keyframes fxStrip { from { background-position: 0 0; } to { background-position: var(--fx-end) 0; } }
+.hitstop .fx-spr, .hitstop .art, .hitstop .art b, .hitstop .atk-proj { animation-play-state: paused !important; }
+.atk-proj { position: absolute; pointer-events: none; z-index: 21; transform-origin: 0 0; }
+.atk-ghost { position: absolute; pointer-events: none; z-index: 1; opacity: .45; filter: brightness(1.8) saturate(.4) drop-shadow(0 0 4px #9cf); transition: opacity .28s linear; }
+.atk-dmg { position: absolute; pointer-events: none; z-index: 22; font: 700 20px var(--pixel, monospace); color: #ff5a4a; text-shadow: 2px 2px 0 #2a0508, -1px -1px 0 #2a0508; animation: atkDmg .9s ease-out forwards; }
+@keyframes atkDmg { 0% { transform: translate(-50%, 0) scale(1.6); color: #fff; } 15% { transform: translate(-50%, -14px) scale(1); color: #ff5a4a; } 100% { transform: translate(-30%, -46px); opacity: 0; } }
+.ult-aoe { position: absolute; inset: 0; z-index: 22; pointer-events: none; background: radial-gradient(circle at var(--x) var(--y), #fff 0, var(--c) 18%, transparent 70%); mix-blend-mode: screen; opacity: 0; animation: ultAoe .65s ease-out forwards; } /* 💥 필살기 광역 섬광 (2026-11-06) */
+@keyframes ultAoe { 0% { opacity: 0; } 12% { opacity: .95; } 100% { opacity: 0; } }
+.ult-ring { position: absolute; z-index: 23; pointer-events: none; border-radius: 50%; border: 6px solid #fff; box-shadow: 0 0 24px var(--c), inset 0 0 24px var(--c); transform: translate(-50%, -50%) scale(.02); opacity: 1; animation: ultRing .6s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes ultRing { to { transform: translate(-50%, -50%) scale(1); opacity: 0; border-width: 2px; } }
+.atk-wave { position: absolute; pointer-events: none; z-index: 19; border: 3px solid #fff6c8; border-radius: 50%; box-shadow: 0 0 12px #ffd25a, inset 0 0 10px #ffd25a; transform: translate(-50%, -50%) scaleY(.32); animation: atkWave .6s ease-out forwards; }
+@keyframes atkWave { from { width: 10px; height: 10px; opacity: 1; } to { width: 260px; height: 260px; opacity: 0; } }
+.atk-reso .art { filter: drop-shadow(0 0 6px #ffd25a) drop-shadow(0 0 12px #ffb000); }
+.ult { position: fixed; inset: 0; z-index: 90; pointer-events: none; overflow: hidden; }
+.ult .u-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, #0008, #000d); animation: uDim 1.25s ease forwards; }
+@keyframes uDim { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.ult .u-band { position: absolute; left: -15%; right: -15%; top: 30%; height: 34%; transform: rotate(-9deg) translateX(110%); overflow: hidden; border-top: 4px solid #fff; border-bottom: 4px solid #fff; box-shadow: 0 0 30px var(--uc, #ffd25a); background: linear-gradient(90deg, #000 0%, var(--uc2, #3a2a00) 40%, #000 100%); animation: uBand 1.05s cubic-bezier(.2,.9,.2,1) forwards; }
+.ult .u-band::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 22px, #ffffff22 22px 24px, transparent 24px 60px); animation: uLines .25s linear infinite; }
+@keyframes uLines { from { background-position: 0 0; } to { background-position: -120px 0; } }
+@keyframes uBand { 0% { transform: rotate(-9deg) translateX(110%); } 22% { transform: rotate(-9deg) translateX(0); } 72% { transform: rotate(-9deg) translateX(-4%); } 100% { transform: rotate(-9deg) translateX(-120%); } }
+.ult .u-face { position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; transform: translate(-58%, -50%); filter: drop-shadow(0 0 12px var(--uc, #ffd25a)); }
+.ult .u-face .art { width: 100% !important; height: 100% !important; }
+.ult .u-face .art b { animation-play-state: paused !important; }
+.ult .u-eye { position: absolute; top: 60%; width: 90px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, transparent, #fff, transparent); box-shadow: 0 0 16px #fff, 0 0 30px var(--uc, #ffd25a); opacity: 0; animation: uEye .5s .3s ease-out forwards; }
+@keyframes uEye { 0% { opacity: 0; transform: scaleX(.2); } 40% { opacity: 1; transform: scaleX(1.4); } 100% { opacity: 0; transform: scaleX(2.2); } }
+.ult .u-name { position: absolute; left: 0; right: 0; top: 66%; text-align: center; font: 900 clamp(28px, 9vw, 64px) var(--pixel, sans-serif); color: #fff; -webkit-text-stroke: 2px var(--uc, #ffd25a); text-shadow: 0 0 18px var(--uc, #ffd25a), 4px 4px 0 #000; opacity: 0; animation: uName .7s .38s cubic-bezier(.2,1.6,.4,1) forwards; }
+@keyframes uName { 0% { opacity: 0; transform: scale(2.6); } 30% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05); } }
+.ult .u-tear { position: absolute; inset: 0; opacity: 0; animation: uTear .45s 1s ease-out forwards; }
+.ult .u-tear svg { width: 100%; height: 100%; }
+@keyframes uTear { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+.ult .u-flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: uFlash .35s 1s ease-out forwards; }
+@keyframes uFlash { 0% { opacity: 0; } 20% { opacity: .55; } 100% { opacity: 0; } }
+.ult .u-facepic { position: absolute; left: 50%; top: 50%; height: 100%; aspect-ratio: 2 / 1; transform: translate(-50%, -50%); background-repeat: no-repeat; filter: drop-shadow(0 0 12px var(--uc, #ffd25a)); animation: uFacePic 1.05s ease-out forwards; } /* 눈빛 클로즈업 그림 (heroFaces · 2:1 · 2026-11-06) */
+.ult .u-facepic ~ .u-eye { display: none; } /* 그림 얼굴은 눈 위치가 저마다 달라 가짜 눈빛 줄 대신 그림 전체를 번쩍 */
+@keyframes uFacePic { 0% { transform: translate(-50%, -50%) scale(1.25); filter: brightness(1.8) drop-shadow(0 0 12px var(--uc, #ffd25a)); } 35% { transform: translate(-50%, -50%) scale(1); filter: brightness(1) drop-shadow(0 0 12px var(--uc, #ffd25a)); } 55% { filter: brightness(1.6) drop-shadow(0 0 22px #fff); } 100% { transform: translate(-50%, -50%) scale(1.04); filter: brightness(1) drop-shadow(0 0 12px var(--uc, #ffd25a)); } }
+.ult.true .u-band { background: linear-gradient(90deg, #6b4a00, #ffd25a 40%, #fff3c0 50%, #ffd25a 60%, #6b4a00); }
+.ult.true .u-true { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); font-size: min(26vw, 220px); color: #ffd25a; text-shadow: 0 0 24px #ffb000, 0 0 60px #ff8a00; font-weight: 900; z-index: 3; animation: u-true 1.4s ease-out both; pointer-events: none; }
+@keyframes u-true { 0% { opacity: 0; transform: translateX(-50%) scale(2.2); } 25% { opacity: 1; transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) scale(1.1); } }
+.ult-dim { position: absolute; inset: 0; z-index: 19; pointer-events: none; background: radial-gradient(circle at 50% 45%, rgba(6, 4, 12, .66), rgba(6, 4, 12, .9)); animation: ultDim 1.5s ease-out forwards; }
+@keyframes ultDim { 0% { opacity: 0; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+.ult .u-facepic .u-glint { position: absolute; width: 0; height: 0; z-index: 2; }
+.ult .u-facepic .u-glint::before, .ult .u-facepic .u-glint::after { content: ''; position: absolute; left: 0; top: 0; border-radius: 50%; background: radial-gradient(#fff 0 30%, transparent 70%); transform: translate(-50%, -50%) scale(0); opacity: 0; animation: uGlint .6s .3s ease-out forwards; }
+.ult .u-facepic .u-glint::before { width: 140px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, transparent, #fff, transparent); box-shadow: 0 0 18px #fff, 0 0 32px var(--uc, #ffd25a); }
+.ult .u-facepic .u-glint::after { width: 8px; height: 70px; border-radius: 4px; background: linear-gradient(transparent, #fff, transparent); box-shadow: 0 0 14px #fff, 0 0 26px var(--uc, #ffd25a); }
+.ult .u-facepic .u-glint + .u-glint::before, .ult .u-facepic .u-glint + .u-glint::after { animation-delay: .38s; }
+@keyframes uGlint { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 35% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.6); } }
+.ult.guard .u-dim { animation-duration: .95s; }
+.ult.guard .u-band { border-color: #ffe9a6; background: linear-gradient(90deg, #0b2440, #cfeeff 42%, #ffffff 50%, #cfeeff 58%, #0b2440); animation-duration: .8s; }
+.ult.guard .u-facepic { animation-duration: .8s; }
+.ult.guard .u-glint { animation-delay: .18s; }
+.ult.guard .u-name { color: #fff; -webkit-text-stroke: 2px #6cc4ff; text-shadow: 0 0 16px #9fdcff, 0 0 4px #ffd25a, 4px 4px 0 #0b2440; animation-duration: .55s; animation-delay: .22s; letter-spacing: .06em; }
+.ult.guard .u-tear, .ult.guard .u-flash { animation-delay: .7s; }
+.ult.guard .u-shield { position: absolute; left: 50%; top: 47%; width: min(46vh, 340px); aspect-ratio: 5 / 6; transform: translate(-50%, -50%) scale(.6); clip-path: polygon(50% 0, 100% 14%, 94% 58%, 50% 100%, 6% 58%, 0 14%); background: radial-gradient(ellipse at 50% 35%, #ffffff55, #9fdcff22 60%, transparent 75%); box-shadow: inset 0 0 0 6px #ffe9a6; opacity: 0; z-index: 2; animation: uShield .8s ease-out forwards; }
+.ult.guard .u-shield::before { content: ''; position: absolute; inset: 6px; clip-path: inherit; background: linear-gradient(180deg, #ffe9a6, #fff6d0 30%, transparent 31%, transparent 69%, #fff6d0 70%, #ffe9a6); opacity: .35; }
+@keyframes uShield { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 30% { opacity: .9; transform: translate(-50%, -50%) scale(1); } 75% { opacity: .7; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.12); } }
+.ult.peek .u-dim { animation-duration: .95s; } .ult.peek .u-band { animation-duration: .8s; } .ult.peek .u-facepic { animation-duration: .8s; }
+.ult.peek .u-glint { animation-delay: .18s; } .ult.peek .u-name { animation-duration: .55s; animation-delay: .22s; } .ult.peek .u-tear, .ult.peek .u-flash { animation-delay: .7s; }
+.ult .u-name .u-sub { display: block; margin-top: 4px; font-size: .38em; -webkit-text-stroke: 0; letter-spacing: 0; color: #fff3d6; text-shadow: 0 2px 0 #000, 0 0 10px #000; }
+.atk-echo { position: absolute; z-index: 9; pointer-events: none; opacity: 0; filter: brightness(1.6) saturate(.4) drop-shadow(0 0 4px #9fdcff); animation: atkEcho .48s ease-out both; }
+.atk-echo > * { pointer-events: none; }
+@keyframes atkEcho { 0% { opacity: .55; } 100% { opacity: 0; transform: translateX(-6px); } }
+@media (prefers-reduced-motion: reduce) { .atk-echo { display: none; } }
+

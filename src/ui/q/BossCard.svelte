@@ -9,7 +9,7 @@
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
   import { shortQ } from './short';
-  import { swing } from '../battle/fx.svelte';
+  import { heroAtk } from '../battle/fx.svelte';
 
   // 👑 형성평가 = 문항 하나씩 한 장 (#99 ① · 점수 · 재도전 규칙은 정식 그대로)
   //   문항마다 첫 시도 = 학습지 · 틀리면 생각 시간 뒤 숫자 바뀐 문제 · 기회 meta.bossTries · 맞히면 도달 = 보스 1 데미지
@@ -58,7 +58,7 @@
     if (!bossSubmit(S, L, code, uid, i, finalOf(q, given))) return;
     const s2 = bossState(L, S.get<Room>(`rooms/${code}`) as Room, uid);
     const me = s2[i], ok = !!me?.ok;
-    flip = { i, ok, text }; swing(ok);
+    flip = { i, ok, text }; heroAtk({ miss: !ok, ult: ok && s2.length > 0 && s2.every((x) => x.first) }); // ⚔ 정식 student.js 981: 형성평가 모두 첫 시도 정답 = ⚡ 필살기(내 속성 Ⅲ↑)
     if (flipT) clearTimeout(flipT);
     flipT = setTimeout(() => {
       flip = null;
