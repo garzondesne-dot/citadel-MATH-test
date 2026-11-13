@@ -28,7 +28,7 @@ const log = (...a) => console.log(...a);
     if (/✗/.test(early)) errs.push(`${id} 손풀기`);
     const done = await wait(); const after = await R();
     const same = before.card === mid.card && before.main === mid.main && before.sel === mid.sel && after.sel === before.sel;
-    if (!same) errs.push(`${id} 자리 바뀜 ${JSON.stringify([before, mid, after])}`); if (!tag || !st || !ef) errs.push(`${id} 장면 ${tag}/${st}/${ef}`); if (!done) errs.push(`${id} 안 끝남`);
+    if (!same) errs.push(`${id} 자리 바뀜 ${JSON.stringify([before, mid, after])}`); if (!tag || (!st && id !== 'ice') || (!ef && id !== 'ice')) errs.push(`${id} 장면 ${tag}/${st}/${ef}`); if (!done) errs.push(`${id} 안 끝남`);
     rows.push(`${id.padEnd(8)} ${tag.padEnd(14)} 상태 ${st.padEnd(8)} 자리 ${same ? '○' : '✗'} ${early}`);
     await s.waitForTimeout(250);
   }

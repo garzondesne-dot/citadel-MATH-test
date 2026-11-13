@@ -6,7 +6,8 @@
   import type { Arena, ArenaState, Hero } from './arena/pixi';
   import Sprite from '../Sprite.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
-  import { bossHp, monsterHp, isChain } from '../../raid/raid';
+  import { atkClock, atkTrack, bossHp, monsterHp, isChain } from '../../raid/raid';
+  import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
@@ -40,6 +41,15 @@
   onDestroy(() => { A?.destroy(); A = null; clearTimeout(qT); });
   $effect(() => { void W; void H; if (A && step) A.update(st); });
 
+  // 🧊 몬스터 공격 = 폰과 같은 시계(atkClock) · 얼음이면 용사단 모두 얼음 덩어리 → 3초(분노 4초) 뒤 녹음 (TV 는 학생 톡을 모름 = 시간으로만)
+  const amemo = {}; let iceDom = $state(0);
+  $effect(() => {
+    const c = atkClock(L, R, now); if (!c || c.paused || !step) return;
+    if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
+    untrack(() => { const d = attackOf(L, step, c.k); if (d.id !== 'ice') return; const ms = attackMs(d, c.lock, attackStrong(hp)); if (A) A.freeze(ms); else domFreeze(ms); });
+  });
+  (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
+  function domFreeze(ms: number) { iceDom = 1; setTimeout(() => (iceDom = 2), ms); setTimeout(() => (iceDom = 0), ms + 650); }
   // ── 공격 사건 (단계가 바뀌면 지난 것은 다시 보이지 않음) ──
   let seen: Record<string, Snap> = {}, seenKey = '', wasDown = false, qT: ReturnType<typeof setTimeout> | undefined;
   const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice' }[] = [];
@@ -87,7 +97,7 @@
     {/if}
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
-        <span class="art" style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} /></span>
+        <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
         <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📵 ' : ''}{h.name}</span>
       </div>
     {/if}{/each}
@@ -107,6 +117,10 @@
   .hp .b { position: relative; width: 100%; height: var(--h); border-radius: 99px; background: #2a0d10; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.7); overflow: hidden; display: grid; place-items: center; }
   .hp .b i { position: absolute; left: 0; top: 0; bottom: 0; background: #e5484d; transition: width 0.5s ease-out; }
   .hp .b b { position: relative; }
+  .art { position: relative; display: block; }
+  .art.iced :global(.hs) { filter: saturate(0.6) brightness(1.15) hue-rotate(160deg) sepia(0.15); }
+  .iceb { position: absolute; left: 22%; right: 22%; top: 6%; bottom: 0; clip-path: polygon(18% 0, 62% 3%, 92% 14%, 100% 46%, 94% 82%, 70% 100%, 26% 98%, 4% 80%, 0 40%, 6% 12%); background: linear-gradient(135deg, rgba(225, 248, 255, 0.55), rgba(150, 210, 240, 0.35) 45%, rgba(190, 235, 255, 0.5)); box-shadow: inset 0 0 10px #fff; }
+  .iceb.melt { animation: imelt 0.6s ease-in forwards; } @keyframes imelt { to { opacity: 0; transform: translateY(4px); } }
   .hr { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; transition: translate 0.18s ease-out; }
   .hr.lunge { translate: calc(var(--dir) * 4cqw) 0; }
   .hr.off { opacity: 0.45; }

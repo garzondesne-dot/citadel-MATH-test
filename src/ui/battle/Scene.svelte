@@ -2,14 +2,19 @@
   import { artUrl, dungeonOf, ELEM_FX, HERO, heroGeo, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
+  import { fx } from './fx.svelte';
+  import IceBlock from './IceBlock.svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
   //   위 = ‹ 뒤로 + 💎 (흰 글씨 + 그림자 · 검은 띠 없음) · 남은 시간 칩 = 마지막 5분부터
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0 }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt' }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt' } = $props();
+  // 🧊 얼음(2026-11-13): 용사를 덮는 얼음 덩어리 · 톡마다 금 · 4번 = 깨져 흩어짐 · 시간 끝 = 녹음 (0.6초 뒤 사라짐)
+  let iceMode = $state<'off' | 'on' | 'shatter' | 'melt'>('off'), iceTaps = $state(0);
+  $effect(() => { if (ice) { iceMode = 'on'; iceTaps = Math.max(0, Math.min(4, 4 - fx.ice)); } else if (iceMode === 'on') { iceMode = iceEnd; if (iceEnd === 'shatter') iceTaps = 4; setTimeout(() => (iceMode = 'off'), 650); } });
   // 💫 #161 속성: 몬스터 → 용사 = 빛 구슬(0.25초) → 용사 자리 속성 이펙트 띠(정식 pfx) · 용사 머리 위 상태 그림(정식 status · 맞는 동안) · 분노 = 장면 붉게
   const efx = $derived(elem ? ELEM_FX[elem] : null);
   const srow = $derived(Math.max(0, STATUS.kinds.indexOf(elem as (typeof STATUS.kinds)[number])));
@@ -25,7 +30,7 @@
   const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
 </script>
 
-<div class="edge" class:hit class:rage style:background-image="url({dungeonOf(theme)})">
+<div class="edge" class:hit class:rage class:iced={ice} style:background-image="url({dungeonOf(theme)})">
   <div class="top">
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
     {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}
@@ -47,12 +52,17 @@
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
+  {#if iceMode !== 'off'}
+    <span class="icew" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px">
+      <IceBlock url={heroUrl()} size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px" pos="-0px -{HERO.idleRow * hg.h * HS}px" w={hg.w * HS} h={hg.h * HS} taps={iceTaps} mode={iceMode === 'on' ? 'on' : iceMode} />
+    </span>
+  {/if}
   {#if hit && efx}
     {#key hitKey}
       <i class="orb e-{elem}" aria-hidden="true"></i>
-      <i class="efx" aria-hidden="true" style:width="{efx.w}px" style:height="{efx.h}px" style:left="{80 - efx.w / 2}px" style:top="{204 - efx.h / 2}px" style:background-image="url({artUrl(efx.src)})" style:background-size="{efx.w * efx.n}px {efx.h}px" style:--n={efx.n} style:--fw="{efx.w * efx.n}px" style:animation-duration="{Math.round((efx.n / efx.fps) * 1000)}ms"></i>
+      {#if !ice}<i class="efx" aria-hidden="true" style:width="{efx.w}px" style:height="{efx.h}px" style:left="{80 - efx.w / 2}px" style:top="{204 - efx.h / 2}px" style:background-image="url({artUrl(efx.src)})" style:background-size="{efx.w * efx.n}px {efx.h}px" style:--n={efx.n} style:--fw="{efx.w * efx.n}px" style:animation-duration="{Math.round((efx.n / efx.fps) * 1000)}ms"></i>{/if}
     {/key}
-    <i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>
+    {#if !ice}<i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>{/if}
   {/if}
   <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
     style:background-position="-{(pose === 'idle' ? 0 : 2) * hg.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
@@ -97,6 +107,8 @@
   @keyframes efx { 0% { opacity: 1; background-position-x: 0; } 99% { opacity: 1; } 100% { opacity: 0; background-position-x: calc(-1 * var(--fw)); } }
   .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
   @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
+  .edge.hit.iced .hero { filter: saturate(0.6) brightness(1.1); }
+  .icew { position: absolute; z-index: 2; left: 0; top: 140px; display: block; }
   .edge.rage { box-shadow: inset 0 0 48px rgba(229, 72, 77, 0.75); }
   .edge.rage .mon { filter: drop-shadow(0 0 6px rgba(229, 72, 77, 0.9)); }
   @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status { animation: none; } }

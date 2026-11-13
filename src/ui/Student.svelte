@@ -85,7 +85,7 @@
   let atk = $state<{ def: AttackDef; at: number; until: number; strong: boolean } | null>(null);
   const memo = {};
   function strike(def: AttackDef, ms: number, strong = false) {
-    atk = { def, at: gnow, until: gnow + ms, strong };
+    atk = { def, at: gnow, until: gnow + ms, strong }; iceEnd = 'melt';
     fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.lock = def.id === 'lock';
     sfx(ELEM_FX[def.elem]?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
   }
@@ -98,6 +98,8 @@
   const atkOn = $derived(!!atk && atk.until > gnow && !scout?.on);
   const stunned = $derived(atkOn && !!atk?.def.lockInput);
   // 손풀기로 풀림 (얼음 4번 · 화염 꾹 1초) · 시간이 지나면 저절로
+  let iceEnd = $state<'shatter' | 'melt'>('melt'); // 🧊 얼음이 톡 4번으로 끝났나(깨짐) · 시간으로 끝났나(녹음)
+  $effect(() => { if (atk && atk.until > gnow && atk.def.id === 'ice' && fx.ice === 0) untrack(() => (iceEnd = 'shatter')); });
   $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire) || (atk.def.id === 'lock' && !fx.lock))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
   $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; fx.lock = false; }); });
   // 화면 시험 고리(#151 · #152 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음 (종류 = 등록 표 id)
@@ -117,7 +119,7 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />

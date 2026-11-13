@@ -15,6 +15,8 @@ export interface Arena {
   hit(u: string, dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
   exp(u: string, text: string): void;
   banner(text: string | null): void;
+  /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
+  freeze(ms: number): void;
   /** ✨ 이펙트 층 (#152 · #161 몬스터 공격 이펙트용) · 화면 크기 */
   fx: Container; size(): { W: number; H: number };
   destroy(): void;
@@ -148,6 +150,29 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     tween(260, (p) => { const k = 0.6 + 0.4 * ease(p); c.scale.set(k); c.alpha = p; });
   }
 
+  // 🧊 얼음 (폰 IceBlock 과 같은 모양): 각진 결정 덩어리(반투명 하늘색 · 흰 테두리 · 하이라이트 · 조각) + 용사 하늘색 · ms 뒤 0.6초에 녹음
+  let ice: Graphics[] = [], iceT: ReturnType<typeof setTimeout> | undefined;
+  const BLK = [[0.18, 0], [0.62, 0.03], [0.92, 0.14], [1, 0.46], [0.94, 0.82], [0.7, 1], [0.26, 0.98], [0.04, 0.8], [0, 0.4], [0.06, 0.12]];
+  function unfreeze(now: boolean) {
+    clearTimeout(iceT); const gs = ice; ice = [];
+    const back = () => { for (const v of heroes.values()) v.sp.tint = 0xffffff; };
+    if (now) { gs.forEach((g) => g.destroy()); back(); return; }
+    tween(600, (p) => gs.forEach((g) => { g.alpha = 1 - p; g.y = p * H() * 0.008; }), () => { gs.forEach((g) => g.destroy()); back(); });
+  }
+  function freeze(ms: number) {
+    unfreeze(true);
+    for (const v of heroes.values()) {
+      const b = v.sp.getBounds(), p = fx.toLocal({ x: b.x, y: b.y }), w = Math.abs(b.width), h = b.height;
+      const x0 = p.x + w * 0.22, y0 = p.y + h * 0.06, bw = w * 0.56, bh = h * 0.94, at = (a: number, c: number) => [x0 + a * bw, y0 + c * bh];
+      const g = new Graphics();
+      g.poly(BLK.flatMap(([a, c]) => at(a!, c!))).fill({ color: 0xcfefff, alpha: 0.42 }).stroke({ width: Math.max(1.5, h * 0.015), color: 0xffffff, alpha: 0.85 });
+      g.poly([...at(0.14, 0.08), ...at(0.3, 0.08), ...at(0.22, 0.54), ...at(0.06, 0.54)]).fill({ color: 0xffffff, alpha: 0.42 });
+      g.poly([...at(0.8, 0.14), ...at(0.86, 0.14), ...at(0.82, 0.34), ...at(0.76, 0.34)]).fill({ color: 0xffffff, alpha: 0.6 });
+      for (const [a, c, k] of [[0.02, 0.92, 1], [0.96, 0.86, 0.8], [0.88, -0.02, 0.7]] as const) { const r = bw * 0.14 * k; g.poly([x0 + a * bw, y0 + c * bh - r, x0 + a * bw + r, y0 + c * bh - r * 0.2, x0 + a * bw + r * 0.4, y0 + c * bh + r, x0 + a * bw - r * 0.8, y0 + c * bh + r * 0.5]).fill({ color: 0xe6f8ff, alpha: 0.7 }); }
+      fx.addChild(g); ice.push(g); v.sp.tint = 0xbfe6ff;
+    }
+    iceT = setTimeout(() => unfreeze(false), ms);
+  }
   let raf = 0;
   return {
     kind: 'pixi', fx,
@@ -156,7 +181,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner,
-    destroy() { cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
+    hit, exp, banner, freeze,
+    destroy() { clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }
