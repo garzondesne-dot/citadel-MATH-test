@@ -38,7 +38,12 @@ export function shake(box: HTMLElement | null, amp = 3, ms = 180) {
 }
 export const knock = (monBox: HTMLElement | null, d = 12) => { if (monBox?.animate) monBox.animate([{ translate: '0 0', filter: 'brightness(3)' }, { translate: `${d}px 0`, filter: 'brightness(1.2)', offset: 0.35 }, { translate: '0 0', filter: 'brightness(1)' }], { duration: 340, easing: 'ease-out' }); };
 const hitstop = (box: HTMLElement, ms: number) => { box.classList.add('hitstop'); return wait(ms).then(() => box.classList.remove('hitstop')); };
-function dmg(box: HTMLElement, x: number, y: number, txt = '−1') { const e = document.createElement('b'); e.className = 'atk-dmg'; e.textContent = txt; e.style.left = `${x}px`; e.style.top = `${y}px`; box.appendChild(e); setTimeout(() => e.remove(), 950); }
+// 🎨 다듬기 ⑧ (2026-11-13): 「−1」 크게 · 연타마다 위로 비켜 쌓기(0.7초 안에 뜬 숫자 수만큼 26px 위)
+const dmgStack = new WeakMap<HTMLElement, { n: number; t: number }>();
+function dmg(box: HTMLElement, x: number, y: number, txt = '−1') {
+  const now = performance.now(), st = dmgStack.get(box), n = st && now - st.t < 700 ? st.n + 1 : 0; dmgStack.set(box, { n, t: now });
+  const e = document.createElement('b'); e.className = 'atk-dmg'; e.textContent = txt; e.style.left = `${x}px`; e.style.top = `${y - n * 26}px`; box.appendChild(e); setTimeout(() => e.remove(), 950);
+}
 /** ✖ 틀림 = 방패 불꽃 「팅」 (🔨 다듬기 ③ · 2026-11-13): 몬스터 앞 맞닿는 자리에 네모 불꽃 8 + 흰 번쩍 + 「팅!」 */
 export function ting(box: HTMLElement, x: number, y: number, dir = 1) {
   if (reduce()) return; const e = document.createElement('i'); e.className = 'atk-ting'; e.style.left = `${x}px`; e.style.top = `${y}px`;
@@ -243,7 +248,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
     await wait(110);
     for (let k = 0; k < hits - 1 && scene.isConnected; k++) {
       if (!o.custom && !isNewFx(fx)) void place(scene, fx, { body: B, mult: mult * 0.8, dir }); await wait(90);
-      o.onHit?.({ k, n: hits }); if (!o.noDmg) dmg(scene, B.cx + (k % 2 ? 14 : -14), B.y0 + 6 - k * 6); knock(monBox, 8); shake(scene, 2, 90);
+      o.onHit?.({ k, n: hits }); if (!o.noDmg) dmg(scene, B.cx + (k % 2 ? 10 : -10), B.y0 + 6); knock(monBox, 8); shake(scene, 2, 90);
       fxHit(fx); await wait(70);
     }
     if (o.miss) { sfx('block', 0.75); ting(scene, dir > 0 ? B.x0 + B.w * 0.1 : B.x1 - B.w * 0.1, B.cy - B.h * 0.05, dir); await dash(scene, heroBox, to, { x: to.x - dir * 40, y: to.y - 6 }, 160, false); monBox.animate?.([{ scale: '1' }, { scale: '1.08' }, { scale: '1' }], { duration: 260 }); shake(scene, 2, 120); await wait(140); }
