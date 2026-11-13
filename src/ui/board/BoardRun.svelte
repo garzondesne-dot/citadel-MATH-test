@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
+  import { busy } from '../busy.svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
   import { memoryStore } from '../../store/device';
@@ -100,7 +101,8 @@
     miss: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s || s.kind !== 'monster' || isChain(L, RR, s.id)) return; const r = plainRecord(L, RR, s.id, uid); if (r.canRetry || !r.submitted) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map((q) => (q.type === 'multi' ? [] : -999)) as never); },
   };
   (globalThis as unknown as { __board?: typeof hook }).__board = hook;
-  onDestroy(() => { clearInterval(drive); lr.stop(); });
+  untrack(() => busy.n++); // 진행 중 = 새 판 저절로 새로 고침 안 함 (#38)
+  onDestroy(() => { untrack(() => busy.n--); clearInterval(drive); lr.stop(); });
   // ── 시간 · 멈춤 ──
   const meta = $derived(R ? bMeta(R) : null);
   const bp = $derived(R ? bPause(R) : null);

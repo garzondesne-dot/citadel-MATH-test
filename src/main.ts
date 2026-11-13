@@ -2,8 +2,10 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { applyTheme, savedTheme } from './theme/theme';
 import { chooseStore } from './store/config';
+import { startPwa } from './pwa.svelte';
 
 applyTheme(savedTheme(), { tv: new URLSearchParams(location.search).get('role') === 'hall' });
+startPwa(); // 📲 #38 서비스 워커 · 설치 단추
 const target = document.getElementById('app');
 if (!target) throw new Error('#app 없음');
 // 🔌 「어느 서버」 (#137): 사이트 server.json · ?emu= → 이 기기 / 시험 서버 꽂개를 고른 뒤 화면을 띄움

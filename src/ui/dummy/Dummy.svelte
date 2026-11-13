@@ -13,7 +13,7 @@
   import { liveRoom } from '../room.svelte';
   import Student from '../Student.svelte';
   import Sheet from '../battle/Sheet.svelte';
-  import BottomAction from '../battle/BottomAction.svelte';
+  import { busy } from '../busy.svelte';
 
   // 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 선생님 「쪼갤것」 · V1-DESIGN 5-0 · 게시판 던전과 따로)
   //   차시 고르기 → 그 차시 문제(몬스터) → 형성평가 재대결 · 레이드 학생 화면(Student) 그대로 · 이 폰 안(메모리) 방
@@ -48,6 +48,7 @@
   let lr: ReturnType<typeof liveRoom> | null = null, drive: ReturnType<typeof setInterval> | null = null;
   $effect(() => {
     const r = run; if (!r) return;
+    untrack(() => busy.n++); // 진행 중 = 새 판 저절로 새로 고침 안 함 (#38) · effect 안에서 읽지 않게
     untrack(() => {
       lr = liveRoom(r.S, r.code);
       drive = setInterval(() => {
@@ -56,7 +57,7 @@
         if (isEnd(r.L, RR)) finish(r, RR);
       }, 300);
     });
-    return () => { if (drive) clearInterval(drive); lr?.stop(); };
+    return () => { untrack(() => busy.n--); if (drive) clearInterval(drive); lr?.stop(); };
   });
   const DAYK = 'citadel-v1-dummy-day', FIRSTK = 'citadel-v1-dummy-first';
   function finish(r: { L: LessonPack; S: Store; code: string }, RR: Room) {

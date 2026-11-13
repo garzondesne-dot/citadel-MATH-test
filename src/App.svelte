@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { swUpdate } from './pwa.svelte';
+  import { busy } from './ui/busy.svelte';
   import { bindFeatures } from './school/features.svelte';
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
@@ -82,11 +84,20 @@
   // 🫥 #162 ① · #172 학생 화면(첫 화면 · 캠프 · 수업 · 게시판)엔 「BETA · 판」 · 「시험 서버」 글자를 숨김 → 캠프 ⚙ 설정 맨 아래 작은 「판」 줄 · 끊김 붉은 띠 · 새 판 ↻ 는 그대로
   const stuScreen = !role || role === 'student' || role === 'camp';
   const verOld = $derived(!!site && site !== BUILD && !inClass);
+  // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
+  //   수업 중 = #163 ④ 그대로 숨김(끝나면 보임) · 게시판 던전 · 허수아비 진행 중 · 오래 켜 둔 화면 = 띠만
+  const born = Date.now();
+  const reloadNew = () => { void swUpdate().then(() => location.replace(`${location.pathname}?${[...new URLSearchParams(location.search)].filter(([k]) => k !== 'v').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).concat(`v=${site}`).join('&')}`)); };
+  $effect(() => {
+    if (!verOld || !(!role || role === 'camp') || busy.n || Date.now() - born > 20e3) return;
+    try { if (sessionStorage.getItem('dgb-auto') === site) return; sessionStorage.setItem('dgb-auto', site); } catch { return; }
+    untrack(reloadNew);
+  });
 </script>
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if verOld}<button type="button" class="beta-pill old" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="옛 판 {BUILD} · 새 판 {site} · 새로 고침" onclick={() => location.replace(`${location.pathname}${location.search}${location.search ? '&' : '?'}v=${site}`)}>BETA · {BUILD} → {site} ↻</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
@@ -135,6 +146,8 @@
   .srv.server { color: var(--ok); } .srv.off { color: #fff; background: var(--bad); }
   .srv.tsrv { top: 0; left: auto; right: 2px; transform: none; height: 16px; font-size: 10.5px; opacity: 0.8; }
   .srv.hsrv { top: auto; bottom: 8px; left: 120px; transform: none; }
+  .newbuild { position: fixed; top: 0; left: 0; right: 0; z-index: 60; margin: 0 auto; max-width: 430px; min-height: 44px; padding: calc(env(safe-area-inset-top, 0px) + 6px) var(--s4) 6px; border: 0; background: var(--accent); color: var(--on-accent); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--accent-sh, rgba(0, 0, 0, 0.4)); cursor: pointer; }
+  .newbuild.hall { max-width: none; font-size: 18px; }
   .beta-pill.old { pointer-events: auto; border: 1px solid var(--bad); color: #fff; background: var(--bad-bg); font: inherit; font-weight: 700; cursor: pointer; }
   .beta-pill.tpill.old { height: 22px; opacity: 1; }
   .beta-pill.hall { top: auto; bottom: 8px; left: 8px; transform: none; }
