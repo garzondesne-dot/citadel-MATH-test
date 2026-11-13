@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, chainRecord, healsReceived, isChain, plainRecord, petrify, ultUsed } from '../../raid/raid';
+  import { activeIds, bossRecord, chainRecord, healsReceived, isChain, plainRecord, petrify, ultUsed } from '../../raid/raid';
   import { spendEnergy, trueUlt } from '../../raid/actions';
   import { canTrue, cutin, ultBlast } from '../fx/attack';
   import { savedLook } from '../../store/me.svelte';
@@ -15,7 +15,8 @@
   //   🌟 = 첫 공격 퍼펙트 + 재도전 판 2개를 각각 한 번에 → 세 번째 ⚡ 에서만 켜짐 · 💚 파티 힐 없음 · 👑 형성평가 뒤 = 💚 · ⛓ 두 장(🌟 흐림)
   //   「그만하기」 = 재도전 판 닫고 기다리기 · 몬스터가 살아 있는 동안 「🔥 이어서」 · 남은 ⚡ 그대로
   const { S, L, R, code, mid, uid, now, onround, boss = false }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; onround: () => void; boss?: boolean } = $props();
-  const rec = $derived(isChain(L, R, mid) ? chainRecord(L, R, mid, uid) : plainRecord(L, R, mid, uid));
+  type RecLike = { tokLeft: number; canHeal: boolean; roundOpen?: boolean; rounds?: number; trueOk?: boolean };
+  const rec = $derived((boss ? bossRecord(L, R, uid) : isChain(L, R, mid) ? chainRecord(L, R, mid, uid) : plainRecord(L, R, mid, uid)) as RecLike);
   type Sk = 'heal' | 'bind' | 'true';
   let sel = $state<Sk>('heal'), pick = $state(false), rest = $state(false), msg = $state('');
   const look = untrack(() => savedLook());

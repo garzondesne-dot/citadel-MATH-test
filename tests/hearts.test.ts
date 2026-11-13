@@ -94,7 +94,7 @@ describe('👑 형성평가 v4 = 일반 몬스터 꼴', () => {
     const R = () => S.get<Room>(roomPath('B4')) as Room;
     for (let g = 0; g < 60 && stepOf(L, R())?.kind !== 'boss'; g++) nextStep(S, L, 'B4');
     const rec = (u: string) => bossRecord(L, R(), u);
-    const bad = (q: Question): Given => (q.type === 'blanks' ? q.items.map(() => '999') : q.type === 'multi' ? [] : q.type === 'choice' ? (q.answerIndex + 1) % Math.max(2, q.options?.length || 2) : '999') as Given;
+    const bad = (q: Question): Given => (q.type === 'blanks' ? q.items.map(() => '999') : q.type === 'multi' ? [] : q.type === 'choice' ? (q.answerIndex + 1) % Math.max(2, q.choices.length) : '999') as Given;
     const send = (u: string, okSet: (i: number) => boolean) => { const r = rec(u); const g: Record<number, Given> = {}; r.todo.forEach((i) => { const q = bossItem(L, R(), u, i, r.next(i))!; g[i] = okSet(i) ? answerOf(q) : bad(q); }); return bossSubmitAll(S, L, 'B4', u, g); };
     return { S, L, R, rec, send };
   }

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import BossForm from './q/BossForm.svelte';
+  import { V4 } from '../raid/raid';
   import { feat } from '../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Store } from '../model/types';
@@ -182,7 +184,7 @@
       <div class="qwrap">
       {#key `${stepIdx(R)}|${step.id}`}
         {#if step.kind === 'boss'}
-          <BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />
+          {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
           <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
         {:else if mid}

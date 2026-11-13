@@ -64,29 +64,34 @@ const log = (...a) => console.log(...a);
       log('  정찰:', (await st[0].textContent('.bcard .lab')).trim(), '· 준비 완료 뒤 단추', (await st[0].textContent('.act .btn')).trim());
     }
     await appear();
-    if (id === 'boss') {
+    if (id === 'boss') { // 👑 v4 (📜 2026-11-13 밤) = 일반 몬스터 꼴: 문항을 모두 채워 한 번에 「공격」 · 틀리면 ❤ −1 · 틀린 문항만 새 숫자 · 맞힌 문항 잠김
       for (const [k, p] of st.entries()) {
-        for (let i = 0, nC = await p.$$eval('.row .cell', (x) => x.length); i < nC; i++) { /* #149 6차시 형성평가 = 3문항 */
-          if (await ko()) break;
+        const nC = await p.$$eval('.row .cell', (x) => x.length);
+        for (let i = 0; i < nC; i++) {
           await p.click(`.row .cell:nth-child(${i + 1})`); await p.waitForTimeout(100);
           const item = await p.$('.bcard .item'); if (!item) continue;
-          if (k === 0 && i === 1) {
-            for (const d of '99') await (await item.$(`.rune[aria-label="룬 ${d}"]`)).click();
-            await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(200);
-            log('  학생1 2번 틀림:', (await p.textContent('.bad b')).trim(), '| 단추', (await p.textContent('.act .btn')).trim());
-            await p.waitForTimeout(5300);
-            const bc = await p.$$eval('.row .cell', (cs) => cs.map((c) => `${c.querySelector('b').textContent}${c.className.replace(/svelte-\S+/g, '').replace('cell', '').replace(/\bs-/g, '').trim()}${c.disabled ? '·잠김' : ''}:${c.querySelector('.tx').textContent}`).join(' | '));
-            log('  형성평가 재도전(#116):', bc);
-            if (!/1번ok·잠김/.test(bc) || !/2번oldbad\s*now:＿/.test(bc)) errs.push('형성평가 ✔ 잠김 · ✘ 빈칸 아님');
-            await shot(p, 'r116-boss-retry-360.png'); await overflow(p, '형성평가 재도전');
-            const t = (await p.textContent('.bcard .item')), m = /n\(U\) = (\d+), n\(([A-Z])\) = (\d+)/.exec(t);
-            const it2 = await p.$('.bcard .item'); for (const d of String(Number(m[1]) - Number(m[3]))) await (await it2.$(`.rune[aria-label="룬 ${d}"]`)).click();
-          } else if (k === 1 && i === 0) { await answer(item, { choice: '∪' }); await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(800); log('  학생2 1번 틀림 → 그대로 두고 다음:', (await p.$eval('.row .cell:nth-child(1)', (c) => c.className.replace(/svelte-\S+/g, '').trim()))); continue; }
+          if (k === 0 && i === 1) { for (const d of '99') await (await item.$(`.rune[aria-label="룬 ${d}"]`)).click(); }
+          else if (k === 1 && i === 0) await answer(item, { choice: '∪' });
           else await answer(item, A.boss[i]);
-          await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(150);
+          await p.waitForTimeout(80);
         }
-        if (k === 0) { await p.waitForSelector('.gt .r'); await p.waitForTimeout(200); log('  학생1 채점표:', await p.$$eval('.gt .r', (rs) => rs.map((r) => `${r.querySelector('.n').textContent}${r.className.replace(/svelte-\S+/g, '').replace(/\br\b/, '').replace(/\bg-/g, '').trim()} ${r.querySelector('.a').textContent}`).join(' | ')), '|', (await p.textContent('.bcard .lab')).trim()); await shot(p, 'r116-boss-table-360.png'); await overflow(p, '형성평가 채점표'); log('  학생1 도달: 6 / 6 · 종합실', await tvHp()); continue; }
-        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '/ 6 · 종합실', await tvHp());
+        await waitMain(p); log(`  학생${k + 1} 단추:`, (await p.$eval('.act .btn', (x) => x.getAttribute('aria-label') || x.textContent)).trim()); await (await mainBtn(p)).click(); await p.waitForTimeout(700);
+        const toast = await p.$eval('.toast', (x) => x.textContent).catch(() => '');
+        log(`  학생${k + 1} 한 번에 제출:`, toast.trim());
+        if (k === 0) {
+          const bc = await p.$$eval('.row .cell', (cs) => cs.map((c) => `${c.querySelector('b').textContent}${c.className.replace(/svelte-\S+/g, '').replace('cell', '').replace(/\bs-/g, '').trim()}${c.disabled ? '·잠김' : ''}`).join(' | '));
+          const hearts = await p.$$eval('.act .hs svg', (x) => x.map((e) => e.getAttribute('class')).join(' ')).catch(() => '');
+          log('  형성평가 다시(v4):', bc, '| ❤', hearts.replace(/svelte-\S+/g, ''));
+          if (!/❤ −1/.test(toast) || !/1ok·잠김/.test(bc)) errs.push('형성평가 v4 ❤ −1 · 맞힌 문항 잠김 아님');
+          await shot(p, 'v4-boss-retry-360.png'); await overflow(p, '형성평가 재도전');
+          const t = (await p.textContent('.bcard .item')), m = /n\(U\) = (\d+), n\(([A-Z])\) = (\d+)/.exec(t);
+          const it2 = await p.$('.bcard .item'); for (const d of String(Number(m[1]) - Number(m[3]))) await (await it2.$(`.rune[aria-label="룬 ${d}"]`)).click();
+          await waitMain(p); await (await mainBtn(p)).click(); await p.waitForTimeout(900);
+          const sk = await p.$$eval('.cards .card', (x) => x.map((e) => `${e.dataset.sk}${e.disabled ? '✗' : ''}`).join(' ')).catch(() => '');
+          log('  학생1 다 끝 → 기술 카드:', sk); if (!/heal/.test(sk) || !/true✗/.test(sk)) errs.push('형성평가 뒤 기술 카드(💚 · ⛓ · 🌟 흐림) 아님');
+          await shot(p, 'v4-boss-done-360.png');
+        }
+        log(`  학생${k + 1} 도달:`, (await p.$$eval('.row .cell.s-ok', (bs) => bs.length)), '· 종합실', await tvHp());
       }
       await overflow(st[0], '형성평가'); await taps(st[0], '형성평가');
       log('  보스:', (await ko()) ? '🏆 승리!' : '아직');
