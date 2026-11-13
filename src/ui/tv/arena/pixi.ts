@@ -13,6 +13,9 @@ export interface Arena {
   readonly kind: 'pixi';
   update(st: ArenaState): void;
   hit(u: string, dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
+  /** ⚔ 정식 attack.js 를 DOM 층이 그릴 때: 그 용사 그림 숨김 · 몬스터만 반응(깜빡 · 흔들 · 숫자 · 베기 선 없음) */
+  heroVisible(u: string, on: boolean): void;
+  monHit(dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
   exp(u: string, text: string): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
@@ -134,6 +137,12 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       else float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900);
     }, 170);
   }
+  function heroVisible(u: string, on: boolean) { const v = heroes.get(u); if (v) v.c.visible = on; }
+  function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice') {
+    const m = monSp; if (!m) return; const mx = m.x;
+    if (kind === 'hit') { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); }
+    else float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900);
+  }
   function slash() {
     const g = new Graphics(), cx = monCx, cy = monTop + monSize * 0.5, r = monSize * 0.32;
     g.moveTo(cx - r, cy - r * 0.6).lineTo(cx + r, cy + r * 0.6).stroke({ width: Math.max(4, H() * 0.012), color: 0xffffff, alpha: 0.95, cap: 'round' });
@@ -181,7 +190,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze,
+    hit, exp, banner, freeze, heroVisible, monHit,
     destroy() { clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }

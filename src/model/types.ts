@@ -149,7 +149,7 @@ export interface Store {
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──
-export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean; /** 반 · 들어온 판(BUILD) — 🔄 옛 판 확인 */ cls?: string; ver?: string; /** 출전 용사 (TV 이름표 그림) */ hero?: number; /** 🧪 통계 · 체력 머릿수에서 빠짐 (베타 반 · 시험 계정 · #123) */ x?: boolean; /** 🔥 한 판 더 시작한 판 수 (소레이드) */ pr?: Record<string, number> }
+export interface RoomPlayer { num: number; nick: string; seen: number; teacher?: boolean; /** 반 · 들어온 판(BUILD) — 🔄 옛 판 확인 */ cls?: string; ver?: string; /** 출전 용사 (TV 이름표 그림) */ hero?: number; /** ⚔ 끼운 스킬 · 강화 (TV 공격 이펙트 · 오라 · 🔨 용사 fx) */ fx?: string; enh?: number; /** 🧪 통계 · 체력 머릿수에서 빠짐 (베타 반 · 시험 계정 · #123) */ x?: boolean; /** 🔥 한 판 더 시작한 판 수 (소레이드) */ pr?: Record<string, number> }
 /** ⚔ 소레이드 답 한 줄: s = 단계 · p = 판(0 진짜 · 1~ 연습) · g = 답 · w = 근거 빈칸 · ph = 서술형 통과 */
 export interface ChainSub { s: number; p: number; g: Given | ''; w?: 1; ph?: 1 }
 /** 방을 만들 때 다른 점 표에서 옮겨 적는 값 — 엔진은 이 값만 읽는다 (모드 이름으로 가르지 않음) */

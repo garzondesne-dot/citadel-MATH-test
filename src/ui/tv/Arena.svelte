@@ -8,6 +8,11 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import { atkClock, atkTrack, bossHp, monsterHp, isChain } from '../../raid/raid';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
+  import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
+  import { deco } from '../fx/aura';
+  import { ladder } from '../../model/hero';
+  import { bossState, plainRecord } from '../../raid/raid';
+  import { HERO, heroUrl, monBody } from '../manifest';
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
@@ -57,10 +62,62 @@
   function play() {
     if (qT) return;
     const h = queue.shift(); if (!h) return;
-    if (A) A.hit(h.u, h.dmg, h.kind);
+    if (fxLayer && W && tvAttack(h)) { /* ⚔ 정식 attack.js (DOM 층) */ }
+    else if (A) A.hit(h.u, h.dmg, h.kind);
     else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); domPop(h.kind === 'hit' ? `-${h.dmg}` : h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); }
     qT = setTimeout(() => { qT = undefined; play(); }, 350);
   }
+  // ⚔ 🔨 용사 fx (정식 hall.js 606~618 · 학생 폰과 같은 attack()): Pixi = 캔버스 위 DOM 층에 그 용사 대역(같은 자리 · 같은 크기)을 두고 Pixi 용사는 잠깐 숨김
+  //   몬스터 대역 = 보이는 몸통 상자(data-bb) · 맞는 순간 = Pixi 몬스터 깜빡 · 숫자 / DOM 장면 = 그 용사 칸(.art) 그대로 · ⚡ 필살기 = 첫 시도 퍼펙트 + 내 속성 Ⅲ↑(정식 hall.js 78)
+  let fxLayer = $state<HTMLDivElement | null>(null), auraLayer = $state<HTMLDivElement | null>(null), hidden = $state<Record<string, boolean>>({});
+  const ulSeen = new Set<string>(); let auraSig = '';
+  setForce(true);
+  function ultOf(u: string, fxk: string, hero: number): boolean {
+    if (!step || !canUlt(fxk, hero)) return false;
+    const key = `${R.state.step}|${step.id}|${u}`; if (ulSeen.has(key)) return false;
+    let ok = false;
+    if (step.kind === 'boss') { const st2 = bossState(L, R, u); ok = st2.length > 0 && st2.every((x) => x.first); }
+    else if (step.kind === 'monster' && L.monsters[step.id] && !isChain(L, R, step.id)) { const r = plainRecord(L, R, step.id, u); ok = r.perfectAt === 0 && r.tries.length === 1; }
+    if (ok) ulSeen.add(key); return ok;
+  }
+  function tvAttack(h: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice' }): boolean {
+    const k = ids.indexOf(h.u), sl = slots[k], lay = fxLayer; if (!sl || !lay || !step) return false;
+    const p = R.players?.[h.u], hero = p?.hero ?? 0, fxk = p?.fx || ladder(hero)[0]!, ult = h.kind === 'hit' && ultOf(h.u, fxk, hero);
+    atkPreload(hero, fxk); if (ult) preloadFaces();
+    let heroBox: HTMLElement, monBox: HTMLElement, art: HTMLElement | null = null; const tmp: HTMLElement[] = [];
+    const mb = document.createElement('div'); mb.className = 'tvm'; let bb = ''; try { const sp = spriteOf(sprite); bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { /* 기본 몸통 */ }
+    mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; mb.dataset.bb = bb; lay.appendChild(mb); tmp.push(mb); monBox = mb;
+    if (A) {
+      const w = HERO.w * sl.s, hgt = HERO.h * sl.s, hb = document.createElement('div'); hb.className = 'tvh';
+      hb.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`;
+      art = document.createElement('i'); art.className = `art hero${sl.flip ? ' flip' : ''}`;
+      art.style.cssText = `position:absolute;inset:0;background:url(${heroUrl(hero)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated;${sl.flip ? 'transform:scaleX(-1);' : ''}`;
+      hb.appendChild(art); lay.appendChild(hb); tmp.push(hb); heroBox = hb; A.heroVisible(h.u, false);
+    } else {
+      const el = host.querySelector(`.hr[data-u="${CSS.escape(h.u)}"] .art`) as HTMLElement | null; if (!el) { tmp.forEach((e) => e.remove()); return false; }
+      heroBox = el;
+    }
+    const ROWS: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
+    const pose = (q: Pose) => { if (art) art.style.backgroundPosition = `${q === 'attack' ? (2 / (HERO.cols - 1)) * 100 : 0}% ${(ROWS[q] / (HERO.rows - 1)) * 100}%`; };
+    if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); domPop(h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
+    void attack(lay, { heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
+      heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
+      onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit'); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
+      .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; });
+    return true;
+  }
+  // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
+  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number) => void }).__tvAtk = (k, kind = 'hit', dmg = 2) => { const u = ids[k]; if (u) { queue.push({ u, dmg, kind }); play(); } };
+  // ✨ 오라 (정식 aura.js · TV = 입자 2개까지): Pixi = 캔버스 아래 층에 용사 자리마다 · DOM 장면 = HeroSprite 가 직접
+  $effect(() => {
+    const lay = auraLayer; if (!lay || mode !== 'pixi' || !W) return;
+    const rows = heroes.map((h, k) => ({ sl: slots[k], lv: Number(R.players?.[h.u]?.enh) || 0 })), sig = JSON.stringify(rows);
+    if (sig === auraSig) return;
+    untrack(() => {
+      auraSig = sig; lay.replaceChildren();
+      for (const { sl, lv } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true); }
+    });
+  });
   function domPop(text: string, x: number, y: number, cls: string) { const k = ++fk; domFx = [...domFx, { k, text, x, y, cls }]; setTimeout(() => (domFx = domFx.filter((f) => f.k !== k)), 1300); }
   $effect(() => {
     if (!step) return;
@@ -88,6 +145,7 @@
 </script>
 
 <div class="arena2" class:split bind:this={host} data-mode={mode}>
+  <div class="tvaura" bind:this={auraLayer} aria-hidden="true"></div>
   {#if mode === 'dom' && W && step && sprite}
     <!-- DOM 장면 = 캔버스와 같은 배치 (WebGL 없는 기기) -->
     <i class="sh" style:left="{box.shadow.cx - box.shadow.w / 2}px" style:top="{box.shadow.y - H * 0.018}px" style:width="{box.shadow.w}px" style:height="{H * 0.036}px"></i>
@@ -96,18 +154,22 @@
       <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>HP {hp.left} / {hp.max}</b></div></div>
     {/if}
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
-      <div class="hr" class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
-        <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
+      <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
+        <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} aura={Number(R.players?.[h.u]?.enh) || 0} tv />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
         <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📵 ' : ''}{h.name}</span>
       </div>
     {/if}{/each}
     {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
+  <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
 </div>
 
 <style>
   .arena2 { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
+  .tvaura { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .arena2 :global(canvas) { position: relative; z-index: 1; }
+  .tvfx { position: absolute; inset: 0; z-index: 2000; pointer-events: none; overflow: hidden; }
   .sh { position: absolute; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%); }
   .mon { position: absolute; } .mon.shadow { filter: brightness(0.08); }
   .mon.float { animation: bob 2.6s steps(2, jump-none) infinite; } /* #164 계단 · 정수 px */

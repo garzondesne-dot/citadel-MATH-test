@@ -24,6 +24,7 @@
   import TdTV from '../rest/TdTV.svelte';
   import { tvBgm, tvBgmNow } from './bgm';
   import { soundPref } from '../sound.svelte';
+  import { ladder } from '../../model/hero';
   import FunCrowd from '../rest/FunCrowd.svelte';
   import { artUrl, FUN_BG } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
@@ -176,7 +177,7 @@
   (globalThis as { __tvFake?: (n: number) => void }).__tvFake = (n: number) => { fakeN = n; };
   $effect(() => {
     const n = fakeN; if (!n || !code) return;
-    const beat = () => { for (let k = 0; k < n; k++) { const b = `rooms/${code}/players/fake${k}`; S.set(`${b}/num`, 101 + k); S.set(`${b}/nick`, `가상${k + 1}`); S.set(`${b}/hero`, k % 31); S.set(`${b}/seen`, S.now()); } };
+    const beat = () => { for (let k = 0; k < n; k++) { const b = `rooms/${code}/players/fake${k}`; S.set(`${b}/num`, 101 + k); S.set(`${b}/nick`, `가상${k + 1}`); S.set(`${b}/hero`, k % 31); S.set(`${b}/fx`, ladder(k % 31)[(k * 3) % 4]); S.set(`${b}/enh`, (k * 3) % 11); S.set(`${b}/seen`, S.now()); } }; // ⚔ 가상 용사 = 스킬 · 강화도 섞음 (TV 이펙트 · 오라 시험)
     beat(); const t = setInterval(beat, 2000); return () => clearInterval(t);
   });
 </script>

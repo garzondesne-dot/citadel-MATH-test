@@ -39,7 +39,7 @@
   const loadedAt = Date.now();
   const live = untrack(() => {
     const x = untrack(() => !!cls && isExcluded(S, cls, num));
-    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, x });
+    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, fx: savedLook().fx, enh: savedLook().enh, x });
     hb();
     const beat = setInterval(hb, 3000);
     const bye = () => leave(S, code, uid);
