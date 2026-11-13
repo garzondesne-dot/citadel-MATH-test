@@ -4,6 +4,7 @@
 //   ⚡ 필살기 컷인(1.2초 · 얼굴 · 눈빛 · 이름 · 찢김) → 💥 광역(본 이펙트 + 네 귀퉁이 + 충격파 + 어둠막) · 🌟 진필살기 = 금빛 · 「眞」 · 조금 길게
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) · 갤러리 같은 함수 — 연출만 (데미지 · 체력 · 정답 판정과 무관)
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
+import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
 import { heroOf } from '../../model/hero';
 import { artUrl } from '../manifest';
@@ -68,13 +69,14 @@ export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string
   await wait((shot && o.from ? Math.min(0.9, hit[0] || 0.3) : Math.min(0.3, hit[0] || 0.06)) * 1000);
   if (!scene.isConnected) return;
   o.onHit?.();
-  knock(monBox, o.finish ? 24 : 12); shake(scene, Math.max(2, hit[3] || 2) * (o.finish ? 2 : 1.2), Math.max(0.14, hit[2] || 0.18) * (o.finish ? 2000 : 1000));
+  const lay = layerOn() && !o.ult && !o.cast, tN = Math.max(0, Number(tierOf(fx)) || 0); if (lay) overlay(scene, B, famOf(fx)?.id ?? 'cut', tN, !!scene.closest('.tv, .tvfx')); // ✨ 맞는 순간 겹 (시제품)
+  knock(monBox, o.finish ? 24 : 12); shake(scene, Math.max(2, hit[3] || 2) * (o.finish ? 2 : 1.2) * (lay && scene.closest('.tv, .tvfx') ? 1 + tN * 0.2 : 1), Math.max(0.14, hit[2] || 0.18) * (o.finish ? 2000 : 1000));
   if (!o.noDmg) dmg(scene, B.cx, B.y0 + 6);
   else if (o.prac) for (let k = 0; k < o.prac; k++) setTimeout(() => { if (scene.isConnected) dmg(scene, B.cx, B.y0 + 6, '🔥 +1', true); }, k * 90); // 🔥 한 판 더 맞힘 = 데미지 0 · 회색 흔적 (📜 2026-11-13 밤)
   if (o.finish) wave(scene, B.cx, B.y1);
   if (o.finish) sfx('finish', 0.95); else fxHit(fx);
   if (!o.noDmg) setTimeout(() => sfx('hurt', 0.55), 70);
-  await hitstop(scene, (o.finish ? 0.32 : Math.max(0.05, hit[1] || 0.08)) * 1000);
+  await hitstop(scene, (o.finish ? 0.32 : Math.max(0.05, hit[1] || 0.08, lay && tN >= 2 ? [0, 0, 0.1, 0.13][tN]! : 0)) * 1000); // 겹 = Ⅲ · Ⅳ 잠깐 멈춤 더 길게
 }
 type P2 = { x: number; y: number };
 function dash(scene: HTMLElement, heroBox: HTMLElement, from0: number | P2, to0: number | P2, ms: number, ghosts: boolean) {
