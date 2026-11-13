@@ -26,7 +26,19 @@ export const NUM = {
 export const RECIPES: Record<string, { shape: 'crescent'; colors: [number, number, number]; hi: number; spark: 'square' | 'shard'; sound: string }> = {
   cut: { shape: 'crescent', colors: [0x0b3f78, 0x2f8fe0, 0xa8e2ff], hi: 0xffffff, spark: 'square', sound: 'cut' },
 };
-export type SlashO = { x: number; y: number; w: number; h: number; dir: number; tier: number; fam?: string; seed?: number; onImpact?: () => void };
+/** 🌙 쌍월 참(Ⅳ) 시제품 3가지 (🔨 2026-11-13 밤 평가판 👎 「쌍월이면 대표 스킬인데 신경 써 줘 · 하나도 안 멋져」 · 머리 📎 「NUM · RECIPES 값만 다르게」)
+ *  A = 지금 Ⅳ · B = 초승달 두 개가 X 로 엇갈림(둘째 0.07초 뒤) + 맞는 순간 큰 흰 번쩍 + 파편 많이 · C = 더 두꺼운 호 + 잔상 길게(6겹 · 진하게)
+ *  선생님이 고르면 고른 값이 Ⅳ 기본이 되고 나머지 계열로 넓힘 */
+import { twinOf, type TwinV } from '../../fx/twin';
+export { setTwin, twinOf, type TwinV } from '../../fx/twin';
+type TwinX = { rad?: number; len?: number; thick?: number; ghosts?: number; flash?: number; sparks?: number; dur?: number; stagger?: number; bigFlash?: number; shards?: boolean; ghostGap?: number; ghostAlpha?: number; sweep?: number };
+export const TWIN: Record<TwinV, TwinX> = {
+  a: {},
+  // rad = 호 반지름 배율(작을수록 많이 휨 = 초승달 · 긴 직선 꼬리 없음) · sweep = 호가 도는 각
+  b: { rad: 0.5, len: 1.4, thick: 0.34, ghosts: 2, sparks: 46, stagger: 0.07, bigFlash: 1, shards: true, sweep: 1.05 },
+  c: { rad: 0.56, len: 1.5, thick: 0.5, ghosts: 6, ghostGap: 0.07, ghostAlpha: 0.5, sparks: 30, dur: 1.0, sweep: 1.0 },
+};
+export type SlashO = { x: number; y: number; w: number; h: number; dir: number; tier: number; fam?: string; seed?: number; onImpact?: () => void; /** 쌍월 시제품 (없으면 지금 고른 것) */ v?: TwinV };
 
 // 고정 난수 (같은 seed = 같은 그림 · 굽기와 실제가 같게)
 function rng(seed: number) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 100000) / 100000; }; }
@@ -37,12 +49,13 @@ type Spark = { x: number; y: number; vx: number; vy: number; life: number; size:
 /** 이펙트 하나 = t(초)의 순수 함수로 그림 (굽기 도구가 칸마다 부름) */
 export class SlashFx {
   g = new Graphics(); t = 0; done = false; impacted = false; level = 0;
-  T: (typeof NUM.tiers)[number]; C: (typeof RECIPES)[string]; sparks: Spark[] = []; r: () => number;
-  constructor(public o: SlashO, level = 0) { this.T = NUM.tiers[clamp(o.tier, 0, 3)]!; this.C = RECIPES[o.fam || 'cut'] ?? RECIPES.cut!; this.r = rng(o.seed ?? 7); this.level = level; this.makeSparks(); }
+  T: (typeof NUM.tiers)[number] & TwinX; C: (typeof RECIPES)[string]; sparks: Spark[] = []; r: () => number;
+  constructor(public o: SlashO, level = 0) { const T0 = NUM.tiers[clamp(o.tier, 0, 3)]!; this.T = o.tier >= 3 ? { ...T0, ...TWIN[o.v ?? twinOf()] } : T0; this.C = RECIPES[o.fam || 'cut'] ?? RECIPES.cut!; this.r = rng(o.seed ?? 7); this.level = level; this.makeSparks(); }
   get impactT() { return this.T.dur * 0.32; }
   makeSparks() {
     const n = Math.round(this.T.sparks * (this.level >= 1 ? 0.5 : 1)); this.sparks = [];
-    for (let i = 0; i < n; i++) { const a = (this.r() - 0.5) * 1.6 + (this.o.dir > 0 ? 0 : Math.PI), sp = 30 + this.r() * 70; this.sparks.push({ x: 0, y: 0, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, life: 0.25 + this.r() * 0.3, size: this.r() < 0.3 ? 2 : 1, col: this.r() < 0.4 ? this.C.hi : this.C.colors[2] }); }
+    const wide = this.T.shards ? 2.6 : 1.6, fast = this.T.shards ? 1.5 : 1;
+    for (let i = 0; i < n; i++) { const a = (this.r() - 0.5) * wide + (this.o.dir > 0 ? 0 : Math.PI), sp = (30 + this.r() * 70) * fast; this.sparks.push({ x: 0, y: 0, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, life: 0.25 + this.r() * 0.3, size: this.r() < (this.T.shards ? 0.6 : 0.3) ? 2 : 1, col: this.r() < 0.4 ? this.C.hi : this.C.colors[2] }); }
   }
   /** 초승달 궤적 하나: 중심 (cx, cy) · 반지름 R · 각 a0→a1 · 머리 hp · 꼬리 tp (0~1) · 두께 th · 투명도 al */
   crescent(cx: number, cy: number, R: number, a0: number, a1: number, hp: number, tp: number, th: number, al: number) {
@@ -63,17 +76,18 @@ export class SlashFx {
   /** t 초의 모습을 그림 (낮은 해상도 좌표) */
   draw(t: number, fancy = true, reduce = false) {
     const g = this.g, o = this.o, T = fancy ? this.T : NUM.tiers[0]!, d = this.T.dur; g.clear();
-    const cx = o.x, cy = o.y, R = Math.max(o.w, o.h) * 0.85 * T.len, dir = o.dir;
+    const cx = o.x, cy = o.y, R = Math.max(o.w, o.h) * 0.85 * T.len * (this.T.rad ?? 1), dir = o.dir;
     const arcs = this.level >= 3 ? Math.min(1, T.arcs) : T.arcs;
     for (let k = 0; k < arcs; k++) {
-      const off = T.cross ? 0 : k * 0.12 * d, tt = t - off; if (tt < 0) continue;
+      const off = T.cross ? k * (this.T.stagger ?? 0) : k * 0.12 * d, tt = t - off; if (tt < 0) continue;
       const span = T.dur * 0.75, p = clamp(tt / span), hp = ease(clamp(p / 0.55)), tp = clamp((p - 0.2) / 0.8) ** 1.4, al = 1 - clamp((p - 0.7) / 0.3);
       // 각: 궤적 가운데가 맞는 점(몸통 가운데)을 지나게 — 호의 중심을 맞는 점에서 R 만큼 떨어뜨림 · 위 → 아래로 긋기 · 용사 → 몬스터 방향 · Ⅳ 쌍월 = 엇갈린 두 줄 · Ⅲ = 조금씩 비켜 세 줄
       const flip = T.cross && k === 1 ? -1 : 1, phi = dir > 0 ? (flip > 0 ? Math.PI * 0.78 : Math.PI * 1.22) : (flip > 0 ? Math.PI * 0.22 : -Math.PI * 0.22);
       const rr = R * (1 - (T.cross ? 0 : k * 0.07)), hx = cx + (T.cross ? 0 : (k - (arcs - 1) / 2) * o.w * 0.16 * dir), hy = cy + (T.cross ? 0 : (k - (arcs - 1) / 2) * o.h * 0.1);
-      const ox = hx - Math.cos(phi) * rr, oy = hy - Math.sin(phi) * rr, half = 0.78 * Math.min(1.2, T.len), sg = (dir > 0 ? -1 : 1) * flip;
+      const ox = hx - Math.cos(phi) * rr, oy = hy - Math.sin(phi) * rr, half = (this.T.sweep ?? 0.78) * Math.min(1.2, T.len), sg = (dir > 0 ? -1 : 1) * flip;
       const a0 = phi + half * sg, a1 = phi - half * sg;
-      if (fancy && this.level < 3) for (let gi = T.ghosts; gi >= 1; gi--) this.crescent(ox, oy, rr, a0 + 0.14 * gi * sg, a1 + 0.14 * gi * sg, hp, tp, T.thick, al * (0.22 / gi));
+      const gg = this.T.ghostGap ?? 0.14, ga = this.T.ghostAlpha ?? 0.22;
+      if (fancy && this.level < 3) for (let gi = T.ghosts; gi >= 1; gi--) this.crescent(ox, oy, rr, a0 + gg * gi * sg, a1 + gg * gi * sg, hp, tp, T.thick, al * (ga / (ga > 0.3 ? Math.sqrt(gi) : gi)));
       this.crescent(ox, oy, rr, a0, a1, hp, tp, T.thick, al);
     }
     // 번쩍 (맞는 순간 0.08초 · 동작 줄이기 = 끔)
@@ -84,8 +98,18 @@ export class SlashFx {
       for (const [dx, dy] of [[1, 0], [0, 1], [0.7, 0.7], [0.7, -0.7]] as const) { const l = dx && dy ? L0 * 0.55 : L0; g.poly([cx - dx * l, cy - dy * l, cx + dy * w0, cy - dx * w0, cx + dx * l, cy + dy * l, cx - dy * w0, cy + dx * w0]).fill({ color: this.C.hi, alpha: a }); }
       g.circle(cx, cy, Math.max(2, Math.max(o.w, o.h) * 0.08 * (1 - q))).fill({ color: this.C.hi, alpha: a });
     }
-    // 입자 (맞는 순간부터 · 단순 물리 · 정사각 도트)
-    if (fancy && t >= it) { const st = t - it; for (const s of this.sparks) { if (st > s.life) continue; const x = cx + s.vx * st, y = cy + s.vy * st + 60 * st * st, a = 1 - st / s.life; g.rect(Math.round(x), Math.round(y), s.size, s.size).fill({ color: s.col, alpha: a }); } }
+    // 💥 큰 흰 번쩍 (쌍월 B · 맞는 순간 0.14초 · 흰 원이 퍼지며 사라짐 + 빛살 1.6배)
+    const bf = this.T.bigFlash ?? 0;
+    if (fancy && bf && !reduce && this.level < 3 && t >= it && t < it + 0.14) {
+      const q = (t - it) / 0.14, Rr = Math.max(o.w, o.h) * (0.25 + 0.55 * q) * T.len;
+      g.circle(cx, cy, Rr).fill({ color: 0xffffff, alpha: bf * 0.85 * (1 - q) ** 1.5 }); g.circle(cx, cy, Rr * 0.55).fill({ color: this.C.colors[2], alpha: bf * 0.6 * (1 - q) });
+      const L1 = Rr * 1.6, w1 = Math.max(1, 4 * (1 - q));
+      for (const [dx, dy] of [[0.7, 0.7], [0.7, -0.7]] as const) g.poly([cx - dx * L1, cy - dy * L1, cx + dy * w1, cy - dx * w1, cx + dx * L1, cy + dy * L1, cx - dy * w1, cy + dx * w1]).fill({ color: 0xffffff, alpha: bf * (1 - q) });
+    }
+    // 입자 (맞는 순간부터 · 단순 물리 · 정사각 도트 · 쌍월 B = 날아가는 방향으로 긴 파편)
+    if (fancy && t >= it) { const st = t - it, sh = !!this.T.shards; for (const s of this.sparks) { if (st > s.life) continue; const x = cx + s.vx * st, y = cy + s.vy * st + 60 * st * st, a = 1 - st / s.life;
+      if (sh && s.size > 1) { const vy = s.vy + 120 * st, m = Math.hypot(s.vx, vy) || 1, L = 4; g.moveTo(Math.round(x), Math.round(y)).lineTo(Math.round(x - (s.vx / m) * L), Math.round(y - (vy / m) * L)).stroke({ width: 1, color: s.col, alpha: a }); }
+      else g.rect(Math.round(x), Math.round(y), s.size, s.size).fill({ color: s.col, alpha: a }); } }
     if (t >= it && !this.impacted) { this.impacted = true; o.onImpact?.(); }
     if (t >= this.T.dur + (fancy ? 0.35 : 0)) this.done = true;
   }

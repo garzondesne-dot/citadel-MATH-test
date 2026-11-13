@@ -14,6 +14,7 @@
   import { cutin, ultBlast, canUlt, canTrue } from './fx/attack';
   import { guard } from './fx/aura';
   import { setNewFx } from './fx/fx';
+  import { setTwin, twinOf, type TwinV } from './fx/twin';
   // ⚔ 용사 fx 탭 (🔨 용사 fx · 2026-11-13): 용사 · 끼운 스킬 · 강화를 이 기기 「내 용사」에 적고 같은 학생 화면에서 공격 · 필살기 · 진필살기 · 홀리 방패 · 오라를 하나씩
   //   🃏 카드 특전 공격 이펙트 = 정식에 없음(도감 특전 = 용사 열기) → 흐린 단추 · ❓#3
   // 💥 공격 갤러리 (#161 · 테스트 모드 · 선생님 확인용): 학생 폰 화면 그대로(이 기기 메모리 방 · 데미지 · 기록 없음) + 위에 효과 15개 단추
@@ -26,6 +27,8 @@
   const KEY = 'citadel-v1-me';
   const readMe = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') as { hero?: number; enh?: number; socket?: Record<string, string> }; } catch { return {}; } };
   let newfx = $state(false); $effect(() => setNewFx(newfx));
+  // 🌙 쌍월 참 시제품 A · B · C (평가판 🧪 · 폰 = 구운 띠 · 📺 = TV 원본 ?newfx&twin=)
+  let twin = $state<TwinV>(twinOf()); const pickTwin = (v: TwinV) => { setTwin(v); twin = v; };
   let hh = $state(Number(readMe().hero) || 0), enh = $state(Number(readMe().enh) || 0), sk = $state(readMe().socket?.[String(readMe().hero ?? 0)] ?? ladder(Number(readMe().hero) || 0)[0]!), ver = $state(0);
   function look(h: number, e: number, k: string) { const m = readMe(); m.hero = h; m.enh = e; m.socket = { ...(m.socket || {}), [String(h)]: k }; try { localStorage.setItem(KEY, JSON.stringify(m)); } catch { /* 사생활 창 */ } hh = h; enh = e; sk = k; ver += 1; }
   const scene = () => document.querySelector('.edge') as HTMLElement | null;
@@ -52,6 +55,7 @@
         <select aria-label="강화" value={enh} onchange={(e) => look(hh, Number((e.currentTarget as HTMLSelectElement).value), sk)}>{#each Array.from({ length: 11 }, (_, i) => i) as i (i)}<option value={i}>+{i} 오라</option>{/each}</select>
       </div>
       <div class="tabs2"><button type="button" class:on={!newfx} onclick={() => (newfx = false)}>지금 것</button><button type="button" class:on={newfx} data-new onclick={() => (newfx = true)}>✨ 새 것 (⚔ 베기 시제품)</button></div>
+      {#if newfx}<div class="tabs2 twin" role="group" aria-label="쌍월 참 시제품">{#each ['a', 'b', 'c'] as const as v (v)}<button type="button" class:on={twin === v} data-twin={v} onclick={() => pickTwin(v)}>🌙 쌍월 {v.toUpperCase()}</button>{/each}<a class="tvlink" href="?role=hall&mode=test&room=GTW&newfx&twin={twin}&demo=twin" target="_blank">📺 TV 모습</a></div>{/if}
       <div class="ids">{#each [...ladder(hh), 'wings', 'smite'] as k, i (k)}<button type="button" class="a" class:on={sk === k} data-sk={k} onclick={() => look(hh, enh, k)}>{i < 4 ? 'ⅠⅡⅢⅣ'[i] : '🪶'}<small>{k === 'wings' ? '황금 날개' : k === 'smite' ? '심판의 빛' : skillName(k)}</small></button>{/each}</div>
       <div class="ids">
         <button type="button" class="a" data-h="hit" onclick={() => heroAtk({ miss: false, hits: 3 })}>⚔<small>공격</small></button>
@@ -87,4 +91,5 @@
   .tabs2 { width: 100%; display: flex; gap: 4px; } .tabs2 button { flex: 1; }
   .hrow { width: 100%; display: flex; gap: 4px; } .hrow select { flex: 1; min-width: 0; height: 32px; border-radius: 8px; background: var(--surface); color: var(--text); border: 1px solid var(--line); font: 600 13px var(--font); }
   .ids .a:disabled { opacity: 0.35; }
+  .twin .tvlink { display: inline-flex; align-items: center; padding: 0 10px; color: var(--gem); font-weight: 700; text-decoration: none; }
 </style>

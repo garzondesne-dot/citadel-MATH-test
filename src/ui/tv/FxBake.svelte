@@ -21,16 +21,18 @@
     for (const t of [bgTex, monTex, heroTex]) t.source.scaleMode = 'nearest';
     bgC.addChild(bg, ms, hs);
     const oldKind = ['cut', 'moon', 'slash', 'twin'];
-    const fxAt = (tier: number, t: number) => { const f = new SlashFx({ x: BODY.x / P, y: BODY.y / P, w: BODY.w / P, h: BODY.h / P, dir: 1, tier, fam: 'cut', seed: 7 }); let tt = 0; while (tt < t) { tt = Math.min(t, tt + 1 / 60); f.t = tt; f.draw(tt, true, false); } if (t >= f.impactT && f.T.hitstop) { /* 굽기 = 히트 스톱 없음(칸 순서로 표현) */ } return f; };
-    const drawNew = (tier: number, t: number) => { const f = fxAt(tier, t); app.renderer.render({ container: f.g, target: rt, clear: true }); f.g.destroy(); out.visible = true; };
+    const fxAt = (tier: number, t: number, v?: 'a' | 'b' | 'c') => { const f = new SlashFx({ x: BODY.x / P, y: BODY.y / P, w: BODY.w / P, h: BODY.h / P, dir: 1, tier, fam: 'cut', seed: 7, v }); let tt = 0; while (tt < t) { tt = Math.min(t, tt + 1 / 60); f.t = tt; f.draw(tt, true, false); } if (t >= f.impactT && f.T.hitstop) { /* 굽기 = 히트 스톱 없음(칸 순서로 표현) */ } return f; };
+    const drawNew = (tier: number, t: number, v?: 'a' | 'b' | 'c') => { const f = fxAt(tier, t, v); app.renderer.render({ container: f.g, target: rt, clear: true }); f.g.destroy(); out.visible = true; };
     const drawOld = (tier: number, t: number) => { const k = oldKind[tier]!, sp = spec(k)!; const n = Math.min(sp.n - 1, Math.floor(t * sp.fps)); if (t > sp.n / sp.fps) { old.visible = false; return; } PIXI.Assets.load(artUrl(`art/${sp.src}`)).then(() => {}); };
     (window as unknown as { __bake: unknown }).__bake = {
       NUM, W, H, BODY,
       /** 새 것 한 칸 (투명 · 낮은 해상도 그대로) → dataURL */
-      async frame(tier: number, t: number) { drawNew(tier, t); const c = app.renderer.extract.canvas({ target: rt }) as HTMLCanvasElement; return c.toDataURL('image/png'); },
+      async frame(tier: number, t: number, v?: 'a' | 'b' | 'c') { drawNew(tier, t, v); const c = app.renderer.extract.canvas({ target: rt }) as HTMLCanvasElement; return c.toDataURL('image/png'); },
       low: { w: lowW, h: lowH, px: BODY.x / P, py: BODY.y / P, bb: [(BODY.x - BODY.w / 2) / P, (BODY.y - BODY.h / 2) / P, (BODY.x + BODY.w / 2) / P, (BODY.y + BODY.h / 2) / P] },
       /** 같은 장면 · 새 것 */
-      async sceneNew(tier: number, t: number) { bgC.visible = true; old.visible = false; drawNew(tier, t); app.render(); },
+      async sceneNew(tier: number, t: number, v?: 'a' | 'b' | 'c') { bgC.visible = true; old.visible = false; drawNew(tier, t, v); app.render(); },
+      /** 쌍월 시제품 길이 */
+      durOf: (v: 'a' | 'b' | 'c') => new SlashFx({ x: 0, y: 0, w: 1, h: 1, dir: 1, tier: 3, v }).T.dur,
       /** 같은 장면 · 지금 띠 같은 순간 (정식 띠 칸 · 몸통에 맞춘 크기 근사) */
       async sceneOld(tier: number, t: number) {
         bgC.visible = true; out.visible = false; const k = oldKind[tier]!, sp = spec(k)!, tex = await PIXI.Assets.load(artUrl(`art/${sp.src}`)); tex.source.scaleMode = 'nearest';

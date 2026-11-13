@@ -7,6 +7,19 @@ const KINDS = ['cut', 'moon', 'slash', 'twin'], FPS = 20;
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }), p = await (await b.newContext({ viewport: { width: 480, height: 300 } })).newPage();
   await p.goto('http://localhost:4173/?role=fxbake'); await p.waitForSelector('.bake[data-ready="true"]', { timeout: 30000 });
   const info = await p.evaluate(() => ({ low: window.__bake.low, durs: window.__bake.NUM.tiers.map((t) => t.dur) })); fs.mkdirSync(OUT, { recursive: true });
+  // 🌙 쌍월 시제품만: node bake.cjs twin → pfx2/proto-twin-{a,b,c}-v1.webp · fx-new.json 「twin-a · twin-b · twin-c」 (다른 칸은 그대로)
+  if (process.argv[2] === 'twin') {
+    const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), 'utf8'));
+    for (const v of ['a', 'b', 'c']) {
+      const dur = await p.evaluate((v) => window.__bake.durOf(v), v), n = Math.ceil((dur + 0.3) * FPS), files = [];
+      for (let i = 0; i < n; i++) { const url = await p.evaluate(([t, v]) => window.__bake.frame(3, t, v), [i / FPS, v]); const f = path.join(TMP, `tw${v}-${String(i).padStart(2, '0')}.png`); fs.writeFileSync(f, Buffer.from(url.split(',')[1], 'base64')); files.push(f); }
+      const src = `pfx2/proto-twin-${v}-v1.webp`;
+      execFileSync('python3', ['-I', '-c', `import sys\nfrom PIL import Image\nfs=sys.argv[2:]\nims=[Image.open(f).convert('RGBA') for f in fs]\nw,h=ims[0].size\ns=Image.new('RGBA',(w*len(ims),h))\nfor i,im in enumerate(ims): s.paste(im,(i*w,0))\ns.save(sys.argv[1],'WEBP',lossless=True,method=6)`, path.join(ROOT, 'public/art', src), ...files]);
+      J.fx[`twin-${v}`] = { src, w: info.low.w, h: info.low.h, n, fps: FPS, px: Math.round(info.low.px), py: Math.round(info.low.py), pk: Math.round(n * 0.35) }; J.bb[`twin-${v}`] = info.low.bb.map(Math.round);
+      console.log(`twin-${v}: ${n}칸 · ${fs.statSync(path.join(ROOT, 'public/art', src)).size}B`);
+    }
+    fs.writeFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), JSON.stringify(J, null, 1) + '\n'); await b.close(); return;
+  }
   const spec = { fx: {}, bb: {} };
   for (let tier = 0; tier < 4; tier++) {
     const n = Math.ceil((info.durs[tier] + 0.3) * FPS), files = [];

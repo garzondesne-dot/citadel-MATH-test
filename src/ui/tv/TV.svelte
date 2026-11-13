@@ -183,6 +183,12 @@
   // 화면 시험 고리(#157 · 학생 화면엔 없음 · 출시 전 메모 5): 가상 학생 n명이 이 방에 들어와 있음(2초마다 접속 신호)
   let fakeN = $state(0);
   (globalThis as { __tvFake?: (n: number) => void }).__tvFake = (n: number) => { fakeN = n; };
+  // 🌙 갤러리 「📺 TV 모습」(?demo=twin · 테스트 모드만): 가상 학생 1명 → 첫 몬스터까지 → 3.5초마다 쌍월 참(필살기 · 새 엔진 ?newfx&twin=) 한 번
+  if (typeof location !== 'undefined' && /[?&]demo=twin\b/.test(location.search) && /[?&]mode=test\b/.test(location.search)) {
+    fakeN = 1;
+    const adv = () => { const RR = R; if (!RR) return; if (step && (step.kind === 'monster' || step.kind === 'boss')) return true; go(); return false; };
+    let n = 0; const t1 = setInterval(() => { if (adv() || ++n > 12) { clearInterval(t1); setInterval(() => (globalThis as { __tvAtk?: (k: number, kind?: string, dmg?: number, fx?: string, ult?: boolean, now?: boolean) => void }).__tvAtk?.(0, 'hit', 3, 'twin', true, true), 3500); } }, 900);
+  }
   $effect(() => {
     const n = fakeN; if (!n || !code) return;
     const beat = () => { for (let k = 0; k < n; k++) { const b = `rooms/${code}/players/fake${k}`; S.set(`${b}/num`, 101 + k); S.set(`${b}/nick`, `가상${k + 1}`); S.set(`${b}/hero`, k % 31); S.set(`${b}/fx`, ladder(k % 31)[(k * 3) % 4]); S.set(`${b}/enh`, (k * 3) % 11); S.set(`${b}/seen`, S.now()); } }; // ⚔ 가상 용사 = 스킬 · 강화도 섞음 (TV 이펙트 · 오라 시험)
