@@ -112,7 +112,7 @@
   {:else if !role && login}
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
-    <Title {S} onin={(p) => { bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
+    <Title {S} onin={(p, joined) => { if (joined) { try { sessionStorage.setItem('citadel-hero0', '1'); } catch { /* 무시 */ } } bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
   {:else if role === 'fxbake'}
     {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
   {:else if role === 'atk'}

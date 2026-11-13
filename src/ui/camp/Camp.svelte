@@ -14,6 +14,7 @@
   import { SUBJ } from '../../engine/subject';
   const wishLeft: (w: Record<string, true> | undefined, m: Record<string, true> | undefined) => number = SUBJ.cards?.wishLeft ?? (() => 0);
   import MyHero from './MyHero.svelte';
+  import FirstHero from './FirstHero.svelte';
   import { isEnd } from '../../raid/raid';
   import { CAMP, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
   import CampProp from './CampProp.svelte';
@@ -122,6 +123,8 @@
   const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   let sheet = $state<string | null>(null);
+  // 🧙 첫 용사 고르기 = 방금 가입한 폰의 첫 캠프에서 한 번 (App 이 가입 때 표시 · 📜 2026-11-13 밤 ❓#1 = A)
+  let hero0 = $state((() => { try { return sessionStorage.getItem('citadel-hero0') === '1'; } catch { return false; } })());
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
@@ -280,6 +283,8 @@
     {/if}
   </Sheet>
 {/if}
+
+{#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
 <style>
   /* 📋 게시판 던전 = 파란 포털 빛 (게시판 그림이 오기 전 자리 · 평소 불씨) */
