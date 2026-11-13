@@ -13,13 +13,16 @@
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import { clock } from '../clock.svelte';
+  import { CAMP_PORTAL } from '../manifest';
+  import { sfx } from '../sound.svelte';
+  import HeroSprite from '../camp/HeroSprite.svelte';
 
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
   //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
   type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
-  const { L0, uid, num, nick, cls, team = null, onend, onquit }: {
-    L0: LessonPack; uid: string; num: number; nick: string; cls: string;
+  const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
+    L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
     team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string> } | null;
     onend: (r: End) => void; onquit: () => void;
   } = $props();
@@ -101,6 +104,8 @@
     miss: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s || s.kind !== 'monster' || isChain(L, RR, s.id)) return; const r = plainRecord(L, RR, s.id, uid); if (r.canRetry || !r.submitted) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map((q) => (q.type === 'multi' ? [] : -999)) as never); },
   };
   (globalThis as unknown as { __board?: typeof hook }).__board = hook;
+  // 🌀 출발 = 파란 포털이 확 열림(0.6 → 1.0 · 0.4초 · 소용돌이 · 바닥 빛 고리 · 「쉬잉」) → 용사가 뛰어듦 → 게시판 던전 (1.1초 · 동작 줄이기 = 크기만)
+  let warp = $state(true); sfx('wind', 0.8); setTimeout(() => (warp = false), 1100);
   untrack(() => busy.n++); // 진행 중 = 새 판 저절로 새로 고침 안 함 (#38)
   onDestroy(() => { untrack(() => busy.n--); clearInterval(drive); lr.stop(); });
   // ── 시간 · 멈춤 ──
@@ -133,6 +138,7 @@
   const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
 </script>
 
+{#if warp}<div class="warp" aria-hidden="true" data-k="warp"><i class="wring"></i><i class="wp" style="background-image:url({CAMP_PORTAL.src})"></i><span class="whero"><HeroSprite id={hero} scale={2} /></span></div>{/if}
 <div class="run">
   <div class="tline" aria-label="남은 시간 {mmss(leftMs)}"><i style:width="{meta?.limit ? (leftMs / meta.limit) * 100 : 100}%"></i></div>
   <button type="button" class="quit" aria-label="그만하기" onclick={onquit}>‹</button>
@@ -189,4 +195,14 @@
   .who { display: flex; flex-direction: column; gap: 6px; }
   .who button { min-height: 56px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 0 14px; }
   .who button:disabled { opacity: 0.45; } .who small { font-size: 12.5px; color: var(--text-2); }
+  .warp { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: radial-gradient(circle at 50% 55%, rgba(30, 60, 140, 0.55), rgba(5, 8, 20, 0.92) 70%); animation: wfade 1.1s ease-in forwards; pointer-events: none; }
+  .wp { grid-area: 1 / 1; width: 46vmin; aspect-ratio: 200 / 300; background-size: 100% 100%; image-rendering: pixelated; animation: wopen 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both, wspin 0.7s 0.4s linear; filter: drop-shadow(0 0 18px rgba(110, 190, 255, 0.9)); }
+  .wring { grid-area: 1 / 1; align-self: start; margin-top: calc(50vh + 27vmin); width: 52vmin; aspect-ratio: 3 / 1; border-radius: 50%; border: 4px solid rgba(130, 205, 255, 0.95); box-shadow: 0 0 18px rgba(130, 205, 255, 0.9); animation: wring 0.8s ease-out both; }
+  .whero { grid-area: 1 / 1; align-self: start; margin-top: calc(50vh + 30vmin); animation: wjump 0.7s 0.35s cubic-bezier(0.5, 0, 0.8, 0.4) both; }
+  @keyframes wopen { from { transform: scale(0.6) rotate(-50deg); } to { transform: scale(1) rotate(0); } }
+  @keyframes wspin { 50% { transform: scale(1.06) rotate(6deg); } }
+  @keyframes wring { from { transform: translateY(-50%) scale(0.2); opacity: 1; } to { transform: translateY(-50%) scale(1.3); opacity: 0; } }
+  @keyframes wjump { 0% { transform: none; opacity: 1; } 40% { transform: translateY(-18vmin) scale(1.05); } 100% { transform: translateY(-34vmin) scale(0.15); opacity: 0; } }
+  @keyframes wfade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .wp, .wring, .whero { animation: none; } .wring { display: none; } }
 </style>

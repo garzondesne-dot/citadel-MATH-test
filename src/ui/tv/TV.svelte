@@ -8,7 +8,10 @@
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
   import { liveRoom, liveValue } from '../room.svelte';
-  import { CAMP, dungeonOf } from '../manifest';
+  import { CAMP, CAMP_PROPS, dungeonOf, propPos } from '../manifest';
+  import CampProp from '../camp/CampProp.svelte';
+  import { portalOf } from '../camp/portal.svelte';
+  import { feat } from '../../school/features.svelte';
   import { useMe } from '../../store/me.svelte';
   import Sprite from '../Sprite.svelte';
   import DemoPhone from './DemoPhone.svelte';
@@ -165,8 +168,13 @@
   const tline = $derived(view !== 'camp' && view !== 'lobby' && started && closeAt && left != null ? { p: Math.max(0, Math.min(1, (now - started) / (closeAt - started))), red: !!door || left <= 5 * 60e3 } : null);
   const restLeft = $derived(R?.state.rest ? Math.max(0, R.state.rest.at + R.state.rest.min * 60e3 - now) : 0);
   const mmss = (ms: number) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-  // 물건 이름표 (늘 보임 · 캠프 그림 안 % 자리) — 열린 것 한 줄 = 복습 유도
-  const OBJ = $derived([['🏰 성채던전', SUBJ.camp.castleSub, 50, 21], ['🌀 차원문', R && !R.state.closed ? `${L.no}차시 던전 · 열림` : `${L.no}차시 던전`, 85, 50], ['📮 우편함', '', 42, 60], ['📋 게시판', '게시판 던전', 72, 72], ['⚒ 모루', SUBJ.camp.anvilSub, 16, 84], ['🔥 모닥불', '', 52, 78]] as const);
+  // 🏕 교사 캠프 = 학생 캠프와 같은 자리표(manifest CAMP_PROPS · 🔨 「캠프라는 캠프는 모두 지침대로」) · 물건 그림 + 바로 아래 이름표(늘 보임) · 꺼진 기능 = 그 자리만 비움
+  const PNAME: Record<string, string> = { anvil: '⚒ 모루', scare: '🎯 허수아비', dummy: '📋 게시판', mail: '📮 우편함' };
+  const tvProps = $derived(CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)));
+  const zoneLab = (k: string) => { const z = CAMP.zones[k]!; return { x: ((z[0] + z[2]) / 2 / CAMP.size[0]) * 100, y: ((k === 'tent' ? z[1] + 40 : z[3]) / CAMP.size[1]) * 100 }; }; // 출제 공방 = 텐트 위 (학생 캠프와 같게)
+  const ZONES = $derived([['castle', '🏰 성채던전', feat('citadel')], ['tent', '✏ 출제 공방', feat('author')], ['gate', R && !R.state.closed ? `🌀 ${L.no}차시 던전 · 열림` : `🌀 ${L.no}차시 던전`, true]].filter((z) => z[2]) as [string, string, boolean][]);
+  const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
+  let fireF = $state(0); const fireT = setInterval(() => (fireF = (fireF + 1) % CAMP.fire.frames), CAMP.fire.ms); onDestroy(() => clearInterval(fireT));
   let hk = $state(1);
   const fit = () => (hk = Math.min(1.3, (innerHeight * 0.86) / 760));
   const [CW, CH] = CAMP.size;
@@ -218,7 +226,9 @@
       <img class="obj" alt="" src={CAMP.tent.src} style="left:{pct(CAMP.tent.x, CW)};top:{pct(CAMP.tent.y, CH)};width:{pct(CAMP.tent.w, CW)}" />
       <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
       <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} row={8} aura={M.me.enh} scale={2} /></span>
-      {#each OBJ as [t, s, x, y] (t)}<span class="ob" style:left="{x}%" style:top="{y}%"><b>{t}</b>{#if s}<small>{s}</small>{/if}</span>{/each}
+      <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
+      {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b></span></span>{/each}
+      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b></span>{/each}
       <button type="button" class="ob me2" style:left="{CAMP.hero.left + 4}%" style:top="{100 - CAMP.hero.bottom - 2}%" onclick={() => { fit(); hero = true; }}><b>🧙 내 용사</b><small>용사 바꾸기</small></button>
     </div>
     <div class="campqr">
@@ -386,6 +396,8 @@
   .campv .me { position: absolute; z-index: 1; transform: translateX(-50%); }
   .ob.me2 { cursor: pointer; border-color: #6cc6ff; color: #fff; font: inherit; } .ob.me2 small { color: #6cc6ff; }
   .campv .gate { opacity: 0; } .campv .gate.on { opacity: 1; }
+  .tprop, .tfire { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
+  .ob.blw { left: 50%; top: 100%; transform: translate(-50%, 2px); } .ob.zl { transform: translate(-50%, -110%); }
   .ob { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 0.5cqh 0.9cqw; border-radius: 1.4cqh; background: rgba(10, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.22); white-space: nowrap; box-shadow: 0 3px 0 #000; }
   .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { display: none; } /* TV 이름표 = 절반 · 한 줄 · 아이콘 + 이름만 */
   .ob { padding: 0.25cqh 0.5cqw !important; border-radius: 0.8cqh !important; box-shadow: 0 2px 0 #000 !important; }

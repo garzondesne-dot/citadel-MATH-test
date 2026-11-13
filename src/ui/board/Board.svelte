@@ -163,10 +163,10 @@
     {/if}
   </Sheet>
 {/if}
-{#if run}<BoardRun L0={run} {uid} {num} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
+{#if run}<BoardRun L0={run} {uid} {num} hero={me.hero} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
-  {#if L}<BoardRun L0={L} {uid} {num} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
+  {#if L}<BoardRun L0={L} {uid} {num} hero={me.hero} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}
 
 <style>

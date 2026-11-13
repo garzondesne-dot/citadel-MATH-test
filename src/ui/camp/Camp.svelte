@@ -15,7 +15,9 @@
   const wishLeft: (w: Record<string, true> | undefined, m: Record<string, true> | undefined) => number = SUBJ.cards?.wishLeft ?? (() => 0);
   import MyHero from './MyHero.svelte';
   import { isEnd } from '../../raid/raid';
-  import { CAMP, HERO, heroGeo, heroNudge, heroUrl } from '../manifest';
+  import { CAMP, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
+  import CampProp from './CampProp.svelte';
+  import { portalOf } from './portal.svelte';
   import { useMe } from '../../store/me.svelte';
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
@@ -69,6 +71,9 @@
   let mailToast = $state('');
   const mu = untrack(() => pupil)?.uid ?? '';
   const mv = untrack(() => liveValue<Record<string, Mail>>(S, mu ? `mail/${mu}` : 'mail/_none'));
+  // 🌀 게시판 포털 (TV 교사 캠프와 같은 규칙 · portal.svelte.ts)
+  const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
+  if (typeof window !== 'undefined') (window as { __portalBurst?: () => void }).__portalBurst = () => portal.burst();
   onDestroy(mv.stop);
   $effect(() => {
     const fresh = Object.entries(mv.v.val || {}).filter(([, x]) => x && !x.got).sort((a, b) => a[1].at - b[1].at);
@@ -138,8 +143,6 @@
   const [W, H] = CAMP.size;
   const zoneStyle = (k: string) => { const z = CAMP.zones[k] as [number, number, number, number]; return `left:${pct(z[0], W)};top:${pct(z[1], H)};width:${pct(z[2] - z[0], W)};height:${pct(z[3] - z[1], H)}`; };
   const objStyle = (o: { x: number; y: number; w: number }) => `left:${pct(o.x, W)};top:${pct(o.y, H)};width:${pct(o.w, W)}`;
-  const propStyle = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
-  const sheetBg = (src: string, cols: number, col: number) => `background-image:url(${src});background-size:${cols * 100}% 100%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% 0`;
   const HS = 1; // 정보판 용사 = 칸 80 × 64 그대로(정수 배율)
   // 🚪 코드로 들어가기 (#138 · 정식 codeGate): 6자리 · 열려 있는 방이어야 함
   let codeIn = $state(''), codeErr = $state('');
@@ -163,7 +166,7 @@
     <img class="obj lit" class:on={sheet === 'castle'} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
     <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
-    <i class="sp fire" style="{propStyle(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
+    <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, HERO.sitRow).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
     {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
@@ -172,10 +175,11 @@
         <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
       </button>
     {/each}
-    {#each ([['anvil', CAMP.anvil, 3], ['scare', CAMP.scare, 2], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const).filter(([k]) => (k !== 'anvil' || feat('forge')) && (k !== 'scare' || feat('scarecrow')) && (k !== 'dummy' || feat('board'))) as [k, p, cols] (k)}
+    {#each CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)) as p (p.k)}
+      {@const k = p.k}
       {@const st = lab(k)}
-      <button type="button" class="prop" style={propStyle(p)} aria-label={NAME[k]} onclick={(e) => tap(k, e)}>
-        {#if k === 'dummy'}<i class="img portal" style="aspect-ratio:96 / 96" aria-hidden="true"><b>📋</b></i>{:else}<i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>{/if}
+      <button type="button" class="prop" style={propPos(p)} aria-label={NAME[k]} data-prop={k} onclick={(e) => tap(k, e)}>
+        <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} />
         <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>
       </button>
     {/each}
@@ -278,9 +282,6 @@
 
 <style>
   /* 📋 게시판 던전 = 파란 포털 빛 (게시판 그림이 오기 전 자리 · 평소 불씨) */
-  .img.portal { display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, rgba(140, 200, 255, 0.85) 0 18%, rgba(70, 120, 255, 0.45) 40%, transparent 70%); animation: pglow 2.4s ease-in-out infinite alternate; }
-  .img.portal b { font-size: 26px; filter: drop-shadow(0 2px 2px #000); }
-  @keyframes pglow { to { filter: brightness(1.25); } }
   .outq { margin: 0; font-size: 16px; color: var(--text-2); }
   .out:disabled, .mi:disabled { opacity: 0.45; }
   .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; display: grid; place-items: center; text-decoration: none; }
@@ -311,10 +312,10 @@
   .fire { filter: drop-shadow(0 0 18px #ff9a2a); }
   .zone { position: absolute; z-index: 5; background: none; border: 0; padding: 0; }
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
-  .prop .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; transition: transform 0.12s ease-out; transform-origin: 50% 100%; }
-  .prop:active .img { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
+  .prop:active :global(.img) { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
   .label { position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%); white-space: nowrap; height: 26px; padding: 0 9px; border-radius: 13px; background: var(--surface-2); color: var(--text); font: 700 var(--fs-small) var(--font); display: flex; align-items: center; gap: var(--s1); box-shadow: 0 3px 0 #000; z-index: 5; transition: opacity var(--t); }
   .zone .label { bottom: 4px; transform: translate(-50%, 0); }
+  .zone[aria-label='출제 공방'] .label { bottom: auto; top: 0; transform: translate(-50%, -60%); } /* 출제 공방 이름표 = 텐트 위 (아래 빈 땅 = 🎯 허수아비 자리 · 캠프 자리표) */
   .label.new { background: #f2f3f5; color: #14161b; }
   .label.gold { background: var(--accent); color: var(--on-accent); animation: glow 1.6s ease-in-out infinite; }
   .label.dim { opacity: 0.7; color: var(--text-2); }

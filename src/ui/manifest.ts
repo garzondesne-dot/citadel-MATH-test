@@ -96,13 +96,27 @@ export const CAMP = {
   gateOn: { src: A('camp-gate-on-v1.webp'), x: 820, y: 520, w: 362 },
   zones: { castle: [300, 165, 900, 464], tent: [118, 668, 448, 888], gate: [915, 575, 1095, 885] } as Record<string, [number, number, number, number]>,
   fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45, bottom: 17, width: 15 },
-  anvil: { src: A('anvil-v1.webp'), cols: 3, left: 6, bottom: 8, width: 19 },
-  dummy: { src: A('camp-dummy-v2.webp'), cols: 2, left: 67, bottom: 19, width: 11 },
-  // 🎯 허수아비 (📜 2026-11-13 밤 쪼갬 · 자리표 = 모루와 ✏ 출제 공방 사이) · 옛 허수아비 자리(dummy) = 📋 게시판 던전(게시판 그림 + 파란 포털 · 그림 오기 전 = 포털 빛만)
-  scare: { src: A('camp-dummy-v2.webp'), cols: 2, left: 19, bottom: 27, width: 10 },
-  mail: { src: A('camp-mail-v2.webp'), cols: 2, left: 37, bottom: 33, width: 10 },
+  // ⚠ 물건 자리는 아래 CAMP_PROPS 한 곳 (학생 캠프 · 교사 「나」 내 캠프 · TV 교사 캠프 · 테스트 모드가 모두 이 표를 읽음)
   hero: { left: 30, bottom: 15 },
 };
+
+// 🏕 캠프 물건 자리표 = 한 곳 (🔨 2026-11-13 밤 선생님 「캠프라는 캠프는 모두 지침대로 배치해」 · V1-DESIGN 4-1 🏕 캠프 자리표)
+//   자리 = 캠프 그림(1182 × 1330) 안 % (left · bottom · width) → 폰 · TV 크기가 달라도 같은 비율 · ⚙ 스위치로 꺼진 물건 = 그 자리만 비움(다른 물건 안 움직임)
+//   🎯 허수아비 = ⚒ 모루와 ✏ 출제 공방(텐트) 사이 바닥 · 📋 게시판 던전(k = 'dummy' · 옛 허수아비 자리) = 게시판 그림 2칸(① 평소 ② 모집 중) + 오른쪽 옆 바닥 파란 포털
+export type CampPropKey = 'anvil' | 'scare' | 'dummy' | 'mail';
+export interface CampProp { k: CampPropKey; src: string; cols: number; aspect: string; left: number; bottom: number; width: number; feat?: 'forge' | 'scarecrow' | 'board' }
+export const CAMP_PROPS: CampProp[] = [
+  { k: 'anvil', src: A('anvil-v1.webp'), cols: 3, aspect: '362 / 362', left: 6, bottom: 8, width: 19, feat: 'forge' },
+  { k: 'scare', src: A('camp-dummy-v2.webp'), cols: 2, aspect: '96 / 96', left: 24, bottom: 29.5, width: 9, feat: 'scarecrow' },
+  { k: 'dummy', src: A('obj-board-v1.webp'), cols: 2, aspect: '192 / 192', left: 66, bottom: 19, width: 13, feat: 'board' },
+  { k: 'mail', src: A('camp-mail-v2.webp'), cols: 2, aspect: '96 / 96', left: 42, bottom: 33, width: 10 },
+];
+/** 🌀 파란 포털 (정식 dportal-bonus · 게시판 오른쪽 옆 바닥 · 게시판보다 조금 작게) · 크기 = 평소 0.15(불씨) · 모집 0.6(숨쉬기 2초) · 출발 1.0(0.4초 · 소용돌이) */
+export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 79.5, bottom: 19, width: 8, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.6, open: 1 } };
+export const campProp = (k: CampPropKey) => CAMP_PROPS.find((p) => p.k === k)!;
+export const propPos = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
+/** 그림 칸 한 장 (cols 칸 중 col 번째) */
+export const cellBg = (src: string, cols: number, col: number) => `background-image:url(${src});background-size:${cols * 100}% 100%;background-position:${cols > 1 ? (col / (cols - 1)) * 100 : 0}% 0`;
 
 // 🏕 쉼터 놀이 그림 · 배경음 (#142-2 · 정식 manifest fun · td · bgm 에서 옮김) — 교실 TV 에서만
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp' };
