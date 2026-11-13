@@ -37,6 +37,10 @@ export interface Subject {
   titles: { after: string; list: { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[] };
   /** ⭕ 쉼터 수학 OX 문장 (차시 · 문장 · 참 · 한 줄 해설) — 없으면 OX 놀이 안 보임 */
   funOx?: { no: number; t: string; a: boolean; why: string }[];
+  /** 💥 던전 특수 공격 = 차시 번호 → 공격 id (그 차시 보스 셋째 공격 · ⚙ 스위치 틀 · 과목 팩으로 옮김) */
+  specialAttacks?: Record<string, string>;
+  /** ⚡ 파지직 공격이 잠깐 바꾸는 기호 (그 과목 기호 · 없으면 숫자만) */
+  glitchSyms?: string;
   /** 스킬 이름 (용사 스킬 도감 · 엔진 기본 이름 대신) — 과목 팩 subject.json 의 skillNames */
   skillNames?: Record<string, string>;
   /** 캠프 · TV 이름표 글자 */

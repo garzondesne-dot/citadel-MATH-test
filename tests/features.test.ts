@@ -27,3 +27,13 @@ describe('⚙ 스위치 틀', () => {
     S.set('school/ai/on', true); expect(stateOf(S, null, 'photo')).toBe('on');
   });
 });
+import { bossAttacks } from '../src/raid/attacks';
+import { packOf } from '../src/engine/packs';
+import { SUBJ } from '../src/engine/subject';
+describe('📚 과목 팩으로 옮긴 것 (⚙ 스위치 틀)', () => {
+  it('던전 특수 공격 = 팩 specialAttacks[차시 번호] · 엔진엔 차시 번호 없음', () => {
+    const L = packOf('set-06')!; expect(bossAttacks(L)).not.toContain('mirror');
+    expect(bossAttacks({ ...L, no: 8 })).toContain('mirror'); expect(bossAttacks({ ...L, no: 9 })).toContain('lock'); expect(bossAttacks({ ...L, no: 10 })).toContain('scale');
+  });
+  it('파지직 기호 = 팩 glitchSyms', () => { expect(SUBJ.glitchSyms).toContain('∪'); });
+});

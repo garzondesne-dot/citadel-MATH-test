@@ -4,12 +4,13 @@
 //   lockInput = 효과 동안 답 입력을 막는가 (멈춤 · 파지직) · gesture = 손풀기 몸짓(있으면 일찍 풀림)
 //   새 공격(#161) = 여기에 한 줄 + 화면 효과(ui/battle/AttackFx.svelte) 한 갈래
 import type { LessonPack, Step } from '../model/types';
+import { SUBJ } from '../engine/subject';
 
 //   효과 시간 = attackMs (모두 3초 · 분노 4초 · 2026-11-13) · ms 칸은 옛 기록(쓰지 않음)
 //   elem = 속성(#161 · 정식 상태이상 8 = 장면 띠 몬스터 → 용사 이펙트 · 용사 머리 위 상태 그림 · 속성 소리) · special = 던전 특수(그 차시 보스 셋째 공격)
 //   손풀기 몸짓 = 겹치지 않게 하나씩: rub 문지르기 · tap4 톡톡 · hold 꾹 · swipe 좌우 쓸기 · dtap 두 번 톡 · touch 손가락 대기(닿은 곳만 보임 · 일찍 안 끝남) · drag 끌어다 꽂기
 export type Elem = 'stun' | 'freeze' | 'bind' | 'burn' | 'poison' | 'shock' | 'confuse' | 'sleep';
-export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; elem: Elem; gesture?: 'rub' | 'tap4' | 'hold' | 'swipe' | 'dtap' | 'touch' | 'drag'; ms?: number; special?: number }
+export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; elem: Elem; gesture?: 'rub' | 'tap4' | 'hold' | 'swipe' | 'dtap' | 'touch' | 'drag'; ms?: number }
 export const ATTACKS: Record<string, AttackDef> = {
   pause: { id: 'pause', name: '멈춤', icon: '⏸', tag: '💥 몬스터 공격!', lockInput: true, elem: 'stun' },
   glitch: { id: 'glitch', name: '파지직', icon: '⚡', tag: '⚡ 파지직 공격!', lockInput: true, elem: 'shock' },
@@ -25,9 +26,9 @@ export const ATTACKS: Record<string, AttackDef> = {
   sleep: { ms: 3000, id: 'sleep', name: '수면', icon: '💤', tag: '💤 수면 공격!', lockInput: false, gesture: 'dtap', elem: 'sleep' },
   dark: { ms: 3000, id: 'dark', name: '어둠', icon: '🌑', tag: '🌑 어둠 공격!', lockInput: false, gesture: 'touch', elem: 'confuse' },
   // #161 던전 특수 3 (그 차시 보스만 · 짝 표 둘 다음 셋째)
-  mirror: { id: 'mirror', name: '반사', icon: '🪞', tag: '🪞 반사 공격!', lockInput: false, elem: 'confuse', special: 8 },
-  lock: { ms: 3000, id: 'lock', name: '자물쇠', icon: '🔒', tag: '🔒 자물쇠 공격!', lockInput: false, gesture: 'drag', elem: 'bind', special: 9 },
-  scale: { id: 'scale', name: '저울', icon: '⚖️', tag: '⚖️ 저울 공격!', lockInput: false, elem: 'stun', special: 10 },
+  mirror: { id: 'mirror', name: '반사', icon: '🪞', tag: '🪞 반사 공격!', lockInput: false, elem: 'confuse' },
+  lock: { ms: 3000, id: 'lock', name: '자물쇠', icon: '🔒', tag: '🔒 자물쇠 공격!', lockInput: false, gesture: 'drag', elem: 'bind' },
+  scale: { id: 'scale', name: '저울', icon: '⚖️', tag: '⚖️ 저울 공격!', lockInput: false, elem: 'stun' },
 };
 /** 갤러리 · 시험 순서 (지금 6 → 새 6 → 특수 3) */
 export const ATTACK_IDS = Object.keys(ATTACKS);
@@ -38,9 +39,10 @@ export const attackMs = (_a?: AttackDef, _lockSec?: number, strong = false) => (
 export const attackStrong = (hp: { left: number; max: number } | null | undefined) => !!hp && hp.max > 0 && hp.left > 0 && hp.left / hp.max < 0.5;
 export const attackDef = (id: string | undefined) => ATTACKS[id || ''] ?? ATTACKS.pause!;
 /** 보스 공격 목록 = 짝 표 둘 + 그 차시 던전 특수(있으면) · 돌아가며 */
+//   던전 특수 = 과목 팩 SUBJ.specialAttacks[차시 번호] (⚙ 스위치 틀 · 차시 번호를 엔진에 두지 않음)
 export function bossAttacks(L: LessonPack): string[] {
-  const sp = Object.values(ATTACKS).find((a) => a.special === L.no);
-  return [...(L.boss?.attack || []), ...(sp ? [sp.id] : [])];
+  const sp = SUBJ.specialAttacks?.[String(L.no)];
+  return [...(L.boss?.attack || []), ...(sp && ATTACKS[sp] ? [sp] : [])];
 }
 /** 이 단계 · k번째 공격의 종류 (보스 = 목록을 차례로) */
 export function attackOf(L: LessonPack, step: Step | null, k: number): AttackDef {

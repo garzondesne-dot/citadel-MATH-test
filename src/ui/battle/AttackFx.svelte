@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { SUBJ } from "../../engine/subject";
   import { onDestroy, onMount } from 'svelte';
   // 💥 몬스터 공격 화면 효과 (#152 · raid/attacks.ts 등록 표) — 문제 카드 묶음(.qwrap) 위에만 · 레이아웃 0(덮개 · transform) · 문제 · 보기 · 고른 답은 안 건드림
   //   pause = 덮개 + 줄어드는 원 · glitch = 문제 글 숫자 · 기호가 2~3번 잠깐 바뀌었다 원래대로 + 색 갈라짐 · fog = 안개(문지르면 닦임)
@@ -15,14 +16,14 @@
   onDestroy(() => timers.forEach(clearTimeout));
 
   // ⚡ 파지직: 문제 글(보기 · 칩 · 단추 · 답 칸 밖)의 글자 노드만 잠깐 바꿨다가 원래 값으로 (그 사이 화면이 글을 바꿨으면 건드리지 않음)
-  const NOISE = '▓※#', DIG = '0123456789';
+  const NOISE = '▓※#', DIG = '0123456789', SYMS = SUBJ.glitchSyms ?? ''; // 바꾸는 기호 = 과목 팩 (⚙ 스위치 틀)
   function glitch() {
     const q = host?.closest('.qwrap'); if (!q) return;
     const nodes: Text[] = []; const w = document.createTreeWalker(q, NodeFilter.SHOW_TEXT);
     for (let n = w.nextNode(); n; n = w.nextNode()) { const el = n.parentElement; if (!el || el.closest('button, input, textarea, .row, .runepad, .gfx, [role="button"]:not(.sy)') || !n.nodeValue?.trim()) continue; nodes.push(n as Text); }
     const flick = () => {
       const saved = nodes.map((n) => n.nodeValue ?? '');
-      const fake = saved.map((s) => [...s].map((ch) => (/\d/.test(ch) ? DIG[(Number(ch) + 3 + Math.floor(Math.random() * 6)) % 10] : /[∪∩⊂⊄∈∉=<>+\-×÷ᶜ]/.test(ch) ? NOISE[Math.floor(Math.random() * 3)] : ch)).join(''));
+      const fake = saved.map((s) => [...s].map((ch) => (/\d/.test(ch) ? DIG[(Number(ch) + 3 + Math.floor(Math.random() * 6)) % 10] : SYMS.includes(ch) ? NOISE[Math.floor(Math.random() * 3)] : ch)).join(''));
       nodes.forEach((n, i) => { n.nodeValue = fake[i]!; });
       later(110, () => nodes.forEach((n, i) => { if (n.nodeValue === fake[i]) n.nodeValue = saved[i]!; }));
     };
