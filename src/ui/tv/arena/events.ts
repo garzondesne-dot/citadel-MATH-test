@@ -3,14 +3,15 @@
 import type { LessonPack, Room, Step } from '../../../model/types';
 import { bossTries, chainRecord, chainSubs, isChain, plainRecord } from '../../../raid/raid';
 
-export interface Snap { n: number; dmg: number; prac: boolean }
-export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice' }
+export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean }
+/** perfect = 이번 공격으로 그 학생이 다 맞힘(🎆 숫자 크고 노랗게) */
+export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; perfect?: boolean }
 
 export function snapOf(L: LessonPack, R: Room, step: Step, u: string): Snap {
   if (step.kind === 'boss') { const t = bossTries(L, R, u); return { n: t.length, dmg: new Set(t.filter((x) => x.ok).map((x) => x.i)).size, prac: false }; }
   if (step.kind !== 'monster' || !L.monsters[step.id]) return { n: 0, dmg: 0, prac: false };
-  if (isChain(L, R, step.id)) { const r = chainRecord(L, R, step.id, u); return { n: chainSubs(R, step.id, u).length, dmg: r.stage, prac: r.practice }; }
-  const r = plainRecord(L, R, step.id, u); return { n: r.tries.length, dmg: r.best, prac: r.practice };
+  if (isChain(L, R, step.id)) { const r = chainRecord(L, R, step.id, u); return { n: chainSubs(R, step.id, u).length, dmg: r.stage, prac: r.practice, perf: r.practice }; }
+  const r = plainRecord(L, R, step.id, u); return { n: r.tries.length, dmg: r.best, prac: r.practice, perf: r.perfectAt >= 0 };
 }
 
 /** 지난 snap 과 비교한 공격 사건 (한 학생이 한 번에 여러 번 냈어도 사건 하나) */
@@ -20,7 +21,7 @@ export function hitsOf(was: Record<string, Snap>, now: Record<string, Snap>): Hi
     const b = was[u] || { n: 0, dmg: 0, prac: false };
     if (a.n <= b.n) continue;
     const d = Math.max(0, a.dmg - b.dmg);
-    out.push({ u, dmg: d, kind: d > 0 ? 'hit' : a.prac ? 'practice' : 'miss' });
+    out.push({ u, dmg: d, kind: d > 0 ? 'hit' : a.prac ? 'practice' : 'miss', ...(d > 0 && a.perf && !b.perf ? { perfect: true } : {}) });
   }
   return out;
 }

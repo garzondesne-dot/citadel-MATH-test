@@ -60,7 +60,7 @@
   function domFreeze(ms: number) { iceDom = 1; setTimeout(() => (iceDom = 2), ms); setTimeout(() => (iceDom = 0), ms + 650); }
   // ── 공격 사건 (단계가 바뀌면 지난 것은 다시 보이지 않음) ──
   let seen: Record<string, Snap> = {}, seenKey = '', wasDown = false, qT: ReturnType<typeof setTimeout> | undefined;
-  const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean }[] = [];
+  const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean; perfect?: boolean }[] = [];
   let domFx = $state<{ k: number; text: string; x: number; y: number; cls: string }[]>([]), domBan = $state(''), fk = 0, lunge = $state<Record<string, boolean>>({});
   function play() {
     if (qT) return;
@@ -88,7 +88,7 @@
     else if (step.kind === 'monster' && L.monsters[step.id] && !isChain(L, R, step.id)) { const r = plainRecord(L, R, step.id, u); ok = r.perfectAt === 0 && r.tries.length === 1; }
     if (ok) ulSeen.add(key); return ok;
   }
-  function tvAttack(h: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean }): boolean {
+  function tvAttack(h: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean; perfect?: boolean }): boolean {
     const k = ids.indexOf(h.u), sl = slots[k], lay = fxLayer; if (!sl || !lay || !step) return false;
     const p = R.players?.[h.u], hero = p?.hero ?? 0, fxk = h.fx || p?.fx || ladder(hero)[0]!, ult = h.ult || (h.kind === 'hit' && ultOf(h.u, fxk, hero));
     atkPreload(hero, fxk); if (ult) preloadFaces();
@@ -111,7 +111,7 @@
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97 }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
     void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
-      onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit'); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
+      onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; });
     return true;
   }
@@ -132,7 +132,10 @@
   if (typeof location !== 'undefined' && /[?&]perf\b/.test(location.search)) setTimeout(() => void bench(), 3000);
   (globalThis as { __slash?: unknown }).__slash = { stats: () => A?.slashStats(), cfg: (c: { fancy?: boolean; level?: number | null }) => A?.slashCfg(c) };
   // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
-  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult }); else { queue.push({ u, dmg, kind, fx, ult }); play(); } };
+  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean, perfect?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now, perfect) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult, perfect }); else { queue.push({ u, dmg, kind, fx, ult, perfect }); play(); } };
+  (globalThis as { __tvKill?: () => void; __tvJuice?: (on?: boolean) => boolean }).__tvKill = () => A?.armKill(); // 화면 시험 고리
+  (globalThis as { __tvJuice?: (on?: boolean) => boolean; __tvJuiceStats?: () => unknown }).__tvJuice = (on) => A?.juice(on) ?? false;
+  (globalThis as { __tvJuiceStats?: () => unknown }).__tvJuiceStats = () => A?.juiceStats();
   // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음
   let guardBusy = false;
   async function tvGuard(us: string[]) {
@@ -173,6 +176,7 @@
       if (hs.length) { queue.push(...hs); play(); }
       const d = !!hp?.down;
       if (d && !wasDown) {
+        A?.armKill(); // 🎆 마지막 일격 = 느리게 · 충격파 · 조각
         const text = boss ? '🎉 보스 격파! 모두 함께 이겼다!' : '⚔ 몬스터 격파!';
         setTimeout(() => { if (A) A.banner(text); else domBan = text; }, 350 * (queue.length + 1));
         setTimeout(() => ids.forEach((u, k) => { const x = xpOf(L, R, st0, u); if (!x) return; setTimeout(() => { if (A) A.exp(u, `+${x} EXP`); else { const sl = partyLayout(ids.length, W, H, split)[k]; if (sl) domPop(`+${x} EXP`, sl.x, sl.y - 64 * sl.s, 'exp'); } }, (k % 6) * 120); }), 350 * (queue.length + 1) + 600);

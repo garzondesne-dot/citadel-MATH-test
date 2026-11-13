@@ -2,7 +2,8 @@
 //   이 파일은 TV(?role=hall) 에서만 import() 로 불림 → 학생 폰 번들에 PixiJS 가 들어가지 않음(시험이 확인)
 //   층 = 그림자 · 몬스터 · 체력 막대 · 용사단 · ✨ 이펙트 층(fx · 공격 · 데미지 · +EXP · 격파 · #152 · #161 몬스터 공격 이펙트가 여기에 붙음)
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
-import { Application, Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
+import { Application, Assets, ColorMatrixFilter, Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
+import { ShockwaveFilter } from 'pixi-filters';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
 import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
@@ -16,7 +17,13 @@ export interface Arena {
   hit(u: string, dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
   /** ⚔ 정식 attack.js 를 DOM 층이 그릴 때: 그 용사 그림 숨김 · 몬스터만 반응(깜빡 · 흔들 · 숫자 · 베기 선 없음) */
   heroVisible(u: string, on: boolean): void;
-  monHit(dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
+  monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o?: HitO): void;
+  /** 🎆 격파 예약: 다음 맞힘(1.5초 안 · 없으면 그때) = 마지막 일격 → 느리게 0.5초 · 충격파 · 조각 */
+  armKill(): void;
+  /** 🎆 화려한 연출 켬 · 끔 (🧩 스위치 · 동작 줄이기면 끔) */
+  juice(on?: boolean): boolean;
+  /** 시험: 마지막 격파 조각 수 · 가장 멀리 간 거리(px) · 충격파 붙었나 · 흔들림 최고 단계 */
+  juiceStats(): { shards: number; far: number; wave: boolean; shake: number; stops: number };
   /** ⚔ 새 스킬 fx (시제품) · false = 못 받음 → 지금 띠 · 설정 · 상태(시험) */
   slash(o: SlashO, fall: () => void): boolean;
   slashCfg(c: { fancy?: boolean; level?: number | null }): void;
@@ -32,6 +39,20 @@ export interface Arena {
   destroy(): void;
 }
 
+/** 🎆 맞은 정도: perfect = 그 학생 다 맞힘(숫자 크고 노랗게) · ult = 필살기(흔들림 2단) */
+export type HitO = { perfect?: boolean; ult?: boolean };
+/** 🎆 화려한 연출 (🔨 TV 이펙트 첫 묶음 · 2026-11-13) — 숫자 표 하나 · 학생 폰 번들 0(이 파일은 TV 만)
+ *  히트 스톱 · 흰 번쩍 · 흔들림 3단계(감쇠) · 데미지 숫자 튀어오름 · 격파 = 충격파 고리 + 조각 + 마지막 일격 느리게 */
+export const JUICE = {
+  STOP_MS: 55, STOP_PERFECT_MS: 75, // ⏸ 히트 스톱 0.05~0.08초 (닿는 순간 몬스터 · 용사 트윈 멈춤)
+  FLASH_MS: 34, // ⚪ 흰 번쩍 = 1~2 프레임
+  SHAKE: [0, 0.004, 0.008, 0.014] as const, SHAKE_MS: [0, 180, 280, 460] as const, // 📳 0 작은 공격 · 1 강타(퍼펙트 · 3↑) · 2 필살기 · 3 격파 (화면 높이 비율 · 감쇠)
+  NUM_POP: 1.7, NUM_PERFECT: 1.45, // 🔢 튀어오름 처음 배율 · 퍼펙트 글자 배율(노랑)
+  SLOW_MS: 500, SLOW: 0.35, // 🐢 마지막 일격 0.5초 느리게
+  WAVE_MS: 300, SHARDS: 6, SHARD_MS: 900, // 💥 충격파 0.3초 안(번짐은 순간만) · 조각 6 × 6 · 0.9초
+};
+const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const juiceDefault = () => { if (reduceMotion()) return false; try { if (typeof location !== 'undefined' && /[?&]fancy=0\b/.test(location.search)) return false; return localStorage.getItem('citadel-fancy') !== '0'; } catch { return true; } };
 type Tween = { t0: number; ms: number; f: (p: number) => void; done?: () => void };
 const ease = (p: number) => 1 - (1 - p) * (1 - p);
 
@@ -59,12 +80,14 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
 
   // ── 트윈 · 애니메이션 ──
   const tweens = new Set<Tween>();
-  const tween = (ms: number, f: (p: number) => void, done?: () => void) => { tweens.add({ t0: performance.now(), ms, f, done }); };
+  // 🐢 가상 시계: 히트 스톱(0) · 느리게(0.35) 동안 트윈이 그만큼 늦게 흐름 · 실제 시간은 그대로
+  let vt = performance.now(), lastT = vt, scale = 1, stopUntil = 0, slowUntil = 0;
+  const tween = (ms: number, f: (p: number) => void, done?: () => void) => { tweens.add({ t0: vt, ms, f, done }); };
   let bob = 0, stoned = false, baseF: ColorMatrixFilter[] = [];
   const greyF = new ColorMatrixFilter(); greyF.greyscale(0.55, false);
   app.ticker.add(() => {
-    const t = performance.now();
-    for (const w of [...tweens]) { const p = Math.min(1, (t - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
+    const t = performance.now(); scale = t < stopUntil ? 0 : t < slowUntil ? JUICE.SLOW : 1; vt += (t - lastT) * scale; lastT = t;
+    for (const w of [...tweens]) { const p = Math.min(1, (vt - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
     if (t - heroT > 162) { heroT = t; heroF = (heroF + 1) % 8; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
   });
@@ -145,17 +168,55 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     // 몬스터 깜빡 · 흔들
     const m = monSp, mx = m.x;
     setTimeout(() => {
-      if (kind === 'hit') { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); slash(); }
-      else float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900);
+      void mx; monHit(dmg, kind); if (kind === 'hit') slash();
     }, 170);
   }
   function stone(on: boolean) { if (on === stoned) return; stoned = on; if (monSp) monSp.filters = on ? [...baseF, greyF] : baseF; }
   function heroVisible(u: string, on: boolean) { const v = heroes.get(u); if (v) v.c.visible = on; }
-  function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice') {
-    const m = monSp; if (!m) return; const mx = m.x;
-    if (kind === 'hit') { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); }
-    else float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900);
+  // 🎆 화려한 연출
+  const JS = { shards: 0, far: 0, wave: false, shake: 0, stops: 0 };
+  let fancy = juiceDefault(), killArm = 0, killT: ReturnType<typeof setTimeout> | undefined, shakeOn = false;
+  const whiteF = new ColorMatrixFilter(); whiteF.matrix = [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0];
+  function shake(lv: number) {
+    if (lv > JS.shake) JS.shake = lv; if (!lv || shakeOn) return; shakeOn = true; const a = H() * JUICE.SHAKE[lv]!, t0 = performance.now(), ms = JUICE.SHAKE_MS[lv]!;
+    const f = () => { const k = 1 - (performance.now() - t0) / ms; if (k <= 0) { root.x = root.y = 0; shakeOn = false; app.ticker.remove(f); return; } root.x = Math.round((Math.random() * 2 - 1) * a * k * k); root.y = Math.round((Math.random() * 2 - 1) * a * k * k); };
+    app.ticker.add(f);
   }
+  function flash(m: Sprite) { const f0 = m.filters ? [...(m.filters as ColorMatrixFilter[])] : []; m.filters = [...f0.slice(-1), whiteF]; setTimeout(() => { if (!m.destroyed) m.filters = stoned ? [...baseF, greyF] : baseF; }, JUICE.FLASH_MS); } // 필터 동시 2개까지
+  function pop(text: string, perfect: boolean) {
+    const x = monCx + (Math.random() - 0.5) * monSize * 0.3, y = monTop + monSize * 0.35, t = txt(text, 'big', true, perfect ? 0xffd25a : 0xffffff); t.anchor.set(0.5, 1); t.x = x; t.y = y; fx.addChild(t);
+    if (!perfect) t.style.stroke = { color: 0xb3261e, width: Math.max(3, H() * 0.006) }; const k0 = perfect ? JUICE.NUM_PERFECT : 1;
+    tween(1100, (p) => { const q = p < 0.18 ? p / 0.18 : 1; t.scale.set(k0 * (JUICE.NUM_POP - (JUICE.NUM_POP - 1) * ease(q))); t.y = y - H() * 0.09 * ease(p); t.alpha = p < 0.72 ? 1 : 1 - (p - 0.72) / 0.28; }, () => t.destroy());
+  }
+  function kill() {
+    killArm = 0; clearTimeout(killT); const m = monSp; if (!m || !fancy) return;
+    slowUntil = performance.now() + JUICE.SLOW_MS; shake(3);
+    // 💥 충격파 고리 (root 에 0.3초 · 끝나면 뗌)
+    const cx = monCx, cy = monTop + monSize * 0.55, wf = new ShockwaveFilter({ center: { x: cx, y: cy }, amplitude: 30, wavelength: 140, brightness: 1.25, speed: Math.max(600, monSize * 4), radius: Math.max(W(), H()), time: 0 });
+    root.filters = [wf]; JS.wave = true; const t0 = performance.now(); const wv = () => { const e = (performance.now() - t0) / 1000; wf.time = e; if (e * 1000 > JUICE.WAVE_MS) { root.filters = []; app.ticker.remove(wv); } }; app.ticker.add(wv);
+    // 🧩 조각: 몬스터 그림을 6 × 6 으로 잘라 튀김 (ParticleContainer · 0.9초)
+    const tx = m.texture, fr = tx.frame, n = JUICE.SHARDS, pw = fr.width / n, ph = fr.height / n, sc = Math.abs(m.scale.x);
+    const pc = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, color: true } }); fx.addChild(pc);
+    const b = m.getBounds(), ps: { p: Particle; vx: number; vy: number; vr: number }[] = [];
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const p = new Particle({ texture: new Texture({ source: tx.source, frame: new Rectangle(fr.x + i * pw, fr.y + j * ph, pw, ph) }), x: b.x + (i + 0.5) * pw * sc, y: b.y + (j + 0.5) * ph * sc, scaleX: sc, scaleY: sc, anchorX: 0.5, anchorY: 0.5 });
+      const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1, v = H() * (1.1 + Math.random() * 1.1);
+      pc.addParticle(p); ps.push({ p, vx: (dx / d) * v, vy: (dy / d) * v - H() * 0.5, vr: (Math.random() - 0.5) * 12 });
+    }
+    JS.shards = ps.length; JS.far = 0; m.alpha = 0.25; let last = vt; const p0 = ps.map((s) => [s.p.x, s.p.y]); const g = H() * 2.2;
+    tween(JUICE.SHARD_MS, (q) => { const dt = Math.min(0.05, Math.max(0, (vt - last) / 1000)); last = vt; for (const s of ps) { s.vy += g * dt; s.p.x += s.vx * dt; s.p.y += s.vy * dt; s.p.rotation += s.vr * dt; s.p.alpha = q < 0.6 ? 1 : 1 - (q - 0.6) / 0.4; } JS.far = Math.max(JS.far, ...ps.map((s, i) => Math.hypot(s.p.x - p0[i]![0]!, s.p.y - p0[i]![1]!))); }, () => { pc.destroy({ children: true }); if (!m.destroyed) m.alpha = 1; });
+  }
+  function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
+    const m = monSp; if (!m) return; const mx = m.x;
+    if (kind !== 'hit') { float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900); return; }
+    const wob = () => { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); };
+    if (!fancy) { wob(); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); return; }
+    const perfect = !!o.perfect, last = dmg > 0 && killArm > 0;
+    stopUntil = performance.now() + (perfect ? JUICE.STOP_PERFECT_MS : JUICE.STOP_MS); JS.stops++; flash(m); wob();
+    if (dmg > 0) pop(`-${dmg}`, perfect);
+    if (last) kill(); else shake(o.ult ? 2 : perfect || dmg >= 3 ? 1 : 0);
+  }
+  function armKill() { if (!fancy) return; killArm = performance.now(); clearTimeout(killT); killT = setTimeout(() => { if (killArm) kill(); }, 1500); }
   function slash() {
     const g = new Graphics(), cx = monCx, cy = monTop + monSize * 0.5, r = monSize * 0.32;
     g.moveTo(cx - r, cy - r * 0.6).lineTo(cx + r, cy + r * 0.6).stroke({ width: Math.max(4, H() * 0.012), color: 0xffffff, alpha: 0.95, cap: 'round' });
@@ -203,10 +264,12 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, heroVisible, monHit, stone,
+    hit, exp, banner, freeze, heroVisible, monHit, stone, armKill,
+    juice: (on) => { if (on != null) fancy = on; return fancy; },
+    juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),
     slashCfg: (c) => { if (c.fancy != null) SL.fancy = c.fancy; if (c.level !== undefined) SL.forceLevel = c.level; },
     slashStats: () => ({ fps: Math.round(SL.fps), level: SL.level, live: SL.live.length, queue: SL.queue.length }),
-    destroy() { SL.destroy(); clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
+    destroy() { SL.destroy(); clearTimeout(iceT); clearTimeout(killT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }
