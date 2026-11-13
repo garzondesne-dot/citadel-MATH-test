@@ -11,7 +11,7 @@ describe('⚙ 스위치 틀', () => {
     expect(DEFAULT_CFG.bundle).toBe('full');
   });
   it('🪶 기본 = 모두 끔 · ⚔ 표준 = 용사 · 쉼터 · 몬스터 공격 · 🏰 전체 = 모두', () => {
-    for (const f of FEATS) expect(wanted({ bundle: 'basic' }, f.id)).toBe(false);
+    for (const f of FEATS) expect(wanted({ bundle: 'basic' }, f.id)).toBe(f.id === 'scarecrow' || f.id === 'board'); // 🪶 기본 = 뼈대 + 복습(🎯 · 📋)
     const std = BUNDLES.find((b) => b.id === 'standard')!.on;
     for (const id of ['hero', 'rest-balance', 'rest-defense', 'mon-attack'] as FeatId[]) expect(std).toContain(id);
     for (const id of ['forge', 'citadel', 'photo', 'contest'] as FeatId[]) expect(wanted({ bundle: 'standard' }, id)).toBe(false);

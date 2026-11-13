@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { itemsFor, plainRecord, stone } from '../../raid/raid';
@@ -132,6 +133,9 @@
     : fixing && !allFilled ? (nextWrong >= 0 ? '틀린 것을 모두 고쳐야 다시 공격' : '답을 고르면 다시 공격')
     : !allFilled && q && !filled(q, given[cur] ?? null) ? '답을 고르면 다음으로' : '');
   const mainOff = $derived(!!reveal || locked || thinkLeft > 0 || (!tableHold && !allFilled && (fixing ? nextWrong < 0 : !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))));
+  // 🎯 허수아비 방 = ❤ · ⚡ 없음 · 문제 위 꼬리표 「📄 학습지 숫자」/「🔁 바뀐 숫자」(수업 기록 기준)
+  const dummy = $derived(isDummy(R));
+  const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
 </script>
 
 {#if showDone}
@@ -150,7 +154,7 @@
     <span class="lab acc">{no} · {v4 ? '❤ 를 다 썼어요' : '기회를 다 썼어요'}</span>
     <p class="muted">{v4 ? '벌은 없어요 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '벌은 없어요 — 학습지에 풀이를 정리해요'}. 데미지 {rec.best}</p>
   </div>
-  {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span><Hearts total={rec.slots} left={0} memo={`${code}|${mid}|${uid}`} />{/snippet}</BottomAction>
+  {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if !dummy}<Hearts total={rec.slots} left={0} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}</BottomAction>
   {:else}<BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />{/if}
 {:else if reveal || tableHold}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={!!reveal?.flash} still={!reveal} onpick={reveal ? undefined : pickCell} />
@@ -165,7 +169,7 @@
     {/if}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel="다음 틀린 문제">
-    {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{#if v4 && !reveal}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}
+    {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{#if v4 && !reveal}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else if q}
   {#if v4 && attempt > 0 && rec.perfect}
@@ -179,7 +183,7 @@
   {/if}
   <AnswerRow {cells} {cur} onpick={pickCell} />
   <div class="bcard" class:badline={fixing}>
-    <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if rec.healed}<span class="healed">💚 {healers}의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
+    <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if numTag}<span class="tag">{numTag}</span>{/if}{#if rec.healed}<span class="healed">💚 {healers}의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
     {#if L.monsters[mid]?.noteText}<p class="muted">💡 {L.monsters[mid]?.noteText}</p>{/if}
     {#key `${key}|${cur}`}
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
@@ -189,7 +193,7 @@
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
     {#snippet main()}
-      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}<Hearts mode="energy" left={rec.tokLeft} lock />{:else}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}
+      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}
       {:else if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Slots total={rec.slots} marks={marks} heal={rec.healed} />
       {:else}<span>{fixing ? '다음 틀린 문제 ▶' : '다음 소문제 ▶'}</span>{/if}
     {/snippet}

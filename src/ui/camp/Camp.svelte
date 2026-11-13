@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Dummy from '../dummy/Dummy.svelte';
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
@@ -111,7 +112,7 @@
     if (!me.seen[id]) return 'new';
     return showAll ? 'new' : 'hide';
   }
-  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', mail: '우편함', hero: '내 용사' };
+  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', scare: '🎯 허수아비', mail: '우편함', hero: '내 용사' };
   const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   let sheet = $state<string | null>(null);
@@ -171,10 +172,10 @@
         <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
       </button>
     {/each}
-    {#each ([['anvil', CAMP.anvil, 3], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const).filter(([k]) => k !== 'anvil' || feat('forge')) as [k, p, cols] (k)}
+    {#each ([['anvil', CAMP.anvil, 3], ['scare', CAMP.scare, 2], ['dummy', CAMP.dummy, 2], ['mail', CAMP.mail, 2]] as const).filter(([k]) => (k !== 'anvil' || feat('forge')) && (k !== 'scare' || feat('scarecrow')) && (k !== 'dummy' || feat('board'))) as [k, p, cols] (k)}
       {@const st = lab(k)}
       <button type="button" class="prop" style={propStyle(p)} aria-label={NAME[k]} onclick={(e) => tap(k, e)}>
-        <i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>
+        {#if k === 'dummy'}<i class="img portal" style="aspect-ratio:96 / 96" aria-hidden="true"><b>📋</b></i>{:else}<i class="img" style="{sheetBg(p.src, cols, 0)};aspect-ratio:{k === 'anvil' ? '362 / 362' : '96 / 96'}"></i>{/if}
         <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>
       </button>
     {/each}
@@ -251,6 +252,9 @@
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
+{:else if sheet === 'scare'}
+  <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬) -->
+  <Dummy {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} />
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
   <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} onclose={() => (sheet = null)} />
@@ -273,6 +277,10 @@
 {/if}
 
 <style>
+  /* 📋 게시판 던전 = 파란 포털 빛 (게시판 그림이 오기 전 자리 · 평소 불씨) */
+  .img.portal { display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle, rgba(140, 200, 255, 0.85) 0 18%, rgba(70, 120, 255, 0.45) 40%, transparent 70%); animation: pglow 2.4s ease-in-out infinite alternate; }
+  .img.portal b { font-size: 26px; filter: drop-shadow(0 2px 2px #000); }
+  @keyframes pglow { to { filter: brightness(1.25); } }
   .outq { margin: 0; font-size: 16px; color: var(--text-2); }
   .out:disabled, .mi:disabled { opacity: 0.45; }
   .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; display: grid; place-items: center; text-decoration: none; }

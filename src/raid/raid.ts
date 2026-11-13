@@ -14,6 +14,8 @@ export const seedOf = (R: Room, uid: string) => `${R.meta.code}|${uid}`;
 const NEWR = (R: Room) => Number(R.meta.version || 0) >= 3;
 // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤 선생님 「진행」 · 머리 🔨 하트 묶음): ❤ 4 · 몬스터마다 ⚡ 3 · 🔥 재도전 판 — 지금 열린 v3 방은 옛 규칙 그대로(수업 중 안 바뀜)
 export const V4 = (R: Room) => Number(R.meta.version || 0) >= 4;
+/** 🎯 허수아비 방 (혼자 복습 · ❤ · ⚡ · 시간 · 등급 없음 · 틀린 소문제만 다시 · 해결하면 처치 끝 · 📜 2026-11-13 밤 쪼갬) */
+export const isDummy = (R: Room) => !!(R.meta as { dummy?: boolean }).dummy;
 /** ⚡ 몬스터마다 새로 (다 맞힌 뒤에만) */
 export const ENERGY = 3;
 /** 🙋 선생님 「풀어주기」 횟수 (v4 · unlock/{mid}/{uid} = 수 · 하나 = ❤ +1) */
@@ -202,7 +204,7 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
   const ok = !!R.chainOk?.[mid]?.[uid];
   let stage = 0, cost = 0, wrong = 0, lastWrong: ChainRec['lastWrong'] = null, byPh = false, leftAt = -1;
   const says: string[] = [], wrongAt: Record<number, boolean> = {};
-  const v4 = V4(R), healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed + (v4 ? unlocksOf(R, mid, uid) : 0);
+  const v4 = V4(R), healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed + (v4 ? unlocksOf(R, mid, uid) : 0) + (isDummy(R) ? 99 : 0); // 🎯 허수아비 = ❤ 없음
   const pWrongBy: Record<number, number> = {}; // v4 🌟: 판마다 틀린 수
   // v4 🙋 풀어주기 뒤 그 칸으로 풀어내면 ❤ +1 (풀어주기 횟수까지): ❤ 가 처음 0 이 된 뒤 맞힌 단계 수
   const slots0 = CHAIN_SLOTS + healed; let zeroed = false, refundN = 0;

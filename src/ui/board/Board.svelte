@@ -136,11 +136,11 @@
           <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
         {/each}
       {:else}
-        <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>혼자 시작하거나 · 모집 글을 올려요</small></div>
+        <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>팀 없이 도전하거나 · 모집 글을 올려요</small></div>
       {/if}
       <p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>
     </div>
-    <BottomAction dock={false} text="⚔ 혼자 시작 ›" onmain={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}
+    <BottomAction dock={false} text="⚔ 팀 없이 도전 ›" onmain={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}
       why={open || !online ? (open ? '수업 중엔 모집 글을 못 올려요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" disabled={open || !online} onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'post'; }}>＋ 모집 글 올리기</button>{/snippet}</BottomAction>
   {/if}
   {#if toast}<p class="toast3" role="status">{toast}</p>{/if}
@@ -154,7 +154,7 @@
     {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
   </Sheet>
 {:else if sheet}
-  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 혼자 시작`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && !validPin(pin))} onmain={go}>
+  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && !validPin(pin))} onmain={go}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
     {#if sheet === 'post'}

@@ -98,6 +98,8 @@ export const CAMP = {
   fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45, bottom: 17, width: 15 },
   anvil: { src: A('anvil-v1.webp'), cols: 3, left: 6, bottom: 8, width: 19 },
   dummy: { src: A('camp-dummy-v2.webp'), cols: 2, left: 67, bottom: 19, width: 11 },
+  // 🎯 허수아비 (📜 2026-11-13 밤 쪼갬 · 자리표 = 모루와 ✏ 출제 공방 사이) · 옛 허수아비 자리(dummy) = 📋 게시판 던전(게시판 그림 + 파란 포털 · 그림 오기 전 = 포털 빛만)
+  scare: { src: A('camp-dummy-v2.webp'), cols: 2, left: 19, bottom: 27, width: 10 },
   mail: { src: A('camp-mail-v2.webp'), cols: 2, left: 37, bottom: 33, width: 10 },
   hero: { left: 30, bottom: 15 },
 };

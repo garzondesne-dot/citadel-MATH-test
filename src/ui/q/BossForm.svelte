@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { BOSS_ID, bossItem, bossRecord, bossTries } from '../../raid/raid';
@@ -49,6 +50,9 @@
     if (r2.roundOpen === false && r.roundOpen) practice = false;
   }
   const sol = (i: number) => tries.filter((t) => t.i === i).pop()?.q?.solution || '';
+  // 🎯 허수아비 방 = ❤ · ⚡ 없음 · 문제 위 꼬리표 「📄 학습지 숫자」/「🔁 바뀐 숫자」(수업 기록 기준)
+  const dummy = $derived(isDummy(R));
+  const numTag = $derived(dummy ? (R.meta.fresh?.[BOSS_ID] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
 </script>
 
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
@@ -58,7 +62,7 @@
     <span class="lab acc">📖 ❤ 를 다 썼어요 · 해설 보기 · 벌은 없어요</span>
     {#each todo as i (i)}<p class="sol"><b>{i + 1}번</b> {sol(i) || '해설을 보며 학습지에 정리해요'}</p>{/each}
   </div>
-  <BottomAction battle disabled why="학습지에 정리하고 다음을 기다려요">{#snippet main()}<span>📖 해설 보는 중</span><Hearts total={r.slots} left={0} memo={`${code}|boss|${uid}`} />{/snippet}</BottomAction>
+  <BottomAction battle disabled why="학습지에 정리하고 다음을 기다려요">{#snippet main()}<span>📖 해설 보는 중</span>{#if !dummy}<Hearts total={r.slots} left={0} memo={`${code}|boss|${uid}`} />{/if}{/snippet}</BottomAction>
 {:else if r.done && !practice && !bonusMode}
   <AnswerRow {cells} {label} />
   <div class="bcard"><div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>형성평가 {r.n}문항 모두 끝!</b><span>⚡ {r.tokLeft} · 기술 하나 = 🔥 재도전 판</span></span></div>
@@ -68,11 +72,11 @@
   <AnswerRow {cells} cur={cur} {label} onpick={(i) => { if (todo.includes(i)) cur = i; }} />
   {#if r.roundOpen || bonusMode}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => { practice = false; bonusMode = false; }}>그만하기</button></p>{/if}
   <div class="bcard">
-    <div class="head"><span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 ❤ 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
+    <div class="head">{#if numTag}<span class="tag">{numTag}</span> {/if}<span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 ❤ 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
     {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>
-    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}<Hearts mode="energy" left={r.tokLeft} lock />{:else}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
+    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
   </BottomAction>
 {/if}
 

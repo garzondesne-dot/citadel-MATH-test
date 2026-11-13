@@ -12,13 +12,15 @@ const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 export type FeatId =
   | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox'
   | 'mon-attack' | 'forge' | 'symtalk' | 'citadel' | 'seteuk' | 'schedule' | 'photo'
-  | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice';
+  | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board';
 export type BundleId = 'basic' | 'standard' | 'full';
 export interface Feat { id: FeatId; ic: string; name: string; sub: string; group: string; /** 켜려면 필요한 것 → 없으면 잠김 이유(채우는 길) · null = 됨 */ need?: (S: Store | null) => string | null }
 
 const packNeed = (has: boolean, what: string) => (has ? null : `📚 과목 팩에 ${what}이(가) 없어요 · 「준비」 탭에서 팩을 올리면 열려요`);
 export const FEATS: Feat[] = [
   { id: 'hero', ic: '🧙', name: '용사 · 스킬 · 강화', sub: '호칭 · 💎 상점 포함', group: '용사' },
+  { id: 'scarecrow', ic: '🎯', name: '허수아비 · 혼자 복습', sub: '학습지 숫자 · 맞힌 문제는 바뀐 숫자', group: '복습' },
+  { id: 'board', ic: '📋', name: '게시판 던전 · 팀 도전', sub: '1~4명 · 늘 바뀐 숫자', group: '복습' },
   { id: 'mon-attack', ic: '💥', name: '몬스터 공격 · 😡 분노', sub: '수업 중 몬스터가 반격', group: '수업' },
   { id: 'lesson-fx', ic: '🎆', name: '수업 연출', sub: '🔥 콤보 · 🦇 박쥐 · 🎁 보물 상자', group: '수업' },
   { id: 'juice', ic: '✨', name: '화려한 연출 (TV)', sub: '히트 스톱 · 흔들림 · 격파 충격파 · 느린 PC 면 끔', group: '수업' },
@@ -40,8 +42,8 @@ export const FEATS: Feat[] = [
 ];
 const ALL = FEATS.map((f) => f.id);
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [
-  { id: 'basic', ic: '🪶', name: '기본', sub: '뼈대만 · 수업 레이드 · 엑셀 차시 · 결과', on: [] },
-  { id: 'standard', ic: '⚔', name: '표준', sub: '뼈대 + 용사 · 쉼터 놀이 · 몬스터 공격', on: ['hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme'] },
+  { id: 'basic', ic: '🪶', name: '기본', sub: '뼈대만 · 수업 레이드 · 엑셀 차시 · 결과 · 복습', on: ['scarecrow', 'board'] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
+  { id: 'standard', ic: '⚔', name: '표준', sub: '뼈대 + 용사 · 쉼터 놀이 · 몬스터 공격', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme'] },
   { id: 'full', ic: '🏰', name: '전체', sub: '과목 팩이 있을 때 · 우리 학교', on: ALL },
 ];
 export interface FeatCfg { bundle: BundleId; on?: Partial<Record<FeatId, boolean>> }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isDummy } from '../../raid/raid';
   import SkillCards from './SkillCards.svelte';
   import Hearts from '../battle/Hearts.svelte';
   import { V4 } from '../../raid/raid';
@@ -69,6 +70,9 @@
   }
   function again() { const p = pracStart(S, L, code, mid, uid); if (p) { pracPass = p; toast = ''; } }
   const hearts = $derived(prac && !pDone && !pFail ? { total: CHAIN_SLOTS, left: rec.pass === pass ? rec.pLeft : CHAIN_SLOTS } : { total: rec.slots, left: rec.left });
+  // 🎯 허수아비 방 = ❤ · ⚡ 없음 · 문제 위 꼬리표 「📄 학습지 숫자」/「🔁 바뀐 숫자」(수업 기록 기준)
+  const dummy = $derived(isDummy(R));
+  const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
 </script>
 
 {#if needWhy && wq?.why}
@@ -86,10 +90,11 @@
     <div class="story"><b>📜 나의 풀이</b><ol>{#each pFail ? pItems.map((x) => x.say || '') : says as t, k (k)}<li>{t}</li>{/each}</ol></div>
     {#if !v4}<p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>{/if}
   </div>
-  {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={again} />{:else if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
+  {#if v4}{#if !dummy}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={again} />{/if}{:else if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
 {:else}
+  {#if numTag && !prac}<p class="tagl"><span class="tag">{numTag}</span></p>{/if}
   {#if v4 && prac}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></p>{/if}
   <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
 {/if}
@@ -106,13 +111,13 @@
   <span></span>
 {:else if rec.locked && !prac}
   <BottomAction battle disabled why={v4 ? '🙋 ❤ 0 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요'}>
-    {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}
+    {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && true}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
-    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}<Hearts mode="energy" left={rec.tokLeft} lock />{:else if v4}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
+    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 
