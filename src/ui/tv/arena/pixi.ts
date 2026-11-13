@@ -16,6 +16,8 @@ export interface Arena {
   /** ⚔ 정식 attack.js 를 DOM 층이 그릴 때: 그 용사 그림 숨김 · 몬스터만 반응(깜빡 · 흔들 · 숫자 · 베기 선 없음) */
   heroVisible(u: string, on: boolean): void;
   monHit(dmg: number, kind: 'hit' | 'miss' | 'practice'): void;
+  /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
+  stone(on: boolean): void;
   exp(u: string, text: string): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
@@ -49,11 +51,12 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   // ── 트윈 · 애니메이션 ──
   const tweens = new Set<Tween>();
   const tween = (ms: number, f: (p: number) => void, done?: () => void) => { tweens.add({ t0: performance.now(), ms, f, done }); };
-  let bob = 0;
+  let bob = 0, stoned = false, baseF: ColorMatrixFilter[] = [];
+  const greyF = new ColorMatrixFilter(); greyF.greyscale(0.55, false);
   app.ticker.add(() => {
     const t = performance.now();
     for (const w of [...tweens]) { const p = Math.min(1, (t - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
-    bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
+    bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
     if (t - heroT > 162) { heroT = t; heroF = (heroF + 1) % 8; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
   });
 
@@ -73,7 +76,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const f: ColorMatrixFilter[] = [];
     if (sp.hue) { const m = new ColorMatrixFilter(); m.hue(sp.hue, false); f.push(m); }
     if (s.shadow) { const m = new ColorMatrixFilter(); m.brightness(0.08, false); f.push(m); }
-    monSp.filters = f;
+    baseF = f; monSp.filters = stoned ? [...f, greyF] : f;
   }
   // ── 체력 막대 (몬스터 바로 위 · 굵게 · 숫자) ──
   function drawHp(s: ArenaState) {
@@ -137,6 +140,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       else float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900);
     }, 170);
   }
+  function stone(on: boolean) { if (on === stoned) return; stoned = on; if (monSp) monSp.filters = on ? [...baseF, greyF] : baseF; }
   function heroVisible(u: string, on: boolean) { const v = heroes.get(u); if (v) v.c.visible = on; }
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice') {
     const m = monSp; if (!m) return; const mx = m.x;
@@ -190,7 +194,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, heroVisible, monHit,
+    hit, exp, banner, freeze, heroVisible, monHit, stone,
     destroy() { clearTimeout(iceT); cancelAnimationFrame(raf); tweens.clear(); try { app.destroy({ removeView: true }, { children: true }); } catch { /* 무시 */ } },
   };
 }

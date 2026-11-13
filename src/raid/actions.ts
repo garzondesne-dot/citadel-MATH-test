@@ -1,6 +1,7 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
+import { perfStreak, petrify, ultUsed } from './raid';
 import { periodEnd } from '../school/bells';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -192,11 +193,31 @@ export function scoutReady(S: Store, code: string, id: string, uid: string): voi
 
 // ⚡ 기력 쓰기 (#152 · 정식 heals 칸 그대로): 💚 친구 힐 = heals/{몬스터}/{나}/{k} = 받는 친구 uid (그 친구 도전 칸 +1 · 상한 healMax)
 //   ⛓ 묶기 = heals/{몬스터}/{나}/{k} = '!bind@시각' (몬스터 공격 3초 늦춤) · 둘 다 기력 하나 (healsGiven 으로 셈)
+/** 🌟 진필살기 (정식 actions.js heal opt.true · 기력 카드 🌟 = ⚡1): 3연속 퍼펙트 + 내 속성 Ⅳ + 남은 기력 · 이 몬스터가 아직 안 굳었을 때 → '!true@시각' (파티 힐 + 🗿 석화 20초 · 반 전체 한 번) · 실패 = 이유 */
+export function trueUlt(S: Store, L: LessonPack, code: string, mid: string, me: string, canTrue: boolean): string {
+  const R = getRoom(S, code); if (!R) return '방이 없어요';
+  const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
+  if (perfStreak(rec as { tries: { correct: number; total: number }[] }) < 3 || ultUsed(R, mid, me)) return '3연속 퍼펙트일 때만 쓸 수 있어요';
+  if (!canTrue) return '진필살기는 내 속성 Ⅳ 전설 스킬을 끼웠을 때만 쓸 수 있어요';
+  if (petrify(R, mid)) return '이 몬스터는 이미 진필살기로 굳었어요 — 지금 맞히면 💎 가 나와요!';
+  if (rec.tokLeft <= 0) return '⚡ 기력이 없어요';
+  S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, `!true@${S.now()}`);
+  return '';
+}
+/** 🛡 홀리 방패 켜기 · 끄기 (정식 holyArm) · 막은 순간 = 내 칸에 막은 시각 + 켬 지움 (holyUse) */
+export const holyArm = (S: Store, code: string, me: string, mid: string, on: boolean) => S.set(`${roomPath(code)}/players/${me}/hg`, on ? { mid: String(mid), at: S.now() } : null);
+export function holyUse(S: Store, code: string, me: string, mid: string) { S.set(`${roomPath(code)}/players/${me}/holy/${mid}`, S.now()); S.set(`${roomPath(code)}/players/${me}/hg`, null); }
+/** 🗿 석화 찬스 💎 (정식 petriGem · 석화 중 맞힌 데미지 · 한 번 석화에 3까지) = gifts/{uid}/petri… (캠프에서 지갑으로) */
+export function petriGem(S: Store, code: string, me: string, at: number, mid: string, gain: number) {
+  const k = `gifts/${me}/petri_${code}_${mid}_${at}`, had = Number(S.get<{ g?: number }>(k)?.g) || 0, tot = Math.min(3, had + gain);
+  if (tot > had) S.set(k, { g: tot, at: S.now(), code, fun: '🗿 석화 찬스' });
+  return tot - had;
+}
 export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
   const R = getRoom(S, code); if (!R) return false;
   const rec = isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
   if (rec.tokLeft <= 0) return false;
-  if (to !== 'bind' && (to === me || healsReceived(R, mid, to) >= R.meta.healMax)) return false;
+  if (to !== 'bind' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);
   return true;
 }

@@ -16,6 +16,9 @@
   import { fx } from './battle/fx.svelte';
   import AttackFx from './battle/AttackFx.svelte';
   import { attackDef, attackMs, attackOf, attackStrong, type AttackDef } from '../raid/attacks';
+  import { holyArmed, holyCan, holyOn, stone, BOSS_ID as BID } from '../raid/raid';
+  import { holyArm, holyUse } from '../raid/actions';
+  import { guardQ } from './battle/fx.svelte';
   import { ELEM_FX } from './manifest';
   import { sfx } from './sound.svelte';
   import { symState } from './battle/symsheet.svelte';
@@ -93,8 +96,25 @@
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => { const d = attackOf(L, step, c.k), st = attackStrong(sceneHp?.hp); strike(d, attackMs(d, c.lock, st), st); });
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => {
+      // 🛡 홀리 방패 (정식 student.js 395): 켜 둔 +10 용사가 있으면 반 전체 안 멈춤 · 내가 켰으면 막은 기록(→ 🗿 석화 10초) + 날개 · 방패
+      const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { guardStrike(hg, c.mid); return; }
+      const d = attackOf(L, step, c.k), st = attackStrong(sceneHp?.hp); strike(d, attackMs(d, c.lock, st), st);
+    });
   });
+  let gtoast = $state('');
+  function guardStrike(us: string[], mid: string) {
+    const mine = us.includes(uid), names = us.filter((u) => u !== uid).map((u) => R?.players?.[u]?.nick || '친구');
+    if (mine) { holyUse(S, code, uid, mid); guardQ.v += 1; }
+    const tell = () => { gtoast = `🛡 ${mine ? `내${names.length ? ' · ' + names.join(' · ') : ''}` : names.join(' · ') + '의'} 홀리 방패! 안 멈춰요`; sfx('correct', 0.75); setTimeout(() => (gtoast = ''), 1600); };
+    setTimeout(tell, mine ? 1120 : 200);
+  }
+  // 🛡 켤 수 있음 · 켜 둠 (장면 띠 왼쪽 위 단추) · 🗿 석화 남은 초
+  const holyMid = $derived(step?.kind === 'boss' ? BID : mid);
+  const holyState = $derived(!R || !holyMid ? '' : holyOn(R, holyMid, uid) ? 'on' : holyCan(L, R, uid, now) ? 'can' : '');
+  const stoneNow = $derived(R && holyMid ? stone(R, holyMid) : null);
+  const stoneLeft = $derived(stoneNow ? Math.max(0, Math.ceil((stoneNow.until - now) / 1000)) : 0);
+  function toggleHoly() { if (!R || !holyMid) return; const on = holyState !== 'on'; holyArm(S, code, uid, holyMid, on); sfx(on ? 'holy' : 'click', 0.8); }
   const atkOn = $derived(!!atk && atk.until > gnow && !scout?.on);
   const stunned = $derived(atkOn && !!atk?.def.lockInput);
   // 손풀기로 풀림 (얼음 4번 · 화염 꾹 1초) · 시간이 지나면 저절로
@@ -119,7 +139,7 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
@@ -174,6 +194,7 @@
     {/if}
   {/if}
 </section>
+{#if gtoast}<div class="gtoast" role="status">{gtoast}</div>{/if}
 <SymSheet />
 {#if cpt && cptId}
   <Sheet onclose={() => (cpt = false)} mainText="문제로 돌아가기" tall>
@@ -191,6 +212,7 @@
 {/if}
 
 <style>
+  .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }
   .body { max-width: 430px; margin: 0 auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
   .body.battle { padding-top: var(--s1); }
   .row { display: flex; align-items: baseline; gap: var(--s2); }

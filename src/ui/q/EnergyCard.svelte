@@ -6,7 +6,11 @@
   import { untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, chainRecord, healsReceived, isChain, plainRecord } from '../../raid/raid';
-  import { spendEnergy } from '../../raid/actions';
+  import { spendEnergy, trueUlt } from '../../raid/actions';
+  import { perfStreak, petrify, ultUsed } from '../../raid/raid';
+  import { canTrue, cutin, ultBlast } from '../fx/attack';
+  import { savedLook } from '../../store/me.svelte';
+  import { HERO, heroUrl } from '../manifest';
   import Sheet from '../battle/Sheet.svelte';
   // ⚡ 기력 (#152 · DECISIONS 「⚡ v1.0 도전 칸 → 기력」): 다 맞히면 안 쓴 도전 칸이 ⚡ 로 바뀌며 충전(칸당 0.2초 · 누르면 건너뜀)
   //   기력 시트 = ⛓ 묶기 ⚡1 · 💚 친구 힐 ⚡1(받는 친구 = 도전 칸 +1) · 🌟 필살기(조건) — 수치 · 규칙 · 기록 = 정식 heals 칸 그대로
@@ -15,7 +19,18 @@
   const key = untrack(() => `${code}|${mid}|${uid}`);
   let shown = $state(charged.has(key) ? 99 : 0), pick = $state(false), msg = $state('');
   $effect(() => { if (rec.tokens > 0 && !charged.has(key)) { charged.add(key); const t = setInterval(() => { shown += 1; if (shown >= rec.tokens) clearInterval(t); }, 200); return () => clearInterval(t); } });
-  const friends = $derived(activeIds(R, now).filter((u) => u !== uid && !R.players?.[u]?.teacher).map((u) => ({ u, nick: R.players?.[u]?.nick || u, full: healsReceived(R, mid, u) >= R.meta.healMax })));
+  const friends = $derived(activeIds(R, now).filter((u) => u !== uid && !R.players?.[u]?.teacher).map((u) => ({ u, nick: R.players?.[u]?.nick || u, full: healsReceived(R, mid, u, L) >= R.meta.healMax })));
+  // 🌟 진필살기 (❓#3 ③B · 정식 student.js 560 · actions.js heal true): 3연속 퍼펙트(첫 시도 + 새 문제 2번) + 내 속성 Ⅳ + 남은 기력 · 이 몬스터가 안 굳었을 때 · 반 전체 한 번
+  //   = 금빛 컷인 + 광역 → 🗿 석화 20초(공격 멈춤 · 그동안 맞히면 💎) + 아직 다 못 맞힌 친구 모두 도전 칸 +1
+  const look = untrack(() => savedLook());
+  const trueOk = $derived(perfStreak(rec as { tries: { correct: number; total: number }[] }) >= 3 && canTrue(look.fx, look.hero) && !ultUsed(R, mid, uid) && !petrify(R, mid) && rec.tokLeft > 0);
+  const trueWhy = $derived(!canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : perfStreak(rec as { tries: { correct: number; total: number }[] }) < 3 ? '첫 시도 퍼펙트 + 새 문제 2번 연속 퍼펙트' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '');
+  async function goTrue() {
+    const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
+    msg = '🌟 진필살기! 🗿 석화 20초 · 못 맞힌 친구 모두 도전 칸 +1';
+    await cutin(look.hero, look.fx, { gold: true, heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>` });
+    const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultBlast(sc, sc.querySelector('.mon'), look.fx);
+  }
   function go(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { msg = to === 'bind' ? '⛓ 몬스터를 묶었어요! (공격 3초 늦춤)' : `💚 ${friends.find((f) => f.u === to)?.nick ?? ''} 에게 힐! (도전 칸 +1)`; pick = false; setTimeout(() => (msg = ''), 2000); } }
 </script>
 
@@ -30,7 +45,7 @@
   <div class="acts">
     <button type="button" class="btn2" disabled={rec.tokLeft <= 0} onclick={() => go('bind')}>⛓ 묶기 <small>⚡1</small></button>
     <button type="button" class="btn2" disabled={rec.tokLeft <= 0 || !friends.some((f) => !f.full)} onclick={() => (pick = true)}>💚 친구 힐 <small>⚡1</small></button>
-    <button type="button" class="btn2" disabled title="첫 시도 퍼펙트 + 새 문제 2번 연속 퍼펙트 · Ⅳ 스킬">🌟 필살기 <small>조건</small></button>
+    <button type="button" class="btn2" class:gold={trueOk} disabled={!trueOk} title={trueWhy} onclick={goTrue}>🌟 진필살기 <small>{trueOk ? '⚡1' : '조건'}</small></button>
   </div>
   <p class="muted">{msg || (rec.tokLeft > 0 ? '묶기 = 몬스터 공격을 3초 늦춰요 · 힐 = 친구 도전 칸 +1' : rec.chain ? '기력을 다 썼어요' : '🔥 연습 공격으로 새 문제를 맞히면 ⚡ +1 (기회는 그대로)')}</p>
 </div>
@@ -42,6 +57,7 @@
 {/if}
 
 <style>
+  .gold:not(:disabled) { border-color: #ffd25a; color: #ffd25a; box-shadow: 0 0 10px rgba(255, 210, 90, 0.6); }
   .charge { width: 100%; border: 1px solid var(--accent); background: var(--surface); color: var(--text); border-radius: var(--r); padding: var(--s2) var(--s3); display: flex; flex-direction: column; align-items: center; gap: var(--s1); font: inherit; }
   .bolts { display: flex; gap: 6px; } .bolts i { font-style: normal; font-size: 22px; opacity: 0.15; transform: translateY(6px); transition: opacity 0.18s, transform 0.18s; } .bolts i.on { opacity: 1; transform: none; }
   .en { display: flex; flex-direction: column; gap: var(--s2); }

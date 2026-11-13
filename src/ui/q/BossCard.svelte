@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
-  import { bossItem, bossState, bossTries } from '../../raid/raid';
-  import { bossSubmit } from '../../raid/actions';
+  import { bossItem, bossState, bossTries, stone } from '../../raid/raid';
+  import { bossSubmit, petriGem } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { type Mark } from '../battle/Slots.svelte';
@@ -58,6 +58,7 @@
     if (!bossSubmit(S, L, code, uid, i, finalOf(q, given))) return;
     const s2 = bossState(L, S.get<Room>(`rooms/${code}`) as Room, uid);
     const me = s2[i], ok = !!me?.ok;
+    { const R2 = S.get<Room>(`rooms/${code}`) as Room, pt = stone(R2, 'boss'); if (pt && S.now() < pt.until && ok) petriGem(S, code, uid, pt.at, 'boss', 1); } // 🗿 석화 중 도달 = 💎1
     flip = { i, ok, text }; heroAtk({ miss: !ok, ult: ok && s2.length > 0 && s2.every((x) => x.first) }); // ⚔ 정식 student.js 981: 형성평가 모두 첫 시도 정답 = ⚡ 필살기(내 속성 Ⅲ↑)
     if (flipT) clearTimeout(flipT);
     flipT = setTimeout(() => {

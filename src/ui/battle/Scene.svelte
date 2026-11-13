@@ -4,7 +4,8 @@
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
   import IceBlock from './IceBlock.svelte';
-  import { atkQ } from './fx.svelte';
+  import { atkQ, guardQ } from './fx.svelte';
+  import { guard } from '../fx/aura';
   import { attack, canUlt, preload as atkPreload, type Pose } from '../fx/attack';
   import { monBody } from '../manifest';
   import { aura as auraAct } from '../fx/aura';
@@ -14,9 +15,9 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt' }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt' } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean } = $props();
   // 🧊 얼음(2026-11-13): 용사를 덮는 얼음 덩어리 · 톡마다 금 · 4번 = 깨져 흩어짐 · 시간 끝 = 녹음 (0.6초 뒤 사라짐)
   let iceMode = $state<'off' | 'on' | 'shatter' | 'melt'>('off'), iceTaps = $state(0);
   $effect(() => { if (ice) { iceMode = 'on'; iceTaps = Math.max(0, Math.min(4, 4 - fx.ice)); } else if (iceMode === 'on') { iceMode = iceEnd; if (iceEnd === 'shatter') iceTaps = 4; setTimeout(() => (iceMode = 'off'), 650); } });
@@ -30,7 +31,9 @@
   const ROW: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
   let edge = $state<HTMLDivElement | null>(null), heroBox = $state<HTMLSpanElement | null>(null), monEl = $state<HTMLElement | null>(null), apose = $state<Pose | ''>('');
   const heroRow = $derived(apose ? ROW[apose] : pose === 'idle' ? HERO.idleRow : ATK_ROW), heroCol = $derived(apose ? (apose === 'attack' ? 2 : 0) : pose === 'idle' ? 0 : 2);
-  let lastAtk = 0;
+  let lastAtk = 0, lastGuard = guardQ.v;
+  // 🛡 홀리 방패 막기 = 내 용사 날개 · 방패 (정식 Aura.guard · 장면 높이 안)
+  $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
     untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });
@@ -53,6 +56,8 @@
     {#if timeLeftMs != null && timeLeftMs <= 5 * 60000}<span class="pill time" aria-label="남은 시간">⏱ {mm(Math.max(0, timeLeftMs))}</span>{/if}
     <span class="pill" aria-label="마정석 {gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{gem}</span>
   </div>
+  {#if holy && onholy}<button type="button" class="holy-btn" class:on={holy === 'on'} onclick={onholy} aria-pressed={holy === 'on'}>🛡 <b>{holy === 'on' ? '준비됨' : '홀리 방패'}</b><small>{holy === 'on' ? '다음 공격을 막습니다 · 누르면 끄기' : '누르면 다음 공격을 막아요'}</small></button>{/if}
+  {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
   {#if chips.length}<div class="buffs">{#each chips as c, k (k)}<span class="buff" class:on={c.on}>{c.text}</span>{/each}</div>{/if}
   {#if hp && !shadow}
     <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div></div>
@@ -64,7 +69,7 @@
       {/each}
     </div>
   {/if}
-  <i class="mon art monster" bind:this={monEl} data-bb={monBB} class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
+  <i class="mon art monster" class:stoned={stoneSec > 0} bind:this={monEl} data-bb={monBB} class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   {#if iceMode !== 'off'}
@@ -124,6 +129,10 @@
   .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
   @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
   .edge.hit.iced .hero { filter: saturate(0.6) brightness(1.1); }
+  .holy-btn { position: absolute; z-index: 4; left: var(--s3); top: 60px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; min-height: 48px; border-radius: 12px; border: 2px solid #ffd25a; background: rgba(12, 20, 36, 0.85); color: #fff6c8; font: 700 14px var(--font); box-shadow: 0 3px 0 #000; }
+  .holy-btn small { font-size: 12px; font-weight: 500; opacity: 0.85; } .holy-btn.on { background: linear-gradient(135deg, #3a2a00, #6b4a00); box-shadow: 0 0 14px rgba(255, 210, 90, 0.8); }
+  .stone-chip { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: 252px; padding: 3px 10px; border-radius: 12px; background: rgba(40, 40, 46, 0.9); border: 1px solid #c9c9d6; color: #fff; font: 700 13px var(--font); white-space: nowrap; }
+  .mon.stoned { filter: grayscale(1) brightness(0.85) contrast(1.1) !important; }
   .icew { position: absolute; z-index: 2; left: 0; top: 140px; display: block; }
   .edge.rage { box-shadow: inset 0 0 48px rgba(229, 72, 77, 0.75); }
   .edge.rage .mon { filter: drop-shadow(0 0 6px rgba(229, 72, 77, 0.9)); }

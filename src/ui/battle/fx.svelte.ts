@@ -9,3 +9,6 @@ export type HeroAtk = { id: number; miss: boolean; hits?: number; ult?: boolean;
 let atkN = 0;
 export const atkQ = $state<{ v: HeroAtk | null }>({ v: null });
 export function heroAtk(o: Omit<HeroAtk, 'id'>) { atkQ.v = { ...o, id: ++atkN }; fx.pose = o.miss ? 'miss' : 'attack'; fx.poseUntil = Date.now() + 320; }
+
+/** 🛡 홀리 방패 막기 연출 요청 (장면 띠가 날개 · 방패를 그림 · 정식 Aura.guard) */
+export const guardQ = $state<{ v: number }>({ v: 0 });

@@ -58,15 +58,58 @@ export function gradeAttempt(L: LessonPack, R: Room, mid: string, uid: string, a
 const healsOf = (R: Room, mid: string) => R.heals?.[mid] || {};
 export const healsGiven = (R: Room, mid: string, uid: string) => keys(healsOf(R, mid)[uid]).length;
 const num = (R: Room, uid: string) => R.players?.[uid]?.num || 0;
-export function healsTo(R: Room, mid: string, uid: string) {
+// 🌟 진필살기 (정식 model.js 72~88 · 2026-11-13 ❓#3 ③B): 힐 칸 값 '!true@시각' = 파티 힐(아직 다 못 맞힌 친구 모두 +1) + 🗿 석화 TRUE_SEC 초(몬스터 공격 멈춤 · 그동안 맞히면 💎) · 한 몬스터에 반 전체 한 번
+export const TRUE_SEC = 20;
+export const isTrue = (v: unknown) => typeof v === 'string' && v.startsWith('!true');
+const partyLike = (v: unknown) => v === '*' || isTrue(v);
+export function petrify(R: Room, mid: string): { by: string; at: number; until: number } | null {
+  let out: { by: string; at: number; until: number } | null = null;
+  Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.values(byK || {}).forEach((v) => { if (isTrue(v)) { const at = Number(String(v).split('@')[1]) || 0; if (!out || at > out.at) out = { by: from, at, until: at + TRUE_SEC * 1000 }; } }));
+  return out;
+}
+export const ultUsed = (R: Room, mid: string, uid: string) => Object.values(healsOf(R, mid)[uid] || {}).some((v) => v === '!ult' || isTrue(v));
+/** 퍼펙트 연속: 첫 시도부터 다 맞힌 시도가 몇 번 이어졌나 (첫 시도가 아니면 0) */
+export const perfStreak = (rec: { tries: { correct: number; total: number }[] }) => { let n = 0; for (const t of rec.tries) { if (t.total > 0 && t.correct === t.total) n++; else break; } return n; };
+/** 이 몬스터를 한 번이라도 다 맞혔나 (파티 힐 받는 조건 · 정식 perfectRaw) */
+function perfectRaw(L: LessonPack, R: Room, mid: string, uid: string) { if (isChain(L, R, mid)) return chainRecord(L, R, mid, uid, true).perfect; return attemptsOf(R, mid, uid).some((t) => { const g = gradeAttempt(L, R, mid, uid, t.attempt, t.given); return g.total > 0 && g.correct === g.total; }); }
+export function healsTo(R: Room, mid: string, uid: string, L?: LessonPack) {
   const out: { from: string; k: number }[] = [];
-  Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.entries(byK || {}).forEach(([k, to]) => { if (to === uid) out.push({ from, k: Number(k) }); }));
+  Object.entries(healsOf(R, mid)).forEach(([from, byK]) => Object.entries(byK || {}).forEach(([k, to]) => { if (to === uid || (partyLike(to) && from !== uid && !R.players?.[uid]?.teacher && !!L && !perfectRaw(L, R, mid, uid))) out.push({ from, k: Number(k) }); }));
   return out.sort((a, b) => num(R, a.from) - num(R, b.from) || a.k - b.k);
 }
 /** ⛓ 묶기 (정식 v3 · heals 칸 「!bind@시각」 · 하나 = 3초) */
 export const BIND_SEC = 3;
-export const bindSec = (R: Room, mid: string) => Object.values(healsOf(R, mid)).reduce((a, byK) => a + Object.values(byK || {}).filter((v) => typeof v === 'string' && v.startsWith('!bind')).length, 0) * BIND_SEC;
-export const healsReceived = (R: Room, mid: string, uid: string) => Math.min(R.meta.healMax, healsTo(R, mid, uid).length);
+export const bindSec = (R: Room, mid: string) => Object.values(healsOf(R, mid)).reduce((a, byK) => a + Object.values(byK || {}).filter((v) => typeof v === 'string' && v.startsWith('!bind')).length, 0) * BIND_SEC
+  + Object.values(healsOf(R, mid)).reduce((a, byK) => a + Object.values(byK || {}).filter(isTrue).length, 0) * TRUE_SEC // 🌟 석화 = 공격 시계 멈춤 (정식 combo.js bindFor)
+  + holyTimes(R, mid).length * HOLY_SEC; // 🛡 홀리 방패 석화 = 공격 시계 멈춤
+
+// 🛡 홀리 방패 (정식 model.js 333~367 · 2026-11-13 ❓#3 ⑤A): +10 용사 · 이 몬스터 퍼펙트(보스 = 형성평가 모든 문항 도달) → 「🛡 홀리 방패」 켜기
+//   players/{uid}/hg = { mid, at } (켬) · players/{uid}/holy/{mid} = 막은 시각(몬스터마다 한 번) · 공격이 오면 켜 둔 용사 1명 이상 = 반 전체 안 멈춤 + 🗿 석화 HOLY_SEC 초 · 💥 15종 모두 막음
+export const HOLY_SEC = 10;
+type PH = { enh?: number; hg?: { mid: string; at: number } | null; holy?: Record<string, number>; teacher?: boolean };
+const ph = (R: Room, uid: string) => (R.players?.[uid] || {}) as PH;
+export const holyUsed = (R: Room, mid: string, uid: string) => Number(ph(R, uid).holy?.[mid]) || 0;
+export const awake = (p: PH | undefined) => Number(p?.enh) >= 10;
+export const holyOn = (R: Room, mid: string, uid: string) => { const p = ph(R, uid), h = p.hg; return !!(h && h.mid === mid && awake(p) && !holyUsed(R, mid, uid)); };
+/** 지금 공격을 막을 용사들 (켠 시각이 이번 공격 주기 안 · per 초 + 3초) */
+export function holyArmed(R: Room, mid: string, now: number, per: number | null): string[] {
+  return keys(R.players).filter((u) => !ph(R, u).teacher && holyOn(R, mid, u) && (per == null || now - Number(ph(R, u).hg?.at || 0) <= per * 1000 + 3000));
+}
+/** 막은 시각들 (같은 공격을 여럿이 막으면 3초 안 = 한 번) */
+export function holyTimes(R: Room, mid: string): { at: number; by: string[] }[] {
+  const ts = keys(R.players).map((u) => holyUsed(R, mid, u)).filter(Boolean).sort((a, b) => a - b), out: { at: number; by: string[] }[] = [];
+  ts.forEach((t) => { if (!out.length || t - out[out.length - 1]!.at > 3000) out.push({ at: t, by: [] }); });
+  keys(R.players).forEach((u) => { const t = holyUsed(R, mid, u); const c = out.find((o) => t && t >= o.at && t - o.at <= 3000); if (c) c.by.push(u); });
+  return out;
+}
+/** 🗿 지금 몬스터를 굳힌 것 (진필살기 20초 · 홀리 방패 10초 중 가장 늦게 시작한 것) */
+export function stone(R: Room, mid: string): { by: string; all?: string[]; at: number; until: number; holy?: boolean } | null {
+  const pt = petrify(R, mid), hs = holyTimes(R, mid), h = hs.length ? hs[hs.length - 1]! : null;
+  const ho = h ? { by: h.by[0] ?? '', all: h.by, at: h.at, until: h.at + HOLY_SEC * 1000, holy: true } : null;
+  if (!pt) return ho; if (!ho) return pt;
+  return ho.at > pt.at ? ho : pt;
+}
+export const healsReceived = (R: Room, mid: string, uid: string, L?: LessonPack) => Math.min(R.meta.healMax, healsTo(R, mid, uid, L).length);
 
 export interface Rec {
   chain?: false;
@@ -88,7 +131,7 @@ export function plainRecord(L: LessonPack, R: Room, mid: string, uid: string): R
   const last = tries[tries.length - 1] || null;
   const perfectAt = tries.findIndex((t) => t.total > 0 && t.correct === t.total);
   const practice = perfectAt >= 0 && tries.length - 1 > perfectAt;
-  const healed = healsReceived(R, mid, uid);
+  const healed = healsReceived(R, mid, uid, L);
   const slots = R.meta.retries + 1 + healed;
   if (NEWR(R)) {
     const prac = perfectAt >= 0 ? tries.slice(perfectAt + 1) : [];
@@ -128,12 +171,12 @@ export interface ChainRec {
   pDoneN: number; pWhy: number; whyOk: boolean; pLeft: number; pFail: boolean; healed: number; canRetry: false; canHeal: boolean; nextAttempt: number; nextK: number;
 }
 /** 정식 chainRecord 그대로 */
-export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string): ChainRec {
+export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, noParty = false): ChainRec {
   const its = chainItems(L, R, mid, uid, 0), n = its.length, subs = chainSubs(R, mid, uid);
   const ok = !!R.chainOk?.[mid]?.[uid];
   let stage = 0, cost = 0, wrong = 0, lastWrong: ChainRec['lastWrong'] = null, byPh = false, leftAt = -1;
   const says: string[] = [], wrongAt: Record<number, boolean> = {};
-  const healed = healsReceived(R, mid, uid), slots = CHAIN_SLOTS + healed;
+  const healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed;
   let pCost = 0, pass = 0, pStage = 0, pItems: Question[] | null = null, pSays: string[] = [], pDoneN = 0, pWhy = -1, whyOk = false;
   const whySet = new Set<number>();
   subs.forEach((t) => {
@@ -310,4 +353,13 @@ export function resultOf(L: LessonPack, R: Room, uid: string) {
   });
   const boss = L.boss ? { ok: mastery(L, R, uid).filter(Boolean).length, items: L.boss.items } : null;
   return { mons, boss, right: mons.reduce((a, m) => a + m.best, 0) + (boss ? boss.ok : 0), total: mons.reduce((a, m) => a + m.total, 0) + (boss ? boss.items : 0) };
+}
+/** 🛡 홀리 방패를 켤 수 있나 (정식 holyCan): +10 · 이 몬스터 퍼펙트(한 번의 시도에서 모두 · 소레이드 = 틀림 없이 완성) · 보스 = 형성평가 모든 문항 도달 · 몬스터마다 한 번 · 쓰러지기 전 */
+export function holyCan(L: LessonPack, R: Room, uid: string, now: number): boolean {
+  const step = stepOf(L, R), p = R.players?.[uid] as { enh?: number } | undefined;
+  if (!step || !awake(p)) return false;
+  if (step.kind === 'boss') return !!L.boss && !holyUsed(R, BOSS_ID, uid) && !bossHp(L, R, now).won && (() => { const b = bossState(L, R, uid); return b.length > 0 && b.every((x) => x.ok); })();
+  if (step.kind !== 'monster' || !L.monsters[step.id] || holyUsed(R, step.id, uid) || cleared(L, R, step.id, now)) return false;
+  if (isChain(L, R, step.id)) { const cr = chainRecord(L, R, step.id, uid); return !!(cr.done && cr.perfect); }
+  return plainRecord(L, R, step.id, uid).perfect;
 }

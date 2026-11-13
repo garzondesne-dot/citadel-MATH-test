@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
-  import { itemsFor, plainRecord } from '../../raid/raid';
+  import { itemsFor, plainRecord, stone } from '../../raid/raid';
+  import { petriGem } from '../../raid/actions';
   import type { Room as RoomT } from '../../model/types';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
@@ -20,7 +21,7 @@
   //   틀림 → 채점표 → 같은 문제 · ✔ 잠김 · ✘ 빈칸(재도전 v4) · 생각 시간 / 퍼펙트 → ✔ 카드 + 보조 줄(힐 · 묶기 · 진필살기 = 자리만)
   const { S, L, R, code, mid, uid, now, locked, title }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string } = $props();
   const rec = $derived(plainRecord(L, R, mid, uid));
-  const healers = $derived([...new Set(healsTo(R, mid, uid).map((h) => R.players?.[h.from]?.nick || '친구'))].join(' · '));
+  const healers = $derived([...new Set(healsTo(R, mid, uid, L).map((h) => R.players?.[h.from]?.nick || '친구'))].join(' · '));
   const marks = $derived(rec.tries.map((t) => markOf(t.correct, t.total))); // ▢ 도전 칸 = 낸 차례마다 ✔ · 노랑 · − (#152)
   const attempt = $derived(rec.nextAttempt);
   const items = $derived(itemsFor(L, R, mid, uid, attempt));
@@ -81,6 +82,7 @@
     if (!l2) return;
     // ⚔ 정식 student.js: 도장(채점) 뒤 공격 한 번 · hits = 이번에 늘어난 데미지 · ⚡ 필살기 = 첫 시도에 모두 맞힘(장면이 내 속성 Ⅲ↑ 판정) · 🔥 끈기 = 두 번 넘게 틀린 뒤 다 맞힘 · 연습 = 데미지 0
     const gain = Math.max(0, r2.best - oldBest), all = l2.marks.length > 0 && l2.marks.every(Boolean);
+    { const R2 = S.get<RoomT>(`rooms/${code}`) as RoomT, pt = stone(R2, mid); if (pt && S.now() < pt.until && gain > 0 && !r2.practice) petriGem(S, code, uid, pt.at, mid, gain); } // 🗿 석화 찬스 (정식 petriGem)
     pendAtk = { miss: !l2.marks.some((m, i) => m && !keep[i]) && !r2.practice, hits: r2.practice ? 1 : gain || l2.marks.filter(Boolean).length, ult: !r2.practice && l2.attempt === 0 && all, finish: !r2.practice && l2.attempt >= 2 && r2.perfectAt === l2.attempt, noDmg: r2.practice };
     startReveal(qs, texts, l2.marks, keep, gain);
   }

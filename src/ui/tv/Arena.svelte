@@ -11,7 +11,9 @@
   import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
   import { deco } from '../fx/aura';
   import { ladder } from '../../model/hero';
-  import { bossState, plainRecord } from '../../raid/raid';
+  import { bossState, plainRecord, holyArmed, stone, BOSS_ID } from '../../raid/raid';
+  import { cutin } from '../fx/attack';
+  import { guard } from '../fx/aura';
   import { HERO, heroUrl, monBody } from '../manifest';
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
@@ -51,7 +53,7 @@
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { const d = attackOf(L, step, c.k); if (d.id !== 'ice') return; const ms = attackMs(d, c.lock, attackStrong(hp)); if (A) A.freeze(ms); else domFreeze(ms); });
+    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k); if (d.id !== 'ice') return; const ms = attackMs(d, c.lock, attackStrong(hp)); if (A) A.freeze(ms); else domFreeze(ms); });
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
   function domFreeze(ms: number) { iceDom = 1; setTimeout(() => (iceDom = 2), ms); setTimeout(() => (iceDom = 0), ms + 650); }
@@ -108,6 +110,25 @@
   }
   // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
   (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number) => void }).__tvAtk = (k, kind = 'hit', dmg = 2) => { const u = ids[k]; if (u) { queue.push({ u, dmg, kind }); play(); } };
+  // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음
+  let guardBusy = false;
+  async function tvGuard(us: string[]) {
+    if (guardBusy) return; guardBusy = true;
+    const p0 = R.players?.[us[0]!]; await cutin(p0?.hero ?? 0, p0?.fx || 'twinkle', { guard: true }); guardBusy = false;
+    const lay = fxLayer; if (!lay) return;
+    us.forEach((u) => {
+      const k = ids.indexOf(u), sl = slots[k]; if (!sl) return;
+      if (A) {
+        const w = HERO.w * sl.s, hgt = HERO.h * sl.s, hb = document.createElement('div'); hb.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`;
+        const art = document.createElement('i'); art.className = 'art hero'; art.style.cssText = `position:absolute;inset:0;background:url(${heroUrl(R.players?.[u]?.hero ?? 0)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated`;
+        hb.appendChild(art); lay.appendChild(hb); A.heroVisible(u, false); guard(hb); setTimeout(() => { hb.remove(); A?.heroVisible(u, true); }, 2650);
+      } else { const el = host.querySelector(`.hr[data-u="${CSS.escape(u)}"]`) as HTMLElement | null; if (el) guard(el); }
+    });
+  }
+  // 🗿 석화 (진필살기 20초 · 홀리 방패 10초): 몬스터 회색 돌 · 남은 초 (정식 hall.js 94)
+  const stoneNow = $derived(step ? stone(R, step.kind === 'boss' ? BOSS_ID : step.id) : null);
+  const stoneLeft = $derived(stoneNow ? Math.max(0, Math.ceil((stoneNow.until - now) / 1000)) : 0);
+  $effect(() => { A?.stone(stoneLeft > 0); });
   // ✨ 오라 (정식 aura.js · TV = 입자 2개까지): Pixi = 캔버스 아래 층에 용사 자리마다 · DOM 장면 = HeroSprite 가 직접
   $effect(() => {
     const lay = auraLayer; if (!lay || mode !== 'pixi' || !W) return;
@@ -149,7 +170,7 @@
   {#if mode === 'dom' && W && step && sprite}
     <!-- DOM 장면 = 캔버스와 같은 배치 (WebGL 없는 기기) -->
     <i class="sh" style:left="{box.shadow.cx - box.shadow.w / 2}px" style:top="{box.shadow.y - H * 0.018}px" style:width="{box.shadow.w}px" style:height="{H * 0.036}px"></i>
-    <div class="mon" class:shadow class:float={!hp?.down} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : 'idle'} size={box.mon.size} /></div>
+    <div class="mon" class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : 'idle'} size={box.mon.size} /></div>
     {#if hp && !shadow}
       <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>HP {hp.left} / {hp.max}</b></div></div>
     {/if}
@@ -162,11 +183,14 @@
     {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
+  {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
 </div>
 
 <style>
   .arena2 { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
+  .mon.stoned { filter: grayscale(1) brightness(0.85) contrast(1.1); }
+  .stonelab { position: absolute; z-index: 6; transform: translateX(-50%); padding: 0.5cqh 1.2cqw; border-radius: 99px; background: rgba(40, 40, 46, 0.9); border: 2px solid #c9c9d6; font-size: var(--tv-body); font-weight: 700; white-space: nowrap; }
   .tvaura { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .arena2 :global(canvas) { position: relative; z-index: 1; }
   .tvfx { position: absolute; inset: 0; z-index: 2000; pointer-events: none; overflow: hidden; }
