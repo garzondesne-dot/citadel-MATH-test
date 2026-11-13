@@ -24,6 +24,7 @@
   import TdTV from '../rest/TdTV.svelte';
   import { tvBgm, tvBgmNow } from './bgm';
   import { soundPref } from '../sound.svelte';
+  import FunCrowd from '../rest/FunCrowd.svelte';
   import { artUrl, FUN_BG } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import type { Nun } from '../../rest/nunchi';
@@ -80,6 +81,13 @@
   const fun = $derived(funOf(R));
   const ff = $derived(fun && fun.kind !== 'nun' ? norm(fun as Fun) : null);
   const nn = $derived(fun && fun.kind === 'nun' ? (fun as unknown as Nun) : null);
+  // 🔄 🙊 쉼터 무리(❓#2 B): 이름 = 번호 뺀 이름 · 번호 = 명단(없으면 방 기록) · TV 높이 1000 넘으면 용사 1.5배
+  const nmOnly = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? p.name.slice(1) : R?.players?.[u]?.nick ?? u; };
+  const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? Number((R?.players?.[u] as { num?: number } | undefined)?.num) ?? 0;
+  let tvH = $state(720);
+  const crowdK = $derived(tvH >= 1000 ? 1.5 : 1);
+  const revPeople = $derived(ff && ff.kind === 'rev' && ff.phase !== 'end' && R ? Object.keys(ff.alive || {}).map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, num: numOf(u), name: nmOnly(u), st: (ff.phase === 'show' && ff.res?.out.includes(u) ? 'out' : '') as '' | 'out' })).sort((a, b) => a.num - b.num) : []);
+  const nunPeople = $derived(nn && nn.phase !== 'end' && R ? [...Object.keys(nn.alive || {}), ...Object.keys(nn.out || {}).filter((u) => !(nn.alive || {})[u]), ...Object.keys(nn.zz || {}).filter((u) => !(nn.alive || {})[u] && !(nn.out || {})[u])].map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, num: numOf(u), name: nmOnly(u), st: ((nn.zz || {})[u] ? 'zz' : (nn.out || {})[u] ? 'out' : '') as '' | 'out' | 'zz', say: (nn.said || {})[u] })).sort((a, b) => (a.st === 'out' ? 1 : 0) - (b.st === 'out' ? 1 : 0) || a.num - b.num) : []);
   const fnow = $derived(fun?.frz != null ? Number(fun.frz) : now);
   const funSec = $derived(fun && fun.phase !== 'end' ? Math.max(0, Math.ceil(((fun.phase === 'show' ? (ff?.until ?? nn?.to ?? 0) : fun.to) - fnow) / 1000)) : 0);
   const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
@@ -173,7 +181,7 @@
   });
 </script>
 
-<svelte:window onmousemove={poke} ontouchstart={poke} onkeydown={poke} onresize={fit} />
+<svelte:window bind:innerHeight={tvH} onmousemove={poke} ontouchstart={poke} onkeydown={poke} onresize={fit} />
 <div class="tv" class:dim={!!R?.state.focus}>
   <div class="bg" style:background-image="url({view === 'camp' ? CAMP.bg : dungeonOf(L.theme)})" class:campbg={view === 'camp'}></div>
 
@@ -263,7 +271,8 @@
         <h3>🙊 눈치게임 · {nn.round}판</h3>
         {#if nn.phase === 'end'}<p class="big">🏆 우승 {(nn.win || []).length}명</p><div class="crowd">{#each nn.win || [] as u (u)}<span><HeroSprite id={R.players?.[u]?.hero ?? 0} scale={2} /><em>{nameOf(u)}</em></span>{/each}</div>
         {:else}<p class="s">1부터 차례로 · 둘이 같이 누르면 💥 · 마지막 1명도 탈락</p><div class="cd">{nn.phase === 'ready' ? funSec : nn.n}</div>
-          <div class="evs">{#each (nn.ev || []).slice(-4) as e, k (k)}<span>{e.k === 'say' ? `🗣 ${e.n} ${e.u.map(nameOf).join('')}` : e.k === 'clash' ? `💥 동시! ${e.u.map(nameOf).join(' · ')}` : e.k === 'last' ? `⌛ 마지막! ${e.u.map(nameOf).join('')}` : `⏳ 시간 끝 ${e.u.length}명`}</span>{/each}</div>{/if}
+          <div class="evs">{#each (nn.ev || []).slice(-4) as e, k (k)}<span>{e.k === 'say' ? `🗣 ${e.n} ${e.u.map(nameOf).join('')}` : e.k === 'clash' ? `💥 동시! ${e.u.map(nameOf).join(' · ')}` : e.k === 'last' ? `⌛ 마지막! ${e.u.map(nameOf).join('')}` : `⏳ 시간 끝 ${e.u.length}명`}</span>{/each}</div>
+          {#if nunPeople.length}<FunCrowd kind="nun" people={nunPeople} k={crowdK} />{/if}{/if}
       {:else if ff}
         <h3>{KIND[ff.kind as Kind].short}{ff.kind === 'quiz' ? ` · ${ff.n} / ${Math.min(QN, ff.queue.length)}` : ` · ${ff.n}판`}</h3>
         {#if ff.phase === 'end'}
@@ -274,6 +283,7 @@
           {#if ff.s}<p class="q">{ff.s}</p>{/if}
           <div class="vs">{#each ff.q as t, k (k)}<span class="o{k}">{t}</span>{/each}</div>
           {#if ff.phase === 'show'}<p class="ver">{verdict(ff)}</p>{:else}<div class="cd">{funSec}</div>{/if}
+          {#if revPeople.length}<FunCrowd kind="rev" people={revPeople} k={crowdK} />{/if}
         {/if}
       {/if}
       {#if funErr}<p class="err">{funErr}</p>{/if}
