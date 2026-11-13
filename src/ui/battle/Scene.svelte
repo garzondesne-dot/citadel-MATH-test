@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dungeonOf, HERO, heroGeo, heroNudge, heroUrl, spriteOf } from '../manifest';
+  import { artUrl, dungeonOf, ELEM_FX, HERO, heroGeo, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   // 🎬 장면 띠 (②B · 2-1절): 폰 맨 위부터 양끝까지 · 높이 280 · 아래 56px 페이드
@@ -7,9 +7,12 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0 }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number } = $props();
+  // 💫 #161 속성: 몬스터 → 용사 = 빛 구슬(0.25초) → 용사 자리 속성 이펙트 띠(정식 pfx) · 용사 머리 위 상태 그림(정식 status · 맞는 동안) · 분노 = 장면 붉게
+  const efx = $derived(elem ? ELEM_FX[elem] : null);
+  const srow = $derived(Math.max(0, STATUS.kinds.indexOf(elem as (typeof STATUS.kinds)[number])));
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
   const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
@@ -22,7 +25,7 @@
   const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
 </script>
 
-<div class="edge" class:hit style:background-image="url({dungeonOf(theme)})">
+<div class="edge" class:hit class:rage style:background-image="url({dungeonOf(theme)})">
   <div class="top">
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
     {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}
@@ -44,6 +47,13 @@
   <i class="mon" class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
+  {#if hit && efx}
+    {#key hitKey}
+      <i class="orb e-{elem}" aria-hidden="true"></i>
+      <i class="efx" aria-hidden="true" style:width="{efx.w}px" style:height="{efx.h}px" style:left="{80 - efx.w / 2}px" style:top="{204 - efx.h / 2}px" style:background-image="url({artUrl(efx.src)})" style:background-size="{efx.w * efx.n}px {efx.h}px" style:--n={efx.n} style:--fw="{efx.w * efx.n}px" style:animation-duration="{Math.round((efx.n / efx.fps) * 1000)}ms"></i>
+    {/key}
+    <i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>
+  {/if}
   <i class="hero" class:lunge={pose === 'attack'} class:whiff={pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
     style:background-position="-{(pose === 'idle' ? 0 : 2) * hg.w * HS}px -{(pose === 'idle' ? HERO.idleRow : ATK_ROW) * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>
 </div>
@@ -79,5 +89,16 @@
   .edge.hit .hero { filter: sepia(1) saturate(6) hue-rotate(-40deg) brightness(0.9); }
   .tag { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: 216px; height: 32px; padding: 0 12px; border-radius: 16px; background: rgba(8, 9, 12, 0.72); border: 1px solid var(--accent); color: #fff; font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; white-space: nowrap; }
   .tag.hitTag { border-color: var(--bad); background: rgba(120, 20, 20, 0.85); }
+  /* 💫 #161 속성 이펙트 · 상태 그림 · 분노 */
+  .orb { position: absolute; z-index: 2; left: 300px; top: 160px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff, var(--oc, #ff6b6b) 55%, transparent 70%); animation: orb 0.25s ease-in forwards; pointer-events: none; }
+  @keyframes orb { to { transform: translate(-230px, 36px); opacity: 0.2; } }
+  .orb.e-freeze { --oc: #7fd6ff; } .orb.e-burn { --oc: #ff8a1c; } .orb.e-poison { --oc: #b06cff; } .orb.e-shock { --oc: #ffe14a; } .orb.e-bind { --oc: #c9c9d6; } .orb.e-confuse { --oc: #ff7ad9; } .orb.e-sleep { --oc: #9fb2ff; }
+  .efx { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; opacity: 0; animation-name: efx; animation-timing-function: steps(var(--n)); animation-fill-mode: forwards; animation-delay: 0.22s; pointer-events: none; }
+  @keyframes efx { 0% { opacity: 1; background-position-x: 0; } 99% { opacity: 1; } 100% { opacity: 0; background-position-x: calc(-1 * var(--fw)); } }
+  .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
+  @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
+  .edge.rage { box-shadow: inset 0 0 48px rgba(229, 72, 77, 0.75); }
+  .edge.rage .mon { filter: drop-shadow(0 0 6px rgba(229, 72, 77, 0.9)); }
+  @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status { animation: none; } }
   .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
 </style>

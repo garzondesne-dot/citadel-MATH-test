@@ -13,6 +13,7 @@
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
   import Title from './ui/Title.svelte';
+  import AtkGallery from './ui/AtkGallery.svelte';
   import TeacherApp from './ui/teacher/TeacherApp.svelte';
   import { pupil, savedLogin, type Live, type Pupil } from './school/school';
   import { liveValue } from './ui/room.svelte';
@@ -92,6 +93,8 @@
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
     <Title {S} onin={(p) => { bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
+  {:else if role === 'atk'}
+    <AtkGallery />
   {:else if role === 'dev'}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>

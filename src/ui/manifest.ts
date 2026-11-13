@@ -102,3 +102,16 @@ export const artUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 export const absArt = (p: string) => (typeof document !== 'undefined' ? new URL(artUrl(p), document.baseURI).href : artUrl(p));
 // ✏ 출제 책상 (obj-quest · 캠프 물건 꼴 192 × 96 · 칸 96 · ① 평소 ② 새 소식) — 캠프 자리 · 기능은 출제 공방 시안 컨펌 뒤
 export const QUEST_DESK = { src: artUrl('art/camp/obj-quest-v1.webp'), cols: 2 };
+// 💫 #161 상태이상 그림(정식 status-v1 · 칸 80 × 80 · 6칸 × 8줄 = 속성) · 몬스터 → 용사 속성 이펙트(정식 pfx 띠 재사용 · pixelfx MIT) · 속성 소리
+export const STATUS = { src: 'art/status-v1.webp', w: 80, h: 80, cols: 6, ms: 600, kinds: ['stun', 'freeze', 'bind', 'burn', 'poison', 'shock', 'confuse', 'sleep'] as const };
+export const ELEM_FX: Record<string, { src: string; w: number; h: number; n: number; fps: number; sfx: string }> = {
+  stun: { src: 'art/pfx/fx-bash-v1.webp', w: 91, h: 81, n: 14, fps: 15, sfx: 'smash' },
+  freeze: { src: 'art/pfx/fx-frost-v1.webp', w: 126, h: 115, n: 19, fps: 15, sfx: 'frost' },
+  bind: { src: 'art/pfx/fx-bind-v1.webp', w: 138, h: 81, n: 20, fps: 15, sfx: 'block' },
+  burn: { src: 'art/pfx/fx-flame-v1.webp', w: 199, h: 165, n: 16, fps: 15, sfx: 'fire' },
+  poison: { src: 'art/pfx/fx-void-v1.webp', w: 162, h: 130, n: 22, fps: 15, sfx: 'magic' },
+  shock: { src: 'art/pfx/fx-spark-v1.webp', w: 129, h: 104, n: 14, fps: 15, sfx: 'spark' },
+  confuse: { src: 'art/pfx/fx-vortex-v1.webp', w: 150, h: 114, n: 22, fps: 15, sfx: 'wind' },
+  sleep: { src: 'art/pfx/fx-twinkle-v1.webp', w: 110, h: 110, n: 16, fps: 15, sfx: 'magic' },
+};
+export const SFX: Record<string, string> = { smash: 'sfx/smash-v2.mp3', frost: 'sfx/frost-v2.mp3', block: 'sfx/block-v2.mp3', fire: 'sfx/fire-v2.mp3', magic: 'sfx/magic-v2.mp3', spark: 'sfx/spark-v2.mp3', wind: 'sfx/wind-v2.mp3', hurt: 'sfx/hurt-v2.mp3', click: 'sfx/click-v2.mp3' };

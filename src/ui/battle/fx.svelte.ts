@@ -2,5 +2,5 @@
 //   hold = 아직 안 뒤집힌 ✔ 만큼 몬스터 체력을 잠깐 덜 깎인 것처럼 · pose = 용사 베기 / 헛스윙
 //   block = 💥 몬스터 공격으로 입력 멈춤(#151 · 주요 단추 = 같은 자리 흐린 「⏳ 막는 중…」)
 //   ice = 🧊 얼음 공격으로 주요 단추가 얼어 있는 동안 남은 톡 수(0 = 없음) · fire = 🔥 화염 공격 중(주요 단추 자리 = 🧯 꾹 눌러 끄기) (#152)
-export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false });
+export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean; lock: boolean }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false, lock: false });
 export function swing(ok: boolean) { fx.pose = ok ? 'attack' : 'miss'; fx.poseUntil = Date.now() + 320; }

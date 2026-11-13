@@ -15,7 +15,9 @@
   import SymText from './q/SymText.svelte';
   import { fx } from './battle/fx.svelte';
   import AttackFx from './battle/AttackFx.svelte';
-  import { attackDef, attackMs, attackOf, type AttackDef } from '../raid/attacks';
+  import { attackDef, attackMs, attackOf, attackStrong, type AttackDef } from '../raid/attacks';
+  import { ELEM_FX } from './manifest';
+  import { sfx } from './sound.svelte';
   import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
@@ -79,26 +81,28 @@
 
   // 👾 몬스터 공격: 모든 기기가 같은 시계로 같은 순간에 맞음 → 문제 화면이면 lock 초 동안 공격 효과 (정식 monsterStrike · #152 공격 종류 = 차시 팩 attack)
   //   멈춤 · 파지직 = 입력 막힘 / 안개 · 얼음 · 화염 = 손풀기로 일찍 풀림 / 강타 = 흔들기만 · 모두 lock 초 지나면 저절로
-  let atk = $state<{ def: AttackDef; at: number; until: number } | null>(null);
+  //   #161 세기 = 몬스터(보스) 체력 50% 아래면 강(분노 · 효과 조금 길게 · 소리 · 장면 붉게 · 멈춤 시간 상한 안) · 속성 소리
+  let atk = $state<{ def: AttackDef; at: number; until: number; strong: boolean } | null>(null);
   const memo = {};
-  function strike(def: AttackDef, ms: number) {
-    atk = { def, at: gnow, until: gnow + ms };
-    fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire';
+  function strike(def: AttackDef, ms: number, strong = false) {
+    atk = { def, at: gnow, until: gnow + ms, strong };
+    fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.lock = def.id === 'lock';
+    sfx(ELEM_FX[def.elem]?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
   }
   $effect(() => {
     if (!R) return;
     const c = atkClock(L, R, now);
     if (!c || c.paused) return;
-    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => { const d = attackOf(L, step, c.k); strike(d, attackMs(d, c.lock)); });
+    if (atkTrack(memo, c, `${c.kind}|${c.mid}`).strike && !symState.open) untrack(() => { const d = attackOf(L, step, c.k), st = attackStrong(sceneHp?.hp); strike(d, attackMs(d, c.lock, st), st); });
   });
   const atkOn = $derived(!!atk && atk.until > gnow && !scout?.on);
   const stunned = $derived(atkOn && !!atk?.def.lockInput);
   // 손풀기로 풀림 (얼음 4번 · 화염 꾹 1초) · 시간이 지나면 저절로
-  $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
-  $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; }); });
+  $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire) || (atk.def.id === 'lock' && !fx.lock))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
+  $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; fx.lock = false; }); });
   // 화면 시험 고리(#151 · #152 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음 (종류 = 등록 표 id)
-  (globalThis as { __strike?: (ms?: number, id?: string) => void }).__strike = (ms = 3000, id = 'pause') => strike(attackDef(id), ms);
-  $effect(() => { fx.block = stunned; return () => { fx.block = false; fx.ice = 0; fx.fire = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
+  (globalThis as { __strike?: (ms?: number, id?: string, strong?: boolean) => void }).__strike = (ms = 3000, id = 'pause', strong = false) => strike(attackDef(id), ms, strong);
+  $effect(() => { fx.block = stunned; return () => { fx.block = false; fx.ice = 0; fx.fire = false; fx.lock = false; }; }); // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
@@ -113,7 +117,7 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk?.def.tag ?? ''}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? '💥 쓰러짐! 그래도 공격할 수 있어요' : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
@@ -162,7 +166,7 @@
         {/if}
       {/key}
       {#if atkOn && atk}
-        {#key atk.at}<AttackFx kind={atk.def.id} len={atk.until - atk.at} left={atk.until - gnow} onclear={() => { if (atk) atk = { ...atk, until: gnow }; }} />{/key}
+        {#key atk.at}<AttackFx kind={atk.def.id} strong={atk.strong} len={atk.until - atk.at} left={atk.until - gnow} onclear={() => { if (atk) atk = { ...atk, until: gnow }; }} />{/key}
       {/if}
       </div>
     {/if}

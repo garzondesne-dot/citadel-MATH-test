@@ -6,21 +6,44 @@
 import type { LessonPack, Step } from '../model/types';
 
 //   ms = 효과 시간(있으면 · #168 손풀기 공격 = 3초 · 손으로 풀면 일찍) · 없으면 지금 멈춤(lock) 그대로
-export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; gesture?: 'rub' | 'tap4' | 'hold'; ms?: number }
+//   elem = 속성(#161 · 정식 상태이상 8 = 장면 띠 몬스터 → 용사 이펙트 · 용사 머리 위 상태 그림 · 속성 소리) · special = 던전 특수(그 차시 보스 셋째 공격)
+//   손풀기 몸짓 = 겹치지 않게 하나씩: rub 문지르기 · tap4 톡톡 · hold 꾹 · swipe 좌우 쓸기 · dtap 두 번 톡 · touch 손가락 대기(닿은 곳만 보임 · 일찍 안 끝남) · drag 끌어다 꽂기
+export type Elem = 'stun' | 'freeze' | 'bind' | 'burn' | 'poison' | 'shock' | 'confuse' | 'sleep';
+export interface AttackDef { id: string; name: string; icon: string; tag: string; lockInput: boolean; elem: Elem; gesture?: 'rub' | 'tap4' | 'hold' | 'swipe' | 'dtap' | 'touch' | 'drag'; ms?: number; special?: number }
 export const ATTACKS: Record<string, AttackDef> = {
-  pause: { id: 'pause', name: '멈춤', icon: '⏸', tag: '💥 몬스터 공격!', lockInput: true },
-  glitch: { id: 'glitch', name: '파지직', icon: '⚡', tag: '⚡ 파지직 공격!', lockInput: true },
-  fog: { ms: 3000, id: 'fog', name: '안개', icon: '🌫', tag: '🌫 안개 공격!', lockInput: false, gesture: 'rub' },
-  ice: { ms: 3000, id: 'ice', name: '얼음', icon: '🧊', tag: '🧊 얼음 공격!', lockInput: false, gesture: 'tap4' },
-  fire: { ms: 3000, id: 'fire', name: '화염', icon: '🔥', tag: '🔥 화염 공격!', lockInput: false, gesture: 'hold' },
-  smash: { id: 'smash', name: '강타', icon: '💢', tag: '💢 강타!', lockInput: false },
+  pause: { id: 'pause', name: '멈춤', icon: '⏸', tag: '💥 몬스터 공격!', lockInput: true, elem: 'stun' },
+  glitch: { id: 'glitch', name: '파지직', icon: '⚡', tag: '⚡ 파지직 공격!', lockInput: true, elem: 'shock' },
+  fog: { ms: 3000, id: 'fog', name: '안개', icon: '🌫', tag: '🌫 안개 공격!', lockInput: false, gesture: 'rub', elem: 'sleep' },
+  ice: { ms: 3000, id: 'ice', name: '얼음', icon: '🧊', tag: '🧊 얼음 공격!', lockInput: false, gesture: 'tap4', elem: 'freeze' },
+  fire: { ms: 3000, id: 'fire', name: '화염', icon: '🔥', tag: '🔥 화염 공격!', lockInput: false, gesture: 'hold', elem: 'burn' },
+  smash: { id: 'smash', name: '강타', icon: '💢', tag: '💢 강타!', lockInput: false, elem: 'stun' },
+  // #161 새 6
+  confuse: { id: 'confuse', name: '혼란', icon: '🌀', tag: '🌀 혼란 공격!', lockInput: false, elem: 'confuse' },
+  wind: { id: 'wind', name: '바람', icon: '🌪', tag: '🌪 바람 공격!', lockInput: false, elem: 'stun' },
+  poison: { id: 'poison', name: '독', icon: '☠️', tag: '☠️ 독 공격!', lockInput: false, elem: 'poison' },
+  bind: { ms: 3000, id: 'bind', name: '속박', icon: '⛓', tag: '⛓ 속박 공격!', lockInput: true, gesture: 'swipe', elem: 'bind' },
+  sleep: { ms: 3000, id: 'sleep', name: '수면', icon: '💤', tag: '💤 수면 공격!', lockInput: false, gesture: 'dtap', elem: 'sleep' },
+  dark: { ms: 3000, id: 'dark', name: '어둠', icon: '🌑', tag: '🌑 어둠 공격!', lockInput: false, gesture: 'touch', elem: 'confuse' },
+  // #161 던전 특수 3 (그 차시 보스만 · 짝 표 둘 다음 셋째)
+  mirror: { id: 'mirror', name: '반사', icon: '🪞', tag: '🪞 반사 공격!', lockInput: false, elem: 'confuse', special: 8 },
+  lock: { ms: 3000, id: 'lock', name: '자물쇠', icon: '🔒', tag: '🔒 자물쇠 공격!', lockInput: false, gesture: 'drag', elem: 'bind', special: 9 },
+  scale: { id: 'scale', name: '저울', icon: '⚖️', tag: '⚖️ 저울 공격!', lockInput: false, elem: 'stun', special: 10 },
 };
-/** 효과 시간 (ms) = 등록 표 ms · 없으면 지금 멈춤(lock 초) */
-export const attackMs = (a: AttackDef, lockSec: number) => a.ms ?? lockSec * 1000;
+/** 갤러리 · 시험 순서 (지금 6 → 새 6 → 특수 3) */
+export const ATTACK_IDS = Object.keys(ATTACKS);
+/** 효과 시간 (ms) = 등록 표 ms · 없으면 지금 멈춤(lock 초) · 분노(강) = 1.3배 · 단 멈춤 시간 상한 안(원래가 상한보다 길면 그대로) */
+export const attackMs = (a: AttackDef, lockSec: number, strong = false) => { const base = a.ms ?? lockSec * 1000; return strong ? Math.round(Math.min(base * 1.3, Math.max(base, lockSec * 1000))) : base; };
+/** 세기: 몬스터 체력 50% 아래 = 강(분노) · 아니면 약 */
+export const attackStrong = (hp: { left: number; max: number } | null | undefined) => !!hp && hp.max > 0 && hp.left > 0 && hp.left / hp.max < 0.5;
 export const attackDef = (id: string | undefined) => ATTACKS[id || ''] ?? ATTACKS.pause!;
+/** 보스 공격 목록 = 짝 표 둘 + 그 차시 던전 특수(있으면) · 돌아가며 */
+export function bossAttacks(L: LessonPack): string[] {
+  const sp = Object.values(ATTACKS).find((a) => a.special === L.no);
+  return [...(L.boss?.attack || []), ...(sp ? [sp.id] : [])];
+}
 /** 이 단계 · k번째 공격의 종류 (보스 = 목록을 차례로) */
 export function attackOf(L: LessonPack, step: Step | null, k: number): AttackDef {
   if (!step) return ATTACKS.pause!;
-  if (step.kind === 'boss') { const a = L.boss?.attack || []; return attackDef(a.length ? a[((k % a.length) + a.length) % a.length] : 'pause'); }
+  if (step.kind === 'boss') { const a = bossAttacks(L); return attackDef(a.length ? a[((k % a.length) + a.length) % a.length] : 'pause'); }
   return attackDef(L.monsters[step.id]?.attack);
 }

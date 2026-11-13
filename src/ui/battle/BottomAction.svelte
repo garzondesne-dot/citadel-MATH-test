@@ -12,7 +12,7 @@
   let h = $state(0);
   const block = $derived(battle && fx.block);
   // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
-  const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire);
+  const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire), lockd = $derived(battle && fx.lock); // 🔒 #161 자물쇠 = 떨어진 🗝 를 끌어다 꽂기(AttackFx)
   let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
   const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; }, 1000); };
   const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
@@ -24,6 +24,8 @@
   {#if aux}<div class="row">{@render aux()}</div>{/if}
   {#if block}
     <button type="button" class="btn pmain" disabled aria-label="막는 중">⏳ 막는 중…</button>
+  {:else if lockd}
+    <button type="button" class="btn pmain lockd" disabled aria-label="자물쇠 · 열쇠를 끌어다 꽂기">🔒 열쇠를 끌어다 꽂기</button>
   {:else if ice}
     <button type="button" class="btn pmain ice" aria-label="얼음 깨기" onclick={() => (fx.ice = Math.max(0, fx.ice - 1))}>🧊 톡톡 깨기 · {fx.ice}</button>
   {:else if fire}
@@ -45,6 +47,7 @@
   .btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .btn:disabled { opacity: 0.4; box-shadow: none; }
   .btn.ice { background: linear-gradient(135deg, #cfeaff, #8fc9f2 60%, #e8f6ff); color: #0d3550; box-shadow: inset 0 0 0 2px #fff, 0 3px 0 #4f8fbf; }
+  .btn.lockd { opacity: 1; background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
   .btn.fire { background: #3a1a12; color: #ffd7b0; box-shadow: inset 0 0 0 2px #ff7a3a, 0 3px 0 #000; touch-action: none; user-select: none; -webkit-user-select: none; }
   .btn.fire.holding { background: linear-gradient(90deg, #ff7a3a 0%, #3a1a12 0%); animation: hold 1s linear forwards; }
   @keyframes hold { from { background-size: 0% 100%; } to { background: #ff7a3a; } }

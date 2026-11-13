@@ -6,7 +6,7 @@ import { PROFILES } from '../src/model/profiles';
 import { chainSubmit, heartbeat, nextStep, openRoom, roomPath, spendEnergy } from '../src/raid/actions';
 import { answerOf, bindSec, chainRecord, healsReceived, stepOf } from '../src/raid/raid';
 import { packOf } from '../src/engine/packs';
-import { attackMs, attackOf, ATTACKS } from '../src/raid/attacks';
+import { attackMs, attackOf, attackStrong, ATTACKS, bossAttacks } from '../src/raid/attacks';
 
 describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
   it('소레이드 다 맞힘 → 기력 = 남은 칸 · 묶기 · 힐 · 바닥나면 막힘', () => {
@@ -31,9 +31,22 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(attackOf(L6, st(L6, 'm1'), 0).id).toBe('fog'); expect(attackOf(L7, st(L7, 'u4'), 0).id).toBe('smash');
     expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['glitch', 'fog', 'glitch']);
     expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('ice');
-    expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash']);
-    expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch']);
+    expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'lock', 'scale']);
+    expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch', 'bind']);
     // #168 손풀기 공격만 3초 · 나머지 = 지금 멈춤
-    expect(Object.values(ATTACKS).map((a) => attackMs(a, 1))).toEqual([1000, 1000, 3000, 3000, 3000, 1000]);
+    expect(Object.values(ATTACKS).slice(0, 6).map((a) => attackMs(a, 1))).toEqual([1000, 1000, 3000, 3000, 3000, 1000]);
+  });
+  it('#161 공격 15: 속성 8 · 몸짓 겹침 0 · 던전 특수 = 그 차시 보스 셋째 · 분노 = 50% 아래 · 멈춤 상한 안', () => {
+    const els = new Set(Object.values(ATTACKS).map((a) => a.elem)); expect(els.size).toBe(8);
+    const g = Object.values(ATTACKS).map((a) => a.gesture).filter(Boolean); expect(new Set(g).size).toBe(g.length);
+    const L8 = packOf('set-08')!, L9 = packOf('set-09')!, L10 = packOf('set-10')!, L6 = packOf('set-06')!;
+    expect(bossAttacks(L8)).toEqual(['glitch', 'ice', 'mirror']); expect(bossAttacks(L9)).toEqual(['smash', 'glitch', 'lock']); expect(bossAttacks(L10)).toEqual(['smash', 'fog', 'scale']);
+    expect(bossAttacks(L6)).toEqual(['glitch', 'fog']);
+    const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['glitch', 'ice', 'mirror', 'glitch']);
+    expect(attackStrong({ left: 49, max: 100 })).toBe(true); expect(attackStrong({ left: 50, max: 100 })).toBe(false); expect(attackStrong({ left: 0, max: 100 })).toBe(false); expect(attackStrong(null)).toBe(false);
+    expect(attackMs(ATTACKS.pause!, 4, true)).toBe(4000); // 멈춤 = 이미 상한
+    expect(attackMs(ATTACKS.fog!, 5, true)).toBe(3900); // 3초 × 1.3 ≤ 5초
+    expect(attackMs(ATTACKS.fog!, 3, true)).toBe(3000); // 상한 3초
+    expect(attackMs(ATTACKS.fog!, 1, true)).toBe(3000); // 원래가 상한보다 길면 그대로
   });
 });

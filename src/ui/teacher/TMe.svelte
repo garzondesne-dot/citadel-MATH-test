@@ -52,6 +52,7 @@
     <a class="item" href="?role=hall" target="_blank"><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>교사 캠프 · 교실 TV 에서 열려요</small></span></a>
     <button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
+    <a class="item" href="?role=atk" target="_blank"><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
     <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">🔊</span><span class="tx"><b>소리</b><small>교사 폰 · {sound}</small></span></button>
     <button type="button" class="item" disabled={!admin} onclick={teacherOut}><span class="ic">↪</span><span class="tx"><b>로그아웃</b><small>{admin ? who : '교사 로그인 뒤'}</small></span></button>
