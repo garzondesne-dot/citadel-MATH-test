@@ -311,7 +311,8 @@
   .fire { filter: drop-shadow(0 0 18px #ff9a2a); }
   .zone { position: absolute; z-index: 5; background: none; border: 0; padding: 0; }
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
-  .prop .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+  .prop .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; transition: transform 0.12s ease-out; transform-origin: 50% 100%; }
+  .prop:active .img { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
   .label { position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%); white-space: nowrap; height: 26px; padding: 0 9px; border-radius: 13px; background: var(--surface-2); color: var(--text); font: 700 var(--fs-small) var(--font); display: flex; align-items: center; gap: var(--s1); box-shadow: 0 3px 0 #000; z-index: 5; transition: opacity var(--t); }
   .zone .label { bottom: 4px; transform: translate(-50%, 0); }
   .label.new { background: #f2f3f5; color: #14161b; }

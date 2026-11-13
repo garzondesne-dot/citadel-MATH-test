@@ -139,7 +139,7 @@
   :global(html), :global(body) { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: var(--fs-body); -webkit-text-size-adjust: 100%; }
   :global(button) { cursor: pointer; font-family: var(--font); }
   :global(a) { color: var(--accent); }
-  :global(button:focus-visible), :global(a:focus-visible) { outline: 3px solid var(--gem); outline-offset: 2px; }
+  :global(button:focus-visible), :global(a:focus-visible), :global([role='button']:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
   .beta { background: var(--accent); color: var(--on-accent); text-align: center; font-weight: 700; padding: var(--s1) var(--s2); font-size: var(--fs-small); }
   .blocked { position: fixed; top: 0; left: 0; right: 0; z-index: 99; padding: 8px 12px; background: var(--bad); color: #fff; font-weight: 700; font-size: 14px; text-align: center; }
   .srv { position: fixed; top: 42px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: none; height: 20px; padding: 0 8px; border-radius: 10px; background: rgba(8, 9, 12, 0.55); color: var(--text-3); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; white-space: nowrap; }
