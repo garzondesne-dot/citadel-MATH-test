@@ -86,7 +86,7 @@
   {:else if role === 'camp'}
     <Camp {S} L={lessonOf(code)} {code} />
   {:else if role === 'teacher'}
-    <TeacherApp {S} packs={PACKS} />
+    <TeacherApp {S} packs={q.get('packs') === '0' ? [] : PACKS} />
   {:else if role === 'student' && me}
     <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
   {:else if !role && login}

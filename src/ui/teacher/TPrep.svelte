@@ -34,11 +34,15 @@
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
-  <label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>
+  {#if packs.length}<label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>{/if}
   <div class="seg3" role="tablist">{#each [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
-  {#if seg === 'lesson' && T}
+  {#if seg === 'lesson' && !packs.length}
+    <!-- 🐞 B9 (정식 0169e5f · 차시 0개 학교): 깨지지 않게 · 「아직 차시가 없어요」 + 📊 엑셀로 차시 만들기 -->
+    <div class="empty none"><b class="plus">📭</b><span><b>아직 차시가 없어요</b></span><small>엑셀로 첫 차시를 만들면 여기에 생겨요</small></div>
+    <button type="button" class="item" disabled><span class="ic">📊</span><span class="tx"><b>엑셀로 차시 만들기</b><small>선생님 본인용 문제 은행 · 테스트 판 · 준비 중</small></span></button>
+  {:else if seg === 'lesson' && T}
     <div class="empty"><b class="plus">＋</b><span><b>{T.no}차시 {T.title}</b> · 준비 안 됨</span><small>차시 팩을 올리면 수업 열기에 생겨요</small></div>
     <button type="button" class="item" disabled><span class="ic">📦</span><span class="tx"><b>차시 팩 올리기</b><small>테스트 판 · 준비 중</small></span></button>
   {:else if seg === 'lesson' && L}
@@ -73,7 +77,7 @@
     </div>
   {/if}
 </div>
-<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : '차시를 골라요'}</small>{/if}</button></div>
+<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>
 
 {#if edit}
   {@const k = edit}
