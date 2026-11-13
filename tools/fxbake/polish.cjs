@@ -17,6 +17,6 @@ const [PORT = '4173', PRE = 'after', OUT = '.', ONLY = ''] = process.argv.slice(
   if (want('aura')) for (const lv of [5, 8, 10]) { await pick(0, 'cut', lv); await s.waitForTimeout(500); await edge(`6-aura${lv}`); }
   if (want('holy')) { await pick(0, 'cut', 0); await press('holy'); await s.waitForTimeout(1950); await edge('7-holy-hit'); await s.waitForTimeout(400); await edge('7-holy-after'); await s.waitForTimeout(2500); }
   if (want('dmg')) { await pick(0, 'slash', 0); await press('hit'); for (const t of [700, 250]) { await s.waitForTimeout(t); await edge(`8-dmg-${t}`); } await s.waitForTimeout(2000); }
-  if (want('cut')) { await pick(0, 'twin', 0); await press('ult'); await s.waitForTimeout(520); await page('9-cutin'); await s.waitForTimeout(3000); }
+  if (want("cut")) { await pick(0, "twin", 0); await press("ult"); await s.waitForTimeout(3500); await press("ult"); await s.waitForTimeout(560); await page('9-cutin'); await s.waitForTimeout(3000); }
   console.log(errs.length ? `❌ ${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
