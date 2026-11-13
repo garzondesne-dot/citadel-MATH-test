@@ -60,7 +60,7 @@
   <div class="list">
     {#if srv}<button type="button" class="item" class:warn={!admin} onclick={() => (sheet = 'login')}><span class="ic">🔐</span><span class="tx"><b>{admin ? '교사로 로그인됨' : '교사 로그인'}</b><small>{admin ? who : '명단 · 기록 · 수업 열기에 필요 · 처음 한 번'}</small></span></button>{/if}
     <button type="button" class="item" onclick={() => (hero = true)}><span class="ic">🧙</span><span class="tx"><b>내 용사</b><small>용사 바꾸기 · 강화 · 스킬 (학생 폰과 같은 창)</small></span></button>
-    <a class="item" href="?role=hall" target="_blank"><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>교사 캠프 · 교실 TV 에서 열려요</small></span></a>
+    <a class="item" href="?role=camp&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>학생 폰 캠프와 같은 화면 · 교실 TV 교사 캠프는 TV 에서</small></span></a>
     <button type="button" class="item" data-k="feat" onclick={() => (sheet = 'feat')}><span class="ic">⚙</span><span class="tx"><b>우리 학교 기능</b><small>{BUNDLES.find((b) => b.id === featCfg().bundle)?.ic} {BUNDLES.find((b) => b.id === featCfg().bundle)?.name} 묶음 · 켜고 끄기</small></span></button>
     {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>{/if}
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>

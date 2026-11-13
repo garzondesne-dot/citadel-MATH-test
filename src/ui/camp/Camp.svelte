@@ -150,6 +150,8 @@
     if (R0.state?.closed) { codeErr = '이미 끝난 수업이에요'; return; }
     location.href = `?role=student&room=${encodeURIComponent(c)}`;
   }
+  // ⛺ 교사 「나」 → 내 캠프 (📜 2026-11-13 밤 🪞 「선생님이 보는 것 = 학생이 보는 것」): 학생 폰 캠프와 같은 화면 · 교사 지갑(테스트 값) · ‹ = 「나」 탭으로 · QR 은 리모컨 쪽에만
+  const fromMe = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me';
 </script>
 
 <div class="camp">
@@ -178,7 +180,7 @@
     {/each}
 
     <div class="top">
-      {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
+      {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
       <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
       <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
@@ -191,7 +193,7 @@
     {#if feat('hero')}<button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{me.nick}</b></span>
+        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{fromMe ? '선생님' : me.nick}</b></span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>
@@ -273,7 +275,7 @@
 <style>
   .outq { margin: 0; font-size: 16px; color: var(--text-2); }
   .out:disabled, .mi:disabled { opacity: 0.45; }
-  .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; }
+  .back { flex: none; width: 40px; height: var(--tap); margin-left: -8px; border: 0; background: none; color: #fff; font-size: 30px; line-height: 1; text-shadow: 0 1px 2px #000; cursor: pointer; display: grid; place-items: center; text-decoration: none; }
   .menu { display: flex; flex-direction: column; gap: var(--s2); }
   .mi { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: var(--s2); min-height: 56px; padding: var(--s2) var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font: inherit; text-align: left; }
   .mi span { grid-row: span 2; font-size: 24px; text-align: center; } .mi b { font-size: 16px; } .mi small { color: var(--text-3); font-size: 13px; }
