@@ -5,6 +5,7 @@
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
+  import HeroIntro from './HeroIntro.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
@@ -207,15 +208,8 @@
   <div class="hsw" role="dialog" aria-modal="true" aria-label="용사 바꾸기" style:top="{swTop}px">
     <div class="grab"><i></i></div>
     <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {HEROES.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
-    <div class="swd">
-      <span class="swbig" class:dim={!ownsPick}><HeroSprite id={pickH} play={ownsPick} dim={!ownsPick} aura={ownsPick ? lv : 0} />{#if ownsPick && lv}<b>+{lv}</b>{/if}</span>
-      <span class="swtx">
-        <b>{pick.name} <small>· {pick.job}</small></b>
-        <span class="tg">{famName(pickH)} · 「{pick.nick}」</span>
-        <span class="st">{ownsPick ? pick.a : pick.cond ? `🔓 ${pick.cond}` : pick.a}</span>
-        <span class="skr" aria-label="스킬">{#each ownedSk(pickH) as o, k (k)}<i class:on={o}>{TN[k]}</i>{/each}</span>
-      </span>
-    </div>
+    <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
+    <HeroIntro id={pickH} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
     <div class="swg">
       {#each allHeroes as h (h.id)}
         {@const own = ownsHero(W, P, h.id)}
@@ -349,16 +343,6 @@
   .grab { height: 14px; display: grid; place-items: center; } .grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line); display: block; }
   .hswh { display: flex; align-items: center; gap: var(--s2); } .hswh b { font-size: 18px; } .hswh span { flex: 1; font-size: 13px; color: var(--text-2); }
   .hswh button { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text-2); font-size: 18px; }
-  .swd { display: flex; gap: var(--s3); align-items: center; padding: 10px; border-radius: 14px; background: var(--surface-2); }
-  .swbig { position: relative; flex: none; width: 96px; height: 96px; border-radius: 14px; background: var(--bg); display: grid; place-items: center; }
-  .swbig b { position: absolute; right: -6px; bottom: -6px; height: 22px; padding: 0 7px; border-radius: 11px; background: var(--accent); color: var(--on-accent); font-size: 13px; display: grid; place-items: center; }
-  .swtx { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left; }
-  .swtx > b { font-size: 18px; } .swtx > b small { font-size: 13px; color: var(--text-2); }
-  .swtx .tg { font-size: 13px; color: var(--accent); font-weight: 700; }
-  .swtx .st { font-size: 13px; color: var(--text-2); }
-  .skr { display: flex; gap: 4px; }
-  .skr i { font-style: normal; width: 28px; height: 24px; border-radius: 6px; background: var(--bg); color: var(--text-3); font-size: 12px; font-weight: 700; display: grid; place-items: center; }
-  .skr i.on { background: color-mix(in srgb, var(--accent) 25%, var(--bg)); color: var(--accent); }
   .swg { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-content: start; padding-top: 8px; }
   .swc { position: relative; min-height: 96px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); padding: 6px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; color: var(--text); font-family: var(--font); }
   .swi { width: 64px; height: 52px; display: grid; place-items: center; overflow: visible; }
