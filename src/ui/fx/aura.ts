@@ -23,6 +23,12 @@ function style() {
 .au-o>.au-s{left:calc(var(--p)*-6);top:calc(var(--p)*-6);width:calc(var(--p)*12);height:calc(var(--p)*12);background:${u(a.orbs)} 0 var(--ay)/400% 1000% no-repeat;animation:auF .6s steps(4) infinite;filter:drop-shadow(0 0 2px var(--au))}
 .au-h{left:calc(50% - var(--p)*41);bottom:calc(var(--p)*-1);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
 .au-hb{left:calc(50% - var(--p)*41);bottom:calc(var(--p)*-1);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${a.haloBurst ? u(a.haloBurst) : 'none'} 0 0/600% 100% no-repeat;animation:auF6 1.2s steps(6) infinite;z-index:0;opacity:.95}
+/* 🎨 다듬기 ⑥ (2026-11-13): +4~+9 바닥 고리 = 납작한 타원(세로 줄무늬 그림 대신) · 입자 = 별 모양 */
+.au-r.el{left:calc(50% - var(--p)*30);bottom:calc(var(--p)*-3);width:calc(var(--p)*60);height:calc(var(--p)*14);background:none;border-radius:50%;border:calc(var(--p)*1.8) solid var(--au);box-shadow:0 0 calc(var(--p)*3) var(--au),inset 0 0 calc(var(--p)*3) var(--au);filter:none;animation:auEl 1.4s ease-in-out infinite alternate;box-sizing:border-box}
+.au-r.el.f{clip-path:inset(50% 0 0 0)}
+@keyframes auEl{from{opacity:.95;transform:scale(1)}to{opacity:.6;transform:scale(1.06,1.1)}}
+.au-o.st>.au-s{left:calc(var(--p)*-5.5);top:calc(var(--p)*-5.5);width:calc(var(--p)*11);height:calc(var(--p)*11);background:radial-gradient(circle,#fff 0 22%,var(--au) 45%);clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%);animation:auTw .9s ease-in-out infinite alternate;filter:drop-shadow(0 0 2px var(--au))}
+@keyframes auTw{from{transform:scale(.75) rotate(0)}to{transform:scale(1.1) rotate(45deg)}}
 @keyframes auF6{to{background-position-x:120%}}
 @keyframes auF{to{background-position-x:133.333%}}
 @keyframes auO{${st.join('')}}`;
@@ -37,9 +43,10 @@ export function deco(art: HTMLElement, lv: number, tv = false): () => void {
   const i = lv >= 10 ? 6 : lv - 1, col = AURA.colors[lv - 1] || '#fff';
   art.style.setProperty('--ay', `${((i / 9) * 100).toFixed(3)}%`); art.style.setProperty('--au', col);
   const holy = lv >= 10 && !!AURA.halo;
-  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r"></span>`;
+  const el = !holy && lv >= 4 ? ' el' : '', st = !holy && lv >= 4 ? ' st' : '';
+  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r${el}"></span>`;
   const n = nOrb(lv, tv), dur = (3.4 - lv * 0.1).toFixed(2);
-  const front = holy ? '' : `<span class="au-s au-r f"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
+  const front = holy ? '' : `<span class="au-s au-r f${el}"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o${st}" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
   art.insertAdjacentHTML('afterbegin', back); art.insertAdjacentHTML('beforeend', front);
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
