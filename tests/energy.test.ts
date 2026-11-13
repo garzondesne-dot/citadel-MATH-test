@@ -5,7 +5,7 @@ import { memoryStore } from '../src/store/device';
 import { PROFILES } from '../src/model/profiles';
 import { chainSubmit, heartbeat, nextStep, openRoom, roomPath, spendEnergy } from '../src/raid/actions';
 import { answerOf, bindSec, chainRecord, healsReceived, stepOf } from '../src/raid/raid';
-import { packOf } from '../src/engine/packs';
+import { PACKS, packOf } from '../src/engine/packs';
 import { attackMs, attackOf, attackStrong, ATTACKS, bossAttacks } from '../src/raid/attacks';
 
 describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
@@ -28,9 +28,11 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
   it('짝 표: 몬스터마다 attack · 보스 = 번갈아 · 없으면 pause', () => {
     const L6 = packOf('set-06')!, L7 = packOf('set-06@7')!, L2 = packOf('set-02')!;
     const st = (L: typeof L6, id: string) => L.steps.find((s) => s.id === id)!;
-    expect(attackOf(L6, st(L6, 'm1'), 0).id).toBe('fog'); expect(attackOf(L7, st(L7, 'u4'), 0).id).toBe('smash');
-    expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['glitch', 'fog', 'glitch']);
-    expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('ice');
+    // 2026-11-13 짝 표(❓#1 B · 선생님 「짝표대로」)
+    expect(attackOf(L6, st(L6, 'm1'), 0).id).toBe('fog'); expect(attackOf(L6, st(L6, 'm2'), 0).id).toBe('sleep'); expect(attackOf(L7, st(L7, 'u4'), 0).id).toBe('bind');
+    expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['bind', 'fog', 'bind']);
+    expect([0, 1, 2].map((k) => attackOf(L7, st(L7, 'boss'), k).id)).toEqual(['bind', 'glitch', 'bind']); // 나눈 7차시 보스 = 「@7」
+    expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('wind');
     expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'lock', 'scale']);
     expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch', 'bind']);
     // 2026-11-13 선생님 「B1」: 모든 공격 3초 · 분노 4초 (멈춤 시간 lock 과 상관없음)
@@ -41,9 +43,12 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     const els = new Set(Object.values(ATTACKS).map((a) => a.elem)); expect(els.size).toBe(8);
     const g = Object.values(ATTACKS).map((a) => a.gesture).filter(Boolean); expect(new Set(g).size).toBe(g.length);
     const L8 = packOf('set-08')!, L9 = packOf('set-09')!, L10 = packOf('set-10')!, L6 = packOf('set-06')!;
-    expect(bossAttacks(L8)).toEqual(['glitch', 'ice', 'mirror']); expect(bossAttacks(L9)).toEqual(['smash', 'glitch', 'lock']); expect(bossAttacks(L10)).toEqual(['smash', 'fog', 'scale']);
-    expect(bossAttacks(L6)).toEqual(['glitch', 'fog']);
-    const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['glitch', 'ice', 'mirror', 'glitch']);
+    expect(bossAttacks(L8)).toEqual(['dark', 'glitch', 'mirror']); expect(bossAttacks(L9)).toEqual(['bind', 'dark', 'lock']); expect(bossAttacks(L10)).toEqual(['dark', 'bind', 'scale']);
+    expect(bossAttacks(L6)).toEqual(['bind', 'fog']);
+    const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['dark', 'glitch', 'mirror', 'dark']);
+    // 15개 모두 실제 수업(단계에 있는 몬스터 · 보스)에서 한 번 이상 쓰임
+    const used = new Set<string>(); for (const P of PACKS) for (const x of P.steps) { if (x.kind === 'monster' && P.monsters[x.id]) used.add(attackOf(P, x, 0).id); if (x.kind === 'boss') bossAttacks(P).forEach((a) => used.add(a)); }
+    expect([...used].sort()).toEqual(Object.keys(ATTACKS).sort());
     expect(attackStrong({ left: 49, max: 100 })).toBe(true); expect(attackStrong({ left: 50, max: 100 })).toBe(false); expect(attackStrong({ left: 0, max: 100 })).toBe(false); expect(attackStrong(null)).toBe(false);
   });
 });

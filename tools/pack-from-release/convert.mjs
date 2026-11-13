@@ -115,7 +115,7 @@ for (const id of ONLY) {
   const pack = {
     v: 1, id, no: L.no, title: (D && D.title) || L.title, unit: L.unit, sheet: L.sheet, goal: (D && D.goal) || L.goal,
     theme: theme((D && D.theme) || L.theme), defaultPct: Number(D && D.pct) || L.defaultPct || 90,
-    ...(L.parts ? { parts: L.parts.map((pt) => (V1_BOSS_SPLIT[id] != null && bo ? { ...pt, boss: [V1_BOSS_SPLIT[id], bo.items || bo.sets[1].length] } : pt)) } : {}), ...(L.next || (D && D.next) ? { next: (D && D.next && D.next.title ? D.next : L.next) } : {}),
+    ...(L.parts ? { parts: L.parts.map((pt) => (V1_BOSS_SPLIT[id] != null && bo ? { ...pt, boss: [V1_BOSS_SPLIT[id], bo.items || bo.sets[1].length] } : pt)).map((pt) => ((ATTACKS[id] || {})[`@${pt.no}`] ? { ...pt, attack: ATTACKS[id][`@${pt.no}`].boss } : pt)) } : {}), ...(L.next || (D && D.next) ? { next: (D && D.next && D.next.title ? D.next : L.next) } : {}),
     ...(D && D.std ? { std: D.std } : {}),
     source: { file: `lessons/${id}.js`, commit, board: D ? D.updatedAt : null },
     steps: steps.map((s) => ({ kind: s.kind, id: s.id, title: s.title, ...(s.say ? { say: s.say } : {}), ...(s.img ? { img: s.img } : {}), ...(s.min ? { min: s.min } : {}), ...(s.special ? { special: true } : {}), ...(s.review ? { review: true } : {}) })),

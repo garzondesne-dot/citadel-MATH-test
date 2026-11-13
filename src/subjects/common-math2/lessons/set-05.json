@@ -100,7 +100,7 @@
    "retry": {
     "gen": "set05.m2"
    },
-   "attack": "smash"
+   "attack": "sleep"
   },
   "m3": {
    "title": "문제 3 · 4",
@@ -108,7 +108,7 @@
    "retry": {
     "gen": "set05.m3"
    },
-   "attack": "pause"
+   "attack": "smash"
   },
   "m5": {
    "title": "문제 5",
@@ -116,7 +116,7 @@
    "retry": {
     "gen": "set05.m5"
    },
-   "attack": "glitch"
+   "attack": "confuse"
   },
   "b1": {
    "title": "보강 ① · 법칙으로 간단히",
@@ -489,7 +489,7 @@
    ]
   },
   "attack": [
-   "smash",
+   "sleep",
    "fire"
   ]
  },

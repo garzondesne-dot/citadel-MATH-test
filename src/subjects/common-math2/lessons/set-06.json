@@ -16,6 +16,10 @@
    "boss": [
     3,
     6
+   ],
+   "attack": [
+    "bind",
+    "glitch"
    ]
   }
  ],
@@ -122,7 +126,7 @@
    "retry": {
     "gen": "set06.m2"
    },
-   "attack": "ice"
+   "attack": "sleep"
   },
   "m3": {
    "title": "문제 3",
@@ -130,7 +134,7 @@
    "retry": {
     "gen": "set06.m3"
    },
-   "attack": "pause"
+   "attack": "wind"
   },
   "u4": {
    "title": "문제 4 · 조건을 만족하는 X",
@@ -141,7 +145,7 @@
    "chain": {
     "gen": "set06.u4"
    },
-   "attack": "smash"
+   "attack": "bind"
   },
   "u5": {
    "title": "문제 5 · 미지수 x",
@@ -164,7 +168,7 @@
    "chain": {
     "gen": "set06.u6"
    },
-   "attack": "pause"
+   "attack": "poison"
   },
   "u7": {
    "title": "문제 7 · 「~이 아니거나」",
@@ -175,7 +179,7 @@
    "chain": {
     "gen": "set06.u7"
    },
-   "attack": "pause"
+   "attack": "confuse"
   },
   "m4": {
    "title": "문제 4 (v2 명제)",
@@ -481,7 +485,7 @@
    ]
   },
   "attack": [
-   "glitch",
+   "bind",
    "fog"
   ]
  },

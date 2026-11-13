@@ -106,7 +106,7 @@
    "retry": {
     "gen": "set08.m1"
    },
-   "attack": "glitch"
+   "attack": "dark"
   },
   "m2": {
    "title": "문제 3 · 진리집합",
@@ -132,7 +132,7 @@
    "retry": {
     "gen": "set08.m4"
    },
-   "attack": "pause"
+   "attack": "bind"
   },
   "m5": {
    "title": "문제 7 · 8 · ‘모든’과 ‘어떤’",
@@ -141,7 +141,7 @@
    "retry": {
     "gen": "set08.m5"
    },
-   "attack": "pause"
+   "attack": "wind"
   }
  },
  "boss": {
@@ -398,8 +398,8 @@
    ]
   },
   "attack": [
-   "glitch",
-   "ice"
+   "dark",
+   "glitch"
   ]
  },
  "crops": {

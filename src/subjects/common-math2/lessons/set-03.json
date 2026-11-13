@@ -100,7 +100,7 @@
    "retry": {
     "gen": "set03.m2"
    },
-   "attack": "smash"
+   "attack": "wind"
   },
   "m3": {
    "title": "문제 3",
@@ -459,8 +459,8 @@
    ]
   },
   "attack": [
-   "fire",
-   "smash"
+   "ice",
+   "poison"
   ]
  },
  "crops": {

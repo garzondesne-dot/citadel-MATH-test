@@ -14,7 +14,10 @@ const raw = SUBJ.lessons;
 const base = raw.map(headOf);
 const parts = raw.flatMap((p) => (p.parts || []).map((pt): LessonPack | null => {
   const k = p.steps.findIndex((s) => s.id === pt.from);
-  return k < 0 ? null : { ...p, id: `${p.id}@${pt.no}`, no: pt.no, title: pt.title, partOf: p.id, steps: p.steps.slice(k), parts: undefined, ...(pt.boss && p.boss ? { boss: cutBoss(p.boss, pt.boss[0]!, pt.boss[1]!) } : {}) };
+  if (k < 0) return null;
+  const part: LessonPack = { ...p, id: `${p.id}@${pt.no}`, no: pt.no, title: pt.title, partOf: p.id, steps: p.steps.slice(k), parts: undefined, ...(pt.boss && p.boss ? { boss: cutBoss(p.boss, pt.boss[0]!, pt.boss[1]!) } : {}) };
+  if (pt.attack && part.boss) part.boss = { ...part.boss, attack: pt.attack }; // 💥 나눈 수업 보스 공격 (짝 표 「@7」)
+  return part;
 }).filter((x): x is LessonPack => !!x));
 export const PACKS: LessonPack[] = [...base, ...parts].sort((a, b) => a.no - b.no);
 export const packOf = (id: string | null | undefined): LessonPack | null => PACKS.find((p) => p.id === id) ?? null;

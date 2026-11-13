@@ -99,7 +99,7 @@ export interface LessonPack {
   goal?: string;
   std?: string;
   /** 한 팩을 두 수업으로 (#132 · #149): from = 뒷수업 첫 칸 · boss = 형성평가를 나눌 때 뒷수업이 가질 문항 [시작, 끝) (앞수업 = [0, 시작)) */
-  parts?: { no: number; from: string; title: string; boss?: number[] }[];
+  parts?: { no: number; from: string; title: string; boss?: number[]; /** 💥 나눈 수업 보스 공격 (짝 표 「@번호」) */ attack?: string[] }[];
   /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = 6차시 팩의 문제 4부터) */
   partOf?: string;
   next?: { title: string; ask?: string; link?: string };

@@ -100,7 +100,7 @@
    "retry": {
     "gen": "set09.m1"
    },
-   "attack": "pause"
+   "attack": "sleep"
   },
   "m2": {
    "title": "문제 2 · 참 · 거짓과 반례",
@@ -109,7 +109,7 @@
    "retry": {
     "gen": "set09.m2"
    },
-   "attack": "smash"
+   "attack": "dark"
   },
   "m3": {
    "title": "문제 3 · 역과 대우",
@@ -127,7 +127,7 @@
    "retry": {
     "gen": "set09.m4"
    },
-   "attack": "pause"
+   "attack": "poison"
   },
   "m5": {
    "title": "문제 5 · 역과 대우 (중단원)",
@@ -139,7 +139,7 @@
    "chain": {
     "gen": "set09.m5"
    },
-   "attack": "glitch"
+   "attack": "confuse"
   }
  },
  "boss": {
@@ -435,8 +435,8 @@
    ]
   },
   "attack": [
-   "smash",
-   "glitch"
+   "bind",
+   "dark"
   ]
  },
  "crops": {

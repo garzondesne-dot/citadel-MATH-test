@@ -133,7 +133,7 @@
    "retry": {
     "gen": "set02.m2"
    },
-   "attack": "pause"
+   "attack": "poison"
   },
   "m3": {
    "title": "문제 3 · 원소의 개수",
@@ -149,7 +149,7 @@
    "retry": {
     "gen": "set02.m4"
    },
-   "attack": "ice"
+   "attack": "wind"
   },
   "s2": {
    "title": "보강 · 원소의 개수 한 걸음 더",
@@ -346,8 +346,8 @@
    ]
   },
   "attack": [
-   "fire",
-   "smash"
+   "smash",
+   "poison"
   ]
  },
  "crops": {
