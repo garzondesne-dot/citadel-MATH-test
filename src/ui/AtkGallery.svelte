@@ -55,7 +55,7 @@
         <button type="button" class="a" data-h="ult" disabled={!canUlt(sk, hh)} title="내 속성 Ⅲ · Ⅳ" onclick={() => heroAtk({ miss: false, hits: 3, ult: true })}>⚡<small>필살기</small></button>
         <button type="button" class="a" data-h="true" disabled={!canTrue(sk, hh)} title="내 속성 Ⅳ" onclick={trueUlt}>🌟<small>진필살기</small></button>
         <button type="button" class="a" data-h="holy" onclick={holy}>🛡<small>홀리 방패</small></button>
-        <button type="button" class="a" data-h="state" onclick={() => { const mid = (chain ? G2 : G1).id, rp = `rooms/${code}`; S.set(`${rp}/players/gallery/enh`, 10); S.set(`${rp}/players/gallery/hg`, { mid, at: S.now() }); S.set(`${rp}/heals/${mid}/x/0`, `!true@${S.now()}`); }}>🗿<small>석화 · 🛡 켬</small></button>
+        <button type="button" class="a" data-h="state" onclick={() => { const mid = (chain ? G2 : G1).id, rp = `rooms/${code}`; S.set(`${rp}/players/gallery/enh`, 10); S.set(`${rp}/players/gallery/hg`, { mid, at: S.now() }); S.set(`${rp}/players/x/nick`, `하늘`); S.set(`${rp}/heals/${mid}/x/0`, `!true@${S.now()}`); }}>🗿<small>석화 · 🛡 켬</small></button>
         <button type="button" class="a" data-h="card" disabled title="정식에 카드 공격 이펙트 없음 · ❓#3">🃏<small>카드 특전</small></button>
       </div>
     {:else}

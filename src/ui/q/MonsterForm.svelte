@@ -167,7 +167,7 @@
   {/if}
   <AnswerRow {cells} {cur} onpick={pickCell} />
   <div class="bcard" class:badline={fixing}>
-    <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if rec.healed}<span class="healed">💚 {healers} 의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
+    <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if rec.healed}<span class="healed">💚 {healers}의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
     {#if L.monsters[mid]?.noteText}<p class="muted">💡 {L.monsters[mid]?.noteText}</p>{/if}
     {#key `${key}|${cur}`}
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
