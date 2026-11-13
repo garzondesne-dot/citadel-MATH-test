@@ -18,7 +18,7 @@ const log = (...a) => console.log(...a);
   for (const id of ids) {
     const before = await R(); await s.click(`.ids .a[data-id="${id}"]`); await s.waitForTimeout(id === 'glitch' ? 60 : 450);
     const mid = await R(); const tag = await s.$eval('.edge .hitTag', (x) => x.textContent.trim()).catch(() => '');
-    const st = await s.$eval('.edge .status', (x) => x.dataset.elem).catch(() => ''); const ef = !!(await s.$('.edge .efx'));
+    const st = await s.$eval('.edge .status', (x) => x.dataset.elem).catch(() => ''); const ef = !!(await s.$('.edge .efx')) || (id === 'confuse' && !!(await s.$('.edge .dizzy'))); // 🌀 혼란 = 소용돌이 그림 대신 머리 위 별 (b78)
     await s.screenshot({ path: `${SHOTS}/b49-atk-${String(ids.indexOf(id) + 1).padStart(2, '0')}-${id}.png` });
     let early = '';
     if (id === 'bind') { const bx = await s.$eval('.chains', (x) => { const r = x.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }); await s.mouse.move(bx.x, bx.y); await s.mouse.down(); for (const dx of [-80, 80, -80, 80]) await s.mouse.move(bx.x + dx, bx.y, { steps: 6 }); await s.mouse.up(); early = (await wait()) ? '쓸기로 끊김' : '✗'; }
