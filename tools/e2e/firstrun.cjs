@@ -18,7 +18,7 @@ const log = (...a) => console.log(...a);
   await t.fill('.fld.tid', 'teacher@school.test'); await t.fill('.fld[type=password]', 'pw123456'); await t.click('.sheet .lk');
   await t.waitForTimeout(3000); await t.waitForSelector('.tabs', { timeout: 20000 });
   await t.click('.tabs button:has-text("수업")'); await t.waitForTimeout(500);
-  await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
   const live = await rest('school/live'); log('① 교사 계정 → 수업 열기:', live ? `${live.cls} · ${live.code}` : '✗ 안 열림'); if (!live) errs.push('① 수업 열기');
   const key = (await t.textContent('.codek small').catch(() => '')).replace(/\D/g, ''); log('   교사 폰 종합실 키:', key);
   await t.screenshot({ path: `${SHOTS}/b46-teacher-live.png` });

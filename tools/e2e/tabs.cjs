@@ -39,7 +39,8 @@ const B = 'http://localhost:4173/';
   await p.click('.four button >> nth=0'); await p.click('.stp button[aria-label="줄이기"]'); await p.click('.sheet .act .btn');
   log('⑰ 기본값:', (await p.textContent('.four')).replace(/\s+/g, ' ').trim(), '| 주요 단추', (await p.textContent('.tact .btn')).trim(), await p.$eval('.tact .btn', (e) => Math.round(innerHeight - e.getBoundingClientRect().bottom)));
   await shot('b11-prep');
-  await p.click('.seg3 button:has-text("시간표")'); await p.click('.sg button:not([disabled]) >> nth=0'); await p.click('.g4 button:has-text("1-6")'); await p.waitForTimeout(100);
+  await p.evaluate(() => window.__featSet({ bundle: 'full', on: { schedule: true } })); await p.waitForTimeout(300); // 📅 시간표 켬 = 준비 탭 「시간표」 (기본 = 끔 · 탭 없음)
+  await p.click('.seg3 button:has-text("시간표")'); for (let k = 0; k < 6; k++) await p.click('.sg button:not([disabled]) >> nth=0'); await p.waitForTimeout(100);
   log('⑰ 시간표 칸:', (await p.textContent('.sg button:not([disabled]) >> nth=0')).trim(), '| 진도', (await p.textContent('.pg >> nth=0')).replace(/\s+/g, ' ').trim());
   // ⑱ 소식
   await tab('소식'); await fixedOk('⑱ 소식'); const d0 = (await p.textContent('.tabs .rdot')).trim();

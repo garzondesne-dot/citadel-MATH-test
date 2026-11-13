@@ -19,7 +19,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
     const onN = sw.filter(Boolean).length, picked = await t.$eval('.fs .b.on', (x) => x.dataset.b);
     await t.screenshot({ path: `${SHOTS}/feat-${bundle}-teacher.png` });
     if (picked !== bundle) errs.push(`${bundle} 묶음 표시 ${picked}`);
-    if (bundle === 'basic' && onN !== 2) errs.push(`기본인데 켬 ${onN} (🎯 · 📋 만 켜야 함)`); if (bundle === 'full' && onN !== sw.length) errs.push(`전체인데 끔 ${sw.length - onN}`);
+    if (bundle === 'basic' && onN !== 2) errs.push(`기본인데 켬 ${onN} (🎯 · 📋 만 켜야 함)`); if (bundle === 'full' && onN !== sw.length - 1) errs.push(`전체인데 끔 ${sw.length - onN} (📅 시간표만 꺼야 함)`);
     const h = watch(await ctx.newPage()); await h.goto(B + `?role=hall&mode=test&room=F${bundle}`); await h.waitForSelector('.dock'); await h.waitForTimeout(800);
     console.log(`${bundle}: 캠프 모루 ${camp.anvil ? '○' : '✗'} · 성채 ${camp.castle ? '○' : '✗'} · 용사 카드 ${camp.hero ? '○' : '✗'} · 게시판 ${camp.board ? '○' : '✗'} · 교사 스위치 켬 ${onN}/${sw.length} · TV 열림`);
     await ctx.close();

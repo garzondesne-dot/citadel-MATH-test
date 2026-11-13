@@ -29,7 +29,7 @@ const log = (...a) => console.log(...a);
   }
   log('넘침(px):\n  ' + rows.join('\n  '));
   // 교사 리모컨 = 🧪 수업 열기 (이 기기) · 테마마다 가로 넘침 · 세로 스크롤
-  await set(tp, 'gold'); { const c = await tp.$('.tt:not([disabled])'); if (c) await c.click(); else { await tp.click('.tlink:has-text("다른 반")'); await tp.click('.grid4 .pk:has-text("1-3")'); } await tp.waitForTimeout(150); } await tp.click('.pk3 .pk >> nth=0'); await tp.click('.sub2 button:has-text("테스트")'); await tp.waitForTimeout(1200);
+  await set(tp, 'gold'); { const c = await tp.$('[data-cls="1-3"]'); if (c) await c.click(); else { await tp.click('.tlink:has-text("다른 반")'); await tp.click('.grid4 .pk:has-text("1-3")'); } await tp.waitForTimeout(150); } await tp.click('.pk3 .pk >> nth=0'); await tp.click('.sub2 button:has-text("테스트")'); await tp.waitForTimeout(1200);
   const rem = [];
   for (const t of IDS) { await set(tp, t); const o = await tp.evaluate(() => ({ x: document.documentElement.scrollWidth - innerWidth, y: document.documentElement.scrollHeight - innerHeight })); rem.push(`${t} ${o.x}/${o.y}`); if (o.x > 0 || o.y > 0) errs.push(`${t} 리모컨 넘침 ${o.x}/${o.y}`); }
   log('리모컨 넘침(가로/세로):', rem.join(' · '));

@@ -16,7 +16,7 @@ const log = (...a) => console.log(...a);
   const W = {}; for (let d = 1; d <= 5; d++) { W[d] = {}; for (let q = 1; q <= 7; q++) W[d][q] = '1-3'; } await rest('school/sched', 'PUT', W);
   const open = async (url, w, h) => { const ctx = await b.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); await p.goto(B + url); return p; };
   const t = await open(`?role=teacher${E}`, 360, 640); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
-  await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
   const live = await rest('school/live');
   const tv = await open(`?role=hall${E}`, 1280, 720); await require('./_emu.cjs').asHost(tv, live.code); await tv.waitForSelector('.dock', { timeout: 20000 }); // 🔐 TV = 종합실 키로 hosts
   const st = await open(`?role=student&room=${live.code}&as=1-3:1${E}`, 390, 844);

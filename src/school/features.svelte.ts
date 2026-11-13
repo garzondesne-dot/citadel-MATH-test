@@ -33,14 +33,15 @@ export const FEATS: Feat[] = [
   { id: 'symtalk', ic: '📖', name: '기호 톡', sub: '', group: '과목 팩', need: () => packNeed(!!SUBJ.symtalk, '기호 사전') },
   { id: 'citadel', ic: '🏯', name: '성채 던전', sub: '', group: '과목 팩', need: () => packNeed(!!SUBJ.camp?.floors?.some((f) => !f.off), '성채 평가 문항') },
   { id: 'seteuk', ic: '📝', name: '성취기준 · 오개념 · 세특 문장', sub: '', group: '과목 팩', need: () => packNeed(Object.keys(SUBJ.misconceptions || {}).length > 0, '오개념 카드') },
-  { id: 'schedule', ic: '📅', name: '시간표 · 예약 수업 · ⏳ 보스 타임바', sub: '교시 시각 = 학교 일과표', group: '학교 정보' },
+  { id: 'schedule', ic: '📅', name: '시간표 · 교시 시각', sub: '켜면 교시 시각 · 시간표 입력 · 수업 열기 추천 한 줄 · ⏳ 타임바 = 교시 끝 · 끄면 반 → 차시 수동 · 50분', group: '학교 정보' },
   { id: 'photo', ic: '📷', name: '서술형 사진 채점', sub: 'AI 채점', group: '학교 정보', need: (S) => (!S || S.get('school/ai/on') ? null : '🔑 AI 채점 연결이 필요해요 · 「나」 탭 「📷 사진 채점 연결」') },
   { id: 'survey', ic: '📝', name: '수업 설문', sub: '', group: '그 밖' },
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },
   { id: 'theme', ic: '🎨', name: '테마', sub: '', group: '그 밖' },
 ];
-const ALL = FEATS.map((f) => f.id);
+// 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
+const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule');
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [
   { id: 'basic', ic: '🪶', name: '기본', sub: '뼈대만 · 수업 레이드 · 엑셀 차시 · 결과 · 복습', on: ['scarecrow', 'board'] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
   { id: 'standard', ic: '⚔', name: '표준', sub: '뼈대 + 용사 · 쉼터 놀이 · 몬스터 공격', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme'] },

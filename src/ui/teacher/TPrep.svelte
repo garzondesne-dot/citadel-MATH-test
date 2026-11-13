@@ -2,9 +2,11 @@
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
-  import { CLASSES, isBeta, setSlot, week } from '../../school/school';
+  import { CLASSES, isBeta, week } from '../../school/school';
   import { DOW, kst, PERIODS } from '../../school/bells';
   import Sheet from '../battle/Sheet.svelte';
+  import SchedEdit from './SchedEdit.svelte';
+  import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
@@ -27,7 +29,6 @@
   const bump = (k: keyof Prep, d: number) => { const [st, lo, hi] = STEP[k]; S.set(`school/prep/${lid}/${k}`, Math.max(lo, Math.min(hi, prep[k] + d * st))); ver++; };
   // 시간표 · 진도
   const W = $derived.by(() => { void ver; return week(S); });
-  let pickCell = $state<[number, number] | null>(null);
   const prog = (c: string) => { void ver; return Number(S.get<number>(`school/prog/${c}`)) || (L?.no ?? 6) + 1; };
   const nextSlot = (c: string) => { const k = kst(now); for (let d = 0; d < 7; d++) { const dow = ((k.dow - 1 + d) % 7) + 1; for (const p of PERIODS[dow] || []) if (W[String(dow)]?.[String(p)] === c) return `${DOW[dow]} ${p}교시`; } return '시간표 없음'; };
 </script>
@@ -35,7 +36,7 @@
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
   {#if packs.length}<label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>{/if}
-  <div class="seg3" role="tablist">{#each [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
+  <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
   {#if seg === 'lesson' && !packs.length}
@@ -52,16 +53,8 @@
     <button type="button" class="item" disabled><span class="ic">🎬</span><span class="tx"><b>영상 {Object.keys(L.videos || {}).length}편</b><small>테스트 판 · 준비 중</small></span></button>
     <p class="lab">단계별 그림 0 / {L.steps.filter((s) => !s.later).length}</p>
     <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st"><i>⚠</i><b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>넣기 ›</em></div>{/each}</div>
-  {:else if seg === 'week'}
-    <p class="lab">정규 시간표 · 매주 반복</p>
-    <div class="sg" role="grid" aria-label="시간표">
-      <span></span>{#each [1, 2, 3, 4, 5] as d (d)}<b>{DOW[d]}</b>{/each}
-      {#each [1, 2, 3, 4, 5, 6, 7] as p (p)}
-        <b>{p}</b>
-        {#each [1, 2, 3, 4, 5] as d (d)}{@const c = W[String(d)]?.[String(p)] || ''}<button type="button" class:on={!!c} disabled={!(PERIODS[d] || []).includes(p)} onclick={() => (pickCell = [d, p])}>{c || '—'}</button>{/each}
-      {/each}
-    </div>
-    <p class="hint">칸을 누르면 반 고르기</p>
+  {:else if seg === 'week' && feat('schedule')}
+    <SchedEdit {S} />
     <p class="lab">진도 맞추기 · 반마다 다음 차시</p>
     <div class="list">
       {#each CLASSES as c (c)}
@@ -87,19 +80,12 @@
     <p class="hint">이 차시 수업을 열 때 방에 옮겨 적어요 · 수업 중 바꾸기는 리모컨</p>
   </Sheet>
 {/if}
-{#if pickCell}
-  {@const [d, p] = pickCell}
-  <Sheet onclose={() => (pickCell = null)}>
-    {#snippet title()}{DOW[d]} {p}교시{/snippet}
-    <div class="g4"><button type="button" onclick={() => { setSlot(S, d, p, null); ver++; pickCell = null; }}>— 비움</button>{#each CLASSES as c (c)}<button type="button" class:on={W[String(d)]?.[String(p)] === c} onclick={() => { setSlot(S, d, p, c); ver++; pickCell = null; }}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
-  </Sheet>
-{/if}
 
 <style>
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   select { width: 100%; height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); padding: 0 var(--s3); }
-  .seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); }
+  .seg3 { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); }
   .seg3 button { height: 40px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font: 700 14px var(--font); }
   .seg3 button.on { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 2px var(--accent); }
   .four { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
@@ -109,20 +95,12 @@
   .st { box-sizing: border-box; width: 100%; }
   .st { display: grid; grid-template-columns: 22px 70px minmax(0, 1fr) auto; gap: 6px; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 10px; background: var(--surface); font-size: 13px; }
   .st i { font-style: normal; color: #f0a24a; } .st small { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .st em { font-style: normal; color: var(--text-3); font-size: 12px; }
-  .sg { display: grid; grid-template-columns: 24px repeat(5, minmax(0, 1fr)); gap: 4px; align-items: center; text-align: center; font-size: 13px; }
-  .sg b { color: var(--text-2); }
-  .sg button { height: 38px; border-radius: 8px; border: 1px dashed var(--line); background: none; color: var(--text-3); font: 700 13px var(--font); }
-  .sg button.on { border: 1px solid var(--accent); background: var(--surface-2); color: var(--text); }
-  .sg button:disabled { opacity: 0.25; }
   .pg { display: grid; grid-template-columns: 60px minmax(0, 1fr) 44px 44px; gap: 6px; align-items: center; min-height: 48px; padding: 0 0 0 12px; border-radius: var(--r); background: var(--surface); font-size: 13.5px; }
   .pg small { color: var(--text-2); }
   .pg button { height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 18px var(--font); }
   .stp { display: grid; grid-template-columns: 64px 1fr 64px; gap: var(--s2); align-items: center; text-align: center; }
   .stp b { font-size: 28px; color: var(--accent); }
   .stp button { height: 56px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 24px var(--font); }
-  .g4 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .g4 button { height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
-  .g4 button.on { border: 2px solid var(--accent); }
   .plus { width: 56px; height: 56px; border-radius: 14px; border: 2px dashed var(--line); color: var(--accent); display: grid; place-items: center; font-size: 28px !important; }
   .empty small { font-size: 13px; color: var(--text-3); }
   .lab { margin: var(--s2) 0 0; font-size: 13px; font-weight: 700; color: var(--text-2); }

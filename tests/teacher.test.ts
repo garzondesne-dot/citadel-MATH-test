@@ -6,6 +6,7 @@ import { PROFILES } from '../src/model/profiles';
 import { memoryStore } from '../src/store/device';
 import { appearNow, doorStart, endClass, extendTime, giveGift, heartbeat, nextStep, openRoom, prevStep, roomPath, scoutAdd, setAbsent, setFocus, setPct, setRest, submit } from '../src/raid/actions';
 import { items } from '../src/engine/lessons';
+import { setFeatCfg } from '../src/school/features.svelte';
 import { activeIds, atkClock, seedOf, gameNow, isChain, itemsFor, monsterHp, solveLock, stepIdx, stepOf, timeLeft } from '../src/raid/raid';
 
 const L = pack as LessonPack;
@@ -23,13 +24,20 @@ const toPlain = (S: Store, R: () => Room) => { for (let g = 0; g < 20; g++) { ne
 
 describe('교사 쪽 엔진 (#119)', () => {
   it('수업 시작 = 그 교시 끝까지 마감 · 집중에도 남은 시간 흐름 · +5분 한 번', () => {
+    setFeatCfg({ bundle: 'full', on: { schedule: true } }); // 📅 시간표 켬 = 교시 끝
     const { S, R } = setup();
     nextStep(S, L, 'T');
     expect(R().state.deadline).toBe(Date.UTC(2026, 10, 12, 2, 50)); // 11:50 KST
+    setFeatCfg(null);
     expect(timeLeft(R(), S.now())).toBe(45 * 60e3);
     expect(extendTime(S, 'T')).toBeNull();
     expect(timeLeft(R(), S.now())).toBe(50 * 60e3);
     expect(extendTime(S, 'T')).toMatch(/한 번/);
+  });
+  it('📅 시간표 끔(기본) = 타임바 늘 50분', () => {
+    const { S, R } = setup();
+    nextStep(S, L, 'T');
+    expect(R().state.deadline).toBe(S.now() + 50 * 60e3);
   });
   it('문 닫기: +5분을 안 썼으면 묻기 · 누르면 「문을 밀어 열었다」 · 수업 끝 = 닫힘', () => {
     const { S, R } = setup();

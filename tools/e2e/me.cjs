@@ -39,7 +39,7 @@ const log = (...a) => console.log(...a);
   await bp.screenshot({ path: `${SHOTS}/b25-phoneB-camp.png` });
   // 교사 🧪 6차시 → 폰 B 입장 → 마무리 → records
   const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
-  await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
   await bp.waitForFunction(() => { const g = document.querySelector('.act .btn'); return g && !g.disabled; }, null, { timeout: 10000 }); await bp.click('.act .btn'); await bp.waitForTimeout(2500);
   const main = async () => { await t.waitForSelector('.tact .btn:not([disabled])'); await t.click('.tact .btn'); await t.waitForTimeout(350); };
   for (let k = 0; k < 30; k++) { const m = (await t.textContent('.tact .btn')).trim(); if (/수업 닫기/.test(m)) break; await main(); }

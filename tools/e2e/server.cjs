@@ -20,7 +20,7 @@ const log = (...a) => console.log(...a);
   // 리모컨: 1-3반 · 6차시 · 🧪 테스트로 열기
   const t = await open(`?role=teacher${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   log('리모컨 표시:', (await t.textContent('.srv')).trim());
-  await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
   const live = await rest('school/live'); log('서버 school/live:', JSON.stringify(live));
   const tv = await open(`?role=hall${E}`, 1280, 720); await tv.waitForTimeout(1500); await require('./_emu.cjs').asHost(tv, live.code); // 🔐 TV = 종합실 키로 hosts
   // 폰 1 = 가입(Firebase 로그인) → 그 다음 방으로 · 폰 2 · 3 = 반 · 번호로 바로
@@ -77,7 +77,7 @@ const log = (...a) => console.log(...a);
   await t.click('.lbar button:has-text("수업 닫기")'); await t.click('.ask .btn'); await t.waitForTimeout(800);
   const stop = await rest(`rooms/${live.code}/state/stop`), lastT = await rest('school/lastTest/1-3');
   log('중간에 닫기 → 서버 stop:', JSON.stringify(stop), '| lastTest:', JSON.stringify(lastT && { lesson: lastT.lesson, done: lastT.done }));
-  await t.reload(); await t.waitForSelector('.tabs', { timeout: 15000 }); await t.click('.tt:not([disabled])'); await t.waitForTimeout(400);
+  await t.reload(); await t.waitForSelector('.tabs', { timeout: 15000 }); await t.click('[data-cls="1-3"]'); await t.waitForTimeout(400);
   const it = (await t.textContent('.mid .item')).replace(/\s+/g, ' ').trim(); log('리모컨 새로 고침 뒤 ⑫:', it);
   if (!it.includes('이어서')) errs.push('서버에서 ⏯ 이어서 안 뜸');
   await t.screenshot({ path: `${SHOTS}/b20-remote-resume.png` });

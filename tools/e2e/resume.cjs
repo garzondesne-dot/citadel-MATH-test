@@ -13,7 +13,7 @@ const B = 'http://localhost:4173/', DB = 'citadel-v1-test-db';
     await p.goto(B + '?role=teacher');
     await p.evaluate((k) => { localStorage.clear(); const w = {}; for (let d = 1; d <= 5; d++) { w[d] = {}; for (let q = 1; q <= 7; q++) w[d][q] = '1-3'; } localStorage.setItem(`${k}|school/sched`, JSON.stringify(w)); }, DB);
     await p.reload(); await p.waitForSelector('.tabs');
-    const pick = async () => { const c = await p.$('.tt:not([disabled])'); if (c) await c.click(); else { await p.click('.tlink:has-text("다른 반")'); await p.click('.grid4 .pk:has-text("1-3")'); } await p.waitForTimeout(150); };
+    const pick = async () => { const c = await p.$('[data-cls="1-3"]'); if (c) await c.click(); else { await p.click('.tlink:has-text("다른 반")'); await p.click('.grid4 .pk:has-text("1-3")'); } await p.waitForTimeout(150); };
     const openAndStart = async (how) => {
       await how(); await p.waitForTimeout(300);
       const lv = await p.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);

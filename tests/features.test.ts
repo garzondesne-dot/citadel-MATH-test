@@ -6,8 +6,10 @@ import type { Store } from '../src/model/types';
 
 const S: Store = { ...memoryStore(), kind: 'memory', now: () => 0 } as Store;
 describe('⚙ 스위치 틀', () => {
-  it('설정 없음 = 🏰 전체 (우리 학교 그대로) · 모든 기능 켬', () => {
-    for (const f of FEATS) expect(wanted(null, f.id)).toBe(true);
+  it('설정 없음 = 🏰 전체 (우리 학교 그대로) · 모든 기능 켬 · 📅 시간표만 끔(모든 묶음 기본 끔)', () => {
+    for (const f of FEATS) expect(wanted(null, f.id)).toBe(f.id !== 'schedule');
+    for (const b of BUNDLES) expect(wanted({ bundle: b.id }, 'schedule')).toBe(false);
+    expect(wanted({ bundle: 'basic', on: { schedule: true } }, 'schedule')).toBe(true);
     expect(DEFAULT_CFG.bundle).toBe('full');
   });
   it('🪶 기본 = 모두 끔 · ⚔ 표준 = 용사 · 쉼터 · 몬스터 공격 · 🏰 전체 = 모두', () => {

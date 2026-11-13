@@ -51,11 +51,12 @@ const DB = 'citadel-v1-test-db';
       if (m.main && (m.main[3] !== 68 || Math.abs(m.fromBottom - 74) > 1)) errs.push(`${tag} ${name}: 주요 단추 ${m.main} · 바닥에서 ${m.fromBottom}`);
       return m;
     };
+    await t.evaluate(() => window.__featSet({ bundle: 'full', on: { schedule: true } })); await t.waitForTimeout(300); // 📅 시간표 켬 = 옛 ⑫ 시간표 길 (기본 = 끔)
     await shot(t, 'b8-t-home-empty'); const mh0 = await meas('⑫ 빈 시간표');
     await t.click('text=시간표 넣기'); const dow = await t.evaluate(() => (new Date(Date.now() + 9 * 3600e3).getUTCDay() || 7));
     if (dow <= 5) { const c = t.locator('.sg button').nth(2 * 5 + (dow - 1)); for (let k = 0; k < 3; k++) await c.click(); }
     await t.click('.sheet .act .btn');
-    if (dow <= 5) await t.click('.tt:has-text("1-3")'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
+    if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); } // 주말 = 오늘 시간표 비어 있음
     await t.click('.pk:has-text("6차시")'); await shot(t, 'b8-t-home'); const mh1 = await meas('⑫ 고름');
     log(tag, '⑫ 주요 단추:', (await t.textContent('.tact .btn')).trim(), '| 자리', mh1.main, '바닥에서', mh1.fromBottom, '| 빈 판과 같은 자리', JSON.stringify(mh0.main) === JSON.stringify(mh1.main));
     await t.click('.tact .btn'); await t.waitForSelector('.nums');
@@ -123,7 +124,7 @@ const DB = 'citadel-v1-test-db';
     log(tag, '🎁 12번 캠프: 선물', g.n, '줄 · 받음', g.got, '· 💎', g.gem, '| TV', (await tv.textContent('.ttl')).trim());
     if (!g.got || g.gem !== 9999 + 10) errs.push(`${tag} 선물이 지갑에 안 들어감`);
     // ⏯ 이어서: 문제 1 처치 안 됨 → 「문제 1부터 이어서」 → 새 방 시작 = 문제 1
-    if (dow <= 5) await t.click('.tt:has-text("1-3")'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
+    if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); } // 주말 = 오늘 시간표 비어 있음
     const rs = (await t.$('.item:has-text("이어서")')) ? (await t.textContent('.item:has-text("이어서") b')).trim() : '없음';
     log(tag, '⏯ 이어서:', rs); if (!/문제 1부터 이어서/.test(rs)) errs.push(`${tag} 이어서 자리가 안 맞음 ${rs}`);
     await t.click('.item:has-text("이어서")'); await t.waitForSelector('.nums');
