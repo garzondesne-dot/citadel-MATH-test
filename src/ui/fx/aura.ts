@@ -14,6 +14,8 @@ function style() {
   for (let i = 0; i <= 24; i++) { const t = (i / 24) * Math.PI * 2, x = Math.cos(t) * 32, y = Math.sin(t) * 5, f = Math.sin(t) > 0 && Math.abs(Math.cos(t)) > 0.7; /* 🔧 2026-11-13: 앞 = 궤도 앞쪽 반 중 몸 밖(양옆)일 때만 · 몸통 · 얼굴 앞은 늘 뒤 */ st.push(`${((i / 24) * 100).toFixed(2)}%{transform:translate(calc(var(--p)*${x.toFixed(1)}),calc(var(--p)*${y.toFixed(1)})) scale(${f ? 1 : 0.7});opacity:${f ? 1 : 0.55};z-index:${f ? 3 : 0}}`); }
   const s = document.createElement('style'); s.id = 'aura-css';
   s.textContent = `.art.au{container-type:inline-size;--p:1.55cqw;overflow:visible}
+/* 🔧 오라 자리 = 용사 몸 가운데 · 발 기준선 (--bx · --by = 그림 상자 밀림 · 옛 칸 px · 가운데 맞춘 상자는 0) */
+.au-g,.au-r,.au-o{margin-left:calc(var(--bx,0)*1.25cqw);margin-bottom:calc(var(--by,0)*1.25cqw)}
 .au-s{position:absolute;pointer-events:none;image-rendering:pixelated;display:block}
 .au-g{left:calc(50% - var(--p)*32);bottom:calc(var(--p)*-4);width:calc(var(--p)*64);height:calc(var(--p)*14);border-radius:50%;background:radial-gradient(closest-side,var(--au) 0%,transparent 100%);opacity:.5;animation:auGl 1.6s ease-in-out infinite alternate;z-index:0}
 @keyframes auGl{to{opacity:.28;transform:scaleX(.9)}}
@@ -38,13 +40,14 @@ function style() {
 }
 /** 오라 붙이기 (lv 0 = 없음) · 돌려주는 값 = 지우기 */
 /** head = 그 상자 안 머리 자리 [가로 = 상자 가운데에서, 높이 = 상자 아래에서] (옛 칸 80 px 단위 · manifest heroHead 에 그림 칸 밀림을 더한 값) · +10 후광 · 빛살 중심 = 머리 뒤 */
-export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number]): () => void {
+export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number]): () => void {
   art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au');
   if (!lv) return () => {};
   const w = art.getBoundingClientRect().width; if (w && w < 40) return () => {};
   style(); art.classList.add('au');
   const i = lv >= 10 ? 6 : lv - 1, col = AURA.colors[lv - 1] || '#fff';
   if (head) { art.style.setProperty('--hx', String(head[0])); art.style.setProperty('--hy', String(head[1])); }
+  if (body) { art.style.setProperty('--bx', String(body[0])); art.style.setProperty('--by', String(body[1])); }
   art.style.setProperty('--ay', `${((i / 9) * 100).toFixed(3)}%`); art.style.setProperty('--au', col);
   const holy = lv >= 10 && !!AURA.halo;
   const el = !holy && lv >= 4 ? ' el' : '', st = !holy && lv >= 4 ? ' st' : '';
@@ -56,8 +59,9 @@ export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, n
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
 /** Svelte 액션: <i class="art" use:aura={{ lv, tv }}> */
-export function aura(node: HTMLElement, p: { lv: number; tv?: boolean; head?: [number, number] }) {
-  let off = () => {}; const run = (q: { lv: number; tv?: boolean; head?: [number, number] }) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head); }); };
+type AuraP = { lv: number; tv?: boolean; head?: [number, number]; body?: [number, number] };
+export function aura(node: HTMLElement, p: AuraP) {
+  let off = () => {}; const run = (q: AuraP) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head, q.body); }); };
   run(p);
   return { update: run, destroy: () => off() };
 }
