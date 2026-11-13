@@ -22,7 +22,7 @@
   // 📝 일반 몬스터 카드 (②B · ③ 틀렸을 때 · ⑥ 퍼펙트 · 규칙 = 정식 fightForm v3)
   //   카드 맨 위 「문제 n · 소문제 k / m」 · 한 장에 소문제 하나 · 다 채우면 「공격」(하트 = 남은 기회)
   //   틀림 → 채점표 → 같은 문제 · ✔ 잠김 · ✘ 빈칸(재도전 v4) · 생각 시간 / 퍼펙트 → ✔ 카드 + 보조 줄(힐 · 묶기 · 진필살기 = 자리만)
-  const { S, L, R, code, mid, uid, now, locked, title }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string } = $props();
+  const { S, L, R, code, mid, uid, now, locked, title, onhint }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void } = $props();
   const rec = $derived(plainRecord(L, R, mid, uid));
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   const healers = $derived([...new Set(healsTo(R, mid, uid, L).map((h) => R.players?.[h.from]?.nick || '친구'))].join(' · '));
@@ -123,7 +123,7 @@
   const lastGold = $derived(!!last && last.marks.length > 0 && last.marks.every(Boolean));
   const cells = $derived.by((): Cell[] => items.map((x, i) => {
     const text = textOf(x, given[i], i);
-    if (fixing) return keepAt(i) ? { text, state: 'ok', lock: true } : { text, state: 'oldbad' };
+    if (fixing) return keepAt(i) ? { text, state: 'ok', lock: true } : { text, state: 'oldbad', old: v4 && last ? textOf(lastItems[i] as Question, (last.given || [])[i], i) : null };
     return { text, state: text ? 'filled' : 'empty' };
   }));
   const pickCell = (i: number) => { if (!keepAt(i)) { tableHold = false; cur = i; } };
@@ -150,26 +150,30 @@
     <span class="lab acc">{no} · {v4 ? '❤ 를 다 썼어요' : '기회를 다 썼어요'}</span>
     <p class="muted">{v4 ? '벌은 없어요 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '벌은 없어요 — 학습지에 풀이를 정리해요'}. 데미지 {rec.best}</p>
   </div>
-  {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span><Hearts total={rec.slots} left={0} />{/snippet}</BottomAction>
+  {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span><Hearts total={rec.slots} left={0} memo={`${code}|${mid}|${uid}`} />{/snippet}</BottomAction>
   {:else}<BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />{/if}
 {:else if reveal || tableHold}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={!!reveal?.flash} still={!reveal} onpick={reveal ? undefined : pickCell} />
   <div class="bcard">
     {#if reveal}
       <span class="lab acc">{no} · 채점 중…</span>
-    {:else}
+    {:else if !v4}
       <span class="lab acc">{no} · 데미지 {rec.best} · 소문제 {wrongIdx.map((i) => i + 1).join(', ')} 이 틀렸어요</span>
       <p class="muted">맞힌 것은 그대로 잠기고, 틀린 것만 빈칸으로 다시 풀어요 · 공격 단추의 하트가 하나 줄었어요</p>
+    {:else}
+      <span class="lab acc">{no}</span>
     {/if}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel="다음 틀린 문제">
-    {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{/snippet}
+    {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{#if v4 && !reveal}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}
   </BottomAction>
 {:else if q}
-  {#if fixing}
+  {#if v4 && attempt > 0 && rec.perfect}
+    <p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (practice = false)}>그만하기</button></p>
+  {:else if v4}
+    <span></span>
+  {:else if fixing}
     <div class="bad" role="status"><b>소문제 {wrongIdx.map((i) => i + 1).join(', ')} 을 고쳐요</b><span>맞힌 것은 초록으로 잠김 · 틀린 것을 모두 고쳐야 다시 공격</span></div>
-  {:else if attempt > 0 && rec.perfect && v4}
-    <div class="bad" role="status" style="background:var(--surface-2)"><b>🔥 재도전 판 · 숫자가 바뀐 같은 문제</b><span>데미지 0 · 틀려도 ❤ 그대로 · 다 맞히면 다음 ⚡ <button type="button" class="stop" onclick={() => (practice = false)}>그만하기</button></span></div>
   {:else if attempt > 0 && rec.perfect}
     <div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 숫자가 바뀐 새 문제 (연습)</b><span>맞혀도 데미지는 그대로 · 틀리면 하트 −1</span></div>
   {/if}
@@ -182,8 +186,10 @@
     {/key}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '❤' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
+    {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
+    {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
     {#snippet main()}
-      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}<Hearts mode="energy" left={rec.tokLeft} lock />{:else}<Hearts total={rec.slots} left={rec.left} />{/if}
+      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}<Hearts mode="energy" left={rec.tokLeft} lock />{:else}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}
       {:else if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Slots total={rec.slots} marks={marks} heal={rec.healed} />
       {:else}<span>{fixing ? '다음 틀린 문제 ▶' : '다음 소문제 ▶'}</span>{/if}
     {/snippet}
@@ -191,7 +197,8 @@
 {/if}
 
 <style>
-  .ans { margin: 0; padding: var(--s2) var(--s3); border-radius: 10px; background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); color: var(--text); font-size: 15px; font-weight: 700; }
+  .tagl { margin: 0; display: flex; align-items: center; gap: var(--s2); }
+  .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line, #2f3440); color: var(--text-2); font: 700 13px var(--font); }
   .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }
   .healed { display: block; font-size: var(--fs-small); color: var(--ok); font-weight: 700; }
 </style>

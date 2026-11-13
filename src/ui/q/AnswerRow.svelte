@@ -1,7 +1,7 @@
 <script lang="ts">
   // 🧾 답안 줄 (#108 ①): 소문제(소레이드 = 단계)마다 칸 하나 「① {5, 6}」 · 고른 답이 계속 보임 · 지금 칸 = 금빛 테두리
   //   칸을 누르면 그 소문제로 · 좁으면 답을 … 으로 줄임(누르면 카드에서 전체) · 채점 = 왼쪽부터 뒤집힘(✔ 초록 · ✘ 빨강) · 다 맞히면 줄 전체 금빛 반짝
-  export type Cell = { text: string | null; state: 'empty' | 'filled' | 'ok' | 'bad' | 'oldbad'; /** 재도전 v4: 지난번 ✔ = 잠김(다시 안 열림) */ lock?: boolean };
+  export type Cell = { text: string | null; state: 'empty' | 'filled' | 'ok' | 'bad' | 'oldbad'; /** 재도전 v4: 지난번 ✔ = 잠김(다시 안 열림) */ lock?: boolean; /** 📜 2026-11-13 밤: 틀린 칸 = 지난 답 빨강 + 줄 긋기 (새로 채우기 전까지) */ old?: string | null };
   const { cells, cur = -1, flash = false, onpick, label = (i: number) => '①②③④⑤⑥⑦⑧⑨'[i] ?? String(i + 1) }:
     { cells: Cell[]; cur?: number; flash?: boolean; onpick?: (i: number) => void; label?: (i: number) => string } = $props();
 </script>
@@ -10,7 +10,7 @@
   {#each cells as c, i (i)}
     <button type="button" class="cell s-{c.state}" class:now={i === cur} disabled={!onpick || !!c.lock} aria-current={i === cur ? 'step' : undefined}
       aria-label="{label(i)} {c.lock ? '잠김 ' : ''}{c.state === 'ok' ? '맞음 ' : c.state === 'bad' || c.state === 'oldbad' ? '틀림 ' : ''}{c.text ?? '빈 칸'}" onclick={() => onpick?.(i)}>
-      <b>{label(i)}</b><span class="tx">{c.text ?? '＿'}</span>{#if c.state === 'ok'}<i class="badge b-ok" aria-hidden="true">✔</i>{:else if c.state === 'bad' || c.state === 'oldbad'}<i class="badge b-bad" aria-hidden="true">✘</i>{/if}
+      <b>{label(i)}</b><span class="tx" class:old={!c.text && !!c.old}>{c.text ?? c.old ?? '＿'}</span>{#if c.state === 'ok'}<i class="badge b-ok" aria-hidden="true">✔</i>{:else if c.state === 'bad' || c.state === 'oldbad'}<i class="badge b-bad" aria-hidden="true">✘</i>{/if}
     </button>
   {/each}
 </div>
@@ -28,6 +28,7 @@
   .cell b { color: var(--text-2); flex: none; }
   .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cell.s-empty .tx { color: var(--text-3); }
+  .tx.old { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 2px; }
   .cell.now { border-color: var(--accent); }
   .cell.s-ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); animation: flip 0.2s ease-out 1; }
   .cell.s-bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 22%, var(--surface)); animation: flip 0.2s ease-out 1; }

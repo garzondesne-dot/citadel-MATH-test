@@ -315,13 +315,16 @@ export function bossRecord(L: LessonPack, R: Room, uid: string) {
     if (doneAt < 0) { if (ent.some((e) => !e.ok && !bonus(e.i))) wrong += 1; ent.forEach((e) => { if (e.ok) solved.add(e.i); }); if (Array.from({ length: hpN }, (_, i) => i).every((i) => solved.has(i))) doneAt = k; }
   });
   const left = Math.max(0, slots - wrong), done = doneAt >= 0, out = !done && subs.length > 0 && left <= 0;
-  const after = done ? subs.slice(doneAt + 1) : [], full = (sub: Record<string, number>) => Object.entries(sub).length > 0 && Object.entries(sub).every(([i, a]) => okAt(Number(i), Number(a)) || bonus(Number(i)));
+  // 재도전 판 = ❤ 문항이 든 제출만 셈 (⭐ 보너스만 낸 제출 = 판 아님)
+  const after = done ? subs.slice(doneAt + 1) : [], full = (sub: Record<string, number>) => Object.keys(sub).some((i) => !bonus(Number(i))) && Object.entries(sub).every(([i, a]) => okAt(Number(i), Number(a)) || bonus(Number(i)));
   const rounds = after.filter(full).length, spent = healsGiven(R, BOSS_ID, uid), tokens = done ? ENERGY : 0, tokLeft = Math.max(0, tokens - spent), roundOpen = spent > rounds;
   const next = (i: number) => { const mine = tr.filter((t) => t.i === i); return mine.length ? Math.max(...mine.map((t) => t.a)) + 1 : 0; };
   // 이번 제출에 낼 문항: 진짜 = 아직 못 맞힌 문항(보너스 포함) · 재도전 판 = 모든 문항 새 숫자
   const todo = Array.from({ length: n }, (_, i) => i).filter((i) => (roundOpen ? true : !done && !tr.some((t) => t.i === i && t.ok)));
+  // ⭐ 보너스만 남으면(다 끝낸 뒤) = 보너스만 다시 낼 수 있음 · ❤ 안 깎임 · 숫자 바뀐 새 문제 · 문항마다 4번까지 (📜 2026-11-13 밤)
+  const BONUS_MAX = 4, bonusTodo = done ? Array.from({ length: n }, (_, i) => i).filter((i) => bonus(i) && !tr.some((t) => t.i === i && t.ok) && tr.filter((t) => t.i === i).length < BONUS_MAX) : [];
   return { n, hpN, subs: subs.length, slots, left, healed, done, out, explain: out, locked: false, solved: [...solved], tokens, tokLeft, spent, rounds, roundOpen,
-    canSubmit: roundOpen || (!done && left > 0), canHeal: tokLeft > 0 && !roundOpen, todo, next, bonus, first: subs[0] ? Object.keys(subs[0]).map(Number) : [] };
+    canSubmit: roundOpen || (!done && left > 0), canHeal: tokLeft > 0 && !roundOpen, todo, bonusTodo, next, bonus, first: subs[0] ? Object.keys(subs[0]).map(Number) : [] };
 }
 export function bossHp(L: LessonPack, R: Room, now: number) {
   const pct = pctOf(L, R);

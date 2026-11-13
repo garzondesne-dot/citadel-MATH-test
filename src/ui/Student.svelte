@@ -186,9 +186,9 @@
         {#if step.kind === 'boss'}
           {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId ? () => (cpt = true) : undefined} />
         {:else if mid}
-          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} />
+          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId ? () => (cpt = true) : undefined} />
         {/if}
       {/key}
       {#if atkOn && atk}

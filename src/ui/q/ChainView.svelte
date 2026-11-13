@@ -18,7 +18,7 @@
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
   //   (b4 범위 밖: ✍ 서술형 📸 · ⛓ 묶기 · 💚 힐 · 💡 힌트 주기)
-  const { S, L, R, code, mid, uid, now, locked, title }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string } = $props();
+  const { S, L, R, code, mid, uid, now, locked, title, onhint }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void } = $props();
   const rec = $derived(chainRecord(L, R, mid, uid));
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   let pracPass = $state<number | null>(null);
@@ -59,6 +59,7 @@
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
       : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 하트 −${before === pItems.length - 1 ? 1 : 0.5}`)
       : r2.locked ? '🙋 하트 1칸 — 선생님 확인을 기다려요' : r2.fail ? '기회를 다 썼어요' : `✘ 틀렸어요 · 하트 −${before === rec.n - 1 ? 1 : 0.5}`;
+    if (v4 && !okNow) toast = ''; // 틀렸을 때 = 배너 · 안내 없이 하트 쪼개짐 · 나의 풀이 빨강 줄만 (📜 2026-11-13 밤)
   }
   function why(i: number) {
     const err = chainSubmit(S, L, code, mid, uid, rec.pWhy, pass, i, 1);
@@ -83,14 +84,14 @@
   <div class="bcard">
     <div class="okline"><span class="ic" aria-label="맞음">{pFail ? '✘' : '✔'}</span><span><b>{pFail ? '이번 연습 판은 기회를 다 썼어요' : pDone ? '연습 사슬 완성!' : rec.perfect ? '퍼펙트 사슬!' : '대장 처치!'}</b><span>{prac ? '데미지 없음 · 수업 기록 그대로' : `데미지 ${rec.best}`}</span></span></div>
     <div class="story"><b>📜 나의 풀이</b><ol>{#each pFail ? pItems.map((x) => x.say || '') : says as t, k (k)}<li>{t}</li>{/each}</ol></div>
-    <p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>
+    {#if !v4}<p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>{/if}
   </div>
   {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={again} />{:else if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
 {:else}
-  {#if v4 && prac}<div class="bad" role="status" style="background:var(--surface-2)"><b>🔥 재도전 판 · 숫자가 바뀐 같은 문제</b><span>데미지 0 · 틀려도 ❤ 그대로 · 다 맞히면 다음 ⚡ <button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></span></div>{/if}
-  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} />
+  {#if v4 && prac}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></p>{/if}
+  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 {#if needWhy}
@@ -105,21 +106,19 @@
   <span></span>
 {:else if rec.locked && !prac}
   <BottomAction battle disabled why={v4 ? '🙋 ❤ 0 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요'}>
-    {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}<Hearts total={rec.slots} left={rec.left} />{/if}{/snippet}
+    {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
-    {#snippet aux()}{#if v4}<div class="tool2"><button type="button" class="tb" disabled title="힌트는 다음 판에">💡 힌트</button><button type="button" class="tb wr" disabled title="📸 사진 채점은 베타에 아직 없어요">✍ 서술형</button></div>{/if}{/snippet}
-    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}<Hearts mode="energy" left={rec.tokLeft} lock />{:else if v4}<Hearts total={rec.slots} left={rec.left} />{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
+    {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
+    {#snippet right()}{#if v4 && true}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
+    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}<Hearts mode="energy" left={rec.tokLeft} lock />{:else if v4}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 
 <style>
-  /* 🧰 보조 줄 (📜 2026-11-13 밤 시안 ⑥ · 위치 일관성): 💡 힌트 = 늘 왼쪽 · ✍ 서술형 = 늘 오른쪽(소레이드만) · 베타에 아직 없는 기능 = 자리만 흐림 */
-  .tool2 { display: flex; justify-content: space-between; gap: var(--s2); width: 100%; }
-  .tb { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
-  .tb.wr { border: 2px solid var(--scroll); background: rgba(199, 155, 255, 0.14); }
-  .tb:disabled { opacity: 0.4; }
+  .tagl { margin: 0; display: flex; align-items: center; gap: var(--s2); }
+  .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line, #2f3440); color: var(--text-2); font: 700 13px var(--font); }
   .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }
   .wq { margin: 0; font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
   .bl { color: var(--accent); }

@@ -153,9 +153,9 @@ export function submit(S: Store, L: LessonPack, code: string, mid: string, uid: 
 /** 👑 v4 형성평가 한 번에 제출 (bossRecord.todo 문항 모두 · 문항마다 새 시도 번호 = 틀린 문항 = 새 숫자) */
 export function bossSubmitAll(S: Store, L: LessonPack, code: string, uid: string, given: Record<number, Given>): boolean {
   const R = getRoom(S, code); if (!R || !L.boss || !V4(R)) return false;
-  const r = bossRecord(L, R, uid); if (!r.canSubmit || !r.todo.length) return false;
+  const r = bossRecord(L, R, uid), bonusOnly = !r.canSubmit && r.bonusTodo.length > 0, list = bonusOnly ? r.bonusTodo : r.todo; if ((!r.canSubmit && !bonusOnly) || !list.length) return false;
   const k = r.subs, sub: Record<string, number> = {};
-  for (const i of r.todo) { const a = roundOpenNext(r, i); sub[i] = a; S.set(`${roomPath(code)}/bossTry/${uid}/${i}/${a}`, given[i] ?? ''); }
+  for (const i of list) { const a = roundOpenNext(r, i); sub[i] = a; S.set(`${roomPath(code)}/bossTry/${uid}/${i}/${a}`, given[i] ?? ''); }
   S.set(`${roomPath(code)}/bossSub/${uid}/${k}`, sub);
   return true;
 }

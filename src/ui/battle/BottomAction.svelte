@@ -7,8 +7,8 @@
   //   주요 단추가 없는 화면 = 그 자리를 비워 두지 않고 흐린 단추(text) + 이유
   //   dock = 화면 바닥에 고정(fixed + 같은 높이 빈칸) · false = 이미 바닥에 붙은 판(시트 · 전체 화면 판) 안에서 마지막 줄
   //   💥 몬스터 공격 중(fx.block) = 같은 자리 흐린 「⏳ 막는 중…」
-  const { main, text = '', disabled = false, why = '', onmain, aux, mainLabel, href, dock = true, battle = false }:
-    { main?: Snippet; text?: string; disabled?: boolean; why?: string; onmain?: () => void; aux?: Snippet; mainLabel?: string; href?: string; dock?: boolean; battle?: boolean } = $props();
+  const { main, text = '', disabled = false, why = '', onmain, aux, mainLabel, href, dock = true, battle = false, left, right }:
+    { main?: Snippet; text?: string; disabled?: boolean; why?: string; onmain?: () => void; aux?: Snippet; mainLabel?: string; href?: string; dock?: boolean; battle?: boolean; /** 📜 2026-11-13 밤 시안 ②⑤⑥′: 맨 아래 한 줄 = 왼쪽(💡 정사각 56) · 가운데 노란 · 오른쪽(✍ 폭 84) · 없는 자리 = 노란이 넓어짐 */ left?: Snippet; right?: Snippet } = $props();
   let h = $state(0);
   const block = $derived(battle && fx.block);
   // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
@@ -22,6 +22,8 @@
 <div class="act" class:dock bind:clientHeight={h}>
   {#if why && !block}<p class="why">{why}</p>{/if}
   {#if aux}<div class="row">{@render aux()}</div>{/if}
+  <div class="line">
+  {#if left && !block}{@render left()}{/if}
   {#if block}
     <button type="button" class="btn pmain" disabled aria-label="막는 중">⏳ 막는 중…</button>
   {:else if lockd}
@@ -35,12 +37,21 @@
   {:else}
     <button type="button" class="btn pmain" disabled={disabled || (!main && !onmain)} aria-label={mainLabel} onclick={() => onmain?.()}>{#if main}{@render main()}{:else}{text}{/if}</button>
   {/if}
+  {#if right && !block}{@render right()}{/if}
+  </div>
 </div>
 
 <style>
   .spacer { flex: none; }
   .act { box-sizing: border-box; flex: none; z-index: 4; padding: var(--s2) var(--s4) calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--bg); display: flex; flex-direction: column; gap: var(--s2); }
   .act.dock { position: fixed; bottom: 0; left: 0; right: 0; max-width: 430px; margin: 0 auto; }
+  .line { display: flex; gap: var(--s2); align-items: stretch; min-width: 0; }
+  .line > .btn { flex: 1; width: auto; min-width: 0; }
+  .line :global(.side) { flex: none; height: var(--btn-h); border-radius: 14px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 700 12px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); position: relative; }
+  .line :global(.side:disabled) { opacity: 0.4; box-shadow: none; }
+  .line :global(.side.hint) { width: var(--btn-h); } .line :global(.side.hint i) { font-style: normal; font-size: 22px; line-height: 1.1; }
+  .line :global(.side.hint b) { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--bad); color: #fff; font-size: 12px; display: grid; place-items: center; padding: 0 5px; }
+  .line :global(.side.wr) { width: 84px; border: 2px solid var(--scroll); background: rgba(199, 155, 255, 0.14); font-size: 14px; } .line :global(.side.wr small) { font-size: 10px; font-weight: 500; color: var(--scroll); }
   .row { display: flex; gap: var(--s2); align-items: center; min-width: 0; }
   .btn { box-sizing: border-box; width: 100%; height: var(--btn-h); flex: none; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); display: flex; align-items: center; justify-content: center; gap: var(--s2); text-decoration: none; padding: 0 var(--s3); overflow: hidden; white-space: nowrap; transition: transform var(--t), box-shadow var(--t); }
   .btn :global(small) { font-size: 13px; font-weight: 500; opacity: 0.85; }

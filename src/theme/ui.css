@@ -26,6 +26,8 @@
 .story ol { margin: var(--s1) 0 0; padding-left: 1.3rem; }
 .story li { line-height: 1.55; }
 .story li:last-child { color: var(--ok); } /* 방금 맞힌 단계 = 맞음 초록 (2026-11-13 밤 선생님 「빨간색 → 초록」 · 다음 단계로 가면 보통 글자) */
+.story li.wr { color: var(--bad); } /* ✘ 이번 단계 틀린 답 = 빨강 + 줄 긋기 (📜 2026-11-13 밤 · 배너 대신) */
+.story li.wr s { text-decoration-thickness: 2px; }
 .big { font-size: 34px; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-3); font-size: var(--fs-small); }
 .toast { margin: 0; text-align: center; font-weight: 700; overflow-wrap: anywhere; }

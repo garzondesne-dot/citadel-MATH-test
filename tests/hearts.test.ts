@@ -115,3 +115,18 @@ describe('👑 형성평가 v4 = 일반 몬스터 꼴', () => {
     expect(rec('a').todo.length).toBe(6); send('a', () => true); expect(rec('a').rounds).toBe(1); expect(rec('a').canHeal).toBe(true);
   });
 });
+describe('👑 ⭐ 보너스만 남음', () => {
+  it('다 끝낸 뒤 보너스만 다시 · ❤ 안 깎임 · 문항마다 4번 · 판으로 안 셈', () => {
+    const b = memoryStore(), S: Store = { ...b, kind: 'memory', now: () => 1_000_000 };
+    const L = packOf('set-04')!; openRoom(S, L, 'B5', PROFILES.test); heartbeat(S, 'B5', 'a', 1, 'a');
+    const R = () => S.get<Room>(roomPath('B5')) as Room;
+    for (let g = 0; g < 60 && stepOf(L, R())?.kind !== 'boss'; g++) nextStep(S, L, 'B5');
+    const rec = () => bossRecord(L, R(), 'a');
+    const bad = (q: Question): Given => (q.type === 'blanks' ? q.items.map(() => '999') : q.type === 'multi' ? [] : q.type === 'choice' ? (q.answerIndex + 1) % Math.max(2, q.choices.length) : '999') as Given;
+    const send = (ok: (i: number) => boolean) => { const r = rec(); const list = r.canSubmit ? r.todo : r.bonusTodo; const g: Record<number, Given> = {}; list.forEach((i) => { const q = bossItem(L, R(), 'a', i, r.next(i))!; g[i] = ok(i) ? answerOf(q) : bad(q); }); return bossSubmitAll(S, L, 'B5', 'a', g); };
+    send((i) => i !== 5); expect(rec().done).toBe(true); expect(rec().bonusTodo).toEqual([5]); expect(rec().left).toBe(4);
+    for (let k = 0; k < 3; k++) expect(send(() => false)).toBe(true);
+    expect(rec().bonusTodo).toEqual([]); expect(send(() => true)).toBe(false); // 4번까지
+    expect(rec().left).toBe(4); expect(rec().rounds).toBe(0);
+  });
+});
