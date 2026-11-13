@@ -1,7 +1,7 @@
 // 📺 TV 전투 연출 사건 (#157 · 정식 hall.js attacks · updateFight · xpOf 를 옮김) — 순수 계산
 //   학생마다 (공격 횟수 n · 깎은 데미지 dmg) 를 지난번과 비교 → 늘었으면 공격 사건 하나 · 정답 · 오답 글자는 만들지 않음(연출만)
 import type { LessonPack, Room, Step } from '../../../model/types';
-import { bossTries, chainRecord, chainSubs, isChain, plainRecord } from '../../../raid/raid';
+import { bossTries, chainRecord, chainSubs, isChain, plainRecord, V4 } from '../../../raid/raid';
 
 export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean }
 /** perfect = 이번 공격으로 그 학생이 다 맞힘(🎆 숫자 크고 노랗게) */
@@ -29,5 +29,8 @@ export function hitsOf(was: Record<string, Snap>, now: Record<string, Snap>): Hi
 /** +EXP (정식 control.js xpOf = 제출 2 + 맞힌 소문제 2 · 보스 = +10) — 몬스터가 쓰러질 때 머리 위에만 · 기록에 쓰지 않음 */
 export function xpOf(L: LessonPack, R: Room, step: Step, u: string): number {
   if (step.kind === 'boss') return bossTries(L, R, u).length ? 10 : 0;
-  const s = snapOf(L, R, step, u); return s.n ? s.n * 2 + s.dmg * 2 : 0;
+  const s = snapOf(L, R, step, u); if (!s.n) return 0;
+  // v4 🔥 재도전 판 완성마다 EXP +1 (📜 2026-11-13 밤 · 머리 🔨 하트 묶음 B)
+  const rr = step.kind === 'monster' && V4(R) && L.monsters[step.id] ? (isChain(L, R, step.id) ? chainRecord(L, R, step.id, u).rounds ?? 0 : plainRecord(L, R, step.id, u).rounds ?? 0) : 0;
+  return s.n * 2 + s.dmg * 2 + rr;
 }

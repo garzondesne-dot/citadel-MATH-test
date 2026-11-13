@@ -109,11 +109,17 @@
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
+    {#snippet aux()}{#if v4}<div class="tool2"><button type="button" class="tb" disabled title="힌트는 다음 판에">💡 힌트</button><button type="button" class="tb wr" disabled title="📸 사진 채점은 베타에 아직 없어요">✍ 서술형</button></div>{/if}{/snippet}
     {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}<Hearts mode="energy" left={rec.tokLeft} lock />{:else if v4}<Hearts total={rec.slots} left={rec.left} />{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 
 <style>
+  /* 🧰 보조 줄 (📜 2026-11-13 밤 시안 ⑥ · 위치 일관성): 💡 힌트 = 늘 왼쪽 · ✍ 서술형 = 늘 오른쪽(소레이드만) · 베타에 아직 없는 기능 = 자리만 흐림 */
+  .tool2 { display: flex; justify-content: space-between; gap: var(--s2); width: 100%; }
+  .tb { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
+  .tb.wr { border: 2px solid var(--scroll); background: rgba(199, 155, 255, 0.14); }
+  .tb:disabled { opacity: 0.4; }
   .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }
   .wq { margin: 0; font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
   .bl { color: var(--accent); }
