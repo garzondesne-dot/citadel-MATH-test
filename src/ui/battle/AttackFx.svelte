@@ -107,6 +107,13 @@
       {#each ['back', 'mid', 'front'] as ly (ly)}<div class="fl {ly}">{#each Array.from({ length: 7 }, (_, i) => i) as i (i)}<i style:left="{-6 + i * 15.5}%" style:animation-delay="{((i * 37) % 9) * 0.06}s" style:animation-duration="{0.38 + ((i * 13) % 5) * 0.06}s"></i>{/each}</div>{/each}
       {#each Array.from({ length: 14 }, (_, i) => i) as i (i)}<b class="ember" style:left="{4 + ((i * 53) % 92)}%" style:animation-delay="{((i * 29) % 13) * 0.11}s" style:animation-duration="{0.9 + ((i * 7) % 5) * 0.18}s"></b>{/each}
     </div>
+  {:else if kind === 'poison'}
+    <!-- ☠ 독 (📜 2026-11-13 밤 다시 · 「공격 이펙트랑 안 어울림」): 문제 칸 위에서 보라 · 초록 독이 줄줄 흘러내리고 방울이 떨어짐 · 위에 고인 독에서 거품이 부풀다 톡 터짐 -->
+    <div class="pois">
+      <i class="slime"></i>
+      {#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i class="drip" class:g={i % 3 === 1} style:left="{4 + i * 11 + ((i * 7) % 5)}%" style:--h="{34 + ((i * 37) % 80)}px" style:animation-delay="{((i * 13) % 7) * 0.09}s"><b></b></i>{/each}
+      {#each Array.from({ length: 7 }, (_, i) => i) as i (i)}<i class="bub" class:g={i % 2 === 0} style:left="{6 + ((i * 41) % 86)}%" style:--s="{12 + ((i * 17) % 14)}px" style:animation-delay="{0.5 + ((i * 23) % 11) * 0.12}s"></i>{/each}
+    </div>
   {:else if kind === 'wind'}
     <div class="gust"><i></i><i></i><i></i><i></i></div>
   {:else if kind === 'bind'}
@@ -151,8 +158,6 @@
   .gust i { position: absolute; left: -40%; height: 2px; width: 40%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent); animation: streak 0.9s linear 1 forwards; }
   .gust i:nth-child(1) { top: 18%; } .gust i:nth-child(2) { top: 42%; animation-delay: 0.15s; } .gust i:nth-child(3) { top: 63%; animation-delay: 0.3s; } .gust i:nth-child(4) { top: 82%; animation-delay: 0.1s; }
   @keyframes streak { to { transform: translateX(360%); } }
-  :global(.qwrap:has(.afx.poison)) :global(.bcard) { animation: pz 0.6s ease-in-out 3; }
-  @keyframes pz { 50% { box-shadow: 0 0 0 3px #b06cff, 0 0 18px rgba(176, 108, 255, 0.7); } }
   :global(.qwrap:has(.afx.mirror)) :global(.bcard :is(p, .qt, .q, .q1, .q2, .story)) { animation: mir var(--len, 2000ms) steps(1) 1; }
   @keyframes mir { 0% { transform: none; } 8% { transform: scaleX(-1); } 92% { transform: scaleX(-1); } 100% { transform: none; } }
   :global(.qwrap:has(.afx.scale)) :global(.bcard) { transform-origin: 50% 100%; animation: tilt 1.6s ease-out; }
@@ -203,4 +208,17 @@
   :global(.qwrap:has(.afx.fire)) :global(.bcard) { box-shadow: inset 0 -40px 40px -20px rgba(30, 8, 0, 0.85), inset 0 0 0 2px rgba(120, 40, 0, 0.6); animation: heat 0.18s steps(2) infinite; }
   @keyframes heat { 50% { filter: brightness(1.04) contrast(1.02); } }
   @media (prefers-reduced-motion: reduce) { .fl i, .ember { animation: none; } .ember { display: none; } :global(.qwrap:has(.afx.fire)) :global(.bcard) { animation: none; } }
+  /* ☠ 독 */
+  .pois { position: absolute; inset: 0; border-radius: var(--r); overflow: hidden; pointer-events: none; }
+  .slime { position: absolute; left: -4%; right: -4%; top: -14px; height: 30px; background: radial-gradient(ellipse at 20% 100%, #8a3cff 0 40%, transparent 41%) 0 0 / 18% 100% repeat-x, linear-gradient(#5a1a9e, #8a3cff); filter: drop-shadow(0 2px 3px rgba(100, 255, 120, 0.4)); animation: slin 0.35s ease-out both; }
+  @keyframes slin { from { transform: translateY(-100%); } to { transform: none; } }
+  .drip { position: absolute; top: 8px; width: 9px; height: 0; opacity: 0.9; border-radius: 0 0 6px 6px; background: linear-gradient(#8a3cff, #a35bff 60%, #b97aff); box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.25); animation: drip 1.1s cubic-bezier(0.5, 0, 0.7, 1) forwards; }
+  .drip.g { background: linear-gradient(#2fbf4a, #5be36d 60%, #8bff9a); }
+  .drip b { position: absolute; left: 50%; bottom: -8px; width: 11px; height: 13px; margin-left: -5.5px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; background: inherit; animation: drop 0.6s 1.1s ease-in forwards; }
+  @keyframes drip { to { height: var(--h); } }
+  @keyframes drop { to { transform: translateY(220px); opacity: 0; } }
+  .bub { position: absolute; top: 4px; width: var(--s); height: var(--s); border-radius: 50%; border: 2px solid rgba(220, 180, 255, 0.95); background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.7) 0 18%, rgba(170, 90, 255, 0.55) 40%, rgba(120, 40, 220, 0.4)); transform: scale(0); animation: bub 1.1s ease-in infinite; }
+  .bub.g { border-color: rgba(170, 255, 180, 0.95); background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.7) 0 18%, rgba(90, 230, 110, 0.55) 40%, rgba(30, 160, 60, 0.4)); }
+  @keyframes bub { 0% { transform: translateY(0) scale(0); opacity: 1; } 70% { transform: translateY(10px) scale(1.25); opacity: 1; } 78% { transform: translateY(12px) scale(1.6); opacity: 0.6; border-width: 1px; } 82% { transform: translateY(12px) scale(1.9); opacity: 0; } 100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .slime, .drip, .drip b, .bub { animation: none; } .drip { height: var(--h); } .bub { transform: none; } }
 </style>
