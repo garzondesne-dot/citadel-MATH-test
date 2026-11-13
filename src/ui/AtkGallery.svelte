@@ -35,10 +35,13 @@
   function mk(c: string, L: typeof L6, id: string) { openRoom(S, L, c, PROFILES.test); const i = L.steps.findIndex((s) => s.id === id); S.set(`${roomPath(c)}/meta/solve`, 0); S.set(`${roomPath(c)}/state`, { step: i, stepAt: S.now() }); }
   untrack(() => { mk('GAL1', L6, G1.id); mk('GAL2', L7, G2.id); });
   function hit(id: string) { const d = ATTACKS[id]!; now = id; (globalThis as { __strike?: (ms: number, id: string, s: boolean) => void }).__strike?.(attackMs(d, 3, strong), id, strong); }
+  const backTo = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me' ? '?role=teacher&tab=me' : '?role=teacher';
 </script>
 
 <div class="gal">
   <div class="bar" role="toolbar" aria-label="공격 갤러리">
+    <!-- ‹ 나가기 (📜 2026-11-13 밤 버그): 교사 「나」 탭에서 왔으면 「나」 탭 · 주소로 바로 열었으면 교사 첫 화면 -->
+    <a class="back" href={backTo} aria-label="나가기">‹ 나가기</a>
     <b>💥 공격 갤러리</b>
     <button type="button" class:on={strong} aria-pressed={strong} onclick={() => (strong = !strong)}>😡 분노</button>
     <button type="button" class:on={chain} aria-pressed={chain} onclick={() => (chain = !chain)}>⚔ 졸개</button>
@@ -71,6 +74,7 @@
 </div>
 
 <style>
+  .back { flex: none; min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px 0 4px; color: var(--text); font: 700 15px var(--font); text-decoration: none; }
   .gal { position: relative; min-height: 100dvh; }
   .bar { position: relative; z-index: 9; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; background: rgba(8, 9, 12, 0.92); border-bottom: 1px solid var(--line); }
   .bar b { font-size: 14px; margin-right: auto; }

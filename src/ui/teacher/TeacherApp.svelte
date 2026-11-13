@@ -26,7 +26,9 @@
   const liveR = $derived(live ? S.get<Room>(roomPath(live.code)) : null);
   const liveL = $derived(live ? packs.find((p) => p.id === live.lesson) ?? null : null);
   let page = $state<'home' | 'live'>(untrack(() => (liveNow(S) ? 'live' : 'home')));
-  let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>('class');
+  // ?tab=me 등 = 처음 열 탭 (공격 갤러리 「‹ 나가기」 · 뒤로 가기 = 「나」 탭으로)
+  const tab0 = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('tab') : null;
+  let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>((['class', 'pupil', 'prep', 'news', 'me'] as const).find((k) => k === tab0) ?? 'class');
   let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
 
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
