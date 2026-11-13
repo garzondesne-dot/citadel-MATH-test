@@ -15,7 +15,7 @@ const log = (...a) => console.log(...a);
   // ① 교사
   const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 });
   await t.click('.tabs button:has-text("나")'); await t.click('.item:has-text("교사 로그인")'); await t.waitForSelector('.sheet');
-  await t.fill('.fld[type=email]', 'teacher@school.test'); await t.fill('.fld[type=password]', 'pw123456'); await t.click('.sheet .lk');
+  await t.fill('.fld.tid', 'teacher@school.test'); await t.fill('.fld[type=password]', 'pw123456'); await t.click('.sheet .lk');
   await t.waitForTimeout(3000); await t.waitForSelector('.tabs', { timeout: 20000 });
   await t.click('.tabs button:has-text("수업")'); await t.waitForTimeout(500);
   await t.click('.tt:not([disabled])'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);

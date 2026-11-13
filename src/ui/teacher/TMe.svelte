@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { loginEmails, makeEmail } from '../../school/teacherId';
   import SoundToggles from '../SoundToggles.svelte';
   import { soundPref } from '../sound.svelte';
   import { HALLKEY } from '../../school/school';
@@ -32,10 +33,14 @@
     const A = (S as AS).auth; if (!A) return; busy = true; lerr = '';
     try {
       const fa = await import('firebase/auth');
-      const c = make ? await fa.createUserWithEmailAndPassword(A, email.trim(), pw) : await fa.signInWithEmailAndPassword(A, email.trim(), pw);
+      // ✉ B8 아이디 또는 이메일: 로그인 = 이메일 그대로 → 안 되면 예전 꼴 t_…@citadel.class
+      let c: Awaited<ReturnType<typeof fa.signInWithEmailAndPassword>> | null = null, last: unknown = null;
+      if (make) c = await fa.createUserWithEmailAndPassword(A, makeEmail(email), pw);
+      else for (const e of loginEmails(email)) { try { c = await fa.signInWithEmailAndPassword(A, e, pw); break; } catch (x) { last = x; } }
+      if (!c) throw last;
       if (!S.get('admins')) S.set(`admins/${c.user.uid}`, true); // 첫 비번 계정 = 교사 (규칙이 「교사가 아직 없을 때만」 허락)
       setTimeout(() => location.reload(), 600);
-    } catch (e) { lerr = /email-already/.test(String((e as { code?: string }).code)) ? '이미 있는 계정 · 「로그인」을 눌러요' : /weak-password/.test(String((e as { code?: string }).code)) ? '비밀번호는 6자 이상' : '이메일 · 비밀번호를 다시 확인해요'; }
+    } catch (e) { lerr = /email-already/.test(String((e as { code?: string }).code)) ? '이미 있는 계정 · 「로그인」을 눌러요' : /weak-password/.test(String((e as { code?: string }).code)) ? '비밀번호는 6자 이상' : '아이디(이메일) · 비밀번호를 다시 확인해요'; }
     busy = false;
   }
   async function teacherOut() { const A = (S as AS).auth; if (!A) return; const fa = await import('firebase/auth'); await fa.signOut(A); location.reload(); }
@@ -67,7 +72,7 @@
   <Sheet onclose={() => (sheet = '')} mainText={busy ? '…' : '로그인'} mainDisabled={busy || !email || pw.length < 6} onmain={() => teacherIn(false)}>
     {#snippet title()}🔐 교사 로그인{/snippet}
     {#if admin}<p class="ok">✅ {who} · 교사</p>{/if}
-    <input class="fld" type="email" autocomplete="username" placeholder="이메일" bind:value={email} />
+    <input class="fld tid" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="교사 아이디 · 영문·숫자 (또는 이메일)" bind:value={email} />
     <input class="fld" type="password" autocomplete="current-password" placeholder="비밀번호 (6자 이상)" bind:value={pw} />
     {#if lerr}<p class="err">{lerr}</p>{/if}
     <button type="button" class="lk" disabled={busy || !email || pw.length < 6} onclick={() => teacherIn(true)}>처음이에요 · 교사 계정 만들기 (처음 만든 계정만 교사)</button>
