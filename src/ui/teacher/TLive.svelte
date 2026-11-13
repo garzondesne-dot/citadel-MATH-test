@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { V4 } from '../../raid/raid';
   import { hallKeyOf } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, chainRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { appearNow, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { isOld, roster, type Live } from '../../school/school';
   import { hhmm } from '../../school/bells';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
@@ -61,7 +62,7 @@
   const stuck = $derived.by(() => {
     if (!R || !mid) return [] as { u: string; lock: boolean }[];
     if (chain) return ids.map((u) => ({ u, r: chainRecord(L, R, mid, u) })).filter((x) => x.r.locked || x.r.fail).map((x) => ({ u: x.u, lock: x.r.locked }));
-    return ids.map((u) => ({ u, r: plainRecord(L, R, mid, u) })).filter((x) => x.r.submitted && !x.r.canRetry && x.r.best < x.r.total).map((x) => ({ u: x.u, lock: false }));
+    return ids.map((u) => ({ u, r: plainRecord(L, R, mid, u) })).filter((x) => x.r.submitted && !x.r.canRetry && x.r.best < x.r.total).map((x) => ({ u: x.u, lock: !!x.r.locked })); // v4 ❤ 0 = 🙋 잠김 → 풀어주기
   });
   const boss5 = $derived(left != null && left > 0 && left <= 5 * 60e3 && !R?.state.extend);
   const doorAsk = $derived(!!R?.state.door);
@@ -171,7 +172,7 @@
         {/if}
       </div>
       <div class="alerts" aria-label="챙길 학생">
-        <div class="al stuck">{#if stuck.length}<span class="alh">🔒 막힘 {stuck.length}</span>{#each stuck.slice(0, 3) as x (x.u)}<button type="button" onclick={() => { if (x.lock && mid) { chainRelease(S, code, mid, x.u); say(`✔ ${nameOf(x.u)} 풀어 줬어요`); } else say(`${nameOf(x.u)} · 기회를 다 썼어요 (학습지로)`); }}>{nameOf(x.u)}</button>{/each}{#if stuck.length > 3}<span class="more">+{stuck.length - 3}</span>{/if}{/if}</div>
+        <div class="al stuck">{#if stuck.length}<span class="alh">🔒 막힘 {stuck.length}</span>{#each stuck.slice(0, 3) as x (x.u)}<button type="button" onclick={() => { if (x.lock && mid) { if (R && V4(R)) heartRelease(S, code, mid, x.u); else chainRelease(S, code, mid, x.u); say(`✔ ${nameOf(x.u)} 풀어 줬어요`); } else say(`${nameOf(x.u)} · 기회를 다 썼어요 (학습지로)`); }}>{nameOf(x.u)}</button>{/each}{#if stuck.length > 3}<span class="more">+{stuck.length - 3}</span>{/if}{/if}</div>
         <div class="al old">{#if oldIds.length}<span class="alh">🔄 옛 판 {oldIds.length}</span>{#each oldIds.slice(0, 2) as u (u)}<button type="button" onclick={() => { sendReload(S, code, [u]); say(`🔄 ${nameOf(u)} 새로 고침`); }}>{nameOf(u)} · 새로 고침</button>{/each}{#if oldIds.length > 2}<span class="more">+{oldIds.length - 2}</span>{/if}{/if}</div>
       </div>
     </div>

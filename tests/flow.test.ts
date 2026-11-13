@@ -110,7 +110,7 @@ describe('던전 통일 엔진', () => {
       S.tick(2);
       expect(solveLock(L, R(), S.now())?.on).toBe(false);
       // 그 밖의 규칙 값은 같음
-      expect({ ...R().meta, profile: '', solve: 0, created: 0 }).toEqual({ code: 'T', lesson: 'set-06', version: 3, created: 0, profile: '', retries: 3, healMax: 2, bossTries: 4, solve: 0, think: 5 });
+      expect({ ...R().meta, profile: '', solve: 0, created: 0 }).toEqual({ code: 'T', lesson: 'set-06', version: 4, created: 0, profile: '', retries: 3, healMax: 2, bossTries: 4, solve: 0, think: 5 });
       expect(monsterHp(L, R(), 'm1', S.now()).max).toBe(Math.floor((1 * 4 * 90) / 100));
       expect(record(L, R(), 'm1', 'u1').slots).toBe(4);
     }
@@ -125,7 +125,7 @@ describe('던전 통일 엔진', () => {
   });
 
   it('⚔ 소레이드: 잠김 → 풀어주기 · 한 판 더 3판 · 근거 빈칸 · 졸개 쓰러짐', () => {
-    const { S, R } = setup('test', 3);
+    const { S, R } = setup('test', 3); S.set('rooms/T/meta/version', 3); // 옛 v3 방 회귀 (v4 = hearts.test)
     while (stepOf(L, R())?.id !== 'u4') nextStep(S, L, 'T');
     const mid = 'u4', its = chainItems(L, R(), mid, 'u1', 0), w = wrong([its[0] as Question])[0] as Given;
     for (let k = 0; k < 6; k++) chainSubmit(S, L, 'T', mid, 'u1', 0, 0, w);

@@ -63,3 +63,25 @@ describe('⚡ 기력 → 🔥 재도전 판 (v4)', () => {
     expect(rec('a').trueOk).toBe(false);
   });
 });
+import { chainItems, chainRecord } from '../src/raid/raid';
+import { chainSubmit, pracStart } from '../src/raid/actions';
+import type { Given, Question } from '../src/model/types';
+describe('⚔ 소레이드 v4', () => {
+  it('❤ 4 · 졸개 −0.5 · 대장 −1 · ❤ 0 → 잠김 → 풀어주기 ❤ +1 · 다 맞히면 ⚡ 3 · ⚡ 1 → 재도전 판(무료) · 다 맞혀야 다음', () => {
+    const b = memoryStore(), S: Store = { ...b, kind: 'memory', now: () => 1_000_000 };
+    const L = packOf('set-06')!; openRoom(S, L, 'C4', PROFILES.test); heartbeat(S, 'C4', 'a', 1, 'a');
+    const R = () => S.get<Room>(roomPath('C4')) as Room;
+    for (let g = 0; g < 40 && stepOf(L, R())?.id !== 'u4'; g++) nextStep(S, L, 'C4');
+    expect(R().meta.version).toBe(4);
+    const mid = 'u4', its = chainItems(L, R(), mid, 'a', 0), w = (q: Question) => wrong(q) as Given;
+    for (let k = 0; k < 8; k++) chainSubmit(S, L, 'C4', mid, 'a', 0, 0, w(its[0] as Question));
+    const r0 = chainRecord(L, R(), mid, 'a'); expect(r0.left).toBe(0); expect(r0.locked).toBe(true); expect(r0.fail).toBe(false);
+    heartRelease(S, 'C4', mid, 'a'); expect(chainRecord(L, R(), mid, 'a').left).toBe(1); expect(chainRecord(L, R(), mid, 'a').locked).toBe(false);
+    its.forEach((q, s) => chainSubmit(S, L, 'C4', mid, 'a', s, 0, answerOf(q)));
+    const r1 = chainRecord(L, R(), mid, 'a'); expect(r1.done).toBe(true); expect(r1.tokens).toBe(ENERGY);
+    expect(chainSubmit(S, L, 'C4', mid, 'a', 0, 1, null)).toMatch(/⚡/); // ⚡ 안 쓰면 판 없음
+    expect(spendEnergy(S, L, 'C4', mid, 'a', 'bind')).toBe(true); expect(pracStart(S, L, 'C4', mid, 'a')).toBe(1);
+    const p1 = chainItems(L, R(), mid, 'a', 1); for (let k = 0; k < 9; k++) chainSubmit(S, L, 'C4', mid, 'a', 0, 1, w(p1[0] as Question)); // 판 안 오답 = 무료
+    expect(chainRecord(L, R(), mid, 'a').pFail).toBe(false); expect(spendEnergy(S, L, 'C4', mid, 'a', 'bind')).toBe(false);
+  });
+});

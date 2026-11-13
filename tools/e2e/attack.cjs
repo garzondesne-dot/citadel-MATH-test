@@ -49,9 +49,10 @@ const KINDS = ['pause', 'glitch', 'fog', 'ice', 'fire', 'smash'];
   await s.waitForTimeout(200); log('   주요 단추:', (await s.$eval('.pmain', (x) => x.outerHTML.replace(/ class="[^"]*svelte[^"]*"/g, '').slice(0, 300))), '| 칸 안 고름 표시', await s.$$eval('.qwrap .bcard .chip', (xs) => xs.slice(0, 3).map((x) => x.className.replace(/svelte-\S+/g, '').trim()).join(',')));
   const pm = await s.$('.pmain:not([disabled])'); if (pm) { await pm.click(); await s.waitForTimeout(1600); }
   // 채점표 → 「다음 틀린 문제 ▶」 → 틀린 칸을 다시 채우면 「다시 공격」 단추에 도전 칸이 다시 보임
-  for (let g = 0; g < 3 && !(await s.$('.pmain .sl')); g++) { const b2 = await s.$('.pmain:not([disabled])'); if (b2) await b2.click(); await s.waitForTimeout(300); for (let i = 0; i < cells.length; i++) { await s.click(`.qwrap .row .cell:nth-child(${i + 1})`).catch(() => {}); await s.waitForTimeout(60); if (!(await s.$('.qwrap .bcard .chip.on'))) { const c = await s.$('.qwrap .bcard .chip'); if (c) await c.click(); } } }
-  const sl = await s.$$eval('.pmain .sl i', (xs) => xs.map((x) => x.className.replace(/svelte-\S+/g, '').trim() || 'empty').join(' '));
-  log('▢ 도전 칸 (한 번 낸 뒤):', sl); if (!/\b(bad|part|ok)\b/.test(sl)) errs.push('도전 칸 색');
+  for (let g = 0; g < 3 && !(await s.$('.pmain .sl, .pmain .hs')); g++) { const b2 = await s.$('.pmain:not([disabled])'); if (b2) await b2.click(); await s.waitForTimeout(300); for (let i = 0; i < cells.length; i++) { await s.click(`.qwrap .row .cell:nth-child(${i + 1})`).catch(() => {}); await s.waitForTimeout(60); if (!(await s.$('.qwrap .bcard .chip.on'))) { const c = await s.$('.qwrap .bcard .chip'); if (c) await c.click(); } } }
+  // ❤ v4 (📜 2026-11-13 밤): 「도전 칸」 → ❤ 4 · 한 번 틀리면 ❤ 하나 빔(빈 하트 = 테두리)
+  const sl = await s.$$eval('.pmain .hs svg', (xs) => xs.map((x) => x.getAttribute('class')).join(' '));
+  log('❤ 하트 (한 번 낸 뒤):', sl); if ((sl.match(/full/g) || []).length !== 3 || (sl.match(/empty/g) || []).length !== 1) errs.push('하트 3 + 빈 1 아님');
   await s.screenshot({ path: `${SHOTS}/b41-slots.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();

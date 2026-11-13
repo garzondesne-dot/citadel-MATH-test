@@ -11,7 +11,7 @@ import { attackMs, attackOf, attackStrong, ATTACKS, bossAttacks } from '../src/r
 describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
   it('소레이드 다 맞힘 → 기력 = 남은 칸 · 묶기 · 힐 · 바닥나면 막힘', () => {
     const L = packOf('set-06@7')!, S: Store = { ...memoryStore(), kind: 'memory' };
-    openRoom(S, L, 'E1', PROFILES.test); heartbeat(S, 'E1', 'a', 1, '가'); heartbeat(S, 'E1', 'b', 2, '나');
+    openRoom(S, L, 'E1', PROFILES.test); S.set(`rooms/E1/meta/version`, 3); /* 옛 v3 방 회귀 */ heartbeat(S, 'E1', 'a', 1, '가'); heartbeat(S, 'E1', 'b', 2, '나');
     const R = () => S.get<Room>(roomPath('E1')) as Room;
     while (stepOf(L, R())?.kind !== 'monster') nextStep(S, L, 'E1');
     const id = stepOf(L, R())!.id;

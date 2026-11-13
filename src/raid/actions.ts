@@ -12,7 +12,7 @@ const getRoom = (S: Store, code: string) => S.get<Room>(roomPath(code));
 export function openRoom(S: Store, L: LessonPack, code: string, P: DungeonProfile): Room {
   const R = getRoom(S, code);
   if (R && R.meta.lesson === L.id && R.meta.profile === P.key) return R;
-  const fresh: Room = { meta: { code, lesson: L.id, version: 3, created: S.now(), ...rulesOf(P) }, state: { step: -1, stepAt: S.now() } };
+  const fresh: Room = { meta: { code, lesson: L.id, version: 4, created: S.now(), ...rulesOf(P) }, state: { step: -1, stepAt: S.now() } };
   S.set(roomPath(code), fresh);
   return fresh;
 }

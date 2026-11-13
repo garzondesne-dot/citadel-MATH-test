@@ -14,6 +14,9 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { markOf } from '../battle/Slots.svelte';
   import EnergyCard from './EnergyCard.svelte';
+  import SkillCards from './SkillCards.svelte';
+  import Hearts from '../battle/Hearts.svelte';
+  import { V4, answerOf } from '../../raid/raid';
   import { healsTo } from '../../raid/raid';
 
   // 📝 일반 몬스터 카드 (②B · ③ 틀렸을 때 · ⑥ 퍼펙트 · 규칙 = 정식 fightForm v3)
@@ -21,6 +24,7 @@
   //   틀림 → 채점표 → 같은 문제 · ✔ 잠김 · ✘ 빈칸(재도전 v4) · 생각 시간 / 퍼펙트 → ✔ 카드 + 보조 줄(힐 · 묶기 · 진필살기 = 자리만)
   const { S, L, R, code, mid, uid, now, locked, title }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string } = $props();
   const rec = $derived(plainRecord(L, R, mid, uid));
+  const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   const healers = $derived([...new Set(healsTo(R, mid, uid, L).map((h) => R.players?.[h.from]?.nick || '친구'))].join(' · '));
   const marks = $derived(rec.tries.map((t) => markOf(t.correct, t.total))); // ▢ 도전 칸 = 낸 차례마다 ✔ · 노랑 · − (#152)
   const attempt = $derived(rec.nextAttempt);
@@ -59,7 +63,7 @@
   const allFilled = $derived(items.length > 0 && items.every((q, i) => filled(q, given[i] ?? null)));
   const thinkLeft = $derived(Math.max(0, Math.ceil((thinkUntil - now) / 1000)));
   const q = $derived(items[cur]);
-  const showDone = $derived(rec.perfect && !rec.fix && !practice);
+  const showDone = $derived(rec.perfect && (v4 || !rec.fix) && !practice);
   const spent = $derived(rec.submitted && !rec.canRetry && !rec.perfect);
   const nextUnfilled = $derived(items.findIndex((x, i) => i !== cur && !filled(x, given[i] ?? null)));
   // 다음 틀린 문제: 지금 칸 다음의 ✘ 소문제(빈칸 먼저 · 한 바퀴)
@@ -133,19 +137,21 @@
 {#if showDone}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={reveal ? reveal.flash : lastGold} still={!reveal} />
   <div class="bcard">
-    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b><span>데미지 {rec.best} · 남은 기회는 연습</span></span></div>
-    <EnergyCard {S} {L} {R} {code} {mid} {uid} {now} />
+    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b><span>데미지 {rec.best} · {v4 ? `⚡ ${rec.tokLeft} · 기술 하나 = 🔥 재도전 판` : '남은 기회는 연습'}</span></span></div>
+    {#if !v4}<EnergyCard {S} {L} {R} {code} {mid} {uid} {now} />{/if}
   </div>
+  {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={() => { practice = true; tableHold = false; }} />{:else}
   <BottomAction battle disabled={!rec.canRetry || !!reveal} why={reveal ? '채점 중… (화면을 누르면 바로 결과)' : rec.canRetry ? '숫자가 바뀐 새 문제 · 데미지는 그대로' : '연습 기회를 다 썼어요'} onmain={() => { practice = true; tableHold = false; }} mainLabel="연습 공격 (도전 기회 {rec.left}번)">
     {#snippet main()}<span>🔥 연습 공격</span><Slots total={rec.slots} marks={marks} heal={rec.healed} now={rec.left > 0} />{/snippet}
-  </BottomAction>
+  </BottomAction>{/if}
 {:else if spent}
   <GradeTable rows={reveal ? revealRows : lastRows} still={!reveal} />
   <div class="bcard">
-    <span class="lab acc">{no} · 기회를 다 썼어요</span>
-    <p class="muted">벌은 없어요 — 학습지에 풀이를 정리해요. 데미지 {rec.best}</p>
+    <span class="lab acc">{no} · {v4 ? '❤ 를 다 썼어요' : '기회를 다 썼어요'}</span>
+    <p class="muted">{v4 ? '벌은 없어요 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '벌은 없어요 — 학습지에 풀이를 정리해요'}. 데미지 {rec.best}</p>
   </div>
-  <BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />
+  {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span><Hearts total={rec.slots} left={0} />{/snippet}</BottomAction>
+  {:else}<BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />{/if}
 {:else if reveal || tableHold}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={!!reveal?.flash} still={!reveal} onpick={reveal ? undefined : pickCell} />
   <div class="bcard">
@@ -162,6 +168,8 @@
 {:else if q}
   {#if fixing}
     <div class="bad" role="status"><b>소문제 {wrongIdx.map((i) => i + 1).join(', ')} 을 고쳐요</b><span>맞힌 것은 초록으로 잠김 · 틀린 것을 모두 고쳐야 다시 공격</span></div>
+  {:else if attempt > 0 && rec.perfect && v4}
+    <div class="bad" role="status" style="background:var(--surface-2)"><b>🔥 재도전 판 · 숫자가 바뀐 같은 문제</b><span>데미지 0 · 틀려도 ❤ 그대로 · 다 맞히면 다음 ⚡ <button type="button" class="stop" onclick={() => (practice = false)}>그만하기</button></span></div>
   {:else if attempt > 0 && rec.perfect}
     <div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 숫자가 바뀐 새 문제 (연습)</b><span>맞혀도 데미지는 그대로 · 틀리면 하트 −1</span></div>
   {/if}
@@ -172,15 +180,19 @@
     {#key `${key}|${cur}`}
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
     {/key}
+    {#if rec.reveal && !keepAt(cur) && fixing}<p class="ans">💡 선생님이 풀어 줬어요 · 정답 {textOf(q, answerOf(q), cur) ?? '학습지 참고'}</p>{/if}
   </div>
-  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (도전 기회 ${rec.submitted ? rec.left : rec.slots}번)` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
+  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '❤' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
     {#snippet main()}
-      {#if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Slots total={rec.slots} marks={marks} heal={rec.healed} />
+      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}<Hearts mode="energy" left={rec.tokLeft} lock />{:else}<Hearts total={rec.slots} left={rec.left} />{/if}
+      {:else if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Slots total={rec.slots} marks={marks} heal={rec.healed} />
       {:else}<span>{fixing ? '다음 틀린 문제 ▶' : '다음 소문제 ▶'}</span>{/if}
     {/snippet}
   </BottomAction>
 {/if}
 
 <style>
+  .ans { margin: 0; padding: var(--s2) var(--s3); border-radius: 10px; background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); color: var(--text); font-size: 15px; font-weight: 700; }
+  .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }
   .healed { display: block; font-size: var(--fs-small); color: var(--ok); font-weight: 700; }
 </style>

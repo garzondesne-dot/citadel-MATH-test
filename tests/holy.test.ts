@@ -11,7 +11,7 @@ import { packOf } from '../src/engine/packs';
 const wrong = (q: Parameters<typeof answerOf>[0]) => (q.type === 'multi' ? ([] as never) : q.type === 'choice' ? ((q.answerIndex + 1) % 9 as never) : ('999' as never));
 function room() {
   let t = 1_000_000; const b = memoryStore(), S: Store = { ...b, kind: 'memory', now: () => t };
-  const L = packOf('set-06')!; openRoom(S, L, 'H1', PROFILES.test);
+  const L = packOf('set-06')!; openRoom(S, L, 'H1', PROFILES.test); S.set(`${roomPath('H1')}/meta/version`, 3); // 옛 v3 방 규칙(열린 방 그대로) 회귀 · v4 = hearts.test
   heartbeat(S, 'H1', 'a', 1, '가', { enh: 10 }); heartbeat(S, 'H1', 'b', 2, '나', { enh: 3 }); heartbeat(S, 'H1', 'c', 3, '다', { enh: 10 });
   const R = () => S.get<Room>(roomPath('H1')) as Room;
   while (stepOf(L, R())?.kind !== 'monster') nextStep(S, L, 'H1');
