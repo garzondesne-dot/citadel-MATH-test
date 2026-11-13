@@ -132,6 +132,8 @@ export const QUEST_DESK = { src: artUrl('art/camp/obj-quest-v1.webp'), cols: 2 }
 export const STATUS = { src: 'art/status-v1.webp', w: 80, h: 80, cols: 6, ms: 600, kinds: ['stun', 'freeze', 'bind', 'burn', 'poison', 'shock', 'confuse', 'sleep'] as const };
 export const ELEM_FX: Record<string, { src: string; w: number; h: number; n: number; fps: number; sfx: string }> = {
   stun: { src: 'art/pfx/fx-bash-v1.webp', w: 91, h: 81, n: 14, fps: 15, sfx: 'smash' },
+  // 🌪 바람 공격 = 👍 받은 용사 스킬 🌬 질풍 띠 (📜 2026-11-13 밤 「바람이면 플레이어 스킬 중에 바람 스킬 하나 가져다 써」) · Scene 이 atkId 'wind' 일 때
+  gale: { src: 'art/pfx/fx-gale-v1.webp', w: 152, h: 89, n: 17, fps: 15, sfx: 'wind' },
   freeze: { src: 'art/pfx/fx-frost-v1.webp', w: 126, h: 115, n: 19, fps: 15, sfx: 'frost' },
   bind: { src: 'art/pfx/fx-bind-v1.webp', w: 138, h: 81, n: 20, fps: 15, sfx: 'block' },
   burn: { src: 'art/pfx/fx-flame-v1.webp', w: 199, h: 165, n: 16, fps: 15, sfx: 'fire' },

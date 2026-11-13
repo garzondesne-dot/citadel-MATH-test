@@ -94,7 +94,7 @@
   function strike(def: AttackDef, ms: number, strong = false) {
     atk = { def, at: gnow, until: gnow + ms, strong }; iceEnd = 'melt';
     fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.lock = def.id === 'lock'; fx.bind = def.id === 'bind'; fx.chain = { cut: 0, broken: false, open: false };
-    sfx(ELEM_FX[def.elem]?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
+    sfx((def.id === 'wind' ? ELEM_FX.gale : ELEM_FX[def.elem])?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
   }
   $effect(() => {
     if (!R) return;

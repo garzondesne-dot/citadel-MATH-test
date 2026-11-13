@@ -22,7 +22,7 @@
   let iceMode = $state<'off' | 'on' | 'shatter' | 'melt'>('off'), iceTaps = $state(0);
   $effect(() => { if (ice) { iceMode = 'on'; iceTaps = Math.max(0, Math.min(4, 4 - fx.ice)); } else if (iceMode === 'on') { iceMode = iceEnd; if (iceEnd === 'shatter') iceTaps = 4; setTimeout(() => (iceMode = 'off'), 650); } });
   // 💫 #161 속성: 몬스터 → 용사 = 빛 구슬(0.25초) → 용사 자리 속성 이펙트 띠(정식 pfx) · 용사 머리 위 상태 그림(정식 status · 맞는 동안) · 분노 = 장면 붉게
-  const efx = $derived(elem && atkId !== 'confuse' ? ELEM_FX[elem] : null); // 🌀 혼란 = 차원문(소용돌이) 그림 뺌 (📜 2026-11-13 밤 「혼란한 느낌 아님」)
+  const efx = $derived(atkId === 'wind' ? ELEM_FX.gale : elem && atkId !== 'confuse' ? ELEM_FX[elem] : null); // 🌀 혼란 = 차원문(소용돌이) 그림 뺌 (📜 2026-11-13 밤 「혼란한 느낌 아님」)
   const srow = $derived(Math.max(0, STATUS.kinds.indexOf(elem as (typeof STATUS.kinds)[number])));
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
