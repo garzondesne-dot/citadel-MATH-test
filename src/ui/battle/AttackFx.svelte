@@ -1,6 +1,8 @@
 <script lang="ts">
   import { SUBJ } from "../../engine/subject";
   import { onDestroy, onMount } from 'svelte';
+  import ChainFx from './ChainFx.svelte';
+  import { fx } from './fx.svelte';
   // 💥 몬스터 공격 화면 효과 (#152 · raid/attacks.ts 등록 표) — 문제 카드 묶음(.qwrap) 위에만 · 레이아웃 0(덮개 · transform) · 문제 · 보기 · 고른 답은 안 건드림
   //   pause = 덮개 + 줄어드는 원 · glitch = 문제 글 숫자 · 기호가 2~3번 잠깐 바뀌었다 원래대로 + 색 갈라짐 · fog = 안개(문지르면 닦임)
   //   fire = 아래 불길이 보기 칸을 가림(주요 단추 자리 🧯 꾹) · smash = 카드 흔들(±6px · 기울기 · 0.8초 감쇠) · ice = 주요 단추가 얼음(BottomAction)
@@ -49,9 +51,12 @@
   function swipe(e: PointerEvent) {
     if (!(e.buttons || e.pointerType === 'touch')) { sw = { x: e.clientX, dir: 0, run: 0, flips: sw.flips }; return; }
     const dx = e.clientX - sw.x; sw.x = e.clientX; if (!dx) return; const d = Math.sign(dx);
-    if (d === sw.dir) sw.run += Math.abs(dx); else { if (sw.run > 40) { sw.flips += 1; cut = sw.flips; } sw.dir = d; sw.run = Math.abs(dx); }
-    if (sw.run > 40 && sw.flips >= 2) { cut = 3; onclear(); }
+    if (fx.chain.broken) return;
+    if (d === sw.dir) sw.run += Math.abs(dx); else { if (sw.run > 40) { sw.flips += 1; cut = sw.flips; fx.chain.cut = Math.min(2, cut); } sw.dir = d; sw.run = Math.abs(dx); }
+    if (sw.run > 40 && sw.flips >= 2) { cut = 3; shatter(); }
   }
+  // ⛓ 끊김 = 사슬이 조각조각 부서져 흩어진 뒤(0.45초) 풀림 · 카드 · 노란 단추 함께
+  function shatter() { fx.chain.broken = true; later(450, onclear); }
   // 💤 수면: 두 번 빠르게 톡(0.35초 안) = 번쩍
   let lastTap = 0, woke = $state(false);
   function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(160, onclear); } lastTap = t; }
@@ -59,12 +64,12 @@
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }
   // 🔒 자물쇠: 문제 카드 안 아무 데나 떨어진 🗝 → 끌어서 주요 단추(🔒) 위에 놓으면 풀림
-  let kx = $state(0), ky = $state(0), drag = $state(false), k0 = { x: 0, y: 0, px: 0, py: 0 };
+  let kx = $state(0), ky = $state(0), drag = $state(false), inserted = $state(false), k0 = { x: 0, y: 0, px: 0, py: 0 };
   function kdown(e: PointerEvent) { drag = true; k0 = { x: kx, y: ky, px: e.clientX, py: e.clientY }; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); }
   function kmove(e: PointerEvent) { if (!drag) return; kx = k0.x + e.clientX - k0.px; ky = k0.y + e.clientY - k0.py; }
   function kup(e: PointerEvent) {
     if (!drag) return; drag = false; const b = document.querySelector('.act .pmain.lockd')?.getBoundingClientRect();
-    if (b && e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 16 && e.clientY <= b.bottom + 12) { onclear(); return; }
+    if (b && e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 16 && e.clientY <= b.bottom + 12) { inserted = true; fx.chain.open = true; later(260, shatter); return; } // 🗝 꽂음 → 자물쇠 고리 튕김 → 사슬 부서짐
   }
   onMount(() => {
     if (kind === 'glitch') glitch(); if (kind === 'fog') fog();
@@ -89,8 +94,8 @@
   {:else if kind === 'wind'}
     <div class="gust"><i></i><i></i><i></i><i></i></div>
   {:else if kind === 'bind'}
-    <div class="chains" class:c1={cut >= 1} class:c2={cut >= 2} role="button" tabindex="-1" aria-label="좌우로 쓸어 사슬 끊기" onpointermove={swipe} onpointerdown={swipe}>
-      <i class="ch a"></i><i class="ch b"></i><span class="hint">↔ 좌우로 쓸어 끊기 · {Math.ceil(left / 1000)}초</span>
+    <div class="chains" role="button" tabindex="-1" aria-label="좌우로 쓸어 사슬 끊기" onpointermove={swipe} onpointerdown={swipe}>
+      <ChainFx cut={Math.min(2, cut)} broken={fx.chain.broken} />{#if !fx.chain.broken}<span class="hint">↔ 좌우로 쓸어 끊기 · {Math.ceil(left / 1000)}초</span>{/if}
     </div>
   {:else if kind === 'sleep'}
     <div class="lids" class:woke role="button" tabindex="-1" aria-label="두 번 톡 눌러 깨기" onpointerdown={tap}>
@@ -99,7 +104,7 @@
   {:else if kind === 'dark'}
     <div class="darkc" style:--lx="{lx}px" style:--ly="{ly}px" style:opacity={0.45 + 0.53 * p}><span class="hint">👆 손가락을 대면 그 자리가 보여요</span></div>
   {:else if kind === 'lock'}
-    <span class="key" class:drag role="button" tabindex="-1" aria-label="열쇠" style:left="{kx}px" style:top="{ky}px" onpointerdown={kdown} onpointermove={kmove} onpointerup={kup} onpointercancel={kup}>🗝</span>
+    {#if !inserted}<span class="key" class:drag role="button" tabindex="-1" aria-label="열쇠" style:left="{kx}px" style:top="{ky}px" onpointerdown={kdown} onpointermove={kmove} onpointerup={kup} onpointercancel={kup}>🗝</span>{/if}
   {/if}
 </div>
 
@@ -138,10 +143,7 @@
   @keyframes mir { 0% { transform: none; } 8% { transform: scaleX(-1); } 92% { transform: scaleX(-1); } 100% { transform: none; } }
   :global(.qwrap:has(.afx.scale)) :global(.bcard) { transform-origin: 50% 100%; animation: tilt 1.6s ease-out; }
   @keyframes tilt { 15% { transform: rotate(-4deg); } 40% { transform: rotate(3deg); } 65% { transform: rotate(-1.5deg); } 85% { transform: rotate(0.6deg); } 100% { transform: none; } }
-  .chains { position: absolute; inset: 0; pointer-events: auto; touch-action: none; border-radius: var(--r); background: rgba(8, 9, 12, 0.35); overflow: hidden; }
-  .ch { position: absolute; left: -10%; right: -10%; height: 18px; top: 45%; background: repeating-linear-gradient(90deg, #c9c9d6 0 14px, #6d6f7d 14px 18px, transparent 18px 22px); border-radius: 9px; box-shadow: 0 2px 0 #000; transition: opacity 0.15s, transform 0.15s; }
-  .ch.a { transform: rotate(-24deg); } .ch.b { transform: rotate(24deg); }
-  .chains.c1 .ch.a { opacity: 0.35; transform: rotate(-24deg) translateY(-10px); } .chains.c2 .ch.b { opacity: 0.35; transform: rotate(24deg) translateY(10px); }
+  .chains { position: absolute; inset: 0; pointer-events: auto; touch-action: none; border-radius: var(--r); background: rgba(8, 9, 12, 0.35); overflow: visible; }
   .hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.8); color: #fff; font-size: var(--fs-small); font-weight: 700; white-space: nowrap; }
   .lids { position: fixed; inset: 0; z-index: 6; max-width: 430px; margin: 0 auto; pointer-events: auto; touch-action: manipulation; overflow: hidden; }
   .lid { position: absolute; left: 0; right: 0; height: 52%; background: linear-gradient(#1a1220, #2a1d30); }

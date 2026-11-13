@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { fx } from './fx.svelte';
+  import ChainFx from './ChainFx.svelte';
   // 🟡 BottomAction (3절 · #151 「주요 단추 = 모든 화면 한 자리」): 학생 폰의 노란 주요 단추는 이 부품 하나로만 그림
   //   주요 단추 = 높이 56 · 폭 = 양옆 16 뺀 전체 · 폰 바닥(안전 영역 위)에서 20 · 늘 맨 아래
   //   그 위 = 이유 한 줄(why) · 보조 줄(aux: 보조 단추 · 바뀐 것 줄 …) — 주요 단추를 밀어 올리지 않고 위로 쌓임
@@ -10,7 +11,8 @@
   const { main, text = '', disabled = false, why = '', onmain, aux, mainLabel, href, dock = true, battle = false, left, right }:
     { main?: Snippet; text?: string; disabled?: boolean; why?: string; onmain?: () => void; aux?: Snippet; mainLabel?: string; href?: string; dock?: boolean; battle?: boolean; /** 📜 2026-11-13 밤 시안 ②⑤⑥′: 맨 아래 한 줄 = 왼쪽(💡 정사각 56) · 가운데 노란 · 오른쪽(✍ 폭 84) · 없는 자리 = 노란이 넓어짐 */ left?: Snippet; right?: Snippet } = $props();
   let h = $state(0);
-  const block = $derived(battle && fx.block);
+  const chained = $derived(battle && (fx.bind || fx.lock)); // ⛓ 속박 · 🔒 자물쇠 = 노란 단추도 사슬로 X 감김 (카드와 같은 사슬)
+  const block = $derived(battle && fx.block && !chained);
   // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
   const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire), lockd = $derived(battle && fx.lock); // 🔒 #161 자물쇠 = 떨어진 🗝 를 끌어다 꽂기(AttackFx)
   let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
@@ -26,8 +28,8 @@
   {#if left && !block}{@render left()}{/if}
   {#if block}
     <button type="button" class="btn pmain" disabled aria-label="막는 중">⏳ 막는 중…</button>
-  {:else if lockd}
-    <button type="button" class="btn pmain lockd" disabled aria-label="자물쇠 · 열쇠를 끌어다 꽂기">🔒 열쇠를 끌어다 꽂기</button>
+  {:else if chained}
+    <button type="button" class="btn pmain chained" class:lockd disabled aria-label={lockd ? '자물쇠 · 열쇠를 끌어다 꽂기' : '사슬에 묶임 · 문제 칸을 좌우로 쓸어 끊기'}><span class="ctx">{lockd ? '🗝 열쇠를 끌어다 꽂기' : '⛓ 위 칸을 좌우로 쓸어 끊기'}</span><ChainFx thin cut={fx.chain.cut} broken={fx.chain.broken} pad={lockd} open={fx.chain.open} /></button>
   {:else if ice}
     <button type="button" class="btn pmain ice" aria-label="얼음 깨기" onclick={() => (fx.ice = Math.max(0, fx.ice - 1))}>🧊 톡톡 깨기 · {fx.ice}</button>
   {:else if fire}
@@ -59,6 +61,8 @@
   .btn:disabled { opacity: 0.4; box-shadow: none; }
   .btn.ice { background: linear-gradient(135deg, #cfeaff, #8fc9f2 60%, #e8f6ff); color: #0d3550; box-shadow: inset 0 0 0 2px #fff, 0 3px 0 #4f8fbf; }
   .btn.lockd { opacity: 1; background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
+  .btn.chained { position: relative; overflow: visible; opacity: 1; background: #24262e; color: #c9ccd6; box-shadow: inset 0 0 0 2px #5a5e6b; } .btn.chained.lockd { background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
+  .btn.chained .ctx { position: relative; z-index: 0; font-size: 15px; opacity: 0.8; }
   .btn.fire { background: #3a1a12; color: #ffd7b0; box-shadow: inset 0 0 0 2px #ff7a3a, 0 3px 0 #000; touch-action: none; user-select: none; -webkit-user-select: none; }
   .btn.fire.holding { background: linear-gradient(90deg, #ff7a3a 0%, #3a1a12 0%); animation: hold 1s linear forwards; }
   @keyframes hold { from { background-size: 0% 100%; } to { background: #ff7a3a; } }
