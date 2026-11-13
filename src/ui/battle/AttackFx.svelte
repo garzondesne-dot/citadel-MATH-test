@@ -32,6 +32,18 @@
     const k = len >= 900 ? 3 : 2; // 깜빡임 ≤ 3번/초
     for (let i = 0; i < k; i++) later(Math.round((i * len) / k) + 30, flick);
   }
+  // 🌀 혼란 (📜 2026-11-13 밤 다시): 문제 칸이 어지럽게 출렁 + 보기 칸이 둘씩 비틀거리며 서로 자리를 바꿨다 돌아옴 (보이기만 · 고른 답 · 누름은 그대로)
+  function confuse() {
+    const q = host?.closest('.qwrap') as HTMLElement | null; if (!q) return;
+    q.style.setProperty('--clen', `${len}ms`); q.classList.add('cwob'); later(len, () => q.classList.remove('cwob'));
+    const os = [...q.querySelectorAll<HTMLElement>('.bcard :is(.opt, .chip, .rune)')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0);
+    const R = (e: HTMLElement) => e.getBoundingClientRect();
+    for (let i = 0; i + 1 < os.length; i += 2) {
+      const a = os[i]!, b = os[i + 1]!, ra = R(a), rb = R(b), dx = rb.left - ra.left, dy = rb.top - ra.top;
+      for (const [el, x, y, k] of [[a, dx, dy, 1], [b, -dx, -dy, -1]] as const) { el.style.setProperty('--sx', `${x}px`); el.style.setProperty('--sy', `${y}px`); el.style.setProperty('--sk', String(k)); el.style.setProperty('--clen', `${len}ms`); el.classList.add('cswap'); }
+    }
+    later(len, () => os.forEach((e) => e.classList.remove('cswap')));
+  }
   // 🌫 안개: 캔버스 · 문지르면 그 자리 닦임 · 시간이 지나면 옅어짐 · 70% 닦으면 끝
   function fog() {
     const c = cv; if (!c) return; const r = c.getBoundingClientRect(); c.width = Math.max(1, Math.round(r.width)); c.height = Math.max(1, Math.round(r.height));
@@ -72,7 +84,7 @@
     if (b && e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 16 && e.clientY <= b.bottom + 12) { inserted = true; fx.chain.open = true; later(260, shatter); return; } // 🗝 꽂음 → 자물쇠 고리 튕김 → 사슬 부서짐
   }
   onMount(() => {
-    if (kind === 'glitch') glitch(); if (kind === 'fog') fog();
+    if (kind === 'glitch') glitch(); if (kind === 'fog') fog(); if (kind === 'confuse') confuse();
     if (kind === 'lock' && host) { const r = host.getBoundingClientRect(); kx = Math.round(r.width * (0.2 + Math.random() * 0.55)); ky = Math.round(Math.min(r.height - 60, 40 + Math.random() * Math.max(40, r.height - 120))); }
     if (kind === 'dark') { const o = { capture: true } as const; for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) window.addEventListener(t, light as EventListener, o); return () => { for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) window.removeEventListener(t, light as EventListener, o); }; }
   });
@@ -129,8 +141,6 @@
   @keyframes smash { 10% { transform: translateX(-6px) rotate(-1.2deg); } 25% { transform: translateX(6px) rotate(1deg); } 45% { transform: translateX(-4px) rotate(-0.6deg); } 65% { transform: translateX(3px) rotate(0.3deg); } 100% { transform: none; } }
   /* ── #161 새 효과 ── (움직임 ≤ 효과 시간 · 레이아웃 0 = transform · 덮개만) */
   .afx.strong :is(.chains, .lids, .darkc) { box-shadow: inset 0 0 0 2px var(--bad); }
-  :global(.qwrap:has(.afx.confuse)) :global(:is(.opt, .chip, .rune)) { animation: spin1 0.8s ease-in-out; }
-  @keyframes spin1 { to { transform: rotate(360deg); } }
   :global(.qwrap:has(.afx.wind)) :global(.bcard :is(p, .qt, .q, .q1, .q2, .story, .lab)) { animation: gust 1.1s ease-in-out; }
   @keyframes gust { 30% { transform: translateX(16px) skewX(-14deg); opacity: 0.35; filter: blur(1px); } 60% { transform: translateX(-6px) skewX(6deg); opacity: 0.7; } 100% { transform: none; } }
   .gust { position: absolute; inset: 0; overflow: hidden; border-radius: var(--r); }
@@ -161,4 +171,10 @@
   .afx.sleep { z-index: 7; }
   .afx.lock, .afx.dark, .afx.wind, .afx.mirror, .afx.scale, .afx.poison, .afx.confuse { pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { :global(.qwrap) :global(.bcard) { animation: none !important; } }
+  /* 🌀 혼란: 출렁(기울기 · 기울어짐 · 색 살짝 돌기) · 보기 자리 바꿈(비틀 → 남의 자리 → 비틀 → 제자리) */
+  :global(.qwrap.cwob) { animation: cwob var(--clen, 3000ms) ease-in-out; transform-origin: 50% 40%; }
+  @keyframes cwob { 0%, 100% { transform: none; filter: none; } 12% { transform: rotate(-1.6deg) skewX(3deg); filter: hue-rotate(25deg); } 26% { transform: rotate(1.4deg) skewX(-3deg) translateX(4px); } 40% { transform: rotate(-1deg) skewX(2deg); filter: hue-rotate(-20deg); } 55% { transform: rotate(1.2deg) skewX(-2deg) translateX(-4px); } 70% { transform: rotate(-0.8deg) skewX(1.5deg); } 85% { transform: rotate(0.5deg); filter: none; } }
+  :global(.cswap) { position: relative; z-index: 2; animation: cswap var(--clen, 3000ms) cubic-bezier(0.5, 0, 0.4, 1) both; }
+  @keyframes cswap { 0% { transform: none; } 14% { transform: translate(calc(var(--sx) * 0.15), -10px) rotate(calc(var(--sk) * -9deg)); } 30% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 5deg)); } 45% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * -4deg)); } 62% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 3deg)); } 80% { transform: translate(calc(var(--sx) * 0.4), calc(var(--sy) * 0.4 + 8px)) rotate(calc(var(--sk) * -7deg)); } 100% { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { :global(.qwrap.cwob), :global(.cswap) { animation: none; } }
 </style>

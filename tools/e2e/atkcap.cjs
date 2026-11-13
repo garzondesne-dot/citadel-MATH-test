@@ -12,7 +12,7 @@ const ACT = { // 풀기 동작 (사람이 하는 것처럼)
   for (const kind of KINDS) {
     const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })).newPage();
     await p.goto(B + '?role=atk'); await p.waitForSelector('.ids'); await p.addStyleTag({ content: '.beta-pill,.srv,.newbuild,.bar{visibility:hidden!important}' }); await p.waitForTimeout(600);
-    const clip = await p.evaluate(() => { const q = document.querySelector('.qwrap').getBoundingClientRect(), a = document.querySelector('.act').getBoundingClientRect(); return { x: 0, y: Math.max(0, q.top - 20), width: 390, height: Math.min(844, a.bottom) - Math.max(0, q.top - 20) }; });
+    const clip = await p.evaluate(() => { const sc = document.querySelector('.edge, .scene'), q = document.querySelector('.qwrap').getBoundingClientRect(), a = document.querySelector('.act').getBoundingClientRect(), top = sc ? sc.getBoundingClientRect().top + 60 : q.top - 20; return { x: 0, y: Math.max(0, top), width: 390, height: Math.min(844, a.bottom) - Math.max(0, top) }; }); // 장면(용사) + 문제 칸 + 노란 단추
     await p.locator(`.ids button[data-id="${kind}"]`).evaluate((e) => e.click());
     const fr = []; const shot = async (n) => { for (let i = 0; i < n; i++) { const f = path.join(TMP, `${TAG}-${kind}-${String(fr.length).padStart(3, '0')}.png`); await p.screenshot({ path: f, clip }); fr.push(f); await p.waitForTimeout(45); } };
     await shot(26); if (ACT[kind]) { const act = ACT[kind](p); await shot(6); await act; } await shot(18);

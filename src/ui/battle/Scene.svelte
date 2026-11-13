@@ -15,14 +15,14 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean } = $props();
   // 🧊 얼음(2026-11-13): 용사를 덮는 얼음 덩어리 · 톡마다 금 · 4번 = 깨져 흩어짐 · 시간 끝 = 녹음 (0.6초 뒤 사라짐)
   let iceMode = $state<'off' | 'on' | 'shatter' | 'melt'>('off'), iceTaps = $state(0);
   $effect(() => { if (ice) { iceMode = 'on'; iceTaps = Math.max(0, Math.min(4, 4 - fx.ice)); } else if (iceMode === 'on') { iceMode = iceEnd; if (iceEnd === 'shatter') iceTaps = 4; setTimeout(() => (iceMode = 'off'), 650); } });
   // 💫 #161 속성: 몬스터 → 용사 = 빛 구슬(0.25초) → 용사 자리 속성 이펙트 띠(정식 pfx) · 용사 머리 위 상태 그림(정식 status · 맞는 동안) · 분노 = 장면 붉게
-  const efx = $derived(elem ? ELEM_FX[elem] : null);
+  const efx = $derived(elem && atkId !== 'confuse' ? ELEM_FX[elem] : null); // 🌀 혼란 = 차원문(소용돌이) 그림 뺌 (📜 2026-11-13 밤 「혼란한 느낌 아님」)
   const srow = $derived(Math.max(0, STATUS.kinds.indexOf(elem as (typeof STATUS.kinds)[number])));
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
@@ -80,11 +80,12 @@
       <IceBlock url={heroUrl()} size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px" pos="-0px -{HERO.idleRow * hg.h * HS}px" w={hg.w * HS} h={hg.h * HS} taps={iceTaps} mode={iceMode === 'on' ? 'on' : iceMode} />
     </span>
   {/if}
-  {#if hit && efx}
+  {#if hit && (efx || atkId === 'confuse')}
     {#key hitKey}
       <i class="orb e-{elem}" aria-hidden="true"></i>
-      {#if !ice}<i class="efx" aria-hidden="true" style:width="{efx.w}px" style:height="{efx.h}px" style:left="{80 - efx.w / 2}px" style:top="{204 - efx.h / 2}px" style:background-image="url({artUrl(efx.src)})" style:background-size="{efx.w * efx.n}px {efx.h}px" style:--n={efx.n} style:--fw="{efx.w * efx.n}px" style:animation-duration="{Math.round((efx.n / efx.fps) * 1000)}ms"></i>{/if}
+      {#if !ice && efx}<i class="efx" aria-hidden="true" style:width="{efx.w}px" style:height="{efx.h}px" style:left="{80 - efx.w / 2}px" style:top="{204 - efx.h / 2}px" style:background-image="url({artUrl(efx.src)})" style:background-size="{efx.w * efx.n}px {efx.h}px" style:--n={efx.n} style:--fw="{efx.w * efx.n}px" style:animation-duration="{Math.round((efx.n / efx.fps) * 1000)}ms"></i>{/if}
     {/key}
+    {#if atkId === 'confuse'}<span class="dizzy" aria-hidden="true" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px"><i>★</i><i>★</i><i>★</i><i>✦</i></span>{/if}
     {#if !ice}<i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>{/if}
   {/if}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
@@ -129,6 +130,11 @@
   .orb.e-freeze { --oc: #7fd6ff; } .orb.e-burn { --oc: #ff8a1c; } .orb.e-poison { --oc: #b06cff; } .orb.e-shock { --oc: #ffe14a; } .orb.e-bind { --oc: #c9c9d6; } .orb.e-confuse { --oc: #ff7ad9; } .orb.e-sleep { --oc: #9fb2ff; }
   .efx { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; opacity: 0; animation-name: efx; animation-timing-function: steps(var(--n)); animation-fill-mode: forwards; animation-delay: 0.22s; pointer-events: none; }
   @keyframes efx { 0% { opacity: 1; background-position-x: 0; } 99% { opacity: 1; } 100% { opacity: 0; background-position-x: calc(-1 * var(--fw)); } }
+  /* 🌀 혼란 = 머리 위로 별 세 개 · 반짝이 하나가 빙글빙글 (타원 궤도 · 앞뒤 크기 차) */
+  .dizzy { position: absolute; z-index: 3; left: 36px; top: 146px; width: 92px; height: 28px; pointer-events: none; }
+  .dizzy i { position: absolute; left: 50%; top: 50%; font-style: normal; font-size: 18px; color: #ffe066; text-shadow: 0 0 6px #ff7ad9, 0 2px 0 #000; animation: orbit 0.9s linear infinite; }
+  .dizzy i:nth-child(2) { animation-delay: -0.3s; color: #fff3a8; } .dizzy i:nth-child(3) { animation-delay: -0.6s; } .dizzy i:nth-child(4) { animation-delay: -0.45s; color: #ff9be6; font-size: 14px; }
+  @keyframes orbit { 0% { transform: translate(-50%, -50%) translate(-38px, 0) scale(0.8); z-index: 1; } 25% { transform: translate(-50%, -50%) translate(0, 10px) scale(1.15); } 50% { transform: translate(-50%, -50%) translate(38px, 0) scale(0.8); } 75% { transform: translate(-50%, -50%) translate(0, -10px) scale(0.6); opacity: 0.6; } 100% { transform: translate(-50%, -50%) translate(-38px, 0) scale(0.8); } }
   .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
   @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
   .edge.hit.iced .hero { filter: saturate(0.6) brightness(1.1); }
@@ -141,7 +147,7 @@
   .icew { position: absolute; z-index: 2; left: 0; top: 140px; display: block; }
   .edge.rage { box-shadow: inset 0 0 48px rgba(229, 72, 77, 0.75); }
   .edge.rage .mon { filter: drop-shadow(0 0 6px rgba(229, 72, 77, 0.9)); }
-  @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status, .dizzy i { animation: none; } }
   .hb { position: absolute; z-index: 1; left: 0; top: 140px; display: block; }
   .hb .hero { top: 0; }
   .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
