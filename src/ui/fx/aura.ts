@@ -11,7 +11,7 @@ let css = false;
 function style() {
   if (css || typeof document === 'undefined') return; css = true;
   const a = AURA, u = (f: string) => `url('${artUrl(`art/${f}`)}')`, st: string[] = [];
-  for (let i = 0; i <= 24; i++) { const t = (i / 24) * Math.PI * 2, x = Math.cos(t) * 32, y = Math.sin(t) * 5, f = Math.sin(t) > 0; st.push(`${((i / 24) * 100).toFixed(2)}%{transform:translate(calc(var(--p)*${x.toFixed(1)}),calc(var(--p)*${y.toFixed(1)})) scale(${f ? 1 : 0.7});opacity:${f ? 1 : 0.55};z-index:${f ? 3 : 0}}`); }
+  for (let i = 0; i <= 24; i++) { const t = (i / 24) * Math.PI * 2, x = Math.cos(t) * 32, y = Math.sin(t) * 5, f = Math.sin(t) > 0 && Math.abs(Math.cos(t)) > 0.7; /* 🔧 2026-11-13: 앞 = 궤도 앞쪽 반 중 몸 밖(양옆)일 때만 · 몸통 · 얼굴 앞은 늘 뒤 */ st.push(`${((i / 24) * 100).toFixed(2)}%{transform:translate(calc(var(--p)*${x.toFixed(1)}),calc(var(--p)*${y.toFixed(1)})) scale(${f ? 1 : 0.7});opacity:${f ? 1 : 0.55};z-index:${f ? 3 : 0}}`); }
   const s = document.createElement('style'); s.id = 'aura-css';
   s.textContent = `.art.au{container-type:inline-size;--p:1.55cqw;overflow:visible}
 .au-s{position:absolute;pointer-events:none;image-rendering:pixelated;display:block}
