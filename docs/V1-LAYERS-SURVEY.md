@@ -2,7 +2,7 @@
 
 > 목표(선생님): 「학교판(배포판)과 정식판(이 될 v1.0)이 프로그램상 차이가 발생하지 않고 사용자의 선택에 의해 기능이 열리고 잠기게」
 > 층 = 🦴 **뼈대**(늘 켜짐) · 🧩 **추가 기능**(스위치 · 필요한 것 = 과목 팩 · 일과표 · AI 키) · 📚 **과목 팩**(단원 내용 · 모루는 공통수학2 팩에만).
-> ⚠ V1-DESIGN 10절이 hero-v2 에 아직 없어(19bf87c 기준) 요청 글의 층 정의로 나눔 · 10절과 다를 수 있는 칸 = 「(추정)」.
+> 층 = **V1-DESIGN 10절 확정 표**(hero-v2 · 2026-11-13 밤)로 맞춤. 10절 표에 없는 기능 = 「10절 없음」.
 > 기준 판 = 테스트 저장소 b53 · 정식 = Citadel-MATH `release` 5ec29b6.
 
 ## ① 출시 전 빈칸 (정식 기능 ↔ v1.0)
@@ -25,17 +25,21 @@ v1.0 엔 **기능 스위치 층이 아직 없음** → 아래는 모두 「늘 �
 |---|---|---|---|
 | ⚒ 모루 · 📖 도감 (🧩 · 📚 공통수학2만) | 과목 팩 `forge` · `cards` | `ui/camp/Camp.svelte` 캠프 물건 anvil(167줄 목록 · 238줄 시트) · `ui/forge/Anvil.svelte` · `ForgeCard.svelte` = `SUBJ.forge!`(느낌표 = 없으면 **깨짐**) · `ui/battle/SymSheet.svelte` 찜 ☆ → 모루 | **깨짐**(forge 없는 팩) — 캠프에서 모루 물건을 숨기는 갈림 필요 |
 | 📖 기호 톡 (🧩 · 📚) | 과목 팩 `symtalk` | `ui/q/SymText.svelte`(모든 문제 글) · `Student.svelte` SymSheet | 이미 「없으면 글 그대로」 ✔ · 끄는 스위치만 없음 |
-| 📋 게시판 던전 (🦴? · (추정) 뼈대) | 서버 | `Camp.svelte` dummy 물건 · `ui/board/*` | — |
+| 📋 게시판 던전 · 🔒 암호 (🦴 「🎯 복습」) | 서버 | `Camp.svelte` dummy 물건 · `ui/board/*` | — |
 | 🏰 성채 (🧩 · 📚 평가 팩) | 과목 팩 `camp.floors` · 평가 문항 | `Camp.svelte` castle 물건 · 212줄 시트 = 층 목록만 | 층 목록이 과목 팩에 필수 칸(`camp` 필수) |
 | ✏ 출제 공방 · ⛺ 텐트 (🧩) | 서버 · (사진 = AI 키) | `Camp.svelte` tent 물건(빈 시트) | 빈 시트 |
-| 📮 우편함 (🦴 (추정)) | 서버 | `Camp.svelte` · `Student.svelte` mailNew · `teacher/TNews` | — |
-| 🏕 쉼터 놀이 · 🏰 디펜스 · ⭕ OX (🧩) | ⭕ = 과목 팩 `funOx` | `tv/TV.svelte` · `teacher/TLive.svelte` GAMES 목록 · `Student.svelte` FunPhone | OX 문장이 없으면 빈 목록(이미 `|| []`) · 놀이 하나씩 끄는 스위치 없음 |
-| 💥 몬스터 공격 · 기력 카드 (🦴 (추정)) | 차시 팩 `attack` | `Student.svelte` · `tv/Arena.svelte` · `q/MonsterForm` · `ChainView` EnergyCard | — |
+| 📮 우편함 (10절 없음 → 🦴 제안) | 서버 | `Camp.svelte` · `Student.svelte` mailNew · `teacher/TNews` | — |
+| 🏕 쉼터 놀이 ⚖ · 🔄 · 🙊 · 🏰 디펜스 각각 (🧩 · 없음) · ⭕ OX (🧩 · 📚 OX 문장) | ⭕ = 과목 팩 `funOx` | `tv/TV.svelte` · `teacher/TLive.svelte` GAMES 목록 · `Student.svelte` FunPhone | OX 문장이 없으면 빈 목록(이미 `|| []`) · 놀이 하나씩 끄는 스위치 없음 |
+| 💥 몬스터 공격 종류 · 😡 분노 (🧩 · 없음) · 기력 카드(10절 없음) | 차시 팩 `attack` | `Student.svelte`(AttackFx · strike) · `battle/Scene.svelte`(속성 · 얼음) · `tv/Arena.svelte`(얼음) · `q/MonsterForm` · `ChainView` EnergyCard | **뼈대(수업 레이드)가 직접 부름** = 규칙 ① 어김 → 꺼지면 「멈춤」 하나만 쓰는 길 필요 |
 | 📅 시간표 · 교시 · 보스 타임바(문 닫기) (🧩 일과표) | 일과표 | `raid/actions.ts`(마감 = 교시 끝) · `teacher/THome`(오늘 시간표 칸) · `TPrep`(시간표 탭) · `TLive` · `TNews` | 늘 켜짐 · 정식 학교판은 숨김(bf6285f) |
 | 📊 대시보드 성취기준 · 오개념 · 세특 문장 (🧩 · 📚) | 과목 팩 `standards` · `misconceptions` · `seteuk` | `school/dash.ts` · `school/seteuk.ts` · `teacher/Dash.svelte` | 필수 칸 · 정식 학교판은 숨김(f436a51) |
 | 📷 사진 채점 · AI (🧩 AI 키) | AI 키 | `teacher/TMe` 「사진 채점 연결」(준비 중) | 아직 없음 |
 | 🎬 영상 · 📄 학습지 그림(prep) (🦴 · 📚) | 차시 팩 · 서버 prep | `q/PrepImg` · TV | — |
 | 🔊 소리 · 🎵 배경음 (🦴) | — | `ui/sound.svelte.ts` | — |
+| 🧙 용사 · 스킬 · 강화 · 호칭 · 💎 상점 (🧩 · 없음) | — | `camp/Camp.svelte` · `MyHero` · `battle/Scene.svelte`(내 용사 그림) · `tv/Arena`(용사단) · 세특 · 대시보드 호칭 | **뼈대(레이드 장면 · TV)가 용사 그림을 늘 그림** → 꺼지면 기본 용사 하나 |
+| 🎨 테마 (🧩 · 없음) | — | `camp` ⚙ ThemePicker · 교사 나 탭 | — |
+| 📝 수업 설문 · 🏆 반 대항전 (🧩 · 없음) | — | v1.0 없음(① 표) | — |
+| 📊 엑셀 차시 올리기 · 학습지 PDF · ✂ 자동 자르기 (🦴) | — | `teacher/TPrep` 「준비 중」 | **뼈대인데 v1.0 에 없음** |
 
 ### (나) 코드에 박힌 단원 글자 · 차시 번호 · 집합 기호 (과목 팩으로 옮길 것)
 | 자리 | 무엇 | 옮길 곳 |
@@ -74,4 +78,4 @@ v1.0 엔 **기능 스위치 층이 아직 없음** → 아래는 모두 「늘 �
 | 학교 로고 · 이름 · 과목 글자 | `index.html` · `Title.svelte` · `TV` 위 막대 | 학교 설정 `name` · `logo` |
 | 새 판 = 수업 끝난 뒤 · 서버 준비 전 안내 | `App.svelte` checkVer(이미 수업 중 숨김 ✔) | 뼈대 그대로 |
 
-→ 원칙 제안: 코드에 「학교판이면」을 쓰지 않고 **`feature(id)` 하나**만 읽음 · 켤 수 있는지 = 필요한 것(과목 팩 칸 · 일과표 · AI 키)이 있는지 · 켤지 = 학교 설정. 정식(우리 학교) = 모두 켬 · 학교판 = 기본 묶음.
+→ 10절 규칙대로: 코드엔 `if (학교판)` 없음 · **`feature(id)` 하나**만 읽음 · 켤 수 있는지 = 필요한 것(과목 팩 칸 · 일과표 · AI 키) · 켤지 = 그 학교 서버 설정(🪶 기본 · ⚔ 표준 · 🏰 전체 묶음 + 낱낱 스위치 · 교사 「나」 탭 「⚙ 우리 학교 기능」) · 시험 3판(모두 끔 · 표준 · 모두 켬).
