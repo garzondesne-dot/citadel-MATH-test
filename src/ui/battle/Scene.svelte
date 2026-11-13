@@ -56,7 +56,7 @@
     {#if timeLeftMs != null && timeLeftMs <= 5 * 60000}<span class="pill time" aria-label="남은 시간">⏱ {mm(Math.max(0, timeLeftMs))}</span>{/if}
     <span class="pill" aria-label="마정석 {gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{gem}</span>
   </div>
-  {#if holy && onholy}<button type="button" class="holy-btn" class:on={holy === 'on'} onclick={onholy} aria-pressed={holy === 'on'}>🛡 <b>{holy === 'on' ? '준비됨' : '홀리 방패'}</b><small>{holy === 'on' ? '다음 공격을 막습니다 · 누르면 끄기' : '누르면 다음 공격을 막아요'}</small></button>{/if}
+  {#if holy && onholy}<button type="button" class="holy-btn" class:on={holy === 'on'} onclick={onholy} aria-pressed={holy === 'on'}>🛡 <b>{holy === 'on' ? '방패 준비됨' : '홀리 방패'}</b><small>{holy === 'on' ? '끄기' : '켜기'}</small></button>{/if}
   {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
   {#if chips.length}<div class="buffs">{#each chips as c, k (k)}<span class="buff" class:on={c.on}>{c.text}</span>{/each}</div>{/if}
   {#if hp && !shadow}
@@ -92,7 +92,7 @@
 <style>
   .edge { position: relative; height: 280px; background-size: cover; background-position: center 62%; image-rendering: pixelated; overflow: hidden; }
   .edge::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(transparent, var(--bg)); z-index: 1; }
-  .top { position: absolute; top: 0; left: 0; right: 0; z-index: 3; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s1); }
+  .top { position: absolute; top: 0; left: 0; right: 0; z-index: 5; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s1); }
   .back { width: 44px; height: var(--tap); display: grid; place-items: center; color: #fff; font-size: 30px; text-decoration: none; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); }
   .sp { flex: 1; }
   .pill { display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -129,8 +129,10 @@
   .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
   @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
   .edge.hit.iced .hero { filter: saturate(0.6) brightness(1.1); }
-  .holy-btn { position: absolute; z-index: 4; left: var(--s3); top: 60px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 6px 10px; min-height: 48px; border-radius: 12px; border: 2px solid #ffd25a; background: rgba(12, 20, 36, 0.85); color: #fff6c8; font: 700 14px var(--font); box-shadow: 0 3px 0 #000; }
-  .holy-btn small { font-size: 12px; font-weight: 500; opacity: 0.85; } .holy-btn.on { background: linear-gradient(135deg, #3a2a00, #6b4a00); box-shadow: 0 0 14px rgba(255, 210, 90, 0.8); }
+  /* 🔧 화면 고침 2 (2026-11-13): 3줄 카드가 ‹ 뒤로를 덮음 → 한 줄 칩(높이 48 · 폭 절반 안) · 위 막대(z 5) 아래 자리 · 뒤로가 늘 위 */
+  .holy-btn { position: absolute; z-index: 4; left: var(--s3); top: calc(var(--bar-top) + var(--s1)); display: flex; align-items: center; gap: 6px; max-width: calc(50% - var(--s4)); height: 40px; padding: 0 12px; border-radius: 20px; border: 2px solid #ffd25a; background: rgba(12, 20, 36, 0.85); color: #fff6c8; font: 700 14px var(--font); white-space: nowrap; box-shadow: 0 3px 0 #000; }
+  .holy-btn::after { content: ''; position: absolute; inset: -4px 0; } /* 누르는 칸 48 */
+  .holy-btn small { font-size: 13px; font-weight: 500; opacity: 0.8; padding-left: 6px; border-left: 1px solid rgba(255, 246, 200, 0.4); } .holy-btn.on { background: linear-gradient(135deg, #3a2a00, #6b4a00); box-shadow: 0 0 14px rgba(255, 210, 90, 0.8); }
   .stone-chip { position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: 252px; padding: 3px 10px; border-radius: 12px; background: rgba(40, 40, 46, 0.9); border: 1px solid #c9c9d6; color: #fff; font: 700 13px var(--font); white-space: nowrap; }
   .mon.stoned { filter: grayscale(1) brightness(0.85) contrast(1.1) !important; }
   .icew { position: absolute; z-index: 2; left: 0; top: 140px; display: block; }
