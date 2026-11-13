@@ -35,7 +35,8 @@
   // 🌀 혼란 (📜 2026-11-13 밤 다시): 문제 칸이 어지럽게 출렁 + 보기 칸이 둘씩 비틀거리며 서로 자리를 바꿨다 돌아옴 (보이기만 · 고른 답 · 누름은 그대로)
   function confuse() {
     const q = host?.closest('.qwrap') as HTMLElement | null; if (!q) return;
-    q.style.setProperty('--clen', `${len}ms`); q.classList.add('cwob'); later(len, () => q.classList.remove('cwob'));
+    // ⚠ .qwrap 에 transform 을 걸면 그 안의 고정(fixed) 노란 단추가 따라 움직임 → 문제 카드(.bcard)에만 출렁
+    const cards = [...q.querySelectorAll<HTMLElement>('.bcard')]; cards.forEach((c) => { c.style.setProperty('--clen', `${len}ms`); c.classList.add('cwob'); }); later(len, () => cards.forEach((c) => c.classList.remove('cwob')));
     const os = [...q.querySelectorAll<HTMLElement>('.bcard :is(.opt, .chip, .rune)')].filter((e) => e.offsetParent && e.getBoundingClientRect().width > 0);
     const R = (e: HTMLElement) => e.getBoundingClientRect();
     for (let i = 0; i + 1 < os.length; i += 2) {
@@ -71,7 +72,7 @@
   function shatter() { fx.chain.broken = true; later(450, onclear); }
   // 💤 수면: 두 번 빠르게 톡(0.35초 안) = 번쩍
   let lastTap = 0, woke = $state(false);
-  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(160, onclear); } lastTap = t; }
+  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(320, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
   // 🌑 어둠: 손가락 닿은 곳만 보임 (덮개는 누름을 막지 않음 · 화면 어디를 눌러도 그 자리가 밝아짐)
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }
@@ -166,12 +167,16 @@
   .hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 4px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.8); color: #fff; font-size: var(--fs-small); font-weight: 700; white-space: nowrap; }
   .lids { position: fixed; inset: 0; z-index: 6; max-width: 430px; margin: 0 auto; pointer-events: auto; touch-action: manipulation; overflow: hidden; }
   .lid { position: absolute; left: 0; right: 0; height: 52%; background: linear-gradient(#1a1220, #2a1d30); }
-  .lid.top { top: 0; transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 30% 30%; animation: lidT var(--len, 3000ms) ease-in-out forwards; }
-  .lid.bot { bottom: 0; transform: translateY(100%); border-radius: 50% 50% 0 0 / 30% 30% 0 0; animation: lidB var(--len, 3000ms) ease-in-out forwards; }
-  @keyframes lidT { 18% { transform: translateY(-38%); } 30% { transform: translateY(-58%); } 40% { transform: translateY(-34%); } 52% { transform: translateY(-12%); } 100% { transform: translateY(-8%); } }
-  @keyframes lidB { 18% { transform: translateY(38%); } 30% { transform: translateY(58%); } 40% { transform: translateY(34%); } 52% { transform: translateY(12%); } 100% { transform: translateY(8%); } }
-  .lids.woke .lid.top { animation: none; transform: translateY(-100%); transition: transform 0.15s ease-out; } .lids.woke .lid.bot { animation: none; transform: translateY(100%); transition: transform 0.15s ease-out; }
-  .zzz { position: absolute; right: 18%; top: 34%; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }
+  .lid.top { top: 0; transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 30% 30%; animation: lidT calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.45, 0, 0.6, 1) forwards; box-shadow: 0 6px 0 #0c0810, 0 12px 18px rgba(0, 0, 0, 0.5); }
+  .lid.bot { bottom: 0; transform: translateY(100%); border-radius: 50% 50% 0 0 / 30% 30% 0 0; animation: lidB calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.45, 0, 0.6, 1) forwards; box-shadow: 0 -6px 0 #0c0810, 0 -12px 18px rgba(0, 0, 0, 0.5); }
+  /* 💤 수면 (📜 2026-11-13 밤 다시 · 「감기려다 정신 차리고 올라가는 느낌」 → 스르르 한 번에 내려와 거의 감김 · 졸린 듯 살짝 들썩) */
+  @keyframes lidT { 0% { transform: translateY(-100%); } 70% { transform: translateY(-9%); } 78% { transform: translateY(-13%); } 86% { transform: translateY(-6%); } 100% { transform: translateY(-4%); } }
+  @keyframes lidB { 0% { transform: translateY(100%); } 70% { transform: translateY(9%); } 78% { transform: translateY(13%); } 86% { transform: translateY(6%); } 100% { transform: translateY(4%); } }
+  .lids.woke .lid.top { animation: none; transform: translateY(-115%); transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1); } .lids.woke .lid.bot { animation: none; transform: translateY(115%); transition: transform 0.12s cubic-bezier(0.2, 1.4, 0.4, 1); }
+  .lids.woke::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, #fff 0 20%, rgba(255, 255, 255, 0.6) 45%, transparent 70%); animation: wkf 0.25s ease-out forwards; } /* 번쩍 */
+  @keyframes wkf { from { opacity: 1; transform: scaleY(0.2); } to { opacity: 0; transform: scaleY(1.4); } }
+  .lids.woke .zzz { animation: zgone 0.2s forwards; } @keyframes zgone { to { opacity: 0; transform: translateY(-30px) scale(1.4); } }
+  .zzz { position: absolute; right: 18%; top: 34%; animation: zfl 1.4s ease-in-out infinite; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }
   .lids .hint { bottom: auto; top: 50%; transform: translate(-50%, -50%); }
   .key { position: absolute; z-index: 7; width: 48px; height: 48px; margin: -24px 0 0 -24px; display: grid; place-items: center; font-size: 32px; pointer-events: auto; touch-action: none; cursor: grab; filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 6px rgba(245, 184, 74, 0.9)); }
   .key.drag { cursor: grabbing; transform: scale(1.15); }
@@ -179,11 +184,11 @@
   .afx.lock, .afx.dark, .afx.wind, .afx.mirror, .afx.scale, .afx.poison, .afx.confuse { pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { :global(.qwrap) :global(.bcard) { animation: none !important; } }
   /* 🌀 혼란: 출렁(기울기 · 기울어짐 · 색 살짝 돌기) · 보기 자리 바꿈(비틀 → 남의 자리 → 비틀 → 제자리) */
-  :global(.qwrap.cwob) { animation: cwob var(--clen, 3000ms) ease-in-out; transform-origin: 50% 40%; }
+  :global(.bcard.cwob) { animation: cwob var(--clen, 3000ms) ease-in-out; transform-origin: 50% 40%; }
   @keyframes cwob { 0%, 100% { transform: none; filter: none; } 12% { transform: rotate(-1.6deg) skewX(3deg); filter: hue-rotate(25deg); } 26% { transform: rotate(1.4deg) skewX(-3deg) translateX(4px); } 40% { transform: rotate(-1deg) skewX(2deg); filter: hue-rotate(-20deg); } 55% { transform: rotate(1.2deg) skewX(-2deg) translateX(-4px); } 70% { transform: rotate(-0.8deg) skewX(1.5deg); } 85% { transform: rotate(0.5deg); filter: none; } }
   :global(.cswap) { position: relative; z-index: 2; animation: cswap var(--clen, 3000ms) cubic-bezier(0.5, 0, 0.4, 1) both; }
   @keyframes cswap { 0% { transform: none; } 14% { transform: translate(calc(var(--sx) * 0.15), -10px) rotate(calc(var(--sk) * -9deg)); } 30% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 5deg)); } 45% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * -4deg)); } 62% { transform: translate(var(--sx), var(--sy)) rotate(calc(var(--sk) * 3deg)); } 80% { transform: translate(calc(var(--sx) * 0.4), calc(var(--sy) * 0.4 + 8px)) rotate(calc(var(--sk) * -7deg)); } 100% { transform: none; } }
-  @media (prefers-reduced-motion: reduce) { :global(.qwrap.cwob), :global(.cswap) { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { :global(.bcard.cwob), :global(.cswap) { animation: none; } }
   /* 🌑 어둠: 먹물(가장자리 · 귀퉁이 덩어리가 0.9초 동안 번져 커짐) + 연기(느리게 일렁) · 손전등 = 덮개 전체에 구멍(mask) */
   .darkc { position: absolute; inset: -6px; border-radius: var(--r); pointer-events: none; overflow: hidden; -webkit-mask: radial-gradient(circle 78px at calc(var(--lx) + 6px) calc(var(--ly) + 6px), transparent 0 52%, #000 88%); mask: radial-gradient(circle 78px at calc(var(--lx) + 6px) calc(var(--ly) + 6px), transparent 0 52%, #000 88%); background: rgba(3, 3, 7, 0.0); animation: dbase 0.7s 0.15s ease-in forwards; }
   @keyframes dbase { to { background: rgba(2, 2, 5, 0.985); } }
@@ -221,4 +226,5 @@
   .bub.g { border-color: rgba(170, 255, 180, 0.95); background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.7) 0 18%, rgba(90, 230, 110, 0.55) 40%, rgba(30, 160, 60, 0.4)); }
   @keyframes bub { 0% { transform: translateY(0) scale(0); opacity: 1; } 70% { transform: translateY(10px) scale(1.25); opacity: 1; } 78% { transform: translateY(12px) scale(1.6); opacity: 0.6; border-width: 1px; } 82% { transform: translateY(12px) scale(1.9); opacity: 0; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .slime, .drip, .drip b, .bub { animation: none; } .drip { height: var(--h); } .bub { transform: none; } }
+  @keyframes zfl { 50% { transform: translate(6px, -8px); } }
 </style>
