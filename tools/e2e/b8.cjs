@@ -27,11 +27,11 @@ const DB = 'citadel-v1-test-db';
     const hgt = async (sel) => s0.$eval(sel, (e) => Math.round(e.getBoundingClientRect().height)).catch(() => null);
     const h1 = await hgt('.act .btn');
     await s0.click('button[aria-label="내 용사 보기"]'); await s0.waitForSelector('.mh');
-    const h2 = { 강화: await hgt('.mh .pmain'), 탭: await hgt('.tabs button'), 용사바꾸기: await hgt('.chg') };
+    const h2 = { 강화: await hgt('.mh .pmain'), 탭: await hgt('.htabs button'), 용사바꾸기: await hgt('.chg') };
     await s0.click('.mh .pmain'); await s0.waitForTimeout(100); h2.저장 = await hgt('.mh .pmain'); h2.되돌리기 = await hgt('.savebar .btn2');
     const ox = await s0.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     log(tag, '#120 높이: 입장', h1, JSON.stringify(h2), '| 가로 넘침', ox);
-    if (h1 !== 56 || h2.강화 !== 56 || h2.탭 !== 48 || h2.용사바꾸기 !== 36 || h2.저장 !== 56 || h2.되돌리기 !== 48 || ox > 0) errs.push(`${tag} #120 단추 높이 ${h1} ${JSON.stringify(h2)} 넘침 ${ox}`);
+    if (h1 !== 56 || h2.강화 !== 56 || h2.탭 !== 48 || h2.용사바꾸기 !== 48 || h2.저장 !== 56 || h2.되돌리기 !== 48 || ox > 0) errs.push(`${tag} #120 단추 높이 ${h1} ${JSON.stringify(h2)} 넘침 ${ox}`);
     if (W === 360) await s0.screenshot({ path: `${SHOTS}/b8-myhero-360.png` });
     await s0.click('.savebar .btn2'); await s0.click('.mh .back'); await s0.waitForTimeout(100);
 

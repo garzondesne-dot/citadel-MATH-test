@@ -285,7 +285,7 @@
   .tt { font-style: normal; font-size: var(--fs-small); padding: 1px 6px; border-radius: 8px; background: var(--surface-2); }
   .tester { font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--line); color: var(--text-3); font-weight: 700; }
   .sub { font-size: var(--fs-small); color: var(--text-2); overflow-wrap: anywhere; }
-  .chg { position: relative; align-self: flex-start; min-height: var(--pill-h); display: inline-flex; align-items: center; font-size: var(--fs-small); font-weight: 700; color: var(--text); padding: 0 14px; border-radius: 18px; background: var(--surface-2); }
+  .chg { position: relative; align-self: flex-start; min-height: var(--tap, 48px); display: inline-flex; align-items: center; font-size: var(--fs-small); font-weight: 700; color: var(--text); padding: 0 14px; border-radius: 18px; background: var(--surface-2); }
   .bdot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 5px; background: var(--gem); box-shadow: 0 0 0 2px var(--bg); }
   .htabs { display: grid; width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .htabs button { position: relative; min-height: var(--tab-h); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 16px var(--font); }
