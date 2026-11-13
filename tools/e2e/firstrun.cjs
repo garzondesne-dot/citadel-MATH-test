@@ -13,9 +13,8 @@ const log = (...a) => console.log(...a);
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }), errs = [];
   const open = async (u, w = 390, h = 844) => { const p = await (await b.newContext({ viewport: { width: w, height: h } })).newPage(); p.on('pageerror', (e) => errs.push(`${u}: ${e}`)); p.on('console', (m) => { if (m.type() === 'error' && !/favicon/.test(m.text())) errs.push(`${u}: ${m.text().slice(0, 140)}`); }); await p.goto(B + u); return p; };
   // ① 교사
-  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 });
-  await t.click('.tabs button:has-text("나")'); await t.click('.item:has-text("교사 로그인")'); await t.waitForSelector('.sheet');
-  await t.fill('.fld.tid', 'teacher@school.test'); await t.fill('.fld[type=password]', 'pw123456'); await t.click('.sheet .lk');
+  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tgate', { timeout: 20000 }); // 🔐 입구
+  await t.fill('.tgate .fld.tid', 'teacher@school.test'); await t.fill('.tgate .fld[type=password]', 'pw123456'); await t.click('.tgate .lk');
   await t.waitForTimeout(3000); await t.waitForSelector('.tabs', { timeout: 20000 });
   await t.click('.tabs button:has-text("수업")'); await t.waitForTimeout(500);
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
@@ -39,11 +38,10 @@ const log = (...a) => console.log(...a);
   log('   캠프 BETA · 시험 서버 글자:', pill || srv ? `✗ 보임 ${srv ?? ''}` : '숨김 ○'); if (pill || srv) errs.push('#162 학생 화면 BETA 글자');
   await s.click('button[aria-label="설정"]'); await s.waitForSelector('.sheet .build'); log('   ⚙ 설정 맨 아래:', (await s.textContent('.sheet .build')).trim()); await s.click('.sheet .pmain'); await s.waitForTimeout(300);
   // #172 ‹ 메뉴 → 교사 폰 · 교실 TV · 로그아웃
-  await s.click('.top .back'); await s.waitForSelector('.sheet .menu'); const mi = await s.$$eval('.sheet .mi b', (xs) => xs.map((x) => x.textContent).join(' · ')); log('   ‹ 메뉴:', mi); if (!/교사 폰.*교실 TV.*로그아웃/.test(mi)) errs.push('#172 메뉴');
+  await s.click('.top .back'); await s.waitForSelector('.sheet .menu'); const mi = await s.$$eval('.sheet .mi b', (xs) => xs.map((x) => x.textContent).join(' · ')); log('   ‹ 메뉴:', mi); if (!/교사 폰.*교실 TV.*처음 화면/.test(mi)) errs.push('#172 메뉴');
   await s.screenshot({ path: `${SHOTS}/b47-camp-menu.png` });
-  await s.click('.sheet .mi:has-text("로그아웃")'); await s.waitForSelector('.title', { timeout: 20000 }); await s.waitForTimeout(500);
-  const menu = await s.$('.links button:has-text("교사 · 종합실")'); log('   ⚙ 로그아웃 → 첫 화면 · 「교사 · 종합실 ›」:', menu ? '○' : '✗'); if (!menu) errs.push('③ 로그아웃 → 메뉴');
-  await s.screenshot({ path: `${SHOTS}/b46-logout-title.png` });
+  const outDis = await s.$eval('.sheet .mi:has-text("처음 화면")', (x) => x.disabled); log('   수업 중 「처음 화면으로」 막힘:', outDis ? '○' : '✗'); if (!outDis) errs.push('수업 중 처음 화면 막힘');
+
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();
 })();

@@ -14,6 +14,7 @@
   import TPrep from './TPrep.svelte';
   import TNews from './TNews.svelte';
   import TMe from './TMe.svelte';
+  import TGate from './TGate.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { unreadN } from '../../school/inbox';
 
@@ -37,6 +38,7 @@
   type AS = Store & { auth?: unknown; isAdmin?: () => boolean };
   const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
   let loginAsk = $state(false), loginGo = $state(false);
+  const gate = needAdmin(); // 🔐 입구 (📜 2026-11-13 밤 선생님 「진행」): 서버인데 교사 로그인 안 한 폰 = 교사 화면 대신 로그인 화면만 (로그인하면 새로 고침)
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
     if (needAdmin()) { loginAsk = true; return; }
     const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
@@ -60,7 +62,9 @@
 </script>
 
 <div class="tp" class:wide={wideDash && tab === 'pupil' && page === 'home'}>
-  {#if live && liveL && page === 'live'}
+  {#if gate}
+    <TGate {S} />
+  {:else if live && liveL && page === 'live'}
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}

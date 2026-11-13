@@ -11,7 +11,7 @@ const NAMES = ['가람', '나래', '다온', '라온', '마루', '바다', '사�
   const W = {}; for (let d = 1; d <= 5; d++) { W[d] = {}; for (let q = 1; q <= 7; q++) W[d][q] = '1-3'; } await rest('school/sched', 'PUT', W);
   const b = await chromium.launch(), errs = [];
   const open = async (url, vp) => { const p = await (await b.newContext({ viewport: vp })).newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); await p.goto(B + url); return p; };
-  const t = await open(`?role=teacher&${E}`, { width: 390, height: 844 }); await t.waitForSelector('.tabs', { timeout: 20000 }); await asAdmin(t, '.tabs');
+  const t = await open(`?role=teacher&${E}`, { width: 390, height: 844 }); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await wait(1500);
   const code = (await rest('school/live')).code;
   const seen = async () => { const P = {}; NAMES.forEach((n, i) => { P[`fk${i + 1}`] = { num: i + 1, nick: n, seen: Date.now(), hero: i % 34, cls: '1-3' }; }); await rest(`rooms/${code}/players`, 'PATCH', P); };

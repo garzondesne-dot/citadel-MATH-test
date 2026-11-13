@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { loginEmails, makeEmail } from '../../school/teacherId';
+  import { teacherIn as teacherIn0, toTitle as toTitle0 } from './teacherAuth';
   import SoundToggles from '../SoundToggles.svelte';
   import { soundPref } from '../sound.svelte';
   import { HALLKEY } from '../../school/school';
@@ -33,23 +33,10 @@
   type AS = Store & { auth?: import('firebase/auth').Auth; isAdmin?: () => boolean };
   const srv = !!(S as AS).auth, admin = (S as AS).isAdmin?.() ?? false, who = (S as AS).auth?.currentUser?.email ?? '';
   let email = $state(''), pw = $state(''), lerr = $state(''), busy = $state(false);
-  async function teacherIn(make: boolean) {
-    const A = (S as AS).auth; if (!A) return; busy = true; lerr = '';
-    try {
-      const fa = await import('firebase/auth');
-      // ✉ B8 아이디 또는 이메일: 로그인 = 이메일 그대로 → 안 되면 예전 꼴 t_…@citadel.class
-      let c: Awaited<ReturnType<typeof fa.signInWithEmailAndPassword>> | null = null, last: unknown = null;
-      if (make) c = await fa.createUserWithEmailAndPassword(A, makeEmail(email), pw);
-      else for (const e of loginEmails(email)) { try { c = await fa.signInWithEmailAndPassword(A, e, pw); break; } catch (x) { last = x; } }
-      if (!c) throw last;
-      if (!S.get('admins')) S.set(`admins/${c.user.uid}`, true); // 첫 비번 계정 = 교사 (규칙이 「교사가 아직 없을 때만」 허락)
-      setTimeout(() => location.reload(), 600);
-    } catch (e) { lerr = /email-already/.test(String((e as { code?: string }).code)) ? '이미 있는 계정 · 「로그인」을 눌러요' : /weak-password/.test(String((e as { code?: string }).code)) ? '비밀번호는 6자 이상' : '아이디(이메일) · 비밀번호를 다시 확인해요'; }
-    busy = false;
-  }
+  async function teacherIn(make: boolean) { busy = true; lerr = await teacherIn0(S, email, pw, make); busy = false; }
   async function teacherOut() { const A = (S as AS).auth; if (!A) return; const fa = await import('firebase/auth'); await fa.signOut(A); location.reload(); }
   // 🚪 처음 화면 (📜 2026-11-13 밤): 로그인 정보만 지움(이 기기 테스트 · 체험 저장 그대로) → 첫 화면(학생 로그인 · 「교사 · 종합실 ›」)
-  async function toTitle() { const A = (S as AS).auth; if (A?.currentUser) { try { const fa = await import('firebase/auth'); await fa.signOut(A); } catch { /* 무시 */ } } location.replace(location.pathname); }
+  const toTitle = () => toTitle0(S);
   function pickTheme(t: Theme) { theme = t; setTheme(t); S.set('school/teacher/theme', t); }
 </script>
 

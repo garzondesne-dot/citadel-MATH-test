@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await rest('school/sched', 'PUT', W);
   const b = await chromium.launch(), errs = [];
   const open = async (url, vp = { width: 360, height: 640 }) => { const ctx = await b.newContext({ viewport: vp }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); await p.goto(B + url); return p; };
-  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
+  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
   const code = (await rest('school/live')).code;
   const ph = []; for (let n = 1; n <= 3; n++) ph.push(await open(`?role=student&room=${code}&as=1-3:${n}&${E}`));

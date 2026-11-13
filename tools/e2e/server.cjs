@@ -18,7 +18,7 @@ const log = (...a) => console.log(...a);
   const b = await chromium.launch(), errs = [];
   const open = async (url, w = 360, h = 640) => { const ctx = await b.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); p.on('console', (m) => { if (m.type() === 'error') errs.push(`${url}: ${m.text()}`); }); await p.goto(B + url); return p; };
   // 리모컨: 1-3반 · 6차시 · 🧪 테스트로 열기
-  const t = await open(`?role=teacher${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
+  const t = await open(`?role=teacher${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   log('리모컨 표시:', (await t.textContent('.srv')).trim());
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
   const live = await rest('school/live'); log('서버 school/live:', JSON.stringify(live));

@@ -25,7 +25,7 @@ const log = (...a) => console.log(...a);
   const s2 = await open(`?${E}`); await signup(s2, '1-4', 1);
   const before = await s1.$eval('.act .btn', (x) => x.disabled); log('수업 전 1-3 캠프 입장 단추 막힘:', before);
   // 교사: 1-3 · 6차시 🧪 테스트로 열기
-  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
+  const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
   const live = await rest('school/live'); log('school/live:', live.cls, live.code, '테스트', live.test);
   // ① 1-3 학생 = 차원문 저절로 열림
