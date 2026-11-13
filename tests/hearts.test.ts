@@ -28,7 +28,7 @@ describe('❤ 하트 (일반 몬스터 · v4)', () => {
     const { S, L, id, solve, rec } = room();
     for (let i = 0; i < 4; i++) solve('b', false);
     expect(rec('b').left).toBe(0); expect(rec('b').locked).toBe(true); expect(solve('b', false)).toBe(false);
-    heartRelease(S, 'V4', id, 'b'); expect(rec('b').left).toBe(1); expect(rec('b').locked).toBe(false); expect(rec('b').reveal).toBe(true);
+    heartRelease(S, 'V4', id, 'b'); expect(rec('b').left).toBe(1); expect(rec('b').locked).toBe(false); expect(rec('b').reveal).toBe(false); // 정답은 안 보여 줌 (❓#34-1 답)
     solve('a'); expect(spendEnergy(S, L, 'V4', id, 'a', 'b')).toBe(true); expect(rec('b').left).toBe(2);
   });
 });
@@ -77,7 +77,8 @@ describe('⚔ 소레이드 v4', () => {
     for (let k = 0; k < 8; k++) chainSubmit(S, L, 'C4', mid, 'a', 0, 0, w(its[0] as Question));
     const r0 = chainRecord(L, R(), mid, 'a'); expect(r0.left).toBe(0); expect(r0.locked).toBe(true); expect(r0.fail).toBe(false);
     heartRelease(S, 'C4', mid, 'a'); expect(chainRecord(L, R(), mid, 'a').left).toBe(1); expect(chainRecord(L, R(), mid, 'a').locked).toBe(false);
-    its.forEach((q, s) => chainSubmit(S, L, 'C4', mid, 'a', s, 0, answerOf(q)));
+    chainSubmit(S, L, 'C4', mid, 'a', 0, 0, answerOf(its[0]!)); expect(chainRecord(L, R(), mid, 'a').left).toBe(2); // 풀어준 칸으로 풀어냄 = ❤ +1
+    its.slice(1).forEach((q, s) => chainSubmit(S, L, 'C4', mid, 'a', s + 1, 0, answerOf(q)));
     const r1 = chainRecord(L, R(), mid, 'a'); expect(r1.done).toBe(true); expect(r1.tokens).toBe(ENERGY);
     expect(chainSubmit(S, L, 'C4', mid, 'a', 0, 1, null)).toMatch(/⚡/); // ⚡ 안 쓰면 판 없음
     expect(spendEnergy(S, L, 'C4', mid, 'a', 'bind')).toBe(true); expect(pracStart(S, L, 'C4', mid, 'a')).toBe(1);

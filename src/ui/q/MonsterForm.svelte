@@ -180,7 +180,6 @@
     {#key `${key}|${cur}`}
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
     {/key}
-    {#if rec.reveal && !keepAt(cur) && fixing}<p class="ans">💡 선생님이 풀어 줬어요 · 정답 {textOf(q, answerOf(q), cur) ?? '학습지 참고'}</p>{/if}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '❤' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
     {#snippet main()}
