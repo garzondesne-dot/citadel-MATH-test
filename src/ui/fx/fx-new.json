@@ -1,7 +1,7 @@
 {
  "fx": {
   "cut": {
-   "src": "pfx2/new-cut-v1.webp",
+   "src": "pfx2/new-cut-v2.webp",
    "w": 160,
    "h": 100,
    "n": 13,
@@ -11,7 +11,7 @@
    "pk": 5
   },
   "moon": {
-   "src": "pfx2/new-moon-v1.webp",
+   "src": "pfx2/new-moon-v2.webp",
    "w": 160,
    "h": 100,
    "n": 15,
@@ -21,7 +21,7 @@
    "pk": 5
   },
   "slash": {
-   "src": "pfx2/new-slash-v1.webp",
+   "src": "pfx2/new-slash-v2.webp",
    "w": 160,
    "h": 100,
    "n": 18,
@@ -31,7 +31,7 @@
    "pk": 6
   },
   "twin": {
-   "src": "pfx2/new-twin-v1.webp",
+   "src": "pfx2/new-twin-v2.webp",
    "w": 160,
    "h": 100,
    "n": 24,
@@ -41,7 +41,7 @@
    "pk": 8
   },
   "twin-a": {
-   "src": "pfx2/proto-twin-a-v1.webp",
+   "src": "pfx2/proto-twin-a-v2.webp",
    "w": 160,
    "h": 100,
    "n": 24,
@@ -51,7 +51,7 @@
    "pk": 8
   },
   "twin-b": {
-   "src": "pfx2/proto-twin-b-v1.webp",
+   "src": "pfx2/proto-twin-b-v2.webp",
    "w": 160,
    "h": 100,
    "n": 24,
@@ -61,7 +61,7 @@
    "pk": 8
   },
   "twin-c": {
-   "src": "pfx2/proto-twin-c-v1.webp",
+   "src": "pfx2/proto-twin-c-v2.webp",
    "w": 160,
    "h": 100,
    "n": 26,

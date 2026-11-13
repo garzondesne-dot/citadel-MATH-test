@@ -81,10 +81,10 @@ export class SlashFx {
     for (let k = 0; k < arcs; k++) {
       const off = T.cross ? k * (this.T.stagger ?? 0) : k * 0.12 * d, tt = t - off; if (tt < 0) continue;
       const span = T.dur * 0.75, p = clamp(tt / span), hp = ease(clamp(p / 0.55)), tp = clamp((p - 0.2) / 0.8) ** 1.4, al = 1 - clamp((p - 0.7) / 0.3);
-      // 각: 궤적 가운데가 맞는 점(몸통 가운데)을 지나게 — 호의 중심을 맞는 점에서 R 만큼 떨어뜨림 · 위 → 아래로 긋기 · 용사 → 몬스터 방향 · Ⅳ 쌍월 = 엇갈린 두 줄 · Ⅲ = 조금씩 비켜 세 줄
+      // 각: 궤적 가운데가 맞는 점(몸통 가운데)을 지나게 — 호의 중심을 맞는 점에서 R 만큼 떨어뜨림 · 용사 쪽에서 출발 → 몬스터 쪽으로 긋기 · Ⅳ 쌍월 = 엇갈린 두 줄 · Ⅲ = 조금씩 비켜 세 줄
       const flip = T.cross && k === 1 ? -1 : 1, phi = dir > 0 ? (flip > 0 ? Math.PI * 0.78 : Math.PI * 1.22) : (flip > 0 ? Math.PI * 0.22 : -Math.PI * 0.22);
       const rr = R * (1 - (T.cross ? 0 : k * 0.07)), hx = cx + (T.cross ? 0 : (k - (arcs - 1) / 2) * o.w * 0.16 * dir), hy = cy + (T.cross ? 0 : (k - (arcs - 1) / 2) * o.h * 0.1);
-      const ox = hx - Math.cos(phi) * rr, oy = hy - Math.sin(phi) * rr, half = (this.T.sweep ?? 0.78) * Math.min(1.2, T.len), sg = (dir > 0 ? -1 : 1) * flip;
+      const ox = hx - Math.cos(phi) * rr, oy = hy - Math.sin(phi) * rr, half = (this.T.sweep ?? 0.78) * Math.min(1.2, T.len), sg = (dir > 0 ? 1 : -1) * flip; // 📜 2026-11-13 밤 선생님 「A 인데 용사 기준 왼쪽에서 오른쪽 공격이 방향이 맞아 보임」 → 머리 = 용사 쪽에서 출발해 몬스터 쪽으로 (옛 = 반대)
       const a0 = phi + half * sg, a1 = phi - half * sg;
       const gg = this.T.ghostGap ?? 0.14, ga = this.T.ghostAlpha ?? 0.22;
       if (fancy && this.level < 3) for (let gi = T.ghosts; gi >= 1; gi--) this.crescent(ox, oy, rr, a0 + gg * gi * sg, a1 + gg * gi * sg, hp, tp, T.thick, al * (ga / (ga > 0.3 ? Math.sqrt(gi) : gi)));
