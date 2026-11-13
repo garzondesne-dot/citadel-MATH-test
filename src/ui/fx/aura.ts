@@ -29,6 +29,8 @@ function style() {
 @keyframes auEl{from{opacity:.95;transform:scale(1)}to{opacity:.6;transform:scale(1.06,1.1)}}
 .au-o.st>.au-s{left:calc(var(--p)*-5.5);top:calc(var(--p)*-5.5);width:calc(var(--p)*11);height:calc(var(--p)*11);background:radial-gradient(circle,#fff 0 22%,var(--au) 45%);clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%);animation:auTw .9s ease-in-out infinite alternate;filter:drop-shadow(0 0 2px var(--au))}
 @keyframes auTw{from{transform:scale(.75) rotate(0)}to{transform:scale(1.1) rotate(45deg)}}
+/* 🔧 화면 고침 1 (2026-11-13 머리 방 Pixel 7): 용사 그림이 .art 자기 배경이면 오라 뒤 겹(고리 · 후광 · 빛살)이 그 위에 그려져 얼굴을 가림 → 용사 그림을 한 겹 더(au-me · z 1) 올려 오라는 늘 용사 뒤 · 앞 반쪽 고리 · 입자만 앞 */
+.au-me{inset:0;background:inherit;z-index:1}
 @keyframes auF6{to{background-position-x:120%}}
 @keyframes auF{to{background-position-x:133.333%}}
 @keyframes auO{${st.join('')}}`;
@@ -47,7 +49,8 @@ export function deco(art: HTMLElement, lv: number, tv = false): () => void {
   const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r${el}"></span>`;
   const n = nOrb(lv, tv), dur = (3.4 - lv * 0.1).toFixed(2);
   const front = holy ? '' : `<span class="au-s au-r f${el}"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o${st}" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
-  art.insertAdjacentHTML('afterbegin', back); art.insertAdjacentHTML('beforeend', front);
+  const me = getComputedStyle(art).backgroundImage !== 'none' ? '<span class="au-s au-me"></span>' : '';
+  art.insertAdjacentHTML('afterbegin', back + me); art.insertAdjacentHTML('beforeend', front);
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
 /** Svelte 액션: <i class="art" use:aura={{ lv, tv }}> */
