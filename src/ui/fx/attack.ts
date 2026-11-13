@@ -120,6 +120,8 @@ export const ULT_COLOR: Record<string, [string, string]> = { wind: ['#9affd8', '
 let faceImg: HTMLImageElement | null = null;
 export function preloadFaces() { if (faceImg || typeof Image === 'undefined') return; faceImg = new Image(); faceImg.src = artUrl(`art/${FACES.src}`); }
 const faceReady = () => !!(faceImg && faceImg.complete && faceImg.naturalWidth);
+/** 🐞 첫 필살기에 얼굴 · 눈빛이 빠지던 것 (📜 2026-11-13 밤 「눈빛 연출은 나오는데 눈빛이 나오진 않네」): 얼굴 그림을 받을 때까지 기다렸다 띄움(최대 0.6초) */
+function faceWait(ms = 600): Promise<void> { preloadFaces(); if (faceReady() || !faceImg) return Promise.resolve(); const im = faceImg; return new Promise((res) => { const t = setTimeout(res, ms); im.addEventListener('load', () => { clearTimeout(t); res(); }, { once: true }); im.addEventListener('error', () => { clearTimeout(t); res(); }, { once: true }); }); }
 const eyesOf = (n: number) => { const e = FACES.eyes[n]; return e ? `<i class="u-glint" style="left:${e[0]! * 100}%;top:${e[1]! * 100}%"></i><i class="u-glint" style="left:${e[2]! * 100}%;top:${e[3]! * 100}%;animation-delay:.38s"></i>` : ''; };
 /** 얼굴 그림이 없으면 = 용사 도트 확대 (heroArt 콜백 · 없으면 빈 띠) */
 function faceHtml(hero: number, heroArt?: (hero: number) => string) {
@@ -133,6 +135,10 @@ const esc = (s: string) => s.replace(/[<>&]/g, '');
 /** ⚡ 필살기 컷인 (1.2초) · gold = 🌟 진필살기(금빛 · 眞 · 조금 길게) · guard = 🛡 홀리 방패(흰 · 하늘빛 · 짧게) */
 export function cutin(hero: number, fx: string, opt: CutOpt = {}): Promise<void> {
   if (reduce() || typeof document === 'undefined') return wait(0);
+  if (!faceReady() && FACES.eyes[Number(hero) || 0]) return faceWait().then(() => cutinNow(hero, fx, opt));
+  return cutinNow(hero, fx, opt);
+}
+function cutinNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
   const fam = (famOf(fx) ?? { id: 'star' }).id, [c1, c2] = opt.guard ? ['#9fdcff', '#e6f6ff'] : opt.gold ? ['#ffd25a', '#fff3c0'] : ULT_COLOR[fam] ?? ULT_COLOR.star!;
   const d = document.createElement('div'); d.className = `ult${opt.gold ? ' true' : ''}${opt.guard ? ' guard' : ''}${opt.peek ? ' peek' : ''}`; d.style.setProperty('--uc', c1); d.style.setProperty('--uc2', c2);
   const crack = Array.from({ length: 9 }, (_, i) => `${(i * 12.5).toFixed(1)},${(50 + (i % 2 ? -1 : 1) * (6 + Math.random() * 10) + (i - 4) * 4).toFixed(1)}`).join(' ');

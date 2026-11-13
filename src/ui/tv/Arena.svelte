@@ -13,7 +13,7 @@
   import { deco } from '../fx/aura';
   import { ladder } from '../../model/hero';
   import { bossState, plainRecord, holyArmed, stone, BOSS_ID, pracHitsAll } from '../../raid/raid';
-  import { cutin } from '../fx/attack';
+  import { cutin, ultBlast } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
   import { HERO, heroHead, heroUrl, monBody } from '../manifest';
@@ -158,6 +158,22 @@
   const pracN = $derived(step?.kind === 'monster' ? pracHitsAll(L, R, step.id) : 0);
   const stoneLeft = $derived(stoneNow ? Math.max(0, Math.ceil((stoneNow.until - now) / 1000)) : 0);
   $effect(() => { A?.stone(stoneLeft > 0); });
+  // 🌟 진필살기 (📜 2026-11-13 밤 선생님 「종합실에서도 필살기 · 진필살기 · 오라 · 방패 · 눈빛 똑같이」): 새 석화(진필살기)를 본 순간 = 금빛 컷인 「眞」 + 눈빛 → 광역(본 이펙트 · 네 귀퉁이 · 충격파) → 🗿 석화 (학생 폰 trueUlt 과 같은 순서)
+  let trueSeen = ''; const born = Date.now();
+  $effect(() => {
+    const st = stoneNow; if (!st || st.holy) return; const key = `${step?.id}|${st.at}`; if (key === trueSeen) return;
+    untrack(() => { trueSeen = key; if (st.at < born - 2000 || Date.now() - st.at > 8000) return; void tvTrue(st.by); });
+  });
+  async function tvTrue(u: string) {
+    const p0 = R.players?.[u], hero = p0?.hero ?? 0, fxk = p0?.fx || ladder(hero)[3]!;
+    await cutin(hero, fxk, { gold: true });
+    const lay = fxLayer; if (!lay) return;
+    const mb = document.createElement('div'); mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; lay.appendChild(mb);
+    await ultBlast(lay, mb, fxk); mb.remove();
+  }
+  (globalThis as { __tvTrue?: (k: number) => void }).__tvTrue = (k) => { const u = ids[k]; if (u) void tvTrue(u); };
+  (globalThis as { __tvGuard?: (k: number) => void }).__tvGuard = (k) => { const u = ids[k]; if (u) void tvGuard([u]); }; // 시험 고리
+  preloadFaces(); // 눈빛 얼굴 그림은 TV 가 열릴 때 미리
   // ✨ 오라 (정식 aura.js · TV = 입자 2개까지): Pixi = 캔버스 아래 층에 용사 자리마다 · DOM 장면 = HeroSprite 가 직접
   $effect(() => {
     const lay = auraLayer; if (!lay || mode !== 'pixi' || !W) return;
