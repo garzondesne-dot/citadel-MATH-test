@@ -10,7 +10,7 @@
   //   「처음이에요 · 가입」 = 같은 화면(비밀번호 두 번) · 교사 · 종합실 = 맨 아래 작은 글자 링크 · 한 번 로그인한 폰은 다음부터 바로 캠프(App 이 고름)
   const { S, onin }: { S: Store; onin: (p: Pupil) => void } = $props();
   const ART = `${import.meta.env.BASE_URL}art/brand-bg-v1.webp`;
-  const LOGO = `${import.meta.env.BASE_URL}art/menu-logo-v1.webp`;
+  const LOGO = `${import.meta.env.BASE_URL}art/brand-school-logo-v1.webp`; // 🖼 로고 = 「모두의 던전」(방패 · 월계수 · 띠 없음 · 2026-11-13 밤 선생님 「로고를 전부 모두의 던전으로」) · 과목 이름은 과목 팩 글자
   let cls = $state('');
   let num = $state(0);
   let join = $state(false);
@@ -39,7 +39,7 @@
 </script>
 
 <div class="title" style:background-image="url({ART})">
-  <h1 class="logo"><img src={LOGO} alt="모두의 던전 · {SUBJ.name}" /></h1>
+  <h1 class="logo"><img src={LOGO} alt="모두의 던전" /></h1>
   <form class="form" onsubmit={(e) => { e.preventDefault(); if (ready) go(); }}>
     <div class="row">
       <label class="sel"><span class="sr">반</span>
