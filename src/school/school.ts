@@ -67,9 +67,14 @@ const ready = async (S: Store, cls: string, num: number) => { await (S as AuthSt
 /** 시험 서버 로그인 이름 · 비밀번호 (Firebase 는 6자 이상 · 학생이 쓰는 건 숫자 4자리 그대로) */
 // 🔑 시험 서버 0000 초기화 (📜 2026-11-14 리모컨 시안 v12 「시험 서버에서도 되게」): 다른 학생의 로그인 비밀번호는 바꿀 수 없어서 → 선생님이 그 칸의 「로그인 판 g」를 하나 올리고 reset 표시
 //   → 학생 로그인 주소가 새 주소(…-g1@…)가 되고 · 새 주소엔 로그인이 아직 없으니 그때 친 4자리(0000)로 새로 만들어 그 칸에 이어짐(claim) · 용사 · 기록 칸은 반 · 번호라 그대로
-export const authEmail = (cls: string, num: number, g = 0) => `${uidOf(cls, num)}${g ? `-g${g}` : ''}@citadel-test.local`;
-const genOf = (S: Store, cls: string, num: number) => Number(S.get<number>(`${accPath(cls, num)}/g`)) || 0;
-const authPw = (pw: string) => `cdm-${pw}`;
+// 🚀 출시 (📜 2026-11-15 「정식 기준 · 합치기 없음」 · 계정 옮기기): 로그인 이름 · 비밀번호 = 정식과 같은 꼴 → 선생님이 정식 로그인 목록을 그대로 들여오면(auth:import) 학생은 같은 4자리로 바로 들어옴
+//   정식 = s_{반}_{번호}_{gen}@citadel.class · {4자리}#cm (js/raid/account.js email · pw) · gen = 정식 accounts 의 gen(초기화 판) · 베타 0000 초기화 판 g 와 같은 뜻(g 가 있으면 g)
+//   옛 베타 꼴(s1_3_1@citadel-test.local · cdm-4자리)은 로그인 때 한 번 더 시도만(새로 만들지 않음)
+export const authEmail = (cls: string, num: number, g = 0) => `s_${encodeURIComponent(cls).replace(/%/g, '').toLowerCase()}_${Number(num)}_${g || 0}@citadel.class`;
+const oldEmail = (cls: string, num: number, g = 0) => `${uidOf(cls, num)}${g ? `-g${g}` : ''}@citadel-test.local`;
+const genOf = (S: Store, cls: string, num: number) => { const a = S.get<{ g?: number; gen?: number }>(accPath(cls, num)); return Number(a?.g ?? a?.gen) || 0; };
+export const authPw = (pw: string) => `${pw}#cm`;
+const oldPw = (pw: string) => `cdm-${pw}`;
 /** 가입 · 로그인 (시험 서버면 Firebase 로그인까지) → 오류 글 또는 null */
 export async function enter(S: Store, cls: string, num: number, pw: string, pw2: string, join: boolean): Promise<string | null> {
   const A = (S as AuthStore).auth;
@@ -85,14 +90,22 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
     catch (e) { return /email-already/.test(String((e as { code?: string }).code)) ? '이미 가입한 번호예요 · 로그인해요' : '가입하지 못했어요 · 잠시 뒤 다시'; }
   }
   if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
-  try { await fa.signInWithEmailAndPassword(A, authEmail(cls, num, genOf(S, cls, num)), authPw(pw)); if (S.get<boolean>(`${accPath(cls, num)}/reset`)) claim(S, cls, num, A.currentUser?.uid); return ready(S, cls, num); }
+  const g0 = genOf(S, cls, num);
+  const signIn = async () => { try { return await fa.signInWithEmailAndPassword(A, authEmail(cls, num, g0), authPw(pw)); } catch (e) { try { return await fa.signInWithEmailAndPassword(A, oldEmail(cls, num, g0), oldPw(pw)); } catch { throw e; } } }; // 정식 꼴 → 옛 베타 꼴
+  try { const c = await signIn(); if (S.get<boolean>(`${accPath(cls, num)}/reset`) || S.get<string>(`${accPath(cls, num)}/uid`) !== c.user.uid) claim(S, cls, num, c.user.uid); return ready(S, cls, num); }
   catch (e) {
     // 🔁 #163 정식에서 옮긴 계정(reset: true · 정식 「선생님 초기화」와 같은 뜻) = 이 서버 로그인이 아직 없음 → 지금 친 4자리로 새로 만들고 그 학생 칸에 이어짐
     //   🔑 선생님 0000 초기화(로그인 판 g ≥ 1) = 0000 으로만 들어옴 (정식 「잊으면 0000」)
     const rs = S.get<boolean>(`${accPath(cls, num)}/reset`), g = genOf(S, cls, num);
     if (rs && g > 0 && pw !== '0000') return '선생님이 0000 으로 바꿨어요 · 0000 으로 들어와요';
-    if (rs && /^\d{4}$/.test(pw) && /user-not-found|invalid-credential|invalid-login/.test(String((e as { code?: string }).code))) {
-      try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, genOf(S, cls, num)), authPw(pw)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); } catch { /* 이미 만든 로그인 = 비밀번호 다름 */ }
+    if (rs && /^\d{4}$/.test(pw) && /user-not-found|invalid-credential|invalid-login|wrong-password/.test(String((e as { code?: string }).code))) {
+      try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, g), authPw(pw)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); }
+      catch (e2) {
+        // 정식에서 「선생님 초기화」 표시째 옮긴 계정 = 그 판(gen) 로그인이 이미 있음 → 정식처럼 0000 이면 다음 판(gen + 1)으로 새로 만들어 이음
+        if (pw === '0000' && /email-already/.test(String((e2 as { code?: string }).code))) {
+          try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, g + 1), authPw(pw)); claim(S, cls, num, c.user.uid); S.set(`${accPath(cls, num)}/g`, g + 1); /* 규칙 = 내 uid 를 먼저 적어야 다음 칸을 씀 */ return ready(S, cls, num); } catch { /* 아래 */ }
+        }
+      }
     }
     return '비밀번호가 달라요 · 잊었으면 선생님께';
   }
