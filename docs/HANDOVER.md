@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b147 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b148 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -113,6 +113,7 @@
 | b145 | 📜 🎆 이펙트 다시 만들기 ⑤ 😐 다듬기 · ✨ twinkle(돌며 날아온 별 → 펑 · 작은 별 8 `star`) · 🌀 void(검은 구멍이 커지며 빨아들임 → 꺼짐 → 고리 두 겹 · 빛살 16 `void` · 충격파) · ❄ ice(몸 둘레 결정 6 → 쩍 → 산산조각 `shatter`) · ❄ spikes(발밑까지 얼음 가시가 차례로 솟음 → 부서짐 `spikes`) = 새 엔진(RECIPES `star` · `frost` · `NEW_SKILLS`) · 👹 🪞 mirror(글이 납작해졌다 뒤집혀 펴짐 + 은빛 반사광 두 번 `.mshine`) · 😡 rage(분노 = 카드 가장자리 붉게 세 번 고동 `.afx.strong::after` · 동작 줄이기 = 고정) · 🔥 fire 칸 = 새것(b77~)이 1차 👍 그대로 · 평가판 「🔁 다시 만듦」 31장 · 1차 👎 · 😐 전부 다시 만듦 끝 |
 | b146 | 📜 📱 화면 꺼짐 방지 (머리 🔨 · 선생님 2026-11-14 「교사 폰 리모컨은 자동 화면 꺼짐 안 되게」 · DECISIONS 40af77e · 정식 DS.UI.wake 그대로) · `src/ui/wake.svelte.ts holdWake(tip)` = Screen Wake Lock · 잡은 수 세기(TV 안 시연 폰 겹침) · visibilitychange 로 다시 잡음 · 마지막이 놓을 때 끔 · 리모컨 TLive(🧪 테스트 수업 · 체험판 같은 화면) · 학생 수업 Student(정식 screen-student · 시연 폰은 띠 없음) · 교실 TV(정식 screen-hall) · 지원 안 됨(없음 · 실패) = 수업 입장 때 한 번만 안내 띠(`citadel-wake-tip` 이 기기) · e2e `tools/e2e/wake.cjs` |
 | b147 | 📜 🌗 폰 다크 모드 · 강제 어둡게 무시 (머리 🔨 · 선생님 2026-11-14 「웹앱이 다크 모드는 적용 안 되게」) · color-scheme 을 'only light' / 'only dark' 로 = index.html 메타 · `theme.ts applyTheme` 메타 · tokens.css · submit.css 의 모든 color-scheme · 📝 제출 종이 카드(qpaper .bcard) = only light · 앱 테마는 앱 설정으로만 · e2e `tools/e2e/forcedark.cjs` = 크롬 강제 다크(`--blink-settings=forceDarkModeEnabled=true` · ⚠ `--enable-features=WebContentsForceDark` 는 헤드리스에서 안 먹음) + prefers dark 에서 학생(금빛 · 구름 · 제출) · 리모컨 · TV 캡처 = 보통과 0% 차이 (옛 'light' 로 되돌리면 61% 뒤집힘 확인) |
+| b148 | 🔧 👩‍🏫 시연 선생님 용사 = 교사 계정 「내 용사」 (머리 🐞 · 선생님 2026-11-14 「교사 모습이랑 실제 시연할 때 캐릭터랑 안 맞음」) · 원인 = TV 🎮 시연이 `savedLook()`(TV 기기의 학생 칸)을 읽음 · 교사 기록은 교사 폰에만 있었음 → `me.svelte.ts` 교사 저장 때 서버 `school/tlook` {hero · enh · fx · socket · title · nick · at} 도 씀(`setTeacherSink` = TeacherApp · TV) · TV 는 `S.watch(TLOOK)` → DemoPhone `tlook` prop(`teacherLook` · 없으면 현자 7) · 일격 · 컷인 · ⚡ 필살기 잠김 · TV 교사 캠프 M.me 도 따라감 · 규칙 그대로(school = 교사 쓰기 · 로그인 읽기) · e2e `tools/e2e/tlook.cjs` |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

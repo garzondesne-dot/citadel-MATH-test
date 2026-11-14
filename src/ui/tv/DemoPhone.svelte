@@ -3,7 +3,7 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { memoryStore } from '../../store/device';
   import { roomPath } from '../../raid/actions';
-  import { savedLook } from '../../store/me.svelte';
+  import { teacherLook, type TLook } from '../../store/me.svelte';
   import { NAMES, tierOf } from '../fx/fx';
   import { answerOf, BOSS_ID, bossRecord, V4, bossState, chainRecord, isChain, itemsFor, bossItem as bossItemR, plainRecord, stepOf } from '../../raid/raid';
   import { penLine, stripNo } from '../../engine/input';
@@ -12,7 +12,7 @@
   //   폭 390 학생 화면을 창 폭에 맞춰 키움(3m 거리에서 읽히게) · 높이 = 창 높이 ÷ 배율 · 넘치면 안에서 스크롤
   //   문제 · 숫자 규칙 · 부품(장면 띠 · 답안 줄 · 칩 · 룬 · 노란 주요 단추 56/20 · 도전 칸) = 학생과 같은 Student 화면
   //   다른 점 = 이 기기 메모리 방(데미지 · 기록 없음 · 실제 수업 방에 쓰지 않음) · 정찰 없음 · 💡 정답 펼치기 · 🔄 숫자 바꿔 다시 · ✕ 닫기
-  const { L, R, code, onclose, onstrike }: { L: LessonPack; R: Room; code: string; onclose: () => void; /** 🧑‍🏫 다 맞힘 → 선생님 일격 (ult = ⚡ 필살기) */ onstrike?: (ult: boolean) => void } = $props();
+  const { L, R, code, onclose, onstrike, tlook = null }: { L: LessonPack; R: Room; code: string; /** 👩‍🏫 교사 계정 「내 용사」(school/tlook) */ tlook?: TLook | null; onclose: () => void; /** 🧑‍🏫 다 맞힘 → 선생님 일격 (ult = ⚡ 필살기) */ onstrike?: (ult: boolean) => void } = $props();
   const PW = 390;
   let round = $state(0), reveal = $state(false), boxH = $state(0), boxW = $state(0);
   // 📐 한 화면 (📜 2026-11-14 「웬만하면 스크롤 안 되면 좋겠어」): 배율 = min(폭 배율, 높이 배율) · 문제 글자가 TV 에서 약 20px(학생 15px × 1.35) 아래로는 안 줄임 · 상태가 바뀔 때마다 다시 맞춤(0.5초마다 내용 높이를 잼)
@@ -49,10 +49,10 @@
     if (st.kind !== 'monster' || !L.monsters[st.id]) return false;
     return isChain(L, D, st.id) ? chainRecord(L, D, st.id, 'demo').done : plainRecord(L, D, st.id, 'demo').perfectAt >= 0;
   });
-  const tLook = savedLook(), tTier = tierOf(tLook.fx), tUlt = tTier === 3 || tTier === 's', tName = NAMES[tLook.fx] || '';
+  const tLook = $derived(teacherLook(tlook)), tTier = $derived(tierOf(tLook.fx)), tUlt = $derived(tTier === 3 || tTier === 's'), tName = $derived(NAMES[tLook.fx] || ''); // 👩‍🏫 교사 계정 「내 용사」 (TV 기기 저장값 아님 · 폰에서 바꾸면 바로)
 </script>
 
-<div class="dp" role="dialog" aria-label="선생님 시연">
+<div class="dp" role="dialog" aria-label="선생님 시연" data-thero={tLook.hero} data-tfx={tLook.fx} data-tult={tUlt}>
   <div class="bar">
     <b>🎮 시연</b><span class="tag">데미지 · 기록 없음</span>
     <button type="button" onclick={() => (reveal = !reveal)}>💡 정답 {reveal ? '접기' : '펼치기'}</button>

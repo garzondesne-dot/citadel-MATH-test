@@ -1,6 +1,7 @@
 <script lang="ts">
   import { HALLKEY } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
+  import { setTeacherSink } from '../../store/me.svelte';
   import './teacher.css';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
@@ -20,6 +21,7 @@
 
   // 📱 교사 폰 (#119 ⑫ ⑬ ⑭) — 수업이 없으면 아래 탭 5(수업 · 학생 · 준비 · 소식 · 나) · 수업이 열리면 탭 자리에 같은 높이 「수업 중 막대」(TLive)
   const { S, packs }: { S: Store; packs: LessonPack[] } = $props();
+  setTeacherSink(untrack(() => S), true); // 👩‍🏫 교사 「내 용사」 → 서버 school/tlook (교실 TV 🎮 시연이 따름)
   const stopClock = useClock();
   const lv = untrack(() => liveValue<Live>(S, 'school/live'));
   onDestroy(() => { stopClock(); lv.stop(); });

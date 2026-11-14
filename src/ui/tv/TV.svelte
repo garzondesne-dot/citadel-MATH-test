@@ -24,7 +24,7 @@
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
   import { sfx } from '../sound.svelte';
-  import { savedLook } from '../../store/me.svelte';
+  import { setTeacherSink, teacherLook, TLOOK, type TLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
@@ -56,6 +56,10 @@
   const beatT = untrack(() => (code ? setInterval(() => tvBeat(S, code), 3000) : 0)); if (code) untrack(() => tvBeat(S, code));
   onDestroy(() => clearInterval(beatT));
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
+  // 👩‍🏫 교사 「내 용사」 = 서버 school/tlook (교사 폰 · 이 TV 교사 캠프 어디서 바꿔도 같음 · 📜 2026-11-14 🐞 「시연 캐릭터 ≠ 교사 모습」)
+  setTeacherSink(S);
+  let tlook = $state<TLook | null>(null);
+  onDestroy(S.watch<TLook>(TLOOK, (v) => { tlook = v; if (v && v.hero != null) Object.assign(M.me, { hero: v.hero, enh: v.enh, socket: v.socket || {}, title: v.title || 'none' }); }));
   // 🎨 교실 TV 테마 = 이 TV 에서 따로 고름 (📜 2026-11-14 선생님 「TV 화면에서도 테마 설정 바꿀 수 있게 · TV 화면이랑 교사 폰이랑 테마 별개로」) · 이 TV 에 기억 · 색만(도트 테두리 · 바탕 그림 없음)
   const TVK = 'citadel-v1-tv-theme';
   let tvTheme = $state<Theme>((() => { try { const t = localStorage.getItem(TVK); return isTheme(t) ? t : 'gold'; } catch { return 'gold'; } })());
@@ -301,7 +305,7 @@
     {#if scout?.on}
       <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
-    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} onclose={() => (demo = false)} onstrike={(ult) => { const lk = savedLook(); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx }; demo = false; }} /></div>{/if}
+    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} {tlook} onclose={() => (demo = false)} onstrike={(ult) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx }; demo = false; }} /></div>{/if}
   {/if}
 
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->
