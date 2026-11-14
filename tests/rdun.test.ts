@@ -32,4 +32,10 @@ describe('랜덤 던전', () => {
     expect(artless(bare)).toBe(true); expect(RDUN_IDS).toContain(rdunOf(bare));
     expect(spriteOf(dressed(bare).monsters.m1!.sprite).sheet.cols).toBe(5);
   });
+  it('🖼 던전마다 자기 배경 (📜 2026-11-14 배경화면 12종 · rd-d01 … rd-d12 · 파일 있음 · 겹치지 않음)', async () => {
+    const { DUNGEONS } = await import('../src/ui/manifest'); const fs = await import('fs');
+    const bgs = Object.keys(RDUN).map((k) => RDUN[k]!.bg);
+    expect(new Set(bgs).size).toBe(Object.keys(RDUN).length);
+    for (const k of Object.keys(RDUN)) { const b = RDUN[k]!.bg; expect(b).toBe(`rd-${k}`); expect(DUNGEONS[b]).toBeTruthy(); expect(fs.existsSync(`public/${DUNGEONS[b]}`)).toBe(true); }
+  });
 });

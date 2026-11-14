@@ -43,6 +43,8 @@ export const DUNGEONS: Record<string, string> = {
   '01-burrow': 'art/dg-01-burrow-v1h.webp',
   'citadel-room': 'art/dg-citadel-room-v1h.webp', 'citadel-boss': 'art/dg-citadel-boss-v1h.webp', // 🏰 성채 방 · 보스 방 (정식 citadel.room · boss)
   ...(GEN.dungeons as Record<string, string>),
+  // 🎲 랜덤 던전 배경 12 (📜 2026-11-14 🎨 「배경화면12종」 · 던전마다 하나 · 원본 1672 × 941 → 정확히 절반)
+  ...Object.fromEntries(Array.from({ length: 12 }, (_, i) => { const k = `d${String(i + 1).padStart(2, '0')}`; return [`rd-${k}`, `art/rdun/bg-${k}-v1h.webp`]; })),
 };
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;
 
