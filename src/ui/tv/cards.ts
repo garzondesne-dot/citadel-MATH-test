@@ -27,7 +27,7 @@ export function problemParts(qs: string[]): { head: string[]; items: string[] } 
   const head = cut > 0 ? first.slice(0, cut + 5) : '';
   if (!head || !parts.every((p) => p.rest.startsWith(head))) return { head: [], items: qs };
   const cond = head.replace(/\s*일 때\s*$/, '');
-  // 「U = {…}, A = {…}, B = {…}」 → 첫 집합 한 줄 · 나머지 한 줄
+  // 「U = {…}, A = {…}, B = {…}」 → 첫 조건 한 줄 · 나머지 한 줄
   const sets = cond.split(/,\s+(?=[A-Z][A-Za-z₀-₉]*\s*=)/);
   const lines = sets.length > 2 ? [sets[0]!, sets.slice(1).join(', ')] : [cond];
   return { head: lines, items: parts.map((p) => `${p.lab ? `${p.lab} ` : ''}${p.rest.slice(head.length)}`) };

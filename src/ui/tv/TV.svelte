@@ -175,7 +175,7 @@
   // 📺 시안 (2026-11-14): 물건 이름표 아래 부제 = 실제 상태 (성채 열린 층 · 이번 차시 · 허수아비 복습 범위 · 모루 카드 수)
   const floorsOpen = (SUBJ.camp?.floors ?? []).filter((f) => !f.off).length;
   const revNos = $derived(PACKS.filter((p) => (p.steps.some((x) => x.kind === 'monster') || p.boss) && p.no < L.no).map((p) => p.no));
-  const SUBS = $derived<Record<string, string>>({ castle: floorsOpen ? `${floorsOpen}층 열림 · 단원 평가` : '단원 평가', gate: `${L.no}차시 던전${R && !R.state.closed ? ' · 열림' : ''}`, scare: revNos.length ? `복습 ${Math.min(...revNos)}~${Math.max(...revNos)}차시` : '복습', anvil: `연성 ${SUBJ.forge?.unit.CARDS.length ?? 0}장` });
+  const SUBS = $derived<Record<string, string>>({ castle: (() => { const t = (SUBJ.camp?.castleSub ?? '').split(' · ').pop() ?? ''; return floorsOpen ? `${floorsOpen}층 열림${t ? ` · ${t}` : ''}` : t; })(), gate: `${L.no}차시 던전${R && !R.state.closed ? ' · 열림' : ''}`, scare: revNos.length ? `복습 ${Math.min(...revNos)}~${Math.max(...revNos)}차시` : '복습', anvil: `연성 ${SUBJ.forge?.unit.CARDS.length ?? 0}장` });
   const ZONES = $derived([['castle', '🏰 성채던전', feat('citadel')], ['tent', '✏ 출제 공방', feat('author')], ['gate', '🌀 차원문', true]].filter((z) => z[2]) as [string, string, boolean][]);
   const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
   // 🧙 캠프 그림 속 선생님 용사 = 그림 폭에 맞춰 (그림 폭 512 = 2배 · 창이 작거나 폰으로 보면 같이 작아짐 · 🐛 2026-11-13 밤 선생님 캡처 「용사가 캠프 그림을 덮음」)
