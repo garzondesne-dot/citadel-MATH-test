@@ -2,7 +2,7 @@
 //   이 파일은 TV(?role=hall) 에서만 import() 로 불림 → 학생 폰 번들에 PixiJS 가 들어가지 않음(시험이 확인)
 //   층 = 그림자 · 몬스터 · 체력 막대 · 용사단 · ✨ 이펙트 층(fx · 공격 · 데미지 · +EXP · 격파 · #152 · #161 몬스터 공격 이펙트가 여기에 붙음)
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
-import { Application, Assets, ColorMatrixFilter, Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
+import { Application, Assets, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
 import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
@@ -31,8 +31,6 @@ export interface Arena {
   slashStats(): { fps: number; level: number; live: number; queue: number };
   /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
   stone(on: boolean): void;
-  /** 🧑‍🏫 선생님 일격 「💥 소멸!」 = 쓰러진 몬스터를 그 단계 동안 숨김 */
-  monGone(on: boolean): void;
   exp(u: string, text: string): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
@@ -61,7 +59,7 @@ export const JUICE = {
   SHAKE: [0, 0.004, 0.008, 0.014] as const, SHAKE_MS: [0, 180, 280, 460] as const, // 📳 0 작은 공격 · 1 강타(퍼펙트 · 3↑) · 2 필살기 · 3 격파 (화면 높이 비율 · 감쇠)
   NUM_POP: 1.7, NUM_PERFECT: 1.45, // 🔢 튀어오름 처음 배율 · 퍼펙트 글자 배율(노랑)
   SLOW_MS: 500, SLOW: 0.35, // 🐢 마지막 일격 0.5초 느리게
-  WAVE_MS: 300, SHARDS: 6, SHARD_MS: 900, // 💥 충격파 0.3초 안(번짐은 순간만) · 조각 6 × 6 · 0.9초
+  WAVE_MS: 300, // 💥 충격파 0.3초 안(번짐은 순간만) · 조각은 없앰(📜 2026-11-14 문제점 2)
 };
 const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /** 🧩 ⚙ 우리 학교 기능 「✨ 화려한 연출」 + 동작 줄이기 + ?fancy=0 + 이 기기 설정 */
@@ -221,17 +219,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     // 💥 충격파 고리 (root 에 0.3초 · 끝나면 뗌)
     const cx = monCx, cy = monTop + monSize * 0.55, wf = new ShockwaveFilter({ center: { x: cx, y: cy }, amplitude: 30, wavelength: 140, brightness: 1.25, speed: Math.max(600, monSize * 4), radius: Math.max(W(), H()), time: 0 });
     root.filters = [wf]; JS.wave = true; const t0 = performance.now(); const wv = () => { const e = (performance.now() - t0) / 1000; wf.time = e; if (e * 1000 > JUICE.WAVE_MS) { root.filters = []; app.ticker.remove(wv); } }; app.ticker.add(wv);
-    // 🧩 조각: 몬스터 그림을 6 × 6 으로 잘라 튀김 (ParticleContainer · 0.9초)
-    const tx = m.texture, fr = tx.frame, n = JUICE.SHARDS, pw = fr.width / n, ph = fr.height / n, sc = Math.abs(m.scale.x);
-    const pc = new ParticleContainer({ dynamicProperties: { position: true, rotation: true, color: true } }); fx.addChild(pc);
-    const b = m.getBounds(), ps: { p: Particle; vx: number; vy: number; vr: number }[] = [];
-    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const p = new Particle({ texture: new Texture({ source: tx.source, frame: new Rectangle(fr.x + i * pw, fr.y + j * ph, pw, ph) }), x: b.x + (i + 0.5) * pw * sc, y: b.y + (j + 0.5) * ph * sc, scaleX: sc, scaleY: sc, anchorX: 0.5, anchorY: 0.5 });
-      const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) || 1, v = H() * (1.1 + Math.random() * 1.1);
-      pc.addParticle(p); ps.push({ p, vx: (dx / d) * v, vy: (dy / d) * v - H() * 0.5, vr: (Math.random() - 0.5) * 12 });
-    }
-    JS.shards = ps.length; JS.far = 0; m.alpha = 0.25; let last = vt; const p0 = ps.map((s) => [s.p.x, s.p.y]); const g = H() * 2.2;
-    tween(JUICE.SHARD_MS, (q) => { const dt = Math.min(0.05, Math.max(0, (vt - last) / 1000)); last = vt; for (const s of ps) { s.vy += g * dt; s.p.x += s.vx * dt; s.p.y += s.vy * dt; s.p.rotation += s.vr * dt; s.p.alpha = q < 0.6 ? 1 : 1 - (q - 0.6) / 0.4; } JS.far = Math.max(JS.far, ...ps.map((s, i) => Math.hypot(s.p.x - p0[i]![0]!, s.p.y - p0[i]![1]!))); }, () => { pc.destroy({ children: true }); if (!m.destroyed) m.alpha = 1; });
+    // 🧩 조각으로 쪼개져 사라지는 기믹 = 없앰 (📜 2026-11-14 선생님 문제점 2 · 사라졌다 몸통이 돌아오던 버그 포함) → 쓰러진 자세(down) 그대로 · 충격파 · 느리게 · 흔들림만
+    JS.shards = 0; JS.far = 0; void m;
   }
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
     const m = monSp; if (!m) return; const mx = m.x;
@@ -303,7 +292,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, pose, monGone: (on: boolean) => { monC.visible = !on; }, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

@@ -141,7 +141,7 @@
   }
   // 🧑‍🏫 선생님 일격 (📜 2026-11-14 「교사 시연은 학생이랑 달라 · 퍼펙트 뜨면 필살기 공격」 · 정식 hall.js teacherStrike): 왼쪽에서 등장 → 몬스터로 돌진 → 팍(필살기 = 컷인 + 광역)
   //   「시연 · 데미지 없음」 · 이미 쓰러진 몬스터면 「💥 소멸!」 = 번쩍 → 조각 14개 사방 → 0.9초 뒤 사라짐(그 단계 동안) · 데미지 · 기록 없음
-  let goneKey = $state(''), seenStrike = 0; const born = Date.now(); // 🐞 새로 열린 전투 장면은 열리기 전 일격을 다시 틀지 않음 (한 번 누름 = 한 번)
+  let goneKey = $state(''), seenStrike = 0; // 🐞 새로 열린 전투 장면은 열리기 전 일격을 다시 틀지 않음 (born = 아래 · 한 번 누름 = 한 번)
   const stepKey = $derived(`${R.state.step}|${step?.id ?? ''}`);
   $effect(() => { const g = goneKey === stepKey; A?.monGone(g); });
   $effect(() => { const t = tstrike; if (!t || t.at === seenStrike || t.at < born) return; seenStrike = t.at; untrack(() => void teacherStrike(t)); });
