@@ -33,3 +33,5 @@
 
 ## 📚 정식 차시 → 팩 파일 (`official/`)
 `official/set-11.json` = 정식 `lessons/set-11.js`(d51d070 · release fff1568) 를 변환기로 옮긴 뒤 생성기 판 0 ~ 6 을 미리 쓴 판(pool)으로 굳힌 파일(문제 · 정답 = 정식 원문 · 시드 하나라 학생마다 숫자가 같음) · 칸 그림 9칸 이름만(review · c1 · m1 · c2 · m2 · sum · m3 · m4 · boss — 그림 파일은 정식 서버에만 → 올릴 때 「🖼 칸 그림 같이 고르기」로 그 이름의 그림을 고름) · 영상 v11-49 · 50 · 51 연결 · 몬스터 그림 「거울 웅덩이 두꺼비」(garden4)는 앱에 넣음.
+
+`official/set-12.json` = 정식 `lessons/set-12.js`(5bb5c08 · 영상 a40ac77 · release af5b3be) 를 같은 길(convert.mjs --only set-12 → `tools/pack-from-release/freeze.ts` 판 0 ~ 6)로 굳힌 파일 · 몬스터 3(m3 = ⚔ 소레이드) · 형성평가 5문항 · 칸 그림 8칸 이름만(review · c1 · m1 · c2 · m2 · m3 · sum · boss) · 영상 v12-52(c1 · m1 · sum) · v12-53(c2 · m2) · v12-54(m3) — zip 에 같은 이름(끝이 v12-52 …)의 mp4 를 넣으면 연결 · 몬스터 그림(garden0 · garden4 · garden3 · gardenboss0)은 앱에 이미 있음.

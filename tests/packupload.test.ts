@@ -71,6 +71,14 @@ describe('📦 차시 팩 올리기 검사기', () => {
     expect(errs(checkUpload(JSON.stringify(d), look)).map((x) => `${x.at} | ${x.msg}`)).toContain('형성평가 · 버전 0 · 1번 | 정답 「∩」 — 보기 번호(0부터)로 적어요 (「∩」 = 1번)');
   });
   it('JSON 이 아니면 한 줄 이유', () => { expect(checkUpload('{ 깨짐', look).issues[0]!.at).toBe('파일'); });
+  it('📚 정식 12차시 팩 파일 (official/set-12.json · release af5b3be) = 검사 통과 · 판 0 ~ 6 · 소레이드 · 영상 3편 · 칸 그림 8칸', () => {
+    const r = checkUpload(fs.readFileSync('tools/pack-upload/official/set-12.json', 'utf8'), look);
+    expect(errs(r)).toEqual([]);
+    expect(r.pack!.no).toBe(12); expect(Object.keys(r.pack!.monsters)).toEqual(['m1', 'm2', 'm3']);
+    expect(new Set(Object.values(r.pack!.videos ?? {}))).toEqual(new Set(['video/v12-52.mp4', 'video/v12-53.mp4', 'video/v12-54.mp4']));
+    expect(r.pack!.imgCells).toEqual(['review', 'c1', 'm1', 'c2', 'm2', 'm3', 'sum', 'boss']);
+    console.log('12차시', JSON.stringify(r.stats), r.issues.map((x) => `${x.lvl} ${x.at} · ${x.msg}`).join(' | '));
+  });
   it('풀 판 차시(엔진 꼴 · 생성기) = 같은 길 · 통과 · 이미 있는 차시 = 선생님 확인만', () => {
     for (const f of fs.readdirSync('src/subjects/common-math2/lessons')) {
       const r = checkUpload(fs.readFileSync(`src/subjects/common-math2/lessons/${f}`, 'utf8'), look);
