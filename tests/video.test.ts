@@ -37,3 +37,9 @@ describe('🎬 영상 (zip 안 mp4 → 서버 · 📜 2026-11-14)', () => {
     expect(u.images.map((x) => x.name)).toEqual(['c1.png']);
   });
 });
+
+// 🎬 13차시 영상 서고 (📜 2026-11-14 머리 🔨 · 13차시 = 베타 차시 팩만 · ex-13 video = v13-55 · 56 · 57) — 앱 video/ 에 있어야 팩 이름만으로 연결
+import fsV13 from 'node:fs';
+describe('🎬 13차시 영상', () => {
+  it('v13-55 · 56 · 57 = public/video', () => { for (const f of ['v13-55', 'v13-56', 'v13-57']) expect(fsV13.statSync(`public/video/${f}.mp4`).size, f).toBeGreaterThan(100_000); });
+});
