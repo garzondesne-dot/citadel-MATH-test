@@ -20,6 +20,7 @@
   import MyHero from '../camp/MyHero.svelte';
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
+  import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
   import { applyTheme, isTheme, type Theme } from '../../theme/theme';
@@ -264,10 +265,10 @@
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
     <div class="split" class:z1={zoom === 1} class:z2={zoom === 2}>
-      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg {S} {L} id={step.id} alt="{short(step)} 개념"><h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4><p><SymText text={step.say ?? ''} /></p></PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg {S} {L} id={step.id} alt="{short(step)} 개념">{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {#if nextMon}
         {@const qs = qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id)}
-        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg"><PrepImg {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{#each qs.slice(0, 4) as q, k (k)}<p><SymText text={q.question} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg"><PrepImg {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {/if}
     </div>
   {:else if view === 'end'}
@@ -285,7 +286,7 @@
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->
   {#if R?.state.sheet && sheetQs.length}
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
-    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제">{#each sheetQs.slice(0, 6) as q, k (k)}<p><SymText text={q.question} /></p>{/each}</PrepImg></div></div>
+    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제">{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><video src={L.videos[R.state.video]} autoplay controls muted={!sound}></video></div>{/if}
   {#if R?.state.rest}
@@ -430,7 +431,7 @@
   .h { display: flex; flex-direction: column; align-items: center; gap: 0.3cqh; }
   .h span { font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.2cqh 0.7cqw; border-radius: 999px; white-space: nowrap; }
   .h.nin { opacity: 0.4; }
-  .split { position: absolute; left: 2cqw; right: 2cqw; top: 13cqh; bottom: 3cqh; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw; }
+  .split { position: absolute; left: 2cqw; right: 2cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw; }
   .split.z1 { grid-template-columns: 1fr 0fr; } .split.z2 { grid-template-columns: 0fr 1fr; }
   .split.z1 .cpane:nth-child(2), .split.z2 .cpane:nth-child(1) { display: none; }
   .cpane { position: relative; text-align: left; border: 0; border-radius: 2cqh; background: #fbf8f1; color: #1b1a17; padding: 3cqh 2cqw; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; font: inherit; cursor: zoom-in; }
@@ -442,7 +443,12 @@
   .pimg :global(.pi) { height: 100%; } .pimg :global(.pi img) { height: 100%; width: 100%; object-fit: contain; }
   .simg { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; }
   .simg :global(.pi) { height: 100%; } .simg :global(.pi img) { height: 100%; width: 100%; object-fit: contain; }
-  .zm { position: absolute; right: 1.4cqw; bottom: 1.4cqh; font-style: normal; font-size: var(--tv-small); color: #7a6850; }
+  .zm { position: absolute; right: 1.4cqw; bottom: 1.4cqh; font-style: normal; font-size: var(--tv-small); color: #7a6850; border: 1px solid #d8cdb8; border-radius: 99px; padding: 0.2cqh 0.8cqw; background: #fffdf8; }
+  /* 📺 시안: 개념 = 제목 + 회색 수식 상자 + 요약 한 줄 · 문제 = 공통 조건 위에 한 번 + (1)~(n) 짧게 */
+  .cpane .fbox { background: #efeadf; border-radius: 1cqh; padding: 2cqh 1.4cqw; text-align: center; font-family: 'DejaVu Serif', 'Times New Roman', serif; font-style: italic; font-size: var(--tv-title); line-height: 1.3; }
+  .cpane p.sum { font-size: var(--tv-body); font-weight: 600; }
+  .qhead { display: flex; flex-direction: column; gap: 0.4cqh; font-size: var(--tv-title); line-height: 1.3; margin-bottom: 0.6cqh; }
+  .cpane p.qi { font-size: var(--tv-body); line-height: 1.45; }
   .sc { position: absolute; right: 1.5cqw; top: 25cqh; z-index: 3; padding: 1.4cqh 1.4cqw; border-radius: 1.6cqh; background: rgba(8, 9, 12, 0.78); border: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; gap: 0.6cqh; align-items: flex-end; }
   .sc .q { font-size: var(--tv-body); font-weight: 700; }
   .sc .r { font-size: var(--tv-body); } .sc .r b { font-size: var(--tv-big); color: #9fc8ff; }
