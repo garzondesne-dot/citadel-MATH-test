@@ -4,7 +4,8 @@
   import { bindFeatures } from './school/features.svelte';
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
-  import { PACKS, packOf } from './engine/packs';
+  import { PACKS, addPacks, packOf } from './engine/packs';
+  import { PACK_PATH } from './school/packUpload';
   import { dressed } from './ui/rdun';
   import { submitScreen } from './ui/submit.svelte';
   import { answerOf, itemsFor } from './raid/raid';
@@ -48,10 +49,12 @@
   const sv = S as Store & { onNet?: (fn: (s: { connected: boolean }) => void) => () => void };
   sv.onNet?.((s) => (netOk = s.connected));
   // 🧩 #132 차시 = 방이 기억한 차시(meta.lesson) → 지금 열린 수업 → 6차시 · 팩은 src/packs 모두
+  // 📦 올린 차시 팩 (L1 · prep/packs/{id}) → 차시 목록에 (엔진 검사를 통과한 것만)
+  addPacks(Object.values(untrack(() => S).get<Record<string, LessonPack>>(PACK_PATH) || {}).filter((p) => p && p.v === 1 && Array.isArray(p.steps) && !validate(p).length));
   const DEF = packOf(SUBJ.defaultLesson) ?? PACKS[0]!;
   const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
   // 🎲 그림 없는 차시 = 랜덤 던전을 입힘 · 방 meta.rdun = 시험으로 고른 던전 (ui/rdun.ts)
-  const lessonOf = (c: string): LessonPack => dressed(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? DEF, c ? S.get<string>(`rooms/${c}/meta/rdun`) : null);
+  const lessonOf = (c: string): LessonPack => dressed(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? (q.get('mode') === 'test' ? packOf(q.get('lesson')) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? DEF, c ? S.get<string>(`rooms/${c}/meta/rdun`) : null);
   // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름
   let modeKey = $state<'class' | 'test'>(q.get('mode') === 'class' ? 'class' : 'test');
   const P = $derived(PROFILES[modeKey]);

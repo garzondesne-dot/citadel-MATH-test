@@ -21,3 +21,8 @@ const parts = raw.flatMap((p) => (p.parts || []).map((pt): LessonPack | null => 
 }).filter((x): x is LessonPack => !!x));
 export const PACKS: LessonPack[] = [...base, ...parts].sort((a, b) => a.no - b.no);
 export const packOf = (id: string | null | undefined): LessonPack | null => PACKS.find((p) => p.id === id) ?? null;
+/** 📦 올린 차시 팩 더하기 (L1 · prep/packs) — 같은 id 는 올린 판이 대신함 · 차시 번호 순 유지 (PACKS 는 같은 배열을 고침) */
+export function addPacks(list: LessonPack[]): void {
+  for (const p of list) { const k = PACKS.findIndex((x) => x.id === p.id); if (k >= 0) PACKS.splice(k, 1, p); else PACKS.push(p); }
+  PACKS.sort((a, b) => a.no - b.no);
+}

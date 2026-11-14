@@ -1,0 +1,22 @@
+# 📦 차시 팩 올리기 (L1 · 2026-11-14)
+
+교사 폰 **준비 → 도구 → 📦 차시 팩 올리기** (준비 안 된 차시 칸의 단추도 같은 창). 파일(.json) 또는 글 붙여 넣기 → 자동 검사 → 미리 보기 → 저장(`prep/packs/{id}` · 규칙 바꿀 일 없음).
+
+## 양식 = 「📚 차시 팩 입력판」 문서 꼴 + 덧붙인 칸 (손발 ❓#61 추천)
+| 칸 | 뜻 |
+|---|---|
+| `id` · `no` · `title` · `unit` · `goal` · `theme` · `pct` · `next` · `std` | 입력판 그대로 (`id` = 영어 소문자 · 숫자 · -) |
+| `steps[]` | `{ kind: intro · concept · monster · boss, id, title, say?, min? }` |
+| `mons.<id>` | `{ title, sprite, attack?, chain?, vers: [버전 0, 버전 1 … 버전 6] }` — 각 버전 = 문항 배열 · `vers` 가 없으면 `first` = 버전 0 |
+| `boss` | `{ title, sprite, attack?, items, hpItems, tags[], vers: [버전 0 …] }` — 버전마다 문항 번호 순 |
+| 문항 | `{ type, q, a, ch?, sol? }` · `choice` · `multi` = `ch` 보기 필수 · `a` = 보기 번호(0부터) 또는 보기 글자(여러 개 = 「0,3」) · `ox` = O/X · `number` = 정수 · `blanks` = 「⊂,⊄」 칸 순서 · `text` = 「답1\|답2」 |
+| 그림 이름 | 입력판 그대로(`2` → base2:0 · `extra:4` → extra4:0 · `2@h250`) 또는 배치표 이름 |
+
+## 검사 (틀리면 「칸 · 이유 한 줄」 · 오류가 하나라도 있으면 저장 못 함)
+양식 칸 빠짐 · 단계 종류 · 형식 · 보기 번호 범위 · 정답 범위(룬 −9999 ~ 9999) · **정답 재계산**(과목 `recheck.ts`: 원소 나열 ∪ ∩ ᶜ − · 두 집합 n( ) 연립 · 부분집합 2ⁿ — 다시 못 푼 문항은 「눈으로 확인」 수만 셈) · 버전 0 ~ 6(7개까지 · 문항 수 · 형식이 버전 0 과 같아야) · 도감 이름표(그림 · 배경 · 공격 · 형성평가 tags = 개념 칸) · 엔진 검사(문항 0개 등) · 앱에 이미 있는 id = ⚠ 선생님 확인(올린 판이 대신함).
+
+## 풀 판(우리) 차시 = 같은 길
+`src/subjects/common-math2/lessons/set-NN.json`(입력판 반영본 · 변환기 `tools/pack-from-release`) 을 그대로 올리면 엔진 꼴(v: 1 · 생성기)로 검사 · 통과. 입력판 원문만으로는 multi 보기 · blanks 정답이 없어 검사기가 그 칸을 알려 줌.
+
+## 시험
+`npx vitest run tests/packupload.test.ts` (예시 1 · 일부러 틀린 팩 5 · 풀 판 8차시) · `node tools/e2e/packup.cjs <폴더>` (올리기 · 미리 보기 · 저장 · 차시 목록 · 학생 폰 문제 일치)

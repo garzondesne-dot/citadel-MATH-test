@@ -8,6 +8,7 @@
   import SchedEdit from './SchedEdit.svelte';
   import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
+  import PackUpload from './PackUpload.svelte';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
   //   차시 준비 = 기본값 네 칸(체력 기준 · 재도전 · 생각 시간 · 정찰 · 누르면 바꾸기 → 그 차시 수업을 열 때 방에 옮겨 적음) · 학습지 PDF · 영상 · 단계별 그림 n/m
@@ -16,6 +17,7 @@
   const { S, packs, now, ontest, want = '' }: { S: Store; packs: LessonPack[]; now: number; ontest: (L: LessonPack) => void; want?: string } = $props();
   const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id || p.no === l.no));
   const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
+  let upOpen = $state(false); // 📦 차시 팩 올리기 (L1)
   let lid = $state(untrack(() => want || packs[0]?.id || ''));
   const L = $derived(packs.find((p) => p.id === lid) ?? null);
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
@@ -45,7 +47,7 @@
     <button type="button" class="item" disabled><span class="ic">📊</span><span class="tx"><b>엑셀로 차시 만들기</b><small>선생님 본인용 문제 은행 · 테스트 판 · 준비 중</small></span></button>
   {:else if seg === 'lesson' && T}
     <div class="empty"><b class="plus">＋</b><span><b>{T.no}차시 {T.title}</b> · 준비 안 됨</span><small>차시 팩을 올리면 수업 열기에 생겨요</small></div>
-    <button type="button" class="item" disabled><span class="ic">📦</span><span class="tx"><b>차시 팩 올리기</b><small>테스트 판 · 준비 중</small></span></button>
+    <button type="button" class="item" data-k="packup-go" onclick={() => (upOpen = true)}><span class="ic">📦</span><span class="tx"><b>차시 팩 올리기</b><small>입력판 양식 파일 · 검사 · 미리 보기 뒤 저장</small></span></button>
   {:else if seg === 'lesson' && L}
     <p class="lab">기본값 · 이 차시</p>
     <div class="four">{#each Object.keys(STEP) as k (k)}{@const kk = k as keyof Prep}<button type="button" onclick={() => (edit = kk)}><small>{STEP[kk][4]}</small><b>{prep[kk]}{STEP[kk][3]}</b></button>{/each}</div>
@@ -65,11 +67,13 @@
   {:else}
     <div class="list">
       {#each [['📦', '차시 팩 올리기', '새 차시(v1.0) 파일을 올려 차시 목록에 더하기'], ['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
-        <button type="button" class="item" disabled><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d} · 준비 중</small></span></button>
+        {#if ic === '📦'}<button type="button" class="item" data-k="packup-go" onclick={() => (upOpen = true)}><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d}</small></span></button>
+        {:else}<button type="button" class="item" disabled><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d} · 준비 중</small></span></button>{/if}
       {/each}
     </div>
   {/if}
 </div>
+{#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 <div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>
 
 {#if edit}

@@ -13,6 +13,7 @@ if (!target) throw new Error('#app 없음');
 void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void }).bootShow?.('⚠ 서버에 닿지 않아요'); throw e; }).then(async ({ S, where }) => {
   const room = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('join');
   if (room && S.fetch) await S.fetch(`rooms/${room}`).catch(() => null);
+  if (S.fetch) await S.fetch('prep/packs').catch(() => null); // 📦 올린 차시 팩 (L1)
   mount(App, { target, props: { S, where } });
   requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.()); // ⏳ 첫 화면(index.html) 지움 = 앱이 그려진 다음 프레임
 });

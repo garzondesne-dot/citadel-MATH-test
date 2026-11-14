@@ -7,6 +7,8 @@ import { getBossGen, getChainGen, getGen } from './registry';
 //   보스 = Rng(`${seed}|boss|${문항}|${시도}`) (정식 bossItem)
 // 같은 (팩 · 칸 · 시드 · 판)은 늘 같은 문항 → 한 번 만든 것은 다시 씀 (시계가 돌 때마다 다시 만들지 않게 · 정식 bossMade 와 같은 까닭)
 const memo = new Map<string, Question[]>();
+/** 📦 같은 id 의 팩을 다시 올리면(검사 · 미리 보기) 지난 판으로 만든 문항을 지움 */
+export const forget = (id: string): void => { for (const k of [...memo.keys()]) if (k.startsWith(`${id}|`)) memo.delete(k); };
 const remember = (k: string, make: () => Question[]): Question[] => {
   let v = memo.get(k);
   if (!v) {
