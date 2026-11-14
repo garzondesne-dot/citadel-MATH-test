@@ -5,6 +5,8 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
+  import { BOT_MAX, isBot } from '../../raid/bots';
   import { isOld, roster, resetPw, hasAccount, type Live } from '../../school/school';
   import { BUILD } from '../../build';
   import { unlocksOf } from '../../raid/raid';
@@ -25,7 +27,11 @@
   const R = $derived(lr.v.room as Room | null);
   $effect(() => { if (R?.state.closed) untrack(onclose); }); // 교실 TV 에서 문이 닫혀 끝나도 교사 폰이 따라감
   const code = $derived(live.code);
-  const pupils = $derived(roster(live.cls, S));
+  // 🤖 가상 학생 (📜 2026-11-14 · 🧪 테스트 수업만): 번호 칸 뒤에 🤖 칸 · 이름 앞 🤖
+  const botPupils = $derived(R ? Object.entries(R.players || {}).filter(([u, p]) => isBot(u) && (p as { bot?: boolean }).bot).map(([u, p]) => ({ cls: live.cls, num: Number((p as { num?: number }).num) || 101, name: `·${(p as { nick?: string }).nick ?? '🤖'}`, uid: u })).sort((a, b) => a.num - b.num) : []);
+  const pupils = $derived([...roster(live.cls, S), ...botPupils]);
+  const nl = (n: number) => (n > 100 ? `🤖${n - 100}` : String(n));
+  $effect(() => { if (R?.state.closed && bot.code === code) untrack(botsOff); });
   const ids = $derived(R ? activeIds(R, now) : []);
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
@@ -156,10 +162,16 @@
   {#snippet att()}
     <div class="card att" aria-label="번호 칸">
       <div class="hd"><span class="lab">{isLobby(R) ? '들어온 학생 · 판 확인' : '출석 · 판 · 도움'}</span><b class="cnt">{ids.length} <small>/ {expected.length}</small></b></div>
+      {#if live.test}<div class="bots" data-k="bots" role="group" aria-label="가상 학생">
+        <button type="button" class="bsw" class:on={bot.on && bot.code === code} aria-pressed={bot.on && bot.code === code} data-k="bot-sw" onclick={() => setBots(S, L, code, !(bot.on && bot.code === code), bot.n)}>🤖 가상 학생 <b>{bot.on && bot.code === code ? '켬' : '끔'}</b></button>
+        <button type="button" class="bst" aria-label="한 명 줄이기" disabled={bot.n <= 1} onclick={() => (bot.on && bot.code === code ? setBots(S, L, code, true, bot.n - 1) : (bot.n = bot.n - 1))}>−</button>
+        <b class="bn" data-k="bot-n">{bot.n}명</b>
+        <button type="button" class="bst" aria-label="한 명 늘리기" disabled={bot.n >= BOT_MAX} onclick={() => (bot.on && bot.code === code ? setBots(S, L, code, true, bot.n + 1) : (bot.n = bot.n + 1))}>＋</button>
+      </div>{/if}
       <div class="nums c{COLS}" role="group" aria-label="번호 칸">
         {#each pupils as p (p.uid)}
           {@const st = stOf(p.uid)}
-          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{p.num}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{p.num}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
+          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
         {/each}
       </div>
       <div class="q">
@@ -168,7 +180,7 @@
         {:else}
           <button type="button" class="qm" data-k="qm" aria-label="도움 요청 {order.length}명 · 누르면 옛 판 {oldIds.length}명 새로 고침" onclick={reload}><b>🙋{order.length}</b></button>
           <div class="qs" class:more={order.length > 3} data-k="qs">
-            {#each order.slice(0, order.length > 3 ? 4 : 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:wait={k === 3} class:slide={fresh[u] && k < 3} data-u={u} tabindex={k === 3 ? -1 : 0} aria-label="{numOf(u)}번 {pname(u)} 풀어주기" onclick={() => k < 3 && release(u)}>{numOf(u)}<span>{pname(u)}</span></button>{/each}
+            {#each order.slice(0, order.length > 3 ? 4 : 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:wait={k === 3} class:slide={fresh[u] && k < 3} data-u={u} tabindex={k === 3 ? -1 : 0} aria-label="{nl(numOf(u))}번 {pname(u)} 풀어주기" onclick={() => k < 3 && release(u)}>{nl(numOf(u))}<span>{pname(u)}</span></button>{/each}
             {#each Array.from({ length: Math.max(0, 3 - order.length) }) as _, k (k)}<span class="qslot"></span>{/each}
           </div>
         {/if}
@@ -321,6 +333,7 @@
   .rfcap b { color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
   .att { flex: none; padding: 10px 12px; gap: 6px; }
   .att .hd { height: 18px; }
+  .bots { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; } .bsw { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); text-align: left; padding: 0 12px; box-shadow: 0 3px 0 var(--surface); } .bsw b { float: right; color: var(--text-3); } .bsw.on { border-color: var(--accent); } .bsw.on b { color: var(--accent); } .bst { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 18px var(--font); } .bst:disabled { opacity: 0.4; } .bn { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
   .cnt { font-size: 18px; font-variant-numeric: tabular-nums; } .cnt small { font-size: 12px; color: var(--text-2); }
   .nums { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
   .nums.c7 { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
