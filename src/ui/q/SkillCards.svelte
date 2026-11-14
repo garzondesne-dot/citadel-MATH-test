@@ -9,6 +9,7 @@
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Hearts from '../battle/Hearts.svelte';
+  import { paperOn } from '../submit.svelte';
   // ⚡ 다 맞힌 뒤 기술 카드 (📜 2026-11-13 밤 · 베타 v4 · 시안 ⑥ · 머리 🔨 하트 묶음 B · C)
   //   카드 3장(💚 힐 · ⛓ 묶기 · 🌟 진필살기 · 모두 ⚡1) → 아래 한 줄 = 고른 카드 설명 + 「그만하기」 → 노란 단추 = 「💚 힐 주고 🔥 재도전」
   //   ⚡ 1 쓰면 바로 🔥 재도전 판(숫자 바뀐 같은 문제 · 무료 · 데미지 0 · ❤ 그대로) → 그 판을 다 맞혀야 다음 ⚡ · ⚡ 0 = 끝
@@ -41,7 +42,16 @@
   function act() { msg = ''; if (rec.roundOpen) { rest = false; onround(); return; } if (rest) { rest = false; return; } if (sel === 'heal') pick = true; else if (sel === 'bind') spend('bind'); else void useTrue(); }
 </script>
 
-{#if rec.roundOpen || rest}
+{#if paperOn() && !rec.roundOpen && !rest && rec.tokLeft > 0}
+  <!-- 📝 제출 모드 「더 해 볼 것」 = 두 줄만 (친구 돕기 · 연습 문제 · 묶기 · 진필살기 · 전리품 표시 없음 · 2026-11-14 추천대로) -->
+  <div class="bcard sk pmore" data-k="more">
+    <span class="lab">더 해 볼 것 ({rec.tokLeft}번 남음)</span>
+    <button type="button" class="pm" disabled={!can('heal')} onclick={() => { msg = ''; pick = true; }}>친구 돕기 · 기회가 0 인 친구에게 1번</button>
+    <button type="button" class="pm" disabled={!rec.canHeal} onclick={() => { msg = ''; spend('bind'); }}>연습 문제 · 숫자를 바꿔 한 번 더</button>
+    {#if msg}<p class="muted">{msg}</p>{/if}
+  </div>
+  <BottomAction battle text="다음 문제를 기다려요" why="선생님이 다음으로 넘기면 바로 이어져요" />
+{:else if rec.roundOpen || rest}
   <div class="bcard sk">
     <span class="lab acc">{rec.roundOpen ? '🔥 재도전 판이 열려 있어요' : '⏸ 쉬는 중'}</span>
     <p class="muted">{rec.roundOpen ? '다 맞히면 다음 ⚡ 를 쓸 수 있어요 · 틀려도 ❤ 는 그대로' : `남은 ⚡ ${rec.tokLeft} 그대로 · 몬스터가 살아 있는 동안 언제든 이어서`}</p>
@@ -77,6 +87,8 @@
 
 <style>
   .sk { display: flex; flex-direction: column; gap: var(--s2); }
+  .pm { min-height: 44px; border: 1px solid #1d1d1f; border-radius: 6px; background: transparent; color: #1d1d1f; font: 700 14px var(--font); }
+  .pm:disabled { opacity: 0.4; }
   .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
   .card { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 84px; border-radius: 12px; border: 2px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
   .card:active { translate: 0 2px; box-shadow: none; }

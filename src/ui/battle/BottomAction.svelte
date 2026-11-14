@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { pw } from '../submit.svelte';
   import type { Snippet } from 'svelte';
   import { fx } from './fx.svelte';
   import ChainFx from './ChainFx.svelte';
@@ -32,7 +33,7 @@
 {#if smoke}{#key smoke}<div class="smokepuff" aria-hidden="true">{#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i style:left="{6 + i * 11}%" style:animation-delay="{(i % 3) * 0.08}s"></i>{/each}</div>{/key}{/if}
 {#if dock}<div class="spacer" style:height="{h}px" aria-hidden="true"></div>{/if}
 <div class="act" class:dock bind:clientHeight={h}>
-  {#if why && !block}<p class="why">{why}</p>{/if}
+  {#if why && !block}<p class="why">{pw(why)}</p>{/if}
   {#if aux}<div class="row">{@render aux()}</div>{/if}
   <div class="line">
   {#if left && !block}{@render left()}{/if}

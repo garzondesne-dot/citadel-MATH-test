@@ -10,6 +10,8 @@
   import { liveRoom, liveValue } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Scene from './battle/Scene.svelte';
+  import ModeSwitch from './ModeSwitch.svelte';
+  import { paperOn } from './submit.svelte';
   import BottomAction from './battle/BottomAction.svelte';
   import SymSheet from './battle/SymSheet.svelte';
   import MonsterForm from './q/MonsterForm.svelte';
@@ -148,7 +150,10 @@
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
 </script>
 
-{#if battle && step && R}
+{#if paperOn() && R && !isLobby(R)}
+  <!-- 📝 제출 모드 머리줄 (시안 ①~⑥): ‹ 뒤로 · n차시 · 문제 k · 게임 | 제출 -->
+  <header class="ptop" class:pboard={board} data-k="ptop">{#if !board}<a class="pback" href="?" aria-label="뒤로">‹</a>{/if}<b>{L.no}차시 · {step ? (step.kind === 'boss' ? '형성평가' : step.kind === 'concept' ? (step.title.split(' · ')[0] ?? step.title) : probNo) : '수업'}</b><ModeSwitch dark /></header>{#if board}<div class="pgap" aria-hidden="true"></div>{/if}
+{:else if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
     hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN}
     onconcept={cptId ? () => (cpt = true) : undefined}
@@ -176,7 +181,12 @@
     <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p></div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
-    {#if scout?.on}
+    {#if scout?.on && paperOn()}
+      <div class="pscout" data-k="pscout"><b class="ph1">학습지 {probNo} 을 먼저 풀어 두세요</b><p>{Math.ceil(scout.left / 1000)}초 뒤 답 칸이 열려요. 선생님이 일찍 열 수도 있어요.</p></div>
+      <BottomAction disabled={readyNow} why={readyNow ? '준비 완료를 보냈어요' : ''} onmain={() => scout && scoutReady(S, code, scout.id, uid)} mainLabel="준비 완료">
+        {#snippet main()}<span>준비 완료</span>{/snippet}
+      </BottomAction>
+    {:else if scout?.on}
       <div class="bcard">
         <span class="lab acc">{probNo} · 정찰</span>
         <div class="row"><span class="big">{Math.ceil(scout.left / 1000)}초</span><span class="muted">뒤에 몬스터가 나타나요</span></div>
@@ -198,14 +208,17 @@
           <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId ? () => (cpt = true) : undefined} />
         {/if}
       {/key}
-      {#if atkOn && atk}
+      {#if atkOn && atk && paperOn()}
+        <!-- 📝 제출 모드 = 효과 없이 글자 한 줄 (입력 멈춤 규칙은 그대로 · 시간이 지나면 저절로) -->
+        <p class="patk" role="status">{atk.def.lockInput ? '잠깐 멈춤' : '잠깐'} · {Math.max(1, Math.ceil((atk.until - gnow) / 1000))}초</p>
+      {:else if atkOn && atk}
         {#key atk.at}<AttackFx kind={atk.def.id} strong={atk.strong} len={atk.until - atk.at} left={atk.until - gnow} onclear={() => { if (atk) atk = { ...atk, until: gnow }; }} />{/key}
       {/if}
       </div>
     {/if}
   {/if}
 </section>
-{#if gtoast}<div class="gtoast" role="status">{gtoast}</div>{/if}
+{#if gtoast && !paperOn()}<div class="gtoast" role="status">{gtoast}</div>{/if}
 <SymSheet />
 {#if cpt && cptId}
   <Sheet onclose={() => (cpt = false)} mainText="문제로 돌아가기" tall>
@@ -213,7 +226,7 @@
     <PrepImg {S} {L} id={cptId} alt="개념"><p class="say"><SymText text={L.steps.find((s) => s.id === cptId)?.say ?? ''} /></p></PrepImg>
   </Sheet>
 {/if}
-{#if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
+{#if paperOn()}<!-- 📝 제출 모드 = 💎 · 선물 알림 없음 (뒤에서 그대로 쌓임) -->{:else if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
 {#if R && !R.state.closed && R.state.focus && !board}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
@@ -224,6 +237,14 @@
 
 <style>
   .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }
+  .ptop { position: sticky; top: 0; z-index: 5; max-width: 430px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1.5px solid #1d1d1f; background: #f7f6f1; }
+  .ptop.pboard { padding-left: 52px; } .pgap { height: 44px; }
+  .ptop b { flex: 1; min-width: 0; font: 700 17px 'Noto Serif KR', 'Nanum Myeongjo', serif; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pback { width: 32px; height: 32px; display: grid; place-items: center; color: #555; font-size: 22px; text-decoration: none; }
+  .pscout { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+  .pscout .ph1 { font: 700 17px 'Noto Serif KR', serif; color: #1d1d1f; border-bottom: 1.5px solid #1d1d1f; padding-bottom: 4px; }
+  .pscout p { margin: 0; font-size: 14px; color: #6a6a6a; }
+  .patk { position: absolute; left: 0; right: 0; top: 0; z-index: 6; margin: 0; padding: 8px 12px; background: #f7f6f1; border: 1px solid #1d1d1f; border-radius: 6px; font: 700 14px var(--font); color: #1d1d1f; text-align: center; }
   .body { max-width: 430px; margin: 0 auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
   .body.battle { padding-top: var(--s1); }
   .row { display: flex; align-items: baseline; gap: var(--s2); }

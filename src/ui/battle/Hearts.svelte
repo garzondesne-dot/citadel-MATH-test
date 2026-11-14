@@ -6,6 +6,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { sfx } from '../sound.svelte';
+  import { paperOn } from '../submit.svelte';
   // ❤ 노란 단추 오른쪽 고정 칸 (📜 2026-11-13 밤 · 베타 v4 · 시안 ⑤⑥): 풀 때 = ❤ 남은 수(반 하트 · 빈 하트 = 테두리)
   //   💔 틀렸을 때 = 배너 · 안내 없이 줄어든 하트가 커졌다 두 조각으로 갈라져 떨어지며 사라짐(0.7초 · 「쨍」 · 짧은 진동 · 반 하트 = 반쪽만 · 동작 줄이기 = 흐려짐만)
   //   다 맞힌 뒤 = ⚡ 남은 수 · 🔥 재도전 판 = ⚡ + 🔒(판을 다 맞혀야 다음 ⚡)
@@ -28,7 +29,10 @@
   const brk = (i: number) => breaking.find((b) => b.i === i);
 </script>
 
-{#if mode === 'heart'}
+{#if paperOn()}
+  <!-- 📝 제출 모드: 하트 대신 글자 -->
+  <span class="ptx" data-k="left">{mode === 'heart' ? `남은 기회 ${Math.max(0, Math.floor(left))}번` : `더 해 볼 것 ${left}번`}</span>
+{:else if mode === 'heart'}
   <span class="hs" role="img" aria-label="하트 {left} / {total}">
     {#each cells as c, i (i)}
       {@const b = brk(i)}
@@ -48,6 +52,7 @@
 {/if}
 
 <style>
+  .ptx { font: 500 13px var(--font); color: inherit; opacity: 0.85; white-space: nowrap; }
   .hs { display: inline-flex; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 10px; background: rgba(26, 19, 0, 0.14); }
   .cell { position: relative; display: inline-flex; }
   svg .o { fill: none; stroke: rgba(40, 20, 0, 0.6); stroke-width: 1.6; }

@@ -6,6 +6,7 @@
   import type { LessonPack } from './model/types';
   import { PACKS, packOf } from './engine/packs';
   import { dressed } from './ui/rdun';
+  import { submitScreen } from './ui/submit.svelte';
   import { answerOf, itemsFor } from './raid/raid';
   import type { Room } from './model/types';
   import { SUBJ } from './engine/subject';
@@ -91,6 +92,7 @@
   const inClass = $derived(!!lvApp.v.val?.code && (role === 'teacher' || role === 'hall' || (!!login && lvApp.v.val.cls === login.cls) || (role === 'student' && !!code && lvApp.v.val.code === code)));
   // 🫥 #162 ① · #172 학생 화면(첫 화면 · 캠프 · 수업 · 게시판)엔 「BETA · 판」 · 「시험 서버」 글자를 숨김 → 캠프 ⚙ 설정 맨 아래 작은 「판」 줄 · 끊김 붉은 띠 · 새 판 ↻ 는 그대로
   const stuScreen = !role || role === 'student' || role === 'camp';
+  submitScreen(stuScreen); // 📝 제출 모드 = 학생 화면만
   const verOld = $derived(!!site && site !== BUILD && !inClass);
   // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
   //   수업 중 = #163 ④ 그대로 숨김(끝나면 보임) · 게시판 던전 · 허수아비 진행 중 · 오래 켜 둔 화면 = 띠만

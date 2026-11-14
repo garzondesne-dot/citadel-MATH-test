@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import SkillCards from './SkillCards.svelte';
   import Hearts from '../battle/Hearts.svelte';
@@ -45,7 +46,7 @@
   const pracShown = $derived((!prac && rec.done) || pDone || pFail);
   $effect(() => { const k = `${pass}|${pracShown}`; if (pracShown && k !== armKey) { armKey = k; armAt = untrack(() => now) + 1500; } });
   let toast = $state('');
-  const stName = (i: number, n: number) => (i === n - 1 ? '대장' : `졸개 ${'①②③④⑤⑥'[i]}`);
+  const stName = (i: number, n: number) => (paperOn() ? `단계 ${i + 1} / ${n}` : i === n - 1 ? '대장' : `졸개 ${'①②③④⑤⑥'[i]}`);
   let flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | null = null;
   function go() {
     if (!q || !ready || locked || flip) return;
@@ -117,7 +118,7 @@
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && true}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
-    {#snippet main()}<span>{stName(stage, pItems.length)} {prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
+    {#snippet main()}<span>{pw(`${stName(stage, pItems.length)} ${prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격`)}</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 

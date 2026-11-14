@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
@@ -76,7 +77,7 @@
     {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>
-    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
+    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{paperOn() ? (bonusMode ? '보너스 문항 제출' : r.roundOpen ? '재도전 제출' : '모두 제출') : bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
   </BottomAction>
 {/if}
 

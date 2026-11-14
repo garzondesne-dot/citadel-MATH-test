@@ -28,6 +28,8 @@
   import ThemePicker from '../ThemePicker.svelte';
   import Board from '../board/Board.svelte';
   import Anvil from '../forge/Anvil.svelte';
+  import ModeSwitch from '../ModeSwitch.svelte';
+  import { paperOn } from '../submit.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
 
@@ -165,7 +167,21 @@
   const fromMe = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me';
 </script>
 
-<div class="camp">
+<div class="camp" class:paper={paperOn()}>
+  {#if paperOn()}
+  <!-- 📝 제출 모드 v2 ⑦ 수업 밖 = 「오늘 할 일」 (학습 이름 + 통일 용어 괄호 한 번 · 그림 없음 · 💎 없음) -->
+  <header class="ptop" data-k="ptop">{#if pupil}<button type="button" class="pback" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="pback" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b>오늘 할 일</b><button type="button" class="pset" onclick={() => (sheet = 'set')}>설정</button><ModeSwitch dark /></header>
+  <section class="ptodo" data-k="todo" aria-label="오늘 할 일">
+    <p class="pwho">{fromMe ? '선생님' : me.nick} · {SUBJ.name}</p>
+    <ul>
+      <li><button type="button" data-todo="gate" onclick={() => tap('gate')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{L.no}차시 수업</b><small>{open ? '지금 · 선생님과 함께' : '선생님이 수업을 열면 들어가요'}</small></span>{#if open}<em>지금</em>{/if}</button></li>
+      {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
+      {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{SUBJ.camp.castleSub.split(' · ').pop()} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
+      {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
+      <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
+    </ul>
+  </section>
+  {:else}
   <!-- #145 ② 짧은 화면(360 × 640 등): 장면만 비율 그대로 줄여 가운데 · 정보판 · 주요 단추는 늘 같은 자리(겹침 0) -->
   <div class="stagebox" style:--ar={W / H}>
   <div class="stage" role="presentation" onclick={ground} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
@@ -222,6 +238,7 @@
     </div>
     <p class="next">{nextLine}</p>{/if}
   </section>
+  {/if}
   <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel="{L.no}차시 던전 입장">
     {#snippet aux()}{#if !open}<button type="button" class="codebtn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}
     {#snippet main()}<span>{open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
@@ -247,7 +264,7 @@
   <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
     {#snippet title()}⚙ 설정{/snippet}
     {#if feat('theme')}<span class="slab">🎨 테마</span>
-    <ThemePicker now={theme} {feats} onpick={pickTheme} paper />{/if}
+    <ThemePicker now={theme} {feats} onpick={pickTheme} paper sub />{:else}<span class="slab">📝 보기</span><ModeSwitch dark />{/if}
     <span class="slab">🔊 소리</span>
     <SoundToggles />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
@@ -290,6 +307,20 @@
 {#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
 <style>
+  /* 📝 제출 모드 v2 ⑦ 오늘 할 일 */
+  .camp.paper { background: transparent; }
+  .ptop { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 12px; background: #f7f6f1; border-bottom: 1.5px solid #1d1d1f; }
+  .ptop b { flex: 1; min-width: 0; font: 700 18px var(--serif); color: #1d1d1f; }
+  .pback { min-width: 44px; min-height: 44px; display: grid; place-items: center; border: 0; background: none; color: #1d1d1f; font: 700 24px var(--font); text-decoration: none; }
+  .pset { min-height: 32px; padding: 0 10px; border: 1px solid #1d1d1f; border-radius: 4px; background: #fff; color: #1d1d1f; font: 700 13px var(--font); }
+  .ptodo { flex: 1; padding: 12px 16px 16px; }
+  .pwho { margin: 4px 0 10px; font: 500 14px var(--font); color: #4a4a4f; }
+  .ptodo ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .ptodo li button { width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 6px 2px; border: 0; border-bottom: 1px solid #c9c6bc; background: none; color: #1d1d1f; text-align: left; font: inherit; cursor: pointer; }
+  .ptodo .ck { flex: none; font: 400 22px var(--serif); color: #1d1d1f; width: 22px; }
+  .ptodo .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .ptodo .tx b { font: 700 16px var(--serif); } .ptodo .tx small { font-size: 13px; color: #6d6d73; }
+  .ptodo em { font-style: normal; font: 700 13px var(--font); color: #c8312b; border: 1.5px solid #c8312b; border-radius: 3px; padding: 1px 6px; }
   /* 📋 게시판 던전 = 파란 포털 빛 (게시판 그림이 오기 전 자리 · 평소 불씨) */
   .outq { margin: 0; font-size: 16px; color: var(--text-2); }
   .out:disabled, .mi:disabled { opacity: 0.45; }

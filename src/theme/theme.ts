@@ -5,6 +5,7 @@
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './tokens.css';
 import './ui.css';
+import './submit.css'; // 📝 제출 모드 v2 (:root[data-submit] · 학생 화면만)
 
 export type Theme = 'gold' | 'navy' | 'cloud' | 'classic' | 'lava' | 'star' | 'sakura' | 'sand' | 'deep' | 'porcelain' | 'parchment';
 /** 업적 칸: 지금 몇 번 했는지 (없는 기능 = null → 조건 줄만) */

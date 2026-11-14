@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
@@ -141,7 +142,7 @@
 {#if showDone}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={reveal ? reveal.flash : lastGold} still={!reveal} />
   <div class="bcard">
-    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b><span>데미지 {rec.best} · {v4 ? `⚡ ${rec.tokLeft} · 기술 하나 = 🔥 재도전 판` : '남은 기회는 연습'}</span></span></div>
+    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b>{#if !paperOn()}<span>데미지 {rec.best} · {v4 ? `⚡ ${rec.tokLeft} · 기술 하나 = 🔥 재도전 판` : '남은 기회는 연습'}</span>{/if}</span></div>
     {#if !v4}<EnergyCard {S} {L} {R} {code} {mid} {uid} {now} />{/if}
   </div>
   {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={() => { practice = true; tableHold = false; }} />{:else}
@@ -165,11 +166,11 @@
       <span class="lab acc">{no} · 데미지 {rec.best} · 소문제 {wrongIdx.map((i) => i + 1).join(', ')} 이 틀렸어요</span>
       <p class="muted">맞힌 것은 그대로 잠기고, 틀린 것만 빈칸으로 다시 풀어요 · 공격 단추의 하트가 하나 줄었어요</p>
     {:else}
-      <span class="lab acc">{no}</span>
+      <span class="lab acc">{no}{paperOn() ? ' 채점' : ''}</span>
     {/if}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel="다음 틀린 문제">
-    {#snippet main()}<span>{reveal ? '채점 중…' : '다음 틀린 문제 ▶'}</span>{#if v4 && !reveal}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
+    {#snippet main()}<span>{reveal ? '채점 중…' : paperOn() ? `(${(wrongIdx.find((i) => !filled(items[i] as Question, given[i] ?? null)) ?? wrongIdx[0] ?? 0) + 1}) 다시 풀기` : '다음 틀린 문제 ▶'}</span>{#if v4 && !reveal}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else if q}
   {#if v4 && attempt > 0 && rec.perfect}
@@ -193,7 +194,7 @@
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
     {#snippet main()}
-      {#if allFilled && v4}<span>{rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격'}</span>{#if rec.perfect}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}
+      {#if allFilled && v4}<span>{pw(rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격')}</span>{#if rec.perfect}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}
       {:else if allFilled}<span>{fixing ? '다시 공격' : rec.perfect ? '연습 공격' : '공격'}</span><Slots total={rec.slots} marks={marks} heal={rec.healed} />
       {:else}<span>{fixing ? '다음 틀린 문제 ▶' : '다음 소문제 ▶'}</span>{/if}
     {/snippet}

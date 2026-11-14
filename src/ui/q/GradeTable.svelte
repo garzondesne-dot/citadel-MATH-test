@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { paperOn } from '../submit.svelte';
   // 🧾 채점표 (#113 · 시안 ⑩ v2): 공격하면 가로 답안 칸 → 세로 표 · 소문제마다 한 줄 = 번호 · 문제(짧게 · 넘치면 …) · 내 답 전체(자르지 않음 · 줄바꿈) · ✔/✘ 원 배지
   //   still = 다시 그릴 때 뒤집힘 없음(결과 화면) · wait = 아직 안 뒤집힘 · ok / bad = 뒤집힌 결과 · 다 맞히면 표 금빛 · 줄을 누르면 그 소문제로(✘ 줄만 · onpick 이 있을 때)
   export type GRow = { q: string; a: string | null; state: 'wait' | 'ok' | 'bad' | 'keep' };
@@ -7,6 +8,7 @@
     { rows: GRow[]; gold?: boolean; still?: boolean; onpick?: (i: number) => void; label?: (i: number) => string } = $props();
 </script>
 
+{#if paperOn() && rows.length && rows.every((r) => r.state !== 'wait')}<p class="pmark" data-k="pscore"><span class="pscore">{rows.filter((r) => r.state === 'ok' || r.state === 'keep').length} / {rows.length}</span></p>{/if}
 <div class="gt" class:gold class:still role="list" aria-label="채점표">
   {#each rows as r, i (i)}
     {@const pick = !!onpick && r.state === 'bad'}
@@ -19,6 +21,7 @@
 </div>
 
 <style>
+  .pmark { margin: 4px 0 0; text-align: right; }
   .gt { padding-top: 6px; display: flex; flex-direction: column; gap: 6px; perspective: 500px; }
   .r { box-sizing: border-box; display: grid; grid-template-columns: 22px minmax(56px, 1fr) auto 22px; align-items: center; gap: 8px; min-height: var(--tap); padding: 4px 10px; border-radius: var(--r-sm); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; text-align: left; width: 100%; }
   .n { font-size: var(--fs-small); color: var(--text-3); font-weight: 700; }

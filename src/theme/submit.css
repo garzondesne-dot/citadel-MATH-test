@@ -1,0 +1,66 @@
+/* 📝 제출 모드 v2 = 학습지 꼴 (📜 2026-11-14 선생님 · DECISIONS 「📝 제출 모드 v2」 · 시안 submit-mode-v2.html)
+   학생 화면에서만 :root[data-submit] (submit.svelte.ts) · 다른 테마 · 어두운 설정 무시 · 바탕 한 가지 고정
+   파란 펜 = 내 답 · 빨간 펜 = 채점 · 검은 바탕 = 주요 단추 · 그림 · 효과 · 이모지 없음 */
+:root[data-submit] {
+  --bg: #f7f6f1; --surface: #ffffff; --surface-2: #f1efe8; --text: #1d1d1f; --text-2: #4a4a4f; --text-3: #6d6d73;
+  --accent: #1d1d1f; --on-accent: #ffffff; --accent-sh: #1d1d1f; --line: #c9c6bc; --press-sh: transparent; --bad-bg: #fbe9e7;
+  --ok: #1f3a68; --bad: #c8312b; --pen: #1f3a68; --red: #c8312b; --rule: #d9dde3;
+  --serif: 'Noto Serif KR', 'Noto Serif CJK KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
+  color-scheme: light;
+}
+:root[data-submit] body { background: repeating-linear-gradient(to bottom, transparent 0 25px, var(--rule) 25px 26px), #f7f6f1; color: #1d1d1f; }
+:root[data-submit] *, :root[data-submit] *::before, :root[data-submit] *::after { animation: none !important; transition: none !important; text-shadow: none !important; }
+
+/* 그림 · 효과 · 장면 = 없음 (문제 그림 .vq · .pimg 는 남김) */
+:root[data-submit] canvas,
+:root[data-submit] .edge, :root[data-submit] .fx, :root[data-submit] .sprite, :root[data-submit] .hero,
+:root[data-submit] .gtoast, :root[data-submit] .gift, :root[data-submit] .pill.gem, :root[data-submit] .wallet,
+:root[data-submit] .camp-art, :root[data-submit] .lootfx { display: none !important; }
+:root[data-submit] img:not(.vq img):not(.pimg):not(.pimg img) { display: none !important; }
+
+/* 카드 = 종이 위에 바로 (테두리 · 그림자 없음) */
+:root[data-submit] .bcard { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+:root[data-submit] .lab.acc, :root[data-submit] .tag { background: transparent !important; color: #1d1d1f !important; border: 1px solid #1d1d1f; border-radius: 3px; }
+:root[data-submit] .muted { color: #6d6d73 !important; }
+
+/* 문제 = 명조 */
+:root[data-submit] .qt, :root[data-submit] .q1, :root[data-submit] .q2, :root[data-submit] .qt *, :root[data-submit] .q1 *, :root[data-submit] .q2 *, :root[data-submit] .qhead { font-family: var(--serif) !important; color: #1d1d1f !important; }
+
+/* 내 답 = 파란 펜 · 고른 칩 = 옅은 파랑 */
+:root[data-submit] .chip, :root[data-submit] .opt { background: #fff !important; color: #1d1d1f !important; border: 1px solid #b9b7ae !important; border-radius: 4px !important; box-shadow: none !important; }
+:root[data-submit] .chip.on, :root[data-submit] .opt.on { background: #e3ebf7 !important; color: #1f3a68 !important; border-color: #1f3a68 !important; }
+:root[data-submit] .box, :root[data-submit] .cell .tx, :root[data-submit] .gt .a, :root[data-submit] input { color: #1f3a68 !important; }
+:root[data-submit] .cell { background: #fff !important; border: 1px solid #b9b7ae !important; border-radius: 4px !important; box-shadow: none !important; }
+:root[data-submit] .cell.now { border: 2px solid #1f3a68 !important; }
+:root[data-submit] .runepad button, :root[data-submit] .rune { background: #fff !important; color: #1d1d1f !important; border: 1px solid #b9b7ae !important; box-shadow: none !important; }
+
+/* 단추 = 주요는 검정 · 보조는 테두리 */
+:root[data-submit] .btn { box-shadow: none !important; border-radius: 4px !important; }
+:root[data-submit] .btn.pmain { background: #1d1d1f !important; color: #fff !important; border: 0 !important; }
+:root[data-submit] .btn.pmain:disabled { background: #8a8a8f !important; }
+:root[data-submit] .btn:not(.pmain) { background: #fff !important; color: #1d1d1f !important; border: 1px solid #1d1d1f !important; }
+
+/* 채점 = 빨간 펜 ○ ✗ (색 + 기호) · 답안 칸 배지도 같은 꼴 */
+:root[data-submit] .gt .m { background: transparent !important; color: transparent !important; position: relative; }
+:root[data-submit] .gt .g-ok .m::before, :root[data-submit] .gt .g-keep .m::before { content: '○'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--red); font: 700 24px var(--serif); }
+:root[data-submit] .gt .g-bad .m::before { content: '✗'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--red); font: 700 22px var(--serif); }
+:root[data-submit] .badge { background: #fff !important; color: var(--red) !important; box-shadow: none !important; border: 1px solid var(--red); }
+:root[data-submit] .cell.s-ok, :root[data-submit] .cell.s-bad, :root[data-submit] .cell.s-oldbad { border-color: #b9b7ae !important; }
+:root[data-submit] .pscore { display: inline-block; transform: rotate(-6deg); color: var(--red); font: 700 26px var(--serif); border: 2px solid var(--red); border-radius: 4px; padding: 0 10px; line-height: 1.3; }
+/* 채점표 = 공책 줄 위에 한 줄씩 (칸 없음) */
+:root[data-submit] .gt .r { background: transparent !important; border: 0 !important; border-bottom: 1px solid #c9c6bc !important; border-radius: 0 !important; }
+:root[data-submit] .gt .n { color: #1d1d1f !important; font-family: var(--serif); }
+:root[data-submit] .gt .q { color: #4a4a4f !important; font-family: var(--serif); }
+/* 그림자 · 반짝임 없음 (학습지) */
+:root[data-submit] button, :root[data-submit] .card, :root[data-submit] .okline { box-shadow: none !important; }
+:root[data-submit] .okline { background: transparent !important; border: 0 !important; border-bottom: 1.5px solid #1d1d1f !important; border-radius: 0 !important; color: #1d1d1f !important; }
+:root[data-submit] .okline .ic { display: none; }
+:root[data-submit] .okline b { font-family: var(--serif); }
+:root[data-submit] .side { background: #fff !important; color: #1d1d1f !important; border: 1px solid #1d1d1f !important; border-radius: 4px !important; }
+:root[data-submit] .tag { color: #1f3a68 !important; border-color: #1f3a68 !important; }
+:root[data-submit] .rune-slot { background: #fff !important; color: #1f3a68 !important; border: 0 !important; border-bottom: 1.5px solid #1d1d1f !important; border-radius: 0 !important; box-shadow: none !important; font-family: var(--serif); }
+:root[data-submit] .rune-slot.empty { color: #8a8a8f !important; }
+/* 답 줄 = 「답 { }」 밑줄 위 파란 펜 */
+:root[data-submit] .ans { background: transparent !important; border: 0 !important; border-bottom: 1.5px solid #1d1d1f !important; border-radius: 0 !important; color: #1f3a68 !important; font-family: var(--serif); font-weight: 700; }
+:root[data-submit] .ans small { color: #1d1d1f !important; font-family: var(--font); }
+:root[data-submit] .ans .ph { color: #8a8a8f !important; font-weight: 400; }

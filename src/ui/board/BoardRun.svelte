@@ -173,6 +173,13 @@
 
 <style>
   .run { position: fixed; inset: 0; z-index: 18; background: var(--bg); overflow: auto; }
+  /* 📝 제출 모드: 위 막대(‹ · 제목 · 게임 | 제출) 아래 한 줄 = 남은 시간 · 도구 (글자만 · 종이 꼴) */
+  :global(:root[data-submit]) .quit { background: transparent; color: #1d1d1f; border-radius: 0; }
+  :global(:root[data-submit]) .tline { top: 56px; background: #d9dde3; } :global(:root[data-submit]) .tline i { background: #1d1d1f; }
+  :global(:root[data-submit]) .tleft { top: 64px; background: transparent; color: #1d1d1f; padding: 0; }
+  :global(:root[data-submit]) .tools { top: 62px; right: auto; left: max(16px, calc(50% - 199px)); }
+  :global(:root[data-submit]) .tools button { background: #fff; color: #1d1d1f; border: 1px solid #1d1d1f; border-radius: 4px; }
+  :global(:root[data-submit]) .team { top: 100px; } :global(:root[data-submit]) .team span { background: #fff; color: #1d1d1f; border: 1px solid #b9b7ae; }
   .tline { position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 30; background: rgba(255, 255, 255, 0.12); max-width: 430px; margin: 0 auto; }
   .tline i { display: block; height: 3px; background: var(--accent); transition: width 0.3s linear; }
   .quit { position: fixed; top: 6px; left: max(4px, calc(50% - 211px)); z-index: 30; width: 44px; height: 44px; border: 0; border-radius: 22px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: 22px; }

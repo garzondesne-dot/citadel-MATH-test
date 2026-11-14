@@ -4,6 +4,7 @@
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
   import IceBlock from './IceBlock.svelte';
+  import ModeSwitch from '../ModeSwitch.svelte';
   import { atkQ, guardQ } from './fx.svelte';
   import { guard } from '../fx/aura';
   import { attack, canUlt, preload as atkPreload, type Pose } from '../fx/attack';
@@ -71,6 +72,7 @@
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
     {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}
     <span class="sp"></span>
+    <ModeSwitch /><!-- 📝 게임 | 제출 (2026-11-14) -->
     {#if timeLeftMs != null && timeLeftMs <= 5 * 60000}<span class="pill time" aria-label="남은 시간">⏱ {mm(Math.max(0, timeLeftMs))}</span>{/if}
     <span class="pill" aria-label="마정석 {gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{gem}</span>
   </div>
