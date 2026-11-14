@@ -1,4 +1,5 @@
 import { TEST_ADDR } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
+import './oldUrl'; // 🔗 옛 정식 주소(?code= · &key=)를 지금 꼴로 · 키는 주소에서 곧바로 지움 (출시 막는 것 8)
 import { mount } from 'svelte';
 import App from './App.svelte';
 import { applyTheme, savedTheme } from './theme/theme';

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { oldHall } from '../oldUrl';
   import { boxGet, boxSet } from '../school/secretBox';
   import { onDestroy, untrack } from 'svelte';
   import type { DungeonProfile, LessonPack, Store } from '../model/types';
@@ -64,6 +65,8 @@
     if (!(await register(live.code, keyIn))) kerr = '비밀번호가 달라요 · 교사 폰에서 다시 확인해요';
   }
   const ready = $derived(!trying && /^\d{4}$/.test(keyIn) && (!byCode || /^\d{6}$/.test(codeIn.trim())));
+  // 🔗 옛 정식 TV 주소(?role=hall&code=…&key=…) = 코드로 들어가기에 채워 한 번 (키는 oldUrl 이 이미 주소에서 지움)
+  if (oldHall && srv && !admin) untrack(() => { byCode = true; codeIn = oldHall!.code; keyIn = oldHall!.key; void enter().then(() => { keyIn = ''; }); });
 </script>
 
 {#if !gated}
