@@ -8,7 +8,7 @@
   //   fire = 아래 불길이 보기 칸을 가림(주요 단추 자리 🧯 꾹) · smash = 카드 흔들(±6px · 기울기 · 0.8초 감쇠) · ice = 주요 단추가 얼음(BottomAction)
   //   #161 새 6 · 특수 3: confuse = 보기 칩 한 바퀴 빙글 → 제자리 · wind = 문제 글이 바람에 흩날렸다 제자리 · poison = 카드 테두리 보라 세 번 두근
   //   bind = 사슬이 카드를 감음(입력 막힘) → 좌우로 3번 쓸면 끊김 · sleep = 화면이 흐려지며 눈 모양으로 좁아져 깜깜 + Zzz → 두 번 빠르게 톡 = 번쩍
-  //   dark = 손가락 닿은 곳만 손전등 원 · 점점 밝아짐 · mirror = 문제 글 좌우 뒤집힘 → 돌아옴 · lock = 주요 단추 🔒 + 떨어진 🗝 끌어다 꽂기 · scale = 카드가 기울었다 균형
+  //   dark = 손가락 닿은 곳만 손전등 원 · 점점 밝아짐 · mirror = 문제 글 좌우 뒤집힘 → 돌아옴 · scale = 카드가 기울었다 균형
   //   strong(분노) = 같은 효과 · 테두리 붉게(장면 띠도 붉음) · 시간은 등록 표 attackMs 가 정함
   const { kind, len, left, onclear, strong = false }: { kind: string; len: number; left: number; onclear: () => void; strong?: boolean } = $props();
   let host: HTMLDivElement;
@@ -76,17 +76,8 @@
   // 🌑 어둠: 손가락 닿은 곳만 보임 (덮개는 누름을 막지 않음 · 화면 어디를 눌러도 그 자리가 밝아짐)
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }
-  // 🔒 자물쇠: 문제 카드 안 아무 데나 떨어진 🗝 → 끌어서 주요 단추(🔒) 위에 놓으면 풀림
-  let kx = $state(0), ky = $state(0), drag = $state(false), inserted = $state(false), k0 = { x: 0, y: 0, px: 0, py: 0 };
-  function kdown(e: PointerEvent) { drag = true; k0 = { x: kx, y: ky, px: e.clientX, py: e.clientY }; (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId); }
-  function kmove(e: PointerEvent) { if (!drag) return; kx = k0.x + e.clientX - k0.px; ky = k0.y + e.clientY - k0.py; }
-  function kup(e: PointerEvent) {
-    if (!drag) return; drag = false; const b = document.querySelector('.act .pmain.lockd')?.getBoundingClientRect();
-    if (b && e.clientX >= b.left - 12 && e.clientX <= b.right + 12 && e.clientY >= b.top - 16 && e.clientY <= b.bottom + 12) { inserted = true; fx.chain.open = true; later(260, shatter); return; } // 🗝 꽂음 → 자물쇠 고리 튕김 → 사슬 부서짐
-  }
   onMount(() => {
     if (kind === 'glitch') glitch(); if (kind === 'fog') fog(); if (kind === 'confuse') confuse();
-    if (kind === 'lock' && host) { const r = host.getBoundingClientRect(); kx = Math.round(r.width * (0.2 + Math.random() * 0.55)); ky = Math.round(Math.min(r.height - 60, 40 + Math.random() * Math.max(40, r.height - 120))); }
     if (kind === 'dark') { const o = { capture: true } as const; for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) window.addEventListener(t, light as EventListener, o); return () => { for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) window.removeEventListener(t, light as EventListener, o); }; }
   });
   const p = $derived(Math.max(0, Math.min(1, left / Math.max(1, len))));
@@ -131,8 +122,6 @@
       <i class="ink k1"></i><i class="ink k2"></i><i class="ink k3"></i><i class="ink k4"></i><i class="ink k5"></i><i class="ink k6"></i><i class="smoke"></i>
     </div>
     <span class="hint dh">👆 손가락을 대면 그 자리가 보여요</span>
-  {:else if kind === 'lock'}
-    {#if !inserted}<span class="key" class:drag role="button" tabindex="-1" aria-label="열쇠" style:left="{kx}px" style:top="{ky}px" onpointerdown={kdown} onpointermove={kmove} onpointerup={kup} onpointercancel={kup}>🗝</span>{/if}
   {/if}
 </div>
 
@@ -181,10 +170,8 @@
   .lids.woke .zzz { animation: zgone 0.2s forwards; } @keyframes zgone { to { opacity: 0; transform: translateY(-30px) scale(1.4); } }
   .zzz { position: absolute; right: 18%; top: 34%; animation: zfl 1.4s ease-in-out infinite; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }
   .lids .hint { bottom: auto; top: 50%; transform: translate(-50%, -50%); }
-  .key { position: absolute; z-index: 7; width: 48px; height: 48px; margin: -24px 0 0 -24px; display: grid; place-items: center; font-size: 32px; pointer-events: auto; touch-action: none; cursor: grab; filter: drop-shadow(0 2px 0 #000) drop-shadow(0 0 6px rgba(245, 184, 74, 0.9)); }
-  .key.drag { cursor: grabbing; transform: scale(1.15); }
   .afx.sleep { z-index: 7; }
-  .afx.lock, .afx.dark, .afx.wind, .afx.mirror, .afx.scale, .afx.poison, .afx.confuse { pointer-events: none; }
+  .afx.dark, .afx.wind, .afx.mirror, .afx.scale, .afx.poison, .afx.confuse { pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { :global(.qwrap) :global(.bcard) { animation: none !important; } }
   /* 🌀 혼란: 출렁(기울기 · 기울어짐 · 색 살짝 돌기) · 보기 자리 바꿈(비틀 → 남의 자리 → 비틀 → 제자리) */
   :global(.bcard.cwob) { animation: cwob var(--clen, 3000ms) ease-in-out; transform-origin: 50% 40%; }

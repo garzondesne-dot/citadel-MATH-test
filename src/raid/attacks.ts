@@ -25,9 +25,9 @@ export const ATTACKS: Record<string, AttackDef> = {
   bind: { ms: 3000, id: 'bind', name: '속박', icon: '⛓', tag: '⛓ 속박 공격!', lockInput: true, gesture: 'swipe', elem: 'bind' },
   sleep: { ms: 3000, id: 'sleep', name: '수면', icon: '💤', tag: '💤 수면 공격!', lockInput: false, gesture: 'dtap', elem: 'sleep' },
   dark: { ms: 3000, id: 'dark', name: '어둠', icon: '🌑', tag: '🌑 어둠 공격!', lockInput: false, gesture: 'touch', elem: 'confuse' },
-  // #161 던전 특수 3 (그 차시 보스만 · 짝 표 둘 다음 셋째)
+  // #161 던전 특수 2 (그 차시 보스만 · 짝 표 둘 다음 셋째 · 🔒 자물쇠 뺌)
   mirror: { id: 'mirror', name: '반사', icon: '🪞', tag: '🪞 반사 공격!', lockInput: false, elem: 'confuse' },
-  lock: { ms: 3000, id: 'lock', name: '자물쇠', icon: '🔒', tag: '🔒 자물쇠 공격!', lockInput: false, gesture: 'drag', elem: 'bind' },
+  // 🔒 자물쇠 = 뺌 (📜 2026-11-14 선생님 「A 뺌」 · 머리 e1880f6 · 9차시 보스 = 짝 표 둘만)
   scale: { id: 'scale', name: '저울', icon: '⚖️', tag: '⚖️ 저울 공격!', lockInput: false, elem: 'stun' },
 };
 /** 갤러리 · 시험 순서 (지금 6 → 새 6 → 특수 3) */

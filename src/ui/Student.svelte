@@ -93,7 +93,7 @@
   const memo = {};
   function strike(def: AttackDef, ms: number, strong = false) {
     atk = { def, at: gnow, until: gnow + ms, strong }; iceEnd = 'melt';
-    fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.lock = def.id === 'lock'; fx.bind = def.id === 'bind'; fx.chain = { cut: 0, broken: false, open: false };
+    fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.bind = def.id === 'bind'; fx.chain = { cut: 0, broken: false, open: false };
     sfx((def.id === 'wind' ? ELEM_FX.gale : ELEM_FX[def.elem])?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
   }
   $effect(() => {
@@ -124,11 +124,11 @@
   // 손풀기로 풀림 (얼음 4번 · 화염 꾹 1초) · 시간이 지나면 저절로
   let iceEnd = $state<'shatter' | 'melt'>('melt'); // 🧊 얼음이 톡 4번으로 끝났나(깨짐) · 시간으로 끝났나(녹음)
   $effect(() => { if (atk && atk.until > gnow && atk.def.id === 'ice' && fx.ice === 0) untrack(() => (iceEnd = 'shatter')); });
-  $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire) || (atk.def.id === 'lock' && !fx.lock))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
-  $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; fx.lock = false; fx.bind = false; }); });
+  $effect(() => { if (atk && atk.until > gnow && ((atk.def.id === 'ice' && fx.ice === 0) || (atk.def.id === 'fire' && !fx.fire))) untrack(() => { if (atk) atk = { ...atk, until: gnow }; }); });
+  $effect(() => { if (!atkOn) untrack(() => { fx.ice = 0; fx.fire = false; fx.bind = false; }); });
   // 화면 시험 고리(#151 · #152 · 학생 화면엔 안 보임 · 출시 전 메모 5): 지금 몬스터 공격을 한 번 맞음 (종류 = 등록 표 id)
   (globalThis as { __strike?: (ms?: number, id?: string, strong?: boolean) => void }).__strike = (ms = 3000, id = 'pause', strong = false) => strike(attackDef(id), ms, strong);
-  $effect(() => { fx.block = stunned; }); onDestroy(() => { fx.block = false; fx.ice = 0; fx.fire = false; fx.lock = false; fx.bind = false; }); // ⛓ 입력 막힘이 바뀔 때마다 사슬 표시를 지우지 않게 (정리는 화면을 떠날 때만) // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
+  $effect(() => { fx.block = stunned; }); onDestroy(() => { fx.block = false; fx.ice = 0; fx.fire = false; fx.bind = false; }); // ⛓ 입력 막힘이 바뀔 때마다 사슬 표시를 지우지 않게 (정리는 화면을 떠날 때만) // 💥 주요 단추 = 같은 자리 「⏳ 막는 중…」(#151)
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)

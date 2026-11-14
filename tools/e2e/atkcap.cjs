@@ -1,5 +1,5 @@
 // 👹 몬스터 공격 「지금 ↔ 새것」 움직이는 그림 (평가판 🧪): 공격 갤러리에서 그 공격을 맞고 · 풀기 동작까지 → 카드 + 노란 단추 둘레만 잘라 webp
-//   NODE_PATH=$(npm root -g) node tools/e2e/atkcap.cjs <폴더> <주소> <이름표> <공격…>   (예: http://localhost:4173/ new bind lock · 옛 판은 4174 에 따로 띄워 old)
+//   NODE_PATH=$(npm root -g) node tools/e2e/atkcap.cjs <폴더> <주소> <이름표> <공격…>   (예: http://localhost:4173/ new bind dark · 옛 판은 4174 에 따로 띄워 old)
 const { chromium } = require('playwright'); const fs = require('fs'); const path = require('path'); const { execFileSync } = require('child_process');
 const [OUT = '.', B = 'http://localhost:4173/', TAG = 'new', ...KINDS] = process.argv.slice(2);
 const TMP = fs.mkdtempSync('/tmp/atkcap-');
@@ -9,7 +9,6 @@ const ACT = { // 풀기 동작 (사람이 하는 것처럼)
   fire: async (p) => { const b = await p.$('.act .pmain'); if (!b) return; const bb = await b.boundingBox(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2); await p.mouse.down(); await p.waitForTimeout(1150); await p.mouse.up(); },
   dark: async (p) => { const r = await p.$eval('.qwrap', (e) => { const b = e.getBoundingClientRect(); return { x: b.left + b.width * 0.35, y: b.top + b.height * 0.45 }; }); await p.mouse.move(r.x, r.y); await p.mouse.down(); for (let k = 0; k < 12; k++) { await p.mouse.move(r.x + k * 12, r.y + Math.sin(k) * 20, { steps: 2 }); await p.waitForTimeout(40); } await p.mouse.up(); },
   bind: async (p) => { const r = await p.$eval('.qwrap', (e) => { const b = e.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; }); await p.mouse.move(r.x, r.y); await p.mouse.down(); for (let k = 0; k < 4; k++) { await p.mouse.move(r.x + 90, r.y, { steps: 4 }); await p.mouse.move(r.x - 90, r.y, { steps: 4 }); } await p.mouse.up(); },
-  lock: async (p) => { const k = await p.$('.afx .key'); const b = await p.$('.act .pmain'); if (!k || !b) return; const kb = await k.boundingBox(), bb = await b.boundingBox(); await p.mouse.move(kb.x + kb.width / 2, kb.y + kb.height / 2); await p.mouse.down(); await p.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, { steps: 10 }); await p.mouse.up(); },
 };
 (async () => {
   const b = await chromium.launch();

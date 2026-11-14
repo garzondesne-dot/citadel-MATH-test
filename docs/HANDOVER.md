@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b93 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b94 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -59,6 +59,7 @@
 | b91 | 🔨 ✨ 맞는 순간 겹 시제품 (머리 DECISIONS 8f16f4d · 🔥 화염 폭발로 「지금 ↔ 얹은 것」 먼저) | `fx/layer.ts` `overlay()` = attack.ts `impact()` 맞는 순간(onHit)에 낮은 해상도 캔버스 한 장 · 계열 색 빛살 8갈래 + 흰 속(0.14초 · 원판 아님) · 계열 파편(불 = 불똥 솟음 · 번개 · 얼음 · 별 · 마법 · 나머지 네모) Ⅰ~Ⅳ 12/20/32/44 · Ⅳ 충격파 고리 · Ⅲ·Ⅳ 잠깐 멈춤 0.1/0.13초 · TV(.tv · .tvfx) = 계열 색 화면 물듦 + 흔들림 ×(1 + 단계 × 0.2) · 「동작 줄이기」 = 번쩍만 / 기본 끔 · 켜기 = `?layer=1`(이 기기 기억) · 필살기 · 쏘기 준비는 안 붙임 · 평가판 p-layer-fire |
 | b92 | 📜 ✨ 맞는 순간 겹 = 👍 30 에 기본으로 (선생님 평가판 「🔥 화염 폭발 · 지금 ↔ 겹」 👍 · 2026-11-14 「골랐어 진행」) | `fx/layer.ts` `LAYER_FX` = 평가판 h-* 👍 30(bash chain compass crit cut cyclone fire flame frost gale leaf lightning mana meteor moon nova orb pillar qed ring ruler smite spark stars sweep thrust thunder upper venn wings) · wings · smite = Ⅳ 취급 · 비교용 `?layer=1` 모두 · `?layer=0` 끔 · 👎 24 · 😐 4 는 겹 없음(다시 만들 차례) / 시험 tests/layer.test.ts(30개 · 모두 있는 스킬) · herofx · tvherofx ✅ |
 | b93 | 🔨 🗡 👎 다시 ① 베기류 6 (머리 7e0f44e · 쌍월 A 방식 · 호 = 용사 쪽 → 몬스터 쪽) | `slash.ts` `SKILLS` 표(스킬 = 칼질 cut 여러 개 { at · phi · rad · sweep · thick · len · ox · oy · ghosts } + 덧붙임 extra) + `drawSkill()` · 출발 = 용사 쪽(끝점 x 비교로 자동) · 계열 색 RECIPES smash · sweep · wind 더함 / slash = 초승달 세 번 Z · hammer = 내려찍기 + 땅 금 · 먼지 · 돌 · quake = 더 크게 + 금 길게 · 바위 5 솟음 · 땅 고리 2 · 충격파 · spin = 가로 세 번 + 바람 줄 · reap = 큰 낫 날 X + 잔상 · wblade = 날아와 꽂힘 + 속도선 / 폰 띠 `bake.cjs skills …` → `pfx2/new-<스킬>-v3.webp`(slash 는 옛 v2 지움 · ⚠ `bake.cjs`(기본)를 다시 돌리면 fx-new.json 이 4칸만 남음 → 그 뒤 `bake.cjs twin` · `bake.cjs skills …` 다시) · 이름 목록 `fx/twin.ts NEW_SKILLS`(Pixi 안 끌어옴) · TV Arena = 새 것 켜면 이 스킬도 새 엔진 / 기본은 지금 것(갤러리 「✨ 새 것」 · TV ?newfx) · 평가판 p-re-* 6 · 시험 layer.test(폰 띠 있음) · herofx · tvherofx ✅ |
+| b94 | 📜 🔒 자물쇠 공격 뺌 (선생님 「A 뺌」 · 머리 e1880f6) | `raid/attacks.ts` ATTACKS 에서 lock 지움(14종) · 과목 팩 specialAttacks 「9」 지움 → 9차시 보스 = 짝 표 둘(bind · dark) · 학생 화면 `fx.lock` · 노란 단추 🔒 · AttackFx 열쇠 끌기 · 갤러리 · 평가판 카드(lock · p-atk-lock) 지움 · ChainFx 자물쇠 그림(pad)은 남김(안 씀) / 시험 energy · features · gallery 14개 ✅ |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

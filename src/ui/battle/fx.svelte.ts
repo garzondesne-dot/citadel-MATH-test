@@ -3,7 +3,7 @@
 //   block = 💥 몬스터 공격으로 입력 멈춤(#151 · 주요 단추 = 같은 자리 흐린 「⏳ 막는 중…」)
 //   ice = 🧊 얼음 공격으로 주요 단추가 얼어 있는 동안 남은 톡 수(0 = 없음) · fire = 🔥 화염 공격 중(주요 단추 자리 = 🧯 꾹 눌러 끄기) (#152)
 //   ⛓ chain = 속박 · 자물쇠 사슬 상태(노란 단추도 같은 사슬 · 📜 2026-11-13 밤 다시 만들기): cut = 끊은 줄 수 · broken = 부서지는 중 · open = 자물쇠 열림
-export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean; lock: boolean; bind: boolean; chain: { cut: number; broken: boolean; open: boolean } }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false, lock: false, bind: false, chain: { cut: 0, broken: false, open: false } });
+export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss'; poseUntil: number; block: boolean; ice: number; fire: boolean; bind: boolean; chain: { cut: number; broken: boolean; open: boolean } }>({ hold: 0, pose: 'idle', poseUntil: 0, block: false, ice: 0, fire: false, bind: false, chain: { cut: 0, broken: false, open: false } });
 export function swing(ok: boolean) { heroAtk({ miss: !ok }); }
 /** ⚔ 용사 공격 한 번 (정식 DS.Attack.play 를 장면 띠가 부름 · 🔨 용사 fx): miss = 틀림(튕겨냄) · hits = 연타 수(Ⅲ · Ⅳ 근접) · ult = ⚡ 필살기(첫 시도 퍼펙트 + 내 속성 Ⅲ↑ · 장면이 판정) · finish = 끈기의 일격 · noDmg = 연습 */
 /** prac = 🔥 한 판 더 · 연습 공격에서 맞힌 수 (데미지 0 · 회색 「🔥 +1」 흔적) */

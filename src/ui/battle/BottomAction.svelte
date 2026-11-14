@@ -13,10 +13,10 @@
   const { main, text = '', disabled = false, why = '', onmain, aux, mainLabel, href, dock = true, battle = false, left, right }:
     { main?: Snippet; text?: string; disabled?: boolean; why?: string; onmain?: () => void; aux?: Snippet; mainLabel?: string; href?: string; dock?: boolean; battle?: boolean; /** 📜 2026-11-13 밤 시안 ②⑤⑥′: 맨 아래 한 줄 = 왼쪽(💡 정사각 56) · 가운데 노란 · 오른쪽(✍ 폭 84) · 없는 자리 = 노란이 넓어짐 */ left?: Snippet; right?: Snippet } = $props();
   let h = $state(0);
-  const chained = $derived(battle && (fx.bind || fx.lock)); // ⛓ 속박 · 🔒 자물쇠 = 노란 단추도 사슬로 X 감김 (카드와 같은 사슬)
+  const chained = $derived(battle && fx.bind); // ⛓ 속박 · 🔒 자물쇠 = 노란 단추도 사슬로 X 감김 (카드와 같은 사슬)
   const block = $derived(battle && fx.block && !chained);
   // 🧊 얼음 = 주요 단추가 얼어붙음 → 톡톡 4번 깨기 · 🔥 화염 = 같은 자리 「🧯 꾹 눌러 끄기」 1초 (#152 · 시간이 지나면 저절로)
-  const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire), lockd = $derived(battle && fx.lock); // 🔒 #161 자물쇠 = 떨어진 🗝 를 끌어다 꽂기(AttackFx)
+  const ice = $derived(battle && fx.ice > 0), fire = $derived(battle && fx.fire);
   let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
   // 🧯 다 끄면 = 불길 자리에서 회색 연기가 뭉게뭉게 피어오름(0.9초 · 📜 2026-11-13 밤 다시)
   let smoke = $state(0);
@@ -39,7 +39,7 @@
   {#if block}
     <button type="button" class="btn pmain" disabled aria-label="막는 중">⏳ 막는 중…</button>
   {:else if chained}
-    <button type="button" class="btn pmain chained" class:lockd disabled aria-label={lockd ? '자물쇠 · 열쇠를 끌어다 꽂기' : '사슬에 묶임 · 문제 칸을 좌우로 쓸어 끊기'}><span class="ctx">{lockd ? '🗝 열쇠를 끌어다 꽂기' : '⛓ 위 칸을 좌우로 쓸어 끊기'}</span><ChainFx thin cut={fx.chain.cut} broken={fx.chain.broken} pad={lockd} open={fx.chain.open} /></button>
+    <button type="button" class="btn pmain chained" disabled aria-label={'사슬에 묶임 · 문제 칸을 좌우로 쓸어 끊기'}><span class="ctx">⛓ 위 칸을 좌우로 쓸어 끊기</span><ChainFx thin cut={fx.chain.cut} broken={fx.chain.broken} /></button>
   {:else if ice}
     <button type="button" class="btn pmain ice" aria-label="얼음 깨기 · {fx.ice}번 남음" onclick={iceTap}><i class="iceart" style="{iceBg(4 - fx.ice)}" aria-hidden="true"></i><span class="ict">🧊 톡톡 깨기 · {fx.ice}</span></button>
   {:else if fire}
@@ -76,8 +76,7 @@
   .icebreak { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); height: var(--btn-h); padding: 0 var(--s4); pointer-events: none; z-index: 6; }
   .icebreak .iceart { width: calc(108% - 2 * var(--s4) * 1.08); animation: ibk 0.45s ease-out forwards; }
   @keyframes ibk { 0% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1); opacity: 1; } 15% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.06); } 100% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.18); opacity: 0; } }
-  .btn.lockd { opacity: 1; background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
-  .btn.chained { position: relative; overflow: visible; opacity: 1; background: #24262e; color: #c9ccd6; box-shadow: inset 0 0 0 2px #5a5e6b; } .btn.chained.lockd { background: #2a2416; color: #f5d27a; box-shadow: inset 0 0 0 2px #f5b84a; }
+  .btn.chained { position: relative; overflow: visible; opacity: 1; background: #24262e; color: #c9ccd6; box-shadow: inset 0 0 0 2px #5a5e6b; }
   .btn.chained .ctx { position: relative; z-index: 0; font-size: 15px; opacity: 0.8; }
   .btn.fire { background: #3a1a12; color: #ffd7b0; box-shadow: inset 0 0 0 2px #ff7a3a, 0 3px 0 #000; touch-action: none; user-select: none; -webkit-user-select: none; }
   .btn.fire.holding { background: linear-gradient(90deg, #ff7a3a 0%, #3a1a12 0%); animation: hold 1s linear forwards; }

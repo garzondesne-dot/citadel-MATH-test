@@ -33,17 +33,17 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['bind', 'fog', 'bind']);
     expect([0, 1, 2].map((k) => attackOf(L7, st(L7, 'boss'), k).id)).toEqual(['bind', 'glitch', 'bind']); // 나눈 7차시 보스 = 「@7」
     expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('wind');
-    expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'lock', 'scale']);
+    expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'scale']);
     expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch', 'bind']);
     // 2026-11-13 선생님 「B1」: 모든 공격 3초 · 분노 4초 (멈춤 시간 lock 과 상관없음)
-    expect(Object.values(ATTACKS).map((a) => attackMs(a, 1))).toEqual(Array(15).fill(3000));
-    expect(Object.values(ATTACKS).map((a) => attackMs(a, 9, true))).toEqual(Array(15).fill(4000));
+    expect(Object.values(ATTACKS).map((a) => attackMs(a, 1))).toEqual(Array(14).fill(3000));
+    expect(Object.values(ATTACKS).map((a) => attackMs(a, 9, true))).toEqual(Array(14).fill(4000));
   });
   it('#161 공격 15: 속성 8 · 몸짓 겹침 0 · 던전 특수 = 그 차시 보스 셋째 · 분노 = 50% 아래 · 멈춤 상한 안', () => {
     const els = new Set(Object.values(ATTACKS).map((a) => a.elem)); expect(els.size).toBe(8);
     const g = Object.values(ATTACKS).map((a) => a.gesture).filter(Boolean); expect(new Set(g).size).toBe(g.length);
     const L8 = packOf('set-08')!, L9 = packOf('set-09')!, L10 = packOf('set-10')!, L6 = packOf('set-06')!;
-    expect(bossAttacks(L8)).toEqual(['dark', 'glitch', 'mirror']); expect(bossAttacks(L9)).toEqual(['bind', 'dark', 'lock']); expect(bossAttacks(L10)).toEqual(['dark', 'bind', 'scale']);
+    expect(bossAttacks(L8)).toEqual(['dark', 'glitch', 'mirror']); expect(bossAttacks(L9)).toEqual(['bind', 'dark']); // 🔒 자물쇠 뺌 (2026-11-14) expect(bossAttacks(L10)).toEqual(['dark', 'bind', 'scale']);
     expect(bossAttacks(L6)).toEqual(['bind', 'fog']);
     const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['dark', 'glitch', 'mirror', 'dark']);
     // 15개 모두 실제 수업(단계에 있는 몬스터 · 보스)에서 한 번 이상 쓰임
