@@ -61,7 +61,8 @@
   const prep = $derived.by((): Prep => { void ver; return { ...base, ...(S.get<Partial<Prep>>(`school/prep/${lid}`) || {}) }; });
   let edit = $state<keyof Prep | null>(null);
   const STEP: Record<keyof Prep, [number, number, number, string, string]> = { pct: [5, 10, 100, '%', '체력 기준'], retries: [1, 0, 5, '번', '재도전'], think: [1, 0, 30, '초', '생각 시간'], solve: [10, 0, 300, '초', '정찰'] };
-  const bump = (k: keyof Prep, d: number) => { const [st, lo, hi] = STEP[k]; S.set(`school/prep/${lid}/${k}`, Math.max(lo, Math.min(hi, prep[k] + d * st))); ver++; };
+  // 🐞 (📜 2026-11-15 「정찰 50초로 하면 실제로 60」 · 원인 = 준비 값은 수업을 열 때만 방에 옮겨 적힘 → 이미 열린 수업은 옛 값): 이 차시 수업이 열려 있으면 그 방에도 바로
+  const bump = (k: keyof Prep, d: number) => { const [st, lo, hi] = STEP[k], v = Math.max(lo, Math.min(hi, prep[k] + d * st)); S.set(`school/prep/${lid}/${k}`, v); const lv = S.get<{ code?: string; lesson?: string }>('school/live'); if (lv?.code && lv.lesson === lid) S.set(`rooms/${lv.code}/meta/${k}`, v); ver++; };
   // 시간표 · 진도
   const W = $derived.by(() => { void ver; return week(S); });
   const prog = (c: string) => { void ver; return Number(S.get<number>(`school/prog/${c}`)) || (L?.no ?? 6) + 1; };

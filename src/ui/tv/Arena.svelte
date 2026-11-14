@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { serverNow } from '../clock.svelte';
   import { NEW_SKILLS } from '../fx/twin';
   import { feat } from '../../school/features.svelte';
   import { onDestroy, onMount, untrack } from 'svelte';
@@ -208,10 +209,10 @@
   const stoneLeft = $derived(stoneNow ? Math.max(0, Math.ceil((stoneNow.until - now) / 1000)) : 0);
   $effect(() => { A?.stone(stoneLeft > 0); });
   // 🌟 진필살기 (📜 2026-11-13 밤 선생님 「종합실에서도 필살기 · 진필살기 · 오라 · 방패 · 눈빛 똑같이」): 새 석화(진필살기)를 본 순간 = 금빛 컷인 「眞」 + 눈빛 → 광역(본 이펙트 · 네 귀퉁이 · 충격파) → 🗿 석화 (학생 폰 trueUlt 과 같은 순서)
-  let trueSeen = ''; const born = Date.now();
+  let trueSeen = ''; const born = serverNow(); // ⏱ 서버 시각(방의 at 과 같은 시계)
   $effect(() => {
     const st = stoneNow; if (!st || st.holy) return; const key = `${step?.id}|${st.at}`; if (key === trueSeen) return;
-    untrack(() => { trueSeen = key; if (st.at < born - 2000 || Date.now() - st.at > 8000) return; void tvTrue(st.by); });
+    untrack(() => { trueSeen = key; if (st.at < born - 2000 || serverNow() - st.at > 8000) return; void tvTrue(st.by); });
   });
   async function tvTrue(u: string) {
     const p0 = R.players?.[u], hero = p0?.hero ?? 0, fxk = p0?.fx || ladder(hero)[3]!;

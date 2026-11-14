@@ -2,6 +2,7 @@ import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectDatabaseEmulator, get as fbGet, getDatabase, onValue, ref, set as fbSet, type Database } from 'firebase/database';
 import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
+import { setClockOffset } from '../ui/clock.svelte';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
 //   읽기 = 맨 윗칸(rooms · school · gifts · mail · accounts)을 실시간으로 받아 둔 거울(mirror)에서 바로 · 쓰기 = 거울에 먼저 + 서버에 보냄
@@ -44,7 +45,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const net: NetState = { connected: false, uid: auth.currentUser?.uid ?? null };
   const netSubs = new Set<(s: NetState) => void>();
   const tell = () => netSubs.forEach((f) => f({ ...net }));
-  onValue(ref(db, '.info/serverTimeOffset'), (s) => { offset = Number(s.val()) || 0; });
+  onValue(ref(db, '.info/serverTimeOffset'), (s) => { offset = Number(s.val()) || 0; setClockOffset(offset); }); // ⏱ 화면 시계도 같은 서버 시각
   onValue(ref(db, '.info/connected'), (s) => { net.connected = !!s.val(); tell(); });
   onAuthStateChanged(auth, (u) => { net.uid = u?.uid ?? null; tell(); });
   // 거울 덩어리 구독 (같은 덩어리는 한 번) · 첫 값이 올 때까지 기다리는 약속을 돌려줌

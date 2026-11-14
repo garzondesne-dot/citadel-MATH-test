@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { serverNow } from './clock.svelte';
   import { holdWake } from './wake.svelte';
   import BossForm from './q/BossForm.svelte';
   import { V4 } from '../raid/raid';
@@ -51,7 +52,7 @@
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
   const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
-  const loadedAt = Date.now();
+  const loadedAt = serverNow(); // ⏱ 선물 at(서버 시각)과 같은 시계
   const live = untrack(() => {
     const x = untrack(() => !!cls && isExcluded(S, cls, num));
     const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, fx: savedLook().fx, enh: savedLook().enh, x });
