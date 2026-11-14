@@ -50,6 +50,10 @@ describe('📦 차시 팩 올리기 검사기', () => {
     expect(e).toMatch(/배경\(theme\) \| 던전 배경 「99-moon」/); expect(e).toMatch(/문제 1 · 그림\(sprite\) \| 몬스터 그림 「nope9:0」/);
     expect(e).toMatch(/공격 「laser」/); expect(e).toMatch(/tags 2번 \| 개념 칸 「c9」/);
   });
+  it('정답 = 보기 번호로 통일 · 보기 글자로 적으면 번호를 알려 줌', () => {
+    const d = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); d.boss.vers[0][0].a = '∩';
+    expect(errs(checkUpload(JSON.stringify(d), look)).map((x) => `${x.at} | ${x.msg}`)).toContain('형성평가 · 버전 0 · 1번 | 정답 「∩」 — 보기 번호(0부터)로 적어요 (「∩」 = 1번)');
+  });
   it('JSON 이 아니면 한 줄 이유', () => { expect(checkUpload('{ 깨짐', look).issues[0]!.at).toBe('파일'); });
   it('풀 판 차시(엔진 꼴 · 생성기) = 같은 길 · 통과 · 이미 있는 차시 = 선생님 확인만', () => {
     for (const f of fs.readdirSync('src/subjects/common-math2/lessons')) {

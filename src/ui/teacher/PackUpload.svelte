@@ -54,7 +54,7 @@
         <p class="lab">미리 보기 · 학생 폰과 같은 문제 꼴 (💡 정답 펼침)</p>
         <div class="chips2" role="tablist">{#each stepsQ as s (s.id)}<button type="button" role="tab" class:on={pick === s.id} aria-selected={pick === s.id} onclick={() => { pick = s.id; ver = 0; }}>{s.title.split(' · ')[0]}</button>{/each}</div>
         {#if nVer > 1}<div class="chips2 vers" role="tablist" aria-label="버전">{#each Array.from({ length: nVer }, (_, k) => k) as k (k)}<button type="button" role="tab" class:on={ver === k} aria-selected={ver === k} onclick={() => (ver = k)}>버전 {k}</button>{/each}</div>{/if}
-        <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
+        <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
       {/if}
     {/if}
     {#if saved}<p class="ok" role="status">{saved}</p>{/if}

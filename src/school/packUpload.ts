@@ -2,7 +2,7 @@
 //   양식 = 「📚 차시 팩 입력판」 문서 꼴 그대로(id · no · title · unit · goal · theme · pct · steps · mons · boss · next) + 덧붙인 칸(손발 ❓#61 추천):
 //     mons.<id>.vers = [버전 0, 버전 1 … 버전 6] (각 버전 = 문항 배열 · 없으면 first = 버전 0) · choice · multi = ch(보기) 필수 · blanks = a 에 빈칸 정답 「⊂,⊄」
 //     boss.vers = [버전 0(= first), 버전 1 …] (각 버전 = 문항 번호 순 배열)
-//   문항 = { type: choice | ox | number | multi | blanks | text, q, a, ch?, sol? }
+//   문항 = { type: choice | ox | number | multi | blanks | text, q, a, ch?, sol? } · choice · multi 정답 a = 보기 번호(0부터)만 (❓#61 답 · 통일)
 //   검사 = 양식 칸 빠짐 · 형식 · 보기 번호 · 정답 범위 · 정답 재계산(과목 SUBJ.recheck) · 버전 0~6 줄 · 도감 이름표(그림 · 배경 · 공격 · 개념 칸)
 //   엔진 꼴(v: 1 · monsters)도 그대로 받음 = 풀 판(우리) 차시를 같은 길로
 import type { LessonPack, MonsterPack, Question, Step } from '../model/types';
@@ -46,13 +46,18 @@ function toQ(it: BItem, at: string, out: Issue[]): Question | null {
   if (t === 'choice' || t === 'multi') {
     if (!ch || ch.length < 2) return err('보기(ch)가 2개 이상 있어야 해요');
     if (new Set(ch).size !== ch.length) return err('보기에 같은 것이 두 번 있어요');
-    const idx = (x: string) => { const n = num(x); if (Number.isInteger(n) && String(n) === x.trim()) return n; return ch.indexOf(x); };
+    // 정답 = 보기 번호(0부터)로 통일 (머리 ❓#61 답 「한 쪽으로 통일」 · 보기 글자에 쉼표 · 숫자가 섞여도 헷갈리지 않게)
+    const notNo = (x: string) => !/^\d+$/.test(x.trim());
+    const hint = (x: string) => { const k = ch.indexOf(x.trim()); return k >= 0 ? ` (「${x}」 = ${k}번)` : ''; };
+    const idx = (x: string) => Number(x.trim());
     if (t === 'choice') {
-      const a = list(it.a); if (a.length !== 1) return err('선다 정답은 하나(보기 번호 0부터 또는 보기 글자)');
+      const a = list(it.a); if (a.length !== 1) return err('선다 정답은 보기 번호 하나(0부터)');
+      if (notNo(a[0]!)) return err(`정답 「${a[0]}」 — 보기 번호(0부터)로 적어요${hint(a[0]!)}`);
       const k = idx(a[0]!); if (k < 0 || k >= ch.length) return err(`정답 「${a[0]}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖이에요`);
       return { ...base, type: 'choice', choices: ch, answerIndex: k };
     }
     const a = list(it.a); if (!a.length) return err('여러 개 고르기 정답이 비었어요');
+    const nn = a.find(notNo); if (nn != null) return err(`정답 「${nn}」 — 보기 번호(0부터)로 적어요${hint(nn)}`);
     const ks = a.map(idx); const bad = a.find((_, i) => ks[i]! < 0 || ks[i]! >= ch.length);
     if (bad != null) return err(`정답 「${bad}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖이에요`);
     if (new Set(ks).size !== ks.length) return err('정답 번호가 겹쳐요');

@@ -9,7 +9,7 @@
 | `steps[]` | `{ kind: intro · concept · monster · boss, id, title, say?, min? }` |
 | `mons.<id>` | `{ title, sprite, attack?, chain?, vers: [버전 0, 버전 1 … 버전 6] }` — 각 버전 = 문항 배열 · `vers` 가 없으면 `first` = 버전 0 |
 | `boss` | `{ title, sprite, attack?, items, hpItems, tags[], vers: [버전 0 …] }` — 버전마다 문항 번호 순 |
-| 문항 | `{ type, q, a, ch?, sol? }` · `choice` · `multi` = `ch` 보기 필수 · `a` = 보기 번호(0부터) 또는 보기 글자(여러 개 = 「0,3」) · `ox` = O/X · `number` = 정수 · `blanks` = 「⊂,⊄」 칸 순서 · `text` = 「답1\|답2」 |
+| 문항 | `{ type, q, a, ch?, sol? }` · `choice` · `multi` = `ch` 보기 필수 · `a` = **보기 번호(0부터)만**(여러 개 = 「0,3」 · 보기 글자로 적으면 「「거짓」 = 1번」처럼 알려 줌 · ❓#61 답 「한 쪽으로 통일」) · `ox` = O/X · `number` = 정수 · `blanks` = 「⊂,⊄」 칸 순서 · `text` = 「답1\|답2」 |
 | 그림 이름 | 입력판 그대로(`2` → base2:0 · `extra:4` → extra4:0 · `2@h250`) 또는 배치표 이름 |
 
 ## 검사 (틀리면 「칸 · 이유 한 줄」 · 오류가 하나라도 있으면 저장 못 함)
