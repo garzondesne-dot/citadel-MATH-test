@@ -9,6 +9,7 @@
   import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
   import PackUpload from './PackUpload.svelte';
+  import { prepImg } from '../../school/prep';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
   //   차시 준비 = 기본값 네 칸(체력 기준 · 재도전 · 생각 시간 · 정찰 · 누르면 바꾸기 → 그 차시 수업을 열 때 방에 옮겨 적음) · 학습지 PDF · 영상 · 단계별 그림 n/m
@@ -20,6 +21,9 @@
   let upOpen = $state(false); // 📦 차시 팩 올리기 (L1)
   let lid = $state(untrack(() => want || packs[0]?.id || ''));
   const L = $derived(packs.find((p) => p.id === lid) ?? null);
+  // 🖼 단계별 그림 = 서버 칸 그림(prep/{차시}/img/{칸 = 단계 img · id})을 실제로 읽어 셈 (🐞 2026-11-14 늘 「0 / n」 · 고정 글자였음)
+  let hasImg = $state<Record<string, string | null>>({});
+  $effect(() => { const Lc = L; hasImg = {}; if (!Lc) return; for (const st of Lc.steps.filter((x) => !x.later)) { const c = st.img ?? st.id; void prepImg(S, Lc, c).then((u) => { if (L === Lc) hasImg = { ...hasImg, [st.id]: u }; }); } });
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
   let seg = $state<'lesson' | 'week' | 'tools'>('lesson');
   let ver = $state(0);
@@ -53,8 +57,8 @@
     <div class="four">{#each Object.keys(STEP) as k (k)}{@const kk = k as keyof Prep}<button type="button" onclick={() => (edit = kk)}><small>{STEP[kk][4]}</small><b>{prep[kk]}{STEP[kk][3]}</b></button>{/each}</div>
     <button type="button" class="item" disabled><span class="ic">📄</span><span class="tx"><b>학습지 PDF · 한 번에 넣기</b><small>테스트 판 · 준비 중</small></span></button>
     <button type="button" class="item" disabled><span class="ic">🎬</span><span class="tx"><b>영상 {Object.keys(L.videos || {}).length}편</b><small>테스트 판 · 준비 중</small></span></button>
-    <p class="lab">단계별 그림 0 / {L.steps.filter((s) => !s.later).length}</p>
-    <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st"><i>⚠</i><b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>넣기 ›</em></div>{/each}</div>
+    <p class="lab" data-k="stepimgs">단계별 그림 {L.steps.filter((s) => !s.later && hasImg[s.id]).length} / {L.steps.filter((s) => !s.later).length}</p>
+    <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st" class:has={!!hasImg[s.id]}>{#if hasImg[s.id]}<img class="th" src={hasImg[s.id]} alt="" />{:else}<i>⚠</i>{/if}<b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>{hasImg[s.id] ? '✔ 있음' : '넣기 ›'}</em></div>{/each}</div>
   {:else if seg === 'week' && feat('schedule')}
     <SchedEdit {S} />
     <p class="lab">진도 맞추기 · 반마다 다음 차시</p>
@@ -86,6 +90,7 @@
 {/if}
 
 <style>
+  .st .th { width: 40px; height: 28px; object-fit: cover; object-position: top; border-radius: 4px; background: #fff; flex: none; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   select { width: 100%; height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); padding: 0 var(--s3); }

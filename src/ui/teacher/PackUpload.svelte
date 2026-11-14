@@ -30,7 +30,7 @@
   let imgs = $state<Record<string, string>>({}), unused = $state<string[]>([]), media = $state<Issue[]>([]), vidOk = $state<Record<string, boolean>>({});
   const P0 = $derived(res?.pack ?? null);
   /** 그림을 같이 올리면 = 팩 자기 칸 그림을 씀(imgOf 빌리기 끔) */
-  const P = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return rest as LessonPack; });
+  const P = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return { ...rest, imgCells: [...new Set([...(P0.imgCells ?? []), ...Object.keys(imgs)])] } as LessonPack; }); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
   const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
   // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
@@ -75,8 +75,10 @@
     pdfIss = miss.length ? [{ at: `✂ PDF 칸 ${miss.join(' · ')}`, msg: '자르지 못함 — 학습지에서 그 칸 이름 글자를 못 찾았어요 · 「그림 직접 고르기」 또는 팩 find 칸', lvl: 'ask' }] : [];
     await recheckMedia();
   }
+  /** 그림 칸 = 팩 img 목록 · 없으면 단계(도입 img · 개념 · 문제 · 형성평가) 모두 — 단계 id 가 무엇이든 단계 종류 · 제목으로 자름 (🐞 2026-11-14 팩에 img 목록이 없어 0장) */
+  const cellsOf = (Pk: LessonPack) => (Pk.imgCells?.length ? Pk.imgCells : [...new Set(slotsOf(Pk.steps, Pk.boss?.title ?? '').map((x) => x.id))]);
   async function matchImgs() {
-    const cells = new Set(P0?.imgCells ?? []), got: Record<string, string> = {};
+    const cells = new Set(P0 ? cellsOf(P0) : []), got: Record<string, string> = {};
     const m = matchCells(picked.map((f) => f.name), [...cells]); // 이름 = 칸 · 끝이 「_칸」 (드라이브 접두어) · 정확히 같은 이름 우선
     for (const [c, n] of Object.entries(m.map)) { const f = picked.find((x) => x.name === n); if (f) got[c] = await shrink(f); }
     fromFile = got; unused = m.unused;
@@ -89,12 +91,14 @@
     try {
       const { readPdf, cutRects, inkOf } = await import('./pdfPages');
       pdfDoc = await readPdf(bytes);
-      const cells = new Set(Pk.imgCells ?? []), slots = slotsOf(Pk.steps, Pk.boss?.title ?? '', Pk.find ?? {}).filter((x, i, a) => cells.has(x.id) && a.findIndex((y) => y.id === x.id) === i);
+      const cells = new Set(cellsOf(Pk)), slots = slotsOf(Pk.steps, Pk.boss?.title ?? '', Pk.find ?? {}).filter((x, i, a) => cells.has(x.id) && a.findIndex((y) => y.id === x.id) === i);
       if (!pdfDoc.lines.length) { pdfNote = '✂ PDF 에 글자가 없어요(스캔 · 사진 PDF) — 칸마다 그림을 직접 골라 주세요'; rects = Object.fromEntries(slots.map((x) => [x.id, null])); await combine(); return; }
       const r = autoRects(pdfDoc.lines, slots, inkOf(pdfDoc.pages)), got: Record<string, string> = {};
       for (const [c, rs] of Object.entries(r)) if (rs) got[c] = cutRects(pdfDoc.pages, rs);
       rects = r; fromPdf = got; (globalThis as { __pdfRects?: unknown }).__pdfRects = r; // 시험: 자른 틀
       const n = Object.values(r).filter(Boolean).length;
+      if (!slots.length) { pdfNote = '✂ 자를 칸이 없어요 — 팩에 단계(도입 · 개념 · 문제 · 형성평가)가 없어요'; await combine(); return; }
+      if (!n) { pdfNote = `✂ ${pdfName} 에서 칸 이름 글자(몬스터 n · 문제 n · STEP n · 형성평가 · 생각 열기)를 하나도 못 찾았어요 — 레이드용 학습지가 맞는지 · 칸마다 그림을 직접 골라 주세요`; rects = r; await combine(); return; }
       pdfNote = `✂ ${pdfName} 에서 ${n} / ${slots.length}칸을 글자로 찾아 잘랐어요 — 칸마다 눈으로 보고, 틀리면 위 · 아래를 늘리고 줄이거나 그림을 직접 골라요`;
     } catch (e) { pdfNote = `✂ PDF 를 읽지 못했어요 — ${(e as Error).message}`; }
     await combine();
