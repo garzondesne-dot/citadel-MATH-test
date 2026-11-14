@@ -328,7 +328,8 @@
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
       <span class="sep"></span>
       {#each gamesOn() as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
-    {:else if R && !isLobby(R) && !R.state.closed && view !== 'camp'}
+    {:else if R && !R.state.closed && view !== 'camp'}
+      <!-- 📺 시안 (선생님 「1번 추천대로」 2026-11-14): 던전 대기실에서도 같은 도구 줄 + ▶ 수업 시작 -->
       <span class="sep"></span>
       <button type="button" class="t" class:on={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}>🏕<small>쉼터</small></button>
       <button type="button" class="t" disabled={!step || !L.videos?.[step.id]} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}>🎬<small>영상</small></button>
@@ -338,7 +339,7 @@
     {/if}
     {#if R && !R.state.closed}
       <span class="sep"></span>
-      {#if view !== 'camp' && !isLobby(R)}<button type="button" class="n fo" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}>🔴 집중</button>
+      {#if view !== 'camp'}<button type="button" class="n fo" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}>🔴 집중</button>
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
