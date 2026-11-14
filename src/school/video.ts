@@ -74,3 +74,14 @@ export function applyVids(packs: { id: string; videos?: Record<string, string> }
 export async function loadVids(S: { get<T>(p: string): T | null; fetch?<T>(p: string): Promise<T | null> }, packs: { id: string; videos?: Record<string, string> }[]): Promise<void> {
   try { applyVids(packs, S.fetch ? await S.fetch<Record<string, Record<string, string>>>(VMAP) : S.get<Record<string, Record<string, string>>>(VMAP)); } catch (e) { console.warn('차시 영상 받기 실패', e); }
 }
+
+// 📚 영상 서고 (📜 2026-11-14 선생님 「이름만 적기로 진행해」 · 제미나이는 mp4 를 zip 에 못 넣음): 팩 video 칸 이름 → ① 베타 앱 video/ ② 정식 사이트 assets/video/(꼬리 -v2 · -v3 … 최신) ③ 서버에 올린 영상 prep/{팩}/vid
+export const OFFICIAL_VIDEO = 'https://garzondesne-dot.github.io/Citadel-MATH/assets/video/';
+export async function findVideo(name: string, packId: string, head: (url: string) => Promise<boolean>, srv: (path: string) => Promise<boolean>): Promise<{ url: string; from: 'app' | 'official' | 'server' } | null> {
+  const base = name.replace(/^.*\//, '').replace(/\.mp4$/i, ''), stem = base.replace(/-v\d+$/, '');
+  if (await head(`video/${base}.mp4`)) return { url: `video/${base}.mp4`, from: 'app' };
+  const tries = base !== stem ? [base] : [...[6, 5, 4, 3, 2].map((n) => `${stem}-v${n}`), stem];
+  for (const t of tries) if (await head(`${OFFICIAL_VIDEO}${t}.mp4`)) return { url: `${OFFICIAL_VIDEO}${t}.mp4`, from: 'official' };
+  const p = vidPath(packId, base); if (await srv(`${p}/n`)) return { url: RTDB + p, from: 'server' };
+  return null;
+}

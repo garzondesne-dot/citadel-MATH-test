@@ -7,7 +7,7 @@
   import { prepPath, prepPut } from '../../school/prep';
   import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
   import type { PdfDoc } from './pdfPages';
-  import { matchVideos, putVid, RTDB, vidPath } from '../../school/video';
+  import { findVideo, matchVideos, putVid, RTDB, vidPath } from '../../school/video';
   import { items, bossItem } from '../../engine/lessons';
   import { PACKS, UPLOADED, addPacks, removePack } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
@@ -34,7 +34,10 @@
   const P1 = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return { ...rest, imgCells: [...new Set([...(P0.imgCells ?? []), ...Object.keys(imgs)])] } as LessonPack; });
   // 🎬 zip 안 .mp4 (📜 2026-11-14 「전부 진행해」): 이름 끝맞춤 → 칸 · 미리 보기 = 이 기기 Blob 주소 · 저장 때 서버 prep/{팩}/vid/{이름} 로 올리고 rtdb: 주소로 바꿈
   let zvids: { name: string; data: Uint8Array }[] = [], vmap = $state<Record<string, string>>({}), vblob = $state<Record<string, string>>({}), vunused = $state<string[]>([]);
-  const P = $derived.by((): LessonPack | null => { if (!P1) return null; if (!Object.keys(vmap).length) return P1; return { ...P1, videos: { ...(P1.videos ?? {}), ...Object.fromEntries(Object.entries(vmap).map(([c, n]) => [c, vblob[n]!])) } }; }); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
+  // 📚 영상 서고: zip 에 없는 이름 = 앱 · 정식 사이트 · 서버에서 찾은 주소 (vres = 'video/이름.mp4' → 찾은 주소 · null = 못 찾음)
+  let vres = $state<Record<string, { url: string; from: string } | null>>({});
+  const P = $derived.by((): LessonPack | null => { if (!P1) return null; const base = Object.fromEntries(Object.entries(P1.videos ?? {}).map(([c, u]) => [c, vres[u]?.url ?? u])); const v = { ...base, ...Object.fromEntries(Object.entries(vmap).map(([c, n]) => [c, vblob[n]!])) }; return Object.keys(v).length ? { ...P1, videos: v } : P1; });
+  const fromLib = $derived(Object.values(vres).filter(Boolean).length), missLib = $derived(Object.entries(vres).filter(([, x]) => !x).map(([u]) => u.replace(/^.*\//, '').replace(/\.mp4$/, ''))); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
   const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
   // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
@@ -51,10 +54,15 @@
   // 그림 · 영상 있는지 = 서버 그림 칸 · 앱 영상 파일 (없으면 ⚠ 한 줄 · 저장은 막지 않음)
   const hasImg = async (path: string) => { try { const x = S.fetch ? await S.fetch<string>(path) : S.get<string>(path); return typeof x === 'string' && x.startsWith('data:image'); } catch { return false; } };
   const hasFile = async (url: string) => { if (url.startsWith('blob:')) return true; try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
-  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; matchVids(); return matchImgs(); }
+  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; vres = {}; matchVids(); return matchImgs(); }
   // 그림 · 영상 확인 다시 (팩 · 그림이 바뀔 때마다) — 붙인 그림 = 있음 · 영상 = 있는 파일만 연결
   let mseq = 0;
   async function recheckMedia() {
+    const k0 = ++mseq;
+    if (P1) { // 📚 zip 에 없는 영상 이름 → 서고에서 찾기 (한 번 찾은 이름은 기억)
+      const zipNames = new Set(Object.keys(vmap)), want = [...new Set(Object.entries(P1.videos ?? {}).filter(([c, u]) => !zipNames.has(c) && u.startsWith('video/')).map(([, u]) => u))].filter((u) => !(u in vres));
+      if (want.length) { const got: typeof vres = {}; for (const u of want) got[u] = await findVideo(u, P1.id, hasFile, async (p) => { try { const x = S.fetch ? await S.fetch(p) : S.get(p); return x != null; } catch { return false; } }); if (k0 !== mseq) return; vres = { ...vres, ...got }; }
+    }
     const Pk = P, k = ++mseq; if (!Pk) { media = []; return; }
     const own = (path: string) => Object.entries(imgs).some(([c]) => path === prepPath(Pk, c));
     const ok: Record<string, boolean> = {};
@@ -190,7 +198,7 @@
 
     {#if res}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}</p>
-      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}</p>{/if}
+      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
       {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
       {#if issues.length}<ul class="iss" data-k="packiss">{#each issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
       {#if P && stepsQ.length}
