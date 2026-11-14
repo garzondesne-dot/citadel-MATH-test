@@ -10,6 +10,7 @@ const log = (...a) => console.log(...a);
     roster: { '1-3': { 5: '시험오', 6: '시험육' } }, rosterMask: { '1-3': { 5: '시*오', 6: '시*육' } },
     records: { '1-3': { 5: { 'set-06': { no: 6, conc: { c1: [3, 4], c2: [2, 2] }, names: { c1: '개념가', c2: '개념나' }, boss: 5, bossN: 6, mis: { m1: [2, 1] } } } } },
     gem: { '1-3': { 5: { total: 321, scroll: 7 } } }, xp: { '1-3': { 5: { total: 880 } } },
+    bonus: { '1-3': { 5: { 'eval-1': { r1: { clear: true, tries: 3, mis: { m9: [4, 2] } } }, 'set-06': { u4: { tries: 2 } } } } }, cards: { '1-3': { 5: { sub: true, emp: true } } },
   });
   const b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   p.on('pageerror', (e) => errs.push(String(e)));
@@ -23,6 +24,7 @@ const log = (...a) => console.log(...a);
   log('5번 시트:', sheet5.slice(0, 200));
   const gem5 = await p.$eval('.four', (x) => x.textContent).catch(() => '');
   if (!/321/.test((await p.textContent('body')))) errs.push('5번 💎 321 안 보임');
+  const body5 = (await p.textContent('.ps')).replace(/\s+/g, ' '); log('   5번 시트(성채 · 카드):', (body5.match(/풀이 \d+회/) || [''])[0]); if (!/풀이 5회/.test(body5)) errs.push('🏰 성채 도전 수(정식 bonus tries)');
   if (!cards.some((c) => /시험오/.test(c) && /Lv\.(\d+)/.test(c) && !/Lv\.1\b/.test(c))) errs.push('5번 EXP 880 → 레벨이 1 보다 커야 함');
   await p.screenshot({ path: `${SHOTS}/realdash-5.png` });
   await p.click('.hd .x'); await p.waitForTimeout(300);

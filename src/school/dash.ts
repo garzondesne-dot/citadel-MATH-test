@@ -86,8 +86,9 @@ export function fakeClass(S: Store | null, cls: string) {
  *  xp/{반}/{번호}/total · gem/{반}/{번호} = total · scroll · day(날짜 → 그날 받은 💎) · 나머지 덧붙임(사진 · 막힘 · 기호 …)은 아직 0 */
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 export function realClass(S: Store, cls: string) {
+  const bonAll = S.get<Record<string, Record<string, Record<string, { tries?: number; mis?: Record<string, [number, number]> } | null>>>>(`bonus/${cls}`) || {}, cardAll = S.get<Record<string, Record<string, unknown>>>(`cards/${cls}`) || {};
   const recAll = S.get<Record<string, Record<string, Partial<LessonRec> & Record<string, unknown>>>>(`records/${cls}`) || {}, xpAll = S.get<Record<string, { total?: number }>>(`xp/${cls}`) || {}, gemAll = S.get<Record<string, { total?: number; scroll?: number; day?: Record<string, number> }>>(`gem/${cls}`) || {};
-  const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {};
+  const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {}, bmis: Record<number, Record<string, [number, number]>> = {};
   const now = S.now(), dayK = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), week = new Set(Array.from({ length: 7 }, (_, i) => dayK(now - i * 864e5)));
   for (const p of roster(cls, S)) {
     byN[p.num] = p.name; records[p.num] = {};
@@ -98,9 +99,16 @@ export function realClass(S: Store, cls: string) {
     }
     xp[p.num] = Number(xpAll[p.num]?.total) || 0;
     const g = gemAll[p.num] || {}, day = isObj(g.day) ? g.day : {};
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: 0, fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: 0, trySet: 0, noteDone: 0, cards: 0, surveyed: false };
+    // 🏰 성채 · 🎯 복습 기록(bonus/{반}/{번호}/{차시 · 평가}/{방}) = 정식 dash.js 그대로: 오개념(mis)을 학생 오개념에 합침 · 도전 수 · 단원 평가(eval-) · 복습(set-) 따로
+    const bon = bonAll[p.num] || {}, rows = Object.entries(bon).filter(([k, l]) => isObj(l) && k !== 'review' && k !== 'board').flatMap(([lid, l]) => Object.values(l as Record<string, unknown>).filter(isObj).map((m) => ({ lid, m: m as { tries?: number; mis?: Record<string, [number, number]> } })));
+    const bm: Record<string, [number, number]> = (bmis[p.num] = {});
+    for (const { m } of rows) if (isObj(m.mis)) for (const [k, v] of Object.entries(m.mis)) { const a = (bm[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
+    const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false };
   }
-  return build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
+  const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
+  for (const st of out.studs) for (const [k, v] of Object.entries(bmis[st.n] || {})) { const a = (st.mis[k] ||= [0, 0]); a[0] += v[0]; a[1] += v[1]; } // 🏰 성채 오개념 합침 (정식 dash.js)
+  return out;
 }
 /** 대시보드 · 학생 시트가 쓰는 한 곳: 서버 = 진짜 · 이 기기 = 가짜 */
 export const classData = (S: Store | null, cls: string) => (S && S.kind === 'server' ? realClass(S, cls) : fakeClass(S, cls));

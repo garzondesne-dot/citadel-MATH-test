@@ -46,7 +46,7 @@
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, r.photo ? '📷 답 확인만' : '', `${r.no}차시`].filter(Boolean).join(' · ');
   }
-  const badge = (r: CastleRoom) => (!st?.isOpen(r) ? '🔒' : recs[r.id]?.clear ? '✔' : recs[r.id]?.runs ? '💧' : 'NEW');
+  const badge = (r: CastleRoom) => (!st?.isOpen(r) ? '🔒' : recs[r.id]?.clear ? '✔' : (recs[r.id]?.runs || recs[r.id]?.tries) ? '💧' : 'NEW'); // 정식에서 옮긴 방 = runs 없이 tries 만 있음
 
   // ── 방 하나 = 메모리 방 하나 (허수아비 · 게시판과 같은 길) ──
   let run = $state<{ L: ReturnType<typeof roomPack>; S: Store; code: string; r: CastleRoom; P: CastlePack } | null>(null);
@@ -88,7 +88,7 @@
   }
   function finish(x: NonNullable<typeof run>, RR: Room) {
     if (drive) clearInterval(drive); drive = null;
-    const runs0 = Number(recs[x.r.id]?.runs) || 0, o = outcome(x, RR), s = save(x, o.clear, o.n);
+    const runs0 = Number(recs[x.r.id]?.runs) || (Number(recs[x.r.id]?.tries) ? 1 : 0), o = outcome(x, RR), s = save(x, o.clear, o.n); // 정식 기록(tries 만) = 이미 해 본 방 → 첫 판 무결 보너스 아님
     sfx(o.clear ? 'game-ok' : 'game-no', 0.8);
     // 💎 · EXP = 정식 그대로 (처음 처치만 · 하루 한도 100 안 · 🏆 업적은 밖 · 미리 보기 = 없음)
     const rw = castleReward({ first: s.first, boss: !!x.r.boss, firstCastle: s.firstCastle, flawless: o.flawless && runs0 === 0, sealed: s.first && !!x.r.boss }), got: string[] = [];
