@@ -33,7 +33,7 @@
       async frame(tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd') { drawNew(tier, t, v); const c = app.renderer.extract.canvas({ target: rt }) as HTMLCanvasElement; return c.toDataURL('image/png'); },
       low: { w: lowW, h: lowH, px: BODY.x / P, py: BODY.y / P, bb: [(BODY.x - BODY.w / 2) / P, (BODY.y - BODY.h / 2) / P, (BODY.x + BODY.w / 2) / P, (BODY.y + BODY.h / 2) / P] },
       /** 같은 장면 · 새 것 */
-      async sceneNew(tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd') { bgC.visible = true; old.visible = false; drawNew(tier, t, v); app.render(); },
+      async sceneNew(tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd', skill?: string) { bgC.visible = true; old.visible = false; drawNew(tier, t, v, skill); app.render(); },
       /** 쌍월 시제품 길이 */
       durOf: (v: 'a' | 'b' | 'c') => new SlashFx({ x: 0, y: 0, w: 1, h: 1, dir: 1, tier: 3, v }).T.dur,
       /** 같은 장면 · 지금 띠 같은 순간 (정식 띠 칸 · 몸통에 맞춘 크기 근사) */

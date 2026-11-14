@@ -28,25 +28,28 @@ export const RECIPES: Record<string, { shape: 'crescent'; colors: [number, numbe
   smash: { shape: 'crescent', colors: [0x6a2a08, 0xe8701a, 0xffd08a], hi: 0xfff4e0, spark: 'square', sound: 'smash' },
   sweep: { shape: 'crescent', colors: [0x0b5a34, 0x2fc87a, 0xb4ffd8], hi: 0xffffff, spark: 'shard', sound: 'cut' },
   wind: { shape: 'crescent', colors: [0x0b5a5a, 0x3fd8c8, 0xc8fff4], hi: 0xffffff, spark: 'shard', sound: 'cut' },
+  light: { shape: 'crescent', colors: [0x7a4a06, 0xf5b84a, 0xfff2b0], hi: 0xffffff, spark: 'square', sound: 'cut' },
 };
 /** 🗡 👎 다시 만들기 (📜 2026-11-14 머리 7e0f44e · 쌍월 A 방식 · 호 = 용사 쪽 → 몬스터 쪽)
  *  스킬 하나 = 칼질(cut) 몇 개 + 덧붙임(extra) · cut = { at 시작(초) · phi 맞는 점에서 본 호 중심 반대 방향(π 배수 · 0.5 = 가로 휘두름 · 0.78 = 위→아래 대각 · 1 = 세로 내려찍기 · 1.22 = 아래→위 대각) · rad 반지름(작을수록 많이 휨) · sweep 호가 도는 각 · thick 두께 · ox · oy 맞는 점 비켜 놓기(몸통 크기 배) }
  *  선생님 평가 한 줄: slash 「그저 직선 3개」 · spin 「원반이 도는 것 같음」 · reap 「원반 느낌」 · wblade 「칼날 느낌 안 듦」 · hammer · quake 👎 */
 type Cut = { at: number; phi: number; rad?: number; sweep?: number; thick?: number; len?: number; ox?: number; oy?: number; ghosts?: number };
-type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' };
+type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' | 'holy'; /** ✂ 베인 자국 (b140 · 기준 1 「벤다는 느낌」): 칼날이 맞는 점을 지날 때 그 방향으로 가는 흰 금이 번쩍 · 크기 배 */ slit?: number };
 export const SKILLS: Record<string, SkillR> = {
   // ⚔ 베기 Ⅲ 연타 = 휘어진 칼날 세 번 · Z 자(위→아래 · 아래→위 · 가로) · 0.08초 차이 · 끝이 가늘고 가운데가 두꺼운 초승달
-  slash: { fam: 'cut', tier: 2, dur: 0.62, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: -0.12, ghosts: 2 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: 0.04, ghosts: 2 }, { at: 0.16, phi: 0.56, rad: 0.7, len: 1.5, sweep: 0.9, thick: 0.3, oy: 0.18, ghosts: 2 }], sparks: 20, flash: 0.8, hitstop: 0.06, shake: 1 },
+  slash: { fam: 'cut', tier: 2, slit: 1.1, dur: 0.62, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: -0.12, ghosts: 2 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: 0.04, ghosts: 2 }, { at: 0.16, phi: 0.56, rad: 0.7, len: 1.5, sweep: 0.9, thick: 0.3, oy: 0.18, ghosts: 2 }], sparks: 20, flash: 0.8, hitstop: 0.06, shake: 1 },
   // 🔨 강타 Ⅲ 망치 = 머리 위에서 내려찍는 두꺼운 호 하나 → 땅이 갈라짐(금 · 먼지 · 돌 조각)
   hammer: { fam: 'smash', tier: 2, dur: 0.66, cuts: [{ at: 0, phi: 0.92, rad: 0.75, sweep: 0.85, thick: 0.5, len: 1.45, ghosts: 2 }], sparks: 18, flash: 0.9, hitstop: 0.09, shake: 2, extra: 'crack' },
   // 🔨 강타 Ⅳ 지진 = 더 크게 내려찍음 → 땅 금이 양옆으로 뻗고 바위가 솟고 땅 고리 두 겹 · 충격파
   quake: { fam: 'smash', tier: 3, dur: 0.95, cuts: [{ at: 0, phi: 0.95, rad: 0.82, sweep: 0.9, thick: 0.55, len: 1.65, ghosts: 3 }], sparks: 30, flash: 1, hitstop: 0.1, shake: 3, shock: true, extra: 'quake' },
   // 🌪 연격 Ⅲ 회전 베기 = 가로로 세 번 휘두름(위 · 가운데 · 아래 · 0.07초) + 바람 줄 · 원반 아님
-  spin: { fam: 'sweep', tier: 2, dur: 0.6, cuts: [{ at: 0, phi: 0.5, rad: 0.8, len: 1.35, sweep: 0.85, thick: 0.26, oy: -0.24, ghosts: 2 }, { at: 0.07, phi: 0.5, rad: 0.85, len: 1.4, sweep: 0.9, thick: 0.3, oy: 0, ghosts: 2 }, { at: 0.14, phi: 0.5, rad: 0.8, len: 1.35, sweep: 0.85, thick: 0.26, oy: 0.24, ghosts: 2 }], sparks: 18, flash: 0.75, hitstop: 0.06, shake: 1, extra: 'gust' },
+  spin: { fam: 'sweep', tier: 2, slit: 1.2, dur: 0.6, cuts: [{ at: 0, phi: 0.5, rad: 0.8, len: 1.35, sweep: 0.85, thick: 0.26, oy: -0.24, ghosts: 2 }, { at: 0.07, phi: 0.5, rad: 0.85, len: 1.4, sweep: 0.9, thick: 0.3, oy: 0, ghosts: 2 }, { at: 0.14, phi: 0.5, rad: 0.8, len: 1.35, sweep: 0.85, thick: 0.26, oy: 0.24, ghosts: 2 }], sparks: 18, flash: 0.75, hitstop: 0.06, shake: 1, extra: 'gust' },
   // 🌪 연격 Ⅳ 낫 = 크고 가는 낫 날 하나가 크게 휘어 긋고 · 반대로 한 번 더(X) · 잔상
-  reap: { fam: 'sweep', tier: 3, dur: 0.9, cuts: [{ at: 0, phi: 0.7, rad: 0.62, sweep: 1.15, thick: 0.2, len: 1.6, ghosts: 3 }, { at: 0.13, phi: 1.3, rad: 0.62, sweep: 1.1, thick: 0.18, len: 1.5, ghosts: 2 }], sparks: 28, flash: 1, hitstop: 0.08, shake: 3, shock: true, glow: true },
+  reap: { fam: 'sweep', tier: 3, slit: 1.5, dur: 0.9, cuts: [{ at: 0, phi: 0.7, rad: 0.62, sweep: 1.15, thick: 0.2, len: 1.6, ghosts: 3 }, { at: 0.13, phi: 1.3, rad: 0.62, sweep: 1.1, thick: 0.18, len: 1.5, ghosts: 2 }], sparks: 28, flash: 1, hitstop: 0.08, shake: 3, shock: true, glow: true },
   // 🌬 바람 Ⅰ 바람 칼날 = 초승달 칼날이 용사 쪽에서 날아와 꽂히며 그음 + 속도선
-  wblade: { fam: 'wind', tier: 0, dur: 0.5, cuts: [{ at: 0, phi: 0.62, rad: 0.62, len: 1.35, sweep: 0.8, thick: 0.32, ghosts: 2 }], sparks: 12, flash: 0.6, extra: 'fly' },
+  wblade: { fam: 'wind', tier: 0, slit: 1, dur: 0.5, cuts: [{ at: 0, phi: 0.62, rad: 0.62, len: 1.35, sweep: 0.8, thick: 0.32, ghosts: 2 }], sparks: 12, flash: 0.6, extra: 'fly' },
+  // ☀ 빛 Ⅰ 빛 베기 (b140 · 1차 👎 「벤다는 느낌이 안 듦」) = 금빛 초승달 칼날 하나가 위→아래 대각으로 긋고 · 베인 자국 + 맞는 순간 빛 십자(세로가 긴 성광) · 금빛 가루
+  radiant: { fam: 'light', tier: 0, slit: 1.2, dur: 0.5, cuts: [{ at: 0, phi: 0.75, rad: 0.66, len: 1.4, sweep: 0.85, thick: 0.34, ghosts: 2 }], sparks: 16, flash: 0.8, extra: 'holy' },
 };
 /** 🌙 쌍월 참(Ⅳ) 시제품 3가지 (🔨 2026-11-13 밤 평가판 👎 「쌍월이면 대표 스킬인데 신경 써 줘 · 하나도 안 멋져」 · 머리 📎 「NUM · RECIPES 값만 다르게」)
  *  A = 지금 Ⅳ · B = 초승달 두 개가 X 로 엇갈림(둘째 0.07초 뒤) + 맞는 순간 큰 흰 번쩍 + 파편 많이 · C = 더 두꺼운 호 + 잔상 길게(6겹 · 진하게)
@@ -159,7 +162,20 @@ export class SlashFx {
       this.crescent(ox, oy, R, a0, a1, hp, tp, th, al);
     }
     if (S.extra === 'fly' && fancy && flyP < 1) for (let k = 0; k < 4; k++) { const yy = cy + (k - 1.5) * o.h * 0.14, x0 = cx + flyX - dir * o.w * (0.4 + k * 0.15); g.moveTo(Math.round(x0), Math.round(yy)).lineTo(Math.round(x0 - dir * o.w * (0.6 + 0.2 * k)), Math.round(yy)).stroke({ width: 1, color: this.C.colors[2], alpha: 0.7 * (1 - flyP) }); }
+    // ✂ 베인 자국: 칼질마다 머리가 맞는 점을 지난 뒤 0.16초 · 그 순간 칼날 방향(호의 접선)으로 가는 가늘고 긴 흰 금 · 가운데가 굵고 끝이 뾰족 · 넓어졌다 가늘어지며 사라짐
+    if (S.slit && fancy && !reduce && this.level < 3) for (const c of cuts) {
+      const t0 = c.at + span * 0.22, q = (t - t0) / 0.16; if (q < 0 || q > 1) continue;
+      const phi = Math.PI * (dir > 0 ? c.phi : 1 - c.phi), ang = phi + Math.PI / 2, ux = Math.cos(ang), uy = Math.sin(ang), px = -uy, py = ux;
+      const hx = cx + (c.ox ?? 0) * o.w * dir, hy = cy + (c.oy ?? 0) * o.h, L = base * 0.75 * S.slit * (0.6 + 0.4 * ease(clamp(q * 3))), wd = Math.max(0.6, 2.4 * S.slit * Math.sin(Math.PI * Math.min(1, q * 1.4))), a = 1 - q * q;
+      g.poly([hx - ux * L, hy - uy * L, hx + px * wd, hy + py * wd, hx + ux * L, hy + uy * L, hx - px * wd, hy - py * wd]).fill({ color: this.C.colors[2], alpha: a * 0.8 });
+      g.poly([hx - ux * L * 0.8, hy - uy * L * 0.8, hx + px * wd * 0.45, hy + py * wd * 0.45, hx + ux * L * 0.8, hy + uy * L * 0.8, hx - px * wd * 0.45, hy - py * wd * 0.45]).fill({ color: 0xffffff, alpha: a });
+    }
     const it = this.impactT;
+    // ✝ 빛 십자 (holy · 빛 베기): 맞는 순간 0.22초 · 세로가 긴 금빛 십자 + 흰 속
+    if (S.extra === 'holy' && fancy && !reduce && t >= it && t < it + 0.22) {
+      const q = (t - it) / 0.22, a = 1 - q, V = base * (0.7 + 0.5 * ease(q)), Hh = V * 0.55, w = Math.max(1.5, 5 * (1 - q));
+      for (const [col, k] of [[this.C.colors[1], 1], [0xffffff, 0.5]] as const) { g.poly([cx, cy - V * k, cx + w * k, cy, cx, cy + V * 0.6 * k, cx - w * k, cy]).fill({ color: col, alpha: a }); g.poly([cx - Hh * k, cy, cx, cy - w * k, cx + Hh * k, cy, cx, cy + w * k]).fill({ color: col, alpha: a }); }
+    }
     // 💨 바람 줄 (gust): 가로 줄 4개가 용사 쪽 → 몬스터 쪽으로 지나감
     if (S.extra === 'gust' && fancy && t < span) { const q = t / span; for (let k = 0; k < 4; k++) { const yy = cy + (k - 1.5) * o.h * 0.22, x0 = cx + dir * o.w * (-1.2 + 2.4 * q + k * 0.1); g.moveTo(Math.round(x0), Math.round(yy)).lineTo(Math.round(x0 - dir * o.w * 0.5), Math.round(yy)).stroke({ width: 1, color: this.C.colors[2], alpha: 0.6 * (1 - q) }); } }
     // 🪨 땅 갈라짐 (crack · quake): 맞는 순간부터 · 발밑 줄에서 지그재그 금이 양옆으로 뻗음 · 먼지 · 돌 조각 · quake = 금 더 길고 바위가 솟고 땅 고리 두 겹

@@ -21,7 +21,7 @@
    "pk": 5
   },
   "slash": {
-   "src": "pfx2/new-slash-v3.webp",
+   "src": "pfx2/new-slash-v4.webp",
    "w": 160,
    "h": 100,
    "n": 19,
@@ -91,7 +91,7 @@
    "pk": 8
   },
   "spin": {
-   "src": "pfx2/new-spin-v3.webp",
+   "src": "pfx2/new-spin-v4.webp",
    "w": 160,
    "h": 100,
    "n": 18,
@@ -101,7 +101,7 @@
    "pk": 5
   },
   "reap": {
-   "src": "pfx2/new-reap-v3.webp",
+   "src": "pfx2/new-reap-v4.webp",
    "w": 160,
    "h": 100,
    "n": 24,
@@ -111,7 +111,7 @@
    "pk": 7
   },
   "wblade": {
-   "src": "pfx2/new-wblade-v3.webp",
+   "src": "pfx2/new-wblade-v4.webp",
    "w": 160,
    "h": 100,
    "n": 16,
@@ -129,6 +129,16 @@
    "px": 110,
    "py": 57,
    "pk": 9
+  },
+  "radiant": {
+   "src": "pfx2/new-radiant-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 16,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 5
   }
  },
  "bb": {
@@ -205,6 +215,12 @@
    82
   ],
   "twin-d": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "radiant": [
    85,
    32,
    135,

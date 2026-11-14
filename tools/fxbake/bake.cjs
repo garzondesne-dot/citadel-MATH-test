@@ -14,7 +14,7 @@ const KINDS = ['cut', 'moon', 'slash', 'twin'], FPS = 20;
     for (const k of process.argv.slice(3)) {
       const dur = await p.evaluate((k) => window.__bake.durSkill(k), k), n = Math.ceil((dur + 0.3) * FPS), files = [];
       for (let i = 0; i < n; i++) { const url = await p.evaluate(([t, k]) => window.__bake.frameSkill(k, t), [i / FPS, k]); const f = path.join(TMP, `sk${k}-${String(i).padStart(2, '0')}.png`); fs.writeFileSync(f, Buffer.from(url.split(',')[1], 'base64')); files.push(f); }
-      const src = `pfx2/new-${k}-v3.webp`;
+      const src = `pfx2/new-${k}-v${process.env.V || 3}.webp`; // 다시 구울 때 = V=4 … (그림은 캐시 먼저 → 이름을 바꿈)
       execFileSync('python3', ['-I', '-c', `import sys\nfrom PIL import Image\nfs=sys.argv[2:]\nims=[Image.open(f).convert('RGBA') for f in fs]\nw,h=ims[0].size\ns=Image.new('RGBA',(w*len(ims),h))\nfor i,im in enumerate(ims): s.paste(im,(i*w,0))\ns.save(sys.argv[1],'WEBP',lossless=True,method=6)`, path.join(ROOT, 'public/art', src), ...files]);
       J.fx[k] = { src, w: info.low.w, h: info.low.h, n, fps: FPS, px: Math.round(info.low.px), py: Math.round(info.low.py), pk: Math.round(n * 0.3) }; J.bb[k] = info.low.bb.map(Math.round);
       console.log(`${k}: ${n}칸 · ${fs.statSync(path.join(ROOT, 'public/art', src)).size}B`);
