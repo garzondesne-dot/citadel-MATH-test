@@ -5,7 +5,7 @@
   import { PACKS } from '../../engine/packs';
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
-  import { GEM, kstDay, TEAM_X, type firstTry } from '../../board/board';
+  import { END_MS, GEM, kstDay, TEAM_X, type firstTry } from '../../board/board';
   import { bonusOf, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
   import { liveValue } from '../room.svelte';
   import { lastClass, lastTest } from '../../school/school';
@@ -90,11 +90,26 @@
       rank = { lesson: L.id, week: weekOf(S.now()), key };
     }
     if (team && r.drv) S.set(`${POSTS}/${team.pid}/phase`, 'done');
-    res = { ...r, L, n, role, mult, bonus, base, total2, got, rank };
+    if (team) markSeen(team.pid);
+    res = { ...r, L, n, role, mult, bonus, base, total2, got, rank }; stageGo(0);
   }
+  // 🐞 결과 연출 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 등급 도장 → 💎 올라감 → 다 보임 · 단계마다 최소 2초 · 화면을 누르면 다음 단계 · 결과 화면은 단추를 누를 때까지 그대로
+  let stage = $state(2), gemShown = $state(0), stT: ReturnType<typeof setTimeout> | undefined, gemRaf = 0;
+  function stageGo(k: number) {
+    clearTimeout(stT); cancelAnimationFrame(gemRaf); stage = Math.min(2, k);
+    if (stage === 1 && res) { const to = res.got, t0 = performance.now(), dur = END_MS * 0.6; gemShown = 0; const f = () => { const q = Math.min(1, (performance.now() - t0) / dur); gemShown = Math.round(to * q); if (q < 1) gemRaf = requestAnimationFrame(f); else sfx('game-ok', 0.6); }; gemRaf = requestAnimationFrame(f); }
+    else if (res) gemShown = stage >= 2 ? res.got : 0;
+    if (stage < 2) stT = setTimeout(() => stageGo(stage + 1), END_MS);
+  }
+  const skip = () => { if (stage < 2) stageGo(stage + 1); };
+  onDestroy(() => { clearTimeout(stT); cancelAnimationFrame(gemRaf); });
   const rk = $derived(res?.rank ? rankOf(rkv.v.val?.[res.rank.lesson]?.[res.rank.week] ?? null, res.rank.key) : null);
   const dayLeft = $derived(GEM.dayCap - (Number(me.wallet.day?.[kstDay(S.now())]) || 0));
-  const teamRun = $derived(mine && mine.phase === 'play' && mine.code && !res ? mine : null);
+  // 🐞 (📜 2026-11-14) 이끄는 폰이 먼저 끝내 글이 'done' 이 되어도, 이 폰이 자기 결과를 아직 못 봤으면 전투를 닫지 않음 (예전 = 바로 닫혀 결과 없이 게시판으로)
+  const SEEN = 'citadel-board-seen';
+  let seen = $state<string[]>((() => { try { return JSON.parse(localStorage.getItem(SEEN) || '[]') as string[]; } catch { return []; } })());
+  const markSeen = (pid: string) => { seen = [...seen.filter((x) => x !== pid), pid].slice(-30); try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch { /* 사생활 창 */ } };
+  const teamRun = $derived(mine && (mine.phase === 'play' || (mine.phase === 'done' && !seen.includes(mine.pid))) && mine.code && !res ? mine : null);
   const names = (p: Post) => Object.fromEntries(membersOf(p).map((m) => [m.uid, `${m.cls}반 ${heroOf(m.hero).name}`]));
 </script>
 
@@ -102,17 +117,18 @@
   <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b class="t">{mine && mine.phase === 'wait' ? `📋 ${mine.no}차시 팀` : '📋 게시판 던전'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
   {#if res}
     <!-- ⑪ ⑫ 결과 -->
-    <div class="mid">
-      <div class="card grade" class:x={!res.clear}><b class="g">{res.clear ? res.grade : '✕'}</b><span><b>{res.clear ? `${res.L.no}차시 클리어 · ${res.n > 1 ? '팀 ' : ''}등급 ${res.grade}` : '⌛ 시간이 끝났어요 · 클리어 ✕'}</b><small>첫 시도 기준 · {res.tf.total}문항 중 틀림 + 미제출 {res.tf.bad + res.tf.none}개</small></span></div>
+    <!-- 🐞 결과 연출: 등급 도장 → 💎 올라감 → 순위 · 단계마다 최소 2초 · 누르면 다음 (단추는 늘 그대로) -->
+    <div class="mid" role="button" tabindex="0" aria-label="결과 · 누르면 다음" data-k="board-res" data-stage={stage} onclick={skip} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip(); }}>
+      <div class="card grade stamp" class:x={!res.clear}><b class="g">{res.clear ? res.grade : '✕'}</b><span><b>{res.clear ? `${res.L.no}차시 클리어 · ${res.n > 1 ? '팀 ' : ''}등급 ${res.grade}` : '⌛ 시간이 끝났어요 · 클리어 ✕'}</b><small>첫 시도 기준 · {res.tf.total}문항 중 틀림 + 미제출 {res.tf.bad + res.tf.none}개</small></span></div>
       <div class="stat"><span><b>{res.tf.ok}</b>⭕ 맞힘</span><span><b>{res.tf.bad}</b>❌ 틀림</span><span><b>{res.tf.none}</b>⏭ 미제출</span></div>
-      {#if rk && rk.s}<div class="card rk"><small>익명 순위 · {res.L.no}차시 · 이번 주 · 학년 ({rk.n}팀)</small><div><span>⚔ 최강</span><em>{rk.s}위</em></div><div><span>📈 성장</span><em>{rk.g}위</em></div><div><span>🤝 협동</span><em>{rk.c}위</em></div></div>{/if}
-      <div class="card rw">
+      {#if stage >= 2 && rk && rk.s}<div class="card rk"><small>익명 순위 · {res.L.no}차시 · 이번 주 · 학년 ({rk.n}팀)</small><div><span>⚔ 최강</span><em>{rk.s}위</em></div><div><span>📈 성장</span><em>{rk.g}위</em></div><div><span>🤝 협동</span><em>{rk.c}위</em></div></div>{/if}
+      {#if stage >= 1}<div class="card rw rise">
         <div><span>💎 맞힌 소문제 {res.right} (최대 {GEM.itemMax}){res.clear ? ` + ⏰ 클리어 ${GEM.clear}` : ''}</span><span>{res.base}</span></div>
         {#if res.n > 1}<div><span>👥 {res.n}인 팀 × {res.mult}</span><span>× {res.mult}</span></div>{/if}
         {#if res.bonus}<div><span>{res.role === 'g' ? `🛡 수호 보너스 +${Math.round(res.bonus * 100)}%` : '🌱 도전자만 클리어 +50%'}</span><span>+{Math.round(res.bonus * 100)}%</span></div>{/if}
-        <div class="tot"><span>받은 💎</span><span>{res.got}{res.got < res.total2 ? ` (오늘 한도 · ${res.total2 - res.got} 못 받음)` : ''}</span></div>
-      </div>
-      <p class="why">벌은 없어요 · 한 번 더 = 숫자가 새로 바뀌어요</p>
+        <div class="tot"><span>받은 💎</span><span data-k="board-gem">{gemShown}{stage >= 2 && res.got < res.total2 ? ` (오늘 한도 · ${res.total2 - res.got} 못 받음)` : ''}</span></div>
+      </div>{/if}
+      {#if stage >= 2}<p class="why">벌은 없어요 · 한 번 더 = 숫자가 새로 바뀌어요</p>{:else}<p class="why tap">화면을 누르면 다음</p>{/if}
     </div>
     <!-- 📜 2026-11-14 선생님 「게시판던전 마지막 한번더랑 게시판으로 위치 바꿔줘」 = 자리만 맞바꿈(🔥 한 번 더 = 위 · 금빛 그대로 / 📋 게시판으로 = 아래 맨 끝 · 테두리 단추 그대로) · 1인 · 팀 같은 화면 -->
     <div class="endact" data-k="board-end"><button type="button" class="again" data-k="board-again" onclick={() => { pick = res!.L; sheet = 'solo'; go(); }}>🔥 한 번 더</button><button type="button" class="btn2 wide" data-k="board-back" onclick={() => (res = null)}>📋 게시판으로</button></div>
@@ -196,6 +212,9 @@
   .mid { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
   .card { background: var(--surface); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
   .card small { font-size: 13px; color: var(--text-2); }
+  .stamp { animation: stampin 0.32s cubic-bezier(.2,1.6,.4,1) both; } .rise { animation: risein 0.2s ease-out both; }
+  @keyframes stampin { from { transform: scale(1.6) rotate(-6deg); opacity: 0; } } @keyframes risein { from { transform: translateY(8px); opacity: 0; } }
+  .why.tap { color: var(--text-3); }
   .card.row { flex-direction: row; justify-content: space-between; font-size: 14px; }
   .lbl { font-size: 13px; color: var(--text-3); font-weight: 700; }
   .post { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: var(--r); padding: 10px 12px; }

@@ -6,7 +6,7 @@
   import { memoryStore } from '../../store/device';
   import { bossSubmit, chainSubmit, nextStep, openRoom, roomPath, submit } from '../../raid/actions';
   import { activeIds, answerOf, bossItem, bossState, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord, resultOf, stepOf } from '../../raid/raid';
-  import { boardPack, firstTry, freshAll, gradeOf, itemCount, SEC_PER_ITEM, stepDone } from '../../board/board';
+  import { boardPack, END_MS, firstTry, freshAll, gradeOf, itemCount, SEC_PER_ITEM, stepDone } from '../../board/board';
   import { bMeta, bPause, helpOn, hintKey, hintOf, pauseMax, pauseOff, pauseOn, pausesLeft, sendHint, solvedStep, stuckItem, thinkUsed, timeLeft, type Role } from '../../board/team';
   import { liveRoom } from '../room.svelte';
   import Student from '../Student.svelte';
@@ -84,16 +84,21 @@
     if (!isEnd(L, RR) && !over && (who.length ? who : [uid]).every((u) => stepDone(L, RR, u))) { nextStep(S, L, code); return; }
     if (isEnd(L, RR) || over) S.set(`${roomPath(code)}/state/bend`, { at: S.now(), clear: !over });
   }, 300);
-  // ── 끝 (모든 폰) ──
+  // ── 끝 (모든 폰) ── 🐞 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 끝 신호를 받으면 그 순간 기록을 붙잡아 두고
+  //   ⚔ 처치! / ⌛ 시간 끝 장면을 2초 보여 준 뒤(누르면 바로) 결과로 — 팀 친구가 먼저 넘어가도 이 폰 결과는 붙잡은 기록 그대로
+  let endShow = $state<{ clear: boolean } | null>(null), endT: ReturnType<typeof setTimeout> | undefined, endGo: (() => void) | null = null;
   $effect(() => {
     const RR = R, be = RR && (RR.state as unknown as { bend?: { clear: boolean } }).bend; if (!RR || !be || ended) return;
     ended = true;
     untrack(() => {
       const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
       const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
-      onend({ drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L });
+      const out = { drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L };
+      let done = false; endGo = () => { if (done) return; done = true; clearTimeout(endT); onend(out); };
+      endShow = { clear: be.clear }; sfx(be.clear ? 'finish' : 'game-no', 0.8); endT = setTimeout(() => endGo?.(), END_MS);
     });
   });
+  onDestroy(() => clearTimeout(endT));
   const amDrvNow = (RR: Room) => solo || leader(RR, S.now())?.u === uid;
   const elapsedOf = (RR: Room) => { const m = bMeta(RR); return m ? (m.limit || 0) - timeLeft(RR, S.now()) : 0; };
   // 🧪 화면 시험만: 지금 단계를 다 맞히기 · 다 틀리기 (e2e team.cjs · 답 입력 화면 자체는 레이드 e2e 가 시험)
@@ -174,6 +179,7 @@
       {#if bp.by === uid}<BottomAction text="▶ 다시 시작" onmain={() => R && pauseOff(S, code, R)} />{:else}<BottomAction text="⏸ 멈춤 중" why="멈춘 친구가 다시 시작해요" />{/if}</div>
   {/if}
   {#if toast || took}<p class="toast2" role="status">{toast || took}</p>{/if}
+  {#if endShow}<button type="button" class="endov" class:x={!endShow.clear} data-k="board-endov" onclick={() => endGo?.()}><b>{endShow.clear ? '⚔ 처치!' : '⌛ 시간 끝'}</b><small>누르면 결과</small></button>{/if}
 </div>
 {#if hintSheet}
   <Sheet onclose={() => (hintSheet = false)}>
@@ -224,4 +230,9 @@
   @keyframes wjump { 0% { transform: none; opacity: 1; } 40% { transform: translateY(-18vmin) scale(1.05); } 100% { transform: translateY(-34vmin) scale(0.15); opacity: 0; } }
   @keyframes wfade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .wp, .wring, .whero { animation: none; } .wring { display: none; } }
+  .endov { position: fixed; inset: 0; z-index: 30; border: 0; background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--accent) 22%, var(--bg)) 0%, var(--bg) 62%); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #fff; font-family: var(--font); animation: endin 0.18s ease-out; }
+  .endov b { font-size: 40px; font-weight: 800; text-shadow: 0 3px 0 #000, 0 0 18px var(--accent); }
+  .endov.x b { text-shadow: 0 3px 0 #000; }
+  .endov small { font-size: 15px; font-weight: 700; opacity: 0.85; }
+  @keyframes endin { from { opacity: 0; transform: scale(1.06); } }
 </style>

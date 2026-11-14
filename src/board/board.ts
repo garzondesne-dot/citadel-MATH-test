@@ -4,6 +4,8 @@ import { BOSS_ID, bossState, chainItems, chainRecord, isChain, itemsFor, plainRe
 // 📋 게시판 던전 규칙 (#143 · DECISIONS 「🏕 v1.0 쉼터 · 📋 게시판 던전 확정」) — 화면은 이 함수만 읽음
 //   판 = 그 차시의 문제(몬스터) → 형성평가(보스)만 · 개념 · 도입 없음 · 「다음 판에서」 자리도 풂 · 첫 판부터 숫자 바뀐 판(meta.fresh)
 export const SEC_PER_ITEM = 90;
+/** 🐞 게시판 끝 연출 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): ⚔ 처치 · 등급 도장 · 💎 올라감 = 최소 2초씩 · 누르면 다음 */
+export const END_MS = 2000;
 /** 등급 (첫 시도 기준 · 틀림 + 미제출 비율) */
 export const GRADE: [string, number][] = [['S', 0.1], ['A', 0.25], ['B', 0.5]];
 /** 💎 (❓ #143-b 답 오기 전 = 손발 추천 A: 맞힌 소문제 × 1 (최대 12) + 시간 안 클리어 4 · 정식 레이드 solvedMax · clear) · 하루 한도 = 정식 DAY_CAP */

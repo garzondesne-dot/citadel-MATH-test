@@ -21,6 +21,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     await p.click('.links button:has-text("가입")'); await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.waitForTimeout(150); if (await p.$('.pad')) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.click('.title .pmain'); await p.waitForTimeout(2500);
+    if (await p.$('text=첫 용사 고르기')) { await p.click('button:has-text("시작")'); await p.waitForTimeout(800); } // 🧙 첫 용사 고르기 (b1xx 뒤로 새로 가입하면 뜸)
   };
   const A = await open(`?${E}`); await signup(A, '1-3', 1);
   await rest('records/1-3/1/set-06', 'PUT', { right: 27, total: 30, no: 6, at: Date.now() });
