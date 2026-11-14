@@ -68,8 +68,9 @@
   });
   // 📲 번호 칸 (📜 2026-11-14 선생님 시안 v12 「오케이 이거야 · 이대로 컨펌」 · 머리 e1880f6 B): 대기실 · 수업 중 · 마무리 = 같은 자리 · 같은 크기
   //   열 = 24명 이하 8 × 3(번호 + 이름) · 25~27 9 × 3 · 28~30 10 × 3(번호만) · 칸 = 들어옴 · 안 옴(점선) · 결석(결) · ⚠ 옛 판(노란 바탕 + 두근두근 2.4초) · 🙋 도움(빨간 테두리 + 손 흔들기) · 둘 다
-  const COLS = $derived(pupils.length <= 24 ? 8 : pupils.length <= 27 ? 9 : 10);
-  const named = $derived(COLS === 8);
+  // 📜 2026-11-14 선생님 「리모컨 21명 하면 7X3으로해줘」 = 21명 이하 7열(번호 + 이름) · 22~24 8열
+  const COLS = $derived(pupils.length <= 21 ? 7 : pupils.length <= 24 ? 8 : pupils.length <= 27 ? 9 : 10);
+  const named = $derived(COLS <= 8);
   const help = $derived(stuck.filter((x) => x.lock).map((x) => x.u));
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
@@ -311,6 +312,7 @@
   .att .hd { height: 18px; }
   .cnt { font-size: 18px; font-variant-numeric: tabular-nums; } .cnt small { font-size: 12px; color: var(--text-2); }
   .nums { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
+  .nums.c7 { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
   .nums.c9 { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; } .nums.c10 { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; }
   .n { position: relative; height: 40px; border-radius: 8px; border: 1.5px dashed var(--line); background: none; color: var(--text-3); font: 700 14px var(--font); padding: 0; display: grid; place-items: center; align-content: center; line-height: 1.15; }
   .nums.c9 .n, .nums.c10 .n { font-size: 15px; }
