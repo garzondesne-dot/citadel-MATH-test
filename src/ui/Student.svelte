@@ -104,6 +104,7 @@
   let atk = $state<{ def: AttackDef; at: number; until: number; strong: boolean } | null>(null);
   const memo = {};
   function strike(def: AttackDef, ms: number, strong = false) {
+    if (cardOnly) return; // 🎮 시연 = 몬스터 공격 · 효과 · 소리 없음 (📜 2026-11-14 「교사용 시연에 전투 모션도 나와」)
     atk = { def, at: gnow, until: gnow + ms, strong }; iceEnd = 'melt';
     fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.bind = def.id === 'bind'; fx.chain = { cut: 0, broken: false, open: false };
     sfx((def.id === 'wind' ? ELEM_FX.gale : ELEM_FX[def.elem])?.sfx ?? 'smash'); if (strong) setTimeout(() => sfx('hurt', 0.5), 180);

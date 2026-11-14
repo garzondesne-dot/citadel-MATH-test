@@ -26,7 +26,13 @@ const packFile = (id) => (id === 'set-11' ? path.join(ROOT, 'tools/pack-upload/o
     ok(`${arg} 문제 카드 · 주요 단추 · 넘침 0`, r.card && r.main && r.over <= 0, `배율 ${r.k} · 문제 글자 ${r.fs}px(TV) · 「${r.head}」`);
     if (want) ok(`${arg} 소레이드 단계(졸개 · 대장)`, r.chain);
     await tv.click('.dpane .bar button:has-text("정답")'); await tv.waitForTimeout(300); const rev = (await tv.textContent('.dpane .rev').catch(() => '')).trim(); ok(`${arg} 💡 정답 펼치기 그대로`, rev.length > 2, rev.slice(0, 50));
-    await tv.screenshot({ path: path.join(SHOTS, `demo-${arg.replace(/[:@]/g, '_')}.png`) });
+    await tv.evaluate(() => [...document.querySelectorAll('nav.dock .t')].find((b) => /고정/.test(b.textContent))?.click()); // 📌 막대 고정 = 늘 떠 있음
+    for (const [W, H] of [[1920, 1080], [1366, 768]]) { // 조작 막대를 띄운 채 시연 주요 단추가 다 보임 (🐞 2026-11-14)
+      await tv.setViewportSize({ width: W, height: H }); await tv.waitForTimeout(500); await tv.mouse.move(W / 3, H / 2); await tv.mouse.move(W / 2, H / 2); await tv.waitForFunction(() => document.querySelector("nav.dock")?.classList.contains("on"), null, { timeout: 3000 }).catch(() => {}); await tv.waitForTimeout(450);
+      const g = await tv.evaluate(() => { const d = document.querySelector('nav.dock'), m = document.querySelector('.dpane .pmain'), pane = document.querySelector('.dpane'); const dr = d.getBoundingClientRect(), mr = m.getBoundingClientRect(), pr = pane.getBoundingClientRect(); return { dockOn: d.classList.contains('on'), dockTop: Math.round(dr.top), dockL: Math.round(dr.left), mBot: Math.round(mr.bottom), paneBot: Math.round(pr.bottom), mTop: Math.round(mr.top), inPane: mr.bottom <= pr.bottom + 1 }; });
+      ok(`${arg} ${W}×${H} 막대 떠 있어도 주요 단추 다 보임`, g.dockOn && g.mBot <= g.dockTop && g.inPane, JSON.stringify(g));
+      await tv.screenshot({ path: path.join(SHOTS, `demo-${arg.replace(/[:@]/g, '_')}-${W}.png`) });
+    }
     await ctx.close();
   }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();

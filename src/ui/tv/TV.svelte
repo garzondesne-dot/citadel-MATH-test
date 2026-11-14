@@ -467,7 +467,7 @@
   .sc { position: absolute; right: 2cqw; top: 23cqh; z-index: 3; min-width: 31cqw; padding: 2.2cqh 2cqw; border-radius: 2cqh; background: rgba(10, 16, 30, 0.86); border: 2px solid #6aa3ff; box-shadow: 0 0 2cqh rgba(106, 163, 255, 0.25); display: flex; flex-direction: column; gap: 1cqh; align-items: center; text-align: center; } /* 🌫 정찰 = 큰 테두리 카드 (📺 시안) */
   .sc .q { font-size: var(--tv-body); font-weight: 700; }
   .sc .r { font-size: var(--tv-body); } .sc .r b { font-size: var(--tv-big); color: #9fc8ff; }
-  .dpane { position: absolute; right: 1.5cqw; top: 11cqh; bottom: 2cqh; width: 40cqw; z-index: 4; border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
+  .dpane { position: absolute; right: 1.5cqw; top: 11cqh; bottom: 13cqh; /* 🎮 아래 조작 막대(7.6cqh + 여백 · 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 40cqw; z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
