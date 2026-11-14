@@ -21,3 +21,12 @@ describe('TV 카드', () => {
     expect(problemParts(['(1) 하나', '(2) 둘'])).toEqual({ head: [], items: ['(1) 하나', '(2) 둘'] });
   });
 });
+import { talkOf } from '../src/ui/tv/cards';
+describe('💬 말할 거리', () => {
+  it('6차시 개념 1 = 괄호 속 교사 말 · 5차시 개념 1 = 복습 말 · 없으면 빈 글', () => {
+    const L6 = PACKS.find((p) => p.no === 6)!, L5 = PACKS.find((p) => p.no === 5)!;
+    expect(talkOf(L6.steps.find((s) => s.id === 'c1')!.say ?? '')).toBe('급식에서 「둘 다 안 먹는」 친구 · 지난 시간 Aᶜ, A − B 복습');
+    expect(talkOf(L5.steps.find((s) => s.id === 'c1')!.say ?? '')).toMatch(/^먼저 지난 시간 복습/);
+    expect(talkOf(L6.steps.find((s) => s.id === 'c2')!.say ?? '')).toBe('');
+  });
+});

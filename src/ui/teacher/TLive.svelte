@@ -13,6 +13,7 @@
   import { liveRoom } from '../room.svelte';
   import QR from '../QR.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import { talkOf } from '../tv/cards';
   import { driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
   import { status as funStatus, norm, type Fun } from '../../rest/fun';
 
@@ -32,6 +33,7 @@
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
   const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name.slice(1)}` : R?.players?.[u]?.nick ?? u; };
   const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? R?.players?.[u]?.num ?? 0;
+  let talkOpen = $state(false); // 💬 말할 거리 전체
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string) => { toast = t; if (toastT) clearTimeout(toastT); toastT = setTimeout(() => (toast = ''), 1800); };
 
@@ -203,6 +205,9 @@
           <div class="adj" aria-label="정찰 시간 조정"><button type="button" aria-label="정찰 30초 줄이기" onclick={() => scoutAdd(S, L, code, -30)}>−30초</button>
             <div class="hpl"><div class="b sc"><i style:width="{Math.min(100, (scout.left / ((scout.end - scout.t0) || 1)) * 100)}%"></i></div><small>등장까지 <b>{Math.ceil(scout.left / 1000)}초</b> · 준비 완료 <b>{Object.keys(R.ready?.[scout.id] || {}).length}</b></small></div>
             <button type="button" aria-label="정찰 30초 늘리기" onclick={() => scoutAdd(S, L, code, 30)}>+30초</button></div>
+        {:else if step?.kind === 'concept' && talkOf(step.say ?? '')}
+          <!-- 💬 말할 거리 (선생님 「A 말할 거리로 보이게」 2026-11-14): 개념 단계엔 체력 칸 대신 · 같은 높이 44px · 2줄 · 길면 「더 보기」 -->
+          <div class="adj talk" aria-label="말할 거리"><p><b>💬</b> {talkOf(step.say ?? '')}</p><button type="button" onclick={() => (talkOpen = true)}>더 보기</button></div>
         {:else}
           <div class="adj" aria-label="체력 기준 조정"><button type="button" aria-label="체력 기준 5% 내리기" disabled={!hp} onclick={() => setPct(S, code, (R.meta.pct ?? L.defaultPct) - 5)}>−5%</button>
             <div class="hpl"><div class="b"><i style:width="{hp && hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div><small>{#if hp}체력 <b>{hp.left} / {hp.max}</b> · 기준 <b>{hp.pct}%</b>{:else}몬스터 없음 · 기준 <b>{R.meta.pct ?? L.defaultPct}%</b>{/if}</small></div>
@@ -223,6 +228,12 @@
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} 풀어줬어요 (❤ +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
+  {#if talkOpen && step?.kind === 'concept'}
+    <Sheet onclose={() => (talkOpen = false)} mainText="닫기">
+      {#snippet title()}💬 말할 거리 · {short(step)}{/snippet}
+      <p class="talkfull">{talkOf(step.say ?? '')}</p>
+    </Sheet>
+  {/if}
   {#if whoP}
     {@const st = stOf(whoP.uid)}
     <Sheet onclose={() => (who = '')} mainText="닫기">
@@ -355,6 +366,10 @@
   .unsub { font-size: 13px; color: var(--text-2); }
   .sub { margin-left: auto; font-size: 13px; color: var(--text-2); } .sub b { font-size: 22px; font-weight: 800; color: var(--text); }
   .adj { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 8px; align-items: center; height: 44px; }
+  .adj.talk { grid-template-columns: minmax(0, 1fr) 64px; }
+  .adj.talk p { margin: 0; font-size: 13px; line-height: 1.35; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .adj.talk p b { font-weight: 400; }
+  .talkfull { margin: 0; font-size: 16px; line-height: 1.6; }
   .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }

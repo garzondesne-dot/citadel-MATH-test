@@ -32,3 +32,10 @@ export function problemParts(qs: string[]): { head: string[]; items: string[] } 
   const lines = sets.length > 2 ? [sets[0]!, sets.slice(1).join(', ')] : [cond];
   return { head: lines, items: parts.map((p) => `${p.lab ? `${p.lab} ` : ''}${p.rest.slice(head.length)}`) };
 }
+
+/** 💬 교사용 말할 거리 = 개념 글 앞의 「(먼저 …)」 「(지난 …)」 괄호 속 (TV · 학생 폰엔 안 보임 · 교사 폰 리모컨 개념 단계 · 2026-11-14 선생님 「A 말할 거리로 보이게」) */
+export function talkOf(say: string): string {
+  const out: string[] = []; let s = (say || '').trim(), m: RegExpExecArray | null;
+  while ((m = /^\(((?:먼저|지난)[^)]*)\)\s*/.exec(s))) { out.push(m[1]!.replace(/^먼저 말로:\s*/, '').trim()); s = s.slice(m[0].length); }
+  return out.join(' · ');
+}
