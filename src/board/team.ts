@@ -193,13 +193,24 @@ export function itemSolved(L: LessonPack, R: Room, uid: string, mid: string, k: 
   if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, uid); return r.done || r.stage > k; }
   return plainRecord(L, R, mid, uid).tries.some((t) => !!t.marks[k]);
 }
-/** 구조 목록: { g 수호자, c 도전자, key } — 알림 뒤 수호자의 💡 · ⏸ + 도전자가 맞힘 */
-export function rescuesOf(L: LessonPack, R: Room, roles: Record<string, Role>): { g: string; c: string; key: string }[] {
-  const out: { g: string; c: string; key: string }[] = [], bh = (R as unknown as { bh?: Record<string, Record<string, { from: string; at: number }>> }).bh || {}, rh = (R as unknown as { rh?: Record<string, Record<string, number>> }).rh || {};
+/** 🤝 완전 구조 (📜 2026-11-15 선생님 「추천 A」): 구조 뒤 그 도전자가 같은 몬스터의 다음 소문제를 💡 · ⏸ 없이 첫 시도에 맞힘
+ *  소레이드 = 다음 단계를 틀림 없이 · 형성평가 = 다음 문항 첫 시도 · 일반 몬스터 = 구조된 소문제를 처음 맞힌 그 제출에서 다음 소문제도 처음으로 맞힘 */
+export function fullRescue(L: LessonPack, R: Room, c: string, mid: string, k: number): boolean {
+  const k1 = k + 1, key1 = hintKey(mid, k1), helped = !!((R as unknown as { bh?: Record<string, Record<string, unknown>> }).bh?.[c]?.[key1]) || Object.values((R as unknown as { rh?: Record<string, Record<string, number>> }).rh || {}).some((x) => !!x?.[`${c}_${key1}`]);
+  if (helped) return false;
+  if (mid === BOSS_ID) { const b = bossState(L, R, c)[k1]; return !!b && b.first; }
+  if (!L.monsters[mid]) return false;
+  if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, c); return k1 < r.stFirst.length && !!r.stFirst[k1]; }
+  const tr = plainRecord(L, R, mid, c).tries, at = tr.findIndex((t) => !!t.marks[k]);
+  return at >= 0 && !!tr[at]!.marks[k1] && !tr.slice(0, at).some((t) => !!t.marks[k1]);
+}
+/** 구조 목록: { g 수호자, c 도전자, key, full 완전 구조 } — 알림 뒤 수호자의 💡 · ⏸ + 도전자가 맞힘 */
+export function rescuesOf(L: LessonPack, R: Room, roles: Record<string, Role>): { g: string; c: string; key: string; full: boolean }[] {
+  const out: { g: string; c: string; key: string; full: boolean }[] = [], bh = (R as unknown as { bh?: Record<string, Record<string, { from: string; at: number }>> }).bh || {}, rh = (R as unknown as { rh?: Record<string, Record<string, number>> }).rh || {};
   for (const [c, list] of Object.entries(seOf(R))) for (const [key, a] of Object.entries(list || {})) {
     if (!a || !itemSolved(L, R, c, a.mid, a.k)) continue;
     const byHint = bh[c]?.[key], g = byHint && roles[byHint.from] === 'g' && byHint.at >= a.at ? byHint.from : Object.keys(rh).find((u) => roles[u] === 'g' && Number(rh[u]?.[`${c}_${key}`]) >= a.at);
-    if (g) out.push({ g, c, key });
+    if (g) out.push({ g, c, key, full: fullRescue(L, R, c, a.mid, a.k) });
   }
   return out;
 }

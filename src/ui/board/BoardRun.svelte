@@ -21,7 +21,7 @@
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
   //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
-  type End = { /** 👋 끝까지 남았나 · 끝날 때 인원 */ stay: boolean; nEnd: number; drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로) */ rescue: { g: number; c: number } };
+  type End = { /** 👋 끝까지 남았나 · 끝날 때 인원 */ stay: boolean; nEnd: number; drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로 · 완전 구조) */ rescue: { g: number; c: number; full: number } };
   const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
     team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
@@ -93,7 +93,7 @@
     untrack(() => {
       const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
       const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
-      const rz = solo ? [] : rescuesOf(L, RR, roles), rescue = { g: rz.filter((x) => x.g === uid).length, c: rz.filter((x) => x.c === uid).length };
+      const rz = solo ? [] : rescuesOf(L, RR, roles), rescue = { g: rz.filter((x) => x.g === uid).length, c: rz.filter((x) => x.c === uid).length, full: rz.filter((x) => x.g === uid && x.full).length };
       const stay = solo || !be.who || be.who.includes(uid), nEnd = solo ? 1 : (be.who?.length || ids.length);
       const out = { stay, nEnd, drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L, rescue };
       let done = false; endGo = () => { if (done) return; done = true; clearTimeout(endT); onend(out); };

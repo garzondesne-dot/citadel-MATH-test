@@ -25,9 +25,9 @@ describe('엔진 폴더 = 과목 낱말 · 차시 id 없음 (#136)', () => {
     expect(hits).toEqual([]);
   });
 });
-it('칭호 목록 = 분리 전과 같은 순서 (엔진 칭호 + 과목 칭호를 같은 자리에 끼움)', async () => {
+it('칭호 목록 = 분리 전과 같은 순서 (엔진 칭호 + 과목 칭호를 같은 자리에 끼움)', async () => { // 🛡 구조 기사(rescuer) = 📜 2026-11-15 더함
   const { TITLES } = await import('../src/model/hero');
-  expect(TITLES.map((t) => t.id)).toEqual(["none", "dawn", "first", "slayer", "smith", "collector", "magic", "rare", "grit", "sage", "king", "detective", "sovereign", "gambler", "nunchi", "oxsurv", "steady", "quester", "writer", "hunter", "wall", "awake", "slash10k", "lv1", "lv2", "lv3", "lv4", "lv5", "lv6", "lv7", "lv8", "lv9", "lv10"]);
+  expect(TITLES.map((t) => t.id)).toEqual(["none", "dawn", "first", "slayer", "smith", "collector", "magic", "rare", "grit", "sage", "king", "detective", "sovereign", "gambler", "nunchi", "oxsurv", "steady", "quester", "writer", "hunter", "wall", "awake", "slash10k", "rescuer", "lv1", "lv2", "lv3", "lv4", "lv5", "lv6", "lv7", "lv8", "lv9", "lv10"]);
 });
 it('스킬 이름 = 과목 팩이 정함 (엔진 기본 「📐 도형」 · 공통수학2 = 「📐 벤 다이어그램」 · #140)', async () => {
   const { SKILL_NAMES } = await import('../src/model/hero');

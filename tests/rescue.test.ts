@@ -44,7 +44,7 @@ describe('🤝 구조', () => {
     expect(rescuesOf(L, R(), roles)).toEqual([]); // 아직 안 맞힘 · 도움 없음
     S.set(`${roomPath(C)}/bh/c/${hintKey(mid, 0)}`, { from: 'g', at: S.now() + 1 });
     submit(S, L, C, mid, 'c', itemsFor(L, R(), mid, 'c', 0).map(answerOf));
-    expect(rescuesOf(L, R(), roles)).toEqual([{ g: 'g', c: 'c', key: hintKey(mid, 0) }]);
+    expect(rescuesOf(L, R(), roles)).toMatchObject([{ g: 'g', c: 'c', key: hintKey(mid, 0) }]);
   });
   it('⏸ 설명으로 도와도 구조 · 도움 없이 혼자 맞히면 구조 아님 · 틀리면 아님', () => {
     const a1 = setup(), a = { mid: a1.mid, k: 0, at: a1.S.now() };
@@ -60,5 +60,16 @@ describe('🤝 구조', () => {
     raiseStrong(d.S, d.C, 'c', a3); markPauseHelp(d.S, d.C, 'g', 'c', a3);
     submit(d.S, d.L, d.C, d.mid, 'c', itemsFor(d.L, d.R(), d.mid, 'c', 0).map(answerOf));
     expect(rescuesOf(d.L, d.R(), d.roles)).toHaveLength(1);
+  });
+  it('🤝 완전 구조(A) = 구조 뒤 같은 몬스터 다음 소문제를 도움 없이 처음 맞힘 · 다음 소문제에 힌트를 받았으면 아님', () => {
+    const { L, S, C, R, mid, roles } = setup(), a = { mid, k: 0, at: S.now() };
+    raiseStrong(S, C, 'c', a); S.set(`${roomPath(C)}/bh/c/${hintKey(mid, 0)}`, { from: 'g', at: S.now() + 1 });
+    submit(S, L, C, mid, 'c', itemsFor(L, R(), mid, 'c', 0).map(answerOf)); // 0 · 1 모두 처음 맞힘
+    expect(rescuesOf(L, R(), roles)[0]!.full).toBe(true);
+    const b = setup(), a2 = { mid: b.mid, k: 0, at: b.S.now() };
+    raiseStrong(b.S, b.C, 'c', a2); b.S.set(`${roomPath(b.C)}/bh/c/${hintKey(b.mid, 0)}`, { from: 'g', at: b.S.now() + 1 }); b.S.set(`${roomPath(b.C)}/bh/c/${hintKey(b.mid, 1)}`, { from: 'g', at: b.S.now() + 2 });
+    b.S.set(`${roomPath(b.C)}/bh/c/${hintKey(b.mid, 1)}`, { from: 'g', at: b.S.now() + 2 });
+    submit(b.S, b.L, b.C, b.mid, 'c', itemsFor(b.L, b.R(), b.mid, 'c', 0).map(answerOf));
+    expect(rescuesOf(b.L, b.R(), b.roles)[0]!.full).toBe(false);
   });
 });

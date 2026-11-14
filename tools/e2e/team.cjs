@@ -68,7 +68,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await A.screenshot({ path: `${SHOTS}/b32-team-result-guard.png` }); await C.screenshot({ path: `${SHOTS}/b32-team-result.png` });
   const rz = await Promise.all([A, Bp, C].map((p) => p.$eval('[data-k="board-rescue"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '')));
   log('🤝 구조 보상: A', rz[0] || '-', '| B', rz[1] || '-', '| C', rz[2] || '-');
-  if (!/\+5/.test(rz[0]) || !/\+3/.test(rz[1])) errs.push('🤝 구조 보상');
+  if (!/\+(5|10)\b/.test(rz[0]) || !/\+3/.test(rz[1])) errs.push('🤝 구조 보상');
   log('💎 서버:', JSON.stringify({ A: (await rest('gem/1-3/1')).day, C: (await rest('gem/1-5/1')).day }), '| 📕 복습 완료 칸 A:', Object.keys((await rest('bonus/1-3/1/review/set-06')) || {}).length, '| 순위:', JSON.stringify(await rest('school/board/rank')).slice(0, 120));
   // 🏆 · 📣 · 📜 (DECISIONS 2026-11-14): 결과 = 내 순위 카드 · 게시판 = 최근 전투 한 줄(익명 · 내 판 = 나) · 랭킹 창 탭 3 · 내 기록
   for (const p of [A, Bp]) for (let i = 0; i < 3; i++) { await p.click('[data-k="board-res"]', { position: { x: 8, y: 8 } }).catch(() => {}); await wait(250); } await wait(800);

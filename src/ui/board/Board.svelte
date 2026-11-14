@@ -62,7 +62,7 @@
   let myFeeds = $state<string[]>((() => { try { return JSON.parse(localStorage.getItem(MYFEED) || '[]') as string[]; } catch { return []; } })());
   const myFeed = (k: string) => { myFeeds = [...myFeeds, k].slice(-50); try { localStorage.setItem(MYFEED, JSON.stringify(myFeeds)); } catch { /* 사생활 창 */ } };
   onDestroy(rkv.stop);
-  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rescueGot?: number; rescue?: { g: number; c: number }; rank: { sem: string; role: 'g' | 'c'; lid: string; up: boolean } | null };
+  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rescueGot?: number; rescue?: { g: number; c: number; full?: number }; rank: { sem: string; role: 'g' | 'c'; lid: string; up: boolean } | null };
   let res = $state<Res | null>(null);
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
@@ -79,7 +79,7 @@
   }
   function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } if (p.lk && !p.mem?.[uid]) { pinPost = p; pin = ''; pinErr = ''; sheet = 'pin'; return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
   // ── 결과 (1인 · 팀 같은 꼴) ──
-  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number }; stay?: boolean; nEnd?: number }, team: Post | null) {
+  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number; full?: number }; stay?: boolean; nEnd?: number }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;
     // 👋 팀 배수 = 끝날 때 남은 인원 · 끝까지 남은 사람만 💎 (나간 사람 = 맞힌 기록 · 📕 복습 완료 · 순위만) (📜 2026-11-14)
     const left = team ? r.stay === false : false, n = team ? Math.max(1, r.nEnd ?? membersOf(team).length) : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
@@ -91,7 +91,8 @@
       const day = kstDay(S.now()), gp = cls && num ? `gem/${cls}/${num}` : '', log = (gp && S.get<Record<string, unknown>>(`${gp}/log`)) || {};
       const usedG = Object.keys(log).filter((k) => k.startsWith(`rescue_${day}_`)).length, usedC = Object.keys(log).filter((k) => k.startsWith(`rescued_${day}_`)).length;
       const nG = Math.max(0, Math.min(r.rescue.g, RESCUE.perDay - usedG));
-      for (let i = 0; i < nG; i++) { const g = earnDaily(me.wallet, RESCUE.guard, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: '🤝 구조 (수호자)' }); }
+      const nFull = Math.min(nG, r.rescue.full ?? 0); // 🤝 완전 구조 = 그 구조에 +5 더 (하루 3번 안 · 같은 칸)
+      for (let i = 0; i < nG; i++) { const want = RESCUE.guard + (i < nFull ? RESCUE.guard : 0), g = earnDaily(me.wallet, want, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: i < nFull ? '🤝 완전 구조 (수호자)' : '🤝 구조 (수호자)' }); }
       for (let i = 0; i < r.rescue.c; i++) { const g = earnDaily(me.wallet, RESCUE.chall, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescued_${day}_${usedC + i}`, { g, at: S.now(), why: '🤝 구조 받음' }); }
     }
     if (got || rescueGot) save();
