@@ -16,7 +16,7 @@ export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => 
 type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string };
 type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
-type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; mons?: Record<string, BMon>; boss?: BBoss };
+type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
 
 const TYPES = ['choice', 'ox', 'number', 'multi', 'blanks', 'text'];
 const MAXV = 7; // 버전 0 ~ 6
@@ -154,7 +154,7 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     if (!s || !KINDS.includes(String(s.kind))) { out.push({ at, msg: `종류 「${s?.kind ?? ''}」 — ${KINDS.join(' · ')}`, lvl: 'err' }); return; }
     if (!s.id || !s.title) { out.push({ at, msg: 'id · 제목(title)이 비었어요', lvl: 'err' }); return; }
     if (steps.some((x) => x.id === s.id)) out.push({ at, msg: `id 「${s.id}」 가 겹쳐요`, lvl: 'err' });
-    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}) });
+    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}) });
   });
   const monsters: Record<string, MonsterPack> = {};
   for (const s of steps.filter((x) => x.kind === 'monster')) {
@@ -188,7 +188,19 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     }
   }
   if (!b.id || !b.title || !Array.isArray(b.steps)) return null;
-  return { v: 1, id: String(b.id), no: Number(b.no) || 0, title: String(b.title), unit: String(b.unit ?? ''), theme: b.theme, defaultPct: Number(b.pct) > 0 ? Number(b.pct) : 90, ...(b.goal ? { goal: b.goal } : {}), ...(b.std ? { std: b.std } : {}), ...(b.sheet ? { sheet: b.sheet } : {}), ...(b.next ? { next: b.next } : {}), source: { file: 'upload', commit: '', board: new Date().toISOString() }, steps, monsters, ...(boss ? { boss } : {}) };
+  // 🖼 학습지 칸 그림 · 🎬 영상 (📜 2026-11-14 선생님 「좋아, 추가하자」 · 선택 칸 = 빠져도 저장은 막지 않음 · 있는지 확인은 checkMedia)
+  const stepIds = new Set(steps.map((x) => x.id)), cells = new Set([...stepIds, ...steps.map((x) => x.img).filter((x): x is string => !!x)]);
+  const img = Array.isArray(b.img) ? b.img.map(String) : [];
+  img.forEach((c) => { if (!cells.has(c)) out.push({ at: `그림(img) 「${c}」`, msg: '단계 id 나 단계의 img 칸에 없는 칸이에요 — 그 자리에 안 보여요', lvl: 'ask' }); });
+  const videos: Record<string, string> = {}, vfiles: string[] = [];
+  (Array.isArray(b.video) ? b.video : []).forEach((v, k) => {
+    const f = String(v?.file ?? '').trim().replace(/\.mp4$/, ''); const at = Array.isArray(v?.at) ? v!.at.map(String) : v?.at ? [String(v.at)] : [];
+    if (!/^[\w.-]+$/.test(f)) { out.push({ at: `영상(video) ${k + 1}번`, msg: `파일 이름 「${v?.file ?? ''}」 — 예: v11-49`, lvl: 'ask' }); return; }
+    if (!at.length) out.push({ at: `영상(video) ${k + 1}번 「${f}」`, msg: '연결 칸(at)이 비었어요', lvl: 'ask' });
+    at.forEach((a) => { if (!stepIds.has(a)) out.push({ at: `영상(video) 「${f}」 · 칸 「${a}」`, msg: '단계 목록에 없는 칸이에요', lvl: 'ask' }); else videos[a] = videoUrl(f); });
+    vfiles.push(f);
+  });
+  return { v: 1, id: String(b.id), no: Number(b.no) || 0, title: String(b.title), unit: String(b.unit ?? ''), theme: b.theme, defaultPct: Number(b.pct) > 0 ? Number(b.pct) : 90, ...(b.goal ? { goal: b.goal } : {}), ...(b.std ? { std: b.std } : {}), ...(b.sheet ? { sheet: b.sheet } : {}), ...(b.next ? { next: b.next } : {}), source: { file: 'upload', commit: '', board: new Date().toISOString() }, steps, monsters, ...(img.length ? { imgCells: img } : {}), ...(b.imgOf ? { imgOf: String(b.imgOf) } : {}), ...(Object.keys(videos).length ? { videos } : {}), ...(boss ? { boss } : {}) };
 }
 
 /** 엔진 꼴(풀 판 차시 · v: 1) — 첫 판(버전 0) 문항만 다시 계산 · 생성기 이름은 엔진 검사가 확인 */
@@ -226,5 +238,19 @@ export async function loadUploaded(S: { get<T>(p: string): T | null; fetch?<T>(p
   const v = (S.fetch ? await S.fetch<Record<string, LessonPack>>(PACK_PATH).catch(() => null) : S.get<Record<string, LessonPack>>(PACK_PATH)) || {};
   const out: LessonPack[] = [];
   for (const p0 of Object.values(v)) { if (!p0 || p0.v !== 1) continue; try { const p = revive(p0); forget(p.id); if (!validate(p).length) out.push(p); else console.warn('올린 차시 팩 검사 실패', p.id, validate(p)); } catch (e) { console.warn('올린 차시 팩 읽기 실패', e); } }
+  return out;
+}
+
+/** 🎬 영상 파일 이름 → 주소 (베타 public/video/<이름>.mp4 · 차시 팩 video 칸) */
+export const videoUrl = (f: string) => `video/${f}.mp4`;
+/** 🖼 🎬 그림 · 영상이 실제 있는지 (서버 prep/{imgOf ?? id}/img/{칸} · 영상 파일) — 없으면 「그림 · 영상 없음」 한 줄(⚠ · 저장은 막지 않음) */
+export async function checkMedia(P: LessonPack, img: (path: string) => Promise<boolean>, file: (url: string) => Promise<boolean>): Promise<Issue[]> {
+  const out: Issue[] = [], src = P.imgOf ?? P.partOf ?? P.id;
+  const cells = P.imgCells ?? [];
+  const gone = (await Promise.all(cells.map(async (c) => ((await img(`prep/${src}/img/${c}`)) ? null : c)))).filter(Boolean);
+  if (gone.length) out.push({ at: `그림(img) ${gone.join(' · ')}`, msg: `그림 없음 — 서버 prep/${src}/img 에 그 칸 그림이 없어요(글자로 보여요)`, lvl: 'ask' });
+  const urls = [...new Set(Object.values(P.videos || {}))];
+  const vgone = (await Promise.all(urls.map(async (u) => ((await file(u)) ? null : u)))).filter(Boolean);
+  if (vgone.length) out.push({ at: `영상(video) ${vgone.map((u) => String(u).replace(/^.*\//, '')).join(' · ')}`, msg: '영상 없음 — 그 파일이 앱에 없어요(🎬 단추가 꺼져요)', lvl: 'ask' });
   return out;
 }

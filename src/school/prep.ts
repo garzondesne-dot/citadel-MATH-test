@@ -3,7 +3,7 @@
 //   그 단계에서만 한 장씩 받고 이 기기에 잠깐 기억 (실시간 거울에 넣지 않음)
 import type { LessonPack, Store } from '../model/types';
 const memo = new Map<string, Promise<string | null>>();
-export const prepPath = (L: LessonPack, id: string) => `prep/${L.partOf ?? L.id}/img/${id}`;
+export const prepPath = (L: LessonPack, id: string) => `prep/${L.imgOf ?? L.partOf ?? L.id}/img/${id}`; // 📦 올린 팩 = imgOf 차시 그림을 빌려 씀
 export function prepImg(S: Store, L: LessonPack, id: string): Promise<string | null> {
   const p = prepPath(L, id);
   let v = memo.get(p);

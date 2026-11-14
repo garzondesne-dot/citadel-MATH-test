@@ -10,9 +10,10 @@
   {
    "kind": "intro",
    "id": "intro",
-   "title": "도입 · 생각 열기",
-   "say": "오늘은 예시 팩",
-   "min": 2
+   "title": "도입 · 🔁 전시 확인",
+   "say": "지난 시간 확인",
+   "min": 2,
+   "img": "review"
   },
   {
    "kind": "concept",
@@ -26,6 +27,26 @@
    "id": "m1",
    "title": "문제 1",
    "min": 5
+  },
+  {
+   "kind": "concept",
+   "id": "c2",
+   "title": "개념 2 · 원소의 개수",
+   "say": "n(A ∪ B) = n(A) + n(B) − n(A ∩ B)",
+   "min": 3
+  },
+  {
+   "kind": "monster",
+   "id": "m2",
+   "title": "문제 2",
+   "min": 5
+  },
+  {
+   "kind": "concept",
+   "id": "sum",
+   "title": "📝 오늘 정리",
+   "say": "합집합 · 여집합 · 원소의 개수",
+   "min": 2
   },
   {
    "kind": "boss",
@@ -107,6 +128,37 @@
      }
     ]
    ]
+  },
+  "m2": {
+   "title": "문제 2",
+   "sprite": "1",
+   "attack": "pause",
+   "vers": [
+    [
+     {
+      "type": "number",
+      "q": "n(U) = 30, n(A) = 12, n(B) = 15, n(A ∩ B) = 5 일 때 n(A ∪ B) = ?",
+      "a": "22",
+      "sol": ""
+     }
+    ],
+    [
+     {
+      "type": "number",
+      "q": "n(U) = 40, n(A) = 18, n(B) = 12, n(A ∩ B) = 5 일 때 n(A ∪ B) = ?",
+      "a": "25",
+      "sol": ""
+     }
+    ],
+    [
+     {
+      "type": "number",
+      "q": "n(U) = 30, n(A) = 10, n(B) = 14, n(A ∩ B) = 4 일 때 n(Aᶜ) = ?",
+      "a": "20",
+      "sol": ""
+     }
+    ]
+   ]
   }
  },
  "boss": {
@@ -156,5 +208,38 @@
     }
    ]
   ]
- }
+ },
+ "imgOf": "set-11",
+ "img": [
+  "review",
+  "c1",
+  "m1",
+  "c2",
+  "m2",
+  "sum",
+  "boss"
+ ],
+ "video": [
+  {
+   "file": "v11-49",
+   "at": [
+    "c1",
+    "m1",
+    "sum"
+   ]
+  },
+  {
+   "file": "v11-50",
+   "at": [
+    "c2",
+    "m2"
+   ]
+  },
+  {
+   "file": "v11-51",
+   "at": [
+    "boss"
+   ]
+  }
+ ]
 }

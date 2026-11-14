@@ -1,7 +1,7 @@
 // 📦 차시 팩 올리기 + 자동 검사기 (L1 · 2026-11-14 머리 🔨): 예시 팩 통과 · 일부러 틀린 팩 5개 = 칸 · 이유 · 풀 판 차시(엔진 꼴)도 같은 길 · 정답 재계산
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
-import { checkUpload, spriteName } from '../src/school/packUpload';
+import { checkMedia, checkUpload, spriteName } from '../src/school/packUpload';
 import { SUBJ } from '../src/engine/subject';
 import { ATTACKS } from '../src/raid/attacks';
 import { items, bossItem } from '../src/engine/lessons';
@@ -21,8 +21,8 @@ describe('📦 차시 팩 올리기 검사기', () => {
   it('예시 팩 = 통과 · 버전 3 · 정답 재계산 모두 맞음 · 미리 보기 문항 = 학생과 같은 함수(items · bossItem)', () => {
     const r = run('example-ex-11.json');
     expect(errs(r)).toEqual([]);
-    expect(r.stats).toMatchObject({ mons: 1, items: 4, versions: 5, ask: 2 });
-    expect(r.stats.rechecked).toBe(8); // 문제 1 버전 0~2 × 2 + 형성평가 버전 0~1 × 1(n 식) = 8 · 선다 2 = 선생님 확인
+    expect(r.stats).toMatchObject({ mons: 2, items: 5, versions: 8, ask: 2 });
+    expect(r.stats.rechecked).toBe(11); // 문제 1 버전 0~2 × 2 + 문제 2 버전 0~2 × 1 + 형성평가 버전 0~1 × 1(n 식) = 11 · 선다 2 = 선생님 확인
     const P = r.pack!;
     expect(items(P, 'm1', 's', 0)[0]!.type).toBe('multi');
     expect((items(P, 'm1', 's', 1)[1] as Extract<Question, { type: 'number' }>).answer).toBe(25);
@@ -30,6 +30,19 @@ describe('📦 차시 팩 올리기 검사기', () => {
     expect((bossItem(P, 's', 0, 0) as Extract<Question, { type: 'choice' }>).answerIndex).toBe(1);
     expect((bossItem(P, 's', 1, 1) as Extract<Question, { type: 'number' }>).answer).toBe(9);
     expect(P.monsters.m1!.sprite).toBe('base2:0'); expect(P.boss!.sprite).toBe('extra4:0');
+  });
+  it('🖼 🎬 그림 · 영상 칸 (정식 11차시 칸 그림 · 영상 3편) · 없으면 ⚠ 한 줄 · 저장은 막지 않음', async () => {
+    const P = run('example-ex-11.json').pack!;
+    expect(P.imgOf).toBe('set-11'); expect(P.imgCells).toEqual(['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss']);
+    expect(P.steps[0]!.img).toBe('review');
+    expect(P.videos).toEqual({ c1: 'video/v11-49.mp4', m1: 'video/v11-49.mp4', sum: 'video/v11-49.mp4', c2: 'video/v11-50.mp4', m2: 'video/v11-50.mp4', boss: 'video/v11-51.mp4' });
+    for (const f of ['v11-49', 'v11-50', 'v11-51']) expect(fs.existsSync(`public/video/${f}.mp4`), f).toBe(true);
+    const have = new Set(['prep/set-11/img/c1', 'prep/set-11/img/m1']);
+    const xs = await checkMedia(P, async (p) => have.has(p), async (u) => u !== 'video/v11-51.mp4');
+    expect(xs.map((x) => `${x.lvl} | ${x.at} | ${x.msg.split(' — ')[0]}`)).toEqual(['ask | 그림(img) review · c2 · m2 · sum · boss | 그림 없음', 'ask | 영상(video) v11-51.mp4 | 영상 없음']);
+    const d = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); d.img.push('zz'); d.video.push({ file: 'v11-49', at: ['nope'] });
+    const r2 = checkUpload(JSON.stringify(d), look); expect(errs(r2)).toEqual([]);
+    expect(r2.issues.filter((x) => x.lvl === 'ask').map((x) => x.at)).toEqual(expect.arrayContaining(['그림(img) 「zz」', '영상(video) 「v11-49」 · 칸 「nope」']));
   });
   it('틀린 팩 1 · 양식 칸 빠짐 · 단계 종류', () => {
     const e = errs(run('bad-1-fields.json')).map((x) => `${x.at} | ${x.msg}`).join('\n');

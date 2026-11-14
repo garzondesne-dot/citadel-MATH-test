@@ -2,7 +2,8 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkUpload, PACK_PATH, revive, type Checked } from '../../school/packUpload';
+  import { checkMedia, checkUpload, PACK_PATH, revive, type Checked } from '../../school/packUpload';
+  import PrepImg from '../q/PrepImg.svelte';
   import { items, bossItem } from '../../engine/lessons';
   import { PACKS, addPacks } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
@@ -22,15 +23,25 @@
   let pick = $state(''), ver = $state(0);
   const errs = $derived(res?.issues.filter((x) => x.lvl === 'err') ?? []), asks = $derived(res?.issues.filter((x) => x.lvl === 'ask') ?? []);
   const P = $derived(res?.pack ?? null);
-  const stepsQ = $derived(P ? P.steps.filter((s) => (s.kind === 'monster' && P.monsters[s.id]) || (s.kind === 'boss' && P.boss)) : []);
+  // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
+  const hasMedia = (s: { id: string; img?: string }) => !!P && (!!P.videos?.[s.id] || (P.imgCells ?? []).includes(s.img ?? s.id));
+  const stepsQ = $derived(P ? P.steps.filter((s) => (s.kind === 'monster' && P.monsters[s.id]) || (s.kind === 'boss' && P.boss) || hasMedia(s)) : []);
+  const pickStep = $derived(P?.steps.find((s) => s.id === pick) ?? null);
+  const pickCell = $derived(pickStep ? (pickStep.img ?? pickStep.id) : '');
   const nVer = $derived.by(() => { if (!P || !pick) return 1; if (pick === 'boss') return 1 + Math.max(0, ...(P.boss?.pool ?? []).map((x) => x.length)); const m = P.monsters[pick]; return m && 'pool' in m.retry ? 1 + m.retry.pool.length : 1; });
   const shown = $derived.by((): Question[] => {
     if (!P || !pick) return [];
     try { return pick === 'boss' ? Array.from({ length: P.boss?.items ?? 0 }, (_, i) => bossItem(P, 'preview', i, ver)).filter((q): q is Question => !!q) : items(P, pick, 'preview', ver); } catch { return []; }
   });
   const answerOf = (q: Question): Given => (q.type === 'choice' ? q.answerIndex : q.type === 'ox' ? q.answer : q.type === 'number' ? q.answer : q.type === 'multi' ? q.answer : q.type === 'blanks' ? q.items.map((x) => x.answer) : q.type === 'text' ? q.answers[0] ?? '' : null);
-  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = stepsQ[0]?.id ?? ''; ver = 0; }
-  $effect(() => { if (res && !pick && stepsQ[0]) pick = stepsQ[0].id; });
+  // 그림 · 영상 있는지 = 서버 그림 칸 · 앱 영상 파일 (없으면 ⚠ 한 줄 · 저장은 막지 않음)
+  const hasImg = async (path: string) => { try { const x = S.fetch ? await S.fetch<string>(path) : S.get<string>(path); return typeof x === 'string' && x.startsWith('data:image'); } catch { return false; } };
+  const hasFile = async (url: string) => { try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
+  function run(t: string, n: string) {
+    text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0;
+    const r0 = res, Pk = r0.pack; if (Pk) void checkMedia(Pk, hasImg, hasFile).then((xs) => { if (res === r0 && xs.length) res = { ...r0, issues: [...r0.issues, ...xs] }; });
+  }
+  $effect(() => { if (res && !pick && stepsQ[0]) pick = (stepsQ.find((x) => x.kind === 'monster') ?? stepsQ[0]).id; });
   async function onfile(e: Event) { const f = (e.target as HTMLInputElement).files?.[0]; if (f) run(await f.text(), f.name); }
   let failed = $state('');
   async function save() {
@@ -58,6 +69,11 @@
         <p class="lab">미리 보기 · 학생 폰과 같은 문제 꼴 (💡 정답 펼침)</p>
         <div class="chips2" role="tablist">{#each stepsQ as s (s.id)}<button type="button" role="tab" class:on={pick === s.id} aria-selected={pick === s.id} onclick={() => { pick = s.id; ver = 0; }}>{s.title.split(' · ')[0]}</button>{/each}</div>
         {#if nVer > 1}<div class="chips2 vers" role="tablist" aria-label="버전">{#each Array.from({ length: nVer }, (_, k) => k) as k (k)}<button type="button" role="tab" class:on={ver === k} aria-selected={ver === k} onclick={() => (ver = k)}>버전 {k}</button>{/each}</div>{/if}
+        {#if P && pickStep && ((P.imgCells ?? []).includes(pickCell) || P.videos?.[pick])}<div class="media" data-k="packmedia">
+          {#if (P.imgCells ?? []).includes(pickCell)}<div class="mimg" data-k="packimg"><PrepImg {S} L={P} id={pickCell} alt="학습지 칸 {pickCell}"><p class="noimg">🖼 그림 「{pickCell}」 없음 · 글자로 보여요</p></PrepImg></div>{/if}
+          <!-- svelte-ignore a11y_media_has_caption -->
+          {#if P.videos?.[pick]}<video src={P.videos[pick]} controls preload="metadata" playsinline data-k="packvid"></video>{/if}
+        </div>{/if}
         <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
       {/if}
     {/if}
@@ -82,6 +98,7 @@
   .chips2 button { flex: none; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); }
   .chips2 button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .prev { display: flex; flex-direction: column; gap: 12px; }
+  .media { display: flex; flex-direction: column; gap: 8px; } .media video { width: 100%; border-radius: var(--r-sm); background: #000; } .noimg { margin: 0; font-size: 13px; color: var(--text-2); }
   .pq { padding: 10px; border-radius: var(--r); background: var(--surface-2); }
   .sol { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
   .ok { margin: 0; color: var(--ok); font-weight: 700; } .fail { margin: 0; color: var(--bad); font-weight: 700; }

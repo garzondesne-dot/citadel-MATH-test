@@ -23,7 +23,20 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
     if (f === 'bad-3-recheck.json') await p.screenshot({ path: `${SHOTS}/packup-1-bad.png` });
   }
   // ② 예시 팩
-  await upload('example-ex-11.json');
+  // 🖼 정식 11차시 칸 그림 대역(이 기기 · prep/set-11/img/{칸}) — boss · sum 은 일부러 비움 = 「그림 없음」 한 줄 · 저장은 됨
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAIAAABM5OhcAAAAk0lEQVR42u3SMQ0AAAjAMOZf9DDBRxsJTUvJAQaxEBYICwRFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAs0Hc84b2DxcEVo7AAAAAASUVORK5CYII=';
+  await p.evaluate((png) => { for (const c of ['review', 'c1', 'm1', 'c2', 'm2']) window.__dbSet(`prep/set-11/img/${c}`, png); }, PNG);
+  await upload('example-ex-11.json'); await p.waitForTimeout(1200); // 그림 · 영상 확인은 뒤따라 옴
+  { const iss = (await p.textContent('[data-k="packiss"]').catch(() => '')).replace(/\s+/g, ' ');
+    ok('🖼 그림 없음 = sum · boss 만 · ⚠ 한 줄 · 영상 3편 있음(영상 없음 줄 없음)', /그림\(img\) sum · boss/.test(iss) && !/영상 없음/.test(iss) && (await mainDis()) === false, iss.slice(0, 160)); }
+  await p.click('.chips2 button:has-text("개념 1")'); await p.waitForTimeout(500);
+  { const m = await p.evaluate(() => ({ img: !!document.querySelector('[data-k="packimg"] img'), vid: document.querySelector('[data-k="packvid"]')?.getAttribute('src') ?? '' }));
+    const ok2 = await p.evaluate(async (u) => (await fetch(u, { method: 'HEAD' })).headers.get('content-type'), m.vid).catch(() => '');
+    ok('🖼 🎬 미리 보기 개념 1 = 칸 그림 + 영상 v11-49 (재생 파일 있음)', m.img && /v11-49/.test(m.vid) && /video/.test(ok2 || ''), `${JSON.stringify(m)} · ${ok2}`);
+    await p.screenshot({ path: `${SHOTS}/packup-5-media.png` }); }
+  { const vids = []; for (const st of ['개념 2', '형성평가']) { await p.click(`.chips2 button:has-text("${st}")`); await p.waitForTimeout(250); vids.push(await p.$eval('[data-k="packvid"]', (x) => x.getAttribute('src')).catch(() => '')); }
+    ok('🎬 영상 3편 = 개념 2 v11-50 · 형성평가 v11-51', /v11-50/.test(vids[0]) && /v11-51/.test(vids[1]), vids.join(' · ')); }
+  await p.click('.chips2 button:has-text("문제 1")'); await p.waitForTimeout(200);
   const sum = (await p.textContent('[data-k="packsum"]')).trim();
   ok('② 예시 팩 = ✔ 통과 · 저장 단추 켜짐', /검사 통과/.test(sum) && (await mainDis()) === false, sum);
   const prev = async () => p.$$eval('[data-k="packprev"] .pq', (xs) => xs.map((x) => x.innerText.replace(/\s+/g, ' ').slice(0, 60)));
