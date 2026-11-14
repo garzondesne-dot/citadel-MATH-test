@@ -99,7 +99,7 @@ export function realClass(S: Store, cls: string) {
     }
     xp[p.num] = Number(xpAll[p.num]?.total) || 0;
     const g = gemAll[p.num] || {}, day = isObj(g.day) ? g.day : {};
-    // 🏰 성채 · 🎯 복습 기록(bonus/{반}/{번호}/{차시 · 평가}/{방}) = 정식 dash.js 그대로: 오개념(mis)을 학생 오개념에 합침 · 도전 수 · 단원 평가(eval-) · 복습(set-) 따로
+    // 🏰 성채 · 🎯 복습 기록(bonus/{반}/{번호}/{차시 · 평가}/{방}) = 정식 dash.js 그대로: 오개념(mis)을 학생 오개념에 합침 · 도전 수 · 평가 방(eval-) · 복습 방(set-) 따로
     const bon = bonAll[p.num] || {}, rows = Object.entries(bon).filter(([k, l]) => isObj(l) && k !== 'review' && k !== 'board').flatMap(([lid, l]) => Object.values(l as Record<string, unknown>).filter(isObj).map((m) => ({ lid, m: m as { tries?: number; mis?: Record<string, [number, number]> } })));
     const bm: Record<string, [number, number]> = (bmis[p.num] = {});
     for (const { m } of rows) if (isObj(m.mis)) for (const [k, v] of Object.entries(m.mis)) { const a = (bm[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
