@@ -238,7 +238,7 @@
       <img class="obj" alt="" src={CAMP.castle.src} style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)}" />
       <img class="obj" alt="" src={CAMP.tent.src} style="left:{pct(CAMP.tent.x, CW)};top:{pct(CAMP.tent.y, CH)};width:{pct(CAMP.tent.w, CW)}" />
       <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
-      <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} row={8} aura={M.me.enh} scale={heroK} /></span>
+      <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} pose="sit" aura={M.me.enh} scale={heroK} /></span>
       <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
       {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b></span></span>{/each}
       {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b></span>{/each}
@@ -258,7 +258,7 @@
   {:else if view === 'lobby'}
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
     <div class="lring">
-      <div class="tchr"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><HeroSprite id={M.me.hero} scale={3} aura={M.me.enh} /><span>🧙 선생님</span></div>
+      <div class="tchr"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><HeroSprite id={M.me.hero} scale={3} aura={M.me.enh} pose="idle" /><span>🧙 선생님</span></div>
       <div class="rows">{#each pupils.filter((p) => !absent[p.uid]) as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={1} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name.slice(1)}</span></div>{/each}</div>
     </div>
   {:else if view === 'concept' && step}

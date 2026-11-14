@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b107 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b108 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -73,6 +73,7 @@
 | b105 | 📜 ⚔ 다시 만든 스킬 = 바로 기본 (선생님 「아직 용사 스킬이 예전 거네? 지금 옮겨 줘」 · 머리 🔨) | `fx.ts` mode auto(기본) = 쌍월 참 A(twin-a) + NEW_SKILLS(slash · hammer · quake · spin · reap · wblade) 새 띠 · 👍 받은 옛 띠(베기 Ⅰ · 달빛 베기 Ⅱ …)는 그대로 · all = 시제품 모두 · old = 옛 띠 / 갤러리 = 「✨ 지금 게임(새 것)」 기본 · 「옛 것(비교)」 / TV = 기본 켬(쌍월 = 늘 Ⅳ 엔진 · 6 스킬 = SKILLS) · `?newfx=0` 옛 띠 · `?newfx` 시제품 모두 / ⚠ 앞으로 다시 만드는 이펙트 = 만들면 `NEW_SKILLS`(fx/twin.ts) 에 넣어 바로 기본 · 평가판은 「옛 ↔ 새」 / 시험 herofx · tvherofx · vitest ✅ |
 | b106 | 🎨 ⛓ 속박 사슬 그림 넣음 (chain-bind · 정식 hero-v2 bf735f2 docs/handoff/chain · 선생님 「사슬은 에셋 처리해」) | 원본 2172 × 724 · 6칸이 같은 간격이 아님 → 알파 빈 틈으로 칸 나눔(①② = 반쪽 · 왼쪽 / 오른쪽 붙임 · ③~⑥ 가운데) → 같은 칸 404 × 205 → 0.55배 `public/art/chain/chain-bind-v1.webp`(222 × 112 × 6) · manifest `CHAIN` / `ChainFx.svelte` = 그림 칸: ①+② 양옆에서 함께(0.11초) → ③ X(0.11초) → ④ 철컥(소리 · 진동 · 움찔) · 묶인 동안 ④ + 가끔 팽팽 → 쓸기 ⑤ → 끊김 ⑥ 흩어지며 사라짐 · 문제 칸 = 폭 94% · 위쪽(문제 글 자리) · 노란 단추 = 높이 2배 · 동작 줄이기 = 바로 ④ / 코드 사슬(SVG) · 🔒 자물쇠 그림 지움 · 평가판 p-atk-bind 새 비교 · 시험 gallery ✅ |
 | b107 | 🎨 ❄ 얼음 결정 그림 넣음 (ice-crystal · 정식 hero-v2 ce40993 docs/handoff/ice · 8조각) | 알파 빈 틈으로 8조각 → 96 × 96 칸 가운데 `public/art/ice/ice-crystal-v1.webp` · manifest `ICE.crystal`(0 가시 · 1 육각 · 2 세 갈래 · 3 눈송이 · 4 깨진 조각 · 5 반짝이 · 6 휜 조각 · 7 덩어리) / ① 용사 얼음 `IceBlock` 결정 6 = 그림 칸(2 · 0 · 6 · 4 · 7 · 1) · TV Pixi 결정 = 같은 그림 스프라이트(못 받으면 코드 결정) ② ❄ 얼음 계열 맞는 순간 겹(`layer.ts` frost) = 결정 그림 조각 (3 + 단계×2)개 튐 ③ 🧊 노란 단추 깨짐 = 결정 조각 8개 튐 / 평가판 p-atk-ice 새 비교 · 시험 ice · icefx ✅ · 그림 docs/shots/b107 |
+| b108 | 🔨 🐞 용사 모션 점검 · 고침 (머리 🔨 「공격할 때 공격 모션으로 안 나가 · 모션 전부 점검」) | 정식 anims 표 = `manifest.ts` `ANIM`(줄 · 칸 · 초 · 한 번만) · 폰 장면 띠(`Scene.svelte`) = 정지 칸 → CSS steps 로 줄 돌림 · 사건 우선순위: 공격 연출(걷기 → 공격 4칸) → 맞음 0.4초 → 헐떡(공격 받는 동안) → 틀림 뒤 맞음 · 다 맞힘 뒤 기쁨 → 힐 시전(⚡ 쓴 수 늘면) · 힐 받음(받은 힐 + 풀어주기 늘면 1.6초) → ❤0 잠김 = 쓰러짐(한 번 · 22 도트 올림) → 처치 = 기쁨 → 정찰 = 생각 → 대기 · TV Pixi = 12줄 모두 잘라 `pose(u, p, ms)` · 공격 대역 · DOM 장면 = `fx/heroRow.ts` `rowAnim` · `HeroSprite pose` · TV 교사 캠프 앉기 · 게시판 포털 · 스킬 미리 보기 · 캠프 카드 · 교사 「나」 대기 돌림 · 갤러리 💚 힐 받음 · ✨ 힐 주기 단추 · 시험 `tools/e2e/motion.cjs`(폰 8 · TV Pixi · DOM 각 8 · 오류 0) |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

@@ -17,7 +17,8 @@
   import { cutin, ultBlast } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
-  import { HERO, heroHead, heroUrl, monBody } from '../manifest';
+  import { HERO, heroHead, heroUrl, monBody, type HPose } from '../manifest';
+  import { rowAnim } from '../fx/heroRow';
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
@@ -56,9 +57,20 @@
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k); if (d.id !== 'ice') return; const ms = attackMs(d, c.lock, attackStrong(hp)); if (A) A.freeze(ms); else domFreeze(ms); });
+    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
+  // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 · 정식 hall.js pose): Pixi = A.pose · DOM 장면 = HeroSprite pose · 잠깐 모션(ms) 위에 바탕 모션(쓰러짐 · 기쁨 · 생각)
+  let domPose = $state<Record<string, HPose>>({}); const poseT: Record<string, ReturnType<typeof setTimeout>> = {};
+  function tvPose(u: string, p: HPose, ms: number) {
+    if (A) { A.pose(u, p, ms); return; }
+    for (const x of u === '*' ? ids : [u]) { domPose = { ...domPose, [x]: p }; clearTimeout(poseT[x]); poseT[x] = setTimeout(() => { const { [x]: _, ...rest } = domPose; void _; domPose = rest; }, ms); }
+  }
+  const baseOf = (u: string): HPose | '' => (step && snapNow[u]?.slump ? 'fall' : hp?.down ? 'win' : shadow ? 'think' : '');
+  let snapNow = $state<Record<string, Snap>>({});
+  (globalThis as { __tvPoses?: () => Record<string, string> }).__tvPoses = () => (A ? A.poses() : Object.fromEntries(ids.map((u) => [u, domPose[u] || baseOf(u) || 'idle']))); // 화면 시험 고리
+  (globalThis as { __tvPose?: (u: string, p: HPose, ms: number) => void }).__tvPose = (u, p, ms) => tvPose(u, p, ms);
+  $effect(() => { const b = ids.map((u) => [u, baseOf(u)] as const); if (A) for (const [u, p] of b) A.pose(u, p); });
   function domFreeze(ms: number) { iceDom = 1; setTimeout(() => (iceDom = 2), ms); setTimeout(() => (iceDom = 0), ms + 650); }
   // ── 공격 사건 (단계가 바뀌면 지난 것은 다시 보이지 않음) ──
   let seen: Record<string, Snap> = {}, seenKey = '', wasDown = false, qT: ReturnType<typeof setTimeout> | undefined;
@@ -108,14 +120,15 @@
       const el = host.querySelector(`.hr[data-u="${CSS.escape(h.u)}"] .art`) as HTMLElement | null; if (!el) { tmp.forEach((e) => e.remove()); return false; }
       heroBox = el;
     }
-    const ROWS: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
-    const pose = (q: Pose) => { if (art) art.style.backgroundPosition = `${q === 'attack' ? (2 / (HERO.cols - 1)) * 100 : 0}% ${(ROWS[q] / (HERO.rows - 1)) * 100}%`; };
+    // 🎞 공격 대역 = 정식 anims 줄을 돌림(걷기 4 · 공격 4 · 기쁨 · 생각) · DOM 장면 = 그 용사 그림 칸(.hs i) 그대로
+    const rowEl = art ?? (heroBox.querySelector('.hs > i:not(.i8)') as HTMLElement | null);
+    const pose = (q: Pose) => rowAnim(rowEl, q);
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); domPop(h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
     void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
-      .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; });
+      .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
     return true;
   }
   // ⏱ 성능 재기 (머리 📎 기준 · 교실 PC 에서 직접): 주소에 ?perf → 가상 용사 30명 → 지금 띠 30명 동시 4초 · 새 것 30명 동시 4초 → 평균 · 최저 fps · 최장 프레임 ms 를 화면에
@@ -192,8 +205,12 @@
     const st0 = step, key = `${R.state.step}|${st0.id}`, cur: Record<string, Snap> = {};
     for (const u of ids) cur[u] = snapOf(L, R, st0, u);
     untrack(() => {
+      snapNow = cur;
       if (key !== seenKey) { seenKey = key; seen = cur; wasDown = !!hp?.down; queue.length = 0; if (A) A.banner(null); domBan = ''; return; }
-      const hs = hitsOf(seen, cur); seen = cur;
+      const hs = hitsOf(seen, cur);
+      // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
+      for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) tvPose(u, 'healed', 1600); if ((a.gave ?? 0) > (b.gave ?? 0)) tvPose(u, 'heal', 1400); if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
+      seen = cur;
       if (hs.length) { queue.push(...hs); play(); }
       const d = !!hp?.down;
       if (d && !wasDown) {
@@ -224,7 +241,7 @@
     {/if}
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
-        <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} aura={Number(R.players?.[h.u]?.enh) || 0} tv />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
+        <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} aura={Number(R.players?.[h.u]?.enh) || 0} tv pose={domPose[h.u] || baseOf(h.u) || undefined} />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
         <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📵 ' : ''}{h.name}</span>
       </div>
     {/if}{/each}

@@ -43,7 +43,7 @@
 <div class="tbar"><div class="t">나</div></div>
 <div class="mid scroll">
   <button type="button" class="hc" onclick={() => (hero = true)}>
-    <span class="pic"><HeroSprite id={M.me.hero} aura={M.me.enh} />{#if M.me.enh}<b>+{M.me.enh}</b>{/if}</span>
+    <span class="pic"><HeroSprite id={M.me.hero} aura={M.me.enh} play />{#if M.me.enh}<b>+{M.me.enh}</b>{/if}</span>
     <span class="tx"><b>선생님</b><small>{famOfHero(M.me.hero).name.split(' ')[0]} {info.name} · {info.job} · 강화 +{M.me.enh}</small></span><span class="go">›</span>
   </button>
   <div class="list">

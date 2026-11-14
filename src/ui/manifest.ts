@@ -30,6 +30,9 @@ export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGE
 import { heroOf, PORTRAITS } from '../model/hero';
 import { savedLook } from '../store/me.svelte';
 export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, sitRow: 8 };
+/** 🎞 용사 모션 표 = 정식 assets/manifest.js anims 그대로 (📜 2026-11-14 머리 🔨 「용사 공격할 때 공격 모션으로 안 나가 · 모션 전부 점검」): [줄, 칸 수, 한 바퀴 초, 한 번만] */
+export type HPose = 'idle' | 'walk' | 'attack' | 'hit' | 'win' | 'fall' | 'heal' | 'portal' | 'sit' | 'healed' | 'think' | 'pant';
+export const ANIM: Record<HPose, [number, number, number, boolean?]> = { idle: [0, 4, 1.28], walk: [1, 4, 0.64], attack: [2, 4, 0.48], hit: [3, 1, 0.4], win: [4, 2, 0.7], fall: [5, 2, 0.6, true], heal: [6, 2, 0.7], portal: [7, 4, 0.9, true], sit: [8, 2, 1.6], healed: [9, 2, 0.8], think: [10, 2, 1.4], pant: [11, 2, 0.5] };
 // 🎯 캐릭터 정중앙 (#121): 그림 틀(80 × 64 · 256)이 아니라 보이는 부분(알파 상자 · tools/make-sprite-bbox.py) 가운데를 칸 가운데 · 발을 칸 아래 기준선에
 //   가로 = 서 있는 줄(0) 상자 가운데(공격 줄도 몸이 같은 자리 · 무기가 뻗어도 흔들리지 않게) · 앉기 줄(8)은 그 줄 상자 · 세로 = 그 줄 상자 아래
 import BBOX from './sprite-bbox.json';

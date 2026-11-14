@@ -7,7 +7,7 @@ import { ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -35,6 +35,10 @@ export interface Arena {
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
   freeze(ms: number): void;
+  /** 🎞 용사 모션 (📜 2026-11-14 머리 🔨): u = 한 명 · '*' = 모두 · ms 있으면 그 시간만 · 없으면 계속(바탕 모션 · '' = 지움) · 줄 = 정식 anims */
+  pose(u: string, p: HPose | '', ms?: number): void;
+  /** 시험: 용사마다 지금 그리는 줄 (idle = 대기) */
+  poses(): Record<string, string>;
   /** ✨ 이펙트 층 (#152 · #161 몬스터 공격 이펙트용) · 화면 크기 */
   fx: Container; size(): { W: number; H: number };
   destroy(): void;
@@ -91,7 +95,13 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const t = performance.now(); scale = t < stopUntil ? 0 : t < slowUntil ? JUICE.SLOW : 1; vt += (t - lastT) * scale; lastT = t;
     for (const w of [...tweens]) { const p = Math.min(1, (vt - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
-    if (t - heroT > 162) { heroT = t; heroF = (heroF + 1) % 8; for (const h of heroes.values()) if (!h.busy && h.tex) h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
+    const tick = t - heroT > 162; if (tick) { heroT = t; heroF = (heroF + 1) % 8; }
+    for (const h of heroes.values()) {
+      if (h.busy) continue;
+      const tp = h.tp && t < h.tu ? h.tp : '', p = tp || h.bp;
+      if (p && p !== 'idle' && h.rows) { const [row, n, dur, once] = ANIM[p], e = (t - (tp ? h.t0 : h.b0)) / (dur * 1000 / n), f = once ? Math.min(n - 1, Math.floor(e)) : Math.floor(e) % n; h.sp.texture = h.rows[row]![Math.max(0, f)]!; h.cur = p; continue; }
+      if ((tick || h.cur) && h.tex) { h.cur = ''; h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
+    }
   });
 
   const visOf = (s: ArenaState) => { try { const sp = spriteOf(s.sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } };
@@ -126,7 +136,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     hpC.addChild(g, n, lab);
   }
   // ── 용사단 ──
-  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; atk: Texture[] | null; busy: boolean; key: string; x: number; y: number; s: number };
+  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; atk: Texture[] | null; rows: Texture[][] | null; tp: HPose | ''; tu: number; t0: number; bp: HPose | ''; b0: number; cur: HPose | ''; busy: boolean; key: string; x: number; y: number; s: number };
   const heroes = new Map<string, HeroV>(); let heroT = 0, heroF = 0, partyKey = '';
   async function drawParty(s: ArenaState) {
     const slots = partyLayout(s.heroes.length, W(), H(), s.split), key = s.heroes.map((h) => `${h.u}:${h.hero}`).join(',') + `|${W()}|${H()}|${s.split}`;
@@ -135,7 +145,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     for (let i = 0; i < s.heroes.length; i++) {
       const hh = s.heroes[i]!, sl = slots[i]!;
       let v = heroes.get(hh.u);
-      if (!v) { const c = new Container(), sp = new Sprite(), name = txt('', 'small', true, 0xffffff); sp.anchor.set(0.5, 1); name.anchor.set(0.5, 0); c.addChild(sp, name); partyC.addChild(c); v = { c, sp, name, tex: null, atk: null, busy: false, key: '', x: 0, y: 0, s: 1 }; heroes.set(hh.u, v); }
+      if (!v) { const c = new Container(), sp = new Sprite(), name = txt('', 'small', true, 0xffffff); sp.anchor.set(0.5, 1); name.anchor.set(0.5, 0); c.addChild(sp, name); partyC.addChild(c); v = { c, sp, name, tex: null, atk: null, rows: null, tp: '', tu: 0, t0: 0, bp: '', b0: 0, cur: '', busy: false, key: '', x: 0, y: 0, s: 1 }; heroes.set(hh.u, v); }
       const hk = `${hh.hero}|${sl.s.toFixed(3)}`;
       v.x = sl.x; v.y = sl.y; v.s = sl.s; v.c.x = sl.x; v.c.y = sl.y; v.c.zIndex = Math.round(sl.y);
       if (v.key !== hk) {
@@ -144,7 +154,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         // 새 화풍 세밀 시트(칸 192 × 144 · k=2) · 옛 80 × 64 둘 다: 칸 자르기 = 그림 칸 · 배율 = s ÷ k · 발 = 칸 아래 base
         const i8 = idle8Of(hh.hero); // 🫁 #169 대기 8프레임
         if (i8) void src(i8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * HERO.w, hh.hero * HERO.h, HERO.w, HERO.h)); });
-        void src(url).then((so) => { if (v!.key !== hk) return; if (!i8) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.atk = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.atkRow * g.ch, g.cw, g.ch)); if (v!.tex) v!.sp.texture = v!.tex[0]!; });
+        void src(url).then((so) => { if (v!.key !== hk) return; if (!i8) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.rows = Array.from({ length: HERO.rows }, (_, r) => Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, r * g.ch, g.cw, g.ch))); v!.atk = v!.rows[HERO.atkRow]!; if (v!.tex) v!.sp.texture = v!.tex[0]!; });
         v.sp.anchor.set(0.5, (g.ch - g.base) / g.ch);
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
@@ -165,8 +175,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   function hit(u: string, dmg: number, kind: 'hit' | 'miss' | 'practice') {
     const v = heroes.get(u); if (!v || !monSp) return;
     const dir = v.x < monCx ? 1 : -1, x0 = v.x, dx = Math.min(Math.abs(monCx - v.x) * 0.35, W() * 0.08) * dir;
-    v.busy = true; if (v.atk) v.sp.texture = v.atk[2]!;
-    tween(380, (p) => { const q = p < 0.5 ? ease(p * 2) : ease((1 - p) * 2); v.c.x = x0 + dx * q; }, () => { v.busy = false; v.c.x = x0; });
+    setPose(v, 'attack', 480); // 🎞 공격 줄 4칸 (정식 0.48초 한 바퀴) · 틀림 = 끝에 맞음 줄
+    tween(380, (p) => { const q = p < 0.5 ? ease(p * 2) : ease((1 - p) * 2); v.c.x = x0 + dx * q; }, () => { v.c.x = x0; if (kind === 'miss') setPose(v, 'hit', 500); });
     // 몬스터 깜빡 · 흔들
     const m = monSp, mx = m.x;
     setTimeout(() => {
@@ -267,6 +277,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     }
     iceT.push(setTimeout(() => unfreeze(false), ms));
   }
+  function setPose(v: HeroV, p: HPose | '', ms?: number) { const t = performance.now(); if (ms) { v.tp = p; v.t0 = t; v.tu = t + ms; } else if (v.bp !== p) { v.bp = p; v.b0 = t; } }
+  function pose(u: string, p: HPose | '', ms?: number) { for (const [k, v] of heroes) if (u === '*' || u === k) setPose(v, p, ms); }
   let raf = 0;
   return {
     kind: 'pixi', fx,
@@ -275,7 +287,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, heroVisible, monHit, stone, armKill,
+    hit, exp, banner, freeze, pose, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

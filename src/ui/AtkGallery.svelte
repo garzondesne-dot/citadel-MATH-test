@@ -10,7 +10,7 @@
   import { ATTACKS, ATTACK_IDS, attackMs } from '../raid/attacks';
   import Student from './Student.svelte';
   import { HEROES, ladder, skillName } from '../model/hero';
-  import { heroAtk } from './battle/fx.svelte';
+  import { heroAtk, heroPose } from './battle/fx.svelte';
   import { cutin, ultBlast, canUlt, canTrue } from './fx/attack';
   import { guard } from './fx/aura';
   import { setNewFx } from './fx/fx';
@@ -61,6 +61,9 @@
         <button type="button" class="a" data-h="hit" onclick={() => heroAtk({ miss: false, hits: 3 })}>⚔<small>공격</small></button>
         <button type="button" class="a" data-h="clear" onclick={() => { const P = chain ? G2 : G1, R0 = () => S.get<Room>(roomPath(code)) as Room; if (chain) { chainItems(P.L, R0(), P.id, 'gallery', 0).forEach((q, k) => chainSubmit(S, P.L, code, P.id, 'gallery', k, 0, answerOf(q))); } else { const r = plainRecord(P.L, R0(), P.id, 'gallery'); submit(S, P.L, code, P.id, 'gallery', itemsFor(P.L, R0(), P.id, 'gallery', r.nextAttempt).map(answerOf)); } }}>✔<small>다 맞힘</small></button>
         <button type="button" class="a" data-h="lockme" onclick={() => { const P = chain ? G2 : G1, R0 = () => S.get<Room>(roomPath(code)) as Room; if (chain) { const q = chainItems(P.L, R0(), P.id, 'gallery', 0)[chainRecord(P.L, R0(), P.id, 'gallery').stage]; for (let k = 0; k < 8 && q; k++) chainSubmit(S, P.L, code, P.id, 'gallery', chainRecord(P.L, R0(), P.id, 'gallery').stage, 0, q.type === 'choice' ? (q.answerIndex + 1) % 3 : '999'); } else for (let k = 0; k < 4; k++) { const r = plainRecord(P.L, R0(), P.id, 'gallery'); submit(S, P.L, code, P.id, 'gallery', itemsFor(P.L, R0(), P.id, 'gallery', r.nextAttempt).map(() => null)); } }}>🙋<small>❤ 0 잠김</small></button>
+        <!-- 🎞 용사 모션 (📜 2026-11-14 머리 🔨 모션 점검): 힐 받음 = 🙋 풀어주기 하나(❤ +1 · 받은 힐과 같은 줄) · 힐 주기 = 시전 줄 -->
+        <button type="button" class="a" data-h="healed" onclick={() => { const mid = (chain ? G2 : G1).id, p = `${roomPath(code)}/unlock/${mid}/gallery`; S.set(p, (Number(S.get(p)) || 0) + 1); }}>💚<small>힐 받음</small></button>
+        <button type="button" class="a" data-h="heal" onclick={() => heroPose('heal', 1400)}>✨<small>힐 주기</small></button>
         <button type="button" class="a" data-h="prac" onclick={() => heroAtk({ miss: false, hits: 1, noDmg: true, prac: 2 })}>🔥<small>한 판 더</small></button>
         <button type="button" class="a" data-h="miss" onclick={() => heroAtk({ miss: true })}>✖<small>틀림</small></button>
         <button type="button" class="a" data-h="finish" onclick={() => heroAtk({ miss: false, hits: 3, finish: true })}>🔥<small>끈기</small></button>

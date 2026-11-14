@@ -16,10 +16,10 @@
   import ChainView from './q/ChainView.svelte';
   import BossCard from './q/BossCard.svelte';
   import SymText from './q/SymText.svelte';
-  import { fx } from './battle/fx.svelte';
+  import { fx, heroPose } from './battle/fx.svelte';
   import AttackFx from './battle/AttackFx.svelte';
   import { attackDef, attackMs, attackOf, attackStrong, type AttackDef } from '../raid/attacks';
-  import { holyArmed, holyCan, holyOn, pracHitsAll, stone, BOSS_ID as BID } from '../raid/raid';
+  import { holyArmed, holyCan, holyOn, pracHitsAll, stone, BOSS_ID as BID, plainRecord, unlocksOf, healsGiven } from '../raid/raid';
   import { holyArm, holyUse } from '../raid/actions';
   import { guardQ } from './battle/fx.svelte';
   import { ELEM_FX } from './manifest';
@@ -79,6 +79,13 @@
   const gem = $derived(R ? (() => { const g = PROFILES[R.meta.profile]?.reward.gem; return typeof g === 'number' ? g : 0; })() : 0);
   const crec = $derived(R && mid && chain ? chainRecord(L, R, mid, uid) : null);
   const downs = $derived(R && mid && chain ? chainDown(L, R, mid, now) : []);
+  // 🎞 용사 모션 (📜 2026-11-14 머리 🔨): ❤ 0 잠김 = 쓰러짐 줄 · 받은 힐 + 풀어주기가 늘면 힐 받음 줄 · 내가 ⚡ 쓰면(힐 · 묶기 · 🌟) 힐 시전 줄
+  const myRec = $derived(R && mid && L.monsters[mid] ? (crec ?? plainRecord(L, R, mid, uid)) : null);
+  const slump = $derived(!!myRec && (!!myRec.locked || ((myRec as { fail?: boolean }).fail ?? (!myRec.perfect && myRec.submitted && myRec.left <= 0 && !myRec.canRetry))));
+  const healN = $derived(myRec && R && mid ? myRec.healed + unlocksOf(R, mid, uid) : 0);
+  const gaveN = $derived(R && mid ? healsGiven(R, mid, uid) : 0);
+  let gave0 = -1;
+  $effect(() => { const g = gaveN; untrack(() => { if (gave0 >= 0 && g > gave0) heroPose('heal', 1400); gave0 = g; }); });
   // 졸개 체력(정식 chainDown: 넘어야 할 학생 수 − 넘은 학생) · 대장 = 공동 체력
   const sceneHp = $derived.by(() => {
     if (step?.kind === 'boss' && bhp) return { hp: { left: bhp.left, max: bhp.max }, label: L.boss?.title.split(' · ').pop() ?? '보스' };
@@ -143,7 +150,7 @@
 
 {#if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />

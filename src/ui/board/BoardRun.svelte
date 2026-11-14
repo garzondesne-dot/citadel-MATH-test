@@ -138,7 +138,7 @@
   const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
 </script>
 
-{#if warp}<div class="warp" aria-hidden="true" data-k="warp"><i class="wring"></i><i class="wp" style="background-image:url({CAMP_PORTAL.src})"></i><span class="whero"><HeroSprite id={hero} scale={2} /></span></div>{/if}
+{#if warp}<div class="warp" aria-hidden="true" data-k="warp"><i class="wring"></i><i class="wp" style="background-image:url({CAMP_PORTAL.src})"></i><span class="whero"><HeroSprite id={hero} scale={2} pose="portal" /></span></div>{/if}
 <div class="run">
   <div class="tline" aria-label="남은 시간 {mmss(leftMs)}"><i style:width="{meta?.limit ? (leftMs / meta.limit) * 100 : 100}%"></i></div>
   <button type="button" class="quit" aria-label="그만하기" onclick={onquit}>‹</button>

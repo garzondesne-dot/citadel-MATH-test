@@ -200,7 +200,7 @@
 
   <section class="info">
     {#if feat('hero')}<button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
-      <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
+      <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{fromMe ? '선생님' : me.nick}</b></span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>

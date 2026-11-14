@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { artUrl, dungeonOf, ELEM_FX, HERO, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
+  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
@@ -15,9 +15,9 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false }:
+  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0 }:
     { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean } = $props();
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number } = $props();
   // 🧊 얼음(2026-11-13): 용사를 덮는 얼음 덩어리 · 톡마다 금 · 4번 = 깨져 흩어짐 · 시간 끝 = 녹음 (0.6초 뒤 사라짐)
   let iceMode = $state<'off' | 'on' | 'shatter' | 'melt'>('off'), iceTaps = $state(0);
   $effect(() => { if (ice) { iceMode = 'on'; iceTaps = Math.max(0, Math.min(4, 4 - fx.ice)); } else if (iceMode === 'on') { iceMode = iceEnd; if (iceEnd === 'shatter') iceTaps = 4; setTimeout(() => (iceMode = 'off'), 650); } });
@@ -26,17 +26,24 @@
   const srow = $derived(Math.max(0, STATUS.kinds.indexOf(elem as (typeof STATUS.kinds)[number])));
   // 💥 hit = 몬스터 공격(#151): 장면 띠 안에서만 — 빨간 번쩍 0.15초 · 「💥 몬스터 공격!」 꼬리표 · 용사 붉게 (문제 카드는 움직이지 않음)
   //   note = 장면 안 알림 꼬리표(쓰러짐 · 승리) — 문제 위 알림 띠 대신
-  const ATK_ROW = 2; // 정식 heroesV2 anims.attack = 2줄
   // ⚔ 정식 DS.Attack.play (🔨 용사 fx · 2026-11-13): 장면 = .edge · heroBox = .hb · monBox = .mon(보이는 몸통 data-bb) · 자세 = 정식 anims 줄(idle 0 · walk 1 · attack 2 · win 4 · think 10)
-  const ROW: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
   let edge = $state<HTMLDivElement | null>(null), heroBox = $state<HTMLSpanElement | null>(null), monEl = $state<HTMLElement | null>(null), apose = $state<Pose | ''>('');
-  const heroRow = $derived(apose ? ROW[apose] : pose === 'idle' ? HERO.idleRow : ATK_ROW), heroCol = $derived(apose ? (apose === 'attack' ? 2 : 0) : pose === 'idle' ? 0 : 2);
+  // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 모션 점검 · 정식 student.js pose2 순서): 공격 연출 줄 → 맞음 0.4초 → 헐떡(공격 받는 동안) → 잠깐 모션(틀림 = 맞음 줄 · 힐 시전 · 힐 받음 · 기쁨)
+  //   → 힐 받음 1.6초 → ❤0 잠김 = 쓰러짐(한 번) → 처치 · 승리 = 기쁨 → 정찰 = 생각 → 대기 · 줄마다 칸을 돌림(정식 anims 칸 수 · 초)
+  let hitPh = $state<'' | 'hit' | 'pant'>(''), hitT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const h = hit; untrack(() => { clearTimeout(hitT); if (h) { hitPh = 'hit'; hitT = setTimeout(() => (hitPh = 'pant'), 400); } else hitPh = ''; }); });
+  let lastHeal = -1, healing = $state(false), healT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const n = healN; untrack(() => { if (lastHeal >= 0 && n > lastHeal) { healing = true; clearTimeout(healT); healT = setTimeout(() => (healing = false), 1600); } lastHeal = n; }); });
+  let flash = $state<HPose | ''>(''), flashT: ReturnType<typeof setTimeout> | undefined;
+  const after = (p: HPose, ms: number) => { flash = p; clearTimeout(flashT); flashT = setTimeout(() => (flash = ''), ms); }; // 공격 연출 끝 = 틀림 → 맞음 줄 · 다 맞힘 → 기쁨 줄
+  const hpose = $derived<HPose>(apose ? apose : hitPh ? hitPh : flash ? flash : pose === 'miss' ? 'hit' : pose !== 'idle' ? pose : healing ? 'healed' : slump ? 'fall' : down ? 'win' : shadow ? 'think' : 'idle');
+  const anim = $derived(ANIM[hpose]);
   let lastAtk = 0, lastGuard = guardQ.v;
   // 🛡 홀리 방패 막기 = 내 용사 날개 · 방패 (정식 Aura.guard · 장면 높이 안)
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
-    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => setTimeout(() => (apose = ''), 400)); });
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
   });
   const sp = $derived(spriteOf(sprite));
   const monBB = $derived(monBody(sp.sheet.src, sp.row, sp.sheet.poses[down ? 'down' : 'idle'], sp.sheet.cell));
@@ -90,7 +97,8 @@
   {/if}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
   <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
-    style:background-position="-{heroCol * hg.w * HS}px -{heroRow * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
+    data-pose={hpose} class:once={!!anim[3]} class:still={anim[1] < 2 || iceMode === 'on'} style:--fw="{hg.w * HS}px" style:--n={anim[1]} style:--dur="{anim[2]}s" style:--end="-{anim[1] * hg.w * HS}px" style:--end1="-{(anim[1] - 1) * hg.w * HS}px" style:--n1={Math.max(1, anim[1] - 1)}
+    style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
 </div>
 
 <style>
@@ -152,5 +160,12 @@
   @media (prefers-reduced-motion: reduce) { .orb, .efx { display: none; } .status, .dizzy i { animation: none; } }
   .hb { position: absolute; z-index: 1; left: 0; top: 140px; display: block; }
   .hb .hero { top: 0; }
+  .hb .hero[data-pose='fall'] { top: -44px; transition: top 0.2s ease-out; } /* 😞 누운 그림 = 아래 카드(페이드)에 가리지 않게 22 도트 올림 */
+  /* 🎞 줄 돌리기 = 정식 anims (칸 수 · 초) · 한 번만 = 마지막 칸에서 멈춤 · 칸 1 · 얼음 = 멈춤 */
+  .hero { background-position-x: 0; animation: hrow var(--dur) steps(var(--n)) infinite; }
+  .hero.once { animation: hrow1 var(--dur) steps(var(--n1)) forwards; }
+  .hero.still { animation: none; }
+  @keyframes hrow { from { background-position-x: 0; } to { background-position-x: var(--end); } }
+  @keyframes hrow1 { from { background-position-x: 0; } to { background-position-x: var(--end1); } }
   .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
 </style>
