@@ -100,13 +100,13 @@ def main():
             row.append({'px': px, 'gx': x0 + bx0 - k * gw, 'y': y0 + by0, 'y1': y0 + by1})
         frames.append(row)
     maxw = max(f['px'].shape[1] for r in frames for f in r); maxh = max(f['px'].shape[0] for r in frames for f in r)
-    cell = 256 if max(maxw, maxh) <= 244 else 320
+    cell = int(-(-(max(maxw, maxh) + 12) // 8) * 8)  # 칸 = 가장 큰 그림 + 여백 12 (8 의 배수) · 몬스터가 칸을 꽉 채워 화면에서 작아 보이지 않게
     sheet = np.zeros((cell * len(frames), cell * 5, 4), np.uint8)
     runes = []; bbox = {}
     for ri, row in enumerate(frames):
         a = row[0]; aw = a['px'].shape[1]
         base = max(f['y1'] for f in row[:2])  # 대기 발 = 바닥선
-        dx = cell / 2 - (a['gx'] + aw / 2); floor = cell - 10
+        dx = cell / 2 - (a['gx'] + aw / 2); floor = cell - 6
         rr = []; ref = None; refcol = None
         for k in (0, 1):  # 기준 = 대기 A (없으면 B) 의 원판 · 칸 좌표
             f = row[k]; h, w = f['px'].shape[:2]

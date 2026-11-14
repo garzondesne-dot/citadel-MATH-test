@@ -1,23 +1,38 @@
 // 그래픽 배치표 — 그림 파일 이름은 여기에만 (정식 assets/manifest.js 방식)
 // 'mimic:0' = 정식 monsters-extra-v2 시트의 3번 줄(이끼 미믹 · 정식 sprite 'extra:3')만 잘라 옮긴 것 · 칸 256 · 자세 3
 // 끝에 '@h120' = 색 변형 (hue-rotate · 정식과 같은 꼴) — b2 는 그림 하나로 몬스터 · 보스를 색만 바꿔 씀
-export interface Sheet { src: string; cols: number; rows: number; cell: number; poses: Record<'idle' | 'attack' | 'down', number>; names: string[] }
+export interface Sheet { src: string; cols: number; rows: number; cell: number; poses: Record<'idle' | 'attack' | 'down', number> & { idleB?: number; hit?: number }; names: string[]; /** 🎲 룬 원판 [x, y, r] (칸 비율) · 줄 × 칸 · null = 기호 없음 */ rune?: ([number, number, number] | null)[][] }
+export type MonPose = 'idle' | 'idleB' | 'attack' | 'hit' | 'down';
+/** 몬스터 자세 → 칸 (5칸 시트만 대기 B · 맞음이 있음 · 3칸 시트 = 대기 · 공격 · 쓰러짐으로 대신) */
+export const poseCol = (s: Sheet, p: MonPose) => (p === 'idleB' ? s.poses.idleB ?? s.poses.idle : p === 'hit' ? s.poses.hit ?? s.poses.idle : s.poses[p]);
 
 import { SUBJ } from '../engine/subject';
+import RDUN_JSON from './rdun.json';
+/** 🎲 랜덤 던전 (DECISIONS 「🎲 랜덤 던전」 · 그림 없는 차시에 차례로) — 과목과 상관없는 그림 표 */
+export interface Rdun { name: string; src: string; cell: number; rows: number; names: string[]; boss: number | null; bossName: string; attack: string[]; bossAttack: string[]; bg: string; rune: ([number, number, number] | null)[][] }
+export const RDUN = RDUN_JSON as unknown as Record<string, Rdun>;
+export const RDUN_IDS = Object.keys(RDUN).sort();
 const GEN = SUBJ.themes; // 몬스터 줄 · 던전 배경 표 = 과목 팩 (#132 · #136)
 export const SHEETS: Record<string, Sheet> = {
   mimic: { src: 'art/monster-mimic-v1.webp', cols: 3, rows: 1, cell: 256, poses: { idle: 0, attack: 1, down: 2 }, names: ['이끼 미믹'] },
   // 🧩 #132 정식 차시가 쓰는 몬스터 줄만 잘라 온 것 (tools/pack-from-release · 'new2:0' = 정식 'new:2')
   ...Object.fromEntries(Object.entries(GEN.sheets as Record<string, { src: string; cell: number; names: string[] }>).map(([k, v]) => [k, { src: v.src, cols: 3, rows: 1, cell: v.cell, poses: { idle: 0, attack: 1, down: 2 }, names: v.names }])),
+  // 🎲 5칸 = 대기 A · 대기 B(숨쉬기) · 공격 · 맞음(움찔) · 쓰러짐
+  ...Object.fromEntries(Object.entries(RDUN).map(([k, v]) => [k, { src: v.src, cols: 5, rows: v.rows, cell: v.cell, poses: { idle: 0, idleB: 1, attack: 2, hit: 3, down: 4 }, names: v.names, rune: v.rune }])),
 };
 
+/** 그림 주소: '시트:줄' + '@h120'(색 돌리기) + '@r∪'(🎲 몸 룬 기호 · 맨 끝) + '@e'(대장 · 엘리트 = 1.3배 · 금빛 테두리 · 🎲 소레이드 대장 · 그림 없는 보스) */
 export function spriteOf(ref: string) {
-  const [base, h] = ref.split('@h');
+  const rm = /@r(.+)$/.exec(ref), rune = rm?.[1] ?? '';
+  const r0 = rm ? ref.slice(0, rm.index) : ref, elite = /@e\b/.test(r0);
+  const [base, h] = r0.replace(/@e\b/, '').split('@h');
   const [k, i] = (base || '').split(':');
   const s = SHEETS[k || ''];
   if (!s) throw new Error(`배치표에 없는 그림: ${ref}`);
-  return { sheet: s, row: Number(i || 0) % s.rows, hue: Number(h) || 0, url: `${import.meta.env.BASE_URL}${s.src}` };
+  return { sheet: s, row: Number(i || 0) % s.rows, hue: Number(h) || 0, elite, rune, url: `${import.meta.env.BASE_URL}${s.src}` };
 }
+/** 🎲 룬 원판 자리 (칸 비율) · 없으면 null */
+export const runeAt = (s: Sheet, row: number, col: number) => s.rune?.[row]?.[col] ?? null;
 
 // 던전 배경 (정식 manifest.dungeons · 차시 팩 theme) — 원본 1672 × 941 을 정확히 절반(최근접)으로 줄인 판
 export const DUNGEONS: Record<string, string> = {

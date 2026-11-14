@@ -7,7 +7,7 @@ import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { ANIM, type HPose, HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -37,6 +37,9 @@ export interface Arena {
   freeze(ms: number): void;
   /** 🎞 용사 모션 (📜 2026-11-14 머리 🔨): u = 한 명 · '*' = 모두 · ms 있으면 그 시간만 · 없으면 계속(바탕 모션 · '' = 지움) · 줄 = 정식 anims */
   pose(u: string, p: HPose | '', ms?: number): void;
+  /** 🎲 몬스터 잠깐 자세 (공격 · 맞음) · 시험: 지금 몬스터 칸 */
+  monPose(p: 'attack' | 'hit', ms: number): void;
+  monNow(): string;
   /** 시험: 용사마다 지금 그리는 줄 (idle = 대기) */
   poses(): Record<string, string>;
   /** ✨ 이펙트 층 (#152 · #161 몬스터 공격 이펙트용) · 화면 크기 */
@@ -95,6 +98,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const t = performance.now(); scale = t < stopUntil ? 0 : t < slowUntil ? JUICE.SLOW : 1; vt += (t - lastT) * scale; lastT = t;
     for (const w of [...tweens]) { const p = Math.min(1, (vt - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
+    if (monSp && monTex.idle && !st?.down) { const p: MonPose = mflash && t < mflashUntil ? mflash : !stoned && !st?.shadow && monTex.idleB !== monTex.idle && Math.floor(t / 700) % 2 ? 'idleB' : 'idle'; if (p !== monCur) { monCur = p; monSp.texture = monTex[p]!; } placeRune(p); }
     const tick = t - heroT > 162; if (tick) { heroT = t; heroF = (heroF + 1) % 8; }
     for (const h of heroes.values()) {
       if (h.busy) continue;
@@ -107,18 +111,25 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   const visOf = (s: ArenaState) => { try { const sp = spriteOf(s.sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } };
   // ── 몬스터 ──
   let st: ArenaState | null = null, monSp: Sprite | null = null, monY = 0, monKey = '', monCx = 0, monTop = 0, monSize = 0;
+  // 🎲 5칸 시트: 자세별 칸 · 숨쉬기(A ↔ B 0.7초) · 잠깐 자세(공격 · 맞음) · 몸 룬 기호
+  let monTex: Partial<Record<MonPose, Texture>> = {}, monCur: MonPose = 'idle', mflash: MonPose | '' = '', mflashUntil = 0, monRune: Text | null = null, monRuneAt: (p: MonPose) => [number, number, number] | null = () => null, monK = 1, monX = 0, monCell = 256;
+  const placeRune = (p: MonPose) => { if (!monRune || !monSp) return; const r = monRuneAt(p); monRune.visible = !!r && !st?.shadow; if (!r) return; const c = monCell; monRune.x = monX - (c / 2 - r[0] * c) * monK * (monSp.scale.x / Math.abs(monSp.scale.x)); monRune.y = monSp.y - c * monK + r[1] * c * monK; monRune.style.fontSize = Math.max(10, r[2] * c * monK * 1.35); };
   async function drawMon(s: ArenaState) {
     const sp = spriteOf(s.sprite), b = arenaBox(W(), H(), s.boss, s.split, visOf(s)), pose = s.down ? 'down' : 'idle', key = `${s.sprite}|${pose}|${W()}|${H()}|${s.split}|${s.shadow}`;
     monCx = b.mon.cx; monTop = b.mon.top; monSize = b.mon.size;
     shadowG.clear().ellipse(b.shadow.cx, b.shadow.y, b.shadow.w / 2, H() * 0.018).fill({ color: 0x000000, alpha: 0.45 });
     if (key === monKey) return; monKey = key;
     const so = await src(sp.url); if (key !== monKey) return;
-    const col = sp.sheet.poses[pose], c = sp.sheet.cell, nd = monNudge(sp.sheet.src, sp.row, sp.sheet.poses.idle, c), k = b.mon.size / c;
+    const col = sp.sheet.poses[pose], c = sp.sheet.cell, nd = monNudge(sp.sheet.src, sp.row, sp.sheet.poses.idle, c), k = (b.mon.size / c) * (sp.elite ? 1.3 : 1);
     if (!monSp) { monSp = new Sprite(); monSp.anchor.set(0.5, 1); monC.addChild(monSp); }
     monSp.texture = frame(so, col * c, sp.row * c, c, c);
+    monTex = Object.fromEntries((['idle', 'idleB', 'attack', 'hit', 'down'] as MonPose[]).map((p) => [p, frame(so, poseCol(sp.sheet, p) * c, sp.row * c, c, c)])); monCur = pose;
     monSp.scale.set(k); monSp.x = b.mon.cx + nd.dx * b.mon.size; monY = b.mon.top + b.mon.size + nd.dy * b.mon.size; monSp.y = monY;
+    monK = k; monX = monSp.x; monCell = c; monRuneAt = (p) => (sp.rune ? runeAt(sp.sheet, sp.row, poseCol(sp.sheet, p)) : null);
+    if (sp.rune) { if (!monRune) { monRune = txt('', 'title', true, 0xffffff); monRune.anchor.set(0.5); monRune.style.stroke = { color: 0x0b3a52, width: 4 }; monC.addChild(monRune); } monRune.text = sp.rune; placeRune(pose); } else if (monRune) monRune.visible = false;
     const f: (ColorMatrixFilter | GlowFilter)[] = [];
     if (sp.hue) { const m = new ColorMatrixFilter(); m.hue(sp.hue, false); f.push(m); }
+    if (sp.elite && !s.shadow) f.push(new GlowFilter({ color: 0xffc94a, distance: 10, outerStrength: 2, innerStrength: 0, quality: 0.2 })); // 🎲 대장 = 금빛 테두리 (왕관 그림 전)
     if (s.shadow) { const m = new ColorMatrixFilter(); m.brightness(0.08, false); f.push(m, new GlowFilter({ color: 0xe5484d, distance: 12, outerStrength: 2.2, innerStrength: 0, quality: 0.2 })); } // 🌫 정찰 = 붉은 테두리 실루엣 (📺 시안 2026-11-14)
     baseF = f; monSp.filters = stoned ? [...f, greyF] : f;
   }
@@ -221,6 +232,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
     const m = monSp; if (!m) return; const mx = m.x;
     if (kind !== 'hit') { float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900); return; }
+    mflash = 'hit'; mflashUntil = performance.now() + 320; // 🎲 맞음 칸(움찔)
     const wob = () => { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); };
     if (!fancy) { wob(); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); return; }
     const perfect = !!o.perfect, last = dmg > 0 && killArm > 0;
@@ -287,7 +299,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, pose, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

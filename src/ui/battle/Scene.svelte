@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
+  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
@@ -43,16 +43,24 @@
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
-    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
   });
   const sp = $derived(spriteOf(sprite));
+  // 🎲 몬스터 자세 (5칸 시트): 몬스터 공격 = 공격 칸 0.6초 · 용사에게 맞음 = 맞음 칸(움찔) · 대기 = A ↔ B 숨쉬기 · 쓰러짐
+  let mflash = $state<'' | 'hit' | 'attack'>(''), mT: ReturnType<typeof setTimeout> | undefined;
+  const monFlash = (p: 'hit' | 'attack', ms: number) => { mflash = p; clearTimeout(mT); mT = setTimeout(() => (mflash = ''), ms); };
+  let lastHitKey = 0;
+  $effect(() => { const on = hit, k = hitKey; untrack(() => { if (on && k !== lastHitKey) { lastHitKey = k; monFlash('attack', 600); } }); });
+  const mpose = $derived<MonPose>(down ? 'down' : mflash || 'idle');
+  const mrune = $derived(sp.rune && !shadow ? runeAt(sp.sheet, sp.row, poseCol(sp.sheet, mpose)) : null);
   const monBB = $derived(monBody(sp.sheet.src, sp.row, sp.sheet.poses[down ? 'down' : 'idle'], sp.sheet.cell));
+  const breath = $derived(mpose === 'idle' && sp.sheet.poses.idleB != null && !shadow && !stoneSec);
   const hpLabel = $derived(hpL || sp.sheet.names[sp.row] || '몬스터');
   const MON = 128; // 몬스터 칸 256 → 정확히 ½
   const HS = 2;
   const hg = $derived(heroGeo(savedLook().hero)); // 새 화풍(세밀 시트) = 같은 자리에서 위 · 옆으로 넘쳐 그림 // 용사 칸 80 × 64 → 정수 2배
   const mm = (ms: number) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
-  const monBg = (size: number, pose: 'idle' | 'down') => `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${sp.sheet.poses[pose] * size}px -${sp.row * size}px;width:${size}px;height:${size}px;${sp.hue ? `filter:hue-rotate(${sp.hue}deg)${shadow ? ' brightness(0)' : ''};` : shadow ? 'filter:brightness(0);opacity:.85;' : ''}`;
+  const monBg = (size: number, pose: MonPose) => { const f = [sp.hue ? `hue-rotate(${sp.hue}deg)` : '', shadow ? 'brightness(0)' : '', sp.elite && !shadow ? 'drop-shadow(0 0 2px #ffd25a) drop-shadow(0 0 6px #e8a81f)' : ''].filter(Boolean).join(' '); return `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${poseCol(sp.sheet, pose) * size}px -${sp.row * size}px;width:${size}px;height:${size}px;--s:${size}px;--y:-${sp.row * size}px;${f ? `filter:${f};` : ''}${shadow && !sp.hue ? 'opacity:.85;' : ''}`; };
   // 👑 +10 후광 = 머리 뒤 중앙: 이 장면은 그림 상자(.art)가 heroNudge 만큼 밀려 있음 → 머리 자리에서 밀림을 뺌(가로) · 더함(높이)
   const bodyIn = (id: number): [number, number] => { const n = heroNudge(id, 0); return [-n.dx, n.dy]; };
   const headIn = (id: number): [number, number] => { const h = heroHead(id), n = heroNudge(id, 0); return [h[0] - n.dx, h[1] + n.dy]; };
@@ -79,7 +87,7 @@
       {/each}
     </div>
   {/if}
-  <i class="mon art monster" class:stoned={stoneSec > 0} bind:this={monEl} data-bb={monBB} class:minboss={!!minions} style={monBg(minions ? 104 : MON, down ? 'down' : 'idle')} aria-label={sp.sheet.names[sp.row]}></i>
+  <i class="mon art monster" class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   {#if iceMode !== 'off'}
@@ -119,6 +127,12 @@
   .mon { position: absolute; z-index: 1; right: 24px; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
   /* ⚔ 소레이드 (#160 · 정식 소레이드 1단계 배치): 대장 = 오른쪽 뒤(조금 위) · 졸개 셋 = 대장 앞 한 줄(오른쪽 정렬 · 간격 8) · 용사 = 왼쪽 · 용사 칸(160)과 겹침 0 */
   .mon.minboss { right: 8px; top: 90px; }
+  /* 🎲 5칸 시트: 대기 숨쉬기(A ↔ B 0.7초) · 대장 1.3배 · 몸 룬 기호 */
+  .mon.breath { animation: mbreath 1.4s steps(1) infinite; }
+  @keyframes mbreath { 0% { background-position: 0 var(--y); } 50% { background-position: calc(-1 * var(--s)) var(--y); } }
+  .mon.elite { transform: scale(1.3); transform-origin: 50% 100%; }
+  .mon .rune { position: absolute; transform: translate(-50%, -52%); color: #fff; font-style: normal; font-family: 'DejaVu Sans', system-ui, sans-serif; font-weight: 800; line-height: 1; text-shadow: 0 0 2px #0b3a52, 0 0 4px #0b3a52, 0 0 6px rgba(80, 230, 255, 0.8); pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .mon.breath { animation: none; } }
   .minions { position: absolute; z-index: 2; right: 16px; top: 194px; display: flex; gap: var(--s2); }
   .mini { display: block; image-rendering: pixelated; background-repeat: no-repeat; border-radius: var(--r-sm); }
   .mini { transition: transform 0.2s ease-out, opacity 0.2s; }

@@ -15,6 +15,8 @@
   import { guard } from './fx/aura';
   import { setNewFx } from './fx/fx';
   import { setTwin, twinOf, type TwinV } from './fx/twin';
+  import { dressed } from './rdun';
+  import { RDUN, RDUN_IDS } from './manifest';
   // ⚔ 용사 fx 탭 (🔨 용사 fx · 2026-11-13): 용사 · 끼운 스킬 · 강화를 이 기기 「내 용사」에 적고 같은 학생 화면에서 공격 · 필살기 · 진필살기 · 홀리 방패 · 오라를 하나씩
   //   🃏 카드 특전 공격 이펙트 = 정식에 없음(도감 특전 = 용사 열기) → 흐린 단추 · ❓#3
   // 💥 공격 갤러리 (#161 · 테스트 모드 · 선생님 확인용): 학생 폰 화면 그대로(이 기기 메모리 방 · 데미지 · 기록 없음) + 위에 효과 15개 단추
@@ -22,7 +24,9 @@
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   // 일반 = 소레이드 아닌 첫 몬스터가 있는 첫 차시 · 졸개 = 소레이드 몬스터가 있는 첫 차시 (차시 id 를 쓰지 않음 · #136)
   const pick = (chainy: boolean) => { for (const P of PACKS) { const st = P.steps.find((x) => x.kind === 'monster' && !!P.monsters[x.id] && !!(P.monsters[x.id] as { chain?: unknown }).chain === chainy); if (st) return { L: P, id: st.id }; } return { L: PACKS[0]!, id: PACKS[0]!.steps[0]!.id }; };
-  const G1 = pick(false), G2 = pick(true), L6 = G1.L, L7 = G2.L;
+  // 🎲 랜덤 던전 미리 보기 (2026-11-14): 주소 ?rdun=d01 → 같은 차시에 그 던전 그림 · 공격 · 몸 룬을 입힘
+  const RD = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('rdun') || '' : '';
+  const G1 = pick(false), G2 = pick(true), L6 = dressed(G1.L, RD), L7 = dressed(G2.L, RD);
   let chain = $state(false), strong = $state(false), now = $state(''), tab = $state<'mon' | 'hero'>('mon');
   const KEY = 'citadel-v1-me';
   const readMe = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') as { hero?: number; enh?: number; socket?: Record<string, string> }; } catch { return {}; } };
@@ -48,6 +52,7 @@
     <b>💥 공격 갤러리</b>
     <button type="button" class:on={strong} aria-pressed={strong} onclick={() => (strong = !strong)}>😡 분노</button>
     <button type="button" class:on={chain} aria-pressed={chain} onclick={() => (chain = !chain)}>⚔ 졸개</button>
+    <select aria-label="🎲 랜덤 던전" data-k="rdun" value={RD} onchange={(e) => { const v = (e.currentTarget as HTMLSelectElement).value, q = new URLSearchParams(location.search); if (v) q.set('rdun', v); else q.delete('rdun'); location.search = q.toString(); }}><option value="">🎲 차시 그림</option>{#each RDUN_IDS as id (id)}<option value={id}>🎲 {id} {RDUN[id]!.name}</option>{/each}</select>
     <div class="tabs2"><button type="button" class:on={tab === 'mon'} onclick={() => (tab = 'mon')}>💥 몬스터 공격</button><button type="button" class:on={tab === 'hero'} onclick={() => (tab = 'hero')}>⚔ 용사 fx</button></div>
     {#if tab === 'hero'}
       <div class="hrow">

@@ -59,10 +59,14 @@
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
+    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 · 정식 hall.js pose): Pixi = A.pose · DOM 장면 = HeroSprite pose · 잠깐 모션(ms) 위에 바탕 모션(쓰러짐 · 기쁨 · 생각)
+  // 🎲 몬스터 잠깐 자세 (공격 · 맞음) — Pixi = A.monPose · DOM = Sprite pose
+  let domMon = $state<'' | 'attack' | 'hit'>(''), domMonT: ReturnType<typeof setTimeout> | undefined;
+  function monAct(p: 'attack' | 'hit', ms: number) { if (A) { A.monPose(p, ms); return; } domMon = p; clearTimeout(domMonT); domMonT = setTimeout(() => (domMon = ''), ms); }
+  (globalThis as { __tvMon?: (p: 'attack' | 'hit', ms?: number) => void }).__tvMon = (p, ms = 600) => monAct(p, ms); // 화면 시험 고리
   let domPose = $state<Record<string, HPose>>({}); const poseT: Record<string, ReturnType<typeof setTimeout>> = {};
   function tvPose(u: string, p: HPose, ms: number) {
     if (A) { A.pose(u, p, ms); return; }
@@ -237,7 +241,7 @@
   {#if mode === 'dom' && W && step && sprite}
     <!-- DOM 장면 = 캔버스와 같은 배치 (WebGL 없는 기기) -->
     <i class="sh" style:left="{box.shadow.cx - box.shadow.w / 2}px" style:top="{box.shadow.y - H * 0.018}px" style:width="{box.shadow.w}px" style:height="{H * 0.036}px"></i>
-    <div class="mon" class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : 'idle'} size={box.mon.size} /></div>
+    <div class="mon" class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : domMon || 'idle'} size={box.mon.size} /></div>
     {#if hp && !shadow}
       <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>{hp.left} / {hp.max}</b></div></div>
     {/if}
