@@ -133,13 +133,7 @@
     return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? `📵 끊김 ${lost.map(nameOf).join(' · ')}` : '' };
   });
 
-  // ── 정찰 +30초 1초 표시 ──
-  let addFlash = $state(''), lastAdd = -1, flashT: ReturnType<typeof setTimeout> | null = null;
-  $effect(() => {
-    const a = scout ? Number(R?.state.solveAdd?.[scout.id] || 0) : -1;
-    if (lastAdd >= 0 && a !== lastAdd) { untrack(() => { addFlash = a > lastAdd ? '+30초' : '−30초'; if (flashT) clearTimeout(flashT); flashT = setTimeout(() => (addFlash = ''), 1000); }); }
-    lastAdd = a;
-  });
+  // ── 정찰 +30초 = 교사 폰에만 (📺 시안 · 선생님 「2번 교사 폰에만」 2026-11-14) · TV 는 남은 초만 바뀜 ──
 
   // ── 👑 문 닫기 (정식 #68 A): 마감이 되면 장면 · +5분을 아직 안 썼으면 30초 묻기 · 지나면 수업 끝 ──
   $effect(() => { if (R && !R.state.closed && !isLobby(R) && left === 0 && !R.state.door) untrack(() => doorStart(S, code)); });
@@ -278,7 +272,7 @@
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
     <Arena {L} R={R as Room} {step} {now} {ids} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} />
     {#if scout?.on}
-      <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초 {#if addFlash}<span class="adj">{addFlash}</span>{/if}</div></div>
+      <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
     {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} onclose={() => (demo = false)} /></div>{/if}
   {/if}
@@ -448,10 +442,9 @@
   .cpane p.sum { font-size: var(--tv-body); font-weight: 600; }
   .qhead { display: flex; flex-direction: column; gap: 0.4cqh; font-size: var(--tv-title); line-height: 1.3; margin-bottom: 0.6cqh; }
   .cpane p.qi { font-size: var(--tv-body); line-height: 1.45; }
-  .sc { position: absolute; right: 1.5cqw; top: 25cqh; z-index: 3; padding: 1.4cqh 1.4cqw; border-radius: 1.6cqh; background: rgba(8, 9, 12, 0.78); border: 1px solid rgba(255, 255, 255, 0.2); display: flex; flex-direction: column; gap: 0.6cqh; align-items: flex-end; }
+  .sc { position: absolute; right: 2cqw; top: 23cqh; z-index: 3; min-width: 31cqw; padding: 2.2cqh 2cqw; border-radius: 2cqh; background: rgba(10, 16, 30, 0.86); border: 2px solid #6aa3ff; box-shadow: 0 0 2cqh rgba(106, 163, 255, 0.25); display: flex; flex-direction: column; gap: 1cqh; align-items: center; text-align: center; } /* 🌫 정찰 = 큰 테두리 카드 (📺 시안) */
   .sc .q { font-size: var(--tv-body); font-weight: 700; }
   .sc .r { font-size: var(--tv-body); } .sc .r b { font-size: var(--tv-big); color: #9fc8ff; }
-  .adj { margin-left: 0.6cqw; font-weight: 700; color: #9fc8ff; background: rgba(20, 34, 58, 0.85); border: 2px solid #6aa3ff; border-radius: 999px; padding: 0.3cqh 1cqw; }
   .dpane { position: absolute; right: 1.5cqw; top: 11cqh; bottom: 2cqh; width: 40cqw; z-index: 4; border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }

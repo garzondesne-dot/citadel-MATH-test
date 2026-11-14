@@ -266,7 +266,7 @@
   .arena2 :global(canvas) { position: relative; z-index: 1; }
   .tvfx { position: absolute; inset: 0; z-index: 2000; pointer-events: none; overflow: hidden; }
   .sh { position: absolute; border-radius: 50%; background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%); }
-  .mon { position: absolute; } .mon.shadow { filter: brightness(0.08); }
+  .mon { position: absolute; } .mon.shadow { filter: brightness(0.08) drop-shadow(0 0 2px #e5484d) drop-shadow(0 0 8px #e5484d); } /* 🌫 정찰 = 붉은 테두리 실루엣 */
   .mon.float { animation: bob 2.6s steps(2, jump-none) infinite; } /* #164 계단 · 정수 px */
   @keyframes bob { 50% { transform: translateY(-4px); } }
   .hp { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0.6cqh; font-size: var(--tv-body); font-weight: 700; text-shadow: 0 1px 2px #000; }

@@ -3,7 +3,7 @@
 //   층 = 그림자 · 몬스터 · 체력 막대 · 용사단 · ✨ 이펙트 층(fx · 공격 · 데미지 · +EXP · 격파 · #152 · #161 몬스터 공격 이펙트가 여기에 붙음)
 //   글자 판(위 막대 · 숫자 칸 · 조작 막대 · 문제 창 · 시연 폰)은 HTML 그대로 캔버스 위에
 import { Application, Assets, ColorMatrixFilter, Container, Graphics, Particle, ParticleContainer, Rectangle, Sprite, Text, Texture, type TextureSource } from 'pixi.js';
-import { ShockwaveFilter } from 'pixi-filters';
+import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
@@ -89,7 +89,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   // 🐢 가상 시계: 히트 스톱(0) · 느리게(0.35) 동안 트윈이 그만큼 늦게 흐름 · 실제 시간은 그대로
   let vt = performance.now(), lastT = vt, scale = 1, stopUntil = 0, slowUntil = 0;
   const tween = (ms: number, f: (p: number) => void, done?: () => void) => { tweens.add({ t0: vt, ms, f, done }); };
-  let bob = 0, stoned = false, baseF: ColorMatrixFilter[] = [];
+  let bob = 0, stoned = false, baseF: (ColorMatrixFilter | GlowFilter)[] = [];
   const greyF = new ColorMatrixFilter(); greyF.greyscale(0.55, false);
   app.ticker.add(() => {
     const t = performance.now(); scale = t < stopUntil ? 0 : t < slowUntil ? JUICE.SLOW : 1; vt += (t - lastT) * scale; lastT = t;
@@ -117,9 +117,9 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     if (!monSp) { monSp = new Sprite(); monSp.anchor.set(0.5, 1); monC.addChild(monSp); }
     monSp.texture = frame(so, col * c, sp.row * c, c, c);
     monSp.scale.set(k); monSp.x = b.mon.cx + nd.dx * b.mon.size; monY = b.mon.top + b.mon.size + nd.dy * b.mon.size; monSp.y = monY;
-    const f: ColorMatrixFilter[] = [];
+    const f: (ColorMatrixFilter | GlowFilter)[] = [];
     if (sp.hue) { const m = new ColorMatrixFilter(); m.hue(sp.hue, false); f.push(m); }
-    if (s.shadow) { const m = new ColorMatrixFilter(); m.brightness(0.08, false); f.push(m); }
+    if (s.shadow) { const m = new ColorMatrixFilter(); m.brightness(0.08, false); f.push(m, new GlowFilter({ color: 0xe5484d, distance: 12, outerStrength: 2.2, innerStrength: 0, quality: 0.2 })); } // 🌫 정찰 = 붉은 테두리 실루엣 (📺 시안 2026-11-14)
     baseF = f; monSp.filters = stoned ? [...f, greyF] : f;
   }
   // ── 체력 막대 (몬스터 바로 위 · 굵게 · 숫자) ──
