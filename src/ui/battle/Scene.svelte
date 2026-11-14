@@ -89,7 +89,7 @@
     {#if !ice}<i class="status" data-elem={elem} aria-label="상태 {elem}" style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({artUrl(STATUS.src)})" style:background-size="{STATUS.cols * STATUS.w * HS}px {STATUS.kinds.length * STATUS.h * HS}px" style:background-position-y="-{srow * STATUS.h * HS}px" style:width="{STATUS.w * HS}px" style:height="{STATUS.h * HS}px" style:--sw="{STATUS.cols * STATUS.w * HS}px"></i>{/if}
   {/if}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
-  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
+  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
     style:background-position="-{heroCol * hg.w * HS}px -{heroRow * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
 </div>
 
@@ -138,6 +138,8 @@
   .status { position: absolute; z-index: 2; left: 0; top: 108px; display: block; image-rendering: pixelated; background-repeat: no-repeat; animation: st 0.6s steps(6) infinite; pointer-events: none; }
   @keyframes st { from { background-position-x: 0; } to { background-position-x: calc(-1 * var(--sw)); } }
   .edge.hit.iced .hero { filter: saturate(0.6) brightness(1.1); }
+  /* 🧊 용사 얼음 (📜 2026-11-14) = 그림이 푸르게 물듦 (얼굴 · 옷은 그대로 보임) · 녹으면 0.5초에 원래 색 */
+  .hero { transition: filter 0.5s ease-out; } .hero.frozen, .edge.hit.iced .hero.frozen { filter: grayscale(0.2) sepia(1) hue-rotate(170deg) saturate(3.2) brightness(0.95) contrast(1.08); transition: filter 0.15s ease-out; }
   /* 🔧 화면 고침 2 (2026-11-13): 3줄 카드가 ‹ 뒤로를 덮음 → 한 줄 칩(높이 48 · 폭 절반 안) · 위 막대(z 5) 아래 자리 · 뒤로가 늘 위 */
   .holy-btn { position: absolute; z-index: 4; left: var(--s3); top: calc(var(--bar-top) + var(--s1)); display: flex; align-items: center; gap: 6px; max-width: calc(50% - var(--s4)); height: 40px; padding: 0 12px; border-radius: 20px; border: 2px solid #ffd25a; background: rgba(12, 20, 36, 0.85); color: #fff6c8; font: 700 14px var(--font); white-space: nowrap; box-shadow: 0 3px 0 #000; }
   .holy-btn::after { content: ''; position: absolute; inset: -4px 0; } /* 누르는 칸 48 */

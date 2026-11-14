@@ -7,7 +7,7 @@ import { ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -235,37 +235,30 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     tween(260, (p) => { const k = 0.6 + 0.4 * ease(p); c.scale.set(k); c.alpha = p; });
   }
 
-  // 🧊 얼음 (그림 · 📜 2026-11-13 밤 🎨 ice-tv 5칸): 용사마다 ① 발밑 서리 → ② 반 → ③ 다 얼음(0.1초씩) · 하늘색 · ms 뒤 ④ 녹으며 물방울 → ⑤ 거의 녹음(0.3초씩) → 사라짐
-  //   그림을 못 받으면 = 옛 각진 덩어리 그대로(Graphics)
-  let ice: (Graphics | Sprite)[] = [], iceT: ReturnType<typeof setTimeout>[] = [];
-  const iceTex: Texture[] = [];
-  void src(ICE.tv.src).then((so) => { for (let k = 0; k < ICE.tv.cols; k++) iceTex.push(new Texture({ source: so, frame: new Rectangle(k * ICE.tv.w, 0, ICE.tv.w, ICE.tv.h) })); }).catch(() => {});
-  const BLK = [[0.18, 0], [0.62, 0.03], [0.92, 0.14], [1, 0.46], [0.94, 0.82], [0.7, 1], [0.26, 0.98], [0.04, 0.8], [0, 0.4], [0.06, 0.12]];
+  // 🧊 얼음 (📜 2026-11-14 선생님 「네모나게 꽁꽁 얼어버린 거 말고 용사 이미지 푸른색으로 칠해지면서 군데군데 얼음 결정 조각 붙은 걸로」 · 폰 IceBlock 과 같은 모양)
+  //   용사마다 그림이 푸르게(tint 0x6fc4ff) · 몸 군데군데 얼음 결정 6개가 0.05초씩 돋아남 · ms 뒤 결정이 녹아 흘러내리며(0.6초) 원래 색
+  let ice: Graphics[] = [], iceT: ReturnType<typeof setTimeout>[] = [];
+  const XT: [number, number, number, number][] = [[0.46, 0.18, 1.0, -15], [0.36, 0.4, 0.9, 20], [0.6, 0.42, 1.1, -30], [0.44, 0.6, 0.8, 10], [0.56, 0.74, 1.0, 35], [0.4, 0.82, 0.85, -25]];
+  function crystal(x: number, y: number, h: number, rot: number) {
+    const g = new Graphics(), w = h * 0.62;
+    g.poly([0, -h / 2, w * 0.32, -h * 0.16, w * 0.14, h / 2, -w * 0.14, h / 2, -w * 0.32, -h * 0.16]).fill({ color: 0x8fd6ff, alpha: 0.95 }).stroke({ width: Math.max(1, h * 0.06), color: 0x1d5f94, alpha: 0.9 });
+    g.poly([0, -h / 2, w * 0.16, -h * 0.12, 0, h * 0.1, -w * 0.16, -h * 0.12]).fill({ color: 0xffffff, alpha: 0.95 });
+    g.x = x; g.y = y; g.rotation = (rot * Math.PI) / 180; return g;
+  }
   function unfreeze(now: boolean) {
     iceT.forEach(clearTimeout); iceT = []; const gs = ice; ice = [];
     const back = () => { for (const v of heroes.values()) v.sp.tint = 0xffffff; };
     if (now) { gs.forEach((g) => g.destroy()); back(); return; }
-    const sps = gs.filter((g): g is Sprite => g instanceof Sprite), grs = gs.filter((g) => !(g instanceof Sprite));
-    if (sps.length && iceTex.length >= 5) { sps.forEach((g) => (g.texture = iceTex[3]!)); back(); iceT.push(setTimeout(() => sps.forEach((g) => (g.texture = iceTex[4]!)), 300)); iceT.push(setTimeout(() => tween(250, (p) => sps.forEach((g) => (g.alpha = 1 - p)), () => sps.forEach((g) => g.destroy())), 600)); }
-    if (grs.length) tween(600, (p) => grs.forEach((g) => { g.alpha = 1 - p; g.y = p * H() * 0.008; }), () => { grs.forEach((g) => g.destroy()); back(); });
+    const y0 = gs.map((g) => g.y);
+    tween(600, (p) => gs.forEach((g, k) => { g.alpha = 1 - p; g.y = y0[k]! + p * H() * 0.02; g.scale.y = 1 - 0.5 * p; }), () => { gs.forEach((g) => g.destroy()); });
+    back();
   }
   function freeze(ms: number) {
     unfreeze(true);
     for (const v of heroes.values()) {
       const b = v.sp.getBounds(), p = fx.toLocal({ x: b.x, y: b.y }), w = Math.abs(b.width), h = b.height;
-      if (iceTex.length >= 5) {
-        const sp = new Sprite(iceTex[0]!); sp.anchor.set(0.5, 1); const sc = (h * 1.12) / ICE.tv.h; sp.scale.set(sc); sp.x = p.x + w / 2; sp.y = p.y + h + h * 0.04; sp.alpha = 0.95;
-        fx.addChild(sp); ice.push(sp); v.sp.tint = 0xbfe6ff;
-        iceT.push(setTimeout(() => { if (!sp.destroyed) sp.texture = iceTex[1]!; }, 100)); iceT.push(setTimeout(() => { if (!sp.destroyed) sp.texture = iceTex[2]!; }, 200));
-        continue;
-      }
-      const x0 = p.x + w * 0.22, y0 = p.y + h * 0.06, bw = w * 0.56, bh = h * 0.94, at = (a: number, c: number) => [x0 + a * bw, y0 + c * bh];
-      const g = new Graphics();
-      g.poly(BLK.flatMap(([a, c]) => at(a!, c!))).fill({ color: 0xcfefff, alpha: 0.42 }).stroke({ width: Math.max(1.5, h * 0.015), color: 0xffffff, alpha: 0.85 });
-      g.poly([...at(0.14, 0.08), ...at(0.3, 0.08), ...at(0.22, 0.54), ...at(0.06, 0.54)]).fill({ color: 0xffffff, alpha: 0.42 });
-      g.poly([...at(0.8, 0.14), ...at(0.86, 0.14), ...at(0.82, 0.34), ...at(0.76, 0.34)]).fill({ color: 0xffffff, alpha: 0.6 });
-      for (const [a, c, k] of [[0.02, 0.92, 1], [0.96, 0.86, 0.8], [0.88, -0.02, 0.7]] as const) { const r = bw * 0.14 * k; g.poly([x0 + a * bw, y0 + c * bh - r, x0 + a * bw + r, y0 + c * bh - r * 0.2, x0 + a * bw + r * 0.4, y0 + c * bh + r, x0 + a * bw - r * 0.8, y0 + c * bh + r * 0.5]).fill({ color: 0xe6f8ff, alpha: 0.7 }); }
-      fx.addChild(g); ice.push(g); v.sp.tint = 0xbfe6ff;
+      v.sp.tint = 0x6fc4ff;
+      XT.forEach(([a, c, k, r], i) => { iceT.push(setTimeout(() => { const g = crystal(p.x + a * w, p.y + c * h, h * 0.16 * k, r); g.scale.set(0.2); fx.addChild(g); ice.push(g); tween(120, (q) => g.scale.set(0.2 + 0.8 * q)); }, i * 50)); });
     }
     iceT.push(setTimeout(() => unfreeze(false), ms));
   }
