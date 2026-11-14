@@ -30,6 +30,7 @@ const log = (...a) => console.log(...a);
   await s.click('.links button:has-text("가입")'); await s.click('button.pw >> nth=0'); for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`);
   await s.waitForTimeout(200); if (await s.$('.pad')) for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`); else { await s.click('button.pw >> nth=1'); for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`); }
   await s.waitForTimeout(200); await s.click('.title .pmain'); await s.waitForSelector('.stage', { timeout: 20000 }); await s.waitForTimeout(1500);
+  if (await s.$('[data-k="first-hero"]')) await s.click('[data-k="first-hero"] .pmain'); // 🧙 첫 용사 (b90)
   const gate = (await s.textContent('.pmain')).trim(); log('③ 학생 가입 → 캠프 · 주요 단추:', gate); if (!/던전 입장/.test(gate)) errs.push('③ 캠프 차원문');
   await s.click('.pmain'); await s.waitForURL(/role=student/, { timeout: 10000 }).catch(() => {}); await s.waitForTimeout(2000);
   const lobby = (await s.textContent('body')).replace(/\s+/g, ' '); log('   입장:', /입장 완료|기다려요/.test(lobby) ? '대기실 ○' : `✗ ${lobby.slice(0, 80)}`); if (!/입장 완료|기다려요/.test(lobby)) errs.push('③ 대기실');

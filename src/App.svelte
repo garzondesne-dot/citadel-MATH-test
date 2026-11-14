@@ -35,6 +35,8 @@
     addEventListener('popstate', (e) => { if (!(e.state as { gate?: number } | null)?.gate) history.pushState({ gate: 1 }, ''); });
   }
   // 화면 시험 고리(#163-① · 에뮬레이터 시험이 교사 · TV 표시를 REST 로 넣을 때 · 출시 전 메모 5): 이 폰의 로그인 uid
+  // 화면 시험 고리: 이 기기 저장일 때만 경로에 값 넣기 (리모컨 🙋 줄 캡처 · 서버엔 없음)
+  if (!(S as { auth?: unknown }).auth) (globalThis as { __dbSet?: (p: string, v: unknown) => void }).__dbSet = (p, v) => S.set(p, v);
   (globalThis as { __uid?: () => string | null }).__uid = () => (S as { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? null;
   let netOk = $state(true);
   const sv = S as Store & { onNet?: (fn: (s: { connected: boolean }) => void) => () => void };

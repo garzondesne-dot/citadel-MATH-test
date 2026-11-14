@@ -21,7 +21,7 @@ const DB = 'citadel-v1-test-db';
     await s0.selectOption('select >> nth=0', '1-3'); await s0.selectOption('select >> nth=1', '12');
     log(tag, '⓪ 이름:', (await s0.textContent('.name')).trim(), '| 단추', (await s0.textContent('.title .pmain')).trim());
     await pin(s0, 0, '1234'); await pin(s0, 1, '1235'); await s0.click('.title .pmain'); log(tag, '⓪ 두 번 다름:', (await s0.textContent('.err')).trim());
-    await pin(s0, 0, '1234'); await pin(s0, 1, '1234'); await shot(s0, 'b8-title-join'); await s0.click('.title .pmain'); await s0.waitForSelector('.camp');
+    await pin(s0, 0, '1234'); await pin(s0, 1, '1234'); await shot(s0, 'b8-title-join'); await s0.click('.title .pmain'); await s0.waitForSelector('.camp'); await s0.waitForTimeout(300); if (await s0.$('[data-k="first-hero"]')) await s0.click('[data-k="first-hero"] .pmain'); // 🧙 첫 용사 고르기 (b90)
     await s0.reload(); await s0.waitForSelector('.camp'); log(tag, '⓪ 다시 열기 = 바로 캠프 ·', (await s0.textContent('.hero-card .nm')).trim());
     // #120 학생 폰 단추 높이: 주요 56 · 탭 · 되돌리기 48 · 작은 알약 36 · 가로 넘침 0
     const hgt = async (sel) => s0.$eval(sel, (e) => Math.round(e.getBoundingClientRect().height)).catch(() => null);
@@ -44,7 +44,7 @@ const DB = 'citadel-v1-test-db';
         const doc = document.scrollingElement.scrollHeight - innerHeight;
         const scrollers = [...document.querySelectorAll('.tp *')].filter((e) => { if (e.closest('.sheet')) return false; const cs = getComputedStyle(e); return e.scrollHeight > e.clientHeight + 1 && (/(auto|scroll)/.test(cs.overflowY) || e.classList.contains('mid')); }).map((e) => `${e.className.split(' ')[0]}:${e.scrollHeight - e.clientHeight}`);
         const main = document.querySelector('.tact .btn');
-        return { doc, scrollers, main: r(main), fromBottom: main ? Math.round(innerHeight - main.getBoundingClientRect().bottom) : null, tools: [...document.querySelectorAll('.rdock button')].map(r), adj: r(document.querySelector('.adj')), alerts: r(document.querySelector('.alerts')), card: r(document.querySelector('.rstat')) };
+        return { doc, scrollers, main: r(main), fromBottom: main ? Math.round(innerHeight - main.getBoundingClientRect().bottom) : null, tools: [...document.querySelectorAll('.rdock button')].map(r), adj: r(document.querySelector('.adj')), att: r(document.querySelector('.att')), q: r(document.querySelector('.att .q')), card: r(document.querySelector('.rstat')) };
       });
       if (m.doc > 0) errs.push(`${tag} ${name}: 문서 스크롤 ${m.doc}`);
       if (m.scrollers.length) errs.push(`${tag} ${name}: 칸 스크롤 ${m.scrollers.join(' ')}`);
@@ -66,10 +66,10 @@ const DB = 'citadel-v1-test-db';
     const studs = [];
     for (const n of [1, 2, 3, 5, 12]) { const s = watch(await ctx.newPage()); await s.goto(`${B}?role=student&room=${live.code}&as=1-3:${n}${n === 5 ? '&ver=b6' : ''}`); studs.push(s); }
     await t.waitForTimeout(700);
-    await t.click('.n:text-is("15")'); await t.waitForTimeout(100);
+    await t.click('.n[data-n="15"]'); await t.waitForTimeout(100);
     await shot(t, 'b8-t-lobby'); const ml1 = await meas('⑬ 대기실 5명');
-    log(tag, '⑬ 들어온:', (await t.textContent('.cnt')).replace(/\s+/g, ' ').trim(), '| 옛 판 단추:', (await t.textContent('.wide')).trim(), '| 결석 15번:', await t.$eval('.n:text-is("15")', (e) => e.className.includes('ab')), '| 단추 같은 자리', JSON.stringify(ml0.main) === JSON.stringify(ml1.main) && JSON.stringify(ml1.main) === JSON.stringify(mh1.main));
-    await t.click('.bub'); await t.click('.qk button >> nth=1'); log(tag, '⑬ 말풍선:', (await t.textContent('.bub b')).trim());
+    log(tag, '⑬ 들어온:', (await t.textContent('.cnt')).replace(/\s+/g, ' ').trim(), '| ⚠ 칸:', (await t.textContent('[data-k="qm"]')).trim(), '| 결석 15번:', await t.$eval('.n[data-n="15"]', (e) => e.className.includes('ab')), '| 단추 같은 자리', JSON.stringify(ml0.main) === JSON.stringify(ml1.main) && JSON.stringify(ml1.main) === JSON.stringify(mh1.main));
+    log(tag, '⑬ 💬 말풍선 칸 없음 (시안 v12):', !(await t.$('.bub')));
     // ⑮ TV (교사 캠프 → 던전 대기실)
     const tv = watch(await ctx.newPage()); await tv.setViewportSize({ width: 1280, height: 720 }); await tv.goto(B + '?role=hall'); await tv.waitForSelector('.tv');
     await tv.mouse.move(640, 300); if (W === 360) await tv.screenshot({ path: `${SHOTS}/b8-tv-camp.png` });
@@ -89,11 +89,12 @@ const DB = 'citadel-v1-test-db';
     const hp0 = (await t.textContent('.adj .hpl small')).trim(); await t.click('.adj button:has-text("−5%")'); await t.waitForTimeout(150);
     log(tag, '⑭ 체력:', hp0, '→ −5%', (await t.textContent('.adj .hpl small')).trim());
     const same = (a, c) => JSON.stringify(a) === JSON.stringify(c);
-    log(tag, '⑭ 칸 고정: 도구', same(mr0.tools, mr1.tools) && same(mr1.tools, mr2.tools), '| 조정 칸', same(mr0.adj, mr1.adj) && same(mr1.adj, mr2.adj), '| 칩 자리', same(mr1.alerts, mr2.alerts), '| 주요 단추 높이 · 자리', same(mr0.main, mr2.main) && mr2.main[1] === mh1.main[1] && mr2.main[3] === mh1.main[3], mr2.main, '| 도구 높이', [...new Set(mr2.tools.map((x) => x[3]))]);
+    log(tag, '⑭ 칸 고정: 도구', same(mr0.tools, mr1.tools) && same(mr1.tools, mr2.tools), '| 조정 칸', same(mr0.adj, mr1.adj) && same(mr1.adj, mr2.adj), '| 번호 칸 = 대기실 자리 · 크기', same(ml1.att, mr2.att) && same(mr0.att, mr2.att), ml1.att, mr2.att, '| 주요 단추 높이 · 자리', same(mr0.main, mr2.main) && mr2.main[1] === mh1.main[1] && mr2.main[3] === mh1.main[3], mr2.main, '| 도구 높이', [...new Set(mr2.tools.map((x) => x[3]))]);
     if (!(same(mr0.tools, mr1.tools) && same(mr1.tools, mr2.tools) && same(mr0.adj, mr2.adj) && same(mr0.main, mr2.main) && mr2.main[1] === mh1.main[1])) errs.push(`${tag} ⑭ 칸이 움직임`);
-    if (mr2.tools.some((x) => x[3] !== 52)) errs.push(`${tag} ⑭ 도구 높이 52 아님`);
+    if (!(same(ml1.att, mr2.att) && same(mr0.att, mr2.att) && same(ml1.q, mr2.q))) errs.push(`${tag} 번호 칸이 대기실 ↔ 수업 중 다른 자리 ${ml1.att} / ${mr2.att}`); // 📲 시안 v12
+    if (mr2.tools.some((x) => x[3] !== 54) || new Set(mr2.tools.map((x) => x[1])).size !== 1) errs.push(`${tag} ⑭ 도구 = 한 줄 · 높이 54 아님`);
     // 🔒 · 🔄 칩 (5번 옛 판) · 문제 풀이 학생 1명
-    log(tag, '⑭ 칩:', (await t.textContent('.alerts')).replace(/\s+/g, ' ').trim());
+    log(tag, '⑭ 🙋 줄:', (await t.textContent('.att .q')).replace(/\s+/g, ' ').trim());
     await shot(t, 'b8-t-remote-play'); await tv.mouse.move(660, 300); if (W === 360) await tv.screenshot({ path: `${SHOTS}/b8-tv-play.png` });
     // 🔴 집중: 학생 폰 덮개 · TV ⏸ · 남은 시간은 흐름
     await t.click('.rdock button:has-text("집중")'); await t.waitForTimeout(300);

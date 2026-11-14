@@ -5,7 +5,9 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
-  import { isOld, roster, type Live } from '../../school/school';
+  import { isOld, roster, resetPw, hasAccount, type Live } from '../../school/school';
+  import { BUILD } from '../../build';
+  import { unlocksOf } from '../../raid/raid';
   import { hhmm } from '../../school/bells';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
@@ -64,6 +66,30 @@
     if (chain) return ids.map((u) => ({ u, r: chainRecord(L, R, mid, u) })).filter((x) => x.r.locked || x.r.fail).map((x) => ({ u: x.u, lock: x.r.locked }));
     return ids.map((u) => ({ u, r: plainRecord(L, R, mid, u) })).filter((x) => x.r.submitted && !x.r.canRetry && x.r.best < x.r.total).map((x) => ({ u: x.u, lock: !!x.r.locked })); // v4 ❤ 0 = 🙋 잠김 → 풀어주기
   });
+  // 📲 번호 칸 (📜 2026-11-14 선생님 시안 v12 「오케이 이거야 · 이대로 컨펌」 · 머리 e1880f6 B): 대기실 · 수업 중 · 마무리 = 같은 자리 · 같은 크기
+  //   열 = 24명 이하 8 × 3(번호 + 이름) · 25~27 9 × 3 · 28~30 10 × 3(번호만) · 칸 = 들어옴 · 안 옴(점선) · 결석(결) · ⚠ 옛 판(노란 바탕 + 두근두근 2.4초) · 🙋 도움(빨간 테두리 + 손 흔들기) · 둘 다
+  const COLS = $derived(pupils.length <= 24 ? 8 : pupils.length <= 27 ? 9 : 10);
+  const named = $derived(COLS === 8);
+  const help = $derived(stuck.filter((x) => x.lock).map((x) => x.u));
+  // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
+  let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
+  $effect(() => { const h = help; untrack(() => { const keep = order.filter((u) => h.includes(u)), add = h.filter((u) => !keep.includes(u)); if (add.length || keep.length !== order.length) { order = [...keep, ...add]; if (add.length) { const f = { ...fresh }; add.forEach((u) => (f[u] = true)); fresh = f; setTimeout(() => { const g = { ...fresh }; add.forEach((u) => delete g[u]); fresh = g; }, 400); } } }); });
+  const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : isOld(R?.players?.[uid]?.ver) ? (help.includes(uid) ? 'oldh' : 'old') : help.includes(uid) ? 'help' : 'in';
+  const pname = (uid: string) => pupils.find((x) => x.uid === uid)?.name.slice(1) ?? '';
+  // 🙋 풀어주기 (칩 한 번) · 3초 「되돌리기」
+  let undoU = $state<{ u: string; mid: string; v4: boolean; n: number; at: number } | null>(null), undoT: ReturnType<typeof setTimeout> | null = null;
+  function release(u: string) {
+    if (!R || !mid) return; const v4 = V4(R), n = unlocksOf(R, mid, u);
+    if (v4) heartRelease(S, code, mid, u); else chainRelease(S, code, mid, u);
+    undoU = { u, mid, v4, n, at: order.indexOf(u) }; if (undoT) clearTimeout(undoT); undoT = setTimeout(() => (undoU = null), 3000);
+  }
+  function undo() { const x = undoU; if (!x) return; if (x.v4) S.set(`${roomPath(code)}/unlock/${x.mid}/${x.u}`, x.n || null); else S.set(`${roomPath(code)}/chainOk/${x.mid}/${x.u}`, null); const o = order.filter((u) => u !== x.u); o.splice(Math.max(0, x.at), 0, x.u); order = o; undoU = null; } // 되돌리면 원래 자리로
+  // 번호 칸 누름 = 상태 창 (대기실의 안 온 번호 = 바로 결석 표시)
+  let who = $state(''), pwAsk = $state(false), pwDone = $state(false);
+  function tapNum(uid: string) { const st = stOf(uid); if (R && isLobby(R) && (st === 'no' || st === 'ab')) { setAbsent(S, code, uid, st !== 'ab'); return; } who = uid; pwAsk = false; pwDone = false; }
+  const whoP = $derived(pupils.find((x) => x.uid === who) ?? null);
+  const whoRec = $derived.by(() => { if (!R || !who || !mid) return null; const r = chain ? chainRecord(L, R, mid, who) : plainRecord(L, R, mid, who); const tries = 'tries' in r ? r.tries : []; return { left: r.left, slots: r.slots, locked: !!r.locked, wrong: tries.filter((t) => !(t.total > 0 && t.correct === t.total)).length, right: tries.filter((t) => t.total > 0 && t.correct === t.total).length, chain: 'chain' in r && !!r.chain }; });
+  const reload = () => { if (!oldIds.length) { say('옛 판 학생이 없어요'); return; } sendReload(S, code, oldIds); say(`🔄 옛 판 ${oldIds.length}명에게 새로 고침을 보냈어요`); };
   const boss5 = $derived(left != null && left > 0 && left <= 5 * 60e3 && !R?.state.extend);
   const doorAsk = $derived(!!R?.state.door);
 
@@ -120,46 +146,53 @@
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
 
+  {#snippet att()}
+    <div class="card att" aria-label="번호 칸">
+      <div class="hd"><span class="lab">{isLobby(R) ? '들어온 학생 · 판 확인' : '출석 · 판 · 도움'}</span><b class="cnt">{ids.length} <small>/ {expected.length}</small></b></div>
+      <div class="nums c{COLS}" role="group" aria-label="번호 칸">
+        {#each pupils as p (p.uid)}
+          {@const st = stOf(p.uid)}
+          <button type="button" class="n {st}" class:sel={who === p.uid} data-n={p.num} aria-label="{p.num}번 {p.name.slice(1)} · {st === 'in' ? '새 판' : st === 'old' ? '옛 판' : st === 'help' ? '도움 요청' : st === 'oldh' ? '도움 요청 · 옛 판' : st === 'ab' ? '결석' : '안 옴'}" onclick={() => tapNum(p.uid)}><b>{p.num}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
+        {/each}
+      </div>
+      <div class="q">
+        {#if isLobby(R)}
+          <button type="button" class="qm lob" data-k="qm" aria-label="옛 판 {oldIds.length}명 · 누르면 새로 고침" onclick={reload}><b>⚠{oldIds.length}</b></button><span class="hint">⚠ 옛 판 학생 수 · 누르면 새로 고침<br />안 온 번호 = 눌러서 결석</span>
+        {:else}
+          <button type="button" class="qm" data-k="qm" aria-label="도움 요청 {order.length}명 · 누르면 옛 판 {oldIds.length}명 새로 고침" onclick={reload}><b>🙋{order.length}</b></button>
+          <div class="qs" class:more={order.length > 3} data-k="qs">
+            {#each order.slice(0, order.length > 3 ? 4 : 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:wait={k === 3} class:slide={fresh[u] && k < 3} data-u={u} tabindex={k === 3 ? -1 : 0} aria-label="{numOf(u)}번 {pname(u)} 풀어주기" onclick={() => k < 3 && release(u)}>{numOf(u)}<span>{pname(u)}</span></button>{/each}
+            {#each Array.from({ length: Math.max(0, 3 - order.length) }) as _, k (k)}<span class="qslot"></span>{/each}
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/snippet}
   {#if isLobby(R)}
     <!-- ⑬ 대기실 -->
     <div class="mid lob">
-      <button type="button" class="join" onclick={() => (sheet = 'qr')} aria-label="수업 코드 {code} · QR 보기"><span>🚪 코드</span><b>{spaced(code)}</b><em>📱 QR ›</em></button>
-      <div class="card">
-        <div class="hd"><span class="lab">들어온 학생 · 판 확인</span><b class="cnt">{ids.length} <small>/ {expected.length}</small></b></div>
-        <div class="nums" role="group" aria-label="번호 칸">
-          {#each pupils as p (p.uid)}
-            {@const st = absent[p.uid] ? 'ab' : inSet.has(p.uid) ? (isOld(R.players?.[p.uid]?.ver) ? 'old' : 'in') : 'no'}
-            <button type="button" class="n {st}" aria-label="{p.num}번 {st === 'in' ? '새 판' : st === 'old' ? '옛 판' : st === 'ab' ? '결석' : '안 옴'}" disabled={st === 'in' || st === 'old'} onclick={() => setAbsent(S, code, p.uid, st !== 'ab')}>{p.num}{#if st === 'old'}<i>⚠</i>{:else if st === 'ab'}<i>결</i>{/if}</button>
-          {/each}
-        </div>
-        <div class="legend fold"><span><i class="lg in"></i>새 판 {ids.length - oldIds.length}</span><span><i class="lg old"></i>옛 판 {oldIds.length}{oldIds.length ? ` (${oldIds.map(numOf).join(' · ')}번)` : ''}</span><span><i class="lg no"></i>안 옴 {expected.length - ids.length}</span></div>
-        <button type="button" class="wide" disabled={!oldIds.length} onclick={() => { sendReload(S, code, oldIds); say(`🔄 ${oldIds.length}명에게 새로 고침을 보냈어요`); }}>{oldIds.length ? `⚠ 옛 판 ${oldIds.length}명에게 새로 고침` : '옛 판 없음'} · 안 온 번호 = 눌러서 결석</button>
-      </div>
-      <button type="button" class="bub" onclick={() => { bub = R.state.bubble || QUICK[0] || ''; sheet = 'bubble'; }}><span>💬</span><b>「{R.state.bubble || QUICK[0]}」</b><em>바꾸기 ›</em></button>
-      <div class="card fl">
-        <div class="hd"><span class="lab">오늘 흐름 · 약 {mins}분</span><span class="endt"><b>끝 {hhmm(endAt)}</b>{#if bell} <small>종 {hhmm(bell)}</small>{/if}</span></div>
+      <button type="button" class="join row2" onclick={() => (sheet = 'qr')} aria-label="수업 코드 {code} · QR 보기"><span>🚪 코드</span><b>{spaced(code)}</b><em>📱 QR ›</em></button>
+      {@render att()}
+      <div class="card fl1">
+        <div class="hd"><span class="lab">오늘 흐름 · 약 {mins}분 · <button type="button" class="setl" onclick={() => (sheet = 'set')}>설정 ›</button></span><span class="endt"><b>끝 {hhmm(endAt)}</b>{#if bell} <small>종 {hhmm(bell)}</small>{/if}</span></div>
         <div class="fbar">{#each G as g (g.from)}<i style:flex={g.min} style:background={COLOR[g.kind]}></i>{/each}</div>
-        <ol class="tl2 fold">{#each G as g (g.from)}<li><i style:background={COLOR[g.kind]}></i><span>{g.label}</span><em>{g.min}분</em></li>{/each}</ol>
-        <div class="setrow fold"><button type="button" class="chipbtn" onclick={() => (sheet = 'set')}>체력 기준 {R.meta.pct ?? L.defaultPct}%</button><button type="button" class="chipbtn" onclick={() => (sheet = 'set')}>정찰 {R.meta.solve}초</button><button type="button" class="chipbtn" onclick={() => (sheet = 'set')}>생각 {R.meta.think}초</button></div>
-        <button type="button" class="fsum unfold" onclick={() => (sheet = 'set')}>{G.map((g) => `${g.label.replace(/ ⚔$/, '')} ${g.min}`).join(' · ')}분 · <b>설정 ›</b></button>
       </div>
     </div>
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
     <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
     <!-- ⑭ 리모컨 -->
-    <div class="rflow" aria-label="단계 {steps.findIndex((x) => x.k === i) + 1} / {steps.length}">
-      <div class="rfbar">{#each steps as x (x.s.id)}<i class:ok={x.k < i} class:now={x.k === i} style:flex={flex(x)} style:--c={COLOR[kindOf(L, R, x.s)]} title={short(x.s)}></i>{/each}</div>
-      <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
-    </div>
     <div class="mid rem">
-      <div class="pace fold"><span>끝 예상 <b>{hhmm(endAt)}</b></span>{#if bell}<span class:late={late > 0}>종 {hhmm(bell)}{late > 0 ? ` · ${late}분 늦음` : ' · 맞춰 가요'}</span>{/if}</div>
+      <div class="rflow row2" aria-label="단계 {steps.findIndex((x) => x.k === i) + 1} / {steps.length}">
+        <div class="rfbar">{#each steps as x (x.s.id)}<i class:ok={x.k < i} class:now={x.k === i} style:flex={flex(x)} style:--c={COLOR[kindOf(L, R, x.s)]} title={short(x.s)}></i>{/each}</div>
+        <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
+      </div>
+      {@render att()}
       <div class="card rstat">
-        <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리 · 학급 결과' : `지금 · ${step?.title ?? ''}`}</span>
-          {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 문을 닫아요 · <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰 중</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
-        </div>
-        <div class="rs2"><div class="big2"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b><span>/ {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span></div>
-          <span class="unsub">{#if mid || step?.kind === 'boss'}{#if !unsub.length}미제출 없음{:else if unsub.length <= 4}미제출 <b>{unsub.map(numOf).join(' · ')}번</b>{:else}미제출 <b>{unsub.length}명</b>{/if}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
+        <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</span>
+          {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
+          <span class="unsub">{#if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
+          <span class="sub"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>
         </div>
         {#if scout?.on}
           <div class="adj" aria-label="정찰 시간 조정"><button type="button" aria-label="정찰 30초 줄이기" onclick={() => scoutAdd(S, L, code, -30)}>−30초</button>
@@ -171,23 +204,39 @@
             <button type="button" aria-label="체력 기준 5% 올리기" disabled={!hp} onclick={() => setPct(S, code, (R.meta.pct ?? L.defaultPct) + 5)}>+5%</button></div>
         {/if}
       </div>
-      <div class="alerts" aria-label="챙길 학생">
-        <div class="al stuck">{#if stuck.length}<span class="alh">🔒 막힘 {stuck.length}</span>{#each stuck.slice(0, 3) as x (x.u)}<button type="button" onclick={() => { if (x.lock && mid) { if (R && V4(R)) heartRelease(S, code, mid, x.u); else chainRelease(S, code, mid, x.u); say(`✔ ${nameOf(x.u)} 풀어 줬어요`); } else say(`${nameOf(x.u)} · 기회를 다 썼어요 (학습지로)`); }}>{nameOf(x.u)}</button>{/each}{#if stuck.length > 3}<span class="more">+{stuck.length - 3}</span>{/if}{/if}</div>
-        <div class="al old">{#if oldIds.length}<span class="alh">🔄 옛 판 {oldIds.length}</span>{#each oldIds.slice(0, 2) as u (u)}<button type="button" onclick={() => { sendReload(S, code, [u]); say(`🔄 ${nameOf(u)} 새로 고침`); }}>{nameOf(u)} · 새로 고침</button>{/each}{#if oldIds.length > 2}<span class="more">+{oldIds.length - 2}</span>{/if}{/if}</div>
-      </div>
     </div>
     <div class="rdock" role="group" aria-label="도구">
-      <button type="button" class:on={!!R.state.rest} aria-pressed={!!R.state.rest} onclick={openRest}><b>🏕 쉼터</b></button>
-      <button type="button" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><b>🎬 영상</b></button>
-      <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><b>📄 문제</b></button>
-      <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><b>💎 선물</b></button>
-      <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><b>🔴 집중</b></button>
-      <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><b>⏰ +5분</b></button>
+      <button type="button" class:on={!!R.state.rest} aria-pressed={!!R.state.rest} onclick={openRest}><i>🏕</i>쉼터</button>
+      <button type="button" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><i>🎬</i>영상</button>
+      <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
+      <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
+      <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
+      <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
     <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
+  {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} 풀어줬어요 (❤ +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
+  {#if whoP}
+    {@const st = stOf(whoP.uid)}
+    <Sheet onclose={() => (who = '')} mainText="닫기">
+      {#snippet title()}{whoP.num} {whoP.name.slice(1)} {#if st === 'help' || st === 'oldh'}<span class="chip r">🙋 도움 요청</span>{/if}{#if st === 'old' || st === 'oldh'}<span class="chip y">⚠ 옛 판</span>{/if}{/snippet}
+      <div class="wst" data-k="who">
+        <div>판<b>{R.players?.[whoP.uid]?.ver ? (isOld(R.players?.[whoP.uid]?.ver) ? `옛 판 ${R.players?.[whoP.uid]?.ver}` : `새 판 ${BUILD}`) : st === 'ab' ? '결석' : '안 들어옴'}</b></div>
+        <div>지금<b>{isLobby(R) ? '대기실' : isEnd(L, R) ? '마무리' : short(step)}</b></div>
+        <div>하트<b>{whoRec ? `❤ ${whoRec.left} / ${whoRec.slots}${whoRec.locked ? ' · 잠김' : ''}` : '—'}</b></div>
+        <div>이 몬스터<b>{whoRec ? `틀림 ${whoRec.wrong} · 맞힘 ${whoRec.right}` : '—'}</b></div>
+      </div>
+      <div class="wacts">
+        <button type="button" class="p" disabled={!(st === 'help' || st === 'oldh')} onclick={() => { release(whoP.uid); who = ''; }}>✔ 풀어주기 (❤ +1)</button>
+        <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name.slice(1)} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
+        <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
+        <button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>
+      </div>
+      {#if pwAsk}<div class="conf" data-k="pwask"><span><b>{whoP.num} {whoP.name.slice(1)}</b> 비밀번호를 0000 으로 바꿀까요? 다음 로그인 때 0000 으로 들어와요.</span><div><button type="button" onclick={() => (pwAsk = false)}>취소</button><button type="button" class="y" data-k="pwgo" onclick={() => { resetPw(S, live.cls, whoP.num); pwAsk = false; pwDone = true; }}>0000 으로 바꾸기</button></div></div>{/if}
+    </Sheet>
+  {/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
   {#if sheet === 'bubble'}
@@ -243,89 +292,101 @@
 {/if}
 
 <style>
-  .join { flex: none; display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press-sh); }
-  .join span { font-size: 13px; font-weight: 700; color: var(--text-2); } .join b { flex: 1; text-align: left; font-size: 24px; letter-spacing: 2px; color: var(--accent); font-variant-numeric: tabular-nums; } .join em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--text-2); }
-  .qrbox { display: flex; flex-direction: column; align-items: center; gap: var(--s2); text-align: center; }
-  .qcode { font-size: 34px; letter-spacing: 4px; color: var(--accent); font-variant-numeric: tabular-nums; }
-  .qrbox p { margin: 0; font-size: 14px; color: var(--text-2); line-height: 1.5; } .qrbox .tvu { font-size: 13px; word-break: break-all; } .qrbox .tvu b { color: var(--text); }
-  .cnt { font-size: 20px; }
-  .cnt small { font-size: 13px; color: var(--text-2); }
-  .nums { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
-  .n { position: relative; height: 36px; border-radius: 9px; border: 1px dashed var(--line); background: none; color: var(--text-3); font: 700 14px var(--font); padding: 0; }
-  .n.in { border: 1px solid var(--accent); background: var(--surface-2); color: var(--text); opacity: 1; }
-  .n.old { border: 1px solid #f0a24a; background: #3a2a12; color: #ffd7a0; opacity: 1; }
-  .n.ab { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-3); text-decoration: line-through; }
-  .n i { position: absolute; top: -6px; right: -6px; font-style: normal; font-size: 11px; text-decoration: none; }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--text-2); }
-  .legend span { display: flex; align-items: center; gap: 5px; }
-  .lg { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-  .lg.in { border: 1px solid var(--accent); background: var(--surface-2); }
-  .lg.old { border: 1px solid #f0a24a; background: #3a2a12; }
-  .lg.no { border: 1px dashed var(--line); }
-  .wide { width: 100%; height: 40px; border-radius: var(--r); border: 1px solid var(--line); background: none; color: var(--text); font: 700 13px var(--font); }
-  .wide:disabled { color: var(--text-3); }
-  .bub { display: flex; align-items: center; gap: var(--s2); height: 48px; flex: none; padding: 0 var(--s3); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
-  .bub b { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bub em { font-style: normal; font-size: 12.5px; color: var(--text-2); flex: none; }
-  .endt { font-size: 13px; } .endt b { color: var(--accent); } .endt small { color: var(--text-2); }
-  .fbar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; }
-  .fbar i { display: block; }
-  .tl2 { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-  .tl2 li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 24px; font-size: 13.5px; }
-  .tl2 li > i { width: 10px; height: 10px; border-radius: 3px; }
-  .tl2 em { font-style: normal; font-size: 12px; color: var(--text-2); }
-  .setrow { display: flex; gap: 6px; flex-wrap: wrap; }
-  .fsum { border: 0; background: none; padding: 0; text-align: left; font: 500 12.5px var(--font); color: var(--text-2); min-height: 32px; }
-  .fsum b { color: var(--text); }
-  .rflow { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: 5px; }
+  /* 📲 시안 v12 (2026-11-14 컨펌): 두 번째 칸 높이 36 · 번호 칸 = 대기실 · 수업 중 같은 자리 · 같은 크기 */
+  .row2 { flex: none; height: 36px; }
+  .join { display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press-sh); }
+  .join span { font-size: 13px; font-weight: 700; color: var(--text-2); } .join b { flex: 1; text-align: left; font-size: 21px; letter-spacing: 2px; color: var(--accent); font-variant-numeric: tabular-nums; } .join em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--text-2); }
+  .rflow { display: flex; flex-direction: column; justify-content: center; gap: 4px; }
   .rfbar { display: flex; gap: 2px; height: 12px; }
   .rfbar i { display: block; border-radius: 3px; background: var(--surface-2); border: 1px solid var(--line); }
   .rfbar i.ok { background: #2d5c45; border-color: #2d5c45; }
   .rfbar i.now { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(245, 184, 74, 0.3); }
-  .rfcap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
-  .rfcap b { color: var(--text); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; }
-  .pace { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
-  .pace b { color: var(--text); font-size: 15px; }
-  .pace .late { color: #f0a24a; font-weight: 700; }
-  .rstat { gap: 6px; }
-  .rs1 { display: flex; align-items: center; justify-content: space-between; gap: 6px; height: 26px; overflow: hidden; }
-  .rs1 .lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rfcap { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); font-size: 12px; line-height: 1.2; color: var(--text-2); white-space: nowrap; }
+  .rfcap b { color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+  .att { flex: none; padding: 10px 12px; gap: 6px; }
+  .att .hd { height: 18px; }
+  .cnt { font-size: 18px; font-variant-numeric: tabular-nums; } .cnt small { font-size: 12px; color: var(--text-2); }
+  .nums { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 5px; }
+  .nums.c9 { grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 4px; } .nums.c10 { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; }
+  .n { position: relative; height: 40px; border-radius: 8px; border: 1.5px dashed var(--line); background: none; color: var(--text-3); font: 700 14px var(--font); padding: 0; display: grid; place-items: center; align-content: center; line-height: 1.15; }
+  .nums.c9 .n, .nums.c10 .n { font-size: 15px; }
+  .n s { text-decoration: none; font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; max-width: 100%; opacity: 0.9; }
+  .n.in { border: 1.5px solid var(--accent); background: var(--surface-2); color: var(--text); }
+  .n.old, .n.oldh { border: 1.5px solid var(--accent); background: #3a2e10; color: var(--text); }
+  .n.old::after, .n.oldh::before { content: '⚠'; position: absolute; right: -4px; top: -9px; font-size: 11px; color: var(--accent); }
+  .n.ab { border: 0; background: var(--surface-2); color: var(--text-3); } .n.ab b { text-decoration: line-through; }
+  .n.ab::after { content: '결'; position: absolute; right: 3px; top: 2px; font-size: 9px; line-height: 1; color: var(--text-2); }
+  .n.help, .n.oldh { border: 2px solid var(--bad); transform-origin: 50% 100%; } .n.help { background: #3a1416; color: #fff; }
+  .n.help::after, .n.oldh::after { content: '🙋'; position: absolute; left: -5px; top: -9px; font-size: 11px; }
+  .n.sel { outline: 3px solid #fff; outline-offset: 1px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .n.old { animation: beat 2.4s ease-in-out infinite; }
+    .n.help { animation: wave 1.4s ease-in-out infinite; }
+    .n.oldh { animation: wave 1.4s ease-in-out infinite, glowy 2.4s ease-in-out infinite; }
+    .qc.slide { animation: slin 0.35s ease-out; }
+  }
+  @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(10deg); } 30% { transform: rotate(-10deg); } 40% { transform: rotate(8deg); } 50% { transform: rotate(-4deg); } }
+  @keyframes beat { 0%, 30%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(242, 182, 50, 0); } 8% { transform: scale(1.1); box-shadow: 0 0 10px 3px rgba(242, 182, 50, 0.75); } 16% { transform: scale(1); } 22% { transform: scale(1.06); box-shadow: 0 0 8px 2px rgba(242, 182, 50, 0.55); } }
+  @keyframes glowy { 0%, 30%, 100% { box-shadow: 0 0 0 0 rgba(242, 182, 50, 0); } 8% { box-shadow: 0 0 10px 3px rgba(242, 182, 50, 0.75); } 22% { box-shadow: 0 0 8px 2px rgba(242, 182, 50, 0.55); } }
+  @keyframes slin { from { transform: translateX(72px); opacity: 0.2; } to { transform: none; opacity: 1; } }
+  .q { display: flex; gap: 6px; align-items: center; height: 40px; }
+  .qm { flex: none; width: 58px; height: 40px; border-radius: 10px; border: 1px solid var(--bad); background: #3a1416; color: #fff; position: relative; padding: 0; font: 800 17px/1 var(--font); display: grid; place-items: center; overflow: hidden; }
+  .qm::before { content: '↻'; position: absolute; inset: 0; display: grid; place-items: center; font: 700 40px/1 system-ui, sans-serif; color: #fff; opacity: 0.22; }
+  .qm b { position: relative; } .qm.lob { border-color: var(--accent); background: #3a2e10; color: var(--accent); } .qm:active { transform: scale(0.95); }
+  .hint { flex: 1; min-width: 0; font-size: 12px; color: var(--text-2); line-height: 1.3; }
+  .qs { flex: 1; min-width: 0; display: flex; gap: 4px; overflow: hidden; }
+  .qs.more { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
+  .qc { flex: none; width: 68px; height: 40px; border: 0; border-radius: 10px; background: var(--bad); color: #fff; font: 700 13.5px var(--font); display: flex; align-items: center; justify-content: center; gap: 3px; white-space: nowrap; padding: 0; }
+  .qc.first { box-shadow: 0 0 0 2px #fff inset; } .qc.wait { opacity: 0.75; pointer-events: none; }
+  .qslot { flex: none; width: 68px; height: 40px; border-radius: 10px; border: 1px dashed var(--line); }
+  .fl1 { flex: none; padding: 10px 12px; gap: 6px; }
+  .setl { border: 0; background: none; padding: 0; font: 700 13px var(--font); color: var(--text); }
+  .rstat { flex: none; padding: 8px 12px; gap: 4px; }
+  .rs1 { display: flex; align-items: baseline; gap: 6px; height: 26px; overflow: hidden; white-space: nowrap; }
+  .rs1 .lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; font-weight: 700; }
+  .unsub { font-size: 13px; color: var(--text-2); }
+  .sub { margin-left: auto; font-size: 13px; color: var(--text-2); } .sub b { font-size: 22px; font-weight: 800; color: var(--text); }
+  .adj { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 8px; align-items: center; height: 44px; }
+  .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .adj button:disabled { opacity: 0.35; box-shadow: none; }
+  .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  .rdock button { height: 54px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); display: grid; place-items: center; align-content: center; gap: 1px; padding: 0; box-shadow: 0 3px 0 var(--press-sh); }
+  .rdock button i { font-style: normal; font-size: 17px; line-height: 1; }
+  .rdock button.on { border: 2px solid var(--accent); background: var(--surface-2); }
+  .rdock button:disabled { opacity: 0.4; box-shadow: none; }
+  .rdock button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .rdock .glow { border: 2px solid var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(245, 184, 74, 0.25); }
+  @media (prefers-reduced-motion: no-preference) { .rdock .glow { animation: glow 1.6s ease-in-out infinite; } }
+  .utoast { display: flex; align-items: center; gap: 8px; } .utoast button { margin-left: auto; border: 0; background: none; color: #fff; text-decoration: underline; font: 600 13px var(--font); }
+  .chip { font-size: 11.5px; border-radius: 99px; padding: 1px 7px; font-weight: 700; vertical-align: middle; } .chip.r { background: var(--bad); color: #fff; } .chip.y { background: var(--accent); color: var(--on-accent); }
+  .wst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .wst div { background: var(--surface-2); border-radius: 10px; padding: 8px; font-size: 12px; color: var(--text-2); } .wst b { display: block; color: var(--text); font-size: 15px; }
+  .wacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .wacts button { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 14px; min-height: 52px; font: 700 14px var(--font); }
+  .wacts button:disabled { opacity: 0.4; }
+  .wacts .p { grid-column: 1 / -1; background: var(--accent); color: var(--on-accent); border: 0; min-height: 60px; font-size: 17px; box-shadow: 0 3px 0 var(--accent-sh); }
+  .wacts .k { color: var(--accent); }
+  .conf { background: #3a2e10; border: 1px solid #6a5420; border-radius: 12px; padding: 10px; font-size: 13px; display: grid; gap: 8px; }
+  .conf div { display: flex; gap: 8px; } .conf button { flex: 1; border: 0; border-radius: 10px; padding: 10px; font: 700 13.5px var(--font); background: var(--surface-2); color: var(--text); } .conf .y { background: var(--accent); color: var(--on-accent); }
+
+  .qrbox { display: flex; flex-direction: column; align-items: center; gap: var(--s2); text-align: center; }
+  .qcode { font-size: 34px; letter-spacing: 4px; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .qrbox p { margin: 0; font-size: 14px; color: var(--text-2); line-height: 1.5; } .qrbox .tvu { font-size: 13px; word-break: break-all; } .qrbox .tvu b { color: var(--text); }
+  .endt { font-size: 13px; } .endt b { color: var(--accent); } .endt small { color: var(--text-2); }
+  .fbar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; }
+  .fbar i { display: block; }
   .acc { color: var(--accent); }
   .badge { flex: none; white-space: nowrap; font-size: 12.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
   .badge.sc { background: #1d2a3d; color: #9fc8ff; }
   .badge.boss { background: #3a1717; color: #ffb4ae; }
   .badge.fo { background: var(--surface-2); color: var(--text); }
-  .rs2 { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
-  .big2 { display: flex; align-items: baseline; gap: 6px; }
-  .big2 b { font-size: 40px; line-height: 1; }
-  .big2 span { font-size: 15px; color: var(--text-2); }
-  .unsub { font-size: 13px; color: var(--text-2); text-align: right; }
-  .unsub b { color: var(--text); }
-  .adj { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 8px; align-items: center; height: 48px; }
-  .adj button { height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
-  .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-  .adj button:disabled { opacity: 0.35; box-shadow: none; }
   .hpl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .hpl .b { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
   .hpl .b i { display: block; height: 10px; border-radius: 5px; background: var(--hp); transition: width 0.3s ease-out; }
   .hpl .b.sc i { background: #6aa3ff; }
   .hpl small { font-size: 12px; color: var(--text-2); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hpl b { color: var(--text); }
-  .alerts { display: flex; flex-direction: column; gap: 6px; height: 74px; flex: none; }
-  .al { display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; height: 34px; overflow: hidden; }
-  .alh { font-size: 12.5px; font-weight: 700; min-width: 64px; white-space: nowrap; flex: none; }
-  .al button { flex: none; height: 34px; padding: 0 10px; border-radius: 17px; font: 700 13px var(--font); border: 1px solid; }
-  .al.stuck .alh { color: #ffb4ae; } .al.stuck button { background: #3a1717; border-color: var(--bad); color: #ffd9d6; }
-  .al.old .alh { color: #ffd7a0; } .al.old button { background: #3a2a12; border-color: #f0a24a; color: #ffd7a0; }
-  .more { font-size: 12.5px; color: var(--text-2); flex: none; }
-  .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .rdock button { height: 52px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press-sh); }
-  .rdock button b { font-size: 16px; }
-  .rdock button.on { border: 2px solid var(--accent); background: var(--surface-2); }
-  .rdock button:disabled { opacity: 0.4; box-shadow: none; }
-  .rdock button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-  .rdock .glow { border: 2px solid var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(245, 184, 74, 0.25); }
-  @media (prefers-reduced-motion: no-preference) { .rdock .glow { animation: glow 1.6s ease-in-out infinite; } }
   @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(245, 184, 74, 0.35); } }
   .games { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .game { height: 84px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 var(--press-sh); }
