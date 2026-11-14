@@ -40,6 +40,7 @@
   import { submitWho } from './submit.svelte';
   import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
   import { solvedN } from '../raid/raid';
+  import { analyze } from '../raid/combo';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -91,6 +92,13 @@
   const gaveN = $derived(R && mid ? healsGiven(R, mid, uid) : 0);
   let gave0 = -1;
   $effect(() => { const g = gaveN; untrack(() => { if (gave0 >= 0 && g > gave0) heroPose('heal', 1400); gave0 = g; }); });
+  // 🔊 2차 🔥 반 콤보 10 · 20 · 30 (정식 student.js thrillWatch → tierNote · 처음 본 단계는 기억만 · 단계마다 한 번)
+  let tierSeen: Set<string> | null = null;
+  $effect(() => {
+    const r = R; if (!r) return;
+    const ks = analyze(L, r).binds.filter((b) => b.why.startsWith('tier')).map((b) => `${b.at}|${b.why}`);
+    untrack(() => { const first = !tierSeen; tierSeen ??= new Set(); let snd = false; for (const k of ks) if (!tierSeen.has(k)) { tierSeen.add(k); if (!first) snd = true; } if (snd) sfx('combo', 0.85); });
+  });
   // 졸개 체력(정식 chainDown: 넘어야 할 학생 수 − 넘은 학생) · 대장 = 공동 체력
   const sceneHp = $derived.by(() => {
     if (step?.kind === 'boss' && bhp) return { hp: { left: bhp.left, max: bhp.max }, label: L.boss?.title.split(' · ').pop() ?? '보스' };

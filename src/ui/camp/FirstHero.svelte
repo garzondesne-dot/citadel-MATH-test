@@ -5,6 +5,7 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import HeroIntro from './HeroIntro.svelte';
   import HeroSprite from './HeroSprite.svelte';
+  import { sfx } from '../sound.svelte';
 
   // 🧙 첫 용사 고르기 (📜 2026-11-13 밤 ❓#1 = A · 선생님 답 → 머리 🔨 「베타 가입 마지막에 기본 용사 · 🧙 소개 카드로 보고 고름 → 캠프」)
   //   가입한 그 폰 첫 캠프에서 한 번만 · 위 = 고른 용사 소개 카드(몽타주 · 이야기 · 스킬 단계) · 아래 = 기본 용사(처음부터 열린 용사)만 칸 · 「⚔ ○○ 와 시작」
@@ -14,7 +15,7 @@
   let pick = $state(untrack(() => (BASIC.some((h) => h.id === me.hero) ? me.hero : (BASIC[0]?.id ?? 0))));
   const h = $derived(heroOf(pick));
   const ro = (n: string) => { const c = n.charCodeAt(n.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? '과' : '와'; };
-  function go() { me.hero = pick; me.seen['hero0'] = true; persist(); ondone(); }
+  function go() { me.hero = pick; me.seen['hero0'] = true; persist(); sfx('hero-pick', 0.8); ondone(); } // 🔊 2차 🧙 첫 용사 고름 (베타만 · 「⚔ ○○ 와 시작」 누를 때 한 번)
 </script>
 
 <div class="fh" role="dialog" aria-modal="true" aria-label="첫 용사 고르기" data-k="first-hero">

@@ -11,6 +11,7 @@
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import SkillCards from './SkillCards.svelte';
   import { heroAtk } from '../battle/fx.svelte';
+  import { sfx } from '../sound.svelte';
   // 👑 형성평가 v4 = 일반 몬스터 꼴 (📜 2026-11-13 밤 · 머리 🔨 하트 묶음 D · 베타 v4 방)
   //   4~7문항을 다 채워 한 번에 「공격」 · 하나라도 틀리면 ❤ −1(⭐ 보너스 문항은 틀려도 ❤ 그대로) · ❤ 4 공유
   //   틀린 문항만 숫자 바뀐 새 문제로 다시 · 맞힌 문항 = 초록으로 잠김 · ❤ 0 = 📖 해설 보기 · 💡 힌트 숨김 · 데미지 = 맞힌 문항마다 1
@@ -40,8 +41,10 @@
     if (!allFilled) { if (nextUnfilled >= 0) cur = nextUnfilled; return; }
     const before = new Set(r.solved), g = Object.fromEntries(todo.map((i) => [i, finalOf(qs[i]!, given[i] ?? null)]));
     if (!bossSubmitAll(S, L, code, uid, g)) return;
+    const okBefore = (i: number) => tries.filter((t) => t.i === i && t.ok).length;
     const r2 = bossRecord(L, S.get<Room>(`rooms/${code}`) as Room, uid), gain = r2.solved.filter((i) => !before.has(i)).length;
     const ok = todo.filter((i) => (r.roundOpen ? (bossTries(L, S.get<Room>(`rooms/${code}`) as Room, uid).some((t) => t.i === i && t.a === r.next(i) && t.ok)) : r2.solved.includes(i))).length;
+    { const tr2 = bossTries(L, S.get<Room>(`rooms/${code}`) as Room, uid); if (todo.some((i) => r.bonus(i) && tr2.filter((t) => t.i === i && t.ok).length > okBefore(i))) setTimeout(() => sfx('star-bonus', 0.8), 450); } // 🔊 2차 ⭐ 보너스 (정식 student.js 같은 순간)
     if (!r.roundOpen) petriAward(S, code, uid, BOSS_ID, gain); else petriAward(S, code, uid, BOSS_ID, ok);
     heroAtk({ miss: ok === 0, hits: Math.max(1, gain), noDmg: r.roundOpen, prac: r.roundOpen ? ok : 0, ult: r.subs === 0 && ok === todo.length });
     const bad = todo.length - ok;

@@ -1,3 +1,7 @@
+<script lang="ts" module>
+  const cardSnd = new Set<string>(); // 🔊 ⚡ 카드 펼침 = (몬스터 · ⚡ 값)마다 한 번 (이 기기)
+</script>
+
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -10,6 +14,7 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import Hearts from '../battle/Hearts.svelte';
   import { paperOn } from '../submit.svelte';
+  import { sfx } from '../sound.svelte';
   // ⚡ 다 맞힌 뒤 기술 카드 (📜 2026-11-13 밤 · 베타 v4 · 시안 ⑥ · 머리 🔨 하트 묶음 B · C)
   //   카드 3장(💚 힐 · ⛓ 묶기 · 🌟 진필살기 · 모두 ⚡1) → 아래 한 줄 = 고른 카드 설명 + 「그만하기」 → 노란 단추 = 「💚 힐 주고 🔥 재도전」
   //   ⚡ 1 쓰면 바로 🔥 재도전 판(숫자 바뀐 같은 문제 · 무료 · 데미지 0 · ❤ 그대로) → 그 판을 다 맞혀야 다음 ⚡ · ⚡ 0 = 끝
@@ -36,9 +41,13 @@
     const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
     await cutin(look.hero, look.fx, { gold: true, heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>` });
     const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultBlast(sc, sc.querySelector('.mon'), look.fx);
-    onround();
+    onround(); retrySnd();
   }
-  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { pick = false; onround(); } else msg = '지금은 쓸 수 없어요'; }
+  const retrySnd = () => setTimeout(() => sfx('retry-start', 0.75), 700); // 🔊 2차 🔥 재도전 판 (정식 student.js 같은 순간 · 기술을 쓴 뒤 0.7초)
+  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { pick = false; onround(); retrySnd(); } else msg = '지금은 쓸 수 없어요'; }
+  // 🔊 2차 ⚡ 카드 펼침 (정식 student.js 같은 순간 · ⚡ 칸마다 한 번)
+  const cardsOn = $derived(!paperOn() && !rec.roundOpen && !rest && rec.tokLeft > 0);
+  $effect(() => { if (!cardsOn) return; const ck = `${code}|${mid}|${uid}|${rec.tokLeft}`; untrack(() => { if (!cardSnd.has(ck)) { cardSnd.add(ck); sfx('energy-card', 0.7); } }); });
   function act() { msg = ''; if (rec.roundOpen) { rest = false; onround(); return; } if (rest) { rest = false; return; } if (sel === 'heal') pick = true; else if (sel === 'bind') spend('bind'); else void useTrue(); }
 </script>
 

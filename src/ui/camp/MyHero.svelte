@@ -4,6 +4,7 @@
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
+  import { sfx } from '../sound.svelte';
   import HeroSprite from './HeroSprite.svelte';
   import HeroIntro from './HeroIntro.svelte';
   import SkillPreview from './SkillPreview.svelte';
@@ -112,6 +113,8 @@
     confirm = false;
     const r = save(W, P, L0, look, Date.now());
     if (typeof r === 'string') { say(r, 3000); return; }
+    // 🔊 2차 🔨 강화 · 🌟 대성공 · 🔓 스킬 해금 (정식 camp.js 같은 순간 · 강화가 있으면 강화 소리만 · 정식 강화는 실패 없음 · +10 각성 소리는 베타에 없음)
+    if (P.enh) { if (r.great) sfx('enh-great', 0.85); else sfx('enh-ok', 0.85); } else if (P.sk.length) sfx('skill-unlock', 0.85);
     me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title;
     persist();
     L0 = { ...r.look, socket: { ...r.look.socket } }; look = { ...r.look, socket: { ...r.look.socket } }; P = emptyPlan();

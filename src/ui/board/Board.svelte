@@ -14,6 +14,7 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
   import RuneKeypad from '../q/RuneKeypad.svelte';
+  import { sfx } from '../sound.svelte';
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
@@ -39,6 +40,17 @@
   const posts = $derived(Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done').sort((a, b) => b.at - a.at));
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? null);
+  // 🔊 2차 📋 새 모집 글 (베타만): 처음 받은 글은 기억만 · 그 뒤 남의 새 모집 글이 생기면 한 번
+  let seenPid: Set<string> | null = untrack(() => (pv.v.val != null ? new Set(Object.keys(pv.v.val)) : null));
+  const t0 = Date.now();
+  $effect(() => {
+    const val = pv.v.val, wait = posts.filter((p) => p.phase === 'wait' && !p.mem?.[uid]).map((p) => p.pid);
+    untrack(() => {
+      if (!seenPid) { if (val != null || Date.now() - t0 > 2000) seenPid = new Set(Object.keys(val || {})); return; } // 서버 첫 값 = 기억만
+      const nw = wait.filter((id) => !seenPid!.has(id)); Object.keys(val || {}).forEach((id) => seenPid!.add(id));
+      if (nw.length) sfx('board', 0.8);
+    });
+  });
   const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: me.hero });
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };

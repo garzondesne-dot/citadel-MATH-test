@@ -4,6 +4,7 @@
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
   import SoundToggles from '../SoundToggles.svelte';
+  import { sfx } from '../sound.svelte';
   import { BUILD } from '../../build';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -92,7 +93,7 @@
       }
       if (g) { me.wallet.gem += g; M.save(); }
       const last = fresh[fresh.length - 1]![1];
-      mailToast = mailLine(last, g) + (fresh.length > 1 ? ` 외 ${fresh.length - 1}` : '');
+      mailToast = mailLine(last, g) + (fresh.length > 1 ? ` 외 ${fresh.length - 1}` : ''); sfx('mail', 0.7); // 🔊 2차 📬 새 소식 (안 본 소식이 생길 때 한 번 · 읽음 표시로 다시 안 남)
       setTimeout(() => (mailToast = ''), 3200);
     });
   });
@@ -131,9 +132,16 @@
   $effect(() => { const s = sheet; try { if (s) sessionStorage.setItem(SK, JSON.stringify({ s, at: Date.now() })); else sessionStorage.removeItem(SK); } catch { /* 사생활 창 */ } });
   // 🧙 첫 용사 고르기 = 방금 가입한 폰의 첫 캠프에서 한 번 (App 이 가입 때 표시 · 📜 2026-11-13 밤 ❓#1 = A)
   let hero0 = $state((() => { try { return sessionStorage.getItem('citadel-hero0') === '1'; } catch { return false; } })());
+  // 🏰 성채 새 방 (정식 camp.js · 이 기기에 지난 수 기억 · 늘면 한 번 안내) — 베타 성채 = 과목 팩의 열린 층 수 · 처음 본 수는 소리 없이 기억만
+  {
+    const fresh = (SUBJ.camp?.floors ?? []).filter((f) => !f.off).length, nk = `citadel-castle-new-${untrack(() => pupil)?.uid ?? 'me'}`;
+    let was: number | null = null; try { const v = localStorage.getItem(nk); was = v == null ? null : Number(v) || 0; localStorage.setItem(nk, String(fresh)); } catch { /* 사생활 창 */ }
+    if (feat('citadel') && was != null && fresh > was && !untrack(() => hero0)) { giftToast = untrack(() => giftToast) || `🏰 성채던전에 새 방 ${fresh - was}개가 열렸어요!`; sfx('castle-open', 0.8); setTimeout(() => (giftToast = ''), 3200); } // 🔊 2차 🏰
+  }
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
+    if (id === 'scare') sfx('dummy-hit', 0.8); // 🔊 2차 🎯 허수아비 맞음 (정식 camp.js 같은 순간)
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
     sheet = id;
   }

@@ -1,5 +1,10 @@
+<script lang="ts" module>
+  let funSnd = ''; // 🔊 ⭕ · ❌ = 판마다 한 번 (정식 fun.js funSnd)
+</script>
+
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { sfx } from '../sound.svelte';
   import type { Room, Store } from '../../model/types';
   import { balList, KIND, norm, oxList, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import type { Nun } from '../../rest/nunchi';
@@ -51,6 +56,14 @@
     const was = [...r.a, ...r.b, ...(r.c || []), ...r.none].includes(uid);
     if (!was) return '';
     return alive ? '🎉 살아남았다!' : (ff.zz || {})[uid] ? '💤 안 골라서 관전' : `💥 ${r.none.includes(uid) ? '안 골라서' : ff.rps ? '가위바위보에 져서' : KIND[ff.kind].out} 탈락`;
+  });
+
+  // 🔊 2차 ⭕ · ❌ 쉼터 놀이 결과 (정식 fun.js 같은 순간 · 공개 1.9초 뒤 · 학생 폰만 · OX 타임 빼고)
+  $effect(() => {
+    if (!ff || ff.phase !== 'show' || ff.kind === 'quiz' || !ff.res) return;
+    const r = ff.res, k = `${ff.g}|${ff.rk}`;
+    if (![...(r.a || []), ...(r.b || []), ...(r.c || []), ...(r.none || [])].includes(uid)) return;
+    untrack(() => { if (funSnd === k) return; funSnd = k; const no = (r.out || []).includes(uid); setTimeout(() => { if (no) sfx('game-no', 0.8); else sfx('game-ok', 0.8); }, 1900); });
   });
 
   // ── 🙊 눈치 ──

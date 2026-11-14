@@ -20,6 +20,7 @@
   import Hearts from '../battle/Hearts.svelte';
   import { V4, answerOf } from '../../raid/raid';
   import { healsTo } from '../../raid/raid';
+  import { sfx } from '../sound.svelte';
 
   // 📝 일반 몬스터 카드 (②B · ③ 틀렸을 때 · ⑥ 퍼펙트 · 규칙 = 정식 fightForm v3)
   //   카드 맨 위 「문제 n · 소문제 k / m」 · 한 장에 소문제 하나 · 다 채우면 「공격」(하트 = 남은 기회)
@@ -90,6 +91,7 @@
     const gain = Math.max(0, r2.best - oldBest), all = l2.marks.length > 0 && l2.marks.every(Boolean);
     petriAward(S, code, uid, mid, r2.practice ? l2.marks.filter(Boolean).length : gain); // 🗿 석화 찬스 (진짜 = 늘어난 데미지 · 연습 공격 = 이번에 맞힌 소문제 · 석화 한 번에 3까지)
     pendAtk = { miss: !l2.marks.some((m, i) => m && !keep[i]) && !r2.practice, hits: r2.practice ? 1 : gain || l2.marks.filter(Boolean).length, ult: !r2.practice && l2.attempt === 0 && all, finish: !r2.practice && l2.attempt >= 2 && r2.perfectAt === l2.attempt, noDmg: r2.practice, prac: r2.practice ? l2.marks.filter(Boolean).length : 0, win: !r2.practice && r2.perfectAt === l2.attempt };
+    if (v4 && !dummy && r2.submitted && !r2.canRetry && !r2.perfect) setTimeout(() => sfx('lock', 0.8), 500); // 🔊 2차 ❤ 0 잠김 (🙋 선생님 확인 · 소레이드와 같게 제출 0.5초 뒤)
     startReveal(qs, texts, l2.marks, keep, gain);
   }
   let pendAtk: Omit<HeroAtk, 'id'> | null = null;

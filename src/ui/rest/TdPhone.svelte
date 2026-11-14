@@ -1,6 +1,11 @@
+<script lang="ts" module>
+  let cdSnd: unknown = null; // 🔊 ⏱ 3 · 2 · 1 = 판마다 한 번
+</script>
+
 <script lang="ts">
   /* eslint-disable @typescript-eslint/no-explicit-any */
   import { untrack } from 'svelte';
+  import { sfx } from '../sound.svelte';
   import type { Room, Store } from '../../model/types';
   import { HEROES, heroOf } from '../../model/hero';
   import { emptyPlan, ownsHero } from '../../model/draft';
@@ -26,6 +31,7 @@
   const tw = $derived((f?.tw ? (Array.isArray(f.tw) ? f.tw : Object.values(f.tw)) : []).find((t: any) => t.u === uid) as any);
   const used = $derived(!!((R as any).tdt || {})[f?.g]?.[uid] || !!L.used?.[uid]);
   const cd = $derived(f?.phase === 'play' ? Math.ceil((f.t0 - now) / 1000) : 0);
+  $effect(() => { if (cd >= 2 && f?.g != null) { const g = f.g; untrack(() => { if (cdSnd !== g) { cdSnd = g; sfx('countdown', 0.8); } }); } }); // 🔊 2차 ⏱ 3 · 2 · 1 (베타만 · 디펜스 시작 카운트가 뜰 때 한 번)
   const tdm = $derived((((R as any).tdm || {})[f?.g] || {}) as Record<string, { sw?: string; no?: string; hero?: number; swd?: number }>);
   const myHero = $derived(tdm[uid]?.hero != null ? Number(tdm[uid]!.hero) : Number(R.players?.[uid]?.hero) || 0);
   const ranged = $derived(!!heroOf(myHero).ranged);
