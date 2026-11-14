@@ -3,7 +3,8 @@ import App from './App.svelte';
 import { applyTheme, savedTheme } from './theme/theme';
 import { chooseStore } from './store/config';
 import { startPwa } from './pwa.svelte';
-import { addPacks } from './engine/packs';
+import { addPacks, PACKS } from './engine/packs';
+import { loadVids } from './school/video';
 import { loadUploaded } from './school/packUpload';
 
 applyTheme(savedTheme(), { tv: new URLSearchParams(location.search).get('role') === 'hall' });
@@ -15,7 +16,8 @@ if (!target) throw new Error('#app 없음');
 void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void }).bootShow?.('⚠ 서버에 닿지 않아요'); throw e; }).then(async ({ S, where }) => {
   const room = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('join');
   if (room && S.fetch) await S.fetch(`rooms/${room}`).catch(() => null);
-  addPacks(await loadUploaded(S)); // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
+  addPacks(await loadUploaded(S)); await loadVids(S, PACKS); // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
+  // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
   mount(App, { target, props: { S, where } });
   requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.()); // ⏳ 첫 화면(index.html) 지움 = 앱이 그려진 다음 프레임
 });

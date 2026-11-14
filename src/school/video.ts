@@ -64,3 +64,13 @@ export function matchVideos(names: string[], files: { file: string; at: string[]
   }
   return { map, unused: names.filter((x) => !used.has(x)) };
 }
+
+// 🎬 앱 차시(정식 videos 가 코드에 든 차시)에도 영상 더하기 (📜 2026-11-14 「학습지 · 영상 한 번에 넣기」 zip) — 서버 prep/vids/{차시 id}/{칸} = 'rtdb:…' 를 앱 시작 때 덮어씀
+export const VMAP = 'prep/vids';
+export const vidRoot = (L: { id: string; imgOf?: string; partOf?: string }) => L.imgOf ?? L.partOf ?? L.id;
+export function applyVids(packs: { id: string; videos?: Record<string, string> }[], map: Record<string, Record<string, string>> | null | undefined): void {
+  for (const [id, m] of Object.entries(map || {})) { const p = packs.find((x) => x.id === id); if (p && m && typeof m === 'object') p.videos = { ...(p.videos ?? {}), ...m }; }
+}
+export async function loadVids(S: { get<T>(p: string): T | null; fetch?<T>(p: string): Promise<T | null> }, packs: { id: string; videos?: Record<string, string> }[]): Promise<void> {
+  try { applyVids(packs, S.fetch ? await S.fetch<Record<string, Record<string, string>>>(VMAP) : S.get<Record<string, Record<string, string>>>(VMAP)); } catch (e) { console.warn('차시 영상 받기 실패', e); }
+}

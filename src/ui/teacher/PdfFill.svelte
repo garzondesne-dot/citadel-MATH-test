@@ -5,28 +5,60 @@
   import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
   import { prepPath, prepPut } from '../../school/prep';
   import type { PdfDoc } from './pdfPages';
+  import { matchCells, unpackZip } from '../../school/packUpload';
+  import { matchVideos, putVid, RTDB, VMAP, vidPath, vidRoot } from '../../school/video';
   // 📄 차시 준비 「학습지 PDF · 한 번에 넣기」 (📜 2026-11-14 선생님 「전부 진행해」 · DECISIONS 「🖼🎬 베타 차시 그림 · 영상 채우기」)
   //   PDF 1개 → 칸마다 자름(앱 차시 = 칸 위치 crops 그대로 · 칸 위치가 없는 차시 · 올린 팩 = 글자로 찾기 b121) → 칸마다 미리 보기 · 위 · 아래 늘리기 · 줄이기 · 그림 직접 고르기 → 저장 prep/{차시}/img/{칸}
   //   문제 · 정답 · 생성기는 그대로 · 늘 한 줄 결과
+  //   zip 도 받음 (📜 2026-11-14 「PDF 만 고를 수 있고 zip 은 못 고름」): PDF 1개 = 자르기 · 그림 = 이름 끝맞춤 칸(PDF 자른 것보다 이김) · mp4 = 이름 끝맞춤 영상 칸 → prep/{차시}/vid + prep/vids/{차시}/{칸} · 팩 JSON = 무시(한 줄)
   const { S, L, onclose, ondone }: { S: Store; L: LessonPack; onclose: () => void; ondone?: () => void } = $props();
   const slots = untrack(() => slotsOf(L.steps.filter((s) => !s.later), L.boss?.title ?? '', L.find ?? {})).filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i); // 열 때 차시 그대로
   let note = $state(''), name = $state(''), rects = $state<Record<string, Rect[] | null>>({}), cut = $state<Record<string, string>>({}), own = $state<Record<string, string>>({});
   let pick = $state(slots[0]?.id ?? ''), saving = $state(false), saved = $state(''), failed = $state('');
   let doc: PdfDoc | null = null;
   const iou = (a: Rect, b: Rect) => { if (a.p !== b.p) return 0; const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)), i = ix * iy; return i / (a.w * a.h + b.w * b.h - i || 1); };
-  const urlOf = (c: string) => own[c] ?? cut[c] ?? null;
+  let file = $state<Record<string, string>>({}), zinfo = $state(''), vmap = $state<Record<string, string>>({}), vblob = $state<Record<string, string>>({});
+  let zvids: { name: string; data: Uint8Array }[] = [];
+  const urlOf = (c: string) => own[c] ?? file[c] ?? cut[c] ?? null;
+  const stepIds = untrack(() => L.steps.filter((s) => !s.later).map((s) => s.id));
+  const nv = $derived(new Set(Object.values(vmap)).size);
   const n = $derived(slots.filter((s) => urlOf(s.id)).length);
   async function shrink(f: File): Promise<string> {
     const bmp = await createImageBitmap(f), w = Math.min(1280, bmp.width), h = Math.round((bmp.height * w) / bmp.width);
     const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d')!.drawImage(bmp, 0, 0, w, h);
     const out = c.toDataURL('image/webp', 0.85); return out.startsWith('data:image/webp') ? out : c.toDataURL('image/jpeg', 0.85);
   }
-  async function onpdf(e: Event) {
+  async function onfile(e: Event) {
     const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
-    name = f.name; note = `✂ ${f.name} 읽는 중… (처음엔 PDF 읽기 도구를 받느라 몇 초 걸려요)`; cut = {}; rects = {}; saved = ''; failed = '';
+    name = f.name; cut = {}; rects = {}; file = {}; own = {}; saved = ''; failed = ''; zinfo = ''; note = ''; doc = null;
+    for (const u of Object.values(vblob)) URL.revokeObjectURL(u); vmap = {}; vblob = {}; zvids = [];
+    const buf = new Uint8Array(await f.arrayBuffer());
+    const isZip = /\.zip$/i.test(f.name) || (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04);
+    if (!isZip) { await cropBytes(buf, f.name); return; }
+    const z = await unpackZip(buf);
+    if (z.error && !z.images.length && !z.pdfs.length && !z.videos.length && !/\.json/.test(z.error)) { note = `🗜 ${f.name} — ${z.error}`; return; }
+    const lines: string[] = [];
+    if (z.json || /\.json 이 \d/.test(z.error ?? '')) lines.push('📦 팩 JSON 은 무시했어요 — 문제를 바꾸려면 📦 차시 팩 올리기');
+    // 그림 → 칸 (이름 = 칸 · 끝이 「_칸」)
+    const m = matchCells(z.images.map((x) => x.name), slots.map((x) => x.id)), got: Record<string, string> = {};
+    for (const [c, nm] of Object.entries(m.map)) { const im = z.images.find((x) => x.name === nm)!; got[c] = await shrink(new File([im.data as Uint8Array<ArrayBuffer>], nm, { type: /\.webp$/i.test(nm) ? 'image/webp' : /\.png$/i.test(nm) ? 'image/png' : 'image/jpeg' })); }
+    file = got;
+    // 영상 → 칸 (차시 videos 의 파일 이름 끝맞춤 · 없으면 이름 끝 = 단계 칸)
+    const byUrl: Record<string, string[]> = {}; for (const [c, u] of Object.entries(L.videos ?? {})) (byUrl[u] ??= []).push(c);
+    const vm = matchVideos(z.videos.map((x) => x.name), Object.entries(byUrl).map(([u, at]) => ({ file: u.replace(/^.*\//, '').replace(/\.mp4$/i, ''), at: at.filter((c) => stepIds.includes(c)) })), stepIds);
+    zvids = z.videos; vmap = vm.map; vblob = Object.fromEntries([...new Set(Object.values(vm.map))].map((nm) => [nm, URL.createObjectURL(new Blob([z.videos.find((x) => x.name === nm)!.data as Uint8Array<ArrayBuffer>], { type: 'video/mp4' }))]));
+    const left = [...m.unused, ...vm.unused]; if (left.length) lines.push(`칸을 못 찾은 파일: ${left.join(' · ')}`);
+    if (z.pdfs.length > 1) lines.push(`PDF 가 ${z.pdfs.length}개 (${z.pdfs.map((x) => x.name).join(' · ')}) — 학습지 PDF 는 1개만 · 자르지 않았어요`);
+    zinfo = lines.join('\n');
+    if (z.pdfs.length === 1) await cropBytes(z.pdfs[0]!.data, z.pdfs[0]!.name);
+    if (!z.pdfs.length && !z.images.length && !z.videos.length) note = `🗜 ${f.name} 안에 학습지 PDF · 그림 · 영상이 없어요 (zip 안 파일: ${z.files.slice(0, 6).join(' · ')}${z.files.length > 6 ? ' …' : ''})`;
+  }
+  async function cropBytes(bytes: Uint8Array, fname: string) {
+    const f = { name: fname };
+    note = `✂ ${f.name} 읽는 중… (처음엔 PDF 읽기 도구를 받느라 몇 초 걸려요)`;
     try {
       const { readPdf, cutRects, inkOf } = await import('./pdfPages');
-      doc = await readPdf(new Uint8Array(await f.arrayBuffer()));
+      doc = await readPdf(bytes);
       const crops0 = (L.crops ?? {}) as Record<string, Rect[]>;
       const byText = doc.lines.length ? autoRects(doc.lines, slots, inkOf(doc.pages)) : {};
       // 앱 차시 = 학습지에 맞춰 잰 칸 위치(crops) — 고른 PDF 가 그 판인지 먼저 봄: 쪽 수가 모자라거나 글자로 찾은 칸과 절반 넘게 어긋나면 글자로 찾기
@@ -56,23 +88,35 @@
     const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
     let k = 0;
     for (const s of slots) { const u = urlOf(s.id); if (!u) continue; if (!(await put(prepPath(L, s.id), u))) { failed = `「${s.id}」 그림을 저장하지 못했어요 · 교사 로그인 · 인터넷을 확인해요`; saving = false; return; } prepPut(L, s.id, u); k++; }
-    saving = false; saved = `${L.no}차시 칸 그림 ${k}장을 저장했어요`; ondone?.();
+    // 🎬 zip 영상 = 서버에 쪼개 올림(같은 이름 = 한 번) → prep/vids/{차시}/{칸} = rtdb: 주소 · 이 탭의 차시에도 바로
+    const up: Record<string, string> = {}, add: Record<string, string> = {};
+    for (const [c, nm] of Object.entries(vmap)) {
+      if (!up[nm]) { const z = zvids.find((x) => x.name === nm); if (!z) continue; note = `🎬 영상 「${nm}」 올리는 중…`; const pth = vidPath(vidRoot(L), nm); if (!(await putVid(put, pth, z.data))) { failed = `영상 「${nm}」 을 저장하지 못했어요 · 교사 로그인 · 인터넷을 확인해요`; saving = false; return; } up[nm] = RTDB + pth; }
+      if (!(await put(`${VMAP}/${L.id}/${c}`, up[nm]))) { failed = `영상 칸 「${c}」 을 저장하지 못했어요`; saving = false; return; }
+      add[c] = up[nm]!;
+    }
+    if (Object.keys(add).length) L.videos = { ...(L.videos ?? {}), ...add };
+    saving = false; saved = `${L.no}차시 칸 그림 ${k}장${Object.keys(up).length ? ` · 영상 ${Object.keys(up).length}편` : ''}을 저장했어요`; ondone?.();
   }
   const pickSlot = $derived(slots.find((s) => s.id === pick) ?? null);
   const label = (s: { id: string; title: string }) => s.title.split(' · ')[0] || s.id;
 </script>
 
-<Sheet {onclose} tall mainText={saved ? '저장했어요' : saving ? '저장 중…' : `칸 그림 ${n}장 저장`} mainDisabled={!n || saving || !!saved} why={!n && name ? '자른 그림이 없으면 저장할 수 없어요' : ''} onmain={save}>
-  {#snippet title()}📄 {L.no}차시 학습지 PDF · 한 번에 넣기{/snippet}
+<Sheet {onclose} tall mainText={saved ? '저장했어요' : saving ? '저장 중…' : `칸 그림 ${n}장${nv ? ` · 영상 ${nv}편` : ''} 저장`} mainDisabled={(!n && !nv) || saving || !!saved} why={!n && !nv && name ? '넣을 그림 · 영상이 없으면 저장할 수 없어요' : ''} onmain={save}>
+  {#snippet title()}📄 {L.no}차시 학습지 · 영상 한 번에 넣기{/snippet}
   <div class="pf" data-k="pdffill">
-    <label class="file"><input type="file" accept="application/pdf,.pdf" onchange={onpdf} data-k="fillpdf" /><span>📂 학습지 PDF 고르기</span><small>{name || '레이드용 학습지 PDF 1개 · 칸마다 잘라 단계별 그림으로'}</small></label>
+    <label class="file"><input type="file" accept="application/pdf,.pdf,.zip,application/zip,application/x-zip-compressed" onchange={onfile} data-k="fillpdf" /><span>📂 학습지 PDF · zip 고르기</span><small>{name || 'PDF 1개 = 칸마다 잘라 그림으로 · zip = PDF + 칸 그림 + 영상(mp4)'}</small></label>
+    {#if name && !/읽는 중/.test(note)}<p class="sum" data-k="fillsum">✂ 그림 {n} / {slots.length}칸 · 🎬 영상 {nv}편</p>{/if}
     {#if note}<p class="note" data-k="fillnote">{note}</p>{/if}
+    {#if zinfo}<p class="note" data-k="fillzip">{zinfo}</p>{/if}
     {#if name}
       <div class="chips2" role="tablist">{#each slots as s (s.id)}<button type="button" role="tab" class:on={pick === s.id} class:none={!urlOf(s.id)} aria-selected={pick === s.id} onclick={() => (pick = s.id)}>{label(s)}{urlOf(s.id) ? '' : ' ⚠'}</button>{/each}</div>
       {#if pickSlot}<div class="cell">
-        <small>{own[pick] ? '🖼 직접 고른 그림' : cut[pick] ? '✂ 학습지 PDF 에서 자름' : '⚠ 자르지 못함 — 그림을 직접 골라 주세요'}</small>
-        {#if cut[pick] && !own[pick]}<span class="adj"><button type="button" data-k="top-up" onclick={() => adjust(pick, 'top', 1)}>위 늘리기</button><button type="button" onclick={() => adjust(pick, 'top', -1)}>위 줄이기</button><button type="button" data-k="bot-up" onclick={() => adjust(pick, 'bottom', 1)}>아래 늘리기</button><button type="button" onclick={() => adjust(pick, 'bottom', -1)}>아래 줄이기</button></span>{/if}
+        <small>{own[pick] ? '🖼 직접 고른 그림' : file[pick] ? '🖼 zip 안 그림' : cut[pick] ? '✂ 학습지 PDF 에서 자름' : '⚠ 자르지 못함 — 그림을 직접 골라 주세요'}</small>
+        {#if cut[pick] && !own[pick] && !file[pick]}<span class="adj"><button type="button" data-k="top-up" onclick={() => adjust(pick, 'top', 1)}>위 늘리기</button><button type="button" onclick={() => adjust(pick, 'top', -1)}>위 줄이기</button><button type="button" data-k="bot-up" onclick={() => adjust(pick, 'bottom', 1)}>아래 늘리기</button><button type="button" onclick={() => adjust(pick, 'bottom', -1)}>아래 줄이기</button></span>{/if}
         <label class="ownpick"><input type="file" accept="image/png,image/webp,image/jpeg" onchange={(e) => pickOwn(pick, e)} />그림 직접 고르기</label>
+        <!-- svelte-ignore a11y_media_has_caption -->
+        {#if vmap[pick]}<video src={vblob[vmap[pick]!]} controls playsinline preload="metadata" data-k="fillvid"></video>{/if}
         <div class="img" data-k="fillimg">{#if urlOf(pick)}<img src={urlOf(pick)} alt="학습지 칸 {pick}" />{:else}<p class="no">그림 없음</p>{/if}</div>
       </div>{/if}
     {/if}
@@ -85,7 +129,8 @@
   .file { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 12px; border: 1.5px dashed var(--line); border-radius: var(--r); cursor: pointer; }
   .file input, .ownpick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
   .file span { font-weight: 700; } .file small { color: var(--text-2); font-size: 13px; }
-  .note { margin: 0; font: 600 13px var(--font); color: var(--text-2); }
+  .sum { margin: 0; font: 700 15px var(--font); color: var(--text); } video { width: 100%; border-radius: var(--r-sm); background: #000; }
+  .note { white-space: pre-line; margin: 0; font: 600 13px var(--font); color: var(--text-2); }
   .chips2 { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
   .chips2 button { flex: none; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); }
   .chips2 button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); } .chips2 button.none { border-style: dashed; }
