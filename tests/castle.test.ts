@@ -122,3 +122,21 @@ describe('➕ 덧칸 = 차시 팩에도 (say · why · groups · ref)', () => {
     expect(checkUpload(JSON.stringify(P), lk).issues.filter((x) => x.lvl === 'err').map((x) => x.msg).join()).toMatch(/근거 줄\(why\) 정답 「5」/);
   });
 });
+
+// 💎 성채 보상 = 정식 gem.js G · grow.js XP 그대로 (📜 2026-11-14 머리 「정식 값 그대로」)
+import { castleReward, CASTLE_GEM, CASTLE_XP } from '../src/school/castle';
+describe('💎 성채 보상 (정식 값)', () => {
+  it('정식 숫자', () => { expect(CASTLE_GEM).toEqual({ room: 8, roomBoss: 24, roomFirst: 6, first: 4, seal: 12 }); expect(CASTLE_XP).toEqual({ clear: 5, seal: 10 }); });
+  it('처음 처치 · 첫 방 · 첫 판 무오답', () => { const r = castleReward({ first: true, boss: false, firstCastle: true, flawless: true, sealed: false }); expect(r.gems.map((g) => g.n)).toEqual([8, 4, 6]); expect(r.xp).toBe(5); });
+  it('보스 = 24 + 업적 12(한도 밖) · EXP 15', () => { const r = castleReward({ first: true, boss: true, firstCastle: false, flawless: false, sealed: true }); expect(r.gems).toEqual([{ n: 24, why: '성채 방 처치' }, { n: 12, why: '🏆 업적', free: true }]); expect(r.xp).toBe(15); });
+  it('다시 처치 = 없음', () => { expect(castleReward({ first: false, boss: true, firstCastle: false, flawless: true, sealed: false })).toEqual({ gems: [], xp: 0 }); });
+});
+
+// 🏰 정식 성채 몬스터 시트 다섯 그대로 (📜 2026-11-14 「기존에 쓰던 몬스터 셋을 그대로」 · 정식 assets/manifest.js 71~77)
+import { spriteOf } from '../src/ui/manifest';
+describe('🏰 성채 몬스터 시트', () => {
+  it('castle1 · 2 · 3 · castleboss · castleboss2 + @h 색 변형', () => {
+    for (const ref of ['castle1:1', 'castle2:4', 'castle3:2@h200', 'castleboss:1', 'castleboss2:0']) { const s = spriteOf(ref); expect(s.url, ref).toMatch(/art\/castle\/monsters-castle/); }
+    expect(spriteOf('castle3:2@h200').hue ?? spriteOf('castle3:2@h200').filter ?? '').toBeTruthy();
+  });
+});

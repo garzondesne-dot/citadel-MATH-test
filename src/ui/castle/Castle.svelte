@@ -8,11 +8,13 @@
   import { chainRecord, isChain, plainRecord } from '../../raid/raid';
   import { stepDone } from '../../board/board';
   import { meBound } from '../../store/meSync';
-  import { baseVer, bonusBase, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
+  import { baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
   import { castles, visibleCastles } from '../../school/castles.svelte';
   import { spriteOf } from '../manifest';
   import { busy } from '../busy.svelte';
   import { sfx } from '../sound.svelte';
+  import { earnDaily } from '../../model/wallet';
+  import { GEM, kstDay } from '../../board/board';
   import Student from '../Student.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
@@ -20,7 +22,7 @@
   //   층 목록 → 방 목록 → 방 하나 = 몬스터 한 마리(1:1 · 혼자) · 전투 = 학생 레이드 화면(Student · MonsterForm · ChainView · 룬 키패드) 그대로 🪞
   //   열림 = 반 진도 ≥ 방 no · 👑 = 열린 방 60%(올림) 처치 · 기회 4 · 틀린 소문제만 다음 판 숫자 · 실패 = 💧 벌 없음
   //   preview = 👁 선생님 미리 보기: 모든 방 열림 · 기록 · 데미지 없음 · 처치 기록 = bonus/{반}/{번호}/{팩}/{방}
-  const { S, me = null, uid, num = 0, cls = '', preview = false, floor = '', onclose }: { S: Store; me?: Me | null; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void } = $props();
+  const { S, me = null, save: persist = () => {}, uid, num = 0, cls = '', preview = false, floor = '', onclose }: { S: Store; me?: Me | null; /** 💎 · EXP 저장 (캠프 M.save) */ save?: () => void; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void } = $props();
   const floors = $derived(preview ? castles.list : visibleCastles());
   // 🧑 기록 자리 = 그 학생으로 로그인한 폰이면 서버 정식 경로 · 아니면 이 기기(테스트 · 체험)
   const RS = untrack(() => meBound()?.S ?? S);
@@ -48,7 +50,7 @@
 
   // ── 방 하나 = 메모리 방 하나 (허수아비 · 게시판과 같은 길) ──
   let run = $state<{ L: ReturnType<typeof roomPack>; S: Store; code: string; r: CastleRoom; P: CastlePack } | null>(null);
-  let res = $state<{ clear: boolean; r: CastleRoom; first: boolean; bossNew: boolean } | null>(null);
+  let res = $state<{ clear: boolean; r: CastleRoom; first: boolean; bossNew: boolean; firstCastle?: boolean; got?: string[] } | null>(null);
   let toast = $state('');
   function start() {
     const p = P, r = room; if (!p || !r || !st?.isOpen(r)) return;
@@ -73,22 +75,30 @@
   /** 처치 · 💧 판정 + 기록 (미리 보기 = 기록 없음) */
   function outcome(x: NonNullable<typeof run>, RR: Room) {
     const mid = x.r.id;
-    if (isChain(x.L, RR, mid)) { const c = chainRecord(x.L, RR, mid, uid); return { clear: c.done, n: c.nextK }; }
-    const p = plainRecord(x.L, RR, mid, uid); return { clear: p.perfect, n: p.tries.length };
+    if (isChain(x.L, RR, mid)) { const c = chainRecord(x.L, RR, mid, uid); return { clear: c.done, n: c.nextK, flawless: !!c.done && !!(c as { perfect?: boolean }).perfect }; }
+    const p = plainRecord(x.L, RR, mid, uid); return { clear: p.perfect, n: p.tries.length, flawless: p.perfect && p.tries.length === 1 };
   }
   function save(x: NonNullable<typeof run>, clear: boolean, n: number) {
-    if (preview || !n) return { first: false, bossNew: false };
+    if (preview || !n) return { first: false, bossNew: false, firstCastle: false };
     const path = `${base}/${x.P.id}/${x.r.id}`, old = RS.get<CastleRec>(path) || {};
-    const before = castleState(x.P, upto, recsOf(x.P)).bossOpen;
+    const before = castleState(x.P, upto, recsOf(x.P)).bossOpen, anyBefore = floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear));
     RS.set(path, { ...old, tries: (Number(old.tries) || 0) + n, runs: (Number(old.runs) || 0) + 1, at: S.now(), ...(clear || old.clear ? { clear: true } : {}) });
     ver++;
-    return { first: clear && !old.clear, bossNew: !before && castleState(x.P, upto, recsOf(x.P)).bossOpen };
+    return { first: clear && !old.clear, bossNew: !before && castleState(x.P, upto, recsOf(x.P)).bossOpen, firstCastle: clear && !old.clear && !anyBefore };
   }
   function finish(x: NonNullable<typeof run>, RR: Room) {
     if (drive) clearInterval(drive); drive = null;
-    const o = outcome(x, RR), s = save(x, o.clear, o.n);
+    const runs0 = Number(recs[x.r.id]?.runs) || 0, o = outcome(x, RR), s = save(x, o.clear, o.n);
     sfx(o.clear ? 'game-ok' : 'game-no', 0.8);
-    res = { clear: o.clear, r: x.r, ...s }; run = null;
+    // 💎 · EXP = 정식 그대로 (처음 처치만 · 하루 한도 100 안 · 🏆 업적은 밖 · 미리 보기 = 없음)
+    const rw = castleReward({ first: s.first, boss: !!x.r.boss, firstCastle: s.firstCastle, flawless: o.flawless && runs0 === 0, sealed: s.first && !!x.r.boss }), got: string[] = [];
+    if (me && !preview && (rw.gems.length || rw.xp)) {
+      const day = kstDay(S.now());
+      for (const g of rw.gems) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) got.push(`💎 +${n} ${g.why}`); }
+      if (rw.xp) { me.xp += rw.xp; got.unshift(`+${rw.xp} EXP`); }
+      persist();
+    }
+    res = { clear: o.clear, r: x.r, ...s, got }; run = null;
     if (s.bossNew) { toast = '👑 보스 방이 열렸어요!'; sfx('castle-open', 0.8); setTimeout(() => (toast = ''), 3000); }
   }
   /** ‹ 그만하기 = 낸 답이 있으면 💧 한 번으로 셈 (정식: 판마다 기록) */
@@ -119,6 +129,7 @@
         <span class="big" aria-hidden="true">{res.clear ? '⚔' : '💧'}</span>
         <b>{res.r.title}</b>
         <p>{res.clear ? (preview ? '미리 보기 · 기록하지 않았어요' : res.first ? '처음 처치했어요!' : '다시 처치했어요') : '벌은 없어요 · 다음엔 새 숫자로 다시 도전해요'}</p>
+        {#if res.got?.length}<ul class="got" data-k="castle-got">{#each res.got as g (g)}<li>{g}</li>{/each}</ul>{:else if res.clear && !preview && !res.first}<p class="sub">다시 처치 · 보상은 처음 처치 때만</p>{/if}
         {#if P && st && !preview}<p class="sub">처치 {st.cleared} / 열린 방 {st.plain.length}{st.boss ? ` · 👑 ${st.bossOpen ? '보스 방 열림' : `${st.need}방 처치하면 보스`}` : ''}</p>{/if}
       </div>
     {:else if !P}
@@ -187,4 +198,5 @@
   .drun { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow: auto; }
   .quit { position: fixed; z-index: 30; left: 4px; top: 4px; width: 44px; height: 44px; border: 0; background: none; color: #fff; font-size: 28px; text-shadow: 0 1px 2px #000; }
   .pv { position: fixed; z-index: 30; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 2px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.6); color: var(--accent); font-size: var(--fs-small); font-weight: 700; }
+  .got { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; align-items: center; } .got li { font: 700 15px var(--font); color: var(--gem); } .got li:first-child { color: var(--accent); }
 </style>

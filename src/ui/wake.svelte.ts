@@ -22,7 +22,7 @@ export function holdWake(tip = false): () => void {
   void grab().then((ok) => {
     if (!tip || ok || (nav()?.wakeLock && !S.failed)) return;
     try { if (localStorage.getItem(TIP_KEY)) return; localStorage.setItem(TIP_KEY, '1'); } catch { return; }
-    wakeTip.text = TIP;
+    wakeTip.text = TIP; setTimeout(() => { if (wakeTip.text === TIP) wakeTip.text = ''; }, 6000); // 정식 toast 6초 · 그 뒤 저절로 닫힘(밑 단추를 오래 가리지 않게)
   });
   let done = false;
   return () => { if (done) return; done = true; S.holds = Math.max(0, S.holds - 1); if (!S.holds) drop(); };

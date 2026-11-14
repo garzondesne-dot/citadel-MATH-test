@@ -474,6 +474,18 @@
     "증명 두루마리"
    ]
   },
+  "castle3": {
+   "src": "art/castle/monsters-castle3-v1.webp",
+   "cell": 192,
+   "rows": 5,
+   "names": [
+    "진리집합 수정 골렘",
+    "역 · 대우 사슬 망령",
+    "귀류법 미로 거미",
+    "절대부등식 탑 수호자",
+    "필요충분 쌍둥이 열쇠 기사"
+   ]
+  },
   "castleboss": {
    "src": "art/castle/monsters-castleboss-v1.webp",
    "cell": 384,

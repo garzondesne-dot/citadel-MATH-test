@@ -267,7 +267,7 @@
 
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
-  <Castle {S} {me} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
+  <Castle {S} {me} save={M.save} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
 {:else if sheet === 'castle'}
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>

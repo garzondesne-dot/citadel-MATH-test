@@ -149,3 +149,19 @@ export async function castleZip(P: CastlePack): Promise<{ name: string; bytes: U
   const files: Record<string, Uint8Array> = { [`${P.id}.json`]: strToU8(JSON.stringify(P.raw, null, 1)), 'README.txt': strToU8(`🏰 ${floorName(P)} · 방 ${P.rooms.length}개 · 열림 ${spanOf(P)}\n이 zip 의 .json 을 「📦 팩 올리기」에 그대로 올리면 같은 성채 팩이에요.\n`) };
   return { name: `(성채 ${P.floor}층) ${P.id}.zip`, bytes: zipSync(files) };
 }
+
+// 💎 성채 보상 = 정식 그대로 (📜 2026-11-14 머리 「보상 없음은 안 됨 — 정식 release 코드 값 그대로」 · js/raid/gem.js G · js/raid/grow.js XP · js/raid/bonus.js win)
+//   처음 처치한 방만: 방 8 · 👑 보스 방 24 · 🎁 성채 첫 방(평생 한 번) 4 · 첫 판에 틀림 없이 6 = 하루 한도 안 · 🏆 업적(그 층 보스 처음 처치 = 인장) 12 = 한도 밖
+//   EXP = 방 처음 처치 5 + 업적 10 · 📷 서술형 통과 6 = 베타에 사진 채점이 생기면 · 다시 처치 = 보상 없음
+export const CASTLE_GEM = { room: 8, roomBoss: 24, roomFirst: 6, first: 4, seal: 12 } as const;
+export const CASTLE_XP = { clear: 5, seal: 10 } as const;
+export interface CastleWin { first: boolean; boss: boolean; firstCastle: boolean; flawless: boolean; sealed: boolean }
+/** 받을 것 (줄마다 = 💎 n · 이유 · 한도 밖?) + EXP */
+export function castleReward(w: CastleWin): { gems: { n: number; why: string; free?: boolean }[]; xp: number } {
+  if (!w.first) return { gems: [], xp: 0 };
+  const gems: { n: number; why: string; free?: boolean }[] = [{ n: w.boss ? CASTLE_GEM.roomBoss : CASTLE_GEM.room, why: '성채 방 처치' }];
+  if (w.firstCastle) gems.push({ n: CASTLE_GEM.first, why: '성채 첫 방' });
+  if (w.flawless) gems.push({ n: CASTLE_GEM.roomFirst, why: '첫 판에 처치' });
+  if (w.sealed) gems.push({ n: CASTLE_GEM.seal, why: '🏆 업적', free: true });
+  return { gems, xp: CASTLE_XP.clear + (w.sealed ? CASTLE_XP.seal : 0) };
+}

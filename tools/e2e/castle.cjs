@@ -75,6 +75,9 @@ const norm = (t) => String(t).replace(/\s+/g, '').replace(/^\d+[⑴⑵⑶⑷⑸�
   const rec = await s.evaluate(() => window.__dbGet('bonus/1-1/3/eval-1/q03'));
   ok('③ 처치 · 기록 bonus/1-1/3/eval-1/q03 = clear · tries 2', res.c === '1' && rec && rec.clear === true && rec.tries === 2 && rec.runs === 1, `${res.t} · ${JSON.stringify(rec)}`);
   await s.screenshot({ path: `${SHOTS}/castle-9-clear.png` });
+  // 💎 정식 값 (📜 2026-11-14 머리): 처음 처치 = 방 8 + 성채 첫 방 4 (두 번째 판에 처치라 「첫 판에 처치」 6 없음) · EXP 5
+  const got = await s.$$eval('[data-k="castle-got"] li', (xs) => xs.map((x) => x.textContent.trim())).catch(() => []);
+  ok('③ 보상 = +5 EXP · 💎 +8 방 · 💎 +4 첫 방', got.join('|') === '+5 EXP|💎 +8 성채 방 처치|💎 +4 성채 첫 방', got.join(' · '));
   // ④ 6방 더 → 👑
   await s.evaluate(() => { for (const r of ['q01', 'q02', 'q04', 'q05', 'q06', 'q08']) window.__dbSet(`bonus/1-1/3/eval-1/${r}`, { clear: true, tries: 1, runs: 1, at: Date.now() }); });
   await s.click('[data-k="castle"] button.pmain'); await s.click('[data-k="castle"] .back'); await s.waitForTimeout(200);
