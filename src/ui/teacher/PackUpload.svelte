@@ -185,8 +185,8 @@
   async function save() {
     if (!P || errs.length) return;
     const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
-    // 🎬 있는 영상만 연결 (파일이 없는 칸은 뺌)
-    if (v.videos) { for (const [k, u] of Object.entries(v.videos)) if (vidOk[u] === false) delete v.videos[k]; if (!Object.keys(v.videos).length) delete v.videos; }
+    // 🎬 영상 이름은 지금 서고에 없어도 그대로 저장 (🐞 2026-11-14 「13차시 팩에 영상이 포함 안 됨」 = 올릴 때 없던 영상을 빼 버려 나중에 서고에 생겨도 안 붙었음)
+    //   재생할 때 다시 찾음(video.ts videoSrc = 앱 → 정식 사이트) · 그때도 없으면 그 칸 🎬 = 「영상을 받지 못했어요」 한 줄
     const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
     for (const [c, u] of Object.entries(imgs)) if (!(await put(prepPath(v, c), u))) { failed = `그림 「${c}」 를 저장하지 못했어요 · 교사 로그인 · 인터넷을 확인해요`; return; }
     // 🎬 zip 영상 = 서버에 쪼개 올림(같은 이름 = 한 번) → 칸 주소 rtdb:
@@ -238,7 +238,7 @@
 
     {#if res}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}</p>
-      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
+      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 이름만 저장(서고에 생기면 저절로 붙음)` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
       {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
       {#if issues.length}<ul class="iss" data-k="packiss">{#each issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
       {#if P && stepsQ.length}

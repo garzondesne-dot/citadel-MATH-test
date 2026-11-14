@@ -25,9 +25,16 @@ describe('🎬 영상 (zip 안 mp4 → 서버 · 📜 2026-11-14)', () => {
     expect(m.map).toEqual({ c1: '(11차시) 49_v11-49.mp4', m1: '(11차시) 49_v11-49.mp4', c2: 'v11-50.mp4', c3: '정리_c3.mp4' });
     expect(m.unused).toEqual(['xm1.mp4', '모름.mp4']); // 「xm1」 = 구분자 없이 붙음 → 아님
   });
-  it('보통 주소는 그대로 · 없는 rtdb 영상 = null', async () => {
-    const S = { get: () => null } as never;
-    expect(await videoSrc(S, 'video/v11-49.mp4')).toBe('video/v11-49.mp4');
+  it('보통 주소는 그대로 · 없는 rtdb 영상 = null · 앱 영상 이름 = 재생할 때 다시 찾음(앱 → 정식 사이트)', async () => {
+    const S = { get: () => null } as never, f0 = globalThis.fetch;
+    const has = new Set(['video/v11-49.mp4', 'https://garzondesne-dot.github.io/Citadel-MATH/assets/video/v12-60-v2.mp4']);
+    globalThis.fetch = (async (u: string) => ({ ok: has.has(u), headers: { get: () => 'video/mp4' } })) as never;
+    try {
+      expect(await videoSrc(S, 'video/v11-49.mp4')).toBe('video/v11-49.mp4'); // 앱에 있음
+      expect(await videoSrc(S, 'video/v12-60.mp4')).toBe('https://garzondesne-dot.github.io/Citadel-MATH/assets/video/v12-60-v2.mp4'); // 정식 꼬리 최신
+      expect(await videoSrc(S, 'video/v99-99.mp4')).toBe(null); // 아무 데도 없음 = 「받지 못했어요」
+      expect(await videoSrc(S, 'https://x.example/a.mp4')).toBe('https://x.example/a.mp4');
+    } finally { globalThis.fetch = f0; }
     expect(await videoSrc(S, 'rtdb:prep/x/vid/none')).toBe(null);
   });
   it('zip 풀기 = .mp4 를 영상으로', async () => {

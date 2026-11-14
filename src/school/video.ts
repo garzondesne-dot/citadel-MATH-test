@@ -37,7 +37,17 @@ const memo = new Map<string, Promise<string | null>>();
 /** 재생 주소 = 보통 주소는 그대로 · rtdb: = 받아서 Blob 주소 (한 번 받으면 이 탭에서 기억) */
 export function videoSrc(S: Pick<Store, 'get'> & { fetch?: Store['fetch'] }, url: string | null | undefined): Promise<string | null> {
   if (!url) return Promise.resolve(null);
-  if (!isRtdb(url)) return Promise.resolve(url);
+  if (!isRtdb(url)) {
+    // 🎬 앱 영상 이름(video/…) = 재생할 때 다시 찾음: 앱에 있으면 그대로 · 없으면 정식 사이트(꼬리 -v 최신) · 둘 다 없으면 null (🐞 2026-11-14 13차시)
+    if (!/^video\//.test(url) || typeof fetch !== 'function') return Promise.resolve(url);
+    let w = memo.get(url);
+    if (!w) {
+      const head = (u: string) => fetch(u, { method: 'HEAD' }).then((r) => r.ok && !/text\/html/.test(r.headers.get('content-type') || '')).catch(() => false);
+      w = findVideo(url, '', head, async () => false).then((x) => x?.url ?? null).catch(() => null);
+      memo.set(url, w); void w.then((x) => { if (!x) memo.delete(url); });
+    }
+    return w;
+  }
   let v = memo.get(url);
   if (!v) {
     const p = url.slice(RTDB.length);

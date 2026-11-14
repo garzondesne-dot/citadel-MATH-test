@@ -18,7 +18,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/', ROOT 
   const s11 = await p.evaluate(() => window.__dbGet('prep/packs/set-11')?.videos); ok('① 저장 = 이름 · 주소만 (video/v11-49.mp4 …)', s11 && s11.c1 === 'video/v11-49.mp4' && s11.m4 === 'video/v11-51.mp4', JSON.stringify(s11).slice(0, 80));
   const c = await up(path.join(ROOT, 'tools/pack-upload/official/set-12.json'));
   ok('② 12차시 = 정식 사이트에서 2편 · 꼬리 최신 · 없는 이름 한 줄', /영상 2편 연결/.test(c.ms) && /서고에서 2편/.test(c.ms) && /영상 없음 — v12-54/.test(c.miss) && /한 번에 넣기/.test(c.miss), `${c.ms} | ${c.miss}`);
-  const s12 = await p.evaluate(() => window.__dbGet('prep/packs/set-12')?.videos); ok('② 저장 = 정식 주소 · v12-53 → v12-53-v2 · v12-54 칸은 빠짐', s12 && /Citadel-MATH\/assets\/video\/v12-52\.mp4$/.test(s12.c1) && /v12-53-v2\.mp4$/.test(s12.c2) && !s12.m3, JSON.stringify(s12).slice(0, 160));
+  const s12 = await p.evaluate(() => window.__dbGet('prep/packs/set-12')?.videos); ok('② 저장 = 정식 주소 · v12-53 → v12-53-v2 · v12-54 = 이름만 남김(나중에 서고에서 찾음)', s12 && /Citadel-MATH\/assets\/video\/v12-52\.mp4$/.test(s12.c1) && /v12-53-v2\.mp4$/.test(s12.c2) && s12.m3 === 'video/v12-54.mp4', JSON.stringify(s12).slice(0, 160));
   await p.click('.tabs button:has-text("준비")'); await p.click('[data-k="lpick-go"]'); await p.click('[data-k="lpick"] .grid [data-id="set-11"]'); await p.click('[data-k="vid-go"]'); await p.click('[data-k="vidlist"] .row');
   await p.waitForSelector('[data-k="prepvid"]', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(1500);
   const v = await p.$eval('[data-k="prepvid"]', (x) => ({ src: x.getAttribute('src'), rs: x.readyState })).catch(() => null); ok('11차시 🎬 재생 (앱 영상)', v && /v11-49\.mp4$/.test(v.src) && v.rs >= 1, JSON.stringify(v));

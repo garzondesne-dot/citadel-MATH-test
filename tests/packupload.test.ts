@@ -40,7 +40,7 @@ describe('📦 차시 팩 올리기 검사기', () => {
     for (const f of ['v11-49', 'v11-50', 'v11-51']) expect(fs.existsSync(`public/video/${f}.mp4`), f).toBe(true);
     const have = new Set(['prep/ex-11/img/c1', 'prep/ex-11/img/m1']);
     const xs = await checkMedia(P, async (p) => have.has(p), async (u) => u !== 'video/v11-51.mp4');
-    expect(xs.map((x) => `${x.lvl} | ${x.at} | ${x.msg.split(' — ')[0]}`)).toEqual(['ask | 그림(img) review · c2 · m2 · sum · boss | 그림 없음', 'ask | 영상(video) v11-51.mp4 | 영상 없음']);
+    expect(xs.map((x) => `${x.lvl} | ${x.at} | ${x.msg.split(' — ')[0]}`)).toEqual(['ask | 그림(img) review · c2 · m2 · sum · boss | 그림 없음', 'ask | 영상(video) v11-51.mp4 | 영상이 아직 서고에 없어요']);
     for (const c of P.imgCells!) expect(fs.existsSync(`${DIR}img/${c}.png`), `예시 그림 ${c}`).toBe(true);
     const dOf = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); dOf.imgOf = 'set-11'; expect(checkUpload(JSON.stringify(dOf), look).pack!.imgOf).toBe('set-11'); // 다른 차시 그림 빌리기
     const d = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); d.img.push('zz'); d.video.push({ file: 'v11-49', at: ['nope'] });

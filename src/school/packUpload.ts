@@ -276,7 +276,7 @@ export async function checkMedia(P: LessonPack, img: (path: string) => Promise<b
   if (gone.length) out.push({ at: `그림(img) ${gone.join(' · ')}`, msg: `그림 없음 — 서버 prep/${src}/img 에 그 칸 그림이 없어요(글자로 보여요)`, lvl: 'ask' });
   const urls = [...new Set(Object.values(P.videos || {}))];
   const vgone = (await Promise.all(urls.map(async (u) => ((await file(u)) ? null : u)))).filter(Boolean);
-  if (vgone.length) out.push({ at: `영상(video) ${vgone.map((u) => String(u).replace(/^.*\//, '')).join(' · ')}`, msg: '영상 없음 — 그 파일이 앱에 없어요(🎬 단추가 꺼져요)', lvl: 'ask' });
+  if (vgone.length) out.push({ at: `영상(video) ${vgone.map((u) => String(u).replace(/^.*\//, '')).join(' · ')}`, msg: '영상이 아직 서고에 없어요 — 이름은 저장해 두고, 영상이 서고에 생기면 저절로 붙어요(다시 올릴 필요 없음)', lvl: 'ask' });
   return out;
 }
 
