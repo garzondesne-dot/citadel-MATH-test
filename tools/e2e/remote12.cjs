@@ -19,8 +19,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DB = 'citade
   log('대기실: 번호 칸', lob, '| ⚠ 칸', (await t.textContent('[data-k="qm"]')).trim(), '| 이름', await t.$eval('.n[data-n="1"] s', (e) => e.textContent));
   await t.click('.tact .btn'); await t.waitForSelector('.rflow'); await t.click('.tact .btn'); await t.waitForTimeout(200); await t.click('.tact .btn'); await t.waitForTimeout(400);
   for (const n of [4, 7, 2, 9, 12]) { await t.evaluate(([code, u]) => { for (let k = 0; k < 4; k++) window.__dbSet(`rooms/${code}/subs/m1/${u}/${k}`, [[]]); }, [live.code, `s1_3_${n}`]); await t.waitForTimeout(150); }
+  for (const n of [1, 3, 5]) { await t.evaluate(([code, u]) => window.__perfect(code, 'm1', u), [live.code, `s1_3_${n}`]); } // ✔ 다 맞힘 (5번 = 옛 판 위 ✔)
   await t.waitForTimeout(500); const rem = await box();
-  const q = await t.evaluate(() => ({ qm: document.querySelector('[data-k="qm"]').textContent.trim(), chips: [...document.querySelectorAll('.qs .qc')].map((e) => `${e.textContent.trim()}${e.classList.contains('wait') ? '(대기)' : ''}`), more: document.querySelector('.qs').classList.contains('more'), help: [...document.querySelectorAll('.n.help, .n.oldh')].map((e) => e.dataset.n) }));
+  const okN = await t.$$eval('.n.ok', (x) => x.map((e) => e.dataset.n + (e.classList.contains('old') ? '⚠' : ''))); console.log('✔ 초록:', okN.join(' ')); if (okN.length !== 3) errs.push('✔ 초록 3명 아님');
+  const q = await t.evaluate(() => ({ qm: document.querySelector('[data-k="qm"]').textContent.trim(), chips: [...document.querySelectorAll('.qs .qc')].map((e) => `${e.textContent.trim()}${e.classList.contains('wait') ? '(대기)' : ''}`), more: document.querySelector('.qs').classList.contains('more'), help: [...document.querySelectorAll('.n.help')].map((e) => e.dataset.n) }));
   log('수업 중: 번호 칸', rem, '같은 자리', JSON.stringify(lob) === JSON.stringify(rem), '|', JSON.stringify(q));
   if (JSON.stringify(lob) !== JSON.stringify(rem)) errs.push('번호 칸 자리 다름');
   if (q.qm !== '🙋5' || q.chips.length !== 4 || !q.more || !/대기/.test(q.chips[3])) errs.push('🙋 줄');

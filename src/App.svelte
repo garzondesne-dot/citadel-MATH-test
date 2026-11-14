@@ -5,6 +5,8 @@
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
   import { PACKS, packOf } from './engine/packs';
+  import { answerOf, itemsFor } from './raid/raid';
+  import type { Room } from './model/types';
   import { SUBJ } from './engine/subject';
   import { PROFILES } from './model/profiles';
   import { validate } from './engine/lessons';
@@ -37,6 +39,8 @@
   // 화면 시험 고리(#163-① · 에뮬레이터 시험이 교사 · TV 표시를 REST 로 넣을 때 · 출시 전 메모 5): 이 폰의 로그인 uid
   // 화면 시험 고리: 이 기기 저장일 때만 경로에 값 넣기 (리모컨 🙋 줄 캡처 · 서버엔 없음)
   if (!(S as { auth?: unknown }).auth) (globalThis as { __dbSet?: (p: string, v: unknown) => void }).__dbSet = (p, v) => S.set(p, v);
+  // · 그 학생이 지금 몬스터를 한 번에 다 맞힌 제출(리모컨 ✔ 초록 캡처)
+  if (!(S as { auth?: unknown }).auth) (globalThis as { __perfect?: (code: string, mid: string, uid: string) => void }).__perfect = (code, mid, uid) => { const R = S.get<Room>(`rooms/${code}`), Lp = R ? packOf((R.meta as { lesson?: string }).lesson) : null; if (!R || !Lp) return; S.set(`rooms/${code}/subs/${mid}/${uid}/0`, itemsFor(Lp, R, mid, uid, 0).map(answerOf)); };
   (globalThis as { __uid?: () => string | null }).__uid = () => (S as { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? null;
   let netOk = $state(true);
   const sv = S as Store & { onNet?: (fn: (s: { connected: boolean }) => void) => () => void };

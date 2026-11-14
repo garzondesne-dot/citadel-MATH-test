@@ -74,7 +74,11 @@
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
   $effect(() => { const h = help; untrack(() => { const keep = order.filter((u) => h.includes(u)), add = h.filter((u) => !keep.includes(u)); if (add.length || keep.length !== order.length) { order = [...keep, ...add]; if (add.length) { const f = { ...fresh }; add.forEach((u) => (f[u] = true)); fresh = f; setTimeout(() => { const g = { ...fresh }; add.forEach((u) => delete g[u]); fresh = g; }, 400); } } }); });
-  const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : isOld(R?.players?.[uid]?.ver) ? (help.includes(uid) ? 'oldh' : 'old') : help.includes(uid) ? 'help' : 'in';
+  // ✔ 문제 결과 색 (📜 2026-11-14 선생님 「진행 · 베타 먼저」 · 머리 덧붙임 3): 지금 몬스터(보스)를 다 맞힘 = 초록 + ✔ (교사 폰만 · TV 아님) · 🙋 가 초록보다 앞 · 다음 단계 = 새로 · 쉼터 · 개념 · 영상 = 출석 · ⚠ · 🙋 만
+  const okSet = $derived.by(() => { if (!R || !step || R.state.rest) return new Set<string>(); if (mid) return new Set(ids.filter((u) => (chain ? chainRecord(L, R, mid, u).done : plainRecord(L, R, mid, u).perfect))); if (step.kind === 'boss') return new Set(ids.filter((u) => { const b = bossState(L, R, u); return b.length > 0 && b.every((x) => x.ok); })); return new Set<string>(); });
+  /** 칸 바탕 = 결석 · 안 옴 · 🙋 · ✔ · 들어옴 (⚠ 옛 판은 따로 덧붙임 = isOldU) */
+  const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : help.includes(uid) ? 'help' : okSet.has(uid) ? 'ok' : 'in';
+  const isOldU = (uid: string) => inSet.has(uid) && !absent[uid] && isOld(R?.players?.[uid]?.ver);
   const pname = (uid: string) => pupils.find((x) => x.uid === uid)?.name.slice(1) ?? '';
   // 🙋 풀어주기 (칩 한 번) · 3초 「되돌리기」
   let undoU = $state<{ u: string; mid: string; v4: boolean; n: number; at: number } | null>(null), undoT: ReturnType<typeof setTimeout> | null = null;
@@ -152,7 +156,7 @@
       <div class="nums c{COLS}" role="group" aria-label="번호 칸">
         {#each pupils as p (p.uid)}
           {@const st = stOf(p.uid)}
-          <button type="button" class="n {st}" class:sel={who === p.uid} data-n={p.num} aria-label="{p.num}번 {p.name.slice(1)} · {st === 'in' ? '새 판' : st === 'old' ? '옛 판' : st === 'help' ? '도움 요청' : st === 'oldh' ? '도움 요청 · 옛 판' : st === 'ab' ? '결석' : '안 옴'}" onclick={() => tapNum(p.uid)}><b>{p.num}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
+          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{p.num}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{p.num}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
         {/each}
       </div>
       <div class="q">
@@ -221,7 +225,7 @@
   {#if whoP}
     {@const st = stOf(whoP.uid)}
     <Sheet onclose={() => (who = '')} mainText="닫기">
-      {#snippet title()}{whoP.num} {whoP.name.slice(1)} {#if st === 'help' || st === 'oldh'}<span class="chip r">🙋 도움 요청</span>{/if}{#if st === 'old' || st === 'oldh'}<span class="chip y">⚠ 옛 판</span>{/if}{/snippet}
+      {#snippet title()}{whoP.num} {whoP.name.slice(1)} {#if st === 'help'}<span class="chip r">🙋 도움 요청</span>{:else if st === 'ok'}<span class="chip g">✔ 다 맞힘</span>{/if}{#if isOldU(whoP.uid)}<span class="chip y">⚠ 옛 판</span>{/if}{/snippet}
       <div class="wst" data-k="who">
         <div>판<b>{R.players?.[whoP.uid]?.ver ? (isOld(R.players?.[whoP.uid]?.ver) ? `옛 판 ${R.players?.[whoP.uid]?.ver}` : `새 판 ${BUILD}`) : st === 'ab' ? '결석' : '안 들어옴'}</b></div>
         <div>지금<b>{isLobby(R) ? '대기실' : isEnd(L, R) ? '마무리' : short(step)}</b></div>
@@ -229,7 +233,7 @@
         <div>이 몬스터<b>{whoRec ? `틀림 ${whoRec.wrong} · 맞힘 ${whoRec.right}` : '—'}</b></div>
       </div>
       <div class="wacts">
-        <button type="button" class="p" disabled={!(st === 'help' || st === 'oldh')} onclick={() => { release(whoP.uid); who = ''; }}>✔ 풀어주기 (❤ +1)</button>
+        <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>✔ 풀어주기 (❤ +1)</button>
         <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name.slice(1)} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
         <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
         <button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>
@@ -312,17 +316,19 @@
   .nums.c9 .n, .nums.c10 .n { font-size: 15px; }
   .n s { text-decoration: none; font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; max-width: 100%; opacity: 0.9; }
   .n.in { border: 1.5px solid var(--accent); background: var(--surface-2); color: var(--text); }
-  .n.old, .n.oldh { border: 1.5px solid var(--accent); background: #3a2e10; color: var(--text); }
-  .n.old::after, .n.oldh::before { content: '⚠'; position: absolute; right: -4px; top: -9px; font-size: 11px; color: var(--accent); }
+  .n.in.old { background: #3a2e10; }
+  .n.ok { border: 1.5px solid #3fae6a; background: #1f4b31; color: #fff; }
+  .n.ok::after { content: '✔'; position: absolute; left: -4px; top: -9px; font-size: 11px; color: #7ee2a8; font-weight: 900; }
+  .n.old::before { content: '⚠'; position: absolute; right: -4px; top: -9px; font-size: 11px; color: var(--accent); }
   .n.ab { border: 0; background: var(--surface-2); color: var(--text-3); } .n.ab b { text-decoration: line-through; }
   .n.ab::after { content: '결'; position: absolute; right: 3px; top: 2px; font-size: 9px; line-height: 1; color: var(--text-2); }
-  .n.help, .n.oldh { border: 2px solid var(--bad); transform-origin: 50% 100%; } .n.help { background: #3a1416; color: #fff; }
-  .n.help::after, .n.oldh::after { content: '🙋'; position: absolute; left: -5px; top: -9px; font-size: 11px; }
+  .n.help { border: 2px solid var(--bad); background: #3a1416; color: #fff; transform-origin: 50% 100%; } .n.help.old { background: #3a2e10; }
+  .n.help::after { content: '🙋'; position: absolute; left: -5px; top: -9px; font-size: 11px; }
   .n.sel { outline: 3px solid #fff; outline-offset: 1px; }
   @media (prefers-reduced-motion: no-preference) {
     .n.old { animation: beat 2.4s ease-in-out infinite; }
     .n.help { animation: wave 1.4s ease-in-out infinite; }
-    .n.oldh { animation: wave 1.4s ease-in-out infinite, glowy 2.4s ease-in-out infinite; }
+    .n.help.old { animation: wave 1.4s ease-in-out infinite, glowy 2.4s ease-in-out infinite; }
     .qc.slide { animation: slin 0.35s ease-out; }
   }
   @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(10deg); } 30% { transform: rotate(-10deg); } 40% { transform: rotate(8deg); } 50% { transform: rotate(-4deg); } }
@@ -359,7 +365,7 @@
   .rdock .glow { border: 2px solid var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(245, 184, 74, 0.25); }
   @media (prefers-reduced-motion: no-preference) { .rdock .glow { animation: glow 1.6s ease-in-out infinite; } }
   .utoast { display: flex; align-items: center; gap: 8px; } .utoast button { margin-left: auto; border: 0; background: none; color: #fff; text-decoration: underline; font: 600 13px var(--font); }
-  .chip { font-size: 11.5px; border-radius: 99px; padding: 1px 7px; font-weight: 700; vertical-align: middle; } .chip.r { background: var(--bad); color: #fff; } .chip.y { background: var(--accent); color: var(--on-accent); }
+  .chip { font-size: 11.5px; border-radius: 99px; padding: 1px 7px; font-weight: 700; vertical-align: middle; } .chip.r { background: var(--bad); color: #fff; } .chip.y { background: var(--accent); color: var(--on-accent); } .chip.g { background: #3fae6a; color: #06210f; }
   .wst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .wst div { background: var(--surface-2); border-radius: 10px; padding: 8px; font-size: 12px; color: var(--text-2); } .wst b { display: block; color: var(--text); font-size: 15px; }
   .wacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
