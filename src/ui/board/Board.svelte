@@ -6,7 +6,7 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
+  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
   import { liveValue } from '../room.svelte';
   import { lastClass, lastTest } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
@@ -56,7 +56,7 @@
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   const rkv = untrack(() => liveValue<Record<string, Record<string, Record<string, RankRow>>>>(S, RANK));
   onDestroy(rkv.stop);
-  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rank: { lesson: string; week: string; key: string } | null };
+  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rescueGot?: number; rescue?: { g: number; c: number }; rank: { lesson: string; week: string; key: string } | null };
   let res = $state<Res | null>(null);
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
@@ -73,12 +73,21 @@
   }
   function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } if (p.lk && !p.mem?.[uid]) { pinPost = p; pin = ''; pinErr = ''; sheet = 'pin'; return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
   // ── 결과 (1인 · 팀 같은 꼴) ──
-  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack }, team: Post | null) {
+  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number } }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;
     const n = team ? membersOf(team).length : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
     const base = Math.min(GEM.itemMax, r.right * GEM.perItem) + (r.clear ? GEM.clear : 0), mult = TEAM_X[Math.max(1, Math.min(4, n))] ?? 1, bonus = bonusOf(role, n, guard, r.clear);
     const total2 = Math.round(base * mult * (1 + bonus)), got = earnDaily(me.wallet, total2, kstDay(S.now()), GEM.dayCap);
-    if (got) save();
+    // 🤝 구조 보상 (📜 DECISIONS 2026-11-14): 수호자 💎 +5(하루 3번) · 도전자 💎 +3 · 하루 한도 안 · 서버 log = rescue_{날짜}_{n} · rescued_{날짜}_{n}
+    let rescueGot = 0;
+    if (r.rescue && (r.rescue.g || r.rescue.c) && S.kind !== 'memory') {
+      const day = kstDay(S.now()), gp = cls && num ? `gem/${cls}/${num}` : '', log = (gp && S.get<Record<string, unknown>>(`${gp}/log`)) || {};
+      const usedG = Object.keys(log).filter((k) => k.startsWith(`rescue_${day}_`)).length, usedC = Object.keys(log).filter((k) => k.startsWith(`rescued_${day}_`)).length;
+      const nG = Math.max(0, Math.min(r.rescue.g, RESCUE.perDay - usedG));
+      for (let i = 0; i < nG; i++) { const g = earnDaily(me.wallet, RESCUE.guard, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: '🤝 구조 (수호자)' }); }
+      for (let i = 0; i < r.rescue.c; i++) { const g = earnDaily(me.wallet, RESCUE.chall, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescued_${day}_${usedC + i}`, { g, at: S.now(), why: '🤝 구조 받음' }); }
+    }
+    if (got || rescueGot) save();
     // 📕 「복습 완료」 기록 칸 (오답노트 화면은 ⛺ 텐트 시안 뒤 · bonus/{반}/{번호}/review/{차시}/{문제} = 시각)
     if (cls && num) r.L.steps.forEach((s) => { const m = (r.R.subs?.[s.kind === 'boss' ? 'boss' : s.id]?.[uid]); if (m) S.set(`bonus/${cls}/${num}/review/${L.id}/${s.kind === 'boss' ? 'boss' : s.id}`, S.now()); });
     // 🏆 익명 순위 (학년 전체 · 차시별 · 이번 주): ⚔ 최강 = 첫 시도 정답률 · 📈 성장 = 수업 기록보다 오른 폭 · 🤝 협동 = 주고받은 힌트
@@ -91,7 +100,7 @@
     }
     if (team && r.drv) S.set(`${POSTS}/${team.pid}/phase`, 'done');
     if (team) markSeen(team.pid);
-    res = { ...r, L, n, role, mult, bonus, base, total2, got, rank }; stageGo(0);
+    res = { ...r, L, n, role, mult, bonus, base, total2, got: got + rescueGot, rescueGot, rank }; stageGo(0);
   }
   // 🐞 결과 연출 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 등급 도장 → 💎 올라감 → 다 보임 · 단계마다 최소 2초 · 화면을 누르면 다음 단계 · 결과 화면은 단추를 누를 때까지 그대로
   let stage = $state(2), gemShown = $state(0), stT: ReturnType<typeof setTimeout> | undefined, gemRaf = 0;
@@ -126,7 +135,8 @@
         <div><span>💎 맞힌 소문제 {res.right} (최대 {GEM.itemMax}){res.clear ? ` + ⏰ 클리어 ${GEM.clear}` : ''}</span><span>{res.base}</span></div>
         {#if res.n > 1}<div><span>👥 {res.n}인 팀 × {res.mult}</span><span>× {res.mult}</span></div>{/if}
         {#if res.bonus}<div><span>{res.role === 'g' ? `🛡 수호 보너스 +${Math.round(res.bonus * 100)}%` : '🌱 도전자만 클리어 +50%'}</span><span>+{Math.round(res.bonus * 100)}%</span></div>{/if}
-        <div class="tot"><span>받은 💎</span><span data-k="board-gem">{gemShown}{stage >= 2 && res.got < res.total2 ? ` (오늘 한도 · ${res.total2 - res.got} 못 받음)` : ''}</span></div>
+        {#if res.rescueGot}<div data-k="board-rescue"><span>🤝 구조 보상</span><span>+{res.rescueGot}</span></div>{/if}
+        <div class="tot"><span>받은 💎</span><span data-k="board-gem">{gemShown}{stage >= 2 && res.got - (res.rescueGot ?? 0) < res.total2 ? ` (오늘 한도 · ${res.total2 - res.got + (res.rescueGot ?? 0)} 못 받음)` : ''}</span></div>
       </div>{/if}
       {#if stage >= 2}<p class="why">벌은 없어요 · 한 번 더 = 숫자가 새로 바뀌어요</p>{:else}<p class="why tap">화면을 누르면 다음</p>{/if}
     </div>

@@ -7,7 +7,7 @@
   import { bossSubmit, chainSubmit, nextStep, openRoom, roomPath, submit } from '../../raid/actions';
   import { activeIds, answerOf, bossItem, bossState, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord, resultOf, stepOf } from '../../raid/raid';
   import { boardPack, END_MS, firstTry, freshAll, gradeOf, itemCount, SEC_PER_ITEM, stepDone } from '../../board/board';
-  import { bMeta, bPause, helpOn, hintKey, hintOf, pauseMax, pauseOff, pauseOn, pausesLeft, sendHint, solvedStep, stuckItem, thinkUsed, timeLeft, type Role } from '../../board/team';
+  import { bMeta, bPause, helpOn, hintKey, hintOf, itemSolved, markPauseHelp, pauseMax, pauseOff, pauseOn, pausesLeft, raiseStrong, rescuesOf, sendHint, seOf, solvedStep, strongOf, stuckItem, thinkUsed, timeLeft, type Role, type SeAlert } from '../../board/team';
   import { liveRoom } from '../room.svelte';
   import Student from '../Student.svelte';
   import Sheet from '../battle/Sheet.svelte';
@@ -21,7 +21,7 @@
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
   //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
-  type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
+  type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로) */ rescue: { g: number; c: number } };
   const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
     team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
@@ -93,7 +93,8 @@
     untrack(() => {
       const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
       const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
-      const out = { drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L };
+      const rz = solo ? [] : rescuesOf(L, RR, roles), rescue = { g: rz.filter((x) => x.g === uid).length, c: rz.filter((x) => x.c === uid).length };
+      const out = { drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L, rescue };
       let done = false; endGo = () => { if (done) return; done = true; clearTimeout(endT); onend(out); };
       endShow = { clear: be.clear }; sfx(be.clear ? 'finish' : 'game-no', 0.8); endT = setTimeout(() => endGo?.(), END_MS);
     });
@@ -153,6 +154,30 @@
   let took = $state(''), tookFor = '';
   $effect(() => { const L1 = leader(R, now), d = L1 ? { u: L1.u, from: L1.l.from } : null; if (!d || !d.from) return; const k = `${d.u}|${d.from}`; if (k === tookFor) return; tookFor = k; untrack(() => { took = `🔁 진행을 ${d.u === uid ? '내가' : `${name(d.u)}가`} 이어받았어요`; setTimeout(() => (took = ''), 3500); }); });
   const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
+  // 🚨 강적 출현 · 🤝 구조 (📜 DECISIONS 2026-11-14 · board/team.ts strongOf · rescuesOf)
+  //   도전자 폰 = 막 뜬 소문제가 그 차시 · 몬스터 수업 기록이 없거나(A) 못 맞혔는데 복습 전(B)이면 알림 한 번(이유는 이 폰에만 · 서버엔 안 적음)
+  //   팀 모두 = 그 몬스터 붉은 맥박 + 경보음 · 수호자 폰 = 진동 + 위 띠 「🚨 강적 출현! ○○ 를 도와주세요」 + 💡 · ⏸ 바로 단추
+  /** 받침 있으면 「을」 · 없으면 「를」 (한글이 아니면 「을(를)」) */
+  const eulReul = (w: string) => { const c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 ? `${w}${(c - 0xac00) % 28 ? '을' : '를'}` : `${w}을(를)`; };
+  const raised = new Set<string>();
+  $effect(() => {
+    const it = stuck, RR = R; if (solo || !guardTeam || myRole === 'g' || !it || !RR || isLobby(RR)) return;
+    untrack(() => {
+      const key = hintKey(it.mid, it.k); if (raised.has(key) || seOf(RR)[uid]?.[key]) return; raised.add(key);
+      const why = strongOf(S.get(`records/${cls}/${num}/${L0.id}`), S.get(`bonus/${cls}/${num}/review/${L0.id}`), it.mid, it.k);
+      if (why) raiseStrong(S, code, uid, { mid: it.mid, k: it.k, at: S.now() });
+    });
+  });
+  const se = $derived(seOf(R));
+  const curMid = $derived(R && !isLobby(R) && !isEnd(L, R) ? (stepOf(L, R)?.kind === 'boss' ? 'boss' : stepOf(L, R)?.id ?? '') : '');
+  const open = $derived(!R ? [] : Object.entries(se).flatMap(([c, list]) => Object.values(list || {}).filter((a): a is SeAlert => !!a && !itemSolved(L, R!, c, a.mid, a.k)).map((a) => ({ c, a }))));
+  const pulse = $derived(open.some((x) => x.a.mid === curMid));
+  const heard = new Set<string>();
+  $effect(() => { const list = open; untrack(() => { for (const x of list) { const k = `${x.c}|${x.a.mid}_${x.a.k}`; if (heard.has(k)) continue; heard.add(k); sfx('mon-appear-boss', 0.9); if (myRole === 'g' && x.c !== uid) { try { navigator.vibrate?.([200, 100, 200]); } catch { /* 무시 */ } } } }); });
+  let shut = $state<Record<string, true>>({});
+  const alert = $derived(myRole === 'g' ? open.filter((x) => x.c !== uid && !shut[`${x.c}|${x.a.mid}_${x.a.k}`]).sort((p, q) => q.a.at - p.a.at)[0] ?? null : null);
+  function helpHint(c: string) { if (!R) return; if (!canHint) { say('이 문제를 먼저 다 맞히면 힌트를 보낼 수 있어요'); return; } const e = sendHint(S, code, R, L, uid, c); say(e ?? `💡 ${name(c)}에게 보냈어요`); }
+  function helpPause(c: string, a: SeAlert) { if (!R) return; if (bp || pausesLeft(R, uid) <= 0) { say('⏸ 설명을 더 쓸 수 없어요'); return; } markPauseHelp(S, code, uid, c, a); pauseOn(S, code, R, uid); }
 </script>
 
 {#if warp}<div class="warp" aria-hidden="true" data-k="warp"><i class="wring"></i><i class="wp" style="background-image:url({CAMP_PORTAL.src})"></i><span class="whero"><HeroSprite id={hero} scale={2} pose="portal" /></span></div>{/if}
@@ -171,6 +196,8 @@
     {/if}
   </div>
   <Student {S} {L} {code} {uid} {num} {nick} {cls} board {mates} {mateFeed} />
+  {#if pulse}<div class="rage" aria-hidden="true" data-k="strong-pulse"></div>{/if}
+  {#if alert}<div class="sos" role="alert" data-k="strong-alert"><b>🚨 강적 출현! {eulReul(name(alert.c))} 도와주세요</b><span class="sb"><button type="button" onclick={() => helpHint(alert.c)}>💡 힌트 보내기</button><button type="button" onclick={() => helpPause(alert.c, alert.a)}>⏸ 설명 멈춤</button><button type="button" class="sx" aria-label="알림 닫기" onclick={() => (shut = { ...shut, [`${alert.c}|${alert.a.mid}_${alert.a.k}`]: true })}>✕</button></span></div>{/if}
   {#if (gotHint || autoHint) && hintOpen && !bp}
     <div class="hcard" role="status"><b>{gotHint ? '🛡 수호자의 힌트' : '🧭 길잡이 힌트'}</b><p>{gotHint || autoHint}</p><button type="button" aria-label="힌트 닫기" onclick={() => (hintOpen = false)}>✕</button></div>
   {/if}
@@ -235,4 +262,12 @@
   .endov.x b { text-shadow: 0 3px 0 #000; }
   .endov small { font-size: 15px; font-weight: 700; opacity: 0.85; }
   @keyframes endin { from { opacity: 0; transform: scale(1.06); } }
+  /* 🚨 강적 = 장면 띠(몬스터 자리) 붉은 맥박 · 누름은 막지 않음 */
+  .rage { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: min(100%, 430px); height: 280px; z-index: 5; pointer-events: none; background: radial-gradient(ellipse at 70% 55%, rgba(240, 40, 40, 0.55), rgba(240, 40, 40, 0) 60%); animation: rage 1.1s ease-in-out infinite; }
+  @keyframes rage { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .rage { animation: none; opacity: 0.6; } }
+  .sos { position: fixed; top: 96px; left: max(8px, calc(50% - 207px)); right: max(8px, calc(50% - 207px)); z-index: 31; padding: 8px 10px; border-radius: var(--r); background: #4a1013; border: 2px solid var(--bad); color: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 6px; }
+  .sos b { font-size: 15px; } .sos .sb { display: flex; gap: 6px; }
+  .sos button { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 0; background: rgba(255, 255, 255, 0.14); color: #fff; font: 700 14px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+  .sos button.sx { flex: none; width: 44px; background: transparent; box-shadow: none; }
 </style>

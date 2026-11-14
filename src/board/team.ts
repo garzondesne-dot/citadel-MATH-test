@@ -167,3 +167,39 @@ export function bonusOf(role: Role, n: number, guard: boolean, clear: boolean): 
   if (role === 'g') return Math.min(0.3, 0.1 * Math.max(0, n - 1));
   return !guard && clear && n > 1 ? 0.5 : 0;
 }
+// ── 🚨 강적 출현 · 🤝 구조 (📜 DECISIONS 2026-11-14 「게시판 던전 강적 출현 · 구조 보상」) ──
+//   ① 판정(도전자 폰 · 이유는 그 폰에만): (A) 그 차시 · 그 몬스터 수업 기록 없음 · 아무도 안 한 칸(n) / (B) 수업에서 못 맞힌 칸(x · -)인데 📕 복습 완료 기록 없음
+//   ② 알림 = rooms/{방}/se/{도전자}/{몬스터_소문제} = { mid, k, at } (이유는 안 적음) · 같은 소문제는 한 번
+//   ③ 🤝 구조 = 알림 뒤 수호자가 💡 힌트(bh · from) 또는 ⏸ 설명(rh/{수호자}/{도전자}_{키} = 시각)을 쓰고 → 도전자가 그 소문제를 맞힘
+//      보상 = 수호자 💎 +5(하루 3번) · 도전자 💎 +3 · 하루 한도 100 안 (각자 자기 폰이 받음 · 게시판 끝 정산)
+export const RESCUE = { guard: 5, chall: 3, perDay: 3 } as const;
+export type SeAlert = { mid: string; k: number; at: number };
+type RecLite = { mons?: Record<string, string>; bossM?: string } | null | undefined;
+export function strongOf(rec: RecLite, reviewed: Record<string, unknown> | null | undefined, mid: string, k: number): 'A' | 'B' | null {
+  if (!rec) return 'A';
+  if (mid === BOSS_ID) { const c = rec.bossM?.[k]; if (c == null || c === 'n') return 'A'; return (c === 'x' || c === '-') && !reviewed?.boss ? 'B' : null; }
+  const st = rec.mons?.[mid];
+  if (st == null || st === 'n') return 'A';
+  return (st === 'x' || st === '-') && !reviewed?.[mid] ? 'B' : null;
+}
+export const seOf = (R: Room | null) => ((R as unknown as { se?: Record<string, Record<string, SeAlert>> } | null)?.se) || {};
+export const raiseStrong = (S: Store, code: string, uid: string, a: SeAlert) => S.set(`${roomPath(code)}/se/${uid}/${hintKey(a.mid, a.k)}`, a);
+/** ⏸ 설명을 그 도전자 때문에 켰음 (구조 판정용 · 수호자 칸) */
+export const markPauseHelp = (S: Store, code: string, g: string, c: string, a: SeAlert) => S.set(`${roomPath(code)}/rh/${g}/${c}_${hintKey(a.mid, a.k)}`, S.now());
+/** 그 도전자가 그 소문제를 맞혔나 */
+export function itemSolved(L: LessonPack, R: Room, uid: string, mid: string, k: number): boolean {
+  if (mid === BOSS_ID) return !!bossState(L, R, uid)[k]?.ok;
+  if (!L.monsters[mid]) return false;
+  if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, uid); return r.done || r.stage > k; }
+  return plainRecord(L, R, mid, uid).tries.some((t) => !!t.marks[k]);
+}
+/** 구조 목록: { g 수호자, c 도전자, key } — 알림 뒤 수호자의 💡 · ⏸ + 도전자가 맞힘 */
+export function rescuesOf(L: LessonPack, R: Room, roles: Record<string, Role>): { g: string; c: string; key: string }[] {
+  const out: { g: string; c: string; key: string }[] = [], bh = (R as unknown as { bh?: Record<string, Record<string, { from: string; at: number }>> }).bh || {}, rh = (R as unknown as { rh?: Record<string, Record<string, number>> }).rh || {};
+  for (const [c, list] of Object.entries(seOf(R))) for (const [key, a] of Object.entries(list || {})) {
+    if (!a || !itemSolved(L, R, c, a.mid, a.k)) continue;
+    const byHint = bh[c]?.[key], g = byHint && roles[byHint.from] === 'g' && byHint.at >= a.at ? byHint.from : Object.keys(rh).find((u) => roles[u] === 'g' && Number(rh[u]?.[`${c}_${key}`]) >= a.at);
+    if (g) out.push({ g, c, key });
+  }
+  return out;
+}

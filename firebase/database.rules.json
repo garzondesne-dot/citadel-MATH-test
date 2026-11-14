@@ -19,6 +19,8 @@
         "heals": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
         "ready": { "$id": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
         "help": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "se": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "rh": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
         "bh": {
           "$to": {
             "$key": { ".write": "auth != null && ((newData.exists() && root.child('pids/' + newData.child('from').val() + '/u').val() === auth.uid) || (!newData.exists() && root.child('pids/' + data.child('from').val() + '/u').val() === auth.uid))" }

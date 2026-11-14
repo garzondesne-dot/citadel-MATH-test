@@ -41,6 +41,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await A.click('.bd .act .btn'); await wait(4000);
   for (const p of [A, Bp, C]) await p.waitForSelector('.run', { timeout: 15000 });
   log('⑨ 팀 줄:', (await A.textContent('.run .team')).replace(/\s+/g, ' ').trim(), '| A 도구:', await A.$$eval('.run .tools button', (xs) => xs.map((x) => x.textContent.trim()).join(' / ')), '| B 도구:', await Bp.$$eval('.run .tools button', (xs) => xs.map((x) => x.textContent.trim()).join(' / ')));
+  // 🚨 강적 출현 (B · C = 수업 기록 없음 → A 판정) → 팀 모두 붉은 맥박 · A(수호자) 위 띠 · 이유는 안 적음
+  await wait(1500);
+  const se = await rest(`rooms/${(await rest('school/board/posts'))[pid].code}/se`);
+  const sos = await A.$eval('[data-k="strong-alert"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => ''), pulse = await Promise.all([A, Bp, C].map((p) => p.$('[data-k="strong-pulse"]').then((x) => !!x)));
+  log('🚨 강적 출현: 서버 알림', Object.keys(se || {}).join(','), '| 이유 칸 없음', !JSON.stringify(se || {}).includes('why'), '| A 띠', sos, '| 맥박', pulse.join(' '), '| B 띠 없음', !(await Bp.$('[data-k="strong-alert"]')));
+  if (!se || !sos || !pulse.every(Boolean) || await Bp.$('[data-k="strong-alert"]')) errs.push('🚨 강적 출현');
+  await A.screenshot({ path: `${SHOTS}/b32-team-strong-guard.png` }); await Bp.screenshot({ path: `${SHOTS}/b32-team-strong-chall.png` });
   // 🙋
   await Bp.click('.run .tools button:has-text("도와줘")'); await wait(1200); const tA = (await A.textContent('.run .team')); log('🙋 B 도와줘 → A 팀 줄:', tA.replace(/\s+/g, ' ').trim()); if (!/🙋/.test(tA)) errs.push('🙋 보임');
   // ⏸ 설명
@@ -59,6 +66,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(2000);
   for (const [n, p] of [['A', A], ['B', Bp], ['C', C]]) { const g = await p.$eval('.bd .grade', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '없음'); const rw = await p.$eval('.bd .rw', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => ''); const rk = await p.$eval('.bd .rk', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '없음'); log(`⑪ ${n}:`, g, '|', rw, '|', rk); if (g === '없음') errs.push(`${n} 결과`); }
   await A.screenshot({ path: `${SHOTS}/b32-team-result-guard.png` }); await C.screenshot({ path: `${SHOTS}/b32-team-result.png` });
+  const rz = await Promise.all([A, Bp, C].map((p) => p.$eval('[data-k="board-rescue"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '')));
+  log('🤝 구조 보상: A', rz[0] || '-', '| B', rz[1] || '-', '| C', rz[2] || '-');
+  if (!/\+5/.test(rz[0]) || !/\+3/.test(rz[1])) errs.push('🤝 구조 보상');
   log('💎 서버:', JSON.stringify({ A: (await rest('gem/1-3/1')).day, C: (await rest('gem/1-5/1')).day }), '| 📕 복습 완료 칸 A:', Object.keys((await rest('bonus/1-3/1/review/set-06')) || {}).length, '| 순위:', JSON.stringify(await rest('school/board/rank')).slice(0, 120));
   // ⑬ 끊김
   await C.click('.bd .btn2'); await C.context().setOffline(true); await wait(3000);
