@@ -31,7 +31,8 @@
   .sw { display: flex; gap: 3px; } .sw i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(128, 128, 128, 0.4); }
   /* 견본 색 = 그 테마의 바탕 · 판 · 강조 */
   [data-th='gold'] .sw i:nth-child(1) { background: #0f1115; } [data-th='gold'] .sw i:nth-child(2) { background: #222632; } [data-th='gold'] .sw i:nth-child(3) { background: #f5b84a; }
-  :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(1) { background: #0d1530; } :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(2) { background: #15224a; } :is([data-th='navy'], [data-th='classic']) .sw i:nth-child(3) { background: #f2c14e; }
+  [data-th='navy'] .sw i:nth-child(1) { background: #0d1530; } [data-th='navy'] .sw i:nth-child(2) { background: #15224a; } [data-th='navy'] .sw i:nth-child(3) { background: #f2c14e; }
+  [data-th='classic'] .sw i:nth-child(1) { background: #14110f; } [data-th='classic'] .sw i:nth-child(2) { background: #2b241e; } [data-th='classic'] .sw i:nth-child(3) { background: #ebb84f; }
   [data-th='cloud'] .sw i:nth-child(1) { background: #eef1f6; } [data-th='cloud'] .sw i:nth-child(2) { background: #fff; } [data-th='cloud'] .sw i:nth-child(3) { background: #e9a23b; }
   [data-th='lava'] .sw i:nth-child(1) { background: #140f0d; } [data-th='lava'] .sw i:nth-child(2) { background: #2b211b; } [data-th='lava'] .sw i:nth-child(3) { background: #ff8f3f; }
   [data-th='star'] .sw i:nth-child(1) { background: #0c1020; } [data-th='star'] .sw i:nth-child(2) { background: #1e2640; } [data-th='star'] .sw i:nth-child(3) { background: #e6ebf5; }

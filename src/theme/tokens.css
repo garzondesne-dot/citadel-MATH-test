@@ -20,7 +20,9 @@
   color-scheme: dark;
 }
 /* 🎨 #144 테마 10 + 클래식 (시안 8fD8n9QKzP4s8RfYktPoxx 값 그대로) — 의미 색(맞음 · 틀림 · 💎 · 📜 · 체력)은 같음 · 밝은 테마 3개만 조금 진하게 */
-:root[data-theme='navy'], :root[data-theme='classic'] { --bg: #0d1530; --surface: #101a3a; --surface-2: #15224a; --text: #eef2fb; --text-2: #b6c1dc; --text-3: #8592b3; --accent: #f2c14e; --on-accent: #241800; --accent-sh: #a8822f; --line: #2b3a6e; --press-sh: #060b1c; --bad-bg: #2a1622; color-scheme: dark; }
+/* 🏛 클래식 = 공식 게임(v0.9) 색 (📜 2026-11-14 선생님 「클래식 테마 변경 · 첨부 사진」 · 공식 css/style.css :root 그대로 · 갈색 판 + 금빛) */
+:root[data-theme='classic'] { --bg: #14110f; --surface: #1f1a16; --surface-2: #2b241e; --text: #f3ecdc; --text-2: #ad9f8a; --text-3: #7d705e; --accent: #ebb84f; --on-accent: #3a2204; --accent-sh: #8a6420; --line: #5b4a36; --press-sh: #0a0806; --bad-bg: #2a1616; color-scheme: dark; }
+:root[data-theme='navy'] { --bg: #0d1530; --surface: #101a3a; --surface-2: #15224a; --text: #eef2fb; --text-2: #b6c1dc; --text-3: #8592b3; --accent: #f2c14e; --on-accent: #241800; --accent-sh: #a8822f; --line: #2b3a6e; --press-sh: #060b1c; --bad-bg: #2a1622; color-scheme: dark; }
 :root[data-theme='lava'] { --bg: #140f0d; --surface: #1f1814; --surface-2: #2b211b; --text: #f5ede6; --text-2: #c9bcb2; --text-3: #9a8f88; --accent: #ff8f3f; --on-accent: #1f0c00; --accent-sh: #a3501a; --line: #3a2e27; --press-sh: #0a0706; --bad-bg: #2c1612; color-scheme: dark; }
 :root[data-theme='star'] { --bg: #0c1020; --surface: #141a2e; --surface-2: #1e2640; --text: #e8ecf6; --text-2: #b3bbd0; --text-3: #8c94ad; --accent: #e6ebf5; --on-accent: #0c1020; --accent-sh: #7d879e; --line: #2a3352; --press-sh: #060812; --bad-bg: #2a1620; color-scheme: dark; }
 :root[data-theme='sakura'] { --bg: #140d12; --surface: #1f151c; --surface-2: #2b1e27; --text: #f6eef3; --text-2: #cdb9c6; --text-3: #9c8a96; --accent: #ff9ec7; --on-accent: #2a0b18; --accent-sh: #a35a7a; --line: #3a2a35; --press-sh: #0a0609; --bad-bg: #2c1519; color-scheme: dark; }

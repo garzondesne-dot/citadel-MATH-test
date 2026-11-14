@@ -1,47 +1,61 @@
-/* 🏛 클래식 테마 (#144 · 초창기 정식 v0.9.10~13 옷) — 이 파일은 클래식을 고른 폰만 받음(theme.ts 지연 로드 · 다른 테마 = 그림 · 글꼴 요청 0)
-   색 = 청남 성채 토큰(tokens.css) · 판 = ui-panel-v1 9-slice · 단추 = ui-btn-v1 / gold(주요) / press / gold-press / off · 탭 = ui-tab-on-v1
-   모서리 각짐 · pixelated · 글꼴 = 제목 · 단추만 Galmuri11-Bold(문제 · 수식 · 긴 글 = v1.0 글꼴) · 자리 · 크기 · 순서는 v1.0 그대로
-   9-slice 는 클래식만의 예외 (ui-senior 「나인슬라이스」 줄) · 교실 TV(data-tv) 는 색만 따름 */
-@font-face { font-family: 'Galmuri11'; src: url('/classic/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+/* 🏛 클래식 테마 = 공식 게임 옷 (📜 2026-11-14 선생님 「클래식 테마 변경할 거야 · 첨부 사진 확인해」 · 공식 v0.9 js/engine/art.js skin() 그대로)
+   색 = 공식 :root(갈색 판 · 금빛 · tokens.css) · 판 = ui-panel-v4(15 / 10px) · 단추 = ui-btn-v3 키트(14 / 9px · 누름 · 흐림 · 금빛 주요) · 탭 = ui-tab-v3 / on · 입력 칸 = ui-input-v3 · ✕ = ui-icbtn-v3
+   글꼴 = Galmuri11(모든 글) · 문제 · 수식 · 보기 = v1.0 글꼴(공식도 읽고 계산하는 글자 = 고딕) · 모서리 각짐 · pixelated · 자리 · 크기 · 순서는 v1.0 그대로
+   이 파일은 클래식을 고른 폰만 받음(theme.ts 지연 로드) · 교실 TV(data-tv) 는 색만 따름 · 📜 문제 칸 양피지(data-qpaper) 를 켜면 문제 카드는 양피지가 이김 */
+@font-face { font-family: 'Galmuri11'; src: url('/classic/Galmuri11.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Galmuri11'; src: url('/classic/Galmuri11-Bold.woff2') format('woff2'); font-weight: 700 900; font-display: swap; }
 :root[data-theme='classic']:not([data-tv]) {
-  --k-panel: url('/classic/ui-panel-v1.webp');
-  --k-btn: url('/classic/ui-btn-v1.webp');
-  --k-gold: url('/classic/ui-btn-gold-v1.webp');
-  --k-press: url('/classic/ui-btn-press-v1.webp');
-  --k-gpress: url('/classic/ui-btn-gold-press-v1.webp');
-  --k-off: url('/classic/ui-btn-off-v1.webp');
-  --k-tab: url('/classic/ui-tab-on-v1.webp');
+  --k-panel: url('/classic/ui-panel-v4.webp');
+  --k-btn: url('/classic/ui-btn-v3.webp');
+  --k-gold: url('/classic/ui-btn-gold-v3.webp');
+  --k-press: url('/classic/ui-btn-press-v3.webp');
+  --k-gpress: url('/classic/ui-btn-gold-press-v3.webp');
+  --k-off: url('/classic/ui-btn-off-v3.webp');
+  --k-tab: url('/classic/ui-tab-v3.webp');
+  --k-tabon: url('/classic/ui-tab-on-v3.webp');
+  --k-input: url('/classic/ui-input-v3.webp');
+  --k-icbtn: url('/classic/ui-icbtn-v3.webp');
   --pixel: 'Galmuri11', var(--font);
   --r-sm: 0px; --r: 0px; --r-lg: 0px;
 }
-/* 바탕 = 가운데 기둥 바깥에 그림(세로 · 가로) · 기둥 안은 바탕색 */
-:root[data-theme='classic']:not([data-tv]) body { background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-v3b.webp') center / cover no-repeat fixed; }
+/* 바탕 = 가운데 기둥 바깥에 성문 그림 · 기둥 안은 바탕색 */
+:root[data-theme='classic']:not([data-tv]) body { font-family: var(--pixel); background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-v3b.webp') center / cover no-repeat fixed; }
 @media (orientation: landscape) { :root[data-theme='classic']:not([data-tv]) body { background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-wide-v1.webp') center / cover no-repeat fixed; } }
+/* 글꼴: 모든 글 = Galmuri11 · 문제 · 수식 · 보기 · 답 칸 = v1.0 글꼴 */
+:root[data-theme='classic']:not([data-tv]) :is(button, input, select, textarea, .sheet, .tp, .mh) { font-family: var(--pixel); }
+:root[data-theme='classic']:not([data-tv]) .bcard :is(p, .q, .qt, .q1, .q2, .story, .opt, .chip, .rune, .sy, input, .ans, .math) { font-family: var(--font); }
 
-/* 판 (카드 · 시트 · 문제 카드) */
-:root[data-theme='classic']:not([data-tv]) :is(.bcard, .card, .sheet) {
-  box-sizing: border-box; border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
-  border-image: var(--k-panel) 22 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important; image-rendering: pixelated;
+/* 판 = ui-panel-v4 (카드 · 시트 · 문제 카드 · 내 용사 창) */
+:root[data-theme='classic']:not([data-tv]) :is(.bcard, .card, .sheet, .hsw, .hcard, .hc) {
+  box-sizing: border-box; border-style: solid !important; border-color: transparent !important; border-width: 10px !important;
+  border-image: var(--k-panel) 15 fill / 10px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important; image-rendering: pixelated;
 }
 :root[data-theme='classic']:not([data-tv]) .sheet { border-bottom-width: 0 !important; }
+/* 📜 문제 칸 양피지가 켜져 있으면 문제 카드는 양피지 */
+:root[data-theme='classic'][data-qpaper]:not([data-tv]) .bcard { border-image: none !important; border: 2px solid #5a4024 !important; background: #f2e6c9 url('/art/ui/ui-paper-v1.webp') center / 100% 100% no-repeat !important; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45) !important; }
 
-/* 단추: 기본 · 누름 · 흐림 · 주요(금빛) */
-:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .tabs button, .game, .rstep button, .adj button, .codebtn) {
-  border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
-  border-image: var(--k-btn) 8 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important;
-  image-rendering: pixelated; color: #eef2fb !important; font-family: var(--pixel) !important; text-shadow: 0 1px 0 #000a;
+/* 단추 = ui-btn-v3 (기본 · 누름 · 흐림) · 주요 = 금빛 */
+:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .game, .rstep button, .adj button, .codebtn, .item, .htabs button, .th, .wacts button, .qk button, .gquick button, .swc, .lr, .qp, .lk.box) {
+  border-style: solid !important; border-color: transparent !important; border-width: 9px !important;
+  border-image: var(--k-btn) 14 fill / 9px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: 0 3px 0 #0008 !important;
+  image-rendering: pixelated; color: #eef2ff; text-shadow: 1px 1px 0 #000;
 }
-:root[data-theme='classic']:not([data-tv]) :is(.btn, .tact .btn, .game.on, .rdock button.on, .tabs button.on) {
-  border-style: solid !important; border-color: transparent !important; border-width: 6px !important;
-  border-image: var(--k-gold) 8 fill / 6px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: none !important;
-  image-rendering: pixelated; color: #3a2204 !important; font-family: var(--pixel) !important; text-shadow: 0 1px 0 #ffefb0;
+:root[data-theme='classic']:not([data-tv]) :is(.btn, .pmain, .tact .btn, .game.on, .rdock button.on, .htabs button.on, .th.on, .wacts .p, .lr.equip) {
+  border-style: solid !important; border-color: transparent !important; border-width: 9px !important;
+  border-image: var(--k-gold) 14 fill / 9px stretch !important; background: none !important; border-radius: 0 !important; box-shadow: 0 3px 0 #0008 !important;
+  image-rendering: pixelated; color: #3a2204 !important; text-shadow: 0 1px 0 #ffefb0 !important; font-weight: 700;
 }
-:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .game, .rstep button, .adj button):active:not(:disabled) { border-image-source: var(--k-press) !important; transform: translateY(2px); }
-:root[data-theme='classic']:not([data-tv]) .btn:active:not(:disabled) { border-image-source: var(--k-gpress) !important; transform: translateY(2px); }
-:root[data-theme='classic']:not([data-tv]) :is(.btn, .btn2, .chipbtn, .rdock button, .game, .adj button):disabled { border-image-source: var(--k-off) !important; color: #c4c8d2 !important; text-shadow: 0 1px 0 #0008; opacity: 0.8; }
-/* 탭 (선택 = ui-tab-on) */
-:root[data-theme='classic']:not([data-tv]) .tp .tabs button.on { border-image: var(--k-tab) 6 fill / 6px stretch !important; color: #ffd35a !important; text-shadow: 1px 1px 0 #000; }
-
-/* 제목 · 단추 글꼴만 Galmuri (문제 · 수식 · 긴 글은 그대로) */
-:root[data-theme='classic']:not([data-tv]) :is(.ttl, .tbar .t, .sheet .bar .t, .bar .tt, .bcard .lab, h1, h2, h3) { font-family: var(--pixel); }
-:root[data-theme='classic']:not([data-tv]) :is(.pill, .label) { border-radius: 0 !important; }
+:root[data-theme='classic']:not([data-tv]) :is(.btn2, .chipbtn, .rdock button, .game, .rstep button, .adj button, .item, .htabs button, .th, .wacts button):active:not(:disabled) { border-image-source: var(--k-press) !important; transform: translateY(1px); }
+:root[data-theme='classic']:not([data-tv]) :is(.btn, .pmain):active:not(:disabled) { border-image-source: var(--k-gpress) !important; transform: translateY(1px); }
+:root[data-theme='classic']:not([data-tv]) :is(.btn, .pmain, .btn2, .chipbtn, .rdock button, .game, .adj button, .wacts button, .th):disabled { border-image-source: var(--k-off) !important; color: #9aa0ad !important; text-shadow: 0 1px 0 #0008 !important; opacity: 0.75; }
+/* 아래 탭 = ui-tab-v3 / 고른 탭 = on */
+:root[data-theme='classic']:not([data-tv]) .tp .tabs button { border-style: solid !important; border-color: transparent !important; border-width: 8px 8px 0 !important; border-image: var(--k-tab) 14 14 0 fill / 8px 8px 0 stretch !important; background: none !important; border-radius: 0 !important; color: #b9c4e6 !important; image-rendering: pixelated; }
+:root[data-theme='classic']:not([data-tv]) .tp .tabs button.on { border-image-source: var(--k-tabon) !important; color: #ffd35a !important; text-shadow: 1px 1px 0 #000; }
+/* 입력 칸 · 고르기 = ui-input-v3 */
+:root[data-theme='classic']:not([data-tv]) :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea) { border-style: solid !important; border-color: transparent !important; border-width: 7px !important; border-image: var(--k-input) 14 fill / 7px stretch !important; background: none !important; border-radius: 0 !important; color: #eef2ff !important; image-rendering: pixelated; }
+:root[data-theme='classic']:not([data-tv]) .bcard input { font-family: var(--font); }
+/* ✕ 닫기 = ui-icbtn-v3 · 금빛 글자 */
+:root[data-theme='classic']:not([data-tv]) :is(.sheet .x, .hswh button, .thh button, button[aria-label='닫기']) { border: 7px solid transparent !important; border-image: var(--k-icbtn) 14 fill / 7px stretch !important; background: none !important; border-radius: 0 !important; color: #ffd35a !important; text-shadow: 1px 1px 0 #000; image-rendering: pixelated; }
+/* 제목 = 금빛 */
+:root[data-theme='classic']:not([data-tv]) :is(.ttl, .tbar .t, .sheet .bar .t, .bar .tt, h1, h2, h3) { font-family: var(--pixel); color: var(--accent); }
+:root[data-theme='classic']:not([data-tv]) :is(.pill, .label, .chip, .badge) { border-radius: 0 !important; }
