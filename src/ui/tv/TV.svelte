@@ -267,10 +267,10 @@
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
     <div class="split" class:z1={zoom === 1} class:z2={zoom === 2}>
-      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg {S} {L} id={step.id} alt="{short(step)} 개념">{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={step.id} alt="{short(step)} 개념">{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {#if nextMon}
         {@const qs = qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id)}
-        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg"><PrepImg {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {/if}
     </div>
   {:else if view === 'end'}
@@ -455,7 +455,7 @@
   .cpane p { margin: 0; font-size: var(--tv-title); line-height: 1.5; }
   .split.z1 .cpane p, .split.z2 .cpane p { font-size: var(--tv-title); }
   .pimg { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.4cqh; }
-  .pimg :global(.pi) { height: 100%; } .pimg :global(.pi img) { height: 100%; width: 100%; object-fit: contain; }
+  .pimg { background: #fff; border-radius: 1cqh; } .pimg :global(.pi.fill) { width: 100%; } .pimg :global(.pi.fill img) { width: 100%; height: auto; } /* 🐞 2026-11-14 「좌우 전부 차지 · 하얀 배경」: 폭 가득 · 위에서부터 · 넘치면 「↗ 누르면 크게」(카드가 커짐) */
   .simg { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; }
   .simg :global(.pi) { height: 100%; } .simg :global(.pi img) { height: 100%; width: 100%; object-fit: contain; }
   .zm { position: absolute; right: 1.4cqw; bottom: 1.4cqh; font-style: normal; font-size: var(--tv-small); color: #7a6850; border: 1px solid #d8cdb8; border-radius: 99px; padding: 0.2cqh 0.8cqw; background: #fffdf8; }
