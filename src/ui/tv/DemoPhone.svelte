@@ -22,6 +22,9 @@
   const K_MIN = $derived.by(() => { void boxH; return (20 * (tvH() / 1080)) / Math.max(10, qfs); });
   const k = $derived.by(() => { if (!boxW) return 1; const kw = Math.min(boxW / PW, 3), kh = need && boxH ? boxH / need : kw; return Math.max(Math.min(kw, K_MIN), Math.min(kw, kh)); });
   const PH = $derived(boxH && k ? boxH / k : 844);
+  // 🐞 (📜 2026-11-15 「풀이 칸과 테두리 사이 공백 · 테두리까지 맞춰 늘려」): 폭도 칸에 맞춤 = 배율 k 는 그대로(글자 크기 그대로) · 폰 폭 = 칸 폭 ÷ k (390 아래로는 안 줄임)
+  let PWv = $state(PW);
+  $effect(() => { const w = boxW && k ? Math.max(PW, Math.floor(boxW / k)) : PW; if (Math.abs(w - untrack(() => PWv)) > 3) PWv = w; }); // 3px 넘게 바뀔 때만 (폭 ↔ 내용 높이 ↔ 배율이 서로 쫓는 고리 막기)
   $effect(() => { void tick; const el = scr; if (!el) return; const body = el.querySelector('section.body') as HTMLElement | null, act = el.querySelector('.act.dock') as HTMLElement | null; if (!body) return; const h = body.offsetTop + body.scrollHeight + 4; void act; /* 아래 단추 자리(spacer)는 body 안에 이미 있음 */ if (Math.abs(h - need) > 2) need = h; const q = el.querySelector('.q2, .qt') as HTMLElement | null; if (q) { const f = parseFloat(getComputedStyle(q).fontSize) || 15; if (f !== qfs) qfs = f; } });
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   // 판마다 다른 방 = 숫자가 바뀜 (seed = 방 코드) · 방을 먼저 만들고 나서 학생 화면을 띄움(접속 신호가 빈 방을 만들지 않게)
@@ -67,7 +70,7 @@
   </div>{/if}
   <div class="box" class:hide={win && !!onstrike} bind:clientHeight={boxH} bind:clientWidth={boxW}>
     {#key dcode}
-      <div class="phone" style:width="{PW}px" style:height="{PH}px" style:transform="scale({k})">
+      <div class="phone" style:width="{PWv}px" style:height="{PH}px" style:transform="scale({k})">
         <div class="scr" data-k="demo-scr" bind:this={scr}><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
       </div>
     {/key}

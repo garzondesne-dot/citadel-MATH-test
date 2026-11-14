@@ -84,11 +84,8 @@ export function setBubble(S: Store, code: string, text: string): void { S.set(`$
 /** 체력 기준 % (리모컨 ±5% · 대기실 설정) · 10 ~ 100 */
 export function setPct(S: Store, code: string, pct: number): void { S.set(`${roomPath(code)}/meta/pct`, Math.max(10, Math.min(100, Math.round(pct)))); }
 /** 정찰 초 · 생각 초 (대기실 설정 · 다음 몬스터부터) */
-export function setSolveSec(S: Store, code: string, sec: number): void {
-  const v = Math.max(0, Math.min(300, Math.round(sec))); S.set(`${roomPath(code)}/meta/solve`, v);
-  // 🐞 (📜 2026-11-15 「정찰 50초로 하면 실제로 60」): 리모컨에서 바꾼 값 = 그 차시 📋 차시 준비 값도 같이 → 다음 수업 · 준비 화면 · 지금 수업이 같은 초
-  const lid = S.get<string>(`${roomPath(code)}/meta/lesson`); if (lid && !code.startsWith('T')) S.set(`school/prep/${lid}/solve`, v);
-}
+/** 🌫 정찰 초 (리모컨 · 대기실 설정 · 그 수업만 · 📜 2026-11-15 「B 추천대로」 = 📋 차시 준비 기본값은 안 바꿈) */
+export function setSolveSec(S: Store, code: string, sec: number): void { S.set(`${roomPath(code)}/meta/solve`, Math.max(0, Math.min(300, Math.round(sec)))); }
 export function setThink(S: Store, code: string, sec: number): void { S.set(`${roomPath(code)}/meta/think`, Math.max(0, Math.min(30, Math.round(sec)))); }
 /** 🌫 정찰 ±초 (정식 setSolve add): 늘리면 끝이 뒤로 · 남은 시간보다 많이 줄이면 바로 등장 */
 export function scoutAdd(S: Store, L: LessonPack, code: string, sec: number): void {
