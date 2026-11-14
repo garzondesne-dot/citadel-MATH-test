@@ -59,6 +59,8 @@ export const TWIN: Record<TwinV, TwinX> = {
   // rad = 호 반지름 배율(작을수록 많이 휨 = 초승달 · 긴 직선 꼬리 없음) · sweep = 호가 도는 각
   b: { rad: 0.5, len: 1.4, thick: 0.34, ghosts: 2, sparks: 46, stagger: 0.07, bigFlash: 1, shards: true, sweep: 1.05 },
   c: { rad: 0.56, len: 1.5, thick: 0.5, ghosts: 6, ghostGap: 0.07, ghostAlpha: 0.5, sparks: 30, dur: 1.0, sweep: 1.0 },
+  // d = 🌙 쌍월 v3 · 다시 만듦 (📜 2026-11-14 평가: A 👍 「용사 기준 왼 → 오」 · B 👍 「멋진데 크기를 키우는 건」) = A 방향(머리 = 용사 쪽) + B 의 X 교차 · 큰 흰 번쩍 · 긴 파편 · 크게(B 보다 반지름 1.4배 · 두껍게) · 잔상 3겹 진하게
+  d: { rad: 0.62, len: 1.7, thick: 0.4, ghosts: 3, ghostGap: 0.1, ghostAlpha: 0.32, sparks: 54, stagger: 0.08, bigFlash: 1, shards: true, sweep: 1.05, dur: 1.0, flash: 1 },
 };
 export type SlashO = { x: number; y: number; w: number; h: number; dir: number; tier: number; fam?: string; seed?: number; onImpact?: () => void; /** 쌍월 시제품 (없으면 지금 고른 것) */ v?: TwinV; /** 👎 다시 만든 스킬 (SKILLS) */ skill?: string };
 

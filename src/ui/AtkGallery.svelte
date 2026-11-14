@@ -60,7 +60,7 @@
         <select aria-label="강화" value={enh} onchange={(e) => look(hh, Number((e.currentTarget as HTMLSelectElement).value), sk)}>{#each Array.from({ length: 11 }, (_, i) => i) as i (i)}<option value={i}>+{i} 오라</option>{/each}</select>
       </div>
       <div class="tabs2"><button type="button" class:on={!newfx} onclick={() => (newfx = false)}>옛 것 (비교)</button><button type="button" class:on={newfx} data-new onclick={() => (newfx = true)}>✨ 지금 게임 (새 것)</button></div>
-      {#if newfx}<div class="tabs2 twin" role="group" aria-label="쌍월 참 시제품">{#each ['a', 'b', 'c'] as const as v (v)}<button type="button" class:on={twin === v} data-twin={v} onclick={() => pickTwin(v)}>🌙 쌍월 {v.toUpperCase()}</button>{/each}<a class="tvlink" href="?role=hall&mode=test&room=GTW&newfx&twin={twin}&demo=twin" target="_blank">📺 TV 모습</a></div>{/if}
+      {#if newfx}<div class="tabs2 twin" role="group" aria-label="쌍월 참 시제품">{#each ['d', 'a', 'b', 'c'] as const as v (v)}<button type="button" class:on={twin === v} data-twin={v} onclick={() => pickTwin(v)}>{v === 'd' ? '🌙 쌍월 v3 · 다시 만듦' : `🌙 쌍월 ${v.toUpperCase()}`}</button>{/each}<a class="tvlink" href="?role=hall&mode=test&room=GTW&newfx&twin={twin}&demo=twin" target="_blank">📺 TV 모습</a></div>{/if}
       <div class="ids">{#each [...ladder(hh), 'wings', 'smite'] as k, i (k)}<button type="button" class="a" class:on={sk === k} data-sk={k} onclick={() => look(hh, enh, k)}>{i < 4 ? 'ⅠⅡⅢⅣ'[i] : '🪶'}<small>{k === 'wings' ? '황금 날개' : k === 'smite' ? '심판의 빛' : skillName(k)}</small></button>{/each}</div>
       <div class="ids">
         <button type="button" class="a" data-h="hit" onclick={() => heroAtk({ miss: false, hits: 3 })}>⚔<small>공격</small></button>

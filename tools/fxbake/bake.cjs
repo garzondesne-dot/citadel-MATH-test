@@ -23,10 +23,10 @@ const KINDS = ['cut', 'moon', 'slash', 'twin'], FPS = 20;
   }
   if (process.argv[2] === 'twin') {
     const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), 'utf8'));
-    for (const v of ['a', 'b', 'c']) {
+    for (const v of process.argv.length > 3 ? process.argv.slice(3) : ['a', 'b', 'c', 'd']) {
       const dur = await p.evaluate((v) => window.__bake.durOf(v), v), n = Math.ceil((dur + 0.3) * FPS), files = [];
       for (let i = 0; i < n; i++) { const url = await p.evaluate(([t, v]) => window.__bake.frame(3, t, v), [i / FPS, v]); const f = path.join(TMP, `tw${v}-${String(i).padStart(2, '0')}.png`); fs.writeFileSync(f, Buffer.from(url.split(',')[1], 'base64')); files.push(f); }
-      const src = `pfx2/proto-twin-${v}-v2.webp`;
+      const src = v === 'd' ? 'pfx2/twin-d-v1.webp' : `pfx2/proto-twin-${v}-v2.webp`; // d = 쌍월 v3 다시 만듦
       execFileSync('python3', ['-I', '-c', `import sys\nfrom PIL import Image\nfs=sys.argv[2:]\nims=[Image.open(f).convert('RGBA') for f in fs]\nw,h=ims[0].size\ns=Image.new('RGBA',(w*len(ims),h))\nfor i,im in enumerate(ims): s.paste(im,(i*w,0))\ns.save(sys.argv[1],'WEBP',lossless=True,method=6)`, path.join(ROOT, 'public/art', src), ...files]);
       J.fx[`twin-${v}`] = { src, w: info.low.w, h: info.low.h, n, fps: FPS, px: Math.round(info.low.px), py: Math.round(info.low.py), pk: Math.round(n * 0.35) }; J.bb[`twin-${v}`] = info.low.bb.map(Math.round);
       console.log(`twin-${v}: ${n}칸 · ${fs.statSync(path.join(ROOT, 'public/art', src)).size}B`);
