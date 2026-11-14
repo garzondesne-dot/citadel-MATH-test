@@ -37,6 +37,9 @@
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
   import FunPhone from './rest/FunPhone.svelte';
+  import { submitWho } from './submit.svelte';
+  import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
+  import { solvedN } from '../raid/raid';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -147,6 +150,10 @@
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
   let cpt = $state(false);
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
+  // 📝 공부 증거 한 줄 (B · 2026-11-14): 수업 끝 = 이 수업에서 낸 소문제 수를 그날 칸에 적고 「오늘 푼 문제 n개 · 지난주보다 +k」
+  const whoKey = untrack(() => (cls ? `${cls}-${num}` : uid));
+  if (!untrack(() => board)) submitWho({ who: untrack(() => whoKey), cls: untrack(() => cls) || undefined, num: untrack(() => num) });
+  const proof = $derived.by(() => { if (!result || !R) return ''; const t = S.now(); noteSolved(whoKey, code, solvedN(L, R, uid), t); return proofLine(daySolved(whoKey, t) ?? 0, lastWeekOf(whoKey, t)); });
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
 </script>
 
@@ -159,6 +166,8 @@
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
+{:else if R && !board}
+  <div class="gtop"><ModeSwitch /></div><!-- 📝 장면이 없는 화면(대기 · 개념 · 결과)에도 「게임 | 제출」 -->
 {/if}
 <section class="body" class:battle>
   {#if R?.state.closed && !result}
@@ -174,6 +183,7 @@
     <div class="bcard">
       <div class="okline"><span class="ic">{bhp?.won ? '🏆' : '🏁'}</span><span><b>{bhp?.won ? '승리!' : '수업 끝'}</b><span>{nick}</span></span></div>
       <p class="big">{result.right} <small class="muted">/ {result.total} 맞힘</small></p>
+      {#if proof}<p class="proof" data-k="proof">{proof}</p>{/if}
       <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
     </div>
     {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
@@ -238,6 +248,9 @@
 <style>
   .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }
   .ptop { position: sticky; top: 0; z-index: 5; max-width: 430px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1.5px solid #1d1d1f; background: #f7f6f1; }
+  .gtop { display: flex; justify-content: flex-end; padding: 10px 16px 0; }
+  .proof { margin: 4px 0 8px; font: 700 15px var(--font); color: var(--text); }
+  :global(:root[data-submit]) .proof { color: #1d1d1f; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; }
   .ptop.pboard { padding-left: 52px; } .pgap { height: 44px; }
   .ptop b { flex: 1; min-width: 0; font: 700 17px 'Noto Serif KR', 'Nanum Myeongjo', serif; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pback { width: 32px; height: 32px; display: grid; place-items: center; color: #555; font-size: 22px; text-decoration: none; }

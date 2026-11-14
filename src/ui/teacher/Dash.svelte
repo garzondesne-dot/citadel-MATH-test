@@ -6,6 +6,7 @@
   import { download, makeXlsx } from '../../school/xlsx';
   import Sheet from '../battle/Sheet.svelte';
   import { untrack } from 'svelte';
+  import { modeLogs, modeSummary } from '../../school/study';
 
   // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
   //   폰 = 위 고정(묶음 3칸 → 보기 칩 · 가로 밀기) + 가운데만 넘김 · ⬇ 엑셀 = 학생 탭 [명단 · 대시보드] 줄 오른쪽 끝(#131)
@@ -17,6 +18,8 @@
   $effect(() => { if (cls !== lastCls) { lastCls = cls; vid = cls === ALL ? 'cmp' : vid === 'cmp' ? 'grid' : vid; } });
   const grp = $derived(GROUPS.findIndex((g) => g.views.some((x) => x[0] === vid)));
   const V = $derived(view(S, cls, vid));
+  // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
+  const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
   const sc = $derived(scope(S, cls));
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -39,6 +42,9 @@
     <div class="vws" role="tablist" aria-label="보기">{#each wide ? GROUPS.flatMap((g) => g.views) : GROUPS[grp]?.views ?? [] as [k, t] (k)}<button type="button" role="tab" class:on={vid === k} aria-selected={vid === k} disabled={k === 'cmp' && cls !== ALL} onclick={() => (vid = k)}>{t}</button>{/each}</div>
   </div>
   <div class="body">
+    <details class="msum" data-k="modesum"><summary>제출 모드 {ms.submitN}명 · 오늘 바꾼 횟수 {ms.todayN}</summary>
+      {#if ms.rows.length}<ul>{#each ms.rows as r (r.who)}<li><b>{r.num != null ? `${r.num}번` : r.who}</b><span>바꾼 횟수 {r.n} · 오늘 {r.today}</span><em class:sub={r.last === 'submit'}>{r.last === 'submit' ? '제출' : '게임'}</em></li>{/each}</ul>{:else}<p>아직 바꾼 학생이 없어요</p>{/if}
+    </details>
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
@@ -72,6 +78,12 @@
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
+  .msum { margin: 0 0 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); font-size: 14px; }
+  .msum summary { min-height: 32px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+  .msum ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .msum li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; align-items: center; } .msum li span { color: var(--text-2); }
+  .msum em { font-style: normal; font-weight: 700; padding: 0 8px; border-radius: 4px; border: 1px solid var(--line); } .msum em.sub { border-color: var(--text); }
+  .msum p { margin: 6px 0 0; color: var(--text-3); }
   .dash { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .nav { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: 6px; position: relative; }
   .grp { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }

@@ -2,12 +2,25 @@
 //   켜는 법 = 테마처럼: ⚙ 설정 테마 줄 「제출」 + 위 막대 「게임 | 제출」 · 이 기기(학생 폰)에 기억 · 진행은 그대로
 //   바뀌는 것 = 학생 폰 겉모습만(바탕 #f7f6f1 + 공책 줄 · 그림 · 효과 · 소리 · 이모지 · 아이콘 없음 · 명조 문제 · 파란 펜 답 · 빨간 펜 채점)
 //   바뀌지 않는 것 = 문제 · 채점 · 기회 4 · 데미지 · 기록 · 💎 · EXP · 전리품(뒤에서 그대로 쌓임 · 화면 알림 없음) · 교실 TV(용사 그대로) · 교사 폰
+import { logMode } from '../school/study';
 const KEY = 'citadel-v1-submit';
 const load = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
 export const submit = $state<{ on: boolean; screen: boolean }>({ on: typeof localStorage !== 'undefined' ? load() : false, screen: false });
 /** 학생 화면(첫 화면 · 캠프 · 수업)에서만 겉모습을 바꿈 — 교사 폰 · TV 는 언제나 게임 꼴 */
 export function submitScreen(on: boolean): void { submit.screen = on; apply(); }
-export function setSubmit(on: boolean): void { submit.on = on; try { localStorage.setItem(KEY, on ? '1' : '0'); } catch { /* 사생활 창 */ } apply(); }
+// D 모드 바꾼 기록 (2026-11-14 덧붙임): 누가 · 어느 화면에서 바꿨는지 (학생 화면이 알려 줌 · 학생에게는 안 보임)
+let who: { who: string; cls?: string; num?: number } | null = null;
+export function submitWho(w: { who: string; cls?: string; num?: number }): void { who = w; }
+const screenName = () => {
+  if (typeof document === 'undefined') return '';
+  if (document.querySelector('[data-k="todo"]')) return '오늘 할 일';
+  const t = document.querySelector('[data-k="ptop"] b, .scene .ttl, .top .ttl')?.textContent?.trim();
+  const role = new URLSearchParams(location.search).get('role');
+  return t || (role === 'student' ? '수업' : role === 'camp' ? '내 캠프' : '첫 화면');
+};
+export function setSubmit(on: boolean): void {
+  if (on !== submit.on) { const w = who ?? (() => { try { const l = JSON.parse(localStorage.getItem('citadel-v1-login') || 'null') as { cls: string; num: number } | null; return l ? { who: `${l.cls}-${l.num}`, ...l } : { who: '이 기기' }; } catch { return { who: '이 기기' }; } })(); logMode({ ...w, at: Date.now(), dir: on ? 'g2s' : 's2g', screen: screenName() }); }
+  submit.on = on; try { localStorage.setItem(KEY, on ? '1' : '0'); } catch { /* 사생활 창 */ } apply(); }
 /** 지금 학생 화면이 제출 모드로 보이는가 */
 export const paperOn = () => submit.on && submit.screen;
 // 글자만: 제출 모드 동안 화면의 글자 마디에서 이모지를 뺌(원래 글은 기억해 두었다가 게임 모드로 오면 되돌림 · 화면을 다시 그려도 다시 뺌)

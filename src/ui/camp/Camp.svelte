@@ -29,7 +29,7 @@
   import Board from '../board/Board.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
-  import { paperOn } from '../submit.svelte';
+  import { paperOn, submitWho } from '../submit.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
 
@@ -52,6 +52,7 @@
   if (untrack(() => theme) !== savedTheme()) setTheme(untrack(() => theme));
   const feats = $derived.by(() => { const b = meBound(); return featsOf(b ? b.S.get(`records/${b.cls}/${b.num}`) : null, me.cards); });
   function pickTheme(t: Theme) { theme = t; me.theme = t; M.save(); setTheme(t); }
+  { const p0 = untrack(() => pupil); if (p0) submitWho({ who: `${p0.cls}-${p0.num}`, cls: p0.cls, num: p0.num }); } // 📝 모드 바꾼 기록 = 누가
   // ⓪ 로그인한 학생 = 이름표 이름 (명단에서 · 학생이 쓰지 않음)
   if (untrack(() => pupil) && me.nick !== untrack(() => pupil)?.name) { me.nick = untrack(() => pupil)?.name ?? me.nick; M.save(); }
   // 🎁 선생님 선물 받기 (gifts/{uid} · 하루 한도 밖) — 캠프에 들어오면 아직 안 받은 것을 지갑에 넣고 한 줄 알림 (지급 = 기록 · 알림 = 보여 주기)

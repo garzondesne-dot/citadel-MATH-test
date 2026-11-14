@@ -429,3 +429,24 @@ export function holyCan(L: LessonPack, R: Room, uid: string, now: number): boole
   if (isChain(L, R, step.id)) { const cr = chainRecord(L, R, step.id, uid); return !!(cr.done && cr.perfect); }
   return plainRecord(L, R, step.id, uid).perfect;
 }
+/** 📝 공부 증거 (📜 2026-11-14 · 제출 모드 v2 덧붙임 B): 이 수업에서 그 학생이 「낸」 소문제 수
+ *  일반 = 다 맞히기 전까지의 제출(첫 제출 = 전체 · 다시 낼 때 = 지난번 틀린 것만) · 소레이드 = 진짜 판 단계 제출(연습 판 · 풀어 줌 빼고)
+ *  형성평가 = ❤ 문항을 다 맞힐 때까지 낸 문항 수 · 다 맞힌 뒤 「연습 공격」 · 🔥 재도전 판은 뺌 */
+export function solvedN(L: LessonPack, R: Room, uid: string): number {
+  let n = 0;
+  for (const mid of Object.keys(L.monsters)) {
+    if (isChain(L, R, mid)) { n += chainSubs(R, mid, uid).filter((t) => !t.p && !t.ph).length; continue; }
+    const tr = plainRecord(L, R, mid, uid).tries, pre = (() => { const p = tr.findIndex((t) => t.total > 0 && t.correct === t.total); return p >= 0 ? tr.slice(0, p + 1) : tr; })();
+    pre.forEach((t, k) => { n += k === 0 ? t.total : Math.max(0, (pre[k - 1]!.total - pre[k - 1]!.correct)); });
+  }
+  if (L.boss) {
+    const hpN = bossRecord(L, R, uid).hpN, tr = bossTries(L, R, uid), solved = new Set<number>(), bs = R.bossSub?.[uid] || {};
+    for (const k of Object.keys(bs).map(Number).sort((x, y) => x - y)) {
+      const ent = Object.entries(bs[k] || {}) as [string, number][];
+      n += ent.length;
+      ent.forEach(([i, a]) => { if (tr.some((t) => t.i === Number(i) && t.a === Number(a) && t.ok)) solved.add(Number(i)); });
+      if (hpN > 0 && Array.from({ length: hpN }, (_, i) => i).every((i) => solved.has(i))) break;
+    }
+  }
+  return n;
+}

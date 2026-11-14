@@ -68,6 +68,19 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   { const n4 = (await s2.$$('.row .cell')).length; for (let i = 0; i < n4; i++) { await s2.click(`.row .cell:nth-child(${i + 1})`).catch(() => {}); await s2.waitForTimeout(80); const it = await s2.$('.bcard .item'); const c = it && (await it.$('.chip, .opt, .rune[aria-label^="룬"]')); if (c) await c.click(); }
     ok('④ 형성평가 단추 = 「모두 제출」', /모두 제출/.test(await s2.textContent('.act .btn').catch(() => '')), (await s2.textContent('.act .btn').catch(() => '')).trim()); }
   await paper2('④ 형성평가'); await sh2('4-boss');
+  // B 공부 증거 한 줄: 학생2 = 문제 1 소문제 4 + 형성평가 3문항 한 번 제출 = 7 · 학생1 = 문제 1 소문제 4(틀린 첫 제출) = 4
+  await s2.click('.act .btn'); await s2.waitForTimeout(1500);
+  for (let g = 0; g < 4 && !(await s2.$('[data-k="proof"]')); g++) { await next(); await s2.waitForTimeout(800); }
+  const pf2 = (await s2.textContent('[data-k="proof"]').catch(() => '')).trim(), pf1 = (await s.textContent('[data-k="proof"]').catch(() => '')).trim();
+  ok('B 결과 줄 = 「오늘 푼 문제 n개」 (학생2 = 7 · 학생1 = 4 · 지난주 기록 없음 = 앞만)', pf2 === '오늘 푼 문제 7개' && pf1 === '오늘 푼 문제 4개', `학생2 「${pf2}」 · 학생1 「${pf1}」`);
+  await sh2('9-result');
+  // 지난주(7일 전 같은 요일) = 5 를 넣고 다시 그리면 「지난주보다 +2」 · 게임 모드에서도 같은 줄
+  console.log('· 결과 줄', pf1, '|', pf2, '|', await s2.evaluate(() => localStorage.getItem('citadel-v1-solved')));
+  const n2 = Number(/(\d+)개/.exec(pf2)?.[1] ?? -1);
+  const k2 = await s2.evaluate((n2) => { const m = JSON.parse(localStorage.getItem('citadel-v1-solved') || '{}'); const who = Object.keys(m).find((w) => Object.values(Object.values(m[w])[0] || {}).reduce((a, v) => a + v, 0) === n2) ?? Object.keys(m)[0]; const d = new Date(Date.now() + 9 * 3600e3 - 7 * 864e5).toISOString().slice(0, 10); m[who][d] = { OLD: 5 }; localStorage.setItem('citadel-v1-solved', JSON.stringify(m)); return { who, d }; }, n2);
+  await s2.click('[data-k="modesw"] button:has-text("게임")'); await s2.waitForTimeout(300); await s2.reload(); await s2.waitForSelector('[data-k="proof"]', { timeout: 9000 }).catch(() => {});
+  { const t = (await s2.textContent('[data-k="proof"]').catch(() => '')).trim(); ok('B 지난주보다 +k · 게임 모드에서도', t === `오늘 푼 문제 ${n2}개 · 지난주보다 +${n2 - 5}`, `${t} (${JSON.stringify(k2)})`); await sh2('9-result-game'); }
+  await s2.click('[data-k="modesw"] button:has-text("제출")').catch(() => {}); await s2.waitForTimeout(300);
   // ③ 소레이드 = 게시판 던전 7차시 첫 단계(u4) · 게임 모드 캠프에서 들어가 위 막대 「제출」
   { const ctx3 = await b.newContext({ viewport: { width: 360, height: 760 }, deviceScaleFactor: 2 }), p = await ctx3.newPage(); p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(B + '?role=camp&room=SUBR'); await p.waitForSelector('.stage');
@@ -91,6 +104,15 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await c.screenshot({ path: `${SHOTS}/submit-8-settings.png` });
   if (thSub) { await c.click('.th[data-th="gold"]').catch(() => {}); await c.waitForTimeout(300); ok('⚙ 다른 테마 고르면 게임 모드', await c.evaluate(() => !document.documentElement.dataset.submit)); await c.click('[data-k="th-submit"]'); await c.waitForTimeout(300); ok('⚙ 「제출」 고르면 제출 모드', await c.evaluate(() => document.documentElement.dataset.submit === '1')); }
   // 교사 폰 · TV 는 언제나 게임 꼴
+  // D 모드 바꾼 기록 = 교사 대시보드(이 기기 저장) 한 줄: 학생1 제출 · 게임 · 제출 / 학생2 게임 · 제출 / 캠프 금빛 · 제출 = 7번 · 마지막 제출 3명
+  { const t = await open('?role=teacher'); await t.waitForSelector('.tabs', { timeout: 9000 });
+    await t.click('.tabs button:has-text("학생")'); await t.waitForTimeout(200); await t.click('.seg button:has-text("대시보드")'); await t.waitForTimeout(300);
+    const all = await t.$('.chips button:has-text("전체")'); if (all) { await all.click(); await t.waitForTimeout(300); }
+    const line = (await t.textContent('[data-k="modesum"] summary').catch(() => '')).trim(), logs = await t.evaluate(() => JSON.parse(localStorage.getItem('citadel-v1-modelog') || '[]'));
+    const today = logs.length, last = new Map(); logs.forEach((l) => last.set(l.who, l.dir)); const subN = [...last.values()].filter((d) => d === 'g2s').length;
+    ok('D 대시보드 「제출 모드 n명 · 오늘 바꾼 횟수 m」 = 기록과 같음', line === `제출 모드 ${subN}명 · 오늘 바꾼 횟수 ${today}` && today >= 6, `「${line}」 · 기록 ${today}줄 · 화면 ${[...new Set(logs.map((l) => l.screen))].join(' / ')}`);
+    await t.click('[data-k="modesum"] summary'); await t.waitForTimeout(200); await t.screenshot({ path: `${SHOTS}/submit-10-dash.png` });
+    ok('D 학생 화면에는 안 보임', !(await s.$('[data-k="modesum"]')) && !(await s2.$('[data-k="modesum"]'))); }
   ok('📺 TV = 게임 꼴 그대로', await hall.evaluate(() => !document.documentElement.dataset.submit));
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
