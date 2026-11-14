@@ -220,7 +220,7 @@
     {#if tline}
       <div class="tline" class:red={!!door} style:--p="{tline.p * 100}%">
         <i></i><em class:still={!!R?.state.focus}>⏳</em>
-        <span class="tlt" class:red={tline.red} class:edge={tline.p > 0.88} class:start={tline.p < 0.06}>남은 {mmss(left ?? 0)}</span>
+        <span class="tlt" class:red={tline.red}>남은 {mmss(left ?? 0)}</span>
         <b>👑</b>
       </div>
     {/if}
@@ -394,8 +394,7 @@
   @keyframes hgs { 0%, 80% { transform: translate(-50%, -50%) rotate(0); } 90%, 100% { transform: translate(-50%, -50%) rotate(180deg); } }
   .tline b { position: absolute; left: 97%; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-small); line-height: 1; }
   .tlt { position: absolute; left: var(--p); top: 100%; margin-top: 0.35cqw; transform: translateX(-50%); white-space: nowrap; font-size: var(--tv-body); font-weight: 700; color: #f2f3f5; background: rgba(15, 17, 21, 0.85); border: 1px solid color-mix(in srgb, #f5b84a 60%, transparent); border-radius: 99px; padding: 0.1cqw 0.8cqw; }
-  .tlt.edge { transform: translateX(-90%); }
-  .tlt.start { transform: translateX(-10%); }
+  .tline .tlt { left: 50%; } /* 📺 시안: ⏳ 남은 시간 = 위 가운데(단계 막대 아래) · ⏳ 표시만 진행 자리를 따라감 (2026-11-14) */
   .tlt.red { border-color: #e5484d; color: #ffb3b0; }
   .nbox { position: absolute; right: 1.5cqw; top: 11cqh; z-index: 3; width: 15cqw; min-height: 11cqh; border-radius: 1.6cqh; background: rgba(8, 9, 12, 0.75); border: 1px solid rgba(255, 255, 255, 0.18); padding: 1.2cqh 1.2cqw; display: flex; flex-direction: column; gap: 0.4cqh; overflow: hidden; }
   .nbox.over { z-index: 7; }
