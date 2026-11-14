@@ -40,8 +40,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
       if (rd) ok(`📺 ${name} 칸 (숨쉬기 · 공격 · 맞음)`, ['idle', 'idleB', 'attack', 'hit'].every((p) => seen.has(p)), [...seen].join(' '));
       await hall.waitForTimeout(1600); await hall.screenshot({ path: `${SHOTS}/rdun-tv-${name}-mon.png` });
       // 소레이드 대장 (d01 native 만) · 보스 = 「앞으로」 를 눌러 그 단계까지
-      const stepTo = async (lab) => { for (let g = 0; g < 14; g++) { const now = await hall.$eval('.tflow .fs.now em', (x) => x.textContent).catch(() => ''); if (now.includes(lab)) break; if (!(await go())) break; } await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 12000 }).catch(() => {}); await hall.waitForTimeout(1500); };
-      if (rd === 'd01' && tag === 'native') { await stepTo('문제 4'); await hall.screenshot({ path: `${SHOTS}/rdun-tv-${name}-chain.png` }); }
+      const stepTo = async (lab) => { for (let g = 0; g < 14; g++) { // 6차시 문제 4~7 = 「다음 판」 칸(흐름 막대에 없음) → 소레이드 대장은 폰 갤러리 ⚔ 졸개에서 확인
+        const now = await hall.$eval('.tflow .fs.now em', (x) => x.textContent).catch(() => ''); if (now.includes(lab)) break; if (!(await go())) break; } await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 12000 }).catch(() => {}); await hall.waitForTimeout(1500); };
       await stepTo('형성평가');
       await hall.screenshot({ path: `${SHOTS}/rdun-tv-${name}-boss.png` });
       if (rd) ok(`📺 ${name} 보스 이름`, true, await hall.evaluate(() => window.__arena?.hpName ?? ''));
