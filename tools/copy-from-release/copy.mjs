@@ -55,8 +55,19 @@ async function readOfficial() {
 }
 
 // ── 베타(시험 서버) 읽기 · 쓰기 (복사 도구 계정 = 규칙 맨 위 COPY_TOOL_UID · 에뮬레이터 = owner) ──
+const SA_FILE = arg('--sa'); // 🚀 출시: 베타 프로젝트 서비스 계정(관리자) 열쇠 파일 — 쓰는 곳 = 베타만
+async function saToken(file) {
+  const sa = JSON.parse(readFileSync(file, 'utf8')), now = Math.floor(Date.now() / 1000);
+  if (CFG.projectId && sa.project_id !== CFG.projectId) throw new Error(`열쇠 프로젝트(${sa.project_id})가 베타(${CFG.projectId})와 달라요 — 멈춤`);
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const head = b64({ alg: 'RS256', typ: 'JWT' }), body = b64({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 });
+  const sig = createSign('RSA-SHA256').update(`${head}.${body}`).sign(sa.private_key, 'base64url');
+  const r = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${head}.${body}.${sig}` });
+  const j = await r.json(); if (!j.access_token) throw new Error('베타 열쇠 토큰 실패'); return j.access_token;
+}
 async function dstAuth() {
   if (EMU) return { h: { Authorization: 'Bearer owner' }, q: '' };
+  if (SA_FILE) return { h: {}, q: `access_token=${await saToken(SA_FILE)}` };
   const e = process.env.COPY_EMAIL, p = process.env.COPY_PW; if (!e || !p) throw new Error('COPY_EMAIL · COPY_PW 가 없어요 (복사 도구 계정)');
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${CFG.apiKey}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: e, password: p, returnSecureToken: true }) });
   const j = await r.json(); if (!j.idToken) throw new Error(`복사 도구 로그인 실패: ${j.error?.message}`);
