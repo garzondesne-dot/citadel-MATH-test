@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { holdWake, wakeTip } from './wake.svelte';
+  import { holdWake } from './wake.svelte';
   import BossForm from './q/BossForm.svelte';
   import { V4 } from '../raid/raid';
   import { feat } from '../school/features.svelte';
@@ -46,7 +46,7 @@
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
   const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean } = $props();
-  const unwake = holdWake(!cardOnly); onDestroy(unwake); // 📱 수업 화면 = 화면 꺼짐 방지 (정식 WAKE_SCREENS screen-student) · 시연 폰은 띠 없음
+  const unwake = holdWake(); onDestroy(unwake); // 📱 수업 화면 = 화면 꺼짐 방지 (정식 WAKE_SCREENS screen-student) · 안내 띠 = 학생 앱 입구(App) 한 곳
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
   const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
@@ -242,7 +242,6 @@
     {/if}
   {/if}
 </section>
-{#if wakeTip.text && !cardOnly}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 {#if gtoast && !paperOn()}<div class="gtoast" role="status">{gtoast}</div>{/if}
 <SymSheet />
 {#if cpt && cptId}
@@ -286,5 +285,4 @@
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }
   .cover p { margin: 0; color: var(--text-2); }
-  .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 30; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
 </style>

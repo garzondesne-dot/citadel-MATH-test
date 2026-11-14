@@ -24,6 +24,7 @@
   import TeacherApp from './ui/teacher/TeacherApp.svelte';
   import { pupil, savedLogin, type Live, type Pupil } from './school/school';
   import { liveValue } from './ui/room.svelte';
+  import { holdWake, wakeTip } from './ui/wake.svelte';
 
   const q = new URLSearchParams(location.search);
   const role = q.get('role');
@@ -104,11 +105,15 @@
     try { if (sessionStorage.getItem('dgb-auto') === site) return; sessionStorage.setItem('dgb-auto', site); } catch { return; }
     untrack(reloadNew);
   });
+  // 📱 학생 폰 = 앱이 열려 있는 동안 화면 꺼짐 방지 (📜 2026-11-14 선생님 「학생용 폰도 자동 화면 꺼짐 안 되게」 · DECISIONS 「📱 학생 폰 = 앱이 열려 있는 동안」)
+  //   학생 앱 입구 한 곳: 로그인 뒤(캠프 · 수업 · 📋 게시판 · 🎯 허수아비 · 🏰 성채 · ⚒ 모루 · 내 용사 · 대기실 · 결과 전부) · 다른 앱 갔다 오면 다시 · 앱 닫으면 놓음 · 미지원 띠 한 번(b146)
+  $effect(() => { if (!(stuScreen && (role === 'student' || role === 'camp' || !!login))) return; return holdWake(true); });
 </script>
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
 {#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
@@ -174,4 +179,5 @@
   .modes label { min-height: 40px; display: flex; align-items: center; gap: var(--s2); }
   .modes small { color: var(--text-2); }
   .err { color: var(--bad); }
+  .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
 </style>

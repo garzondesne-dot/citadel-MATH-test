@@ -27,5 +27,23 @@ const NONE = () => { Object.defineProperty(navigator, 'wakeLock', { value: undef
     // 새로 고침 = 이 기기 기억 → 다시 안 뜸 (localStorage 지우지 않음)
     ok('같은 기기 다시 = 띠 안 뜸', !(await t.$('[data-k="wake-tip"]')));
     await ctx.close(); }
+  // 📱 학생 앱 전부 (📜 2026-11-14 「학생용 폰도」): 캠프 · 📋 게시판 · 🏰 성채 시트 = 잡힘 · 가려지면 풀림 · 돌아오면 다시
+  { const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); await ctx.addInitScript(FAKE); const c = await ctx.newPage();
+    await c.goto(B + '?role=camp&room=WK1'); await c.waitForSelector('.stage'); await c.waitForTimeout(500);
+    ok('학생 캠프 = 잡힘', (await c.evaluate(() => window.__wake())).held);
+    await c.click('button[aria-label="📋 게시판"]'); await c.waitForSelector('.bd'); await c.waitForTimeout(300);
+    ok('📋 게시판 = 잡힘', (await c.evaluate(() => window.__wake())).held);
+    await c.close(); const c2 = await ctx.newPage(); await c2.goto(B + '?role=camp&room=WK1'); await c2.waitForSelector('.stage'); await c2.click('button[aria-label="성채"]'); await c2.waitForSelector('.sheet'); await c2.waitForTimeout(300);
+    ok('🏰 성채 시트 = 잡힘', (await c2.evaluate(() => window.__wake())).held);
+    await c2.evaluate(async () => { await window.__wl.live.release(); Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    ok('학생 · 가려지면 풀림', !(await c2.evaluate(() => window.__wake())).held);
+    await c2.evaluate(() => { Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true }); document.dispatchEvent(new Event('visibilitychange')); }); await c2.waitForTimeout(200);
+    ok('학생 · 돌아오면 다시 잡힘', (await c2.evaluate(() => window.__wake())).held);
+    await ctx.close(); }
+  { const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); await ctx.addInitScript(NONE); const c = await ctx.newPage();
+    await c.goto(B + '?role=camp&room=WK2'); await c.waitForSelector('.stage'); await c.waitForTimeout(800);
+    ok('학생 캠프 · 미지원 = 띠 한 번', !!(await c.$('[data-k="wake-tip"]')));
+    await c.reload(); await c.waitForSelector('.stage'); await c.waitForTimeout(800); ok('학생 · 다시 열면 띠 없음', !(await c.$('[data-k="wake-tip"]')));
+    await ctx.close(); }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}` : '✅ 오류 0'); await b.close();
 })();
