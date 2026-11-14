@@ -73,7 +73,7 @@
   function shatter() { fx.chain.broken = true; later(450, onclear); }
   // 💤 수면: 두 번 빠르게 톡(0.35초 안) = 번쩍
   let lastTap = 0, woke = $state(false);
-  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; sfx('wake', 0.8); later(380, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
+  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; sfx('wake', 0.8); later(760, onclear); } lastTap = t; } // 📜 2026-11-14 평가 😐 「한 번 감기려다가 정신 차리고 올라간다」 = 반쯤 뜸 → 다시 스르르 감김 → 번쩍 끝까지 (0.72초)이 보이게
   // 🌑 어둠: 손가락 닿은 곳만 보임 (덮개는 누름을 막지 않음 · 화면 어디를 눌러도 그 자리가 밝아짐)
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }
@@ -163,10 +163,11 @@
   .eye { position: absolute; inset: -2px; background: #05030a; --m: radial-gradient(closest-side, #000 62%, transparent 100%) 50% 50% / 240% 240% no-repeat, linear-gradient(#000, #000);
     -webkit-mask: var(--m); -webkit-mask-composite: xor; mask: var(--m); mask-composite: exclude; animation: eyeShut calc(var(--len, 3000ms) * 0.75) cubic-bezier(0.5, 0, 0.75, 1) forwards; }
   @keyframes eyeShut { 0% { -webkit-mask-size: 240% 240%, auto; mask-size: 240% 240%, auto; } 40% { -webkit-mask-size: 190% 120%, auto; mask-size: 190% 120%, auto; } 75% { -webkit-mask-size: 170% 34%, auto; mask-size: 170% 34%, auto; } 90% { -webkit-mask-size: 160% 9%, auto; mask-size: 160% 9%, auto; } 100% { -webkit-mask-size: 160% 0%, auto; mask-size: 160% 0%, auto; } }
-  .lids.woke .eye { animation: eyeOpen 0.34s cubic-bezier(0.3, 0.6, 0.3, 1) forwards; }
-  @keyframes eyeOpen { 0% { -webkit-mask-size: 160% 6%, auto; mask-size: 160% 6%, auto; } 35% { -webkit-mask-size: 170% 40%, auto; mask-size: 170% 40%, auto; } 100% { -webkit-mask-size: 260% 260%, auto; mask-size: 260% 260%, auto; opacity: 0.6; } }
-  .lids.woke .haze { animation: none; transition: backdrop-filter 0.34s ease-out, -webkit-backdrop-filter 0.34s ease-out; -webkit-backdrop-filter: blur(0) brightness(1); backdrop-filter: blur(0) brightness(1); }
-  .lids.woke::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 30% at 50% 50%, rgba(255, 255, 255, 0.85), transparent 70%); animation: wkf 0.25s ease-out forwards; } /* 번쩍 */
+  .lids.woke .eye { animation: eyeOpen 0.72s linear forwards; }
+  /* 깨기 = 실눈 → 반쯤 뜸(0.18초) → 다시 스르르 감김(꾸벅 · 0.2초) → 정신 차리고 번쩍 끝까지 */
+  @keyframes eyeOpen { 0% { -webkit-mask-size: 160% 6%, auto; mask-size: 160% 6%, auto; animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); } 25% { -webkit-mask-size: 175% 52%, auto; mask-size: 175% 52%, auto; animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.6); } 52% { -webkit-mask-size: 165% 10%, auto; mask-size: 165% 10%, auto; animation-timing-function: cubic-bezier(0.15, 0.8, 0.3, 1); } 62% { -webkit-mask-size: 175% 60%, auto; mask-size: 175% 60%, auto; } 100% { -webkit-mask-size: 260% 260%, auto; mask-size: 260% 260%, auto; opacity: 0.6; } }
+  .lids.woke .haze { animation: none; transition: backdrop-filter 0.3s ease-out 0.4s, -webkit-backdrop-filter 0.3s ease-out 0.4s; -webkit-backdrop-filter: blur(0) brightness(1); backdrop-filter: blur(0) brightness(1); }
+  .lids.woke::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 80% 30% at 50% 50%, rgba(255, 255, 255, 0.85), transparent 70%); opacity: 0; animation: wkf 0.25s ease-out 0.42s forwards; } /* 번쩍 = 정신 차리는 순간 (그 전엔 안 보임) */
   @keyframes wkf { from { opacity: 1; transform: scaleY(0.2); } to { opacity: 0; transform: scaleY(1.6); } }
   .lids.woke .zzz { animation: zgone 0.2s forwards; } @keyframes zgone { to { opacity: 0; transform: translateY(-30px) scale(1.4); } }
   .zzz { position: absolute; right: 18%; top: 34%; animation: zfl 1.4s ease-in-out infinite; color: #cfd6ff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 0 #000; } .zzz small { font-size: 0.7em; margin-left: 2px; }

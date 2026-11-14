@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b141 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b142 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -107,6 +107,7 @@
 | b139 | 📜 🎆 이펙트 다시 만들기 ① 🌙 쌍월 v3 (머리 🔨 · 선생님 2026-11-14 「이펙트 평가 끝」 · fx-eval README 기준 3) = A 방향(용사 쪽 → 몬스터 쪽) + B X 교차 · 큰 흰 번쩍 · 긴 파편 · 더 크게(rad 0.62 · len 1.7 · 두께 0.4 · 잔상 3겹) · `slash.ts TWIN.d` · 기본 = d(저장 키 `citadel-twin2` · 옛 a/b/c 고른 기기도 새 기본) · 폰 띠 `pfx2/twin-d-v1.webp`(`bake.cjs twin d`) · 갤러리 「🌙 쌍월 v3 · 다시 만듦」 · 평가판 「🔁 다시 만듦」 탭(2차 평가 · 카드 id `r2-…`) · 시험 `tests/twin3.test.ts` |
 | b140 | 📜 🎆 이펙트 다시 만들기 ② 베기류 (fx-eval 기준 1 「칼날 · 원반 아님」) · `slash.ts SKILLS` 에 ✂ 베인 자국(`slit` · 칼날이 맞는 점을 지날 때 접선 방향 흰 금 0.16초) = slash · spin · reap · wblade · radiant · ☀ radiant 새로(RECIPES `light` 금빛 · `extra: 'holy'` 세로 긴 빛 십자 · `NEW_SKILLS` 에 더함 → 폰 띠 · TV 모두 새 엔진) · 폰 띠 다시 구움 = `new-{slash,spin,reap,wblade}-v4` · `new-radiant-v3`(그림 캐시 → 이름 바꿈 · `bake.cjs` 는 `V=4` 로 판 번호) · 같은 장면 비교 도구 `tools/fxbake/skillcmp.cjs` · 평가판 「🔁 다시 만듦」 7장(위 5 + hammer · quake = b93 그대로 · 1차에 표 없음) |
 | b141 | 📜 🔊 효과음 2차 「자리만」 → 장면에 붙임 16/18 (머리 🔨 · 선생님 2026-11-14 「붙여 줘」) · 정식 release 25322f5 같은 순간 · ⚡ energy-card(SkillCards 펼침 · 몬스터 × 남은 ⚡ 한 번) · 🔥 retry-start(기술 써서 재도전 판 열림 0.7초 뒤) · 🙋 lock(❤ 0 잠김 0.5초 뒤 · 소레이드 · 몬스터) · ⭐ star-bonus(보스 보너스 맞힘 0.45초 뒤) · ⭕❌ game-ok/no(쉼터 놀이 공개 1.9초 뒤 · 폰만 · TV 없음) · 🔨 enh-ok/great · 🔓 skill-unlock(else · 겹침 없음 · MyHero 저장) · 🧙 hero-pick · 🔥 combo(Student · 반 콤보 10·20·30 첫 도달 · 처음 불러온 단계는 조용히) · ⏱ countdown(🏰 디펜스 3초 시작 · 베타 유일) · 🎯 dummy-hit(캠프 허수아비 = `tap('scare')`) · 🏰 castle-open(+정식 「새 방 n개」 토스트 · 사용자별 localStorage 수) · 📬 mail(새 메일 토스트) · 📋 board(게시판 열려 있을 때 남이 새 모집 글) · ⏳ 장면 없음 = enh-fail(강화 실패 없음) · scroll(✍ 사진 채점 아직) · 시험 `tests/sfx2scene.test.ts` · e2e `tools/e2e/sfx2scene.cjs` |
+| b142 | 📜 🎆 이펙트 다시 만들기 ③ 💤 수면 깨기 (fx-eval 😐 「한 번 감기려다가 정신 차리고 올라간다」) · `AttackFx.svelte` eyeOpen 0.72초 = 실눈 → 반쯤 뜸(25%) → 다시 스르르 감김(52% · 10%) → 번쩍 끝까지 · 흐림은 0.4초 뒤 걷힘 · 번쩍(::after)은 0.42초 = 정신 차리는 순간 · 닫힘 760ms · 번쩍이 처음부터 보이던 것 고침(opacity 0 + forwards) · 상태 이상 나머지(혼란 · 어둠 · 독 · 바람 · 화염 칸) = 새것이 1차 👍 · 속박 = b106 사슬 그림 그대로 |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |
