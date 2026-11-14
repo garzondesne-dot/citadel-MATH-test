@@ -121,6 +121,8 @@ export const cellBg = (src: string, cols: number, col: number) => `background-im
 // 🧊 얼음 공격 그림 (정식 hero-v2 12e8be3 docs/handoff/ice · 2026-11-13 밤) — 칸 5개 · 알파로 잘라 기준선 맞춤 · 가운데 반투명 그대로
 //   btn = 노란 단추: ① 멀쩡 ② 금 하나 ③ 별 금 ④ 크게 금 ⑤ 깨져 흩어짐 (bar = 단추 몸이 있는 줄 · 단추 가운데에 맞춤)
 //   tv = 용사 얼음: ① 발밑 서리 ② 반 ③ 다 얼음 ④ 녹으며 물방울 ⑤ 거의 녹음 (발 기준선 = 칸 아래)
+/** ⛓ 속박 사슬 그림 (📜 2026-11-14 🎨 chain-bind · 6칸: ① 왼쪽 날아옴 ② 오른쪽 날아옴 ③ X 교차 ④ 철컥 번쩍 ⑤ 금 · 불티 ⑥ 조각나 흩어짐) */
+export const CHAIN = { src: `${import.meta.env.BASE_URL}art/chain/chain-bind-v1.webp`, n: 6 };
 export const ICE = {
   btn: { src: `${import.meta.env.BASE_URL}art/ice/ice-btn-v1.webp`, cols: 5, w: 206, h: 342, barTop: 130, barBot: 210 },
   tv: { src: `${import.meta.env.BASE_URL}art/ice/ice-tv-v1.webp`, cols: 5, w: 202, h: 352 },
