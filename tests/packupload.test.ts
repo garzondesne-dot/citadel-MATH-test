@@ -1,7 +1,8 @@
 // 📦 차시 팩 올리기 + 자동 검사기 (L1 · 2026-11-14 머리 🔨): 예시 팩 통과 · 일부러 틀린 팩 5개 = 칸 · 이유 · 풀 판 차시(엔진 꼴)도 같은 길 · 정답 재계산
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
-import { checkMedia, checkUpload, spriteName } from '../src/school/packUpload';
+import { checkMedia, checkUpload, matchCells, spriteName, unpackZip, ZIP_MAX } from '../src/school/packUpload';
+import { zipSync, strToU8 } from 'fflate';
 import { SUBJ } from '../src/engine/subject';
 import { ATTACKS } from '../src/raid/attacks';
 import { items, bossItem } from '../src/engine/lessons';
@@ -76,6 +77,26 @@ describe('📦 차시 팩 올리기 검사기', () => {
       expect(errs(r), f).toEqual([]);
       expect(r.issues.some((x) => x.lvl === 'ask' && x.at === 'id'), f).toBe(true);
     }
+  });
+  it('🗜 zip 하나 = 팩 .json 1개 + 칸 그림 (폴더 · 드라이브 접두어 상관없음) · json 0 · 2개 = 오류 · 20MB', async () => {
+    const pack = fs.readFileSync('tools/pack-upload/official/set-11.json');
+    const png = new Uint8Array(fs.readFileSync(`${DIR}img/c1.png`));
+    const cells = ['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'm3', 'm4', 'boss'];
+    const z = zipSync({ '11차시 묶음/(11차시) set-11.json': new Uint8Array(pack), ...Object.fromEntries(cells.map((c) => [`11차시 묶음/(11차시) 칸그림_${c}.webp`, png])), '__MACOSX/._x.png': png, '11차시 묶음/(11차시) 레이드용_v1.pdf': png });
+    const u = await unpackZip(z);
+    expect(u.error).toBeUndefined(); expect(u.name).toBe('(11차시) set-11.json'); expect(u.images.length).toBe(9);
+    expect(JSON.parse(u.json!).id).toBe('set-11');
+    const m = matchCells(u.images.map((x) => x.name), cells);
+    expect(Object.keys(m.map).sort()).toEqual([...cells].sort()); expect(m.unused).toEqual([]);
+    expect((await unpackZip(zipSync({ 'a.png': png }))).error).toMatch(/\.json 이 없어요/);
+    expect((await unpackZip(zipSync({ 'a.json': strToU8('{}'), 'b/c.json': strToU8('{}') }))).error).toMatch(/\.json 이 2개 \(a\.json · c\.json\)/);
+    expect((await unpackZip(new Uint8Array(ZIP_MAX + 1))).error).toMatch(/20MB 까지만/);
+    expect((await unpackZip(strToU8('zip 아님'))).error).toMatch(/풀 수 없어요/);
+  });
+  it('🖼 그림 이름 맞춤 = 이름 = 칸 · 끝이 「구분자 + 칸」 · 정확히 같은 이름 우선 · 나머지 쓰이지 않는 그림', () => {
+    const m = matchCells(['c1.webp', '(11차시) 칸그림_c1.webp', 'x_sum.png', 'review.jpg', 'tc1.png', 'boss-m1.webp'], ['c1', 'sum', 'review', 'm1']);
+    expect(m.map).toEqual({ c1: 'c1.webp', sum: 'x_sum.png', review: 'review.jpg', m1: 'boss-m1.webp' });
+    expect(m.unused).toEqual(['(11차시) 칸그림_c1.webp', 'tc1.png']);
   });
   it('입력판 그림 이름 → 배치표 이름', () => {
     expect(spriteName(2)).toBe('base2:0'); expect(spriteName('extra:4')).toBe('extra4:0'); expect(spriteName('2@h250')).toBe('base2:0@h250'); expect(spriteName('d01:2@e')).toBe('d01:2@e'); expect(spriteName('')).toBe('');

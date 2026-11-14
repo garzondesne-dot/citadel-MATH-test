@@ -2,7 +2,7 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkMedia, checkUpload, deletable, PACK_PATH, revive, type Checked, type Issue } from '../../school/packUpload';
+  import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, revive, unpackZip, type Checked, type Issue } from '../../school/packUpload';
   import PrepImg from '../q/PrepImg.svelte';
   import { prepPath, prepPut } from '../../school/prep';
   import { items, bossItem } from '../../engine/lessons';
@@ -63,14 +63,24 @@
   }
   async function matchImgs() {
     const cells = new Set(P0?.imgCells ?? []), got: Record<string, string> = {}, no: string[] = [];
-    for (const f of picked) { const c = f.name.replace(/\.(png|webp|jpe?g)$/i, ''); if (cells.has(c)) got[c] = await shrink(f); else no.push(f.name); }
+    const m = matchCells(picked.map((f) => f.name), [...cells]); // 이름 = 칸 · 끝이 「_칸」 (드라이브 접두어) · 정확히 같은 이름 우선
+    for (const [c, n] of Object.entries(m.map)) { const f = picked.find((x) => x.name === n); if (f) got[c] = await shrink(f); }
+    no.push(...m.unused);
     imgs = got; unused = no;
     const Pk = P; if (Pk) for (const [c, u] of Object.entries(got)) prepPut(Pk, c, u);
     await recheckMedia();
   }
   async function onimgs(e: Event) { picked = [...((e.target as HTMLInputElement).files ?? [])]; await matchImgs(); }
   $effect(() => { if (res && !pick && stepsQ[0]) pick = (stepsQ.find((x) => x.kind === 'monster') ?? stepsQ[0]).id; });
-  async function onfile(e: Event) { const f = (e.target as HTMLInputElement).files?.[0]; if (f) run(await f.text(), f.name); }
+  async function onfile(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
+    if (!/\.zip$/i.test(f.name)) { run(await f.text(), f.name); return; }
+    // 🗜 zip = 팩 .json 1개 + 칸 그림들 (폴더 · 이름 접두어 상관없음 · 20MB 까지)
+    const z = await unpackZip(new Uint8Array(await f.arrayBuffer()));
+    if (z.error || !z.json) { res = { pack: null, issues: [{ at: `zip ${f.name}`, msg: z.error ?? '팩이 없어요', lvl: 'err' }], stats: { mons: 0, items: 0, versions: 0, rechecked: 0, ask: 0 } }; name = f.name; return; }
+    picked = z.images.map((x) => new File([x.data as Uint8Array<ArrayBuffer>], x.name, { type: /\.webp$/i.test(x.name) ? 'image/webp' : /\.png$/i.test(x.name) ? 'image/png' : 'image/jpeg' }));
+    run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장`);
+  }
     // 🗑 올린 팩 지우기 (📜 2026-11-14 선생님 「기존 11차시 지우면 되지? → 삭제 없어」): 베타에서 올린 팩만 · 확인 한 번 · 팩 + 그 팩 칸 그림
   const mine = $derived([...UPLOADED].map((id) => PACKS.find((p) => p.id === id)).filter((p): p is LessonPack => !!p).sort((a, b) => a.no - b.no));
   let ask = $state(''), gone = $state('');
@@ -105,7 +115,7 @@
         {#if deletable(m.id, (x) => builtIn.has(x))}{#if ask === m.id}<span class="cf" role="alertdialog"><em>이 팩을 지울까요? 되돌릴 수 없어요</em><button type="button" class="yes" data-k="packdel-yes" onclick={() => del(m.id)}>예</button><button type="button" class="no" onclick={() => (ask = '')}>아니요</button></span>{:else}<button type="button" class="del" data-k="packdel" onclick={() => (ask = m.id)}>🗑 삭제</button>{/if}{/if}
       </div>{/each}</div>{/if}
     {#if gone}<p class="ok" role="status">{gone}</p>{/if}
-    <label class="file"><input type="file" accept=".json,application/json" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 .json (입력판 양식)'}</small></label>
+    <label class="file"><input type="file" accept=".json,.zip,application/json,application/zip" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 .json · 또는 .zip (팩 + 칸 그림 · 20MB 까지)'}</small></label>
     <label class="file img"><input type="file" accept="image/png,image/webp,image/jpeg" multiple onchange={onimgs} data-k="packimgs" /><span>🖼 칸 그림 같이 고르기 (여러 장)</span><small>파일 이름 = 칸 이름 (예: c1.png · review.webp)</small></label>
         <button type="button" class="b2" onclick={() => (paste = !paste)}>{paste ? '붙여 넣기 닫기' : '글로 붙여 넣기'}</button>
     {#if paste}<textarea rows="5" bind:value={text} placeholder={'{ "id": "lesson-11", "no": 11, … }'} data-k="packtext"></textarea><button type="button" class="b2" onclick={() => run(text, '붙여 넣은 글')}>검사하기</button>{/if}

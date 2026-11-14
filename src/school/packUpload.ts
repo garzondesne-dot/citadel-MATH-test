@@ -257,3 +257,30 @@ export async function checkMedia(P: LessonPack, img: (path: string) => Promise<b
 
 /** 🗑 지울 수 있는 팩 = 베타에서 올린 팩만 · 정식 차시 id(set-NN) · 앱에 든 차시는 지우지 않음 (서버 규칙도 같은 줄을 막음) */
 export const deletable = (id: string, builtIn: (id: string) => boolean) => !/^set-[0-9]+$/.test(id) && !builtIn(id);
+
+// 🗜 zip 하나로 올리기 (📜 2026-11-14 선생님 「zip 파일로 한 번에 올리고 싶은데」 · DECISIONS 「🗜 차시 팩 = zip 하나로 올리기」)
+export const ZIP_MAX = 20 * 1024 * 1024;
+const IMG_RE = /\.(png|webp|jpe?g)$/i;
+/** 그림 파일 이름 → 칸: 이름(확장자 뺌) = 칸 이거나 끝이 「구분자 + 칸」(드라이브 접두어 「(11차시) 칸그림_c1」) · 겹치면 정확히 같은 이름 우선 · 나머지 = 쓰이지 않는 그림 */
+export function matchCells(names: string[], cells: string[]): { map: Record<string, string>; unused: string[] } {
+  const base = (n: string) => n.replace(/^.*\//, '').replace(IMG_RE, '');
+  const hit = (n: string, c: string) => { const b = base(n); if (b === c) return 2; return b.length > c.length && b.endsWith(c) && /[^0-9A-Za-z]/.test(b[b.length - c.length - 1]!) ? 1 : 0; };
+  const map: Record<string, string> = {};
+  for (const c of [...cells].sort((a, b) => b.length - a.length)) { // 긴 칸 이름 먼저 (sum ↔ m 같은 겹침 없게)
+    const cand = names.filter((n) => !Object.values(map).includes(n)).map((n) => [n, hit(n, c)] as const).filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]);
+    if (cand[0]) map[c] = cand[0][0];
+  }
+  return { map, unused: names.filter((n) => !Object.values(map).includes(n)) };
+}
+/** zip 풀기 = .json 1개(팩) + 그림들 · 폴더 상관없음 · 숨김 · __MACOSX 빼고 */
+export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; error?: string }> {
+  if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
+  const { unzipSync, strFromU8 } = await import('fflate');
+  let files: Record<string, Uint8Array>;
+  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
+  const ok = (p: string) => !/(^|\/)(__MACOSX|\.)/.test(p) && !p.endsWith('/');
+  const js = Object.keys(files).filter((p) => ok(p) && /\.json$/i.test(p));
+  const images = Object.keys(files).filter((p) => ok(p) && IMG_RE.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! }));
+  if (js.length !== 1) return { json: null, name: '', images, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
+  return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images };
+}
