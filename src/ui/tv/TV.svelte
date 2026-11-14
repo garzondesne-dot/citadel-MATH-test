@@ -1,5 +1,6 @@
 <script lang="ts">
   import { SUBJ } from '../../engine/subject';
+  import { PACKS } from '../../engine/packs';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
@@ -171,7 +172,11 @@
   const PNAME: Record<string, string> = { anvil: '⚒ 모루', scare: '🎯 허수아비', dummy: '📋 게시판', mail: '📮 우편함' };
   const tvProps = $derived(CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)));
   const zoneLab = (k: string) => { const z = CAMP.zones[k]!; return { x: ((z[0] + z[2]) / 2 / CAMP.size[0]) * 100, y: ((k === 'tent' ? z[1] + 40 : z[3]) / CAMP.size[1]) * 100 }; }; // 출제 공방 = 텐트 위 (학생 캠프와 같게)
-  const ZONES = $derived([['castle', '🏰 성채던전', feat('citadel')], ['tent', '✏ 출제 공방', feat('author')], ['gate', R && !R.state.closed ? `🌀 ${L.no}차시 던전 · 열림` : `🌀 ${L.no}차시 던전`, true]].filter((z) => z[2]) as [string, string, boolean][]);
+  // 📺 시안 (2026-11-14): 물건 이름표 아래 부제 = 실제 상태 (성채 열린 층 · 이번 차시 · 허수아비 복습 범위 · 모루 카드 수)
+  const floorsOpen = (SUBJ.camp?.floors ?? []).filter((f) => !f.off).length;
+  const revNos = $derived(PACKS.filter((p) => (p.steps.some((x) => x.kind === 'monster') || p.boss) && p.no < L.no).map((p) => p.no));
+  const SUBS = $derived<Record<string, string>>({ castle: floorsOpen ? `${floorsOpen}층 열림 · 단원 평가` : '단원 평가', gate: `${L.no}차시 던전${R && !R.state.closed ? ' · 열림' : ''}`, scare: revNos.length ? `복습 ${Math.min(...revNos)}~${Math.max(...revNos)}차시` : '복습', anvil: `연성 ${SUBJ.forge?.unit.CARDS.length ?? 0}장` });
+  const ZONES = $derived([['castle', '🏰 성채던전', feat('citadel')], ['tent', '✏ 출제 공방', feat('author')], ['gate', '🌀 차원문', true]].filter((z) => z[2]) as [string, string, boolean][]);
   const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
   // 🧙 캠프 그림 속 선생님 용사 = 그림 폭에 맞춰 (그림 폭 512 = 2배 · 창이 작거나 폰으로 보면 같이 작아짐 · 🐛 2026-11-13 밤 선생님 캡처 「용사가 캠프 그림을 덮음」)
   let campW = $state(0);
@@ -235,8 +240,8 @@
       <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
       <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} pose="sit" aura={M.me.enh} scale={heroK} /></span>
       <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
-      {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b></span></span>{/each}
-      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b></span>{/each}
+      {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b>{#if SUBS[p.k]}<small>{SUBS[p.k]}</small>{/if}</span></span>{/each}
+      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b>{#if SUBS[k]}<small>{SUBS[k]}</small>{/if}</span>{/each}
       <button type="button" class="ob me2" style:left="{CAMP.hero.left + 4}%" style:top="{100 - CAMP.hero.bottom - 2}%" onclick={() => { fit(); hero = true; }}><b>🧙 내 용사</b><small>용사 바꾸기</small></button>
     </div>
     <div class="campqr">
@@ -409,7 +414,7 @@
   .tprop, .tfire { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
   .ob.blw { left: 50%; top: 100%; transform: translate(-50%, 2px); } .ob.zl { transform: translate(-50%, -110%); }
   .ob { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 0.5cqh 0.9cqw; border-radius: 1.4cqh; background: rgba(10, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.22); white-space: nowrap; box-shadow: 0 3px 0 #000; }
-  .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { display: none; } /* TV 이름표 = 절반 · 한 줄 · 아이콘 + 이름만 */
+  .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { font-size: calc(var(--tv-body) * 0.42); font-weight: 700; color: #ebb84f; white-space: nowrap; } /* TV 이름표 = 이름 + 부제 한 줄 (📺 시안 2026-11-14) */
   .ob { padding: 0.25cqh 0.5cqw !important; border-radius: 0.8cqh !important; box-shadow: 0 2px 0 #000 !important; }
   .campqr { position: relative; flex: none; width: 26cqw; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 1.4cqh; padding: 2cqh 1.4cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.8); border: 1px solid rgba(255, 255, 255, 0.18); text-align: center; }
   .campqr :global(svg) { width: 34cqh; height: 34cqh; border-radius: 1.2cqh; }
