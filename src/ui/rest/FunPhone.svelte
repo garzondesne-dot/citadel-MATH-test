@@ -72,6 +72,8 @@
 
   // ── 🙊 눈치 ──
   const nn = $derived(f && f.kind === 'nun' ? (f as unknown as Nun) : null);
+  const myCheer = $derived(nn ? ((R as unknown as { nunE?: Record<string, Record<string, { e: string }>> }).nunE?.[nn.g]?.[uid]?.e ?? '') : '');
+  const cheerOn = $derived(!!nn && cover !== 'zz' && (cover === 'out' || cover === 'see' || nn.phase === 'end' || !!nn.out?.[uid]));
   const myPress = $derived(nn ? (R as unknown as { nun?: Record<string, Record<string, Record<string, number>>> }).nun?.[nn.g]?.[nn.round]?.[uid] : undefined);
   const nunMine = $derived(!nn ? '' : nn.said?.[uid] ? `🗣 ${nn.said[uid]}!` : nn.out?.[uid] === 'clash' ? '💥 동시! 탈락' : nn.out?.[uid] === 'last' ? '⌛ 마지막! 탈락' : nn.out?.[uid] ? '⏳ 시간 끝 · 탈락' : myPress ? '…' : '');
 
@@ -150,8 +152,13 @@
       <div class="ic">{cover === 'zz' ? '💤' : cover === 'out' ? '👀' : '👀'}</div>
       <b class="h">{cover === 'zz' ? '관전 중' : cover === 'out' ? '탈락 · 끝까지 구경해요' : '관객석'}</b>
       <p class="sub">{cover === 'zz' ? '지난 판에 고르지 않았어요' : cover === 'out' ? '다음 놀이에서 다시 만나요' : '이번 놀이가 끝나면 함께해요'}</p>
+      {#if cheerOn}{@render cheerRow()}{/if}
     </div>
+  {:else if cheerOn}
+    <div class="cheer-dock">{@render cheerRow()}</div>
   {/if}
+  <!-- 🙊 응원 (정식 nunchi.js phone · 탈락 · 관객석 · 끝난 뒤 = 👏 🔥 😱 · TV 위로 떠오름 · 💤 관전은 🙋 만(응원이 🙋 를 덮지 않게)) -->
+  {#snippet cheerRow()}<div class="cheer" role="group" aria-label="응원">{#each ['👏', '🔥', '😱'] as e (e)}<button type="button" class:on={myCheer === e} aria-label="응원 {e}" onclick={() => { if (nn) { nunCheer(S, code, nn.g, uid, e); try { navigator.vibrate?.(20); } catch { /* 무시 */ } } }}>{e}</button>{/each}</div>{/snippet}
 </div>
 
 <style>
@@ -188,4 +195,9 @@
   .why { margin: 0; text-align: center; font-size: 13px; color: var(--text-3); }
   .cover { position: absolute; inset: 0; z-index: 3; background: rgba(8, 9, 12, 0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover .sub { margin: 0; color: var(--text-2); font-size: 14px; }
+  .cheer { display: flex; gap: var(--s2); justify-content: center; margin-top: var(--s3); }
+  .cheer button { min-width: 64px; min-height: var(--tap); border-radius: var(--r); border: 1px solid rgba(255, 255, 255, 0.14); background: var(--surface-2); font-size: 26px; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+  .cheer button:active { transform: translateY(2px); box-shadow: none; }
+  .cheer button.on { border-color: var(--accent); }
+  .cheer-dock { flex: none; padding: 0 var(--s4) var(--s2); }
 </style>

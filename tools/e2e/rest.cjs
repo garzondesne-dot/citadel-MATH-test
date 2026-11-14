@@ -73,6 +73,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await ph[0].click('.fun .act .btn'); await wait(1200); await ph[1].click('.fun .act .btn'); await wait(1500);
   f = await fun(); log('🙊 눈치:', f.phase, '· 말함', JSON.stringify(f.said), '· 탈락', JSON.stringify(f.out));
   await tv.screenshot({ path: `${SHOTS}/b26-tv-nun.png` });
+  // 👏 응원 (정식 nunchi.js · 탈락 · 관객 · 끝 = 👏 🔥 😱 → nunE → TV 이모지)
+  const cheerPh = []; for (const p of ph) if (await p.$('.fun .cheer button')) cheerPh.push(p);
+  if (cheerPh.length) { await cheerPh[0].click('.fun .cheer button:has-text("🔥")'); await wait(1200); }
+  const ne = await rest(`rooms/${code}/nunE`), neN = Object.values(ne || {}).reduce((a, g) => a + Object.values(g || {}).filter((x) => x.e === '🔥').length, 0), tvEmo = await tv.$$eval('.nn-emo, [class*="emo"]', (xs) => xs.map((x) => x.textContent).join('')).catch(() => '');
+  log('👏 응원: 단추 보인 폰', cheerPh.length, '· 서버 🔥', neN, '· TV', tvEmo.includes('🔥')); if (!cheerPh.length || !neN || !tvEmo.includes('🔥')) errs.push('🙊 응원');
+  if (cheerPh.length) await cheerPh[0].screenshot({ path: `${SHOTS}/b26-phone-nun-cheer.png` });
   await wait(5000); f = await fun(); log('   끝:', f.phase, '· 우승', (f.win || []).join(','));
   await wait(1500);
   const gifts = await rest('gifts'); const got = Object.entries(gifts || {}).map(([u, g]) => `${u}:${Object.values(g).map((x) => `💎${x.g}${x.x ? `+${x.x}EXP` : ''}(${x.fun})`).join(',')}`);
