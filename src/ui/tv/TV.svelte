@@ -79,7 +79,7 @@
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
 
   // ── 어떤 장면인가 ──
-  let campPeek = $state(false);
+  let campPeek = $state(false), setOpen = $state(false);
   const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' ? 'concept' : 'battle');
   let demo = $state(false);
   let ink = $state(false);
@@ -215,6 +215,8 @@
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>
     {#if view !== 'camp'}<span class="code">🚪 코드<b>{code}</b></span>{/if}
+    <!-- ⚙ 설정 (📜 2026-11-14 선생님 「맨 위에 내 캠프 자리를 설정으로 · 내 캠프 · 테마 · 처음으로 · 전체 화면 · 소리」) — 아래 막대엔 도구 · 진행 · 📌 고정만 -->
+    <button type="button" class="gear" data-k="tvset" aria-label="설정" aria-expanded={setOpen} onclick={(e) => { e.stopPropagation(); setOpen = !setOpen; }}>⚙</button>
     <!-- ⛺ 둥근 캠프 단추 없앰 (선생님 「저 버튼은 없어도 돼」 · 캠프 보기 = 조작 막대 🏕) -->
     {#if tline}
       <div class="tline" class:red={!!door} style:--p="{tline.p * 100}%">
@@ -327,8 +329,6 @@
 
   <!-- 조작 막대 (#119 덧붙임 2): 🔊 · ⛶ | 🏕 · 🎬 · 📄 · 🎮 · ✏ | 🔴 집중 · « 뒤로 · 앞으로 ▶ · 📌 — 캠프 · 메뉴 · 수업 끝 단추 없음 (수업 닫기 = 교사 폰) -->
   <nav class="dock" class:on={dockOn} class:small={view === 'camp'} aria-label="조작 막대">
-    <button type="button" class="t" class:off={!sound} aria-pressed={!sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<small>{sound ? '소리' : '꺼짐'}</small></button>
-    <button type="button" class="t" onclick={full}>⛶<small>전체</small></button>
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
       <span class="sep"></span>
@@ -348,10 +348,20 @@
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
-    <button type="button" class="t" data-k="tvtheme" class:on={themeOpen} onclick={() => (themeOpen = !themeOpen)}>🎨<small>테마</small></button>
+    <span class="sep"></span>
     <button type="button" class="t" class:on={pin} aria-pressed={pin} onclick={() => (pin = !pin)}>📌<small>고정</small></button>
-    <button type="button" class="t" data-k="out" aria-label="처음 화면으로" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<small>처음</small></button>
   </nav>
+  {#if setOpen}
+    <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
+      <div class="setbox" role="menu" aria-label="TV 설정" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') setOpen = false; }}>
+        {#if R && !R.state.closed}<button type="button" role="menuitem" class:on={campPeek} onclick={() => { campPeek = !campPeek; setOpen = false; }}>⛺<span>{campPeek ? '수업으로 돌아가기' : '내 캠프'}</span></button>{/if}
+        <button type="button" role="menuitem" data-k="tvtheme" onclick={() => { themeOpen = true; setOpen = false; }}>🎨<span>테마</span></button>
+        <button type="button" role="menuitem" onclick={() => { full(); setOpen = false; }}>⛶<span>전체 화면</span></button>
+        <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
+        <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
+      </div>
+    </div>
+  {/if}
   {#if themeOpen}<div class="thov" role="dialog" aria-label="TV 테마"><div class="thbox"><div class="thh"><b>🎨 교실 TV 테마</b><small>이 TV 에만 · 교사 폰과 따로</small><button type="button" aria-label="닫기" onclick={() => (themeOpen = false)}>✕</button></div><ThemePicker now={tvTheme} feats={null} onpick={pickTv} /></div></div>{/if}
 
   {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} /></div></div>{/if}
@@ -383,6 +393,11 @@
   .tflow.dim .fs i { background: color-mix(in srgb, var(--c) 40%, var(--surface-2)) !important; height: 0.7cqw !important; box-shadow: none !important; }
   .tflow.dim .fs em { color: var(--text-2) !important; font-weight: 500 !important; font-size: var(--tv-small) !important; }
   .code { flex: none; font-size: var(--tv-body); font-weight: 700; white-space: nowrap; }
+  .gear { flex: none; width: 5.2cqh; height: 5.2cqh; margin-left: 1cqw; border-radius: 1.2cqh; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; font-size: var(--tv-title); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+  .setov { position: absolute; inset: 0; z-index: 40; }
+  .setbox { position: absolute; right: 1.5cqw; top: 9cqh; min-width: 22cqw; display: flex; flex-direction: column; gap: 0.6cqh; padding: 1.2cqh; border-radius: 1.6cqh; background: rgba(14, 16, 22, 0.96); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, 0.5); }
+  .setbox button { display: flex; align-items: center; gap: 1cqw; padding: 1.1cqh 1.2cqw; border: 0; border-radius: 1.1cqh; background: rgba(255, 255, 255, 0.06); color: #fff; font: 700 var(--tv-body) var(--font); text-align: left; cursor: pointer; }
+  .setbox button.on { background: color-mix(in srgb, var(--accent) 30%, transparent); }
   .code b { margin-left: 0.5cqw; color: var(--text); font-size: var(--tv-title); letter-spacing: 0.1cqw; }
   .ib { flex: none; width: 3.6cqw; height: 3.6cqw; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: var(--tv-title); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .ib.on { border: 2px solid var(--accent); }
@@ -493,7 +508,6 @@
   .dock .t { width: 7cqh; height: 7.6cqh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2cqh; padding: 0; }
   .dock .t small { font-size: var(--tv-small); color: #d6d9e0; }
   .dock .t.on { border: 2px solid var(--accent); }
-  .dock .t.off { border: 2px solid var(--bad); }
   .dock .n { height: 7.6cqh; padding: 0 1.2cqw; font-size: var(--tv-body); display: flex; flex-direction: column; align-items: center; justify-content: center; white-space: nowrap; }
   .dock .n small { font-size: var(--tv-small); color: inherit; opacity: 0.8; }
   .dock .n.go { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh); }

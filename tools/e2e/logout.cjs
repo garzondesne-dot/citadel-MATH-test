@@ -21,6 +21,6 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await Promise.all([p.waitForNavigation(), p.click('button[data-k="out-go"]')]); await p.waitForTimeout(500);
   const t2 = !!(await p.$('text=교사 · 종합실')); log('② 교사 「나」 → 🚪 → 첫 화면:', t2); if (!t2) errs.push('교사 → 첫 화면 아님');
   // ③ TV 🚪 단추 있음
-  await p.goto(B + '?role=hall&mode=test&room=LO2'); await p.waitForSelector('.dock'); const tv = !!(await p.$('.dock button[data-k="out"]')); log('③ TV 🚪:', tv); if (!tv) errs.push('TV 🚪 없음');
+  await p.goto(B + '?role=hall&mode=test&room=LO2'); await p.waitForSelector('.dock'); await p.click('.gear[data-k="tvset"]'); await p.waitForTimeout(200); const tv = !!(await p.$('.setbox button[data-k="out"]')); log('③ TV 🚪 (⚙ 설정 안):', tv); if (!tv) errs.push('TV 🚪 없음');
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
