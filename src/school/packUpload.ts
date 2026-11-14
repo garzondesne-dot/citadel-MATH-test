@@ -16,7 +16,7 @@ export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => 
 type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string };
 type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
-type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
+type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; find?: Record<string, string>; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
 
 const TYPES = ['choice', 'ox', 'number', 'multi', 'blanks', 'text'];
 const MAXV = 7; // 버전 0 ~ 6
@@ -200,7 +200,7 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     at.forEach((a) => { if (!stepIds.has(a)) out.push({ at: `영상(video) 「${f}」 · 칸 「${a}」`, msg: '단계 목록에 없는 칸이에요', lvl: 'ask' }); else videos[a] = videoUrl(f); });
     vfiles.push(f);
   });
-  return { v: 1, id: String(b.id), no: Number(b.no) || 0, title: String(b.title), unit: String(b.unit ?? ''), theme: b.theme, defaultPct: Number(b.pct) > 0 ? Number(b.pct) : 90, ...(b.goal ? { goal: b.goal } : {}), ...(b.std ? { std: b.std } : {}), ...(b.sheet ? { sheet: b.sheet } : {}), ...(b.next ? { next: b.next } : {}), source: { file: 'upload', commit: '', board: new Date().toISOString() }, steps, monsters, ...(img.length ? { imgCells: img } : {}), ...(b.imgOf ? { imgOf: String(b.imgOf) } : {}), ...(Object.keys(videos).length ? { videos } : {}), ...(boss ? { boss } : {}) };
+  return { v: 1, id: String(b.id), no: Number(b.no) || 0, title: String(b.title), unit: String(b.unit ?? ''), theme: b.theme, defaultPct: Number(b.pct) > 0 ? Number(b.pct) : 90, ...(b.goal ? { goal: b.goal } : {}), ...(b.std ? { std: b.std } : {}), ...(b.sheet ? { sheet: b.sheet } : {}), ...(b.next ? { next: b.next } : {}), source: { file: 'upload', commit: '', board: new Date().toISOString() }, steps, monsters, ...(img.length ? { imgCells: img } : {}), ...(b.imgOf ? { imgOf: String(b.imgOf) } : {}), ...(b.find && typeof b.find === 'object' ? { find: Object.fromEntries(Object.entries(b.find).map(([k, v]) => [k, String(v)])) } : {}), ...(Object.keys(videos).length ? { videos } : {}), ...(boss ? { boss } : {}) };
 }
 
 /** 엔진 꼴(풀 판 차시 · v: 1) — 첫 판(버전 0) 문항만 다시 계산 · 생성기 이름은 엔진 검사가 확인 */
@@ -273,14 +273,15 @@ export function matchCells(names: string[], cells: string[]): { map: Record<stri
   return { map, unused: names.filter((n) => !Object.values(map).includes(n)) };
 }
 /** zip 풀기 = .json 1개(팩) + 그림들 · 폴더 상관없음 · 숨김 · __MACOSX 빼고 */
-export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; error?: string }> {
-  if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
+export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; pdfs: { name: string; data: Uint8Array }[]; error?: string }> {
+  if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], pdfs: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
   const { unzipSync, strFromU8 } = await import('fflate');
   let files: Record<string, Uint8Array>;
-  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
+  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], pdfs: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
   const ok = (p: string) => !/(^|\/)(__MACOSX|\.)/.test(p) && !p.endsWith('/');
   const js = Object.keys(files).filter((p) => ok(p) && /\.json$/i.test(p));
   const images = Object.keys(files).filter((p) => ok(p) && IMG_RE.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! }));
-  if (js.length !== 1) return { json: null, name: '', images, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
-  return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images };
+  const pdfs = Object.keys(files).filter((p) => ok(p) && /\.pdf$/i.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! })); // ✂ 학습지 PDF (칸 그림 자동 자르기)
+  if (js.length !== 1) return { json: null, name: '', images, pdfs, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
+  return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images, pdfs };
 }

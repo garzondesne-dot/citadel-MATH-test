@@ -5,6 +5,8 @@
   import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, revive, unpackZip, type Checked, type Issue } from '../../school/packUpload';
   import PrepImg from '../q/PrepImg.svelte';
   import { prepPath, prepPut } from '../../school/prep';
+  import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
+  import type { PdfDoc } from './pdfPages';
   import { items, bossItem } from '../../engine/lessons';
   import { PACKS, UPLOADED, addPacks, removePack } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
@@ -24,11 +26,12 @@
   let text = $state(''), name = $state(''), res = $state<Checked | null>(null), paste = $state(false), saved = $state('');
   let pick = $state(''), ver = $state(0);
   // 🖼 함께 고른 그림 (📜 2026-11-14 선생님 「그림도 팩 올릴 때 같이 올리게 해줘」): 파일 이름 = 칸 이름이면 그 칸 · 저장 = prep/{팩 id}/img/{칸}(같은 이름 = 덮어씀)
+  let pdfIss = $state<Issue[]>([]);
   let imgs = $state<Record<string, string>>({}), unused = $state<string[]>([]), media = $state<Issue[]>([]), vidOk = $state<Record<string, boolean>>({});
   const P0 = $derived(res?.pack ?? null);
   /** 그림을 같이 올리면 = 팩 자기 칸 그림을 씀(imgOf 빌리기 끔) */
   const P = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return rest as LessonPack; });
-  const issues = $derived(res ? [...res.issues, ...media] : []);
+  const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
   // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
   const hasMedia = (s: { id: string; img?: string }) => !!P && (!!P.videos?.[s.id] || (P.imgCells ?? []).includes(s.img ?? s.id));
@@ -44,7 +47,7 @@
   // 그림 · 영상 있는지 = 서버 그림 칸 · 앱 영상 파일 (없으면 ⚠ 한 줄 · 저장은 막지 않음)
   const hasImg = async (path: string) => { try { const x = S.fetch ? await S.fetch<string>(path) : S.get<string>(path); return typeof x === 'string' && x.startsWith('data:image'); } catch { return false; } };
   const hasFile = async (url: string) => { try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
-  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; matchImgs(); }
+  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; return matchImgs(); }
   // 그림 · 영상 확인 다시 (팩 · 그림이 바뀔 때마다) — 붙인 그림 = 있음 · 영상 = 있는 파일만 연결
   let mseq = 0;
   async function recheckMedia() {
@@ -61,15 +64,48 @@
     const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d')!.drawImage(bmp, 0, 0, w, h);
     const out = c.toDataURL('image/webp', 0.85); return out.startsWith('data:image/webp') ? out : c.toDataURL('image/jpeg', 0.85);
   }
-  async function matchImgs() {
-    const cells = new Set(P0?.imgCells ?? []), got: Record<string, string> = {}, no: string[] = [];
-    const m = matchCells(picked.map((f) => f.name), [...cells]); // 이름 = 칸 · 끝이 「_칸」 (드라이브 접두어) · 정확히 같은 이름 우선
-    for (const [c, n] of Object.entries(m.map)) { const f = picked.find((x) => x.name === n); if (f) got[c] = await shrink(f); }
-    no.push(...m.unused);
-    imgs = got; unused = no;
-    const Pk = P; if (Pk) for (const [c, u] of Object.entries(got)) prepPut(Pk, c, u);
+  // 칸 그림 = ✂ PDF 에서 자른 것 < 🖼 zip · 고른 그림 파일 < 🖼 그 칸만 직접 고른 그림 (뒤가 이김)
+  let fromFile = $state<Record<string, string>>({}), fromPdf = $state<Record<string, string>>({}), own = $state<Record<string, string>>({});
+  let rects = $state<Record<string, Rect[] | null>>({}), pdfDoc: PdfDoc | null = null, pdfNote = $state('');
+  const srcOf = (c: string) => (own[c] ? 'own' : fromFile[c] ? 'file' : fromPdf[c] ? 'pdf' : '');
+  async function combine() {
+    imgs = { ...fromPdf, ...fromFile, ...own };
+    const Pk = P; if (Pk) for (const [c, u] of Object.entries(imgs)) prepPut(Pk, c, u);
+    const miss = Object.entries(rects).filter(([c, r]) => !r && !fromFile[c] && !own[c]).map(([c]) => c);
+    pdfIss = miss.length ? [{ at: `✂ PDF 칸 ${miss.join(' · ')}`, msg: '자르지 못함 — 학습지에서 그 칸 이름 글자를 못 찾았어요 · 「그림 직접 고르기」 또는 팩 find 칸', lvl: 'ask' }] : [];
     await recheckMedia();
   }
+  async function matchImgs() {
+    const cells = new Set(P0?.imgCells ?? []), got: Record<string, string> = {};
+    const m = matchCells(picked.map((f) => f.name), [...cells]); // 이름 = 칸 · 끝이 「_칸」 (드라이브 접두어) · 정확히 같은 이름 우선
+    for (const [c, n] of Object.entries(m.map)) { const f = picked.find((x) => x.name === n); if (f) got[c] = await shrink(f); }
+    fromFile = got; unused = m.unused;
+    await combine();
+  }
+  // ✂ 학습지 PDF → 칸마다 자동 자르기 (정식 수업 준비와 같은 글자 찾기 · 칸 = 팩 imgCells)
+  async function cropPdf(bytes: Uint8Array, pdfName: string) {
+    const Pk = P0; if (!Pk) return;
+    pdfNote = `✂ ${pdfName} 읽는 중…`;
+    try {
+      const { readPdf, cutRects, inkOf } = await import('./pdfPages');
+      pdfDoc = await readPdf(bytes);
+      const cells = new Set(Pk.imgCells ?? []), slots = slotsOf(Pk.steps, Pk.boss?.title ?? '', Pk.find ?? {}).filter((x, i, a) => cells.has(x.id) && a.findIndex((y) => y.id === x.id) === i);
+      if (!pdfDoc.lines.length) { pdfNote = '✂ PDF 에 글자가 없어요(스캔 · 사진 PDF) — 칸마다 그림을 직접 골라 주세요'; rects = Object.fromEntries(slots.map((x) => [x.id, null])); await combine(); return; }
+      const r = autoRects(pdfDoc.lines, slots, inkOf(pdfDoc.pages)), got: Record<string, string> = {};
+      for (const [c, rs] of Object.entries(r)) if (rs) got[c] = cutRects(pdfDoc.pages, rs);
+      rects = r; fromPdf = got; (globalThis as { __pdfRects?: unknown }).__pdfRects = r; // 시험: 자른 틀
+      const n = Object.values(r).filter(Boolean).length;
+      pdfNote = `✂ ${pdfName} 에서 ${n} / ${slots.length}칸을 글자로 찾아 잘랐어요 — 칸마다 눈으로 보고, 틀리면 위 · 아래를 늘리고 줄이거나 그림을 직접 골라요`;
+    } catch (e) { pdfNote = `✂ PDF 를 읽지 못했어요 — ${(e as Error).message}`; }
+    await combine();
+  }
+  async function adjust(c: string, edge: 'top' | 'bottom', d: number) {
+    const rs = rects[c]; if (!rs || !pdfDoc) return;
+    const { cutRects } = await import('./pdfPages');
+    const n = nudge(rs, edge, d); rects = { ...rects, [c]: n }; fromPdf = { ...fromPdf, [c]: cutRects(pdfDoc.pages, n) };
+    await combine();
+  }
+  async function pickOwn(c: string, e: Event) { const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return; own = { ...own, [c]: await shrink(f) }; await combine(); }
   async function onimgs(e: Event) { picked = [...((e.target as HTMLInputElement).files ?? [])]; await matchImgs(); }
   $effect(() => { if (res && !pick && stepsQ[0]) pick = (stepsQ.find((x) => x.kind === 'monster') ?? stepsQ[0]).id; });
   async function onfile(e: Event) {
@@ -79,7 +115,9 @@
     const z = await unpackZip(new Uint8Array(await f.arrayBuffer()));
     if (z.error || !z.json) { res = { pack: null, issues: [{ at: `zip ${f.name}`, msg: z.error ?? '팩이 없어요', lvl: 'err' }], stats: { mons: 0, items: 0, versions: 0, rechecked: 0, ask: 0 } }; name = f.name; return; }
     picked = z.images.map((x) => new File([x.data as Uint8Array<ArrayBuffer>], x.name, { type: /\.webp$/i.test(x.name) ? 'image/webp' : /\.png$/i.test(x.name) ? 'image/png' : 'image/jpeg' }));
-    run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장`);
+    await run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장${z.pdfs.length ? ` + 학습지 PDF ${z.pdfs.length}개` : ''}`);
+    if (z.pdfs.length > 1) pdfNote = `✂ zip 안에 PDF 가 ${z.pdfs.length}개 (${z.pdfs.map((x) => x.name).join(' · ')}) — 학습지 PDF 는 1개만 · 자르지 않았어요`;
+    else if (z.pdfs[0]) await cropPdf(z.pdfs[0].data, z.pdfs[0].name);
   }
     // 🗑 올린 팩 지우기 (📜 2026-11-14 선생님 「기존 11차시 지우면 되지? → 삭제 없어」): 베타에서 올린 팩만 · 확인 한 번 · 팩 + 그 팩 칸 그림
   const mine = $derived([...UPLOADED].map((id) => PACKS.find((p) => p.id === id)).filter((p): p is LessonPack => !!p).sort((a, b) => a.no - b.no));
@@ -123,13 +161,19 @@
     {#if res}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}</p>
       {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}</p>{/if}
+      {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
       {#if issues.length}<ul class="iss" data-k="packiss">{#each issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
       {#if P && stepsQ.length}
         <p class="lab">미리 보기 · 학생 폰과 같은 문제 꼴 (💡 정답 펼침)</p>
         <div class="chips2" role="tablist">{#each stepsQ as s (s.id)}<button type="button" role="tab" class:on={pick === s.id} aria-selected={pick === s.id} onclick={() => { pick = s.id; ver = 0; }}>{s.title.split(' · ')[0]}</button>{/each}</div>
         {#if nVer > 1}<div class="chips2 vers" role="tablist" aria-label="버전">{#each Array.from({ length: nVer }, (_, k) => k) as k (k)}<button type="button" role="tab" class:on={ver === k} aria-selected={ver === k} onclick={() => (ver = k)}>버전 {k}</button>{/each}</div>{/if}
         {#if P && pickStep && ((P.imgCells ?? []).includes(pickCell) || P.videos?.[pick])}<div class="media" data-k="packmedia">
-          {#if (P.imgCells ?? []).includes(pickCell)}<div class="mimg" data-k="packimg"><PrepImg {S} L={P} id={pickCell} alt="학습지 칸 {pickCell}"><p class="noimg">🖼 그림 「{pickCell}」 없음 · 글자로 보여요</p></PrepImg></div>{/if}
+          {#if (P.imgCells ?? []).includes(pickCell)}<div class="csrc" data-k="cellsrc" data-src={srcOf(pickCell)}>
+            <small>{srcOf(pickCell) === 'pdf' ? '✂ 학습지 PDF 에서 자름' : srcOf(pickCell) === 'file' ? '🖼 zip · 고른 그림' : srcOf(pickCell) === 'own' ? '🖼 직접 고른 그림' : '그림 없음'}</small>
+            {#if srcOf(pickCell) === 'pdf'}<span class="adj" role="group" aria-label="자르기 조정"><button type="button" data-k="top-up" onclick={() => adjust(pickCell, 'top', 1)}>위 늘리기</button><button type="button" data-k="top-dn" onclick={() => adjust(pickCell, 'top', -1)}>위 줄이기</button><button type="button" data-k="bot-up" onclick={() => adjust(pickCell, 'bottom', 1)}>아래 늘리기</button><button type="button" data-k="bot-dn" onclick={() => adjust(pickCell, 'bottom', -1)}>아래 줄이기</button></span>{/if}
+            <label class="ownpick"><input type="file" accept="image/png,image/webp,image/jpeg" onchange={(e) => pickOwn(pickCell, e)} data-k="ownpick" />그림 직접 고르기</label>
+          </div>{/if}
+          {#if (P.imgCells ?? []).includes(pickCell)}{#key imgs[pickCell]}<div class="mimg" data-k="packimg"><PrepImg {S} L={P} id={pickCell} alt="학습지 칸 {pickCell}"><p class="noimg">🖼 그림 「{pickCell}」 없음 · 글자로 보여요</p></PrepImg></div>{/key}{/if}
           <!-- svelte-ignore a11y_media_has_caption -->
           {#if P.videos?.[pick]}<video src={P.videos[pick]} controls preload="metadata" playsinline data-k="packvid"></video>{/if}
         </div>{/if}
@@ -152,6 +196,9 @@
   .mrow > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; } .mrow small { color: var(--text-3); font-size: 12px; }
   .del, .cf button { min-height: 40px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--bad); background: transparent; color: var(--bad); font: 700 14px var(--font); }
   .cf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; } .cf em { font-style: normal; font-size: 13px; color: var(--bad); width: 100%; text-align: right; } .cf .yes { background: var(--bad); color: #fff; } .cf .no { border-color: var(--line); color: var(--text); }
+  .csrc { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .csrc small { width: 100%; color: var(--text-2); font-size: 13px; }
+  .adj { display: flex; flex-wrap: wrap; gap: 6px; } .adj button, .ownpick { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); display: inline-flex; align-items: center; position: relative; }
+  .ownpick input { position: absolute; inset: 0; opacity: 0; }
   .msum { margin: 0; font: 600 13px var(--font); color: var(--text-2); }
   .sum.bad { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); }
   .iss { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow: auto; overscroll-behavior: contain; }

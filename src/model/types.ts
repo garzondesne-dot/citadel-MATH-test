@@ -107,6 +107,8 @@ export interface LessonPack {
   /** 🖼 차시 팩 올리기: 학습지 칸 그림 목록(칸 = 단계 id 또는 단계 img) · imgOf = 그 그림을 가진 차시(prep/{imgOf}/img) */
   imgCells?: string[];
   imgOf?: string;
+  /** ✂ 학습지 PDF 자동 자르기: 칸 → 찾을 글자 (단계 제목 · ★ · STEP 으로 못 찾는 칸만) */
+  find?: Record<string, string>;
   /** 어디서 왔나: 정식 파일 · 커밋 · 입력판을 읽은 때 */
   source?: { file: string; commit: string; board: string | null };
   steps: Step[];
