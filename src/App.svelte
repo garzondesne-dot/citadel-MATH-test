@@ -93,7 +93,7 @@
   // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
   //   수업 중 = #163 ④ 그대로 숨김(끝나면 보임) · 게시판 던전 · 허수아비 진행 중 · 오래 켜 둔 화면 = 띠만
   const born = Date.now();
-  const reloadNew = () => { void swUpdate().then(() => location.replace(`${location.pathname}?${[...new URLSearchParams(location.search)].filter(([k]) => k !== 'v').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).concat(`v=${site}`).join('&')}`)); };
+  const reloadNew = () => { try { sessionStorage.setItem('citadel-upd', '1'); } catch { /* 사생활 창 */ } (window as { bootShow?: (t: string) => void }).bootShow?.('🔄 새 판 받는 중…'); void swUpdate().then(() => location.replace(`${location.pathname}?${[...new URLSearchParams(location.search)].filter(([k]) => k !== 'v').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).concat(`v=${site}`).join('&')}`)); };
   $effect(() => {
     if (!verOld || !(!role || role === 'camp') || busy.n || Date.now() - born > 20e3) return;
     try { if (sessionStorage.getItem('dgb-auto') === site) return; sessionStorage.setItem('dgb-auto', site); } catch { return; }

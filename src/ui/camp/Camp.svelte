@@ -122,7 +122,10 @@
   const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', scare: '🎯 허수아비', mail: '우편함', hero: '내 용사' };
   const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
-  let sheet = $state<string | null>(null);
+  // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
+  const SK = 'citadel-camp-sheet';
+  let sheet = $state<string | null>((() => { try { const j = JSON.parse(sessionStorage.getItem(SK) || 'null') as { s: string; at: number } | null; return j && Date.now() - j.at < 10 * 60e3 ? j.s : null; } catch { return null; } })());
+  $effect(() => { const s = sheet; try { if (s) sessionStorage.setItem(SK, JSON.stringify({ s, at: Date.now() })); else sessionStorage.removeItem(SK); } catch { /* 사생활 창 */ } });
   // 🧙 첫 용사 고르기 = 방금 가입한 폰의 첫 캠프에서 한 번 (App 이 가입 때 표시 · 📜 2026-11-13 밤 ❓#1 = A)
   let hero0 = $state((() => { try { return sessionStorage.getItem('citadel-hero0') === '1'; } catch { return false; } })());
   function tap(id: string, e?: Event) {

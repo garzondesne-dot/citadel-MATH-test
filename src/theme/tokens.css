@@ -42,6 +42,9 @@
   :root[data-theme='gold'] { --bg: #0f1115; --surface: #181b22; --surface-2: #222632; --text: #f2f3f5; --accent: #f5b84a; color-scheme: dark; }
 }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* 📱 당겨서 새로 고침 막기 (📜 2026-11-14 선생님 · 모든 판 공통): 바깥 = none · 안쪽 스크롤 칸 = contain (끝까지 내려도 바깥으로 안 번짐) · 새로 고침은 단추로만 */
+html, body { overscroll-behavior-y: none; }
+* { overscroll-behavior-y: contain; }
 /* 옛 이름 (b1~b3 화면) → 토큰 */
 :root {
   --fg: var(--text); --sub: var(--text-2); --card: var(--surface); --muted: var(--surface-2); --band: var(--accent);

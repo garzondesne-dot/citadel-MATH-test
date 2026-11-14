@@ -31,6 +31,8 @@
   // ?tab=me 등 = 처음 열 탭 (공격 갤러리 「‹ 나가기」 · 뒤로 가기 = 「나」 탭으로)
   const tab0 = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('tab') : null;
   let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>((['class', 'pupil', 'prep', 'news', 'me'] as const).find((k) => k === tab0) ?? 'class');
+  // 🔁 새로 고침돼도 보던 탭으로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 탭이 바뀌면 주소 ?tab= 만 고침(기록 안 늘림)
+  $effect(() => { const t = tab; untrack(() => { try { const q = new URLSearchParams(location.search); if (q.get('tab') === t || (t === 'class' && !q.has('tab'))) return; q.set('tab', t); history.replaceState(history.state, '', `${location.pathname}?${q}`); } catch { /* 주소를 못 고치는 곳 */ } }); });
   let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
 
   // 🔐 시험 서버 = 교사 로그인(admins)이 있어야 방을 만들 수 있음 (🚨 2026-11-13 밤 선생님 「수업 방이 개설 안 되네?」 · 로그인 없이 누르면 서버가 거부 → 「수업 방을 찾지 못했어요」)
