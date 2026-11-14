@@ -57,13 +57,16 @@ function load(gem: number, scroll: number, test: boolean, teacher = false): Me {
     if (first) toServer(b, m); // 처음 = 시작 값으로 서버 칸을 만듦
     return m;
   }
-  if (loc) { const m = { ...base, ...loc, test } as Me; m.wallet = migrate(m.wallet); return m; }
+  if (loc) { const m = { ...base, ...loc, test } as Me; m.wallet = migrate(m.wallet); if (teacher) lookIn(m); return m; }
+  if (teacher) { const m = { ...base, test } as Me; lookIn(m); return m; }
   return base;
 }
 /** 👩‍🏫 교사 기록 = 이 기기 따로 칸 (📜 2026-11-13 밤 교사 B안 · 학생 통계 · 순위 · 대시보드와 안 섞임 · 시작 💎 9,999 · 📜 30 · 현자) */
 const TKEY = `${KEY}|teacher`;
 export function useMe(gem: number, scroll: number, test = false, teacher = false) {
+  if (teacher) asTeacher = true; // 👩‍🏫 이 탭 = 교사 → savedLook 도 교사 용사(서버 하나)
   const me = $state<Me>(load(gem, scroll, test, teacher));
+  if (teacher) tWatch.add((v) => { if (v && v.hero != null) Object.assign(me, { hero: v.hero, enh: v.enh, socket: v.socket || {}, title: v.title || 'none' }); }); // 다른 기기(TV 교사 캠프 · 폰)에서 바꿔도 바로
   const b = teacher ? null : meBound();
   const save = () => {
     const snap = JSON.parse(JSON.stringify(me)) as Me;
@@ -80,10 +83,18 @@ export function useMe(gem: number, scroll: number, test = false, teacher = false
 export const TLOOK = 'school/tlook';
 export interface TLook { hero: number; enh: number; fx: string; socket: Record<string, string>; title: string; nick: string; at: number }
 let tSink: ((l: TLook) => void) | null = null;
+// 🧙 교사 「내 용사」 = 한 곳 (📜 2026-11-14 선생님 「교사의 내 용사 관리도 학생들처럼 일관되었으면 · 게시판 던전 갔더니 또 다른 캐릭터」 · DECISIONS 「🧙 교사 내 용사 = 한 곳」)
+//   원본 = 서버 school/tlook 하나 · 이 탭이 교사면(교사 폰 · 교사 캠프 · TV) savedLook() 도 이 값 → 게시판 · 허수아비 · 성채 · 시연 · 컷인 · 대기실 · 결과가 모두 같음
+//   서버 값이 없을 때만 기본 용사(현자 7) · 이 기기 교사 칸(TKEY)은 💎 · 📜 · 산 것 같은 지갑만 (용사 · 강화 · 스킬 · 호칭은 서버 값이 이김)
+let asTeacher = false, tCache: TLook | null = null, tUnsub: (() => void) | null = null;
+const tWatch = new Set<(v: TLook | null) => void>();
+export const isTeacherTab = () => asTeacher;
+function lookIn(m: Me) { if (tCache && tCache.hero != null) Object.assign(m, { hero: tCache.hero, enh: tCache.enh, socket: tCache.socket || {}, title: tCache.title || 'none' }); }
 export const tlookOf = (m: Partial<Me>): TLook => { const hero = Number(m.hero ?? 7) || 0, socket = m.socket || {}; return { hero, enh: Number(m.enh) || 0, fx: equipOf({ hero, socket } as Look), socket, title: m.title || 'none', nick: m.nick || '선생님', at: Date.now() }; };
 /** 교사 화면(교사 폰 · 교실 TV)이 서버 칸을 알려 줌 · publish = 이 기기 교사 기록을 지금 한 번 올림(서버에 아직 없을 때) */
-export function setTeacherSink(S: Pick<Store, 'set' | 'get'>, publish = false): void {
-  tSink = (l) => S.set(TLOOK, l);
+export function setTeacherSink(S: Pick<Store, 'set' | 'get' | 'watch'>, publish = false): void {
+  asTeacher = true; tSink = (l) => { tCache = l; S.set(TLOOK, l); };
+  tUnsub?.(); tUnsub = S.watch<TLook>(TLOOK, (v) => { tCache = v; tWatch.forEach((f) => f(v)); });
   if (publish && !S.get(TLOOK)) { const m = readLocal(TKEY); if (m) tSink(tlookOf(m)); }
 }
 /** 교사 용사 (서버 값 · 없으면 기본 용사 = 현자 7) */
@@ -93,6 +104,7 @@ export function teacherLook(v: Partial<TLook> | null | undefined): { hero: numbe
 }
 /** 출전 용사 · 강화 (전투 장면이 읽음 · 없으면 로안) — 서버에 묶였으면 서버 값 */
 export function savedLook(): { hero: number; enh: number; fx: string } {
+  if (asTeacher) return teacherLook(tCache); // 👩‍🏫 교사 탭 = 서버 교사 용사 하나 (없으면 현자 7)
   const b = meBound();
   if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return { hero, enh: Number(sv.enh) || 0, fx: equipOf({ hero, socket: sv.socket || {} } as Look) }; }
   const m = readLocal(KEY), hero = Number(m?.hero) || 0;
