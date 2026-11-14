@@ -56,8 +56,8 @@ export function applyTheme(t: Theme = 'gold', opt: { tv?: boolean } = {}): void 
   if (savedPaper()) root.dataset.qpaper = '1'; else delete root.dataset.qpaper;
   if (opt.tv) root.dataset.tv = '1'; else delete root.dataset.tv;
   if (d.id === 'classic' && !opt.tv && !classicP) classicP = import('./classic.css');
-  // 🌐 #131 color-scheme 메타 = 테마의 밝기
-  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', d.light ? 'light' : 'dark');
+  // 🌐 #131 color-scheme 메타 = 테마의 밝기 · 📜 2026-11-14 선생님 「웹앱이 다크 모드는 적용 안 되게」 = 'only …' (폰 다크 모드 · 크롬 자동 어둡게 · 삼성 인터넷 웹 페이지 다크 모드가 앱 색을 뒤집지 않음 · 테마는 앱 설정으로만)
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', d.light ? 'only light' : 'only dark');
 }
 /** 이 기기에 기억한 테마 (첫 화면부터 같은 색) */
 export function savedTheme(): Theme { try { const t = localStorage.getItem(KEY); return isTheme(t) ? t : 'gold'; } catch { return 'gold'; } }

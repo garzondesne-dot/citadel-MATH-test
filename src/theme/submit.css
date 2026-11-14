@@ -6,7 +6,7 @@
   --accent: #1d1d1f; --on-accent: #ffffff; --accent-sh: #1d1d1f; --line: #c9c6bc; --press-sh: transparent; --bad-bg: #fbe9e7;
   --ok: #1f3a68; --bad: #c8312b; --pen: #1f3a68; --red: #c8312b; --rule: #d9dde3;
   --serif: 'Noto Serif KR', 'Noto Serif CJK KR', 'Nanum Myeongjo', 'AppleMyungjo', serif;
-  color-scheme: light;
+  color-scheme: only light;
 }
 :root[data-submit] body { background: repeating-linear-gradient(to bottom, transparent 0 25px, var(--rule) 25px 26px), #f7f6f1; color: #1d1d1f; }
 :root[data-submit] *, :root[data-submit] *::before, :root[data-submit] *::after { animation: none !important; transition: none !important; text-shadow: none !important; }
