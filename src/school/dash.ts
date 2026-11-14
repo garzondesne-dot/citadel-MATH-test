@@ -81,6 +81,29 @@ export function fakeClass(S: Store | null, cls: string) {
   cache.set(k, v);
   return v;
 }
+/** 🚀 출시 막는 것 4 (📜 2026-11-15): 서버(시험 서버 · 출시) = 진짜 기록만 · 가짜 기록은 서버 없는 이 기기 판에서만
+ *  records/{반}/{번호}/{차시} = 정식 꼴(conc · names · boss · bossN · mis · no) · 베타가 새로 적은 기록은 conc 가 없을 수 있음(형성평가 · 참여만 셈)
+ *  xp/{반}/{번호}/total · gem/{반}/{번호} = total · scroll · day(날짜 → 그날 받은 💎) · 나머지 덧붙임(사진 · 막힘 · 기호 …)은 아직 0 */
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+export function realClass(S: Store, cls: string) {
+  const recAll = S.get<Record<string, Record<string, Partial<LessonRec> & Record<string, unknown>>>>(`records/${cls}`) || {}, xpAll = S.get<Record<string, { total?: number }>>(`xp/${cls}`) || {}, gemAll = S.get<Record<string, { total?: number; scroll?: number; day?: Record<string, number> }>>(`gem/${cls}`) || {};
+  const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {};
+  const now = S.now(), dayK = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), week = new Set(Array.from({ length: 7 }, (_, i) => dayK(now - i * 864e5)));
+  for (const p of roster(cls, S)) {
+    byN[p.num] = p.name; records[p.num] = {};
+    for (const [lid, r] of Object.entries(recAll[p.num] || {})) {
+      if (!isObj(r)) continue;
+      const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || 0;
+      records[p.num]![lid] = { conc: (isObj(r.conc) ? r.conc : {}) as LessonRec['conc'], names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: Number(r.boss) || 0, bossN: Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null };
+    }
+    xp[p.num] = Number(xpAll[p.num]?.total) || 0;
+    const g = gemAll[p.num] || {}, day = isObj(g.day) ? g.day : {};
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: 0, fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: 0, trySet: 0, noteDone: 0, cards: 0, surveyed: false };
+  }
+  return build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
+}
+/** 대시보드 · 학생 시트가 쓰는 한 곳: 서버 = 진짜 · 이 기기 = 가짜 */
+export const classData = (S: Store | null, cls: string) => (S && S.kind === 'server' ? realClass(S, cls) : fakeClass(S, cls));
 /** 📝 세특 초안 (#127 · 함수 하나 seteukDraft · 학생 시트 · 대시보드 · 엑셀 모두) — 대시보드 기록 → 세특 기록 */
 export const seteukOf = (s: Stud): SeteukIn => ({ went: s.went, heldN: s.heldN, conc: s.conc, std: s.std, boss: s.boss, hg: s.extra.hg, fixed: s.extra.fixes, mis: s.mis, photoN: s.extra.photoOk + s.extra.photoRe, photoRev: s.extra.photoRe, hints: s.extra.hints, tryEval: s.extra.tryEval, trySet: s.extra.trySet, noteDone: s.extra.noteDone, cards: s.extra.cards, symN: s.extra.sym, surveyed: s.extra.surveyed });
 export const stdName = (id: string) => STANDARDS.find((d) => d.id === id)?.name ?? null;

@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
   import { CLASSES, firstClass, isBeta, pasteRoster, liveOfCls } from '../../school/school';
-  import { fakeClass, type Stud } from '../../school/dash';
+  import { classData, type Stud } from '../../school/dash';
   import { ALL } from '../../school/views';
   import Sheet from '../battle/Sheet.svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import { liveValue } from '../room.svelte';
   import PupilSheet from './PupilSheet.svelte';
   import Dash from './Dash.svelte';
 
@@ -17,7 +19,9 @@
   let iw = $state(400);
   const wide = $derived(seg === 'dash' && iw >= 720); // 📊 펼친 화면 (기준 너비 720 · #131 펼친 Fold7 ≈ 830)
   let xl = $state(false); // ⬇ 엑셀 = [명단 · 대시보드] 줄 오른쪽 끝 (#131 · 시안 v85 자리)
-  const data = $derived.by(() => { void ver; return fakeClass(S, cls === ALL ? firstClass() : cls); });
+  // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
+  const lr = untrack(() => liveValue(S, 'records')), lx = untrack(() => liveValue(S, 'xp')), lg = untrack(() => liveValue(S, 'gem')); onDestroy(() => { lr.stop(); lx.stop(); lg.stop(); });
+  const data = $derived.by(() => { void ver; void lr.v.val; void lx.v.val; void lg.v.val; return classData(S, cls === ALL ? firstClass() : cls); });
   const live = $derived(liveOfCls(S, cls));
   const absentToday = (uid: string) => !!live && !!S.get<boolean>(`rooms/${live.code}/absent/${uid}`);
   $effect(() => ondash?.(wide));

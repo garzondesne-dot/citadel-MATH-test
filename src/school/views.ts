@@ -1,7 +1,7 @@
 import { SUBJ } from '../engine/subject';
 import type { Store } from '../model/types';
 import { CLASSES, isBeta } from './school';
-import { achieve, fakeClass, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
+import { achieve, classData, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
 import type { Cell, SheetData } from './xlsx';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
@@ -31,7 +31,7 @@ const SYMS = SUBJ.demo.syms; // 테스트 판 가짜 기호 표 = 과목 팩 (#1
 export const ALL = '전체';
 export function scope(S: Store, cls: string, withX = false) {
   const classes = cls === ALL ? CLASSES : [cls];
-  const per = classes.map((c) => ({ c, ...fakeClass(S, c) }));
+  const per = classes.map((c) => ({ c, ...classData(S, c) }));
   const all = per.flatMap((x) => x.studs);
   const studs = cls === ALL && !withX ? all.filter((s) => !s.x) : cls !== ALL || withX ? all : all;
   const held = [...new Map(per.flatMap((x) => x.held).map((h) => [h.id, h])).values()].sort((a, b) => a.no - b.no);

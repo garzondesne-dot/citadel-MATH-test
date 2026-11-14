@@ -5,7 +5,8 @@
   import { CLASSES, isBeta } from '../../school/school';
   import { download, makeXlsx } from '../../school/xlsx';
   import Sheet from '../battle/Sheet.svelte';
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import { liveValue } from '../room.svelte';
   import { modeLogs, modeSummary } from '../../school/study';
 
   // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
@@ -20,7 +21,9 @@
   const V = $derived(view(S, cls, vid));
   // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
   const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
-  const sc = $derived(scope(S, cls));
+  // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
+  const lr = untrack(() => liveValue(S, 'records')), lx = untrack(() => liveValue(S, 'xp')), lg = untrack(() => liveValue(S, 'gem')); onDestroy(() => { lr.stop(); lx.stop(); lg.stop(); });
+  const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; return scope(S, cls); });
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   function excel() {
