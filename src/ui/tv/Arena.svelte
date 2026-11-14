@@ -68,6 +68,7 @@
   function monAct(p: 'attack' | 'hit', ms: number) { if (A) { A.monPose(p, ms); return; } domMon = p; clearTimeout(domMonT); domMonT = setTimeout(() => (domMon = ''), ms); }
   (globalThis as { __tvMon?: (p: 'attack' | 'hit', ms?: number) => void }).__tvMon = (p, ms = 600) => monAct(p, ms); // 화면 시험 고리
   (globalThis as { __tvMonNow?: () => string }).__tvMonNow = () => (A ? A.monNow() : domMon || 'idle');
+  (globalThis as { __tvMonSeen?: () => string[] }).__tvMonSeen = () => (A ? A.monSeen() : []);
   let domPose = $state<Record<string, HPose>>({}); const poseT: Record<string, ReturnType<typeof setTimeout>> = {};
   function tvPose(u: string, p: HPose, ms: number) {
     if (A) { A.pose(u, p, ms); return; }

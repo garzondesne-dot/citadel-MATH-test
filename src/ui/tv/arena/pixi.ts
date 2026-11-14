@@ -40,6 +40,8 @@ export interface Arena {
   /** 🎲 몬스터 잠깐 자세 (공격 · 맞음) · 시험: 지금 몬스터 칸 */
   monPose(p: 'attack' | 'hit', ms: number): void;
   monNow(): string;
+  /** 시험: 지난번 뒤 지나간 몬스터 칸 (매 프레임 기록 · 짧은 공격 · 맞음 칸도 놓치지 않게) */
+  monSeen(): string[];
   /** 시험: 용사마다 지금 그리는 줄 (idle = 대기) */
   poses(): Record<string, string>;
   /** ✨ 이펙트 층 (#152 · #161 몬스터 공격 이펙트용) · 화면 크기 */
@@ -98,7 +100,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const t = performance.now(); scale = t < stopUntil ? 0 : t < slowUntil ? JUICE.SLOW : 1; vt += (t - lastT) * scale; lastT = t;
     for (const w of [...tweens]) { const p = Math.min(1, (vt - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
-    if (monSp && monTex.idle && !st?.down) { const p: MonPose = mflash && t < mflashUntil ? mflash : !stoned && !st?.shadow && monTex.idleB !== monTex.idle && Math.floor(t / 700) % 2 ? 'idleB' : 'idle'; if (p !== monCur) { monCur = p; monSp.texture = monTex[p]!; } placeRune(p); }
+    if (monSp && monTex.idle && !st?.down) { const p: MonPose = mflash && t < mflashUntil ? mflash : !stoned && !st?.shadow && monTex.idleB !== monTex.idle && Math.floor(t / 700) % 2 ? 'idleB' : 'idle'; if (p !== monCur) { monCur = p; monSp.texture = monTex[p]!; monSeen.add(p); } placeRune(p); }
     const tick = t - heroT > 162; if (tick) { heroT = t; heroF = (heroF + 1) % 8; }
     for (const h of heroes.values()) {
       if (h.busy) continue;
@@ -112,7 +114,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   // ── 몬스터 ──
   let st: ArenaState | null = null, monSp: Sprite | null = null, monY = 0, monKey = '', monCx = 0, monTop = 0, monSize = 0;
   // 🎲 5칸 시트: 자세별 칸 · 숨쉬기(A ↔ B 0.7초) · 잠깐 자세(공격 · 맞음) · 몸 룬 기호
-  let monTex: Partial<Record<MonPose, Texture>> = {}, monCur: MonPose = 'idle', mflash: MonPose | '' = '', mflashUntil = 0, monRune: Text | null = null, monRuneAt: (p: MonPose) => [number, number, number] | null = () => null, monK = 1, monX = 0, monCell = 256;
+  let monTex: Partial<Record<MonPose, Texture>> = {}, monCur: MonPose = 'idle', mflash: MonPose | '' = '', mflashUntil = 0, monRune: Text | null = null, monRuneAt: (p: MonPose) => [number, number, number] | null = () => null, monK = 1, monX = 0, monCell = 256; const monSeen = new Set<string>(); // 시험: 지나간 몬스터 칸
   const placeRune = (p: MonPose) => { if (!monRune || !monSp) return; const r = monRuneAt(p); monRune.visible = !!r && !st?.shadow; if (!r) return; const c = monCell; monRune.x = monX - (c / 2 - r[0] * c) * monK * (monSp.scale.x / Math.abs(monSp.scale.x)); monRune.y = monSp.y - c * monK + r[1] * c * monK; monRune.style.fontSize = Math.max(10, r[2] * c * monK * 1.35); };
   async function drawMon(s: ArenaState) {
     const sp = spriteOf(s.sprite), b = arenaBox(W(), H(), s.boss, s.split, visOf(s)), pose = s.down ? 'down' : 'idle', key = `${s.sprite}|${pose}|${W()}|${H()}|${s.split}|${s.shadow}`;
@@ -299,7 +301,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

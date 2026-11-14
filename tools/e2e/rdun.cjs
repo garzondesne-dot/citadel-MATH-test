@@ -34,9 +34,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
       const nm = await hall.evaluate(() => window.__arena?.hpName ?? '');
       if (rd) ok(`📺 ${name} 몬스터 이름`, !/^문제/.test(nm), nm);
       // 숨쉬기 · 공격 · 맞음
-      const seen = new Set(); for (let k = 0; k < 10; k++) { seen.add(await hall.evaluate(() => window.__tvMonNow?.() ?? '')); await hall.waitForTimeout(150); }
+      await hall.evaluate(() => window.__tvMonSeen?.()); const seen = new Set(); for (let k = 0; k < 10; k++) { seen.add(await hall.evaluate(() => window.__tvMonNow?.() ?? '')); await hall.waitForTimeout(150); }
       await hall.evaluate(() => window.__tvMon('attack', 800)); for (let k = 0; k < 8; k++) { seen.add(await hall.evaluate(() => window.__tvMonNow?.() ?? '')); await hall.waitForTimeout(50); }
       await hall.waitForTimeout(900); await hall.evaluate(() => window.__tvAtk(0, 'hit', 2, 'slash', false, true)); for (let k = 0; k < 30; k++) { seen.add(await hall.evaluate(() => window.__tvMonNow?.() ?? '')); await hall.waitForTimeout(40); }
+      await hall.waitForTimeout(400); for (const p of await hall.evaluate(() => window.__tvMonSeen?.() ?? [])) seen.add(p); // 화면이 매 프레임 적어 둔 칸
       if (rd) ok(`📺 ${name} 칸 (숨쉬기 · 공격 · 맞음)`, ['idle', 'idleB', 'attack', 'hit'].every((p) => seen.has(p)), [...seen].join(' '));
       await hall.waitForTimeout(1600); await hall.screenshot({ path: `${SHOTS}/rdun-tv-${name}-mon.png` });
       // 소레이드 대장 (d01 native 만) · 보스 = 「앞으로」 를 눌러 그 단계까지
