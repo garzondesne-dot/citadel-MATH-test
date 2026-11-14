@@ -2,9 +2,9 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkUpload, PACK_PATH, type Checked } from '../../school/packUpload';
+  import { checkUpload, PACK_PATH, revive, type Checked } from '../../school/packUpload';
   import { items, bossItem } from '../../engine/lessons';
-  import { PACKS } from '../../engine/packs';
+  import { PACKS, addPacks } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
   import { ATTACKS } from '../../raid/attacks';
   import { spriteOf } from '../manifest';
@@ -32,9 +32,13 @@
   function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = stepsQ[0]?.id ?? ''; ver = 0; }
   $effect(() => { if (res && !pick && stepsQ[0]) pick = stepsQ[0].id; });
   async function onfile(e: Event) { const f = (e.target as HTMLInputElement).files?.[0]; if (f) run(await f.text(), f.name); }
-  function save() {
+  let failed = $state('');
+  async function save() {
     if (!P || errs.length) return;
-    S.set(`${PACK_PATH}/${P.id}`, JSON.parse(JSON.stringify(P)) as LessonPack);
+    const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
+    const ok = S.trySet ? await S.trySet(path, v) : (S.set(path, v), true); // 서버 = 실제로 써졌는지 확인(교사 로그인 · 규칙)
+    if (!ok) { failed = '저장하지 못했어요 · 교사로 로그인했는지 · 인터넷을 확인해요'; return; }
+    addPacks([revive(v)]); // 새로 고침 전에도 차시 목록에
     saved = `${P.no}차시 ${P.title} 저장 · 차시 목록에 들어갔어요`;
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.set('lesson', P.id); location.href = u.toString(); }, 900);
   }
@@ -57,7 +61,7 @@
         <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
       {/if}
     {/if}
-    {#if saved}<p class="ok" role="status">{saved}</p>{/if}
+    {#if saved}<p class="ok" role="status">{saved}</p>{/if}{#if failed}<p class="fail" role="alert">{failed}</p>{/if}
   </div>
 </Sheet>
 
@@ -80,5 +84,5 @@
   .prev { display: flex; flex-direction: column; gap: 12px; }
   .pq { padding: 10px; border-radius: var(--r); background: var(--surface-2); }
   .sol { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
-  .ok { margin: 0; color: var(--ok); font-weight: 700; }
+  .ok { margin: 0; color: var(--ok); font-weight: 700; } .fail { margin: 0; color: var(--bad); font-weight: 700; }
 </style>

@@ -146,6 +146,8 @@ export interface Store {
   now(): number;
   /** 한 번 받아 오기 — 실시간 거울 밖 칸(prep 학습지 그림 등 · 서버만) · 없으면 get 과 같음 */
   fetch?<T = unknown>(path: string): Promise<T | null>;
+  /** 써 보고 서버가 받았는지 (서버만 · 규칙에 막히면 false) */
+  trySet?(path: string, value: unknown): Promise<boolean>;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──

@@ -205,3 +205,26 @@ function nativePack(p: LessonPack, out: Issue[], stats: Checked['stats']): Lesso
 
 /** 저장 자리 (교사 쓰기 · 로그인한 사람 읽기 = 규칙 prep 그대로 · 규칙 바꿀 일 없음) */
 export const PACK_PATH = 'prep/packs';
+
+/** 서버에서 돌아온 팩 되살리기 — Firebase 는 빈 배열 · 빈 칸을 지움(retry.pool [] → 칸 없음) → 엔진이 읽는 칸을 다시 채움 */
+export function revive(p: LessonPack): LessonPack {
+  const arr = <T>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : x && typeof x === 'object' ? (Object.values(x) as T[]) : []);
+  const monsters: LessonPack['monsters'] = {};
+  for (const [id, m0] of Object.entries(p.monsters || {})) {
+    const m = { ...m0 } as MonsterPack;
+    const r = (m.retry || {}) as { gen?: string; pool?: unknown };
+    m.retry = r.gen ? (m.retry as MonsterPack['retry']) : { pool: arr<unknown>(r.pool).map((v) => arr<Question>(v)) };
+    if (m.first) m.first = arr<Question>(m.first);
+    if (m.chain && 'pool' in (m.chain as object)) m.chain = { pool: arr<unknown>((m.chain as { pool: unknown }).pool).map((v) => arr<Question>(v)) };
+    monsters[id] = m;
+  }
+  const boss = p.boss ? { ...p.boss, tags: arr<string>(p.boss.tags), ...(p.boss.pool || !p.boss.gen ? { pool: Array.from({ length: p.boss.items }, (_, i) => arr<Question>(arr<unknown>(p.boss!.pool)[i])) } : {}), ...(p.boss.attack ? { attack: arr<string>(p.boss.attack) } : {}) } : undefined;
+  return { ...p, steps: arr<Step>(p.steps), monsters, ...(boss ? { boss } : {}) };
+}
+/** 📦 올린 차시 팩 받기 (앱 시작 때 한 번 · 서버 = 거울 밖 칸이라 fetch · 이 기기 = get) → 엔진 검사 통과분만 */
+export async function loadUploaded(S: { get<T>(p: string): T | null; fetch?<T>(p: string): Promise<T | null> }): Promise<LessonPack[]> {
+  const v = (S.fetch ? await S.fetch<Record<string, LessonPack>>(PACK_PATH).catch(() => null) : S.get<Record<string, LessonPack>>(PACK_PATH)) || {};
+  const out: LessonPack[] = [];
+  for (const p0 of Object.values(v)) { if (!p0 || p0.v !== 1) continue; try { const p = revive(p0); forget(p.id); if (!validate(p).length) out.push(p); else console.warn('올린 차시 팩 검사 실패', p.id, validate(p)); } catch (e) { console.warn('올린 차시 팩 읽기 실패', e); } }
+  return out;
+}
