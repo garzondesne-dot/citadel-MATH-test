@@ -34,6 +34,8 @@
   import PrepImg from './q/PrepImg.svelte';
   import { conceptOf } from '../school/prep';
   import { summaryOf } from '../school/records';
+  import { rewardOf, settle } from '../school/reward';
+  import { kstDay } from '../board/board';
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
@@ -158,7 +160,20 @@
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
+  let rewardLine = $state('');
+  function payReward(b: NonNullable<ReturnType<typeof meBound>>) {
+    if (!R) return;
+    const gp = `gem/${b.cls}/${b.num}`, xp = `xp/${b.cls}/${b.num}`, t = S.now();
+    const gr = b.S.get<{ total?: number; day?: Record<string, number>; log?: Record<string, { g?: number }> }>(gp) || {}, xr = b.S.get<{ total?: number; log?: Record<string, { xp?: number }> }>(xp) || {};
+    const r = settle(rewardOf(L, R, uid, code, t), { gem: Number(gr.total) || 0, xp: Number(xr.total) || 0, day: gr.day, gemLog: gr.log || {}, xpLog: xr.log || {} }, kstDay(t), t);
+    if (!r.gem && !r.xp) return;
+    for (const [k, v] of Object.entries(r.writes)) b.S.set(`${k.startsWith('gem/') ? gp : xp}/${k.slice(k.indexOf('/') + 1)}`, v);
+    if (r.gem) { b.S.set(`${gp}/total`, (Number(gr.total) || 0) + r.gem); for (const [d, n] of Object.entries(r.day)) if (n !== gr.day?.[d]) b.S.set(`${gp}/day/${d}`, n); }
+    if (r.xp) b.S.set(`${xp}/total`, (Number(xr.total) || 0) + r.xp);
+    rewardLine = r.lines.join(' · ');
+  }
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
@@ -200,6 +215,7 @@
       <div class="okline"><span class="ic">{bhp?.won ? '🏆' : '🏁'}</span><span><b>{bhp?.won ? '승리!' : '수업 끝'}</b><span>{nick}</span></span></div>
       <p class="big">{result.right} <small class="muted">/ {result.total} 맞힘</small></p>
       {#if proof}<p class="proof" data-k="proof">{proof}</p>{/if}
+      {#if rewardLine}<p class="rwd" data-k="reward">{rewardLine}</p>{/if}
       <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
     </div>
     {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
@@ -266,6 +282,8 @@
   .ptop { position: sticky; top: 0; z-index: 5; max-width: 430px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1.5px solid #1d1d1f; background: #f7f6f1; }
   .gtop { display: flex; justify-content: flex-end; padding: 10px 16px 0; }
   .proof { margin: 4px 0 8px; font: 700 15px var(--font); color: var(--text); }
+  .rwd { margin: 0 0 8px; font: 700 14px var(--font); color: var(--gem); }
+  :global(:root[data-submit]) .rwd { display: none; } /* 📝 제출 모드 = 보상 숨김 */
   :global(:root[data-submit]) .proof { color: #1d1d1f; font-family: 'Noto Serif KR', 'Noto Serif CJK KR', serif; }
   .ptop.pboard { padding-left: 52px; } .pgap { height: 44px; }
   .ptop b { flex: 1; min-width: 0; font: 700 17px 'Noto Serif KR', 'Nanum Myeongjo', serif; color: #1d1d1f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

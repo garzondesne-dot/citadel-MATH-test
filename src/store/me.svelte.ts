@@ -47,14 +47,14 @@ function toServer(b: Bound, me: Me) {
   const had = b.S.get<Record<string, unknown>>(p(b, 'cards')) || {};
   for (const id of Object.keys(me.cards || {})) if (!had[id]) S.set(`${p(b, 'cards')}/${id}`, true); // 카드 = 늘기만 (정식 cards/{카드} = true)
 }
-function load(gem: number, scroll: number, test: boolean, teacher = false): Me {
+function load(gem: number, scroll: number, test: boolean, teacher = false, local = false): Me {
   const b = teacher ? null : meBound(), base = { ...fresh(gem, scroll, test), ...(teacher ? { nick: '선생님', hero: 7 } : {}) }, loc = readLocal(teacher ? TKEY : localKey(b));
   if (b) {
     const sv = fromServer(b), first = !b.S.get(p(b, 'gem'));
     const local = Object.fromEntries(LOCAL_ONLY.filter((k) => loc && k in loc).map((k) => [k, loc![k]]));
     const m = { ...base, ...(first ? {} : sv), ...local, test } as Me;
     m.wallet = migrate(m.wallet);
-    if (first) toServer(b, m); // 처음 = 시작 값으로 서버 칸을 만듦
+    if (first && !local) toServer(b, m); // 처음 = 시작 값으로 서버 칸을 만듦 (local = 폰 칸만 쓰는 곳은 만들지 않음)
     return m;
   }
   if (loc) { const m = { ...base, ...loc, test } as Me; m.wallet = migrate(m.wallet); if (teacher) lookIn(m); return m; }
@@ -63,15 +63,16 @@ function load(gem: number, scroll: number, test: boolean, teacher = false): Me {
 }
 /** 👩‍🏫 교사 기록 = 이 기기 따로 칸 (📜 2026-11-13 밤 교사 B안 · 학생 통계 · 순위 · 대시보드와 안 섞임 · 시작 💎 9,999 · 📜 30 · 현자) */
 const TKEY = `${KEY}|teacher`;
-export function useMe(gem: number, scroll: number, test = false, teacher = false) {
+/** local = 폰에만 남기는 칸(⭐ 찜 등)만 저장 · 서버 지갑 · 용사 칸은 쓰지 않음 (🚀 출시 · 전투 중 ⭐ 창이 옛 지갑 값으로 💎 를 덮어쓰지 않게) */
+export function useMe(gem: number, scroll: number, test = false, teacher = false, local = false) {
   if (teacher) asTeacher = true; // 👩‍🏫 이 탭 = 교사 → savedLook 도 교사 용사(서버 하나)
-  const me = $state<Me>(load(gem, scroll, test, teacher));
+  const me = $state<Me>(load(gem, scroll, test, teacher, local));
   if (teacher) tWatch.add((v) => { if (v && v.hero != null) Object.assign(me, { hero: v.hero, enh: v.enh, socket: v.socket || {}, title: v.title || 'none' }); }); // 다른 기기(TV 교사 캠프 · 폰)에서 바꿔도 바로
   const b = teacher ? null : meBound();
   const save = () => {
     const snap = JSON.parse(JSON.stringify(me)) as Me;
     if (teacher) { try { localStorage.setItem(TKEY, JSON.stringify(snap)); } catch { /* 무시 */ } tSink?.(tlookOf(snap)); return; }
-    if (b) { toServer(b, snap); try { localStorage.setItem(localKey(b), JSON.stringify(Object.fromEntries(LOCAL_ONLY.map((k) => [k, snap[k]])))); } catch { /* 무시 */ } return; }
+    if (b) { if (!local) toServer(b, snap); try { localStorage.setItem(localKey(b), JSON.stringify(Object.fromEntries(LOCAL_ONLY.map((k) => [k, snap[k]])))); } catch { /* 무시 */ } return; }
     try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch { /* 무시 */ }
   };
   /** 👩‍🏫 교사만: ↺ 처음으로 = 스킬(산 것 · 끼운 것) · 용사(강화 · 고른 용사) 처음 상태 + 💎 · 📜 다시 채움 */

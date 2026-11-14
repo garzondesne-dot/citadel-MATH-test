@@ -44,7 +44,7 @@
   $effect(() => { if (my.sw && tdm[my.sw]?.no === uid && seenNo !== my.sw) { seenNo = my.sw; msg = `🙅 ${nick(my.sw)} 친구가 교환을 거절했어요`; untrack(() => tdSwap(S, code, f.g, uid, null)); } });
   $effect(() => { const d = Number(my.swd) || 0; if (d && d !== seenSwd) { if (seenSwd || d > now - 5000) msg = '🔁 자리를 바꿨어요!'; seenSwd = d; } });
   // ⚙ 용사 바꾸기 (자리 고르기 동안만 · 모양 · 근접/원거리만 · 힘은 모두 같음)
-  const ME = useMe(0, 0);
+  const ME = useMe(0, 0, false, false, true); // 읽기만 (산 용사) · 서버 칸을 만들거나 쓰지 않음
   const owned = $derived(HEROES.filter((h) => ownsHero(ME.me.wallet, emptyPlan(), h.id)));
   let heroSheet = $state(false);
   // ⬆ 판 안 업그레이드 (정식: ⭐ 모으면 한 칸 · 12초 안 안 고르면 저절로)

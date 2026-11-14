@@ -34,7 +34,7 @@ const log = (...a) => console.log(...a);
   const acc = await rest('accounts/1-3/1'); log('가입 → 서버 accounts/1-3/1:', JSON.stringify(acc), '| 비밀번호 칸 없음', acc && !('pw' in acc));
   if (!acc || !acc.uid || 'pw' in acc) errs.push('가입이 서버 계정(uid · 비밀번호 없음)으로 안 됨');
   const phones = [p1, await open(`?role=student&room=${live.code}&as=1-3:2${E}`), await open(`?role=student&room=${live.code}&as=1-3:3${E}`)];
-  await p1.goto(`${B}?role=student&room=${live.code}&as=1-3:1${E}`);
+  await p1.goto(`${B}?role=student&room=${live.code}${E}`); // 폰 1 = 진짜 로그인 그대로(?as 없음 = 학생 칸에 묶임 · 기록 · 💎 저장)
   await t.waitForTimeout(2500);
   const lobbyT = (await t.textContent('.mid')).replace(/\s+/g, ' '); log('리모컨 대기실:', (/(\d+)\s*\/\s*\d+\s*(명|들어옴)?/.exec(lobbyT) || [''])[0], '|', lobbyT.slice(0, 80));
   await t.screenshot({ path: `${SHOTS}/b20-remote-lobby.png` }); await tv.screenshot({ path: `${SHOTS}/b20-tv-lobby.png` });
@@ -83,12 +83,20 @@ const log = (...a) => console.log(...a);
   await t.screenshot({ path: `${SHOTS}/b20-remote-resume.png` });
   await t.click('.mid .item'); await t.waitForTimeout(800);
   const live2 = await rest('school/live');
-  for (const [k, p] of phones.entries()) await p.goto(`${B}?role=student&room=${live2.code}&as=1-3:${k + 1}${E}`);
+  for (const [k, p] of phones.entries()) await p.goto(`${B}?role=student&room=${live2.code}${k ? `&as=1-3:${k + 1}` : ""}${E}`);
   await t.waitForTimeout(2000); await main();
   log('이어서 연 수업:', ((await t.textContent('.mid')).match(/지금 · ([^🌫]+?)(?:🌫|\d+\s*\/|$)/) || ['', '?'])[1].trim(), '| 새 방', live2.code !== live.code);
   for (let k = 0; k < 25; k++) { const m = (await t.textContent('.tact .btn')).trim(); if (/수업 닫기/.test(m)) break; await main(); }
   log('마무리: 리모컨', (await t.textContent('.tact .btn')).trim(), '| TV 끝 화면', !!(await tv.$('.endv')), '| 폰 1', (await phones[0].textContent('body')).replace(/\s+/g, ' ').slice(0, 40));
   await tv.screenshot({ path: `${SHOTS}/b20-tv-end.png` });
+  // 💎 · 🌱 수업 보상 (출시 막는 것 3 · 정식 값 · 폰 1 = 진짜 로그인 · ?as 폰은 학생 칸에 안 묶여 기록 · 보상 없음): 끝난 수업마다 gem/log/raid_{수업} = 참여 4 + 맞힌 소문제 · xp/log/raid_{수업} · total 이 늘어남
+  await phones[0].waitForSelector('[data-k="reward"]', { timeout: 8000 }).catch(() => {});
+  const rw = await Promise.all([1].map(async (n) => { const g = await rest(`gem/1-3/${n}`), x = await rest(`xp/1-3/${n}`); return { n, total: g?.total, raid: g?.log?.[`raid_${live2.code}`]?.g, xp: x?.total, xlog: x?.log?.[`raid_${live2.code}`]?.xp }; }));
+  log('💎 수업 보상:', rw.map((r) => `${r.n}번 💎 ${r.total} (레이드 ${r.raid}) · EXP ${r.xp} (${r.xlog})`).join(' | '), '| 폰 1 줄:', await phones[0].$eval('[data-k="reward"]', (x) => x.textContent).catch(() => '(없음)'));
+  if (rw.some((r) => !(r.raid >= 4) || !(r.total >= 4) || !(r.xp >= 10))) errs.push('수업 보상 💎 · EXP 안 쌓임');
+  // 같은 수업을 다시 그려도 두 번 받지 않음
+  const tot1 = rw[0].total; await phones[0].reload(); await phones[0].waitForTimeout(3000);
+  const tot2 = (await rest('gem/1-3/1'))?.total; log('   다시 그린 뒤 1번 💎', tot1, '→', tot2); if (tot2 !== tot1) errs.push('수업 보상 두 번 받음');
   log(errs.length ? `❌ 오류 ${errs.length}\n${[...new Set(errs)].slice(0, 15).join('\n')}` : '✅ 오류 0');
   await b.close();
 })();

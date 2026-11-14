@@ -10,7 +10,7 @@
   //   이미 만든 카드면 「✅ 내 카드」 + 카드 그림 크게 (#129 ⑥) · 찜 개수 제한 · 보상 · 벌 없음
   const r = $derived(symState.open ? BY[symState.open] : null);
   const card = $derived(symState.open ? SYM_CARD[symState.open] ?? null : null);
-  const M = useMe(9999, 30, true); // 캠프와 같은 기본값 (테스트 판)
+  const M = useMe(9999, 30, true, false, true); // ⭐ 찜만 (폰 칸) · 서버 지갑은 쓰지 않음 (🚀 출시 · 수업 보상 💎 를 옛 값으로 덮어쓰지 않게)
   const made = $derived(!!card && !!M.me.cards?.[card.id]);
   const wished = $derived(!!symState.open && !!M.me.wishes?.[symState.open]);
   let toast = $state(''), t: ReturnType<typeof setTimeout> | null = null;
