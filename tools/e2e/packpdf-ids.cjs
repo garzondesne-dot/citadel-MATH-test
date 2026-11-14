@@ -22,5 +22,13 @@ const [SHOTS = '.', PACK, PDF] = process.argv.slice(2), B = 'http://localhost:41
   await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.selectOption('.lsel select', 'ex-11').catch(() => {}); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(1500);
   const lab = (await p.textContent('[data-k="stepimgs"]').catch(() => '')).trim(); ok('차시 준비 「단계별 그림 9 / 9」', /9 \/ 9/.test(lab), lab);
   await p.screenshot({ path: path.join(SHOTS, 'prep-stepimgs.png'), fullPage: false });
+  // 옛 폰 브라우저 흉내 (Promise.withResolvers 없음) + 확장자 없는 zip (폰 파일 고르기) = 그래도 9 / 9칸 · 실패면 이유 한 줄
+  { const c2 = await b.newContext({ viewport: { width: 400, height: 900 } }); await c2.addInitScript(() => { delete Promise.withResolvers; }); const q = await c2.newPage(); q.on('pageerror', (e) => errs.push(String(e)));
+    const noExt = path.join(SHOTS, 'ex-11-pdf'); fs.copyFileSync(zipPath, noExt);
+    await q.goto(B + '?role=teacher'); await q.waitForSelector('.tabs'); await q.click('.tabs button:has-text("준비")'); await q.click('.seg3 button:has-text("도구")'); await q.click('[data-k="packup-go"]'); await q.waitForSelector('[data-k="packup"]');
+    await q.setInputFiles('[data-k="packfile"]', noExt);
+    await q.waitForFunction(() => /칸을 글자로|못 찾았|읽지 못했|자를 칸이 없|글자가 없|PDF 도/.test(document.querySelector('[data-k="pdfnote"]')?.textContent || ''), null, { timeout: 60000 }).catch(() => {});
+    const n2 = (await q.textContent('[data-k="pdfnote"]').catch(() => '(줄 없음)')).trim();
+    ok('옛 브라우저(withResolvers 없음) + 확장자 없는 zip = 9 / 9칸', /9 \/ 9칸/.test(n2), n2.slice(0, 70)); await c2.close(); }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

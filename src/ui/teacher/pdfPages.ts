@@ -6,8 +6,11 @@ const PAGE_W = 2400, MAX_PAGES = 6, OUT_W = 1280;
 export interface PdfDoc { pages: HTMLCanvasElement[]; lines: Line[] }
 
 export async function readPdf(bytes: Uint8Array): Promise<PdfDoc> {
-  const lib = await import('pdfjs-dist');
-  const worker = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  // 옛 폰 브라우저(iOS 17.4 전 Safari 등)도 읽게 = pdf.js legacy 판 + Promise.withResolvers 메움 (🐞 2026-11-14 선생님 폰에서 자르기 줄이 안 뜸)
+  const P = Promise as unknown as { withResolvers?: unknown };
+  if (!P.withResolvers) P.withResolvers = function <T>() { let resolve!: (v: T) => void, reject!: (e: unknown) => void; const promise = new Promise<T>((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+  const lib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const worker = (await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')).default;
   lib.GlobalWorkerOptions.workerSrc = worker;
   const doc = await lib.getDocument({ data: bytes.slice() }).promise;
   const pages: HTMLCanvasElement[] = [], text: { items: TextItem[]; w: number; h: number }[] = [];

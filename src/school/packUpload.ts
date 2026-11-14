@@ -273,15 +273,16 @@ export function matchCells(names: string[], cells: string[]): { map: Record<stri
   return { map, unused: names.filter((n) => !Object.values(map).includes(n)) };
 }
 /** zip 풀기 = .json 1개(팩) + 그림들 · 폴더 상관없음 · 숨김 · __MACOSX 빼고 */
-export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; pdfs: { name: string; data: Uint8Array }[]; error?: string }> {
-  if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], pdfs: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
+export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; pdfs: { name: string; data: Uint8Array }[]; files: string[]; error?: string }> {
+  if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], pdfs: [], files: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
   const { unzipSync, strFromU8 } = await import('fflate');
   let files: Record<string, Uint8Array>;
-  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], pdfs: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
+  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], pdfs: [], files: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
   const ok = (p: string) => !/(^|\/)(__MACOSX|\.)/.test(p) && !p.endsWith('/');
   const js = Object.keys(files).filter((p) => ok(p) && /\.json$/i.test(p));
   const images = Object.keys(files).filter((p) => ok(p) && IMG_RE.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! }));
-  const pdfs = Object.keys(files).filter((p) => ok(p) && /\.pdf$/i.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! })); // ✂ 학습지 PDF (칸 그림 자동 자르기)
-  if (js.length !== 1) return { json: null, name: '', images, pdfs, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
-  return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images, pdfs };
+  const pdfs = Object.keys(files).filter((p) => ok(p) && /\.pdf$/i.test(p.trim())).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! })); // ✂ 학습지 PDF (칸 그림 자동 자르기)
+  const names = Object.keys(files).filter(ok).map((p) => p.replace(/^.*\//, ''));
+  if (js.length !== 1) return { json: null, name: '', images, pdfs, files: names, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
+  return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images, pdfs, files: names };
 }

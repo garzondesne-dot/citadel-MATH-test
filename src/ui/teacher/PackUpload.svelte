@@ -87,7 +87,7 @@
   // ✂ 학습지 PDF → 칸마다 자동 자르기 (정식 수업 준비와 같은 글자 찾기 · 칸 = 팩 imgCells)
   async function cropPdf(bytes: Uint8Array, pdfName: string) {
     const Pk = P0; if (!Pk) return;
-    pdfNote = `✂ ${pdfName} 읽는 중…`;
+    pdfNote = `✂ ${pdfName} 읽는 중… (처음엔 PDF 읽기 도구를 받느라 몇 초 걸려요)`;
     try {
       const { readPdf, cutRects, inkOf } = await import('./pdfPages');
       pdfDoc = await readPdf(bytes);
@@ -100,7 +100,7 @@
       if (!slots.length) { pdfNote = '✂ 자를 칸이 없어요 — 팩에 단계(도입 · 개념 · 문제 · 형성평가)가 없어요'; await combine(); return; }
       if (!n) { pdfNote = `✂ ${pdfName} 에서 칸 이름 글자(몬스터 n · 문제 n · STEP n · 형성평가 · 생각 열기)를 하나도 못 찾았어요 — 레이드용 학습지가 맞는지 · 칸마다 그림을 직접 골라 주세요`; rects = r; await combine(); return; }
       pdfNote = `✂ ${pdfName} 에서 ${n} / ${slots.length}칸을 글자로 찾아 잘랐어요 — 칸마다 눈으로 보고, 틀리면 위 · 아래를 늘리고 줄이거나 그림을 직접 골라요`;
-    } catch (e) { pdfNote = `✂ PDF 를 읽지 못했어요 — ${(e as Error).message}`; }
+    } catch (e) { pdfNote = `✂ ${pdfName} 을 읽지 못했어요 — ${(e as Error)?.message || String(e)} · 칸마다 「그림 직접 고르기」로 넣거나 칸 그림 파일을 zip 에 같이 넣어 주세요`; }
     await combine();
   }
   async function adjust(c: string, edge: 'top' | 'bottom', d: number) {
@@ -114,14 +114,19 @@
   $effect(() => { if (res && !pick && stepsQ[0]) pick = (stepsQ.find((x) => x.kind === 'monster') ?? stepsQ[0]).id; });
   async function onfile(e: Event) {
     const f = (e.target as HTMLInputElement).files?.[0]; if (!f) return;
-    if (!/\.zip$/i.test(f.name)) { run(await f.text(), f.name); return; }
-    // 🗜 zip = 팩 .json 1개 + 칸 그림들 (폴더 · 이름 접두어 상관없음 · 20MB 까지)
-    const z = await unpackZip(new Uint8Array(await f.arrayBuffer()));
+    const buf = new Uint8Array(await f.arrayBuffer());
+    // zip = 이름 끝 .zip 또는 내용 첫 글자 「PK」 (폰 파일 고르기가 확장자를 떼는 때 · 🐞 2026-11-14)
+    const isZip = /\.zip$/i.test(f.name) || (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04);
+    if (!isZip) { run(new TextDecoder().decode(buf), f.name); return; }
+    // 🗜 zip = 팩 .json 1개 + 칸 그림들 + 학습지 PDF (폴더 · 이름 접두어 상관없음 · 20MB 까지)
+    const z = await unpackZip(buf);
     if (z.error || !z.json) { res = { pack: null, issues: [{ at: `zip ${f.name}`, msg: z.error ?? '팩이 없어요', lvl: 'err' }], stats: { mons: 0, items: 0, versions: 0, rechecked: 0, ask: 0 } }; name = f.name; return; }
     picked = z.images.map((x) => new File([x.data as Uint8Array<ArrayBuffer>], x.name, { type: /\.webp$/i.test(x.name) ? 'image/webp' : /\.png$/i.test(x.name) ? 'image/png' : 'image/jpeg' }));
     await run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장${z.pdfs.length ? ` + 학습지 PDF ${z.pdfs.length}개` : ''}`);
-    if (z.pdfs.length > 1) pdfNote = `✂ zip 안에 PDF 가 ${z.pdfs.length}개 (${z.pdfs.map((x) => x.name).join(' · ')}) — 학습지 PDF 는 1개만 · 자르지 않았어요`;
-    else if (z.pdfs[0]) await cropPdf(z.pdfs[0].data, z.pdfs[0].name);
+    // ✂ 언제나 한 줄: PDF 없음 · 여러 개 · 읽는 중 → 결과 (조용히 0장 금지)
+    if (!z.pdfs.length) pdfNote = z.images.length ? '' : `✂ zip 안에 학습지 PDF 도 칸 그림도 없어요 (zip 안 파일: ${z.files.slice(0, 6).join(' · ')}${z.files.length > 6 ? ' …' : ''})`;
+    else if (z.pdfs.length > 1) pdfNote = `✂ zip 안에 PDF 가 ${z.pdfs.length}개 (${z.pdfs.map((x) => x.name).join(' · ')}) — 학습지 PDF 는 1개만 · 자르지 않았어요`;
+    else await cropPdf(z.pdfs[0]!.data, z.pdfs[0]!.name);
   }
     // 🗑 올린 팩 지우기 (📜 2026-11-14 선생님 「기존 11차시 지우면 되지? → 삭제 없어」): 베타에서 올린 팩만 · 확인 한 번 · 팩 + 그 팩 칸 그림
   const mine = $derived([...UPLOADED].map((id) => PACKS.find((p) => p.id === id)).filter((p): p is LessonPack => !!p).sort((a, b) => a.no - b.no));
