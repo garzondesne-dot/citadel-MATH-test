@@ -43,6 +43,12 @@ const packFile = (id) => (/^set-1[12]$/.test(id) ? path.join(ROOT, `tools/pack-u
     for (let k = 0; k < 20; k++) { await tv.waitForTimeout(150); if (await tv.locator('.dpane').count()) continue; seenHero = seenHero || (await tv.locator('[data-k="tstrike"]').count()) > 0; const tg = await tv.$$eval('[data-k="ttag"]', (xs) => xs.map((x) => x.textContent)).catch(() => []); if (tg.length) seenTag = tg.join(' '); if (seenTag && seenHero) break; }
     ok(`${arg} 누르면 시연 창 닫힘 · 선생님 용사 돌진 · 「${hpDown ? '💥 소멸!' : '시연 · 데미지 없음'}」`, !(await tv.locator('.dpane').count()) && seenHero && (hpDown ? /소멸/.test(seenTag) : /데미지 없음/.test(seenTag)), `용사 ${seenHero} · 글 「${seenTag}」 · 쓰러짐 ${hpDown}`);
     await tv.waitForTimeout(1500); await tv.screenshot({ path: path.join(SHOTS, `strike-${arg.replace(/:/g, '_')}-after.png`) });
+    // 🐞 (📜 2026-11-14 문제점 1) 한 번 누름 = 한 번 · 다음 몬스터로 넘어가도 선생님 일격이 저절로 다시 나오지 않음
+    const st0 = await t.evaluate(() => { const L = window.__dbGet('school/live'); return window.__dbGet(`rooms/${L.code}`).state.step; });
+    let again = 0;
+    for (let g = 0; g < 6; g++) { await t.click('.tact .btn').catch(() => {}); for (let k = 0; k < 6; k++) { await tv.waitForTimeout(150); if (await tv.locator('[data-k="tstrike"]').count()) again++; } }
+    const st1 = await t.evaluate(() => { const L = window.__dbGet('school/live'); return window.__dbGet(`rooms/${L.code}`).state.step; });
+    ok(`${arg} 다음 단계로 넘어가도 일격 다시 안 나옴 (한 번 누름 = 한 번)`, st1 !== st0 && again === 0, `단계 ${st0} → ${st1} · 다시 나온 횟수 ${again}`);
     if (hpDown) { const gone = await tv.evaluate(() => window.__arenaMonGone?.()); out.push(`ℹ 소멸 뒤 몬스터 숨김(그 단계) = ${gone}`); }
     await ctx.close();
   }

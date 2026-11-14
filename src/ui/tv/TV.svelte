@@ -93,7 +93,7 @@
   let ink = $state(false);
   let zoom = $state<0 | 1 | 2>(0);
   let hero = $state(false);
-  $effect(() => { void i; untrack(() => { demo = false; zoom = 0; }); }); // 단계가 바뀌면 시연 · 크게 보기 닫힘 (필기는 Ink 가 지움)
+  $effect(() => { void i; untrack(() => { demo = false; zoom = 0; tstrike = null; }); }); // 단계가 바뀌면 시연 · 크게 보기 닫힘 · 🧑‍🏫 선생님 일격 비움(📜 2026-11-14 🐞 다음 몬스터에서 저절로 또 필살기 = 지난 일격이 남아 새 전투 장면이 다시 틈) (필기는 Ink 가 지움)
   // 🎮 시연 창 = 실제 전투(정찰 · 몬스터 공격 시계 · 학생 공격 연출) 멈춤 · 닫으면 그 자리에서 이어서 (📜 2026-11-14 선생님 「멈춤」 · 학생 풀기 · 제출 · 데미지는 그대로)
   $effect(() => { const d = demo, c = code; if (c) untrack(() => setDemo(S, c, d)); });
 
