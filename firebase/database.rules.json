@@ -54,7 +54,9 @@
       "funStats": { ".write": "auth != null" },
       "survey": { ".write": "auth != null" }
     },
-    "prep": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
+    "prep": { ".read": "auth != null",
+      "$lesson": { ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
+      "packs": { "$id": { ".write": "auth != null && root.child('admins/' + auth.uid).val() === true && (newData.exists() || !$id.matches(/^set-[0-9]+$/))" } } },
     "boardLock": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
       "$pid": { ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).val() === true)" }

@@ -440,6 +440,15 @@
     "필요충분의 천칭 수호자"
    ],
    "cell": 384
+  },
+  "garden4": {
+   "src": "art/mon-garden4-v1.webp",
+   "from": "monsters-skygarden-v2.webp",
+   "row": 4,
+   "names": [
+    "거울 웅덩이 두꺼비"
+   ],
+   "cell": 192
   }
  },
  "dungeons": {

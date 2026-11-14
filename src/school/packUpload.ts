@@ -254,3 +254,6 @@ export async function checkMedia(P: LessonPack, img: (path: string) => Promise<b
   if (vgone.length) out.push({ at: `영상(video) ${vgone.map((u) => String(u).replace(/^.*\//, '')).join(' · ')}`, msg: '영상 없음 — 그 파일이 앱에 없어요(🎬 단추가 꺼져요)', lvl: 'ask' });
   return out;
 }
+
+/** 🗑 지울 수 있는 팩 = 베타에서 올린 팩만 · 정식 차시 id(set-NN) · 앱에 든 차시는 지우지 않음 (서버 규칙도 같은 줄을 막음) */
+export const deletable = (id: string, builtIn: (id: string) => boolean) => !/^set-[0-9]+$/.test(id) && !builtIn(id);

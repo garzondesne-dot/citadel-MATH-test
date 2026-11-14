@@ -2,11 +2,11 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkMedia, checkUpload, PACK_PATH, revive, type Checked, type Issue } from '../../school/packUpload';
+  import { checkMedia, checkUpload, deletable, PACK_PATH, revive, type Checked, type Issue } from '../../school/packUpload';
   import PrepImg from '../q/PrepImg.svelte';
   import { prepPath, prepPut } from '../../school/prep';
   import { items, bossItem } from '../../engine/lessons';
-  import { PACKS, addPacks } from '../../engine/packs';
+  import { PACKS, UPLOADED, addPacks, removePack } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
   import { ATTACKS } from '../../raid/attacks';
   import { spriteOf } from '../manifest';
@@ -71,7 +71,18 @@
   async function onimgs(e: Event) { picked = [...((e.target as HTMLInputElement).files ?? [])]; await matchImgs(); }
   $effect(() => { if (res && !pick && stepsQ[0]) pick = (stepsQ.find((x) => x.kind === 'monster') ?? stepsQ[0]).id; });
   async function onfile(e: Event) { const f = (e.target as HTMLInputElement).files?.[0]; if (f) run(await f.text(), f.name); }
-    async function save() {
+    // 🗑 올린 팩 지우기 (📜 2026-11-14 선생님 「기존 11차시 지우면 되지? → 삭제 없어」): 베타에서 올린 팩만 · 확인 한 번 · 팩 + 그 팩 칸 그림
+  const mine = $derived([...UPLOADED].map((id) => PACKS.find((p) => p.id === id)).filter((p): p is LessonPack => !!p).sort((a, b) => a.no - b.no));
+  let ask = $state(''), gone = $state('');
+  async function del(id: string) {
+    if (!deletable(id, (x) => builtIn.has(x))) return;
+    const put = (p: string) => (S.trySet ? S.trySet(p, null) : Promise.resolve((S.set(p, null), true)));
+    if (!(await put(`${PACK_PATH}/${id}`))) { failed = '지우지 못했어요 · 교사 로그인 · 인터넷을 확인해요'; ask = ''; return; }
+    await put(`prep/${id}`); // 그 팩의 칸 그림
+    removePack(id); ask = ''; gone = `「${id}」 팩을 지웠어요 · 차시 목록에서 빠져요`;
+    setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.delete('lesson'); location.href = u.toString(); }, 900);
+  }
+  async function save() {
     if (!P || errs.length) return;
     const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
     // 🎬 있는 영상만 연결 (파일이 없는 칸은 뺌)
@@ -89,6 +100,11 @@
 <Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? `${P.no}차시 저장` : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : ''} onmain={save}>
   {#snippet title()}📦 차시 팩 올리기{/snippet}
   <div class="up" data-k="packup">
+    {#if mine.length && !res}<div class="mine" data-k="packmine"><p class="lab">올린 차시 팩</p>
+      {#each mine as m (m.id)}<div class="mrow" data-id={m.id}><span><b>{m.no}차시 {m.title}</b><small>{m.id}</small></span>
+        {#if deletable(m.id, (x) => builtIn.has(x))}{#if ask === m.id}<span class="cf" role="alertdialog"><em>이 팩을 지울까요? 되돌릴 수 없어요</em><button type="button" class="yes" data-k="packdel-yes" onclick={() => del(m.id)}>예</button><button type="button" class="no" onclick={() => (ask = '')}>아니요</button></span>{:else}<button type="button" class="del" data-k="packdel" onclick={() => (ask = m.id)}>🗑 삭제</button>{/if}{/if}
+      </div>{/each}</div>{/if}
+    {#if gone}<p class="ok" role="status">{gone}</p>{/if}
     <label class="file"><input type="file" accept=".json,application/json" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 .json (입력판 양식)'}</small></label>
     <label class="file img"><input type="file" accept="image/png,image/webp,image/jpeg" multiple onchange={onimgs} data-k="packimgs" /><span>🖼 칸 그림 같이 고르기 (여러 장)</span><small>파일 이름 = 칸 이름 (예: c1.png · review.webp)</small></label>
         <button type="button" class="b2" onclick={() => (paste = !paste)}>{paste ? '붙여 넣기 닫기' : '글로 붙여 넣기'}</button>
@@ -122,6 +138,10 @@
   .b2 { align-self: flex-start; min-height: 40px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
   textarea { width: 100%; box-sizing: border-box; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 13px ui-monospace, monospace; padding: 8px; }
   .sum { margin: 0; padding: 8px 10px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--ok) 18%, var(--surface)); font: 700 14px var(--font); }
+  .mine { display: flex; flex-direction: column; gap: 6px; } .mrow { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--surface-2); }
+  .mrow > span:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; } .mrow small { color: var(--text-3); font-size: 12px; }
+  .del, .cf button { min-height: 40px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--bad); background: transparent; color: var(--bad); font: 700 14px var(--font); }
+  .cf { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: flex-end; } .cf em { font-style: normal; font-size: 13px; color: var(--bad); width: 100%; text-align: right; } .cf .yes { background: var(--bad); color: #fff; } .cf .no { border-color: var(--line); color: var(--text); }
   .msum { margin: 0; font: 600 13px var(--font); color: var(--text-2); }
   .sum.bad { background: color-mix(in srgb, var(--bad) 18%, var(--surface)); }
   .iss { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow: auto; overscroll-behavior: contain; }

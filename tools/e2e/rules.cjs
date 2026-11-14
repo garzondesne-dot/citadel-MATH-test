@@ -27,6 +27,14 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('교사 남 💎 읽기', await as(T1.tok, 'gem/1-3/2'), true);
   want('교사 secrets 읽기', await as(T1.tok, 'secrets/111111'), true);
   want('교사 학습지 칸 쓰기', await as(T1.tok, 'prep/set-06/img/c1', 'PUT', 'data:image/webp;base64,AA'), true);
+  // 📦 차시 팩 삭제 (2026-11-14 · 베타에서 올린 팩만 · 정식 차시 id set-NN 은 지우기 막음 · 덮어쓰기는 됨)
+  want('교사 팩 올리기(ex-11)', await as(T1.tok, 'prep/packs/ex-11', 'PUT', { id: 'ex-11' }), true);
+  want('교사 팩 지우기(ex-11)', await as(T1.tok, 'prep/packs/ex-11', 'DELETE'), true);
+  want('교사 팩 올리기(set-11)', await as(T1.tok, 'prep/packs/set-11', 'PUT', { id: 'set-11' }), true);
+  want('교사 정식 차시 팩 지우기(set-11) 막힘', await as(T1.tok, 'prep/packs/set-11', 'DELETE'), false);
+  want('교사 packs 통째 지우기 막힘', await as(T1.tok, 'prep/packs', 'DELETE'), false);
+  want('교사 팩 그림 지우기', await as(T1.tok, 'prep/ex-11', 'DELETE'), true);
+  want('익명 팩 올리기', await as(anon.tok, 'prep/packs/ex-12', 'PUT', { id: 'ex-12' }), false);
   want('익명 secrets 읽기', await as(anon.tok, 'secrets/111111'), false);
   want('TV(익명) 키 전 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), false);
   want('TV 틀린 키로 hosts', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '0000'), false);

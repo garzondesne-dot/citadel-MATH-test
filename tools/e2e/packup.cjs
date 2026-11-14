@@ -72,6 +72,23 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   await p.setInputFiles('[data-k="packfile"]', path.join(__dirname, '../../src/subjects/common-math2/lessons/set-06.json')); await p.waitForSelector('[data-k="packsum"]');
   const s6 = (await p.textContent('[data-k="packsum"]')).trim(), i6 = (await p.textContent('[data-k="packiss"]').catch(() => '')).replace(/\s+/g, ' ');
   ok('④ 풀 판 6차시(생성기) = 통과 + 「이미 있는 차시」 확인', /검사 통과/.test(s6) && /이미 있는 차시/.test(i6), `${s6} | ${i6.slice(0, 80)}`);
+  // ⑤ 🗑 삭제 (📜 2026-11-14): 정식 11차시 파일(set-11) 올림 → 올린 팩 목록 = ex-11 은 🗑 · set-11 은 단추 없음 → ex-11 삭제(확인 한 번) → 목록 · 차시 ▾ 에서 사라짐 · 새로 고침 뒤에도
+  await p.setInputFiles('[data-k="packfile"]', path.join(DIR, 'official/set-11.json')); await p.waitForSelector('[data-k="packsum"]');
+  { const sum11 = (await p.textContent('[data-k="packsum"]')).trim(); ok('⑤ 정식 11차시 파일 = 검사 통과', /검사 통과/.test(sum11), sum11); }
+  await p.click('.sheet .btn.pmain'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs');
+  await openUp();
+  const rows = await p.$$eval('[data-k="packmine"] .mrow', (xs) => xs.map((x) => `${x.dataset.id}:${x.querySelector('[data-k="packdel"]') ? '🗑' : '-'}`));
+  ok('⑤ 올린 팩 목록 = ex-11 🗑 · set-11 단추 없음', rows.includes('ex-11:🗑') && rows.includes('set-11:-'), rows.join(' '));
+  await p.click('.mrow[data-id="ex-11"] [data-k="packdel"]'); await p.waitForTimeout(200);
+  ok('⑤ 확인 한 번 「이 팩을 지울까요? 되돌릴 수 없어요」', /이 팩을 지울까요\? 되돌릴 수 없어요/.test(await p.textContent('.mrow[data-id="ex-11"]')));
+  await p.screenshot({ path: `${SHOTS}/packup-6-delete.png` });
+  await p.click('[data-k="packdel-yes"]'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs');
+  await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
+  { const o = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.value)); ok('⑤ 삭제 뒤(새로 고침) 차시 ▾ = ex-11 없음 · set-11 있음', !o.includes('ex-11') && o.includes('set-11'), o.slice(-3).join(' ')); }
+  await p.click('.tabs button:has-text("수업")'); await p.waitForTimeout(300); ok('⑤ 수업 열기 칸에도 예시 없음', !/예시 · 집합/.test(await p.textContent('body')));
+  await p.reload(); await p.waitForSelector('.tabs'); await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
+  { const o = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.value)); ok('⑤ 다시 새로 고침 = 지워진 채', !o.includes('ex-11'), ''); }
+  await openUp();
   const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); ok('360 가로 넘침 0', over <= 0, String(over));
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
