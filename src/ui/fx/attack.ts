@@ -7,6 +7,7 @@
 import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
 import { heroOf } from '../../model/hero';
+import { setCanUlt } from '../../raid/combo';
 import { artUrl } from '../manifest';
 import { sfx } from '../sound.svelte';
 
@@ -201,6 +202,7 @@ export const fit = (hero: number, fx: string) => { const f = famOf(fx); return f
 const tierN = (fx: string) => { const t = tierOf(fx); return typeof t === 'number' ? t : -1; };
 /** ⚡ 필살기 = 내 속성 Ⅲ · Ⅳ · 🌟 진필살기 = 내 속성 Ⅳ (정식 canUlt · canTrue) */
 export const canUlt = (fx: string, hero: number) => tierN(fx) >= 2 && resonates(hero, fx);
+setCanUlt(canUlt); // ⛓ 형성평가 퍼펙트 필살기 묶기 15초 (정식 combo.js · DS.Attack.canUlt)
 export const canTrue = (fx: string, hero: number) => tierN(fx) === 3 && resonates(hero, fx);
 export const preload = (hero: number, fx: string) => { fxPreload(fx); const p = projOf(hero); if (p) fxPreload(p); if (canUlt(fx, hero)) preloadFaces(); };
 

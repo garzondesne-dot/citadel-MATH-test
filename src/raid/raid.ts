@@ -1,5 +1,6 @@
 import type { ChainSub, Given, LessonPack, Question, Room, Step } from '../model/types';
 import { grade } from '../engine/grade';
+import { bindFor } from './combo';
 import { bossItem as packBossItem, chainItems as packChainItems, items } from '../engine/lessons';
 
 // 레이드 규칙 — 정식 js/raid/model.js (DS.Raid) 를 같은 동작으로 옮김 (b2 범위)
@@ -398,7 +399,7 @@ export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const g = gameNow(R, now), focus = focusOn(R);
   const sl = solveLock(L, R, now), slHeld = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
   const start = R.state.stepAt != null ? R.state.stepAt : g;
-  const t = Math.max(0, (g - start - slHeld) / 1000 - bindSec(R, kind === 'boss' ? BOSS_ID : step.id)); // ⛓ 묶기 = 반 전체 묶기 × 3초만큼 공격이 늦어짐 (#152 · 정식 BIND_TOKEN)
+  const t = Math.max(0, (g - start - slHeld) / 1000 - bindFor(L, R, kind === 'boss' ? BOSS_ID : step.id, now)); // ⛓ 묶기 = 정식 자동 묶기 (📜 2026-11-14 「A로 해 줘」 · combo.ts bindFor · 30초 창마다 10초 + 필살기 · 🌟 · 🛡)
   return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || held(R), focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
 }
 /** 게이지 진행 (기기마다 memo 를 들고 같은 규칙으로) — 주기가 바뀌어도 거꾸로 튀지 않게 (정식 atkTrack) */

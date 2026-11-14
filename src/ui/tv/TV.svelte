@@ -467,7 +467,7 @@
   .sc { position: absolute; right: 2cqw; top: 23cqh; z-index: 3; min-width: 31cqw; padding: 2.2cqh 2cqw; border-radius: 2cqh; background: rgba(10, 16, 30, 0.86); border: 2px solid #6aa3ff; box-shadow: 0 0 2cqh rgba(106, 163, 255, 0.25); display: flex; flex-direction: column; gap: 1cqh; align-items: center; text-align: center; } /* 🌫 정찰 = 큰 테두리 카드 (📺 시안) */
   .sc .q { font-size: var(--tv-body); font-weight: 700; }
   .sc .r { font-size: var(--tv-body); } .sc .r b { font-size: var(--tv-big); color: #9fc8ff; }
-  .dpane { position: absolute; right: 1.5cqw; top: 11cqh; bottom: 13cqh; /* 🎮 아래 조작 막대(7.6cqh + 여백 · 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 40cqw; z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
+  .dpane { position: absolute; right: 1.5cqw; top: 11cqh; bottom: 10cqh; /* 🎮 아래 조작 막대(0.7배 · 약 6.7cqh + 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 40cqw; z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
@@ -500,7 +500,7 @@
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
-  .dock.small { scale: 0.7; transform-origin: right bottom; } /* 교사 캠프 리모컨 0.7배 (선생님) */
+  .dock { scale: 0.7; transform-origin: right bottom; } /* 📜 2026-11-14 선생님 「리모컨 사이즈 0.7로」 = 수업 중에도 0.7배 (교사 캠프는 원래 0.7) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }
   .dock button:disabled { opacity: 0.35; cursor: default; }
   .thov { position: absolute; inset: 0; z-index: 60; background: rgba(5, 6, 10, 0.6); display: grid; place-items: center; }

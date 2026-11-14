@@ -59,7 +59,7 @@
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
+    untrack(() => { if (split) return; /* 🎮 시연 중 = TV 공격 연출 없음 (시계 · 게이지 · 학생 폰은 그대로) */ const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 · 정식 hall.js pose): Pixi = A.pose · DOM 장면 = HeroSprite pose · 잠깐 모션(ms) 위에 바탕 모션(쓰러짐 · 기쁨 · 생각)
@@ -207,6 +207,7 @@
       for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true, heroHead(hero, true)); }
     });
   });
+  $effect(() => { if (split) untrack(() => { queue.length = 0; if (A) A.banner(null); domBan = ''; }); }); // 시연을 열면 떠 있던 띠도 내림
   function domPop(text: string, x: number, y: number, cls: string) { const k = ++fk; domFx = [...domFx, { k, text, x, y, cls }]; setTimeout(() => (domFx = domFx.filter((f) => f.k !== k)), 1300); }
   $effect(() => {
     if (!step) return;
@@ -215,6 +216,8 @@
     untrack(() => {
       snapNow = cur;
       if (key !== seenKey) { seenKey = key; seen = cur; wasDown = !!hp?.down; queue.length = 0; if (A) A.banner(null); domBan = ''; return; }
+      // 🎮 시연 중 = TV 전투 연출 없음 (📜 2026-11-14 · 공격 · 격파 띠 · EXP · 자세) — 기록만 따라감 (닫으면 그 뒤부터 다시 연출)
+      if (split) { seen = cur; wasDown = !!hp?.down; queue.length = 0; return; }
       const hs = hitsOf(seen, cur);
       // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
       for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) tvPose(u, 'healed', 1600); if ((a.gave ?? 0) > (b.gave ?? 0)) tvPose(u, 'heal', 1400); if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }

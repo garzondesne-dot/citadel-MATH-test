@@ -2,6 +2,7 @@ import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/ty
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
 import { bossRecord, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
+import { activeNow, cpPatch } from './combo';
 import { periodEnd } from '../school/bells';
 import { feat } from '../school/features.svelte';
 
@@ -51,6 +52,7 @@ function setHold(S: Store, code: string, R: Room, patch: Partial<Room['state']>)
   const after = !!next.focus || !!next.rest;
   if (!before && after) next.holdAt = t;
   if (before && !after) { next.pauseMs = Number(st.pauseMs || 0) + Math.max(0, t - Number(st.holdAt ?? t)); next.holdAt = null; }
+  Object.assign(next, cpPatch(st as never, patch as never, t)); // 🔥 콤보 시계 멈춤 (정식 cpPatch · 집중 · 쉼터 · 영상)
   S.set(`${roomPath(code)}/state`, next);
 }
 /** ⏸ 집중 켜기 · 끄기 (#118): 게임 시계가 멈추고 끄면 멈춘 자리에서 이어감 · 수업 시계(남은 시간 · 문 닫기)는 그대로 */
@@ -66,7 +68,7 @@ export function setRest(S: Store, code: string, on: boolean, min = 5): void {
   setHold(S, code, R, { rest: on ? { at: S.now(), min } : null });
 }
 /** 🎬 영상 · 📄 문제 창 (TV) — 단계 id 또는 끄기 */
-export function setVideo(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/video`, id); }
+export function setVideo(S: Store, code: string, id: string | null): void { const R = getRoom(S, code); const p = R ? cpPatch(R.state as never, { video: id } as never, S.now()) : {}; Object.entries(p).forEach(([k, v]) => S.set(`${roomPath(code)}/state/${k}`, v)); S.set(`${roomPath(code)}/state/video`, id); }
 export function setSheet(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/sheet`, id); }
 /** 🏛 교실 TV 「⚔ 던전 입장」: 교사 캠프 → 던전 대기실 */
 export function hallLobby(S: Store, code: string): void { S.set(`${roomPath(code)}/state/hall`, 'lobby'); }
@@ -149,6 +151,7 @@ export function submit(S: Store, L: LessonPack, code: string, mid: string, uid: 
   const rec = plainRecord(L, R, mid, uid);
   if (rec.submitted && !rec.canRetry) return false;
   S.set(`${roomPath(code)}/subs/${mid}/${uid}/${rec.nextAttempt}`, given);
+  S.set(`${roomPath(code)}/hits/${uid}/m_${mid}_${rec.nextAttempt}`, { at: S.now(), ac: activeNow(R, S.now()) }); // ✨ 공격 기록 (정식 actions hit · 자동 묶기 · 콤보)
   return true;
 }
 /** 👑 v4 형성평가 한 번에 제출 (bossRecord.todo 문항 모두 · 문항마다 새 시도 번호 = 틀린 문항 = 새 숫자) */

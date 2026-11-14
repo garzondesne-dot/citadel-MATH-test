@@ -15,6 +15,7 @@
         ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (root.child('rooms/' + $code + '/hosts/' + auth.uid).isString() && root.child('rooms/' + $code + '/hosts/' + auth.uid).val() === root.child('secrets/' + $code + '/hallKey').val()) || $code.beginsWith('T'))",
         "hosts": { "$uid": { ".write": "auth != null && auth.uid === $uid && (newData.val() === root.child('secrets/' + $code + '/hallKey').val() || !newData.exists())" } },
         "players": { ".write": "auth != null" },
+        "hits": { ".write": "auth != null" },
         "subs": { ".write": "auth != null" },
         "chain": { ".write": "auth != null" },
         "chainOk": { ".write": "auth != null" },
