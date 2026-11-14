@@ -9,6 +9,8 @@
   import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
   import PackUpload from './PackUpload.svelte';
+  import PdfFill from './PdfFill.svelte';
+  import VidList from './VidList.svelte';
   import { prepImg } from '../../school/prep';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
@@ -19,11 +21,13 @@
   const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id || p.no === l.no));
   const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
   let upOpen = $state(false); // 📦 차시 팩 올리기 (L1)
+  let fillOpen = $state(false), vidOpen = $state(false), imgVer = $state(0); // 📄 학습지 PDF 넣기 · 🎬 영상 목록 (📜 2026-11-14 「전부 진행해」)
   let lid = $state(untrack(() => want || packs[0]?.id || ''));
   const L = $derived(packs.find((p) => p.id === lid) ?? null);
   // 🖼 단계별 그림 = 서버 칸 그림(prep/{차시}/img/{칸 = 단계 img · id})을 실제로 읽어 셈 (🐞 2026-11-14 늘 「0 / n」 · 고정 글자였음)
   let hasImg = $state<Record<string, string | null>>({});
-  $effect(() => { const Lc = L; hasImg = {}; if (!Lc) return; for (const st of Lc.steps.filter((x) => !x.later)) { const c = st.img ?? st.id; void prepImg(S, Lc, c).then((u) => { if (L === Lc) hasImg = { ...hasImg, [st.id]: u }; }); } });
+  $effect(() => { const Lc = L; void imgVer; hasImg = {}; if (!Lc) return; for (const st of Lc.steps.filter((x) => !x.later)) { const c = st.img ?? st.id; void prepImg(S, Lc, c).then((u) => { if (L === Lc) hasImg = { ...hasImg, [st.id]: u }; }); } });
+  const nv = $derived(L ? new Set(Object.values(L.videos || {})).size : 0);
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
   let seg = $state<'lesson' | 'week' | 'tools'>('lesson');
   let ver = $state(0);
@@ -55,8 +59,8 @@
   {:else if seg === 'lesson' && L}
     <p class="lab">기본값 · 이 차시</p>
     <div class="four">{#each Object.keys(STEP) as k (k)}{@const kk = k as keyof Prep}<button type="button" onclick={() => (edit = kk)}><small>{STEP[kk][4]}</small><b>{prep[kk]}{STEP[kk][3]}</b></button>{/each}</div>
-    <button type="button" class="item" disabled><span class="ic">📄</span><span class="tx"><b>학습지 PDF · 한 번에 넣기</b><small>테스트 판 · 준비 중</small></span></button>
-    <button type="button" class="item" disabled><span class="ic">🎬</span><span class="tx"><b>영상 {Object.keys(L.videos || {}).length}편</b><small>테스트 판 · 준비 중</small></span></button>
+    <button type="button" class="item" data-k="pdffill-go" onclick={() => (fillOpen = true)}><span class="ic">📄</span><span class="tx"><b>학습지 PDF · 한 번에 넣기</b><small>PDF 1개 → 칸마다 잘라 단계별 그림으로</small></span></button>
+    <button type="button" class="item" data-k="vid-go" disabled={!nv} onclick={() => (vidOpen = true)}><span class="ic">🎬</span><span class="tx"><b>영상 {nv}편</b><small>{nv ? `칸 ${Object.keys(L.videos || {}).length}곳 · 누르면 칸별 목록 · 재생` : '연결된 영상 없음'}</small></span></button>
     <p class="lab" data-k="stepimgs">단계별 그림 {L.steps.filter((s) => !s.later && hasImg[s.id]).length} / {L.steps.filter((s) => !s.later).length}</p>
     <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st" class:has={!!hasImg[s.id]}>{#if hasImg[s.id]}<img class="th" src={hasImg[s.id]} alt="" />{:else}<i>⚠</i>{/if}<b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>{hasImg[s.id] ? '✔ 있음' : '넣기 ›'}</em></div>{/each}</div>
   {:else if seg === 'week' && feat('schedule')}
@@ -78,6 +82,8 @@
   {/if}
 </div>
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
+{#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
+{#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}
 <div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>
 
 {#if edit}

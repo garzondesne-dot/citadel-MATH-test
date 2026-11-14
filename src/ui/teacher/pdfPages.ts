@@ -37,6 +37,7 @@ export function cutRects(pages: HTMLCanvasElement[], rects: Rect[]): string {
 /** 잉크 찾기: 그 쪽 · 그 단(양옆 1% 안쪽 · 가운데 점선 빼고)에서 [y0, y1] 안 마지막으로 어두운 줄 — 풀이 칸 · 상자 · 그림까지 자르려고 */
 export function inkOf(pages: HTMLCanvasElement[]): Ink {
   return (p, x0, x1, y0, y1) => {
+    y1 = Math.min(y1, 0.955); // 쪽 아래 「- n차시」 · 「(1/2)」 쪽 번호 줄은 빼고 (🖼 2026-11-14 4차시 실제 학습지에서 칸이 쪽 끝까지 늘어남)
     const pg = pages[p - 1]; if (!pg || y1 <= y0) return null;
     const W = pg.width, H = pg.height, sx = Math.round((x0 + 0.012) * W), sw = Math.max(1, Math.round((x1 - x0 - 0.024) * W)), sy = Math.round(y0 * H), sh = Math.max(1, Math.round((y1 - y0) * H));
     const d = pg.getContext('2d')!.getImageData(sx, sy, sw, sh).data;
