@@ -29,7 +29,7 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
 function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
   const t = S.now(), st = R.state;
   const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? periodEnd(t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
-  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl });
+  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
 }
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);

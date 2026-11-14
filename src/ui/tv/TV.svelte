@@ -4,7 +4,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { doorStart, endClass, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
+  import { appearNow, doorStart, endClass, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
@@ -150,13 +150,14 @@
   let dockAt = $state(Date.now()), pin = $state(false), mini = $state(false), sound = $state(true);
   const dockOn = $derived(pin || now - dockAt < 3000);
   const poke = () => (dockAt = Date.now());
-  const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : '앞으로 ▶');
-  const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
+  const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : '앞으로 ▶'); // 🌫 정찰 중 = 리모컨과 같게 「⚔ 지금 등장」 (🐞 2026-11-14 · 예전엔 몬스터를 건너뜀)
+  const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
   function go() {
     if (!R) return;
     campPeek = false;
     if (view === 'camp' && isLobby(R)) { hallLobby(S, code); return; }
     if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「앞으로 ▶」 = 쉼터 끝 + 수업으로 (#142)
+    else if (scout?.on) { appearNow(S, L, code); return; } // 🌫 정찰 중 = 지금 등장
     nextStep(S, L, code);
   }
   function full() { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.().catch(() => {}); }
