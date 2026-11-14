@@ -23,12 +23,14 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
     if (f === 'bad-3-recheck.json') await p.screenshot({ path: `${SHOTS}/packup-1-bad.png` });
   }
   // ② 예시 팩
-  // 🖼 정식 11차시 칸 그림 대역(이 기기 · prep/set-11/img/{칸}) — boss · sum 은 일부러 비움 = 「그림 없음」 한 줄 · 저장은 됨
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAIAAABM5OhcAAAAk0lEQVR42u3SMQ0AAAjAMOZf9DDBRxsJTUvJAQaxEBYICwRFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAsEBYIC4QFwgJhgbBAWCAs0Hc84b2DxcEVo7AAAAAASUVORK5CYII=';
-  await p.evaluate((png) => { for (const c of ['review', 'c1', 'm1', 'c2', 'm2']) window.__dbSet(`prep/set-11/img/${c}`, png); }, PNG);
+  // 🖼 그림 없이 올림 = 「그림 없음」 7칸 ⚠ · 저장 단추는 켜짐 → 🖼 칸 그림 8장(7칸 + 쓰이지 않는 extra) 같이 고름 = 「그림 없음」 사라짐 · 「쓰이지 않는 그림 1개」
   await upload('example-ex-11.json'); await p.waitForTimeout(1200); // 그림 · 영상 확인은 뒤따라 옴
   { const iss = (await p.textContent('[data-k="packiss"]').catch(() => '')).replace(/\s+/g, ' ');
-    ok('🖼 그림 없음 = sum · boss 만 · ⚠ 한 줄 · 영상 3편 있음(영상 없음 줄 없음)', /그림\(img\) sum · boss/.test(iss) && !/영상 없음/.test(iss) && (await mainDis()) === false, iss.slice(0, 160)); }
+    ok('🖼 그림 안 고름 = 「그림 없음」 7칸 ⚠ · 영상 3편 있음 · 저장 켜짐', /그림\(img\) review · c1 · m1 · c2 · m2 · sum · boss/.test(iss) && !/영상 없음/.test(iss) && (await mainDis()) === false, iss.slice(0, 140)); }
+  const IMG = path.join(DIR, 'img'), files = ['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss', 'extra'].map((c) => path.join(IMG, `${c}.png`));
+  await p.setInputFiles('[data-k="packimgs"]', files); await p.waitForTimeout(1500);
+  { const iss = (await p.textContent('[data-k="packiss"]').catch(() => '')).replace(/\s+/g, ' '), ms = (await p.textContent('[data-k="packmedia-sum"]').catch(() => '')).trim();
+    ok('🖼 그림 같이 고름 = 「그림 없음」 사라짐 · 7칸 붙음 · 쓰이지 않는 그림 1개 · 영상 3편 연결', !/그림 없음/.test(iss) && /그림 7칸 붙음/.test(ms) && /쓰이지 않는 그림 1개 \(extra\.png\)/.test(ms) && /영상 3편 연결/.test(ms), ms); }
   await p.click('.chips2 button:has-text("개념 1")'); await p.waitForTimeout(500);
   { const m = await p.evaluate(() => ({ img: !!document.querySelector('[data-k="packimg"] img'), vid: document.querySelector('[data-k="packvid"]')?.getAttribute('src') ?? '' }));
     const ok2 = await p.evaluate(async (u) => (await fetch(u, { method: 'HEAD' })).headers.get('content-type'), m.vid).catch(() => '');
@@ -48,6 +50,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   await p.click('.chips2 button:has-text("형성평가")'); await p.waitForTimeout(150); ok('② 형성평가 미리 보기', (await prev()).length === 2);
   await p.click('.sheet .btn.pmain'); await p.waitForTimeout(400);
   ok('② 저장 → prep/packs/ex-11', await p.evaluate(() => Object.keys(localStorage).some((k) => (localStorage.getItem(k) || '').includes('"ex-11"'))));
+  ok('🖼 저장 → prep/ex-11/img 7칸 (팩과 같은 자리 · webp)', await p.evaluate(() => { const all = Object.keys(localStorage).map((k) => localStorage.getItem(k) || '').join(''); const keys = Object.keys(localStorage); const val = (c) => { const k = keys.find((x) => x.endsWith(`prep/ex-11/img/${c}`)); return k ? JSON.parse(localStorage.getItem(k) || 'null') : null; }; void all; return ['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss'].every((c) => /^data:image\/webp/.test(val(c) || '')) && !val('extra'); }));
   await p.waitForNavigation({ timeout: 5000 }).catch(() => {}); await p.waitForSelector('.tabs');
   // ③ 차시 목록 · 테스트
   await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);

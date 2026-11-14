@@ -8,8 +8,8 @@ const { rest, asAdmin } = require('./_emu.cjs');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=127.0.0.1';
 (async () => {
   const b = await chromium.launch(), errs = [], out = [];
-  const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
-  await rest('prep/packs/ex-11', 'DELETE');
+  const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); console.error(out[out.length - 1]); if (!c) errs.push(n); };
+  await rest('prep/packs/ex-11', 'DELETE'); await rest('prep/ex-11', 'DELETE'); await rest('school/live', 'DELETE'); // 지난 시험이 연 수업 지움
   const open = async (u, w = 360, h = 760) => { const ctx = await b.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(B + u + E); return p; };
   const t = await open('?role=teacher'); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
   const lists = async (p) => {
@@ -22,12 +22,14 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   ok('올리기 전 = 11차시 없음', !(await lists(t)).prep);
   await t.click('.tabs button:has-text("준비")'); await t.click('.seg3 button:has-text("도구")'); await t.click('[data-k="packup-go"]');
   await t.setInputFiles('[data-k="packfile"]', path.join(__dirname, '../pack-upload/example-ex-11.json')); await t.waitForSelector('[data-k="packsum"]');
+  await t.setInputFiles('[data-k="packimgs"]', ['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss'].map((c) => path.join(__dirname, `../pack-upload/img/${c}.png`))); await t.waitForTimeout(1500);
   // 새로 고침 없이 (저장 직후 · 다시 그리기 전)
   await t.evaluate(() => { window.__noReload = true; });
   await t.click('.sheet .btn.pmain'); await t.waitForSelector('.sheet .ok, .sheet .fail', { timeout: 10000 });
   const fail = await t.$('.sheet .fail'); ok('저장 = 서버가 받음', !fail, fail ? await fail.textContent() : '');
   const srv = await rest('prep/packs/ex-11'); ok('서버 prep/packs/ex-11 있음', !!srv && srv.id === 'ex-11', srv ? `steps ${(srv.steps || []).length} · m1 retry ${JSON.stringify(Object.keys(srv.monsters?.m1?.retry || {}))}` : '없음');
-  await t.waitForNavigation({ timeout: 6000 }).catch(() => {}); await t.waitForSelector('.tabs', { timeout: 20000 });
+  { const im = await rest('prep/ex-11/img'); ok('🖼 서버 prep/ex-11/img = 칸 그림 7장(webp)', !!im && Object.keys(im).length === 7 && Object.values(im).every((x) => /^data:image\/webp/.test(x)), im ? Object.keys(im).join(' · ') : '없음'); }
+  await t.waitForNavigation({ timeout: 6000 }).catch(() => {}); await t.waitForSelector('.tabs', { timeout: 20000 }).catch(async (e) => { await t.screenshot({ path: `${SHOTS}/emu-fail.png` }); console.error('URL', t.url(), (await t.evaluate(() => document.body.innerText)).slice(0, 300)); throw e; });
   const l1 = await lists(t); ok('새로 고침 뒤 · 준비 차시 ▾ · 수업 열기 = 11차시', l1.prep && l1.home, JSON.stringify(l1));
   await t.screenshot({ path: `${SHOTS}/packup-emu-home.png` });
   // 새 기기 (다른 교사 폰 = 서버에서만 받음)
@@ -38,5 +40,5 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   const live = await rest('school/live'); ok('11차시 수업 열림', live && live.lesson === 'ex-11', JSON.stringify(live));
   const s = await open(`?role=student&room=${live?.code}&as=1-3:1`); await s.waitForTimeout(2500);
   const L = await s.evaluate(() => document.body.innerText.slice(0, 120)); ok('학생 폰 = 11차시 방', !/수업 방을 찾지 못했어요/.test(L), L.replace(/\s+/g, ' ').slice(0, 80));
-  console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await rest('prep/packs/ex-11', 'DELETE'); await b.close();
+  console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await rest('prep/packs/ex-11', 'DELETE'); await rest('prep/ex-11', 'DELETE'); await b.close();
 })();

@@ -9,7 +9,6 @@
 //   FIREBASE_SA_JSON='<정식 서비스 계정 JSON>' COPY_EMAIL=… COPY_PW=… node tools/copy-from-release/copy.mjs --dry   ← 몇 명 · 몇 건만
 //   (위와 같이) node tools/copy-from-release/copy.mjs                                                         ← 실제로 씀
 //   시험(에뮬레이터): node tools/copy-from-release/copy.mjs --src http://127.0.0.1:9000 --src-ns <ns> --emu
-//   📄 학습지 칸 그림만 (2026-11-14 · 차시 팩 그림 칸): … copy.mjs --prep set-11 --prep-only   ← 정식 prep/set-11/img/* 를 시험 서버 같은 자리에 (쉼표로 여러 차시)
 import { createSign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
@@ -74,12 +73,7 @@ async function main() {
   const tok = await srcToken();
   const A = DRY ? null : await dstAuth();
   const rows = [];
-  for (const id of (arg('--prep') || '').split(',').filter(Boolean)) { // 📄 학습지 칸 그림 (prep/{차시}/img · 학생 정보 없음)
-    const v = await src(`prep/${id}/img`, tok), n = v && typeof v === 'object' ? Object.keys(v).length : 0;
-    rows.push(`prep/${id}/img 칸 그림 ${n}장${n ? ` (${Object.keys(v).join(' · ')})` : ''}`);
-    if (!DRY && v != null) await dst(`prep/${id}/img`, v, A);
-  }
-  for (const k of has('--prep-only') ? [] : PATHS) {
+  for (const k of PATHS) {
     const v = await src(k, tok);
     const c = countOf(k, v); rows.push(`${k.padEnd(11)} 학생 ${String(c.students).padStart(4)} · 칸 ${String(c.items).padStart(6)}`);
     if (!DRY && v != null) await dst(k, k === 'accounts' ? prepAccounts(v) : v, A);

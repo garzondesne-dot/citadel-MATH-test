@@ -33,13 +33,15 @@ describe('📦 차시 팩 올리기 검사기', () => {
   });
   it('🖼 🎬 그림 · 영상 칸 (정식 11차시 칸 그림 · 영상 3편) · 없으면 ⚠ 한 줄 · 저장은 막지 않음', async () => {
     const P = run('example-ex-11.json').pack!;
-    expect(P.imgOf).toBe('set-11'); expect(P.imgCells).toEqual(['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss']);
+    expect(P.imgOf).toBeUndefined(); expect(P.imgCells).toEqual(['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss']);
     expect(P.steps[0]!.img).toBe('review');
     expect(P.videos).toEqual({ c1: 'video/v11-49.mp4', m1: 'video/v11-49.mp4', sum: 'video/v11-49.mp4', c2: 'video/v11-50.mp4', m2: 'video/v11-50.mp4', boss: 'video/v11-51.mp4' });
     for (const f of ['v11-49', 'v11-50', 'v11-51']) expect(fs.existsSync(`public/video/${f}.mp4`), f).toBe(true);
-    const have = new Set(['prep/set-11/img/c1', 'prep/set-11/img/m1']);
+    const have = new Set(['prep/ex-11/img/c1', 'prep/ex-11/img/m1']);
     const xs = await checkMedia(P, async (p) => have.has(p), async (u) => u !== 'video/v11-51.mp4');
     expect(xs.map((x) => `${x.lvl} | ${x.at} | ${x.msg.split(' — ')[0]}`)).toEqual(['ask | 그림(img) review · c2 · m2 · sum · boss | 그림 없음', 'ask | 영상(video) v11-51.mp4 | 영상 없음']);
+    for (const c of P.imgCells!) expect(fs.existsSync(`${DIR}img/${c}.png`), `예시 그림 ${c}`).toBe(true);
+    const dOf = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); dOf.imgOf = 'set-11'; expect(checkUpload(JSON.stringify(dOf), look).pack!.imgOf).toBe('set-11'); // 다른 차시 그림 빌리기
     const d = JSON.parse(fs.readFileSync(DIR + 'example-ex-11.json', 'utf8')); d.img.push('zz'); d.video.push({ file: 'v11-49', at: ['nope'] });
     const r2 = checkUpload(JSON.stringify(d), look); expect(errs(r2)).toEqual([]);
     expect(r2.issues.filter((x) => x.lvl === 'ask').map((x) => x.at)).toEqual(expect.arrayContaining(['그림(img) 「zz」', '영상(video) 「v11-49」 · 칸 「nope」']));

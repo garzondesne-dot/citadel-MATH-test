@@ -20,3 +20,5 @@ export function conceptOf(L: LessonPack, id: string): string | null {
   for (let i = k - 1; i >= 0; i--) if (L.steps[i]!.kind === 'concept') return L.steps[i]!.id;
   return null;
 }
+/** 📦 차시 팩 올리기: 고른 그림을 저장 전에 미리 보기 (같은 PrepImg 가 이 기억에서 읽음) */
+export function prepPut(L: LessonPack, id: string, dataUrl: string | null): void { const p = prepPath(L, id); if (dataUrl) memo.set(p, Promise.resolve(dataUrl)); else memo.delete(p); }
