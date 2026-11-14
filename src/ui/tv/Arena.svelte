@@ -22,8 +22,8 @@
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
-  const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow }:
-    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean } = $props();
+  const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow, tstrike = null }:
+    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean; /** 🧑‍🏫 선생님 일격 (시연 다 맞힘) */ tstrike?: { ult: boolean; at: number; hero: number; fx: string } | null } = $props();
   let host: HTMLDivElement;
   let A = $state<Arena | null>(null), mode = $state<'wait' | 'pixi' | 'dom'>('wait');
   let W = $state(0), H = $state(0);
@@ -139,6 +139,38 @@
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
     return true;
   }
+  // 🧑‍🏫 선생님 일격 (📜 2026-11-14 「교사 시연은 학생이랑 달라 · 퍼펙트 뜨면 필살기 공격」 · 정식 hall.js teacherStrike): 왼쪽에서 등장 → 몬스터로 돌진 → 팍(필살기 = 컷인 + 광역)
+  //   「시연 · 데미지 없음」 · 이미 쓰러진 몬스터면 「💥 소멸!」 = 번쩍 → 조각 14개 사방 → 0.9초 뒤 사라짐(그 단계 동안) · 데미지 · 기록 없음
+  let goneKey = $state(''), seenStrike = 0;
+  const stepKey = $derived(`${R.state.step}|${step?.id ?? ''}`);
+  $effect(() => { const g = goneKey === stepKey; A?.monGone(g); });
+  $effect(() => { const t = tstrike; if (!t || t.at === seenStrike) return; seenStrike = t.at; untrack(() => void teacherStrike(t)); });
+  async function teacherStrike(t: { ult: boolean; hero: number; fx: string }) {
+    const lay = fxLayer; if (!lay || !step) return;
+    const key = stepKey, kill = !!hp?.down;
+    atkPreload(t.hero, t.fx); if (t.ult) preloadFaces();
+    const mb = document.createElement('div'); let bb = ''; try { const sp = spriteOf(sprite); bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { /* 기본 몸통 */ }
+    mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; mb.dataset.bb = bb; lay.appendChild(mb);
+    const s0 = Math.max(1.6, (H / 1080) * 2.2), w = HERO.w * s0, hgt = HERO.h * s0, hb = document.createElement('div');
+    hb.style.cssText = `position:absolute;left:${W * 0.04}px;top:${H * 0.62 - hgt}px;width:${w}px;height:${hgt}px`; hb.dataset.k = 'tstrike';
+    const art = document.createElement('i'); art.className = 'art hero'; art.style.cssText = `position:absolute;inset:0;background:url(${heroUrl(t.hero)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated`;
+    hb.appendChild(art); lay.appendChild(hb);
+    const tag = (text: string, cls: string) => { const e = document.createElement('b'); e.className = `ttag ${cls}`; e.dataset.k = 'ttag'; e.textContent = text; e.style.left = `${box.mon.cx}px`; e.style.top = `${box.mon.top + box.mon.size * 0.3}px`; lay.appendChild(e); setTimeout(() => e.remove(), 1600); };
+    await attack(lay, { heroBox: hb, monBox: mb, hero: t.hero, fx: t.fx, miss: false, noDmg: true, rest: 'idle', hits: 1, ultimate: t.ult, pose: (q: Pose) => rowAnim(art, q),
+      heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
+      onHit: (q) => {
+        const last = !q || q.k === q.n - 1; if (!last) return;
+        A?.monHit(0, 'hit', { perfect: true, ult: t.ult });
+        tag(kill ? '💥 소멸!' : '시연 · 데미지 없음', kill ? 'vanish' : 'demo');
+        if (kill) {
+          for (let k = 0; k < 14; k++) { const sh = document.createElement('i'); sh.className = 'shard'; sh.style.cssText = `position:absolute;left:${box.mon.cx}px;top:${box.mon.top + box.mon.size / 2}px;--a:${(k / 14) * 360}deg`; lay.appendChild(sh); setTimeout(() => sh.remove(), 1100); }
+          setTimeout(() => { if (stepKey === key) goneKey = key; }, 900);
+        }
+      } }).catch(() => {});
+    mb.remove(); hb.remove();
+  }
+  (globalThis as { __arenaMonGone?: () => boolean }).__arenaMonGone = () => goneKey === stepKey;
+  (globalThis as { __tvStrike?: (ult?: boolean) => void }).__tvStrike = (ult = false) => void teacherStrike({ ult, hero: 0, fx: 'flame' }); // 시험 고리
   // ⏱ 성능 재기 (머리 📎 기준 · 교실 PC 에서 직접): 주소에 ?perf → 가상 용사 30명 → 지금 띠 30명 동시 4초 · 새 것 30명 동시 4초 → 평균 · 최저 fps · 최장 프레임 ms 를 화면에
   //   크롬 DevTools 「Performance → CPU 4x slowdown」을 켜고 같은 주소를 열면 기준(30명 · 50fps 이상) 확인 · GPU 없는 시험 상자에선 잴 수 없음(쉬는 장면도 2fps)
   let perfOut = $state('');
@@ -294,6 +326,10 @@
   .nm { margin-top: 0.4cqh; font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.1cqh 0.6cqw; border-radius: 99px; white-space: nowrap; }
   .nm.ok { color: var(--ok); }
   .pop { position: absolute; transform: translate(-50%, -100%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; text-shadow: 0 3px 0 #000; animation: up 1.1s ease-out forwards; pointer-events: none; }
+  .tvfx :global(.ttag) { position: absolute; z-index: 20; transform: translate(-50%, -100%); font-weight: 800; text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: up 1.6s ease-out forwards; }
+  .tvfx :global(.ttag.demo) { font-size: var(--tv-title); color: #e8ecf4; } .tvfx :global(.ttag.vanish) { font-size: var(--tv-big); color: #ffb347; }
+  .tvfx :global(.shard) { width: 1.2cqh; height: 1.2cqh; margin: -0.6cqh 0 0 -0.6cqh; background: #ffe08a; border-radius: 2px; box-shadow: 0 0 1cqh #ffb347; animation: shardgo 1s ease-out forwards; pointer-events: none; }
+  @keyframes shardgo { from { transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1; } to { transform: rotate(var(--a)) translateX(24cqh) scale(0.4); opacity: 0; } }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }

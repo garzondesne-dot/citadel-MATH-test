@@ -22,6 +22,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
+  import { savedLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
@@ -82,7 +83,7 @@
   // ── 어떤 장면인가 ──
   let campPeek = $state(false), setOpen = $state(false);
   const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' ? 'concept' : 'battle');
-  let demo = $state(false);
+  let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
   let zoom = $state<0 | 1 | 2>(0);
   let hero = $state(false);
@@ -278,11 +279,11 @@
   {:else if step && R}
     <!-- ⚔ 전투: 몬스터 + 머리 위 체력 · 아래 용사 이름표 -->
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
-    <Arena {L} R={R as Room} {step} {now} {ids} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} />
+    <Arena {L} R={R as Room} {step} {now} {ids} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} />
     {#if scout?.on}
       <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
-    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} onclose={() => (demo = false)} /></div>{/if}
+    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} onclose={() => (demo = false)} onstrike={(ult) => { const lk = savedLook(); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx }; demo = false; }} /></div>{/if}
   {/if}
 
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->

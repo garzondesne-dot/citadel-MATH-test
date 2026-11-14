@@ -31,6 +31,8 @@ export interface Arena {
   slashStats(): { fps: number; level: number; live: number; queue: number };
   /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
   stone(on: boolean): void;
+  /** 🧑‍🏫 선생님 일격 「💥 소멸!」 = 쓰러진 몬스터를 그 단계 동안 숨김 */
+  monGone(on: boolean): void;
   exp(u: string, text: string): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
@@ -301,7 +303,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
     },
-    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, banner, freeze, pose, monGone: (on: boolean) => { monC.visible = !on; }, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

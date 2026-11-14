@@ -3,14 +3,16 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { memoryStore } from '../../store/device';
   import { roomPath } from '../../raid/actions';
-  import { answerOf, BOSS_ID, bossState, chainRecord, isChain, itemsFor, bossItem as bossItemR, plainRecord, stepOf } from '../../raid/raid';
+  import { savedLook } from '../../store/me.svelte';
+  import { NAMES, tierOf } from '../fx/fx';
+  import { answerOf, BOSS_ID, bossRecord, V4, bossState, chainRecord, isChain, itemsFor, bossItem as bossItemR, plainRecord, stepOf } from '../../raid/raid';
   import { penLine, stripNo } from '../../engine/input';
   import Student from '../Student.svelte';
   // 🎮 선생님 시연 = 학생 폰의 문제 카드부터 아래만 (📜 2026-11-14 선생님 「전투 장면은 없애도 될 것 같아」 · 🪞 문제 꼴 · 단계 · 숫자 = 같은 Student 함수)
   //   폭 390 학생 화면을 창 폭에 맞춰 키움(3m 거리에서 읽히게) · 높이 = 창 높이 ÷ 배율 · 넘치면 안에서 스크롤
   //   문제 · 숫자 규칙 · 부품(장면 띠 · 답안 줄 · 칩 · 룬 · 노란 주요 단추 56/20 · 도전 칸) = 학생과 같은 Student 화면
   //   다른 점 = 이 기기 메모리 방(데미지 · 기록 없음 · 실제 수업 방에 쓰지 않음) · 정찰 없음 · 💡 정답 펼치기 · 🔄 숫자 바꿔 다시 · ✕ 닫기
-  const { L, R, code, onclose }: { L: LessonPack; R: Room; code: string; onclose: () => void } = $props();
+  const { L, R, code, onclose, onstrike }: { L: LessonPack; R: Room; code: string; onclose: () => void; /** 🧑‍🏫 다 맞힘 → 선생님 일격 (ult = ⚡ 필살기) */ onstrike?: (ult: boolean) => void } = $props();
   const PW = 390;
   let round = $state(0), reveal = $state(false), boxH = $state(0), boxW = $state(0);
   // 📐 한 화면 (📜 2026-11-14 「웬만하면 스크롤 안 되면 좋겠어」): 배율 = min(폭 배율, 높이 배율) · 문제 글자가 TV 에서 약 20px(학생 15px × 1.35) 아래로는 안 줄임 · 상태가 바뀔 때마다 다시 맞춤(0.5초마다 내용 높이를 잼)
@@ -39,6 +41,15 @@
     const rec = plainRecord(L, D, st.id, 'demo'); return itemsFor(L, D, st.id, 'demo', rec.nextAttempt).map((q, i) => `${i + 1}) ${line(q, i)}`);
   });
   void BOSS_ID;
+  // 🧑‍🏫 시연 다 맞힘 = 선생님 일격 (📜 2026-11-14 「교사 시연은 학생이랑 달라 · 퍼펙트 뜨면 필살기 공격」 · 정식 hall.js strikeHtml): 기술 고르기 · 재도전 판 대신 「⚔ 일반 공격」 · 「⚡ 필살기 · 이름」
+  //   필살기 = 선생님 스킬이 Ⅳ 전설 또는 🪶 특별일 때만 (아니면 잠김 + 한 줄)
+  const win = $derived.by(() => {
+    if (!D) return false; const st = stepOf(L, D); if (!st) return false;
+    if (st.kind === 'boss') return V4(D) ? bossRecord(L, D, 'demo').done : bossState(L, D, 'demo').every((x) => x.ok);
+    if (st.kind !== 'monster' || !L.monsters[st.id]) return false;
+    return isChain(L, D, st.id) ? chainRecord(L, D, st.id, 'demo').done : plainRecord(L, D, st.id, 'demo').perfectAt >= 0;
+  });
+  const tLook = savedLook(), tTier = tierOf(tLook.fx), tUlt = tTier === 3 || tTier === 's', tName = NAMES[tLook.fx] || '';
 </script>
 
 <div class="dp" role="dialog" aria-label="선생님 시연">
@@ -49,7 +60,12 @@
     <button type="button" onclick={onclose}>✕ 닫기</button>
   </div>
   {#if reveal && ans.length}<p class="rev">💡 {ans.join(' · ')}</p>{/if}
-  <div class="box" bind:clientHeight={boxH} bind:clientWidth={boxW}>
+  {#if win && onstrike}<div class="strike" data-k="tstrike" role="group" aria-label="선생님 일격">
+    <p>⚔ 모두 맞혔다! 어떤 공격으로 갈까요?</p>
+    <div class="sbtn"><button type="button" class="s0" onclick={() => onstrike(false)}>⚔ 일반 공격</button><button type="button" class="s1" disabled={!tUlt} onclick={() => onstrike(true)}>⚡ 필살기{tUlt && tName ? ` · ${tName}` : ''}</button></div>
+    {#if !tUlt}<small>⚙ 스킬 고르기에서 Ⅳ 전설이나 🪶 특별 스킬로 바꾸면 필살기를 쓸 수 있어요</small>{/if}
+  </div>{/if}
+  <div class="box" class:hide={win && !!onstrike} bind:clientHeight={boxH} bind:clientWidth={boxW}>
     {#key dcode}
       <div class="phone" style:width="{PW}px" style:height="{PH}px" style:transform="scale({k})">
         <div class="scr" data-k="demo-scr" bind:this={scr}><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
@@ -66,6 +82,12 @@
   .bar button { margin-left: auto; height: 4cqh; padding: 0 0.8cqw; border-radius: 1cqh; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; font-size: var(--tv-small); cursor: pointer; }
   .bar button + button { margin-left: 0; }
   .rev { margin: 0; font-size: var(--tv-small); color: #ffe7a6; }
+  .strike { display: flex; flex-direction: column; gap: 1.6cqh; padding: 2cqh 1cqw; border-radius: 1.6cqh; background: rgba(245, 184, 74, 0.12); border: 1px solid var(--accent); }
+  .strike p { margin: 0; font-size: var(--tv-title); font-weight: 800; color: #ffe7a6; }
+  .strike .sbtn { display: flex; gap: 0.8cqw; } .strike button { flex: 1; min-height: 8cqh; border-radius: 1.4cqh; font: 800 var(--tv-body) var(--font); cursor: pointer; border: 0; box-shadow: 0 0.5cqh 0 rgba(0, 0, 0, 0.35); }
+  .strike .s0 { background: var(--accent); color: #1b1408; } .strike .s1 { background: #6d3df0; color: #fff; } .strike .s1:disabled { opacity: 0.4; cursor: default; }
+  .strike small { font-size: var(--tv-small); color: #d6d9e0; }
+  .box.hide { display: none; }
   .box { flex: 1; min-height: 0; display: flex; justify-content: center; overflow: hidden; }
   /* 폰 틀: transform 이 있는 상자 = 안쪽 「화면 바닥 고정」(주요 단추 · 시트)이 이 틀 기준이 됨 → 학생 폰과 같은 자리 */
   .phone { flex: none; transform-origin: top center; border-radius: 12px; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
