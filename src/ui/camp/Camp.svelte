@@ -63,6 +63,7 @@
   // ⓪ 로그인한 학생 = 이름표 이름 (명단에서 · 학생이 쓰지 않음)
   if (untrack(() => pupil) && me.nick !== untrack(() => pupil)?.name) { me.nick = untrack(() => pupil)?.name ?? me.nick; M.save(); }
   // 🎁 선생님 선물 받기 (gifts/{uid} · 하루 한도 밖) — 캠프에 들어오면 아직 안 받은 것을 지갑에 넣고 한 줄 알림 (지급 = 기록 · 알림 = 보여 주기)
+  let feedTick = $state(0);
   let giftToast = $state('');
   {
     const u = untrack(() => pupil)?.uid;
@@ -296,6 +297,12 @@
     <ThemePicker now={theme} {feats} onpick={pickTheme} paper sub />{:else}<span class="slab">📝 보기</span><ModeSwitch dark />{/if}
     <span class="slab">🔊 소리</span>
     <SoundToggles />
+    {#if pupil && meBound()}{@const off = !!S.get(`accounts/${pupil.cls}/${pupil.num}/feedOff`)}
+      <!-- 📣 게시판 「최근 전투」에 내 판 공개 (📜 DECISIONS 2026-11-14 · 기본 켬 · 꺼도 내 기록 · 랭킹은 남음) -->
+      <span class="slab">📋 게시판 던전</span>
+      <button type="button" class="fsw" class:on={!off} role="switch" aria-checked={!off} data-k="feed-switch" onclick={() => { S.set(`accounts/${pupil.cls}/${pupil.num}/feedOff`, off ? null : true); feedTick++; }}>{#key feedTick}<span>📣</span><b>내 전투 결과 공개</b><span class="st">{off ? '꺼짐' : '켜짐'}</span><i class="kn" aria-hidden="true"></i>{/key}</button>
+      <small class="fnote">익명(반 · 용사)으로 「최근 전투」에 한 줄 · 꺼도 내 기록 · 랭킹은 남아요</small>
+    {/if}
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     <button type="button" class="out" disabled={open} onclick={() => (sheet = 'out')}>🚪 처음 화면으로 <small>{open ? '수업 중엔 못 나가요' : pupil ? `${pupil.cls}반 ${pupil.num}번` : ''}</small></button>
     <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? (BETA ? ' · 시험 서버' : ' · 서버') : ' · 이 기기'}</p>
@@ -439,4 +446,10 @@
   .empty { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s5) 0; color: var(--text-2); }
   .empty .ic { font-size: 40px; }
   .empty p { margin: 0; }
+  .fsw { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--tap); padding: 0 var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); text-align: left; }
+  .fsw b { flex: 1; } .fsw .st { font-size: 13px; color: var(--text-3); font-weight: 500; }
+  .fsw .kn { width: 40px; height: 24px; border-radius: 12px; background: var(--surface-2); position: relative; flex: none; }
+  .fsw .kn::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-3); transition: transform var(--t); }
+  .fsw.on .kn { background: var(--accent); } .fsw.on .kn::after { transform: translateX(16px); background: #fff; }
+  .fnote { display: block; font-size: 13px; color: var(--text-3); margin: 4px 0 var(--s2); }
 </style>

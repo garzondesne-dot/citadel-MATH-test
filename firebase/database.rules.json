@@ -49,6 +49,8 @@
       ".write": "auth != null && root.child('admins/' + auth.uid).val() === true",
       "board": {
         "rank": { ".write": "auth != null" },
+        "feed": { "$k": { ".write": "auth != null && !data.exists() && newData.exists()" } },
+        "rk2": { "$sem": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } } },
         "posts": {
           "$pid": {
             ".write": "auth != null && (!data.exists() || !newData.exists())",

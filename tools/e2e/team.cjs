@@ -70,6 +70,20 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   log('🤝 구조 보상: A', rz[0] || '-', '| B', rz[1] || '-', '| C', rz[2] || '-');
   if (!/\+5/.test(rz[0]) || !/\+3/.test(rz[1])) errs.push('🤝 구조 보상');
   log('💎 서버:', JSON.stringify({ A: (await rest('gem/1-3/1')).day, C: (await rest('gem/1-5/1')).day }), '| 📕 복습 완료 칸 A:', Object.keys((await rest('bonus/1-3/1/review/set-06')) || {}).length, '| 순위:', JSON.stringify(await rest('school/board/rank')).slice(0, 120));
+  // 🏆 · 📣 · 📜 (DECISIONS 2026-11-14): 결과 = 내 순위 카드 · 게시판 = 최근 전투 한 줄(익명 · 내 판 = 나) · 랭킹 창 탭 3 · 내 기록
+  for (const p of [A, Bp]) for (let i = 0; i < 3; i++) { await p.click('[data-k="board-res"]', { position: { x: 8, y: 8 } }).catch(() => {}); await wait(250); } await wait(800);
+  const rkA = await A.$eval('[data-k="board-rank"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => ''), rkB = await Bp.$eval('[data-k="board-rank"]', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
+  log('🏆 결과 순위: A', rkA, '| B', rkB); if (!/수호자 랭킹\s*1 \/ 1/.test(rkA) || !/도전자 랭킹/.test(rkB)) errs.push('결과 순위 카드');
+  await A.click('[data-k="board-back"]'); await wait(1200);
+  const fd = await A.$$eval('[data-k="board-feed"] .fl', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim())).catch(() => []);
+  log('📣 최근 전투:', fd.join(' | ')); if (!fd.length || !/6차시 · 3인 · S/.test(fd[0]) || !/나 ·/.test(fd[0]) || /로안/.test(fd[0])) errs.push('최근 전투 한 줄(익명)');
+  const chipT = await A.$eval('.bd .chips button:nth-child(2)', (x) => x.textContent.trim()); log('   차시 칩:', chipT); if (!/차시$/.test(chipT)) errs.push('차시 칩 「n차시」');
+  await A.click('[data-k="board-rank-open"]'); await wait(800);
+  const pos = await A.$eval('[data-k="board-mypos"]', (x) => x.textContent.trim()); await A.screenshot({ path: `${SHOTS}/b32-board-rank.png` });
+  await A.click('.tabs3 button:has-text("내 기록")'); await wait(400); const myr = await A.$$eval('[data-k="board-myruns"] .rr', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  log('🏆 랭킹 창:', pos, '| 📜 내 기록:', myr.join(' | ')); if (!/내 순위 1 \/ 1/.test(pos) || !myr.length) errs.push('랭킹 창 · 내 기록');
+  await A.screenshot({ path: `${SHOTS}/b32-board-mine.png` });
+  await A.click('.rkp .back'); await wait(300);
   // ⑬ 끊김
   await C.click('.bd .btn2'); await C.context().setOffline(true); await wait(3000);
   const off = await C.evaluate(() => ({ warn: document.querySelector('.bd .off')?.textContent, post: document.querySelector('.bd .act .btn2')?.disabled, solo: document.querySelector('.bd .act .btn')?.disabled })); log('⑬ C 끊김:', JSON.stringify(off)); if (!off.warn || !off.post || off.solo) errs.push('끊김');

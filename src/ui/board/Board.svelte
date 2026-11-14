@@ -5,16 +5,18 @@
   import { PACKS } from '../../engine/packs';
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
-  import { END_MS, GEM, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, RANK, rankOf, setReady, startTeam, weekOf, type Post, type RankRow, type Role } from '../../board/team';
+  import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
+  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, type Post, type Role } from '../../board/team';
+  import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
-  import { lastClass, lastTest } from '../../school/school';
+  import { isBeta, lastClass, lastTest, uidOf } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import { sfx } from '../sound.svelte';
+  import { clock } from '../clock.svelte';
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
@@ -54,9 +56,13 @@
   const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: me.hero });
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
-  const rkv = untrack(() => liveValue<Record<string, Record<string, Record<string, RankRow>>>>(S, RANK));
+  const RK2 = 'school/board/rk2', FEED = 'school/board/feed';
+  const rkv = untrack(() => liveValue<Record<string, Record<string, Agg>>>(S, RK2));
+  const MYFEED = 'citadel-board-myfeed';
+  let myFeeds = $state<string[]>((() => { try { return JSON.parse(localStorage.getItem(MYFEED) || '[]') as string[]; } catch { return []; } })());
+  const myFeed = (k: string) => { myFeeds = [...myFeeds, k].slice(-50); try { localStorage.setItem(MYFEED, JSON.stringify(myFeeds)); } catch { /* 사생활 창 */ } };
   onDestroy(rkv.stop);
-  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rescueGot?: number; rescue?: { g: number; c: number }; rank: { lesson: string; week: string; key: string } | null };
+  type Res = { L: LessonPack; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; n: number; role: Role; mult: number; bonus: number; base: number; total2: number; got: number; rescueGot?: number; rescue?: { g: number; c: number }; rank: { sem: string; role: 'g' | 'c'; lid: string; up: boolean } | null };
   let res = $state<Res | null>(null);
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
@@ -91,13 +97,24 @@
     if (got || rescueGot) save();
     // 📕 「복습 완료」 기록 칸 (오답노트 화면은 ⛺ 텐트 시안 뒤 · bonus/{반}/{번호}/review/{차시}/{문제} = 시각)
     if (cls && num) r.L.steps.forEach((s) => { const m = (r.R.subs?.[s.kind === 'boss' ? 'boss' : s.id]?.[uid]); if (m) S.set(`bonus/${cls}/${num}/review/${L.id}/${s.kind === 'boss' ? 'boss' : s.id}`, S.now()); });
-    // 🏆 익명 순위 (학년 전체 · 차시별 · 이번 주): ⚔ 최강 = 첫 시도 정답률 · 📈 성장 = 수업 기록보다 오른 폭 · 🤝 협동 = 주고받은 힌트
+    // 🏆 · 📜 · 📣 (📜 DECISIONS 2026-11-14 · board/ladder.ts): 내 기록(나만) · 랭킹 줄(학기 · 익명) · 최근 전투 한 줄(익명 · 공개 스위치)
+    const key = team ? team.pid : `s${uid.replace(/[.#$/[\]]/g, '_')}${S.now().toString(36)}`, t = S.now();
     let rank: Res['rank'] = null;
-    const key = team ? team.pid : `s${uid.replace(/[.#$/[\]]/g, '_')}${S.now().toString(36)}`, path = `${RANK}/${L.id}/${weekOf(S.now())}`;
-    if (S.kind !== 'memory') {
-      if (!team || r.drv) { const rr = r.tf.total ? r.tf.ok / r.tf.total : 0, baseR = (() => { const ms = team ? membersOf(team) : [{ cls, num }], xs = ms.map((m) => S.get<{ right?: number; total?: number }>(`records/${m.cls}/${m.num}/${L.id}`)).filter((x) => x && x.total) as { right: number; total: number }[]; return xs.length ? xs.reduce((a, x) => a + x.right / x.total, 0) / xs.length : rr; })();
-        S.set(`${path}/${key}`, { s: Math.round(rr * 1000), g: Math.round((rr - baseR) * 1000), c: r.hints, at: S.now() } satisfies RankRow); }
-      rank = { lesson: L.id, week: weekOf(S.now()), key };
+    const myGrade = gradeOf(r.f), myAcc = r.f.total ? r.f.ok / r.f.total : 0, pidMe = cls && num ? uidOf(cls, num) : '';
+    if (S.kind !== 'memory' && pidMe) {
+      const myRole: 'g' | 'c' = team ? role : roleOf(recOf(L) ?? null).role;
+      S.set(`bonus/${cls}/${num}/board/${key}`, { at: t, lid: L.id, no: L.no, n, role: myRole, grade: myGrade, right: r.right, total: r.total, sec: r.sec, clear: r.clear, left: left || undefined });
+      const cr = S.get<{ right?: number; total?: number }>(`records/${cls}/${num}/${L.id}`), base = cr && cr.total ? (cr.right ?? 0) / cr.total : null;
+      const sem = semOf(t), rp = `${RK2}/${sem}/${pidMe}`, was = S.get<Agg>(rp) ?? { cls, hero: me.hero, enh: me.enh };
+      const ad = addRun({ ...was, cls, hero: me.hero, enh: me.enh, x: isBeta(S, cls) || undefined, at: t }, { lid: L.id, role: myRole, grade: myGrade, acc: myAcc, sec: r.sec, base });
+      if (r.rescue?.g) ad.agg.rz = (ad.agg.rz ?? 0) + r.rescue.g;
+      S.set(rp, ad.agg);
+      rank = { sem, role: myRole, lid: L.id, up: ad.up };
+      if (ad.up) sfx('skill-unlock', 0.9);
+    }
+    if (S.kind !== 'memory' && (!team || r.drv)) { // 📣 판마다 한 줄 (팀 = 진행 맡은 폰이 · 공개를 끈 사람은 아이콘에서 빠짐 · 이름 · 번호 없음)
+      const ms = team ? membersOf(team) : [{ uid, cls, num, hero: me.hero }], open1 = ms.filter((m) => !S.get<boolean>(`accounts/${m.cls}/${m.num}/feedOff`));
+      if (open1.length) { S.set(`${FEED}/${key}`, { at: t, no: L.no, n, grade: r.grade, sec: r.sec, clear: r.clear, who: open1.map((m) => ({ c: m.cls, h: m.hero })) }); myFeed(key); }
     }
     if (team && r.drv) S.set(`${POSTS}/${team.pid}/phase`, 'done');
     if (team) markSeen(team.pid);
@@ -113,7 +130,22 @@
   }
   const skip = () => { if (stage < 2) stageGo(stage + 1); };
   onDestroy(() => { clearTimeout(stT); cancelAnimationFrame(gemRaf); });
-  const rk = $derived(res?.rank ? rankOf(rkv.v.val?.[res.rank.lesson]?.[res.rank.week] ?? null, res.rank.key) : null);
+  const pidMine = untrack(() => (cls && num ? uidOf(cls, num) : ''));
+  // 🏆 랭킹 · 📜 내 기록 창 (탭 = 🛡 수호자 · 🌱 도전자 · 📜 내 기록 · 전체 / 차시 칩 · 학년 / 우리 반)
+  let rkOpen = $state(false), rkTab = $state<'g' | 'c' | 'me'>('g'), rkChip = $state<string>('all'), rkMine = $state(false);
+  const sem = $derived(semOf(clock.now));
+  const board = $derived.by(() => { const rows = rowsOf(rkv.v.val?.[sem] ?? null, rkMine ? cls : undefined), lid = rkChip === 'all' ? undefined : rkChip; return rkTab === 'g' ? viewOf(guardList(rows, lid), pidMine) : rkTab === 'c' ? viewOf(growList(rows, lid), pidMine) : null; });
+  const mineAgg = $derived(pidMine ? rkv.v.val?.[sem]?.[pidMine] ?? null : null);
+  const lr2 = untrack(() => liveValue<Record<string, { at: number; lid: string; no: number; n: number; role: 'g' | 'c'; grade: string; right: number; total: number; sec: number; clear: boolean; left?: boolean }>>(S, cls && num ? `bonus/${cls}/${num}/board` : 'bonus/_none'));
+  onDestroy(lr2.stop);
+  const runs = $derived(Object.entries(lr2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at).sort((a, b) => b.at - a.at));
+  const best = $derived.by(() => { const m: Record<string, (typeof runs)[number]> = {}; for (const r of runs) { const w = m[r.lid]; if (!w || (GS[r.grade] ?? 0) > (GS[w.grade] ?? 0) || ((GS[r.grade] ?? 0) === (GS[w.grade] ?? 0) && r.right / (r.total || 1) > w.right / (w.total || 1))) m[r.lid] = r; } return Object.values(m).sort((a, b) => a.no - b.no); });
+  // 📣 최근 전투 (익명 · 판마다 한 줄 · 내 판 = 「나」)
+  const lf2 = untrack(() => liveValue<Record<string, { at: number; no: number; n: number; grade: string; sec: number; clear: boolean; who?: { c: string; h: number }[] }>>(S, FEED)); onDestroy(lf2.stop);
+  const feed = $derived(Object.entries(lf2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at && (chip === 'all' || x.no === chip)).sort((a, b) => b.at - a.at).slice(0, 8));
+  const mmss2 = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  const day2 = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(5, 10).replace('-', '/');
+  const rk = $derived.by(() => { const r0 = res?.rank; if (!r0 || !pidMine) return null; const rows = rowsOf(rkv.v.val?.[r0.sem] ?? null), v = r0.role === 'g' ? viewOf(guardList(rows), pidMine) : viewOf(growList(rows), pidMine); return { pos: v.pos, n: v.n, role: r0.role, up: r0.up }; });
   const dayLeft = $derived(GEM.dayCap - (Number(me.wallet.day?.[kstDay(S.now())]) || 0));
   // 🐞 (📜 2026-11-14) 이끄는 폰이 먼저 끝내 글이 'done' 이 되어도, 이 폰이 자기 결과를 아직 못 봤으면 전투를 닫지 않음 (예전 = 바로 닫혀 결과 없이 게시판으로)
   const SEEN = 'citadel-board-seen';
@@ -142,7 +174,8 @@
     <div class="mid" role="button" tabindex="0" aria-label="결과 · 누르면 다음" data-k="board-res" data-stage={stage} onclick={skip} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip(); }}>
       <div class="card grade stamp" class:x={!res.clear}><b class="g">{res.clear ? res.grade : '✕'}</b><span><b>{res.clear ? `${res.L.no}차시 클리어 · ${res.n > 1 ? '팀 ' : ''}등급 ${res.grade}` : '⌛ 시간이 끝났어요 · 클리어 ✕'}</b><small>첫 시도 기준 · {res.tf.total}문항 중 틀림 + 미제출 {res.tf.bad + res.tf.none}개</small></span></div>
       <div class="stat"><span><b>{res.tf.ok}</b>⭕ 맞힘</span><span><b>{res.tf.bad}</b>❌ 틀림</span><span><b>{res.tf.none}</b>⏭ 미제출</span></div>
-      {#if stage >= 2 && rk && rk.s}<div class="card rk"><small>익명 순위 · {res.L.no}차시 · 이번 주 · 학년 ({rk.n}팀)</small><div><span>⚔ 최강</span><em>{rk.s}위</em></div><div><span>📈 성장</span><em>{rk.g}위</em></div><div><span>🤝 협동</span><em>{rk.c}위</em></div></div>{/if}
+      {#if stage >= 2 && rk?.up}<div class="card up" data-k="board-up"><b>🛡 승급!</b><small>{res.L.no}차시 정답률 80% 넘김 · 다음 판부터 수호자로 들어갈 수 있어요</small></div>{/if}
+      {#if stage >= 2 && rk && rk.pos}<button type="button" class="card rk" data-k="board-rank" onclick={(e) => { e.stopPropagation(); rkTab = rk.role; rkOpen = true; }}><small>익명 · 이번 학기 · 학년</small><div><span>{rk.role === 'g' ? '🛡 수호자 랭킹' : '🌱 도전자 랭킹'}</span><em>{rk.pos} / {rk.n}</em></div></button>{/if}
       {#if stage >= 1}<div class="card rw rise">
         <div><span>💎 맞힌 소문제 {res.right} (최대 {GEM.itemMax}){res.clear ? ` + ⏰ 클리어 ${GEM.clear}` : ''}</span><span>{res.base}</span></div>
         {#if res.n > 1}<div><span>👥 {res.n}인 팀 × {res.mult}</span><span>× {res.mult}</span></div>{/if}
@@ -174,7 +207,7 @@
     <!-- ⑥ 전체 게시판 -->
     <div class="chips" role="group" aria-label="차시 거르기">
       <button type="button" class:on={chip === 'all'} aria-pressed={chip === 'all'} onclick={() => setChip('all')}>전체</button>
-      {#each LESSONS as p (p.id)}<button type="button" class:on={chip === p.no} class:lock={!isOpen(p)} aria-pressed={chip === p.no} onclick={() => setChip(p.no)}>{isOpen(p) ? '' : '🔒 '}{p.no}</button>{/each}
+      {#each LESSONS as p (p.id)}<button type="button" class:on={chip === p.no} class:lock={!isOpen(p)} aria-pressed={chip === p.no} onclick={() => setChip(p.no)}>{isOpen(p) ? '' : '🔒 '}{p.no}차시</button>{/each}
     </div>
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
@@ -189,10 +222,31 @@
       {:else}
         <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>팀 없이 도전하거나 · 모집 글을 올려요</small></div>
       {/if}
+      <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>🏆 랭킹 · 📜 내 기록</span><small>익명 · 이번 학기</small></button>
+      {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
+        <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{/if}
       <p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>
     </div>
     <BottomAction dock={false} text="⚔ 팀 없이 도전 ›" onmain={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}
       why={open || !online ? (open ? '수업 중엔 모집 글을 못 올려요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" disabled={open || !online} onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'post'; }}>＋ 모집 글 올리기</button>{/snippet}</BottomAction>
+  {/if}
+  {#if rkOpen}
+    <div class="rkp" role="dialog" aria-label="랭킹 · 내 기록" data-k="board-rank-panel">
+      <div class="bar"><button type="button" class="back" aria-label="게시판으로" onclick={() => (rkOpen = false)}>‹</button><b class="t">🏆 랭킹 · {sem.replace('-', '년 ')}학기</b><span></span></div>
+      <div class="tabs3" role="tablist">{#each [['g', '🛡 수호자'], ['c', '🌱 도전자'], ['me', '📜 내 기록']] as [k, t] (k)}<button type="button" role="tab" class:on={rkTab === k} aria-selected={rkTab === k} onclick={() => (rkTab = k as 'g' | 'c' | 'me')}>{t}</button>{/each}</div>
+      {#if rkTab !== 'me'}
+        <div class="chips" role="group" aria-label="차시"><button type="button" class:on={rkChip === 'all'} onclick={() => (rkChip = 'all')}>전체</button>{#each LESSONS as p (p.id)}<button type="button" class:on={rkChip === p.id} onclick={() => (rkChip = p.id)}>{p.no}차시</button>{/each}</div>
+        <div class="seg2"><button type="button" class:on={!rkMine} onclick={() => (rkMine = false)}>학년 전체</button><button type="button" class:on={rkMine} onclick={() => (rkMine = true)}>우리 반만</button></div>
+        <p class="mypos" data-k="board-mypos">{board && board.pos ? `내 순위 ${board.pos} / ${board.n}` : `아직 ${rkTab === 'g' ? '수호자로 한' : '도전자로 한'} 판이 없어요`}</p>
+        <small class="lbl">{rkTab === 'g' ? '차시별 최고 등급 합(S4 A3 B2 C1) → 첫 시도 정답률 → 시간' : '수업 정답률보다 오른 만큼(차시마다 최대 +60%p) · 80% 넘기면 🛡 승급'}</small>
+        <div class="rkl">{#each board?.rows ?? [] as r (r.id)}<div class="rr" class:me={r.id === pidMine}><b class="no">{r.rank}</b><HeroSprite id={r.a.hero} scale={0.5} aura={r.a.enh} /><span class="who">{r.id === pidMine ? `나 · ${r.a.cls}반` : `${r.a.cls}반`}{#if rkTab === 'g' && r.a.rz}<i> · 🤝 {r.a.rz}</i>{/if}</span><em>{rkTab === 'g' ? `${r.score}점` : `+${r.score}%p`}</em></div>{:else}<div class="empty"><span>🏆</span><b>아직 기록이 없어요</b><small>게시판 던전을 한 판 하면 올라가요</small></div>{/each}</div>
+      {:else}
+        <small class="lbl">차시별 최고 (나만 보여요)</small>
+        <div class="rkl">{#each best as b (b.lid)}{@const c = mineAgg?.c?.[b.lid]}<div class="rr"><b class="no">{b.no}</b><span class="who">{b.no}차시 · 최고 {b.grade} · {b.right}/{b.total}</span><em>{c ? (c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`) : ''}</em></div>{:else}<div class="empty"><span>📜</span><b>아직 판이 없어요</b></div>{/each}</div>
+        <small class="lbl">지난 판</small>
+        <div class="rkl" data-k="board-myruns">{#each runs.slice(0, 30) as r (r.k)}<div class="rr"><b class="no">{day2(r.at)}</b><span class="who">{r.no}차시 · {r.n > 1 ? `${r.n}인` : '혼자'} · {r.role === 'g' ? '🛡' : '🌱'} {r.grade} · {r.right}/{r.total} · {mmss2(r.sec)}</span><em>{r.left ? '👋' : r.clear ? '○' : '✕'}</em></div>{/each}</div>
+      {/if}
+    </div>
   {/if}
   {#if toast}<p class="toast3" role="status">{toast}</p>{/if}
 </div>
@@ -281,4 +335,27 @@
   .pinq { margin: 0 0 var(--s2); font-size: 14px; color: var(--text-2); text-align: center; }
   .pinerr { margin: var(--s2) 0 0; text-align: center; color: var(--bad); font-weight: 700; font-size: 15px; }
   .toast3 { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface-2); font-weight: 700; white-space: nowrap; z-index: 25; }
+  .rkbtn { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: var(--tap); padding: 0 var(--s4); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
+  .rkbtn small { color: var(--text-2); font-weight: 500; }
+  .feed { display: flex; flex-direction: column; gap: 6px; }
+  .fl { display: flex; align-items: center; gap: var(--s2); padding: 6px var(--s3); border-radius: var(--r); background: var(--surface); }
+  .fl.me { box-shadow: inset 0 0 0 2px var(--accent); }
+  .fh { display: flex; flex: none; } .ft { display: flex; flex-direction: column; min-width: 0; } .ft b { font-size: 14px; } .ft small { font-size: 13px; color: var(--text-2); }
+  .rkp { position: absolute; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; overflow: auto; padding-bottom: var(--s5); }
+  .tabs3 { display: flex; gap: 6px; padding: 0 var(--s4) var(--s2); }
+  .tabs3 button { flex: 1; min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
+  .tabs3 button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+  .seg2 { display: flex; gap: 6px; padding: var(--s2) var(--s4) 0; }
+  .seg2 button { flex: 1; min-height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); background: transparent; color: var(--text-2); font: 700 14px var(--font); }
+  .seg2 button.on { color: var(--text); border-color: var(--accent); }
+  .mypos { margin: var(--s3) var(--s4) 0; font: 800 18px var(--font); color: var(--accent); }
+  .rkp .lbl { display: block; padding: var(--s2) var(--s4) 0; }
+  .rkl { display: flex; flex-direction: column; gap: 4px; padding: var(--s2) var(--s4) 0; }
+  .rr { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); background: var(--surface); }
+  .rr.me { box-shadow: inset 0 0 0 2px var(--accent); }
+  .rr .no { min-width: 40px; font-size: 14px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .rr .who { flex: 1; min-width: 0; font-size: 14px; } .rr .who i { font-style: normal; color: var(--text-2); }
+  .rr em { font-style: normal; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .card.up { border: 2px solid var(--accent); text-align: center; } .card.up b { font-size: 22px; color: var(--accent); }
+  button.card.rk { width: 100%; text-align: left; color: var(--text); font: inherit; }
 </style>
