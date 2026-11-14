@@ -3,20 +3,21 @@ import { SUBJ } from './subject';
 
 // 채점 — 정식 js/engine/quiz.js DS.Quiz.grade 와 같은 동작 (화면과 분리 · 학생 폰 · 종합실 · 시험이 같이 씀)
 // 주의: multi 는 정식처럼 sort() 기본(글자) 정렬 뒤 비교 — 번호가 10 이상이어도 양쪽이 같은 정렬이라 결과는 같다
+/** 글자 답 맞추기 (📜 2026-11-14 머리 · 12차시 팩 「a - 1」): 빼기 기호 − · – · — · ‐ → - · 띄어쓰기 없앰 · 영문 소문자 — 정답 표기는 그대로 */
+export const normAns = (s: unknown) => String(s == null ? '' : s).replace(/[\u2212\u2013\u2014\u2010\u2011\uFE63\uFF0D]/g, '-').replace(/\s+/g, '').toLowerCase();
 export function grade(q: Question, given: Given): boolean {
   const f = SUBJ.formats[q.type]; if (f) return f.grade(q, given); // 과목 고유 꼴 (#136)
   switch (q.type) {
     case 'blanks': {
       const g = given as string[];
-      return q.items.every((it, k) => g[k] === it.answer);
+      return !!g && q.items.every((it, k) => g[k] === it.answer || normAns(g[k]) === normAns(it.answer));
     }
     case 'ox':
       return given === q.answer;
     case 'number':
       return Number(given) === q.answer;
     case 'text': {
-      const norm = (s: unknown) => String(s == null ? '' : s).replace(/\s+/g, '').toLowerCase();
-      return (q.answers || []).some((a) => norm(a) === norm(given));
+      return (q.answers || []).some((a) => normAns(a) === normAns(given));
     }
     case 'multi':
       return (given as number[]).slice().sort().join(',') === q.answer.slice().sort().join(',');
