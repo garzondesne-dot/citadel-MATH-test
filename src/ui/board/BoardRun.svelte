@@ -16,6 +16,7 @@
   import { CAMP_PORTAL } from '../manifest';
   import { sfx } from '../sound.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
+  import { mateHits, matesOf, mateSnaps, type MateHit } from './mates';
 
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
@@ -23,7 +24,7 @@
   type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack };
   const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
-    team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string> } | null;
+    team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
     onend: (r: End) => void; onquit: () => void;
   } = $props();
   const L = untrack(() => boardPack(L0));
@@ -96,14 +97,25 @@
   const amDrvNow = (RR: Room) => solo || leader(RR, S.now())?.u === uid;
   const elapsedOf = (RR: Room) => { const m = bMeta(RR); return m ? (m.limit || 0) - timeLeft(RR, S.now()) : 0; };
   // 🧪 화면 시험만: 지금 단계를 다 맞히기 · 다 틀리기 (e2e team.cjs · 답 입력 화면 자체는 레이드 e2e 가 시험)
+  const myUid = untrack(() => uid);
+  //   👥 u = 그 팀원 대신 (e2e boardmates.cjs · 동료 공격 연출 시험)
   const hook = {
-    solve: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s) return;
+    solve: (uid0?: string) => { const uid = uid0 || myUid; const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s) return;
       if (s.kind === 'boss') bossState(L, RR, uid).forEach((x, i) => { if (!x.ok && x.left > 0) bossSubmit(S, L, code, uid, i, answerOf(bossItem(L, RR, uid, i, x.next)!)); });
       else if (isChain(L, RR, s.id)) { for (let k = 0; k < 12; k++) { const r = chainRecord(L, S.get<Room>(roomPath(code))!, s.id, uid); if (r.done || r.fail || r.locked) break; chainSubmit(S, L, code, s.id, uid, r.stage, 0, answerOf(r.items[r.stage]!)); } }
       else { const r = plainRecord(L, RR, s.id, uid); if (!r.perfect && (r.canRetry || !r.submitted)) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map(answerOf)); } },
-    miss: () => { const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s || s.kind !== 'monster' || isChain(L, RR, s.id)) return; const r = plainRecord(L, RR, s.id, uid); if (r.canRetry || !r.submitted) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map((q) => (q.type === 'multi' ? [] : -999)) as never); },
+    miss: (uid0?: string) => { const uid = uid0 || myUid; const RR = S.get<Room>(roomPath(code)); if (!RR) return; const s = stepOf(L, RR); if (!s || s.kind !== 'monster' || isChain(L, RR, s.id)) return; const r = plainRecord(L, RR, s.id, uid); if (r.canRetry || !r.submitted) submit(S, L, code, s.id, uid, itemsFor(L, RR, s.id, uid, r.nextAttempt).map((q) => (q.type === 'multi' ? [] : -999)) as never); },
   };
   (globalThis as unknown as { __board?: typeof hook }).__board = hook;
+  // 👥 동료 (📜 2026-11-14 선생님 「게시판 레이드 전투 화면에 동료들 표시 · 동료들 공격하는 장면」): 팀만 · 1인 = 나만(그대로)
+  //   공격 사건 = TV 와 같은 snapOf · hitsOf (동료 기록이 늘 때) → 장면 띠가 줄 세워 하나씩 연출
+  const mates = $derived(solo ? [] : matesOf(ids, uid, R, team?.names ?? {}, team?.heroes));
+  let mateFeed = $state<MateHit[]>([]), mseen: ReturnType<typeof mateSnaps> = null, mk = 0;
+  $effect(() => {
+    const RR = R; if (solo || !RR) return;
+    const now0 = mateSnaps(L, RR, ids.filter((u) => u !== uid));
+    untrack(() => { if (!now0) { mseen = null; return; } const hs = mateHits(mseen, now0, mk); mseen = now0; if (hs.length) { mk = hs[hs.length - 1]!.k; mateFeed = [...mateFeed, ...hs].slice(-12); } });
+  });
   // 🌀 출발 = 파란 포털이 확 열림(0.6 → 1.0 · 0.4초 · 소용돌이 · 바닥 빛 고리 · 「쉬잉」) → 용사가 뛰어듦 → 게시판 던전 (1.1초 · 동작 줄이기 = 크기만)
   let warp = $state(true); sfx('portal', 0.8); setTimeout(() => (warp = false), 1100);
   untrack(() => busy.n++); // 진행 중 = 새 판 저절로 새로 고침 안 함 (#38)
@@ -153,7 +165,7 @@
       {#if !guardTeam}<button type="button" disabled={!R || !!bp || thinkUsed(R)} onclick={() => R && pauseOn(S, code, R, uid, true)}>⏸ 생각 1분</button>{/if}
     {/if}
   </div>
-  <Student {S} {L} {code} {uid} {num} {nick} {cls} board />
+  <Student {S} {L} {code} {uid} {num} {nick} {cls} board {mates} {mateFeed} />
   {#if (gotHint || autoHint) && hintOpen && !bp}
     <div class="hcard" role="status"><b>{gotHint ? '🛡 수호자의 힌트' : '🧭 길잡이 힌트'}</b><p>{gotHint || autoHint}</p><button type="button" aria-label="힌트 닫기" onclick={() => (hintOpen = false)}>✕</button></div>
   {/if}

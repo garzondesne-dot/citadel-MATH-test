@@ -11,6 +11,7 @@
   import { liveRoom, liveValue } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Scene from './battle/Scene.svelte';
+  import type { Mate, MateHit } from './board/mates';
   import ModeSwitch from './ModeSwitch.svelte';
   import { paperOn } from './submit.svelte';
   import BottomAction from './battle/BottomAction.svelte';
@@ -45,7 +46,7 @@
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
-  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean } = $props();
+  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false, mates, mateFeed }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean; /** 👥 게시판 팀 동료 · 동료 공격 사건 (📜 2026-11-14 · 없으면 수업 화면 그대로) */ mates?: Mate[]; mateFeed?: MateHit[] } = $props();
   const unwake = holdWake(); onDestroy(unwake); // 📱 수업 화면 = 화면 꺼짐 방지 (정식 WAKE_SCREENS screen-student) · 안내 띠 = 학생 앱 입구(App) 한 곳
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
@@ -176,7 +177,7 @@
   <header class="ptop" class:pboard={board} data-k="ptop">{#if !board}<a class="pback" href="?" aria-label="뒤로">‹</a>{/if}<b>{L.no}차시 · {step ? (step.kind === 'boss' ? '형성평가' : step.kind === 'concept' ? (step.title.split(' · ')[0] ?? step.title) : probNo) : '수업'}</b><ModeSwitch dark /></header>{#if board}<div class="pgap" aria-hidden="true"></div>{/if}
 {:else if battle && step && R}
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
-    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN}
+    hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN} lift={board} {mates} {mateFeed}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
