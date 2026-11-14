@@ -149,7 +149,7 @@ function cutinNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
   d.innerHTML = `<i class="u-dim"></i><div class="u-band">${faceHtml(hero, opt.heroArt)}<i class="u-eye" style="left:44%"></i><i class="u-eye" style="left:56%"></i></div>${opt.gold ? '<b class="u-true">眞</b>' : ''}${opt.guard ? '<i class="u-shield"></i>' : ''}<b class="u-name">${name}</b><i class="u-flash"></i><div class="u-tear"><svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${crack}" fill="none" stroke="#fff" stroke-width="1.6" style="filter:drop-shadow(0 0 2px ${c1})"/><polyline points="${crack}" fill="none" stroke="${c1}" stroke-width="0.5"/></svg></div>`;
   (opt.host || document.body).appendChild(d);
   if (opt.guard || opt.peek || opt.quick) { if (opt.quick && !opt.mute) sfx('special', 0.6); setTimeout(() => d.remove(), 1100); return wait(800); }
-  if (!opt.mute) { sfx('special', 0.9); setTimeout(() => sfx('finish2', 0.95), 1000); }
+  if (!opt.mute) { sfx(opt.gold ? 'true-ult' : 'special', 0.9); setTimeout(() => sfx('finish2', 0.95), 1000); } // 眞 진필살기 = 금빛 컷인 소리 (🔊 2차)
   setTimeout(() => d.remove(), opt.gold ? 2000 : 1500);
   return wait(opt.gold ? 1450 : 1050);
 }

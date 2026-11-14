@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sfx } from '../sound.svelte';
   import { SUBJ } from "../../engine/subject";
   import { onDestroy, onMount } from 'svelte';
   import ChainFx from './ChainFx.svelte';
@@ -57,7 +58,7 @@
     const c = cv; if (!c || !(e.buttons || e.pointerType === 'touch')) return; const g = c.getContext('2d'); if (!g) return; const r = c.getBoundingClientRect();
     g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(e.clientX - r.left, e.clientY - r.top, 34, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over';
     const d = g.getImageData(0, 0, c.width, c.height).data; let on = 0; for (let i = 3; i < d.length; i += 64) if (d[i]! > 40) on++;
-    if (on / (d.length / 64) < 0.3) onclear();
+    if (on / (d.length / 64) < 0.3) { sfx('fog-clear', 0.8); onclear(); }
   }
   // ⛓ 속박: 좌우로 쓸기 — 40px 넘게 방향을 3번 바꾸면 끊김
   let sw = { x: 0, dir: 0, run: 0, flips: 0 }, cut = $state(0);
@@ -72,7 +73,7 @@
   function shatter() { fx.chain.broken = true; later(450, onclear); }
   // 💤 수면: 두 번 빠르게 톡(0.35초 안) = 번쩍
   let lastTap = 0, woke = $state(false);
-  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; later(380, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
+  function tap() { const t = performance.now(); if (t - lastTap < 350) { woke = true; sfx('wake', 0.8); later(380, onclear); } lastTap = t; } // 번쩍 뜨는 모습(0.12초 + 번쩍 0.25초)이 보이게
   // 🌑 어둠: 손가락 닿은 곳만 보임 (덮개는 누름을 막지 않음 · 화면 어디를 눌러도 그 자리가 밝아짐)
   let lx = $state(-999), ly = $state(-999);
   function light(e: PointerEvent) { if (!host) return; const r = host.getBoundingClientRect(); if (e.type === 'pointerup' || e.type === 'pointercancel') { lx = ly = -999; return; } if (e.type === 'pointermove' && !(e.buttons || e.pointerType === 'touch')) return; lx = e.clientX - r.left; ly = e.clientY - r.top; }

@@ -31,6 +31,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/', ROOT 
     if (sp.id === 'm2') { await tv.evaluate(() => document.querySelector('nav.dock .go').click()); await t.waitForTimeout(800); const sl = await t.evaluate(() => { const L = window.__dbGet('school/live'); const R = window.__dbGet(`rooms/${L.code}`); return { step: R.state.step, end: (R.state.solveEnd || {}).m2 }; }); ok('TV 「⚔ 지금 등장」 = 같은 단계에서 정찰 끝 (건너뛰지 않음)', sl.step === st && !!sl.end, JSON.stringify(sl)); continue; }
     if (/지금 등장/.test(await t.textContent('.tact .btn'))) { await t.click('.tact .btn'); await t.waitForTimeout(500); }
   }
+  const log = await tv.evaluate(() => (window.__sfxLog || []).join(' ')); ok('🔊 TV 효과음 2차 = 수업 시작 · 정찰 시작 · 몬스터 등장 · 보스 등장', ['class-start', 'scout-start', 'mon-appear', 'mon-appear-boss'].every((k) => log.split(' ').includes(k)), log.slice(-160));
   await tv.screenshot({ path: path.join(SHOTS, 'scoutall-tv.png') });
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}` : '✅ 오류 0'); await b.close();
 })();

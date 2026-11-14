@@ -12,10 +12,10 @@
   const frame = $derived(broken ? 5 : f < 3 ? f : cut >= 1 ? 4 : 3);
   onMount(() => {
     if (reduce) return;
-    const ts = [setTimeout(() => (f = 1), 110), setTimeout(() => (f = 2), 220), setTimeout(() => { f = 3; clank = true; sfx('block', 0.9); try { navigator.vibrate?.(30); } catch { /* 무시 */ } setTimeout(() => (clank = false), 160); }, 300)];
+    const ts = [setTimeout(() => (f = 1), 110), setTimeout(() => (f = 2), 220), setTimeout(() => { f = 3; clank = true; sfx('chain-lock', 0.9); try { navigator.vibrate?.(30); } catch { /* 무시 */ } setTimeout(() => (clank = false), 160); }, 300)];
     return () => ts.forEach(clearTimeout);
   });
-  $effect(() => { if (broken) sfx('smash', 0.8); });
+  $effect(() => { if (broken) sfx('chain-break', 0.85); });
 </script>
 
 <div class="chainfx" class:thin class:clank class:held={frame === 3} class:broken aria-hidden="true" data-cut={cut} data-f={frame}>

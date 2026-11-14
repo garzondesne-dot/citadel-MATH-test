@@ -21,11 +21,11 @@
   let holdT: ReturnType<typeof setTimeout> | null = null, holding = $state(false);
   // 🧯 다 끄면 = 불길 자리에서 회색 연기가 뭉게뭉게 피어오름(0.9초 · 📜 2026-11-13 밤 다시)
   let smoke = $state(0);
-  const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; smoke = Date.now(); setTimeout(() => (smoke = 0), 950); }, 1000); };
+  const holdOn = () => { holding = true; holdT = setTimeout(() => { fx.fire = false; holding = false; sfx('fire-out', 0.8); smoke = Date.now(); setTimeout(() => (smoke = 0), 950); }, 1000); };
   // 🧊 얼음 단추 (그림 · 📜 2026-11-13 밤 🎨): 덮임 ① → 톡마다 금 ②③④ → 4번째 톡 = ⑤ 깨져 흩어짐(0.45초 · 살짝 멈칫 · 소리) · 3초면 녹음은 그대로
   const iceBg = (k: number) => { const B = ICE.btn; return `background-image:url(${B.src});background-size:${B.cols * 100}% 100%;background-position:${(Math.max(0, Math.min(4, k)) / (B.cols - 1)) * 100}% 0;aspect-ratio:${B.w} / ${B.h};--bc:${((B.barTop + B.barBot) / 2 / B.h) * 100}%`; };
   let iceBreak = $state(0);
-  function iceTap() { if (fx.ice <= 1) { iceBreak = Date.now(); sfx('frost', 0.9); try { navigator.vibrate?.(40); } catch { /* 무시 */ } setTimeout(() => (iceBreak = 0), 460); } else sfx('block', 0.5); fx.ice = Math.max(0, fx.ice - 1); }
+  function iceTap() { if (fx.ice <= 1) { iceBreak = Date.now(); sfx('ice-shatter', 0.9); try { navigator.vibrate?.(40); } catch { /* 무시 */ } setTimeout(() => (iceBreak = 0), 460); } else sfx('ice-crack', 0.7); fx.ice = Math.max(0, fx.ice - 1); }
   const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
 </script>
 

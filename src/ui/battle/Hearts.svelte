@@ -18,10 +18,11 @@
   function check(now: number) {
     if (!memo || mode !== 'heart') return;
     const was = seen.get(memo); seen.set(memo, now);
+    if (was != null && now > was) { sfx('heart-up', 0.75); return; } // ❤ +1 (풀어주기 · 힐 · 풀어냄)
     if (was == null || now >= was) return;
     const out: { i: number; half: boolean }[] = [];
     for (let i = Math.floor(now); i < Math.ceil(was); i++) { const lostFrom = Math.max(i, now), lostTo = Math.min(i + 1, was); if (lostTo > lostFrom) out.push({ i, half: lostTo - lostFrom <= 0.5 }); }
-    breaking = out; sfx('block', 0.8); try { navigator.vibrate?.(35); } catch { /* 무시 */ }
+    breaking = out; sfx('heart-break', 0.8); try { navigator.vibrate?.(35); } catch { /* 무시 */ }
     setTimeout(() => (breaking = []), 760);
   }
   onMount(() => check(left));

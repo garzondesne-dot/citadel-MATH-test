@@ -6,6 +6,7 @@
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
+  import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
   import { isOld, roster, resetPw, hasAccount, type Live } from '../../school/school';
   import { BUILD } from '../../build';
@@ -82,6 +83,7 @@
   const help = $derived(stuck.filter((x) => x.lock).map((x) => x.u));
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
+  let helpN = 0; $effect(() => { const n = help.length; untrack(() => { if (n > helpN) sfx('raise-hand', 0.8); helpN = n; }); }); // 🔊 🙋 도움 요청 (교사 폰 · 새로 손들 때)
   $effect(() => { const h = help; untrack(() => { const keep = order.filter((u) => h.includes(u)), add = h.filter((u) => !keep.includes(u)); if (add.length || keep.length !== order.length) { order = [...keep, ...add]; if (add.length) { const f = { ...fresh }; add.forEach((u) => (f[u] = true)); fresh = f; setTimeout(() => { const g = { ...fresh }; add.forEach((u) => delete g[u]); fresh = g; }, 400); } } }); });
   // ✔ 문제 결과 색 (📜 2026-11-14 선생님 「진행 · 베타 먼저」 · 머리 덧붙임 3): 지금 몬스터(보스)를 다 맞힘 = 초록 + ✔ (교사 폰만 · TV 아님) · 🙋 가 초록보다 앞 · 다음 단계 = 새로 · 쉼터 · 개념 · 영상 = 출석 · ⚠ · 🙋 만
   const okSet = $derived.by(() => { if (!R || !step || R.state.rest) return new Set<string>(); if (mid) return new Set(ids.filter((u) => (chain ? chainRecord(L, R, mid, u).done : plainRecord(L, R, mid, u).perfect))); if (step.kind === 'boss') return new Set(ids.filter((u) => { const b = bossState(L, R, u); return b.length > 0 && b.every((x) => x.ok); })); return new Set<string>(); });
@@ -148,7 +150,7 @@
     nextStep(S, L, code);
   }
   const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
-  function plus5() { const e = extendTime(S, code); say(e ? `⏰ ${e}` : '⏰ 5분 늘렸어요'); }
+  function plus5() { sfx('plus5', 0.8); const e = extendTime(S, code); say(e ? `⏰ ${e}` : '⏰ 5분 늘렸어요'); }
   const flex = (s: { s: { id: string } }) => Math.max(1, minOf(L, R, s.s as never));
 </script>
 

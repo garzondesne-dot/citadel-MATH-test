@@ -22,6 +22,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
+  import { sfx } from '../sound.svelte';
   import { savedLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
@@ -141,6 +142,20 @@
   // ── 👑 문 닫기 (정식 #68 A): 마감이 되면 장면 · +5분을 아직 안 썼으면 30초 묻기 · 지나면 수업 끝 ──
   $effect(() => { if (R && !R.state.closed && !isLobby(R) && left === 0 && !R.state.door) untrack(() => doorStart(S, code)); });
   const door = $derived(R?.state.door ?? null);
+  // 🔊 효과음 2차 (📜 2026-11-14): TV = 수업 시작 · 정찰 시작(그림자) · 몬스터 등장(일반 P · 보스 A) · 🔴 집중 · 👑 문 닫힘 — 상태가 바뀐 순간 한 번
+  let sndKey = { lobby: true, scout: '', focus: false, door: false };
+  $effect(() => {
+    const Rv = R; if (!Rv) return; const lob = isLobby(Rv), sc = scout?.on ? `${Rv.state.step}` : '', fo = !!Rv.state.focus, dr = !!Rv.state.door, stp = step;
+    untrack(() => {
+      const k = sndKey;
+      if (k.lobby && !lob) sfx('class-start', 0.8);
+      if (sc && sc !== k.scout) sfx('scout-start', 0.7);
+      if (!sc && k.scout && k.scout === `${Rv.state.step}`) sfx(stp?.kind === 'boss' ? 'mon-appear-boss' : 'mon-appear', 0.85);
+      if (fo && !k.focus) sfx('focus', 0.8);
+      if (dr && !k.door) sfx('door-close', 0.85);
+      sndKey = { lobby: lob, scout: sc, focus: fo, door: dr };
+    });
+  });
   const askLeft = $derived(door ? Math.max(0, 30 - Math.floor((now - door.at) / 1000)) : 0);
   $effect(() => { if (R && door && !R.state.closed && (door.ask ? askLeft <= 0 : now - door.at > 3000)) untrack(() => endClass(S, L, code)); });
   const extShow = $derived(!!R?.state.doorExt && now - Number(R.state.doorExt) < 3500);

@@ -105,7 +105,7 @@
   };
   (globalThis as unknown as { __board?: typeof hook }).__board = hook;
   // 🌀 출발 = 파란 포털이 확 열림(0.6 → 1.0 · 0.4초 · 소용돌이 · 바닥 빛 고리 · 「쉬잉」) → 용사가 뛰어듦 → 게시판 던전 (1.1초 · 동작 줄이기 = 크기만)
-  let warp = $state(true); sfx('wind', 0.8); setTimeout(() => (warp = false), 1100);
+  let warp = $state(true); sfx('portal', 0.8); setTimeout(() => (warp = false), 1100);
   untrack(() => busy.n++); // 진행 중 = 새 판 저절로 새로 고침 안 함 (#38)
   onDestroy(() => { untrack(() => busy.n--); clearInterval(drive); lr.stop(); });
   // ── 시간 · 멈춤 ──

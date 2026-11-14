@@ -9,6 +9,7 @@ export function setSound(p: Partial<SoundPref>): void { Object.assign(soundPref,
 const pool = new Map<string, HTMLAudioElement>();
 /** 마지막에 낸 효과음 (시험용) */
 export const sfxLog: string[] = [];
+if (typeof window !== 'undefined') (window as { __sfxLog?: string[] }).__sfxLog = sfxLog; // 시험 고리
 /** 🔊 번갈아 내는 소리 (정식 「번갈아」 방식 · 📜 2026-11-14 선생님 「지금 거랑 B C 사용해 줘」 = 🛡 방패 막는 소리 3개) */
 const ROTATE: Record<string, string[]> = { block: ['block', 'blockB', 'blockC'] };
 const turn: Record<string, number> = {};
