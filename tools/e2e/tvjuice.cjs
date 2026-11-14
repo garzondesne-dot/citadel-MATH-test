@@ -21,7 +21,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
     for (const [i, t] of [560, 120, 120, 120, 200].entries()) { await hall.waitForTimeout(t); await hall.screenshot({ path: `${SHOTS}/juice-${tag}-kill-${i}.png` }); }
     await hall.waitForTimeout(2500);
     const js = await hall.evaluate(() => window.__tvJuiceStats()); console.log(`${tag}: 히트 스톱 ${js.stops} · 흔들림 최고 ${js.shake}단 · 충격파 ${js.wave ? '○' : '✗'} · 조각 ${js.shards} · 가장 멀리 ${Math.round(js.far)}px`);
-    if (on && (!js.stops || js.shake < 3 || !js.wave || js.shards < 30 || js.far < 40)) errs.push('켬인데 연출 빠짐'); if (!on && (js.stops || js.wave)) errs.push('끔인데 연출');
+    if (on && (!js.stops || js.shake < 3 || !js.wave)) errs.push('켬인데 연출 빠짐'); if (js.shards) errs.push('조각 소멸이 남아 있음(📜 2026-11-14 없앰)'); if (!on && (js.stops || js.wave)) errs.push('끔인데 연출');
   }
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

@@ -141,13 +141,12 @@
   }
   // 🧑‍🏫 선생님 일격 (📜 2026-11-14 「교사 시연은 학생이랑 달라 · 퍼펙트 뜨면 필살기 공격」 · 정식 hall.js teacherStrike): 왼쪽에서 등장 → 몬스터로 돌진 → 팍(필살기 = 컷인 + 광역)
   //   「시연 · 데미지 없음」 · 이미 쓰러진 몬스터면 「💥 소멸!」 = 번쩍 → 조각 14개 사방 → 0.9초 뒤 사라짐(그 단계 동안) · 데미지 · 기록 없음
-  let goneKey = $state(''), seenStrike = 0; // 🐞 새로 열린 전투 장면은 열리기 전 일격을 다시 틀지 않음 (born = 아래 · 한 번 누름 = 한 번)
+  let seenStrike = 0; // 🐞 새로 열린 전투 장면은 열리기 전 일격을 다시 틀지 않음 (born = 아래 · 한 번 누름 = 한 번)
   const stepKey = $derived(`${R.state.step}|${step?.id ?? ''}`);
-  $effect(() => { const g = goneKey === stepKey; A?.monGone(g); });
   $effect(() => { const t = tstrike; if (!t || t.at === seenStrike || t.at < born) return; seenStrike = t.at; untrack(() => void teacherStrike(t)); });
   async function teacherStrike(t: { ult: boolean; hero: number; fx: string }) {
     const lay = fxLayer; if (!lay || !step) return;
-    const key = stepKey, kill = !!hp?.down;
+    
     atkPreload(t.hero, t.fx); if (t.ult) preloadFaces();
     const mb = document.createElement('div'); let bb = ''; try { const sp = spriteOf(sprite); bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { /* 기본 몸통 */ }
     mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; mb.dataset.bb = bb; lay.appendChild(mb);
@@ -161,15 +160,10 @@
       onHit: (q) => {
         const last = !q || q.k === q.n - 1; if (!last) return;
         A?.monHit(0, 'hit', { perfect: true, ult: t.ult });
-        tag(kill ? '💥 소멸!' : '시연 · 데미지 없음', kill ? 'vanish' : 'demo');
-        if (kill) {
-          for (let k = 0; k < 14; k++) { const sh = document.createElement('i'); sh.className = 'shard'; sh.style.cssText = `position:absolute;left:${box.mon.cx}px;top:${box.mon.top + box.mon.size / 2}px;--a:${(k / 14) * 360}deg`; lay.appendChild(sh); setTimeout(() => sh.remove(), 1100); }
-          setTimeout(() => { if (stepKey === key) goneKey = key; }, 900);
-        }
+        tag('시연 · 데미지 없음', 'demo'); // 💥 소멸(조각 · 그 단계 숨김) = 없앰 (📜 2026-11-14 문제점 2 · 쓰러진 몬스터는 down 그대로)
       } }).catch(() => {});
     mb.remove(); hb.remove();
   }
-  (globalThis as { __arenaMonGone?: () => boolean }).__arenaMonGone = () => goneKey === stepKey;
   (globalThis as { __tvStrike?: (ult?: boolean) => void }).__tvStrike = (ult = false) => void teacherStrike({ ult, hero: 0, fx: 'flame' }); // 시험 고리
   // ⏱ 성능 재기 (머리 📎 기준 · 교실 PC 에서 직접): 주소에 ?perf → 가상 용사 30명 → 지금 띠 30명 동시 4초 · 새 것 30명 동시 4초 → 평균 · 최저 fps · 최장 프레임 ms 를 화면에
   //   크롬 DevTools 「Performance → CPU 4x slowdown」을 켜고 같은 주소를 열면 기준(30명 · 50fps 이상) 확인 · GPU 없는 시험 상자에선 잴 수 없음(쉬는 장면도 2fps)
@@ -330,9 +324,7 @@
   .nm.ok { color: var(--ok); }
   .pop { position: absolute; transform: translate(-50%, -100%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; text-shadow: 0 3px 0 #000; animation: up 1.1s ease-out forwards; pointer-events: none; }
   .tvfx :global(.ttag) { position: absolute; z-index: 20; transform: translate(-50%, -100%); font-weight: 800; text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: up 1.6s ease-out forwards; }
-  .tvfx :global(.ttag.demo) { font-size: var(--tv-title); color: #e8ecf4; } .tvfx :global(.ttag.vanish) { font-size: var(--tv-big); color: #ffb347; }
-  .tvfx :global(.shard) { width: 1.2cqh; height: 1.2cqh; margin: -0.6cqh 0 0 -0.6cqh; background: #ffe08a; border-radius: 2px; box-shadow: 0 0 1cqh #ffb347; animation: shardgo 1s ease-out forwards; pointer-events: none; }
-  @keyframes shardgo { from { transform: rotate(var(--a)) translateX(0) scale(1); opacity: 1; } to { transform: rotate(var(--a)) translateX(24cqh) scale(0.4); opacity: 0; } }
+  .tvfx :global(.ttag.demo) { font-size: var(--tv-title); color: #e8ecf4; }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
