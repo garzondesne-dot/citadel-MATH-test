@@ -5,6 +5,7 @@
   import { GEM, kstDay } from '../../board/board';
   import SoundToggles from '../SoundToggles.svelte';
   import { sfx } from '../sound.svelte';
+  import { bgm } from '../bgm';
   import { BUILD } from '../../build';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -138,6 +139,9 @@
   let hero0 = $state((() => { try { return sessionStorage.getItem('citadel-hero0') === '1'; } catch { return false; } })());
   // 🏰 성채 새 방 (정식 camp.js · 이 기기에 지난 수 기억 · 늘면 한 번 안내) — 📜 2026-11-14 = 올린 성채 팩(보이는 층)에서 이 학생에게 열린 방 수 · 처음 본 수는 소리 없이 기억만
   const castleWho = untrack(() => ({ cls: pupil?.cls ?? '', num: pupil?.num ?? 0, uid: pupil?.uid ?? 'me' }));
+  // 🎵 학생 폰 배경음 = 첫 화면 · 개인 캠프(⚒ 모루 창 포함)만 (DECISIONS 2026-11-11 · 📜 2026-11-14 되살림) — 🏰 성채 · 🎯 허수아비 · 📋 게시판 = 없음
+  $effect(() => { bgm(castleGo == null && sheet !== 'scare' && sheet !== 'dummy' ? 'camp' : null, 'phone'); });
+  onDestroy(() => bgm(null, 'phone'));
   const castleOpen = (): number => {
     const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
     const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {});

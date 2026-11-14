@@ -3,12 +3,15 @@
   import type { Store } from '../model/types';
   import { CLASSES, enter, hasAccount, pupil, roster, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
+  import { bgm } from './bgm';
+  import { onDestroy } from 'svelte';
   import BottomAction from './battle/BottomAction.svelte';
 
   // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v71 「⓪」 · 선생님 「이 정도는 살리자」)
   //   정식 첫 화면 그림 brand-bg(용사 넷이 문을 엶 · 위치 center 30% · 아래 46% 어둡게) + 정식 로고 menu-logo(폭 80% · 최대 320 · 위 3%) · 반 ▾ · 번호 ▾ → 「n번 · 이름 맞나요?」 → 비밀번호 4칸(숫자 키패드 · 시스템 키보드 안 띄움) → 금빛 「⚔ 모험 시작」
   //   「처음이에요 · 가입」 = 같은 화면(비밀번호 두 번) · 교사 · 종합실 = 맨 아래 작은 글자 링크 · 한 번 로그인한 폰은 다음부터 바로 캠프(App 이 고름)
   const { S, onin }: { S: Store; /** joined = 방금 가입 (🧙 첫 용사 고르기) */ onin: (p: Pupil, joined?: boolean) => void } = $props();
+  bgm('camp', 'phone'); onDestroy(() => bgm(null, 'phone')); // 🎵 첫 화면 = 캠프 곡 (정식 screen-splash · home)
   const ART = `${import.meta.env.BASE_URL}art/brand-bg-v1.webp`;
   const LOGO = `${import.meta.env.BASE_URL}art/brand-school-logo-v1.webp`; // 🖼 로고 = 「모두의 던전」(방패 · 월계수 · 띠 없음 · 2026-11-13 밤 선생님 「로고를 전부 모두의 던전으로」) · 과목 이름은 과목 팩 글자
   let cls = $state('');

@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b159 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b160 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -125,6 +125,7 @@
 | b157 | 🔧 🔐 종합실(TV) 비밀번호 노출 0 (머리 🐞 보안 · 선생님 2026-11-14 「종합실 입장할 때 비번 노출됨」) · 원인 = ① TV 입력 칸이 글자 그대로(type 없음) ② 이 TV 기억이 localStorage 평문(citadel-tv-key) ③ 방(학생도 읽음) rooms/{방}/hosts/{uid} 값 = 키 글자 → 학생이 읽을 수 있었음 · 고침 = 입력 칸 password + 👁 누르는 동안만 · 키는 새 칸 `hostKeys/{방}/{uid}`(.read false · 본인 · 맞는 키만 쓰기) · 방 hosts = true 만(규칙: hostKeys 가 키와 같을 때만) · 기억 = `school/secretBox.ts`(AES-GCM · 꺼낼 수 없는 키 · IndexedDB 암호문) · 옛 평문 칸 = 읽자마자 옮기고 지움 · 틀린 키 거절 = 경고(오류 아님) · ⚠ **firebase/database.rules.json 바뀜 → 선생님 Firebase 콘솔에서 규칙 다시 게시** · 시험 rules.cjs(hostKeys 6줄) · e2e `tools/e2e/tvkey.cjs`(입력 가림 · 👁 · 주소 · 저장 · 콘솔 · 화면 · 방 hosts 에 키 0 · 새로 고침 기억) · server.cjs 오류 0 |
 | b158 | 🔧 13차시 팩 영상: 올릴 때 서고에 없는 영상 이름도 버리지 않고 저장 · 재생 때 앱 → 정식 사이트(-vN 꼬리) 순으로 다시 찾음 · 경고 문구 「이름은 저장해 두고 … 저절로 붙어요」 | vitest 278 · e2e vidlib · packup · packvid · packzip |
 | b159 | ⑧ 게시판 팀 레이드: 동료 용사(최대 3 · 이름 · 오라) 장면에 · 동료 공격 연출 · 데미지 차례대로(6개 넘으면 묶음 · 소리 0.45) · 장면 280→224 · 몬스터 · 용사 위로(게시판만 · 수업 레이드 그대로) · SE 375×667 스크롤 0 | vitest 278 · e2e boardmates · board · soraid · attack |
+| b160 | 📜 🎵 배경음 전부 되살림(정식 14곡 · 자리 그대로): 학생 폰 = 첫 화면 · 캠프 · 모루만(성채 · 허수아비 · 게시판 · 수업 중 = 없음) · TV = 대기실 lobby · 몬스터마다 raid-1→2→3 · 👑 boss-1/2 수업마다 번갈아 · 🎉 win 한 번 · 쉼터 · 놀이 5곡 · 개념 · 도입 = 없음 · 🎚 전투 음량 10% + 60% × (1 − 남은 체력) · ⏸ 🎬 영상 · 📄 문제 창 = 멈춤 · 🔉 전투 중 🎮 시연 · 📄 = 효과음 · 배경음 10% · 화면 숨김 = 멈춤 · `src/ui/bgm.ts` 한 곳(옛 tv/bgm.ts 없앰) · 최대 음량 0.45(정식 배경음 : 효과음 비율을 베타 효과음 0.7 에 맞춤) | vitest 278 · e2e bgm · td · demopause · demoatk |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

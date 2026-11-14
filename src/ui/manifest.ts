@@ -161,7 +161,7 @@ export const ICE = {
 // 🏕 쉼터 놀이 그림 · 배경음 (#142-2 · 정식 manifest fun · td · bgm 에서 옮김) — 교실 TV 에서만
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp' };
 export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
-export const BGM: Record<string, string> = { rest: 'bgm/rest-v1.mp3', bal: 'bgm/bal-v1.mp3', rev: 'bgm/rev-v1.mp3', quiz: 'bgm/ox-v1.mp3', nun: 'bgm/nun-v1.mp3', td: 'bgm/td-v1.mp3' };
+export const BGM: Record<string, string> = { camp: 'bgm/camp-v1.mp3', lobby: 'bgm/lobby-v1.mp3', 'raid-1': 'bgm/raid-1-v1.mp3', 'raid-2': 'bgm/raid-2-v1.mp3', 'raid-3': 'bgm/raid-3-v1.mp3', 'boss-1': 'bgm/boss-1-v1.mp3', 'boss-2': 'bgm/boss-2-v1.mp3', win: 'bgm/win-v1.mp3', rest: 'bgm/rest-v1.mp3', bal: 'bgm/bal-v1.mp3', rev: 'bgm/rev-v1.mp3', quiz: 'bgm/ox-v1.mp3', nun: 'bgm/nun-v1.mp3', td: 'bgm/td-v1.mp3' };
 export const artUrl = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 
 //   CSS 변수(url) 로 넘기므로 절대 주소 (상대 주소는 그 변수를 쓰는 스타일 파일 기준으로 풀려 assets/ 아래를 가리킴)

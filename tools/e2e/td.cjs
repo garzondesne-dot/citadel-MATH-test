@@ -26,7 +26,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const toast = await t.textContent('.toast').catch(() => ''); log('TV 없이 🏰:', toast.trim(), '| fun', await fun()); if (!/교실 TV/.test(toast)) errs.push('TV 없이 시작 안내');
   // TV 켬
   const tv = await open(`?role=hall&${E}`, { width: 1280, height: 720 }); await tv.evaluate(() => { window.__TD_SPEED = 6; }); await wait(4000); await require('./_emu.cjs').asHost(tv, code); // 🔐 TV = 종합실 키로 hosts
-  const bgm0 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 쉼터 곡:', JSON.stringify(bgm0)); if (!bgm0 || bgm0.k !== 'rest') errs.push('쉼터 곡');
+  const bgm0 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 쉼터 곡:', JSON.stringify(bgm0)); if (!bgm0 || bgm0.playing !== 'rest') errs.push('쉼터 곡');
   await t.click('.sheet .act .btn.rbig'); await wait(1500);
   let f = await fun(); log('🏰 시작:', f && f.kind, f && f.map, f && f.phase); if (!f || f.kind !== 'td') errs.push('디펜스 시작');
   await ph[0].waitForSelector('.tdp .mini'); await ph[0].screenshot({ path: `${SHOTS}/b31-td-phone-pick.png` });
@@ -40,7 +40,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   log('⚙ 용사 바꾸기: 고를 수 있는 용사', nh, '| tdm', JSON.stringify(await rest(`rooms/${code}/tdm/${f.g}`)));
   log('   폰 1:', (await ph[0].textContent('.tdp .me')).trim(), '| 폰 2:', (await ph[1].textContent('.tdp .me')).trim(), '| 서버 자리', JSON.stringify(await rest(`rooms/${code}/tdp/${f.g}`)));
   await tv.screenshot({ path: `${SHOTS}/b31-td-tv-pick.png` });
-  const bgm1 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 디펜스 곡:', JSON.stringify(bgm1)); if (!bgm1 || bgm1.k !== 'td') errs.push('디펜스 곡');
+  const bgm1 = await tv.evaluate(() => window.__bgm && window.__bgm()); log('🎵 TV 디펜스 곡:', JSON.stringify(bgm1)); if (!bgm1 || bgm1.playing !== 'td') errs.push('디펜스 곡');
   await wait(9000);
   f = await fun(); log('   판:', f.phase, '· 타워', (Array.isArray(f.tw) ? f.tw : Object.values(f.tw || {})).map((x) => `${x.u}@${x.s}${x.r ? '🏹' : '🗡'}`).join(' '), '· 몬스터 체력 hp0', f.hp0);
   if (f.phase !== 'play' || !f.hp0) errs.push('판 시작');
@@ -71,7 +71,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 다른 놀이 배경 그림 · 곡
   await t.click('.rdock button:has-text("쉼터")'); await wait(400); await t.click('.games .game:has-text("반대로")'); await t.click('.sheet .act .btn.rbig'); await wait(1500);
   const bgImg = await tv.$eval('.ov.fun', (x) => getComputedStyle(x).backgroundImage); const bgm2 = await tv.evaluate(() => window.__bgm && window.__bgm());
-  log('🔄 반대로: 배경', /fun-dorm/.test(bgImg) ? 'fun-dorm' : bgImg.slice(0, 60), '· 곡', JSON.stringify(bgm2)); if (!/fun-dorm/.test(bgImg) || bgm2.k !== 'rev') errs.push('반대로 그림 · 곡');
+  log('🔄 반대로: 배경', /fun-dorm/.test(bgImg) ? 'fun-dorm' : bgImg.slice(0, 60), '· 곡', JSON.stringify(bgm2)); if (!/fun-dorm/.test(bgImg) || bgm2.playing !== 'rev') errs.push('반대로 그림 · 곡');
   await tv.screenshot({ path: `${SHOTS}/b31-tv-rev.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();

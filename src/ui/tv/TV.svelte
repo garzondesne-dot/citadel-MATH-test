@@ -23,7 +23,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
-  import { sfx } from '../sound.svelte';
+  import { duck, sfx } from '../sound.svelte';
   import { setTeacherSink, teacherLook, TLOOK, type TLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
@@ -32,8 +32,7 @@
   import ThemePicker from '../ThemePicker.svelte';
   import { driveFun, endRest, funOf, GAMES, gamesOn, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
   import TdTV from '../rest/TdTV.svelte';
-  import { tvBgm, tvBgmNow } from './bgm';
-  import { soundPref } from '../sound.svelte';
+  import { bgm, bgmHold } from '../bgm';
   import { ladder } from '../../model/hero';
   import FunCrowd from '../rest/FunCrowd.svelte';
   import { artUrl, FUN_BG } from '../manifest';
@@ -114,9 +113,24 @@
   const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
   let funErr = $state(''), errT: ReturnType<typeof setTimeout> | null = null;
   // 🎵 TV 배경음 (#142-2): 🏕 쉼터 화면 · 놀이마다 곡 · 🔊 끄면 멈춤 · 쉼터 밖 = 없음(다른 장면 곡은 다음 판)
-  $effect(() => { tvBgm(R?.state.rest && !R.state.closed ? (fun && fun.phase !== 'end' ? fun.kind : fun?.kind === 'td' ? 'td' : 'rest') : null, sound && soundPref.bgm); }); // 🎵 B5 이 기기 배경음 끔이면 TV 🔊 켜져도 곡 없음
-  onDestroy(() => tvBgm(null, false));
-  if (typeof window !== 'undefined') (window as unknown as { __bgm: unknown }).__bgm = tvBgmNow;
+  // 🎵 종합실 배경음 (📜 2026-11-14 「배경음 전부 되살림」 · 정식 hall.js hallBgm 그대로): 대기실 lobby · 몬스터마다 raid-1 → 2 → 3 · 👑 보스 boss-1 / 2 (수업마다 번갈아)
+  //   🎉 승리 win 한 번 · 🏕 쉼터 rest · 놀이 bal · rev · ox · nun · td · 개념 · 도입 · 수업 끝 = 없음 · 🎚 전투 음량 = 10% + 60% × (1 − 남은 체력)
+  //   ⏸ 🎬 영상 · 📄 문제 창 = 멈춤 · 🔉 전투 중 🎮 시연 · 📄 문제 창 = 효과음 · 배경음 10% · 🔇 TV 소리 끔 · 이 기기 배경음 끔 = 곡 없음
+  const bossAlt = (c: string) => { try { const key = 'citadel-boss-bgm', m = JSON.parse(localStorage.getItem(key) || '{}') as Record<string, number>; if (m[c] == null) { m.n = (m.n || 0) + 1; m[c] = m.n % 2 ? 1 : 2; localStorage.setItem(key, JSON.stringify(m)); } return m[c]!; } catch { return 1; } };
+  const tvSong = $derived.by((): { k: string | null; scale?: number } => {
+    if (!R || R.state.closed) return { k: null };
+    const sc = (h: { max: number; left: number } | null) => (h && h.max ? 0.1 + 0.6 * (1 - Math.max(0, h.left) / h.max) : 0.1);
+    if (isLobby(R)) return { k: 'lobby' };
+    if (R.state.rest) return { k: fun && fun.phase !== 'end' ? fun.kind : fun?.kind === 'td' ? 'td' : 'rest' };
+    if (step?.kind === 'monster') { const n = L.steps.filter((x) => x.kind === 'monster').findIndex((x) => x.id === step.id); return { k: `raid-${(Math.max(0, n) % 3) + 1}`, scale: sc(hp) }; }
+    if (step?.kind === 'boss') return bhp?.won ? { k: 'win' } : { k: `boss-${untrack(() => bossAlt(code || 'local'))}`, scale: sc(bhp) };
+    if (isEnd(L, R) && bhp?.won) return { k: 'win' };
+    return { k: null };
+  });
+  $effect(() => { const t = tvSong; bgm(sound ? t.k : null, 'tv', t.scale != null ? { scale: t.scale } : {}); });
+  $effect(() => { bgmHold('tv', !!(R && !R.state.closed && (R.state.video || R.state.sheet))); });
+  $effect(() => { duck('tv-demo', !!(R && !R.state.closed && (step?.kind === 'monster' || step?.kind === 'boss') && (demo || !!R.state.sheet))); });
+  onDestroy(() => { bgm(null, 'tv'); bgmHold('tv', false); duck('tv-demo', false); });
   function playGame(k: Game) {
     if (!R) return;
     if (fun && fun.kind === k && fun.phase !== 'end') { stopFun(S, code); return; }
