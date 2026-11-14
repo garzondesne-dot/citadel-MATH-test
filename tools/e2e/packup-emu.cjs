@@ -40,5 +40,27 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   const live = await rest('school/live'); ok('11차시 수업 열림', live && live.lesson === 'ex-11', JSON.stringify(live));
   const s = await open(`?role=student&room=${live?.code}&as=1-3:1`); await s.waitForTimeout(2500);
   const L = await s.evaluate(() => document.body.innerText.slice(0, 120)); ok('학생 폰 = 11차시 방', !/수업 방을 찾지 못했어요/.test(L), L.replace(/\s+/g, ' ').slice(0, 80));
+  // 🗑 안전장치 (📜 2026-11-15): 기록 있는 팩 = 경고 + 👀 숨기기 먼저 · 숨김 = 학생 캠프에서만 빠짐 · 다르게 다시 올리면 경고 → 「그래도 올리기」 뒤에만 저장
+  await rest('records/1-3/2/ex-11', 'PUT', { no: 11, mons: { m1: 'o' } }); await rest('records/1-4/5/ex-11', 'PUT', { no: 11, mons: { m1: 'x' } });
+  await rest('school/live', 'DELETE'); await t2.reload(); await t2.waitForSelector('.tabs', { timeout: 20000 }); await t2.waitForTimeout(800);
+  await t2.click('.tabs button:has-text("준비")'); await t2.click('.seg3 button:has-text("도구")'); await t2.click('[data-k="packup-go"]'); await t2.waitForTimeout(500);
+  await t2.click('.mrow[data-id="ex-11"] [data-k="packdel"]'); await t2.waitForTimeout(300);
+  const ask = await t2.$eval('[data-k="packdel-ask"]', (x) => x.textContent.replace(/\s+/g, ' ')).catch(() => '');
+  ok('① 기록 있음 = 「학생 2명의 기록」 경고 + 👀 숨기기 · 그래도 지우기 · 취소', /학생 2명의 기록이 있어요/.test(ask) && /숨기기/.test(ask) && /그래도 지우기/.test(ask) && /취소/.test(ask), ask.slice(0, 90));
+  await t2.screenshot({ path: `${SHOTS}/packsafe-del.png` });
+  await t2.click('[data-k="packdel-hide"]'); await t2.waitForTimeout(800);
+  ok('👀 숨기기 = 서버 hide · 팩은 그대로', (await rest('prep/packs/ex-11/hide')) === true && !!(await rest('prep/packs/ex-11/id')));
+  { const c = await open(''); await c.waitForTimeout(2500); const ids = await c.evaluate(() => (window.__packs ?? null)); const tv = await open('?role=teacher'); await tv.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(tv, '.tabs'); const l = await lists(tv); ok('숨김 = 교사 목록엔 그대로', l.prep, JSON.stringify(l)); void ids; }
+  // ② 몬스터 하나 뺀 판을 같은 id 로 다시 올림
+  const fs = require('fs'), os = require('os'), src = JSON.parse(fs.readFileSync(path.join(__dirname, '../pack-upload/example-ex-11.json'), 'utf8'));
+  const m0 = src.steps.find((x) => x.kind === 'monster').id, cut = { ...src, steps: src.steps.filter((x) => x.id !== m0) }; cut.mons = { ...src.mons }; delete cut.mons[m0];
+  const f2 = path.join(os.tmpdir(), 'ex-11-cut.json'); fs.writeFileSync(f2, JSON.stringify(cut));
+  await t2.setInputFiles('[data-k="packfile"]', f2); await t2.waitForSelector('[data-k="packsum"]'); await t2.waitForTimeout(500);
+  const rep = await t2.$eval('[data-k="pack-replace"]', (x) => x.textContent.replace(/\s+/g, ' ')).catch(() => ''), dis = await t2.$eval('.sheet .btn.pmain', (x) => x.disabled).catch(() => null);
+  ok(`② 다르게 다시 올림 = 「옛 기록 2명과 문제가 맞지 않아요 · 빠지는 칸 ${m0}」 · 저장 막힘`, /옛 기록 2명과 문제가 맞지 않아요/.test(rep) && rep.includes(m0) && dis === true, `${rep.slice(0, 80)} | 막힘 ${dis}`);
+  await t2.screenshot({ path: `${SHOTS}/packsafe-replace.png` });
+  await t2.click('[data-k="pack-replace-ok"]'); await t2.waitForTimeout(300);
+  ok('「그래도 올리기」 = 저장 열림', (await t2.$eval('.sheet .btn.pmain', (x) => x.disabled)) === false);
+  await rest('records/1-3/2/ex-11', 'DELETE'); await rest('records/1-4/5/ex-11', 'DELETE');
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await rest('prep/packs/ex-11', 'DELETE'); await rest('prep/ex-11', 'DELETE'); await b.close();
 })();

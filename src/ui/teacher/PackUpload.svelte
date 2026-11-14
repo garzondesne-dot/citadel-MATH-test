@@ -2,7 +2,7 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, revive, unpackZip, type Checked, type Issue } from '../../school/packUpload';
+  import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, recordedN, revive, slotDiff, unpackZip, type Checked, type Issue } from '../../school/packUpload';
   import PrepImg from '../q/PrepImg.svelte';
   import { prepPath, prepPut } from '../../school/prep';
   import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
@@ -42,6 +42,13 @@
   const fromLib = $derived(Object.values(vres).filter(Boolean).length), missLib = $derived(Object.entries(vres).filter(([, x]) => !x).map(([u]) => u.replace(/^.*\//, '').replace(/\.mp4$/, ''))); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
   const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
+  // 🗑 ② 같은 id 로 다시 올림 = 옛 판과 문제 칸(몬스터 · 형성평가 문항)이 다르고 기록이 있으면 경고 → 「그래도 올리기」를 눌러야 저장 (📜 2026-11-15)
+  const oldP = $derived(P ? PACKS.find((x) => x.id === P!.id) ?? null : null);
+  const recN = $derived(P ? recordedN(S.get<Record<string, unknown>>('records'), P.id) : 0);
+  const sdiff = $derived(oldP && P ? slotDiff(oldP, P) : null);
+  let okReplace = $state(false);
+  $effect(() => { void P; okReplace = false; });
+  const needOk = $derived(!!sdiff && recN > 0 && !okReplace);
   // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
   const hasMedia = (s: { id: string; img?: string }) => !!P && (!!P.videos?.[s.id] || (P.imgCells ?? []).includes(s.img ?? s.id));
   const stepsQ = $derived(P ? P.steps.filter((s) => (s.kind === 'monster' && P.monsters[s.id]) || (s.kind === 'boss' && P.boss) || hasMedia(s)) : []);
@@ -174,6 +181,16 @@
     // 🗑 올린 팩 지우기 (📜 2026-11-14 선생님 「기존 11차시 지우면 되지? → 삭제 없어」): 베타에서 올린 팩만 · 확인 한 번 · 팩 + 그 팩 칸 그림
   const mine = $derived([...UPLOADED].map((id) => PACKS.find((p) => p.id === id)).filter((p): p is LessonPack => !!p).sort((a, b) => a.no - b.no));
   let ask = $state(''), gone = $state('');
+  // 🗑 ① 기록 있는 팩 = 경고 + 👀 숨기기 먼저 권함 (📜 2026-11-15 DECISIONS)
+  const recOf = (id: string) => recordedN(S.get<Record<string, unknown>>('records'), id);
+  let hidden = $state<Record<string, boolean>>({});
+  const isHidden = (id: string) => hidden[id] ?? !!PACKS.find((p) => p.id === id)?.hide;
+  async function setHide(id: string, on: boolean) {
+    const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
+    if (!(await put(`${PACK_PATH}/${id}/hide`, on ? true : null))) { failed = '바꾸지 못했어요 · 교사 로그인 · 인터넷을 확인해요'; return; }
+    const pk = PACKS.find((p) => p.id === id); if (pk) pk.hide = on || undefined;
+    hidden = { ...hidden, [id]: on }; ask = ''; gone = on ? `「${id}」 학생 캠프에서 숨겼어요 · 기록은 그대로 · 다시 켤 수 있어요` : `「${id}」 다시 보여요`;
+  }
   async function del(id: string) {
     if (!deletable(id, (x) => builtIn.has(x))) return;
     const put = (p: string) => (S.trySet ? S.trySet(p, null) : Promise.resolve((S.set(p, null), true)));
@@ -183,8 +200,9 @@
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.delete('lesson'); location.href = u.toString(); }, 900);
   }
   async function save() {
-    if (!P || errs.length) return;
+    if (!P || errs.length || needOk) return;
     const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
+    if (oldP?.hide) v.hide = true; // 👀 숨김은 새 판에도 그대로
     // 🎬 영상 이름은 지금 서고에 없어도 그대로 저장 (🐞 2026-11-14 「13차시 팩에 영상이 포함 안 됨」 = 올릴 때 없던 영상을 빼 버려 나중에 서고에 생겨도 안 붙었음)
     //   재생할 때 다시 찾음(video.ts videoSrc = 앱 → 정식 사이트) · 그때도 없으면 그 칸 🎬 = 「영상을 받지 못했어요」 한 줄
     const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
@@ -223,12 +241,13 @@
   </div>
 </Sheet>
 {:else}
-<Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? `${P.no}차시 저장` : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : ''} onmain={save}>
+<Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? `${P.no}차시 저장` : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved || needOk} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : needOk ? '옛 기록과 문제가 맞지 않아요 · 위에서 「그래도 올리기」를 눌러야 저장돼요' : ''} onmain={save}>
   {#snippet title()}📦 팩 올리기{/snippet}
   <div class="up" data-k="packup">
     {#if mine.length && !res}<div class="mine" data-k="packmine"><p class="lab">올린 차시 팩</p>
       {#each mine as m (m.id)}<div class="mrow" data-id={m.id}><span><b>{m.no}차시 {m.title}</b><small>{m.id}</small></span>
-        {#if deletable(m.id, (x) => builtIn.has(x))}{#if ask === m.id}<span class="cf" role="alertdialog"><em>이 팩을 지울까요? 되돌릴 수 없어요</em><button type="button" class="yes" data-k="packdel-yes" onclick={() => del(m.id)}>예</button><button type="button" class="no" onclick={() => (ask = '')}>아니요</button></span>{:else}<button type="button" class="del" data-k="packdel" onclick={() => (ask = m.id)}>🗑 삭제</button>{/if}{/if}
+        <button type="button" class="hid" data-k="packhide" aria-pressed={isHidden(m.id)} onclick={() => setHide(m.id, !isHidden(m.id))}>{isHidden(m.id) ? '🙈 숨김' : '👀 보임'}</button>
+        {#if deletable(m.id, (x) => builtIn.has(x))}{#if ask === m.id}{@const rn = recOf(m.id)}<span class="cf" role="alertdialog" data-k="packdel-ask">{#if rn}<em>이 차시에 학생 {rn}명의 기록이 있어요. 기록은 남지만 차시 목록 · 복습에서 사라져요</em>{#if !isHidden(m.id)}<button type="button" class="yes" data-k="packdel-hide" onclick={() => setHide(m.id, true)}>👀 숨기기</button>{/if}<button type="button" class="no" data-k="packdel-yes" onclick={() => del(m.id)}>그래도 지우기</button>{:else}<em>이 팩을 지울까요? 되돌릴 수 없어요</em><button type="button" class="yes" data-k="packdel-yes" onclick={() => del(m.id)}>예</button>{/if}<button type="button" class="no" onclick={() => (ask = '')}>{rn ? '취소' : '아니요'}</button></span>{:else}<button type="button" class="del" data-k="packdel" onclick={() => (ask = m.id)}>🗑 삭제</button>{/if}{/if}
       </div>{/each}</div>{/if}
     {#if gone}<p class="ok" role="status">{gone}</p>{/if}
     <label class="file"><input type="file" accept=".json,.zip,application/json,application/zip" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 · 🏰 성채 팩 .json · 또는 .zip (팩 + 칸 그림 · 20MB 까지) · 종류는 파일 안 kind 로 저절로'}</small></label>
@@ -237,6 +256,7 @@
     {#if paste}<textarea rows="5" bind:value={text} placeholder={'{ "id": "lesson-11", "no": 11, … }'} data-k="packtext"></textarea><button type="button" class="b2" onclick={() => run(text, '붙여 넣은 글')}>검사하기</button>{/if}
 
     {#if res}
+      {#if sdiff && recN > 0 && !saved}<p class="ask" data-k="pack-replace" role="alert"><b>⚠ 옛 기록 {recN}명과 문제가 맞지 않아요</b><span>{sdiff.gone.length ? `빠지는 칸 ${sdiff.gone.join(' · ')}` : ''}{sdiff.gone.length && sdiff.added.length ? ' · ' : ''}{sdiff.added.length ? `새 칸 ${sdiff.added.join(' · ')}` : ''}</span><button type="button" class="b2" data-k="pack-replace-ok" aria-pressed={okReplace} onclick={() => (okReplace = !okReplace)}>{okReplace ? '✔ 알고 올려요' : '그래도 올리기'}</button></p>{/if}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}</p>
       {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 이름만 저장(서고에 생기면 저절로 붙음)` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
       {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
@@ -294,4 +314,5 @@
   .pq { padding: 10px; border-radius: var(--r); background: var(--surface-2); }
   .sol { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
   .ok { margin: 0; color: var(--ok); font-weight: 700; } .fail { margin: 0; color: var(--bad); font-weight: 700; }
+  .hid { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); }
 </style>

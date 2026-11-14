@@ -20,7 +20,7 @@ if (!target) throw new Error('#app 없음');
 void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void }).bootShow?.('⚠ 서버에 닿지 않아요'); throw e; }).then(async ({ S, where }) => {
   const room = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('join');
   if (room && S.fetch) await S.fetch(`rooms/${room}`).catch(() => null);
-  addPacks(await loadUploaded(S)); await loadVids(S, PACKS); // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
+  { const r0 = new URLSearchParams(location.search).get('role'); const up = await loadUploaded(S); addPacks(up.filter((p) => !(p.hide && (!r0 || r0 === 'camp')))); } await loadVids(S, PACKS); // 👀 숨긴 팩 = 학생 캠프에서만 빠짐 (수업 · 교사 · TV 는 그대로) // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
   addCastles(await loadCastles(S)); // 🏰 올린 성채 팩 (prep/addons/castle · 📜 2026-11-14)
   // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
   { const m = /^(\d-\d):(\d+)$/.exec(new URLSearchParams(location.search).get('as') || ''); if (m && where.kind === 'emulator' && TEST_ADDR) { const { emuAsLogin } = await import('./school/school'); const e = await emuAsLogin(S, m[1]!, Number(m[2])); if (e) console.warn('?as 로그인', e); } } // 🧪 에뮬레이터 ?as = 진짜 로그인 (📜 2026-11-14 규칙 학생 칸 주인)

@@ -312,3 +312,18 @@ export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null;
   if (js.length !== 1) return { json: null, name: '', images, pdfs, videos, files: names, error: js.length ? `zip 안에 .json 이 ${js.length}개 (${js.map((x) => x.replace(/^.*\//, '')).join(' · ')}) — 팩 파일은 1개만` : 'zip 안에 차시 팩 .json 이 없어요' };
   return { json: strFromU8(files[js[0]!]!), name: js[0]!.replace(/^.*\//, ''), images, pdfs, videos, files: names };
 }
+
+// 🗑 안전장치 (📜 2026-11-15 DECISIONS 「🗑 차시 팩 지우기 · 다시 올리기 안전장치」)
+/** 그 차시에 기록이 있는 학생 수 (records/{반}/{번호}/{차시}) */
+export function recordedN(all: Record<string, unknown> | null, lessonId: string): number {
+  const items = (x: unknown): [string, unknown][] => (Array.isArray(x) ? x.map((v, i) => [String(i), v] as [string, unknown]).filter(([, v]) => v != null) : x && typeof x === 'object' ? Object.entries(x as Record<string, unknown>) : []);
+  let n = 0; for (const [, ns] of items(all)) for (const [, r] of items(ns)) if (r && typeof r === 'object' && (r as Record<string, unknown>)[lessonId]) n++;
+  return n;
+}
+/** 옛 판 ↔ 새 판 문제 칸 차이 (몬스터 id · 형성평가 문항 수) — 같으면 null */
+export function slotDiff(oldP: LessonPack, newP: LessonPack): { gone: string[]; added: string[] } | null {
+  const ids = (P: LessonPack) => [...P.steps.filter((s) => s.kind === 'monster' && P.monsters[s.id]).map((s) => s.id), ...Array.from({ length: P.boss?.items ?? 0 }, (_, i) => `👑${i + 1}`)];
+  const a = ids(oldP), b = ids(newP), gone = a.filter((x) => !b.includes(x)), added = b.filter((x) => !a.includes(x));
+  return gone.length || added.length ? { gone, added } : null;
+}
+

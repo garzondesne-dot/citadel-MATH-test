@@ -91,6 +91,7 @@ export interface LessonPack {
   v: 1;
   id: string;
   no: number;
+  /** 👀 학생 캠프(게시판 · 허수아비 · 성채 목록)에서 숨김 · 수업 · 교사 화면은 그대로 (📜 2026-11-15 🗑 안전장치 ①) */ hide?: boolean;
   title: string;
   unit: string;
   theme?: string;
