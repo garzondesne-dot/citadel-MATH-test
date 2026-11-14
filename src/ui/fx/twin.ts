@@ -4,3 +4,5 @@ let twinNow: TwinV = (() => { try { const q = typeof location !== 'undefined' ? 
 /** 갤러리 · TV(?twin=b) 가 고르는 쌍월 시제품 */
 export const setTwin = (v: TwinV) => { twinNow = v; try { localStorage.setItem('citadel-twin', v); } catch { /* 무시 */ } };
 export const twinOf = () => twinNow;
+/** 🗡 👎 다시 만든 스킬 이름 (slash.ts SKILLS 와 같은 목록 · Pixi 를 끌어오지 않게 여기에 · tests/layer.test.ts 가 맞춰 봄) */
+export const NEW_SKILLS = ['slash', 'hammer', 'quake', 'spin', 'reap', 'wblade'];

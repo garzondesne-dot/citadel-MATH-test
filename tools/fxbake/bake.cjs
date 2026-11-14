@@ -8,6 +8,19 @@ const KINDS = ['cut', 'moon', 'slash', 'twin'], FPS = 20;
   await p.goto('http://localhost:4173/?role=fxbake'); await p.waitForSelector('.bake[data-ready="true"]', { timeout: 30000 });
   const info = await p.evaluate(() => ({ low: window.__bake.low, durs: window.__bake.NUM.tiers.map((t) => t.dur) })); fs.mkdirSync(OUT, { recursive: true });
   // 🌙 쌍월 시제품만: node bake.cjs twin → pfx2/proto-twin-{a,b,c}-v2.webp · fx-new.json 「twin-a · twin-b · twin-c」 (다른 칸은 그대로)
+  // 🗡 👎 다시 만든 스킬: node bake.cjs skills slash hammer … → pfx2/new-<스킬>-v3.webp · fx-new.json 그 스킬 칸 (다른 칸 그대로 · slash 는 ⚔ 베기 Ⅲ 칸을 새것으로 바꿈)
+  if (process.argv[2] === 'skills') {
+    const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), 'utf8'));
+    for (const k of process.argv.slice(3)) {
+      const dur = await p.evaluate((k) => window.__bake.durSkill(k), k), n = Math.ceil((dur + 0.3) * FPS), files = [];
+      for (let i = 0; i < n; i++) { const url = await p.evaluate(([t, k]) => window.__bake.frameSkill(k, t), [i / FPS, k]); const f = path.join(TMP, `sk${k}-${String(i).padStart(2, '0')}.png`); fs.writeFileSync(f, Buffer.from(url.split(',')[1], 'base64')); files.push(f); }
+      const src = `pfx2/new-${k}-v3.webp`;
+      execFileSync('python3', ['-I', '-c', `import sys\nfrom PIL import Image\nfs=sys.argv[2:]\nims=[Image.open(f).convert('RGBA') for f in fs]\nw,h=ims[0].size\ns=Image.new('RGBA',(w*len(ims),h))\nfor i,im in enumerate(ims): s.paste(im,(i*w,0))\ns.save(sys.argv[1],'WEBP',lossless=True,method=6)`, path.join(ROOT, 'public/art', src), ...files]);
+      J.fx[k] = { src, w: info.low.w, h: info.low.h, n, fps: FPS, px: Math.round(info.low.px), py: Math.round(info.low.py), pk: Math.round(n * 0.3) }; J.bb[k] = info.low.bb.map(Math.round);
+      console.log(`${k}: ${n}칸 · ${fs.statSync(path.join(ROOT, 'public/art', src)).size}B`);
+    }
+    fs.writeFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), JSON.stringify(J, null, 1) + '\n'); await b.close(); return;
+  }
   if (process.argv[2] === 'twin') {
     const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/ui/fx/fx-new.json'), 'utf8'));
     for (const v of ['a', 'b', 'c']) {
