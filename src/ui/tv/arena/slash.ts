@@ -30,12 +30,15 @@ export const RECIPES: Record<string, { shape: 'crescent'; colors: [number, numbe
   wind: { shape: 'crescent', colors: [0x0b5a5a, 0x3fd8c8, 0xc8fff4], hi: 0xffffff, spark: 'shard', sound: 'cut' },
   light: { shape: 'crescent', colors: [0x7a4a06, 0xf5b84a, 0xfff2b0], hi: 0xffffff, spark: 'square', sound: 'cut' },
   dark: { shape: 'crescent', colors: [0x1a0830, 0x7a34d8, 0xd8bcff], hi: 0xf4ecff, spark: 'shard', sound: 'cut' },
+  mech: { shape: 'crescent', colors: [0x3a3f48, 0x9aa6b4, 0xeef2f6], hi: 0xffc04a, spark: 'square', sound: 'smash' },
+  water: { shape: 'crescent', colors: [0x0b3a6a, 0x2f9be0, 0xbfeaff], hi: 0xffffff, spark: 'square', sound: 'cut' },
+  arcane: { shape: 'crescent', colors: [0x2a0a5a, 0x8a4cff, 0xe6d4ff], hi: 0xffffff, spark: 'shard', sound: 'cut' },
 };
 /** 🗡 👎 다시 만들기 (📜 2026-11-14 머리 7e0f44e · 쌍월 A 방식 · 호 = 용사 쪽 → 몬스터 쪽)
  *  스킬 하나 = 칼질(cut) 몇 개 + 덧붙임(extra) · cut = { at 시작(초) · phi 맞는 점에서 본 호 중심 반대 방향(π 배수 · 0.5 = 가로 휘두름 · 0.78 = 위→아래 대각 · 1 = 세로 내려찍기 · 1.22 = 아래→위 대각) · rad 반지름(작을수록 많이 휨) · sweep 호가 도는 각 · thick 두께 · ox · oy 맞는 점 비켜 놓기(몸통 크기 배) }
  *  선생님 평가 한 줄: slash 「그저 직선 3개」 · spin 「원반이 도는 것 같음」 · reap 「원반 느낌」 · wblade 「칼날 느낌 안 듦」 · hammer · quake 👎 */
 type Cut = { at: number; phi: number; rad?: number; sweep?: number; thick?: number; len?: number; ox?: number; oy?: number; ghosts?: number };
-type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' | 'holy' | 'eclipse' | 'sword' | 'lance' | 'shield' | 'ghost'; /** ✂ 베인 자국 (b140 · 기준 1 「벤다는 느낌」): 칼날이 맞는 점을 지날 때 그 방향으로 가는 흰 금이 번쩍 · 크기 배 */ slit?: number };
+type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' | 'holy' | 'eclipse' | 'sword' | 'lance' | 'shield' | 'ghost' | 'clang' | 'cog' | 'piston' | 'drill' | 'wave' | 'anchor' | 'tsunami' | 'vortex'; /** ✂ 베인 자국 (b140 · 기준 1 「벤다는 느낌」): 칼날이 맞는 점을 지날 때 그 방향으로 가는 흰 금이 번쩍 · 크기 배 */ slit?: number };
 export const SKILLS: Record<string, SkillR> = {
   // ⚔ 베기 Ⅲ 연타 = 휘어진 칼날 세 번 · Z 자(위→아래 · 아래→위 · 가로) · 0.08초 차이 · 끝이 가늘고 가운데가 두꺼운 초승달
   slash: { fam: 'cut', tier: 2, slit: 1.1, dur: 0.62, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: -0.12, ghosts: 2 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: 0.04, ghosts: 2 }, { at: 0.16, phi: 0.56, rad: 0.7, len: 1.5, sweep: 0.9, thick: 0.3, oy: 0.18, ghosts: 2 }], sparks: 20, flash: 0.8, hitstop: 0.06, shake: 1 },
@@ -65,6 +68,25 @@ export const SKILLS: Record<string, SkillR> = {
   holysword: { fam: 'light', tier: 2, dur: 0.75, cuts: [], sparks: 24, flash: 1, hitstop: 0.08, shake: 2, extra: 'sword' },
   // ☀ 빛 Ⅳ 천상의 창 = 빛의 창이 용사 쪽에서 몬스터를 꿰뚫고 지나감 → 빛줄기가 굵어졌다 사라짐 · 빛 십자 · 충격파
   skylance: { fam: 'light', tier: 3, dur: 0.95, cuts: [], sparks: 36, flash: 1, hitstop: 0.09, shake: 3, shock: true, glow: true, extra: 'lance' },
+  // ── 묶음 ④-2 (b144 · 1차 👎) ── ⚙ 기계
+  // ⚙ Ⅰ 스패너 치기 = 짧고 두꺼운 회색 호로 후려침 → 쨍(주황 불꽃 줄 6)
+  wrench: { fam: 'mech', tier: 0, dur: 0.5, cuts: [{ at: 0, phi: 0.85, rad: 0.7, len: 1.2, sweep: 0.7, thick: 0.45, ghosts: 1 }], sparks: 14, flash: 0.8, hitstop: 0.05, shake: 1, extra: 'clang' },
+  // ⚙ Ⅱ 톱니 던지기 = 톱니바퀴가 돌며 날아와 박힘 → 불꽃 소나기 → 위로 튕겨 나감
+  cog: { fam: 'mech', tier: 1, dur: 0.75, cuts: [], sparks: 22, flash: 0.8, hitstop: 0.06, shake: 1, extra: 'cog' },
+  // ⚙ Ⅲ 증기 해머 = 피스톤 망치가 위에서 쾅 → 증기가 양옆으로 뿜고 땅이 갈라짐
+  piston: { fam: 'mech', tier: 2, dur: 0.8, cuts: [], sparks: 20, flash: 0.9, hitstop: 0.09, shake: 2, extra: 'piston' },
+  // ⚙ Ⅳ 드릴 돌파 = 회전 드릴이 용사 쪽에서 파고듦(줄무늬 돌기) → 불꽃 · 파편 폭발 · 충격파
+  drill: { fam: 'mech', tier: 3, dur: 0.95, cuts: [], sparks: 40, flash: 1, hitstop: 0.09, shake: 3, shock: true, glow: true, extra: 'drill' },
+  // 🌊 물 Ⅰ 물 베기 = 물빛 초승달 + 베인 자국 + 물방울
+  aqua: { fam: 'water', tier: 0, slit: 1.1, dur: 0.5, cuts: [{ at: 0, phi: 0.72, rad: 0.64, len: 1.35, sweep: 0.85, thick: 0.32, ghosts: 2 }], sparks: 16, flash: 0.6 },
+  // 🌊 물 Ⅱ 파도 치기 = 말리는 파도 머리가 용사 쪽에서 몬스터를 덮치며 지나감 · 물거품
+  wave: { fam: 'water', tier: 1, dur: 0.7, cuts: [], sparks: 18, flash: 0.7, hitstop: 0.05, shake: 1, extra: 'wave' },
+  // 🌊 물 Ⅲ 닻 내려찍기 = 사슬 달린 닻이 위에서 떨어져 쾅 → 물 튐 고리 · 땅 금
+  anchor: { fam: 'water', tier: 2, dur: 0.8, cuts: [], sparks: 22, flash: 0.9, hitstop: 0.09, shake: 2, extra: 'anchor' },
+  // 🌊 물 Ⅳ 해일 베기 = 큰 물빛 초승달 X + 뒤따라 높은 물벽이 휩쓸고 지나감 · 충격파
+  tsunami: { fam: 'water', tier: 3, slit: 1.4, dur: 1.0, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.65, sweep: 1.0, thick: 0.38, ghosts: 3 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.65, sweep: 1.0, thick: 0.38, ghosts: 3 }], sparks: 36, flash: 1, hitstop: 0.09, shake: 3, shock: true, glow: true, extra: 'tsunami' },
+  // 🔮 마법 Ⅲ 차원 소용돌이 = 보라 나선이 몬스터로 빨려 들어가 조여짐 → 맞는 순간 안으로 꺼졌다 빛살 폭발 (1차 「공격한다는 느낌이 별로」)
+  vortex: { fam: 'arcane', tier: 2, dur: 0.85, cuts: [], sparks: 30, flash: 1, hitstop: 0.08, shake: 2, extra: 'vortex' },
   radiant: { fam: 'light', tier: 0, slit: 1.2, dur: 0.5, cuts: [{ at: 0, phi: 0.75, rad: 0.66, len: 1.4, sweep: 0.85, thick: 0.34, ghosts: 2 }], sparks: 16, flash: 0.8, extra: 'holy' },
 };
 /** 🌙 쌍월 참(Ⅳ) 시제품 3가지 (🔨 2026-11-13 밤 평가판 👎 「쌍월이면 대표 스킬인데 신경 써 줘 · 하나도 안 멋져」 · 머리 📎 「NUM · RECIPES 값만 다르게」)
@@ -225,6 +247,58 @@ export class SlashFx {
       if (a) { poly([x0, cy - wd, hx, cy - wd * 0.6, hx, cy + wd * 0.6, x0, cy + wd], k1, 0.85); poly([x0, cy - wd * 0.45, hx, cy - wd * 0.25, hx, cy + wd * 0.25, x0, cy + wd * 0.45], 0xffffff, 1); }
       if (q < 1) { const hl = o.w * 0.75, hw = o.h * 0.2; poly([hx + dir * hl, cy, hx, cy - hw, hx - dir * hl * 0.3, cy, hx, cy + hw], k2, 1); poly([hx + dir * hl * 0.8, cy, hx, cy - hw * 0.4, hx, cy + hw * 0.4], 0xffffff, 1); }
     }
+    const st = t - it, rot = (pts: number[], ang: number, x: number, y: number) => pts.map((v, i) => (i % 2 ? y + (pts[i - 1]! * Math.sin(ang) + v * Math.cos(ang)) : x + (v * Math.cos(ang) - pts[i + 1]! * Math.sin(ang))));
+    // 🔧 쨍 (clang): 맞는 순간 0.2초 · 주황 불꽃 줄 6개가 튐
+    if (S.extra === 'clang' && fancy && st >= 0 && st < 0.2) { const q = st / 0.2; for (let k = 0; k < 6; k++) { const an = -Math.PI / 2 + (k - 2.5) * 0.45 + (dir > 0 ? 0.3 : -0.3), r0 = base * 0.15 + base * 0.6 * q, r1 = r0 + base * 0.25 * (1 - q); g.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0).lineTo(cx + Math.cos(an) * r1, cy + Math.sin(an) * r1).stroke({ width: 1, color: hiC, alpha: 1 - q }); } }
+    // ⚙ 톱니 (cog): 돌며 날아옴 → 박혀 0.12초 갈림(불꽃) → 위로 튕겨 사라짐
+    if (S.extra === 'cog') {
+      const R = o.w * 0.3, n = 10, gear: number[] = []; for (let k = 0; k < n * 2; k++) { const an = (k / (n * 2)) * Math.PI * 2, r = k % 2 ? R * 0.78 : R; gear.push(Math.cos(an) * r, Math.sin(an) * r); }
+      let x = cx, y = cy, a = 1; if (st < 0) { const q = ease(clamp(t / it)); x = cx - dir * (o.w * 2.4 * (1 - q) + R * 0.4); } else if (st < 0.12) x = cx - dir * R * 0.4; else { const q = (st - 0.12) / 0.35; x = cx - dir * (R * 0.4 + o.w * 0.8 * q); y = cy - o.h * 1.2 * q + 60 * q * q * 0; a = 1 - clamp(q); }
+      const an = t * 18 * dir; if (a > 0.02) { poly(rot(gear, an, x, y), k0, a); poly(rot(gear.map((v) => v * 0.82), an, x, y), k1, a); g.circle(x, y, R * 0.28).fill({ color: k0, alpha: a }); g.circle(x, y, R * 0.12).fill({ color: k2, alpha: a }); }
+      if (fancy && st >= 0 && st < 0.3) for (let k = 0; k < 8; k++) { const q = st / 0.3, an2 = -Math.PI * 0.5 - dir * 0.6 + (k - 3.5) * 0.22, r0 = R * 0.6 + base * 0.7 * q; g.moveTo(x + Math.cos(an2) * r0, y + Math.sin(an2) * r0 + 40 * q * q).lineTo(x + Math.cos(an2) * (r0 + 5), y + Math.sin(an2) * (r0 + 5) + 40 * q * q).stroke({ width: 1, color: hiC, alpha: 1 - q }); }
+    }
+    // 🔩 피스톤 (piston): 위에서 망치 머리(직사각) + 막대가 내려와 쾅 → 0.3초 머묾 · 증기 뭉치가 양옆으로
+    if (S.extra === 'piston') {
+      const hw = o.w * 0.45, hh = o.h * 0.32, q = st < 0 ? ease(clamp(t / it) ** 1.5) : 1, top = cy + o.h * 0.02 - hh - o.h * 1.8 * (1 - q) + (st >= 0 && st < 0.08 ? 3 : 0), a = st < 0.3 ? 1 : 1 - clamp((st - 0.3) / 0.2);
+      poly([cx - o.w * 0.08, top - o.h * 2, cx + o.w * 0.08, top - o.h * 2, cx + o.w * 0.08, top, cx - o.w * 0.08, top], k0, a);
+      poly([cx - hw, top, cx + hw, top, cx + hw, top + hh, cx - hw, top + hh], k0, a); poly([cx - hw * 0.9, top + 2, cx + hw * 0.9, top + 2, cx + hw * 0.9, top + hh - 2, cx - hw * 0.9, top + hh - 2], k1, a); poly([cx - hw * 0.9, top + 2, cx + hw * 0.9, top + 2, cx + hw * 0.9, top + 4, cx - hw * 0.9, top + 4], k2, a);
+      if (fancy && st >= 0 && st < 0.55) for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const p = clamp((st - k * 0.05) / 0.5); if (p <= 0 || p >= 1) continue; g.circle(cx + sd * (hw + o.w * 0.9 * p + k * 4), top + hh * 0.6 - o.h * 0.2 * p, Math.max(1.5, o.w * (0.08 + 0.12 * p))).fill({ color: 0xe8eef2, alpha: 0.7 * (1 - p) }); }
+    }
+    // 🌀 드릴 (drill): 원뿔 드릴이 용사 쪽에서 파고듦(줄무늬가 흐름) → 맞은 뒤 0.25초 더 갈다 사라짐 · 파편
+    if (S.extra === 'drill') {
+      const L = o.w * 1.1, W = o.h * 0.28, q = st < 0 ? ease(clamp(t / it)) : 1, tip = cx + dir * o.w * 0.15 - dir * o.w * 2.2 * (1 - q) + (st >= 0 && st < 0.25 ? dir * Math.sin(st * 90) * 1.5 : 0), base0 = tip - dir * L, a = st < 0.28 ? 1 : 1 - clamp((st - 0.28) / 0.2);
+      poly([tip, cy, base0, cy - W, base0, cy + W], k0, a); poly([tip, cy, base0, cy - W * 0.75, base0, cy + W * 0.75], k1, a);
+      for (let k = 0; k < 5; k++) { const u = ((k / 5 + t * 6) % 1), x = base0 + (tip - base0) * u, w = W * (1 - u) * 0.85; g.moveTo(x, cy - w).lineTo(x + dir * 3, cy + w).stroke({ width: 1, color: k2, alpha: a * 0.9 }); }
+      poly([base0, cy - W * 1.1, base0 - dir * o.w * 0.25, cy - W * 1.1, base0 - dir * o.w * 0.25, cy + W * 1.1, base0, cy + W * 1.1], k0, a);
+      if (fancy && st >= 0 && st < 0.3) for (let k = 0; k < 10; k++) { const p = st / 0.3, an = Math.PI * (dir > 0 ? 1 : 0) + (k - 4.5) * 0.3, r = o.w * 0.2 + base * 0.8 * p; g.rect(Math.round(cx + Math.cos(an) * r), Math.round(cy + Math.sin(an) * r + 50 * p * p), 2, 2).fill({ color: k % 2 ? hiC : 0x8a7a68, alpha: 1 - p }); }
+    }
+    // 🌊 파도 (wave): 말리는 파도 머리가 용사 쪽 → 몬스터 너머까지 지나감 · 거품 · 맞는 순간 몸 위
+    if (S.extra === 'wave' || S.extra === 'tsunami') {
+      const big = S.extra === 'tsunami', t0 = big ? it * 0.6 : 0, span2 = big ? d * 0.7 : d * 0.75, q = clamp((t - t0) / span2);
+      if (q > 0 && q < 1) {
+        const x = cx - dir * o.w * (big ? 2.2 : 1.8) + dir * o.w * (big ? 4 : 3.4) * ease(q), Hh = o.h * (big ? 1.15 : 0.8), gy = cy + o.h * 0.5, a = 1 - clamp((q - 0.75) / 0.25), back = o.w * (big ? 1.6 : 1.2);
+        poly([x - dir * back, gy, x - dir * back * 0.6, gy - Hh * 0.75, x - dir * o.w * 0.15, gy - Hh, x + dir * o.w * 0.25, gy - Hh * 0.8, x + dir * o.w * 0.1, gy - Hh * 0.55, x + dir * o.w * 0.18, gy], k0, a * 0.9);
+        poly([x - dir * back * 0.8, gy, x - dir * back * 0.5, gy - Hh * 0.62, x - dir * o.w * 0.12, gy - Hh * 0.85, x + dir * o.w * 0.15, gy - Hh * 0.7, x + dir * o.w * 0.02, gy - Hh * 0.45, x + dir * o.w * 0.05, gy], k1, a * 0.9);
+        g.moveTo(x - dir * back * 0.5, gy - Hh * 0.62).lineTo(x - dir * o.w * 0.12, gy - Hh * 0.85).lineTo(x + dir * o.w * 0.15, gy - Hh * 0.7).stroke({ width: 2, color: k2, alpha: a });
+        if (fancy) for (let k = 0; k < 6; k++) { const fx2 = x + dir * o.w * (0.05 + (k % 3) * 0.12), fy = gy - Hh * (0.85 - k * 0.08) - Math.sin(t * 30 + k) * 2; g.circle(fx2, fy, 1.5).fill({ color: 0xffffff, alpha: a }); }
+      }
+    }
+    // ⚓ 닻 (anchor): 사슬 달린 닻이 위에서 떨어져 박힘 → 물 튐 고리 · 물기둥 방울
+    if (S.extra === 'anchor') {
+      const q = st < 0 ? ease(clamp(t / it) ** 1.6) : 1, by = cy + o.h * 0.25 - o.h * 2.4 * (1 - q), a = st < 0.3 ? 1 : 1 - clamp((st - 0.3) / 0.25), W = o.w * 0.5, Hh = o.h * 0.9, sh2 = 0x4a5562, sh3 = 0xb8c4d0;
+      g.moveTo(cx, by - Hh).lineTo(cx, by - Hh - o.h * 2).stroke({ width: 2, color: sh2, alpha: a });
+      poly([cx - W * 0.09, by - Hh, cx + W * 0.09, by - Hh, cx + W * 0.09, by, cx - W * 0.09, by], sh2, a); poly([cx - W * 0.45, by - Hh * 0.75, cx + W * 0.45, by - Hh * 0.75, cx + W * 0.45, by - Hh * 0.66, cx - W * 0.45, by - Hh * 0.66], sh2, a);
+      const ay = by - Hh * 0.35; g.moveTo(cx + Math.cos(0.15 * Math.PI) * W, ay + Math.sin(0.15 * Math.PI) * W).arc(cx, ay, W, 0.15 * Math.PI, 0.85 * Math.PI).stroke({ width: 3, color: sh2, alpha: a }); g.moveTo(cx + Math.cos(0.2 * Math.PI) * (W - 1), ay + Math.sin(0.2 * Math.PI) * (W - 1)).arc(cx, ay, W - 1, 0.2 * Math.PI, 0.8 * Math.PI).stroke({ width: 1, color: sh3, alpha: a });
+      for (const sd of [-1, 1]) poly([cx + sd * W * 0.98, by - Hh * 0.35 + W * 0.42, cx + sd * W * 1.18, by - Hh * 0.35 + W * 0.12, cx + sd * W * 0.8, by - Hh * 0.35 + W * 0.3], sh2, a);
+      g.circle(cx, by - Hh - W * 0.12, W * 0.13).stroke({ width: 2, color: sh2, alpha: a });
+      if (st >= 0 && st < 0.5) { const p = st / 0.5, gy = cy + o.h * 0.48; g.ellipse(cx, gy, o.w * (0.4 + 1.4 * p), o.h * (0.08 + 0.12 * p)).stroke({ width: 2, color: k2, alpha: 1 - p }); if (fancy) for (let k = 0; k < 9; k++) { const an = -Math.PI * (0.15 + 0.7 * (k / 8)), v = o.w * (1.4 + (k % 3) * 0.4); g.circle(cx + Math.cos(an) * v * p, gy + Math.sin(an) * v * p + 120 * p * p, 1.5).fill({ color: k % 2 ? k2 : k1, alpha: 1 - p }); } }
+    }
+    // 🌀 소용돌이 (vortex): 보라 나선 3줄이 바깥에서 몬스터로 조여 들어감 → 맞는 순간 작은 점으로 꺼졌다(0.06초) 빛살 12 + 고리가 터짐
+    if (S.extra === 'vortex') {
+      if (st < 0) { const q = clamp(t / it); for (let arm = 0; arm < 3; arm++) { const pts: number[] = []; for (let k = 0; k <= 16; k++) { const u = k / 16, r = base * (1.3 - 1.1 * q) * (1 - u * 0.85), an = arm * (Math.PI * 2 / 3) + u * 4.2 + q * 7 * dir; pts.push(cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.8); } g.moveTo(pts[0]!, pts[1]!); for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k]!, pts[k + 1]!); g.stroke({ width: 2, color: arm % 2 ? k1 : k2, alpha: 0.4 + 0.6 * q }); } g.circle(cx, cy, Math.max(1, base * 0.12 * (1 - q))).fill({ color: k0, alpha: 0.9 }); }
+      else if (st < 0.06) g.circle(cx, cy, 2).fill({ color: 0xffffff, alpha: 1 });
+      else if (st < 0.45) { const p = (st - 0.06) / 0.39, a = 1 - p; for (let k = 0; k < 12; k++) { const an = (k / 12) * Math.PI * 2, r0 = base * 0.2 * p, r1 = base * (0.4 + 0.9 * ease(p)) * (k % 2 ? 0.7 : 1); g.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0).lineTo(cx + Math.cos(an) * r1, cy + Math.sin(an) * r1).stroke({ width: k % 2 ? 1 : 2, color: k % 3 ? k2 : 0xffffff, alpha: a }); } g.circle(cx, cy, base * (0.25 + 0.8 * ease(p))).stroke({ width: Math.max(1, 3 * a), color: k1, alpha: a }); }
+    }
     // ✝ 빛 십자 (성검 · 창도)
     if ((S.extra === 'sword' || S.extra === 'lance') && fancy && !reduce && t >= it && t < it + 0.22) {
       const q = (t - it) / 0.22, a = 1 - q, V = base * (0.8 + 0.6 * ease(q)), Hh = V * 0.6, w = Math.max(1.5, 5 * (1 - q));
@@ -233,7 +307,7 @@ export class SlashFx {
     // 💨 바람 줄 (gust): 가로 줄 4개가 용사 쪽 → 몬스터 쪽으로 지나감
     if (S.extra === 'gust' && fancy && t < span) { const q = t / span; for (let k = 0; k < 4; k++) { const yy = cy + (k - 1.5) * o.h * 0.22, x0 = cx + dir * o.w * (-1.2 + 2.4 * q + k * 0.1); g.moveTo(Math.round(x0), Math.round(yy)).lineTo(Math.round(x0 - dir * o.w * 0.5), Math.round(yy)).stroke({ width: 1, color: this.C.colors[2], alpha: 0.6 * (1 - q) }); } }
     // 🪨 땅 갈라짐 (crack · quake): 맞는 순간부터 · 발밑 줄에서 지그재그 금이 양옆으로 뻗음 · 먼지 · 돌 조각 · quake = 금 더 길고 바위가 솟고 땅 고리 두 겹
-    if ((S.extra === 'crack' || S.extra === 'quake') && t >= it) {
+    if ((S.extra === 'crack' || S.extra === 'quake' || S.extra === 'piston' || S.extra === 'anchor') && t >= it) {
       const st = t - it, big = S.extra === 'quake', gy = cy + o.h * 0.48, fade = 1 - clamp((st - 0.35) / 0.4), grow = clamp(st / 0.18), r2 = this.r;
       void r2;
       for (const sd of [-1, 1]) { let x = cx, y = gy; const L = o.w * (big ? 1.5 : 0.8) * grow, n = big ? 7 : 5; g.moveTo(Math.round(x), Math.round(y)); for (let k = 1; k <= n; k++) { x = cx + sd * (L * k) / n; y = gy + ((k * 37) % 5 - 2) * 0.8; g.lineTo(Math.round(x), Math.round(y)); } g.stroke({ width: 2, color: 0x1a0f05, alpha: fade }); g.moveTo(Math.round(cx), Math.round(gy - 1)); for (let k = 1; k <= n; k++) g.lineTo(Math.round(cx + sd * (L * k) / n), Math.round(gy - 1 + ((k * 37) % 5 - 2) * 0.8)); g.stroke({ width: 1, color: this.C.colors[2], alpha: fade * 0.7 }); }
