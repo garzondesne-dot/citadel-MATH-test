@@ -15,7 +15,7 @@ const argv = process.argv.slice(2), EMU = argv.includes('emu'), [SHOTS = '.', ..
   const fresh = async () => { await p.goto(B + '?role=teacher' + E); await p.evaluate(() => localStorage.clear()); await p.reload(); if (EMU) { await p.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await emu.asAdmin(p, '.tabs'); } else await p.waitForSelector('.tabs'); };
   if (EMU) { await emu.rest('prep/vids', 'DELETE'); for (const pr of pairs) await emu.rest(`prep/${pr.split('=')[0]}`, 'DELETE'); }
   await fresh();
-  const go = async (id) => { await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.selectOption('.lsel select', id); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400); };
+  const go = async (id) => { await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, id); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400); };
   for (const pr of pairs) {
     const [id, pdf] = pr.split('='), nn = id.replace(/\D/g, '').padStart(2, '0');
     const L = JSON.parse(fs.readFileSync(path.join(ROOT, `src/subjects/common-math2/lessons/${id}.json`), 'utf8'));

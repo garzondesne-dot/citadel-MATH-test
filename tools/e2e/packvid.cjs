@@ -39,7 +39,7 @@ const emu = EMU ? require('./_emu.cjs') : null;
   const vids = await p.evaluate(() => { const x = localStorage.getItem(Object.keys(localStorage).find((k) => /prep\/packs\/ex-v$/.test(k))); return x ? JSON.parse(x).videos : null; });
   ok('팩 videos = rtdb: 주소', vids && /^rtdb:prep\/ex-v\/vid\//.test(vids.c1) && /^rtdb:/.test(vids.intro) && vids.c1 === vids.sum, JSON.stringify(vids).slice(0, 90));
   }
-  await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.selectOption('.lsel select', 'ex-v'); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400);
+  await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, 'ex-v'); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400);
   const vb = (await p.textContent('[data-k="vid-go"]')).trim(); ok('차시 준비 「영상 2편 · 칸 4곳」', /영상 2편/.test(vb) && /칸 4곳/.test(vb), vb);
   await p.click('[data-k="vid-go"]'); await p.waitForSelector('[data-k="vidlist"]'); await p.click('[data-k="vidlist"] .row >> nth=1');
   await p.waitForSelector('[data-k="prepvid"]', { timeout: 15000 }).catch(() => {});

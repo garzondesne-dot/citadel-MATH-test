@@ -54,9 +54,9 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   await p.waitForNavigation({ timeout: 5000 }).catch(() => {}); await p.waitForSelector('.tabs');
   // ③ 차시 목록 · 테스트
   await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  const opts = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.textContent));
+  const opts = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.textContent));
   ok('③ 차시 ▾ 에 11차시', opts.some((t) => /11차시 예시/.test(t)), opts.filter((t) => /11/.test(t)).join(' | '));
-  await p.selectOption('.lsel select', 'ex-11').catch(() => {}); await p.waitForTimeout(200);
+  await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, 'ex-11').catch(() => {}); await p.waitForTimeout(200);
   await p.screenshot({ path: `${SHOTS}/packup-3-list.png` });
   // 학생 폰 = 같은 문제 (테스트 방 · 11차시)
   const hall = await ctx.newPage(); await hall.setViewportSize({ width: 1000, height: 800 }); await hall.goto(B + '?role=hall&mode=test&room=PKU&lesson=ex-11'); await hall.waitForSelector('.dock'); // 🧪 시험 TV = ?lesson 차시로 방을 엶
@@ -84,10 +84,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   await p.screenshot({ path: `${SHOTS}/packup-6-delete.png` });
   await p.click('[data-k="packdel-yes"]'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs');
   await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  { const o = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.value)); ok('⑤ 삭제 뒤(새로 고침) 차시 ▾ = ex-11 없음 · set-11 있음', !o.includes('ex-11') && o.includes('set-11'), o.slice(-3).join(' ')); }
+  { const o = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.value)); ok('⑤ 삭제 뒤(새로 고침) 차시 ▾ = ex-11 없음 · set-11 있음', !o.includes('ex-11') && o.includes('set-11'), o.slice(-3).join(' ')); }
   await p.click('.tabs button:has-text("수업")'); await p.waitForTimeout(300); ok('⑤ 수업 열기 칸에도 예시 없음', !/예시 · 집합/.test(await p.textContent('body')));
   await p.reload(); await p.waitForSelector('.tabs'); await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  { const o = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.value)); ok('⑤ 다시 새로 고침 = 지워진 채', !o.includes('ex-11'), ''); }
+  { const o = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.value)); ok('⑤ 다시 새로 고침 = 지워진 채', !o.includes('ex-11'), ''); }
   await openUp();
   const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); ok('360 가로 넘침 0', over <= 0, String(over));
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();

@@ -14,7 +14,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   const t = await open('?role=teacher'); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
   const lists = async (p) => {
     await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300);
-    const prep = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.textContent)).catch(() => []);
+    const prep = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.textContent)).catch(() => []);
     await p.click('.tabs button:has-text("수업")'); await p.waitForTimeout(300);
     const home = await p.evaluate(() => document.body.innerText);
     return { prep: prep.some((x) => /11차시/.test(x)), home: /11차시|11\s*예시|예시 · 집합/.test(home) };
@@ -36,7 +36,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   const t2 = await open('?role=teacher'); await t2.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t2, '.tabs');
   const l2 = await lists(t2); ok('새 기기 교사 = 11차시', l2.prep && l2.home, JSON.stringify(l2));
   // 학생 폰: 교사가 11차시 테스트 수업을 열고 학생이 들어감
-  await t2.click('.tabs button:has-text("준비")'); await t2.selectOption('.lsel select', 'ex-11'); await t2.waitForTimeout(200); await t2.click('.tact .btn'); await t2.waitForTimeout(1500);
+  await t2.click('.tabs button:has-text("준비")'); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(t2, 'ex-11'); await t2.waitForTimeout(200); await t2.click('.tact .btn'); await t2.waitForTimeout(1500);
   const live = await rest('school/live'); ok('11차시 수업 열림', live && live.lesson === 'ex-11', JSON.stringify(live));
   const s = await open(`?role=student&room=${live?.code}&as=1-3:1`); await s.waitForTimeout(2500);
   const L = await s.evaluate(() => document.body.innerText.slice(0, 120)); ok('학생 폰 = 11차시 방', !/수업 방을 찾지 못했어요/.test(L), L.replace(/\s+/g, ' ').slice(0, 80));

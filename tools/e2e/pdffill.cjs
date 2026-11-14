@@ -12,7 +12,7 @@ const [SHOTS = '.', ...pairs] = process.argv.slice(2), B = 'http://localhost:417
   await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300);
   for (const pr of pairs) {
     const [id, pdf] = pr.split('=');
-    await p.selectOption('.lsel select', id); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400);
+    await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, id); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(400);
     const before = (await p.textContent('[data-k="stepimgs"]')).trim();
     await p.click('[data-k="pdffill-go"]'); await p.waitForSelector('[data-k="pdffill"]');
     await p.setInputFiles('[data-k="fillpdf"]', pdf);
@@ -30,7 +30,7 @@ const [SHOTS = '.', ...pairs] = process.argv.slice(2), B = 'http://localhost:417
     ok(`${id} 저장 → 단계별 그림`, !!m && Object.keys(cut).length > 0 && Number(m[1]) >= Object.keys(cut).length - 1, after);
   }
   // 🎬 영상 n편 = 실제 연결 수 · 누르면 칸별 목록 · 재생 칸
-  await p.selectOption('.lsel select', 'set-03'); await p.waitForTimeout(300);
+  await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, 'set-03'); await p.waitForTimeout(300);
   const vb = (await p.textContent('[data-k="vid-go"]')).trim(); ok('3차시 「영상 n편」 = 실제 수', /영상 \d+편/.test(vb) && !(await p.isDisabled('[data-k="vid-go"]')), vb);
   await p.click('[data-k="vid-go"]'); await p.waitForSelector('[data-k="vidlist"]');
   const rows = await p.$$eval('[data-k="vidlist"] .row', (xs) => xs.map((x) => x.textContent.trim()));

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { upTag } from '../../engine/packs';
+  import LessonPick from './LessonPick.svelte';
+  import { pushRecent, recentLessons } from '../../school/recentLesson';
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
-  import { CLASSES, isBeta, week } from '../../school/school';
+  import { CLASSES, isBeta, lastClass, lastTest, week } from '../../school/school';
   import { DOW, kst, PERIODS } from '../../school/bells';
   import Sheet from '../battle/Sheet.svelte';
   import SchedEdit from './SchedEdit.svelte';
@@ -32,7 +34,19 @@
     expBusy = false;
   }
   let fillOpen = $state(false), vidOpen = $state(false), imgVer = $state(0); // 📄 학습지 PDF 넣기 · 🎬 영상 목록 (📜 2026-11-14 「전부 진행해」)
-  let lid = $state(untrack(() => want || packs[0]?.id || ''));
+  // 📚 처음 값 (📜 2026-11-14): 이 기기에서 마지막으로 고른 차시 → 가장 최근에 연 수업의 차시 → 지금 진도 차시 → 첫 차시
+  let recent = $state(recentLessons());
+  const firstLid = (): string => {
+    const has = (id: string | undefined | null) => !!id && opts.some((o) => o.id === id);
+    if (want && has(want)) return want;
+    const r = recent.find((id) => has(id)); if (r) return r;
+    const lasts = CLASSES.flatMap((c) => [lastClass(S, c), lastTest(S, c)]).filter((x): x is NonNullable<typeof x> => !!x && has(x.lesson)).sort((a, b) => (b.at || 0) - (a.at || 0));
+    if (lasts[0]) return lasts[0].lesson;
+    const pn = CLASSES.map((c) => Number(S.get<number>(`school/prog/${c}`)) || 0).filter((n) => n > 0); const byNo = pn.length ? opts.find((o) => o.no === Math.min(...pn)) : null;
+    return byNo?.id || packs[0]?.id || opts[0]?.id || '';
+  };
+  let lid = $state(untrack(firstLid)), pickOpen = $state(false);
+  function choose(id: string) { lid = id; recent = pushRecent(id); pickOpen = false; }
   const L = $derived(packs.find((p) => p.id === lid) ?? null);
   // 🖼 단계별 그림 = 서버 칸 그림(prep/{차시}/img/{칸 = 단계 img · id})을 실제로 읽어 셈 (🐞 2026-11-14 늘 「0 / n」 · 고정 글자였음)
   let hasImg = $state<Record<string, string | null>>({});
@@ -55,7 +69,7 @@
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
-  {#if packs.length}<label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{upTag(p.id, p.no)}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>{/if}
+  {#if packs.length}{@const cur = opts.find((o) => o.id === lid)}<button type="button" class="lsel lbtn" data-k="lpick-go" aria-haspopup="dialog" onclick={() => (pickOpen = true)}><span class="sr">차시</span><b>{cur ? `${cur.no}차시` : '차시'}</b><span class="lt">{cur ? `${cur.title}${upTag(cur.id, cur.no)}${cur.ready ? '' : ' (준비 안 됨)'}` : '고르기'}</span><i aria-hidden="true">▾</i></button>{/if}
   <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
@@ -92,6 +106,7 @@
     </div>
   {/if}
 </div>
+{#if pickOpen}<LessonPick {opts} pick={lid} {recent} onpick={choose} onclose={() => (pickOpen = false)} />{/if}
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 {#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
 {#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}
@@ -107,6 +122,10 @@
 {/if}
 
 <style>
+  .lbtn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); text-align: left; box-shadow: 0 3px 0 var(--surface); margin-bottom: 8px; }
+  .lbtn:active { transform: translateY(2px); box-shadow: none; }
+  .lbtn b { font: 800 17px var(--font); flex: none; } .lbtn .lt { flex: 1; min-width: 0; font: 600 14px var(--font); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lbtn i { font-style: normal; color: var(--text-3); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .st .th { width: 40px; height: 28px; object-fit: cover; object-position: top; border-radius: 4px; background: #fff; flex: none; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

@@ -25,7 +25,7 @@ const B = 'http://localhost:4173/';
   await shot(p, 'b14-home');
   await p.click('.pk.add >> nth=0'); await p.waitForTimeout(200);
   const r17 = await fixed('⑰');
-  log('   ＋ 누름 → 탭', (await p.textContent('.tabs button.on')).trim(), '| 차시 ▾', await p.$eval('.lsel select', (s) => s.options[s.selectedIndex].text), '|', (await p.textContent('.mid .empty')).replace(/\s+/g, ' ').trim(), '| 주요 단추', (await p.textContent('.tact .btn')).trim(), await p.$eval('.tact .btn', (e) => e.disabled), r17.btn);
+  log('   ＋ 누름 → 탭', (await p.textContent('.tabs button.on')).trim(), '| 차시 ▾', (await p.textContent('[data-k="lpick-go"]')).trim(), '|', (await p.textContent('.mid .empty')).replace(/\s+/g, ' ').trim(), '| 주요 단추', (await p.textContent('.tact .btn')).trim(), await p.$eval('.tact .btn', (e) => e.disabled), r17.btn);
   await shot(p, 'b14-prep-todo');
   // 고르기는 안 됨: 수업 탭으로 돌아가도 고른 차시 없음
   await p.click('.tabs button:has-text("수업")'); log('   돌아와 고른 차시:', (await p.$$('.pk3 .pk.on')).length);

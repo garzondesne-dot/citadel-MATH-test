@@ -19,7 +19,7 @@ const [SHOTS = '.', PACK, PDF] = process.argv.slice(2), B = 'http://localhost:41
   const R = await p.evaluate(() => Object.keys(window.__pdfRects || {}).sort().join(' ')); ok('칸 = review · c1 · m1 · c2 · m2 · m3 · m4 · recap · sum', R === 'c1 c2 m1 m2 m3 m4 recap review sum', R);
   await p.click('.sheet .btn.pmain'); await p.waitForNavigation({ timeout: 8000 }).catch(() => {}); await p.waitForSelector('.tabs');
   const n = await p.evaluate(() => Object.keys(localStorage).filter((k) => /prep\/ex-11\/img\//.test(k)).length); ok('저장 → prep/ex-11/img 9장', n === 9, String(n));
-  await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.selectOption('.lsel select', 'ex-11').catch(() => {}); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(1500);
+  await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, 'ex-11').catch(() => {}); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.waitForTimeout(1500);
   const lab = (await p.textContent('[data-k="stepimgs"]').catch(() => '')).trim(); ok('차시 준비 「단계별 그림 9 / 9」', /9 \/ 9/.test(lab), lab);
   await p.screenshot({ path: path.join(SHOTS, 'prep-stepimgs.png'), fullPage: false });
   // 옛 폰 브라우저 흉내 (Promise.withResolvers 없음) + 확장자 없는 zip (폰 파일 고르기) = 그래도 9 / 9칸 · 실패면 이유 한 줄

@@ -19,7 +19,7 @@ const [SHOTS = '.', ...lessons] = process.argv.slice(2), B = 'http://localhost:4
       await p.setInputFiles('[data-k="packfile"]', packFile(id)); await p.waitForSelector('[data-k="packsum"]'); await p.waitForTimeout(800);
       await p.click('.sheet .btn.pmain'); await p.waitForNavigation({ timeout: 10000 }).catch(() => {}); await p.waitForSelector('.tabs'); await p.evaluate((a) => { window.__botSpeed = 12; if (a != null) window.__botAcc = a; }, process.env.BOT_ACC != null ? Number(process.env.BOT_ACC) : null);
     }
-    await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await p.selectOption('.lsel select', id); await p.waitForTimeout(300);
+    await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, id); await p.waitForTimeout(300);
     await p.click('.tact .btn'); await p.waitForSelector('[data-k="bots"]', { timeout: 10000 });
     const code = await p.evaluate(() => (window.__dbGet('school/live') || {}).code);
     await p.click('[data-k="bot-sw"]');
