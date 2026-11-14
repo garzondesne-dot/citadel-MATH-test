@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { holdWake } from '../wake.svelte';
   import { SUBJ } from '../../engine/subject';
   import { PACKS } from '../../engine/packs';
   import { onDestroy, untrack } from 'svelte';
@@ -44,6 +45,7 @@
   //   왼쪽 위 숫자 한 칸(같은 자리 · 같은 크기) · 오른쪽 위 정찰 상자 · 가운데 몬스터 + 체력 · 아래 용사 이름표 · 오른쪽 아래 조작 막대(3초 뒤 숨음 · 📌)
   //   정답 · 오답 글자 · 종합실 키는 TV 에 없음
   const { S, L, live, now }: { S: Store; L: LessonPack; live: Live | null; now: number } = $props();
+  const unwake = holdWake(); onDestroy(unwake); // 📺 교실 TV = 화면 꺼짐 방지 (정식 screen-hall)
   const code = untrack(() => live?.code ?? '');
   const lr = untrack(() => (code ? liveRoom(S, code) : null));
   onDestroy(() => lr?.stop());

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { holdWake, wakeTip } from '../wake.svelte';
   import { V4 } from '../../raid/raid';
   import { hallKeyOf } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
@@ -23,6 +24,7 @@
   // ⑬ 대기실 · ⑭ 리모컨 (#119 · DECISIONS 「대기실 확정」 「리모컨 칸 고정」 「도구 두 줄 맞춤」) — 같은 틀: 위 막대 · 가운데(스크롤 없음) · 주요 단추 68 · 수업 중 막대 62
   //   리모컨 칸 고정: 지금 단계 카드 = 배지 한 줄 · 제출 n / m · 미제출 · 높이 48 칸(정찰 중 −30초 · 등장까지 · +30초 → 등장 뒤 −5% · 체력 · +5%) · 🔒 · 🔄 칩 자리 늘 2줄 · 도구 여섯 칸 52 · 「다음 ▶」
   const { S, L, live, now, onhome, onclose }: { S: Store; L: LessonPack; live: Live; now: number; onhome: () => void; onclose: () => void } = $props();
+  const unwake = holdWake(true); onDestroy(unwake); // 📱 리모컨 = 화면 꺼짐 방지 (📜 2026-11-14 · 정식 DS.UI.wake) · 지원 안 되면 띠 한 번
   const lr = untrack(() => liveRoom(S, live.code));
   onDestroy(lr.stop);
   const R = $derived(lr.v.room as Room | null);
@@ -268,6 +270,7 @@
     </Sheet>
   {/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
+  {#if wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 
   {#if sheet === 'bubble'}
     <Sheet onclose={() => (sheet = '')}>
@@ -396,6 +399,7 @@
   .rdock button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .rdock .glow { border: 2px solid var(--accent); background: var(--surface-2); box-shadow: 0 0 0 3px rgba(245, 184, 74, 0.25); }
   @media (prefers-reduced-motion: no-preference) { .rdock .glow { animation: glow 1.6s ease-in-out infinite; } }
+  .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 30; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .utoast { display: flex; align-items: center; gap: 8px; } .utoast button { margin-left: auto; border: 0; background: none; color: #fff; text-decoration: underline; font: 600 13px var(--font); }
   .chip { font-size: 11.5px; border-radius: 99px; padding: 1px 7px; font-weight: 700; vertical-align: middle; } .chip.r { background: var(--bad); color: #fff; } .chip.y { background: var(--accent); color: var(--on-accent); } .chip.g { background: #3fae6a; color: #06210f; }
   .wst { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
