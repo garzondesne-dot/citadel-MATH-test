@@ -15,13 +15,18 @@
   --k-tabon: url('/classic/ui-tab-on-v3.webp');
   --k-input: url('/classic/ui-input-v3.webp');
   --k-icbtn: url('/classic/ui-icbtn-v3.webp');
-  --pixel: 'Galmuri11', var(--font);
+  --pixel: 'Galmuri11', 'Pretendard Variable', Pretendard, sans-serif;
   --r-sm: 0px; --r: 0px; --r-lg: 0px;
 }
 /* 바탕 = 가운데 기둥 바깥에 성문 그림 · 기둥 안은 바탕색 */
 :root[data-theme='classic']:not([data-tv]) body { font-family: var(--pixel); background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-v3b.webp') center / cover no-repeat fixed; }
 @media (orientation: landscape) { :root[data-theme='classic']:not([data-tv]) body { background: linear-gradient(var(--bg), var(--bg)) center top / min(100%, 430px) 100% no-repeat fixed, url('/classic/menu-bg-wide-v1.webp') center / cover no-repeat fixed; } }
-/* 글꼴: 모든 글 = Galmuri11 · 문제 · 수식 · 보기 · 답 칸 = v1.0 글꼴 */
+/* 글꼴 (📜 2026-11-14 선생님 「클래식 모드에서 문제 풀이와 관련 없는 항목은 도트 글꼴」): 글꼴 기본값(--font) 자체를 Galmuri11 로 → 부품마다 따로 정한 글꼴까지 모두 도트
+   문제 풀이 칸(.qwrap 문제 카드 · 답 칸 · 보기 · 룬 키패드) 만 v1.0 고딕으로 되돌림 · 그 안의 머리표(.lab)는 도트 */
+:root[data-theme='classic']:not([data-tv]) { --font: 'Galmuri11', 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif; }
+:root[data-theme='classic']:not([data-tv]) :is(.qwrap, .runepad, .rune-slot) { --font: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif; }
+:root[data-theme='classic']:not([data-tv]) .qwrap .lab { font-family: 'Galmuri11', var(--font); }
+/* (옛 줄) 모든 글 = Galmuri11 · 문제 · 수식 · 보기 · 답 칸 = v1.0 글꼴 */
 :root[data-theme='classic']:not([data-tv]) :is(button, input, select, textarea, .sheet, .tp, .mh) { font-family: var(--pixel); }
 :root[data-theme='classic']:not([data-tv]) .bcard :is(p, .q, .qt, .q1, .q2, .story, .opt, .chip, .rune, .sy, input, .ans, .math) { font-family: var(--font); }
 
