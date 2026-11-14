@@ -14,6 +14,8 @@ export interface Slot { id: string; kind: Step['kind']; title: string; find?: st
 const ANCHOR = /^[^\p{L}\p{N}]*(몬스터\s*\d+|문제\s*\d+|STEP\s*\d+)|형성\s*평가|생각\s*열기/u; // 「문제 n」 등은 줄 맨 앞일 때만
 /** 칸 끝 표시 (여기서 위까지만 · 칸 시작은 아님): 레이드용 학습지의 「✏ 풀이 · 메모」 칸 (형성평가 「맞은 개수」는 정식 칸 그림처럼 넣음) */
 const END = /풀이\s*·\s*메모/;
+/** 칸 안 소문제 줄 「문제 n)」 = 칸 끝이 아님 (📜 2026-11-14 문제점 4 · 메모 18 · 13차시 「👾몬스터1」 바로 아래 「문제1)」에서 잘리던 것) */
+const SUBQ = /^[^\p{L}\p{N}]*문제\s*\d+\s*\)/u;
 const AT = (src: string) => new RegExp(`^[^\\p{L}\\p{N}]*${src}`, 'u');
 const esc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*');
 
@@ -50,7 +52,7 @@ export function autoRects(lines: Line[], slots: Slot[], ink?: Ink): Record<strin
   const used = new Set<Line>(), res: Record<string, Rect[] | null> = {}, hits: (Line | null)[] = [];
   const all = anchorsOf(slots);
   all.forEach((res0, i) => { let hit: Line | null = null; for (const re of res0) { hit = sorted.find((l) => !used.has(l) && re.test(l.s)) ?? null; if (hit) break; } if (hit) used.add(hit); hits[i] = hit; });
-  const isEdge = (l: Line, st: Slot) => used.has(l) || (ANCHOR.test(l.s) && !(st.kind === 'concept' && /^[^\p{L}\p{N}]*STEP\s*\d/u.test(l.s)));
+  const isEdge = (l: Line, st: Slot) => used.has(l) || (!SUBQ.test(l.s) && ANCHOR.test(l.s) && !(st.kind === 'concept' && /^[^\p{L}\p{N}]*STEP\s*\d/u.test(l.s)));
   hits.forEach((hit, i) => {
     const st = slots[i]!;
     if (!hit) { if (!(st.id in res)) res[st.id] = null; return; }

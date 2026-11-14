@@ -46,4 +46,12 @@ describe('🐞 2026-11-14 개념 칸 제목 「오늘 정리」(이모지 없음
     const b = anchorsOf([{ id: 'recap', kind: 'concept', title: '📝 오늘 정리' }])[0]!;
     expect(b.some((r) => r.test('📝 오늘 정리'))).toBe(true);
   });
+  it('🐞 13차시: 팩 제목이 「문제 n」이 아니어도 「👾몬스터1」 아래 「문제1)」에서 잘리지 않음 = 다음 칸 이름 앞까지 (📜 2026-11-14 문제점 4)', () => {
+    const ln: Line[] = [L(1, 0.052, 0.582, '👾몬스터1'), L(1, 0.052, 0.607, '문제1)다음 부등식이 절대부등식이면'), L(1, 0.06, 0.65, '(1) x² ≥ 0'), L(1, 0.066, 0.716, '✏풀이·메모'),
+      L(2, 0.052, 0.112, '👾몬스터3'), L(2, 0.052, 0.136, '문제3)x>0일 때 최솟값'), L(2, 0.052, 0.264, '👾몬스터4'), L(2, 0.052, 0.288, '문제4)최솟값을 구하시오')];
+    const st: Step[] = [{ kind: 'monster', id: 'm1', title: 'OX 판별' }, { kind: 'monster', id: 'm2', title: '없음' }, { kind: 'monster', id: 'm3', title: '최솟값' }, { kind: 'monster', id: 'm4', title: '최솟값 2' }];
+    const r3 = autoRects(ln, slotsOf(st));
+    expect(r3.m1![0]!.y + r3.m1![0]!.h).toBeGreaterThan(0.66); expect(r3.m1![0]!.y + r3.m1![0]!.h).toBeLessThan(0.716);
+    expect(r3.m3![0]!.y + r3.m3![0]!.h).toBeGreaterThan(0.15); expect(r3.m3![0]!.y + r3.m3![0]!.h).toBeLessThan(0.264);
+  });
 });
