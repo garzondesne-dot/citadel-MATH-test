@@ -5,7 +5,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, doorStart, endClass, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
+  import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
@@ -95,6 +95,8 @@
   let zoom = $state<0 | 1 | 2>(0);
   let hero = $state(false);
   $effect(() => { void i; untrack(() => { demo = false; zoom = 0; }); }); // 단계가 바뀌면 시연 · 크게 보기 닫힘 (필기는 Ink 가 지움)
+  // 🎮 시연 창 = 실제 전투(정찰 · 몬스터 공격 시계 · 학생 공격 연출) 멈춤 · 닫으면 그 자리에서 이어서 (📜 2026-11-14 선생님 「멈춤」 · 학생 풀기 · 제출 · 데미지는 그대로)
+  $effect(() => { const d = demo, c = code; if (c) untrack(() => setDemo(S, c, d)); });
 
   // ── 🏕 쉼터 놀이 (#142 ⑤) ──
   const fun = $derived(funOf(R));
@@ -305,6 +307,7 @@
     {#if scout?.on}
       <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
+    {#if demo}<div class="demoban" role="status" data-k="demo-ban">🎮 시연 중 · 전투 잠시 멈춤</div>{/if}
     {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} {tlook} onclose={() => (demo = false)} onstrike={(ult) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx }; demo = false; }} /></div>{/if}
   {/if}
 
@@ -540,4 +543,5 @@
   .dock .sep { width: 1px; height: 6cqh; background: rgba(255, 255, 255, 0.2); margin: 0 0.3cqw; }
   .heroov { position: absolute; inset: 0; z-index: 12; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
   .hk { position: relative; flex: none; width: 430px; height: 760px; border-radius: 22px; overflow: hidden; color: var(--text); background: var(--bg); }
+  .demoban { position: absolute; left: 34%; transform: translateX(-50%); top: 9cqh; z-index: 8; padding: 0.6cqh 1.6cqw; border-radius: 999px; background: rgba(10, 12, 18, 0.82); color: #ffe7a8; font: 800 2.2cqh var(--font); letter-spacing: 0.02em; box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.55); pointer-events: none; white-space: nowrap; }
 </style>

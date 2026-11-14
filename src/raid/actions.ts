@@ -1,6 +1,6 @@
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
+import { BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
 import { bossRecord, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { activeNow, cpPatch } from './combo';
 import { periodEnd } from '../school/bells';
@@ -29,7 +29,7 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
 function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
   const t = S.now(), st = R.state;
   const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? periodEnd(t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
-  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
+  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
 }
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
@@ -60,6 +60,13 @@ export function setFocus(S: Store, code: string, on: boolean): void {
   const R = getRoom(S, code);
   if (!R || !!R.state.focus === on) return;
   setHold(S, code, R, { focus: on });
+}
+/** 🎮 TV 시연 창 열기 · 닫기 (📜 2026-11-14 선생님 「멈춤」): 전투 시계(정찰 · 몬스터 공격)만 멈춤 · 학생 풀기 · 제출 · 데미지 · 생각 시간은 그대로 */
+export function setDemo(S: Store, code: string, on: boolean): void {
+  const R = getRoom(S, code); if (!R) return;
+  const st = R.state as Room['state'] & { demoAt?: number | null; demoMs?: number }, g = gameNow(R, S.now());
+  if (on && st.demoAt == null) S.set(`${roomPath(code)}/state/demoAt`, g);
+  if (!on && st.demoAt != null) { S.set(`${roomPath(code)}/state/demoMs`, Number(st.demoMs || 0) + Math.max(0, g - Number(st.demoAt))); S.set(`${roomPath(code)}/state/demoAt`, null); }
 }
 /** 🏕 쉼터 켜기 · 끄기 (정식 setRest · 기본 5분) — 쉬는 동안 게임 시계 멈춤 */
 export function setRest(S: Store, code: string, on: boolean, min = 5): void {
@@ -125,7 +132,7 @@ export function appearNow(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code), st = R && stepOf(L, R);
   if (!R || !st) return;
   const id = st.kind === 'boss' ? BOSS_ID : st.id;
-  S.set(`${roomPath(code)}/state/solveEnd/${id}`, gameNow(R, S.now())); // 정찰 끝 = 게임 시각
+  S.set(`${roomPath(code)}/state/solveEnd/${id}`, battleNow(R, S.now())); // 정찰 끝 = 전투 시각 (🎮 시연 멈춤을 뺀)
 }
 
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */

@@ -364,6 +364,14 @@ export function gameNow(R: Room, wall: number): number {
   const st = R.state, at = held(R) && st.holdAt != null ? Math.min(wall, Number(st.holdAt)) : wall;
   return at - Number(st.pauseMs || 0);
 }
+// ③ 전투 시계 battleNow = 게임 시계 − 🎮 시연으로 멈춘 합 (📜 2026-11-14 선생님 「멈춤」 · DECISIONS 「🧾 답 4개」 3)
+//    교사가 TV 🎮 시연 창을 연 동안 = 정찰 · 몬스터 공격만 멈춤 · 학생 풀기 · 제출 · 데미지 · 생각 시간(게임 시계)은 그대로 · 닫으면 그 자리에서 이어감
+//    state.demoAt = 시연을 연 게임 시각(열려 있을 때만) · state.demoMs = 이 단계에서 시연으로 멈춘 합(단계가 바뀌면 0)
+export const demoOn = (R: Room) => (R.state as { demoAt?: number | null }).demoAt != null;
+export function battleNow(R: Room, wall: number): number {
+  const st = R.state as Room['state'] & { demoAt?: number | null; demoMs?: number }, g = gameNow(R, wall);
+  return g - Number(st.demoMs || 0) - (st.demoAt != null ? Math.max(0, g - Number(st.demoAt)) : 0);
+}
 
 /** ⏯ 이어서 자리 (#119 덧붙임 2 · 선생님 「수업 끝 = 저절로 기억」): 수업이 닫히거나 시간이 끝난 그때 단계
  *  몬스터 · 보스: 처치됨 → 다음 단계부터 / 처치 안 됨 → 그 단계부터(fresh = 숫자 바꾼 판) · 개념 · 도입 → 그 단계부터 · 마무리까지 감(또는 마지막 처치) → done */
@@ -386,7 +394,7 @@ export function solveLock(L: LessonPack, R: Room, now: number) {
   if (!step || !['monster', 'boss'].includes(step.kind) || step.later) return null;
   const id = step.kind === 'boss' ? BOSS_ID : step.id, sec = NEWR(R) ? Number(R.meta.solve) : 0;
   if (!(sec > 0)) return null;
-  const g = gameNow(R, now), t0 = R.state.stepAt != null ? Number(R.state.stepAt) : g;
+  const g = battleNow(R, now), t0 = R.state.stepAt != null ? Number(R.state.stepAt) : g; // 🎮 시연 중 = 정찰도 멈춤
   const end = Math.min(t0 + sec * 1000 + Number(R.state.solveAdd?.[id] || 0), Number(R.state.solveEnd?.[id]) || Infinity);
   return { id, sec, t0, end, left: Math.max(0, end - g), on: g < end };
 }
@@ -410,11 +418,11 @@ export function atkClock(L: LessonPack, R: Room, now: number): Atk | null {
   const hp = kind === 'monster' ? monsterHp(L, R, step.id, now) : bossHp(L, R, now), ratio = hp.max ? Math.max(0, Math.min(1, hp.left / hp.max)) : 1;
   const per = a[0] + (a[1] - a[0]) * (1 - ratio);
   const phase = kind === 'boss' ? bossPhase(ratio) : null, lock = phase ? phase.lock : a[2];
-  const g = gameNow(R, now), focus = focusOn(R);
+  const g = battleNow(R, now), focus = focusOn(R); // 🎮 시연 중 = 공격 시계 멈춤
   const sl = solveLock(L, R, now), slHeld = sl ? Math.max(0, Math.min(g, sl.end) - sl.t0) : 0;
   const start = R.state.stepAt != null ? R.state.stepAt : g;
   const t = Math.max(0, (g - start - slHeld) / 1000 - bindFor(L, R, kind === 'boss' ? BOSS_ID : step.id, now)); // ⛓ 묶기 = 정식 자동 묶기 (📜 2026-11-14 「A로 해 줘」 · combo.ts bindFor · 30초 창마다 10초 + 필살기 · 🌟 · 🛡)
-  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || held(R), focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
+  return { kind, mid: kind === 'boss' ? BOSS_ID : step.id, per, lock, phase: phase ? phase.phase : 0, paused: !!(sl && sl.on) || held(R) || demoOn(R), focus, ratio, t, k: Math.floor(t / per), p: (t % per) / per };
 }
 /** 게이지 진행 (기기마다 memo 를 들고 같은 규칙으로) — 주기가 바뀌어도 거꾸로 튀지 않게 (정식 atkTrack) */
 export function atkTrack(memo: { key?: string; start?: number; hit?: boolean }, c: Atk, key: string) {

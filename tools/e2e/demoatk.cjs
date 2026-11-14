@@ -17,8 +17,8 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1920, height: 1080 }); await tv.goto(`${B}?role=hall&room=${code}`); await tv.waitForSelector('nav.dock', { timeout: 20000 }); await tv.waitForTimeout(1200);
   await tv.mouse.move(960, 540); await tv.click('nav.dock .t:has-text("시연")'); await tv.waitForSelector('.dpane .pmain', { timeout: 15000 });
   let demoFx = 0, stuFx = 0;
-  for (let k = 0; k < 40 && !(stuFx && k > 25); k++) { await tv.waitForTimeout(1500); demoFx += (await tv.locator('.dpane .afx').count()); stuFx += (await s.locator('.afx').count()); }
-  ok('학생 폰 = 몬스터 공격 받음', stuFx > 0, `효과 칸 ${stuFx}번 봄`);
+  for (let k = 0; k < 20; k++) { await tv.waitForTimeout(1500); demoFx += (await tv.locator('.dpane .afx').count()); stuFx += (await s.locator('.afx').count()); }
+  ok('학생 폰도 공격 없음 (📜 2026-11-14 「멈춤」 = 시연 중 전투 멈춤 · 옛 「학생은 받음」 바뀜 · demopause.cjs)', stuFx === 0, `효과 칸 ${stuFx}번`);
   ok('시연 창 = 공격 효과 · 멈춤 덮개 0 (단추가 흐린 건 답을 안 골라서)', demoFx === 0, `시연 효과 ${demoFx}`);
   await tv.screenshot({ path: path.join(SHOTS, 'demoatk-tv.png') });
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}` : '✅ 오류 0'); await b.close();

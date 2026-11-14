@@ -245,12 +245,15 @@
     if (!step) return;
     const st0 = step, key = `${R.state.step}|${st0.id}`, cur: Record<string, Snap> = {};
     for (const u of ids) cur[u] = snapOf(L, R, st0, u);
+    const sp = split; // 🎮 시연을 닫는 순간에도 다시 돎
     untrack(() => {
       snapNow = cur;
       if (key !== seenKey) { seenKey = key; seen = cur; wasDown = !!hp?.down; queue.length = 0; if (A) A.banner(null); domBan = ''; return; }
-      // 🎮 시연 중 = TV 전투 연출 없음 (📜 2026-11-14 · 공격 · 격파 띠 · EXP · 자세) — 기록만 따라감 (닫으면 그 뒤부터 다시 연출)
-      if (split) { seen = cur; wasDown = !!hp?.down; queue.length = 0; return; }
-      const hs = hitsOf(seen, cur);
+      // 🎮 시연 중 = TV 전투 연출 멈춤 (📜 2026-11-14 선생님 「멈춤」) — 학생 기록은 그대로 쌓이고 seen 을 붙잡아 둠 → 닫으면 그동안의 공격을 이어서 보여 줌
+      if (sp) return;
+      let hs = hitsOf(seen, cur);
+      // 너무 많이 쌓였으면(8번 넘게) 학생마다 한 번으로 묶음 (데미지 합 · 맞힘 하나라도 있으면 맞힘)
+      if (hs.length > 8) { const by = new Map<string, (typeof hs)[number]>(); for (const h of hs) { const o = by.get(h.u); if (!o) by.set(h.u, { ...h }); else { o.dmg += h.dmg; if (h.kind === 'hit') o.kind = 'hit'; o.perfect = o.perfect || h.perfect; } } hs = [...by.values()]; }
       // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
       for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) tvPose(u, 'healed', 1600); if ((a.gave ?? 0) > (b.gave ?? 0)) tvPose(u, 'heal', 1400); if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
       seen = cur;
