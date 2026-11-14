@@ -27,6 +27,8 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run build
+        env:
+          VITE_CHANNEL: beta # 📲 베타 이름 · 아이콘 · id (정식 = release)
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
