@@ -21,6 +21,7 @@
   import MyHero from '../camp/MyHero.svelte';
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
+  import Vid from '../q/Vid.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
@@ -289,7 +290,7 @@
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
     <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제">{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
-  {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><video src={L.videos[R.state.video]} autoplay controls muted={!sound}></video></div>{/if}
+  {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
     <div class="ov rest fun" class:still={fun?.frz != null} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
       {#if fun?.kind === 'td'}
@@ -491,7 +492,7 @@
   .ov.sheet { background: rgba(251, 248, 241, 0.97); color: #1b1a17; align-items: flex-start; justify-content: flex-start; padding: 12cqh 6cqw; text-align: left; }
   .ov.sheet b { font-size: var(--tv-title); text-shadow: none; }
   .ov.sheet p { font-size: var(--tv-title); font-weight: 500; }
-  .ov.vid video { max-width: 80cqw; max-height: 80cqh; }
+  .ov.vid :global(video) { max-width: 80cqw; max-height: 80cqh; width: auto; }
   .ov.door .k { font-size: var(--tv-big); }
   .ov.door small b { color: var(--accent); font-size: var(--tv-title); }
   .ext { height: 9cqh; padding: 0 3cqw; border: 0; border-radius: 2cqh; background: var(--accent); color: var(--on-accent); font: 700 var(--tv-title) var(--font); box-shadow: 0 4px 0 var(--accent-sh); cursor: pointer; }
