@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { lockOf, THEMES, type Feats, type Theme } from '../theme/theme';
+  import { lockOf, savedPaper, setPaper, THEMES, type Feats, type Theme } from '../theme/theme';
   // 🎨 테마 고르기 (#144): 11칸 · 고른 것 ✓ · 잠긴 테마 = 흐림 + 조건 한 줄(진행 n / m) · feats = null 이면 모두 열림(교사 폰)
-  const { now, feats, onpick }: { now: Theme; feats: Feats | null; onpick: (t: Theme) => void } = $props();
+  const { now, feats, onpick, paper = false }: { now: Theme; feats: Feats | null; onpick: (t: Theme) => void; /** 📜 문제 칸만 양피지 칸 보이기 (학생 · 교사 폰) */ paper?: boolean } = $props();
+  let qp = $state(savedPaper());
 </script>
 
 <div class="tgrid" role="group" aria-label="테마">
@@ -14,8 +15,13 @@
     </button>
   {/each}
 </div>
+{#if paper}<button type="button" class="qp" role="switch" aria-checked={qp} data-k="qpaper" onclick={() => { qp = !qp; setPaper(qp); }}><span class="pv" aria-hidden="true"></span><span class="tx"><b>📜 문제 칸만 양피지</b><small>어느 테마든 문제 카드만 양피지 바탕 · 진한 글씨</small></span><i class="sw2" class:on={qp}></i></button>{/if}
 
 <style>
+  .qp { margin-top: 8px; width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; text-align: left; }
+  .qp .pv { flex: none; width: 34px; height: 34px; border-radius: 6px; border: 2px solid #5a4024; background: #f2e6c9 url('/art/ui/ui-paper-v1.webp') center / 100% 100%; }
+  .qp .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; } .qp b { font-size: 14px; } .qp small { font-size: 12px; color: var(--text-2); }
+  .sw2 { flex: none; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; } .sw2::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left 0.15s; } .sw2.on { background: var(--ok); } .sw2.on::after { left: 21px; }
   .tgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .th { min-height: 56px; padding: 6px 10px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
   .th.on { border: 2px solid var(--accent); }

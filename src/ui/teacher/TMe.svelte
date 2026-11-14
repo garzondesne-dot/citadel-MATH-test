@@ -121,7 +121,7 @@
 {:else if sheet === 'theme'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🎨 테마{/snippet}
-    <ThemePicker now={theme} feats={null} onpick={pickTheme} />
+    <ThemePicker now={theme} feats={null} onpick={pickTheme} paper />
   </Sheet>
 {:else if sheet === 'sound'}
   <Sheet onclose={() => (sheet = '')}>

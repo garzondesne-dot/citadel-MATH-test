@@ -52,6 +52,7 @@ export function applyTheme(t: Theme = 'gold', opt: { tv?: boolean } = {}): void 
   const d = THEMES.find((x) => x.id === t) ?? THEMES[0]!;
   const root = document.documentElement;
   root.dataset.theme = d.id;
+  if (savedPaper()) root.dataset.qpaper = '1'; else delete root.dataset.qpaper;
   if (opt.tv) root.dataset.tv = '1'; else delete root.dataset.tv;
   if (d.id === 'classic' && !opt.tv && !classicP) classicP = import('./classic.css');
   // 🌐 #131 color-scheme 메타 = 테마의 밝기
@@ -60,3 +61,8 @@ export function applyTheme(t: Theme = 'gold', opt: { tv?: boolean } = {}): void 
 /** 이 기기에 기억한 테마 (첫 화면부터 같은 색) */
 export function savedTheme(): Theme { try { const t = localStorage.getItem(KEY); return isTheme(t) ? t : 'gold'; } catch { return 'gold'; } }
 export function setTheme(t: Theme, opt: { tv?: boolean } = {}): void { try { localStorage.setItem(KEY, t); } catch { /* 무시 */ } applyTheme(t, opt); }
+
+// 📜 문제 칸만 양피지 (📜 2026-11-14 선생님 「문제 칸만 따로 양피지 배경 테마로 할 수 있는 설정」): 어느 테마든 문제 카드(.bcard)만 양피지 바탕 + 진한 글씨 · 이 기기에 기억
+const PKEY = 'citadel-v1-qpaper';
+export function savedPaper(): boolean { try { return localStorage.getItem(PKEY) === '1'; } catch { return false; } }
+export function setPaper(on: boolean): void { try { localStorage.setItem(PKEY, on ? '1' : '0'); } catch { /* 무시 */ } if (typeof document !== 'undefined') { if (on) document.documentElement.dataset.qpaper = '1'; else delete document.documentElement.dataset.qpaper; } }

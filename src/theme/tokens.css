@@ -44,3 +44,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 :root {
   --fg: var(--text); --sub: var(--text-2); --card: var(--surface); --muted: var(--surface-2); --band: var(--accent);
 }
+
+/* 📜 문제 칸만 양피지 (2026-11-14 · 설정 「📜 문제 칸 양피지」 · 어느 테마든 문제 카드 안쪽만 색 낱말을 바꿈) */
+:root[data-qpaper] .bcard { --surface: #f2e6c9; --surface-2: #e7d7b2; --text: #1b130a; --text-2: #4a3a22; --text-3: #6e5c3e; --line: #8a7550; --accent: #8a5a12; --on-accent: #fff6e0; --accent-sh: #5a3a08; --ok: #1d7a50; --bad: #b8322a; --press-sh: #9c8456; --bad-bg: #f3d6cf; color: var(--text); background: #f2e6c9 url('/art/ui/ui-paper-v1.webp') center / 100% 100% no-repeat; border: 2px solid #5a4024; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); image-rendering: auto; }

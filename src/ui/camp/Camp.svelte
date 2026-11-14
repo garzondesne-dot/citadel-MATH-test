@@ -244,7 +244,7 @@
   <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
     {#snippet title()}⚙ 설정{/snippet}
     {#if feat('theme')}<span class="slab">🎨 테마</span>
-    <ThemePicker now={theme} {feats} onpick={pickTheme} />{/if}
+    <ThemePicker now={theme} {feats} onpick={pickTheme} paper />{/if}
     <span class="slab">🔊 소리</span>
     <SoundToggles />
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
