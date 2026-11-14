@@ -69,7 +69,7 @@
     if (ownsSkill(W, P, look.hero, id)) { look.socket[String(look.hero)] = id; return; }
     const st = skState(id, i);
     if (st.st === 'lock') { say(`🔒 ${st.sub}`); return; }
-    P.sk = [...P.sk, id];
+    P.sk = [...P.sk, id]; look.socket[String(look.hero)] = id; // 📜 2026-11-14 선생님 「스킬 업글하면 자동 선택되게」 = 새로 연 단계를 바로 끼움 (저장하면 그대로)
   }
   // ── 🧑 용사 바꾸기 ──
   const pick = $derived(heroOf(pickH));
