@@ -21,7 +21,7 @@
   // 📋 게시판 던전 전투 (#143 ⑨ ⑨-1 ⑨-2 ⑩): 레이드 학생 전투 화면(Student) 그대로 + 위 시간 선 · 팀 줄 · 도구(⏸ · 💡 · 🙋) · 덮개
   //   1인 = 이 폰 안(메모리) 방 · 끊겨도 계속 / 팀 = 서버 방 rooms/T… · 진행(다음 · 끝 · 멈춤 2분)은 글 올린 폰이 맡음
   //   🛡 수호자 = ⏸ 설명 2번(2분) · 💡 힌트(그 문제를 먼저 다 맞힌 뒤 · 친구마다 문제당 1번) / 🌱 도전자 = 🙋 도와줘 / 수호자 없는 팀 · 1인 = 길잡이(💡 자동 1번 + ⏸ 생각 1분 1번)
-  type End = { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로) */ rescue: { g: number; c: number } };
+  type End = { /** 👋 끝까지 남았나 · 끝날 때 인원 */ stay: boolean; nEnd: number; drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로) */ rescue: { g: number; c: number } };
   const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
     team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
@@ -65,7 +65,7 @@
   const now = $derived(clock.now);
   const roles = untrack(() => team?.roles ?? { [uid]: 'c' as Role });
   const myRole = roles[uid] ?? 'c';
-  const guardTeam = Object.values(roles).includes('g');
+  const guardTeam = Object.values(roles).includes('g'); // 처음부터 수호자가 있던 팀 (🌱 용기 보너스 판단 · 꼼수 막기)
   const ids = Object.keys(roles);
   let ended = false;
   // ── 진행 (맡은 폰) ──
@@ -82,19 +82,20 @@
     const over = !!m?.limit && timeLeft(RR, S.now()) <= 0 && !bp;
     const here = activeIds(RR, S.now()), who = ids.filter((u) => here.includes(u));
     if (!isEnd(L, RR) && !over && (who.length ? who : [uid]).every((u) => stepDone(L, RR, u))) { nextStep(S, L, code); return; }
-    if (isEnd(L, RR) || over) S.set(`${roomPath(code)}/state/bend`, { at: S.now(), clear: !over });
+    if (isEnd(L, RR) || over) S.set(`${roomPath(code)}/state/bend`, { at: S.now(), clear: !over, who: (who.length ? who : [uid]) }); // 👋 끝날 때 남은 사람 = 클리어 보상 · 팀 배수 (📜 2026-11-14 「파티원이 나가도 계속」)
   }, 300);
   // ── 끝 (모든 폰) ── 🐞 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 끝 신호를 받으면 그 순간 기록을 붙잡아 두고
   //   ⚔ 처치! / ⌛ 시간 끝 장면을 2초 보여 준 뒤(누르면 바로) 결과로 — 팀 친구가 먼저 넘어가도 이 폰 결과는 붙잡은 기록 그대로
   let endShow = $state<{ clear: boolean } | null>(null), endT: ReturnType<typeof setTimeout> | undefined, endGo: (() => void) | null = null;
   $effect(() => {
-    const RR = R, be = RR && (RR.state as unknown as { bend?: { clear: boolean } }).bend; if (!RR || !be || ended) return;
+    const RR = R, be = RR && (RR.state as unknown as { bend?: { clear: boolean; who?: string[] } }).bend; if (!RR || !be || ended) return;
     ended = true;
     untrack(() => {
       const f = firstTry(L, RR, uid), res = resultOf(L, RR, uid), tf = ids.reduce((a, u) => { const x = firstTry(L, RR, u); return { ok: a.ok + x.ok, bad: a.bad + x.bad, none: a.none + x.none, total: a.total + x.total }; }, { ok: 0, bad: 0, none: 0, total: 0 });
       const hints = Object.values((RR as unknown as { bh?: Record<string, Record<string, { from: string }>> }).bh || {}).reduce((a, o) => a + Object.values(o || {}).length, 0);
       const rz = solo ? [] : rescuesOf(L, RR, roles), rescue = { g: rz.filter((x) => x.g === uid).length, c: rz.filter((x) => x.c === uid).length };
-      const out = { drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L, rescue };
+      const stay = solo || !be.who || be.who.includes(uid), nEnd = solo ? 1 : (be.who?.length || ids.length);
+      const out = { stay, nEnd, drv: amDrvNow(RR), right: res.right, total: res.total, f, tf, grade: gradeOf(tf), clear: be.clear, sec: Math.round(Math.min(elapsedOf(RR), bMeta(RR)?.limit || 1e12) / 1000), hints, R: RR, L, rescue };
       let done = false; endGo = () => { if (done) return; done = true; clearTimeout(endT); onend(out); };
       endShow = { clear: be.clear }; sfx(be.clear ? 'finish' : 'game-no', 0.8); endT = setTimeout(() => endGo?.(), END_MS);
     });
@@ -141,7 +142,7 @@
   const gotHint = $derived(stuck && bh[uid]?.[hintKey(stuck.mid, stuck.k)] ? hintOf(stuck.q) : '');
   let autoHint = $state(''), autoUsed = false, hintOpen = $state(true);
   $effect(() => { // 길잡이: 수호자 없는 팀 · 1인 = 처음 틀렸을 때 💡 한 번 저절로
-    if (guardTeam || autoUsed || !R || !stuck) return;
+    if (guardHere || autoUsed || !R || !stuck) return;
     const tried = (R.subs?.[stuck.mid]?.[uid] && Object.keys(R.subs[stuck.mid]![uid]!).length) || 0;
     if (tried >= 1) { autoUsed = true; autoHint = hintOf(stuck.q); hintOpen = true; }
   });
@@ -154,6 +155,16 @@
   let took = $state(''), tookFor = '';
   $effect(() => { const L1 = leader(R, now), d = L1 ? { u: L1.u, from: L1.l.from } : null; if (!d || !d.from) return; const k = `${d.u}|${d.from}`; if (k === tookFor) return; tookFor = k; untrack(() => { took = `🔁 진행을 ${d.u === uid ? '내가' : `${name(d.u)}가`} 이어받았어요`; setTimeout(() => (took = ''), 3500); }); });
   const name = (u: string) => team?.names[u] ?? (u === uid ? nick : u);
+  // 👋 파티원이 나가도 계속 (📜 2026-11-14 선생님 「중간에 파티원이 나가면 저절로 나머지 파티원끼리 진행 · 혼자 남으면 혼자」): 진행은 이미 「지금 있는 사람」만 기다림
+  //   남은 화면 = 「👋 ○○ 이(가) 나갔어요 · 남은 n명이 이어서」 한 줄 · 🛡 수호자가 다 나가면 = 🔮 길잡이(💡 자동 · ⏸ 생각) 열림
+  const here = $derived(solo || !R ? ids : activeIds(R, now).filter((u) => ids.includes(u)));
+  const guardHere = $derived(guardTeam && here.some((u) => roles[u] === 'g'));
+  let wasHere = new Set<string>(), leftSeen = new Set<string>();
+  $effect(() => { const h = here; if (solo || !R || isLobby(R)) return; untrack(() => {
+    for (const u of wasHere) if (!h.includes(u) && u !== uid && !leftSeen.has(u)) { leftSeen.add(u); const n = h.length; say(n <= 1 ? `👋 ${iGa(name(u))} 나갔어요 · 혼자 이어서` : `👋 ${iGa(name(u))} 나갔어요 · 남은 ${n}명이 이어서`); }
+    for (const u of h) { wasHere.add(u); leftSeen.delete(u); }
+  }); });
+  const iGa = (w: string) => { const c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 ? `${w}${(c - 0xac00) % 28 ? '이' : '가'}` : `${w}이(가)`; };
   // 🚨 강적 출현 · 🤝 구조 (📜 DECISIONS 2026-11-14 · board/team.ts strongOf · rescuesOf)
   //   도전자 폰 = 막 뜬 소문제가 그 차시 · 몬스터 수업 기록이 없거나(A) 못 맞혔는데 복습 전(B)이면 알림 한 번(이유는 이 폰에만 · 서버엔 안 적음)
   //   팀 모두 = 그 몬스터 붉은 맥박 + 경보음 · 수호자 폰 = 진동 + 위 띠 「🚨 강적 출현! ○○ 를 도와주세요」 + 💡 · ⏸ 바로 단추
@@ -161,7 +172,7 @@
   const eulReul = (w: string) => { const c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 ? `${w}${(c - 0xac00) % 28 ? '을' : '를'}` : `${w}을(를)`; };
   const raised = new Set<string>();
   $effect(() => {
-    const it = stuck, RR = R; if (solo || !guardTeam || myRole === 'g' || !it || !RR || isLobby(RR)) return;
+    const it = stuck, RR = R; if (solo || !guardHere || myRole === 'g' || !it || !RR || isLobby(RR)) return;
     untrack(() => {
       const key = hintKey(it.mid, it.k); if (raised.has(key) || seOf(RR)[uid]?.[key]) return; raised.add(key);
       const why = strongOf(S.get(`records/${cls}/${num}/${L0.id}`), S.get(`bonus/${cls}/${num}/review/${L0.id}`), it.mid, it.k);
@@ -192,7 +203,7 @@
       <button type="button" disabled={!canHint} onclick={() => (hintSheet = true)}>💡 힌트</button>
     {:else}
       {#if !solo}<button type="button" class:on={!!help[uid]} onclick={() => helpOn(S, code, uid, !help[uid])}>🙋 {help[uid] ? '도움 요청 중' : '도와줘'}</button>{/if}
-      {#if !guardTeam}<button type="button" disabled={!R || !!bp || thinkUsed(R)} onclick={() => R && pauseOn(S, code, R, uid, true)}>⏸ 생각 1분</button>{/if}
+      {#if !guardHere}<button type="button" disabled={!R || !!bp || thinkUsed(R)} onclick={() => R && pauseOn(S, code, R, uid, true)}>⏸ 생각 1분</button>{/if}
     {/if}
   </div>
   <Student {S} {L} {code} {uid} {num} {nick} {cls} board {mates} {mateFeed} />

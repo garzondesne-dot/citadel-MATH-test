@@ -73,14 +73,15 @@
   }
   function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } if (p.lk && !p.mem?.[uid]) { pinPost = p; pin = ''; pinErr = ''; sheet = 'pin'; return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
   // ── 결과 (1인 · 팀 같은 꼴) ──
-  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number } }, team: Post | null) {
+  function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number }; stay?: boolean; nEnd?: number }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;
-    const n = team ? membersOf(team).length : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
+    // 👋 팀 배수 = 끝날 때 남은 인원 · 끝까지 남은 사람만 💎 (나간 사람 = 맞힌 기록 · 📕 복습 완료 · 순위만) (📜 2026-11-14)
+    const left = team ? r.stay === false : false, n = team ? Math.max(1, r.nEnd ?? membersOf(team).length) : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
     const base = Math.min(GEM.itemMax, r.right * GEM.perItem) + (r.clear ? GEM.clear : 0), mult = TEAM_X[Math.max(1, Math.min(4, n))] ?? 1, bonus = bonusOf(role, n, guard, r.clear);
-    const total2 = Math.round(base * mult * (1 + bonus)), got = earnDaily(me.wallet, total2, kstDay(S.now()), GEM.dayCap);
+    const total2 = left ? 0 : Math.round(base * mult * (1 + bonus)), got = earnDaily(me.wallet, total2, kstDay(S.now()), GEM.dayCap);
     // 🤝 구조 보상 (📜 DECISIONS 2026-11-14): 수호자 💎 +5(하루 3번) · 도전자 💎 +3 · 하루 한도 안 · 서버 log = rescue_{날짜}_{n} · rescued_{날짜}_{n}
     let rescueGot = 0;
-    if (r.rescue && (r.rescue.g || r.rescue.c) && S.kind !== 'memory') {
+    if (!left && r.rescue && (r.rescue.g || r.rescue.c) && S.kind !== 'memory') {
       const day = kstDay(S.now()), gp = cls && num ? `gem/${cls}/${num}` : '', log = (gp && S.get<Record<string, unknown>>(`${gp}/log`)) || {};
       const usedG = Object.keys(log).filter((k) => k.startsWith(`rescue_${day}_`)).length, usedC = Object.keys(log).filter((k) => k.startsWith(`rescued_${day}_`)).length;
       const nG = Math.max(0, Math.min(r.rescue.g, RESCUE.perDay - usedG));
@@ -118,7 +119,18 @@
   const SEEN = 'citadel-board-seen';
   let seen = $state<string[]>((() => { try { return JSON.parse(localStorage.getItem(SEEN) || '[]') as string[]; } catch { return []; } })());
   const markSeen = (pid: string) => { seen = [...seen.filter((x) => x !== pid), pid].slice(-30); try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch { /* 사생활 창 */ } };
-  const teamRun = $derived(mine && (mine.phase === 'play' || (mine.phase === 'done' && !seen.includes(mine.pid))) && mine.code && !res ? mine : null);
+  // ⏱ 같은 판에 다시 들어오기 = 30초 안이면 제자리로(연결이 잠깐 끊김) · 그 뒤는 들어가지 못함 (📜 2026-11-14) — 판이 진행 중일 때 화면을 다시 연 순간 한 번만 봄
+  const REJOIN_MS = 30000;
+  let gone = $state<string[]>([]), okPid = $state<string[]>([]);
+  const teamRun0 = $derived(mine && (mine.phase === 'play' || (mine.phase === 'done' && !seen.includes(mine.pid))) && mine.code && !res ? mine : null);
+  $effect(() => { const t = teamRun0; if (!t || t.phase !== 'play' || gone.includes(t.pid) || okPid.includes(t.pid)) return; untrack(() => {
+    const F = (S as Store & { fetch?: <T>(p: string) => Promise<T | null> }).fetch, path = `rooms/${t.code}/players/${uid}`;
+    void (F ? F<{ seen?: number }>(path).catch(() => null) : Promise.resolve(S.get<{ seen?: number }>(path))).then((me0) => {
+      if (me0?.seen && S.now() - me0.seen > REJOIN_MS) { gone = [...gone, t.pid]; leavePost(S, t, uid); say('⏱ 30초가 지나 이 판엔 다시 들어갈 수 없어요 · 남은 친구들이 이어서 해요'); }
+      else okPid = [...okPid, t.pid];
+    });
+  }); });
+  const teamRun = $derived(teamRun0 && !gone.includes(teamRun0.pid) && (teamRun0.phase !== 'play' || okPid.includes(teamRun0.pid)) ? teamRun0 : null);
   const names = (p: Post) => Object.fromEntries(membersOf(p).map((m) => [m.uid, `${m.cls}반 ${heroOf(m.hero).name}`]));
 </script>
 
