@@ -6,13 +6,14 @@
   import { answerOf, BOSS_ID, bossState, chainRecord, isChain, itemsFor, bossItem as bossItemR, plainRecord, stepOf } from '../../raid/raid';
   import { penLine, stripNo } from '../../engine/input';
   import Student from '../Student.svelte';
-  // 🎮 선생님 시연 = 학생 폰 화면 그대로 (#157 덧붙임 · 🪞): 학생 폰 틀(390 × 844)을 통째로 넣고 비율 그대로 키움(TV 높이에 맞춤)
+  // 🎮 선생님 시연 = 학생 폰의 문제 카드부터 아래만 (📜 2026-11-14 선생님 「전투 장면은 없애도 될 것 같아」 · 🪞 문제 꼴 · 단계 · 숫자 = 같은 Student 함수)
+  //   폭 390 학생 화면을 창 폭에 맞춰 키움(3m 거리에서 읽히게) · 높이 = 창 높이 ÷ 배율 · 넘치면 안에서 스크롤
   //   문제 · 숫자 규칙 · 부품(장면 띠 · 답안 줄 · 칩 · 룬 · 노란 주요 단추 56/20 · 도전 칸) = 학생과 같은 Student 화면
   //   다른 점 = 이 기기 메모리 방(데미지 · 기록 없음 · 실제 수업 방에 쓰지 않음) · 정찰 없음 · 💡 정답 펼치기 · 🔄 숫자 바꿔 다시 · ✕ 닫기
   const { L, R, code, onclose }: { L: LessonPack; R: Room; code: string; onclose: () => void } = $props();
-  const PW = 390, PH = 844;
+  const PW = 390;
   let round = $state(0), reveal = $state(false), boxH = $state(0), boxW = $state(0);
-  const k = $derived(boxH ? Math.min(boxH / PH, boxW / PW) : 0.6);
+  const k = $derived(boxW ? Math.max(0.6, Math.min(boxW / PW, 3)) : 1), PH = $derived(boxH && k ? boxH / k : 844);
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   // 판마다 다른 방 = 숫자가 바뀜 (seed = 방 코드) · 방을 먼저 만들고 나서 학생 화면을 띄움(접속 신호가 빈 방을 만들지 않게)
   //   실제 방 규칙 그대로(재도전 · 체력 기준 …) · 정찰만 끔 · 지금 단계로 바로
@@ -44,7 +45,7 @@
   <div class="box" bind:clientHeight={boxH} bind:clientWidth={boxW}>
     {#key dcode}
       <div class="phone" style:width="{PW}px" style:height="{PH}px" style:transform="scale({k})">
-        <div class="scr"><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board /></div>
+        <div class="scr" data-k="demo-scr"><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
       </div>
     {/key}
   </div>
@@ -60,7 +61,7 @@
   .rev { margin: 0; font-size: var(--tv-small); color: #ffe7a6; }
   .box { flex: 1; min-height: 0; display: flex; justify-content: center; overflow: hidden; }
   /* 폰 틀: transform 이 있는 상자 = 안쪽 「화면 바닥 고정」(주요 단추 · 시트)이 이 틀 기준이 됨 → 학생 폰과 같은 자리 */
-  .phone { flex: none; transform-origin: top center; border-radius: 28px; overflow: hidden; box-shadow: 0 0 0 6px #1b1d24, 0 10px 40px rgba(0, 0, 0, 0.6); background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+  .phone { flex: none; transform-origin: top center; border-radius: 12px; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
   .scr { position: relative; width: 100%; height: 100%; overflow: auto; }
   .scr :global(.edge .back) { pointer-events: none; opacity: 0.4; } /* 시연에선 뒤로 가지 않음 */
 </style>

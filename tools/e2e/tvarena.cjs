@@ -60,7 +60,7 @@ const FONTS = () => {
       // 🎮 시연 = 학생 폰 틀 그대로: 폰 틀 안 노란 주요 단추 = 56 · 바닥 20 (틀 기준 · 배율 나눔) + 같은 문제 학생 폰과 나란히
       if (!dom && W === 1920) {
         await hall.mouse.move(W / 2, H / 2); await hall.click('.dock .t:has-text("시연")'); await hall.waitForSelector('.dpane .phone .pmain'); await hall.waitForTimeout(800);
-        const d = await hall.evaluate(() => { const ph = document.querySelector('.dpane .phone'), pr = ph.getBoundingClientRect(), k = pr.height / 844, m = document.querySelector('.dpane .phone .pmain').getBoundingClientRect(); return { k: +k.toFixed(3), h: Math.round(m.height / k), bot: Math.round((pr.bottom - m.bottom) / k), w: Math.round(m.width / k), q: document.querySelector('.dpane .bcard .lab')?.textContent.trim() }; });
+        const d = await hall.evaluate(() => { const ph = document.querySelector('.dpane .phone'), pr = ph.getBoundingClientRect(), k = pr.width / 390, m = document.querySelector('.dpane .phone .pmain').getBoundingClientRect(); return { k: +k.toFixed(3), h: Math.round(m.height / k), bot: Math.round((pr.bottom - m.bottom) / k), w: Math.round(m.width / k), q: document.querySelector('.dpane .bcard .lab')?.textContent.trim() }; });
         log(`🎮 시연 폰: 배율 ${d.k} · 주요 단추 높이 ${d.h} · 바닥 ${d.bot} · 폭 ${d.w} (폰 390 기준) · 「${d.q}」`);
         if (d.h !== 56 || d.bot !== 20 || d.w < 220) errs.push(`시연 폰 단추 ${JSON.stringify(d)}`);
         await hall.screenshot({ path: `${SHOTS}/b39-tv-demo.png` });

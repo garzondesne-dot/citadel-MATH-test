@@ -43,7 +43,7 @@
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
-  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean } = $props();
+  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean } = $props();
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
   const ver = untrack(() => new URLSearchParams(location.search).get('ver') || BUILD);
@@ -157,7 +157,9 @@
   const battle = $derived(!!R && !isLobby(R) && !result && !!step && (step.kind === 'boss' || !!mid));
 </script>
 
-{#if paperOn() && R && !isLobby(R)}
+{#if cardOnly}
+  <!-- 🎮 시연 = 문제 카드만 -->
+{:else if paperOn() && R && !isLobby(R)}
   <!-- 📝 제출 모드 머리줄 (시안 ①~⑥): ‹ 뒤로 · n차시 · 문제 k · 게임 | 제출 -->
   <header class="ptop" class:pboard={board} data-k="ptop">{#if !board}<a class="pback" href="?" aria-label="뒤로">‹</a>{/if}<b>{L.no}차시 · {step ? (step.kind === 'boss' ? '형성평가' : step.kind === 'concept' ? (step.title.split(' · ')[0] ?? step.title) : probNo) : '수업'}</b><ModeSwitch dark /></header>{#if board}<div class="pgap" aria-hidden="true"></div>{/if}
 {:else if battle && step && R}
@@ -213,9 +215,9 @@
         {#if step.kind === 'boss'}
           {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId ? () => (cpt = true) : undefined} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
         {:else if mid}
-          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId ? () => (cpt = true) : undefined} />
+          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
         {/if}
       {/key}
       {#if atkOn && atk && paperOn()}
@@ -236,7 +238,7 @@
     <PrepImg {S} {L} id={cptId} alt="개념"><p class="say"><SymText text={L.steps.find((s) => s.id === cptId)?.say ?? ''} /></p></PrepImg>
   </Sheet>
 {/if}
-{#if paperOn()}<!-- 📝 제출 모드 = 💎 · 선물 알림 없음 (뒤에서 그대로 쌓임) -->{:else if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
+{#if paperOn() || cardOnly}<!-- 📝 제출 모드 · 🎮 시연 = 💎 · 선물 알림 없음 -->{:else if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
 {#if R && !R.state.closed && R.state.focus && !board}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
