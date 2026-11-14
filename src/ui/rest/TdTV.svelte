@@ -10,11 +10,12 @@
   import { artUrl, TD_ART } from '../manifest';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import Cutin from './Cutin.svelte';
+  import { sfx } from '../sound.svelte';
 
   // 🏰 교실 TV = 디펜스 계산 + 그림 (#142-2 · 정식 td.js hall · 이 기기 하나가 맡음)
   //   자리 고르기 40초(폰 선착순 · 안 고른 학생 = 빈 자리에 무작위) → 난이도 맞추기(calibrate) → 3초 뒤 웨이브 5 → 결과 → 60초 뒤 쉼터로
   //   🔴 집중 = 계산 멈춤(풀면 그 자리에서) · 판 안 업그레이드 = 저절로 · 기술 = 폰 tdt · 🛡 방패 · ✨ 응원 = 교사 폰
-  const { S, code, R, now, nameOf }: { S: Store; code: string; R: Room; now: number; nameOf: (u: string) => string } = $props();
+  const { S, code, R, now, nameOf, quiet = false }: { S: Store; code: string; R: Room; now: number; nameOf: (u: string) => string; quiet?: boolean } = $props();
   const P = (x: string) => `${roomPath(code)}/${x}`;
   const f = $derived((R as any).fun as any);
   const map = $derived(TD.mapGet(f?.map ?? 'forest'));
@@ -56,13 +57,14 @@
   let cut = $state<{ hero: number; name: string; gold: boolean } | null>(null), cutQ: { hero: number; name: string; gold: boolean }[] = [], cutT: ReturnType<typeof setTimeout> | null = null;
   const nextCut = () => { cut = cutQ.shift() ?? null; if (cut) cutT = setTimeout(nextCut, cut.gold ? 2100 : 1600); };
   const queueCut = (c: { hero: number; name: string; gold: boolean }) => { if (cutQ.length > 2) return; cutQ.push(c); if (!cut) nextCut(); };
+  let twFx = $state<Record<string, string>>({}), twSig = '', sndT = 0, sndAt = 0;
   let tick = $state(0), simT = $state(0), banner = $state(''), bannerT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string) => { banner = t; if (bannerT) clearTimeout(bannerT); bannerT = setTimeout(() => (banner = ''), 2600); };
   function loop() {
     raf = requestAnimationFrame(loop);
     const ff = untrack(() => f), RR = untrack(() => R);
     if (!ff || ff.kind !== 'td' || ff.phase !== 'play' || !ff.tw) return;
-    if (!sim || simG !== ff.g) { sim = TD.create({ map: TD.mapGet(ff.map), seed: ff.g, towers: toTowers(Array.isArray(ff.tw) ? ff.tw : Object.values(ff.tw)), hp0: ff.hp0 }); simG = ff.g; simAt = performance.now(); applied = { t: {}, sh: false, ch: {} }; pend = {}; ended = 0; }
+    if (!sim || simG !== ff.g) { sim = TD.create({ map: TD.mapGet(ff.map), seed: ff.g, towers: toTowers(Array.isArray(ff.tw) ? ff.tw : Object.values(ff.tw)), hp0: ff.hp0 }); simG = ff.g; simAt = performance.now(); applied = { t: {}, sh: false, ch: {} }; pend = {}; ended = 0; sndT = 0; twSig = ''; }
     const t = performance.now(), sp = Number((globalThis as any).__TD_SPEED) || 1, dt = Math.min(0.25, (t - simAt) / 1000) * sp; simAt = t; // __TD_SPEED = 화면 시험만(정식 DS_TD.speed)
     const live = S.now() >= ff.t0 && !RR.state.focus; // 🔴 집중 = 멈춤
     if (live && !sim.done) {
@@ -81,6 +83,13 @@
       }
     }
     draw();
+    if (sim && !sim.done && live) { // 🗡 타워 손맛 (정식 td.js hall · 2026-11-09 선생님 「공격할 때 이펙트 타격음」): 쏜 지 0.45초 = 공격 자세 · 왼쪽 적 = 뒤집어 봄 · 막는 중 ⛔ · 각성 빛 · 새 공격마다 타격음(0.09초에 한 번)
+      const blk = new Set(); sim.mons.forEach((m: any) => { if (!m.dead && m.blockBy) blk.add(m.blockBy); });
+      const fx: Record<string, string> = {}; sim.towers.forEach((T: any) => { fx[T.uid] = `${sim.t - T.shotAt < 0.45 ? 'a' : ''}${T.tx != null && T.tx < T.x - 0.05 ? 'f' : ''}${blk.has(T) ? 'b' : ''}${T.awake ? 'w' : ''}`; });
+      const sig = JSON.stringify(fx); if (sig !== twSig) { twSig = sig; twFx = fx; }
+      let nNew = 0, rng = 0; sim.fx.forEach((e: any) => { if (e.k === 'shot' && e.t > sndT) { nNew++; if (e.r) rng++; } }); sndT = sim.t;
+      if (nNew && !untrack(() => quiet) && t - sndAt > 90) { sndAt = t; sfx(rng === nNew ? 'cut' : 'dummy-hit', 0.35); }
+    }
     const nw = S.now();
     if (nw - liveAt > 1000 || (sim.done && !ended)) { liveAt = nw; const o: any = { t: Math.round(sim.t), wave: sim.wave, life: sim.life, shield: sim.shield, kills: {}, used: {}, stars: {}, got: {}, ups: {}, tier: {} }; sim.towers.forEach((T: any) => { if (T.teacher) return; o.kills[T.uid] = T.kills; o.stars[T.uid] = T.stars; o.got[T.uid] = T.upGot; o.ups[T.uid] = T.ups.join(''); o.tier[T.uid] = T.tier; if (T.used) o.used[T.uid] = 1; }); S.set(P(`tdl/${ff.g}`), o); tick++; simT = Math.round(sim.t); }
     if (sim.done && !ended) { ended = ff.g; const top = sim.towers.filter((T: any) => !T.teacher).sort((a: any, b: any) => b.kills - a.kills).slice(0, 3).map((T: any) => [T.uid, T.kills]); S.set(P('fun'), { ...ff, phase: 'end', endAt: S.now(), res: { win: sim.win, life: sim.life, top, t: Math.round(sim.t) } }); }
@@ -135,7 +144,7 @@
     {#if f?.phase === 'pick'}
       {#each Object.entries(picks) as [no, u] (no)}{@const s = slotOf(Number(no))}{#if s}<div class="pk" style:left="{s.x * U}px" style:top="{s.y * U}px"><HeroSprite id={heroOf2(u)} scale={hs} /><b>{nameOf(u)}</b></div>{/if}{/each}
     {:else}
-      {#each tws as t (t.u)}{@const p = twPos(t)}{#if p}<div class="tw" class:ranged={!!t.r} style:left="{p.x * U}px" style:top="{p.y * U}px"><HeroSprite id={t.hero} scale={hs} /><b>{t.T ? '🧙' : (nameOf(t.u).split(' ')[0] ?? '')}</b><em>⚔ {t.T ? '' : (L.kills?.[t.u] ?? 0)}{String(L.ups?.[t.u] ?? '').split('').map((k) => ({ a: '⚔', b: '⚡', c: '✨' } as Record<string, string>)[k]).join('')}</em></div>{/if}{/each}
+      {#each tws as t (t.u)}{@const p = twPos(t)}{#if p}{@const fx = twFx[t.u] ?? ''}<div class="tw" class:ranged={!!t.r} class:flip={fx.includes('f')} class:blocking={fx.includes('b')} class:awake={fx.includes('w')} style:left="{p.x * U}px" style:top="{p.y * U}px">{#if fx.includes('b')}<em class="blk">⛔ 막는 중</em>{/if}<HeroSprite id={t.hero} scale={hs} row={fx.includes('a') ? 2 : 0} /><b>{t.T ? '🧙' : (nameOf(t.u).split(' ')[0] ?? '')}</b><em>⚔ {t.T ? '' : (L.kills?.[t.u] ?? 0)}{String(L.ups?.[t.u] ?? '').split('').map((k) => ({ a: '⚔', b: '⚡', c: '✨' } as Record<string, string>)[k]).join('')}</em></div>{/if}{/each}
     {/if}
     <div class="hud">
       <b>🏰 {map.name}</b>
@@ -161,6 +170,8 @@
   .pk, .tw { position: absolute; transform: translate(-50%, -78%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
   .pk b, .tw b { font-size: 1.6cqh; background: rgba(8, 9, 12, 0.75); color: #fff; border-radius: 99px; padding: 0 0.6cqw; white-space: nowrap; margin-top: -0.4cqh; }
   .tw em { font-style: normal; font-size: 1.4cqh; color: #ffd25a; text-shadow: 0 1px 0 #000; }
+  .tw.flip :global(.art) { transform: scaleX(-1); } .tw.awake :global(.art) { filter: drop-shadow(0 0 6px #ffd25a); }
+  .tw .blk { position: absolute; bottom: 100%; font-style: normal; font-size: 1.4cqh; font-weight: 700; color: #fff; background: #b8323acc; border-radius: 99px; padding: 0 0.6cqw; white-space: nowrap; }
   .tw.ranged b { box-shadow: 0 0 0 2px #6aa3ff; } .tw:not(.ranged) b { box-shadow: 0 0 0 2px #e5484d; }
   .hud { position: absolute; left: 50%; top: 1.2cqh; transform: translateX(-50%); display: flex; gap: 1.6cqw; align-items: center; padding: 0.8cqh 1.6cqw; border-radius: 99px; background: rgba(8, 9, 12, 0.8); color: #fff; font-size: 2.4cqh; font-weight: 700; white-space: nowrap; }
   .hud b { color: #f5b84a; } .hud .sec { font-size: 3cqh; } .hud .fz { color: #ffb4ae; }

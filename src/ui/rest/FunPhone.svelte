@@ -11,6 +11,7 @@
   import { funOf, nunCheer, nunPress, payFun, pick, type AnyFun } from '../../rest/run';
   import FUNQ from '../../rest/funq.json';
   import TdPhone from './TdPhone.svelte';
+  import FunArena from './FunArena.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
   // 📱 학생 폰 · 쉼터 (#142 · 시안 ② ③ ④): 위 = 놀이 이름 · 🧍 살아 있는 인원 / 가운데 = 남은 초 고리 · 문제 / 아래 = 고르기(두 선택지가 곧 주요 단추)
@@ -32,12 +33,15 @@
   const alive = $derived(!!f && !!(f.alive || {})[uid]);
   const nAlive = $derived(f ? Object.keys(f.alive || {}).length : 0);
   const zz = $derived(!!f && !!(f as { zz?: Record<string, number> }).zz?.[uid]);
+  const zzN = $derived(f && f.phase !== 'end' ? Object.keys((f as { zz?: Record<string, number> }).zz || {}).length : 0); // 💤 관전 (정식 zzTag)
   const outN = $derived(ff ? (ff.outAt || {})[uid] : undefined);
   let wake = $state(''); // 🙋 누른 판 (덮개 걷음)
   const cover = $derived.by(() => {
     if (!f || f.phase === 'end' || isTd) return '';
     if (f.kind === 'quiz') return alive ? '' : 'see';
     if (alive) return '';
+    // 🎬 공개(show) 동안 이번 판에 고른 사람 = 덮개 없이 무대 연출(내 용사 추락)까지 봄 → 다음 판부터 덮개 · 💤 안 고른 사람은 지금처럼 덮개 + 🙋 (정식 phone 도 공개 중엔 무대 + 결과 글)
+    if (f.phase === 'show' && !zz && ff?.res && [...ff.res.a, ...ff.res.b, ...(ff.res.c || []), ...ff.res.none].includes(uid)) return '';
     if (zz) return wake === `${f.g}|${(f as Fun).n ?? (f as Nun).round}` ? '' : 'zz';
     return outN != null || f.kind === 'nun' ? 'out' : 'see';
   });
@@ -113,8 +117,10 @@
           <div class="ic">{won ? '🏆' : '🏁'}</div><b class="h">{won ? '우승! 끝까지 살아남았어요' : `우승 ${(ff.win || []).length}명`}</b>
         {/if}
       {:else}
-        <div class="ring" class:rdim={ff.phase === 'show'}>{secs}</div>
-        <div class="card">{card}<small>{ff.rps ? '선생님 손에 지면 탈락 · 안 내면 💤' : KIND[ff.kind].rule}</small></div>
+        {#if ff.phase === 'pick'}<div class="ring sm">{secs}</div>{/if}
+        <div class="card">{card}<small>{ff.rps ? '선생님 손에 지면 탈락 · 안 내면 💤' : KIND[ff.kind].rule}{#if zzN} · 💤 {zzN}명 관전{/if}</small></div>
+        <!-- ⚖ 🔄 ⭕ 무대 = 교실 TV 와 같은 연출 (정식 phone stage · 📜 2026-11-15) -->
+        <div class="fa-box"><FunArena {R} f={ff} {now} me={uid} /></div>
         {#if ff.phase === 'show'}<p class="ver">{verdict(ff)}</p>{#if myRes}<p class="me">{myRes}</p>{/if}{/if}
       {/if}
     {/if}
@@ -127,7 +133,7 @@
   {:else if !f}
     <BottomAction dock={false} text="놀이를 기다리는 중" />
   {:else if nn && nn.phase !== 'end'}
-    <BottomAction dock={false} text={nn.phase === 'play' && alive && !myPress ? `🙊 ${nn.n}!` : nn.phase === 'ready' ? '준비…' : nunMine || '기다려요'} disabled={nn.phase !== 'play' || !alive || !!myPress || !!cover} onmain={() => nunPress(S, code, nn.g, nn.round, uid)} />
+    <BottomAction dock={false} text={nn.phase === 'play' && alive && !myPress ? `🙊 ${nn.n}!` : nn.phase === 'ready' ? '준비…' : nunMine || '기다려요'} disabled={nn.phase !== 'play' || !alive || !!myPress || !!cover} onmain={() => { try { navigator.vibrate?.(30); } catch { /* 무시 */ } nunPress(S, code, nn.g, nn.round, uid); }} />
   {:else if ff && ff.phase !== 'end'}
     <BottomAction dock={false} text={ff.phase === 'pick' ? (mine ? '✓ 골랐어요' : '위에서 골라요') : '다음 판을 기다려요'} why={ff.phase === 'pick' ? (ff.kind === 'quiz' ? '탈락 없는 복습 · 시간 안엔 바꿔도 돼요' : '안 고르면 💤 관전') : ''}>
       {#snippet aux()}<div class="vs" class:three={opts.length === 3}>
@@ -159,6 +165,9 @@
   .h { font-size: 20px; }
   .ring { width: 72px; height: 72px; flex: none; border-radius: 50%; border: 5px solid var(--accent); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .ring.rdim { border-color: var(--line); color: var(--text-3); }
+  .ring.sm { width: 52px; height: 52px; border-width: 4px; font-size: 21px; }
+  .mid { container-type: size; }
+  .fa-box { flex: none; width: 100%; --fa-w: min(100%, calc(40cqh * 16 / 9)); }
   .bub { margin: 0; background: var(--surface-2); border-radius: var(--r); padding: 10px 12px; font-size: 14px; color: var(--text-2); }
   .card { width: 100%; background: var(--surface); border-radius: var(--r); padding: 14px 16px; font-size: 18px; font-weight: 700; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
   .card small { font-size: 13px; font-weight: 500; color: var(--text-2); }

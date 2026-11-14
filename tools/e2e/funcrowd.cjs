@@ -23,9 +23,9 @@ const NAMES = ['가람', '나래', '다온', '라온', '마루', '바다', '사�
       await t.click('.rdock button:has-text("쉼터")').catch(() => {}); await t.click('.sheet .x').catch(() => {});
       await rest(`rooms/${code}/fun`, 'DELETE');
       await tv.mouse.move(600, 400); await tv.click(`.dock .t:has-text("${kind === 'rev' ? '반대로' : '눈치'}")`); await wait(kind === 'nun' ? 4500 : 2500);
-      const sel = kind === 'rev' ? '.crowd2 .fa-nm' : '.crowd2 .nn-name';
+      const sel = kind === 'rev' ? '.fa-arena .fa-nm' : '.crowd2 .nn-name'; // 🔄 2026-11-15: 반대로 = 정식 무대(FunArena) 안 번호표 · 이름
       const m = await tv.evaluate((sel) => { const el = [...document.querySelectorAll(sel)], r = el.map((e) => e.getBoundingClientRect()); let hit = 0; for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) { const a = r[i], c = r[j]; if (a.left < c.right - 1 && c.left < a.right - 1 && a.top < c.bottom - 1 && c.top < a.bottom - 1) hit++; }
-        const bib = document.querySelector('.crowd2 .bib'); const lines = el.map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight || '1')));
+        const bib = document.querySelector('.crowd2 .bib, .fa-arena .bib'); const lines = el.map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight || '1')));
         return { n: el.length, hit, fs: el.length ? parseFloat(getComputedStyle(el[0]).fontSize) : 0, bib: bib ? parseFloat(getComputedStyle(bib).fontSize) : 0, out: r.filter((x) => x.right > innerWidth + 1 || x.left < -1 || x.bottom > innerHeight + 1 || x.top < -1).length, cut: el.filter((e) => e.scrollWidth > e.clientWidth + 1).length }; }, sel);
       await tv.screenshot({ path: `${SHOTS}/b51-${kind}-${tag}.png` });
       const ok = m.n === 30 && m.hit === 0 && m.out === 0 && (kind === 'rev' ? m.fs >= 17 && m.bib >= 22 : m.fs >= 14);

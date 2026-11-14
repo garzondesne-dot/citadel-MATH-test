@@ -60,7 +60,7 @@
   function pick(no: number) {
     if (f?.phase !== 'pick') return;
     if (mine) { const o = picks[no]; if (!o || o === uid) { msg = o ? '내 자리예요' : '이미 자리를 골랐어요 · 친구 자리를 누르면 교환 신청'; return; } tdSwap(S, code, f.g, uid, my.sw === o ? null : o); msg = my.sw === o ? '교환 신청을 취소했어요' : `🔁 ${nick(o)}에게 교환 신청!`; return; }
-    msg = tdPick(S, code, f.g, no, uid) ? '' : '다른 친구가 먼저 잡았어요!';
+    const got = tdPick(S, code, f.g, no, uid); msg = got ? '' : '다른 친구가 먼저 잡았어요!'; if (got) sfx('hero-pick', 0.6); // 🔊 정식 td.js 자리 잡음 = card 소리
   }
   // 🎁 결과 = 하루 💎 최대 3 (이기면 3 · 지면 1)
   let paid = $state(0), paidFor = 0;
@@ -91,7 +91,7 @@
     <div class="card"><b class="h">🏰 {map.name}</b><small>{cd > 0 ? `${cd}초 뒤 시작!` : `🌊 웨이브 ${L.wave ?? 1} / 5 · ❤ ${L.life ?? TD.LIFE}`}</small></div>
     {#if tw}
       <div class="stat"><span><b>{tw.s}번</b>자리</span><span><b>{L.kills?.[uid] ?? 0}</b>처치</span><span><b>⭐{L.stars?.[uid] ?? 0}</b>{nextStar ? `다음 ⭐${nextStar}` : '업그레이드 끝'}</span></div>
-      {#if need > 0}<p class="me">⬆ 업그레이드! 하나를 골라요 <small>(12초 안에 안 고르면 저절로)</small></p><div class="ups">{#each ['a', 'b', 'c'] as const as k (k)}<button type="button" onclick={() => tdUp(S, code, f.g, uid, Math.max(upsTxt.length, mineUp), k)}>{UPN[k]}</button>{/each}</div>
+      {#if need > 0}<p class="me">⬆ 업그레이드! 하나를 골라요 <small>(12초 안에 안 고르면 저절로)</small></p><div class="ups">{#each ['a', 'b', 'c'] as const as k (k)}<button type="button" onclick={() => { tdUp(S, code, f.g, uid, Math.max(upsTxt.length, mineUp), k); sfx('correct', 0.6); }}>{UPN[k]}</button>{/each}</div>
       {:else if upsTxt}<p class="why">업그레이드: {upsTxt.split('').map((k) => UPN[k]?.split(' ')[0]).join(' ')}</p>{/if}
     {:else}
       <p class="me">👀 이번 판은 구경해요 — 다음 판에 함께!</p>

@@ -35,9 +35,11 @@
   import { bgm, bgmHold } from '../bgm';
   import { ladder } from '../../model/hero';
   import FunCrowd from '../rest/FunCrowd.svelte';
+  import FunArena from '../rest/FunArena.svelte';
+  import FUNQ from '../../rest/funq.json';
   import { artUrl, FUN_BG } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
-  import type { Nun } from '../../rest/nunchi';
+  import { HINT as NUN_HINT, type Nun } from '../../rest/nunchi';
 
   // 🖥 교실 TV = 종합실 (#119 ⑮ · DECISIONS 「✅ ⑮ 교실 TV 컨펌」) — 정식 배치 그대로 + v1.0 색 · 글꼴
   //   위 막대 = 차시 · 단계 이름 · 단계 알약 · 시간 막대(👑 = 문 닫는 시각) · 🚪 코드 · 오른쪽 끝 🧙 · ⚙ 없음
@@ -106,11 +108,16 @@
   const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? Number((R?.players?.[u] as { num?: number } | undefined)?.num) ?? 0;
   let tvH = $state(720);
   const crowdK = $derived(tvH >= 1000 ? 1.5 : 1);
-  const revPeople = $derived(ff && ff.kind === 'rev' && ff.phase !== 'end' && R ? Object.keys(ff.alive || {}).map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, num: numOf(u), name: nmOnly(u), st: (ff.phase === 'show' && ff.res?.out.includes(u) ? 'out' : '') as '' | 'out' })).sort((a, b) => a.num - b.num) : []);
-  const nunPeople = $derived(nn && nn.phase !== 'end' && R ? [...Object.keys(nn.alive || {}), ...Object.keys(nn.out || {}).filter((u) => !(nn.alive || {})[u]), ...Object.keys(nn.zz || {}).filter((u) => !(nn.alive || {})[u] && !(nn.out || {})[u])].map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, num: numOf(u), name: nmOnly(u), st: ((nn.zz || {})[u] ? 'zz' : (nn.out || {})[u] ? 'out' : '') as '' | 'out' | 'zz', say: (nn.said || {})[u] })).sort((a, b) => (a.st === 'out' ? 1 : 0) - (b.st === 'out' ? 1 : 0) || a.num - b.num) : []);
+  // 🙊 정식 nunchi hall: 방금(1.8초) 일어난 일 = 용사 톡 · 말풍선 · 💥 동시 / ⌛ 마지막 큰 글 · 8초 넘게 조용하면 「⏳ 긴장감…」 · 응원 이모지가 떠오름
+  const nnLast = $derived(nn ? (nn.ev || []).slice(-1)[0] ?? null : null);
+  const nnFresh = $derived(nnLast && now - nnLast.at < 1800 ? { ...nnLast, u: Array.isArray(nnLast.u) ? nnLast.u : Object.values(nnLast.u || {}) as string[] } : null);
+  const nnHint = $derived(!!nn && nn.phase === 'play' && now - (nn.lastAt || now) > NUN_HINT);
+  const nnEmo = $derived(nn ? Object.values(((R as unknown as { nunE?: Record<string, Record<string, { e: string; at: number }>> } | null)?.nunE ?? {})[nn.g] ?? {}).slice(-12) : []);
+  const nunPeople = $derived(nn && nn.phase !== 'end' && R ? [...Object.keys(nn.alive || {}), ...Object.keys(nn.out || {}).filter((u) => !(nn.alive || {})[u]), ...Object.keys(nn.zz || {}).filter((u) => !(nn.alive || {})[u] && !(nn.out || {})[u])].map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, num: numOf(u), name: nmOnly(u), st: ((nn.zz || {})[u] ? 'zz' : (nn.out || {})[u] ? 'out' : '') as '' | 'out' | 'zz', say: (nn.said || {})[u], ...(nnFresh && nnFresh.u.includes(u) ? { pop: nnFresh.k === 'say' ? `${nnFresh.n}!` : nnFresh.k === 'clash' ? '💥' : nnFresh.k === 'last' ? '⌛' : '⏳', popK: nnFresh.k } : {}) })).sort((a, b) => (a.st === 'out' ? 1 : 0) - (b.st === 'out' ? 1 : 0) || a.num - b.num) : []);
+  const funZz = $derived(fun && fun.kind !== 'td' ? Object.keys((fun as { zz?: Record<string, number> }).zz || {}).length : 0); // 💤 관전 (정식 zzTag #57 ⑫)
   const fnow = $derived(fun?.frz != null ? Number(fun.frz) : now);
   const funSec = $derived(fun && fun.phase !== 'end' ? Math.max(0, Math.ceil(((fun.phase === 'show' ? (ff?.until ?? nn?.to ?? 0) : fun.to) - fnow) / 1000)) : 0);
-  const funCat = $derived(ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : '');
+  const funCat = $derived.by(() => { const k = ff && !ff.s && !ff.rps ? balList()[ff.qi]?.[2] ?? '' : ''; return k ? (FUNQ.cats as Record<string, string>)[k] ?? k : ''; }); // 폰과 같은 이름(🍜 음식)
   let funErr = $state(''), errT: ReturnType<typeof setTimeout> | null = null;
   // 🎵 TV 배경음 (#142-2): 🏕 쉼터 화면 · 놀이마다 곡 · 🔊 끄면 멈춤 · 쉼터 밖 = 없음(다른 장면 곡은 다음 판)
   // 🎵 종합실 배경음 (📜 2026-11-14 「배경음 전부 되살림」 · 정식 hall.js hallBgm 그대로): 대기실 lobby · 몬스터마다 raid-1 → 2 → 3 · 👑 보스 boss-1 / 2 (수업마다 번갈아)
@@ -332,28 +339,33 @@
   {/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
-    <div class="ov rest fun" class:still={fun?.frz != null} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
+    <div class="ov rest fun" class:still={fun?.frz != null} class:stg={!!ff && ff.phase !== 'end'} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
       {#if fun?.kind === 'td'}
-        <TdTV {S} {code} R={R as Room} {now} {nameOf} />
+        <TdTV {S} {code} R={R as Room} {now} {nameOf} quiet={!sound} />
       {:else if !fun}
         <b>🏕 쉼터</b><p>{mmss(restLeft)} · 선생님이 놀이를 고르는 중</p>
       {:else if nn}
-        <h3>🙊 눈치게임 · {nn.round}판</h3>
+        <h3>🙊 눈치게임 · {nn.round}판{#if funZz && nn.phase !== 'end'}<span class="zz">💤 {funZz}명 관전</span>{/if}</h3>
+        {#if nnEmo.length && nn.phase !== 'end'}<div class="nnemos" aria-hidden="true">{#each nnEmo as e, i (i)}<i style:left="{(i * 37) % 92 + 3}%" style:animation-delay="{(i % 4) * 0.3}s">{e.e || '👏'}</i>{/each}</div>{/if}
         {#if nn.phase === 'end'}<p class="big">🏆 우승 {(nn.win || []).length}명</p><div class="crowd">{#each nn.win || [] as u (u)}<span><HeroSprite id={R.players?.[u]?.hero ?? 0} scale={2} /><em>{nameOf(u)}</em></span>{/each}</div>
-        {:else}<p class="s">1부터 차례로 · 둘이 같이 누르면 💥 · 마지막 1명도 탈락</p><div class="cd">{nn.phase === 'ready' ? funSec : nn.n}</div>
+        {:else}<p class="s">1부터 차례로 · 둘이 같이 누르면 💥 · 마지막 1명도 탈락</p>
+          {#if nn.phase === 'play' && nnFresh && (nnFresh.k === 'clash' || nnFresh.k === 'last')}{#key nnFresh.at}<div class="cd nnbig bad">{nnFresh.k === 'clash' ? `💥 동시! ${nnFresh.u.length}명 탈락` : '⌛ 마지막!'}</div>{/key}
+          {:else if nn.phase === 'show'}<div class="cd nnbig">{nn.round}판 끝 · 살아남은 사람 {Object.keys(nn.said || {}).length}명</div>
+          {:else}{#key `${nn.phase}|${nn.phase === 'ready' ? funSec : nn.n}`}<div class="cd nnbig">{nn.phase === 'ready' ? funSec : nn.n}</div>{/key}{/if}
+          {#if nnHint}<p class="nnhint">⏳ 긴장감…</p>{/if}
           <div class="evs">{#each (nn.ev || []).slice(-4) as e, k (k)}<span>{e.k === 'say' ? `🗣 ${e.n} ${e.u.map(nameOf).join('')}` : e.k === 'clash' ? `💥 동시! ${e.u.map(nameOf).join(' · ')}` : e.k === 'last' ? `⌛ 마지막! ${e.u.map(nameOf).join('')}` : `⏳ 시간 끝 ${e.u.length}명`}</span>{/each}</div>
           {#if nunPeople.length}<FunCrowd kind="nun" people={nunPeople} k={crowdK} />{/if}{/if}
       {:else if ff}
-        <h3>{KIND[ff.kind as Kind].short}{ff.kind === 'quiz' ? ` · ${ff.n} / ${Math.min(QN, ff.queue.length)}` : ` · ${ff.n}판`}</h3>
+        <h3>{KIND[ff.kind as Kind].short}{ff.kind === 'quiz' ? ` · ${ff.n} / ${Math.min(QN, ff.queue.length)}` : ` · ${ff.n}판`}{ff.final && ff.kind !== 'quiz' && ff.phase !== 'end' ? ' · 마지막 판' : ''}{#if funZz && ff.phase !== 'end'}<span class="zz">💤 {funZz}명 관전</span>{/if}</h3>
         {#if ff.phase === 'end'}
           <p class="big">{ff.kind === 'quiz' ? '⭕ OX 타임 끝 · 결과는 폰에' : `🏆 우승 ${(ff.win || []).length}명`}</p>
           {#if ff.kind !== 'quiz'}<div class="crowd">{#each ff.win || [] as u (u)}<span><HeroSprite id={R.players?.[u]?.hero ?? 0} scale={2} /><em>{nameOf(u)}</em></span>{/each}</div>{/if}
         {:else}
+          <!-- ⚖ 🔄 ⭕ 무대 (정식 hall stage · 📜 2026-11-15 「연출 = 정식과 같게」): 위 = 규칙 · 둘 중 하나 / 가운데 = 무대(광장 → 발판 → 무너짐) / 아래 = 남은 초 · 판정 -->
           <p class="s">{ff.s ? '' : funCat ? `${funCat} · ` : ''}{ff.rps ? '✊✌️✋ 선생님 손에 지면 탈락 · 안 내면 💤' : KIND[ff.kind].rule}</p>
-          {#if ff.s}<p class="q">{ff.s}</p>{/if}
-          <div class="vs">{#each ff.q as t, k (k)}<span class="o{k}">{t}</span>{/each}</div>
+          {#if ff.s}<p class="q">{ff.s}</p>{:else if !ff.rps}<div class="vs">{#each ff.q as t, k (k)}<span class="o{k}">{t}</span>{/each}</div>{/if}
+          <div class="fa-box"><FunArena R={R as Room} f={ff} {now} big nm={nmOnly} num={numOf} k={crowdK} quiet={!sound} /></div>
           {#if ff.phase === 'show'}<p class="ver">{verdict(ff)}</p>{:else}<div class="cd">{funSec}</div>{/if}
-          {#if revPeople.length}<FunCrowd kind="rev" people={revPeople} k={crowdK} />{/if}
         {/if}
       {/if}
       {#if funErr}<p class="err">{funErr}</p>{/if}
@@ -517,9 +529,19 @@
   .ov.fun { background-color: #13201a !important; background-size: cover !important; background-position: center !important; top: 7.4cqw; z-index: 6; bottom: 0; gap: 1.4cqh; padding: 0 6cqw 12cqh; }
   .ov.fun h3 { margin: 0; font-size: var(--tv-big); }
   .ov.fun .s { font-size: var(--tv-title); color: #cfd3db; font-weight: 500; }
-  .ov.fun .q { font-size: var(--tv-big); max-width: 80cqw; line-height: 1.35; }
-  .ov.fun .vs { display: flex; gap: 2cqw; }
-  .ov.fun .vs span { min-width: 22cqw; padding: 2cqh 2cqw; border-radius: 2cqh; font-size: var(--tv-title); font-weight: 700; background: #2f5f9e; box-shadow: 0 0.6cqh 0 rgba(0, 0, 0, 0.45); }
+  .ov.fun .q { font-size: calc(var(--tv-big) * 0.8); max-width: 84cqw; line-height: 1.3; }
+  .ov.fun .vs { display: flex; gap: 1.4cqw; flex: none; }
+  .ov.fun .vs span { min-width: 18cqw; max-width: 36cqw; padding: 0.8cqh 1.6cqw; border-radius: 1.4cqh; font-size: var(--tv-title); font-weight: 700; background: #2f5f9e; box-shadow: 0 0.5cqh 0 rgba(0, 0, 0, 0.45); }
+  .ov.fun .fa-box { flex: 1 1 0; min-height: 0; width: 100%; container-type: size; display: flex; align-items: center; justify-content: center; --fa-w: min(100cqw, calc(100cqh * 16 / 9)); }
+  .ov.fun .nnbig { animation: nnPop 0.35s ease-out; } .ov.fun .nnbig.bad { color: #e5534b; }
+  @keyframes nnPop { from { transform: scale(0.5); opacity: 0.3; } 70% { transform: scale(1.12); } to { transform: none; opacity: 1; } }
+  .ov.fun .nnhint { color: #6cc6ea; font-size: var(--tv-title); animation: nnBlink 1s steps(2) infinite; } @keyframes nnBlink { 50% { opacity: 0.35; } }
+  .ov.fun .nnemos { position: absolute; left: 0; right: 0; bottom: 0; height: 60%; pointer-events: none; overflow: hidden; z-index: 0; }
+  .ov.fun .nnemos i { position: absolute; bottom: -6cqh; font-style: normal; font-size: 4cqh; animation: nnRise 3.2s linear infinite; }
+  @keyframes nnRise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-50cqh); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .ov.fun .nnbig, .ov.fun .nnhint, .ov.fun .nnemos i { animation: none; } }
+  .ov.fun.stg { padding-bottom: 3cqh; gap: 1cqh; } /* ⚖ 🔄 ⭕ 무대가 있을 땐 아래 여백을 줄여 무대를 크게 (막대는 무대 위로 뜸) */
+  .ov.fun h3 .zz { margin-left: 1.2cqw; padding: 0.3cqh 1cqw; border-radius: 1cqh; background: #2d4f78; font-size: var(--tv-body); vertical-align: middle; }
   .ov.fun .vs .o1 { background: #9e3f3f; } .ov.fun .vs .o2 { background: #4a7a3a; }
   .ov.fun .cd { font-size: var(--tv-big); font-weight: 700; color: #f5b84a; font-variant-numeric: tabular-nums; line-height: 1; }
   .ov.fun .ver, .ov.fun .big { font-size: var(--tv-title); color: #f5b84a; }
