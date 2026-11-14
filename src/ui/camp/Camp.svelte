@@ -33,6 +33,9 @@
   import { paperOn, submitWho } from '../submit.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
+  import Castle from '../castle/Castle.svelte';
+  import { bonusBase, castleState, floorName, progressOf, spanOf, type CastleRec } from '../../school/castle';
+  import { visibleCastles } from '../../school/castles.svelte';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
@@ -132,9 +135,16 @@
   $effect(() => { const s = sheet; try { if (s) sessionStorage.setItem(SK, JSON.stringify({ s, at: Date.now() })); else sessionStorage.removeItem(SK); } catch { /* 사생활 창 */ } });
   // 🧙 첫 용사 고르기 = 방금 가입한 폰의 첫 캠프에서 한 번 (App 이 가입 때 표시 · 📜 2026-11-13 밤 ❓#1 = A)
   let hero0 = $state((() => { try { return sessionStorage.getItem('citadel-hero0') === '1'; } catch { return false; } })());
-  // 🏰 성채 새 방 (정식 camp.js · 이 기기에 지난 수 기억 · 늘면 한 번 안내) — 베타 성채 = 과목 팩의 열린 층 수 · 처음 본 수는 소리 없이 기억만
+  // 🏰 성채 새 방 (정식 camp.js · 이 기기에 지난 수 기억 · 늘면 한 번 안내) — 📜 2026-11-14 = 올린 성채 팩(보이는 층)에서 이 학생에게 열린 방 수 · 처음 본 수는 소리 없이 기억만
+  const castleWho = untrack(() => ({ cls: pupil?.cls ?? '', num: pupil?.num ?? 0, uid: pupil?.uid ?? 'me' }));
+  const castleOpen = (): number => {
+    const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
+    const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {});
+    return visibleCastles().reduce((a, P) => a + castleState(P, up, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}).open.length, 0);
+  };
+  let castleGo = $state<string | null>(null); // 🏰 성채 화면 (층 id · '' = 층 고르기)
   {
-    const fresh = (SUBJ.camp?.floors ?? []).filter((f) => !f.off).length, nk = `citadel-castle-new-${untrack(() => pupil)?.uid ?? 'me'}`;
+    const fresh = untrack(castleOpen), nk = `citadel-castle-rooms-${untrack(() => pupil)?.uid ?? 'me'}`;
     let was: number | null = null; try { const v = localStorage.getItem(nk); was = v == null ? null : Number(v) || 0; localStorage.setItem(nk, String(fresh)); } catch { /* 사생활 창 */ }
     if (feat('citadel') && was != null && fresh > was && !untrack(() => hero0)) { giftToast = untrack(() => giftToast) || `🏰 성채던전에 새 방 ${fresh - was}개가 열렸어요!`; sfx('castle-open', 0.8); setTimeout(() => (giftToast = ''), 3200); } // 🔊 2차 🏰
   }
@@ -185,7 +195,7 @@
     <ul>
       <li><button type="button" data-todo="gate" onclick={() => tap('gate')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{L.no}차시 수업</b><small>{open ? '지금 · 선생님과 함께' : '선생님이 수업을 열면 들어가요'}</small></span>{#if open}<em>지금</em>{/if}</button></li>
       {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
-      {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{SUBJ.camp.castleSub.split(' · ').pop()} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
+      {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{visibleCastles().length ? `${visibleCastles().map((f) => `${f.floor}층`).join(' · ')} 평가` : '평가'} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
       {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
       <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
     </ul>
@@ -254,10 +264,14 @@
   </BottomAction>
 </div>
 
-{#if sheet === 'castle'}
-  <Sheet onclose={() => (sheet = null)} mainText="닫기">
+{#if castleGo != null}
+  <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
+  <Castle {S} {me} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
+{:else if sheet === 'castle'}
+  <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
+  <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
     {#snippet title()}🏰 성채 던전{/snippet}
-    {#each SUBJ.camp.floors as f (f.no)}<div class="floor" class:off={!!f.off}><span class="no">{f.no}</span><span><b>{f.name}</b><span>{f.sub}</span></span></div>{/each}
+    {#each visibleCastles() as f (f.id)}<button type="button" class="floor" data-floor={f.id} onclick={() => { castleGo = f.id; sheet = null; }}><span class="no">{f.floor}</span><span><b>{floorName(f)}</b><span>방 {f.rooms.length}개 · 열림 {spanOf(f)}</span></span></button>{:else}<div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요 · 선생님이 성채 팩을 올리면 열려요</p></div>{/each}
   </Sheet>
 {:else if sheet === 'menu'}
   <!-- ‹ 메뉴 (#172 · 정식 「◀ 메뉴화면」 자리 · ui-senior TopBar = 왼쪽 위 ‹) — 내 캠프 · 교사 폰 · 교실 TV · 로그아웃 -->
@@ -410,7 +424,8 @@
   .rung.lock { opacity: 0.45; box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
   .next { margin: 0; font-size: var(--fs-small); color: var(--text-2); text-align: center; }
-  .floor { min-height: 64px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s3); padding: 0 14px; }
+  .floor { min-height: 64px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s3); padding: 0 14px; border: 0; color: var(--text); font: inherit; text-align: left; width: 100%; box-shadow: 0 3px 0 var(--press-sh); }
+  .floor:active { transform: translateY(2px); box-shadow: none; }
   .floor.off { opacity: 0.55; }
   .floor .no { width: 38px; height: 38px; border-radius: 10px; background: var(--bg); display: grid; place-items: center; font-weight: 700; flex: none; }
   .floor b { display: block; }

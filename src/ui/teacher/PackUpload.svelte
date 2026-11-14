@@ -13,6 +13,8 @@
   import { SUBJ } from '../../engine/subject';
   import { ATTACKS } from '../../raid/attacks';
   import { spriteOf } from '../manifest';
+  import { CASTLE_PATH, checkCastle, diffRooms, floorName, forgetCastle, spanOf, storeOf, type CastleChecked } from '../../school/castle';
+  import { addCastles, castles } from '../../school/castles.svelte';
   // 📦 차시 팩 올리기 (L1 · 📜 2026-11-14 · 머리 🔨): 파일(또는 붙여 넣기) → 자동 검사(칸 · 이유 한 줄) → 미리 보기(학생 폰과 같은 QItem · 💡 정답 펼침) → 저장(prep/packs/{id})
   //   오류 0 이어야 저장 · 「선생님 확인」 = 다시 계산 못 한 문항 · 앱에 있는 차시를 대신함 → 보이기만(저장은 됨)
   const { S, onclose }: { S: Store; onclose: () => void } = $props();
@@ -54,7 +56,26 @@
   // 그림 · 영상 있는지 = 서버 그림 칸 · 앱 영상 파일 (없으면 ⚠ 한 줄 · 저장은 막지 않음)
   const hasImg = async (path: string) => { try { const x = S.fetch ? await S.fetch<string>(path) : S.get<string>(path); return typeof x === 'string' && x.startsWith('data:image'); } catch { return false; } };
   const hasFile = async (url: string) => { if (url.startsWith('blob:')) return true; try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
-  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; vres = {}; matchVids(); return matchImgs(); }
+  // 🏰 올리기 단추 하나 = 파일 안 kind 로 가름 (📜 2026-11-14 · 머리 확정 「추가 팩 관리」): 없음 = 차시 팩(그대로) · "castle" = 🏰 성채 팩(검사기 · 저장 자리 prep/addons/castle 따로)
+  let cres = $state<CastleChecked | null>(null), cpick = $state(''), cver = $state(0);
+  const cerrs = $derived(cres ? cres.issues.filter((x) => x.lvl === 'err') : []), casks = $derived(cres ? cres.issues.filter((x) => x.lvl === 'ask') : []);
+  const cold = $derived(cres?.pack ? castles.list.find((x) => x.id === cres!.pack!.id) ?? null : null);
+  const cdiff = $derived(cold && cres?.pack ? diffRooms(cold, cres.pack) : null);
+  const croom = $derived(cres?.pack?.rooms.find((r) => r.id === cpick) ?? null);
+  const kindOf = (t: string) => { try { const j = JSON.parse(t) as { kind?: unknown }; return j && typeof j === 'object' ? String(j.kind ?? '') : ''; } catch { return ''; } };
+  async function saveCastle() {
+    const P = cres?.pack; if (!P || cerrs.length || saved) return;
+    const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
+    const P2 = { ...P, ...(cold?.hide ? { hide: true } : {}) };
+    if (!(await put(`${CASTLE_PATH}/${P.id}`, storeOf(P2, Date.now())))) { failed = '저장하지 못했어요 · 교사로 로그인했는지 · 인터넷을 확인해요'; return; }
+    const keep = cdiff ? ` · 처치 기록 그대로 ${cdiff.keep.length}방` : '';
+    forgetCastle(P2); addCastles([P2]);
+    saved = `🏰 ${floorName(P)} 저장 · 방 ${P.rooms.length}개${keep} · 「➕ 추가 팩」에 들어갔어요`;
+  }
+  function run(t: string, n: string) {
+    cres = null;
+    if (kindOf(t) === 'castle') { text = t; name = n; saved = ''; failed = ''; res = null; cres = checkCastle(t, { sheet: look.sheet }); cpick = cres.pack?.rooms[0]?.id ?? ''; cver = 0; return; }
+    text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; vres = {}; matchVids(); return matchImgs(); }
   // 그림 · 영상 확인 다시 (팩 · 그림이 바뀔 때마다) — 붙인 그림 = 있음 · 영상 = 있는 파일만 연결
   let mseq = 0;
   async function recheckMedia() {
@@ -183,15 +204,34 @@
   }
 </script>
 
+{#if cres}
+<Sheet {onclose} tall mainText={saved ? '저장했어요' : cres.pack ? (cold ? '🔁 새 판으로 바꾸기' : `🏰 ${cres.pack.floor}층 저장`) : '파일을 골라요'} mainDisabled={!cres.pack || cerrs.length > 0 || !!saved} why={cres.pack && cerrs.length ? `고칠 칸 ${cerrs.length}개가 있으면 저장할 수 없어요` : ''} onmain={saveCastle}>
+  {#snippet title()}📦 팩 올리기 · 🏰 성채{/snippet}
+  <div class="up" data-k="packup" data-kind="castle">
+    <label class="file"><input type="file" accept=".json,.zip,application/json,application/zip" onchange={onfile} data-k="packfile" /><span>📂 다른 파일 고르기</span><small>{name}</small></label>
+    <p class="sum" data-k="packsum" class:bad={cerrs.length > 0}>{cerrs.length ? `✘ 고칠 칸 ${cerrs.length}개` : '✔ 검사 통과'}{casks.length ? ` · 선생님 확인 ${casks.length}` : ''} · 🏰 성채 팩{cres.pack ? ` ${floorName(cres.pack)} · 열림 ${spanOf(cres.pack)}` : ''} · 방 {cres.stats.rooms} · 문항 {cres.stats.items} · 판 {cres.stats.versions}{cres.stats.rechecked ? ` · 다시 계산 맞음 ${cres.stats.rechecked}` : ''}</p>
+    {#if cold && cdiff && !saved}<p class="ask" data-k="castle-replace" role="alert"><b>「{cold.id}」 이 이미 있어요 — 새 판으로 바꿀까요?</b><span>같은 방 id {cdiff.keep.length}개 = 학생 처치 기록 그대로{cdiff.gone.length ? ` · 빠지는 방 ${cdiff.gone.join(' · ')}` : ''}{cdiff.added.length ? ` · 새 방 ${cdiff.added.join(' · ')}` : ''}</span></p>{/if}
+    {#if cres.issues.length}<ul class="iss" data-k="packiss">{#each cres.issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
+    {#if cres.pack}
+      <p class="lab">미리 보기 · 학생 폰과 같은 문제 꼴 (💡 정답 펼침)</p>
+      <div class="chips2" role="tablist">{#each cres.pack.rooms as r (r.id)}<button type="button" role="tab" class:on={cpick === r.id} aria-selected={cpick === r.id} onclick={() => { cpick = r.id; cver = 0; }}>{r.boss ? '👑 ' : ''}{r.id}</button>{/each}</div>
+      {#if croom}<div class="chips2 vers" role="tablist" aria-label="판">{#each croom.vers as _v, k (k)}<button type="button" role="tab" class:on={cver === k} aria-selected={cver === k} onclick={() => (cver = k)}>{k ? `재도전 ${k}` : '첫 판'}</button>{/each}</div>
+      <p class="msum">{croom.title} · {croom.no}차시부터{croom.chain ? ' · ⚔ 소레이드' : ''}{croom.photo ? ' · 📷 서술형(답 확인만)' : ''}</p>
+      <div class="prev" data-k="packprev">{#each croom.vers[cver] ?? [] as q, i (`${cpick}|${cver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>{/if}
+    {/if}
+    {#if saved}<p class="ok" role="status">{saved}</p>{/if}{#if failed}<p class="fail" role="alert">{failed}</p>{/if}
+  </div>
+</Sheet>
+{:else}
 <Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? `${P.no}차시 저장` : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : ''} onmain={save}>
-  {#snippet title()}📦 차시 팩 올리기{/snippet}
+  {#snippet title()}📦 팩 올리기{/snippet}
   <div class="up" data-k="packup">
     {#if mine.length && !res}<div class="mine" data-k="packmine"><p class="lab">올린 차시 팩</p>
       {#each mine as m (m.id)}<div class="mrow" data-id={m.id}><span><b>{m.no}차시 {m.title}</b><small>{m.id}</small></span>
         {#if deletable(m.id, (x) => builtIn.has(x))}{#if ask === m.id}<span class="cf" role="alertdialog"><em>이 팩을 지울까요? 되돌릴 수 없어요</em><button type="button" class="yes" data-k="packdel-yes" onclick={() => del(m.id)}>예</button><button type="button" class="no" onclick={() => (ask = '')}>아니요</button></span>{:else}<button type="button" class="del" data-k="packdel" onclick={() => (ask = m.id)}>🗑 삭제</button>{/if}{/if}
       </div>{/each}</div>{/if}
     {#if gone}<p class="ok" role="status">{gone}</p>{/if}
-    <label class="file"><input type="file" accept=".json,.zip,application/json,application/zip" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 .json · 또는 .zip (팩 + 칸 그림 · 20MB 까지)'}</small></label>
+    <label class="file"><input type="file" accept=".json,.zip,application/json,application/zip" onchange={onfile} data-k="packfile" /><span>📂 파일 고르기</span><small>{name || '차시 팩 · 🏰 성채 팩 .json · 또는 .zip (팩 + 칸 그림 · 20MB 까지) · 종류는 파일 안 kind 로 저절로'}</small></label>
     <label class="file img"><input type="file" accept="image/png,image/webp,image/jpeg" multiple onchange={onimgs} data-k="packimgs" /><span>🖼 칸 그림 같이 고르기 (여러 장)</span><small>파일 이름 = 칸 이름 (예: c1.png · review.webp)</small></label>
         <button type="button" class="b2" onclick={() => (paste = !paste)}>{paste ? '붙여 넣기 닫기' : '글로 붙여 넣기'}</button>
     {#if paste}<textarea rows="5" bind:value={text} placeholder={'{ "id": "lesson-11", "no": 11, … }'} data-k="packtext"></textarea><button type="button" class="b2" onclick={() => run(text, '붙여 넣은 글')}>검사하기</button>{/if}
@@ -222,8 +262,10 @@
     {#if saved}<p class="ok" role="status">{saved}</p>{/if}{#if failed}<p class="fail" role="alert">{failed}</p>{/if}
   </div>
 </Sheet>
+{/if}
 
 <style>
+  .ask { margin: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--r-sm); border-left: 4px solid var(--accent); background: var(--surface-2); font-size: 14px; } .ask span { color: var(--text-2); font-size: 13px; }
   .up { display: flex; flex-direction: column; gap: 10px; }
   .file { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 12px; border: 1.5px dashed var(--line); border-radius: var(--r); cursor: pointer; }
   .file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

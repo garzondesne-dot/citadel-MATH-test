@@ -19,7 +19,8 @@ const GEN = SUBJ.themes; // 몬스터 줄 · 던전 배경 표 = 과목 팩 (#13
 export const SHEETS: Record<string, Sheet> = {
   mimic: { src: 'art/monster-mimic-v1.webp', cols: 3, rows: 1, cell: 256, poses: { idle: 0, attack: 1, down: 2 }, names: ['이끼 미믹'] },
   // 🧩 #132 정식 차시가 쓰는 몬스터 줄만 잘라 온 것 (tools/pack-from-release · 'new2:0' = 정식 'new:2')
-  ...Object.fromEntries(Object.entries(GEN.sheets as Record<string, { src: string; cell: number; names: string[] }>).map(([k, v]) => [k, { src: v.src, cols: 3, rows: 1, cell: v.cell, poses: { idle: 0, attack: 1, down: 2 }, names: v.names }])),
+  //   🏰 성채 시트 (📜 2026-11-14) = 여러 줄 (rows · 'castle1:줄')
+  ...Object.fromEntries(Object.entries(GEN.sheets as Record<string, { src: string; cell: number; names: string[]; rows?: number }>).map(([k, v]) => [k, { src: v.src, cols: 3, rows: v.rows ?? 1, cell: v.cell, poses: { idle: 0, attack: 1, down: 2 }, names: v.names }])),
   // 🎲 5칸 = 대기 A · 대기 B(숨쉬기) · 공격 · 맞음(움찔) · 쓰러짐
   ...Object.fromEntries(Object.entries({ ...RDUN, ...(RDUN_BOSS as unknown as Record<string, Rdun>) }).map(([k, v]) => [k, { src: RDX2 ? v.src.replace('.webp', 'x2.webp') : v.src, cols: 5, rows: v.rows, cell: RDX2 ? v.cell * 2 : v.cell, poses: { idle: 0, idleB: 1, attack: 2, hit: 3, down: 4 }, names: v.names, rune: v.rune }])),
 };
@@ -40,6 +41,7 @@ export const runeAt = (s: Sheet, row: number, col: number) => s.rune?.[row]?.[co
 // 던전 배경 (정식 manifest.dungeons · 차시 팩 theme) — 원본 1672 × 941 을 정확히 절반(최근접)으로 줄인 판
 export const DUNGEONS: Record<string, string> = {
   '01-burrow': 'art/dg-01-burrow-v1h.webp',
+  'citadel-room': 'art/dg-citadel-room-v1h.webp', 'citadel-boss': 'art/dg-citadel-boss-v1h.webp', // 🏰 성채 방 · 보스 방 (정식 citadel.room · boss)
   ...(GEN.dungeons as Record<string, string>),
 };
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;

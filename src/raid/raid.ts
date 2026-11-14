@@ -22,7 +22,10 @@ export const ENERGY = 3;
 /** 🙋 선생님 「풀어주기」 횟수 (v4 · unlock/{mid}/{uid} = 수 · 하나 = ❤ +1) */
 export const unlocksOf = (R: Room, mid: string, uid: string) => Number((R as { unlock?: Record<string, Record<string, number>> }).unlock?.[mid]?.[uid]) || 0;
 /** ⏯ 이어서 수업 (#119 덧붙임 2): 지난 수업에서 처치 못 한 몬스터 = meta.fresh[id] → 판 · 시도 번호를 1 밀어 숫자 바꾼 판부터 (첫 시도 = 학습지 원문을 쓰지 않음) */
-export const shiftOf = (R: Room, mid: string) => (R.meta.fresh?.[mid] ? 1 : 0);
+//   🏰 성채 방 = 숫자 그대로 판 번호 (첫 입장 0 · 다시 들어옴 1~)
+export const shiftOf = (R: Room, mid: string) => { const f = R.meta.fresh?.[mid]; return typeof f === 'number' ? f : f ? 1 : 0; };
+/** 🏰 성채 방 (📜 2026-11-14 · 정식 bonus.js): 틀린 소문제만 다음 판(버전) 숫자로 · 맞힌 소문제는 그 판 그대로 잠김 */
+export const isCastle = (R: Room) => !!R.meta.castle;
 
 // ── 단계 ─────────────────────────────────────────────────
 export const stepIdx = (R: Room) => R.state.step ?? -1;
@@ -53,8 +56,19 @@ export function variantOf(L: LessonPack, R: Room, mid: string, uid: string, atte
   }
   return v;
 }
-export const itemsFor = (L: LessonPack, R: Room, mid: string, uid: string, attempt: number): Question[] =>
-  items(L, mid, seedOf(R, uid), variantOf(L, R, mid, uid, attempt) + shiftOf(R, mid));
+export const itemsFor = (L: LessonPack, R: Room, mid: string, uid: string, attempt: number): Question[] => {
+  if (isCastle(R)) { const seed = seedOf(R, uid); return castleVers(L, R, mid, uid, attempt).map((v, i) => items(L, mid, seed, v)[i] as Question); }
+  return items(L, mid, seedOf(R, uid), variantOf(L, R, mid, uid, attempt) + shiftOf(R, mid));
+};
+/** 🏰 소문제마다 판 번호: 처음 = 들어온 판(shift) · 그 소문제를 틀릴 때마다 +1 (맞히면 그 판에 머묾) */
+export function castleVers(L: LessonPack, R: Room, mid: string, uid: string, attempt: number): number[] {
+  const seed = seedOf(R, uid), b = shiftOf(R, mid), v = items(L, mid, seed, b).map(() => b);
+  for (const t of attemptsOf(R, mid, uid)) {
+    if (t.attempt >= attempt) break;
+    v.forEach((vi, i) => { const q = items(L, mid, seed, vi)[i]; if (!(q && t.given != null && t.given[i] != null && grade(q, t.given[i] as Given))) v[i] = vi + 1; });
+  }
+  return v;
+}
 
 /** 한 번의 시도 채점: 소문제마다 정답 여부 (정식 Model.gradeAttempt) */
 export function gradeAttempt(L: LessonPack, R: Room, mid: string, uid: string, attempt: number, given: Given[] | null) {

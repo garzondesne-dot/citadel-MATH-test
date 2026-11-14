@@ -13,7 +13,7 @@ export type Lvl = 'err' | 'ask';
 export interface Issue { at: string; msg: string; lvl: Lvl }
 /** 도감 찾기 (화면 쪽 배치표 · 공격 표가 알려 줌 · 시험은 가짜로) */
 export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => boolean; attack: (id: string) => boolean; builtIn: (id: string) => boolean }
-type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string };
+type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown };
 type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
 type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; find?: Record<string, string>; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
@@ -34,18 +34,43 @@ export function spriteName(raw: unknown): string {
   return `${k}${row}:0${tail}`;
 }
 
+// ➕ 덧칸 (📜 2026-11-14 🏰 성채 팩 · 차시 팩 같이): say = 나의 풀이 한 줄 · why = 💡 근거 줄 · groups = 두 칸 칩 고르기 · ref = 교과서 문항 번호
+const str = (x: unknown) => typeof x === 'string' && x.trim() !== '';
+function extras(it: BItem, ch: string[] | null, err: (m: string) => null): { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string } | null {
+  const o: { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string } = {};
+  if (it.say != null) { if (typeof it.say !== 'string') return err('나의 풀이(say)는 글 한 줄이에요'); if (it.say.trim()) o.say = it.say; }
+  if (it.ref != null) o.ref = String(it.ref);
+  if (it.why != null) {
+    const w = it.why as Record<string, unknown>;
+    if (!w || typeof w !== 'object' || !str(w.text) || typeof w.pre !== 'string' || typeof w.post !== 'string' || !Array.isArray(w.choices) || w.choices.length < 2) return err('근거 줄(why) = { pre, post, choices(2개 이상), answer, text } 꼴이에요');
+    const a = Number(w.answer); if (!Number.isInteger(a) || a < 0 || a >= w.choices.length) return err(`근거 줄(why) 정답 「${String(w.answer)}」 이 보기 번호 범위(0 ~ ${w.choices.length - 1}) 밖이에요`);
+    o.why = { pre: w.pre, post: w.post, choices: (w.choices as unknown[]).map(String), answer: a, text: String(w.text) };
+  }
+  if (it.groups != null) {
+    const g = it.groups as { label?: unknown; n?: unknown }[];
+    if (!Array.isArray(g) || g.length < 2 || g.some((x) => !x || !str(x.label) || !(Number.isInteger(Number(x.n)) && Number(x.n) > 0))) return err('두 칸 고르기(groups) = [{ label, n }, { label, n }] 꼴이에요');
+    const sum = g.reduce((s, x) => s + Number(x.n), 0); if (ch && sum !== ch.length) return err(`두 칸 고르기(groups) 칸 수 합 ${sum} — 보기는 ${ch.length}개`);
+    o.groups = g.map((x) => ({ label: String(x.label), n: Number(x.n) }));
+  }
+  return o;
+}
+
 /** 입력판 문항 하나 → 엔진 문항 (틀린 칸은 issues 에) */
-function toQ(it: BItem, at: string, out: Issue[]): Question | null {
+export function toQ(it: BItem, at: string, out: Issue[]): Question | null {
   const err = (msg: string) => { out.push({ at, msg, lvl: 'err' }); return null; };
   if (!it || typeof it !== 'object') return err('문항 칸이 비었어요');
   const t = String(it.type ?? ''), q = String(it.q ?? '').trim(), sol = it.sol ? String(it.sol) : undefined;
   if (!TYPES.includes(t)) return err(`형식 「${t || '없음'}」 — ${TYPES.join(' · ')} 중 하나`);
   if (!q) return err('문제 글(q)이 비었어요');
-  const base = { question: q, ...(sol ? { solution: sol } : {}) };
   const ch = Array.isArray(it.ch) ? (it.ch as unknown[]).map(String) : null;
+  const ex = extras(it, ch, err); if (!ex) return null;
+  if (ex.groups && t !== 'multi') return err('두 칸 고르기(groups)는 여러 개 고르기(multi)에만');
+  const { groups, ...ex2 } = ex;
+  const base = { question: q, ...(sol ? { solution: sol } : {}), ...ex2 };
   if (t === 'choice' || t === 'multi') {
     if (!ch || ch.length < 2) return err('보기(ch)가 2개 이상 있어야 해요');
-    if (new Set(ch).size !== ch.length) return err('보기에 같은 것이 두 번 있어요');
+    if (!groups && new Set(ch).size !== ch.length) return err('보기에 같은 것이 두 번 있어요 (두 칸 고르기 groups 일 때만 겹쳐도 돼요)');
+    if (groups) { let b0 = 0; for (const g of groups) { const part = ch.slice(b0, b0 + g.n); b0 += g.n; if (new Set(part).size !== part.length) return err(`「${g.label}」 칸 안 보기에 같은 것이 두 번 있어요`); } }
     // 정답 = 보기 번호(0부터)로 통일 (머리 ❓#61 답 「한 쪽으로 통일」 · 보기 글자에 쉼표 · 숫자가 섞여도 헷갈리지 않게)
     const notNo = (x: string) => !/^\d+$/.test(x.trim());
     const hint = (x: string) => { const k = ch.indexOf(x.trim()); return k >= 0 ? ` (「${x}」 = ${k}번)` : ''; };
@@ -61,7 +86,7 @@ function toQ(it: BItem, at: string, out: Issue[]): Question | null {
     const ks = a.map(idx); const bad = a.find((_, i) => ks[i]! < 0 || ks[i]! >= ch.length);
     if (bad != null) return err(`정답 「${bad}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖이에요`);
     if (new Set(ks).size !== ks.length) return err('정답 번호가 겹쳐요');
-    return { ...base, type: 'multi', options: ch, answer: [...ks].sort((x, y) => x - y) };
+    return { ...base, type: 'multi', options: ch, answer: [...ks].sort((x, y) => x - y), ...(groups ? { groups } : {}) };
   }
   if (t === 'ox') {
     const a = String(it.a ?? '').trim();
@@ -88,7 +113,7 @@ function toQ(it: BItem, at: string, out: Issue[]): Question | null {
 }
 
 /** 버전 0~6 줄 → 문항 판 목록 (버전마다 문항 수 · 형식이 버전 0 과 같아야) */
-function versions(raw: BItem[][], at: string, out: Issue[], qat: (v: number, i: number) => string): Question[][] {
+export function versions(raw: BItem[][], at: string, out: Issue[], qat: (v: number, i: number) => string): Question[][] {
   if (raw.length > MAXV) out.push({ at, msg: `버전이 ${raw.length}개 — 버전 0 ~ 6 (7개까지)`, lvl: 'err' });
   const vs = raw.slice(0, MAXV).map((v, k) => (Array.isArray(v) ? v : (out.push({ at: `${at} · 버전 ${k}`, msg: '버전 칸이 문항 목록이 아니에요', lvl: 'err' }), [])).map((it, i) => toQ(it, qat(k, i), out)));
   const v0 = vs[0] ?? [];
@@ -101,7 +126,7 @@ function versions(raw: BItem[][], at: string, out: Issue[], qat: (v: number, i: 
 }
 
 /** 정답 재계산 (과목 SUBJ.recheck) — 틀리면 오류 · 못 풀면 「선생님 확인」 */
-function recheckAll(qs: Question[], at: (i: number) => string, out: Issue[]): { done: number; ask: number } {
+export function recheckAll(qs: Question[], at: (i: number) => string, out: Issue[]): { done: number; ask: number } {
   let done = 0, ask = 0;
   qs.forEach((q, i) => {
     const r = SUBJ.recheck?.(q) ?? { ok: null };

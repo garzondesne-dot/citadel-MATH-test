@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b150 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b151 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -116,6 +116,7 @@
 | b148 | 🔧 👩‍🏫 시연 선생님 용사 = 교사 계정 「내 용사」 (머리 🐞 · 선생님 2026-11-14 「교사 모습이랑 실제 시연할 때 캐릭터랑 안 맞음」) · 원인 = TV 🎮 시연이 `savedLook()`(TV 기기의 학생 칸)을 읽음 · 교사 기록은 교사 폰에만 있었음 → `me.svelte.ts` 교사 저장 때 서버 `school/tlook` {hero · enh · fx · socket · title · nick · at} 도 씀(`setTeacherSink` = TeacherApp · TV) · TV 는 `S.watch(TLOOK)` → DemoPhone `tlook` prop(`teacherLook` · 없으면 현자 7) · 일격 · 컷인 · ⚡ 필살기 잠김 · TV 교사 캠프 M.me 도 따라감 · 규칙 그대로(school = 교사 쓰기 · 로그인 읽기) · e2e `tools/e2e/tlook.cjs` |
 | b149 | 📜 📋 게시판 던전 끝 화면 단추 자리 맞바꿈 (머리 🔨 · 선생님 2026-11-14 「게시판던전 마지막 한번더랑 게시판으로 위치 바꿔줘」) · `Board.svelte .endact` = 위 🔥 한 번 더(금빛 그대로) · 아래 맨 끝 📋 게시판으로(테두리 단추 그대로) · 1인 · 팀 같은 화면 · e2e board.cjs 순서 확인 |
 | b150 | 🔧 🐞 해골 소환사(hero-bone · 선생님 「마도사」) 그림 고침 (머리 🐞 · 2026-11-14 「꼬마 해골 등장했다 안 했다 함 · 주변에 형광색 제거 덜 됨」) · 원인 = ① 공격 줄 3 · 4칸이 원본 자르기에서 40px 어긋나 용사가 칸 끝에 잘리고 옆 칸 해골 · 뼈 조각이 섞임 ② 기쁨 2칸 중 1칸에만 꼬마 해골 ③ 크로마키 형광 분홍이 가장자리 · 공격 호에 남음 → `tools/fix-bone-sprite.py` = 분홍 가장자리 지움 · 안쪽 보라로 · 공격 4칸 = [준비 · 휘두름 · 휘두름 · 준비] · 기쁨 두 칸 모두 같은 자리에 꼬마 해골 · `hero-bone-v3c.webp`(이름 바꿈 · 캐시) · hero-data · sprite-bbox(heroes · heads 이름만 · 공격 줄 상자) · 정식도 같은 그림(assets/art/hero-bone-v2c.webp) = 같은 문제 |
+| b151 | 📜 🏰 성채 팩 + ➕ 추가 팩 관리 (머리 🔨 · 선생님 2026-11-14 「성채던전 팩 만들어 주세요 · 추가팩은 수업 준비 탭에서 · 추천대로」 · DECISIONS 「🏰 성채던전 팩 · ➕ 추가 팩 관리」 hero-v2 1e1e281) · 📦 팩 올리기 하나 = `kind` 로 가름(없음 = 차시 팩 · castle = 성채 · `checkCastle` 검사기 · 서버 `prep/addons/castle/{id}` · 규칙 그대로) · 문항 덧칸 say · why · groups · ref(차시 팩도) · 🏰 성채 화면 `src/ui/castle/Castle.svelte` = 층 → 방 → 학생과 같은 전투 화면(허수아비처럼 메모리 방 · MonsterForm · ChainView · 룬) · 열림 = 반 진도 ≥ no · 👑 = 열린 방 60%(올림) + 진도 ≥ 보스 no · 틀린 소문제만 다음 판 숫자(`raid.ts castleVers`) · 기회 4 · 📷 방 = 답 확인만 · 기록 `bonus/{반}/{번호}/{팩}/{방}` · ➕ 추가 팩 카드(`AddonPacks.svelte` · 준비 → 차시 준비 아래 · 👁 미리 보기 · 👀 숨김 · ⬇ zip · 🗑 · eval-1~3 은 숨김만 · 같은 id = 「새 판으로 바꿀까요?」 방 id 같으면 기록 이어짐) · 캠프 성채 시트 = 올린 팩 층 · 그림 `public/art/castle/` · 성채 방 배경 절반 크기 · 시험 `tests/castle.test.ts` · e2e `tools/e2e/castle.cjs` 18/18 · ⚠ `mainbtn.cjs` 48줄(새로 고침 뒤 모루 시트가 게시판 단추를 덮음) = 이 판 전부터 실패 |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

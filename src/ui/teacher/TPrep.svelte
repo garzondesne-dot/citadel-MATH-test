@@ -12,6 +12,7 @@
   import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
   import PackUpload from './PackUpload.svelte';
+  import AddonPacks from './AddonPacks.svelte';
   import PdfFill from './PdfFill.svelte';
   import VidList from './VidList.svelte';
   import { prepImg } from '../../school/prep';
@@ -99,12 +100,13 @@
     </div>
   {:else}
     <div class="list">
-      {#each [['📦', '차시 팩 올리기', '새 차시(v1.0) 파일을 올려 차시 목록에 더하기'], ['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
+      {#each [['📦', '차시 팩 올리기', '새 차시(v1.0) 파일 · 🏰 성채 팩도 같은 단추(kind 로 가름)'], ['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
         {#if ic === '📦'}<button type="button" class="item" data-k="packup-go" onclick={() => (upOpen = true)}><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d}</small></span></button>
         {:else}<button type="button" class="item" disabled><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d} · 준비 중</small></span></button>{/if}
       {/each}
     </div>
   {/if}
+  {#if seg === 'lesson'}<AddonPacks {S} onup={() => (upOpen = true)} />{/if}<!-- ➕ 추가 팩 (📜 2026-11-14 · 🏰 성채 · 자리: 쉼터 OX · 모루 · 복습) -->
 </div>
 {#if pickOpen}<LessonPick {opts} pick={lid} {recent} onpick={choose} onclose={() => (pickOpen = false)} />{/if}
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}

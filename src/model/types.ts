@@ -13,6 +13,8 @@ interface QBase {
   say?: string;
   /** 💡 근거 줄 (그 단계를 맞힌 뒤 · 첫 판 = 완성 문장 · 한 판 더 = 빈칸 고르기) */
   why?: { pre: string; post: string; choices: string[]; answer: number; text: string };
+  /** 📖 교과서 문항 번호 (🏰 성채 팩 · 덧칸 · 화면은 안 씀) */
+  ref?: string;
   tag?: string;
 }
 export type Question =
@@ -172,7 +174,7 @@ export interface RoomRules {
   pct?: number;
 }
 export interface Room {
-  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean; /** ⏯ 이어서: 수업 시작 단계 · 숫자 바꾼 판으로 시작할 몬스터 */ resumeFrom?: number; fresh?: Record<string, boolean> } & RoomRules;
+  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean; /** ⏯ 이어서: 수업 시작 단계 · 숫자 바꾼 판으로 시작할 몬스터 */ resumeFrom?: number; fresh?: Record<string, boolean | number>; /** 🏰 성채 방 (📜 2026-11-14) = 틀린 소문제만 다음 판 숫자로 */ castle?: boolean } & RoomRules;
   /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
   state: {
     step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>;

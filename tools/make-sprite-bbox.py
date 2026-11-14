@@ -28,5 +28,9 @@ import glob as _g
 for f, cell in (('monster-mimic-v1.webp', 256), *[(os.path.basename(x), Image.open(x).height) for x in sorted(_g.glob(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'public', 'art', 'mon-*.webp')))]):
     im = Image.open(os.path.join(ART, f)).convert('RGBA')
     out['monsters'][f] = {f'{r}:{c}': box(im, c * cell, r * cell, cell, cell) for r in range(im.height // cell) for c in range(im.width // cell)}
+# 🏰 성채 시트 (📜 2026-11-14 · 정식 monsters-castle* · 3열 × 줄 · 칸 = 폭 / 3)
+for x in sorted(_g.glob(os.path.join(ART, 'castle', 'monsters-*.webp'))):
+    im = Image.open(x).convert('RGBA'); cell = im.width // 3
+    out['monsters'][os.path.basename(x)] = {f'{r}:{c}': box(im, c * cell, r * cell, cell, cell) for r in range(im.height // cell) for c in range(3)}
 json.dump(out, open(os.path.join(ROOT, 'src', 'ui', 'sprite-bbox.json'), 'w'), ensure_ascii=False, indent=0)
 print('heroes', len(out['heroes']), 'monsters', len(out['monsters']))
