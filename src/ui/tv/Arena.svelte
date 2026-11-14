@@ -33,7 +33,9 @@
   function bossHpOf() { const b = bossHp(L, R, now); return { left: b.left, max: b.max, down: b.won }; }
   function monHpOf() { if (!step || step.kind !== 'monster' || !L.monsters[step.id]) return null; const h = monsterHp(L, R, step.id, now); return { left: h.left, max: h.max, down: h.left <= 0 }; }
   const sprite = $derived(boss ? (L.boss?.sprite ?? '') : (L.monsters[step?.id ?? '']?.sprite ?? ''));
-  const hpLabel = $derived(boss ? `👑 ${L.boss?.title.split(' · ').pop() ?? '보스'}` : `${step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${step?.title.split(' · ').pop() ?? ''}`);
+  // 📺 시안 (2026-11-14): 머리 위 = 몬스터 이름(그림 시트 이름 · 폰 장면 띠와 같음) — 「문제 1」 아님 · 이름이 없으면 단계 이름
+  const monName = $derived.by(() => { try { const sp = spriteOf(sprite); return sp.sheet.names[sp.row] || ''; } catch { return ''; } });
+  const hpLabel = $derived(`${boss ? '👑 ' : step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${monName || (boss ? L.boss?.title.split(' · ').pop() ?? '보스' : step?.title.split(' · ').pop() ?? '')}`);
   const heroes = $derived<Hero[]>(ids.map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, name: nameOf(u), ok: submitted(u), off: lost.has(u) })));
   const st = $derived<ArenaState>({ boss, split, sprite, hp: hp ? { left: hp.left, max: hp.max } : null, hpLabel, down: !!hp?.down, shadow, heroes });
 
@@ -223,7 +225,7 @@
     });
   });
   // 화면 시험 고리(TV 장면 · 학생 화면엔 없음): 지금 그리는 방식 · 배치
-  $effect(() => { (globalThis as { __arena?: unknown }).__arena = { mode, W, H, hp: hp ? `${hp.left} / ${hp.max}` : '', box: arenaBox(W, H, boss, split, vis), party: partyLayout(heroes.length, W, H, split) }; });
+  $effect(() => { (globalThis as { __arena?: unknown }).__arena = { mode, W, H, hp: hp ? `${hp.left} / ${hp.max}` : '', hpName: hpLabel, names: heroes.map((h) => `${h.ok ? '✓ ' : ''}${h.name}`), box: arenaBox(W, H, boss, split, vis), party: partyLayout(heroes.length, W, H, split) }; });
 
   const slots = $derived(partyLayout(heroes.length, W, H, split));
   const vis = $derived.by(() => { try { const sp = spriteOf(sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } });
@@ -237,7 +239,7 @@
     <i class="sh" style:left="{box.shadow.cx - box.shadow.w / 2}px" style:top="{box.shadow.y - H * 0.018}px" style:width="{box.shadow.w}px" style:height="{H * 0.036}px"></i>
     <div class="mon" class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : 'idle'} size={box.mon.size} /></div>
     {#if hp && !shadow}
-      <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>HP {hp.left} / {hp.max}</b></div></div>
+      <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>{hp.left} / {hp.max}</b></div></div>
     {/if}
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>

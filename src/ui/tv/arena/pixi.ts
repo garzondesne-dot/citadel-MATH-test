@@ -131,7 +131,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     g.roundRect(b.x, b.y, b.w, b.h, r).fill({ color: 0x2a0d10 });
     if (p > 0) g.roundRect(b.x, b.y, Math.max(b.h, b.w * p), b.h, r).fill({ color: 0xe5484d });
     g.roundRect(b.x, b.y, b.w, b.h * 0.45, r).fill({ color: 0xffffff, alpha: 0.12 });
-    const n = txt(`HP ${s.hp.left} / ${s.hp.max}`, 'body', true, 0xffffff); n.anchor.set(0.5); n.x = b.x + b.w / 2; n.y = b.y + b.h / 2;
+    const n = txt(`${s.hp.left} / ${s.hp.max}`, 'body', true, 0xffffff); n.anchor.set(0.5); n.x = b.x + b.w / 2; n.y = b.y + b.h / 2;
     const lab = txt(s.hpLabel, 'body', true, 0xffffff); lab.anchor.set(0.5, 1); lab.x = b.x + b.w / 2; lab.y = b.y - H() * 0.006;
     hpC.addChild(g, n, lab);
   }
