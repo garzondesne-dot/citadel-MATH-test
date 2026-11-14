@@ -7,7 +7,7 @@ import { ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { HERO, heroGeo, heroNudge, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { HERO, heroGeo, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -237,9 +237,14 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
 
   // 🧊 얼음 (📜 2026-11-14 선생님 「네모나게 꽁꽁 얼어버린 거 말고 용사 이미지 푸른색으로 칠해지면서 군데군데 얼음 결정 조각 붙은 걸로」 · 폰 IceBlock 과 같은 모양)
   //   용사마다 그림이 푸르게(tint 0x6fc4ff) · 몸 군데군데 얼음 결정 6개가 0.05초씩 돋아남 · ms 뒤 결정이 녹아 흘러내리며(0.6초) 원래 색
-  let ice: Graphics[] = [], iceT: ReturnType<typeof setTimeout>[] = [];
+  let ice: (Graphics | Sprite)[] = [], iceT: ReturnType<typeof setTimeout>[] = [];
   const XT: [number, number, number, number][] = [[0.46, 0.18, 1.0, -15], [0.36, 0.4, 0.9, 20], [0.6, 0.42, 1.1, -30], [0.44, 0.6, 0.8, 10], [0.56, 0.74, 1.0, 35], [0.4, 0.82, 0.85, -25]];
-  function crystal(x: number, y: number, h: number, rot: number) {
+  // 🎨 결정 그림 (ice-crystal 8칸 · 그림을 못 받으면 = 코드 결정)
+  const crTex: Texture[] = [];
+  void src(ICE.crystal.src).then((so) => { for (let k = 0; k < ICE.crystal.n; k++) crTex.push(new Texture({ source: so, frame: new Rectangle(k * ICE.crystal.cell, 0, ICE.crystal.cell, ICE.crystal.cell) })); }).catch(() => {});
+  const CR_PICK = [2, 0, 6, 4, 7, 1];
+  function crystal(x: number, y: number, h: number, rot: number, i = 0): Graphics | Sprite {
+    if (crTex.length >= 8) { const sp = new Sprite(crTex[CR_PICK[i % CR_PICK.length]!]!); sp.anchor.set(0.5); sp.width = sp.height = h * 1.4; sp.x = x; sp.y = y; sp.rotation = (rot * Math.PI) / 180; return sp; }
     const g = new Graphics(), w = h * 0.62;
     g.poly([0, -h / 2, w * 0.32, -h * 0.16, w * 0.14, h / 2, -w * 0.14, h / 2, -w * 0.32, -h * 0.16]).fill({ color: 0x8fd6ff, alpha: 0.95 }).stroke({ width: Math.max(1, h * 0.06), color: 0x1d5f94, alpha: 0.9 });
     g.poly([0, -h / 2, w * 0.16, -h * 0.12, 0, h * 0.1, -w * 0.16, -h * 0.12]).fill({ color: 0xffffff, alpha: 0.95 });
@@ -250,7 +255,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     const back = () => { for (const v of heroes.values()) v.sp.tint = 0xffffff; };
     if (now) { gs.forEach((g) => g.destroy()); back(); return; }
     const y0 = gs.map((g) => g.y);
-    tween(600, (p) => gs.forEach((g, k) => { g.alpha = 1 - p; g.y = y0[k]! + p * H() * 0.02; g.scale.y = 1 - 0.5 * p; }), () => { gs.forEach((g) => g.destroy()); });
+    const sy = gs.map((g) => g.scale.y); tween(600, (p) => gs.forEach((g, k) => { g.alpha = 1 - p; g.y = y0[k]! + p * H() * 0.02; g.scale.y = sy[k]! * (1 - 0.5 * p); }), () => { gs.forEach((g) => g.destroy()); });
     back();
   }
   function freeze(ms: number) {
@@ -258,7 +263,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     for (const v of heroes.values()) {
       const b = v.sp.getBounds(), p = fx.toLocal({ x: b.x, y: b.y }), w = Math.abs(b.width), h = b.height;
       v.sp.tint = 0x6fc4ff;
-      XT.forEach(([a, c, k, r], i) => { iceT.push(setTimeout(() => { const g = crystal(p.x + a * w, p.y + c * h, h * 0.16 * k, r); g.scale.set(0.2); fx.addChild(g); ice.push(g); tween(120, (q) => g.scale.set(0.2 + 0.8 * q)); }, i * 50)); });
+      XT.forEach(([a, c, k, r], i) => { iceT.push(setTimeout(() => { const g = crystal(p.x + a * w, p.y + c * h, h * 0.16 * k, r, i), s1 = g.scale.x; g.scale.set(s1 * 0.2); fx.addChild(g); ice.push(g); tween(120, (q) => g.scale.set(s1 * (0.2 + 0.8 * q))); }, i * 50)); });
     }
     iceT.push(setTimeout(() => unfreeze(false), ms));
   }

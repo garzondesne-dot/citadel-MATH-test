@@ -28,7 +28,7 @@
   const holdOff = () => { holding = false; if (holdT) clearTimeout(holdT); holdT = null; };
 </script>
 
-{#if iceBreak}{#key iceBreak}<div class="icebreak" aria-hidden="true"><i class="iceart brk" style="{iceBg(4)}"></i></div>{/key}{/if}
+{#if iceBreak}{#key iceBreak}<div class="icebreak" aria-hidden="true"><i class="iceart brk" style="{iceBg(4)}"></i>{#each [[-150, -70, 0], [-90, -110, 2], [-30, -130, 4], [40, -120, 6], [100, -100, 1], [160, -60, 7], [-120, 10, 5], [130, 20, 4]] as [x, y, k], i (i)}<i class="icr" style="background-image:url({ICE.crystal.src});background-size:{ICE.crystal.n * 100}% 100%;background-position-x:{((k ?? 0) / (ICE.crystal.n - 1)) * 100}%;--x:{x}px;--y:{y}px;--r:{(i % 2 ? 1 : -1) * (120 + i * 30)}deg;animation-delay:{i * 12}ms"></i>{/each}</div>{/key}{/if}<!-- ❄ 깨질 때 결정 조각이 튐 (🎨 ice-crystal · 📜 2026-11-14) -->
 {#if smoke}{#key smoke}<div class="smokepuff" aria-hidden="true">{#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i style:left="{6 + i * 11}%" style:animation-delay="{(i % 3) * 0.08}s"></i>{/each}</div>{/key}{/if}
 {#if dock}<div class="spacer" style:height="{h}px" aria-hidden="true"></div>{/if}
 <div class="act" class:dock bind:clientHeight={h}>
@@ -74,6 +74,9 @@
   .btn.ice:active .iceart { transform: translate(-50%, calc(var(--bc) * -1)) scale(0.97); }
   .ict { position: relative; z-index: 2; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8); }
   .icebreak { position: fixed; left: 0; right: 0; margin: 0 auto; max-width: 430px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); height: var(--btn-h); padding: 0 var(--s4); pointer-events: none; z-index: 6; }
+  .icr { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; background-repeat: no-repeat; image-rendering: pixelated; z-index: 2; animation: icr 0.5s cubic-bezier(0.2, 0.7, 0.4, 1) both; }
+  @keyframes icr { from { transform: scale(0.4); opacity: 1; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .icr { display: none; } }
   .icebreak .iceart { width: calc(108% - 2 * var(--s4) * 1.08); animation: ibk 0.45s ease-out forwards; }
   @keyframes ibk { 0% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1); opacity: 1; } 15% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.06); } 100% { transform: translate(-50%, calc(var(--bc) * -1)) scale(1.18); opacity: 0; } }
   .btn.chained { position: relative; overflow: visible; opacity: 1; background: #24262e; color: #c9ccd6; box-shadow: inset 0 0 0 2px #5a5e6b; }

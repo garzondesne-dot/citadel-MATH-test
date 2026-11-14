@@ -4,6 +4,10 @@
 //   도트 = 낮은 해상도 캔버스(1/3) 를 nearest 로 키움 · 0.85초 뒤 지움 · 「동작 줄이기」 = 번쩍만
 //   🔥 화염 폭발로 「지금 ↔ 얹은 것」 평가 👍(2026-11-14) → 👍 30 에 기본으로 켬 (LAYER_FX)
 import type { Body } from './fx';
+import { ICE } from '../manifest';
+// ❄ 얼음 계열 = 🎨 결정 그림 조각도 튐 (ice-crystal · 📜 2026-11-14)
+let crImg: HTMLImageElement | null = null;
+const crystalImg = () => { if (!crImg && typeof Image !== 'undefined') { crImg = new Image(); crImg.src = ICE.crystal.src; } return crImg && crImg.complete && crImg.naturalWidth ? crImg : null; };
 
 /** 👍 받은 30 (📜 2026-11-14 선생님 평가판 「🔥 화염 폭발 · 지금 ↔ 겹」 👍 → 30 모두 · 평가판 h-* 👍 그대로) */
 export const LAYER_FX = new Set(['bash', 'chain', 'compass', 'crit', 'cut', 'cyclone', 'fire', 'flame', 'frost', 'gale', 'leaf', 'lightning', 'mana', 'meteor', 'moon', 'nova', 'orb', 'pillar', 'qed', 'ring', 'ruler', 'smite', 'spark', 'stars', 'sweep', 'thrust', 'thunder', 'upper', 'venn', 'wings']);
@@ -44,6 +48,8 @@ export function overlay(scene: HTMLElement, B: Body, fam: string, tier: number, 
   const n = red ? 0 : [12, 20, 32, 44][tier] ?? 20, cx = W / 2, cy = H / 2, r0 = (Math.max(B.w, B.h) / PX) * 0.18;
   const ps = Array.from({ length: n }, () => { const a = Math.random() * Math.PI * 2, sp = (24 + Math.random() * 46) * (1 + tier * 0.15); return { x: cx + Math.cos(a) * r0 * Math.random(), y: cy + Math.sin(a) * r0 * Math.random(), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (P.k === 'ember' ? 34 : 10), life: 0.4 + Math.random() * 0.4, c: P.c[Math.random() < 0.35 ? 2 : Math.random() < 0.6 ? 1 : 0]!, s: Math.random() < 0.25 ? 3 : 2 }; });
   const shock = tier >= 3 && !red, t0 = performance.now(), END = 0.85;
+  const ci = fam === 'frost' && !red ? crystalImg() : null, CN = ICE.crystal.n, CC = ICE.crystal.cell;
+  const cps = ci ? Array.from({ length: 3 + tier * 2 }, (_, i) => { const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4; const sp = 22 + Math.random() * 30; return { k: [0, 2, 4, 6, 1, 5, 7, 3][i % 8]!, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 8, s: (Math.max(B.w, B.h) / PX) * (0.16 + Math.random() * 0.1) }; }) : [];
   const f = () => {
     const t = (performance.now() - t0) / 1000; g.clearRect(0, 0, W, H);
     // 번쩍 = 계열 색 빛살 8갈래가 뻗었다 사라짐 + 작은 흰 속 (원판 아님 · 0.14초)
@@ -61,6 +67,7 @@ export function overlay(scene: HTMLElement, B: Body, fam: string, tier: number, 
       else if (P.k === 'ember') { const ss = t > p.life * 0.6 ? Math.max(1, p.s - 1) : p.s; g.fillRect(x, y, ss, ss); if (Math.random() < 0.6) { g.fillStyle = P.c[2]; g.fillRect(x, y, 1, 1); } }
       else g.fillRect(x, y, p.s, p.s);
     }
+    if (ci && t > 0.03) for (const c of cps) { const q = Math.min(1, t / 0.7); g.globalAlpha = 1 - q; g.save(); g.translate(cx + c.vx * t, cy + c.vy * t + 45 * t * t); g.rotate(c.rot + c.vr * t); g.imageSmoothingEnabled = false; g.drawImage(ci, c.k * CC, 0, CC, CC, -c.s / 2, -c.s / 2, c.s, c.s); g.restore(); }
     g.globalAlpha = 1;
     if (t < END && cv.isConnected) requestAnimationFrame(f); else cv.remove();
   };

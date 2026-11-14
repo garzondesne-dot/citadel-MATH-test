@@ -124,6 +124,8 @@ export const cellBg = (src: string, cols: number, col: number) => `background-im
 /** ⛓ 속박 사슬 그림 (📜 2026-11-14 🎨 chain-bind · 6칸: ① 왼쪽 날아옴 ② 오른쪽 날아옴 ③ X 교차 ④ 철컥 번쩍 ⑤ 금 · 불티 ⑥ 조각나 흩어짐) */
 export const CHAIN = { src: `${import.meta.env.BASE_URL}art/chain/chain-bind-v1.webp`, n: 6 };
 export const ICE = {
+  /** ❄ 얼음 결정 조각 8종 (📜 2026-11-14 🎨 ice-crystal · 정식 ce40993 · 96 × 96 칸: 0 가시 · 1 육각 · 2 세 갈래 · 3 눈송이 · 4 깨진 조각 · 5 반짝이 · 6 휜 조각 · 7 덩어리) — 용사 얼음 · ❄ 맞는 순간 파편 · 🧊 단추 깨짐 */
+  crystal: { src: `${import.meta.env.BASE_URL}art/ice/ice-crystal-v1.webp`, n: 8, cell: 96 },
   btn: { src: `${import.meta.env.BASE_URL}art/ice/ice-btn-v1.webp`, cols: 5, w: 206, h: 342, barTop: 130, barBot: 210 },
   tv: { src: `${import.meta.env.BASE_URL}art/ice/ice-tv-v1.webp`, cols: 5, w: 202, h: 352 },
 };
