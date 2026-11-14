@@ -25,6 +25,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/', ROOT 
   out.push(`ℹ ① 줄: ${a.note}`);
   const r1 = await up(a.f); ok('① 다시 올리기 = 검사 통과 · 그림 2칸', /검사 통과/.test(r1.sum) && /그림 2칸/.test(r1.ms), `${r1.sum.slice(0, 40)} | ${r1.ms}`);
   const P1 = await p.evaluate(() => window.__dbGet('prep/packs/ex-10')); ok('① 올린 ex-10 = 같은 단계 · 몬스터 · 형성평가', P1 && strip(P1) === strip(S10));
+  { await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); const o = await p.$$eval('.lsel option', (xs) => xs.map((x) => x.textContent).filter((t) => /^10차시/.test(t))); ok('① 10차시 두 개 = 올린 팩에 「📦 ex-10」 표시', o.length === 2 && o.filter((t) => /📦 ex-10/.test(t)).length === 1, o.join(' / ')); }
   await go('ex-10'); const lab1 = (await p.textContent('[data-k="stepimgs"]')).trim(); ok('① ex-10 차시 준비 그림 2장', /^단계별 그림 2 \//.test(lab1), lab1);
   // ② 올린 팩 ex-v (zip 영상 2편)
   const pack = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/pack-upload/example-ex-11.json'), 'utf8')); pack.id = 'ex-v'; pack.no = 12; pack.title = '영상 시험'; pack.video = [{ file: 'v99-01', at: ['c1', 'm1', 'sum'] }]; delete pack.img;

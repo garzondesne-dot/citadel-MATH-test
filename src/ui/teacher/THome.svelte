@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { upTag } from '../../engine/packs';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { CLASSES, isBeta, lastClass, lastTest, week, type Live } from '../../school/school';
   import { BELLS, DOW, kst, PERIODS, periodNow } from '../../school/bells';
@@ -87,7 +88,7 @@
     <div class="pk3" class:five={cells.length > 6} role="group" aria-label="차시">
       {#each cells as p (p.id)}
         {#if p.p}
-          <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} onclick={() => (lessonId = p.id)}><b>{p.no}차시</b><small>{p.title.split(' · ')[0]}</small></button>
+          <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} onclick={() => (lessonId = p.id)}><b>{p.no}차시</b><small>{p.title.split(' · ')[0]}{upTag(p.id, p.no)}</small></button>
         {:else}
           <button type="button" class="pk add" aria-label="{p.no}차시 준비 안 됨 · 차시 준비로" onclick={() => onprep(p.id)}><b>＋</b><small>{p.no}차시 · 준비 안 됨</small></button>
         {/if}

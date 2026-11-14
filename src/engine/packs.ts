@@ -28,5 +28,7 @@ export function addPacks(list: LessonPack[]): void {
 }
 /** 📦 올린 팩 id (prep/packs 에서 온 것 · 삭제 목록) */
 export const UPLOADED = new Set<string>();
+/** 📦 같은 차시 번호가 둘 이상일 때 올린 팩 표시 (🐞 2026-11-14 선생님 「10차시가 두 개 생겼어」 = 내려받은 앱 10차시를 다시 올린 ex-10) */
+export const upTag = (id: string, no: number) => (UPLOADED.has(id) && PACKS.some((q) => q.no === no && q.id !== id) ? ` · 📦 ${id}` : '');
 /** 🗑 올린 팩 빼기 (지운 뒤 · 새로 고침 없이) */
 export function removePack(id: string): void { const k = PACKS.findIndex((x) => x.id === id); if (k >= 0) PACKS.splice(k, 1); UPLOADED.delete(id); }

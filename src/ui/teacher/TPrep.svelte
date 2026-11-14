@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { upTag } from '../../engine/packs';
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
@@ -54,7 +55,7 @@
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
-  {#if packs.length}<label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>{/if}
+  {#if packs.length}<label class="lsel"><span class="sr">차시</span><select bind:value={lid}>{#each opts as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{upTag(p.id, p.no)}{p.ready ? '' : ' (준비 안 됨)'}</option>{/each}</select></label>{/if}
   <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">

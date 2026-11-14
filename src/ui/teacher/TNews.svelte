@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { upTag } from '../../engine/packs';
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { CLASSES, isBeta, roster, uidOf } from '../../school/school';
@@ -108,7 +109,7 @@
     </div>
     <div class="card">
       <span class="lab">📝 수업 설문 · 학생 폰에 버튼 · 3분</span>
-      <select bind:value={slid}>{#each packs as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}</option>{/each}</select>
+      <select bind:value={slid}>{#each packs as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{upTag(p.id, p.no)}</option>{/each}</select>
       <div class="row"><button type="button" class="b1" disabled={sv} onclick={() => { S.set(`school/survey/${slid}`, true); ver++; say('📝 모든 반 설문을 열었어요'); }}>모든 반 열기</button><button type="button" class="b2" disabled={!sv} onclick={() => { S.set(`school/survey/${slid}`, null); ver++; say('📝 설문을 닫았어요'); }}>모든 반 닫기</button></div>
     </div>
   {/if}
