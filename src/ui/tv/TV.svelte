@@ -328,7 +328,7 @@
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->
   {#if R?.state.sheet && sheetQs.length}
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
-    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제">{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
+    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
@@ -495,9 +495,9 @@
   .cpane p { margin: 0; font-size: var(--tv-title); line-height: 1.5; }
   .split.z1 .cpane p, .split.z2 .cpane p { font-size: var(--tv-title); }
   .pimg { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.4cqh; }
-  .pimg { background: #fff; border-radius: 1cqh; } .pimg :global(.pi.fill) { width: 100%; } .pimg :global(.pi.fill img) { width: 100%; height: auto; } /* 🐞 2026-11-14 「좌우 전부 차지 · 하얀 배경」: 폭 가득 · 위에서부터 · 넘치면 「↗ 누르면 크게」(카드가 커짐) */
+  .pimg { background: #fff; border-radius: 1cqh; } .pimg :global(.pi.fill) { width: 100%; height: 100%; } /* 🐞 2026-11-15 그림 전체가 칸 안에(PrepImg fill = contain · 아주 긴 칸만 스크롤) */ /* 🐞 2026-11-14 「좌우 전부 차지 · 하얀 배경」: 폭 가득 · 위에서부터 · 넘치면 「↗ 누르면 크게」(카드가 커짐) */
   .simg { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; }
-  .simg :global(.pi) { height: 100%; } .simg :global(.pi img) { height: 100%; width: 100%; object-fit: contain; }
+  .simg :global(.pi.fill) { width: 100%; height: 100%; } /* 🐞 2026-11-15 📄 문제 창도 칸 안에 전체 · 아주 긴 칸만 스크롤(PrepImg fill) */
   .zm { position: absolute; right: 1.4cqw; bottom: 1.4cqh; font-style: normal; font-size: var(--tv-small); color: #7a6850; border: 1px solid #d8cdb8; border-radius: 99px; padding: 0.2cqh 0.8cqw; background: #fffdf8; }
   /* 📺 시안: 개념 = 제목 + 회색 수식 상자 + 요약 한 줄 · 문제 = 공통 조건 위에 한 번 + (1)~(n) 짧게 */
   .cpane .fbox { background: #efeadf; border-radius: 1cqh; padding: 2cqh 1.4cqw; text-align: center; font-family: 'DejaVu Serif', 'Times New Roman', serif; font-style: italic; font-size: var(--tv-title); line-height: 1.3; }
