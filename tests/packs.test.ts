@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { PACKS, packOf } from '../src/engine/packs';
-import { bossItem, chainItems, items, validate } from '../src/engine/lessons';
+import { bossItem, chainItems, items, relabel, validate } from '../src/engine/lessons';
+import type { Question } from '../src/model/types'; // 🔢 정식 기대값도 번호 겹침 정리(relabel)를 거쳐 비교 (2026-11-14)
 import { SHEETS, DUNGEONS } from '../src/ui/manifest';
 
 const OFFICIAL_TEST: Record<string, string> = { 'set-02': 'lesson2.test.js', 'set-03': 'lesson.test.js', 'set-04': 'lesson4.test.js', 'set-05': 'lesson5.test.js', 'set-06': 'lesson6.test.js', 'set-08': 'lesson8.test.js', 'set-09': 'lesson9.test.js', 'set-10': 'lesson10.test.js' };
@@ -19,7 +20,7 @@ describe.each(Object.keys(OFFICIAL_TEST))('%s 차시 팩', (id) => {
   }, 60000);
   it('엔진 문항 = 정식 출력 (몬스터 · 시드 3 × 판 0 · 1 · 2 · 3 · 5 · 9)', () => {
     for (const [mid, bySeed] of Object.entries(fix.monsters as Record<string, unknown[][]>))
-      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(items(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(bySeed[k]![j])));
+      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(items(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(relabel(bySeed[k]![j] as Question[]))));
   });
   it('⚔ 소레이드 = 정식 chainItems (시드 3 × 판 0 ~ 3)', () => {
     for (const [mid, bySeed] of Object.entries((fix.chain || {}) as Record<string, unknown[][]>))

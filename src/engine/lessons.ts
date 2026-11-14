@@ -17,10 +17,23 @@ const remember = (k: string, make: () => Question[]): Question[] => {
   return v;
 };
 
+/** 🔢 소문제 번호 겹침 정리 (🐞 머리 🔨 2026-11-14 「(1)(2)(3)(3)」): 학습지 한 번호에 소문제가 둘 이상이면(★ 칸만 남긴 결과) 「(3) ①」「(3) ②」 · 학생 폰 · TV · 교사 화면 모두 이 문항을 씀 */
+const CIRC = '①②③④⑤⑥⑦⑧⑨';
+export function relabel(qs: Question[]): Question[] {
+  const lab = (q: Question) => /^\((\d+)\)\s/.exec(q?.question ?? '')?.[1] ?? null;
+  const n = new Map<string, number>(); qs.forEach((q) => { const l = lab(q); if (l) n.set(l, (n.get(l) || 0) + 1); });
+  if (![...n.values()].some((c) => c > 1)) return qs;
+  const seen = new Map<string, number>();
+  return qs.map((q) => { const l = lab(q); if (!l || (n.get(l) || 0) < 2) return q; const k = seen.get(l) || 0; seen.set(l, k + 1); return { ...q, question: q.question.replace(/^\((\d+)\)\s/, `(${l}) ${CIRC[k] ?? k + 1} `) } as Question; });
+}
+
 export function items(L: LessonPack, mid: string, seed: string, variant: number): Question[] {
   const m = L.monsters[mid];
   if (!m) return [];
-  return remember(`${L.id}|${mid}|${seed}|${variant}`, () => {
+  return remember(`${L.id}|${mid}|${seed}|${variant}`, () => relabel(itemsRaw(L, m, mid, seed, variant)));
+}
+function itemsRaw(L: LessonPack, m: LessonPack['monsters'][string], mid: string, seed: string, variant: number): Question[] {
+  {
     const rng = makeRng(`${seed}|${mid}|${variant}`);
     if (variant === 0 && m.first) return m.first;
     if ('gen' in m.retry) return getGen(m.retry.gen)(variant, rng, m.retry.params);
@@ -29,7 +42,7 @@ export function items(L: LessonPack, mid: string, seed: string, variant: number)
     if (!pool.length) return m.first || [];
     const k = m.first ? (variant - 1) % pool.length : variant % pool.length;
     return pool[k] as Question[];
-  });
+  }
 }
 
 /** ⚔ 소레이드 단계 문항 (판 pass · 정식 L.chainItems: 난수 = Rng(`${seed}|${mid}|chain|${pass}`)) */

@@ -6,7 +6,10 @@ import type { Given, LessonPack, Question, Room } from '../src/model/types';
 import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import fx from './fixtures/parity-set06.json';
 import { makeRng } from '../src/engine/rng';
-import { bossItem as packBossItem, items } from '../src/engine/lessons';
+import { bossItem as packBossItem, items, relabel } from '../src/engine/lessons';
+// 🔢 다른 점 하나 (🐞 2026-11-14): 같은 소문제 번호가 겹치면 「(3) ①」「(3) ②」 → 정식 기대값도 같은 정리를 거쳐 비교
+const RL = (qs: { question: string }[]) => relabel(qs as unknown as Question[]) as unknown as typeof qs;
+const norm = (t: string) => t.replace(/^(\(\d+\)) [①-⑨] /, '$1 ');
 import { grade } from '../src/engine/grade';
 import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterHp, plainRecord, pracUsed, solveLock } from '../src/raid/raid';
 import { chainItems as packChainItems } from '../src/engine/lessons';
@@ -26,7 +29,7 @@ describe(`정식과 같음 (${fx.from})`, () => {
   });
 
   it(`몬스터 문항 ${fx.items.length}판 (문제 1~7 × 시드 30 × 판 0~3)`, () => {
-    for (const c of fx.items) expect(items(L, c.mid, c.seed, c.v).map((q) => pickQ(q as AnyQ)), `${c.mid} ${c.seed} 판 ${c.v}`).toEqual(c.items);
+    for (const c of fx.items) expect(items(L, c.mid, c.seed, c.v).map((q) => pickQ(q as AnyQ)), `${c.mid} ${c.seed} 판 ${c.v}`).toEqual(RL(c.items));
   });
 
   it(`보스 문항 ${fx.boss.length}개 (방 30 × 문항 6 × 시도 0~3)`, () => {
@@ -36,7 +39,7 @@ describe(`정식과 같음 (${fx.from})`, () => {
   it(`채점 ${fx.grade.length}건 (고르기 · 숫자 · 여러 개)`, () => {
     for (const c of fx.grade) {
       const pool = c.kind === 'boss' ? [packBossItem(L, `${c.seed}|u1`, (c as { i: number }).i, 1) as Question] : items(L, c.kind, c.seed, 1);
-      const q = pool.find((x) => x.question === c.question);
+      const q = pool.find((x) => norm(x.question) === c.question);
       expect(q, c.question).toBeTruthy();
       expect(grade(q as Question, c.given as Given), `${c.question} ${JSON.stringify(c.given)}`).toBe(c.ok);
     }
@@ -49,7 +52,7 @@ describe(`정식과 같음 (${fx.from})`, () => {
       const rec = plainRecord(L, R, c.mid, 'u1');
       const got = { best: rec.best, total: rec.total, left: rec.left, slots: rec.slots, healed: rec.healed, perfect: rec.perfect, practice: rec.practice, fix: rec.fix, tokens: rec.tokens, tokLeft: rec.tokLeft, canRetry: rec.canRetry, canHeal: rec.canHeal };
       expect(got, `${c.mid} ${c.name}`).toEqual(c.rec);
-      expect(itemsFor(L, R, c.mid, 'u1', rec.nextAttempt).map((q) => q.question), `${c.mid} ${c.name}: 다음 문제`).toEqual(c.nextQ);
+      expect(itemsFor(L, R, c.mid, 'u1', rec.nextAttempt).map((q) => norm(q.question)), `${c.mid} ${c.name}: 다음 문제`).toEqual(c.nextQ);
       expect(monsterHp(L, R, c.mid, 1000), `${c.mid} ${c.name}: 체력`).toEqual(c.hp);
     }
   });
