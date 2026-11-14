@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { boxGet, boxSet } from '../school/secretBox';
   import { onDestroy, untrack } from 'svelte';
   import type { DungeonProfile, LessonPack, Store } from '../model/types';
   import { openRoom } from '../raid/actions';
@@ -26,20 +27,29 @@
   type AS = Store & { auth?: { currentUser: { uid: string } | null }; isAdmin?: () => boolean; fetch?: <T>(p: string) => Promise<T | null> };
   const srv = !!(S as AS).auth && !fixed, admin = (S as AS).isAdmin?.() ?? false;
   const uid = () => (S as AS).auth?.currentUser?.uid ?? '';
-  let host = $state<Record<string, boolean>>({}), keyIn = $state(''), kerr = $state(''), trying = $state(false);
-  const KK = 'citadel-tv-key';
+  let host = $state<Record<string, boolean>>({}), showKey = $state(false), keyIn = $state(''), kerr = $state(''), trying = $state(false);
+  const KK = 'citadel-tv-key'; // (옛 판 = localStorage 평문 · 지금 = secretBox 암호문 이름)
+  // 🔐 보안 (📜 2026-11-14 🐞 「종합실 입장할 때 비번 노출됨」): 키는 누구도 못 읽는 hostKeys/{방}/{나} 에만 · 방(학생도 읽음)에는 hosts/{나} = true 만
+  //   이 TV 기억 = 암호문(secretBox · 평문 localStorage 없음) · 옛 평문 칸은 읽자마자 옮기고 지움
   async function register(code: string, key: string) {
     if (!uid()) return false;
-    trying = true; S.set(`rooms/${code}/hosts/${uid()}`, key);
-    await new Promise((r) => setTimeout(r, 900));
-    const ok = (await (S as AS).fetch?.<string>(`rooms/${code}/hosts/${uid()}`)) === key; // 규칙이 틀린 키를 막으면 서버에는 없음
+    trying = true; S.set(`hostKeys/${code}/${uid()}`, key);
+    await new Promise((r) => setTimeout(r, 600));
+    S.set(`rooms/${code}/hosts/${uid()}`, true);
+    await new Promise((r) => setTimeout(r, 600));
+    const ok = (await (S as AS).fetch?.<boolean>(`rooms/${code}/hosts/${uid()}`)) === true; // 규칙이 틀린 키를 막으면 서버에는 없음
     trying = false; host = { ...host, [code]: ok };
-    if (ok) { try { localStorage.setItem(KK, key); } catch { /* 무시 */ } } else S.set(`rooms/${code}/hosts/${uid()}`, null);
+    if (ok) void boxSet(KK, key); else { S.set(`rooms/${code}/hosts/${uid()}`, null); S.set(`hostKeys/${code}/${uid()}`, null); }
     return ok;
+  }
+  async function remembered(): Promise<string> {
+    let old = ''; try { old = localStorage.getItem(KK) || ''; if (old) localStorage.removeItem(KK); } catch { /* 무시 */ } // 옛 판 평문 → 지움
+    if (old) { await boxSet(KK, old); return old; }
+    return boxGet(KK);
   }
   $effect(() => {
     const c = live?.code; if (!srv || admin || !c || host[c] != null) return;
-    untrack(() => { let k = ''; try { k = localStorage.getItem(KK) || ''; } catch { /* 무시 */ } if (k) void register(c, k); else host = { ...host, [c]: false }; });
+    untrack(() => { void remembered().then((k) => { if (k) void register(c, k); else host = { ...host, [c]: false }; }); });
   });
   const gated = $derived(srv && !admin && !(live?.code && host[live.code] === true));
   let byCode = $state(false), codeIn = $state('');
@@ -66,7 +76,8 @@
       <p>{byCode ? '교사 폰 수업 화면의 방 코드 6자리와 종합실 비밀번호를 넣어요' : live?.code ? '교사 폰 「나」 탭의 종합실 비밀번호 4자리를 넣어요 · 이 TV 는 기억해요' : '열린 수업이 없어요 · 교사 폰에서 ▶ 수업 열기'}</p>
       <div class="kins">
         {#if byCode}<input class="kin code" data-k="tv-code" inputmode="numeric" maxlength="6" bind:value={codeIn} placeholder="방 코드" />{/if}
-        <input class="kin" data-k="tv-key" inputmode="numeric" maxlength="4" bind:value={keyIn} placeholder="○○○○" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
+        <input class="kin" data-k="tv-key" type={showKey ? 'text' : 'password'} inputmode="numeric" autocomplete="off" maxlength="4" bind:value={keyIn} placeholder="○○○○" aria-label="종합실 비밀번호" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
+        <button type="button" class="keye" data-k="tv-key-eye" aria-label={showKey ? '비밀번호 가리기' : '비밀번호 보기'} aria-pressed={showKey} onpointerdown={() => (showKey = true)} onpointerup={() => (showKey = false)} onpointerleave={() => (showKey = false)}>👁</button>
       </div>
       {#if kerr}<p class="kerr">{kerr}</p>{/if}
       <button type="button" class="kgo" disabled={!ready} onclick={enter}>{trying ? '확인 중…' : '✔ 입장'}</button>
@@ -84,4 +95,5 @@
   .kgo:disabled { opacity: 0.45; }
   .kins { display: flex; gap: 2vh; } .kin.code { width: 40vh; }
   .kalt { border: 0; background: none; color: #c9ccd6; text-decoration: underline; font: 600 2.4vh var(--font); min-height: 6vh; }
+  .keye { min-width: 7vh; min-height: 7vh; border: 0; border-radius: 1.2vh; background: rgba(255, 255, 255, 0.12); color: #fff; font-size: 3.4vh; cursor: pointer; touch-action: none; user-select: none; }
 </style>

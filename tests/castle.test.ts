@@ -137,6 +137,6 @@ import { spriteOf } from '../src/ui/manifest';
 describe('🏰 성채 몬스터 시트', () => {
   it('castle1 · 2 · 3 · castleboss · castleboss2 + @h 색 변형', () => {
     for (const ref of ['castle1:1', 'castle2:4', 'castle3:2@h200', 'castleboss:1', 'castleboss2:0']) { const s = spriteOf(ref); expect(s.url, ref).toMatch(/art\/castle\/monsters-castle/); }
-    expect(spriteOf('castle3:2@h200').hue ?? spriteOf('castle3:2@h200').filter ?? '').toBeTruthy();
+    expect(spriteOf('castle3:2@h200').hue).toBe(200);
   });
 });

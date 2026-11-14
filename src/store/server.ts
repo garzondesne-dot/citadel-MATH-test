@@ -85,7 +85,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       if (!ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) console.warn('시험 서버: 거울 밖 경로', path);
       void ensure(path);
       setIn(mirror, split(path), v); fire(path); // 거울 먼저 (화면이 바로 바뀜)
-      fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
+      fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\/|^\/?hostKeys\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
     },
     async trySet(path: string, value: unknown) {
       void ensure(path);

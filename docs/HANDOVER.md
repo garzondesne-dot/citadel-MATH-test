@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b156 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b157 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -122,6 +122,7 @@
 | b154 | 🎬 13차시 영상 서고 (머리 🔨 · 13차시 = 베타 차시 팩만 · ex-13 video = v13-55 [c1 · m1] · v13-56 [c2 · m2] · v13-57 [c3 · m3 · m4 · recap]) · 드라이브 → `public/video/v13-55 · 56 · 57.mp4` (gdrive.js down) · 팩을 올리면 이름만으로 서고 ① 앱 video/ 에서 찾음 · 시험 tests/video.test.ts |
 | b155 | 📜 📱 학생 폰 화면 꺼짐 방지 = 앱이 열려 있는 동안 (머리 🔨 · 선생님 2026-11-14 「학생용 폰도 자동 화면 꺼짐 안 되게」 · DECISIONS 「📱 학생 폰 = 앱이 열려 있는 동안」) · 학생 앱 입구 한 곳 = `App.svelte` $effect(학생 화면 · 로그인 뒤 · ?role=student · camp) → `holdWake(true)` · 미지원 안내 띠도 App 한 곳(Student 의 띠는 뺌) · 수업 화면 Student 는 잡기만(겹쳐도 수 세기) · e2e wake.cjs 캠프 · 📋 게시판 · 🏰 성채 · 가려짐 · 돌아옴 · 미지원 띠 한 번 |
 | b156 | 📜 🏰 성채 보상 = 정식 값 + 몬스터 시트 다섯 (머리 📜 「보상 없음은 안 됨 · 정식 release 코드 값 그대로」 · 「기존 몬스터 셋 그대로」) · `castle.ts CASTLE_GEM` 방 8 · 👑 보스 방 24 · 🎁 성채 첫 방 4(평생 한 번) · 첫 판에 틀림 없이 6 = 하루 한도 100 안 · 🏆 업적(층 보스 처음 처치) 12 = 한도 밖 · EXP 방 5 + 업적 10(정식 gem.js G · grow.js XP · bonus.js win) · 처음 처치만 · 미리 보기 없음 · 📷 6 = 사진 채점이 생기면 · 결과 카드에 받은 줄(`castle-got`) · Castle `save` prop(캠프 M.save) · `monsters-castle3-v1` 정식 그대로 + themes.json 등록 · sprite-bbox · 📱 미지원 안내 띠 6초 뒤 저절로 닫힘(정식 toast · 밑 단추를 오래 가리지 않게) |
+| b157 | 🔧 🔐 종합실(TV) 비밀번호 노출 0 (머리 🐞 보안 · 선생님 2026-11-14 「종합실 입장할 때 비번 노출됨」) · 원인 = ① TV 입력 칸이 글자 그대로(type 없음) ② 이 TV 기억이 localStorage 평문(citadel-tv-key) ③ 방(학생도 읽음) rooms/{방}/hosts/{uid} 값 = 키 글자 → 학생이 읽을 수 있었음 · 고침 = 입력 칸 password + 👁 누르는 동안만 · 키는 새 칸 `hostKeys/{방}/{uid}`(.read false · 본인 · 맞는 키만 쓰기) · 방 hosts = true 만(규칙: hostKeys 가 키와 같을 때만) · 기억 = `school/secretBox.ts`(AES-GCM · 꺼낼 수 없는 키 · IndexedDB 암호문) · 옛 평문 칸 = 읽자마자 옮기고 지움 · 틀린 키 거절 = 경고(오류 아님) · ⚠ **firebase/database.rules.json 바뀜 → 선생님 Firebase 콘솔에서 규칙 다시 게시** · 시험 rules.cjs(hostKeys 6줄) · e2e `tools/e2e/tvkey.cjs`(입력 가림 · 👁 · 주소 · 저장 · 콘솔 · 화면 · 방 hosts 에 키 0 · 새로 고침 기억) · server.cjs 오류 0 |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

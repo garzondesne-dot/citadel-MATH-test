@@ -37,8 +37,13 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('익명 팩 올리기', await as(anon.tok, 'prep/packs/ex-12', 'PUT', { id: 'ex-12' }), false);
   want('익명 secrets 읽기', await as(anon.tok, 'secrets/111111'), false);
   want('TV(익명) 키 전 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), false);
-  want('TV 틀린 키로 hosts', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '0000'), false);
-  want('TV 맞는 키로 hosts', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '4321'), true);
+  // 🔐 b157: 키 = hostKeys(아무도 못 읽음) · 방 hosts = true 만 (방은 학생도 읽어서)
+  want('TV 틀린 키로 hostKeys', await as(anon.tok, `hostKeys/111111/${anon.uid}`, 'PUT', '0000'), false);
+  want('키 없이 hosts = true', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', true), false);
+  want('옛 꼴(hosts = 키 글자) 막힘', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', '4321'), false);
+  want('TV 맞는 키로 hostKeys', await as(anon.tok, `hostKeys/111111/${anon.uid}`, 'PUT', '4321'), true);
+  want('그 뒤 hosts = true', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', true), true);
+  want('hostKeys 는 본인도 못 읽음', await as(anon.tok, `hostKeys/111111/${anon.uid}`, 'GET'), false);
   want('TV hosts 뒤 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), true);
   want('학생 방 접속 신호(players)', await as(B.tok, `rooms/111111/players/s1_3_2/seen`, 'PUT', 1), true);
   want('학생 방 진행 쓰기', await as(B.tok, 'rooms/111111/state/step', 'PUT', 9), false);
