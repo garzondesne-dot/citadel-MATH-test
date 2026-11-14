@@ -139,6 +139,76 @@
    "px": 110,
    "py": 57,
    "pk": 5
+  },
+  "shade": {
+   "src": "pfx2/new-shade-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 16,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 5
+  },
+  "claw": {
+   "src": "pfx2/new-claw-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 17,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 5
+  },
+  "phantom": {
+   "src": "pfx2/new-phantom-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 20,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 6
+  },
+  "eclipse": {
+   "src": "pfx2/new-eclipse-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 25,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 8
+  },
+  "bulwark": {
+   "src": "pfx2/new-bulwark-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 20,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 6
+  },
+  "holysword": {
+   "src": "pfx2/new-holysword-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 21,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 6
+  },
+  "skylance": {
+   "src": "pfx2/new-skylance-v3.webp",
+   "w": 160,
+   "h": 100,
+   "n": 25,
+   "fps": 20,
+   "px": 110,
+   "py": 57,
+   "pk": 8
   }
  },
  "bb": {
@@ -221,6 +291,48 @@
    82
   ],
   "radiant": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "shade": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "claw": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "phantom": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "eclipse": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "bulwark": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "holysword": [
+   85,
+   32,
+   135,
+   82
+  ],
+  "skylance": [
    85,
    32,
    135,
