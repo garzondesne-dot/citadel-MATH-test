@@ -36,7 +36,8 @@ export function anchorsOf(slots: Slot[]): RegExp[][] {
     if (st.kind === 'intro') out.push(/생각\s*열기/);
     if (st.kind === 'concept' && con === 1) out.push(/생각\s*열기/); // 도입이 안 쓴 「생각 열기」 = 개념 1 칸의 시작 (같은 칸에 STEP 1 이 이어짐)
     if (st.kind === 'concept') out.push(AT(`STEP\\s*${con}(?!\\d)`));
-    if (head && !/^(문제|STEP)\s*\d/.test(head) && head.length >= 2) out.push(new RegExp(`^\\s*${esc(head)}`));
+    // 제목 글자 = 앞 기호 · 이모지는 빼고 찾음(줄 맨 앞 기호 「📝」 등은 건너뜀) — 🐞 2026-11-14 팩 「오늘 정리」(이모지 없음) ↔ 학습지 「📝 오늘 정리」 못 찾음
+    { const h2 = head.replace(/^[^\p{L}\p{N}]+/u, '').trim(); if (h2.length >= 2 && !/^(문제|STEP)\s*\d/.test(h2)) out.push(AT(esc(h2))); }
     return out;
   });
 }

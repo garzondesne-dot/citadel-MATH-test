@@ -1,6 +1,6 @@
 // ✂ 학습지 PDF 칸 자르기 계산 (정식 prep.js autoRects 옮김 + 베타 다듬음): 글자 줄 → 칸 틀 (가짜 줄 · 실제 PDF 는 tools/e2e/packpdf.cjs)
 import { describe, expect, it } from 'vitest';
-import { autoRects, nudge, slotsOf, type Line } from '../src/school/pdfcrop';
+import { anchorsOf, autoRects, nudge, slotsOf, type Line } from '../src/school/pdfcrop';
 import type { Step } from '../src/model/types';
 
 const L = (p: number, x0: number, y: number, s: string, x1 = x0 + 0.3): Line => ({ p, x0, x1, y, h: 0.012, s });
@@ -35,5 +35,15 @@ describe('✂ PDF 칸 자르기', () => {
     const a = [{ p: 1, x: 0, y: 0.5, w: 1, h: 0.2 }];
     expect(nudge(a, 'top', 1)[0]).toMatchObject({ y: 0.485, h: 0.215 }); expect(nudge(a, 'bottom', -1)[0]!.h).toBeCloseTo(0.185, 4);
     expect(nudge([{ p: 1, x: 0, y: 0.005, w: 1, h: 0.2 }], 'top', 1)[0]!.y).toBe(0);
+  });
+});
+
+describe('🐞 2026-11-14 개념 칸 제목 「오늘 정리」(이모지 없음) ↔ 학습지 「📝 오늘 정리」', () => {
+  it('앞 기호 · 이모지를 건너뛰고 제목 글자로 찾음 · 예전 「^제목」은 못 찾음', () => {
+    const a = anchorsOf([{ id: 'recap', kind: 'concept', title: '오늘 정리' }])[0]!;
+    expect(a.some((r) => r.test('📝 오늘 정리'))).toBe(true);
+    expect(/^\s*오늘\s*정리/.test('📝 오늘 정리')).toBe(false);
+    const b = anchorsOf([{ id: 'recap', kind: 'concept', title: '📝 오늘 정리' }])[0]!;
+    expect(b.some((r) => r.test('📝 오늘 정리'))).toBe(true);
   });
 });
