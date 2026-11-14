@@ -1,5 +1,7 @@
 <script lang="ts">
   import { feat } from '../../school/features.svelte';
+  import { clearFlag, flagOf } from '../../school/gemwatch';
+  import { untrack } from 'svelte';
   import type { Store } from '../../model/types';
   import { achieve, band, LESSON_LIST, MIS, memoParts, type Stud } from '../../school/dash';
   import { resetPw, hasAccount, liveOfCls, canResetPw } from '../../school/school';
@@ -9,6 +11,9 @@
   // 👤 학생 한 명 시트 (#124 ⑯ · DECISIONS 「👤 학생 한 명 시트」) — 학생 탭 명단 · 대시보드 어디서 이름을 눌러도 같은 부품
   //   위에서 64 아래까지 덮음 · ✕ / 네 숫자 카드(통과율 · 성취도 · 수업 참여 · 방과후 접속) → 수업 기록 차시 칸 → 방과후 2주 달력 → 💎 · 📜 · 자주 막힌 개념 → 🔑 · 💎 선물 · 🚫 결석 · 📝 세특 초안
   const { S, s, onclose }: { S: Store; s: Stud; onclose: () => void } = $props();
+  // 🚩 💎 급증 (교사만 · 💎 는 빼지 않음 · 「확인함」으로 끔)
+  let flag = $state(untrack(() => flagOf(S, s.cls, s.n)));
+  const when = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(5, 16).replace('T', ' ').replace('-', '/');
   const a = $derived(achieve(s));
   const days = $derived(s.extra.days.filter(Boolean).length);
   const live = $derived(liveOfCls(S, s.cls));
@@ -24,6 +29,7 @@
 <div class="ps" role="dialog" aria-modal="true" aria-label="{s.n}번 {s.name}">
   <div class="hd"><b>{s.n}번 {s.name}</b><small>{s.cls}반 · Lv.{s.lv}{s.x ? ' · 🧪 통계 빠짐' : ''}</small><button type="button" class="x" aria-label="닫기" onclick={onclose}>✕</button></div>
   <div class="body">
+    {#if flag}<div class="flag" role="alert" data-k="gem-flag"><span>🚩 💎 급증 · {when(flag.at)} · {flag.from.toLocaleString()} → {flag.to.toLocaleString()} <small>({flag.why} · 설명 안 됨 {flag.extra.toLocaleString()})</small></span><button type="button" onclick={() => { clearFlag(S, s.cls, s.n); flag = null; }}>확인함</button></div>{/if}
     <div class="four">
       <div><small>통과율</small><b>{s.boss ?? '-'}{s.boss != null ? '%' : ''}</b><em>형성평가 · 첫 시도</em></div>
       <div><small>성취도</small><b>{a ?? '-'}{a != null ? '%' : ''}</b><em>성취기준 {Object.keys(s.std).length}개 평균 · {band(a) || '-'}</em></div>
@@ -99,4 +105,8 @@
   .amt { display: flex; gap: 6px; } .amt button { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); } .amt button.on { background: var(--accent); color: var(--on-accent); }
   .row { display: flex; gap: var(--s2); } .b1 { flex: 1; height: 48px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent); font: 700 16px var(--font); } .b2 { width: 88px; height: 48px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px var(--font); }
   .toast { position: absolute; left: var(--s4); right: var(--s4); top: 56px; margin: 0; z-index: 3; padding: var(--s2); border-radius: var(--r); background: var(--surface-2); text-align: center; font-weight: 700; font-size: 14px; }
+  .flag { display: flex; align-items: center; gap: var(--s2); margin: 0 0 var(--s3); padding: var(--s2) var(--s3); border-radius: var(--r); background: color-mix(in srgb, var(--bad) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent); font-size: 14px; }
+  .flag span { flex: 1; min-width: 0; }
+  .flag small { color: var(--text-2); }
+  .flag button { flex: none; min-height: var(--tap); padding: 0 var(--s3); border-radius: var(--r-sm); border: 0; background: var(--surface-2); color: var(--text); font-weight: 700; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4); }
 </style>

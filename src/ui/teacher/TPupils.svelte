@@ -2,6 +2,7 @@
   import type { Store } from '../../model/types';
   import { CLASSES, firstClass, isBeta, pasteRoster, liveOfCls } from '../../school/school';
   import { classData, type Stud } from '../../school/dash';
+  import { watchGems } from '../../school/gemwatch';
   import { ALL } from '../../school/views';
   import Sheet from '../battle/Sheet.svelte';
   import { onDestroy, untrack } from 'svelte';
@@ -22,6 +23,10 @@
   // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
   const lr = untrack(() => liveValue(S, 'records')), lx = untrack(() => liveValue(S, 'xp')), lg = untrack(() => liveValue(S, 'gem')); onDestroy(() => { lr.stop(); lx.stop(); lg.stop(); });
   const data = $derived.by(() => { void ver; void lr.v.val; void lx.v.val; void lg.v.val; return classData(S, cls === ALL ? firstClass() : cls); });
+  // 🚩 💎 급증 (school/gemwatch.ts · 교사만 · 학생에겐 안 보임): 볼 때마다 사진 비교
+  const lf = untrack(() => liveValue<Record<string, Record<string, unknown>>>(S, 'school/gemFlag')); onDestroy(lf.stop);
+  $effect(() => { void lg.v.val; const c = cls === ALL ? null : cls; if (c) untrack(() => watchGems(S, c)); });
+  const flagged = (c: string, n: number) => !!lf.v.val?.[c]?.[n];
   const live = $derived(liveOfCls(S, cls));
   const absentToday = (uid: string) => !!live && !!S.get<boolean>(`rooms/${live.code}/absent/${uid}`);
   $effect(() => ondash?.(wide));
@@ -39,7 +44,7 @@
     <div class="grid">
       {#each data.studs as s (s.n)}
         {@const ab = absentToday(`s${cls.replace('-', '_')}_${s.n}`)}
-        <button type="button" class="pc" class:ab class:stuck={s.extra.stuck >= 3} onclick={() => (who = s)} aria-label="{s.n}번 {s.name} Lv.{s.lv}{ab ? ' 결석' : ''}"><b>{s.n}</b><span>{s.name}</span><small>Lv.{s.lv}{ab ? ' · 결석' : ''}</small></button>
+        <button type="button" class="pc" class:ab class:stuck={s.extra.stuck >= 3} onclick={() => (who = s)} aria-label="{s.n}번 {s.name} Lv.{s.lv}{ab ? ' 결석' : ''}{flagged(s.cls, s.n) ? ' 💎 급증' : ''}"><b>{s.n}</b><span>{s.name}{#if flagged(s.cls, s.n)} 🚩{/if}</span><small>Lv.{s.lv}{ab ? ' · 결석' : ''}</small></button>
       {/each}
     </div>
     <p class="hint">번호를 누르면 그 학생 · 금빛 테 = 막힘 많음 · 흐림 = 오늘 결석{isBeta(S, cls) ? ' · 🧪 베타 반 = 통계에서 빠짐' : ''}</p>
