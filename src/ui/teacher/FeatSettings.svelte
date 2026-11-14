@@ -2,6 +2,8 @@
   import type { Store } from '../../model/types';
   import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted, schoolInfo } from '../../school/features.svelte';
   import { CLASSES } from '../../school/school';
+  import Sheet from '../battle/Sheet.svelte';
+  import type { BundleId, FeatId } from '../../school/features.svelte';
   // ⚙ 우리 학교 기능 (V1-DESIGN 10절 · 교사 「나」 탭): 묶음(시작값) 하나 고르고 → 낱낱 스위치로 더하고 뺌
   //   🔒 잠김 = 켰지만 「필요한 것」(과목 팩 · AI 키) 없음 → 채우는 길 한 줄 · 꺼진 기능은 학생 · TV 화면에서 통째로 사라짐
   const { S }: { S: Store } = $props();
@@ -11,6 +13,14 @@
   let cls = $state((() => { void schoolInfo.ver; return CLASSES.join(', '); })());
   const clsList = $derived(cls.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean));
   let saved = $state('');
+  // ⚙ 확인 창 (📜 2026-11-15 선생님 「B + C 추천대로」 · DECISIONS 「⚙ 우리 학교 기능 = 확인 창 두 가지」 · 문구 그대로)
+  //   B = 🧙 용사 · 🏰 성채 · 📋 게시판 던전을 끌 때만 (켤 때 안 물음) / C = 묶음 단추 · 낱낱 설정이 있을 때만 (바뀌는 기능 목록)
+  const BIG: FeatId[] = ['hero', 'citadel', 'board'];
+  let askOff = $state<FeatId | null>(null), askBundle = $state<BundleId | null>(null);
+  function tapOne(id: FeatId) { const on = !wanted(c, id); if (!on && BIG.includes(id)) { askOff = id; return; } saveOne(S, id, on); }
+  const overrides = $derived(Object.keys(c.on || {}) as FeatId[]);
+  const bundleDiff = (b: BundleId) => { const nb = { bundle: b }; return FEATS.filter((f) => wanted(c, f.id) !== wanted(nb, f.id)).map((f) => ({ f, from: wanted(c, f.id), to: wanted(nb, f.id) })); };
+  function tapBundle(b: BundleId) { if (overrides.length) { askBundle = b; return; } saveBundle(S, b); }
   function saveCls() { S.set('school/info/classes', clsList); saved = `✔ 반 ${clsList.length}개 저장`; setTimeout(() => (saved = ''), 1600); }
 </script>
 
@@ -18,7 +28,7 @@
   <p class="lead">묶음을 고른 뒤 기능을 하나씩 켜고 끌 수 있어요</p>
   <div class="bund" role="radiogroup" aria-label="묶음">
     {#each BUNDLES as b (b.id)}
-      <button type="button" role="radio" class="b" class:on={c.bundle === b.id} aria-checked={c.bundle === b.id} data-b={b.id} onclick={() => saveBundle(S, b.id)}>
+      <button type="button" role="radio" class="b" class:on={c.bundle === b.id} aria-checked={c.bundle === b.id} data-b={b.id} onclick={() => tapBundle(b.id)}>
         <i>{b.ic}</i><b>{b.name}</b><small>{b.sub}</small>
       </button>
     {/each}
@@ -32,7 +42,7 @@
         <li class:locked={st === 'locked'}>
           <span class="ic">{f.ic}</span>
           <span class="tx"><b>{f.name}</b>{#if st === 'locked' && lk}<small class="why">🔒 {lk}</small>{:else if f.sub}<small>{f.sub}</small>{/if}</span>
-          <button type="button" class="sw" class:on={wanted(c, f.id)} role="switch" aria-checked={wanted(c, f.id)} aria-label="{f.name} {wanted(c, f.id) ? '켬' : '끔'}" data-f={f.id} onclick={() => saveOne(S, f.id, !wanted(c, f.id))}><i></i></button>
+          <button type="button" class="sw" class:on={wanted(c, f.id)} role="switch" aria-checked={wanted(c, f.id)} aria-label="{f.name} {wanted(c, f.id) ? '켬' : '끔'}" data-f={f.id} onclick={() => tapOne(f.id)}><i></i></button>
         </li>
       {/each}
     </ul>
@@ -42,6 +52,21 @@
   <button type="button" class="save" disabled={!clsList.length} onclick={saveCls}>반 목록 저장 · {clsList.length}개</button>{#if saved}<small class="ok">{saved}</small>{/if}
   <p class="foot">🦴 기본 뼈대(수업 레이드 · 엑셀 차시 · 학습지 · 결과 · 대시보드 · 복습 · 소리)는 늘 켜져 있어요</p>
 </div>
+
+{#if askOff}{@const f = FEATS.find((x) => x.id === askOff)}
+  <Sheet onclose={() => (askOff = null)}>
+    {#snippet title()}{f?.ic} {f?.name} 끄기{/snippet}
+    <p class="ask" data-k="feat-off-ask">학생 기록(용사 · 강화 · 💎 · 처치 기록)은 그대로 남지만 학생 화면에서 사라져요. 끌까요?</p>
+    {#snippet act()}<div class="row"><button type="button" class="btn2" onclick={() => (askOff = null)}>취소</button><button type="button" class="btn" data-k="feat-off-yes" onclick={() => { if (askOff) saveOne(S, askOff, false); askOff = null; }}>끄기</button></div>{/snippet}
+  </Sheet>
+{:else if askBundle}{@const b = BUNDLES.find((x) => x.id === askBundle)}{@const diff = bundleDiff(askBundle)}
+  <Sheet onclose={() => (askBundle = null)}>
+    {#snippet title()}{b?.ic} {b?.name} 묶음으로{/snippet}
+    <p class="ask" data-k="bundle-ask">하나씩 바꾼 설정 {overrides.length}개가 묶음 기본값으로 돌아가요. 바꿀까요?</p>
+    {#if diff.length}<ul class="diff" data-k="bundle-diff">{#each diff as d (d.f.id)}<li>{d.f.ic} {d.f.name} <b>{d.from ? '켬' : '끔'} → {d.to ? '켬' : '끔'}</b></li>{/each}</ul>{/if}
+    {#snippet act()}<div class="row"><button type="button" class="btn2" onclick={() => (askBundle = null)}>취소</button><button type="button" class="btn" data-k="bundle-yes" onclick={() => { if (askBundle) saveBundle(S, askBundle); askBundle = null; }}>바꾸기</button></div>{/snippet}
+  </Sheet>
+{/if}
 
 <style>
   .fs { display: flex; flex-direction: column; gap: var(--s3); }
@@ -67,4 +92,6 @@
   .sw i { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left var(--t); }
   .sw.on { background: var(--ok); } .sw.on i { left: 24px; }
   li.locked .sw.on { background: color-mix(in srgb, var(--ok) 40%, #3a3f4c); }
+  .ask { margin: 0 0 var(--s3); font-size: 15px; line-height: 1.5; }
+  .diff { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; } .diff b { margin-left: 6px; color: var(--accent); }
 </style>

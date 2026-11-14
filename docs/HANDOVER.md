@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b171 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b172 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -137,6 +137,7 @@
 | b169 | 🔧 출시 막는 것 7 · 설치 앱: 빌드 하나 = 이름 둘(vite.config.ts) — `VITE_CHANNEL=release npm run build` = 정식 이름 「모두의 던전 : 공통수학2」 · 짧은 이름 「모두의 던전」 · manifest id `./` · start `./index.html`(정식과 같음 → 설치한 정식 앱이 같은 앱으로 이어짐) · 정식 아이콘 icon-*-v2(정식 저장소에서 복사) · <title> · apple 제목 · 서비스 워커 core 아이콘 / 그 밖(베타 Pages = 워크플로 VITE_CHANNEL: beta) = 베타 그대로 · manifest.webmanifest 는 빌드가 만듦(public 에서 뺌) · version.json = { build, v: 'citadel-1.0-b…' } (정식 fresh.js 가 v 를 읽어 옛 정식 폰이 한 번 새로 고침 · 화면엔 「v1.0-b…」) | vitest 282 · e2e pwa(베타) · 정식 빌드 dist 눈 확인(manifest · title · 아이콘 · sw core) |
 | b170 | 🔧 출시 막는 것 8 · 옛 정식 주소 이어 주기(`src/oldUrl.ts` · main.ts 가 두 번째로 부름): 학생 `?role=student&code=X` → `room=X` 로 바꿔 그 수업으로 / TV `?role=hall&code=X&key=Y` → 키는 메모리로만 받고 주소에서 곧바로 지움(history.replaceState · 기록 · 북마크에 안 남음) → Hall 「코드로 들어가기」에 채워 한 번 등록(맞으면 입장 · 틀리면 키 칸 그대로) / `&local` 지움 · 남은 일(코드 아님) = 11 · 12차시 팩을 운영 서버에 올리기 = 출시 날 선생님 손(복사 5 와 같이) | vitest 282 · e2e oldurl(새 · 에뮬레이터 7칸) · tvkey · tvgate · gate |
 | b171 | 🔧 🌫 정찰 시간 · 지금 등장 (선생님 2026-11-15): 원인 = 화면 시계(clock.svelte)가 기기 시계(Date.now)인데 방 시각(stepAt · solveEnd)은 서버 시각(S.now)으로 적힘 → 기기 시계가 늦은 TV · 폰은 그만큼 길게 세고 늦게 등장(시험: 폰 −4초 = 52초로 보이고 지금 등장 4.2초 늦음 · TV +3초 = 45초) → 화면 시계 = 서버 시각(`setClockOffset` · server.ts 가 .info/serverTimeOffset 받을 때) · TV 진필살기 · 학생 선물 알림 비교도 서버 시각 / 덤: 리모컨 정찰 ± = 그 차시 📋 준비 값도 같이(게시판 T 방 제외) · 준비 화면에서 바꾸면 그 차시의 열린 수업에도 바로 | vitest 283(solvesync 새) · e2e scout(새 · 에뮬레이터 · 시계 어긋난 TV · 폰 · 옛 코드에서는 실패 확인) |
+| b172 | 📜 ⚙ 우리 학교 기능 확인 창(선생님 「B + C 추천대로」 · 문구 그대로): B = 🧙 용사 · 🏰 성채 · 📋 게시판 던전을 끌 때만 「학생 기록(용사 · 강화 · 💎 · 처치 기록)은 그대로 남지만 학생 화면에서 사라져요. 끌까요?」 [취소] [끄기] · 켤 때 · 작은 기능 = 안 물음 / C = 묶음 단추를 누를 때 낱낱 설정이 있으면 「하나씩 바꾼 설정 n개가 묶음 기본값으로 돌아가요. 바꿀까요?」 + 바뀌는 기능 목록(이름 켬 → 끔) · 없으면 안 물음 · 확인: 스위치는 화면만 숨기고 쓰는 곳 없음(feat() 쓰는 13곳 모두 읽기) — 에뮬레이터에서 기록을 심고 전부 끈 채 수업 · 선물 → 다시 켬 → 계정 · 강화 · 산 것 · 📜 · EXP · 카드 · 성채 · 게시판 기록 그대로 | vitest 283 · e2e featoff(새 · 에뮬레이터 16칸) |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |
