@@ -7,6 +7,7 @@
   import { liveValue } from './room.svelte';
   import TV from './tv/TV.svelte';
   import { packOf } from '../engine/packs';
+  import { dressed } from './rdun'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
 
   // 🖥 교실 TV (#119 ⑮) — 교사 폰이 연 수업(school/live)을 따라감 · 수업이 없으면 교사 캠프
   //   주소에 ?room= 이 있으면 그 방(시험 · 두 탭 체험: 없으면 그 던전으로 만들고 1-1반으로 봄)
@@ -14,7 +15,7 @@
   const stopClock = useClock();
   const lv = untrack(() => liveValue<Live>(S, 'school/live'));
   onDestroy(() => { stopClock(); lv.stop(); });
-  const devLive = untrack(() => { if (!fixed) return null; openRoom(S, L, code, P); return { code, cls: firstClass(), lesson: L.id, key: '0000' } as Live; });
+  const devLive = untrack(() => { if (!fixed) return null; openRoom(S, L, code, P); const rd = new URLSearchParams(location.search).get('rdun'); if (rd) S.set(`rooms/${code}/meta/rdun`, rd); /* 🎲 시험 TV ?rdun=d01 = 그 던전을 입힌 방 */ return { code, cls: firstClass(), lesson: L.id, key: '0000' } as Live; });
   let pick = $state<Live | null>(null); // ② 코드 + 비밀번호로 고른 방
   const live = $derived(devLive ?? pick ?? lv.v.val);
   const now = $derived(clock.now);
@@ -56,7 +57,7 @@
 </script>
 
 {#if !gated}
-  {#key live?.code ?? ''}<TV {S} L={packOf(live?.lesson) ?? L} {live} {now} />{/key} <!-- 🧩 #132 TV 차시 = 연 수업의 차시 · 🔐 비밀번호로 hosts 가 된 뒤에 (그 전엔 방에 쓰지 않음) -->
+  {#key live?.code ?? ''}<TV {S} L={live ? dressed(packOf(live.lesson) ?? L, S.get<string>(`rooms/${live.code}/meta/rdun`)) : L} {live} {now} />{/key} <!-- 🧩 #132 TV 차시 = 연 수업의 차시 · 🔐 비밀번호로 hosts 가 된 뒤에 (그 전엔 방에 쓰지 않음) -->
 {:else}
   <div class="kov" role="dialog" aria-label="종합실 입장">
     <b>🔐 종합실 입장</b>

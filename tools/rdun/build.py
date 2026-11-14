@@ -16,7 +16,12 @@ T = {
   'd07': ('⚙ 태엽 공장', ['톱니 벌레', '태엽 쥐', '증기 통', '나사 거미', '경비 로봇'], '시계탑 골렘', ['glitch', 'pause'], ['glitch', 'pause', 'smash'], '05-ruins'),
   'd08': ('📚 마법 도서관', ['날개 책', '잉크 방울', '촛대 유령', '두루마리 뱀', '깃펜 새'], '금서의 사서', ['glitch', 'sleep'], ['confuse', 'glitch', 'dark'], '01-burrow'),
   'd09': ('🌙 별빛 천문대', ['별똥 방울', '망원경 올빼미', '달 토끼', '별자리 사슴', '혜성 여우'], '밤하늘 고래', ['confuse', 'dark'], ['dark', 'confuse', 'pause'], '06-frost'),
+  'd10': ('💀 그림자 성', ['그림자 쥐', '촛불 해골', '갑옷 망령', '박쥐 집사', '액자 미믹'], '그림자 군주', ['dark', 'bind'], ['dark', 'bind', 'poison'], '01-burrow'),
+  'd11': ('☁ 구름 섬', ['구름 양', '번개 새', '바람개비 요정', '무지개 달팽이', '열기구 미믹'], '폭풍 거인', ['wind', 'sleep'], ['wind', 'fog', 'smash'], '06-frost'),
+  'd12': ('🧸 장난감 다락방', ['태엽 병정', '공 슬라임', '종이비행기', '퍼즐 상자', '인형 마술사'], '깜짝 상자 왕', ['confuse', 'glitch'], ['confuse', 'pause', 'smash'], '05-ruins'),
 }
+# 👑 보스 묶음 (보스 줄이 없는 던전 · 한 장에 보스 여러 마리) = 시트 id → 줄 순서대로 던전
+BOSSES = {'bg1': ('boss-g1-src-v1.png', ['d03', 'd04', 'd05', 'd06']), 'bg2': ('boss-g2-src-v1.png', ['d07', 'd08', 'd09', 'd10']), 'bg3': ('boss-g3-src-v1.png', ['d11', 'd12'])}
 out, bb = {}, json.load(open(f'{ROOT}/src/ui/sprite-bbox.json'))
 for did, (ko, mons, boss, atk, batk, bg) in T.items():
     src = f'{SRC}/{did}-a4-src-v1.png'
@@ -27,5 +32,18 @@ for did, (ko, mons, boss, atk, batk, bg) in T.items():
                 'attack': atk, 'bossAttack': batk, 'bg': bg, 'rune': j['rune']}
     bb['monsters'][f'{did}-v1.webp'] = j['bbox']
     print(did, j['cell'], j['rows'], '보스' if hasBoss else '보스 그림 없음')
+boss = {}
+for bid, (fn, ds) in BOSSES.items():
+    src = f'{SRC}/{fn}'
+    if not os.path.exists(src): continue
+    j = json.loads(subprocess.check_output([sys.executable, f'{HERE}/cut.py', src, bid, f'{ROOT}/public/art/rdun', '--rows', str(len(ds))]))
+    boss[bid] = {'src': j['src'], 'cell': j['cell'], 'rows': j['rows'], 'names': [T[d][2] for d in ds], 'rune': j['rune']}
+    bb['monsters'][f'{bid}-v1.webp'] = j['bbox']
+    for k, d in enumerate(ds):
+        if d in out and out[d]['boss'] is None: out[d]['bossRef'] = f'{bid}:{k}'
+    print(bid, j['cell'], j['rows'], ds)
+# ✝ → ★ 금서의 사서(bg2 줄 1) 펼친 책 표지 (머리 📎 · 학교 수업용) — 칸 좌표는 cut 결과 기준으로 잰 값
+if 'bg2' in boss: subprocess.check_call([sys.executable, f'{HERE}/fix_cross.py', f'{ROOT}/public/art/rdun/bg2-v1.webp', str(boss['bg2']['cell']), '1', '0:97:161 1:99:190 2:120:165'])
 json.dump(out, open(f'{ROOT}/src/ui/rdun.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+json.dump(boss, open(f'{ROOT}/src/ui/rdun-boss.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 json.dump(bb, open(f'{ROOT}/src/ui/sprite-bbox.json', 'w'), ensure_ascii=False, indent=0)  # 원래 꼴(한 줄에 값 하나) 그대로

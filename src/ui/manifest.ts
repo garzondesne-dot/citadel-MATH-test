@@ -8,17 +8,20 @@ export const poseCol = (s: Sheet, p: MonPose) => (p === 'idleB' ? s.poses.idleB 
 
 import { SUBJ } from '../engine/subject';
 import RDUN_JSON from './rdun.json';
+import RDUN_BOSS from './rdun-boss.json'; // 👑 보스 묶음 시트 (보스 줄이 없는 던전 · bossRef = '묶음:줄')
 /** 🎲 랜덤 던전 (DECISIONS 「🎲 랜덤 던전」 · 그림 없는 차시에 차례로) — 과목과 상관없는 그림 표 */
-export interface Rdun { name: string; src: string; cell: number; rows: number; names: string[]; boss: number | null; bossName: string; attack: string[]; bossAttack: string[]; bg: string; rune: ([number, number, number] | null)[][] }
+export interface Rdun { name: string; src: string; cell: number; rows: number; names: string[]; boss: number | null; bossRef?: string; bossName: string; attack: string[]; bossAttack: string[]; bg: string; rune: ([number, number, number] | null)[][] }
 export const RDUN = RDUN_JSON as unknown as Record<string, Rdun>;
 export const RDUN_IDS = Object.keys(RDUN).sort();
+/** 🔍 확대 품질 비교 (2026-11-14 머리 📎): 주소 ?rdx2 = 도트 전용 2배(Scale2x)로 미리 구운 시트 + 부드러운 축소 (tools/rdun/scale2x.py) */
+const RDX2 = typeof location !== 'undefined' && /[?&]rdx2\b/.test(location.search);
 const GEN = SUBJ.themes; // 몬스터 줄 · 던전 배경 표 = 과목 팩 (#132 · #136)
 export const SHEETS: Record<string, Sheet> = {
   mimic: { src: 'art/monster-mimic-v1.webp', cols: 3, rows: 1, cell: 256, poses: { idle: 0, attack: 1, down: 2 }, names: ['이끼 미믹'] },
   // 🧩 #132 정식 차시가 쓰는 몬스터 줄만 잘라 온 것 (tools/pack-from-release · 'new2:0' = 정식 'new:2')
   ...Object.fromEntries(Object.entries(GEN.sheets as Record<string, { src: string; cell: number; names: string[] }>).map(([k, v]) => [k, { src: v.src, cols: 3, rows: 1, cell: v.cell, poses: { idle: 0, attack: 1, down: 2 }, names: v.names }])),
   // 🎲 5칸 = 대기 A · 대기 B(숨쉬기) · 공격 · 맞음(움찔) · 쓰러짐
-  ...Object.fromEntries(Object.entries(RDUN).map(([k, v]) => [k, { src: v.src, cols: 5, rows: v.rows, cell: v.cell, poses: { idle: 0, idleB: 1, attack: 2, hit: 3, down: 4 }, names: v.names, rune: v.rune }])),
+  ...Object.fromEntries(Object.entries({ ...RDUN, ...(RDUN_BOSS as unknown as Record<string, Rdun>) }).map(([k, v]) => [k, { src: RDX2 ? v.src.replace('.webp', 'x2.webp') : v.src, cols: 5, rows: v.rows, cell: RDX2 ? v.cell * 2 : v.cell, poses: { idle: 0, idleB: 1, attack: 2, hit: 3, down: 4 }, names: v.names, rune: v.rune }])),
 };
 
 /** 그림 주소: '시트:줄' + '@h120'(색 돌리기) + '@r∪'(🎲 몸 룬 기호 · 맨 끝) + '@e'(대장 · 엘리트 = 1.3배 · 금빛 테두리 · 🎲 소레이드 대장 · 그림 없는 보스) */
@@ -85,18 +88,23 @@ export function heroNudge(id: number, row: number): { dx: number; dy: number } {
   return { dx: HERO.w / 2 - (base[0] + base[2]) / 2, dy: HERO.h - own[3] };
 }
 /** 몬스터 칸(줄 · 자세 열)의 보이는 부분 → 가운데 · 발 맞춤 (칸 크기 기준 비율) */
+/** 몬스터 칸 상자 (2배 구운 시트 = 원본 상자 × 2) */
+function bbOf(src: string, row: number, col: number): Box | null {
+  const f = src.split('/').pop() ?? '', x2 = f.endsWith('x2.webp'), b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[x2 ? f.replace('x2.webp', '.webp') : f]?.[`${row}:${col}`];
+  return b && x2 ? (b.map((v) => v * 2) as Box) : b ?? null;
+}
 export function monNudge(src: string, row: number, col: number, cell: number): { dx: number; dy: number } {
-  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  const b = bbOf(src, row, col);
   return b ? { dx: (cell / 2 - (b[0] + b[2]) / 2) / cell, dy: (cell - b[3]) / cell } : { dx: 0, dy: 0 };
 }
 /** ⚔ 몬스터 보이는 몸통 (칸 비율 「x0,y0,x1,y1」 · 정식 bodies 자리 · fx/attack.ts body) */
 export function monBody(src: string, row: number, col: number, cell: number): string {
-  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  const b = bbOf(src, row, col);
   return b ? b.map((v) => (v / cell).toFixed(3)).join(',') : '';
 }
 /** 몬스터 칸의 보이는 높이 (칸 대비 비율 · 체력 막대를 머리 바로 위에 놓을 때) */
 export function monVis(src: string, row: number, col: number, cell: number): number {
-  const b = (BBOX.monsters as unknown as Record<string, Record<string, Box | null>>)[src.split('/').pop() ?? '']?.[`${row}:${col}`];
+  const b = bbOf(src, row, col);
   return b ? (b[3] - b[1]) / cell : 1;
 }
 /** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */

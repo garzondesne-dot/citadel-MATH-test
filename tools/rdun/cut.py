@@ -11,14 +11,29 @@ import numpy as np
 from PIL import Image
 
 def key(a):
+    """바탕 지우기 = 바깥(가장자리)에서 이어진 분홍만(넓은 허용 범위 · flood) + 몸 안에 갇힌 분홍은 아주 진한 #FF00FF 만
+    → 보라 연기 · 분홍 날개처럼 바탕과 가까운 색이 몸 안에 있어도 먹히지 않음 (머리 📎 d10 · d11 · d12)"""
     R, G, B = a[..., 0].astype(int), a[..., 1].astype(int), a[..., 2].astype(int)
-    bg = (R > 190) & (B > 190) & (G < 90)
-    alpha = np.where(bg, 0, 255).astype(np.uint8)
-    for _ in range(2):  # 가장자리 분홍(바탕과 섞인 픽셀) 지우기
+    loose = (R > 190) & (B > 190) & (G < 90)
+    strict = (R > 232) & (B > 232) & (G < 30)
+    h, w = loose.shape; bg = np.zeros_like(loose); q = deque()
+    for y in range(h):
+        for x in (0, w - 1):
+            if loose[y, x] and not bg[y, x]: bg[y, x] = True; q.append((y, x))
+    for x in range(w):
+        for y in (0, h - 1):
+            if loose[y, x] and not bg[y, x]: bg[y, x] = True; q.append((y, x))
+    while q:
+        y, x = q.popleft()
+        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx < w and loose[ny, nx] and not bg[ny, nx]: bg[ny, nx] = True; q.append((ny, nx))
+    alpha = np.where(bg | strict, 0, 255).astype(np.uint8)
+    for _ in range(2):  # 가장자리 분홍(바탕과 섞인 픽셀) 지우기 = 투명 칸에 붙은 것만
         t = alpha == 0
         near = np.zeros_like(t)
         near[1:] |= t[:-1]; near[:-1] |= t[1:]; near[:, 1:] |= t[:, :-1]; near[:, :-1] |= t[:, 1:]
-        pink = (R > 130) & (B > 130) & (G < 0.62 * np.minimum(R, B))
+        pink = (R > 150) & (B > 150) & (G < 0.5 * np.minimum(R, B))
         alpha[near & pink & (alpha > 0)] = 0
     return alpha
 
@@ -91,7 +106,11 @@ def main():
         while len(segs) > 5:  # 효과가 끊긴 조각 = 가장 가까운 것끼리 합침
             gi = min(range(len(segs) - 1), key=lambda i: segs[i + 1][0] - segs[i][1])
             segs[gi] = [segs[gi][0], segs[gi + 1][1]]; del segs[gi + 1]
-        if len(segs) < 5: segs = [[int(k * gw), int((k + 1) * gw)] for k in range(5)]
+        if len(segs) != 5:  # 칸끼리 붙음(보스 묶음) = 격자 경계 근처 ±15% 에서 그림이 가장 적은 세로줄로 자름
+            col = fg[y0:y1].sum(0); cuts = [0]
+            for k in range(1, 5):
+                lo, hi = int((k - 0.15) * gw), int((k + 0.15) * gw); cuts.append(lo + int(np.argmin(col[lo:hi])))
+            cuts.append(W); segs = [[cuts[k], cuts[k + 1]] for k in range(5)]
         row = []
         for k, (x0, x1) in enumerate(segs):
             a = alpha[y0:y1, x0:x1]; ys, xs = np.nonzero(a)

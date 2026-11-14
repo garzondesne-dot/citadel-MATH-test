@@ -24,8 +24,8 @@ describe('랜덤 던전', () => {
     mids.forEach((id, i) => { const sp = spriteOf(D.monsters[id]!.sprite); expect(sp.sheet.src).toBe(RDUN.d01!.src); expect(sp.row).toBe(i % 5); expect(sp.rune.length).toBeGreaterThan(0); expect(['bind', 'sleep']).toContain(D.monsters[id]!.attack); });
     expect(spriteOf(D.boss!.sprite).row).toBe(5); expect(D.boss!.attack).toEqual(['bind', 'sleep', 'smash']);
     const chain = mids.find((id) => D.monsters[id]!.chain); if (chain) expect(spriteOf(D.monsters[chain]!.sprite).elite).toBe(true);
-    // 보스 그림이 아직 없는 던전 = 마지막 몬스터 색 돌림 + 대장
-    const D3 = dressed(L, 'd03'), b = spriteOf(D3.boss!.sprite); expect(b.row).toBe(4); expect(b.hue).toBe(180); expect(b.elite).toBe(true);
+    // 보스 줄 없는 던전 = 보스 묶음 시트
+    const D3 = dressed(L, 'd03'), b = spriteOf(D3.boss!.sprite); expect(b.sheet.names[b.row]).toBe('서리 여왕'); // 👑 보스 묶음 bg1
   });
   it('그림 없는 차시 = 차례로 배정 (그림 지운 사본)', () => {
     const L = PACKS.find((p) => p.no === 6)!, bare = { ...L, id: 'bare', monsters: Object.fromEntries(Object.entries(L.monsters).map(([k, m]) => [k, { ...m, sprite: '' }])) };

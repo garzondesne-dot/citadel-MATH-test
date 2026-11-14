@@ -84,7 +84,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   const txt = (s: string, k: keyof typeof TV_FS, bold: boolean, fill: string | number, stroke = true) => new Text({ text: s, style: { fontFamily: font, fontSize: Math.round(H() * TV_FS[k]), fontWeight: String(bold ? TV_FW.bold : TV_FW.normal) as '700', fill, ...(stroke ? { stroke: { color: 0x000000, width: Math.max(2, H() * 0.004) } } : {}), align: 'center' } });
 
   const tex = new Map<string, Promise<TextureSource>>();
-  const src = (url: string) => { let p = tex.get(url); if (!p) { p = Assets.load<Texture>(url).then((t) => { t.source.scaleMode = 'nearest'; return t.source; }); tex.set(url, p); } return p; };
+  const src = (url: string) => { let p = tex.get(url); if (!p) { p = Assets.load<Texture>(url).then((t) => { t.source.scaleMode = /x2\.webp/.test(url) ? 'linear' : 'nearest'; return t.source; }); tex.set(url, p); } return p; };
   const frame = (s: TextureSource, x: number, y: number, w: number, h: number) => new Texture({ source: s, frame: new Rectangle(x, y, w, h) });
 
   // ── 트윈 · 애니메이션 ──
