@@ -1,4 +1,4 @@
-# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b144 · 2026-11-13
+# 🤝 시험 저장소 인계 (citadel-MATH-test · 손발 테스트 방) — b145 · 2026-11-13
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
@@ -110,6 +110,7 @@
 | b142 | 📜 🎆 이펙트 다시 만들기 ③ 💤 수면 깨기 (fx-eval 😐 「한 번 감기려다가 정신 차리고 올라간다」) · `AttackFx.svelte` eyeOpen 0.72초 = 실눈 → 반쯤 뜸(25%) → 다시 스르르 감김(52% · 10%) → 번쩍 끝까지 · 흐림은 0.4초 뒤 걷힘 · 번쩍(::after)은 0.42초 = 정신 차리는 순간 · 닫힘 760ms · 번쩍이 처음부터 보이던 것 고침(opacity 0 + forwards) · 상태 이상 나머지(혼란 · 어둠 · 독 · 바람 · 화염 칸) = 새것이 1차 👍 · 속박 = b106 사슬 그림 그대로 |
 | b143 | 📜 🎆 이펙트 다시 만들기 ④-1 🌑 어둠 · ☀ 빛 계열 7개 새 엔진 (`slash.ts SKILLS` · RECIPES `dark` · `NEW_SKILLS` 더함 → 폰 띠 · TV 모두) · shade(초승달 + 베인 자국) · claw(나란히 손톱 세 줄) · phantom(분신 셋 + 잔상 줄 `ghost`) · eclipse(X + 검은 고리 · 금빛 코로나 `eclipse` · 충격파) · bulwark(방패 돌진 → 금 → 조각 8개 `shield` · 기준 4) · holysword(위에서 꽂히는 검 · 빛 십자 · 땅 고리 `sword`) · skylance(꿰뚫는 빛 창 · 빛줄기 `lance` · 충격파) · 폰 띠 `pfx2/new-<스킬>-v3.webp` · 평가판 「🔁 다시 만듦」 16장 |
 | b144 | 📜 🎆 이펙트 다시 만들기 ④-2 ⚙ 기계 · 🌊 물 · 🔮 소용돌이 9개 새 엔진 (RECIPES `mech` · `water` · `arcane` · `NEW_SKILLS` 더함) · wrench(호 + 쨍 `clang`) · cog(도는 톱니 날아와 박힘 → 튕김 `cog`) · piston(위에서 쾅 + 증기 + 땅 금 `piston`) · drill(줄무늬 드릴 파고듦 + 파편 `drill` · 충격파) · aqua(초승달 + 베인 자국) · wave(말리는 파도 머리 `wave`) · anchor(사슬 닻 낙하 + 물 고리 + 땅 금 `anchor` · arc 앞 moveTo = 엉뚱한 사선 없게) · tsunami(X + 물벽 · 충격파 · 정식에도 그림 없던 칸) · vortex(나선이 조여듦 → 한 점 → 빛살 · 고리 `vortex`) · 폰 띠 `pfx2/new-<스킬>-v3.webp` · 평가판 「🔁 다시 만듦」 25장 · 1차 👎 용사 스킬 전부 끝 |
+| b145 | 📜 🎆 이펙트 다시 만들기 ⑤ 😐 다듬기 · ✨ twinkle(돌며 날아온 별 → 펑 · 작은 별 8 `star`) · 🌀 void(검은 구멍이 커지며 빨아들임 → 꺼짐 → 고리 두 겹 · 빛살 16 `void` · 충격파) · ❄ ice(몸 둘레 결정 6 → 쩍 → 산산조각 `shatter`) · ❄ spikes(발밑까지 얼음 가시가 차례로 솟음 → 부서짐 `spikes`) = 새 엔진(RECIPES `star` · `frost` · `NEW_SKILLS`) · 👹 🪞 mirror(글이 납작해졌다 뒤집혀 펴짐 + 은빛 반사광 두 번 `.mshine`) · 😡 rage(분노 = 카드 가장자리 붉게 세 번 고동 `.afx.strong::after` · 동작 줄이기 = 고정) · 🔥 fire 칸 = 새것(b77~)이 1차 👍 그대로 · 평가판 「🔁 다시 만듦」 31장 · 1차 👎 · 😐 전부 다시 만듦 끝 |
 | b46 | #171 | ↪ 캠프 ⚙ 설정 「로그아웃 · 첫 화면으로」(학생으로 로그인한 폰도 첫 화면 · 「교사 · 종합실 ›」로) · e2e firstrun = 좁힌 규칙에서 교사 계정 → 수업 → TV 키 → 학생 가입 → 입장 → 로그아웃 |
 | b45 | #170 | 🫁 대기 = PixelLab 숨쉬기 34명 모두(v3) · 로안 · 사제 = 옛 꼬마 시트로 되돌림(새 화풍 칸 192 × 144 · cut.py 는 꺼 둠) |
 | b44 | #168 · #169 | 💥 안개 · 얼음 · 화염 = 3초(등록 표 ms) · 🫁 대기 = PixelLab 8프레임 시험(14명 · manifest IDLE8.on 한 줄로 끔) |

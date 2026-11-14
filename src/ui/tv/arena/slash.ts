@@ -33,12 +33,14 @@ export const RECIPES: Record<string, { shape: 'crescent'; colors: [number, numbe
   mech: { shape: 'crescent', colors: [0x3a3f48, 0x9aa6b4, 0xeef2f6], hi: 0xffc04a, spark: 'square', sound: 'smash' },
   water: { shape: 'crescent', colors: [0x0b3a6a, 0x2f9be0, 0xbfeaff], hi: 0xffffff, spark: 'square', sound: 'cut' },
   arcane: { shape: 'crescent', colors: [0x2a0a5a, 0x8a4cff, 0xe6d4ff], hi: 0xffffff, spark: 'shard', sound: 'cut' },
+  star: { shape: 'crescent', colors: [0x7a5200, 0xffd84a, 0xfff8c8], hi: 0xffffff, spark: 'square', sound: 'cut' },
+  frost: { shape: 'crescent', colors: [0x0b4a7a, 0x6cc6ff, 0xe8f8ff], hi: 0xffffff, spark: 'shard', sound: 'cut' },
 };
 /** 🗡 👎 다시 만들기 (📜 2026-11-14 머리 7e0f44e · 쌍월 A 방식 · 호 = 용사 쪽 → 몬스터 쪽)
  *  스킬 하나 = 칼질(cut) 몇 개 + 덧붙임(extra) · cut = { at 시작(초) · phi 맞는 점에서 본 호 중심 반대 방향(π 배수 · 0.5 = 가로 휘두름 · 0.78 = 위→아래 대각 · 1 = 세로 내려찍기 · 1.22 = 아래→위 대각) · rad 반지름(작을수록 많이 휨) · sweep 호가 도는 각 · thick 두께 · ox · oy 맞는 점 비켜 놓기(몸통 크기 배) }
  *  선생님 평가 한 줄: slash 「그저 직선 3개」 · spin 「원반이 도는 것 같음」 · reap 「원반 느낌」 · wblade 「칼날 느낌 안 듦」 · hammer · quake 👎 */
 type Cut = { at: number; phi: number; rad?: number; sweep?: number; thick?: number; len?: number; ox?: number; oy?: number; ghosts?: number };
-type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' | 'holy' | 'eclipse' | 'sword' | 'lance' | 'shield' | 'ghost' | 'clang' | 'cog' | 'piston' | 'drill' | 'wave' | 'anchor' | 'tsunami' | 'vortex'; /** ✂ 베인 자국 (b140 · 기준 1 「벤다는 느낌」): 칼날이 맞는 점을 지날 때 그 방향으로 가는 흰 금이 번쩍 · 크기 배 */ slit?: number };
+type SkillR = { fam: string; tier: number; dur: number; cuts: Cut[]; sparks?: number; flash?: number; hitstop?: number; shake?: number; shock?: boolean; glow?: boolean; extra?: 'crack' | 'quake' | 'gust' | 'fly' | 'holy' | 'eclipse' | 'sword' | 'lance' | 'shield' | 'ghost' | 'clang' | 'cog' | 'piston' | 'drill' | 'wave' | 'anchor' | 'tsunami' | 'vortex' | 'star' | 'void' | 'shatter' | 'spikes'; /** ✂ 베인 자국 (b140 · 기준 1 「벤다는 느낌」): 칼날이 맞는 점을 지날 때 그 방향으로 가는 흰 금이 번쩍 · 크기 배 */ slit?: number };
 export const SKILLS: Record<string, SkillR> = {
   // ⚔ 베기 Ⅲ 연타 = 휘어진 칼날 세 번 · Z 자(위→아래 · 아래→위 · 가로) · 0.08초 차이 · 끝이 가늘고 가운데가 두꺼운 초승달
   slash: { fam: 'cut', tier: 2, slit: 1.1, dur: 0.62, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: -0.12, ghosts: 2 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.45, sweep: 0.95, thick: 0.34, oy: 0.04, ghosts: 2 }, { at: 0.16, phi: 0.56, rad: 0.7, len: 1.5, sweep: 0.9, thick: 0.3, oy: 0.18, ghosts: 2 }], sparks: 20, flash: 0.8, hitstop: 0.06, shake: 1 },
@@ -87,6 +89,15 @@ export const SKILLS: Record<string, SkillR> = {
   tsunami: { fam: 'water', tier: 3, slit: 1.4, dur: 1.0, cuts: [{ at: 0, phi: 0.78, rad: 0.62, len: 1.65, sweep: 1.0, thick: 0.38, ghosts: 3 }, { at: 0.08, phi: 1.22, rad: 0.62, len: 1.65, sweep: 1.0, thick: 0.38, ghosts: 3 }], sparks: 36, flash: 1, hitstop: 0.09, shake: 3, shock: true, glow: true, extra: 'tsunami' },
   // 🔮 마법 Ⅲ 차원 소용돌이 = 보라 나선이 몬스터로 빨려 들어가 조여짐 → 맞는 순간 안으로 꺼졌다 빛살 폭발 (1차 「공격한다는 느낌이 별로」)
   vortex: { fam: 'arcane', tier: 2, dur: 0.85, cuts: [], sparks: 30, flash: 1, hitstop: 0.08, shake: 2, extra: 'vortex' },
+  // ── 묶음 ⑤ (b145 · 1차 😐 「공격한다는 느낌이 안 듦 · 터지던가 폭발하던가 부서지던가」) ──
+  // ✨ 별 Ⅰ = 큰 별이 돌며 날아와 박힘 → 펑 터져 작은 별 8개가 사방으로 튐
+  twinkle: { fam: 'star', tier: 0, dur: 0.6, cuts: [], sparks: 16, flash: 0.9, hitstop: 0.05, shake: 1, extra: 'star' },
+  // 🌀 블랙홀 Ⅳ = 검은 구멍이 커지며 빛 알갱이를 빨아들임 → 꺼졌다가 큰 폭발(빛살 · 고리 두 겹) · 충격파
+  void: { fam: 'arcane', tier: 3, dur: 1.0, cuts: [], sparks: 40, flash: 1, hitstop: 0.1, shake: 3, shock: true, glow: true, extra: 'void' },
+  // ❄ 얼음 Ⅲ 얼음 파쇄 = 몸 둘레에 얼음 결정 6개가 돋아 얼림 → 쩍 · 결정이 산산조각으로 튐
+  ice: { fam: 'frost', tier: 2, dur: 0.8, cuts: [], sparks: 26, flash: 0.9, hitstop: 0.08, shake: 2, extra: 'shatter' },
+  // ❄ 얼음 Ⅱ 얼음 가시 = 용사 쪽에서 몬스터 발밑까지 얼음 가시가 차례로 솟음 → 마지막 큰 가시가 찌름 → 부서짐
+  spikes: { fam: 'frost', tier: 1, dur: 0.75, cuts: [], sparks: 18, flash: 0.8, hitstop: 0.06, shake: 1, extra: 'spikes' },
   radiant: { fam: 'light', tier: 0, slit: 1.2, dur: 0.5, cuts: [{ at: 0, phi: 0.75, rad: 0.66, len: 1.4, sweep: 0.85, thick: 0.34, ghosts: 2 }], sparks: 16, flash: 0.8, extra: 'holy' },
 };
 /** 🌙 쌍월 참(Ⅳ) 시제품 3가지 (🔨 2026-11-13 밤 평가판 👎 「쌍월이면 대표 스킬인데 신경 써 줘 · 하나도 안 멋져」 · 머리 📎 「NUM · RECIPES 값만 다르게」)
@@ -298,6 +309,32 @@ export class SlashFx {
       if (st < 0) { const q = clamp(t / it); for (let arm = 0; arm < 3; arm++) { const pts: number[] = []; for (let k = 0; k <= 16; k++) { const u = k / 16, r = base * (1.3 - 1.1 * q) * (1 - u * 0.85), an = arm * (Math.PI * 2 / 3) + u * 4.2 + q * 7 * dir; pts.push(cx + Math.cos(an) * r, cy + Math.sin(an) * r * 0.8); } g.moveTo(pts[0]!, pts[1]!); for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k]!, pts[k + 1]!); g.stroke({ width: 2, color: arm % 2 ? k1 : k2, alpha: 0.4 + 0.6 * q }); } g.circle(cx, cy, Math.max(1, base * 0.12 * (1 - q))).fill({ color: k0, alpha: 0.9 }); }
       else if (st < 0.06) g.circle(cx, cy, 2).fill({ color: 0xffffff, alpha: 1 });
       else if (st < 0.45) { const p = (st - 0.06) / 0.39, a = 1 - p; for (let k = 0; k < 12; k++) { const an = (k / 12) * Math.PI * 2, r0 = base * 0.2 * p, r1 = base * (0.4 + 0.9 * ease(p)) * (k % 2 ? 0.7 : 1); g.moveTo(cx + Math.cos(an) * r0, cy + Math.sin(an) * r0).lineTo(cx + Math.cos(an) * r1, cy + Math.sin(an) * r1).stroke({ width: k % 2 ? 1 : 2, color: k % 3 ? k2 : 0xffffff, alpha: a }); } g.circle(cx, cy, base * (0.25 + 0.8 * ease(p))).stroke({ width: Math.max(1, 3 * a), color: k1, alpha: a }); }
+    }
+    const starP = (x: number, y: number, R: number, an: number) => { const pts: number[] = []; for (let k = 0; k < 10; k++) { const r = k % 2 ? R * 0.45 : R, a2 = an + (k / 10) * Math.PI * 2 - Math.PI / 2; pts.push(x + Math.cos(a2) * r, y + Math.sin(a2) * r); } return pts; };
+    // ⭐ 별 (star): 큰 별이 돌며 날아옴 → 맞는 순간 펑 · 작은 별 8개
+    if (S.extra === 'star') {
+      if (st < 0) { const q = ease(clamp(t / it)), x = cx - dir * o.w * 2.2 * (1 - q), y = cy - o.h * 0.5 * Math.sin(Math.PI * q), R = o.w * 0.28; poly(starP(x, y, R, t * 10), k0, 1); poly(starP(x, y, R * 0.75, t * 10), k1, 1); poly(starP(x, y, R * 0.4, t * 10), k2, 1); if (fancy) for (let k = 1; k <= 3; k++) { const q2 = Math.max(0, q - k * 0.08), x2 = cx - dir * o.w * 2.2 * (1 - q2), y2 = cy - o.h * 0.5 * Math.sin(Math.PI * q2); g.circle(x2, y2, Math.max(1, 3 - k * 0.7)).fill({ color: k2, alpha: 0.6 / k }); } }
+      else if (st < 0.5) { const p = st / 0.5, a = 1 - p; g.circle(cx, cy, base * (0.2 + 0.6 * ease(p))).stroke({ width: Math.max(1, 3 * a), color: k1, alpha: a }); for (let k = 0; k < 8; k++) { const an = (k / 8) * Math.PI * 2 + 0.2, r = base * (0.15 + 1.0 * ease(p)); poly(starP(cx + Math.cos(an) * r, cy + Math.sin(an) * r + 40 * p * p, Math.max(3, o.w * 0.17 * (1 - p * 0.5)), p * 8), k % 2 ? k1 : k2, a); } }
+    }
+    // 🕳 블랙홀 (void): 맞는 순간까지 검은 구멍이 커지며 바깥 알갱이가 소용돌이치며 빨려 듦 → 꺼짐(0.05초) → 큰 폭발
+    if (S.extra === 'void') {
+      if (st < 0) { const q = clamp(t / it), R = base * (0.08 + 0.32 * q); for (let k = 0; k < 18; k++) { const u = ((k / 18) + q * 1.6) % 1, an = k * 2.4 + u * 5 * dir, r = base * 1.5 * (1 - u) + R; g.rect(Math.round(cx + Math.cos(an) * r), Math.round(cy + Math.sin(an) * r * 0.8), 2, 2).fill({ color: k % 3 ? k2 : 0xffffff, alpha: 0.4 + 0.6 * u }); } g.circle(cx, cy, R * 1.25).stroke({ width: 2, color: k1, alpha: 0.9 }); g.circle(cx, cy, R).fill({ color: 0x050208, alpha: 1 }); }
+      else if (st < 0.05) g.circle(cx, cy, 2).fill({ color: 0xffffff, alpha: 1 });
+      else if (st < 0.55) { const p = (st - 0.05) / 0.5, a = 1 - p; for (const [k, m] of [[0, 1], [1, 0.65]] as const) g.circle(cx, cy, base * (0.3 + 1.3 * ease(clamp(p - k * 0.12))) * m).stroke({ width: Math.max(1, 4 * a), color: k ? k2 : k1, alpha: a }); for (let k = 0; k < 16; k++) { const an = (k / 16) * Math.PI * 2, r1 = base * (0.5 + 1.1 * ease(p)) * (k % 2 ? 0.6 : 1); g.moveTo(cx, cy).lineTo(cx + Math.cos(an) * r1, cy + Math.sin(an) * r1).stroke({ width: k % 2 ? 1 : 2, color: k % 4 ? k2 : 0xffffff, alpha: a }); } }
+    }
+    // ❄ 얼음 파쇄 (shatter): 결정 6개가 몸 둘레에 돋아 자람 → 맞는 순간 쩍(금) → 조각이 사방으로
+    if (S.extra === 'shatter' || S.extra === 'spikes') {
+      const crys = (x: number, y: number, h: number, w: number, an: number, a: number) => { const ux = Math.cos(an), uy = Math.sin(an), px = -uy, py = ux; poly([x - px * w, y - py * w, x + ux * h, y + uy * h, x + px * w, y + py * w], k0, a); poly([x - px * w * 0.55, y - py * w * 0.55, x + ux * h * 0.92, y + uy * h * 0.92, x + px * w * 0.2, y + py * w * 0.2], k1, a); g.moveTo(x, y).lineTo(x + ux * h * 0.85, y + uy * h * 0.85).stroke({ width: 1, color: k2, alpha: a }); };
+      const gy = cy + o.h * 0.48;
+      const list: [number, number, number, number][] = S.extra === 'shatter' ? [0, 1, 2, 3, 4, 5].map((k) => { const an = -Math.PI / 2 + (k - 2.5) * 0.55; return [cx + Math.cos(an + Math.PI) * o.w * 0.15, cy + o.h * 0.25, an, o.h * (0.7 + (k % 2) * 0.25)]; })
+        : [0, 1, 2, 3, 4].map((k) => [cx - dir * o.w * (1.6 - k * 0.4), gy, -Math.PI / 2 + dir * 0.15 * (k - 2), o.h * (0.3 + k * 0.16)]);
+      list.forEach(([x, y, an, h], k) => {
+        const born = S.extra === 'shatter' ? k * 0.03 : k * (it / 5), q = clamp((t - born) / 0.12);
+        if (q <= 0) return;
+        if (st < 0.04 || (S.extra === 'spikes' && st < 0)) crys(x, y, h * ease(q), Math.max(3, o.w * (S.extra === 'shatter' ? 0.15 : 0.13)), an, 1);
+        else if (st >= 0.04 || S.extra === 'spikes') { const p = clamp((st - 0.04) / 0.45); if (p >= 1) return; for (let j = 0; j < 3; j++) { const a2 = an + (j - 1) * 0.9, v = base * (0.9 + j * 0.3), px = x + Math.cos(an) * h * 0.5 + Math.cos(a2) * v * p, py = y + Math.sin(an) * h * 0.5 + Math.sin(a2) * v * p + 90 * p * p; poly([px, py - 4, px + 3.5, py + 1, px - 3.5, py + 3], j % 2 ? k1 : k2, 1 - p); } }
+      });
+      if (st >= 0 && st < 0.06) for (const [dx, dy] of [[0.5, -0.5], [-0.45, 0.2], [0.15, 0.5], [-0.25, -0.45]] as const) g.moveTo(cx, cy).lineTo(cx + dx * o.w, cy + dy * o.h).stroke({ width: 1, color: 0xffffff, alpha: 1 });
     }
     // ✝ 빛 십자 (성검 · 창도)
     if ((S.extra === 'sword' || S.extra === 'lance') && fancy && !reduce && t >= it && t < it + 0.22) {

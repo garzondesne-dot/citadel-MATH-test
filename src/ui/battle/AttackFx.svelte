@@ -107,6 +107,8 @@
       {#each Array.from({ length: 9 }, (_, i) => i) as i (i)}<i class="drip" class:g={i % 3 === 1} style:left="{4 + i * 11 + ((i * 7) % 5)}%" style:--h="{34 + ((i * 37) % 80)}px" style:animation-delay="{((i * 13) % 7) * 0.09}s"><b></b></i>{/each}
       {#each Array.from({ length: 7 }, (_, i) => i) as i (i)}<i class="bub" class:g={i % 2 === 0} style:left="{6 + ((i * 41) % 86)}%" style:--s="{12 + ((i * 17) % 14)}px" style:animation-delay="{0.5 + ((i * 23) % 11) * 0.12}s"></i>{/each}
     </div>
+  {:else if kind === 'mirror'}
+    <i class="mshine"></i><i class="mshine b"></i>
   {:else if kind === 'wind'}
     <div class="gust"><i></i><i></i><i></i><i></i></div>
   {:else if kind === 'bind'}
@@ -150,7 +152,16 @@
   .gust i:nth-child(1) { top: 18%; } .gust i:nth-child(2) { top: 42%; animation-delay: 0.15s; } .gust i:nth-child(3) { top: 63%; animation-delay: 0.3s; } .gust i:nth-child(4) { top: 82%; animation-delay: 0.1s; }
   @keyframes streak { to { transform: translateX(360%); } }
   :global(.qwrap:has(.afx.mirror)) :global(.bcard :is(p, .qt, .q, .q1, .q2, .story)) { animation: mir var(--len, 2000ms) steps(1) 1; }
-  @keyframes mir { 0% { transform: none; } 8% { transform: scaleX(-1); } 92% { transform: scaleX(-1); } 100% { transform: none; } }
+  /* 🪞 거울 (b145 · 1차 😐): 글이 거울처럼 납작해졌다 뒤집혀 펴짐(0.16초) → 끝에 다시 돌아옴 · 은빛 반사광이 비스듬히 두 번 스침 */
+  @keyframes mir { 0% { transform: none; } 4% { transform: scaleX(0.05); } 8% { transform: scaleX(-1); } 92% { transform: scaleX(-1); } 96% { transform: scaleX(-0.05); } 100% { transform: none; } }
+  .mshine { position: absolute; inset: 0; border-radius: var(--r); overflow: hidden; pointer-events: none; }
+  .mshine::before { content: ''; position: absolute; top: -20%; bottom: -20%; width: 28%; left: -40%; transform: skewX(-20deg); background: linear-gradient(90deg, transparent, rgba(230, 240, 255, 0.55), rgba(255, 255, 255, 0.85), rgba(230, 240, 255, 0.55), transparent); animation: msw 0.45s ease-out 0.05s both; }
+  .mshine.b::before { width: 12%; animation-delay: calc(var(--len, 2000ms) * 0.9); }
+  @keyframes msw { from { left: -40%; } to { left: 120%; } }
+  /* 😡 분노 (b145 · 1차 😐): 테두리 붉음 + 카드 가장자리가 붉게 세 번 고동침 */
+  .afx.strong::after { content: ''; position: absolute; inset: 0; border-radius: var(--r); pointer-events: none; box-shadow: inset 0 0 0 2px var(--bad), inset 0 0 26px rgba(240, 70, 60, 0.55); animation: rpulse 0.42s ease-in-out 3; opacity: 0.25; }
+  @keyframes rpulse { 0%, 100% { opacity: 0.25; } 45% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .afx.strong::after { animation: none; opacity: 0.6; } .mshine::before { animation: none; display: none; } }
   :global(.qwrap:has(.afx.scale)) :global(.bcard) { transform-origin: 50% 100%; animation: tilt 1.6s ease-out; }
   @keyframes tilt { 15% { transform: rotate(-4deg); } 40% { transform: rotate(3deg); } 65% { transform: rotate(-1.5deg); } 85% { transform: rotate(0.6deg); } 100% { transform: none; } }
   .chains { position: absolute; inset: 0; pointer-events: auto; touch-action: none; border-radius: var(--r); background: rgba(8, 9, 12, 0.35); overflow: visible; }
