@@ -13,7 +13,7 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CORE_CACHE).then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('dgb-core-') && k !== CORE_CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('dgb-core-') && k !== CORE_CACHE) || k.startsWith('ds-') /* 🚀 출시: 옛 정식 앱 저장(ds-citadel-* · ds-assets)도 지움 */).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('message', (e) => { if (e.data === 'build?') e.source?.postMessage({ build: BUILD }); });
 

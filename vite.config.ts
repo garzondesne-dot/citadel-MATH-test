@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // 🔄 #134 ① 사이트의 판 번호 = version.json (src/build.ts BUILD 그대로) → 화면이 옛 판인지 BETA 알약이 확인
 const BUILD = /BUILD = '([^']+)'/.exec(readFileSync(new URL('./src/build.ts', import.meta.url), 'utf8'))?.[1] ?? '';
@@ -27,12 +28,15 @@ const htmlId = { name: 'html-id', transformIndexHtml(h: string) {
 
 // 📲 #38 베타 서비스 워커 = sw.js 를 빌드 때 만듦 (판 번호 · 이번 빌드 엔진 파일 목록을 넣어서)
 //   미리 저장(core) = index · manifest · 아이콘 · 첫 화면 그림 2장 · assets/ 의 js · css (글꼴 조각 · 그림 · 소리 · 배경음은 쓸 때 저장)
+//   🐞 (📜 2026-11-15 출시 리허설): CSS 만 있는 동적 import(classic.css)는 빌드 목록엔 빈 js 조각으로 잡혔다가 쓰기 전에 빠짐 → 그 이름이 미리 저장 목록에 들어가 설치가 실패 · 새 워커가 영영 안 켜짐
+//   → 파일을 다 쓴 뒤(writeBundle) 실제로 있는 파일만 목록에 넣음
 type Bundle = Record<string, { fileName: string }>;
-const swPlugin = { name: 'beta-sw', generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }, _o: unknown, bundle: Bundle) {
+const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bundle) {
+  const out = o.dir ?? 'dist', has = (f: string) => existsSync(join(out, f));
   const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
-    ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)];
+    ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)].filter((u) => u === './' || has(u.slice(2)));
   const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', BUILD).replace('__CORE__', JSON.stringify(core));
-  this.emitFile({ type: 'asset', fileName: 'sw.js', source: src });
+  writeFileSync(join(out, 'sw.js'), src);
 } };
 
 // base './' = Pages 하위 경로(/citadel-MATH-test/)에서도 그대로 열림
