@@ -22,7 +22,8 @@
   import PrepImg from '../q/PrepImg.svelte';
   import Ink from './Ink.svelte';
   import Arena from './Arena.svelte';
-  import { applyTheme, isTheme } from '../../theme/theme';
+  import { applyTheme, isTheme, type Theme } from '../../theme/theme';
+  import ThemePicker from '../ThemePicker.svelte';
   import { driveFun, endRest, funOf, GAMES, gamesOn, startFun, stopFun, tvBeat, type Game } from '../../rest/run';
   import TdTV from '../rest/TdTV.svelte';
   import { tvBgm, tvBgmNow } from './bgm';
@@ -48,10 +49,13 @@
   const beatT = untrack(() => (code ? setInterval(() => tvBeat(S, code), 3000) : 0)); if (code) untrack(() => tvBeat(S, code));
   onDestroy(() => clearInterval(beatT));
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
-  // 🎨 교실 TV = 선생님이 고른 테마의 색만 (#144 · 도트 테두리 · 바탕 그림 없음)
-  const tth = untrack(() => liveValue<string>(S, 'school/teacher/theme'));
-  onDestroy(tth.stop);
-  $effect(() => { const t = tth.v.val; if (isTheme(t)) applyTheme(t, { tv: true }); }); // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
+  // 🎨 교실 TV 테마 = 이 TV 에서 따로 고름 (📜 2026-11-14 선생님 「TV 화면에서도 테마 설정 바꿀 수 있게 · TV 화면이랑 교사 폰이랑 테마 별개로」) · 이 TV 에 기억 · 색만(도트 테두리 · 바탕 그림 없음)
+  const TVK = 'citadel-v1-tv-theme';
+  let tvTheme = $state<Theme>((() => { try { const t = localStorage.getItem(TVK); return isTheme(t) ? t : 'gold'; } catch { return 'gold'; } })());
+  let themeOpen = $state(false);
+  $effect(() => { applyTheme(tvTheme, { tv: true }); });
+  function pickTv(t: Theme) { tvTheme = t; try { localStorage.setItem(TVK, t); } catch { /* 무시 */ } themeOpen = false; }
+  // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
   const pupils = $derived(live ? roster(live.cls, S) : []);
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));
@@ -343,9 +347,11 @@
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
+    <button type="button" class="t" data-k="tvtheme" class:on={themeOpen} onclick={() => (themeOpen = !themeOpen)}>🎨<small>테마</small></button>
     <button type="button" class="t" class:on={pin} aria-pressed={pin} onclick={() => (pin = !pin)}>📌<small>고정</small></button>
     <button type="button" class="t" data-k="out" aria-label="처음 화면으로" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<small>처음</small></button>
   </nav>
+  {#if themeOpen}<div class="thov" role="dialog" aria-label="TV 테마"><div class="thbox"><div class="thh"><b>🎨 교실 TV 테마</b><small>이 TV 에만 · 교사 폰과 따로</small><button type="button" aria-label="닫기" onclick={() => (themeOpen = false)}>✕</button></div><ThemePicker now={tvTheme} feats={null} onpick={pickTv} /></div></div>{/if}
 
   {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} /></div></div>{/if}
 </div>
@@ -477,6 +483,9 @@
   .dock.small { scale: 0.7; transform-origin: right bottom; } /* 교사 캠프 리모컨 0.7배 (선생님) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }
   .dock button:disabled { opacity: 0.35; cursor: default; }
+  .thov { position: absolute; inset: 0; z-index: 60; background: rgba(5, 6, 10, 0.6); display: grid; place-items: center; }
+  .thbox { box-sizing: border-box; width: min(72cqw, 820px); max-height: 88cqh; overflow: auto; padding: 2.2cqh; border-radius: 2cqh; background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 1.6cqh; }
+  .thh { display: flex; align-items: baseline; gap: 12px; } .thh b { font-size: 20px; } .thh small { color: var(--text-2); font-size: 13px; } .thh button { margin-left: auto; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: 18px; }
   .dock .t { width: 7cqh; height: 7.6cqh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2cqh; padding: 0; }
   .dock .t small { font-size: var(--tv-small); color: #d6d9e0; }
   .dock .t.on { border: 2px solid var(--accent); }

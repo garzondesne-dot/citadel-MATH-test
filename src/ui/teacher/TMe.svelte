@@ -26,7 +26,7 @@
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   const info = $derived(heroOf(M.me.hero));
-  // 🎨 테마 (#144): 교사 폰 = 11개 모두 · 고르면 교실 TV 도 같은 색(school/teacher/theme · TV = 색만)
+  // 🎨 테마 (#144): 교사 폰 = 11개 모두 · 이 폰만 (📜 2026-11-14 교실 TV 는 TV 에서 따로)
   let theme = $state<Theme>(savedTheme());
   const themeName = $derived(THEMES.find((x) => x.id === theme)?.name ?? '');
   // 🔐 교사 로그인 (#163-① · 정식 그대로): 이메일 · 비번 · 처음 만든 비번 계정 = 교사(admins/{uid}) · 이 폰은 계속 로그인
@@ -37,7 +37,7 @@
   async function teacherOut() { const A = (S as AS).auth; if (!A) return; const fa = await import('firebase/auth'); await fa.signOut(A); location.reload(); }
   // 🚪 처음 화면 (📜 2026-11-13 밤): 로그인 정보만 지움(이 기기 테스트 · 체험 저장 그대로) → 첫 화면(학생 로그인 · 「교사 · 종합실 ›」)
   const toTitle = () => toTitle0(S);
-  function pickTheme(t: Theme) { theme = t; setTheme(t); S.set('school/teacher/theme', t); }
+  function pickTheme(t: Theme) { theme = t; setTheme(t); } // 📜 2026-11-14 TV 테마는 TV 에서 따로 (school/teacher/theme 안 씀)
 </script>
 
 <div class="tbar"><div class="t">나</div></div>
@@ -51,7 +51,7 @@
     <button type="button" class="item" onclick={() => (hero = true)}><span class="ic">🧙</span><span class="tx"><b>내 용사</b><small>용사 바꾸기 · 강화 · 스킬 (학생 폰과 같은 창)</small></span></button>
     <a class="item" href="?role=camp&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>학생 폰 캠프와 같은 화면 · 교실 TV 교사 캠프는 TV 에서</small></span></a>
     <button type="button" class="item" data-k="feat" onclick={() => (sheet = 'feat')}><span class="ic">⚙</span><span class="tx"><b>우리 학교 기능</b><small>{BUNDLES.find((b) => b.id === featCfg().bundle)?.ic} {BUNDLES.find((b) => b.id === featCfg().bundle)?.name} 묶음 · 켜고 끄기</small></span></button>
-    {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>교사 폰 · 교실 TV 색</small></span></button>{/if}
+    {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>이 교사 폰만 · 교실 TV 는 TV 「🎨 테마」</small></span></button>{/if}
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
     <a class="item" href="?role=atk&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" disabled><span class="ic">📷</span><span class="tx"><b>사진 채점 연결</b><small>테스트 판 · 준비 중</small></span></button>
