@@ -13,7 +13,14 @@
   const { L, R, code, onclose }: { L: LessonPack; R: Room; code: string; onclose: () => void } = $props();
   const PW = 390;
   let round = $state(0), reveal = $state(false), boxH = $state(0), boxW = $state(0);
-  const k = $derived(boxW ? Math.max(0.6, Math.min(boxW / PW, 3)) : 1), PH = $derived(boxH && k ? boxH / k : 844);
+  // 📐 한 화면 (📜 2026-11-14 「웬만하면 스크롤 안 되면 좋겠어」): 배율 = min(폭 배율, 높이 배율) · 문제 글자가 TV 에서 약 20px(학생 15px × 1.35) 아래로는 안 줄임 · 상태가 바뀔 때마다 다시 맞춤(0.5초마다 내용 높이를 잼)
+  let need = $state(0), qfs = $state(15), scr = $state<HTMLDivElement | null>(null);
+  // 문제 글(.q2) 하한 = 1080p TV 에서 20px · 작은 화면은 그 비율로 (1366 × 768 = 약 14px)
+  const tvH = () => (typeof window === 'undefined' ? 1080 : Math.min(window.innerHeight, (window.innerWidth * 9) / 16));
+  const K_MIN = $derived.by(() => { void boxH; return (20 * (tvH() / 1080)) / Math.max(10, qfs); });
+  const k = $derived.by(() => { if (!boxW) return 1; const kw = Math.min(boxW / PW, 3), kh = need && boxH ? boxH / need : kw; return Math.max(Math.min(kw, K_MIN), Math.min(kw, kh)); });
+  const PH = $derived(boxH && k ? boxH / k : 844);
+  $effect(() => { void tick; const el = scr; if (!el) return; const body = el.querySelector('section.body') as HTMLElement | null, act = el.querySelector('.act.dock') as HTMLElement | null; if (!body) return; const h = body.offsetTop + body.scrollHeight + 4; void act; /* 아래 단추 자리(spacer)는 body 안에 이미 있음 */ if (Math.abs(h - need) > 2) need = h; const q = el.querySelector('.q2, .qt') as HTMLElement | null; if (q) { const f = parseFloat(getComputedStyle(q).fontSize) || 15; if (f !== qfs) qfs = f; } });
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   // 판마다 다른 방 = 숫자가 바뀜 (seed = 방 코드) · 방을 먼저 만들고 나서 학생 화면을 띄움(접속 신호가 빈 방을 만들지 않게)
   //   실제 방 규칙 그대로(재도전 · 체력 기준 …) · 정찰만 끔 · 지금 단계로 바로
@@ -45,7 +52,7 @@
   <div class="box" bind:clientHeight={boxH} bind:clientWidth={boxW}>
     {#key dcode}
       <div class="phone" style:width="{PW}px" style:height="{PH}px" style:transform="scale({k})">
-        <div class="scr" data-k="demo-scr"><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
+        <div class="scr" data-k="demo-scr" bind:this={scr}><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
       </div>
     {/key}
   </div>
