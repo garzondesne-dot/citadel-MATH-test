@@ -7,6 +7,7 @@
   import { prepPath, prepPut } from '../../school/prep';
   import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
   import type { PdfDoc } from './pdfPages';
+  import { matchVideos, putVid, RTDB, vidPath } from '../../school/video';
   import { items, bossItem } from '../../engine/lessons';
   import { PACKS, UPLOADED, addPacks, removePack } from '../../engine/packs';
   import { SUBJ } from '../../engine/subject';
@@ -22,7 +23,7 @@
     attack: (a: string) => a in ATTACKS,
     builtIn: (id: string) => builtIn.has(id) || PACKS.some((p) => p.id === id),
   };
-  let failed = $state('');
+  let failed = $state(''), vidNote = $state('');
   let text = $state(''), name = $state(''), res = $state<Checked | null>(null), paste = $state(false), saved = $state('');
   let pick = $state(''), ver = $state(0);
   // 🖼 함께 고른 그림 (📜 2026-11-14 선생님 「그림도 팩 올릴 때 같이 올리게 해줘」): 파일 이름 = 칸 이름이면 그 칸 · 저장 = prep/{팩 id}/img/{칸}(같은 이름 = 덮어씀)
@@ -30,7 +31,10 @@
   let imgs = $state<Record<string, string>>({}), unused = $state<string[]>([]), media = $state<Issue[]>([]), vidOk = $state<Record<string, boolean>>({});
   const P0 = $derived(res?.pack ?? null);
   /** 그림을 같이 올리면 = 팩 자기 칸 그림을 씀(imgOf 빌리기 끔) */
-  const P = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return { ...rest, imgCells: [...new Set([...(P0.imgCells ?? []), ...Object.keys(imgs)])] } as LessonPack; }); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
+  const P1 = $derived.by((): LessonPack | null => { if (!P0) return null; if (!Object.keys(imgs).length) return P0; const { imgOf: _drop, ...rest } = P0; void _drop; return { ...rest, imgCells: [...new Set([...(P0.imgCells ?? []), ...Object.keys(imgs)])] } as LessonPack; });
+  // 🎬 zip 안 .mp4 (📜 2026-11-14 「전부 진행해」): 이름 끝맞춤 → 칸 · 미리 보기 = 이 기기 Blob 주소 · 저장 때 서버 prep/{팩}/vid/{이름} 로 올리고 rtdb: 주소로 바꿈
+  let zvids: { name: string; data: Uint8Array }[] = [], vmap = $state<Record<string, string>>({}), vblob = $state<Record<string, string>>({}), vunused = $state<string[]>([]);
+  const P = $derived.by((): LessonPack | null => { if (!P1) return null; if (!Object.keys(vmap).length) return P1; return { ...P1, videos: { ...(P1.videos ?? {}), ...Object.fromEntries(Object.entries(vmap).map(([c, n]) => [c, vblob[n]!])) } }; }); // 붙인 그림 칸 = 그림 칸 목록에 (팩에 img 목록이 없어도)
   const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
   // 미리 보기 칩 = 문제 · 형성평가 + 그림 · 영상이 붙은 도입 · 개념 칸 (학생 폰과 같은 자리)
@@ -46,8 +50,8 @@
   const answerOf = (q: Question): Given => (q.type === 'choice' ? q.answerIndex : q.type === 'ox' ? q.answer : q.type === 'number' ? q.answer : q.type === 'multi' ? q.answer : q.type === 'blanks' ? q.items.map((x) => x.answer) : q.type === 'text' ? q.answers[0] ?? '' : null);
   // 그림 · 영상 있는지 = 서버 그림 칸 · 앱 영상 파일 (없으면 ⚠ 한 줄 · 저장은 막지 않음)
   const hasImg = async (path: string) => { try { const x = S.fetch ? await S.fetch<string>(path) : S.get<string>(path); return typeof x === 'string' && x.startsWith('data:image'); } catch { return false; } };
-  const hasFile = async (url: string) => { try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
-  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; return matchImgs(); }
+  const hasFile = async (url: string) => { if (url.startsWith('blob:')) return true; try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); return r.ok && !/text\/html/.test(r.headers.get('content-type') || ''); } catch { return false; } };
+  function run(t: string, n: string) { text = t; name = n; saved = ''; res = checkUpload(t, look); pick = ''; ver = 0; fromPdf = {}; rects = {}; own = {}; pdfIss = []; pdfNote = ''; pdfDoc = null; matchVids(); return matchImgs(); }
   // 그림 · 영상 확인 다시 (팩 · 그림이 바뀔 때마다) — 붙인 그림 = 있음 · 영상 = 있는 파일만 연결
   let mseq = 0;
   async function recheckMedia() {
@@ -84,6 +88,15 @@
     fromFile = got; unused = m.unused;
     await combine();
   }
+  function matchVids() {
+    for (const u of Object.values(vblob)) URL.revokeObjectURL(u);
+    if (!P0 || !zvids.length) { vmap = {}; vblob = {}; vunused = []; return; }
+    const byUrl: Record<string, string[]> = {}; for (const [c, u] of Object.entries(P0.videos ?? {})) (byUrl[u] ??= []).push(c);
+    const files = Object.entries(byUrl).map(([u, at]) => ({ file: u.replace(/^.*\//, '').replace(/\.mp4$/i, ''), at }));
+    const m = matchVideos(zvids.map((v) => v.name), files, P0.steps.map((x) => x.id));
+    vblob = Object.fromEntries([...new Set(Object.values(m.map))].map((n) => [n, URL.createObjectURL(new Blob([zvids.find((v) => v.name === n)!.data as Uint8Array<ArrayBuffer>], { type: 'video/mp4' }))]));
+    vmap = m.map; vunused = m.unused;
+  }
   // ✂ 학습지 PDF → 칸마다 자동 자르기 (정식 수업 준비와 같은 글자 찾기 · 칸 = 팩 imgCells)
   async function cropPdf(bytes: Uint8Array, pdfName: string) {
     const Pk = P0; if (!Pk) return;
@@ -117,12 +130,13 @@
     const buf = new Uint8Array(await f.arrayBuffer());
     // zip = 이름 끝 .zip 또는 내용 첫 글자 「PK」 (폰 파일 고르기가 확장자를 떼는 때 · 🐞 2026-11-14)
     const isZip = /\.zip$/i.test(f.name) || (buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04);
-    if (!isZip) { run(new TextDecoder().decode(buf), f.name); return; }
+    if (!isZip) { zvids = []; run(new TextDecoder().decode(buf), f.name); return; }
     // 🗜 zip = 팩 .json 1개 + 칸 그림들 + 학습지 PDF (폴더 · 이름 접두어 상관없음 · 20MB 까지)
     const z = await unpackZip(buf);
     if (z.error || !z.json) { res = { pack: null, issues: [{ at: `zip ${f.name}`, msg: z.error ?? '팩이 없어요', lvl: 'err' }], stats: { mons: 0, items: 0, versions: 0, rechecked: 0, ask: 0 } }; name = f.name; return; }
+    zvids = z.videos;
     picked = z.images.map((x) => new File([x.data as Uint8Array<ArrayBuffer>], x.name, { type: /\.webp$/i.test(x.name) ? 'image/webp' : /\.png$/i.test(x.name) ? 'image/png' : 'image/jpeg' }));
-    await run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장${z.pdfs.length ? ` + 학습지 PDF ${z.pdfs.length}개` : ''}`);
+    await run(z.json, `${f.name} · ${z.name} + 그림 ${z.images.length}장${z.pdfs.length ? ` + 학습지 PDF ${z.pdfs.length}개` : ''}${z.videos.length ? ` + 영상 ${z.videos.length}편` : ''}`);
     // ✂ 언제나 한 줄: PDF 없음 · 여러 개 · 읽는 중 → 결과 (조용히 0장 금지)
     if (!z.pdfs.length) pdfNote = z.images.length ? '' : `✂ zip 안에 학습지 PDF 도 칸 그림도 없어요 (zip 안 파일: ${z.files.slice(0, 6).join(' · ')}${z.files.length > 6 ? ' …' : ''})`;
     else if (z.pdfs.length > 1) pdfNote = `✂ zip 안에 PDF 가 ${z.pdfs.length}개 (${z.pdfs.map((x) => x.name).join(' · ')}) — 학습지 PDF 는 1개만 · 자르지 않았어요`;
@@ -146,10 +160,17 @@
     if (v.videos) { for (const [k, u] of Object.entries(v.videos)) if (vidOk[u] === false) delete v.videos[k]; if (!Object.keys(v.videos).length) delete v.videos; }
     const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
     for (const [c, u] of Object.entries(imgs)) if (!(await put(prepPath(v, c), u))) { failed = `그림 「${c}」 를 저장하지 못했어요 · 교사 로그인 · 인터넷을 확인해요`; return; }
+    // 🎬 zip 영상 = 서버에 쪼개 올림(같은 이름 = 한 번) → 칸 주소 rtdb:
+    const upv: Record<string, string> = {};
+    for (const [c, n] of Object.entries(vmap)) {
+      if (!upv[n]) { const z = zvids.find((x) => x.name === n); if (!z) continue; saved = ''; failed = ''; vidNote = `🎬 영상 「${n}」 올리는 중…`; const pth = vidPath(v.id, n); if (!(await putVid(put, pth, z.data))) { vidNote = ''; failed = `영상 「${n}」 을 저장하지 못했어요 · 교사 로그인 · 인터넷을 확인해요`; return; } upv[n] = RTDB + pth; }
+      (v.videos ??= {})[c] = upv[n]!;
+    }
+    vidNote = '';
     const ok = await put(path, v); // 서버 = 실제로 써졌는지 확인(교사 로그인 · 규칙)
     if (!ok) { failed = '저장하지 못했어요 · 교사로 로그인했는지 · 인터넷을 확인해요'; return; }
     addPacks([revive(v)]); // 새로 고침 전에도 차시 목록에
-    saved = `${P.no}차시 ${P.title} 저장${Object.keys(imgs).length ? ` · 그림 ${Object.keys(imgs).length}칸` : ''} · 차시 목록에 들어갔어요`;
+    saved = `${P.no}차시 ${P.title} 저장${Object.keys(imgs).length ? ` · 그림 ${Object.keys(imgs).length}칸` : ''}${Object.keys(upv).length ? ` · 영상 ${Object.keys(upv).length}편` : ''} · 차시 목록에 들어갔어요`;
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.set('lesson', P.id); location.href = u.toString(); }, 900);
   }
 </script>
@@ -169,7 +190,7 @@
 
     {#if res}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}</p>
-      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}</p>{/if}
+      {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 빼고 저장` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}</p>{/if}
       {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
       {#if issues.length}<ul class="iss" data-k="packiss">{#each issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
       {#if P && stepsQ.length}
@@ -189,6 +210,7 @@
         <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
       {/if}
     {/if}
+    {#if vidNote}<p class="msum" role="status" data-k="vidnote">{vidNote}</p>{/if}
     {#if saved}<p class="ok" role="status">{saved}</p>{/if}{#if failed}<p class="fail" role="alert">{failed}</p>{/if}
   </div>
 </Sheet>
