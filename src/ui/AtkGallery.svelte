@@ -26,7 +26,7 @@
   let chain = $state(false), strong = $state(false), now = $state(''), tab = $state<'mon' | 'hero'>('mon');
   const KEY = 'citadel-v1-me';
   const readMe = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') as { hero?: number; enh?: number; socket?: Record<string, string> }; } catch { return {}; } };
-  let newfx = $state(false); $effect(() => setNewFx(newfx));
+  let newfx = $state(true); $effect(() => setNewFx(newfx ? 'auto' : false)); // 📜 2026-11-14 기본 = 게임과 같은 새 것 · 「옛 것」 = 비교
   // 🌙 쌍월 참 시제품 A · B · C (평가판 🧪 · 폰 = 구운 띠 · 📺 = TV 원본 ?newfx&twin=)
   let twin = $state<TwinV>(twinOf()); const pickTwin = (v: TwinV) => { setTwin(v); twin = v; };
   let hh = $state(Number(readMe().hero) || 0), enh = $state(Number(readMe().enh) || 0), sk = $state(readMe().socket?.[String(readMe().hero ?? 0)] ?? ladder(Number(readMe().hero) || 0)[0]!), ver = $state(0);
@@ -54,7 +54,7 @@
         <select aria-label="용사" value={hh} onchange={(e) => { const h = Number((e.currentTarget as HTMLSelectElement).value); look(h, enh, ladder(h)[0]!); }}>{#each HEROES as h (h.id)}<option value={h.id}>{h.id} {h.name} · {h.job}</option>{/each}</select>
         <select aria-label="강화" value={enh} onchange={(e) => look(hh, Number((e.currentTarget as HTMLSelectElement).value), sk)}>{#each Array.from({ length: 11 }, (_, i) => i) as i (i)}<option value={i}>+{i} 오라</option>{/each}</select>
       </div>
-      <div class="tabs2"><button type="button" class:on={!newfx} onclick={() => (newfx = false)}>지금 것</button><button type="button" class:on={newfx} data-new onclick={() => (newfx = true)}>✨ 새 것 (⚔ 베기 시제품)</button></div>
+      <div class="tabs2"><button type="button" class:on={!newfx} onclick={() => (newfx = false)}>옛 것 (비교)</button><button type="button" class:on={newfx} data-new onclick={() => (newfx = true)}>✨ 지금 게임 (새 것)</button></div>
       {#if newfx}<div class="tabs2 twin" role="group" aria-label="쌍월 참 시제품">{#each ['a', 'b', 'c'] as const as v (v)}<button type="button" class:on={twin === v} data-twin={v} onclick={() => pickTwin(v)}>🌙 쌍월 {v.toUpperCase()}</button>{/each}<a class="tvlink" href="?role=hall&mode=test&room=GTW&newfx&twin={twin}&demo=twin" target="_blank">📺 TV 모습</a></div>{/if}
       <div class="ids">{#each [...ladder(hh), 'wings', 'smite'] as k, i (k)}<button type="button" class="a" class:on={sk === k} data-sk={k} onclick={() => look(hh, enh, k)}>{i < 4 ? 'ⅠⅡⅢⅣ'[i] : '🪶'}<small>{k === 'wings' ? '황금 날개' : k === 'smite' ? '심판의 빛' : skillName(k)}</small></button>{/each}</div>
       <div class="ids">

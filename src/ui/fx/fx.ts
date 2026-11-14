@@ -29,11 +29,15 @@ export const tierOf = (k: string): number | 's' => { if (COMBO[k]) return 1; con
 // ⚔ 새 스킬 fx 시제품 (폰 = TV 원본을 구운 띠 · tools/fxbake/bake.cjs · fx-new.json): 켜면 그 스킬만 새 띠 · 지금은 ⚔ 베기 4개 · 선생님 채택 전엔 갤러리에서만 켬
 import { twinOf } from './twin';
 const NEW = NEWJ as unknown as { fx: Record<string, Spec>; bb: Record<string, number[]> };
-let useNew = false;
-export const setNewFx = (on: boolean) => { useNew = on; };
+// 📜 2026-11-14 선생님 「아직 용사 스킬이 예전 거네? 지금 옮겨 줘」 = 다시 만든 것은 만들면 바로 기본 (쌍월 참 A + 👎 다시 만든 스킬 NEW_SKILLS) · 👍 받은 옛 띠(베기 Ⅰ · 달빛 베기 Ⅱ 등)는 그대로
+//   mode: auto = 기본(채택한 것만 새 띠) · all = 시제품 모두(?newfx) · old = 옛 띠만(갤러리 「옛 것」 비교)
+import { NEW_SKILLS } from './twin';
+const ADOPTED = new Set(['twin', ...NEW_SKILLS]);
+let mode: 'auto' | 'all' | 'old' = 'auto';
+export const setNewFx = (on: boolean | 'auto') => { mode = on === 'auto' ? 'auto' : on ? 'all' : 'old'; };
 // 🌙 쌍월 참 시제품 (twin-a · b · c) = 갤러리 · TV ?twin= 이 고른 것 (slash.ts setTwin)
 const twinKey = (k: string) => (k === 'twin' && NEW.fx[`twin-${twinOf()}`] ? `twin-${twinOf()}` : k);
-export const isNewFx = (k: string) => useNew && !!NEW.fx[twinKey(k)];
+export const isNewFx = (k: string) => !!NEW.fx[twinKey(k)] && (mode === 'all' || (mode === 'auto' && ADOPTED.has(k)));
 export const spec = (k: string): Spec | null => (isNewFx(k) ? NEW.fx[twinKey(k)]! : FX2.fx[k] ?? (COMBO[k] ? FX2.fx[COMBO[k]!.base] ?? null : null));
 const url = (sp: Spec) => artUrl(`art/${sp.src}`);
 const imgs: Record<string, HTMLImageElement> = {};

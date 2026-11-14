@@ -77,9 +77,10 @@
   let fxLayer = $state<HTMLDivElement | null>(null), auraLayer = $state<HTMLDivElement | null>(null), hidden = $state<Record<string, boolean>>({});
   const ulSeen = new Set<string>(); let auraSig = '';
   // ⚔ 새 스킬 fx 시제품 (TV 만 · ?newfx 또는 이 기기 설정 · 지금은 ⚔ 베기 계열만 · 선생님 채택 전엔 기본 꺼짐)
-  const NEWFX0 = typeof location !== 'undefined' && (/[?&]newfx\b/.test(location.search) || (() => { try { return localStorage.getItem('citadel-newfx') === '1'; } catch { return false; } })());
+  const NEWFX0 = !(typeof location !== 'undefined' && /[?&]newfx=0\b/.test(location.search)); // 📜 2026-11-14 기본 켬 (채택한 새 것) · ?newfx=0 = 옛 띠
+  const NEWFX_ALL = typeof location !== 'undefined' && /[?&]newfx(?!=0)\b/.test(location.search); // ?newfx = 시제품 모두(베기 Ⅰ · Ⅱ 포함)
   let NEWFX = $state(NEWFX0);
-  const famIdOf = (k: string) => (['cut', 'moon', 'slash', 'twin'].includes(k) || NEW_SKILLS.includes(k) ? 'cut' : ''); // 🗡 👎 다시 만든 스킬(SKILLS)도 새 엔진
+  const famIdOf = (k: string) => ((NEWFX_ALL ? ['cut', 'moon', 'slash', 'twin'].includes(k) : k === 'twin') || NEW_SKILLS.includes(k) ? 'cut' : ''); // 🗡 👎 다시 만든 스킬(SKILLS)도 새 엔진
   const tierIdx = (k: string) => Math.max(0, ['cut', 'moon', 'slash', 'twin'].indexOf(k));
   setForce(true);
   function ultOf(u: string, fxk: string, hero: number): boolean {
@@ -110,7 +111,7 @@
     const ROWS: Record<Pose, number> = { idle: 0, walk: 1, attack: 2, win: 4, think: 10 };
     const pose = (q: Pose) => { if (art) art.style.backgroundPosition = `${q === 'attack' ? (2 / (HERO.cols - 1)) * 100 : 0}% ${(ROWS[q] / (HERO.rows - 1)) * 100}%`; };
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); domPop(h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
-    const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
+    const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
     void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
