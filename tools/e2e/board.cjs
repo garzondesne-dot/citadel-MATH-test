@@ -28,7 +28,7 @@ const log = (...a) => console.log(...a);
   log('⑫ 결과:', (await p.textContent('.bd .grade')).replace(/\s+/g, ' ').trim(), '|', (await p.textContent('.bd .stat')).replace(/\s+/g, ' ').trim(), '|', (await p.textContent('.bd .rw')).replace(/\s+/g, ' ').trim());
   if (!/클리어 ✕/.test(await p.textContent('.bd .grade'))) errs.push('클리어 ✕');
   await p.screenshot({ path: `${SHOTS}/b30-board-x.png` }); await over('결과');
-  const btn = await p.$$eval('.bd .act button', (xs) => xs.map((x) => x.textContent.trim()).join(' / ')); log('   단추:', btn);
+  const btn = await p.$$eval('.bd :is(.act, .endact) button', (xs) => xs.map((x) => x.textContent.trim()).join(' / ')); log('   단추:', btn); if (btn !== '🔥 한 번 더 / 📋 게시판으로') errs.push('끝 화면 단추 순서 (위 🔥 한 번 더 · 아래 📋 게시판으로 · 📜 2026-11-14)');
   await p.click('.bd .btn2'); await p.waitForSelector('.bd .empty');
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();

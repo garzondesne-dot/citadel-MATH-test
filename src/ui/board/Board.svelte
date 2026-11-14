@@ -114,7 +114,8 @@
       </div>
       <p class="why">벌은 없어요 · 한 번 더 = 숫자가 새로 바뀌어요</p>
     </div>
-    <BottomAction dock={false} text="🔥 한 번 더" onmain={() => { pick = res!.L; sheet = 'solo'; go(); }}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => (res = null)}>📋 게시판으로</button>{/snippet}</BottomAction>
+    <!-- 📜 2026-11-14 선생님 「게시판던전 마지막 한번더랑 게시판으로 위치 바꿔줘」 = 자리만 맞바꿈(🔥 한 번 더 = 위 · 금빛 그대로 / 📋 게시판으로 = 아래 맨 끝 · 테두리 단추 그대로) · 1인 · 팀 같은 화면 -->
+    <div class="endact" data-k="board-end"><button type="button" class="again" data-k="board-again" onclick={() => { pick = res!.L; sheet = 'solo'; go(); }}>🔥 한 번 더</button><button type="button" class="btn2 wide" data-k="board-back" onclick={() => (res = null)}>📋 게시판으로</button></div>
   {:else if mine && mine.phase === 'wait'}
     <!-- ⑧ 팀 대기실 -->
     {@const ms = membersOf(mine)}
@@ -206,6 +207,10 @@
   .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-3); text-align: center; }
   .empty span { font-size: 48px; } .empty b { font-size: 15px; color: var(--text-2); } .empty small { font-size: 13px; }
   .why { margin: 0; text-align: center; font-size: 13px; color: var(--text-3); }
+  .endact { flex: none; display: flex; flex-direction: column; gap: var(--s2); padding: var(--s2) var(--s4) calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .endact .btn2.wide { flex: none; }
+  .endact .again { box-sizing: border-box; width: 100%; height: var(--btn-h); border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 var(--btn-fs) var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
+  .endact .again:active { transform: translateY(2px); box-shadow: none; }
   .btn2 { min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .btn2.wide { flex: 1; }
   .btn2:disabled { color: var(--text-3); box-shadow: none; border-style: dashed; }
