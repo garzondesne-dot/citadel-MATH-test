@@ -114,7 +114,8 @@ export function compare(off, dst, opt = {}) {
   }
   for (const [path, v] of Object.entries(converted(off))) { const got = path.split('/').reduce((o, k) => (o == null ? o : o[k]), dst); if (!same(v, got)) bad.push(`바꿔 넣기 ${path}`); }
   const students = [];
-  for (const [c, ns] of Object.entries(off.accounts || {})) for (const n of Object.keys(ns || {})) {
+  for (const [c, ns] of Object.entries(off.accounts || {})) for (const [n, acc] of Object.entries(ns || {})) {
+    if (!acc) continue; // 배열 꼴 반 = [빈칸, 1번 …]
     const a = summary(off, c, n), b = summary(dst, c, n), diff = Object.keys(a).filter((k) => !same(a[k], b[k])).map((k) => `${k} ${a[k]} → ${b[k]}`);
     students.push({ c, n, ok: !diff.length, diff }); if (diff.length) bad.push(`학생 ${c}-${n}: ${diff.join(' · ')}`);
   }

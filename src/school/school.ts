@@ -29,7 +29,8 @@ export const maskName = (name: string) => { const a = [...String(name).trim()]; 
 export function roster(cls: string, S?: Store | null): Pupil[] {
   const ok = (v: unknown) => (v && typeof v === 'object' && Object.keys(v).length ? (v as Record<string, string>) : null);
   const up = ok(S?.get(`roster/${cls}`)) || ok(S?.get(`rosterMask/${cls}`)) || ok(S?.get(`school/roster/${cls}`));
-  if (up && Object.keys(up).length) return Object.entries(up).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
+  // 🚀 정식 기록 = 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, 1번, 2번 …]) → 빈칸 · 0번 뺌
+  if (up && Object.keys(up).length) return Object.entries(up).filter(([n, name]) => !!name && Number(n) > 0).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
   const k = CLASSES.indexOf(cls);
   return GIVEN.map((g, i) => ({ cls, num: i + 1, name: `${FAMILY[(i + k * 3) % FAMILY.length]}${g}`, uid: uidOf(cls, i + 1) }));
 }
