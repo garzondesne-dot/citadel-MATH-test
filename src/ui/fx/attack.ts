@@ -69,7 +69,7 @@ export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string
   await wait((shot && o.from ? Math.min(0.9, hit[0] || 0.3) : Math.min(0.3, hit[0] || 0.06)) * 1000);
   if (!scene.isConnected) return;
   o.onHit?.();
-  const lay = layerOn() && !o.ult && !o.cast, tN = Math.max(0, Number(tierOf(fx)) || 0); if (lay) overlay(scene, B, famOf(fx)?.id ?? 'cut', tN, !!scene.closest('.tv, .tvfx')); // ✨ 맞는 순간 겹 (시제품)
+  const lay = layerOn(fx) && !o.ult && !o.cast, t0 = tierOf(fx), tN = t0 === 's' ? 3 : Math.max(0, Number(t0) || 0); if (lay) overlay(scene, B, famOf(fx)?.id ?? 'cut', tN, !!scene.closest('.tv, .tvfx')); // ✨ 맞는 순간 겹 (👍 30)
   knock(monBox, o.finish ? 24 : 12); shake(scene, Math.max(2, hit[3] || 2) * (o.finish ? 2 : 1.2) * (lay && scene.closest('.tv, .tvfx') ? 1 + tN * 0.2 : 1), Math.max(0.14, hit[2] || 0.18) * (o.finish ? 2000 : 1000));
   if (!o.noDmg) dmg(scene, B.cx, B.y0 + 6);
   else if (o.prac) for (let k = 0; k < o.prac; k++) setTimeout(() => { if (scene.isConnected) dmg(scene, B.cx, B.y0 + 6, '🔥 +1', true); }, k * 90); // 🔥 한 판 더 맞힘 = 데미지 0 · 회색 흔적 (📜 2026-11-13 밤)

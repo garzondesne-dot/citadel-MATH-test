@@ -2,12 +2,15 @@
 //   맞는 칸 번쩍(계열 색 → 흰 점) · 계열 색 파편(불 = 불똥이 솟음 · 번개 = 지지직 · 얼음 = 조각 · 별 = 반짝 · 마법 = 빛 알갱이 · 나머지 = 네모 파편)
 //   Ⅲ · Ⅳ = 더 많이 · 잠깐 멈춤 더 길게(attack.ts) · Ⅳ = 충격파 고리 · TV = 계열 색 화면 물듦 + 흔들림 한 단계 더 · 폰 = 그림 겹만(물듦 · 흔들림 그대로)
 //   도트 = 낮은 해상도 캔버스(1/3) 를 nearest 로 키움 · 0.85초 뒤 지움 · 「동작 줄이기」 = 번쩍만
-//   시제품: 🔥 화염 폭발 하나로 「지금 ↔ 얹은 것」 평가 → 좋으면 30 모두 · 켜기 = ?layer=1 또는 setLayer(true)
+//   🔥 화염 폭발로 「지금 ↔ 얹은 것」 평가 👍(2026-11-14) → 👍 30 에 기본으로 켬 (LAYER_FX)
 import type { Body } from './fx';
 
-let on = (() => { try { const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('layer') : null; return q === '1' || (q == null && typeof localStorage !== 'undefined' && localStorage.getItem('citadel-layer') === '1'); } catch { return false; } })();
-export const setLayer = (v: boolean) => { on = v; try { localStorage.setItem('citadel-layer', v ? '1' : '0'); } catch { /* 무시 */ } };
-export const layerOn = () => on;
+/** 👍 받은 30 (📜 2026-11-14 선생님 평가판 「🔥 화염 폭발 · 지금 ↔ 겹」 👍 → 30 모두 · 평가판 h-* 👍 그대로) */
+export const LAYER_FX = new Set(['bash', 'chain', 'compass', 'crit', 'cut', 'cyclone', 'fire', 'flame', 'frost', 'gale', 'leaf', 'lightning', 'mana', 'meteor', 'moon', 'nova', 'orb', 'pillar', 'qed', 'ring', 'ruler', 'smite', 'spark', 'stars', 'sweep', 'thrust', 'thunder', 'upper', 'venn', 'wings']);
+// 켜기 = 기본 👍 30 · ?layer=1 = 모든 스킬(비교용) · ?layer=0 = 끔(비교용 · 이 기기 기억)
+let mode: 'all' | 'none' | 'up' = (() => { try { const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('layer') : null, v = q ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('citadel-layer') : null); return v === '1' ? 'all' : v === '0' ? 'none' : 'up'; } catch { return 'up'; } })();
+export const setLayer = (v: boolean | null) => { mode = v == null ? 'up' : v ? 'all' : 'none'; try { if (v == null) localStorage.removeItem('citadel-layer'); else localStorage.setItem('citadel-layer', v ? '1' : '0'); } catch { /* 무시 */ } };
+export const layerOn = (fx: string) => mode === 'all' || (mode === 'up' && LAYER_FX.has(fx));
 
 /** 계열 색 [어두운 · 가운데 · 밝은] + 파편 모양 */
 const PAL: Record<string, { c: [string, string, string]; k: 'ember' | 'zap' | 'shard' | 'star' | 'mote' | 'chip' }> = {
@@ -30,7 +33,7 @@ const reduce = () => typeof matchMedia === 'function' && matchMedia('(prefers-re
 const PX = 3;
 /** 맞는 순간 겹 그리기 · tier = 0~3(Ⅰ~Ⅳ) · tv = 화면 물듦 */
 export function overlay(scene: HTMLElement, B: Body, fam: string, tier: number, tv: boolean) {
-  if (!on || !scene.isConnected) return;
+  if (!scene.isConnected) return;
   const P = PAL[fam] ?? PAL.cut!, red = reduce();
   const size = Math.max(B.w, B.h) * (1.9 + tier * 0.25), W = Math.ceil(size / PX), H = W;
   const cv = document.createElement('canvas'); cv.className = 'fx-layer'; cv.width = W; cv.height = H;
