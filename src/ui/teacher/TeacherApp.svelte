@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { BETA } from '../../channel';
   import { HALLKEY } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import { setTeacherSink } from '../../store/me.svelte';
@@ -94,7 +95,7 @@
 {#if loginAsk}
   <Sheet onclose={() => (loginAsk = false)} mainText="🔐 교사 로그인하러" onmain={() => { loginAsk = false; loginGo = true; tab = 'me'; }}>
     {#snippet title()}🔐 교사 로그인이 필요해요{/snippet}
-    <p class="lq" data-k="need-login">시험 서버에 수업 방을 만들려면 이 폰이 교사로 로그인되어 있어야 해요<br /><small>「나」 탭 → 🔐 교사 로그인 → 다시 「▶ 수업 열기」</small></p>
+    <p class="lq" data-k="need-login">{BETA ? '시험 서버' : '서버'}에 수업 방을 만들려면 이 폰이 교사로 로그인되어 있어야 해요<br /><small>「나」 탭 → 🔐 교사 로그인 → 다시 「▶ 수업 열기」</small></p>
   </Sheet>
 {/if}
 

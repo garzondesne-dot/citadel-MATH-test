@@ -16,6 +16,7 @@
   import type { Where } from './store/config';
   import { bindMe } from './store/meSync';
   import { BUILD } from './build';
+  import { BETA, TEST_ADDR } from './channel';
   import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
@@ -80,7 +81,8 @@
   const joinCode = (q.get('join') || '').trim();
   if (joinCode && !role && untrack(() => login)) location.replace(`?role=student&room=${encodeURIComponent(joinCode)}`);
   // 시험 · 두 탭 체험: ?as=1-3:5 = 그 반 · 번호 학생으로 (로그인 없이)
-  const asP = (() => { const m = /^(\d-\d):(\d+)$/.exec(q.get('as') || ''); return m ? pupil(m[1] as string, Number(m[2]), S) : null; })();
+  const asP = (() => { const m = TEST_ADDR ? /^(\d-\d):(\d+)$/.exec(q.get('as') || '') : null; // 🧪 ?as = 시험 주소만 (출시 막는 것 9)
+    return m ? pupil(m[1] as string, Number(m[2]), S) : null; })();
   const me = untrack(() => (role === 'student' ? asP ? { uid: asP.uid, num: asP.num, nick: asP.name, cls: asP.cls } : (login && !q.get('tab') ? { uid: login.uid, num: login.num, nick: login.name, cls: login.cls } : { ...tabId(), nick: '', cls: '' }) : null));
   // 학생 캠프 = 내 반에 열린 수업 (없으면 닫힌 문)
   const lvApp = liveValue<Live>(S, 'school/live');
@@ -112,7 +114,7 @@
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">BETA · {BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">BETA · {BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)</div>{/if}
+{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} aria-label="테스트 버전 {BUILD}{site ? ' · 최신' : ''}">{BETA ? 'BETA · ' : '판 '}{BUILD}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
 {#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}
@@ -122,18 +124,18 @@
   {:else if role === 'camp'}
     <Camp {S} L={lessonOf(code)} {code} />
   {:else if role === 'teacher'}
-    <TeacherApp {S} packs={q.get('packs') === '0' ? [] : PACKS} />
+    <TeacherApp {S} packs={TEST_ADDR && q.get('packs') === '0' ? [] : PACKS} />
   {:else if role === 'student' && me}
     <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
   {:else if !role && login}
     {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
     <Title {S} onin={(p, joined) => { if (joined) { try { sessionStorage.setItem('citadel-hero0', '1'); } catch { /* 무시 */ } } bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
-  {:else if role === 'fxbake'}
+  {:else if role === 'fxbake' && TEST_ADDR}
     {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
   {:else if role === 'atk'}
     <AtkGallery />
-  {:else if role === 'dev'}
+  {:else if role === 'dev' && TEST_ADDR}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
       <p>{DEF.no}차시 {DEF.title} · 같은 브라우저에서 탭 두 개</p>

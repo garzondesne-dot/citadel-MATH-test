@@ -1,6 +1,7 @@
 import type { FirebaseOptions } from 'firebase/app';
 import type { Store } from '../model/types';
 import { deviceStore } from './device';
+import { BETA, TEST_ADDR } from '../channel';
 
 // 🔌 「어느 서버」 설정 하나 (#137 · V1-DESIGN 7절 · L0 ④) — 값은 코드에 박지 않고 사이트의 server.json 한 곳
 //   server.json = { "mode": "device" }                                   ← 이 기기(두 탭 시험 · 기본)
@@ -21,7 +22,8 @@ export function isForbidden(f: FirebaseOptions | undefined): boolean {
 
 export async function chooseStore(): Promise<{ S: Store; where: Where }> {
   const q = new URLSearchParams(location.search);
-  try { const e = q.get('emu'); if (e === 'off') localStorage.removeItem(EMU_KEY); else if (e) localStorage.setItem(EMU_KEY, e); } catch { /* 저장 막힘 */ }
+  if (!TEST_ADDR) { try { localStorage.removeItem(EMU_KEY); } catch { /* 무시 */ } } // 🧪 출시 막는 것 9: 에뮬레이터 = 시험 주소(내 컴퓨터)만
+  else try { const e = q.get('emu'); if (e === 'off') localStorage.removeItem(EMU_KEY); else if (e) localStorage.setItem(EMU_KEY, e); } catch { /* 저장 막힘 */ }
   let emu: string | null = null;
   try { emu = localStorage.getItem(EMU_KEY); } catch { /* 무시 */ }
   let cfg: ServerJson = { mode: 'device' };
@@ -36,7 +38,7 @@ export async function chooseStore(): Promise<{ S: Store; where: Where }> {
   if (cfg.mode === 'server' && cfg.firebase) {
     if (isForbidden(cfg.firebase)) return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `운영 서버(${cfg.firebase.projectId}) 설정이라 연결하지 않았어요 · server.json 을 시험 프로젝트로 바꿔 주세요` } };
     const { serverStore } = await import('./server');
-    try { const S = await serverStore({ firebase: cfg.firebase }); return { S, where: { kind: 'server', label: '🔌 시험 서버' } }; }
+    try { const S = await serverStore({ firebase: cfg.firebase }); return { S, where: { kind: 'server', label: BETA ? '🔌 시험 서버' : '☁ 서버' } }; }
     catch (e) { return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `시험 서버에 닿지 못했어요 (${(e as Error).message})` } }; }
   }
   return { S: deviceStore(), where: { kind: 'device', label: '이 기기' } };

@@ -1,3 +1,4 @@
+import { TEST_ADDR } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
 import { mount } from 'svelte';
 import App from './App.svelte';
 import { applyTheme, savedTheme } from './theme/theme';
@@ -21,7 +22,7 @@ void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void })
   addPacks(await loadUploaded(S)); await loadVids(S, PACKS); // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
   addCastles(await loadCastles(S)); // 🏰 올린 성채 팩 (prep/addons/castle · 📜 2026-11-14)
   // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
-  { const m = /^(\d-\d):(\d+)$/.exec(new URLSearchParams(location.search).get('as') || ''); if (m && where.kind === 'emulator') { const { emuAsLogin } = await import('./school/school'); const e = await emuAsLogin(S, m[1]!, Number(m[2])); if (e) console.warn('?as 로그인', e); } } // 🧪 에뮬레이터 ?as = 진짜 로그인 (📜 2026-11-14 규칙 학생 칸 주인)
+  { const m = /^(\d-\d):(\d+)$/.exec(new URLSearchParams(location.search).get('as') || ''); if (m && where.kind === 'emulator' && TEST_ADDR) { const { emuAsLogin } = await import('./school/school'); const e = await emuAsLogin(S, m[1]!, Number(m[2])); if (e) console.warn('?as 로그인', e); } } // 🧪 에뮬레이터 ?as = 진짜 로그인 (📜 2026-11-14 규칙 학생 칸 주인)
   mount(App, { target, props: { S, where } });
   requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.()); // ⏳ 첫 화면(index.html) 지움 = 앱이 그려진 다음 프레임
 });
