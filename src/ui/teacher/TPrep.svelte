@@ -12,6 +12,7 @@
   import PdfFill from './PdfFill.svelte';
   import VidList from './VidList.svelte';
   import { prepImg } from '../../school/prep';
+  import { UPLOADED } from '../../engine/packs';
 
   // 📋 준비 탭 (#124 ⑰ · 스크롤 A) — 위 고정 = 차시 ▾ + [차시 준비 · 시간표 · 도구] · 가운데만 넘김 · 아래 금빛 「🧪 n차시 테스트 해 보기」(68 · 같은 자리)
   //   차시 준비 = 기본값 네 칸(체력 기준 · 재도전 · 생각 시간 · 정찰 · 누르면 바꾸기 → 그 차시 수업을 열 때 방에 옮겨 적음) · 학습지 PDF · 영상 · 단계별 그림 n/m
@@ -21,6 +22,14 @@
   const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id || p.no === l.no));
   const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
   let upOpen = $state(false); // 📦 차시 팩 올리기 (L1)
+  let expNote = $state(''), expBusy = $state(false); // 📦 차시 팩 내려받기 (📜 2026-11-14)
+  $effect(() => { void L; untrack(() => (expNote = '')); });
+  async function exportZip(Lx: LessonPack) {
+    expBusy = true; expNote = '📦 묶는 중… (그림 · 영상을 받아요)';
+    try { const { exportPack } = await import('../../school/packExport'); const r = await exportPack(S, Lx, !UPLOADED.has(Lx.id), Date.now()); const u = URL.createObjectURL(new File([r.bytes as Uint8Array<ArrayBuffer>], r.name, { type: 'application/zip' })); const a = document.createElement('a'); a.href = u; a.download = r.name; a.rel = 'noopener'; a.style.display = 'none'; document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(u); }, 30000); expNote = r.note; }
+    catch (e) { expNote = `📦 묶지 못했어요 — ${(e as Error)?.message || String(e)}`; }
+    expBusy = false;
+  }
   let fillOpen = $state(false), vidOpen = $state(false), imgVer = $state(0); // 📄 학습지 PDF 넣기 · 🎬 영상 목록 (📜 2026-11-14 「전부 진행해」)
   let lid = $state(untrack(() => want || packs[0]?.id || ''));
   const L = $derived(packs.find((p) => p.id === lid) ?? null);
@@ -61,6 +70,7 @@
     <div class="four">{#each Object.keys(STEP) as k (k)}{@const kk = k as keyof Prep}<button type="button" onclick={() => (edit = kk)}><small>{STEP[kk][4]}</small><b>{prep[kk]}{STEP[kk][3]}</b></button>{/each}</div>
     <button type="button" class="item" data-k="pdffill-go" onclick={() => (fillOpen = true)}><span class="ic">📄</span><span class="tx"><b>학습지 · 영상 한 번에 넣기 (PDF · zip)</b><small>PDF = 칸마다 잘라 그림 · zip = PDF + 칸 그림 + 영상</small></span></button>
     <button type="button" class="item" data-k="vid-go" disabled={!nv} onclick={() => (vidOpen = true)}><span class="ic">🎬</span><span class="tx"><b>영상 {nv}편</b><small>{nv ? `칸 ${Object.keys(L.videos || {}).length}곳 · 누르면 칸별 목록 · 재생` : '연결된 영상 없음'}</small></span></button>
+    <button type="button" class="item" data-k="pack-dl" disabled={expBusy} onclick={() => L && exportZip(L)}><span class="ic">📦</span><span class="tx"><b>이 차시 팩 내려받기 (zip)</b><small>{expNote || '팩 JSON + 칸 그림 + 영상 · 「차시 팩 올리기」에 그대로 다시 올릴 수 있어요'}</small></span></button>
     <p class="lab" data-k="stepimgs">단계별 그림 {L.steps.filter((s) => !s.later && hasImg[s.id]).length} / {L.steps.filter((s) => !s.later).length}</p>
     <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st" class:has={!!hasImg[s.id]}>{#if hasImg[s.id]}<img class="th" src={hasImg[s.id]} alt="" />{:else}<i>⚠</i>{/if}<b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>{hasImg[s.id] ? '✔ 있음' : '넣기 ›'}</em></div>{/each}</div>
   {:else if seg === 'week' && feat('schedule')}
