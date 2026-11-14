@@ -6,6 +6,7 @@
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
   import HeroIntro from './HeroIntro.svelte';
+  import SkillPreview from './SkillPreview.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
@@ -51,7 +52,7 @@
   }
   // ── ⚔ 스킬 ── (정식 #98 · #96: 다음 칸만 · 고른 칸을 다시 누르면 그 칸부터 아래 고름 취소)
   let prev = $state<{ id: string; tier: number; n: number } | null>(null), prevT: ReturnType<typeof setTimeout> | null = null;
-  function preview(id: string, tier: number) { prev = { id, tier, n: (prev?.n ?? 0) + 1 }; if (prevT) clearTimeout(prevT); prevT = setTimeout(() => (prev = null), 1600); }
+  function preview(id: string, tier: number) { prev = { id, tier, n: (prev?.n ?? 0) + 1 }; if (prevT) clearTimeout(prevT); }
   type SkState = 'equip' | 'own' | 'pick' | 'buy' | 'lock';
   const skState = (id: string, i: number): { st: SkState; sub: string } => {
     const g = SKILL_PRICE[id], s = SKILL_SCROLL[id] ?? 0, price = g != null ? `💎 ${g}${s ? ` · 📜 ${s}` : ''}` : '';
@@ -157,11 +158,7 @@
       </div>
     {:else if tab === 'sk'}
       {#if tip96}<p class="tip">이제 용사마다 자기 속성 스킬만 · 다른 속성은 그 용사로</p>{/if}
-      {#if prev}
-        {#key prev.n}
-          <div class="prev" role="status"><HeroSprite id={look.hero} row={2} play aura={lv} /><span><b>{skillName(prev.id)}</b><small>{verdict(prev.tier)}</small></span></div>
-        {/key}
-      {/if}
+      <SkillPreview hero={look.hero} enh={lv} fx={prev?.id ?? eq} n={prev?.n ?? 0} name={prev ? skillName(prev.id) : ''} sub={prev ? verdict(prev.tier) : ''} />
       <p class="lab">{fam.name} · 위 Ⅰ → 아래 Ⅳ</p>
       <div class="lad">
         {#each lad as id, i (id)}
