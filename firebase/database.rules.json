@@ -1,40 +1,45 @@
 {
   "rules": {
     ".write": "auth != null && auth.uid === 'COPY_TOOL_UID'",
-    "admins": {
-      ".read": "auth != null",
-      "$uid": { ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password' && !root.child('admins').exists() && newData.val() === true" }
-    },
-    "secrets": {
-      "$code": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" }
-    },
-    "hostKeys": {
-      "$code": { "$uid": { ".read": false, ".write": "auth != null && auth.uid === $uid && (newData.val() === root.child('secrets/' + $code + '/hallKey').val() || !newData.exists())" } }
-    },
+    "admins": { ".read": "auth != null", "$uid": { ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password' && !root.child('admins').exists() && newData.val() === true" } },
+    "secrets": { "$code": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" } },
+    "hostKeys": { "$code": { "$uid": { ".read": false, ".write": "auth != null && auth.uid === $uid && (newData.val() === root.child('secrets/' + $code + '/hallKey').val() || !newData.exists())" } }},
     "rooms": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
       "$code": {
         ".read": "auth != null",
-        ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (root.child('rooms/' + $code + '/hosts/' + auth.uid).val() === true && root.child('hostKeys/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code + '/hallKey').val()) || $code.beginsWith('T'))",
+        ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (root.child('rooms/' + $code + '/hosts/' + auth.uid).val() === true && root.child('hostKeys/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code + '/hallKey').val()) || ($code.beginsWith('T') && !data.exists()))",
         "hosts": { "$uid": { ".write": "auth != null && auth.uid === $uid && ((newData.val() === true && root.child('hostKeys/' + $code + '/' + auth.uid).val() === root.child('secrets/' + $code + '/hallKey').val()) || !newData.exists())" } },
-        "players": { ".write": "auth != null" },
-        "hits": { ".write": "auth != null" },
-        "subs": { ".write": "auth != null" },
-        "chain": { ".write": "auth != null" },
-        "chainOk": { ".write": "auth != null" },
-        "bossTry": { ".write": "auth != null" },
-        "heals": { ".write": "auth != null" },
-        "ready": { ".write": "auth != null" },
-        "help": { ".write": "auth != null" },
-        "bh": { ".write": "auth != null" },
-        "bdrv": { ".write": "auth != null" },
-        "fv": { ".write": "auth != null" },
-        "nun": { ".write": "auth != null" },
-        "nunE": { ".write": "auth != null" },
-        "tdp": { ".write": "auth != null" },
-        "tdt": { ".write": "auth != null" },
-        "tdm": { ".write": "auth != null" },
-        "tdu": { ".write": "auth != null" }
+        "players": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "hits": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "subs": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "chain": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "chainOk": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "bossTry": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "heals": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "ready": { "$id": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "help": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "bh": {
+          "$to": {
+            "$key": { ".write": "auth != null && ((newData.exists() && root.child('pids/' + newData.child('from').val() + '/u').val() === auth.uid) || (!newData.exists() && root.child('pids/' + data.child('from').val() + '/u').val() === auth.uid))" }
+          }
+        },
+        "bdrv": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "fv": { "$rk": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "nun": { "$g": { "$rd": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }} },
+        "nunE": { "$g": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "tdp": { "$g": { "$no": { ".write": "auth != null && !data.exists() && root.child('pids/' + newData.val() + '/u').val() === auth.uid" } }},
+        "tdt": { "$g": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "tdm": { "$g": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "tdu": { "$g": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
+        "state": { ".write": "auth != null && $code.beginsWith('T')" },
+        "meta": { ".write": "auth != null && $code.beginsWith('T')" },
+        "fun": { ".write": "auth != null && $code.beginsWith('T')" },
+        "absent": { ".write": "auth != null && $code.beginsWith('T')" },
+        "unlock": { ".write": "auth != null && $code.beginsWith('T')" },
+        "k": { ".write": "auth != null && $code.beginsWith('T')" },
+        "tvAt": { ".write": "auth != null && $code.beginsWith('T')" },
+        "bossSub": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }
       }
     },
     "school": {
@@ -47,9 +52,7 @@
             ".write": "auth != null && (!data.exists() || !newData.exists())",
             "code": { ".write": "auth != null" },
             "phase": { ".write": "auth != null" },
-            "mem": {
-              "$uid": { ".write": "auth != null && (data.exists() || !newData.exists() || !root.child('boardLock/' + $pid).exists() || newData.child('k').val() === root.child('boardLock/' + $pid + '/h').val())" }
-            }
+            "mem": { "$uid": { ".write": "auth != null && (data.exists() || !newData.exists() || !root.child('boardLock/' + $pid).exists() || newData.child('k').val() === root.child('boardLock/' + $pid + '/h').val())" } }
           }
         }
       },
@@ -58,58 +61,56 @@
       "funStats": { ".write": "auth != null" },
       "survey": { ".write": "auth != null" }
     },
-    "prep": { ".read": "auth != null",
+    "prep": {
+      ".read": "auth != null",
       "$lesson": { ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
-      "packs": { "$id": { ".write": "auth != null && root.child('admins/' + auth.uid).val() === true && (newData.exists() || !$id.matches(/^set-[0-9]+$/))" } } },
-    "boardLock": {
-      ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$pid": { ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).val() === true)" }
+      "packs": { "$id": { ".write": "auth != null && root.child('admins/' + auth.uid).val() === true && (newData.exists() || !$id.matches(/^set-[0-9]+$/))" } }
     },
-    "gifts": { ".read": "auth != null", ".write": "auth != null" },
-    "mail": { ".read": "auth != null", ".write": "auth != null" },
-    "roster": {
-      ".read": "auth != null && (root.child('admins/' + auth.uid).val() === true || auth.token.firebase.sign_in_provider === 'password')",
-      ".write": "auth != null && root.child('admins/' + auth.uid).val() === true"
-    },
+    "boardLock": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", "$pid": { ".write": "auth != null && (!data.exists() || root.child('admins/' + auth.uid).val() === true)" } },
+    "gifts": { ".read": "auth != null", "$pid": { ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || root.child('pids/' + $pid + '/u').val() === auth.uid)" } },
+    "mail": { ".read": "auth != null", "$pid": { ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || root.child('pids/' + $pid + '/u').val() === auth.uid)" } },
+    "roster": { ".read": "auth != null && (root.child('admins/' + auth.uid).val() === true || auth.token.firebase.sign_in_provider === 'password')", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
     "rosterMask": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
     "tester": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
     "accounts": {
       ".read": "auth != null",
       "$cls": {
-        "$num": {
-          ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (newData.child('uid').val() === auth.uid && (!data.exists() || data.child('reset').val() === true || data.child('uid').val() === auth.uid)))"
-        }
+        "$num": { ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (newData.child('uid').val() === auth.uid && (!data.exists() || data.child('reset').val() === true || data.child('uid').val() === auth.uid)))" }
       }
     },
     "gem": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$cls": { "$num": {
-        ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
-        ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } }
+      "$cls": {
+        "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
+      }
     },
     "xp": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$cls": { "$num": {
-        ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
-        ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } }
+      "$cls": {
+        "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
+      }
     },
     "cards": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$cls": { "$num": {
-        ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
-        ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } }
+      "$cls": {
+        "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
+      }
     },
     "records": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$cls": { "$num": {
-        ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
-        ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } }
+      "$cls": {
+        "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
+      }
     },
     "bonus": {
       ".read": "auth != null && root.child('admins/' + auth.uid).val() === true",
-      "$cls": { "$num": {
-        ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
-        ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } }
+      "$cls": {
+        "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
+      }
+    },
+    "pids": {
+      ".read": "auth != null",
+      "$pid": { ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (newData.child('u').val() === auth.uid && $pid === 's' + newData.child('c').val().replace('-', '_') + '_' + newData.child('n').val() && root.child('accounts/' + newData.child('c').val() + '/' + newData.child('n').val() + '/uid').val() === auth.uid))" }
     }
   }
 }

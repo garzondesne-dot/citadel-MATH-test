@@ -27,6 +27,9 @@ describe.skipIf(!up)('시험 서버 · 동시에 30명 (#137)', () => {
     const mid = 'm1';
     const kids: Store[] = await Promise.all(Array.from({ length: 30 }, () => mk()));
     await until(() => kids.every((k) => !!getRoom(k, code)));
+    // 🔐 학생 칸 주인 표시 (📜 2026-11-14 규칙 · 학생 칸 = 그 로그인만) — 시험이라 owner 로 한꺼번에
+    await until(() => kids.every((k) => !!(k as unknown as { auth: { currentUser: { uid: string } | null } }).auth.currentUser));
+    await fetch(`http://127.0.0.1:9000/pids.json?ns=${NS}`, { method: 'PATCH', headers: { Authorization: 'Bearer owner' }, body: JSON.stringify(Object.fromEntries(kids.map((k, i) => [`s1_3_${i + 1}`, { u: (k as unknown as { auth: { currentUser: { uid: string } } }).auth.currentUser.uid, c: '1-3', n: String(i + 1) }]))) });
     kids.forEach((k, i) => heartbeat(k, code, `s1_3_${i + 1}`, i + 1, `학생${i + 1}`, { cls: '1-3' }));
     await until(() => Object.keys(getRoom(teacher, code)?.players || {}).length === 30);
     // 같은 순간 정답 제출 (각자 자기 칸만 씀)

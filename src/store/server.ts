@@ -1,6 +1,6 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
 import { connectDatabaseEmulator, get as fbGet, getDatabase, onValue, ref, set as fbSet, type Database } from 'firebase/database';
-import { connectAuthEmulator, getAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
@@ -31,7 +31,9 @@ export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: stri
 const within = <T>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<void>((r) => setTimeout(r, ms))]);
 export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const app = initializeApp(o.firebase, o.name ?? 'citadel'); // #141: 이름이 늘 같아야 새로 고침 뒤에도 그 학생 로그인이 남음
-  const db = getDatabase(app), auth = getAuth(app);
+  // 🧪 에뮬레이터 + ?as = 탭마다 따로 로그인(한 브라우저에 학생 여럿 · 규칙 학생 칸 주인 시험) · 그 밖 = 기억하는 로그인
+  const tabAuth = !!o.emulator && typeof location !== 'undefined' && !!new URLSearchParams(location.search).get('as');
+  const db = getDatabase(app), auth = tabAuth ? initializeAuth(app, { persistence: inMemoryPersistence }) : getAuth(app);
   if (o.emulator) { connectDatabaseEmulator(db, o.emulator.host, o.emulator.db); connectAuthEmulator(auth, `http://${o.emulator.host}:${o.emulator.auth}`, { disableWarnings: true }); }
   // 로그인 (규칙 = 로그인한 사람만) — 이미 계정으로 들어와 있으면 그대로
   await within(new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), (e) => { console.error('시험 서버 로그인 실패', e); res(); }); }); }), 8000);

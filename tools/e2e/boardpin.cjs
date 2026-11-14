@@ -15,10 +15,11 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     await p.waitForSelector('select'); await p.selectOption('select >> nth=0', cls); await p.waitForTimeout(200); await p.selectOption('select >> nth=1', String(num)); await p.waitForTimeout(200);
     await p.click('.links button:has-text("가입")'); await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.waitForTimeout(150); if (await p.$('.pad')) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
-    await p.click('.title .pmain'); await p.waitForTimeout(2500);
+    await p.click('.title .pmain'); await p.waitForTimeout(2500); if (await p.$('text=첫 용사 고르기')) { await p.click('button:has-text("시작")'); await p.waitForTimeout(800); }
   };
   const A = await open(); await signup(A, '1-3', 1); const Bp = await open(); await signup(Bp, '1-3', 2); const C = await open(); await signup(C, '1-5', 1);
-  const board = async (p) => { await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
+  const board = async (p) => { if (!(await p.$('.bd'))) await p.click('button[aria-label="📋 게시판"]'); // 새로 고침 뒤엔 보던 게시판이 저절로 다시 열림(#52)
+  await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   const rune = async (p, s) => { for (const d of s) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
   // A ＋ 모집 글 · 🔒 암호

@@ -1,4 +1,5 @@
 import type { Store } from '../model/types';
+import { claimPid } from '../school/school';
 
 // 🧑 학생 기록 서버 저장 (#141 · V1-DESIGN 7절 정식 경로) — 시험 서버에 「그 학생 계정으로 로그인한 폰」일 때만 묶임
 //   accounts/{반}/{번호} = uid · at · hero · socket · title   (용사 · 끼운 스킬 · 고른 호칭)
@@ -17,6 +18,7 @@ export function bindMe(S: Store, cls: string, num: number): boolean {
   const uid = (S as AuthStore).auth?.currentUser?.uid;
   const acc = S.get<{ uid?: string }>(`accounts/${cls}/${num}`);
   bound = S.kind === 'server' && uid && acc?.uid === uid ? { S, cls, num } : null;
+  if (bound) claimPid(S, cls, num); // 🔐 다시 열린 로그인도 주인 표시 (예전에 가입한 폰)
   return !!bound;
 }
 export const unbindMe = () => { bound = null; };

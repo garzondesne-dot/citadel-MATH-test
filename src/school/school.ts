@@ -56,7 +56,14 @@ const accPath = (cls: string, num: number) => `accounts/${cls}/${num}`;
 export const hasAccount = (S: Store, cls: string, num: number) => !!S.get<object>(accPath(cls, num));
 type AuthStore = Store & { auth?: import('firebase/auth').Auth; preload?: (cls: string, num: number) => Promise<void> };
 /** 🔐 #163-① 로그인한 학생의 자기 칸(💎 · EXP · 카드 · 기록)을 먼저 받아 둠 → 그다음 화면 */
-const ready = async (S: Store, cls: string, num: number) => { await (S as AuthStore).preload?.(cls, num); return null; };
+/** 🔐 학생 칸 주인 표시 (📜 2026-11-14 출시 막는 것 2 · 규칙이 「이 학생 칸 = 이 로그인」을 알게): pids/{s반_번호} = { u: 로그인 uid, c: 반, n: 번호 }
+ *  규칙 = accounts/{반}/{번호}/uid 가 같은 로그인일 때만 씀 · 방의 학생 칸 · 선물 · 우편 받음 표시는 이 주인만 */
+export function claimPid(S: Store, cls: string, num: number): void {
+  const u = (S as AuthStore).auth?.currentUser?.uid; if (!u || S.kind !== 'server') return;
+  const k = `pids/${uidOf(cls, num)}`, cur = S.get<{ u?: string }>(k); if (cur?.u === u) return;
+  S.set(k, { u, c: cls, n: String(num) }); // n = 글자 (규칙이 's' + 반 + '_' + 번호 로 맞춰 봄)
+}
+const ready = async (S: Store, cls: string, num: number) => { await (S as AuthStore).preload?.(cls, num); claimPid(S, cls, num); return null; };
 /** 시험 서버 로그인 이름 · 비밀번호 (Firebase 는 6자 이상 · 학생이 쓰는 건 숫자 4자리 그대로) */
 // 🔑 시험 서버 0000 초기화 (📜 2026-11-14 리모컨 시안 v12 「시험 서버에서도 되게」): 다른 학생의 로그인 비밀번호는 바꿀 수 없어서 → 선생님이 그 칸의 「로그인 판 g」를 하나 올리고 reset 표시
 //   → 학생 로그인 주소가 새 주소(…-g1@…)가 되고 · 새 주소엔 로그인이 아직 없으니 그때 친 4자리(0000)로 새로 만들어 그 칸에 이어짐(claim) · 용사 · 기록 칸은 반 · 번호라 그대로
@@ -144,3 +151,15 @@ export const newCode = () => String(100000 + Math.floor(Math.random() * 900000))
 export const newKey = () => String(1000 + Math.floor(Math.random() * 9000));
 /** 들어온 판이 지금 판과 다르면 🔄 옛 판 */
 export const isOld = (ver?: string) => !!ver && ver !== BUILD;
+/** 🧪 에뮬레이터 시험 전용: ?as=반:번호 = 그 학생으로 진짜 로그인(없으면 가입 · 비번 1234 = 시험 가입과 같음) → 규칙(pids 주인)을 그대로 지나감
+ *  실제 시험 서버 · 정식 = 쓰지 않음(main.ts 가 where.kind === 'emulator' 일 때만 부름) */
+export async function emuAsLogin(S: Store, cls: string, num: number): Promise<string | null> {
+  const A = (S as AuthStore).auth; if (!A) return 'no auth';
+  const fa = await import('firebase/auth'), email = authEmail(cls, num, 0), pw = authPw('1234'); // 시험(e2e)이 화면으로 가입할 때 쓰는 4자리와 같게
+  const F = (S as Store & { fetch?: (p: string) => Promise<unknown> }).fetch; if (F) await F(accPath(cls, num)).catch(() => null);
+  const tries = hasAccount(S, cls, num) ? [fa.signInWithEmailAndPassword, fa.createUserWithEmailAndPassword] : [fa.createUserWithEmailAndPassword, fa.signInWithEmailAndPassword]; // 있을 법한 쪽 먼저 (400 줄이기)
+  let err = ''; for (const f of tries) { try { await f(A, email, pw); err = ''; break; } catch (e) { err = String(e); } } if (err) return err;
+  const u = A.currentUser?.uid; if (!u) return 'no uid';
+  if (S.get<string>(`${accPath(cls, num)}/uid`) !== u) S.set(accPath(cls, num), { uid: u, at: S.now() }); // 시험 DB 를 지운 뒤에도 같은 로그인으로 칸을 다시 엶
+  return ready(S, cls, num);
+}
