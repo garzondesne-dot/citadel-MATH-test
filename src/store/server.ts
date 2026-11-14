@@ -9,7 +9,7 @@ import { setClockOffset } from '../ui/clock.svelte';
 //   시계 = 서버 시각(.info/serverTimeOffset) · 끊김 = .info/connected · 로그인 = 처음엔 익명(TV · 교사 · 둘러보기) · 학생은 계정으로 바꿔 탐
 //   ⚠ 시험 전용: 운영 프로젝트에는 연결하지 않음(config.ts 가 막음) · 맨 윗칸 통째로 받으므로 시험 규모용(출시 때 방 단위로 나눔)
 type Tree = Record<string, unknown>;
-const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock'] as const; // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
+const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held'] as const; // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
 const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins'];

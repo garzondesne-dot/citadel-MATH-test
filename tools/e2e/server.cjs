@@ -93,7 +93,8 @@ const log = (...a) => console.log(...a);
   await phones[0].waitForSelector('[data-k="reward"]', { timeout: 8000 }).catch(() => {});
   const rw = await Promise.all([1].map(async (n) => { const g = await rest(`gem/1-3/${n}`), x = await rest(`xp/1-3/${n}`); return { n, total: g?.total, raid: g?.log?.[`raid_${live2.code}`]?.g, xp: x?.total, xlog: x?.log?.[`raid_${live2.code}`]?.xp }; }));
   log('💎 수업 보상:', rw.map((r) => `${r.n}번 💎 ${r.total} (레이드 ${r.raid}) · EXP ${r.xp} (${r.xlog})`).join(' | '), '| 폰 1 줄:', await phones[0].$eval('[data-k="reward"]', (x) => x.textContent).catch(() => '(없음)'));
-  if (rw.some((r) => !(r.raid >= 4) || !(r.total >= 4) || !(r.xp >= 10))) errs.push('수업 보상 💎 · EXP 안 쌓임');
+  if (rw.some((r) => !(r.raid >= 4) || !(r.total >= 4) || !(r.xp >= 50))) errs.push('수업 보상 💎 · EXP(🎁 첫 출정 40 이상 포함) 안 쌓임');
+  const heldT = await rest('held'), fx = await rest(`records/1-3/1/set-06/firstXp`); log('   🎁 첫 출정 EXP', fx, '| 🧪 테스트 수업 held 안 적음', heldT == null); if (!(fx >= 40) || heldT != null) errs.push('첫 출정 · held');
   // 같은 수업을 다시 그려도 두 번 받지 않음
   const tot1 = rw[0].total; await phones[0].reload(); await phones[0].waitForTimeout(3000);
   const tot2 = (await rest('gem/1-3/1'))?.total; log('   다시 그린 뒤 1번 💎', tot1, '→', tot2); if (tot2 !== tot1) errs.push('수업 보상 두 번 받음');

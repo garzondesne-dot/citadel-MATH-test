@@ -35,6 +35,7 @@
   import { conceptOf } from '../school/prep';
   import { summaryOf } from '../school/records';
   import { rewardOf, settle } from '../school/reward';
+  import { SUBJ } from '../engine/subject';
   import { kstDay } from '../board/board';
   import { BUILD } from '../build';
   import { savedLook } from '../store/me.svelte';
@@ -160,14 +161,17 @@
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
-  function payReward(b: NonNullable<ReturnType<typeof meBound>>) {
+  function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {
     if (!R) return;
     const gp = `gem/${b.cls}/${b.num}`, xp = `xp/${b.cls}/${b.num}`, t = S.now();
     const gr = b.S.get<{ total?: number; day?: Record<string, number>; log?: Record<string, { g?: number }> }>(gp) || {}, xr = b.S.get<{ total?: number; log?: Record<string, { xp?: number }> }>(xp) || {};
-    const r = settle(rewardOf(L, R, uid, code, t), { gem: Number(gr.total) || 0, xp: Number(xr.total) || 0, day: gr.day, gemLog: gr.log || {}, xpLog: xr.log || {} }, kstDay(t), t);
+    const held = b.S.get<Record<string, unknown>>(`held/${b.cls.replace(/[.#$/[\]]/g, '_')}`) || {}, recs = Object.fromEntries(Object.entries(before).filter(([, v]) => !!v)); // 🔁 연속 · 🎁 첫 출정 (정식 result.js)
+    const rw = rewardOf(L, R, uid, code, t, { records: recs, held, lessons: SUBJ.lessonList, xpTotal: Number(xr.total) || 0 });
+    if (rw.firstXp && !b.S.get(`records/${b.cls}/${b.num}/${L.id}/firstXp`)) b.S.set(`records/${b.cls}/${b.num}/${L.id}/firstXp`, rw.firstXp); // 정식 rec.firstXp
+    const r = settle(rw, { gem: Number(gr.total) || 0, xp: Number(xr.total) || 0, day: gr.day, gemLog: gr.log || {}, xpLog: xr.log || {} }, kstDay(t), t);
     if (!r.gem && !r.xp) return;
     for (const [k, v] of Object.entries(r.writes)) b.S.set(`${k.startsWith('gem/') ? gp : xp}/${k.slice(k.indexOf('/') + 1)}`, v);
     if (r.gem) { b.S.set(`${gp}/total`, (Number(gr.total) || 0) + r.gem); for (const [d, n] of Object.entries(r.day)) if (n !== gr.day?.[d]) b.S.set(`${gp}/day/${d}`, n); }

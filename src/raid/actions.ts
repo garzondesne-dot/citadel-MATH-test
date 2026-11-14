@@ -34,6 +34,8 @@ function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || isEnd(L, R)) return;
+  // 📕 그 반이 게임으로 수업한 차시 = held/{반}/{차시} (정식 actions.js 수업 시작 · 🔁 연속 참여 💎 · 오답노트 불참 판단) · 🧪 테스트 수업은 안 적음
+  if (isLobby(R) && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true); }
   // ⏯ 이어서 수업: 입장 → 저장된 단계부터 (정식 go() resumeFrom)
   goTo(S, L, code, R, isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R));
 }
