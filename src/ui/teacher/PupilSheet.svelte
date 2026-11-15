@@ -56,10 +56,10 @@
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
     {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}
-    <p class="fake">🧪 테스트 판 가짜 기록 (반 · 번호로 늘 같은 값)</p>
+    <p class="fake">🧪 이 기기 체험 = 가짜 기록 (반 · 번호로 늘 같은 값)</p>
   </div>
   <div class="acts">
-    <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 시험 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
+    <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 이 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
     <button type="button" onclick={() => (gift = true)}>💎 선물</button>
     <button type="button" disabled={!live} title={live ? '' : '수업 중에만'} onclick={() => { if (live) { setAbsent(S, live.code, uidOf(s.cls, s.n), true); say('🚫 오늘 결석으로'); } }}>🚫 결석</button>
     {#if feat('seteuk')}<button type="button" onclick={() => (memo = true)}>📝 세특</button>{/if}

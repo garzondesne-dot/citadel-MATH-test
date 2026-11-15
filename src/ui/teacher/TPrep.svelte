@@ -78,7 +78,7 @@
   {#if seg === 'lesson' && !packs.length}
     <!-- 🐞 B9 (정식 0169e5f · 차시 0개 학교): 깨지지 않게 · 「아직 차시가 없어요」 + 📊 엑셀로 차시 만들기 -->
     <div class="empty none"><b class="plus">📭</b><span><b>아직 차시가 없어요</b></span><small>엑셀로 첫 차시를 만들면 여기에 생겨요</small></div>
-    <button type="button" class="item" disabled><span class="ic">📊</span><span class="tx"><b>엑셀로 차시 만들기</b><small>선생님 본인용 문제 은행 · 테스트 판 · 준비 중</small></span></button>
+    <button type="button" class="item" disabled><span class="ic">📊</span><span class="tx"><b>엑셀로 차시 만들기</b><small>선생님 본인용 문제 은행 · 준비 중</small></span></button>
   {:else if seg === 'lesson' && T}
     <div class="empty"><b class="plus">＋</b><span><b>{T.no}차시 {T.title}</b> · 준비 안 됨</span><small>차시 팩을 올리면 수업 열기에 생겨요</small></div>
     <button type="button" class="item" data-k="packup-go" onclick={() => (upOpen = true)}><span class="ic">📦</span><span class="tx"><b>차시 팩 올리기</b><small>입력판 양식 파일 · 검사 · 미리 보기 뒤 저장</small></span></button>

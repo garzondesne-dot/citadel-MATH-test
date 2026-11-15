@@ -5,6 +5,9 @@
 const loc = typeof location !== 'undefined' ? location : null;
 export const TEST_ADDR = !!loc && /^(localhost|127\.0\.0\.1)$/.test(loc.hostname);
 export const BETA = TEST_ADDR || (!!loc && /-test\//i.test(loc.pathname));
+/** 화면 낱말 (📜 2026-11-15 머리 🔨 「정식에서 테스트 · 베타 낱말 빼기」): 앱 이름 · 통계에서 빠지는 반 이름 */
+export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';
+export const XCLS = BETA ? '베타 반' : '시험 반';
 
 /** 시험 고리 이름 (window.__이름) — 출시에서는 잠금 */
 export const HOOKS = [

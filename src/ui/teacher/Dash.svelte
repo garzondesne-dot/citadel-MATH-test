@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { XCLS } from '../../channel';
   import PhotoBoard from './PhotoBoard.svelte';
   import type { Store } from '../../model/types';
   import type { Stud } from '../../school/dash';
@@ -60,7 +61,7 @@
     <details class="msum" data-k="modesum"><summary>학습지 테마 {ms.submitN}명 · 오늘 바꾼 횟수 {ms.todayN}</summary>
       {#if ms.rows.length}<ul>{#each ms.rows as r (r.who)}<li><b>{r.num != null ? `${r.num}번` : r.who}</b><span>바꾼 횟수 {r.n} · 오늘 {r.today}</span><em class:sub={r.last === 'submit'}>{r.last === 'submit' ? '학습지' : '게임'}</em></li>{/each}</ul>{:else}<p>아직 바꾼 학생이 없어요</p>{/if}
     </details>
-    {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
+    {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · ${XCLS} ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
     {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
     {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
@@ -87,10 +88,10 @@
   <Sheet onclose={() => (xl = false)}>
     {#snippet title()}⬇ 엑셀로 받기{/snippet}
     {#snippet act()}<button type="button" class="btn" onclick={excel}>받기</button>{/snippet}
-    <button type="button" class="xo" class:on={xlPick === 'all'} onclick={() => (xlPick = 'all')}><span>🏫</span><span><b>전체 · 한 파일</b><small>「반 비교」 시트 + 반마다 시트{withX ? '' : ' (🧪 베타 반 빠짐)'}</small></span></button>
+    <button type="button" class="xo" class:on={xlPick === 'all'} onclick={() => (xlPick = 'all')}><span>🏫</span><span><b>전체 · 한 파일</b><small>「반 비교」 시트 + 반마다 시트{withX ? '' : ` (🧪 ${XCLS} 빠짐)`}</small></span></button>
     <button type="button" class="xo" class:on={xlPick === 'cls'} disabled={cls === ALL} onclick={() => (xlPick = 'cls')}><span>{cls === ALL ? '—' : cls}</span><span><b>지금 반만</b><small>{cls === ALL ? '반 칩을 고르면' : `${cls}반 보기 11개를 시트로`}</small></span></button>
     <button type="button" class="xo" class:on={xlPick === 'view'} onclick={() => (xlPick = 'view')}><span>📄</span><span><b>지금 보는 표만</b><small>{V.title} · 시트 1개</small></span></button>
-    <label class="ck"><input type="checkbox" bind:checked={withX} /> 🧪 베타 반 · 시험 계정도 넣기 (「구분」 열)</label>
+    <label class="ck"><input type="checkbox" bind:checked={withX} /> 🧪 {XCLS} · 시험 계정도 넣기 (「구분」 열)</label>
     <small class="fn">파일 · 모두의던전_{xlPick === 'all' ? '전체' : cls}_{ymd()}.xlsx · 기기 안에서 바로 만들어요(서버로 안 보냄)</small>
   </Sheet>
 {/if}

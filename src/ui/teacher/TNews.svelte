@@ -94,7 +94,7 @@
         {/if}
       </div>
     {:else}<div class="empty"><b>📭</b><span>받은 것이 없어요</span></div>{/each}
-    <p class="hint">새 것이 위 · 빨간 점 = 아직 안 봄 · 누르면 그 자리에서 처리 · 💬 학생 메시지 = 답장 · 🧪 테스트 판 가짜 소식</p>
+    <p class="hint">새 것이 위 · 빨간 점 = 아직 안 봄 · 누르면 그 자리에서 처리 · 💬 학생 메시지 = 답장{S.kind === 'server' ? '' : ' · 🧪 이 기기 체험 = 가짜 소식'}</p>
   {:else}
     <div class="card">
       <span class="lab">📮 메시지 · 학생 폰에 「선생님 메시지」</span>

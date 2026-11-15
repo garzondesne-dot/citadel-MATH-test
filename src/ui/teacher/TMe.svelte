@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { APP_NAME, BETA } from '../../channel';
   import { untrack } from 'svelte';
   import { teacherIn as teacherIn0, toTitle as toTitle0 } from './teacherAuth';
   import SoundToggles from '../SoundToggles.svelte';
@@ -55,13 +56,13 @@
     <button type="button" class="item" data-k="feat" onclick={() => (sheet = 'feat')}><span class="ic">⚙</span><span class="tx"><b>우리 학교 기능</b><small>{BUNDLES.find((b) => b.id === featCfg().bundle)?.ic} {BUNDLES.find((b) => b.id === featCfg().bundle)?.name} 묶음 · 켜고 끄기</small></span></button>
     {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>이 교사 폰만 · 교실 TV 는 TV 「🎨 테마」</small></span></button>{/if}
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
-    <a class="item" href="?role=atk&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>테스트 · 몬스터 공격 15개 눌러 보기</small></span></a>
+    <a class="item" href="?role=atk&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>{BETA ? '테스트 · ' : ''}몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" data-k="photo-set-go" disabled={!srv || !admin} onclick={() => (sheet = 'photo')}><span class="ic">📷</span><span class="tx"><b>사진 채점 설정</b><small>{!srv || !admin ? '교사 로그인 뒤' : cfgOf(S).url ? `${cfgOf(S).on ? '켜짐' : '꺼짐'} · 웹 앱 주소 있음` : '웹 앱 주소를 넣으면 켜져요'}</small></span></button>
     <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">{(!soundPref.sfx && !soundPref.bgm) || sound === '끔' ? '🔇' : '🔊'}</span><span class="tx"><b>소리</b><small>교사 폰 · {sound} · 효과음 {soundPref.sfx ? '켜짐' : '꺼짐'} · 배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}</small></span></button>
-    <button type="button" class="item" data-k="install" disabled={pwa.installed} onclick={async () => { if (!(await install())) sheet = 'app'; }}><span class="ic">📲</span><span class="tx"><b>{pwa.installed ? '홈 화면 앱으로 열림' : '홈 화면에 추가'}</b><small>{pwa.installed ? '「던전 베타」 앱 · 정식 앱과 따로' : pwa.prompt ? '누르면 바로 설치 · 「던전 베타」' : pwa.ios ? '아이폰 = 공유 → 홈 화면에 추가' : '앱처럼 바로 열기 · 정식 앱과 따로'}</small></span></button>
+    <button type="button" class="item" data-k="install" disabled={pwa.installed} onclick={async () => { if (!(await install())) sheet = 'app'; }}><span class="ic">📲</span><span class="tx"><b>{pwa.installed ? '홈 화면 앱으로 열림' : '홈 화면에 추가'}</b><small>{pwa.installed ? BETA ? '「던전 베타」 앱 · 정식 앱과 따로' : '「모두의 던전」 앱' : pwa.prompt ? `누르면 바로 설치 · 「${APP_NAME}」` : pwa.ios ? '아이폰 = 공유 → 홈 화면에 추가' : BETA ? '앱처럼 바로 열기 · 정식 앱과 따로' : '앱처럼 바로 열기'}</small></span></button>
     <button type="button" class="item" data-k="out" onclick={() => (sheet = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
   </div>
-  <p class="ver">모두의 던전 v1.0 · 테스트 {BUILD}</p>
+  <p class="ver">모두의 던전 v1.0 · {BETA ? '테스트 ' : ''}{BUILD}</p>
 </div>
 
 {#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} />{/if}
@@ -95,7 +96,7 @@
         <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0l8 4-8 4z" fill="#f5b84a" /></marker></defs>
         <rect x="8" y="8" width="140" height="184" rx="16" fill="#181b22" stroke="#2f3440" />
         <rect x="20" y="24" width="116" height="104" rx="8" fill="#222632" />
-        <text x="78" y="80" text-anchor="middle" font-size="13" fill="#7c8190">던전 베타</text>
+        <text x="78" y="80" text-anchor="middle" font-size="13" fill="#7c8190">{APP_NAME}</text>
         <rect x="9" y="150" width="138" height="41" fill="#222632" />
         <circle cx="78" cy="171" r="17" fill="none" stroke="#f5b84a" stroke-width="3" />
         <path d="M78 160v14M72 166l6-6 6 6M70 170v8h16v-8" fill="none" stroke="#6cc6ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
@@ -111,9 +112,9 @@
       </svg>
       <p class="outq">사파리 아래 <b>공유</b> → 목록을 내려 <b>홈 화면에 추가</b> → 오른쪽 위 <b>추가</b></p>
     {:else}
-      <p class="outq">브라우저 메뉴(⋮)에서 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 눌러요 · 이미 설치했으면 홈 화면의 「던전 베타」로 열어요</p>
+      <p class="outq">브라우저 메뉴(⋮)에서 <b>앱 설치</b> 또는 <b>홈 화면에 추가</b>를 눌러요 · 이미 설치했으면 홈 화면의 「{APP_NAME}」로 열어요</p>
     {/if}
-    <p class="outq">「던전 베타」는 정식 「모두의 던전」 앱과 따로 깔려요</p>
+    {#if BETA}<p class="outq">「던전 베타」는 정식 「모두의 던전」 앱과 따로 깔려요</p>{/if}
   </Sheet>
 {:else if sheet === 'photo'}
   <Sheet onclose={() => (sheet = '')} tall mainText="닫기">

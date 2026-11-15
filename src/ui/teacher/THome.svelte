@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { XCLS } from '../../channel';
   import { upTag } from '../../engine/packs';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { CLASSES, isBeta, lastClass, lastTest, week, type Live } from '../../school/school';
@@ -116,7 +117,7 @@
 {#if sheet === 'cls'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}다른 반{/snippet}
-    <div class="grid4">{#each CLASSES as c (c)}<button type="button" class="pk" class:on={cls === c} onclick={() => { cls = c; sheet = ''; }}><b>{c}반{isBeta(S, c) ? ' 🧪' : ''}</b>{#if isBeta(S, c)}<small>베타 · 통계 빠짐</small>{/if}</button>{/each}</div>
+    <div class="grid4">{#each CLASSES as c (c)}<button type="button" class="pk" class:on={cls === c} onclick={() => { cls = c; sheet = ''; }}><b>{c}반{isBeta(S, c) ? ' 🧪' : ''}</b>{#if isBeta(S, c)}<small>{XCLS} · 통계 빠짐</small>{/if}</button>{/each}</div>
     {#if schedOn}<button type="button" class="tlink" onclick={() => (sheet = 'sched')}>시간표 · 교시 시각 고치기 ›</button>{/if}
   </Sheet>
 {:else if sheet === 'sched'}

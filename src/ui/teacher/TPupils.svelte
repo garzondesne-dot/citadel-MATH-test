@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { XCLS } from '../../channel';
   import type { Store } from '../../model/types';
   import { CLASSES, firstClass, isBeta, pasteRoster, liveOfCls } from '../../school/school';
   import { classData, type Stud } from '../../school/dash';
@@ -47,7 +48,7 @@
         <button type="button" class="pc" class:ab class:stuck={s.extra.stuck >= 3} onclick={() => (who = s)} aria-label="{s.n}번 {s.name} Lv.{s.lv}{ab ? ' 결석' : ''}{flagged(s.cls, s.n) ? ' 💎 급증' : ''}"><b>{s.n}</b><span>{s.name}{#if flagged(s.cls, s.n)} 🚩{/if}</span><small>Lv.{s.lv}{ab ? ' · 결석' : ''}</small></button>
       {/each}
     </div>
-    <p class="hint">번호를 누르면 그 학생 · 금빛 테 = 막힘 많음 · 흐림 = 오늘 결석{isBeta(S, cls) ? ' · 🧪 베타 반 = 통계에서 빠짐' : ''}</p>
+    <p class="hint">번호를 누르면 그 학생 · 금빛 테 = 막힘 많음 · 흐림 = 오늘 결석{isBeta(S, cls) ? ` · 🧪 ${XCLS} = 통계에서 빠짐` : ''}</p>
   </div>
 {:else}
   <Dash {S} {cls} {wide} bind:xl onpick={(s) => (who = s)} onclass={(c) => (cls = c)} />
