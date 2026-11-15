@@ -1,5 +1,6 @@
 import { SUBJ } from '../engine/subject';
 import type { Store } from '../model/types';
+import { PACKS } from '../engine/packs';
 import { CLASSES, isBeta } from './school';
 import { achieve, classData, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
 import type { Cell, SheetData } from './xlsx';
@@ -117,7 +118,7 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
 function weakList(studs: Stud[]) {
   const agg: Record<string, { name: string; lesson: string; ok: number; total: number; who: number }> = {};
   studs.forEach((s) => Object.entries(s.conc).forEach(([k, v]) => { const a = (agg[k] = agg[k] || { name: v.name, lesson: v.lesson, ok: 0, total: 0, who: 0 }); a.ok += v.ok; a.total += v.total; a.who++; }));
-  return Object.values(agg).filter((a) => a.total).sort((a, b) => a.ok / a.total - b.ok / b.total).slice(0, 10).map((a, i) => { const v = pct(a.ok, a.total) ?? 0; return { rk: String(i + 1), nm: a.name, sub: `${LESSON_LIST.find((l) => l.id === a.lesson)?.no ?? ''}차시 · ${a.ok}/${a.total} · ${a.who}명`, pc: `${v}%`, bar: v / 100 }; });
+  return Object.values(agg).filter((a) => a.total).sort((a, b) => a.ok / a.total - b.ok / b.total).slice(0, 10).map((a, i) => { const v = pct(a.ok, a.total) ?? 0; return { rk: String(i + 1), nm: a.name, sub: `${LESSON_LIST.find((l) => l.id === a.lesson)?.no ?? PACKS.find((l) => l.id === a.lesson)?.no ?? (/(\d+)$/.exec(a.lesson)?.[1] ?? '')}차시 · ${a.ok}/${a.total} · ${a.who}명`, pc: `${v}%`, bar: v / 100 }; });
 }
 /** 보기 → 엑셀 시트 (숫자는 숫자 · % 는 서식) · withX = 「구분」 열 */
 export function toSheet(v: View, withX = false): SheetData {

@@ -2,6 +2,7 @@ import { SUBJ } from '../engine/subject';
 import { makeRng } from '../engine/rng';
 import type { Store } from '../model/types';
 import { CLASSES, isExcluded, roster } from './school';
+import { PACKS } from '../engine/packs';
 import { MIS, seteukDraft, type SeteukIn } from './seteuk';
 
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
@@ -30,7 +31,10 @@ const level = (xp: number) => Math.max(1, Math.min(20, Math.floor(Math.sqrt(xp /
 /** 정식 build(): 수업한 차시 = 기록이 하나라도 있는 차시 · 학생마다 참여 · 형성평가 첫 시도 · 개념 첫 시도 · 성취기준 · 오개념 */
 export function build(cls: string, byN: Record<number, string>, records: Records, xp: Record<number, number>, extra: Record<number, Extra>, x: (n: number) => boolean) {
   const ns = Object.keys(byN).map(Number).filter(Boolean).sort((a, b) => a - b);
-  const held = [...new Set(ns.flatMap((n) => Object.keys(records[n] || {})))].map((id) => ({ id, no: LESSONS.find((l) => l.id === id)?.no ?? 0, title: LESSONS.find((l) => l.id === id)?.title ?? id })).sort((a, b) => a.no - b.no);
+  // 차시 번호 · 이름 = 과목 차시 목록 → 올린 차시 팩 → 기록 안 no (🐞 2026-11-15 「대시보드에 6차시까지밖에」: 8 · 9차시가 과목 목록(2~7)에 없어 「0차시」로 맨 앞에 묻혔음)
+  const recNo = (id: string) => { for (const n of ns) { const v = Number((records[n]?.[id] as LessonRec | undefined)?.no); if (v) return v; } return 0; };
+  const metaOf = (id: string) => { const l = LESSONS.find((x) => x.id === id) ?? PACKS.find((x) => x.id === id); const no = l?.no || recNo(id) || Number(/(\d+)$/.exec(id)?.[1]) || 0; return { no, title: l?.title ?? `${no}차시` }; };
+  const held = [...new Set(ns.flatMap((n) => Object.keys(records[n] || {})))].map((id) => ({ id, ...metaOf(id) })).sort((a, b) => a.no - b.no);
   const studs: Stud[] = ns.map((n) => {
     const rec = records[n] || {}, went = held.filter((l) => rec[l.id]);
     let ok = 0, tot = 0, bo = 0, bt = 0;
@@ -94,7 +98,7 @@ export function realClass(S: Store, cls: string) {
     byN[p.num] = p.name; records[p.num] = {};
     for (const [lid, r] of Object.entries(recAll[p.num] || {})) {
       if (!isObj(r)) continue;
-      const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || 0;
+      const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || PACKS.find((l) => l.id === lid)?.no || 0;
       records[p.num]![lid] = { conc: (isObj(r.conc) ? r.conc : {}) as LessonRec['conc'], names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: Number(r.boss) || 0, bossN: Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null };
     }
     xp[p.num] = Number(xpAll[p.num]?.total) || 0;
