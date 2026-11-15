@@ -354,7 +354,7 @@
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'scare'}
   <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬) -->
-  <Dummy {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} />
+  <Dummy {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
   <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} onclose={() => (sheet = null)} />
