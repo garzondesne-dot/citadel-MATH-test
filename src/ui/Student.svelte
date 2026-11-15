@@ -32,6 +32,7 @@
   import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
+  import Vid from './q/Vid.svelte';
   import { conceptOf } from '../school/prep';
   import { summaryOf } from '../school/records';
   import { rewardOf, settle } from '../school/reward';
@@ -189,7 +190,9 @@
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
-  let cpt = $state(false);
+  let cpt = $state(false), vidOn = $state(false);
+  const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
+  $effect(() => { void step?.id; vidOn = false; });
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
   // 📝 공부 증거 한 줄 (B · 2026-11-14): 수업 끝 = 이 수업에서 낸 소문제 수를 그날 칸에 적고 「오늘 푼 문제 n개 · 지난주보다 +k」
   const whoKey = untrack(() => (cls ? `${cls}-${num}` : uid));
@@ -209,6 +212,9 @@
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
+{:else if talk && R && !board}
+  <!-- 📣 도입 · 개념 (📜 2026-11-15 선생님 「빈 화면 · 고장 난 것 같아」): 위 = 그 차시 던전 배경 + 내 용사(오라 · 숨쉬기) + 설명 중 띠 · 몬스터 단계와 같은 장면 부품 -->
+  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} note="👩‍🏫 선생님 설명 중 · TV 를 봐요" />
 {:else if R && !board}
   <div class="gtop"><ModeSwitch /></div><!-- 📝 장면이 없는 화면(대기 · 개념 · 결과)에도 「게임 | 제출」 -->
 {/if}
@@ -239,8 +245,16 @@
       </div>
     {/if}
     {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
-  {:else if step?.kind === 'concept'}
-    <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p></div>
+  {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
+    <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
+    <div class="bcard talk" data-k="talk">
+      <span class="lab acc">📣 {step.kind === 'intro' ? '도입 · 수업을 시작해요' : '개념 설명'}</span>
+      <b class="ttl">{step.title}</b>
+      {#if step.say}<p class="say"><SymText text={step.say} /></p>{/if}
+      <PrepImg {S} {L} id={step.img || step.id} alt={step.title} />
+      {#if L.videos?.[step.id]}<button type="button" class="vbtn" data-k="talk-vid" onclick={() => (vidOn = !vidOn)}>{vidOn ? '🎬 영상 닫기' : '🎬 개념 영상 보기'}</button>{#if vidOn}<Vid {S} url={L.videos[step.id]!} autoplay />{/if}{/if}
+      <p class="muted">학습지를 펴고 선생님 설명을 들어요.</p>
+    </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
     {#if scout?.on && paperOn()}
@@ -298,6 +312,8 @@
 {/if}
 
 <style>
+  .talk .ttl { font-size: 19px; line-height: 1.4; }
+  .talk .vbtn { min-height: var(--tap); border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }
   .ptop { position: sticky; top: 0; z-index: 5; max-width: 430px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1.5px solid #1d1d1f; background: #f7f6f1; }
   .gtop { display: flex; justify-content: flex-end; padding: 10px 16px 0; }

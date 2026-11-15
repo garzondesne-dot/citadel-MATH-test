@@ -18,8 +18,8 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
-    { theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
+  const { noMon = false, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
+    { /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
       minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number;
       /** 📋 게시판 = 장면 낮게 · 용사 · 몬스터 위로 (📜 2026-11-14 「너무 아래에 있음」) */ lift?: boolean; /** 👥 게시판 팀 동료 (없으면 수업 그대로) */ mates?: Mate[]; /** 👥 동료 공격 사건 (k 순서 · 늘기만 함) */ mateFeed?: MateHit[] } = $props();
   // 📋 lift (📜 2026-11-14 머리 🔨 게시판 동료): 장면 높이 −56 · 용사 −68 · 몬스터 −44 · 체력 −12 → SE(375 × 667)에서 답 단추가 스크롤 없이 · 동료가 있으면 내 용사 = 앞 오른쪽(+120)
@@ -104,17 +104,17 @@
   {#if holy && onholy}<button type="button" class="holy-btn" class:on={holy === 'on'} onclick={onholy} aria-pressed={holy === 'on'}>🛡 <b>{holy === 'on' ? '방패 준비됨' : '홀리 방패'}</b><small>{holy === 'on' ? '끄기' : '켜기'}</small></button>{/if}
   {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
   {#if chips.length}<div class="buffs">{#each chips as c, k (k)}<span class="buff" class:on={c.on}>{c.text}</span>{/each}</div>{/if}
-  {#if hp && !shadow}
+  {#if hp && !shadow && !noMon}
     <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div></div>
   {/if}
-  {#if minions}
+  {#if minions && !noMon}
     <div class="minions">
       {#each Array.from({ length: minions.n }) as _, k (k)}
         <i class="mini" class:dead={k < minions.stage || minions.downs.includes(k)} class:now={k === minions.stage} style={monBg(40, k < minions.stage ? 'down' : 'idle')} aria-label="졸개 {k + 1}"></i>
       {/each}
     </div>
   {/if}
-  <i class="mon art monster" class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>
+  {#if !noMon}<i class="mon art monster" class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>{/if}
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   {#if iceMode !== 'off'}
