@@ -125,9 +125,14 @@ export function realClass(S: Store, cls: string) {
     const ph = (S.get<Record<string, Record<string, { status?: string; ok?: boolean }>>>(`photo/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`)) || {};
     const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
+  // 🔎 오개념 = 수업 기록 + 🏰 성채(평가 방 eval-) 기록 (정식 dash.js 그대로 · 🎯 허수아비는 빼기 · 📜 2026-11-15 머리 🔨 (c))
+  for (const st of out.studs) for (const [lid, l] of Object.entries(bonAll[st.n] || {})) {
+    if (!/^eval-/.test(lid) || !isObj(l)) continue;
+    for (const m of Object.values(l as Record<string, { mis?: Record<string, [number, number]> } | null>)) for (const [k, v] of Object.entries(isObj(m?.mis) ? m!.mis! : {})) { const a = (st.mis[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
+  }
   return out;
 }
 /** 대시보드 · 학생 시트가 쓰는 한 곳: 서버 = 진짜 · 이 기기 = 가짜 */

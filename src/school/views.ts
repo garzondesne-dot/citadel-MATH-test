@@ -6,6 +6,7 @@ import { achieve, classData, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type S
 import type { Cell, SheetData } from './xlsx';
 import { CMP, doneCount, summary, surveyCache, WHEN } from './survey';
 import { addDays, day as usageDay, loadUsage, perStudent, weekly, ymdLabel, type Days } from './usage';
+import { misTop } from './seteuk';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
 //   색 + 글자 함께(도달 · 근접 · 미달 · ✔ △ ✘ · ⭐ · ■) · 「전체」 = 모든 반 합산(🧪 베타 반 · 시험 계정 빠짐)
@@ -19,6 +20,7 @@ export interface View {
   bars?: { title: string; vals: number[]; labels: string[]; foot: string; /** ≈ 기록 전 추정(줄무늬) */ est?: boolean[] }[];
   /** 안내 한 줄 (📈 활용 추이 「참고 자료 · ≈ 추정」) */ note?: string;
   /** 막대가 표보다 먼저 */ barsFirst?: boolean;
+  /** 목록 아래 줄을 자르지 않고 여러 줄로 (👀 이유 · 🔎 태그) */ listWrap?: boolean;
   /** 📥 CSV (이름 · 줄) */ csv?: { name: string; rows: (string | number)[][] };
   memos?: { s: Stud; text: string; more: string[] }[];
 }
@@ -72,10 +74,21 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
     }
     case 'grid': return { id, title: '한눈에 표', info: '칸 = 형성평가(맞힌 문항 / 문항) · 이름을 누르면 개인 기록',
       table: { head: ['번호 · 이름', ...held.map((h) => `${h.no}차시`), '남은 문제', 'Lv'], rows: studs.map((s) => ({ pick: s, cells: [{ t: nm(s), v: nm(s) }, ...held.map((h) => lessonCell(s, h.id)), { t: `${s.left > 20 ? '❗ ' : ''}${s.left}`, tone: s.left > 20 ? 'ng' : '', v: s.left }, { t: String(s.lv), v: s.lv }] as TCell[] })), legend: [['ok', '✔ 통과'], ['md', '△ 일부'], ['ng', '✘ 0점'], ['na', '불참'], ['bo', '→ ■ 보충함'], ['', '⭐ 첫 시도 만점']] } };
-    case 'watch': {
-      const why = (s: Stud) => { const miss = s.heldN - s.went, zero = held.filter((h) => s.rec[h.id] && s.rec[h.id]!.boss === 0).length; return { miss, zero, score: miss * 10 + zero * 8 + s.left }; };
-      const xs = studs.map((s) => ({ s, ...why(s) })).filter((x) => x.miss >= 1 || x.zero >= 1 || x.s.left >= 15).sort((a, b) => b.score - a.score).slice(0, 12);
-      return { id, title: '주의 학생', info: '불참 · 0점 · 남은 문제가 많은 학생', list: xs.map((x) => ({ rk: String(x.s.n), nm: `${cls === ALL ? `${x.s.cls} ` : ''}${x.s.name}`, sub: [x.miss ? `불참 ${x.miss}` : '', x.zero ? `0점 ${x.zero}` : '', `남은 문제 ${x.s.left}`].filter(Boolean).join(' · '), pc: x.miss >= 2 ? '❗ 불참' : x.zero ? '❗ 0점' : '❗ 남은 문제', pick: x.s })) };
+    case 'watch': { // 👀 정식 dash.js 「③ 주의 학생」 그대로 (📜 2026-11-15 머리 🔨 (c)) · 5 기준 · 벌이 아니라 확인용
+      const heldOf = (c: string) => sc.per.find((x) => x.c === c)?.held ?? held;
+      const rows = studs.filter((s) => withX || !s.x).map((s) => {
+        const why: string[] = [], miss = heldOf(s.cls).slice(-2).filter((h) => !s.rec[h.id]);
+        if (miss.length) why.push(`최근 불참: ${miss.map((h) => `${h.no}차시`).join(', ')}`);
+        if (s.boss != null && s.boss < 50) why.push(`형성평가 평균 ${s.boss}%`);
+        if (s.first != null && s.first < 50) why.push(`첫 시도 정답률 ${s.first}%`);
+        if (s.went && !s.tries) why.push('허수아비 · 성채 0회');
+        if (s.boss != null && s.first != null && s.boss >= 85 && s.first < 60 && s.extra.fixes >= 6) why.push(`🔍 고침 패턴 확인 (형성평가 ${s.boss}% · 레이드 첫 시도 ${s.first}% · 고친 ${s.extra.fixes}개)`);
+        return { s, why };
+      }).filter((r) => r.why.length);
+      const last2 = held.slice(-2).map((h) => `${h.no}차시`).join(' · ');
+      return { id, title: '주의 학생', info: `최근 2차시(${cls === ALL ? '반마다' : last2 || '—'}) 불참 · 형성평가 50% 미만 · 첫 시도 50% 미만 · 허수아비 · 성채 0회 · 🔍 고침 패턴(형성평가 85% 이상인데 레이드 첫 시도 60% 미만 · 고친 6개 이상 — 벌이 아니라 확인용)`,
+        ...(rows.length ? {} : { note: '👍 지금 눈에 띄는 학생이 없어요.' }),
+        listWrap: true, list: rows.map(({ s, why }) => ({ rk: `${s.n}번`, nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}`, sub: why.join(' · '), pc: '', pick: s })) };
     }
     case 'std': {
       const head = ['번호 · 이름', ...STANDARDS.map((d) => `${d.id.slice(-5)} ${d.name}`)];
@@ -96,11 +109,16 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
         bars: [{ title: '수업 밖 활동 학생 수', vals: act, labels, foot: `이번 주 ${act[5]}명` }, { title: '수업 밖 문제 풀이 수', vals: weeks, labels, foot: `이번 주 ${weeks[5]}회` }] };
     }
     case 'weak': return { id, title: '개념별 약점', info: '반 전체 첫 시도 정답률이 낮은 개념부터 = 다음 수업 복습 1순위', list: weakList(studs) };
-    case 'mis': {
+    case 'mis': { // 🔎 정식 dash.js 「⑥ 오개념」 그대로 (수업 + 🏰 성채 · 🎯 허수아비 빼기 · 📜 2026-11-15 머리 🔨 (c))
       const agg: Record<string, { w: number; f: number; who: number }> = {};
       studs.forEach((s) => Object.entries(s.mis).forEach(([k, v]) => { const a = (agg[k] = agg[k] || { w: 0, f: 0, who: 0 }); a.w += v[0]; a.f += v[1]; a.who++; }));
-      const xs = Object.entries(agg).sort((a, b) => b[1].w - a[1].w), mx = Math.max(1, ...xs.map((x) => x[1].w));
-      return { id, title: '오개념', info: '틀린 답의 종류 · 「바로잡음」 = 그 뒤 재도전 · 보강에서 맞힘', list: xs.map(([k, a]) => ({ rk: k, nm: MIS[k]?.name ?? k, sub: `틀림 ${a.w} · ${a.who}명`, pc: `바로잡음 ${pct(Math.min(a.f, a.w), a.w)}%`, bar: a.w / mx })) };
+      const xs = Object.entries(agg).filter(([k]) => MIS[k]).sort((a, b) => b[1].w - a[1].w);
+      const who = studs.filter((s) => Object.keys(s.mis).some((k) => MIS[k]));
+      return { id, title: '오개념', info: '틀린 답의 종류를 모은 것 · 「바로잡음」 = 그 뒤 재도전 · 형성평가 세트 2 · 성채에서 맞힘 · 점수가 아니라 다음 수업에서 짚을 것',
+        ...(xs.length ? {} : { note: '아직 쌓인 오개념 기록이 없어요.' }),
+        ...(xs.length ? { table: { head: ['코드', '오개념', '틀린 횟수', '학생', '바로잡음'], legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓']] as [Tone, string][],
+          rows: xs.map(([k, a]) => { const v = pct(Math.min(a.f, a.w), a.w); return { cells: [{ t: k, v: k }, { t: MIS[k]!.name, v: MIS[k]!.name }, { t: String(a.w), v: a.w }, { t: `${a.who}명`, v: a.who }, { t: p(v), tone: tone(v), v: pv(v) } as TCell] }; }) } } : {}),
+        listWrap: true, list: who.map((s) => ({ rk: `${s.n}번`, nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}`, sub: misTop(s.mis, 4).map((t) => `${t.code} ${t.wrong}${t.fixed ? ` · ✔${t.fixed}` : ''}`).join('  '), pc: '', pick: s })) };
     }
     case 'sym': {
       const tot = studs.reduce((a, s) => a + s.extra.sym, 0), w = [0.32, 0.16, 0.14, 0.11, 0.08, 0.07, 0.07, 0.05];

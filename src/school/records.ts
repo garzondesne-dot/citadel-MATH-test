@@ -7,7 +7,7 @@ import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor
 import { SUBJ } from '../engine/subject';
 
 export type St = 'o' | 'f' | 'x' | '-' | 'n';
-export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number }
+export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; /** 🔁 고친 소문제 */ fixed?: number; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number }
 
 export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now: number, prev?: Partial<RecRow> | null): RecRow {
   const others = activeIds(R, now).filter((u) => u !== uid);
@@ -28,7 +28,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   }
   const cm = concOf(L, R, uid);
   const res = resultOf(L, R, uid);
-  const out: RecRow = { at: now, code: String(code), no: L.no, mons, conc: cm.conc, names: cm.names, weak: cm.weak, ...(Object.keys(cm.mis).length ? { mis: cm.mis } : {}), miss: Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k), perfects, right: res.right, total: res.total };
+  const out: RecRow = { at: now, code: String(code), no: L.no, mons, conc: cm.conc, names: cm.names, weak: cm.weak, ...(Object.keys(cm.mis).length ? { mis: cm.mis } : {}), ...(cm.fixed ? { fixed: cm.fixed } : {}), miss: Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k), perfects, right: res.right, total: res.total };
   if (L.boss) {
     const mast = mastery(L, R, uid), bs = bossState(L, R, uid), any = others.some((u) => bossState(L, R, u).some((x) => x.n > 0)), hpN = L.boss.hpItems ?? L.boss.items;
     out.boss = mast.slice(0, hpN).filter(Boolean).length; out.bossN = hpN;
@@ -47,27 +47,30 @@ export function concOf(L: LessonPack, R: Room, uid: string) {
   let cur = 'review';
   for (const s of L.steps) { if (s.kind === 'concept') { cur = s.id; names[s.id] = s.title.replace(/^개념 \d+ · /, ''); } if (s.kind === 'monster') map[s.id] = cur; }
   const conc: Record<string, { ok: number; total: number }> = {}, mis: Record<string, [number, number]> = {}, ML = SUBJ.misLogic;
+  let fixed = 0; // 🔁 처음 틀렸다가 고친 소문제 수 (정식 result.js fixed + bossFixed · 대시보드 🔍 고침 패턴 · 세특)
   const bump = (c: string, ok: boolean) => { const v = (conc[c] ||= { ok: 0, total: 0 }); v.total++; if (ok) v.ok++; };
   const addMis = (codes: string[], fixed: boolean) => { for (const c of codes) { const v = (mis[c] ||= [0, 0]); v[0]++; if (fixed) v[1]++; } };
   const split = (L as unknown as { split?: Record<string, string[]> }).split || {};
   for (const s of L.steps) {
     if (s.kind !== 'monster' || !L.monsters[s.id]) continue;
     const sp = split[s.id];
-    if (isChain(L, R, s.id)) { const r = chainRecord(L, R, s.id, uid); if (r.submitted) r.stFirst.forEach((ok, i) => bump(sp?.[i] || map[s.id]!, !!ok)); continue; }
+    if (isChain(L, R, s.id)) { const r = chainRecord(L, R, s.id, uid); if (r.submitted) r.stFirst.forEach((ok, i) => bump(sp?.[i] || map[s.id]!, !!ok)); fixed += r.stOk.filter((ok, i) => ok && !r.stFirst[i]).length; continue; }
     const r = plainRecord(L, R, s.id, uid);
     if (!r.submitted) continue;
     const first = r.tries[0];
+    fixed += Array.from({ length: r.total }, (_, i) => r.tries.some((t) => t.marks[i]) && !(first && first.attempt === 0 && first.marks[i])).filter(Boolean).length;
     Array.from({ length: r.total }, (_, i) => !!(first && first.attempt === 0 && first.marks[i])).forEach((ok, i) => bump(sp?.[i] || map[s.id]!, ok));
     if (ML) for (const tr of r.tries) { const items = itemsFor(L, R, s.id, uid, tr.attempt); items.forEach((q, i) => { if (tr.marks[i]) return; const later = r.tries.some((u) => u.attempt > tr.attempt && u.marks[i]); addMis(ML.classify(q, (tr.given || [])[i]), later); }); }
   }
   if (L.boss) {
     const tags = (L.boss as { tags?: string[] }).tags || [], bs = bossState(L, R, uid), mast = mastery(L, R, uid);
     if (bs.some((x) => x.firstTried)) bs.forEach((x, i) => bump(tags[i] || 'boss', x.first));
+    fixed += mast.filter((ok, i) => ok && !bs[i]?.first).length;
     if (ML) for (const tr of bossTries(L, R, uid)) { if (tr.ok || !tr.q) continue; addMis(ML.classify(tr.q, tr.given, tr.a === 0 ? ML.bossTag(L.id, 1, tr.i) : null), !!mast[tr.i]); }
   }
   const order = Object.keys(conc).filter((c) => conc[c]!.total);
   const weak = order.map((c) => ({ c, r: conc[c]!.ok / conc[c]!.total })).filter((x) => x.r < 0.8).sort((a, b) => a.r - b.r).slice(0, 2).map((x) => x.c);
-  return { conc: Object.fromEntries(order.map((c) => [c, [conc[c]!.ok, conc[c]!.total] as [number, number]])), names, weak, mis };
+  return { conc: Object.fromEntries(order.map((c) => [c, [conc[c]!.ok, conc[c]!.total] as [number, number]])), names, weak, mis, fixed };
 }
 const did = (v: unknown) => v === 'o' || v === 'f' || v === 'x';
 /** 🔁 같은 차시를 다시 열어도 칸마다 합침 (📜 2026-11-15 · 이어 하기 = 앞 수업 칸도 그 차시 기록에)

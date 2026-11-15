@@ -62,6 +62,13 @@ describe('📌 conc · 🔎 mis (정식 summary 꼴)', () => {
     expect(a.weak).toEqual([]); expect(b.weak).toEqual([c]);
     expect(Array.isArray(a.conc![c])).toBe(true); // 정식 꼴 = [첫 시도 맞힘, 문항]
   });
+  it('🔁 고친 소문제 수 fixed = 처음 틀렸다가 다시 맞힌 것 (정식 result.js · 대시보드 🔍 고침 패턴)', () => {
+    const L = packOf('set-06')!, { S, R, id } = play(L);
+    expect(summaryOf(L, R(), 'a', 'R1', 1).fixed).toBeUndefined();
+    const n = itemsFor(L, R(), id, 'b', 1).length;
+    submit(S, L, 'R1', id, 'b', itemsFor(L, R(), id, 'b', 1).map(answerOf));
+    expect(summaryOf(L, R(), 'b', 'R1', 1).fixed).toBe(n);
+  });
   it('개념 단계가 없는 차시 팩 = 그 칸만 review 로 · 오류 없음', () => {
     const L0 = packOf('set-06')!, L = { ...L0, id: 'ex-99', steps: L0.steps.filter((s) => s.kind !== 'concept') };
     const { R } = play(L as never, false);

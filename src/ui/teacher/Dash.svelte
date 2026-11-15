@@ -82,7 +82,7 @@
       <p class="leg">{#each V.table.legend as [t, s] (s)}<span class={t}>{s}</span>{/each}{cls === ALL && vid === 'cmp' ? ' · 반을 누르면 그 반' : ''}</p>
     {/if}
     {#if !V.barsFirst}{@render barsBlock()}{/if}
-    {#if V.list}<div class="list">{#each V.list as x, i (i)}<button type="button" class="dl" disabled={!x.pick} onclick={() => x.pick && onpick(x.pick)}><span class="rk">{x.rk}</span><span class="nm"><b>{x.nm}</b><small>{x.sub}</small></span>{#if x.pc}<span class="pc">{x.pc}</span>{/if}{#if x.bar != null}<i class="bar" style:width="{x.bar * 100}%"></i>{/if}</button>{/each}</div>{/if}
+    {#if V.list}<div class="list" class:wrap={V.listWrap}>{#each V.list as x, i (i)}<button type="button" class="dl" disabled={!x.pick} onclick={() => x.pick && onpick(x.pick)}><span class="rk">{x.rk}</span><span class="nm"><b>{x.nm}</b><small>{x.sub}</small></span>{#if x.pc}<span class="pc">{x.pc}</span>{/if}{#if x.bar != null}<i class="bar" style:width="{x.bar * 100}%"></i>{/if}</button>{/each}</div>{/if}
     {#if V.memos}
       <div class="row"><button type="button" class="b2" onclick={() => copy(V.memos!.map((m) => `${m.s.n}번 ${m.s.name} ${m.text}`).join('\n\n'))}>📋 전체 복사</button><small>기록의 사실만으로 만든 초안 · 관찰을 더해 다듬기</small></div>
       {#each V.memos as m (m.s.cls + m.s.n)}<div class="memo"><b>{m.s.n}번 {m.s.name}</b><p>{m.text}</p>{#if m.more.length}<details class="more"><summary>더 보기 {m.more.length} · 골라 붙이기</summary>{#each m.more as t (t)}<button type="button" class="mline" onclick={() => copy(t)}>＋ {t}</button>{/each}</details>{/if}<button type="button" class="b2" onclick={() => copy(m.text)}>복사</button></div>{/each}
@@ -149,6 +149,7 @@
   .list { display: flex; flex-direction: column; gap: 5px; }
   .dl { position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 4px 10px; border-radius: var(--r); border: 0; background: var(--surface); color: var(--text); font: inherit; text-align: left; }
   .dl:disabled { opacity: 1; }
+  .list.wrap .nm small { white-space: normal; line-height: 1.45; } .list.wrap .dl { padding-top: 8px; padding-bottom: 8px; }
   .rk { flex: none; min-width: 34px; font-weight: 700; color: var(--text-2); font-size: 13px; } .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; z-index: 1; }
   .nm b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nm small { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pc { flex: none; font-size: 13px; font-weight: 700; color: var(--accent); z-index: 1; }
