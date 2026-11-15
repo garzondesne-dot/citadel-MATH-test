@@ -1,6 +1,6 @@
 // ⚡ 필살기 눈빛 · 종합실 연출 (📜 2026-11-13 밤): ① 학생 폰 첫 필살기에도 얼굴 + 눈빛(빛 두 줄) ② TV = ⚡ 필살기 컷인 · 🌟 진필살기(금빛 「眞」 + 광역) · 🛡 홀리 방패(HOLY GUARD + 눈빛) · ✨ 오라 → 캡처 폰 · TV
 const { chromium } = require('playwright');
-const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
+const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4173/';
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] }), errs = [], log = (...a) => console.log(...a);
   const look = (pg) => pg.evaluate(() => { const u = document.querySelector('.ult'); return u ? { cls: u.className, facepic: !!u.querySelector('.u-facepic'), glints: u.querySelectorAll('.u-glint').length, name: u.querySelector('.u-name')?.textContent, zhen: !!u.querySelector('.u-true') } : null; });
