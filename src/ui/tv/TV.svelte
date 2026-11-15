@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { siteUrl } from '../../channel';
   import { holdWake } from '../wake.svelte';
   import { SUBJ } from '../../engine/subject';
   import { PACKS } from '../../engine/packs';
@@ -20,6 +21,10 @@
   import QR from '../QR.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
+  import Anvil from '../forge/Anvil.svelte';
+  import Dummy from '../dummy/Dummy.svelte';
+  import Board from '../board/Board.svelte';
+  import Castle from '../castle/Castle.svelte';
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
@@ -227,13 +232,21 @@
   const portal = untrack(() => portalOf(S)); onDestroy(portal.stop);
   // 🧙 캠프 그림 속 선생님 용사 = 그림 폭에 맞춰 (그림 폭 512 = 2배 · 창이 작거나 폰으로 보면 같이 작아짐 · 🐛 2026-11-13 밤 선생님 캡처 「용사가 캠프 그림을 덮음」)
   let campW = $state(0);
-  const heroK = $derived(campW ? Math.max(0.5, campW / 256) : 2);
+  // 🐞 2026-11-15 「교사 크기 조정」: 예전 campW/256 = 학생 캠프의 1.5배 → 학생 캠프와 같은 비율(장면 폭 390 에 용사 80px) · 후광도 같은 함수(aura)라 같이 줄어듦
+  const heroK = $derived(campW ? Math.max(0.5, campW / 390) : 2);
+  // 🖱 TV(PC) 교사 캠프 물건 누르기 (🐞 2026-11-15 「오브젝트 상호작용 · 던전 입장 안 됨」 = 예전엔 그림뿐이었음) · 옛 정식처럼 수업이 열려 있어도 열림
+  //   모루 · 허수아비 · 게시판 · 성채 = 내 용사처럼 가운데 창(교사 기록 · B안) · 차원문 = 수업 들어가기(⚔ 던전 입장과 같음) · 우편함 = 교사는 소식 탭(리모컨)이라 반응만
+  let tvSheet = $state<'' | 'anvil' | 'scare' | 'dummy' | 'castle'>('');
+  function tvTap(k: string) {
+    if (k === 'gate') { if (R && !R.state.closed) go(); return; }
+    if (k === 'anvil' || k === 'scare' || k === 'dummy' || k === 'castle') { fit(); tvSheet = k; }
+  }
   let fireF = $state(0); const fireT = setInterval(() => (fireF = (fireF + 1) % CAMP.fire.frames), CAMP.fire.ms); onDestroy(() => clearInterval(fireT));
   let hk = $state(1);
   const fit = () => (hk = Math.min(1.3, (innerHeight * 0.86) / 760));
   const [CW, CH] = CAMP.size;
   const pct = (v: number, tot: number) => `${((100 * v) / tot).toFixed(2)}%`;
-  const site = `${location.origin}${import.meta.env.BASE_URL}`;
+  const site = siteUrl(); // 🔗 지금 열린 사이트 (🐞 QR 이 「…github.io./」 로 가던 것)
   // 화면 시험 고리(#157 · 학생 화면엔 없음 · 출시 전 메모 5): 가상 학생 n명이 이 방에 들어와 있음(2초마다 접속 신호)
   let fakeN = $state(0);
   (globalThis as { __tvFake?: (n: number) => void }).__tvFake = (n: number) => { fakeN = n; };
@@ -287,15 +300,17 @@
       <img class="obj" alt="" src={CAMP.castle.src} style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)}" />
       <img class="obj" alt="" src={CAMP.tent.src} style="left:{pct(CAMP.tent.x, CW)};top:{pct(CAMP.tent.y, CH)};width:{pct(CAMP.tent.w, CW)}" />
       <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
-      <span class="me" style:left="{CAMP.hero.left}%" style:bottom="{CAMP.hero.bottom}%"><HeroSprite id={M.me.hero} pose="sit" aura={M.me.enh} scale={heroK} /></span>
+      <span class="me" style:left="{CAMP.hero.left + 1}%" style:bottom="{CAMP.hero.bottom - 3.5}%"><HeroSprite id={M.me.hero} pose="sit" aura={M.me.enh} scale={heroK} /></span>
       <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
-      {#each tvProps as p (p.k)}<span class="tprop" style={propPos(p)} data-prop={p.k}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b>{#if SUBS[p.k]}<small>{SUBS[p.k]}</small>{/if}</span></span>{/each}
-      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<span class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%"><b>{t}</b>{#if SUBS[k]}<small>{SUBS[k]}</small>{/if}</span>{/each}
-      <button type="button" class="ob me2" style:left="{CAMP.hero.left + 4}%" style:top="{100 - CAMP.hero.bottom - 2}%" onclick={() => { fit(); hero = true; }}><b>🧙 내 용사</b><small>용사 바꾸기</small></button>
+      {#each tvProps as p (p.k)}<button type="button" class="tprop" style={propPos(p)} data-prop={p.k} aria-label={PNAME[p.k]} onclick={() => tvTap(p.k)}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b>{#if SUBS[p.k]}<small>{SUBS[p.k]}</small>{/if}</span></button>{/each}
+      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<button type="button" class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%" onclick={() => tvTap(k)}><b>{t}</b>{#if SUBS[k]}<small>{SUBS[k]}</small>{/if}</button>{/each}
+      <button type="button" class="zhit" aria-label="성채던전" data-hit="castle" style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)};aspect-ratio:1" onclick={() => tvTap('castle')}></button>
+      <button type="button" class="zhit" aria-label="차원문" data-hit="gate" style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)};aspect-ratio:1" onclick={() => tvTap('gate')}></button>
+      <button type="button" class="ob me2" style:left="{CAMP.hero.left + 5}%" style:top="{100 - CAMP.hero.bottom + 1.5}%" onclick={() => { fit(); hero = true; }}><b>🧙 내 용사</b><small>용사 바꾸기</small></button>
     </div>
     <div class="campqr">
       {#if R && !R.state.closed}
-        <QR text={site} size={220} />
+        <QR text={`${site}?join=${encodeURIComponent(code)}`} size={220} />
         <small>📱 휴대폰 카메라로 QR 을 찍어요 · 반 · 번호로 로그인</small>
         <div class="cc">수업 코드 <b>{code}</b></div>
       {:else}
@@ -417,6 +432,12 @@
   {/if}
   {#if themeOpen}<div class="thov" role="dialog" aria-label="TV 테마"><div class="thbox"><div class="thh"><b>🎨 교실 TV 테마</b><small>이 TV 에만 · 교사 폰과 따로</small><button type="button" aria-label="닫기" onclick={() => (themeOpen = false)}>✕</button></div><ThemePicker now={tvTheme} feats={null} onpick={pickTv} /></div></div>{/if}
 
+  {#if tvSheet}<div class="heroov" data-k="tv-sheet"><div class="hk" style:transform="translateZ(0) scale({hk})">
+    {#if tvSheet === 'anvil'}<Anvil me={M.me} save={M.save} who="me" onclose={() => (tvSheet = '')} />
+    {:else if tvSheet === 'scare'}<Dummy {S} me={M.me} save={M.save} uid="me" num={0} cls="" onclose={() => (tvSheet = '')} onforge={() => (tvSheet = 'anvil')} />
+    {:else if tvSheet === 'dummy'}<Board {S} me={M.me} save={M.save} uid="me" num={0} cls="" open={false} joinPid="" onclose={() => (tvSheet = '')} />
+    {:else}<Castle {S} me={M.me} save={M.save} all uid="me" num={0} cls="" floor="" onclose={() => (tvSheet = '')} />{/if}
+  </div></div>{/if}
   {#if hero}<div class="heroov"><div class="hk" style:transform="translateZ(0) scale({hk})"><MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} /></div></div>{/if}
 </div>
 
@@ -480,6 +501,8 @@
   .ob.me2 { cursor: pointer; border-color: #6cc6ff; color: #fff; font: inherit; } .ob.me2 small { color: #6cc6ff; }
   .campv .gate { opacity: 0; } .campv .gate.on { opacity: 1; }
   .tprop, .tfire { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
+  button.tprop { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; } button.tprop:hover :global(.cp), button.tprop:focus-visible { filter: brightness(1.2); }
+  button.ob.zl { cursor: pointer; font: inherit; } .zhit { position: absolute; z-index: 1; padding: 0; border: 0; background: none; cursor: pointer; }
   .ob.blw { left: 50%; top: 100%; transform: translate(-50%, 2px); } .ob.zl { transform: translate(-50%, -110%); }
   .ob { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 0.5cqh 0.9cqw; border-radius: 1.4cqh; background: rgba(10, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.22); white-space: nowrap; box-shadow: 0 3px 0 #000; }
   .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { font-size: calc(var(--tv-body) * 0.42); font-weight: 700; color: #ebb84f; white-space: nowrap; } /* TV 이름표 = 이름 + 부제 한 줄 (📺 시안 2026-11-14) */

@@ -29,3 +29,6 @@ export function lockHooks(on = !!loc && !TEST_ADDR): number {
   return n;
 }
 lockHooks();
+/** 🔗 지금 열린 사이트 주소 (QR · 안내 글) = 이 페이지가 있는 폴더 (정식 /Citadel-MATH/ · 베타 /citadel-MATH-test/ · 학교판 /…/s/<코드>/ · 체험판)
+ *  🐞 2026-11-15 「QR 안 먹혀」: 예전 = location.origin + BASE_URL('./') → 「https://…github.io./」(경로가 빠지고 점이 붙음) */
+export const siteUrl = (): string => (typeof location === 'undefined' ? './' : new URL('./', location.href).href);

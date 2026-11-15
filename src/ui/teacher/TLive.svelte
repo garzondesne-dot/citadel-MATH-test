@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { siteUrl } from '../../channel';
   import { holdWake, wakeTip } from '../wake.svelte';
   import { V4 } from '../../raid/raid';
   import { hallKeyOf } from '../../school/school';
@@ -138,7 +139,7 @@
     if (err) say(err); else sheet = '';
   }
   // 🚪 입장 (#138 ③): 코드 크게 + QR(주소 ?join=코드 · 로그인한 폰은 바로 · 아니면 로그인 뒤 그 수업) · 교실 TV 주소
-  const site = `${location.origin}${import.meta.env.BASE_URL}`;
+  const site = siteUrl(); // 🔗 지금 열린 사이트 (🐞 QR 이 「…github.io./」 로 가던 것)
   const joinUrl = $derived(`${site}?join=${encodeURIComponent(code)}`);
   const spaced = (c: string) => c.replace(/^(\d{3})(\d{3})$/, '$1 $2');
   let bub = $state('');
