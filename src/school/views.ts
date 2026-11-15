@@ -22,6 +22,8 @@ export interface View {
   /** 안내 한 줄 (📈 활용 추이 「참고 자료 · ≈ 추정」) */ note?: string;
   /** 막대가 표보다 먼저 */ barsFirst?: boolean;
   /** 거르기 (📖 기호 톡 차시) */ pick?: { label: string; cur: string; opts: [string, string][] };
+  /** 🏆 랭킹 판 여러 개 (1 · 2 · 3 등 = top) */ boards?: { title: string; note: string; rows: { rk: number; nm: string; val: string; pick?: Stud }[] }[];
+  /** 표 위 제목 한 줄 */ tableTitle?: string;
   /** 목록 아래 줄을 자르지 않고 여러 줄로 (👀 이유 · 🔎 태그) */ listWrap?: boolean;
   /** 📥 CSV (이름 · 줄) */ csv?: { name: string; rows: (string | number)[][] };
   memos?: { s: Stud; text: string; more: string[] }[];
@@ -111,7 +113,25 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
       return { id, title: '성취기준', info: '개념별 첫 시도를 성취기준으로 묶은 참고 지표 · 도달 80%↑ · 근접 50~79 · 미달 50↓',
         table: { head, rows: [{ sum: true, cells: [{ t: '도달 비율', v: '도달 비율' }, ...reach.map((v) => ({ t: p(v), tone: tone(v), v: pv(v) } as TCell))] }, ...studs.map((s) => ({ pick: s, cells: [{ t: nm(s), v: nm(s) }, ...STANDARDS.map((d) => { const a = s.std[d.id]; if (!a || !a[1]) return { t: '—', tone: 'na', v: null } as TCell; const v = Math.round((100 * a[0]) / a[1]); const b = v >= 80 ? '도달' : v >= 50 ? '근접' : '미달'; return { t: `${b} ${v}%`, tone: v >= 80 ? 'ok' : v >= 50 ? 'md' : 'ng', v: pv(v) } as TCell; })] }))], legend: [['ok', '도달 80%↑'], ['md', '근접 50~79'], ['ng', '미달 50↓']] } };
     }
-    case 'rank': return { id, title: '랭킹', info: 'EXP · 처치 순', list: [...studs].filter((s) => !s.x).sort((a, b) => b.xp - a.xp).slice(0, 15).map((s, i) => ({ rk: String(i + 1), nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}`, sub: `Lv.${s.lv} · 처치 ${s.bossRaw[0]}`, pc: `${s.xp} EXP`, pick: s })) };
+    case 'rank': { // 🏆 정식 dash.js 「② 랭킹」 그대로 (📜 2026-11-15 머리 🔨): 형성평가 · 첫 시도 · 참여 + 끈기 · 자기주도 · 성장 TOP 5 + 「전체」 = 🏫 반 대항전 · 교사만 봄
+      const who = (s: Stud) => `${cls === ALL ? `${s.cls} ` : ''}${s.n}번 ${s.name}`, ss = studs.filter((s) => withX || !s.x);
+      const board = (title: string, note: string, key: (s: Stud) => number | null, fmt: (s: Stud) => string, n = 99) => {
+        const xs = ss.filter((s) => key(s) != null).sort((a, b) => key(b)! - key(a)! || a.n - b.n).slice(0, n); let rk = 0, prev: number | null = null;
+        return { title, note, rows: xs.map((s, i) => { const v = key(s); if (v !== prev) { rk = i + 1; prev = v; } return { rk, nm: who(s), val: fmt(s), pick: s }; }) };
+      };
+      const av = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+      const vs = cls !== ALL ? [] : sc.per.filter((x) => withX || !isBeta(S, x.c)).map((x) => { const d = x.studs.filter((u) => withX || !u.x); return { c: x.c, n: d.length, boss: av(d.filter((u) => u.boss != null).map((u) => u.boss!)), first: av(d.filter((u) => u.first != null).map((u) => u.first!)), part: av(d.map((u) => u.part || 0)), xp: av(d.map((u) => u.xp)) }; }).sort((a, b) => (b.boss ?? -1) - (a.boss ?? -1));
+      return { id, title: '랭킹', info: `${cls === ALL ? `🏫 전학생 ${ss.length}명 · ` : ''}교사만 보는 순위예요. 학생에게는 보이지 않아요 (게임 안에서는 「기록은 성적이 아니다」 그대로)`,
+        ...(vs.length ? { table: { head: ['반', '인원', '형성평가', '첫 시도', '참여', '평균 EXP'], legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓']] as [Tone, string][], rows: vs.map((v, i) => ({ cls: v.c, cells: [{ t: `${i === 0 ? '👑 ' : ''}${v.c}`, v: v.c }, { t: String(v.n), v: v.n }, { t: p(v.boss), tone: tone(v.boss), v: pv(v.boss) }, { t: p(v.first), tone: tone(v.first), v: pv(v.first) }, { t: p(v.part), tone: tone(v.part), v: pv(v.part) }, { t: v.xp == null ? '-' : String(v.xp), v: v.xp }] as TCell[] })) }, tableTitle: '🏫 반 대항전 · 반 평균' } : {}),
+        boards: [
+          board('🎯 형성평가', '참여한 차시 평균', (s) => s.boss, (s) => `${s.boss}% (${s.bossRaw[0]}/${s.bossRaw[1]})`),
+          board('✅ 첫 시도 정답률', '재도전 전 첫 답', (s) => s.first, (s) => `${s.first}% (${s.firstRaw[0]}/${s.firstRaw[1]})`),
+          board('🙋 참여', cls === ALL ? '반마다 수업한 차시 중 참여율' : `수업한 ${held.length}차시 중`, (s) => s.part, (s) => `${s.part}% (${s.went}/${s.heldN})`),
+          board('🔁 끈기 TOP 5', '재도전으로 고친 문제', (s) => s.extra.fixes, (s) => `${s.extra.fixes}개`, 5),
+          board('🏆 자기주도 TOP 5', '성채 · 허수아비 도전 횟수', (s) => s.tries, (s) => `${s.tries}회 · 업적 ${s.extra.seals ?? 0}`, 5),
+          board('⭐ 성장 TOP 5', 'EXP', (s) => s.xp, (s) => `Lv.${s.lv} · ${s.xp}`, 5),
+        ] };
+    }
     case 'use': if (S.kind === 'server') return useView(S, cls, sc, id); // 📈 서버 = 정식 usage.js 그대로 (act/ + 기록 전 ≈ 추정) · 이 기기 = 아래 가짜
     // falls through
     case 'use-fake': {
@@ -173,8 +193,14 @@ export function toSheet(v: View, withX = false): SheetData {
   const rows: Cell[][] = [];
   if (v.table) {
     rows.push([...(withX ? ['구분'] : []), ...v.table.head]);
-    v.table.rows.forEach((r) => rows.push([...(withX ? [r.pick?.x ? '🧪' : ''] : []), ...r.cells.map((c) => (c.v === undefined ? c.t : c.v))]));
-  } else if (v.list) {
+    v.table.rows.forEach((r) => rows.push([...(withX ? [r.pick?.x ? '🧪' : ''] : []), ...r.cells.map((c, i) => (c.v === undefined || (i === 0 && typeof c.v === 'number') ? c.t : c.v))]));
+    if (v.boards) rows.push([]);
+  }
+  if (v.boards) {
+    rows.push(['판', '등수', '이름', '값']);
+    v.boards.forEach((b) => b.rows.forEach((r) => rows.push([b.title, r.rk, r.nm, r.val])));
+  }
+  if (v.table || v.boards) { /* 위에서 다 넣음 */ } else if (v.list) {
     rows.push(['순서', '이름', '내용', '값']);
     v.list.forEach((x) => rows.push([x.rk, x.nm, x.sub, x.pc]));
   } else if (v.memos) {

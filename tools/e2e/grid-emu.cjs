@@ -1,4 +1,4 @@
-// 📊 한눈에 표 (에뮬레이터 · 📜 2026-11-15 머리 🔨): 정식 15칸 · 칸 제목 누르면 정렬(▼ → ▲) · 📥 CSV
+// 📊 한눈에 표 · 🏆 랭킹 (에뮬레이터 · 📜 2026-11-15 머리 🔨): 정식 칸 · 칸 제목 누르면 정렬(▼ → ▲) · 📥 CSV · 랭킹 판 6개 · 같은 값 = 같은 등수
 const { chromium } = require('playwright');
 const { rest, asAdmin } = require('./_emu.cjs');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
@@ -30,5 +30,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-k="csv"]')]);
   const txt = require('fs').readFileSync(await dl.path(), 'utf8');
   ok('📥 CSV = 머리줄 + 3명', /❗ 남은 문제/.test(txt) && txt.trim().split('\n').length === 4);
+  await p.click('.vws button:has-text("랭킹")'); await p.waitForTimeout(800);
+  const bd = await p.$$eval('[data-k="board"] h4', (x) => x.map((e) => e.firstChild.textContent.trim()));
+  const first = await p.$$eval('[data-k="board"]:first-child li', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok('🏆 랭킹 판 6개 · 형성평가 1등 = 육 100%', bd.length === 6 && /^16번 시험육100%/.test(first[0]), `${bd.join(',')} · ${first.join(' | ')}`);
+  await p.screenshot({ path: `${SHOTS}/rank.png`, fullPage: true });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

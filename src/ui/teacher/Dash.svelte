@@ -88,6 +88,7 @@
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
     {#if V.barsFirst}{@render barsBlock()}{/if}
     {#if V.table}
+      {#if V.tableTitle}<h4 class="ttl">{V.tableTitle}</h4>{/if}
       <div class="tw"><table>
         <thead><tr>{#each V.table.head as h, i (i)}<th class:sk={i === 0}>{#if V.table.sort}<button type="button" class="srt" data-k="sort" onclick={() => sortBy(i)}>{h}{sortCol === i ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</button>{:else}{h}{/if}</th>{/each}</tr></thead>
         <tbody>{#each sortedRows as r, ri (ri)}<tr class:sum={r.sum} class:click={!!r.pick || !!r.cls} onclick={() => (r.pick ? onpick(r.pick) : r.cls ? onclass(r.cls) : null)}>{#each r.cells as c, i (i)}<td class="{c.tone ?? ''}" class:sk={i === 0}>{c.t}</td>{/each}</tr>{/each}</tbody>
@@ -95,6 +96,7 @@
       <p class="leg">{#each V.table.legend as [t, s] (s)}<span class={t}>{s}</span>{/each}{cls === ALL && vid === 'cmp' ? ' · 반을 누르면 그 반' : ''}</p>
     {/if}
     {#if !V.barsFirst}{@render barsBlock()}{/if}
+    {#if V.boards}<div class="boards">{#each V.boards as bd (bd.title)}<section class="board" data-k="board"><h4>{bd.title} <small>{bd.note}</small></h4>{#if bd.rows.length}<ol>{#each bd.rows as r, i (i)}<li class="top{r.rk <= 3 ? r.rk : 0}"><button type="button" class="br" disabled={!r.pick} onclick={() => r.pick && onpick(r.pick)}><b>{r.rk}</b><span>{r.nm}</span><em>{r.val}</em></button></li>{/each}</ol>{:else}<p class="emp">아직 기록이 없어요</p>{/if}</section>{/each}</div>{/if}
     {#if V.list}<div class="list" class:wrap={V.listWrap}>{#each V.list as x, i (i)}<button type="button" class="dl" disabled={!x.pick} onclick={() => x.pick && onpick(x.pick)}><span class="rk">{x.rk}</span><span class="nm"><b>{x.nm}</b><small>{x.sub}</small></span>{#if x.pc}<span class="pc">{x.pc}</span>{/if}{#if x.bar != null}<i class="bar" style:width="{x.bar * 100}%"></i>{/if}</button>{/each}</div>{/if}
     {#if V.memos}
       <div class="row"><button type="button" class="b2" onclick={() => copy(V.memos!.map((m) => `${m.s.n}번 ${m.s.name} ${m.text}`).join('\n\n'))}>📋 전체 복사</button><small>기록의 사실만으로 만든 초안 · 관찰을 더해 다듬기</small></div>
@@ -159,6 +161,13 @@
   .bc.est i { background: repeating-linear-gradient(45deg, var(--accent) 0 4px, color-mix(in srgb, var(--accent) 40%, transparent) 4px 8px); opacity: 0.75; }
   .vpick { gap: var(--s2); font-size: 14px; color: var(--text-2); } .vpick select { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); background: var(--surface); color: var(--text); border: 1px solid var(--surface-2); font: inherit; }
   .srt { all: unset; cursor: pointer; display: block; white-space: nowrap; min-height: 32px; line-height: 32px; } .srt:focus-visible { outline: 2px solid var(--accent); }
+  .ttl, .board h4 { margin: var(--s3) 0 var(--s2); font-size: 15px; } .board h4 small { font-weight: 500; color: var(--text-3); font-size: 12px; }
+  .boards { display: grid; grid-template-columns: 1fr; gap: var(--s3); } .board { background: var(--surface); border-radius: var(--r); padding: 4px var(--s3) var(--s3); }
+  .board ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; } .board .emp { color: var(--text-3); font-size: 13px; margin: 0; }
+  .br { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: var(--s2); min-height: 40px; padding: 0 6px; border-radius: var(--r-sm); cursor: pointer; }
+  .br b { min-width: 24px; text-align: center; color: var(--text-3); font-variant-numeric: tabular-nums; } .br span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; } .br em { font-style: normal; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .top1 .br b { color: var(--accent); } .top1 .br { background: color-mix(in srgb, var(--accent) 12%, transparent); } .top2 .br b, .top3 .br b { color: var(--text); }
+  @media (min-width: 700px) { .boards { grid-template-columns: repeat(3, 1fr); } }
   .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .bc b { position: absolute; top: -16px; font-size: 12px; color: var(--text); } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }

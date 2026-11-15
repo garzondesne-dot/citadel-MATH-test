@@ -27,7 +27,7 @@ describe('대시보드 (#125)', () => {
     const S = memoryStore();
     for (const id of ALL_VIEWS) {
       const v = view(S, id === 'cmp' ? ALL : '1-3', id);
-      expect(v.table || v.list || v.memos || v.bars || v.kpis, id).toBeTruthy();
+      expect(v.table || v.list || v.memos || v.bars || v.kpis || v.boards, id).toBeTruthy();
       expect(toSheet(v).rows.length, id).toBeGreaterThan(1);
     }
   });
