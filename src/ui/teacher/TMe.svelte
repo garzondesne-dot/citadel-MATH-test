@@ -1,5 +1,7 @@
 <script lang="ts">
   import { APP_NAME, BETA } from '../../channel';
+  import { chanOf, upTo } from '../../school/changes';
+  import ChangeList from './ChangeList.svelte';
   import { untrack } from 'svelte';
   import { teacherIn as teacherIn0, toTitle as toTitle0 } from './teacherAuth';
   import SoundToggles from '../SoundToggles.svelte';
@@ -24,7 +26,7 @@
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
   const { S, login0 = false }: { S: Store; /** 수업 열기에서 「🔐 교사 로그인하러」로 옴 = 로그인 창을 바로 엶 */ login0?: boolean } = $props();
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
-  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app' | 'photo'>(untrack(() => (login0 ? 'login' : ''))), key = $state(''), ver = $state(0), toast = $state('');
+  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app' | 'photo' | 'changes'>(untrack(() => (login0 ? 'login' : ''))), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
@@ -53,6 +55,7 @@
     {#if srv}<button type="button" class="item" class:warn={!admin} onclick={() => (sheet = 'login')}><span class="ic">🔐</span><span class="tx"><b>{admin ? '교사로 로그인됨' : '교사 로그인'}</b><small>{admin ? who : '명단 · 기록 · 수업 열기에 필요 · 처음 한 번'}</small></span></button>{/if}
     <button type="button" class="item" onclick={() => (hero = true)}><span class="ic">🧙</span><span class="tx"><b>내 용사</b><small>용사 바꾸기 · 강화 · 스킬 (학생 폰과 같은 창)</small></span></button>
     <a class="item" href="?role=camp&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>학생 폰 캠프와 같은 화면 · 교실 TV 교사 캠프는 TV 에서</small></span></a>
+    <button type="button" class="item" data-k="changes" onclick={() => (sheet = 'changes')}><span class="ic">📜</span><span class="tx"><b>바뀐 것</b><small>판마다 바뀐 것 · 지금 {BUILD}</small></span></button>
     <button type="button" class="item" data-k="feat" onclick={() => (sheet = 'feat')}><span class="ic">⚙</span><span class="tx"><b>우리 학교 기능</b><small>{BUNDLES.find((b) => b.id === featCfg().bundle)?.ic} {BUNDLES.find((b) => b.id === featCfg().bundle)?.name} 묶음 · 켜고 끄기</small></span></button>
     {#if feat('theme')}<button type="button" class="item" onclick={() => (sheet = 'theme')}><span class="ic">🎨</span><span class="tx"><b>테마 · {themeName}</b><small>이 교사 폰만 · 교실 TV 는 TV 「🎨 테마」</small></span></button>{/if}
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
@@ -66,7 +69,12 @@
 </div>
 
 {#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} />{/if}
-{#if sheet === 'login'}
+{#if sheet === 'changes'}
+  <Sheet onclose={() => (sheet = '')} tall mainText="닫기">
+    {#snippet title()}📜 바뀐 것 · 지금 {BUILD}{/snippet}
+    <ChangeList list={upTo(BUILD)} chan={chanOf()} showStudent={chanOf() === 'beta'} />
+  </Sheet>
+{:else if sheet === 'login'}
   <Sheet onclose={() => (sheet = '')} mainText={busy ? '…' : '로그인'} mainDisabled={busy || !email || pw.length < 6} onmain={() => teacherIn(false)}>
     {#snippet title()}🔐 교사 로그인{/snippet}
     {#if admin}<p class="ok">✅ {who} · 교사</p>{/if}

@@ -26,6 +26,7 @@ export function inbox(S: Store, uid: string, cls: string): MailItem[] {
   }
   for (const [id, x] of Object.entries(S.get<Record<string, { text?: string; g?: number; at?: number; kind?: string; got?: boolean; q?: string }>>(`mail/${uid}`) || {})) {
     if (!x || !x.text) continue;
+    if (x.kind === 'news') { out.push({ k: 'notice', id, at: Number(x.at) || 0, text: x.text, g: 0, s: 0, got: true, sub: '📢 새 소식' }); continue; } // 🆕 바뀐 것 (🎒 학생 새 소식)
     out.push({ k: x.kind === 'reply' ? 'reply' : 'msg', id, at: Number(x.at) || 0, text: x.text, g: Number(x.g) || 0, s: 0, got: true, sub: x.kind === 'reply' ? `선생님 답장${x.q ? ` · 내 편지 「${String(x.q).slice(0, 24)}」` : ''}` : '선생님 메시지' });
   }
   if (cls) for (const [id, x] of Object.entries(S.get<Record<string, { text?: string; at?: number }>>(`school/notice/${cls}`) || {})) {

@@ -44,6 +44,7 @@
   import MailBox from './MailBox.svelte';
   import { PACKS } from '../../engine/packs';
   import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
+  import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
@@ -177,6 +178,15 @@
   const anyTodo = $derived(Object.keys(todo).length > 0);
   const hl = (k: string): 'todo' | 'dim' | '' => (todo[k] ? 'todo' : anyTodo ? 'dim' : '');
   let boardJoin = $state('');
+  // 🆕 🎒 학생 새 소식 (📜 2026-11-15 · school/changes.ts): 정식에서만 · 실제 학생 · 캠프에서만(수업 화면 아님) · 마지막 본 판보다 새 판의 학생 줄 = 작은 창 한 번(최대 5줄) + 📮 「📢 새 소식」
+  let stuNews = $state<string[]>([]);
+  untrack(() => {
+    if (!(realStu && pupil && chanOf() === 'rel')) return;
+    const P0 = pupil, S0 = S, sp = studentSeenPath(P0.cls, P0.num);
+    const go = () => { const list = unseen(S0.get<string>(sp), BUILD), lines = studentLines(list); if (!list.length) return; studentNews(S0, P0.uid, list, S0.now()); mbVer++; if (lines.length) stuNews = lines; else S0.set(sp, BUILD); };
+    if (S0.fetch) void S0.fetch(sp).then(go, go); else go();
+  });
+  function stuNewsOk() { if (pupil) S.set(studentSeenPath(pupil.cls, pupil.num), BUILD); stuNews = []; }
   const news = $derived<Record<string, number>>({ castle: 0, dummy: 0, mail: mailN });
   let showAll = $state(false);
   let allTimer: ReturnType<typeof setTimeout> | null = null;
@@ -408,6 +418,12 @@
   </Sheet>
 {/if}
 
+{#if stuNews.length && !sheet && !(hero0 && !me.seen['hero0'])}
+  <Sheet onclose={stuNewsOk} mainText="알았어요" onmain={stuNewsOk}>
+    {#snippet title()}🆕 새 소식{/snippet}
+    <ul class="snews" data-k="stu-news">{#each stuNews as t, i (i)}<li>{t}</li>{/each}</ul>
+  </Sheet>
+{/if}
 {#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
 <style>
@@ -571,4 +587,5 @@
   .prop::before { inset: auto; left: 50%; top: 50%; width: max(calc(100% + 12px), 48px); height: max(calc(100% + 12px), 48px); transform: translate(-50%, -50%); }
   .top { pointer-events: none; } .top > :global(*) { pointer-events: auto; } .top > .sp2, .top > .ttl { pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .prop.todo :global(.img), img.obj.todo { animation: none; filter: drop-shadow(0 0 7px rgba(255, 214, 120, 0.95)) brightness(1.15); } .zone.todo::after, .bub, .spark { animation: none; } .spark { display: none; } }
+  .snews { margin: 0; padding: 0 0 0 1.1em; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5; }
 </style>

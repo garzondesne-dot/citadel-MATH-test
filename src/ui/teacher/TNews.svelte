@@ -19,7 +19,7 @@
   const items = $derived.by(() => { void ver; return inbox(S); });
   const shown = $derived(items.filter((x) => !kind || x.kind === kind));
   const unread = $derived(items.filter((x) => !x.read).length);
-  const IC: Record<InboxItem['kind'], string> = { idea: '💬', photo: '📷', quiz: '✏', survey: '📝' };
+  const IC: Record<InboxItem['kind'], string> = { idea: '💬', photo: '📷', quiz: '✏', survey: '📝', news: '📢' };
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   function tap(x: InboxItem) { open = open === x.id ? '' : x.id; if (!x.read) { S.set(`school/inbox/${x.id}/read`, true); ver++; onread(); } }
   function done(x: InboxItem, msg: string) { S.set(`school/inbox/${x.id}/done`, msg); ver++; say(msg); open = ''; }
@@ -143,7 +143,7 @@
   .nb b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nb small { font-size: 12.5px; color: var(--text-2); }
   .dot { width: 9px; height: 9px; border-radius: 5px; background: var(--bad); flex: none; }
   .do { display: flex; flex-wrap: wrap; gap: var(--s2); padding: 0 var(--s3) var(--s3); }
-  .do p { flex-basis: 100%; margin: 0; font-size: 13.5px; color: var(--text-2); }
+  .do p { flex-basis: 100%; margin: 0; font-size: 13.5px; color: var(--text-2); white-space: pre-line; }
   .b1 { flex: 1; height: 44px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent); font: 700 15px var(--font); }
   .b2 { flex: 1; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px var(--font); }
   .b1:disabled, .b2:disabled { opacity: 0.4; }

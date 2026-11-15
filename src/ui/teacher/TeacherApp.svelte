@@ -19,6 +19,9 @@
   import TGate from './TGate.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { unreadN } from '../../school/inbox';
+  import { chanOf, teacherSeenPath, teacherSync, type Change } from '../../school/changes';
+  import { BUILD } from '../../build';
+  import ChangeList from './ChangeList.svelte';
 
   // 📱 교사 폰 (#119 ⑫ ⑬ ⑭) — 수업이 없으면 아래 탭 5(수업 · 학생 · 준비 · 소식 · 나) · 수업이 열리면 탭 자리에 같은 높이 「수업 중 막대」(TLive)
   const { S, packs }: { S: Store; packs: LessonPack[] } = $props();
@@ -44,6 +47,12 @@
   const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
   let loginAsk = $state(false), loginGo = $state(false);
   const gate = needAdmin(); // 🔐 입구 (📜 2026-11-13 밤 선생님 「진행」): 서버인데 교사 로그인 안 한 폰 = 교사 화면 대신 로그인 화면만 (로그인하면 새로 고침)
+  // 🆕 바뀐 것 (📜 2026-11-15 · school/changes.ts): 교사 로그인한 폰 · 정식 = 못 본 판을 아래 창으로(확인했어요 = 본 판) + 소식 탭 한 통씩 / 베타 = 창 없이 소식 탭 한 통씩(그 자리에서 본 판)
+  const tUid = untrack(() => (S as Store & { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? ((S as AS).auth ? '' : 'local'));
+  const chan = chanOf();
+  let newsList = $state<Change[]>(untrack(() => (!gate && tUid ? teacherSync(S, tUid, chan, BUILD, S.now(), chan === 'beta') : [])));
+  const newsOpen = $derived(chan === 'rel' && newsList.length > 0);
+  function newsOk() { if (tUid) S.set(teacherSeenPath(tUid, 'rel'), BUILD); newsList = []; }
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
     if (needAdmin()) { loginAsk = true; return; }
     const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
@@ -92,6 +101,12 @@
   {/if}
 </div>
 
+{#if newsOpen}
+  <Sheet onclose={newsOk} tall mainText="확인했어요" onmain={newsOk}>
+    {#snippet title()}🆕 바뀐 것 · {newsList.length > 1 ? `${newsList[newsList.length - 1]?.ver} → ${BUILD}` : BUILD}{/snippet}
+    <ChangeList list={newsList} chan="rel" />
+  </Sheet>
+{/if}
 {#if loginAsk}
   <Sheet onclose={() => (loginAsk = false)} mainText="🔐 교사 로그인하러" onmain={() => { loginAsk = false; loginGo = true; tab = 'me'; }}>
     {#snippet title()}🔐 교사 로그인이 필요해요{/snippet}
