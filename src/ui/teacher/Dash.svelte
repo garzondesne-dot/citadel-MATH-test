@@ -1,5 +1,6 @@
 <script lang="ts">
   import { XCLS } from '../../channel';
+  import { PACKS } from '../../engine/packs';
   import PhotoBoard from './PhotoBoard.svelte';
   import type { Store } from '../../model/types';
   import type { Stud } from '../../school/dash';
@@ -27,6 +28,16 @@
   const svCls = () => (cls === ALL ? CLASSES.filter((c) => !isBeta(S, c)) : [cls]);
   async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
+  // 💬 마지막 한마디 모아 보기 (정식 dash.js #sv-words 그대로: 수업 방 rooms/*/words · 반 거르기 · 거른 말 빼기 · 차시 · 반 순 · 이름 없음)
+  let words = $state<{ cls: string; no: number; t: string }[] | null>(null), wBusy = $state(false);
+  $effect(() => { void cls; words = null; });
+  async function wordsLoad() {
+    wBusy = true;
+    const rooms = ((S.fetch ? await S.fetch<Record<string, { meta?: { cls?: string; lesson?: string }; words?: Record<string, { t?: string; bad?: boolean } | null> }>>('rooms').catch(() => null) : S.get<Record<string, never>>('rooms')) || {}) as Record<string, { meta?: { cls?: string; lesson?: string }; words?: Record<string, { t?: string; bad?: boolean } | null> }>;
+    const want = new Set(cls === ALL ? CLASSES : [cls]);
+    words = Object.values(rooms).filter((r) => r && r.meta && r.words && want.has(String(r.meta.cls))).flatMap((r) => { const no = PACKS.find((x) => x.id === r.meta!.lesson)?.no ?? 0; return Object.values(r.words || {}).filter((x) => x && x.t && !x.bad).map((x) => ({ cls: String(r.meta!.cls), no, t: String(x!.t) })); }).sort((a, b) => a.no - b.no || a.cls.localeCompare(b.cls));
+    wBusy = false;
+  }
   function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
   // 🌡 정식 dash.js heat: % 칸 = 바탕 5단(90↑ · 75↑ · 60↑ · 40↑ · 그 아래) · 대시보드 겉모습 = 옛 정식 (📜 2026-11-15 머리 🔨)
   const heat = (v: unknown) => { if (!v || typeof v !== 'object' || !('pct' in (v as object))) return ''; const p = (v as { pct: number }).pct * 100; return p >= 90 ? 'h5' : p >= 75 ? 'h4' : p >= 60 ? 'h3' : p >= 40 ? 'h2' : 'h1'; };
@@ -85,6 +96,7 @@
     {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
     {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
+    {#if vid === 'survey'}<div class="words" data-k="sv-words">{#if words}<h4 class="ttl">💬 마지막 한마디 <small>({words.length}개 · 수업 화면에 이미 보인 말풍선)</small></h4>{#if words.length}<ul>{#each words as w, i (i)}<li><small>{w.cls} · {w.no ? `${w.no}차시` : ''}</small> {w.t}</li>{/each}</ul>{:else}<p class="emp">없음</p>{/if}{:else}<button type="button" class="b2" disabled={wBusy} onclick={wordsLoad}>{wBusy ? '모으는 중…' : '💬 마지막 한마디 모아 보기'}</button>{/if}</div>{/if}
     {#snippet barsBlock()}{#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc" class:est={b.est?.[i]}><i style:height="{(v / mx) * 100}%"></i><b class:now={i === b.vals.length - 1}>{v}</b><em>{b.est?.[i] ? '≈' : ''}{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}{/snippet}
     {#if V.pick}<label class="row vpick">{V.pick.label} <select data-k="vpick" value={V.pick.cur} onchange={(e) => (vopt = (e.currentTarget as HTMLSelectElement).value)}>{#each V.pick.opts as [v, t] (v)}<option value={v}>{t}</option>{/each}</select></label>{/if}
     {#if V.note}<p class="vnote" data-k="use-note">{V.note}</p>{/if}
@@ -174,6 +186,7 @@
   .br b { min-width: 24px; text-align: center; color: var(--text-3); font-variant-numeric: tabular-nums; } .br span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; } .br em { font-style: normal; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
   .top1 .br b { color: var(--accent); } .top1 .br { background: color-mix(in srgb, var(--accent) 12%, transparent); } .top2 .br b, .top3 .br b { color: var(--text); }
   @media (min-width: 700px) { .boards { grid-template-columns: repeat(3, 1fr); } }
+  .words ul { list-style: none; margin: 0 0 var(--s3); padding: 0; display: flex; flex-direction: column; gap: 4px; } .words li { padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); font-size: 14px; } .words li small { color: var(--text-3); margin-right: 6px; } .words .emp { color: var(--text-3); font-size: 13px; }
   .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .bc b { position: absolute; top: -16px; font-size: 11px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; } .bc b.now { color: var(--accent); font-size: 12.5px; font-weight: 800; } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }
