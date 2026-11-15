@@ -11,6 +11,7 @@
   import Hearts from '../battle/Hearts.svelte';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import SkillCards from './SkillCards.svelte';
+  import { keepOk } from './multiFb';
   import { heroAtk } from '../battle/fx.svelte';
   import { sfx } from '../sound.svelte';
   // 👑 형성평가 v4 = 일반 몬스터 꼴 (📜 2026-11-13 밤 · 머리 🔨 하트 묶음 D · 베타 v4 방)
@@ -27,8 +28,9 @@
   const qs = $derived(Object.fromEntries(todo.map((i) => [i, bossItem(L, R, uid, i, r.next(i))])) as Record<number, Question | null>);
   const key = $derived(`${r.subs}|${todo.join(',')}`);
   let given = $state<Record<number, Given>>({}), cur = $state(-1), formKey = '';
-  $effect(() => { if (key !== formKey) { formKey = key; given = Object.fromEntries(todo.map((i) => [i, qs[i] ? emptyOf(qs[i]!) : null])); cur = todo[0] ?? -1; } });
+  $effect(() => { if (key !== formKey) { formKey = key; given = Object.fromEntries(todo.map((i) => { const t = lastBad(i); return [i, qs[i] ? (keepOk(qs[i], t?.given, t?.q) ?? emptyOf(qs[i]!)) : null]; })); /* ☑ 맞은 보기는 고른 채로 (같은 보기일 때만) */ cur = todo[0] ?? -1; } });
   const q = $derived(cur >= 0 ? qs[cur] ?? null : null);
+  const lastBad = (i: number) => { const t = tries.filter((x) => x.i === i).pop(); return t && !t.ok ? t : null; };
   const allFilled = $derived(todo.length > 0 && todo.every((i) => !!qs[i] && filled(qs[i]!, given[i] ?? null)));
   const nextUnfilled = $derived(todo.find((i) => i !== cur && !!qs[i] && !filled(qs[i]!, given[i] ?? null)) ?? -1);
   const okText = (i: number) => { const t = tries.filter((x) => x.i === i && x.ok).pop(); if (!t?.q) return '✔'; const l = penLine(t.q, t.given, 0); return l ? stripNo(l) : '✔'; };
@@ -79,7 +81,7 @@
   {#if r.roundOpen || bonusMode}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => { practice = false; bonusMode = false; }}>그만하기</button></p>{/if}
   <div class="bcard">
     <div class="head">{#if numTag}<span class="tag">{numTag}</span> {/if}<span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 ❤ 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
-    {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} />{/key}
+    {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>
     {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{paperOn() ? (bonusMode ? '보너스 문항 제출' : r.roundOpen ? '재도전 제출' : '모두 제출') : bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}

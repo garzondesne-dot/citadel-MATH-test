@@ -23,6 +23,7 @@
   import PrepImg from './PrepImg.svelte';
   import { chainItems as phItems, codeRubrics, pendState, raidMax, cfgOf, ready as phReady, rubric as phRubric, rubricLesson } from '../../school/photo';
   import { chainPhotoFill, photoScroll, snapEnd, snapStart } from '../../raid/actions';
+  import { keepOk } from './multiFb';
 
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
@@ -45,7 +46,7 @@
   const key = $derived(`${mid}|${pass}|${stage}|${rec.nextK}`);
   let given = $state<Given>(null);
   let formKey = '';
-  $effect(() => { if (key !== formKey) { formKey = key; given = q ? emptyOf(q) : null; } });
+  $effect(() => { if (key !== formKey) { formKey = key; const kept = !prac && rec.lastWrong && rec.lastWrong.s === stage ? keepOk(q, rec.lastWrong.given) : null; given = q ? (kept ?? emptyOf(q)) : null; } }); // ☑ 모두 고르기 = 맞은 보기는 고른 채로
   const ready = $derived(!!q && filled(q, given));
   const lastWrong = $derived(!prac && !!rec.lastWrong && rec.lastWrong.s === stage);
   const used = $derived(pracUsed(R, mid, uid, rec));
@@ -142,7 +143,7 @@
 {:else}
   {#if numTag && !prac}<p class="tagl"><span class="tag">{numTag}</span></p>{/if}
   {#if v4 && prac}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></p>{/if}
-  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
+  <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} prev={rec.lastWrong?.given} prevAt={rec.nextK} hintKey={`${code}|${mid}|s${stage}`} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 {#if wm}

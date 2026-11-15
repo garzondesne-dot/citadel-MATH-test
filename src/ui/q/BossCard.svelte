@@ -10,6 +10,7 @@
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
   import GradeTable, { type GRow } from './GradeTable.svelte';
   import { shortQ } from './short';
+  import { keepOk } from './multiFb';
   import { heroAtk } from '../battle/fx.svelte';
 
   // 👑 형성평가 = 문항 하나씩 한 장 (#99 ① · 점수 · 재도전 규칙은 정식 그대로)
@@ -31,7 +32,8 @@
   const key = $derived(`${cur}|${a}`);
   let given = $state<Given>(null);
   let formKey = '';
-  $effect(() => { if (key !== formKey) { formKey = key; given = q ? emptyOf(q) : null; } });
+  const lastBad = (i: number) => { const t = tries.filter((x) => x.i === i).pop(); return t && !t.ok ? t : null; };
+  $effect(() => { if (key !== formKey) { formKey = key; const t = lastBad(cur); given = q ? (keepOk(q, t?.given, t?.q) ?? emptyOf(q)) : null; } }); // ☑ 맞은 보기는 고른 채로
   let thinkUntil = $state(0);
   let toast = $state('');
   const thinkLeft = $derived(Math.max(0, Math.ceil((thinkUntil - now) / 1000)));
@@ -94,7 +96,7 @@
     {:else if s.left <= 0}
       <p class="muted">📖 기회를 모두 썼어요 — {lastSol || '해설을 보며 학습지에 정리해요'}</p>
     {:else}
-      {#key key}<QItem {q} i={cur} value={given} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given = v)} />{/key}
+      {#key key}<QItem {q} i={cur} value={given} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
     {/if}
   </div>
   {#if !s.ok && s.left > 0}

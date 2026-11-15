@@ -28,7 +28,7 @@
   .cell b { color: var(--text-2); flex: none; }
   .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cell.s-empty .tx { color: var(--text-3); }
-  .tx.old { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 2px; }
+  .tx.old { color: var(--text-2); } /* 📜 2026-11-15 취소선 없음 · 틀림 = 칸 테두리 빨강 + ✘ 배지만 · 글자는 그대로 읽힘 */
   .cell.now { border-color: var(--accent); }
   .cell.s-ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 22%, var(--surface)); animation: flip 0.2s ease-out 1; }
   .cell.s-bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 22%, var(--surface)); animation: flip 0.2s ease-out 1; }

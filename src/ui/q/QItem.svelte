@@ -1,16 +1,27 @@
 <script lang="ts">
   import type { Given, Question } from '../../model/types';
+  import { untrack } from 'svelte';
   import { needNeg, normFor, penLine, stripNo } from '../../engine/input';
   import RuneKeypad from './RuneKeypad.svelte';
   import Chip from './Chip.svelte';
   import Choices from './Choices.svelte';
   import { SUBJ } from '../../engine/subject';
   import SymText from './SymText.svelte';
+  import { firstWrong, marksOf } from './multiFb';
+  import { paperOn } from '../submit.svelte';
 
   // 문항 하나 = 문제 글 + 그 꼴의 답 칸 + 「✍ 나의 답」 한 줄 (꼴 하나 = 부품 하나 · 학생 · 성채 · 허수아비 · 선생님 시연이 같이 씀)
   //   runeLen: 몬스터 · 소레이드 = 2 (0~99) · 문제 창 꼴(형성평가 등) = 4 (#97)
-  const { q, i = 0, value: raw, wasWrong = false, disabled = false, runeLen = 2, showNo = true, ansLabel = '내 답', sym = true, onchange }:
-    { q: Question; i?: number; value: Given; wasWrong?: boolean; disabled?: boolean; runeLen?: number; showNo?: boolean; ansLabel?: string; sym?: boolean; onchange: (v: Given) => void } = $props();
+  const { q, i = 0, value: raw, wasWrong = false, disabled = false, runeLen = 2, showNo = true, ansLabel = '내 답', sym = true, onchange, prev = undefined, prevQ = null, hintKey = '', prevAt = 0 }:
+    { q: Question; i?: number; value: Given; wasWrong?: boolean; disabled?: boolean; runeLen?: number; showNo?: boolean; ansLabel?: string; sym?: boolean; onchange: (v: Given) => void;
+      /** ☑ 지난번 틀린 답(같은 판) · 그때 문항 · 처음 틀림 기억 열쇠(그 문항) — multiFb.ts */ prev?: Given; prevQ?: Question | null; hintKey?: string; /** 몇 번째 시도 뒤인가 (같은 오답을 또 내도 새 틀림으로) */ prevAt?: number } = $props();
+  // ☑ 모두 고르기 (📜 2026-11-15): 고른 정답 ✔ · 고른 오답 ✘ · 처음 틀렸을 때 한 번만 큰 띠 + 「모두」 깜빡 + ☐ 체크 상자 모양
+  const marks = $derived(marksOf(q, prev, prevQ));
+  let fresh = $state(false), shrink = $state(false), fT: ReturnType<typeof setTimeout>[] = [];
+  const mSig = $derived(marks ? `${hintKey}|${prevAt}|${JSON.stringify(prev)}|${JSON.stringify(marks)}` : '');
+  $effect(() => { const sig = mSig, m = marks, k = hintKey; untrack(() => { void sig; fT.forEach(clearTimeout); fresh = false; shrink = false; if (!m || !k || !firstWrong(k)) return; fT = [setTimeout(() => (fresh = true), 700), setTimeout(() => (shrink = true), 2200)]; }); }); // 두 번째 틀림부터 = 띠 없음
+  $effect(() => () => fT.forEach(clearTimeout));
+  const allBits = (t: string) => t.split(/(모두)/);
   // 문제 글: 「… 일 때」 앞부분(조건) = 작은 글 · 묻는 부분 = 큰 글 (②B q1 · q2)
   const parts = $derived.by(() => { const t0 = q.question, t = showNo ? t0 : t0.replace(/^\s*\(\d+\)\s*/, ''), k = t.lastIndexOf(' 일 때 '); return k > 0 ? [t.slice(0, k + 4), t.slice(k + 5)] : ['', t]; });
   const value = $derived(normFor(q, raw));
@@ -26,9 +37,10 @@
     <Choices opts={q.options} value={q.options.indexOf((value as string[] | null)?.[0] ?? '')} {disabled} onpick={(k) => onchange([q.options[k] as string])} />
   {:else}
     {#if parts[0]}<p class="q1"><SymText text={parts[0]} on={sym} /></p>{/if}
-    <p class="q2">{#if showNo && qno}<b class="no">{qno}</b> {/if}<SymText text={parts[1] ?? ''} on={sym} /></p>
+    <p class="q2">{#if showNo && qno}<b class="no">{qno}</b> {/if}{#if q.type === 'multi'}{#each allBits(parts[1] ?? '') as b, k (k)}{#if b === '모두'}<mark class="all" class:paper={paperOn()} class:blink={fresh} data-k="all">모두</mark>{:else if b}<SymText text={b} on={sym} />{/if}{/each}{:else}<SymText text={parts[1] ?? ''} on={sym} />{/if}</p>
     {#if q.type === 'multi'}
-      <Chip {q} value={(value as number[]) || []} {disabled} onchange={(v) => onchange(v)} />
+      {#if fresh}<div class="allband" class:small={shrink} role="status" data-k="allband">☑ 정답이 하나가 아닐 수 있어요 · 모두 고르세요!</div>{/if}
+      <Chip {q} value={(value as number[]) || []} {disabled} {marks} box={fresh} onchange={(v) => onchange(v)} />
     {:else if q.type === 'choice'}
       <Choices opts={q.choices} value={value as number | null} col {disabled} onpick={(k) => onchange(k)} />
     {:else if q.type === 'ox'}
@@ -54,5 +66,13 @@
   .ans { min-height: 46px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s2); padding: 0 14px; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
   .ans small { font-size: var(--fs-small); font-weight: 500; color: var(--text-2); flex: none; }
   .ans .ph { font-size: var(--fs-small); font-weight: 500; color: var(--text-3); }
+  .all { background: #ffe066; color: #1b1408; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; border-radius: 4px; padding: 0 2px; }
+  .all.paper { background: none; color: inherit; }
+  .all.blink { animation: allblink 0.45s ease-in-out 3; }
+  @keyframes allblink { 50% { background: var(--accent); transform: scale(1.12); } }
+  .allband { text-align: center; padding: var(--s3) var(--s2); border-radius: var(--r); background: var(--accent); color: var(--on-accent); font: 800 19px var(--font); animation: bounce 0.5s ease-out 1; transition: font-size var(--t), padding var(--t); }
+  .allband.small { font-size: 14px; padding: 6px var(--s2); }
+  @keyframes bounce { 0% { transform: scale(0.6); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .all.blink, .allband { animation: none; } }
   .txt { width: 100%; box-sizing: border-box; min-height: var(--tap); font-size: 17px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); padding: 0 10px; }
 </style>

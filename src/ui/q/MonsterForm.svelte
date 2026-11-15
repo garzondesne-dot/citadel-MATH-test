@@ -18,6 +18,7 @@
   import Slots, { markOf } from '../battle/Slots.svelte';
   import EnergyCard from './EnergyCard.svelte';
   import SkillCards from './SkillCards.svelte';
+  import { keepOk } from './multiFb';
   import Hearts from '../battle/Hearts.svelte';
   import { V4, answerOf } from '../../raid/raid';
   import { healsTo } from '../../raid/raid';
@@ -51,7 +52,7 @@
     if (key === formKey) return;
     formKey = key;
     const ok = sameQ && !!last && Array.isArray(last.given) && last.given.length === items.length;
-    given = items.map((q, i) => (ok && last && last.marks[i] && last.given[i] != null ? JSON.parse(JSON.stringify(last.given[i])) : emptyOf(q)));
+    given = items.map((q, i) => (ok && last && last.marks[i] && last.given[i] != null ? JSON.parse(JSON.stringify(last.given[i])) : (ok && last ? keepOk(q, last.given[i], lastItems[i]) : null) ?? emptyOf(q))); // ☑ 모두 고르기 = 맞은 보기는 고른 채로
     const firstWrong = ok && last ? last.marks.findIndex((m) => !m) : -1;
     cur = firstWrong >= 0 ? firstWrong : 0;
   });
@@ -191,7 +192,7 @@
     <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if numTag}<span class="tag">{numTag}</span>{/if}{#if rec.healed}<span class="healed">💚 {healers}의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
     {#if L.monsters[mid]?.noteText}<p class="muted">💡 {L.monsters[mid]?.noteText}</p>{/if}
     {#key `${key}|${cur}`}
-      <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} />
+      <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} prev={sameQ && last && !last.marks[cur] ? (last.given || [])[cur] : undefined} prevQ={lastItems[cur] ?? null} hintKey={`${code}|${mid}|${cur}`} prevAt={rec.tries.length} />
     {/key}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '❤' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
