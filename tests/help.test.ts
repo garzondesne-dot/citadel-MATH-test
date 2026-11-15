@@ -5,7 +5,7 @@ import { checkUpload } from '../src/school/packUpload';
 import { SUBJ } from '../src/engine/subject';
 import { ATTACKS } from '../src/raid/attacks';
 import { items } from '../src/engine/lessons';
-import { helpOf, handsOf } from '../src/school/help';
+import { helpOf, handsOf, reviewsOf } from '../src/school/help';
 import type { Room } from '../src/model/types';
 
 const look = { sheet: (r: string) => (r.split(':')[0]!.replace(/@.*$/, '') in SUBJ.themes.sheets), theme: (t: string) => !t || t in SUBJ.themes.dungeons, attack: (a: string) => a in ATTACKS, builtIn: (id: string) => SUBJ.lessons.some((p) => p.id === id) };
@@ -29,6 +29,8 @@ describe('💡 도움 3단 · 🔎 익명 풀이 팩 칸', () => {
     const h1 = helpOf(r.pack!, 'm1', 0, { ...q1, help: undefined });
     expect(h1).toEqual({ concept: it0.help.concept, example: it0.help.example });
     expect(helpOf(r.pack!, 'boss', 0, q)).toBeNull(); // 👑 형성평가 = 도움 3단 안 엶
+    expect(reviewsOf(r.pack!, 'm1')).toEqual([{ i: 0, k: 0, r: it0.review[0] }]); // 🔎 리모컨 단추 목록
+    expect(reviewsOf(r.pack!, 'm2')).toEqual([]);
   });
   it('틀린 help · review = 칸 · 이유', () => {
     const P = base(), it0 = firstItem(P);

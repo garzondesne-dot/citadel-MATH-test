@@ -65,6 +65,8 @@ function setHold(S: Store, code: string, R: Room, patch: Partial<Room['state']>)
   S.set(`${roomPath(code)}/state`, next);
 }
 /** ⏸ 집중 켜기 · 끄기 (#118): 게임 시계가 멈추고 끄면 멈춘 자리에서 이어감 · 수업 시계(남은 시간 · 문 닫기)는 그대로 */
+/** 🔎 익명 풀이 띄우기 · 내리기 (TV 카드 · 학생 폰 「TV 를 봐요」) */
+export const setReview = (S: Store, code: string, v: { mid: string; i: number; k: number } | null) => S.set(`${roomPath(code)}/state/review`, v);
 export function setFocus(S: Store, code: string, on: boolean): void {
   const R = getRoom(S, code);
   if (!R || !!R.state.focus === on) return;

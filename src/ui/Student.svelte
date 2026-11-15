@@ -259,6 +259,7 @@
     </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
+    {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band"><b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span></div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
     {#if scout?.on && paperOn()}
       <div class="pscout" data-k="pscout"><b class="ph1">학습지 {probNo} 을 먼저 풀어 두세요</b><p>{Math.ceil(scout.left / 1000)}초 뒤 답 칸이 열려요. 선생님이 일찍 열 수도 있어요.</p></div>
       <BottomAction disabled={readyNow} why={readyNow ? '준비 완료를 보냈어요' : ''} onmain={() => scout && scoutReady(S, code, scout.id, uid)} mainLabel="준비 완료">
@@ -314,6 +315,8 @@
 {/if}
 
 <style>
+  .revband { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+  .revband b { font-size: 18px; } .revband span { font-size: 15px; color: var(--text-2); }
   .talk .ttl { font-size: 19px; line-height: 1.4; }
   .talk .vbtn { min-height: var(--tap); border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { reviewsOf } from '../../school/help';
   import { siteUrl } from '../../channel';
   import { holdWake } from '../wake.svelte';
   import { SUBJ } from '../../engine/subject';
@@ -220,6 +221,7 @@
   // 📄 문제 창 · 📖 개념 오른쪽 = 학생 폰과 같은 함수(🪞) · 첫 판 숫자
   const nextMon = $derived(step ? L.steps.slice(i).find((s) => s.kind === 'monster' || s.kind === 'boss') ?? null : null);
   const qsOf = (id: string) => (id === BOSS_ID ? (L.boss ? Array.from({ length: L.boss.items }, (_, k) => bossItem(L, `${code}|tv`, k, 0)).filter((q): q is NonNullable<typeof q> => !!q) : []) : L.monsters[id]?.chain ? chainItems(L, id, `${code}|tv`, 0) : items(L, id, `${code}|tv`, 0));
+  const tvRev = $derived.by(() => { const v = R?.state.review; if (!v || !mid || v.mid !== mid) return null; return reviewsOf(L, mid).find((x) => x.i === v.i && x.k === v.k)?.r ?? null; });
   const sheetQs = $derived(R?.state.sheet ? (L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : qsOf(R.state.sheet)) : []);
   // 위 막대 흐름도 · 남은 시간 선 (#119 덧붙임 3 · 4 · 6)
   const topic = $derived(L.title.split(' · ')[0] ?? L.title);
@@ -361,6 +363,14 @@
   {#if R?.state.sheet && sheetQs.length}
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
     <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
+  {/if}
+  {#if tvRev}
+    <!-- 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기): 양피지 카드 · 이름 · 점수 · 정답/오답 글자 없음 · 「함께 살펴볼 줄」 강조 · 질문 · wrong = 「검토할 풀이」 꼬리표 -->
+    <div class="ov rev" data-k="tv-review"><div class="parch">
+      <div class="rh"><b>🔎 함께 살펴볼 풀이</b>{#if tvRev.wrong}<span class="rtag">검토할 풀이</span>{/if}</div>
+      <ol class="rl">{#each tvRev.lines as ln, k (k)}<li class:fo={k === tvRev.focus}>{#if k === tvRev.focus}<span class="fl">함께 살펴볼 줄</span>{/if}<SymText text={ln} on={false} /></li>{/each}</ol>
+      {#if tvRev.ask}<p class="rq">❓ <SymText text={tvRev.ask} on={false} /></p>{/if}
+    </div></div>
   {/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
@@ -558,6 +568,16 @@
   .dpane { position: absolute; right: 1.5cqw; top: 7.5cqh; /* 위 막대(3.8cqw ≈ 6.8cqh) 바로 아래 · 한 화면에 더 들어가게 */ bottom: 10cqh; /* 🎮 아래 조작 막대(0.7배 · 약 6.7cqh + 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 32cqw; /* 📜 2026-11-14 「좌우 폭을 조금 줄여서」 40 → 32 */ z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }
+  .ov.rev { background: rgba(5, 6, 10, 0.7); padding: 4cqh 6cqw; }
+  .parch { width: min(88cqw, 1500px); max-height: 82cqh; overflow: auto; text-align: left; padding: 3cqh 3.4cqw; border-radius: 1.4cqw; color: #2b1d0e; background: linear-gradient(#f6e7c4, #ead3a0); box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, 0.6), inset 0 0 0 0.4cqw #c9a46a; }
+  .parch .rh { display: flex; align-items: center; gap: 1.4cqw; margin-bottom: 1.6cqh; }
+  .parch .rh b { font-size: var(--tv-title); text-shadow: none; color: #5a3a12; }
+  .rtag { padding: 0.4cqh 1cqw; border-radius: 999px; background: #b4442a; color: #fff; font-size: var(--tv-small); font-weight: 800; }
+  .rl { margin: 0; padding-left: 3cqw; display: flex; flex-direction: column; gap: 1.2cqh; font-size: var(--tv-title); font-weight: 700; line-height: 1.45; }
+  .rl li { position: relative; padding: 0.6cqh 1cqw; border-radius: 0.8cqw; }
+  .rl li.fo { background: #ffe066; box-shadow: 0 0 0 0.3cqw #d9a400; }
+  .rl .fl { position: absolute; right: 1cqw; top: -1.6cqh; padding: 0.2cqh 0.8cqw; border-radius: 999px; background: #d9a400; color: #2b1d0e; font-size: var(--tv-small); }
+  .rq { margin: 2cqh 0 0 !important; font-size: var(--tv-title) !important; color: #5a3a12; }
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
   .ov b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; }
   .ov p { margin: 0; font-size: var(--tv-title); font-weight: 700; }

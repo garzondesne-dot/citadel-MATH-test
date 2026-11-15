@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { handsOf, lowerHand } from '../../school/help';
+  import { handsOf, lowerHand, reviewsOf } from '../../school/help';
+  import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
   import { holdWake, wakeTip } from '../wake.svelte';
   import { V4 } from '../../raid/raid';
@@ -93,6 +94,11 @@
   const named = $derived(COLS <= 8);
   // ✋ 💡 도움 3단 뒤 손든 학생도 🙋 줄에 (📜 2026-11-15) · 칩 누름 = 칼이 다 떨어진 학생이면 ⚔ 보급 · 손만 든 학생이면 손 내림
   const hands = $derived(R && mid ? handsOf(R, mid) : []);
+  // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
+  const revs = $derived(mid ? reviewsOf(L, mid) : []);
+  const revNow = $derived(R?.state.review && R.state.review.mid === mid ? R.state.review : null);
+  const revIdx = $derived(revNow ? revs.findIndex((x) => x.i === revNow.i && x.k === revNow.k) : -1);
+  function nextReview() { if (!mid) return; const n = revIdx + 1; setReview(S, code, n < revs.length ? { mid, i: revs[n]!.i, k: revs[n]!.k } : null); }
   const help = $derived([...new Set([...stuck.filter((x) => x.lock).map((x) => x.u), ...hands])]);
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
@@ -258,6 +264,7 @@
       <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
+      {#if revs.length}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
@@ -415,7 +422,7 @@
   .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }
-  .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+  .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
   .rdock button { height: 54px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); display: grid; place-items: center; align-content: center; gap: 1px; padding: 0; box-shadow: 0 3px 0 var(--press-sh); }
   .rdock button i { font-style: normal; font-size: 17px; line-height: 1; }
   .rdock button.on { border: 2px solid var(--accent); background: var(--surface-2); }

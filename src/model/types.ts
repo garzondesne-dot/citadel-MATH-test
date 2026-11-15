@@ -190,6 +190,7 @@ export interface Room {
     focus?: boolean; rest?: { at: number; min: number } | null; holdAt?: number | null; pauseMs?: number | null;
     /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름 · 한 번) · 문 닫기 장면 */ deadline?: number | null; extend?: number; door?: { at: number; ask: boolean } | null; doorExt?: number | null;
     /** 🎬 영상 · 📄 문제 창 (단계 id) · 💬 TV 대기실 선생님 말 · 🎁 마지막 선물(TV 표시) · 🔄 새로 고침 보낸 시각 */
+    /** 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기 · TV 양피지 카드) = 몬스터 · 문항 · 풀이 번호 */ review?: { mid: string; i: number; k: number } | null;
     video?: string | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
     /** 수업 끝 (닫힘) · ⏯ 닫힌 그때 이어서 자리 */ closed?: boolean; stop?: { step: number; fresh: string | null; done: boolean } | null;
     /** 교실 TV: 교사 캠프 → 「⚔ 던전 입장」 누르면 던전 대기실 */ hall?: 'lobby' | null;

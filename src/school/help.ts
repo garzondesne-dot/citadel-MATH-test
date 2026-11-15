@@ -25,3 +25,9 @@ export const raiseHand = (S: Store, code: string, uid: string, mid: string) => S
 export const lowerHand = (S: Store, code: string, uid: string) => S.set(`rooms/${code}/players/${uid}/hand`, null);
 /** 지금 몬스터에서 손든 학생 */
 export const handsOf = (R: Room, mid: string): string[] => Object.entries((R.players || {}) as Record<string, { hand?: { mid?: string } | null }>).filter(([, p]) => p?.hand?.mid === mid).map(([u]) => u);
+/** 🔎 그 몬스터의 익명 풀이 목록 (첫 판 문항 · 소레이드 단계) — [{ i: 문항, k: 풀이 번호, r }] */
+export function reviewsOf(L: LessonPack, mid: string): { i: number; k: number; r: import('../model/types').Review }[] {
+  const m = L.monsters[mid]; if (!m) return [];
+  const qs = (m.first ?? (m.chain ? chainItems(L, mid, '', 0) : [])) as Question[];
+  return qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })));
+}
