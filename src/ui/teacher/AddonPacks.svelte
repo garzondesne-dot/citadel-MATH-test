@@ -9,7 +9,7 @@
   import Sheet from '../battle/Sheet.svelte';
 
   // 📦 팩 탭 (📜 2026-11-15 DECISIONS f3e75f8 · 선생님 「A 추천대로」) — 준비 탭 [차시 준비 · 시간표 · 📦 팩 · 도구] 의 셋째
-  //   맨 위 = 「📦 팩 올리기」 → 종류별 묶음 「🏰 성채 · n층 ▾」(접기 · 이 기기 기억) → 한 층 = 한 줄 「1층 집합 중단원 · 12방 · 처치 35 · 🔓1-1 ›」
+  //   맨 위 = 「📦 팩 올리기」 → 종류별 묶음 「🏰 성채 · n층 ▾」(접기 · 이 기기 기억) → 한 층 = 한 줄 「1층 (층 이름) · 12방 · 처치 n · 🔓1-1 ›」
   //   줄 누르면 아래 시트: 🔓 해금 관리 · 👁 미리 보기 · 👀 보임/숨김 · ⬇ 내려받기 · 🗑 지우기(정식 출신 eval-1~3 = 숨김만) · 「준비 중」 종류는 안 보임(그 종류 팩이 생기면 묶음이 생김)
   const { S, onup }: { S: Store; onup: () => void } = $props();
   type Tree = Record<string, Record<string, Record<string, Record<string, CastleRec>>>>;
