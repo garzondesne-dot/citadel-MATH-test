@@ -21,7 +21,10 @@ describe('📊 한눈에 표', () => {
     expect(left).toBeGreaterThan(0);
     expect(r5.slice(1)).toEqual(['4/6', `❗ ${left}`, '1/1', '67%', '50%', '75%', '3', '2', '1', '4👣 5✍', '1', '1', '2', expect.stringMatching(/^Lv\.\d+$/)]);
     expect(r6[1]).toBe('불참'); expect(r6[2]).toBe('✔');
-    expect(v.csv!.rows[0]).toEqual(T.head); expect(v.csv!.rows.length).toBe(3);
+    const H = v.csv!.rows[0]!; expect(H.slice(0, 4)).toEqual(['번호', '이름', '6차시 형성평가', '남은 문제(오답노트)']); expect(H.slice(-9)).toEqual(['EXP', '전환 시각', '전환 때 업적', '전환 전 깃털', '깃털→💎', '💎 소급 카드', '카드→💎', '전환 전 💎', '전환 뒤 💎']);
+    expect(v.csv!.rows.length).toBe(3);
+    S.set('gem/1-3/5/conv', { at: 1, seals: 2, feather: 30, featherGem: 60, cardsUnpaid: 3, cardGem: 9, gemBefore: 10, gemAfter: 79 });
+    const row5 = view(S, '1-3', 'grid').csv!.rows.find((r) => r[0] === 5)!; expect(row5.slice(-7)).toEqual([2, 30, 60, 3, 9, 10, 79]);
   });
 });
 
@@ -36,5 +39,16 @@ describe('🏆 랭킹', () => {
     expect(v.boards![3]!.rows[0]).toMatchObject({ rk: 1, nm: '3번 다', val: '5개' });
     expect(v.table).toBeUndefined();
     const all = view(S, '전체', 'rank'); expect(all.tableTitle).toMatch(/반 대항전/); expect(all.table!.head).toEqual(['반', '인원', '형성평가', '첫 시도', '참여', '평균 EXP']);
+  });
+});
+
+describe('📚 성취기준', () => {
+  it('지난 시간 복습(review) 칸은 성취기준에 넣지 않음 (정식 Standards.of)', async () => {
+    const { classData, STANDARDS } = await import('../src/school/dash');
+    const S = { ...memoryStore(), kind: 'server' as const };
+    S.set('roster/1-3', { 1: '가' });
+    S.set('records/1-3', { 1: { 'set-04': { no: 4, conc: { review: [0, 3], c1: [2, 2] }, boss: 1, bossN: 2 } } });
+    const st = classData(S, '1-3').studs[0]!.std, id = STANDARDS.find((x) => x.lessons.includes(4))!.id;
+    expect(st[id]).toEqual([2, 2]);
   });
 });

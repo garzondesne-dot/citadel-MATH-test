@@ -46,3 +46,15 @@ describe('📈 활용 추이 보기 (서버)', () => {
     expect(v.csv!.rows.length).toBe(sc0.studs.length + 1);
   });
 });
+
+describe('📈 반 비교 「수업 밖 7일 활동」 = 활용 추이 기록', () => {
+  it('최근 7일에 풀이가 있는 학생 수', async () => {
+    const { memoryStore } = await import('../src/store/device');
+    const { classData } = await import('../src/school/dash');
+    const S = { ...memoryStore(), kind: 'server' as const, now: () => T };
+    S.set('roster/1-3', { 1: '가', 2: '나', 3: '다' });
+    S.set('act/1-3/20261114/1', { r: 2 }); S.set('act/1-3/20261105/2', { c: 1 }); S.set('act/1-3/20261115/3', { v: 1 });
+    const st = classData(S, '1-3').studs;
+    expect(st.map((s) => [s.extra.days.slice(7).reduce((a, b) => a + b, 0), s.extra.days.slice(0, 7).reduce((a, b) => a + b, 0)])).toEqual([[2, 0], [0, 1], [0, 0]]);
+  });
+});

@@ -88,7 +88,12 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
             num(s.extra.fixes, String(s.extra.fixes)), num(s.extra.hintN), num(s.extra.hg), { t: ladT(s), v: ladN(s) }, num(s.extra.seals, String(s.extra.seals ?? 0)), num(s.tries, String(s.tries)), num(s.extra.cardN, String(s.extra.cardN ?? 0)), { t: `Lv.${s.lv}`, v: s.xp }] }; }),
           legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓'], ['na', '불참 · 안 함']] },
       };
-      G.csv = { name: `한눈에표_${cls}.csv`, rows: [G.table!.head, ...G.table!.rows.map((r) => r.cells.map((c) => c.t))] };
+      // 📥 CSV = 정식 downloadCsv 그대로: 반 · 번호 · 이름 · 차시 형성평가 · 남은 문제 · … · 레벨 · EXP + 🔁 화폐 전환 기록(💎) 8칸
+      const cvAt = (t?: number) => (t ? new Date(Number(t)).toLocaleString('ko-KR') : '');
+      G.csv = { name: `한눈에표_${cls === ALL ? '전체' : cls}.csv`, rows: [
+        [...(cls === ALL ? ['반'] : []), '번호', '이름', ...held.map((h) => `${h.no}차시 형성평가`), '남은 문제(오답노트)', '참여', '형성평가 평균(%)', '첫 시도 정답률(%)', '재도전으로 고친 수', '그림 힌트(소문제)', '업적', '던전 도전', '카드', '레벨', 'EXP', '전환 시각', '전환 때 업적', '전환 전 깃털', '깃털→💎', '💎 소급 카드', '카드→💎', '전환 전 💎', '전환 뒤 💎'],
+        ...studs.map((s) => { const x = s.extra.conv; return [...(cls === ALL ? [s.cls] : []), s.n, s.name, ...held.map((h) => { const r = s.rec[h.id]; return !r ? '불참' : r.noBoss ? '수업 안 함' : `${Math.min(r.boss, r.bossN)}/${r.bossN}`; }), s.left, `${s.went}/${s.heldN}`, s.boss ?? '', s.first ?? '', s.extra.fixes, s.extra.hintN ?? 0, s.extra.seals ?? 0, s.tries, s.extra.cardN ?? 0, s.lv, s.xp,
+          ...(x ? [cvAt(x.at), x.seals ?? '', x.feather ?? '', x.featherGem ?? '', x.cardsUnpaid ?? '', x.cardGem ?? '', x.gemBefore ?? '', x.gemAfter ?? ''] : ['', '', '', '', '', '', '', ''])]; })] };
       return G;
     }
     case 'watch': { // 👀 정식 dash.js 「③ 주의 학생」 그대로 (📜 2026-11-15 머리 🔨 (c)) · 5 기준 · 벌이 아니라 확인용
