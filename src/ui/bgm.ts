@@ -5,11 +5,12 @@
 import { artUrl, BGM } from './manifest';
 import { duckK, onSound, soundPref } from './sound.svelte';
 import { paperOn } from './submit.svelte';
+import { actx, WebTrack } from './webaudio';
 
 /** 최대 음량 — 정식 bgm 0.16 : 효과음 0.25(0.28 × 0.9) 비율을 베타 효과음 0.7 에 맞춤 */
 const MAX = 0.45;
 const ONCE = ['win'];
-type El = HTMLAudioElement & { _k?: string; _fade?: number };
+type El = (HTMLAudioElement | WebTrack) & { _k?: string; _fade?: number };
 const slot: { phone: string | null; tv: string | null } = { phone: null, tv: null };
 const hold: Record<string, 1> = {};
 let cur: El | null = null, scale = 1, scaleT = 1, tick: ReturnType<typeof setInterval> | 0 = 0, winDone = '';
@@ -31,8 +32,9 @@ function fade(a: El, to: number, ms: number, done?: () => void) {
   st();
 }
 function start(k: string): El | null {
-  if (typeof Audio === 'undefined') return null;
-  const a = new Audio(artUrl(BGM[k]!)) as El; a._k = k; a.volume = 0; a.preload = 'auto';
+  const c = actx(); // 🔇 Web Audio = iOS 무음 스위치를 따름 (<audio> 는 무시함) · 없으면 예전 <audio>
+  if (!c && typeof Audio === 'undefined') return null;
+  const a = (c ? new WebTrack(c, artUrl(BGM[k]!)) : Object.assign(new Audio(artUrl(BGM[k]!)), { preload: 'auto' })) as El; a._k = k; a.volume = 0;
   if (ONCE.includes(k)) a.addEventListener('ended', () => { if (cur === a) { cur = null; winDone = k; } });
   else a.loop = true;
   void a.play().catch(() => { /* 아직 화면을 누르지 않음 → 첫 터치 때 다시 */ });

@@ -11,7 +11,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const ctx = await b.newContext(), now = (p) => p.evaluate(() => window.__bgm && window.__bgm());
   // ① 학생 폰
   const ph = await ctx.newPage(); await ph.setViewportSize({ width: 390, height: 844 }); ph.on('pageerror', (e) => errs.push(String(e)));
-  await ph.goto(B); await ph.evaluate(() => localStorage.clear()); await ph.reload(); await ph.waitForTimeout(1500);
+  await ph.goto(B); await ph.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-sound', JSON.stringify({ sfx: true, bgm: true })); }); await ph.reload(); // 🔇 학생 폰 처음 = 끔 (11/15) → 켠 학생 기준 await ph.waitForTimeout(1500);
   let v = await now(ph); ok('① 첫 화면 = camp', v && v.phone === 'camp' && v.playing === 'camp', JSON.stringify(v));
   await ph.goto(B + '?role=camp'); await ph.waitForTimeout(1500);
   v = await now(ph); ok('① 캠프 = camp 이어서', v && v.playing === 'camp' && v.vol > 0, JSON.stringify(v));
