@@ -95,7 +95,17 @@ im.save('${f}')`]); return f; };
   await t.click('.grp button:has-text("수업")').catch(() => {}); await t.click('.vws button:has-text("서술형")').catch(async () => { for (const g of await t.$$('.grp button')) { await g.click(); if (await t.$('.vws button:has-text("서술형")')) { await t.click('.vws button:has-text("서술형")'); break; } } });
   await t.waitForSelector('[data-k="photo-board"]'); await t.waitForTimeout(500);
   log('   교사 서술형 확인할 것:', (await t.textContent('[data-pf="need"]')).trim()); await t.screenshot({ path: `${SHOTS}/photo-board.png`, fullPage: true });
-  await t.click('[data-photo="c1"] [data-ok="1"]'); await t.waitForTimeout(800);
+  if (await t.$('[data-k="photo-board"] [data-ok]')) errs.push('대시보드 서술형 = 보기만이어야 함 (단추 없음)');
+  // 📷 사진 승인 = 소식 탭 📷 칩 (📜 2026-11-15 머리 🔨) · 탭 빨간 점에 들어감 · 학생 시트에도
+  const badge = await t.$eval('.tabs button:has-text("소식")', (e) => e.textContent).catch(() => ''); log('   소식 탭:', badge.replace(/\s+/g, ' ').trim()); if (!(Number((badge.match(/\d+/) || ['0'])[0]) >= 1)) errs.push('소식 탭 빨간 점에 📷 포함');
+  await t.click('.seg button:has-text("명단")').catch(() => {}); await t.waitForTimeout(400); await t.click('.pc:has-text("시험삼")'); await t.waitForTimeout(600);
+  const ps = await t.$eval('[data-k="pupil-photo"]', (e) => e.textContent).catch(() => ''); log('   학생 시트:', ps.trim()); if (!/확인할 사진 1/.test(ps) || !(await t.$('[data-photo="c1"] [data-ok="1"]'))) errs.push('학생 시트 📷 확인할 사진 + 단추');
+  await t.screenshot({ path: `${SHOTS}/photo-pupil.png`, fullPage: true }); await t.click('.hd .x').catch(() => {}); await t.waitForTimeout(300);
+  await t.click('.tabs button:has-text("소식")'); await t.waitForTimeout(500); await t.click('[data-chip="photo"]'); await t.waitForTimeout(400);
+  log('   📷 칩:', (await t.textContent('[data-chip="photo"]')).trim()); await t.click('.nw .nb'); await t.waitForTimeout(400);
+  await t.screenshot({ path: `${SHOTS}/photo-news.png`, fullPage: true });
+  await t.click('.nw [data-photo="c1"] [data-ok="1"]'); await t.waitForTimeout(800);
+  if (await t.$('.nw [data-photo="c1"]')) errs.push('✔ 뒤 목록에서 빠져야 함');
   const okv = await rest('photo/1-3/3/eval-1_q07/c1/ok'); log('   ✔ 처치 인정 → ok', okv); if (okv !== true) errs.push('교사 인정');
   // 학생 성채 다시 → 📷 보너스
   for (let i = 0; i < 4 && (await s.$('[data-k="castle"]')); i++) { await s.click('[data-k="castle"] .back'); await s.waitForTimeout(300); }

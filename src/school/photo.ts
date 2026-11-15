@@ -87,3 +87,13 @@ export function usage(S: Store) {
   const wd = Number(c.warnDay) || WARN_DAY0, wm = Number(c.warnMonth) || WARN_MONTH0;
   return { today, month, won: Math.round(month * WON), wd, wm, warn: today >= wd || month >= wm, why: [today >= wd ? `오늘 학교 전체 ${today}장 (기준 ${wd})` : '', month >= wm ? `이번 달 ${month}장 ≈ ${Math.round(month * WON).toLocaleString()}원 (기준 ${wm}장)` : ''].filter(Boolean).join(' · ') };
 }
+
+/** 🧾 방 이름 (차시_방 → 「평가1 방 이름」) */
+export function roomTitle(S: Store, k: string) { const i = k.indexOf('_'), l = k.slice(0, i), r = k.slice(i + 1), y = S.get<{ title?: string }>(`photo_rubric/${l}/${r}`) ?? codeRubrics()[l]?.[r]; return `${l.replace('eval-', '평가')} ${y?.title ?? r}`; }
+/** ✔ 처치 인정 / ✖ 그대로 (정식 photo.js board 그대로 · 그 학생이 다음에 들어올 때 반영) → 저장됐나 */
+export async function markPhoto(S: Store, x: Pick<PhotoRow, 'c' | 'n' | 'k' | 'id'>, ok: boolean): Promise<boolean> {
+  const p = `photo/${x.c}/${x.n}/${x.k}/${x.id}`, at = S.now();
+  return S.trySet ? (await S.trySet(`${p}/ok`, ok)) && (await S.trySet(`${p}/okAt`, at)) : (S.set(`${p}/ok`, ok), S.set(`${p}/okAt`, at), true);
+}
+/** 📷 확인할 것 (⏳ 확신 낮음 · 🙋 이의 신청 · 아직 ✔ ✖ 안 함) · cls · num 으로 좁히기 (📜 2026-11-15 머리 🔨 「사진 승인 = 소식 탭 📷」) */
+export const photoNeeds = (S: Store, cls = '', num = 0) => allRows(S).filter((x) => needs(x) && (!cls || x.c === ck(cls)) && (!num || Number(x.n) === num));

@@ -72,7 +72,8 @@
     setLive(S, null); page = 'home';
   }
   let wideDash = $state(false); // 📊 대시보드 펼친 화면이면 교사 폰 기둥(430) 대신 화면 전체
-  let unread = $state(untrack(() => unreadN(S))); // 🔔 소식 탭 빨간 점 = 안 본 수
+  let unread = $state(untrack(() => unreadN(S))); // 🔔 소식 탭 빨간 점 = 안 본 수 + 📷 확인할 사진
+  const phStop = untrack(() => (S.kind === 'server' ? S.watch('photo', () => (unread = unreadN(S))) : () => {})); onDestroy(phStop);
   const TABS = [['class', '⚔', '수업'], ['pupil', '👥', '학생'], ['prep', '📋', '준비'], ['news', '✉', '소식'], ['me', '🙂', '나']] as const;
 </script>
 

@@ -8,6 +8,10 @@
   import { resetPw, hasAccount, liveOfCls, canResetPw } from '../../school/school';
   import { giveGift, setAbsent } from '../../raid/actions';
   import { uidOf } from '../../school/school';
+  import { photoNeeds } from '../../school/photo';
+  import { liveValue } from '../room.svelte';
+  import PhotoCheck from './PhotoCheck.svelte';
+  import { onDestroy } from 'svelte';
 
   // 👤 학생 한 명 시트 (#124 ⑯ · DECISIONS 「👤 학생 한 명 시트」) — 학생 탭 명단 · 대시보드 어디서 이름을 눌러도 같은 부품
   //   위에서 64 아래까지 덮음 · ✕ / 네 숫자 카드(통과율 · 성취도 · 수업 참여 · 방과후 접속) → 수업 기록 차시 칸 → 방과후 2주 달력 → 💎 · 📜 · 자주 막힌 개념 → 🔑 · 💎 선물 · 🚫 결석 · 📝 세특 초안
@@ -26,6 +30,10 @@
   const cellName = (lid: string, c: string) => (c === 'boss' ? '형성평가' : (PACKS.find((p) => p.id === lid)?.steps.find((x) => x.id === c)?.title.split(' · ')[0] ?? c));
   const misTop = $derived(Object.entries(s.mis).sort((x, y) => y[1][0] - x[1][0]).slice(0, 2));
   const weak = $derived(Object.values(s.conc).filter((c) => c.total && c.ok / c.total < 0.6).sort((x, y) => x.ok / x.total - y.ok / y.total).slice(0, 2));
+  // 📷 이 학생의 확인할 사진 (📜 2026-11-15 머리 🔨 「학생 시트도」) = 소식 탭 📷 과 같은 부품 · ✔ ✖ 하면 빠짐
+  const lvp = untrack(() => (S.kind === 'server' ? liveValue(S, 'photo') : null)); onDestroy(() => lvp?.stop());
+  let phVer = $state(0);
+  const phs = $derived.by(() => { void lvp?.v.val; void phVer; return S.kind === 'server' ? photoNeeds(S, s.cls, s.n) : []; });
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); say('📋 복사했어요'); } catch { say('복사가 막혔어요 · 길게 눌러 복사'); } }
 </script>
 
@@ -55,6 +63,7 @@
       <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>📷 통과 {s.extra.photoOk} · 다시 {s.extra.photoRe}</em></div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
+    {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}
     {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}
     <p class="fake">🧪 이 기기 체험 = 가짜 기록 (반 · 번호로 늘 같은 값)</p>
   </div>

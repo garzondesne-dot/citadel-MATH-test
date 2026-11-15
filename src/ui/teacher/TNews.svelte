@@ -7,6 +7,9 @@
   import { hhmm } from '../../school/bells';
   import { doneCount, keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
   import { feat } from '../../school/features.svelte';
+  import { photoNeeds, roomTitle, type PhotoRow } from '../../school/photo';
+  import { liveValue } from '../room.svelte';
+  import PhotoCheck from './PhotoCheck.svelte';
 
   // 🔔 소식 탭 (#124 ⑱ · 스크롤 A) — 위 고정 = [받은 것 n · 보내기]
   //   받은 것 = 의견 · 📷 사진 채점 대기 · ✏ 출제 확인 · 📝 설문 결과를 한 목록(새 것 위 · 안 본 것 = 왼쪽 빨간 줄 + 점 · 종류 칩 거르기 · 누르면 그 자리에서 처리)
@@ -16,12 +19,17 @@
   let seg = $state<'in' | 'out'>('in');
   let kind = $state<'' | InboxItem['kind']>('');
   let ver = $state(0), open = $state(''), toast = $state('');
-  const items = $derived.by(() => { void ver; return inbox(S); });
+  // 📷 사진 승인 (📜 2026-11-15 머리 🔨): ⏳ 확인 필요 · 🙋 이의 신청 = 「📷 사진」 칩 한 줄씩 · 빨간 점(✔ ✖ 하기 전까지) · 누르면 그 자리에서 ✔ 처치 인정 / ✖ 그대로 → 목록에서 빠짐
+  const lvp = untrack(() => liveValue(S, 'photo')); onDestroy(lvp.stop);
+  type Item = InboxItem & { ph?: PhotoRow };
+  const phItems = $derived.by((): Item[] => { void lvp.v.val; void ver; return S.kind !== 'server' ? [] : photoNeeds(S).map((x) => ({ id: `ph_${x.c}_${x.n}_${x.k}_${x.id}`, kind: 'photo', title: `${x.n}번 ${nameOf(x.c, Number(x.n))} · ${roomTitle(S, x.k)}`, sub: `${x.c}반 · ${x.appeal ? '🙋 이의 신청' : '⏳ 확인 필요'} · ${x.score ?? '-'} / ${x.total ?? '-'} · ${hhmm(Number(x.at) || 0)}`, at: Number(x.at) || 0, read: false, ph: x })); });
+  const items = $derived.by((): Item[] => { void ver; return [...phItems, ...inbox(S)].sort((a, b) => b.at - a.at); });
+  function phDone(ok: boolean, saved: boolean) { say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요 — 교사 로그인을 확인해 주세요'); open = ''; ver++; onread(); }
   const shown = $derived(items.filter((x) => !kind || x.kind === kind));
   const unread = $derived(items.filter((x) => !x.read).length);
   const IC: Record<InboxItem['kind'], string> = { idea: '💬', photo: '📷', quiz: '✏', survey: '📝', news: '📢' };
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
-  function tap(x: InboxItem) { open = open === x.id ? '' : x.id; if (!x.read) { S.set(`school/inbox/${x.id}/read`, true); ver++; onread(); } }
+  function tap(x: Item) { open = open === x.id ? '' : x.id; if (x.ph) return; if (!x.read) { S.set(`school/inbox/${x.id}/read`, true); ver++; onread(); } }
   function done(x: InboxItem, msg: string) { S.set(`school/inbox/${x.id}/done`, msg); ver++; say(msg); open = ''; }
   // 💬 답장 (#130 ①) — 학생 우편함 「선생님 답장」(+💎) · 그 메시지 「↩ 답함」 · 빨간 점 빠짐
   const nameOf = (c: string, n: number) => roster(c, S).find((p) => p.num === n)?.name ?? `${n}번`;
@@ -62,7 +70,7 @@
 <div class="tbar"><div class="t">소식</div></div>
 <div class="fixed">
   <div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'in'} aria-selected={seg === 'in'} onclick={() => (seg = 'in')}>받은 것 {unread}</button><button type="button" role="tab" class:on={seg === 'out'} aria-selected={seg === 'out'} onclick={() => (seg = 'out')}>보내기</button></div>
-  {#if seg === 'in'}<div class="chips">{#each [['', '전체'], ['idea', '💬 의견'], ['photo', '📷 사진'], ['quiz', '✏ 출제'], ['survey', '📝 설문']] as const as [k, t] (k)}<button type="button" class:on={kind === k} onclick={() => (kind = k)}>{t}</button>{/each}</div>{/if}
+  {#if seg === 'in'}<div class="chips">{#each [['', '전체'], ['idea', '💬 의견'], ['photo', '📷 사진'], ['quiz', '✏ 출제'], ['survey', '📝 설문']] as const as [k, t] (k)}<button type="button" class:on={kind === k} data-chip={k} onclick={() => (kind = k)}>{t}{k === 'photo' && phItems.length ? ` ${phItems.length}` : ''}</button>{/each}</div>{/if}
 </div>
 <div class="mid scroll">
   {#if seg === 'in'}
@@ -86,7 +94,8 @@
         {:else if open === x.id}
           <div class="do">
             {#if x.body}<p>{x.body}</p>{/if}
-            {#if x.kind === 'photo'}<button type="button" class="b1" onclick={() => done(x, '통과')}>✔ 통과</button><button type="button" class="b2" onclick={() => done(x, '다시')}>↺ 다시</button>
+            {#if x.ph}<PhotoCheck {S} x={x.ph} who={false} ondone={phDone} />
+            {:else if x.kind === 'photo'}<button type="button" class="b1" onclick={() => done(x, '통과')}>✔ 통과</button><button type="button" class="b2" onclick={() => done(x, '다시')}>↺ 다시</button>
             {:else if x.kind === 'quiz'}<button type="button" class="b1" onclick={() => done(x, '받음')}>받기</button><button type="button" class="b2" onclick={() => done(x, '고치기 보냄')}>고치기</button>
             {:else if x.kind === 'idea'}<button type="button" class="b2" onclick={() => done(x, '읽음')}>읽음</button>
             {:else}<button type="button" class="b2" onclick={() => done(x, '봄')}>닫기</button>{/if}
