@@ -117,6 +117,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   let monTex: Partial<Record<MonPose, Texture>> = {}, monCur: MonPose = 'idle', mflash: MonPose | '' = '', mflashUntil = 0, monRune: Text | null = null, monRuneAt: (p: MonPose) => [number, number, number] | null = () => null, monK = 1, monX = 0, monCell = 256; const monSeen = new Set<string>(); // 시험: 지나간 몬스터 칸
   const placeRune = (p: MonPose) => { if (!monRune || !monSp) return; const r = monRuneAt(p); monRune.visible = !!r && !st?.shadow; if (!r) return; const c = monCell; monRune.x = monX - (c / 2 - r[0] * c) * monK * (monSp.scale.x / Math.abs(monSp.scale.x)); monRune.y = monSp.y - c * monK + r[1] * c * monK; monRune.style.fontSize = Math.max(10, r[2] * c * monK * 1.35); };
   async function drawMon(s: ArenaState) {
+    if (!s.sprite) return; // 🐞 2026-11-15 그림 없는 단계(전환 중 · 그림 안 단 몬스터) = 몬스터를 그리지 않음 (전엔 프레임마다 「배치표에 없는 그림」 오류)
     const sp = spriteOf(s.sprite), b = arenaBox(W(), H(), s.boss, s.split, visOf(s)), pose = s.down ? 'down' : 'idle', key = `${s.sprite}|${pose}|${W()}|${H()}|${s.split}|${s.shadow}`;
     monCx = b.mon.cx; monTop = b.mon.top; monSize = b.mon.size;
     shadowG.clear().ellipse(b.shadow.cx, b.shadow.y, b.shadow.w / 2, H() * 0.018).fill({ color: 0x000000, alpha: 0.45 });
