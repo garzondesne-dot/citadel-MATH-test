@@ -90,7 +90,7 @@
     const h = queue.shift(); if (!h) return;
     if (fxLayer && W && tvAttack(h)) { /* ⚔ 정식 attack.js (DOM 층) */ }
     else if (A) A.hit(h.u, h.dmg, h.kind);
-    else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); domPop(h.kind === 'hit' ? `-${h.dmg}` : h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); }
+    else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); if (h.kind !== 'miss') domPop(h.kind === 'hit' ? `-${h.dmg}` : '연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); /* 틀림 = 글자 없음(돌진 · 튕김만) */ }
     qT = setTimeout(() => { qT = undefined; play(); }, 350);
   }
   // ⚔ 🔨 용사 fx (정식 hall.js 606~618 · 학생 폰과 같은 attack()): Pixi = 캔버스 위 DOM 층에 그 용사 대역(같은 자리 · 같은 크기)을 두고 Pixi 용사는 잠깐 숨김
@@ -132,7 +132,7 @@
     // 🎞 공격 대역 = 정식 anims 줄을 돌림(걷기 4 · 공격 4 · 기쁨 · 생각) · DOM 장면 = 그 용사 그림 칸(.hs i) 그대로
     const rowEl = art ?? (heroBox.querySelector('.hs > i:not(.i8)') as HTMLElement | null);
     const pose = (q: Pose) => rowAnim(rowEl, q);
-    if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); domPop(h.kind === 'practice' ? '연습' : 'MISS', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
+    if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); if (h.kind === 'practice') domPop('연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
     void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,

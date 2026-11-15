@@ -224,7 +224,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   }
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
     const m = monSp; if (!m) return; const mx = m.x;
-    if (kind !== 'hit') { float(kind === 'practice' ? '연습' : 'MISS', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900); return; }
+    if (kind !== 'hit') { if (kind === 'practice') float('연습', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900); return; } // 📜 2026-11-15 틀림 = 「MISS」 글자 없음 · 튕김 모션만
     mflash = 'hit'; mflashUntil = performance.now() + 320; // 🎲 맞음 칸(움찔)
     const wob = () => { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); };
     if (!fancy) { wob(); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); return; }
