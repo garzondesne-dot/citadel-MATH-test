@@ -85,14 +85,17 @@
   {
     const l0 = untrack(() => login), au = (S as Store & { auth?: { currentUser: { uid: string } | null } }).auth;
     if (l0 && where.kind !== 'device' && !q.get('as') && S.kind === 'server' && !meBound()) {
-      let off: (() => void) | null = null, done = false;
-      off = S.watch<{ uid?: string }>(`accounts/${l0.cls}/${l0.num}`, (a) => {
-        if (done || meBound() || !a?.uid) return;
+      let off: (() => void) | null = null, offA: (() => void) | null = null, done = false, acc: { uid?: string } | null = null;
+      const check = () => {
+        if (done || meBound() || !acc?.uid) return;
         const me = au?.currentUser?.uid;
-        if (me && a.uid === me) { bindFor(l0); if (meBound()) { done = true; bindVer++; } }
+        if (!me) return; // 로그인 확인이 아직(느린 인터넷) = 판단하지 않고 기다림 (정상 학생을 내보내지 않게)
+        if (acc.uid === me) { bindFor(l0); if (meBound()) { done = true; bindVer++; } }
         else { done = true; saveLogin(null); login = null; relogin = true; }
-        if (done) queueMicrotask(() => off?.());
-      });
+        if (done) queueMicrotask(() => { off?.(); offA?.(); });
+      };
+      off = S.watch<{ uid?: string }>(`accounts/${l0.cls}/${l0.num}`, (a) => { acc = a; check(); });
+      if (au) void import('firebase/auth').then((fa) => { offA = fa.onAuthStateChanged(au as import('firebase/auth').Auth, () => check()); });
     }
   }
   // 🚪 QR 입장 (#138 ③): ?join=코드 → 로그인한 폰은 바로 그 수업 · 아니면 로그인 뒤 그 수업
