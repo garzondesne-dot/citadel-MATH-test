@@ -8,6 +8,19 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push('리모컨 ' + e));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp');
   await t.click('.tabs button:has-text("나")'); await t.click('[data-k="feat"]'); await t.waitForTimeout(500);
+  // 📦 기능 단계 카드 3장 · ⏱ 이 차시 예상 줄
+  const cards = await t.$$eval('.bund .b', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok('📦 카드 3장 = 🪶 가볍게 · ⚔ 게임처럼 · 🏰 모두 (준비할 것)', cards.length === 3 && /가볍게/.test(cards[0]) && /게임처럼/.test(cards[1]) && /모두/.test(cards[2]) && /준비/.test(cards[0]), cards.map((c) => c.slice(0, 30)).join(' | '));
+  const el = (await t.textContent('[data-k="est-line"]').catch(() => '')) || '';
+  ok('⏱ 「이 차시 예상 = 기본 a분 + 켠 기능 b분 = c분 / 50분」', /이 차시 예상 = 기본 [\d.]+분 \+ 켠 기능 [\d.]+분 = [\d.]+분 \/ 50분/.test(el), el);
+  await t.screenshot({ path: `${SHOTS}/feat-cards.png` });
+  await t.selectOption('[data-k="est-lesson"]', 'set-08'); await t.waitForTimeout(300);
+  const cut = (await t.textContent('[data-k="est-cut"]').catch(() => '')) || '';
+  ok('⏱ 50분 넘는 차시 = 빨강 + 「○○ 끄면 n분 줄어요」', /끄면 [\d.]+분 줄어요/.test(cut) && await t.$eval('[data-k="est"]', (e) => e.classList.contains('over')), cut);
+  await t.screenshot({ path: `${SHOTS}/feat-over.png` });
+  await t.click('[data-k="feat-more"]'); await t.waitForTimeout(300);
+  const tm = await t.$$eval('[data-k="tmin"]', (x) => x.map((e) => e.textContent.trim()));
+  ok('⚙ 자세히 = 기능 옆 ⏱ +n분 · 각자 · 돌면서 · 준비 꼬리표', tm.some((x) => /\+[\d.]+분/.test(x)) && tm.some((x) => /각자/.test(x)) && /팩 덧칸/.test(await t.textContent('.sheet')) && /과목 팩/.test(await t.textContent('.sheet')), tm.slice(0, 5).join(' · '));
   const txt = (await t.textContent('.sheet')) || '';
   const names = ['칼 모양', '도움 3단', '익명 풀이', '개념 체크', '선제 공격', '도장', '문제 칸 양피지 기본'];
   ok('⚙ 「🧩 수업 기능」 묶음 · 7개', /🧩 수업 기능/.test(txt) && names.every((n) => txt.includes(n)), names.filter((n) => !txt.includes(n)).join(',') || '모두 있음');

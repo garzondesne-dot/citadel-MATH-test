@@ -3,6 +3,10 @@
   import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted, schoolInfo } from '../../school/features.svelte';
   import { CLASSES } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
+  import { PACKS, packOf } from '../../engine/packs';
+  import { estimate, estLine, cutLine, ltimePath, packTier, timeSig, LIMIT, TIME_NAME, ZERO_FEATS } from '../../school/ltime';
+  import { liveValue } from '../room.svelte';
+  import { onDestroy, untrack } from 'svelte';
   import type { BundleId, FeatId } from '../../school/features.svelte';
   // ⚙ 우리 학교 기능 (V1-DESIGN 10절 · 교사 「나」 탭): 묶음(시작값) 하나 고르고 → 낱낱 스위치로 더하고 뺌
   //   🔒 잠김 = 켰지만 「필요한 것」(과목 팩 · AI 키) 없음 → 채우는 길 한 줄 · 꺼진 기능은 학생 · TV 화면에서 통째로 사라짐
@@ -21,19 +25,43 @@
   const overrides = $derived(Object.keys(c.on || {}) as FeatId[]);
   const bundleDiff = (b: BundleId) => { const nb = { bundle: b }; return FEATS.filter((f) => wanted(c, f.id) !== wanted(nb, f.id)).map((f) => ({ f, from: wanted(c, f.id), to: wanted(nb, f.id) })); };
   function tapBundle(b: BundleId) { if (overrides.length) { askBundle = b; return; } saveBundle(S, b); }
+  // 📦 기능 단계 · ⏱ 수업 시간 (📜 2026-11-16 · DECISIONS 「📦 차시 팩 · 기능 단계」): 처음 카드 3장 → 상세 = 「⚙ 자세히 ▸」 · 기능 옆 +n분 · 위 「이 차시 예상」 줄
+  const CARD: Record<BundleId, { see: string[]; prep: string }> = {
+    basic: { see: ['문제 카드', '공동 체력'], prep: '준비 없음 · 기본 팩만' },
+    standard: { see: ['문제 카드', '🧙 용사 · ⚔ 칼', '🏕 쉼터 놀이'], prep: '준비 없음 (게임 요소만)' },
+    full: { see: ['문제 카드', '🧙 용사 · ⚔ 칼', '💡 도움 · ✔ 체크 · 🔎 풀이'], prep: '📦 풀 팩 덧칸 · 📚 과목 팩 · 🔑 AI 키' },
+  };
+  const PREP: Record<string, string> = { none: '준비 없음', addon: '📦 팩 덧칸', pack: '📚 과목 팩', key: '🔑 AI 키', info: '🏫 학교 정보' };
+  let more = $state(false);
+  const lv0 = untrack(() => S.get<{ lesson?: string }>('school/live')?.lesson);
+  let lid = $state(untrack(() => (lv0 && packOf(lv0) ? lv0 : PACKS[PACKS.length - 1]?.id ?? '')));
+  const L = $derived(packOf(lid));
+  const on = (id: string) => stateOf(S, c, id as FeatId) === 'on';
+  const sig = $derived(timeSig(on));
+  const meas = untrack(() => liveValue<Record<string, number>>(S, 'school/ltime'));
+  onDestroy(() => meas.stop());
+  const est = $derived.by(() => { if (!L) return null; const all = meas.v.val || {}; void all; return estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, sig))); });
+  const tmin = (id: FeatId) => { if (!est) return ''; if ((ZERO_FEATS as readonly string[]).includes(id)) return '각자 · 돌면서'; const k = id.startsWith('rest-') ? 'rest' : id; const f = est.feats.find((x) => x.id === k); return f ? `+${f.min}분${k === 'rest' ? ' (쉼터 1판)' : ''}` : ''; };
   function saveCls() { S.set('school/info/classes', clsList); saved = `✔ 반 ${clsList.length}개 저장`; setTimeout(() => (saved = ''), 1600); }
 </script>
 
 <div class="fs">
-  <p class="lead">묶음을 고른 뒤 기능을 하나씩 켜고 끌 수 있어요</p>
-  <div class="bund" role="radiogroup" aria-label="묶음">
+  <p class="lead">어떻게 수업할까요? 하나 고르면 그 단계 기능이 켜져요</p>
+  <div class="bund" role="radiogroup" aria-label="기능 단계">
     {#each BUNDLES as b (b.id)}
       <button type="button" role="radio" class="b" class:on={c.bundle === b.id} aria-checked={c.bundle === b.id} data-b={b.id} onclick={() => tapBundle(b.id)}>
-        <i>{b.ic}</i><b>{b.name}</b><small>{b.sub}</small>
+        <span class="mock" aria-hidden="true">{#each CARD[b.id].see as s (s)}<em>{s}</em>{/each}</span>
+        <i>{b.ic}</i><b>{b.name}</b><small class="prep">{CARD[b.id].prep}</small>
       </button>
     {/each}
   </div>
-  {#each groups as g (g)}
+  {#if est && L}<div class="est" class:over={est.over} data-k="est">
+    <label class="lsel"><span>⏱ 차시</span><select bind:value={lid} data-k="est-lesson">{#each PACKS as p (p.id)}<option value={p.id}>{p.no}차시 {p.title.split(' · ')[0]} · {packTier(p) === 'full' ? '풀 팩' : '기본 팩'}</option>{/each}</select></label>
+    <b data-k="est-line">{estLine(est)}</b>
+    {#if est.over}<small data-k="est-cut">⚠ {LIMIT}분을 넘어요{cutLine(est) ? ` · ${cutLine(est)}` : ''}</small>{:else}<small>{packTier(L) === 'full' ? '📦 풀 팩 · 덧칸 기능이 이 차시에서 켜져요' : '기본 팩 · 덧칸 기능은 덧칸이 있는 차시에서만 켜져요'}</small>{/if}
+  </div>{/if}
+  <button type="button" class="more" aria-expanded={more} data-k="feat-more" onclick={() => (more = !more)}>⚙ 자세히 {more ? '▾' : '▸'} <small>기능 하나씩 켜고 끄기 · 준비할 것 · 시간</small></button>
+  {#if more}{#each groups as g (g)}
     <h4>{g}</h4>
     <ul>
       {#each FEATS.filter((f) => f.group === g) as f (f.id)}
@@ -41,12 +69,12 @@
         {@const lk = lockOf(S, f.id)}
         <li class:locked={st === 'locked'}>
           <span class="ic">{f.ic}</span>
-          <span class="tx"><b>{f.name}</b>{#if st === 'locked' && lk}<small class="why">🔒 {lk}</small>{:else if f.sub}<small>{f.sub}</small>{/if}</span>
+          <span class="tx"><b>{f.name}</b>{#if st === 'locked' && lk}<small class="why">🔒 {lk}</small>{:else if f.sub}<small>{f.sub}</small>{/if}<span class="tags"><i class="pt" data-p={f.prep ?? 'none'}>{PREP[f.prep ?? 'none']}</i>{#if tmin(f.id)}<i class="tm" data-k="tmin">⏱ {tmin(f.id)}</i>{/if}</span></span>
           <button type="button" class="sw" class:on={wanted(c, f.id)} role="switch" aria-checked={wanted(c, f.id)} aria-label="{f.name} {wanted(c, f.id) ? '켬' : '끔'}" data-f={f.id} onclick={() => tapOne(f.id)}><i></i></button>
         </li>
       {/each}
     </ul>
-  {/each}
+  {/each}{/if}
   <h4>🏫 학교 정보</h4>
   <label class="cls"><span>반 목록 <small>쉼표로 · 처음 반 = 첫째</small></span><input class="in" bind:value={cls} placeholder="1-1, 1-2, 1-3" data-k="classes" /></label>
   <button type="button" class="save" disabled={!clsList.length} onclick={saveCls}>반 목록 저장 · {clsList.length}개</button>{#if saved}<small class="ok">{saved}</small>{/if}
@@ -79,6 +107,16 @@
   .b { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 88px; padding: var(--s2); border-radius: var(--r); border: 2px solid transparent; background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
   .b:active { translate: 0 2px; box-shadow: none; }
   .b i { font-style: normal; font-size: 22px; } .b b { font-size: 16px; } .b small { font-size: 13px; color: var(--text-2); text-align: center; line-height: 1.3; }
+  .mock { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 4px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--bg); margin-bottom: 4px; }
+  .mock em { font-style: normal; font-size: 11px; line-height: 1.3; padding: 1px 4px; border-radius: 4px; background: var(--surface); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .b .prep { font-size: 12px; }
+  .est { display: flex; flex-direction: column; gap: 4px; padding: var(--s3); border-radius: var(--r); background: var(--surface-2); border: 2px solid var(--line); }
+  .est b { font-size: 15px; } .est small { font-size: 13px; color: var(--text-2); }
+  .est.over { border-color: var(--bad); } .est.over b, .est.over small { color: var(--bad); }
+  .lsel { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); } .lsel select { flex: 1; min-width: 0; min-height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px var(--font); }
+  .more { min-height: 48px; border-radius: var(--r); border: 1px dashed var(--line); background: transparent; color: var(--text); font: 700 15px var(--font); text-align: left; padding: 0 var(--s3); } .more small { color: var(--text-3); font-weight: 500; font-size: 13px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; } .tags i { font-style: normal; font-size: 12px; padding: 0 6px; border-radius: 8px; background: var(--surface); color: var(--text-2); }
+  .tags .tm { color: var(--accent); }
   .b.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); }
   h4 { margin: var(--s2) 0 0; font-size: 14px; color: var(--text-2); }
   ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }

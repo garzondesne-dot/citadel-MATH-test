@@ -110,7 +110,7 @@
     </div>
   {/if}
 </div>
-{#if pickOpen}<LessonPick {opts} pick={lid} {recent} onpick={choose} onclose={() => (pickOpen = false)} />{/if}
+{#if pickOpen}<LessonPick {S} {opts} pick={lid} {recent} onpick={choose} onclose={() => (pickOpen = false)} />{/if}
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 {#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
 {#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}

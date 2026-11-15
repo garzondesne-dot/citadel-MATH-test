@@ -80,8 +80,11 @@ describe('⚙ 🧩 수업 기능 스위치 7개 (📜 2026-11-16)', () => {
   const NEW = ['sword', 'help3', 'review', 'cc', 'pre', 'stamp', 'qpaper'] as const;
   it('7개 · 🤝 · 🧱 는 스위치 없음 · 모든 묶음 처음 값 켬 · 설정 없음 = 켬 · 끄면 끔', () => {
     expect(FEATS.filter((f) => f.group === '🧩 수업 기능').map((f) => f.id)).toEqual([...NEW]);
-    for (const b of BUNDLES) for (const id of NEW) expect(wanted({ bundle: b.id }, id)).toBe(true);
-    for (const id of NEW) expect(wanted(null, id)).toBe(true);
+    // 📦 기능 단계 (📜 2026-11-16): 🪶 기본 = 모두 끔 · ⚔ 표준 = 칼 · 양피지 · 선제 공격 · 도장 · 🏰 풀 = 모두 · 우리 학교 처음 값 = 🏰 풀
+    for (const id of NEW) expect(wanted({ bundle: 'basic' }, id)).toBe(false);
+    for (const id of NEW) expect(wanted({ bundle: 'standard' }, id)).toBe(['sword', 'qpaper', 'pre', 'stamp'].includes(id));
+    for (const id of NEW) expect(wanted({ bundle: 'full' }, id)).toBe(true);
+    for (const id of NEW) expect(wanted(null, id)).toBe(true); void BUNDLES;
     expect(wanted({ bundle: 'full', on: { stamp: false } }, 'stamp')).toBe(false);
   });
   it('📜 양피지 기본 끔 = 처음 값만 끔 · 학생이 고른 값은 그대로', () => {
@@ -89,5 +92,27 @@ describe('⚙ 🧩 수업 기능 스위치 7개 (📜 2026-11-16)', () => {
     setPaperDefault(false); expect(savedPaper()).toBe(false);
     v = '1'; expect(savedPaper()).toBe(true);
     v = null; setPaperDefault(true); expect(savedPaper()).toBe(true);
+  });
+});
+
+import { estimate, packTier, timeSig, recordTime, ltimePath, T0, lessonCounts } from '../src/school/ltime';
+describe('⏱ 수업 시간 영향 (📜 2026-11-16)', () => {
+  const L = SUBJ.lessons.find((l) => l.id === 'set-06')!;
+  it('기본 = 도입 · 개념 · 몬스터(정찰 + 소문제 × 1.5) · 형성평가 · 마무리 · 기능 = 체크 · 풀이 · 쉼터 · 연출', () => {
+    const c = lessonCounts(L), base = c.intro * T0.intro + c.concept * T0.concept + c.mons.reduce((a, m) => a + T0.scout + m.n * (m.chain ? T0.chainStage : T0.item), 0) + c.bossItems * T0.bossItem + T0.wrap;
+    const all = estimate(L, () => true), none = estimate(L, () => false);
+    expect(all.base).toBeCloseTo(base, 5); expect(none.extra).toBe(0); expect(all.extra).toBeCloseTo(T0.rest + T0.fx + c.checks * T0.cc + c.reviews * T0.review, 5);
+    expect(all.total).toBeCloseTo(all.base + all.extra, 5); expect(packTier(L)).toBe('basic');
+  });
+  it('50분 넘으면 빨강 + 가장 큰 기능 끄기 한 줄 · 실측 3번 이상 = 실측 평균', () => {
+    const big = SUBJ.lessons.find((l) => l.id === 'set-08')!, e = estimate(big, () => true);
+    expect(e.over).toBe(true); expect(e.cut?.id).toBe('rest');
+    expect(estimate(L, () => true, { a: 40, b: 44 }).real).toBeNull();
+    const r = estimate(L, () => true, { a: 40, b: 44, c: 48 }); expect(r.real).toEqual({ n: 3, min: 44 }); expect(r.total).toBe(44);
+  });
+  it('수업 닫을 때 실측 기록 = 차시 · 기능 서명 · 수업 · 너무 짧거나 긴 것은 버림', () => {
+    const S = store(), sig = timeSig(() => true); expect(sig).toBe('1111');
+    recordTime(S, 'set-06', 'K1', 0, 45 * 60000, sig); recordTime(S, 'set-06', 'K2', 0, 30000, sig);
+    expect(S.get(ltimePath('set-06', sig))).toEqual({ K1: 45 });
   });
 });

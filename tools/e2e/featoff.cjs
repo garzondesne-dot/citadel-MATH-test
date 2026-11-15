@@ -20,7 +20,7 @@ const rest = (p, method = 'GET', body) => fetch(`${DBU}/${p}.json?ns=${NS}`, { m
   const keep = ['accounts/1-3/5', 'gem/1-3/5', 'xp/1-3/5', 'cards/1-3/5', 'bonus/1-3/5'], snap = async () => Object.fromEntries(await Promise.all(keep.map(async (k) => [k, await rest(k)])));
   const A = await snap(); ok('기록 심음 (계정 uid 그대로)', A['accounts/1-3/5'].uid === acc0.uid && A['gem/1-3/5'].total === 321);
   // ① 확인 창
-  await t.click('.tabs button:has-text("나")'); await t.click('[data-k="feat"]'); await t.waitForSelector('[data-f="hero"]');
+  await t.click('.tabs button:has-text("나")'); await t.click('[data-k="feat"]'); await t.click('[data-k="feat-more"]'); await t.waitForSelector('[data-f="hero"]'); // 📦 상세 = ⚙ 자세히 ▸ 안
   await t.click('[data-f="hero"]'); const qB = await t.textContent('[data-k="feat-off-ask"]').catch(() => '');
   ok('① B: 🧙 용사 끌 때 묻기 · 문구 그대로', qB.includes('학생 기록(용사 · 강화 · 💎 · 처치 기록)은 그대로 남지만 학생 화면에서 사라져요. 끌까요?'));
   await t.screenshot({ path: `${SHOTS}/featoff-B.png` });

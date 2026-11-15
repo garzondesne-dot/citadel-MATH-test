@@ -51,7 +51,7 @@ const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bun
 // base './' = Pages 하위 경로(/citadel-MATH-test/)에서도 그대로 열림
 export default defineConfig({
   base: './',
-  define: SCHOOL ? { 'import.meta.env.VITE_SUBJECT': JSON.stringify('school'), 'import.meta.env.VITE_SCHOOL_SUBJECT': JSON.stringify(SCHOOL.subject), 'import.meta.env.VITE_SCHOOL_NAME': JSON.stringify(SCHOOL.name), 'import.meta.env.VITE_BUNDLE': JSON.stringify('standard') } : {},
+  define: SCHOOL ? { 'import.meta.env.VITE_SUBJECT': JSON.stringify('school'), 'import.meta.env.VITE_SCHOOL_SUBJECT': JSON.stringify(SCHOOL.subject), 'import.meta.env.VITE_SCHOOL_NAME': JSON.stringify(SCHOOL.name), 'import.meta.env.VITE_BUNDLE': JSON.stringify('basic') } : {},
   plugins: [svelte(), versionJson, htmlId, swPlugin],
   test: { include: ['tests/**/*.test.ts'] },
 });
