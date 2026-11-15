@@ -3,6 +3,7 @@
   import { CASTLE_PATH, castleZip, clearedBy, floorName, OFFICIAL, spanOf, type CastlePack, type CastleRec } from '../../school/castle';
   import { castles, removeCastle, setCastleHide } from '../../school/castles.svelte';
   import Castle from '../castle/Castle.svelte';
+  import CastleUnlock from './CastleUnlock.svelte';
 
   // ➕ 추가 팩 (📜 2026-11-14 · 머리 확정 「차시팩 아니고 추가팩은 … 수업 준비 탭에서」 → 「추천대로」)
   //   종류별 묶음: 🏰 성채(지금) · ⭕ 쉼터 OX · ⚒ 모루 · 🎯 복습(자리만 · 준비 중)
@@ -12,7 +13,7 @@
   type Tree = Record<string, Record<string, Record<string, Record<string, CastleRec>>>>;
   let tree = $state<Tree | null>(null);
   $effect(() => { void (S.fetch ? S.fetch<Tree>('bonus') : Promise.resolve(S.get<Tree>('bonus'))).then((t) => (tree = t ?? {})).catch(() => (tree = {})); });
-  let busy = $state(''), ask = $state(''), note = $state(''), look = $state<CastlePack | null>(null);
+  let busy = $state(''), ask = $state(''), note = $state(''), look = $state<CastlePack | null>(null), unl = $state<CastlePack | null>(null);
   const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
   async function toggle(P: CastlePack) {
     busy = P.id; const hide = !P.hide;
@@ -44,6 +45,7 @@
           <div class="cf" role="alertdialog"><em>이 팩을 지울까요? 학생 처치 기록은 남아요</em><button type="button" class="yes" data-k="addon-del-yes" onclick={() => del(P)}>예</button><button type="button" class="no" onclick={() => (ask = '')}>아니요</button></div>
         {:else}
           <div class="acts">
+            <button type="button" data-k="addon-unlock" onclick={() => (unl = P)}>🔓 해금 관리</button>
             <button type="button" data-k="addon-look" onclick={() => (look = P)}>👁 미리 보기</button>
             <button type="button" data-k="addon-vis" role="switch" aria-checked={!P.hide} disabled={busy === P.id} onclick={() => toggle(P)}>{P.hide ? '🙈 숨김' : '👀 보임'}</button>
             <button type="button" data-k="addon-dl" onclick={() => down(P)}>⬇ 내려받기</button>
@@ -59,6 +61,7 @@
   {#if note}<p class="note" role="status">{note}</p>{/if}
   <button type="button" class="item" data-k="addon-up" onclick={onup}><span class="ic">📦</span><span class="tx"><b>팩 올리기</b><small>차시 팩 · 🏰 성채 팩 · 종류는 파일이 알려 줘요</small></span></button>
 </section>
+{#if unl}<CastleUnlock {S} P={unl} onclose={() => (unl = null)} />{/if}
 {#if look}<Castle {S} uid="teacher-preview" preview floor={look.id} onclose={() => (look = null)} />{/if}
 
 <style>

@@ -100,14 +100,30 @@ export const storeOf = (P: CastlePack, now: number) => ({ ...P.raw, ...(P.hide ?
 
 // ── 열림 · 👑 보스 ──
 export interface CastleState { open: CastleRoom[]; plain: CastleRoom[]; cleared: number; need: number; boss: CastleRoom | null; bossOpen: boolean; isOpen: (r: CastleRoom) => boolean }
-/** 열린 방 · 👑 보스 조건 (upto = 그 반이 연 마지막 차시 · all = 선생님 미리 보기) — 정식 roomsState 그대로(사진 방도 잠그지 않음) */
-export function castleState(P: CastlePack, upto: number, recs: Record<string, CastleRec | undefined>, all = false): CastleState {
-  const boss = P.rooms.find((r) => r.boss) ?? null;
-  const plain = P.rooms.filter((r) => !r.boss && (all || r.no <= upto));
+/** 🔓 교사 수동 해금 (📜 2026-11-15 DECISIONS 「성채(추가 팩) 방 = 교사 수동 해금」) — 서버 school/castleOpen/{팩}/{반}/{방} = true · school/castleAuto/{팩} = false(자동 해금 끔)
+ *  열림 = 교사가 연 방 OR 자동(진도 · 👑 보스 60%) · 교사가 연 보스 = 60% 없이 · 자동 끔 = 교사가 연 방만 */
+export interface Manual { open: Record<string, unknown>; auto: boolean }
+export const MANUAL0: Manual = { open: {}, auto: true };
+const ckc = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
+export const openPath = (packId: string, cls: string) => `school/castleOpen/${ckc(packId)}/${ckc(cls)}`;
+export const autoPath = (packId: string) => `school/castleAuto/${ckc(packId)}`;
+export const manualOf = (S: Store, packId: string, cls: string): Manual => ({ open: (cls && S.get<Record<string, unknown>>(openPath(packId, cls))) || {}, auto: S.get<boolean>(autoPath(packId)) !== false });
+/** 교사: 반들 × 방들 열기 · 잠그기 (rooms = 그 층 방 id · 전체 = 모든 방) */
+export function setManual(S: Store, packId: string, classes: string[], rooms: string[], on: boolean) { for (const c of classes) for (const r of rooms) S.set(`${openPath(packId, c)}/${r}`, on ? true : null); }
+export const setAuto = (S: Store, packId: string, on: boolean) => S.set(autoPath(packId), on ? null : false);
+
+// ── 열림 · 👑 보스 ──
+export interface CastleState { open: CastleRoom[]; plain: CastleRoom[]; cleared: number; need: number; boss: CastleRoom | null; bossOpen: boolean; isOpen: (r: CastleRoom) => boolean; auto: boolean; byTeacher: (r: CastleRoom) => boolean }
+/** 열린 방 · 👑 보스 조건 (upto = 그 반이 연 마지막 차시 · all = 선생님 미리 보기 · man = 🔓 교사 해금) — 정식 roomsState(사진 방도 잠그지 않음) + 교사 해금 */
+export function castleState(P: CastlePack, upto: number, recs: Record<string, CastleRec | undefined>, all = false, man: Manual = MANUAL0): CastleState {
+  const boss = P.rooms.find((r) => r.boss) ?? null, auto = man.auto !== false;
+  const byTeacher = (r: CastleRoom) => !!man.open?.[r.id];
+  const plainOpen = (r: CastleRoom) => all || byTeacher(r) || (auto && r.no <= upto);
+  const plain = P.rooms.filter((r) => !r.boss && plainOpen(r));
   const cleared = plain.filter((r) => recs[r.id]?.clear).length, need = Math.ceil((plain.length * (P.bossPct || 60)) / 100);
-  const bossOpen = !!boss && (all || (boss.no <= upto && plain.length > 0 && cleared >= need));
-  const isOpen = (r: CastleRoom) => (r.boss ? bossOpen : all || r.no <= upto);
-  return { open: P.rooms.filter(isOpen), plain, cleared, need, boss, bossOpen, isOpen };
+  const bossOpen = !!boss && (all || byTeacher(boss) || (auto && boss.no <= upto && plain.length > 0 && cleared >= need));
+  const isOpen = (r: CastleRoom) => (r.boss ? bossOpen : plainOpen(r));
+  return { open: P.rooms.filter(isOpen), plain, cleared, need, boss, bossOpen, isOpen, auto, byTeacher };
 }
 /** 🔁 다시 들어온 방의 첫 판 (정식: 처음 = 판 0 · 다시 = 판 1~) — 기회 4번이 판 6 을 넘지 않게 1 · 2 · 3 을 돌림 */
 export const baseVer = (rec: CastleRec | undefined) => { const n = Number(rec?.runs) || 0; return n ? 1 + ((n - 1) % 3) : 0; };

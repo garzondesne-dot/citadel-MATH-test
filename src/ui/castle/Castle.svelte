@@ -8,7 +8,7 @@
   import { chainRecord, isChain, plainRecord } from '../../raid/raid';
   import { stepDone } from '../../board/board';
   import { meBound } from '../../store/meSync';
-  import { baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
+  import { manualOf, baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
   import { castles, visibleCastles } from '../../school/castles.svelte';
   import { spriteOf } from '../manifest';
   import { busy } from '../busy.svelte';
@@ -28,13 +28,16 @@
   const RS = untrack(() => meBound()?.S ?? S);
   const base = untrack(() => { const b = meBound(); return b ? bonusBase(b.cls, b.num) : bonusBase(cls, num || uid); });
   let ver = $state(0);
+  // 🔓 교사 수동 해금 (school/castleOpen · castleAuto = 실시간) — 바뀌면 바로 다시 그림
+  const mStop = untrack(() => [S.watch('school/castleOpen', () => ver++), S.watch('school/castleAuto', () => ver++)]); onDestroy(() => mStop.forEach((f) => f()));
+  const manOf = (Px: CastlePack) => { void ver; return manualOf(S, Px.id, cls); };
   const recsOf = (P: CastlePack): Record<string, CastleRec> => { void ver; return preview ? {} : RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}; };
   const upto = untrack(() => (preview ? 99 : progressOf(S, cls, (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {}, all)));
   let fid = $state(untrack(() => floor || (floors.length === 1 ? floors[0]!.id : '')));
   let pickF = $state(untrack(() => floor || floors[floors.length - 1]?.id || ''));
   const P = $derived(floors.find((f) => f.id === fid) ?? null);
   const recs = $derived(P ? recsOf(P) : {});
-  const st = $derived(P ? castleState(P, upto, recs, preview) : null);
+  const st = $derived(P ? castleState(P, upto, recs, preview, manOf(P)) : null);
   let pickR = $state('');
   $effect(() => { const p = P, s = st; if (!p || !s) return; untrack(() => { if (!p.rooms.some((r) => r.id === pickR && s.isOpen(r))) pickR = (s.open.find((r) => !recs[r.id]?.clear) ?? s.open[0])?.id ?? ''; }); });
   const room = $derived(P?.rooms.find((r) => r.id === pickR) ?? null);
@@ -42,6 +45,7 @@
   const nn = (r: CastleRoom) => (/^\D*(\d+)/.exec(r.id)?.[1] ?? '').padStart(2, '0');
   function lineOf(r: CastleRoom): string {
     if (!st) return '';
+    if (!st.auto && !st.isOpen(r)) return '🔒 선생님이 열어 주면 열려요'; // 🔓 자동 해금 끔 = 교사가 연 방만
     if (r.boss && !st.bossOpen) return r.no > upto && !preview ? `🔒 ${r.no}차시를 배우면 · 열린 방 ${st.need}개 처치` : `🔒 열린 방 ${st.cleared} / ${st.need} 처치하면 열려요`;
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, r.photo ? '📷 답 확인만' : '', `${r.no}차시`].filter(Boolean).join(' · ');
@@ -81,10 +85,10 @@
   function save(x: NonNullable<typeof run>, clear: boolean, n: number) {
     if (preview || !n) return { first: false, bossNew: false, firstCastle: false };
     const path = `${base}/${x.P.id}/${x.r.id}`, old = RS.get<CastleRec>(path) || {};
-    const before = castleState(x.P, upto, recsOf(x.P)).bossOpen, anyBefore = floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear));
+    const before = castleState(x.P, upto, recsOf(x.P), false, manOf(x.P)).bossOpen, anyBefore = floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear));
     RS.set(path, { ...old, tries: (Number(old.tries) || 0) + n, runs: (Number(old.runs) || 0) + 1, at: S.now(), ...(clear || old.clear ? { clear: true } : {}) });
     ver++;
-    return { first: clear && !old.clear, bossNew: !before && castleState(x.P, upto, recsOf(x.P)).bossOpen, firstCastle: clear && !old.clear && !anyBefore };
+    return { first: clear && !old.clear, bossNew: !before && castleState(x.P, upto, recsOf(x.P), false, manOf(x.P)).bossOpen, firstCastle: clear && !old.clear && !anyBefore };
   }
   function finish(x: NonNullable<typeof run>, RR: Room) {
     if (drive) clearInterval(drive); drive = null;
@@ -138,7 +142,7 @@
       {:else}
         <p class="lab">층 고르기</p>
         <div class="list" role="radiogroup" aria-label="층">
-          {#each floors as f (f.id)}{@const s = castleState(f, upto, recsOf(f), preview)}
+          {#each floors as f (f.id)}{@const s = castleState(f, upto, recsOf(f), preview, manOf(f))}
             <button type="button" role="radio" class="row" class:on={pickF === f.id} aria-checked={pickF === f.id} data-floor={f.id} onclick={() => (pickF = f.id)}>
               <span class="no">{f.floor}층</span><span class="tx"><b>{f.title}</b><small>열린 방 {s.open.length} / {f.rooms.length} · 처치 {s.cleared} · {spanOf(f)}</small></span>{#if f.hide}<em class="st">숨김</em>{/if}
             </button>
