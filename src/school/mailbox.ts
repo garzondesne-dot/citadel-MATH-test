@@ -8,8 +8,15 @@ export interface MailItem { k: MailKind; id: string; at: number; text: string; g
 type Gift = { g?: number; s?: number; x?: number; at?: number; fun?: string; got?: boolean; mail?: boolean; from?: string; code?: string };
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
 export const seenKey = (cls: string, num: number) => `citadel-mail-seen-${ck(cls)}-${num}`;
-export const seenGet = (cls: string, num: number) => { try { return Number(localStorage.getItem(seenKey(cls, num))) || 0; } catch { return 0; } };
-export const seenSet = (cls: string, num: number, t: number) => { try { localStorage.setItem(seenKey(cls, num), String(t)); } catch { /* 이 기기만 */ } };
+/** 📮 읽음 = 서버 accounts/{반}/{번호}/mseen (📜 2026-11-15 머리 🔨 「읽음 상태는 서버」 · 다른 폰에서도 같은 보관함) · 이 기기 기억과 둘 중 늦은 것 */
+export const mseenPath = (cls: string, num: number) => `accounts/${ck(cls)}/${num}/mseen`;
+export const seenGet = (cls: string, num: number, S?: Store | null) => { let l = 0; try { l = Number(localStorage.getItem(seenKey(cls, num))) || 0; } catch { /* 무시 */ } return Math.max(l, Number(S?.get(mseenPath(cls, num))) || 0); };
+export const seenSet = (cls: string, num: number, t: number, S?: Store | null) => {
+  try { localStorage.setItem(seenKey(cls, num), String(t)); } catch { /* 이 기기만 */ }
+  try { if (S && S.kind === 'server' && (Number(S.get(mseenPath(cls, num))) || 0) < t) S.set(mseenPath(cls, num), t); } catch { /* 기록은 덤 (그 학생 폰만 쓸 수 있음) */ }
+};
+/** 🗂 보관함 가르기: 받은 소식 = 안 읽은 것 + 아직 안 받은 🎁 선물 · 보관함 = 그 밖(읽은 것 · 받은 선물) */
+export const isNew = (x: MailItem, seen: number) => x.at > seen || (x.k === 'gift' && !x.got);
 /** 선물 한 칸의 이름 */
 export function giftName(k: string, x: Gift): string {
   if (x.fun) return x.fun;

@@ -142,7 +142,7 @@
   const mbWho = untrack(() => (pupil && S.kind === 'server' ? { uid: pupil.uid, cls: pupil.cls, num: pupil.num } : null));
   const mbG = untrack(() => liveValue<unknown>(S, mbWho ? `gifts/${mbWho.uid}` : 'gifts/_none')), mbN = untrack(() => liveValue<unknown>(S, mbWho ? `school/notice/${mbWho.cls}` : 'school/notice/_none'));
   onDestroy(() => { mbG.stop(); mbN.stop(); });
-  let mbSeen = $state(untrack(() => (mbWho ? mailSeenGet(mbWho.cls, mbWho.num) : 0))), mbVer = $state(0);
+  let mbSeen = $state(untrack(() => (mbWho ? mailSeenGet(mbWho.cls, mbWho.num, S) : 0))), mbVer = $state(0);
   const mailN = $derived.by(() => { void mbG.v.val; void mbN.v.val; void mv.v.val; void mbVer; return mbWho ? mailUnread(mailInbox(S, mbWho.uid, mbWho.cls), mbSeen) : 0; });
   function mailTake(id: string): string {
     if (!mbWho) return '';
@@ -415,7 +415,7 @@
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'mail' && mbWho}
-  <MailBox {S} uid={mbWho.uid} cls={mbWho.cls} num={mbWho.num} gem={me.wallet.gem} survey={svNo && !svSent ? svNo : 0} onclaim={mailTake} onsurvey={() => (sheet = 'survey')} onclose={() => { sheet = null; mbSeen = mailSeenGet(mbWho.cls, mbWho.num); mbVer++; }} />
+  <MailBox {S} uid={mbWho.uid} cls={mbWho.cls} num={mbWho.num} gem={me.wallet.gem} survey={svNo && !svSent ? svNo : 0} onclaim={mailTake} onsurvey={() => (sheet = 'survey')} onclose={() => { sheet = null; mbSeen = mailSeenGet(mbWho.cls, mbWho.num, S); mbVer++; }} />
 {:else if sheet === 'castle'}
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
