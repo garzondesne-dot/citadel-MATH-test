@@ -22,14 +22,14 @@
   //   층 목록 → 방 목록 → 방 하나 = 몬스터 한 마리(1:1 · 혼자) · 전투 = 학생 레이드 화면(Student · MonsterForm · ChainView · 룬 키패드) 그대로 🪞
   //   열림 = 반 진도 ≥ 방 no · 👑 = 열린 방 60%(올림) 처치 · 기회 4 · 틀린 소문제만 다음 판 숫자 · 실패 = 💧 벌 없음
   //   preview = 👁 선생님 미리 보기: 모든 방 열림 · 기록 · 데미지 없음 · 처치 기록 = bonus/{반}/{번호}/{팩}/{방}
-  const { S, me = null, save: persist = () => {}, uid, num = 0, cls = '', preview = false, floor = '', onclose }: { S: Store; me?: Me | null; /** 💎 · EXP 저장 (캠프 M.save) */ save?: () => void; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void } = $props();
+  const { S, me = null, save: persist = () => {}, uid, num = 0, cls = '', preview = false, all = false, floor = '', onclose }: { S: Store; /** 👩‍🏫 교사 캠프 = 모든 방 열림(기록은 남음) */ all?: boolean; me?: Me | null; /** 💎 · EXP 저장 (캠프 M.save) */ save?: () => void; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void } = $props();
   const floors = $derived(preview ? castles.list : visibleCastles());
   // 🧑 기록 자리 = 그 학생으로 로그인한 폰이면 서버 정식 경로 · 아니면 이 기기(테스트 · 체험)
   const RS = untrack(() => meBound()?.S ?? S);
   const base = untrack(() => { const b = meBound(); return b ? bonusBase(b.cls, b.num) : bonusBase(cls, num || uid); });
   let ver = $state(0);
   const recsOf = (P: CastlePack): Record<string, CastleRec> => { void ver; return preview ? {} : RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}; };
-  const upto = untrack(() => (preview ? 99 : progressOf(S, cls, (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {})));
+  const upto = untrack(() => (preview ? 99 : progressOf(S, cls, (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {}, all)));
   let fid = $state(untrack(() => floor || (floors.length === 1 ? floors[0]!.id : '')));
   let pickF = $state(untrack(() => floor || floors[floors.length - 1]?.id || ''));
   const P = $derived(floors.find((f) => f.id === fid) ?? null);

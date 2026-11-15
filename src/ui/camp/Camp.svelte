@@ -156,7 +156,7 @@
   onDestroy(() => bgm(null, 'phone'));
   const castleOpen = (): number => {
     const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
-    const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {});
+    const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {}, fromMe0); // 👩‍🏫 교사 캠프 = 모든 방 열림 (정식 교사)
     return visibleCastles().reduce((a, P) => a + castleState(P, up, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}).open.length, 0);
   };
   let castleGo = $state<string | null>(null); // 🏰 성채 화면 (층 id · '' = 층 고르기)
@@ -285,7 +285,7 @@
 
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
-  <Castle {S} {me} save={M.save} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
+  <Castle {S} {me} save={M.save} all={fromMe0} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'castle'}

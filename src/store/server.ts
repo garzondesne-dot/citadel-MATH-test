@@ -12,7 +12,7 @@ type Tree = Record<string, unknown>;
 const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held', 'survey', 'surveyDone'] as const; // 📝 survey = 열림 표시(누구나) · surveyDone = 응답했는지(그 학생 · 교사) · surveyA = 거울 밖(학생은 쓰기만 trySet · 교사는 fetch) // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
-const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey'];
+const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held']; // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
 const BUCKET: Record<string, number> = { rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3 };
 // 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
 const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2 };

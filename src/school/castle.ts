@@ -125,10 +125,14 @@ export function roomPack(P: CastlePack, r: CastleRoom, sprite = r.sprite): Lesso
 export const forgetCastle = (P: CastlePack) => P.rooms.forEach((r) => forget(`${P.id}~${r.id}`));
 
 // ── 진도 · 기록 ──
-/** 반 진도 = 그 반이 마지막으로 연 차시(school/last · 🧪 school/lastTest) · 내 수업 기록 중 큰 것 · 반이 없으면(시험 캠프) 모든 반 중 큰 것 */
-export function progressOf(S: Store, cls: string, recs: Record<string, unknown> = {}): number {
+/** 반 진도 (정식 bonus.js upto = unlock/{반} = 그 반이 게임으로 연 가장 큰 차시) — 베타 = held/{반}(정식에서 옮긴 · 수업 시작 때 적힘 · 출시 대조: 6반 모두 unlock 과 같음)
+ *  + school/last · 🧪 lastTest + 내 수업 기록 중 큰 것 · 반이 없으면(교사 · 시험 캠프) 모든 반 중 큰 것 · all = 👩‍🏫 교사 캠프(정식 교사 = 모든 방 열림) */
+const noOfLesson = (id: string) => PACKS.find((p) => p.id === id)?.no ?? (Number(/(\d+)$/.exec(id)?.[1]) || 0);
+export function progressOf(S: Store, cls: string, recs: Record<string, unknown> = {}, all = false): number {
+  if (all) return 99;
   const cs = cls ? [cls] : CLASSES;
-  return Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), ...cs.flatMap((c) => [Number(lastClass(S, c)?.no) || 0, Number(lastTest(S, c)?.no) || 0]));
+  const held = cs.flatMap((c) => Object.keys(S.get<Record<string, unknown>>(`held/${c.replace(/[.#$/[\]]/g, '_')}`) || {}).map(noOfLesson));
+  return Math.max(0, ...held, ...Object.keys(recs).map(noOfLesson), ...cs.flatMap((c) => [Number(lastClass(S, c)?.no) || 0, Number(lastTest(S, c)?.no) || 0]));
 }
 /** 처치 기록 자리 (정식 bonus/{반}/{번호}) */
 export const bonusBase = (cls: string, num: number | string) => `bonus/${(cls || 'me').replace(/[.#$/[\]]/g, '_')}/${num || 0}`;
