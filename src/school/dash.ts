@@ -131,7 +131,7 @@ export function realClass(S: Store, cls: string) {
     const ph = (S.get<Record<string, Record<string, { status?: string; ok?: boolean }>>>(`photo/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`)) || {};
     const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: S.get(`surveyDone/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`) === true, dummy };
   }
   // 📈 최근 14일 수업 밖 활동(풀이 수 · 앞 7 = 그 전 7일 · 뒤 7 = 최근 7일) = 활용 추이 기록(act · 기록 전 ≈ 추정) · 반 비교 「수업 밖 7일 활동」 · 학생 시트
   const U = loadUsage(S, cls).days, today = usageDay(now);
@@ -149,14 +149,14 @@ export function realClass(S: Store, cls: string) {
       for (const [m, v] of Object.entries(isObj(r.ladW) ? r.ladW : {})) ladW[m] = String(v);
     }
     const g0 = (gemAll[p.num] || {}) as { conv?: Extra['conv'] };
-    Object.assign(e, { conv: isObj(g0.conv) ? g0.conv : null, ox, hintN, lad, ladW, hg: raw.reduce((a, [, r]) => a + (Number(r.hg) || 0), 0), seals: sealsOf(bon as never).length, cardN: Object.keys(isObj(cardAll[p.num]) ? cardAll[p.num]! : {}).length });
+    Object.assign(e, { hints: hintN, conv: isObj(g0.conv) ? g0.conv : null, ox, hintN, lad, ladW, hg: raw.reduce((a, [, r]) => a + (Number(r.hg) || 0), 0), seals: sealsOf(bon as never).length, cardN: Object.keys(isObj(cardAll[p.num]) ? cardAll[p.num]! : {}).length });
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   (out as { dropped?: string[] }).dropped = [...dropped];
   for (const st of out.studs) { // ❗ 남은 문제 = 정식 DS.Note.lesson(…).left (형성평가 있는 수업 차시만 · 성채 평가 차시 빼기)
-    let left = 0;
-    for (const [lid, r] of Object.entries(recAll[st.n] || {})) { if (!isObj(r) || /^eval-/.test(lid)) continue; const L = fullLesson(lid); if (L?.boss) left += noteOf(L, r as Rec, (bonAll[st.n] || {})[lid] as Bon | undefined).left; }
-    st.left = left;
+    let left = 0, done = 0; // ❗ 남은 문제 · 📕 오답 고침 완료(정식 noteDone = 허수아비로 바로잡은 칸 'p')
+    for (const [lid, r] of Object.entries(recAll[st.n] || {})) { if (!isObj(r) || /^eval-/.test(lid)) continue; const L = fullLesson(lid); if (!L?.boss) continue; const x = noteOf(L, r as Rec, (bonAll[st.n] || {})[lid] as Bon | undefined); left += x.left; done += x.mons.filter((m) => m === 'p').length + x.boss.slice(0, x.hp).filter((m) => m === 'p').length; }
+    st.left = left; st.extra.noteDone = done;
   }
   // 🔎 오개념 = 수업 기록 + 🏰 성채(평가 방 eval-) 기록 (정식 dash.js 그대로 · 🎯 허수아비는 빼기 · 📜 2026-11-15 머리 🔨 (c))
   for (const st of out.studs) for (const [lid, l] of Object.entries(bonAll[st.n] || {})) {

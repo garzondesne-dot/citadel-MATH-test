@@ -66,3 +66,18 @@ describe('🧹 옛 판 계산 오류 기록 빼기 (6차시 c4 · 선생님 답 
     expect(S.get('records/1-3/1/set-06/conc/c4')).toEqual([0, 17]); // 서버 기록은 그대로
   });
 });
+
+describe('📝 세특 초안 = 실제 기록 (옛 정식 memoParts 문장 그대로)', () => {
+  it('힌트 준 · 고친 · 그림 힌트 · 성채 · 허수아비 · 오답 고침 · 기호 톡 · 설문 문장이 나옴', async () => {
+    const { classData, seteukOf } = await import('../src/school/dash');
+    const { seteukDraft } = await import('../src/school/seteuk');
+    const S = { ...memoryStore(), kind: 'server' as const };
+    S.set('roster/1-3', { 1: '가' });
+    S.set('records/1-3/1', { 'set-06': { no: 6, at: Date.UTC(2026, 10, 12), conc: { c1: [4, 4] }, boss: 5, bossN: 6, bossM: 'ooooox', mons: { m1: 'x', m2: 'o' }, hg: 2, hints: 1, fixed: 3 } });
+    S.set('bonus/1-3/1', { 'set-06': { m1: { clear: true, tries: 2 } }, 'eval-1': { r1: { tries: 4 } } });
+    S.set('xp/1-3/1', { total: 10, st: { 'set-06': { in: 2 } } });
+    S.set('surveyDone/1-3/1', true);
+    const s = classData(S, '1-3').studs[0]!, d = seteukDraft(seteukOf(s)), all = [d.main, ...d.more].join(' ');
+    for (const t of ['친구를 돕고', '오류를 스스로 바로잡음(3개)', '단서를 활용', '단원 평가 문항에 4회', '유사 문항으로 반복 연습함(2회)', '보완을 완료함(1문항)', '기호의 뜻을 스스로', '성찰에 참여함']) expect(all, t).toContain(t);
+  });
+});

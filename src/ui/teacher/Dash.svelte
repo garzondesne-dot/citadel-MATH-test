@@ -49,7 +49,9 @@
   const lr = untrack(() => liveValue(S, 'records')), lx = untrack(() => liveValue(S, 'xp')), lg = untrack(() => liveValue(S, 'gem')); onDestroy(() => { lr.stop(); lx.stop(); lg.stop(); });
   // 📊 통계 칸 (넣기 · 빼기 · 연 칸)이 바뀌면 다시 계산
   let pickOpen = $state(false), pv = $state(0);
-  const pStop = untrack(() => [S.watch('school/statsPick', () => pv++), S.watch('school/opened', () => pv++)]); onDestroy(() => pStop.forEach((f) => f()));
+  const pStop = untrack(() => [S.watch('school/statsPick', () => pv++), S.watch('school/opened', () => pv++),
+    // 📊 정식 대시보드 칸이 읽는 것 (성채 · 허수아비 · 카드 · 활용 추이 · 설문 응답 · 기호 톡) = 서버에서 받아 둠 (📜 2026-11-15)
+    ...(S.kind === 'server' ? [S.watch('bonus', () => pv++), S.watch('cards', () => pv++), S.watch('act', () => pv++), ...CLASSES.map((c) => S.watch(`surveyDone/${c}`, () => pv++))] : [])]); onDestroy(() => pStop.forEach((f) => f()));
   const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; void pv; return scope(S, cls); });
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
