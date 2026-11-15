@@ -21,7 +21,7 @@ export interface Stud {
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
 export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
-  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
+  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
 export const STANDARDS = SUBJ.standards; // 과목 팩 (#136)
@@ -94,7 +94,7 @@ export function fakeClass(S: Store | null, cls: string) {
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 export function realClass(S: Store, cls: string) {
   const bonAll = S.get<Record<string, Record<string, Record<string, { tries?: number; mis?: Record<string, [number, number]> } | null>>>>(`bonus/${cls}`) || {}, cardAll = S.get<Record<string, Record<string, unknown>>>(`cards/${cls}`) || {};
-  const recAll = S.get<Record<string, Record<string, Partial<LessonRec> & Record<string, unknown>>>>(`records/${cls}`) || {}, xpAll = S.get<Record<string, { total?: number }>>(`xp/${cls}`) || {}, gemAll = S.get<Record<string, { total?: number; scroll?: number; day?: Record<string, number> }>>(`gem/${cls}`) || {};
+  const recAll = S.get<Record<string, Record<string, Partial<LessonRec> & Record<string, unknown>>>>(`records/${cls}`) || {}, xpAll = S.get<Record<string, { total?: number; st?: Record<string, Record<string, number>> }>>(`xp/${cls}`) || {}, gemAll = S.get<Record<string, { total?: number; scroll?: number; day?: Record<string, number> }>>(`gem/${cls}`) || {};
   const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {};
   const now = S.now(), dayK = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), week = new Set(Array.from({ length: 7 }, (_, i) => dayK(now - i * 864e5)));
   // 📊 반 통계 = 그 반 수업에서 연 칸만 (📜 2026-11-15 · statsCells.ts): 차시마다 통계에 넣는 칸 → 안 연 몬스터의 개념 칸 · 형성평가 점수는 뺌(학생 기록은 그대로)
@@ -125,7 +125,7 @@ export function realClass(S: Store, cls: string) {
     const ph = (S.get<Record<string, Record<string, { status?: string; ok?: boolean }>>>(`photo/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`)) || {};
     const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   // 🔎 오개념 = 수업 기록 + 🏰 성채(평가 방 eval-) 기록 (정식 dash.js 그대로 · 🎯 허수아비는 빼기 · 📜 2026-11-15 머리 🔨 (c))

@@ -28,7 +28,8 @@
   async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
   function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
-  const V = $derived.by(() => { void svVer; void pv; void lr.v.val; return view(S, cls, vid); });
+  let vopt = $state('');
+  const V = $derived.by(() => { void svVer; void pv; void lr.v.val; return view(S, cls, vid, false, vopt); });
   // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
   const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
   // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
@@ -70,6 +71,7 @@
     {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
     {#snippet barsBlock()}{#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc" class:est={b.est?.[i]}><i style:height="{(v / mx) * 100}%"></i>{#if i === b.vals.length - 1}<b>{v}</b>{/if}<em>{b.est?.[i] ? '≈' : ''}{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}{/snippet}
+    {#if V.pick}<label class="row vpick">{V.pick.label} <select data-k="vpick" value={V.pick.cur} onchange={(e) => (vopt = (e.currentTarget as HTMLSelectElement).value)}>{#each V.pick.opts as [v, t] (v)}<option value={v}>{t}</option>{/each}</select></label>{/if}
     {#if V.note}<p class="vnote" data-k="use-note">{V.note}</p>{/if}
     {#if V.csv}<div class="row"><button type="button" class="b2" data-k="csv" onclick={csvGo}>📥 CSV 내려받기</button></div>{/if}
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
@@ -144,6 +146,7 @@
   .bc { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
   .bc i { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); display: block; min-height: 2px; }
   .bc.est i { background: repeating-linear-gradient(45deg, var(--accent) 0 4px, color-mix(in srgb, var(--accent) 40%, transparent) 4px 8px); opacity: 0.75; }
+  .vpick { gap: var(--s2); font-size: 14px; color: var(--text-2); } .vpick select { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); background: var(--surface); color: var(--text); border: 1px solid var(--surface-2); font: inherit; }
   .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .bc b { position: absolute; top: -16px; font-size: 12px; color: var(--text); } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }

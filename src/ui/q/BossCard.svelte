@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setSymLesson } from '../../school/symtap';
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { bossItem, bossState, bossTries, stone } from '../../raid/raid';
@@ -17,6 +18,7 @@
   // #116 보여 주기만 #113 과 같게: 답안 줄 = 문항 칸 · 낸 문항 칸만 뒤집힘(0.25초 · ✔ 초록 + 베기 / ✘ 빨강 + 헛스윙) · ✔ 문항 = 그 답 그대로 잠김
   //   ✘ 문항 = 다시 열면 빈칸 · 「다음 안 푼 문항 ▶」 · 모두 끝나면 세로 채점표(문항 · 내 답 전체 · ✔/✘) 한 번에
   const { S, L, R, code, uid, now, locked }: { S: Store; L: LessonPack; R: Room; code: string; uid: string; now: number; locked: boolean } = $props();
+  $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const st = $derived(bossState(L, R, uid));
   const tries = $derived(bossTries(L, R, uid));
   const open = (x: (typeof st)[number]) => !x.ok && x.left > 0;

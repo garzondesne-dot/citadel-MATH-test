@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setSymLesson } from '../../school/symtap';
   import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import SkillCards from './SkillCards.svelte';
@@ -27,6 +28,7 @@
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
   //   ✍ 서술형 📸 (정식 #50 · 📜 2026-11-15): 언제나(시작 전 · 졸개 도중 · 대장 뒤 · 한 판 더 중) · 학습지 숫자 그대로 · 통과 = 🌟 진필살기 + 📜 1 + 남은 단계 처치
   const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
+  $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const rec = $derived(chainRecord(L, R, mid, uid));
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   let pracPass = $state<number | null>(null);

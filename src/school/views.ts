@@ -7,6 +7,7 @@ import type { Cell, SheetData } from './xlsx';
 import { CMP, doneCount, summary, surveyCache, WHEN } from './survey';
 import { addDays, day as usageDay, loadUsage, perStudent, weekly, ymdLabel, type Days } from './usage';
 import { misTop } from './seteuk';
+import { rank as symRank } from './symtap';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
 //   색 + 글자 함께(도달 · 근접 · 미달 · ✔ △ ✘ · ⭐ · ■) · 「전체」 = 모든 반 합산(🧪 베타 반 · 시험 계정 빠짐)
@@ -20,6 +21,7 @@ export interface View {
   bars?: { title: string; vals: number[]; labels: string[]; foot: string; /** ≈ 기록 전 추정(줄무늬) */ est?: boolean[] }[];
   /** 안내 한 줄 (📈 활용 추이 「참고 자료 · ≈ 추정」) */ note?: string;
   /** 막대가 표보다 먼저 */ barsFirst?: boolean;
+  /** 거르기 (📖 기호 톡 차시) */ pick?: { label: string; cur: string; opts: [string, string][] };
   /** 목록 아래 줄을 자르지 않고 여러 줄로 (👀 이유 · 🔎 태그) */ listWrap?: boolean;
   /** 📥 CSV (이름 · 줄) */ csv?: { name: string; rows: (string | number)[][] };
   memos?: { s: Stud; text: string; more: string[] }[];
@@ -55,7 +57,7 @@ const lessonCell = (s: Stud, id: string): TCell => {
 };
 const recent = (s: Stud) => s.extra.days.slice(7).some(Boolean);
 
-export function view(S: Store, cls: string, id: string, withX = false): View {
+export function view(S: Store, cls: string, id: string, withX = false, opt = ''): View {
   const sc: Sc = scope(S, cls, withX);
   const { studs, held } = sc;
   const nm = (s: Stud) => `${cls === ALL ? `${s.cls} ` : ''}${s.n} ${s.name}`;
@@ -120,7 +122,15 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
           rows: xs.map(([k, a]) => { const v = pct(Math.min(a.f, a.w), a.w); return { cells: [{ t: k, v: k }, { t: MIS[k]!.name, v: MIS[k]!.name }, { t: String(a.w), v: a.w }, { t: `${a.who}명`, v: a.who }, { t: p(v), tone: tone(v), v: pv(v) } as TCell] }; }) } } : {}),
         listWrap: true, list: who.map((s) => ({ rk: `${s.n}번`, nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}`, sub: misTop(s.mis, 4).map((t) => `${t.code} ${t.wrong}${t.fixed ? ` · ✔${t.fixed}` : ''}`).join('  '), pc: '', pick: s })) };
     }
-    case 'sym': {
+    case 'sym': if (S.kind === 'server') { // 📖 서버 = 정식 dash.js 「기호 톡」 그대로 (xp/{반}/{번호}/st · 가짜 SYMS 안 씀)
+      const BY = SUBJ.symtalk?.BY ?? {}, lids = [...new Set(studs.flatMap((s) => Object.keys(s.extra.symt || {})))].sort(), lname = (l: string) => { const m = [...LESSON_LIST, ...PACKS].find((x) => x.id === l); return m ? (/^eval-/.test(l) ? `🏰 ${m.title}` : `${m.no}차시`) : l; };
+      const xs = symRank(studs.map((s) => s.extra.symt), (k) => !!BY[k], lids.includes(opt) ? opt : ''), mx = Math.max(1, ...xs.map((x) => x.n));
+      return { id, title: '기호 톡', info: '학생이 문제 속 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호 (다음 수업 짚을 곳) · 벌 · 보상 없음 · 테스트는 안 셈',
+        ...(xs.length ? {} : { note: '아직 누른 기록이 없어요.' }), ...(lids.length ? { pick: { label: '차시', cur: lids.includes(opt) ? opt : '', opts: [['', '모두'], ...lids.map((l) => [l, lname(l)] as [string, string])] } } : {}),
+        list: xs.map((x, i) => ({ rk: String(i + 1), nm: BY[x.id]!.sym, sub: BY[x.id]!.easy, pc: `${x.n}번 · ${x.who}명`, bar: x.n / mx })) };
+    }
+    // falls through
+    case 'sym-fake': {
       const tot = studs.reduce((a, s) => a + s.extra.sym, 0), w = [0.32, 0.16, 0.14, 0.11, 0.08, 0.07, 0.07, 0.05];
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
