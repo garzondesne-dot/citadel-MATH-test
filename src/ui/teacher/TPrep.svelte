@@ -54,7 +54,7 @@
   $effect(() => { const Lc = L; void imgVer; hasImg = {}; if (!Lc) return; for (const st of Lc.steps.filter((x) => !x.later)) { const c = st.img ?? st.id; void prepImg(S, Lc, c).then((u) => { if (L === Lc) hasImg = { ...hasImg, [st.id]: u }; }); } });
   const nv = $derived.by(() => { void imgVer; return L ? new Set(Object.values(L.videos || {})).size : 0; }); // 저장 뒤 다시 셈(imgVer)
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
-  let seg = $state<'lesson' | 'week' | 'tools'>('lesson');
+  let seg = $state<'lesson' | 'week' | 'packs' | 'tools'>('lesson');
   let ver = $state(0);
   type Prep = { pct: number; retries: number; think: number; solve: number };
   const base = $derived<Prep>({ pct: L?.defaultPct ?? 90, retries: PROFILES.class.retries, think: PROFILES.class.thinkSec, solve: PROFILES.class.scoutSec });
@@ -71,8 +71,8 @@
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
-  {#if packs.length}{@const cur = opts.find((o) => o.id === lid)}<button type="button" class="lsel lbtn" data-k="lpick-go" aria-haspopup="dialog" onclick={() => (pickOpen = true)}><span class="sr">차시</span><b>{cur ? `${cur.no}차시` : '차시'}</b><span class="lt">{cur ? `${cur.title}${upTag(cur.id, cur.no)}${cur.ready ? '' : ' (준비 안 됨)'}` : '고르기'}</span><i aria-hidden="true">▾</i></button>{/if}
-  <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
+  {#if packs.length && seg !== 'packs'}{@const cur = opts.find((o) => o.id === lid)}<button type="button" class="lsel lbtn" data-k="lpick-go" aria-haspopup="dialog" onclick={() => (pickOpen = true)}><span class="sr">차시</span><b>{cur ? `${cur.no}차시` : '차시'}</b><span class="lt">{cur ? `${cur.title}${upTag(cur.id, cur.no)}${cur.ready ? '' : ' (준비 안 됨)'}` : '고르기'}</span><i aria-hidden="true">▾</i></button>{/if}
+  <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['packs', '📦 팩'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['packs', '📦 팩'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
   {#if seg === 'lesson' && !packs.length}
@@ -99,6 +99,8 @@
           <button type="button" aria-label="{c} 진도 당기기" onclick={() => { S.set(`school/prog/${c}`, Math.max(1, prog(c) - 1)); ver++; }}>−</button><button type="button" aria-label="{c} 진도 밀기" onclick={() => { S.set(`school/prog/${c}`, prog(c) + 1); ver++; }}>＋</button></div>
       {/each}
     </div>
+  {:else if seg === 'packs'}
+    <AddonPacks {S} onup={() => (upOpen = true)} /><!-- 📦 팩 탭 (📜 2026-11-15 · 🏰 성채 층 = 한 줄 · 누르면 시트) -->
   {:else}
     <div class="list">
       {#each [['📦', '차시 팩 올리기', '새 차시(v1.0) 파일 · 🏰 성채 팩도 같은 단추(kind 로 가름)'], ['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
@@ -107,13 +109,12 @@
       {/each}
     </div>
   {/if}
-  {#if seg === 'lesson'}<AddonPacks {S} onup={() => (upOpen = true)} />{/if}<!-- ➕ 추가 팩 (📜 2026-11-14 · 🏰 성채 · 자리: 쉼터 OX · 모루 · 복습) -->
 </div>
 {#if pickOpen}<LessonPick {opts} pick={lid} {recent} onpick={choose} onclose={() => (pickOpen = false)} />{/if}
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 {#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
 {#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}
-<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>
+{#if seg !== 'packs'}<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>{/if}
 
 {#if edit}
   {@const k = edit}
