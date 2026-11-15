@@ -19,7 +19,9 @@
   const marks = $derived(marksOf(q, prev, prevQ));
   let fresh = $state(false), shrink = $state(false), fT: ReturnType<typeof setTimeout>[] = [];
   const mSig = $derived(marks ? `${hintKey}|${prevAt}|${JSON.stringify(prev)}|${JSON.stringify(marks)}` : '');
-  $effect(() => { const sig = mSig, m = marks, k = hintKey; untrack(() => { void sig; fT.forEach(clearTimeout); fresh = false; shrink = false; if (!m || !k || !firstWrong(k)) return; fT = [setTimeout(() => (fresh = true), 700), setTimeout(() => (shrink = true), 2200)]; }); }); // 두 번째 틀림부터 = 띠 없음
+  // 🐞 2026-11-15 (정식 작업 사본 수업 길 시험): marks 는 시계가 돌 때마다 새 객체 → 효과가 다시 돌아 띠가 꺼졌음 = 글자 열쇠(mSig)가 바뀔 때만
+  let lastSig = '';
+  $effect(() => { const sig = mSig; untrack(() => { if (sig === lastSig) return; lastSig = sig; const m = marks, k = hintKey; fT.forEach(clearTimeout); fresh = false; shrink = false; if (!m || !k || !firstWrong(k)) return; fT = [setTimeout(() => (fresh = true), 700), setTimeout(() => (shrink = true), 2200)]; }); }); // 두 번째 틀림부터 = 띠 없음
   $effect(() => () => fT.forEach(clearTimeout));
   const allBits = (t: string) => t.split(/(모두)/);
   // 문제 글: 「… 일 때」 앞부분(조건) = 작은 글 · 묻는 부분 = 큰 글 (②B q1 · q2)
