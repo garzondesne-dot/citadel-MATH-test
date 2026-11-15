@@ -6,10 +6,15 @@ import type { Store } from '../model/types';
 export interface InboxItem { id: string; kind: 'idea' | 'photo' | 'quiz' | 'survey' | 'news'; title: string; sub: string; body?: string; at: number; read?: boolean; done?: string;
   /** 💬 학생 메시지 보낸 사람 (#130 답장) */ from?: { cls: string; num: number }; replied?: string }
 const SEED: Omit<InboxItem, 'at'>[] = SUBJ.demo.inbox; // 테스트 판 가짜 소식 글 = 과목 팩 (#136)
+const SEED_IDS = new Set(SEED.map((x) => x.id));
 export function inbox(S: Store): InboxItem[] {
   let all = S.get<Record<string, InboxItem>>('school/inbox');
-  if (all && Object.values(all).some((x) => x.kind === 'idea' && !x.from)) all = null; // 옛 가짜 소식(보낸 사람 없음) → 다시 넣음
-  if (!all) { const t = Date.now(); all = Object.fromEntries(SEED.map((x, i) => [x.id, { ...x, at: t - i * 3600e3 }])); S.set('school/inbox', all); }
+  if (all && S.kind !== 'server' && Object.values(all).some((x) => x.kind === 'idea' && !x.from)) all = null; // 옛 가짜 소식(보낸 사람 없음) → 다시 넣음
+  // 🐞 b207 (선생님 캡처 「받은 것 0 인데 가짜 같은 줄」): 가짜 소식 = 이 기기 체험(device)에서만 · 서버(베타 · 정식 = 같은 운영 서버)에는 절대 안 씀
+  //   예전 = 서버에서도 칸이 비면 n1~n6 가짜 소식을 운영 서버 school/inbox 에 써 넣었음 (지우기 = 선생님 허락 뒤 손발이 n1~n6 만)
+  if (!all && S.kind !== 'server') { const t = Date.now(); all = Object.fromEntries(SEED.map((x, i) => [x.id, { ...x, at: t - i * 3600e3 }])); S.set('school/inbox', all); }
+  if (!all) return [];
+  if (S.kind === 'server') return Object.values(all).filter((x) => x && !SEED_IDS.has(x.id)).sort((a, b) => b.at - a.at); // 이미 써진 가짜 줄은 서버에서 안 보임
   return Object.values(all).sort((a, b) => b.at - a.at);
 }
 export const unreadN = (S: Store) => inbox(S).filter((x) => !x.read).length;
