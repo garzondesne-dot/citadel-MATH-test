@@ -20,7 +20,7 @@
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
-  const { S, me, save, uid, num, cls, open, onclose }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void } = $props();
+  const { S, me, save, uid, num, cls, open, onclose, joinPid = '' }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
   const KEY = 'citadel-v1-board-chip';
   let chip = $state<number | 'all'>(untrack(() => { try { const v = localStorage.getItem(KEY); return v && v !== 'all' ? Number(v) : 'all'; } catch { return 'all'; } }));
   const setChip = (c: number | 'all') => { chip = c; try { localStorage.setItem(KEY, String(c)); } catch { /* 무시 */ } };
@@ -78,6 +78,9 @@
     busy = false; if (!pinErr) { sheet = ''; pin = ''; pinPost = null; } else pin = '';
   }
   function join(p: Post) { const why = canJoin(p, uid, { open: isOpen(lessonOf(p.lesson)), inClass: open, online }); if (why) { say(why); return; } if (p.lk && !p.mem?.[uid]) { pinPost = p; pin = ''; pinErr = ''; sheet = 'pin'; return; } { const L0 = lessonOf(p.lesson); joinPost(S, p, meM, (L0 && recOf(L0)) ?? null, L0?.partOf && !recs[L0.id] ? L0.steps.map((x) => x.id) : undefined); } }
+  // 🌀 캠프에서 모집 방을 눌러 왔으면 = 그 방에 바로 참여(한 번 · 이미 멤버면 그대로 · 못 들어가면 이유 한 줄)
+  let joined0 = false;
+  $effect(() => { if (joined0 || !joinPid) return; const p = posts.find((x) => x.pid === joinPid); if (!p) return; joined0 = true; untrack(() => { if (!p.mem?.[uid]) join(p); }); });
   // ── 결과 (1인 · 팀 같은 꼴) ──
   function ended(r: { drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; rescue?: { g: number; c: number; full?: number }; stay?: boolean; nEnd?: number }, team: Post | null) {
     const L = lessonOf(r.L.id) ?? r.L; run = null;

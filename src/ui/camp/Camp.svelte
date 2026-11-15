@@ -42,6 +42,8 @@
   import { donePath, pendingNo, REWARD, statePath } from '../../school/survey';
   import { isExcluded } from '../../school/school';
   import MailBox from './MailBox.svelte';
+  import { PACKS } from '../../engine/packs';
+  import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
@@ -146,6 +148,35 @@
     me.wallet.scroll += got.s; me.xp += got.x; M.save(); mbVer++; sfx('mail', 0.6);
     return `🎁 받았어요${n ? ` · 💎 +${n}` : ''}${got.s ? ` · 📜 +${got.s}` : ''}${got.x ? ` · EXP +${got.x}` : ''}`;
   }
+  // 🏕 캠프 A (📜 2026-11-15 선생님 「A안으로 하되 게시판 던전에서 방이 개설되면 포털 열려서 참여해 보도록 포털에 이펙트도 넣고 게시판 빛나고」 · DECISIONS 맨 아래)
+  //   할 일 있는 물건만 금빛 숨쉬기 + 말풍선 + 별 하나 · 할 일 없는 물건 = 흐림(0.55) · 아무 할 일도 없으면 빛 · 말풍선 · 흐림 없음
+  //   🏰 새 방(열렸는데 아직 못 깬 방) · 🎯 남은 복습 문제 · 오늘 💎 · 📮 안 읽은 소식 · ⚒ 찜한 카드 · 🚪 수업 열림 · 📋 모집 중 방 n/4 (실시간)
+  let todoVer = $state(0);
+  { const tv = setInterval(() => todoVer++, 8000); onDestroy(() => clearInterval(tv)); } // 다른 기기 · 선생님이 바꾼 것(새 방 · 기록)도 8초 안에
+  const castleLeft = (): number => {
+    const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
+    const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {}, fromMe0);
+    return visibleCastles().reduce((a, P) => { const recs = withLegacy(P.id, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}); return a + castleState(P, up, recs, false, manualOf(S, P.id, castleWho.cls)).open.filter((r) => !recs[r.id]?.clear).length; }, 0);
+  };
+  const reviewNow = () => {
+    const b = meBound(); if (!b || !pupil) return { left: 0, gem: 0 };
+    const recs = S.get<Record<string, Rec>>(`records/${pupil.cls}/${pupil.num}`) || {}, bon = b.S.get<Record<string, Bon>>(bonusBase(b.cls, b.num)) || {}, log = b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {};
+    return reviewTodo(PACKS, recs, bon, log, kstDay(S.now()));
+  };
+  const todo = $derived.by<Record<string, string>>(() => {
+    void todoVer; void sheet; void castleGo; void mailN; void wishN;
+    const t: Record<string, string> = {}, rv = feat('scarecrow') ? reviewNow() : { left: 0, gem: 0 }, cn = feat('citadel') ? castleLeft() : 0, rc = feat('board') ? portal.recruit : null;
+    if (rv.left > 0) t.scare = `복습 ${rv.left}${rv.gem ? ` · 💎+${rv.gem}` : ''}`;
+    if (cn > 0) t.castle = `새 방 ${cn}`;
+    if (mailN > 0) t.mail = `소식 ${mailN}`;
+    if (feat('forge') && wishN > 0) t.anvil = `카드 ${wishN}`;
+    if (open) t.gate = '⚔ 수업 열림 · 입장!';
+    if (rc) t.dummy = `⚔ 모집 중 ${rc.n}/${rc.max} · 참여!`;
+    return t;
+  });
+  const anyTodo = $derived(Object.keys(todo).length > 0);
+  const hl = (k: string): 'todo' | 'dim' | '' => (todo[k] ? 'todo' : anyTodo ? 'dim' : '');
+  let boardJoin = $state('');
   const news = $derived<Record<string, number>>({ castle: 0, dummy: 0, mail: mailN });
   let showAll = $state(false);
   let allTimer: ReturnType<typeof setTimeout> | null = null;
@@ -189,6 +220,7 @@
     M.mark(id);
     if (id === 'scare') sfx('dummy-hit', 0.8); // 🔊 2차 🎯 허수아비 맞음 (정식 camp.js 같은 순간)
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
+    if (id === 'dummy') boardJoin = portal.recruit?.pid ?? ''; // 🌀 모집 중 방 = 그 방에 바로 참여 (캠프 A)
     sheet = id;
   }
 
@@ -241,25 +273,25 @@
   <!-- #145 ② 짧은 화면(360 × 640 등): 장면만 비율 그대로 줄여 가운데 · 정보판 · 주요 단추는 늘 같은 자리(겹침 0) -->
   <div class="stagebox" style:--ar={W / H}>
   <div class="stage" role="presentation" onclick={ground} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
-    <img class="obj" alt="" src={CAMP.castle.src} style={objStyle(CAMP.castle)} />
+    <img class="obj {hl('castle')}" alt="" src={CAMP.castle.src} style={objStyle(CAMP.castle)} />
     <img class="obj lit" class:on={sheet === 'castle'} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
-    <img class="obj" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
+    <img class="obj {anyTodo ? 'dim' : ''}" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, HERO.sitRow).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
 
     {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
       {@const st = lab(k)}
-      <button type="button" class="zone" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
-        <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
+      <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
+        {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>{/if}
       </button>
     {/each}
     {#each CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)) as p (p.k)}
       {@const k = p.k}
       {@const st = lab(k)}
-      <button type="button" class="prop" style={propPos(p)} aria-label={NAME[k]} data-prop={k} onclick={(e) => tap(k, e)}>
+      <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} onclick={(e) => tap(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} />
-        <span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>
+        {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>{/if}
       </button>
     {/each}
 
@@ -357,7 +389,7 @@
   <Dummy {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
-  <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} onclose={() => (sheet = null)} />
+  <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onclose={() => { sheet = null; boardJoin = ''; }} />
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} teacher={fromMe0} onreset={fromMe0 ? M.reset : undefined} />
 {:else if sheet}
@@ -518,4 +550,25 @@
   .fsw .kn::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-3); transition: transform var(--t); }
   .fsw.on .kn { background: var(--accent); } .fsw.on .kn::after { transform: translateX(16px); background: #fff; }
   .fnote { display: block; font-size: 13px; color: var(--text-3); margin: 4px 0 var(--s2); }
+
+  /* 🏕 캠프 A (📜 2026-11-15): 할 일 = 금빛 숨쉬기(1.8초 · 빛 + 밝기) · 말풍선(통통 · 꼬리) · 별 하나가 둘레를 돎 / 할 일 없는 물건 = 흐림 0.55 / 동작 줄이기 = 빛 · 말풍선만 */
+  .prop.todo :global(.img), img.obj.todo { animation: todoGlow 1.8s ease-in-out infinite; }
+  .prop.dim :global(.img), img.obj.dim { filter: brightness(0.55) saturate(0.7); }
+  @keyframes todoGlow { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 214, 120, 0.5)) brightness(1); } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 120, 1)) brightness(1.25); } }
+  .zone.todo { box-shadow: none; }
+  .zone.todo::after { content: ''; position: absolute; inset: 10%; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 120, 0.35), transparent); animation: todoHalo 1.8s ease-in-out infinite; }
+  @keyframes todoHalo { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
+  .bub { position: absolute; left: 50%; bottom: calc(100% + 8px); z-index: 7; transform: translate(-50%, 0); white-space: nowrap; font: 800 12px/1 var(--font); color: #2a1d05; background: #fff3cf; border: 2px solid #e3a92d; border-radius: 12px; padding: 6px 9px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); pointer-events: none; animation: bob 1.4s ease-in-out infinite; }
+  .bub::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #e3a92d; border-bottom: 0; }
+  .zone .bub { bottom: auto; top: 0; transform: translate(-50%, -100%); animation-name: bobZ; }
+  .zone[data-zone='gate'] .bub { left: 50%; top: 18%; }
+  @keyframes bob { 50% { transform: translate(-50%, -4px); } }
+  @keyframes bobZ { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, calc(-100% - 4px)); } }
+  .spark { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff7c2; box-shadow: 0 0 8px 3px #ffd863; pointer-events: none; z-index: 6; animation: orbit 2.2s linear infinite; }
+  @keyframes orbit { from { transform: rotate(0) translateX(var(--orb, 26px)); } to { transform: rotate(360deg) translateX(var(--orb, 26px)); } }
+  .zone .spark { --orb: 34px; }
+  /* 누르는 칸 최소 48 × 48 (그림 가운데 기준) · 위 막대 빈 곳은 그 아래 물건으로 통과 */
+  .prop::before { inset: auto; left: 50%; top: 50%; width: max(calc(100% + 12px), 48px); height: max(calc(100% + 12px), 48px); transform: translate(-50%, -50%); }
+  .top { pointer-events: none; } .top > :global(*) { pointer-events: auto; } .top > .sp2, .top > .ttl { pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .prop.todo :global(.img), img.obj.todo { animation: none; filter: drop-shadow(0 0 7px rgba(255, 214, 120, 0.95)) brightness(1.15); } .zone.todo::after, .bub, .spark { animation: none; } .spark { display: none; } }
 </style>

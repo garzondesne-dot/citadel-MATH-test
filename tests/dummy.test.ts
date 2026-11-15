@@ -57,3 +57,15 @@ describe('🎯 허수아비 보상 · 기록 (정식 bonus.js win)', () => {
     expect(r.gems).toEqual([]); expect(r.xp).toBe(5);
   });
 });
+
+import { reviewTodo } from '../src/school/dummy';
+describe('🏕 캠프 🎯 할 일 (시안 A)', () => {
+  it('남은 복습 문제 · 오늘 받을 💎 = 남은 문제 × 3 (하루 6번 안) · 기록 없는 차시는 셈 안 함', () => {
+    const recs = { [L.id]: rec };
+    const a = reviewTodo([L], recs, {}, {}, day);
+    expect(a.left).toBe(noteOf(L, rec, {}).left); expect(a.gem).toBe(Math.min(a.left, 6) * 3);
+    const log5 = Object.fromEntries([...Array(5).keys()].map((k) => [`review_${day}_${k}`, {}]));
+    expect(reviewTodo([L], recs, {}, log5, day).gem).toBe(3);
+    expect(reviewTodo([L], {}, {}, {}, day)).toEqual({ left: 0, gem: 0 });
+  });
+});

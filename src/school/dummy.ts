@@ -59,3 +59,11 @@ export function dummyReward(L: LessonPack, rec: Rec | undefined, bon0: Bon | und
   }
   return { gems, xp, bon };
 }
+
+/** 🏕 캠프 🎯 할 일 (📜 2026-11-15 캠프 시안 A): 남은 복습 문제 수(수업 기록이 있는 차시) · 오늘 받을 수 있는 복습 💎 (남은 문제 × 3 · 하루 6번 안) */
+export function reviewTodo(lessons: LessonPack[], recs: Record<string, Rec>, bonAll: Record<string, Bon>, log: Record<string, unknown>, day: string): { left: number; gem: number } {
+  let left = 0;
+  for (const L of lessons) { const rec = recs[L.id] ?? (L.partOf ? recs[L.partOf] : undefined); if (!rec) continue; const x = noteOf(L, rec, bonAll[L.id]); left += x.left; }
+  const used = Object.keys(log || {}).filter((k) => k.startsWith(`review_${day}_`)).length;
+  return { left, gem: Math.min(left, Math.max(0, DUMMY_G.reviewDay - used)) * DUMMY_G.review };
+}

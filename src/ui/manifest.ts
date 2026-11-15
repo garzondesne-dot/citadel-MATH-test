@@ -142,7 +142,7 @@ export const CAMP_PROPS: CampProp[] = [
   { k: 'mail', src: A('camp-mail-v2.webp'), cols: 2, aspect: '96 / 96', left: 42, bottom: 33, width: 10 },
 ];
 /** 🌀 파란 포털 (정식 dportal-bonus · 게시판 오른쪽 옆 바닥 · 게시판보다 조금 작게) · 크기 = 평소 0.15(불씨) · 모집 0.6(숨쉬기 2초) · 출발 1.0(0.4초 · 소용돌이) */
-export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 79.5, bottom: 19, width: 8, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.6, open: 1 } };
+export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 79.5, bottom: 19, width: 8, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.85, open: 1 } }; // 📜 2026-11-15 캠프 A: 모집 중 = 0.6 → 0.85 (열림 크기 쪽으로 · 소용돌이 · 입자)
 export const campProp = (k: CampPropKey) => CAMP_PROPS.find((p) => p.k === k)!;
 export const propPos = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
 /** 그림 칸 한 장 (cols 칸 중 col 번째) */
