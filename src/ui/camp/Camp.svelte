@@ -57,7 +57,10 @@
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
   const fromMe0 = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me'; // 👩‍🏫 교사 「나」 → 내 캠프 = 교사 기록(B안)
   if (fromMe0) setTeacherSink(untrack(() => S)); // 🧙 교사 캠프 = 교사 「내 용사」 서버 하나 (게시판 · 허수아비 · 성채도 같은 용사)
-  const M = useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
+  // 🧑 실제 학생(서버 계정에 묶임 · 시험 반 · 시험 계정 아님) = 테스트 꼴 아님 (📜 2026-11-15 머리 「정식과 같게」: 테스터 표시 = 시험 반 · 테스트 계정만 · 호칭 = 얻은 것 · 새 계정 시작 💎 0)
+  //   교사 캠프 · 🧪 시험 반 · 시험 계정 · 이 기기 체험 = 그대로 테스트 꼴(💎 9,999 · 📜 30 시작 · 호칭 모두)
+  const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
+  const M = realStu ? useMe(0, 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
   // 🎨 테마 (#144): 서버 accounts 에 고른 테마가 있으면(다른 폰에서 고름) 이 폰도 그 테마로
   let theme = $state<Theme>(untrack(() => (isTheme(me.theme) ? me.theme : savedTheme())));

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { earnedFrom, titleData } from '../../model/titles';
   import { meBound } from '../../store/meSync';
   import { untrack } from 'svelte';
   import type { Me } from '../../store/me.svelte';
@@ -43,7 +44,8 @@
   const xp = $derived(level(me.xp));
   // 🛡 구조 기사 = 게시판 던전 구조 성공 10번 (📜 DECISIONS 2026-11-14 강적 출현 ③) — 서버 gem log 의 rescue_ 칸 수
   const rescueN = $derived.by(() => { const b = meBound(); if (!b) return 0; const lg = b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}; return Object.keys(lg).filter((k) => /^rescue_/.test(k)).length; });
-  const earned = $derived(earnedTitles(me.test, rescueN >= 10 ? ['rescuer'] : []));
+  // 🏅 얻은 호칭 = 정식처럼 기록에서 계산 (📜 2026-11-15 머리 「정식과 같게」) · 교사 · 🧪 테스트(이 기기 저장소 · 시험 계정) = 모두
+  const earned = $derived.by(() => { const b = meBound(), got = rescueN >= 10 ? ['rescuer'] : []; return me.test || !b ? earnedTitles(true, got) : earnedFrom(titleData(b.S, b.cls, b.num), got); });
   const ttl = $derived(look.title && look.title !== 'none' ? titleOf(look.title) : null);
   const nx = $derived(ENH[lv + 1] ?? null);
   const dots = $derived({ enh: canEnh(W, P, L0.enh), sk: canSkill(W, P, look.hero, L0.enh), hero: canHero(W, P, L0.enh) });

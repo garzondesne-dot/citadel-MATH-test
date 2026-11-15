@@ -37,6 +37,8 @@ export interface Subject {
   legacyOpened?: Record<string, Record<string, string[]>>;
   /** 📷 서술형 채점 기준표 (정식 lessons/rubrics.js · { 차시: { 방: 기준표 } } · 교사 「📤 기준표 올리기」 원본) */
   rubrics?: Record<string, Record<string, unknown>>;
+  /** 🟪 옛 규칙 업적(정식 bonus.js LEGACY · 차시 → 옛 방 id) */
+  sealLegacy?: Record<string, string[]>;
   /** 🔎 오개념 분류 (틀린 답 → 코드 · 형성평가 꼬리표) · 없으면 오개념 기록 안 함 */
   misLogic?: { classify(q: import('./types').Question | null, given: unknown, tag?: Record<string, unknown> | null): string[]; bossTag(lid: string, set: number, i: number): Record<string, unknown> | null };
   /** 과목 칭호 (엔진 칭호 목록의 after 뒤에 끼움) */

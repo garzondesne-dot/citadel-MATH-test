@@ -35,6 +35,7 @@ const SUBJECT: Subject = {
   legacyOpened: LEGACY_OPENED as Record<string, Record<string, string[]>>,
   misLogic: { classify: misClassify, bossTag: misBossTag },
   rubrics: RUBRICS as Record<string, Record<string, unknown>>,
+  sealLegacy: { 'set-04': ['b1', 'b2', 'b3'], 'set-05': ['b1', 'b2', 'b3'], 'set-06': ['b1'], 'eval-1': ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'eb'] },
   titles: DATA.titles as Subject['titles'],
   camp: DATA.camp,
   skillNames: DATA.skillNames,
