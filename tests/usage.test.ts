@@ -58,3 +58,16 @@ describe('📈 반 비교 「수업 밖 7일 활동」 = 활용 추이 기록', 
     expect(st.map((s) => [s.extra.days.slice(7).reduce((a, b) => a + b, 0), s.extra.days.slice(0, 7).reduce((a, b) => a + b, 0)])).toEqual([[2, 0], [0, 1], [0, 0]]);
   });
 });
+
+describe('🐞 번호가 1 부터 빽빽 = 서버가 배열로 줌', () => {
+  it('날짜 칸이 [빈칸, 1번, 2번] 이어도 안 깨짐', async () => {
+    const { memoryStore } = await import('../src/store/device');
+    const { loadUsage } = await import('../src/school/usage');
+    const S = { ...memoryStore(), kind: 'server' as const, now: () => T };
+    S.set('act/1-3', { 20261114: [null, { r: 2 }, { v: 1 }] });
+    const u = loadUsage(S, '1-3');
+    expect(u.days['20261114']).toEqual({ 1: { r: 2 }, 2: { v: 1 } });
+    expect(weekly(u.days, 1, '20261115')[0]).toMatchObject({ solves: 2, visits: 2 });
+    expect(perStudent(u.days, '20261115')['1']!.now).toBe(2);
+  });
+});

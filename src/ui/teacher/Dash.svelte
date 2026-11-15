@@ -28,6 +28,8 @@
   async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
   function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
+  // 🌡 정식 dash.js heat: % 칸 = 바탕 5단(90↑ · 75↑ · 60↑ · 40↑ · 그 아래) · 대시보드 겉모습 = 옛 정식 (📜 2026-11-15 머리 🔨)
+  const heat = (v: unknown) => { if (!v || typeof v !== 'object' || !('pct' in (v as object))) return ''; const p = (v as { pct: number }).pct * 100; return p >= 90 ? 'h5' : p >= 75 ? 'h4' : p >= 60 ? 'h3' : p >= 40 ? 'h2' : 'h1'; };
   let vopt = $state('');
   // 📊 칸 제목 눌러 정렬 (정식 dash.js sortKey · sortDir) · 처음 누르면 큰 값부터(번호 · 이름은 작은 값부터) · 같은 칸 다시 = 반대로 · 합계 줄은 맨 위 그대로
   let sortCol = $state(-1), sortDir = $state(1);
@@ -81,17 +83,17 @@
     {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
     {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
-    {#snippet barsBlock()}{#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc" class:est={b.est?.[i]}><i style:height="{(v / mx) * 100}%"></i>{#if i === b.vals.length - 1}<b>{v}</b>{/if}<em>{b.est?.[i] ? '≈' : ''}{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}{/snippet}
+    {#snippet barsBlock()}{#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc" class:est={b.est?.[i]}><i style:height="{(v / mx) * 100}%"></i><b class:now={i === b.vals.length - 1}>{v}</b><em>{b.est?.[i] ? '≈' : ''}{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}{/snippet}
     {#if V.pick}<label class="row vpick">{V.pick.label} <select data-k="vpick" value={V.pick.cur} onchange={(e) => (vopt = (e.currentTarget as HTMLSelectElement).value)}>{#each V.pick.opts as [v, t] (v)}<option value={v}>{t}</option>{/each}</select></label>{/if}
     {#if V.note}<p class="vnote" data-k="use-note">{V.note}</p>{/if}
     {#if V.csv}<div class="row"><button type="button" class="b2" data-k="csv" onclick={csvGo}>📥 CSV 내려받기</button></div>{/if}
-    {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
+    {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big.replace(/(명|회|%)$/, '')}{#if /(명|회|%)$/.test(k.big)}<small>{k.big.slice(-1)}</small>{/if}</b><em class:up={/▲/.test(k.sub)} class:dn={/▼/.test(k.sub)}>{k.sub}</em></div>{/each}</div>{/if}
     {#if V.barsFirst}{@render barsBlock()}{/if}
     {#if V.table}
       {#if V.tableTitle}<h4 class="ttl">{V.tableTitle}</h4>{/if}
       <div class="tw"><table>
         <thead><tr>{#each V.table.head as h, i (i)}<th class:sk={i === 0}>{#if V.table.sort}<button type="button" class="srt" data-k="sort" onclick={() => sortBy(i)}>{h}{sortCol === i ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</button>{:else}{h}{/if}</th>{/each}</tr></thead>
-        <tbody>{#each sortedRows as r, ri (ri)}<tr class:sum={r.sum} class:click={!!r.pick || !!r.cls} onclick={() => (r.pick ? onpick(r.pick) : r.cls ? onclass(r.cls) : null)}>{#each r.cells as c, i (i)}<td class="{c.tone ?? ''}" class:sk={i === 0}>{c.t}</td>{/each}</tr>{/each}</tbody>
+        <tbody>{#each sortedRows as r, ri (ri)}<tr class:sum={r.sum} class:click={!!r.pick || !!r.cls} onclick={() => (r.pick ? onpick(r.pick) : r.cls ? onclass(r.cls) : null)}>{#each r.cells as c, i (i)}<td class={heat(c.v) || c.tone || ''} class:sk={i === 0}>{c.t}</td>{/each}</tr>{/each}</tbody>
       </table></div>
       <p class="leg">{#each V.table.legend as [t, s] (s)}<span class={t}>{s}</span>{/each}{cls === ALL && vid === 'cmp' ? ' · 반을 누르면 그 반' : ''}</p>
     {/if}
@@ -141,21 +143,23 @@
   .vh { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
   .vh b { font-size: 16px; flex: none; } .vh .ib { flex: none; color: var(--text-3); }
   .vh small { min-width: 0; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .kp { border-radius: var(--r); background: var(--surface); padding: 8px 10px; display: flex; flex-direction: column; min-width: 0; }
-  .kp small { font-size: 12px; color: var(--text-2); font-weight: 700; } .kp b { font-size: 20px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .kp em { font-style: normal; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tw { overflow-x: auto; overflow-y: hidden; border-radius: var(--r); border: 1px solid var(--line); }
+  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); margin: var(--s2) 0 var(--s3); }
+  .kp { border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); padding: 10px 12px; gap: 2px; display: flex; flex-direction: column; min-width: 0; }
+  .kp small { font-size: 12px; color: var(--text-2); font-weight: 700; } .kp b { font-size: clamp(22px, 6vw, 28px); font-weight: 900; line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: -0.5px; color: var(--text); white-space: nowrap; } .kp b small { font-size: 14px; font-weight: 700; color: var(--text-2); margin-left: 2px; } .kp em { font-style: normal; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kp em.up { color: var(--ok); } .kp em.dn { color: var(--bad); }
+  .tw { overflow: auto; max-height: min(70vh, 640px); overscroll-behavior: contain; border-radius: var(--r); border: 1px solid var(--line); }
   table { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%; }
   th, td { padding: 7px 8px; white-space: nowrap; text-align: center; border-bottom: 1px solid var(--line); background: var(--surface); }
-  th { font-size: 12px; color: var(--text-2); }
+  th { font-size: 12px; color: var(--text-2); position: sticky; top: 0; z-index: 2; background: var(--surface-2); } th.sk { z-index: 3; }
   .sk { position: sticky; left: 0; z-index: 1; text-align: left; background: var(--surface-2); font-weight: 700; }
   tr.click { cursor: pointer; } tr.sum td { background: var(--surface-2); font-weight: 700; }
+  td.h1 { background: #4a1616; color: #ffd9d6; } td.h2 { background: #5a3a12; color: #ffe2bf; } td.h3 { background: #4d4d16; color: #f4f0c2; } td.h4 { background: #1f4d2a; color: #d4f5dc; } td.h5 { background: #13603a; color: #fff; font-weight: 700; }
   td.ok { color: var(--ok); } td.md { color: #f0a24a; } td.ng { color: var(--bad); } td.na { color: var(--text-3); } td.bo { color: var(--gem); }
   .leg { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--text-2); }
   .leg .ok { color: var(--ok); } .leg .md { color: #f0a24a; } .leg .ng { color: var(--bad); } .leg .na { color: var(--text-3); } .leg .bo { color: var(--gem); }
-  .charts { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .chart { border-radius: var(--r); background: var(--surface); padding: 10px; } .chart small { font-size: 12.5px; color: var(--text-2); font-weight: 700; } .chart p { margin: 4px 0 0; font-size: 12px; color: var(--text-3); }
-  .bars { height: 110px; display: flex; gap: 6px; align-items: flex-end; padding-top: 18px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s3); margin: var(--s2) 0 var(--s3); }
+  .chart { border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); padding: 10px 12px 12px; } .chart small { font-size: 12.5px; color: var(--text-2); font-weight: 700; } .chart p { margin: 4px 0 0; font-size: 12px; color: var(--text-3); }
+  .bars { height: 140px; display: flex; gap: 4px; align-items: flex-end; padding-top: 18px; border-bottom: 1px solid var(--line); }
   .bc { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
   .bc i { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); display: block; min-height: 2px; }
   .bc.est i { background: repeating-linear-gradient(45deg, var(--accent) 0 4px, color-mix(in srgb, var(--accent) 40%, transparent) 4px 8px); opacity: 0.75; }
@@ -169,7 +173,7 @@
   .top1 .br b { color: var(--accent); } .top1 .br { background: color-mix(in srgb, var(--accent) 12%, transparent); } .top2 .br b, .top3 .br b { color: var(--text); }
   @media (min-width: 700px) { .boards { grid-template-columns: repeat(3, 1fr); } }
   .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
-  .bc b { position: absolute; top: -16px; font-size: 12px; color: var(--text); } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
+  .bc b { position: absolute; top: -16px; font-size: 11px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; } .bc b.now { color: var(--accent); font-size: 12.5px; font-weight: 800; } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }
   .dl { position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 4px 10px; border-radius: var(--r); border: 0; background: var(--surface); color: var(--text); font: inherit; text-align: left; }
   .dl:disabled { opacity: 1; }

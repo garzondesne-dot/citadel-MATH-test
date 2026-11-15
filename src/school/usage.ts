@@ -42,6 +42,7 @@ export function loadUsage(S: Store, cls: string): { days: Days; since: string | 
   const k = ck(cls), act = S.get<Days>(`act/${k}`) || {}, days: Days = JSON.parse(JSON.stringify(act)), since = Object.keys(days).sort()[0] || null;
   const est = backfill(S.get<GemLog>(`gem/${k}`), S.get<BonusAll>(`bonus/${k}`));
   for (const [d, byN] of Object.entries(est)) { if (since && d >= since) continue; days[d] ||= {}; for (const [n, x] of Object.entries(byN)) days[d][n] = { ...x, ...(days[d][n] || {}) }; }
+  for (const d of Object.keys(days)) { const byN = days[d] as unknown; if (Array.isArray(byN)) days[d] = Object.fromEntries(byN.map((x, i) => [String(i), x]).filter(([, x]) => x && typeof x === 'object')); }
   return { days, since };
 }
 const solvesOf = (x: Act) => (Number(x.r) || 0) + (Number(x.c) || 0) + (Number(x.f) || 0);
@@ -50,7 +51,7 @@ export function weekly(days: Days, weeks = 8, today = day()) {
   const mon0 = monday(today), list = Array.from({ length: weeks }, (_, i) => addDays(mon0, -7 * (weeks - 1 - i)));
   return list.map((w) => {
     const s = { week: w, active: 0, solves: 0, visits: 0, fixes: 0, joins: 0, est: false }, who = new Set<string>(), vis = new Set<string>();
-    for (let i = 0; i < 7; i++) { const byN = days[addDays(w, i)] || {}; for (const [n, x] of Object.entries(byN)) { const sv = solvesOf(x); s.solves += sv; s.fixes += Number(x.f) || 0; s.joins += Number(x.j) || 0; if (sv) who.add(n); if (x.v || sv || x.j) vis.add(n); if (x.est) s.est = true; } }
+    for (let i = 0; i < 7; i++) { const byN = days[addDays(w, i)] || {}; for (const [n, x] of Object.entries(byN)) { if (!x || typeof x !== 'object') continue; const sv = solvesOf(x); s.solves += sv; s.fixes += Number(x.f) || 0; s.joins += Number(x.j) || 0; if (sv) who.add(n); if (x.v || sv || x.j) vis.add(n); if (x.est) s.est = true; } }
     s.active = who.size; s.visits = vis.size; return s;
   });
 }
@@ -58,6 +59,7 @@ export function weekly(days: Days, weeks = 8, today = day()) {
 export function perStudent(days: Days, today = day()) {
   const out: Record<string, { now: number; prev: number; last: string; pf: number }> = {}, d7 = addDays(today, -6), d14 = addDays(today, -13);
   for (const [d, byN] of Object.entries(days)) for (const [n, x] of Object.entries(byN || {})) {
+    if (!x || typeof x !== 'object') continue; // 🐞 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, 1번, …])
     const o = (out[n] ||= { now: 0, prev: 0, last: '', pf: 0 }), sv = solvesOf(x);
     if (d >= d7 && d <= today) { o.now += sv; o.pf += Number(x.pf) || 0; } else if (d >= d14 && d < d7) o.prev += sv;
     if ((x.v || sv || x.j) && d > o.last) o.last = d;

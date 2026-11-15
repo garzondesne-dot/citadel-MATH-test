@@ -29,7 +29,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await p.screenshot({ path: `${SHOTS}/grid.png`, fullPage: true });
   const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-k="csv"]')]);
   const txt = require('fs').readFileSync(await dl.path(), 'utf8');
-  ok('📥 CSV = 머리줄 + 3명', /❗ 남은 문제/.test(txt) && txt.trim().split('\n').length === 4);
+  ok('📥 CSV = 머리줄 + 3명', /남은 문제\(오답노트\)/.test(txt) && /전환 뒤 💎/.test(txt) && txt.trim().split('\n').length === 4);
   await p.click('.vws button:has-text("랭킹")'); await p.waitForTimeout(800);
   const bd = await p.$$eval('[data-k="board"] h4', (x) => x.map((e) => e.firstChild.textContent.trim()));
   const first = await p.$$eval('[data-k="board"]:first-child li', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
