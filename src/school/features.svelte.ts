@@ -7,12 +7,14 @@ import type { Store } from '../model/types';
 import { SUBJ } from '../engine/subject';
 import { applySchoolInfo, type SchoolInfo } from './school';
 import { BELLS, PERIODS } from './bells';
+import { setPaperDefault } from '../theme/theme';
 const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 
 export type FeatId =
   | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox'
   | 'mon-attack' | 'forge' | 'symtalk' | 'citadel' | 'seteuk' | 'schedule' | 'photo'
-  | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board';
+  | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board'
+  | 'sword' | 'help3' | 'review' | 'cc' | 'pre' | 'stamp' | 'qpaper';
 export type BundleId = 'basic' | 'standard' | 'full';
 export interface Feat { id: FeatId; ic: string; name: string; sub: string; group: string; /** 켜려면 필요한 것 → 없으면 잠김 이유(채우는 길) · null = 됨 */ need?: (S: Store | null) => string | null }
 
@@ -35,6 +37,14 @@ export const FEATS: Feat[] = [
   { id: 'seteuk', ic: '📝', name: '성취기준 · 오개념 · 세특 문장', sub: '', group: '과목 팩', need: () => packNeed(Object.keys(SUBJ.misconceptions || {}).length > 0, '오개념 카드') },
   { id: 'schedule', ic: '📅', name: '시간표 · 교시 시각', sub: '켜면 교시 시각 · 시간표 입력 · 수업 열기 추천 한 줄 · ⏳ 타임바 = 교시 끝 · 끄면 반 → 차시 수동 · 50분', group: '학교 정보' },
   { id: 'photo', ic: '📷', name: '서술형 사진 채점', sub: 'AI 채점', group: '학교 정보', need: (S) => (!S || S.get<{ url?: string }>('gcfg/photo')?.url ? null : '🔑 사진 채점 웹 앱 주소가 필요해요 · 「나」 탭 「📷 사진 채점 설정」') },
+  // 🧩 수업 기능 (📜 2026-11-16 선생님 「옵션으로 키고 끌 수 있게」 · DECISIONS 「⚙ 새 수업 기능」 · 처음 값 = 모두 켬 · 🤝 손 놓은 학생 · 🧱 같은 칸 막힘 = 스위치 없이 늘 켬)
+  { id: 'sword', ic: '⚔', name: '칼 모양 (공격 기회)', sub: '끄면 「남은 기회 n번」 숫자만 · 규칙 · 보급 그대로', group: '🧩 수업 기능' },
+  { id: 'help3', ic: '💡', name: '도움 3단', sub: '끄면 예전 💡 힌트 한 장', group: '🧩 수업 기능' },
+  { id: 'review', ic: '🔎', name: '익명 풀이', sub: '끄면 리모컨 「🔎 풀이」 단추 숨김', group: '🧩 수업 기능' },
+  { id: 'cc', ic: '✔', name: '개념 체크', sub: '끄면 리모컨 「✔ 체크」 단추 숨김', group: '🧩 수업 기능' },
+  { id: 'pre', ic: '⚔', name: '선제 공격', sub: '복습한 칸만큼 첫 몬스터 체력 깎임 · 끄면 체력 그대로', group: '🧩 수업 기능' },
+  { id: 'stamp', ic: '✅', name: '도장 📜', sub: '끄면 리모컨 「✅ 도장」 숨김', group: '🧩 수업 기능' },
+  { id: 'qpaper', ic: '📜', name: '문제 칸 양피지 기본', sub: '끄면 처음 값만 끔 · 학생 🎨 테마 창 스위치는 그대로', group: '🧩 수업 기능' },
   { id: 'survey', ic: '📝', name: '수업 설문', sub: '', group: '그 밖' },
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },
@@ -42,9 +52,10 @@ export const FEATS: Feat[] = [
 ];
 // 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
 const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule');
+const LESSON_NEW: FeatId[] = ['sword', 'help3', 'review', 'cc', 'pre', 'stamp', 'qpaper']; // 🧩 수업 기능 = 모든 묶음 처음 값 켬
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [
-  { id: 'basic', ic: '🪶', name: '기본', sub: '뼈대만 · 수업 레이드 · 엑셀 차시 · 결과 · 복습', on: ['scarecrow', 'board'] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
-  { id: 'standard', ic: '⚔', name: '표준', sub: '뼈대 + 용사 · 쉼터 놀이 · 몬스터 공격', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme'] },
+  { id: 'basic', ic: '🪶', name: '기본', sub: '뼈대만 · 수업 레이드 · 엑셀 차시 · 결과 · 복습', on: ['scarecrow', 'board', ...LESSON_NEW] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
+  { id: 'standard', ic: '⚔', name: '표준', sub: '뼈대 + 용사 · 쉼터 놀이 · 몬스터 공격', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme', ...LESSON_NEW] },
   { id: 'full', ic: '🏰', name: '전체', sub: '과목 팩이 있을 때 · 우리 학교', on: ALL },
 ];
 export interface FeatCfg { bundle: BundleId; on?: Partial<Record<FeatId, boolean>> }
@@ -71,7 +82,8 @@ export const schoolInfo = $state({ ver: 0 });
 /** 앱 시작 때 한 번 (App.svelte) · 시험은 setFeatCfg 로 직접 */
 export function bindFeatures(S: Store) {
   stop?.(); store = S; cfg = S.get<FeatCfg>(PATH) ?? null;
-  const s1 = S.watch<FeatCfg>(PATH, (v) => (cfg = v ?? null));
+  const s1 = S.watch<FeatCfg>(PATH, (v) => { cfg = v ?? null; setPaperDefault(wanted(cfg, 'qpaper')); });
+  setPaperDefault(wanted(cfg, 'qpaper'));
   // 🏫 학교 정보 (반 목록 · 교시) = school/info → 그 자리에서 바꿈
   const info = (v: SchoolInfo | null) => { applySchoolInfo(v, BELLS, PERIODS, { bells: BELLS0, periods: PERIODS0 }); schoolInfo.ver++; };
   info(S.get<SchoolInfo>('school/info')); const s2 = S.watch<SchoolInfo>('school/info', info);

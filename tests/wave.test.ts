@@ -73,3 +73,21 @@ describe('② 🧱 같은 칸 막힘', () => {
     expect(c[0]).toBe(2);
   });
 });
+
+import { BUNDLES, FEATS, wanted } from '../src/school/features.svelte';
+import { savedPaper, setPaperDefault } from '../src/theme/theme';
+describe('⚙ 🧩 수업 기능 스위치 7개 (📜 2026-11-16)', () => {
+  const NEW = ['sword', 'help3', 'review', 'cc', 'pre', 'stamp', 'qpaper'] as const;
+  it('7개 · 🤝 · 🧱 는 스위치 없음 · 모든 묶음 처음 값 켬 · 설정 없음 = 켬 · 끄면 끔', () => {
+    expect(FEATS.filter((f) => f.group === '🧩 수업 기능').map((f) => f.id)).toEqual([...NEW]);
+    for (const b of BUNDLES) for (const id of NEW) expect(wanted({ bundle: b.id }, id)).toBe(true);
+    for (const id of NEW) expect(wanted(null, id)).toBe(true);
+    expect(wanted({ bundle: 'full', on: { stamp: false } }, 'stamp')).toBe(false);
+  });
+  it('📜 양피지 기본 끔 = 처음 값만 끔 · 학생이 고른 값은 그대로', () => {
+    let v: string | null = null; (globalThis as unknown as { localStorage: unknown }).localStorage = { getItem: () => v };
+    setPaperDefault(false); expect(savedPaper()).toBe(false);
+    v = '1'; expect(savedPaper()).toBe(true);
+    v = null; setPaperDefault(true); expect(savedPaper()).toBe(true);
+  });
+});

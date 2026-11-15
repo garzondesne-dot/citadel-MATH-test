@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { feat } from '../../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import type { Me } from '../../store/me.svelte';
@@ -113,7 +114,7 @@
     const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}), ...(fixNow ? { fixAt: at } : {}) }; // ⚔ fixAt = 다음 수업 선제 공격 (📜 2026-11-16 · school/pre.ts)
     if (base) RS.set(`${base}/${L0.id}/${r.mid}`, rec);
     else { const all = readLocal<Record<string, Bon>>(BONK); all[L0.id] = { ...(all[L0.id] || {}), [r.mid]: rec }; try { localStorage.setItem(BONK, JSON.stringify(all)); } catch { /* 무시 */ } }
-    const why: string[] = fixNow ? ['⚔ 다음 수업 선제 공격 +1'] : []; let got = 0, xp = 0;
+    const why: string[] = fixNow && feat('pre') ? ['⚔ 다음 수업 선제 공격 +1'] : []; let got = 0, xp = 0;
     if (o.clear) {
       const log = logNow(), rw = dummyReward(L0, recOf(L0), bonL, [r.mid], log, day), localLog = gemLogP ? null : { ...log };
       for (const g of rw.gems) {

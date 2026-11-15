@@ -66,5 +66,8 @@ export function setTheme(t: Theme, opt: { tv?: boolean } = {}): void { try { loc
 // 📜 문제 칸만 양피지 (📜 2026-11-14 선생님 「문제 칸만 따로 양피지 배경 테마로 할 수 있는 설정」): 어느 테마든 문제 카드(.bcard)만 양피지 바탕 + 진한 글씨 · 이 기기에 기억
 const PKEY = 'citadel-v1-qpaper';
 // 📜 2026-11-15 선생님(머리 🔨 · DECISIONS 「문제 칸 양피지 = 기본값 켬」): 저장값이 없으면 켬 · 저장값('1' · '0')이 있으면 그대로 · 끄기 = 🎨 테마 창 스위치
-export function savedPaper(): boolean { try { return localStorage.getItem(PKEY) !== '0'; } catch { return true; } }
+//   🧩 처음 값 = 학교 ⚙ 「📜 문제 칸 양피지 기본」(📜 2026-11-16 · 끄면 처음 값만 끔 · 학생이 고른 값은 그대로)
+let paperDef = true;
+export function savedPaper(): boolean { try { const v = localStorage.getItem(PKEY); return v == null ? paperDef : v !== '0'; } catch { return paperDef; } }
+export function setPaperDefault(on: boolean): void { if (paperDef === on) return; paperDef = on; if (typeof document === 'undefined') return; if (savedPaper()) document.documentElement.dataset.qpaper = '1'; else delete document.documentElement.dataset.qpaper; }
 export function setPaper(on: boolean): void { try { localStorage.setItem(PKEY, on ? '1' : '0'); } catch { /* 무시 */ } if (typeof document !== 'undefined') { if (on) document.documentElement.dataset.qpaper = '1'; else delete document.documentElement.dataset.qpaper; } }

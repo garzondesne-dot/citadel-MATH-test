@@ -42,7 +42,7 @@ export function nextStep(S: Store, L: LessonPack, code: string): void {
   if (isLobby(R) && R.meta.cls) {
     const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
     if (!test) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true);
-    if (!R.meta.castle && !(R.meta as { dummy?: boolean }).dummy && !R.meta.pre) void armPre(S, L, code, R.meta.cls, test); // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③ · 첫 몬스터 체력)
+    if (feat('pre') && !R.meta.castle && !(R.meta as { dummy?: boolean }).dummy && !R.meta.pre) void armPre(S, L, code, R.meta.cls, test); // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③ · 첫 몬스터 체력)
   }
   // ⏯ 이어서 수업: 입장 → 저장된 단계부터 (정식 go() resumeFrom)
   const to = isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R);

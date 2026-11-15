@@ -7,6 +7,7 @@
   import { onMount } from 'svelte';
   import { sfx } from '../sound.svelte';
   import { paperOn } from '../submit.svelte';
+  import { feat } from '../../school/features.svelte'; // ⚔ 칼 모양 스위치 (📜 2026-11-16 · 끄면 「남은 기회 n번」 숫자만)
   // ⚔ 칼 (📜 2026-11-15 선생님 「좋아 칼로 바꿔」 · DECISIONS 「❤ 하트 → ⚔ 칼」 · 규칙 · 수치는 11/13 하트 그대로 · 겉모습 · 낱말만)
   //   남은 칼 = 은빛 칼날 + 금빛 손잡이 · 반 칸 = 칼날 반 · 쓴 칼 = 회색 테두리 · 틀림 = 그 칼에 금이 가며 회색(0.7초 · 「쨍」 · 짧은 진동)
   //   보급 · 힐 = 칼 하나 초록 빛으로 돌아옴 · 다 맞힘(⚡ 칸으로 바뀜) = 남은 칼이 ⚡ 번개로 바뀌어 날아 들어옴(그 몬스터에서 한 번)
@@ -33,7 +34,7 @@
   const brk = (i: number) => breaking.find((b) => b.i === i);
 </script>
 
-{#if paperOn()}
+{#if paperOn() || !feat('sword')}
   <!-- 📝 제출 모드: 하트 대신 글자 -->
   <span class="ptx" data-k="left">{mode === 'heart' ? `남은 기회 ${Math.max(0, Math.floor(left))}번` : `더 해 볼 것 ${left}번`}</span>
 {:else if mode === 'heart'}

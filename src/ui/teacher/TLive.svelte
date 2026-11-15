@@ -276,8 +276,8 @@
       <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
-      {#if step?.kind === 'concept' && step.check}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
-      {#if revs.length}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
+      {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
+      {#if revs.length && feat('review')}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
@@ -305,7 +305,7 @@
         <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>⚔ 보급 (칼 +1)</button>
         <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name.slice(1)} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
         <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
-        <button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name.slice(1)} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>
+        {#if feat('stamp')}<button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name.slice(1)} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>{/if}
         <button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>
       </div>
       {#if pwAsk}<div class="conf" data-k="pwask"><span><b>{whoP.num} {whoP.name.slice(1)}</b> 비밀번호를 0000 으로 바꿀까요? 다음 로그인 때 0000 으로 들어와요.</span><div><button type="button" onclick={() => (pwAsk = false)}>취소</button><button type="button" class="y" data-k="pwgo" onclick={() => { resetPw(S, live.cls, whoP.num); pwAsk = false; pwDone = true; }}>0000 으로 바꾸기</button></div></div>{/if}

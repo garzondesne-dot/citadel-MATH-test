@@ -1,5 +1,6 @@
 <script lang="ts">
   import { helpOf } from '../../school/help';
+  import { feat } from '../../school/features.svelte';
   import HelpSheet from './HelpSheet.svelte';
   import { setSymLesson } from '../../school/symtap';
   import { paperOn, pw } from '../submit.svelte';
@@ -146,7 +147,7 @@
   const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
   // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
   let helpOpen = $state(false);
-  const helpNow = $derived(helpOf(L, mid, cur, items[cur] ?? null));
+  const helpNow = $derived(!feat('help3') ? null : helpOf(L, mid, cur, items[cur] ?? null));
   // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①): 학생 폰 「첫 줄만 같이 볼까?」 → 도움 2단(없으면 1단) · 도움이 없으면 예전 💡 힌트
   let helpStart = $state(1);
   $effect(() => { const on = () => { if (helpNow) { helpStart = 2; helpOpen = true; } else onhint?.(); }; window.addEventListener('citadel-idlehelp', on); return () => window.removeEventListener('citadel-idlehelp', on); });
