@@ -16,7 +16,13 @@ interface QBase {
   /** 📖 교과서 문항 번호 (🏰 성채 팩 · 덧칸 · 화면은 안 씀) */
   ref?: string;
   tag?: string;
+  /** 💡 도움 3단 (📜 2026-11-15 · 팩 문항 선택 칸): 1단 concept(개념 한 줄) → 2단 first(빈칸 하나 남긴 풀이 첫 줄) → 3단 example(비슷한 예제 + 풀이) · 무료 · 기록만 */
+  help?: Help;
+  /** 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 선택 칸): 교사가 TV 에 띄우는 풀이 카드들 · lines = 풀이 줄 · focus = 「함께 살펴볼 줄」 번호(0부터) · ask = 질문 · wrong = 「검토할 풀이」 */
+  review?: Review[];
 }
+export interface Help { concept: string; first?: string; example?: { q: string; sol: string } }
+export interface Review { lines: string[]; focus?: number; ask?: string; wrong?: boolean }
 export type Question =
   | (QBase & { type: 'choice'; choices: string[]; answerIndex: number; answer?: string })
   | (QBase & { type: 'ox'; answer: boolean })

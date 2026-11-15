@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { helpOf } from '../../school/help';
+  import HelpSheet from './HelpSheet.svelte';
   import { setSymLesson } from '../../school/symtap';
   import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
@@ -110,6 +112,10 @@
       if (more) setTimeout(() => (toast = more), 3500);
     } else if (res?.steps && missOf(res).length) toast = `✏ 빠진 단계: ${missOf(res).join(' · ')} — 그 졸개만 다시 고쳐 써요`;
   }
+  // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
+  let helpOpen = $state(false);
+  const helpNow = $derived(helpOf(L, mid, stage, q ?? null));
+  const handUp = $derived(((R.players?.[uid] as { hand?: { mid?: string } | null } | undefined)?.hand?.mid) === mid);
 </script>
 
 {#if wm}
@@ -170,7 +176,7 @@
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
-    {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
+    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" aria-label="힌트" data-k="hint" onclick={() => (helpNow ? (helpOpen = true) : onhint?.())}><i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
     {#snippet right()}{#if canPhoto}{@render wrBtn()}{:else if v4}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 준비 중)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}<span>{pw(`${stName(stage, pItems.length)} ${prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격`)}</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
@@ -186,6 +192,8 @@
 {#if shot && wm}
   <PhotoSheet {S} {cls} {num} lesson={rl} room={mid} {title} items={phItems(phRubric(S, rl, mid), title, rec.items, rec.says)} trial={trialPh} onclose={snapDone} />
 {/if}
+
+{#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={stage} help={helpNow} hand={handUp} onclose={() => (helpOpen = false)} />{/if}
 
 <style>
   .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }

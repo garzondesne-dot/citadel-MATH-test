@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { helpOf } from '../../school/help';
+  import HelpSheet from './HelpSheet.svelte';
   import { setSymLesson } from '../../school/symtap';
   import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
@@ -142,6 +144,10 @@
   // 🎯 허수아비 방 = ❤ · ⚡ 없음 · 문제 위 꼬리표 「📄 학습지 숫자」/「🔁 바뀐 숫자」(수업 기록 기준)
   const dummy = $derived(isDummy(R));
   const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
+  // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
+  let helpOpen = $state(false);
+  const helpNow = $derived(helpOf(L, mid, cur, items[cur] ?? null));
+  const handUp = $derived(((R.players?.[uid] as { hand?: { mid?: string } | null } | undefined)?.hand?.mid) === mid);
 </script>
 
 {#if showDone}
@@ -197,7 +203,7 @@
     {/key}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '⚔' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
-    {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
+    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" aria-label="힌트" data-k="hint" onclick={() => (helpNow ? (helpOpen = true) : onhint?.())}><i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 없음 · 소레이드만)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}
       {#if allFilled && v4}<span>{pw(rec.perfect ? '🔥 재도전 공격' : fixing ? '다시 공격' : '공격')}</span>{#if rec.perfect}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}
@@ -206,6 +212,8 @@
     {/snippet}
   </BottomAction>
 {/if}
+
+{#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={cur} help={helpNow} hand={handUp} onclose={() => (helpOpen = false)} />{/if}
 
 <style>
   .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }

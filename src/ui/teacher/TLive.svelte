@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { handsOf, lowerHand } from '../../school/help';
   import { siteUrl } from '../../channel';
   import { holdWake, wakeTip } from '../wake.svelte';
   import { V4 } from '../../raid/raid';
@@ -90,7 +91,9 @@
   // 📜 2026-11-14 선생님 「리모컨 21명 하면 7X3으로해줘」 = 21명 이하 7열(번호 + 이름) · 22~24 8열
   const COLS = $derived(pupils.length <= 21 ? 7 : pupils.length <= 24 ? 8 : pupils.length <= 27 ? 9 : 10);
   const named = $derived(COLS <= 8);
-  const help = $derived(stuck.filter((x) => x.lock).map((x) => x.u));
+  // ✋ 💡 도움 3단 뒤 손든 학생도 🙋 줄에 (📜 2026-11-15) · 칩 누름 = 칼이 다 떨어진 학생이면 ⚔ 보급 · 손만 든 학생이면 손 내림
+  const hands = $derived(R && mid ? handsOf(R, mid) : []);
+  const help = $derived([...new Set([...stuck.filter((x) => x.lock).map((x) => x.u), ...hands])]);
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
   let helpN = 0; $effect(() => { const n = help.length; untrack(() => { if (n > helpN) sfx('raise-hand', 0.8); helpN = n; }); }); // 🔊 🙋 도움 요청 (교사 폰 · 새로 손들 때)
@@ -105,6 +108,7 @@
   let undoU = $state<{ u: string; mid: string; v4: boolean; n: number; at: number } | null>(null), undoT: ReturnType<typeof setTimeout> | null = null;
   function release(u: string) {
     if (!R || !mid) return; const v4 = V4(R), n = unlocksOf(R, mid, u);
+    if (hands.includes(u)) { lowerHand(S, code, u); if (!stuck.some((x) => x.u === u && x.lock)) return; }
     if (v4) heartRelease(S, code, mid, u); else chainRelease(S, code, mid, u);
     undoU = { u, mid, v4, n, at: order.indexOf(u) }; if (undoT) clearTimeout(undoT); undoT = setTimeout(() => (undoU = null), 3000);
   }

@@ -13,7 +13,7 @@ export type Lvl = 'err' | 'ask';
 export interface Issue { at: string; msg: string; lvl: Lvl }
 /** 도감 찾기 (화면 쪽 배치표 · 공격 표가 알려 줌 · 시험은 가짜로) */
 export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => boolean; attack: (id: string) => boolean; builtIn: (id: string) => boolean }
-type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown };
+type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown; help?: unknown; review?: unknown };
 type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
 type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; find?: Record<string, string>; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
@@ -36,8 +36,30 @@ export function spriteName(raw: unknown): string {
 
 // ➕ 덧칸 (📜 2026-11-14 🏰 성채 팩 · 차시 팩 같이): say = 나의 풀이 한 줄 · why = 💡 근거 줄 · groups = 두 칸 칩 고르기 · ref = 교과서 문항 번호
 const str = (x: unknown) => typeof x === 'string' && x.trim() !== '';
-function extras(it: BItem, ch: string[] | null, err: (m: string) => null): { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string } | null {
-  const o: { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string } = {};
+function extras(it: BItem, ch: string[] | null, err: (m: string) => null): { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string; help?: Question['help']; review?: Question['review'] } | null {
+  const o: { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string; help?: Question['help']; review?: Question['review'] } = {};
+  // 💡 도움 3단 (📜 2026-11-15): help = { concept(필수 · 글), first?(빈칸 하나 남긴 줄 · 글), example?: { q, sol } }
+  if (it.help != null) {
+    const h = it.help as Record<string, unknown>;
+    if (!h || typeof h !== 'object' || !str(h.concept)) return err('도움 3단(help) = { concept: 「개념 한 줄」, first?: 「빈칸 하나 남긴 줄」, example?: { q, sol } } — concept 가 비었어요');
+    if (h.first != null && !str(h.first)) return err('도움 2단(help.first)은 글 한 줄이에요');
+    const ex = h.example as Record<string, unknown> | undefined;
+    if (ex != null && (typeof ex !== 'object' || !str(ex.q) || !str(ex.sol))) return err('도움 3단 예제(help.example) = { q: 「예제」, sol: 「풀이」 } 둘 다 글이에요');
+    o.help = { concept: String(h.concept), ...(h.first != null ? { first: String(h.first) } : {}), ...(ex ? { example: { q: String(ex.q), sol: String(ex.sol) } } : {}) };
+  }
+  // 🔎 익명 풀이 (📜 2026-11-15): review = [{ lines: [줄…], focus?: 줄 번호(0부터), ask?: 질문, wrong?: true }]
+  if (it.review != null) {
+    const rv = it.review as Record<string, unknown>[];
+    if (!Array.isArray(rv) || !rv.length) return err('익명 풀이(review) = [{ lines: […], focus?, ask?, wrong? }] 배열이에요');
+    const out: NonNullable<Question['review']> = [];
+    for (const [k, r] of rv.entries()) {
+      if (!r || typeof r !== 'object' || !Array.isArray(r.lines) || !r.lines.length || (r.lines as unknown[]).some((l) => typeof l !== 'string')) return err(`익명 풀이 ${k + 1}번 — lines 는 글 줄 배열이에요`);
+      const f = r.focus == null ? undefined : Number(r.focus);
+      if (f != null && (!Number.isInteger(f) || f < 0 || f >= (r.lines as unknown[]).length)) return err(`익명 풀이 ${k + 1}번 — 「함께 살펴볼 줄」(focus ${String(r.focus)})이 줄 번호 범위(0 ~ ${(r.lines as unknown[]).length - 1}) 밖이에요`);
+      out.push({ lines: (r.lines as string[]).map(String), ...(f != null ? { focus: f } : {}), ...(r.ask != null ? { ask: String(r.ask) } : {}), ...(r.wrong ? { wrong: true } : {}) });
+    }
+    o.review = out;
+  }
   if (it.say != null) { if (typeof it.say !== 'string') return err('나의 풀이(say)는 글 한 줄이에요'); if (it.say.trim()) o.say = it.say; }
   if (it.ref != null) o.ref = String(it.ref);
   if (it.why != null) {
