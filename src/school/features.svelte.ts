@@ -34,7 +34,7 @@ export const FEATS: Feat[] = [
   { id: 'citadel', ic: '🏯', name: '성채 던전', sub: '', group: '과목 팩', need: () => packNeed(!!SUBJ.camp?.floors?.some((f) => !f.off), '성채 평가 문항') },
   { id: 'seteuk', ic: '📝', name: '성취기준 · 오개념 · 세특 문장', sub: '', group: '과목 팩', need: () => packNeed(Object.keys(SUBJ.misconceptions || {}).length > 0, '오개념 카드') },
   { id: 'schedule', ic: '📅', name: '시간표 · 교시 시각', sub: '켜면 교시 시각 · 시간표 입력 · 수업 열기 추천 한 줄 · ⏳ 타임바 = 교시 끝 · 끄면 반 → 차시 수동 · 50분', group: '학교 정보' },
-  { id: 'photo', ic: '📷', name: '서술형 사진 채점', sub: 'AI 채점', group: '학교 정보', need: (S) => (!S || S.get('school/ai/on') ? null : '🔑 AI 채점 연결이 필요해요 · 「나」 탭 「📷 사진 채점 연결」') },
+  { id: 'photo', ic: '📷', name: '서술형 사진 채점', sub: 'AI 채점', group: '학교 정보', need: (S) => (!S || S.get<{ url?: string }>('gcfg/photo')?.url ? null : '🔑 사진 채점 웹 앱 주소가 필요해요 · 「나」 탭 「📷 사진 채점 설정」') },
   { id: 'survey', ic: '📝', name: '수업 설문', sub: '', group: '그 밖' },
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },

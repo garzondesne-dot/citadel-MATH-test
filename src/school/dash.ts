@@ -120,8 +120,11 @@ export function realClass(S: Store, cls: string) {
     const bon = bonAll[p.num] || {}, rows = Object.entries(bon).filter(([k, l]) => isObj(l) && k !== 'review' && k !== 'board').flatMap(([lid, l]) => Object.values(l as Record<string, unknown>).filter(isObj).map((m) => ({ lid, m: m as { tries?: number; mis?: Record<string, [number, number]> } })));
     // 🎯 허수아비(복습) 기록 = 반 통계에 안 넣음 (📜 2026-11-15 · 예전 정식 dash.js 는 오개념에 합쳤음) · 학생 시트에 「🎯 허수아비로 함」만
     const dummy = Object.entries(bon).filter(([k, l]) => isObj(l) && !/^eval-/.test(k) && k !== 'review' && k !== 'board').map(([lid, l]) => ({ lid, no: LESSONS.find((x) => x.id === lid)?.no ?? PACKS.find((x) => x.id === lid)?.no ?? 0, cells: Object.keys(l as Record<string, unknown>) })).filter((d) => d.cells.length).sort((a, b) => a.no - b.no);
+    // 📷 서술형 (photo/{반}/{번호}/{차시_방}/{id} · 중계소가 씀): 통과 = 통과했거나 선생님 ✔ 인정한 방 수 · 다시 = ✏ 재도전 장 수
+    const ph = (S.get<Record<string, Record<string, { status?: string; ok?: boolean }>>>(`photo/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`)) || {};
+    const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   return out;

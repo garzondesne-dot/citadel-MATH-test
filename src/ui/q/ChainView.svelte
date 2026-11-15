@@ -17,11 +17,16 @@
   import EnergyCard from './EnergyCard.svelte';
   import { heroAtk } from '../battle/fx.svelte';
   import { sfx } from '../sound.svelte';
+  import Sheet from '../battle/Sheet.svelte';
+  import PhotoSheet, { type PhotoOut } from './PhotoSheet.svelte';
+  import PrepImg from './PrepImg.svelte';
+  import { chainItems as phItems, codeRubrics, pendState, raidMax, cfgOf, ready as phReady, rubric as phRubric, rubricLesson } from '../../school/photo';
+  import { chainPhotoFill, photoScroll, snapEnd, snapStart } from '../../raid/actions';
 
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
-  //   (b4 범위 밖: ✍ 서술형 📸 · ⛓ 묶기 · 💚 힐 · 💡 힌트 주기)
-  const { S, L, R, code, mid, uid, now, locked, title, onhint }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void } = $props();
+  //   ✍ 서술형 📸 (정식 #50 · 📜 2026-11-15): 언제나(시작 전 · 졸개 도중 · 대장 뒤 · 한 판 더 중) · 학습지 숫자 그대로 · 통과 = 🌟 진필살기 + 📜 1 + 남은 단계 처치
+  const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
   const rec = $derived(chainRecord(L, R, mid, uid));
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   let pracPass = $state<number | null>(null);
@@ -76,9 +81,44 @@
   // 🎯 허수아비 방 = ❤ · ⚡ 없음 · 문제 위 꼬리표 「📄 학습지 숫자」/「🔁 바뀐 숫자」(수업 기록 기준)
   const dummy = $derived(isDummy(R));
   const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
+  // ── ✍ 서술형 📸 ──
+  const rl = $derived(rubricLesson(S, L));
+  const srv = untrack(() => (S as { kind?: string }).kind === 'server');
+  const trialPh = $derived(demo || !srv); // 서버 없는 이 기기 체험 · 시연 = 사진 안 받음
+  const canPhoto = $derived(!photo || (!cls && !demo && srv) ? false /* 🎯 허수아비 · 📋 게시판 · 🏰 성채 전투 = 사진 없음 */ : trialPh ? !!(phRubric(S, rl, mid) ?? codeRubrics()[rl]?.[mid]) : phReady(S, rl, mid));
+  const myP = $derived((R.players?.[uid] || {}) as { ph?: Record<string, number>; wr?: Record<string, string>; pp?: Record<string, string | number> });
+  const phN = $derived(Number(myP.ph?.[mid]) || 0), wrOk = $derived(myP.wr?.[mid]), phMax = $derived(raidMax(cfgOf(S)));
+  const pendId = $derived(myP.pp?.[mid]);
+  const pendPh = $derived(!!pendId && wrOk !== 'ok' && cls ? pendState(S, cls, num, rl, mid, String(pendId)) : null);
+  let wm = $state<{ peek: boolean } | null>(null), shot = $state(false), peekAsk = $state(false);
+  $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(S, uid, L.id, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
+  function snapOpen() { if (!wm || phN >= phMax) return; if (!trialPh) snapStart(S, code, uid, mid); sfx('block', 0.5); shot = true; }
+  function snapDone(res: PhotoOut | null) {
+    shot = false; const peek = !!wm?.peek;
+    if (trialPh && demo) { if (res?.status === 'pass') { wm = null; toast = '🌟 서술형 통과! (시연 · 데미지 · 기록 없음)'; } return; }
+    const out = snapEnd(S, L, code, uid, mid, res, peek);
+    if (!peek && out) photoScroll(S, uid, L.id, mid);
+    const missOf = (r: PhotoOut | null) => Object.values(r?.steps || {}).map((x, i) => (x && !x.earned ? (i === rec.n - 1 ? '👑' : '①②③④⑤⑥'[i]) : null)).filter(Boolean);
+    if (res?.status === 'pass') {
+      const nFill = !peek && !rec.done ? chainPhotoFill(S, L, code, uid, mid) : 0;
+      wm = null;
+      toast = peek ? '✍ 연습 쓰기 통과! (진필살기 없음)' : out === 'true' ? '🌟 진필살기 발동! 몬스터가 돌로 굳어요' : '🌟 서술형 통과!';
+      const more = [nFill ? `✍ 남은 ${nFill}단계 모두 처치!` : '', missOf(res).length ? `✏ ${missOf(res).join(' · ')} 단계는 학습지에 다시 정리해 둬요` : ''].filter(Boolean).join(' · ');
+      if (more) setTimeout(() => (toast = more), 3500);
+    } else if (res?.steps && missOf(res).length) toast = `✏ 빠진 단계: ${missOf(res).join(' · ')} — 그 졸개만 다시 고쳐 써요`;
+  }
 </script>
 
-{#if needWhy && wq?.why}
+{#if wm}
+  <div class="bcard wr-card" data-k="write-mode">
+    <span class="lab acc">✍ {title} · {wm.peek ? '✍ 연습 쓰기 (진필살기 없음)' : '게임 풀이를 보지 말고 처음부터 · 학습지 숫자 그대로'}</span>
+    <PrepImg {S} {L} id={mid} alt="학습지 문제"><p class="wq">{phRubric(S, rl, mid)?.ask || title}</p></PrepImg>
+    {#if wm.peek}<div class="story"><b>📜 나의 풀이</b><ol>{#each rec.says as t2, k (k)}<li>{t2}</li>{/each}</ol></div>{/if}
+    {#if pendPh === 'wait'}<p class="muted">⏳ 서술형 사진은 <b>선생님이 직접 확인</b>하고 있어요 (AI 가 확신하지 못함) · 더 또렷하게 다시 찍어도 돼요</p>{/if}
+    <p class="hand">✍ 학습지 서술형 칸에 <b>직접 손으로 쓴 풀이</b>만 찍어요 · 화면 · 인쇄 글은 통과 안 돼요</p>
+    <p class="muted">종이에 풀이를 처음부터 끝까지 쓰고 📸 찍어요 (이 소레이드 {Math.max(0, phMax - phN)}장 남음)</p>
+  </div>
+{:else if needWhy && wq?.why}
   <div class="bcard">
     <span class="lab acc">💡 근거 한 줄 · 틀려도 괜찮아요</span>
     <p class="wq">{wq.why.pre} <b class="bl">____</b>{wq.why.post}</p>
@@ -93,6 +133,7 @@
     <div class="story"><b>📜 나의 풀이</b><ol>{#each pFail ? pItems.map((x) => x.say || '') : says as t, k (k)}<li>{t}</li>{/each}</ol></div>
     {#if !v4}<p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>{/if}
   </div>
+  {#if canPhoto && !pFail}<div class="wrrow">{@render wrBtn()}</div>{/if}
   {#if v4}{#if !dummy}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={again} />{/if}{:else if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
@@ -102,7 +143,13 @@
   <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
 {/if}
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
-{#if needWhy}
+{#if wm}
+  <BottomAction battle disabled={phN >= phMax} why={phN >= phMax ? '📸 이 소레이드 사진을 다 썼어요' : ''} onmain={snapOpen} mainLabel="찍어서 채점">
+    {#snippet left()}{#if !wm?.peek}<button type="button" class="side wx" data-k="wr-peek" onclick={() => (peekAsk = true)}><i>📜</i>풀이 보기</button>{/if}{/snippet}
+    {#snippet right()}<button type="button" class="side wx" data-k="wr-x" onclick={() => (wm = null)}><i>✕</i>그만 쓰기</button>{/snippet}
+    {#snippet main()}<span>📸 찍어서 채점</span>{/snippet}
+  </BottomAction>
+{:else if needWhy}
   <span></span>
 {:else if pracShown && v4}
   <span></span>
@@ -114,17 +161,36 @@
   <span></span>
 {:else if rec.locked && !prac}
   <BottomAction battle disabled why={v4 ? '🙋 ❤ 0 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요'}>
+    {#snippet right()}{#if canPhoto}{@render wrBtn()}{/if}{/snippet}
     {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
-    {#snippet right()}{#if v4 && true}<button type="button" class="side wr" disabled aria-label="서술형 (사진 채점은 베타에 아직 없어요)">✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
+    {#snippet right()}{#if canPhoto}{@render wrBtn()}{:else if v4}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 준비 중)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}<span>{pw(`${stName(stage, pItems.length)} ${prac ? (v4 ? '재도전 ' : '연습 ') : ''}공격`)}</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 
+{#snippet wrBtn()}{#if wrOk === 'ok'}<button type="button" class="side wr" disabled data-k="wr-btn">🌟 통과<small>서술형</small></button>{:else if phN >= phMax}<button type="button" class="side wr" disabled data-k="wr-btn">📸 다 씀<small>{phN}/{phMax}</small></button>{:else}<button type="button" class="side wr" data-k="wr-btn" onclick={() => (wm = { peek: false })}>✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
+{#if peekAsk}
+  <Sheet onclose={() => (peekAsk = false)} mainText="📜 볼게요" onmain={() => { peekAsk = false; if (wm) wm.peek = true; }}>
+    {#snippet title()}📜 풀이 다시 보기{/snippet}
+    <p class="muted">풀이를 보면 이번 도전은 「✍ 연습 쓰기」가 돼요 (진필살기 없음). 볼까요?</p>
+  </Sheet>
+{/if}
+{#if shot && wm}
+  <PhotoSheet {S} {cls} {num} lesson={rl} room={mid} {title} items={phItems(phRubric(S, rl, mid), title, rec.items, rec.says)} trial={trialPh} onclose={snapDone} />
+{/if}
+
 <style>
+  .wr-card .hand { margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface-2); font-size: 15px; line-height: 1.5; }
+  .wrrow { display: flex; justify-content: flex-end; }
+  .wrrow :global(.side.wr) { min-width: 120px; min-height: var(--tap); padding: 4px 12px; border-radius: 14px; border: 2px solid var(--scroll); background: rgba(199, 155, 255, 0.14); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
+  .wrrow :global(.side.wr small) { font-size: 11px; font-weight: 500; color: var(--scroll); }
+  .wrrow :global(.side.wr:disabled) { opacity: 0.5; box-shadow: none; }
+  :global(.line .side.wx) { width: 84px; font-size: 13px; } :global(.line .side.wx i) { font-style: normal; font-size: 18px; line-height: 1.1; }
+  .wr-card .muted { margin: 0; color: var(--text-2); font-size: 14px; }
   .tagl { margin: 0; display: flex; align-items: center; gap: var(--s2); }
   .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line, #2f3440); color: var(--text-2); font: 700 13px var(--font); }
   .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }

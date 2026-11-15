@@ -20,7 +20,7 @@
   //   숫자 = 문제마다 내 수업 기록: 맞힌 기록 있음(o · f) = 🔁 바뀐 숫자 / 없음(안 풂 · 못 맞힘) = 📄 학습지 숫자 · 문제 위 꼬리표
   //   ❤ · ⚡ · 시간 · 등급 · 순위 없음 · 틀린 소문제만 다시(정식 그대로) · 해결하면 그 몬스터 처치 → 다음
   //   보상 = 정식 허수아비 값: 💎 복습 3(하루 6번) · 첫 복습 +4 · 형성평가 재대결 다 맞힘 14 · EXP 5 · 하루 한도 100 안
-  //   ✍ 서술형 📸 = 베타에 사진 채점이 아직 없음 → 「✍ 서술형만」 칩은 자리만 흐림
+  //   ✍ 서술형 📸 = 정식 허수아비엔 사진 채점 없음(성채 서술형 방 · 수업 소레이드만) → 「✍ 서술형만」 칩은 자리만 흐림
   const { S, me, save, uid, num, cls, onclose }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; onclose: () => void } = $props();
   const DUMMY_GEM = { review: 3, perDay: 6, first: 4, rematch: 14, xp: 5 };
   type Rec = { mons?: Record<string, string>; bossM?: string };
@@ -95,7 +95,7 @@
     <div class="chips" role="radiogroup" aria-label="차시">
       {#each LESSONS as p (p.id)}<button type="button" role="radio" class="chip" class:on={pick?.id === p.id} aria-checked={pick?.id === p.id} disabled={!isOpen(p)} onclick={() => (pick = p)}><b>{p.no}차시</b><small>{isOpen(p) ? shortOf(p) : '🔒'}</small></button>{/each}
     </div>
-    <button type="button" class="wonly" disabled title="📸 사진 채점은 베타에 아직 없어요">✍ 서술형만</button>
+    <button type="button" class="wonly" disabled title="📸 사진 채점 = 수업 소레이드 · 🏰 성채 서술형 방에서">✍ 서술형만</button>
     {#if pick}<ul class="tl">{#each tags as t (t.t)}<li><span>{t.t}</span><span class="tag">{t.fresh ? '🔁 바뀐 숫자' : '📄 학습지 숫자'}</span></li>{/each}{#if pick.boss}<li><span>👑 형성평가 재대결</span><span class="tag">{(recOf(pick)?.bossM || '').includes('o') ? '🔁 바뀐 숫자' : '📄 학습지 숫자'}</span></li>{/if}</ul>{/if}
   </Sheet>
 {/if}

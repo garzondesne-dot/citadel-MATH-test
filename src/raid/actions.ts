@@ -1,8 +1,8 @@
 import { BOSS, markOpened } from '../school/statsCells';
-import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
+import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
-import { bossRecord, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
+import { answerOf, bossRecord, cleared, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { activeNow, cpPatch } from './combo';
 import { periodEnd } from '../school/bells';
 import { feat } from '../school/features.svelte';
@@ -262,4 +262,40 @@ export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, 
   if (to !== 'bind' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);
   return true;
+}
+
+// ── ✍ → 📸 서술형 사진 (정식 actions.js snapStart · snapEnd · photoTrue · chainPhotoFill 그대로 · 📜 2026-11-15 선생님 「오늘 사진 채점 기능까지」) ──
+/** 찰칵 = 예고 (TV ⚡ 충전 중 게이지) */
+export const snapStart = (S: Store, code: string, me: string, mid: string) => S.set(`${roomPath(code)}/players/${me}/snap`, { mid, at: S.now() });
+/** 창이 닫힘 → 쓴 장 수(⏳ 선생님 확인으로 넘어간 장 · 창만 닫은 경우는 안 셈) · 확인 기다림 · 통과 표시 → 통과면 🌟 */
+export function snapEnd(S: Store, L: LessonPack, code: string, me: string, mid: string, res: { status: string; id?: string; scores?: number[] } | null, peek = false): 'true' | 'done' | null {
+  const R = getRoom(S, code); if (!R) return null;
+  const p = R.players?.[me] as { ph?: Record<string, number> } | undefined, sc = res?.scores || [];
+  const used = res && (res.status === 'check' || res.status === 'appeal') ? Math.max(0, sc.length - 1) : Math.max(res ? 1 : 0, sc.length);
+  const base = `${roomPath(code)}/players/${me}`;
+  S.set(`${base}/snap`, null); S.set(`${base}/ph/${mid}`, (Number(p?.ph?.[mid]) || 0) + used);
+  S.set(`${base}/pp/${mid}`, res && (res.status === 'check' || res.status === 'appeal') ? res.id || 1 : null);
+  if (res?.status === 'pass') S.set(`${base}/wr/${mid}`, peek ? 'peek' : 'ok');
+  if (!res || res.status !== 'pass' || peek) return null;
+  return photoTrue(S, L, code, me, mid);
+}
+/** 🌟 통과 = 살아 있고 아직 안 굳은 몬스터면 '!true@' (파티 힐 + 🗿 석화) · 아니면 'done' (정식 금빛 컷인 '!tcut@' 은 베타 TV 에 아직 없음 → 효과 없이 📜 만) */
+export function photoTrue(S: Store, L: LessonPack, code: string, me: string, mid: string): 'true' | 'done' {
+  const R = getRoom(S, code); if (!R) return 'done';
+  const step = stepOf(L, R), alive = !!step && step.id === mid && !cleared(L, R, mid, gameNow(R, S.now()));
+  if (alive && !petrify(R, mid)) { S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, `!true@${S.now()}`); return 'true'; }
+  return 'done';
+}
+/** ✍ #50 ③ 졸개를 다 풀기 전에 서술형 통과 = 남은 단계 모두 푼 것으로 (첫 판만 · 학습지 숫자 · 퍼펙트 아님) → 처치한 단계 수 */
+export function chainPhotoFill(S: Store, L: LessonPack, code: string, me: string, mid: string): number {
+  const R = getRoom(S, code); if (!R || !isChain(L, R, mid)) return 0;
+  const rec = chainRecord(L, R, mid, me); if (rec.done) return 0;
+  let k = rec.nextK;
+  for (let s = rec.stage; s < rec.n; s++) S.set(`${roomPath(code)}/chain/${mid}/${me}/${k++}`, { s, p: 0, g: answerOf(rec.items[s] as Question) ?? '', ph: 1 });
+  return rec.n - rec.stage;
+}
+/** 📜 서술 조각 +1 (정식 #27 「통과하면 누구나 📜 1」 · 문제당 한 번 · 연습 쓰기 = 없음) = 선물 칸 (캠프에서 지갑에) */
+export function photoScroll(S: Store, me: string, lid: string, mid: string): boolean {
+  const k = `gifts/${me}/ult_${lid}_${mid}`.replace(/[.#$[\]]/g, '_'); if (S.get(k)) return false;
+  S.set(k, { g: 0, s: 1, at: S.now(), fun: '🌟 진필살기 서술' }); return true;
 }

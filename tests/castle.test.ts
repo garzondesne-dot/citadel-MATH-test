@@ -124,9 +124,9 @@ describe('➕ 덧칸 = 차시 팩에도 (say · why · groups · ref)', () => {
 });
 
 // 💎 성채 보상 = 정식 gem.js G · grow.js XP 그대로 (📜 2026-11-14 머리 「정식 값 그대로」)
-import { castleReward, CASTLE_GEM, CASTLE_XP } from '../src/school/castle';
+import { castleReward, CASTLE_GEM, CASTLE_PHOTO_GEM, CASTLE_XP } from '../src/school/castle';
 describe('💎 성채 보상 (정식 값)', () => {
-  it('정식 숫자', () => { expect(CASTLE_GEM).toEqual({ room: 8, roomBoss: 24, roomFirst: 6, first: 4, seal: 12 }); expect(CASTLE_XP).toEqual({ clear: 5, seal: 10 }); });
+  it('정식 숫자', () => { expect(CASTLE_GEM).toEqual({ room: 8, roomBoss: 24, roomFirst: 6, first: 4, seal: 12 }); expect(CASTLE_XP).toEqual({ clear: 5, seal: 10, photo: 6 }); expect(CASTLE_PHOTO_GEM).toBe(6); }); // 📷 서술형 통과 = 정식 G.photo 6 · EXP 6
   it('처음 처치 · 첫 방 · 첫 판 무오답', () => { const r = castleReward({ first: true, boss: false, firstCastle: true, flawless: true, sealed: false }); expect(r.gems.map((g) => g.n)).toEqual([8, 4, 6]); expect(r.xp).toBe(5); });
   it('보스 = 24 + 업적 12(한도 밖) · EXP 15', () => { const r = castleReward({ first: true, boss: true, firstCastle: false, flawless: false, sealed: true }); expect(r.gems).toEqual([{ n: 24, why: '성채 방 처치' }, { n: 12, why: '🏆 업적', free: true }]); expect(r.xp).toBe(15); });
   it('다시 처치 = 없음', () => { expect(castleReward({ first: false, boss: true, firstCastle: false, flawless: true, sealed: false })).toEqual({ gems: [], xp: 0 }); });

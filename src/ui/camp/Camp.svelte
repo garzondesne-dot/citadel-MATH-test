@@ -70,16 +70,17 @@
   let giftToast = $state('');
   {
     const u = untrack(() => pupil)?.uid;
-    const G = u ? untrack(() => S).get<Record<string, { g: number; x?: number; fun?: string; got?: boolean; mail?: boolean }>>(`gifts/${u}`) || {} : {};
+    const G = u ? untrack(() => S).get<Record<string, { g: number; x?: number; s?: number; fun?: string; got?: boolean; mail?: boolean }>>(`gifts/${u}`) || {} : {};
     const fresh = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail); // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
     if (u && fresh.length) {
       const sum = fresh.reduce((a, [, x]) => a + (Number(x.g) || 0), 0);
       const xp = fresh.reduce((a, [, x]) => a + (Number(x.x) || 0), 0), funOnly = fresh.every(([, x]) => !!x.fun); // 🏕 쉼터 놀이 보상(#142) = 같은 칸 · EXP 도
       // 🗿 석화 찬스 💎 = 하루 한도 안 (📜 2026-11-13 밤 · 정식 DAY_CAP 100 · 넘은 몫은 버림) · 나머지 선물 = 한도 밖 그대로
       const petri = fresh.filter(([k]) => k.startsWith('petri_')).reduce((a, [, x]) => a + (Number(x.g) || 0), 0), petriGot = earnDaily(me.wallet, petri, kstDay(untrack(() => S).now()), GEM.dayCap);
-      me.wallet.gem += sum - petri; me.xp += xp; M.save();
+      const sc = fresh.reduce((a, [, x]) => a + (Number(x.s) || 0), 0); // 📜 ✍ 📸 서술형 통과 (정식 ult_{차시}_{몬스터} · 문제당 한 번)
+      me.wallet.gem += sum - petri; me.wallet.scroll += sc; me.xp += xp; M.save();
       fresh.forEach(([k]) => S.set(`gifts/${u}/${k}/got`, true));
-      giftToast = `${funOnly ? '🏕 쉼터 놀이' : '🎁 선생님 선물'} · 💎 +${sum - petri + petriGot}${xp ? ` · EXP +${xp}` : ''}`;
+      giftToast = `${funOnly ? (fresh.every(([k]) => k.startsWith('ult_')) ? '🌟 진필살기 서술' : '🏕 쉼터 놀이') : '🎁 선생님 선물'}${sum - petri + petriGot ? ` · 💎 +${sum - petri + petriGot}` : ''}${sc ? ` · 📜 +${sc}` : ''}${xp ? ` · EXP +${xp}` : ''}`;
       setTimeout(() => (giftToast = ''), 2600);
     }
   }

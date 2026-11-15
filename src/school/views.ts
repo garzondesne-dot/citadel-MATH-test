@@ -101,7 +101,7 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
     case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
-    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name} · ${SUBJ.demo.photoWhere}`, sub: s.extra.photoRe ? '다시 · 근거 빠짐' : '통과 · 근거 3줄', pc: s.extra.photoRe ? '다시' : '통과', pick: s })) };
+    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}${S?.kind === 'server' ? '' : ` · ${SUBJ.demo.photoWhere}`}`, sub: `통과 ${s.extra.photoOk} · 다시 ${s.extra.photoRe}`, pc: s.extra.photoOk ? '통과' : '다시', pick: s })) };
     case 'survey': { // 📝 정식 대시보드 「📝 설문」 (응답 = surveyA · 이름 없음 · 🧪 베타 반 · 시험 계정은 처음부터 안 쌓임)
       const cs = sc.classes.filter((c) => withX || !isBeta(S, c)), C = surveyCache();
       const L = cs.flatMap((c) => C[c] ?? []), s = summary(L), done = cs.reduce((a, c) => a + doneCount(S, c), 0), size = cs.reduce((a, c) => a + (sc.per.find((x) => x.c === c)?.studs.filter((u) => withX || !u.x).length ?? 0), 0);

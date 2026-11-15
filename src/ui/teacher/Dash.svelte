@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PhotoBoard from './PhotoBoard.svelte';
   import type { Store } from '../../model/types';
   import type { Stud } from '../../school/dash';
   import { ALL, ALL_VIEWS, GROUPS, scope, toSheet, view } from '../../school/views';
@@ -62,6 +63,7 @@
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
     {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
+    {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
     {#if V.table}

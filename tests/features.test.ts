@@ -24,9 +24,9 @@ describe('⚙ 스위치 틀', () => {
   });
   it('잠김 = 켰지만 필요한 것 없음 → 채우는 길 한 줄 · 공통수학2 팩 = 모루 · 기호 톡 · OX 있음', () => {
     expect(lockOf(S, 'forge')).toBeNull(); expect(lockOf(S, 'symtalk')).toBeNull(); expect(lockOf(S, 'rest-ox')).toBeNull();
-    expect(lockOf(S, 'photo')).toMatch(/AI/); expect(stateOf(S, null, 'photo')).toBe('locked');
+    expect(lockOf(S, 'photo')).toMatch(/웹 앱 주소/); expect(stateOf(S, null, 'photo')).toBe('locked');
     expect(stateOf(S, { bundle: 'basic' }, 'photo')).toBe('off');
-    S.set('school/ai/on', true); expect(stateOf(S, null, 'photo')).toBe('on');
+    S.set('gcfg/photo', { on: true, url: 'https://script.google.com/macros/s/x/exec' }); expect(stateOf(S, null, 'photo')).toBe('on'); // 📷 = 사진 채점 웹 앱 주소 (b201)
   });
 });
 import { bossAttacks } from '../src/raid/attacks';

@@ -12,7 +12,7 @@ import { CLASSES, lastClass, lastTest } from './school';
 
 export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; vers: Question[][] }
 export interface CastlePack { kind: 'castle'; id: string; floor: number; title: string; unit: string; theme?: string; goal?: string; bossPct: number; rooms: CastleRoom[]; /** 👀 학생에게 숨김 */ hide?: boolean; /** 올린 때 */ at?: number; /** 올린 글 그대로 (⬇ 내려받기 · 다시 올리기) */ raw: Record<string, unknown> }
-export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number }
+export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number }
 export interface CastleChecked { pack: CastlePack | null; issues: Issue[]; stats: { rooms: number; items: number; versions: number; rechecked: number; ask: number } }
 
 /** 저장 자리 (교사 쓰기 · 로그인한 사람 읽기 = 규칙 prep/$lesson 그대로 · 규칙 바꿀 일 없음) */
@@ -172,9 +172,12 @@ export async function castleZip(P: CastlePack): Promise<{ name: string; bytes: U
 
 // 💎 성채 보상 = 정식 그대로 (📜 2026-11-14 머리 「보상 없음은 안 됨 — 정식 release 코드 값 그대로」 · js/raid/gem.js G · js/raid/grow.js XP · js/raid/bonus.js win)
 //   처음 처치한 방만: 방 8 · 👑 보스 방 24 · 🎁 성채 첫 방(평생 한 번) 4 · 첫 판에 틀림 없이 6 = 하루 한도 안 · 🏆 업적(그 층 보스 처음 처치 = 인장) 12 = 한도 밖
-//   EXP = 방 처음 처치 5 + 업적 10 · 📷 서술형 통과 6 = 베타에 사진 채점이 생기면 · 다시 처치 = 보상 없음
+//   EXP = 방 처음 처치 5 + 업적 10 · 📷 서술형 통과 6 · 다시 처치 = 보상 없음
 export const CASTLE_GEM = { room: 8, roomBoss: 24, roomFirst: 6, first: 4, seal: 12 } as const;
-export const CASTLE_XP = { clear: 5, seal: 10 } as const;
+export const CASTLE_XP = { clear: 5, seal: 10, photo: 6 } as const;
+/** 📷 서술형 통과 (정식 G.photo 6 · 하루 한도 안 · 처음만) · 📜 = 처음 통과 1 + 만점 1 + 점수가 오르면 1 (정식 scrollWin) */
+export const CASTLE_PHOTO_GEM = 6;
+export const photoScrolls = (w: { score?: number; total?: number; up?: boolean } | null) => 1 + (w && Number(w.total) > 0 && w.score === w.total ? 1 : 0) + (w?.up ? 1 : 0);
 export interface CastleWin { first: boolean; boss: boolean; firstCastle: boolean; flawless: boolean; sealed: boolean }
 /** 받을 것 (줄마다 = 💎 n · 이유 · 한도 밖?) + EXP */
 export function castleReward(w: CastleWin): { gems: { n: number; why: string; free?: boolean }[]; xp: number } {

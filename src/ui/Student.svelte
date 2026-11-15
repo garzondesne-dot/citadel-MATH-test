@@ -249,7 +249,7 @@
         {#if step.kind === 'boss'}
           {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} {cls} {num} demo={cardOnly} photo={!board} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
         {:else if mid}
           <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
         {/if}
