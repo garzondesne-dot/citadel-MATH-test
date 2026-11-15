@@ -37,6 +37,8 @@ export interface Subject {
   legacyOpened?: Record<string, Record<string, string[]>>;
   /** 📷 서술형 채점 기준표 (정식 lessons/rubrics.js · { 차시: { 방: 기준표 } } · 교사 「📤 기준표 올리기」 원본) */
   rubrics?: Record<string, Record<string, unknown>>;
+  /** 🧹 옛 판 계산 오류 기록 = 대시보드에서 뺌 (차시 · 개념 칸 · 이 시각 전에 저장된 기록 · 이유 한 줄) · 서버 기록은 그대로 */
+  badConc?: { lid: string; c: string; before: number; why: string }[];
   /** 🟪 옛 규칙 업적(정식 bonus.js LEGACY · 차시 → 옛 방 id) */
   sealLegacy?: Record<string, string[]>;
   /** 🔎 오개념 분류 (틀린 답 → 코드 · 형성평가 꼬리표) · 없으면 오개념 기록 안 함 */

@@ -22,6 +22,7 @@ const SUBJECT: Subject = {
   misLogic: undefined,
   rubrics: undefined,
   sealLegacy: {},
+  badConc: [],
   titles: { after: BASE.titles.after, list: [] },
   camp: { ...BASE.camp, floors: BASE.camp.floors.map((f) => ({ ...f, off: true })) },
   funOx: [],

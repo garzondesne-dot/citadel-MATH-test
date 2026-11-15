@@ -35,6 +35,8 @@ const SUBJECT: Subject = {
   legacyOpened: LEGACY_OPENED as Record<string, Record<string, string[]>>,
   misLogic: { classify: misClassify, bossTag: misBossTag },
   rubrics: RUBRICS as Record<string, Record<string, unknown>>,
+  // 🧹 6차시 「집합 한 장 정리」(c4 = 소레이드 4마리) = 정식이 2026-11-11 10:46 KST 에 고친 버그(대장까지 잡아도 첫 시도 0% 로 셈) 전 기록 → 대시보드에서 뺌 (📜 2026-11-15 선생님 답 A)
+  badConc: [{ lid: 'set-06', c: 'c4', before: Date.UTC(2026, 10, 11, 1, 46, 36), why: '6차시 「집합 한 장 정리」 11/11 오전 전 기록 = 옛 판 계산 오류로 뺌' }],
   sealLegacy: { 'set-04': ['b1', 'b2', 'b3'], 'set-05': ['b1', 'b2', 'b3'], 'set-06': ['b1'], 'eval-1': ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'eb'] },
   titles: DATA.titles as Subject['titles'],
   camp: DATA.camp,

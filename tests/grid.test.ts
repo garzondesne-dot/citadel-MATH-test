@@ -52,3 +52,17 @@ describe('📚 성취기준', () => {
     expect(st[id]).toEqual([2, 2]);
   });
 });
+
+describe('🧹 옛 판 계산 오류 기록 빼기 (6차시 c4 · 선생님 답 A)', () => {
+  it('11/11 10:46 KST 전 c4 = 대시보드에서 뺌 · 뒤 기록은 그대로 · 「개념별 약점」 한 줄', async () => {
+    const { classData } = await import('../src/school/dash');
+    const S = { ...memoryStore(), kind: 'server' as const };
+    S.set('roster/1-3', { 1: '가', 2: '나' });
+    const old = Date.UTC(2026, 10, 10, 1, 0), late = Date.UTC(2026, 10, 12, 1, 0);
+    S.set('records/1-3', { 1: { 'set-06': { no: 6, at: old, conc: { c1: [2, 4], c4: [0, 17] }, boss: 1, bossN: 6 } }, 2: { 'set-06': { no: 6, at: late, conc: { c4: [10, 17] }, boss: 1, bossN: 6 } } });
+    const st = classData(S, '1-3').studs;
+    expect(Object.keys(st[0]!.conc)).toEqual(['set-06|c1']); expect(st[1]!.conc['set-06|c4']).toMatchObject({ ok: 10, total: 17 });
+    expect(view(S, '1-3', 'weak').note).toMatch(/옛 판 계산 오류로 뺌/);
+    expect(S.get('records/1-3/1/set-06/conc/c4')).toEqual([0, 17]); // 서버 기록은 그대로
+  });
+});
