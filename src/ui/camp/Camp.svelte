@@ -326,7 +326,8 @@
   <Sheet onclose={() => (sheet = null)} mainText="다 했어요">
     {#snippet title()}⚙ 설정{/snippet}
     {#if feat('theme')}<span class="slab">🎨 테마</span>
-    <ThemePicker now={theme} {feats} onpick={pickTheme} paper sub />{:else}<span class="slab">📝 보기</span><ModeSwitch dark />{/if}
+    <ThemePicker now={theme} {feats} onpick={pickTheme} paper sub />{:else}<span class="slab">🎨 테마</span>
+    <ThemePicker now={theme} feats={null} basic onpick={pickTheme} paper sub />{/if}
     <span class="slab">🔊 소리</span>
     <SoundToggles />
     {#if pupil && meBound()}{@const off = !!S.get(`accounts/${pupil.cls}/${pupil.num}/feedOff`)}

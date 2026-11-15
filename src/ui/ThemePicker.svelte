@@ -2,12 +2,12 @@
   import { lockOf, savedPaper, setPaper, THEMES, type Feats, type Theme } from '../theme/theme';
   import { setSubmit, submit } from './submit.svelte';
   // 🎨 테마 고르기 (#144): 11칸 · 고른 것 ✓ · 잠긴 테마 = 흐림 + 조건 한 줄(진행 n / m) · feats = null 이면 모두 열림(교사 폰)
-  const { now, feats, onpick, paper = false, sub = false }: { now: Theme; feats: Feats | null; onpick: (t: Theme) => void; /** 📜 문제 칸만 양피지 칸 보이기 (학생 · 교사 폰) */ paper?: boolean; /** 📝 제출 모드 v2 칸 (학생 캠프만 · 테마처럼 고름 · 2026-11-14) */ sub?: boolean } = $props();
+  const { now, feats, onpick, paper = false, sub = false, basic = false }: { now: Theme; feats: Feats | null; onpick: (t: Theme) => void; /** ⚙ 테마 기능 끔 = 기본 테마 + 학습지만 */ basic?: boolean; /** 📜 문제 칸만 양피지 칸 보이기 (학생 · 교사 폰) */ paper?: boolean; /** 📝 제출 모드 v2 칸 (학생 캠프만 · 테마처럼 고름 · 2026-11-14) */ sub?: boolean } = $props();
   let qp = $state(savedPaper());
 </script>
 
 <div class="tgrid" role="group" aria-label="테마">
-  {#each THEMES as d (d.id)}
+  {#each basic ? THEMES.filter((x) => x.id === 'gold') : THEMES as d (d.id)}
     {@const L = lockOf(d, feats)}
     {@const on = now === d.id && !(sub && submit.on)}
     <button type="button" class="th" data-th={d.id} class:on aria-pressed={on} disabled={!L.open} onclick={() => { if (sub) setSubmit(false); onpick(d.id); }}>
@@ -18,7 +18,7 @@
   {/each}
   {#if sub}<button type="button" class="th" data-th="submit" data-k="th-submit" class:on={submit.on} aria-pressed={submit.on} onclick={() => setSubmit(true)}>
     <span class="sw" aria-hidden="true"><i></i><i></i><i></i></span>
-    <b>제출{#if submit.on} ✓{/if}</b><small>학습지 꼴 · 글자만</small>
+    <b>학습지{#if submit.on} ✓{/if}</b><small>종이 꼴 · 글자만 · 진행 그대로</small>
   </button>{/if}
 </div>
 {#if paper}<button type="button" class="qp" role="switch" aria-checked={qp} data-k="qpaper" onclick={() => { qp = !qp; setPaper(qp); }}><span class="pv" aria-hidden="true"></span><span class="tx"><b>📜 문제 칸만 양피지</b><small>어느 테마든 문제 카드만 양피지 바탕 · 진한 글씨</small></span><i class="sw2" class:on={qp}></i></button>{/if}
@@ -34,7 +34,10 @@
   .th:disabled { opacity: 0.5; box-shadow: none; }
   .th:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .th small { font-size: 11.5px; font-weight: 500; color: var(--text-2); line-height: 1.3; }
-  .sw { display: flex; gap: 3px; } .sw i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(128, 128, 128, 0.4); }
+  /* 작은 미리 보기 카드 = 바탕 · 카드 · 강조 단추 (그 테마 색) */
+  .sw { position: relative; display: block; width: 100%; height: 34px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(128, 128, 128, 0.4); }
+  .sw i { position: absolute; display: block; border-radius: 4px; }
+  .sw i:nth-child(1) { inset: 0; border-radius: 0; } .sw i:nth-child(2) { left: 6px; top: 6px; width: 58%; height: 22px; } .sw i:nth-child(3) { right: 6px; top: 10px; width: 24%; height: 14px; border-radius: 7px; }
   /* 견본 색 = 그 테마의 바탕 · 판 · 강조 */
   [data-th='gold'] .sw i:nth-child(1) { background: #0f1115; } [data-th='gold'] .sw i:nth-child(2) { background: #222632; } [data-th='gold'] .sw i:nth-child(3) { background: #f5b84a; }
   [data-th='navy'] .sw i:nth-child(1) { background: #0d1530; } [data-th='navy'] .sw i:nth-child(2) { background: #15224a; } [data-th='navy'] .sw i:nth-child(3) { background: #f2c14e; }

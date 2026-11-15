@@ -1,0 +1,40 @@
+// 🎨 테마 창 (b203 · DECISIONS f196aae): 옛 「게임 | 제출」 자리 = 🎨 단추 → 아래 시트(게임 테마 전부 + 학습지 · 미리 보기 카드)
+//   전투 중(6차시 문제 4 소레이드 · 고른 답 그대로) 테마 바꾸기 → 답 · 단계 유지 → 학습지 → 단추 글자 「테마」 · 다시 게임 → 답 그대로
+const { chromium } = require('playwright');
+const SHOTS = process.argv[2] || '.', base = 'http://localhost:4173/';
+const log = (...a) => console.log(...a);
+(async () => {
+  const b = await chromium.launch(), errs = [];
+  const ctx = await b.newContext({ viewport: { width: 360, height: 760 } });
+  const open = async (url) => { const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(base + url); return p; };
+  const hall = await open('?role=hall&mode=test&lesson=set-06@7&room=TH1'); await hall.setViewportSize({ width: 1000, height: 900 }); await hall.waitForSelector('.dock');
+  const s = await open('?role=student&room=TH1'); await hall.waitForTimeout(1200);
+  await hall.mouse.move(500, 400); await hall.click('.dock .t:has-text("고정")');
+  await hall.click('.dock .go'); await hall.waitForTimeout(300); await hall.click('.dock .go'); await hall.waitForTimeout(300);
+  await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 12000 }).catch(() => {});
+  await s.waitForSelector('[data-k="themebtn"]', { timeout: 12000 });
+  log('① 🎨 단추:', (await s.textContent('[data-k="themebtn"]')).trim(), '| 옛 스위치', !!(await s.$('[data-k="modesw"]')));
+  if (await s.$('[data-k="modesw"]')) errs.push('옛 스위치 남음');
+  await s.waitForSelector('.chip', { timeout: 12000 });
+  const chips = await s.$$('.grp .chip, .chip'); for (const c of chips.slice(0, 2)) await c.click();
+  const picked = async () => s.$$eval('.chip', (x) => x.map((e, i) => (e.classList.contains('on') || e.getAttribute('aria-pressed') === 'true' ? i : -1)).filter((i) => i >= 0).join(','));
+  const stageT = async () => (await s.textContent('.bcard .lab, .paper-h b, .st-now, [class*="stage"] b').catch(() => '')).trim();
+  const p0 = await picked(), st0 = await stageT(); log('② 고른 답', p0, '| 단계', st0);
+  await s.evaluate(() => window.scrollTo(0, 200)); const y0 = await s.evaluate(() => scrollY);
+  await s.$eval('[data-k="themebtn"]', (x) => x.click()); /* 손가락 누름 = 스크롤 안 움직임 (playwright click 은 단추를 화면 안으로 끌어옴) */ await s.waitForSelector('[data-k="theme-sheet"]'); const yo = await s.evaluate(() => scrollY); await s.click('.sheet .x'); await s.waitForTimeout(300); log('   열고 닫기만 → 스크롤', y0, '→', yo, '→', await s.evaluate(() => scrollY)); await s.evaluate((y) => window.scrollTo(0, y), y0);
+  await s.$eval('[data-k="themebtn"]', (x) => x.click()); await s.waitForSelector('[data-k="theme-sheet"]');
+  const tiles = await s.$$eval('[data-k="theme-sheet"] [data-th]', (x) => x.map((e) => e.dataset.th)); log('③ 테마 칸', tiles.length, tiles.join(' '));
+  if (!tiles.includes('submit') || tiles.length < 3) errs.push('테마 칸');
+  await s.screenshot({ path: `${SHOTS}/theme-sheet.png` });
+  const pick = async (th) => { await s.click(`[data-k="theme-sheet"] [data-th="${th}"]:not([disabled])`).catch(async () => { await s.click('[data-k="theme-sheet"] [data-th="gold"]'); }); await s.waitForTimeout(300); };
+  await pick('navy'); const th1 = await s.evaluate(() => document.documentElement.dataset.theme || ''); await s.click('.sheet .x'); await s.waitForTimeout(300);
+  const p1 = await picked(), st1 = await stageT(), y1 = await s.evaluate(() => scrollY);
+  log('④ 테마 바꿈 →', th1, '| 답', p1, '| 단계', st1, '| 스크롤', y0, '→', y1); if (p1 !== p0 || st1 !== st0) errs.push('테마 바꾼 뒤 답 · 단계'); if (Math.abs(y1 - y0) > 4) errs.push('스크롤');
+  await s.click('[data-k="themebtn"]'); await pick('submit'); await s.click('.sheet .x'); await s.waitForTimeout(500);
+  const btn = (await s.textContent('[data-k="themebtn"]')).trim(), sub = await s.evaluate(() => document.documentElement.dataset.submit || '');
+  const p2 = await picked(); log('⑤ 학습지 → 단추', btn, '| submit', sub, '| 답', p2); if (btn !== '테마' || sub !== '1' || p2 !== p0) errs.push('학습지');
+  await s.screenshot({ path: `${SHOTS}/theme-paper.png` });
+  await s.click('[data-k="themebtn"]'); await s.screenshot({ path: `${SHOTS}/theme-sheet-paper.png` }); await pick('gold'); await s.click('.sheet .x'); await s.waitForTimeout(500);
+  const p3 = await picked(); log('⑥ 다시 게임 → 단추', (await s.textContent('[data-k="themebtn"]')).trim(), '| 답', p3); if (p3 !== p0) errs.push('게임 돌아옴');
+  log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
+})();
