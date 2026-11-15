@@ -1,5 +1,6 @@
 <script lang="ts">
   import { handsOf, lowerHand, reviewsOf } from '../../school/help';
+  import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
   import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
   import { holdWake, wakeTip } from '../wake.svelte';
@@ -94,6 +95,9 @@
   const named = $derived(COLS <= 8);
   // ✋ 💡 도움 3단 뒤 손든 학생도 🙋 줄에 (📜 2026-11-15) · 칩 누름 = 칼이 다 떨어진 학생이면 ⚔ 보급 · 손만 든 학생이면 손 내림
   const hands = $derived(R && mid ? handsOf(R, mid) : []);
+  // ✔ 개념 체크 (📜 2026-11-15 · school/cc.ts): 개념 단계에 check 가 있을 때만 단추 · 누름 = 30초 열기 · 다시 = 일찍 닫기 · 아래 한 줄 = 맞힘 n / 인원 · 많이 고른 오답
+  const ccIsOpen = $derived(!!R && ccOpen(R, step, now));
+  const ccSt = $derived(R && step?.check && ccRan(R, step) ? ccStats(R, step) : null);
   // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
   const revs = $derived(mid ? reviewsOf(L, mid) : []);
   const revNow = $derived(R?.state.review && R.state.review.mid === mid ? R.state.review : null);
@@ -219,6 +223,7 @@
         <div class="fbar">{#each G as g (g.from)}<i style:flex={g.min} style:background={COLOR[g.kind]}></i>{/each}</div>
       </div>
     </div>
+    {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
     <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
@@ -264,6 +269,7 @@
       <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
+      {#if step?.kind === 'concept' && step.check}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
       {#if revs.length}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
@@ -422,6 +428,7 @@
   .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }
+  .ccline { margin: var(--s2) var(--s4) 0; padding: 8px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 15px; }
   .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
   .rdock button { height: 54px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); display: grid; place-items: center; align-content: center; gap: 1px; padding: 0; box-shadow: 0 3px 0 var(--press-sh); }
   .rdock button i { font-style: normal; font-size: 17px; line-height: 1; }

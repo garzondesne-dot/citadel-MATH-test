@@ -201,7 +201,17 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     if (!s || !KINDS.includes(String(s.kind))) { out.push({ at, msg: `종류 「${s?.kind ?? ''}」 — ${KINDS.join(' · ')}`, lvl: 'err' }); return; }
     if (!s.id || !s.title) { out.push({ at, msg: 'id · 제목(title)이 비었어요', lvl: 'err' }); return; }
     if (steps.some((x) => x.id === s.id)) out.push({ at, msg: `id 「${s.id}」 가 겹쳐요`, lvl: 'err' });
-    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}) });
+    // ✔ 개념 체크 (📜 2026-11-15): 개념 단계만 · check = { type: 'ox' | 'choice', q, ch?(선다 보기 2개 이상), a(OX = true/false 또는 O/X · 선다 = 보기 번호 0부터), why }
+    let cc: Step['check'] | undefined;
+    if ((s as unknown as { check?: unknown }).check != null) {
+      const c = (s as unknown as { check: Record<string, unknown> }).check, bad = (m: string) => { out.push({ at, msg: `개념 체크(check) — ${m}`, lvl: 'err' }); };
+      if (s.kind !== 'concept') bad('개념(concept) 단계에만 달아요');
+      else if (!c || typeof c !== 'object' || (c.type !== 'ox' && c.type !== 'choice')) bad("type 은 'ox' 또는 'choice'");
+      else if (!str(c.q) || !str(c.why)) bad('문제(q) · 틀렸을 때 한 줄(why)이 비었어요');
+      else if (c.type === 'ox') { const a = c.a === true || c.a === 'O' || c.a === 'o' ? true : c.a === false || c.a === 'X' || c.a === 'x' ? false : null; if (a == null) bad('OX 정답(a)은 true/false 또는 O/X'); else cc = { type: 'ox', q: String(c.q), a, why: String(c.why) }; }
+      else { const ch = Array.isArray(c.ch) ? (c.ch as unknown[]).map(String) : []; const a = Number(c.a); if (ch.length < 2) bad('선다 보기(ch)가 2개 이상'); else if (!Number.isInteger(a) || a < 0 || a >= ch.length) bad(`정답(a) 「${String(c.a)}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖`); else cc = { type: 'choice', q: String(c.q), ch, a, why: String(c.why) }; }
+    }
+    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}), ...(cc ? { check: cc } : {}) });
   });
   const monsters: Record<string, MonsterPack> = {};
   for (const s of steps.filter((x) => x.kind === 'monster')) {

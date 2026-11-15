@@ -148,7 +148,15 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
         kpis: [{ lab: '최근 7일 수업 밖 활동', big: `${now7} / ${studs.length}명`, sub: `${now7 >= prev7 ? '▲' : '▼'} 그 전 7일 ${prev7}명` }, { lab: '수업 밖 풀이', big: `${solves}회`, sub: '최근 2주' }, { lab: '1인당 풀이', big: `${avg(studs.map((s) => s.extra.solves))}회`, sub: `오답 고침 ${fixes}회` }, { lab: '최근 7일 접속', big: `${now7} / ${studs.length}명`, sub: `수업 참여 ${studs.reduce((a, s) => a + s.went, 0)}회` }],
         bars: [{ title: '수업 밖 활동 학생 수', vals: act, labels, foot: `이번 주 ${act[5]}명` }, { title: '수업 밖 문제 풀이 수', vals: weeks, labels, foot: `이번 주 ${weeks[5]}회` }] };
     }
-    case 'weak': { const dr = [...new Set(sc.per.flatMap((x) => (x as { dropped?: string[] }).dropped ?? []))]; return { id, title: '개념별 약점', info: '반 전체 첫 시도 정답률이 낮은 개념부터 = 다음 수업 복습 1순위', ...(dr.length ? { note: `🧹 ${dr.join(' · ')}` } : {}), list: weakList(studs) }; }
+    case 'weak': {
+      const dr = [...new Set(sc.per.flatMap((x) => (x as { dropped?: string[] }).dropped ?? []))];
+      // ✔ 개념 체크 참고 (📜 2026-11-15 · 성적 아님): records … /cc = { 개념 단계: 1 | 0 } → 차시 · 개념마다 맞힘 / 낸 수
+      const ccAgg: Record<string, [number, number]> = {}, recAll = S.get<Record<string, Record<string, { cc?: Record<string, number> } | null>>>(`records/${cls.replace(/[.#$/[\]]/g, '_')}`) || {};
+      for (const byL of Object.values(recAll)) for (const [lid, r] of Object.entries(byL || {})) for (const [sid, v] of Object.entries(r?.cc || {})) { const a2 = (ccAgg[`${lid}|${sid}`] ||= [0, 0]); a2[1]++; if (Number(v) === 1) a2[0]++; }
+      const ccLine = Object.entries(ccAgg).map(([k, [ok, n]]) => { const [lid, sid] = k.split('|') as [string, string], P = PACKS.find((x) => x.id === lid), st = P?.steps.find((x) => x.id === sid); return `${P?.no ?? ''}차시 ${(st?.title ?? sid).replace(/^개념 \d+ · /, '')} ${ok}/${n}`; }).join(' · ');
+      const notes = [dr.length ? `🧹 ${dr.join(' · ')}` : '', ccLine ? `✔ 개념 체크(참고 · 성적 아님): ${ccLine}` : ''].filter(Boolean);
+      return { id, title: '개념별 약점', info: '반 전체 첫 시도 정답률이 낮은 개념부터 = 다음 수업 복습 1순위', ...(notes.length ? { note: notes.join('  ／  ') } : {}), list: weakList(studs) };
+    }
     case 'mis': { // 🔎 정식 dash.js 「⑥ 오개념」 그대로 (수업 + 🏰 성채 · 🎯 허수아비 빼기 · 📜 2026-11-15 머리 🔨 (c))
       const agg: Record<string, { w: number; f: number; who: number }> = {};
       studs.forEach((s) => Object.entries(s.mis).forEach(([k, v]) => { const a = (agg[k] = agg[k] || { w: 0, f: 0, who: 0 }); a.w += v[0]; a.f += v[1]; a.who++; }));

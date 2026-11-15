@@ -21,6 +21,7 @@ interface QBase {
   /** 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 선택 칸): 교사가 TV 에 띄우는 풀이 카드들 · lines = 풀이 줄 · focus = 「함께 살펴볼 줄」 번호(0부터) · ask = 질문 · wrong = 「검토할 풀이」 */
   review?: Review[];
 }
+export interface ConceptCheck { type: 'ox' | 'choice'; q: string; ch?: string[]; a: number | boolean; why: string }
 export interface Help { concept: string; first?: string; example?: { q: string; sol: string } }
 export interface Review { lines: string[]; focus?: number; ask?: string; wrong?: boolean }
 export type Question =
@@ -66,6 +67,8 @@ export interface Step {
   img?: string;
   /** 다음 판에서 만들 자리 — 단계 목록에 보이고 진행은 건너뜀 */
   later?: boolean;
+  /** ✔ 개념 체크 (📜 2026-11-15 · 개념 단계 선택 칸): 리모컨 「✔ 개념 체크」를 누를 때만 학생 폰에 한 문제 · 30초 · 체력 · 데미지 · 보상 없음 */
+  check?: ConceptCheck;
   /** ⏱ 예상 분 (#132 · 선생님 입력판) — 대기실 「오늘 흐름」 · TV 흐름도 */
   min?: number;
   /** 보강 · 복습 몬스터 (정식 special · review) */
@@ -190,6 +193,7 @@ export interface Room {
     focus?: boolean; rest?: { at: number; min: number } | null; holdAt?: number | null; pauseMs?: number | null;
     /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름 · 한 번) · 문 닫기 장면 */ deadline?: number | null; extend?: number; door?: { at: number; ask: boolean } | null; doorExt?: number | null;
     /** 🎬 영상 · 📄 문제 창 (단계 id) · 💬 TV 대기실 선생님 말 · 🎁 마지막 선물(TV 표시) · 🔄 새로 고침 보낸 시각 */
+    /** ✔ 개념 체크 열림 (리모컨 · 30초 · 교사 일찍 닫기) = 단계 id · 연 시각 · 닫는 시각 */ cc?: { id: string; at: number; end: number } | null;
     /** 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기 · TV 양피지 카드) = 몬스터 · 문항 · 풀이 번호 */ review?: { mid: string; i: number; k: number } | null;
     video?: string | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
     /** 수업 끝 (닫힘) · ⏯ 닫힌 그때 이어서 자리 */ closed?: boolean; stop?: { step: number; fresh: string | null; done: boolean } | null;

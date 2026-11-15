@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ccOpen, ccStats } from '../../school/cc';
   import { reviewsOf } from '../../school/help';
   import { siteUrl } from '../../channel';
   import { holdWake } from '../wake.svelte';
@@ -364,6 +365,7 @@
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
     <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
+  {#if R && step && ccOpen(R, step, now)}<div class="ccband" data-k="tv-cc" role="status">✔ 개념 체크 · 준비 완료 <b>{ccStats(R, step).n}</b> / {ids.length}</div>{/if}<!-- ✔ 개념 체크 (📜 2026-11-15): TV 는 낸 수만 · 맞힘 · 오답은 리모컨 -->
   {#if tvRev}
     <!-- 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기): 양피지 카드 · 이름 · 점수 · 정답/오답 글자 없음 · 「함께 살펴볼 줄」 강조 · 질문 · wrong = 「검토할 풀이」 꼬리표 -->
     <div class="ov rev" data-k="tv-review"><div class="parch">
@@ -568,6 +570,8 @@
   .dpane { position: absolute; right: 1.5cqw; top: 7.5cqh; /* 위 막대(3.8cqw ≈ 6.8cqh) 바로 아래 · 한 화면에 더 들어가게 */ bottom: 10cqh; /* 🎮 아래 조작 막대(0.7배 · 약 6.7cqh + 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 32cqw; /* 📜 2026-11-14 「좌우 폭을 조금 줄여서」 40 → 32 */ z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }
+  .ccband { position: absolute; top: 9cqh; left: 50%; transform: translateX(-50%); z-index: 7; padding: 1.2cqh 2.4cqw; border-radius: 999px; background: #1b1408e6; color: #fff; border: 0.3cqw solid var(--accent, #f5b84a); font-size: var(--tv-title); font-weight: 800; }
+  .ccband b { color: #ffe066; }
   .ov.rev { background: rgba(5, 6, 10, 0.7); padding: 4cqh 6cqw; }
   .parch { width: min(88cqw, 1500px); max-height: 82cqh; overflow: auto; text-align: left; padding: 3cqh 3.4cqw; border-radius: 1.4cqw; color: #2b1d0e; background: linear-gradient(#f6e7c4, #ead3a0); box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, 0.6), inset 0 0 0 0.4cqw #c9a46a; }
   .parch .rh { display: flex; align-items: center; gap: 1.4cqw; margin-bottom: 1.6cqh; }

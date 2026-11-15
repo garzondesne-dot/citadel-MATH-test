@@ -34,6 +34,8 @@
   import PrepImg from './q/PrepImg.svelte';
   import Vid from './q/Vid.svelte';
   import Loot from './result/Loot.svelte';
+  import ConceptCheckCard from './q/ConceptCheckCard.svelte';
+  import { ccRan } from '../school/cc';
   import { conceptOf } from '../school/prep';
   import { summaryOf } from '../school/records';
   import { rewardOf, settle } from '../school/reward';
@@ -249,6 +251,7 @@
     {#if R.state.closed}{#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" why="🏁 수업이 끝났어요" />{:else}<BottomAction text="🏁 수업이 끝났어요" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫아도 이 화면은 그대로예요" />{/if}
   {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
     <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
+    {#if step.kind === 'concept' && step.check && ccRan(R, step)}<ConceptCheckCard {S} {R} {code} {uid} {step} {now} />{/if}<!-- ✔ 개념 체크 (📜 2026-11-15 · 리모컨이 열 때만) -->
     <div class="bcard talk" data-k="talk">
       <span class="lab acc">📣 {step.kind === 'intro' ? '도입 · 수업을 시작해요' : '개념 설명'}</span>
       <b class="ttl">{step.title}</b>

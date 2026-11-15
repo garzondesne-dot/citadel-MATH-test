@@ -2,6 +2,7 @@
 //   mons = { 몬스터: o(첫 시도 다 맞힘) · f(고쳐서 다 맞힘) · x(냈지만 못 다 맞힘) · -(남들은 냈는데 안 냄) · n(아무도 안 함) }
 //   bossM = 형성평가 문항마다 'o · x · - · n' 한 줄 · boss = 맞힌 문항 수(체력 문항까지) · bossN = 체력 문항 수 · won = 보스 처치
 //   더한 칸(정식에 없음 · 정식 앱은 무시): right · total = 맞힌 소문제 / 전체 (📋 게시판 수호자 기준) · loot · firstXp 는 있던 값 그대로
+import { ccRecord } from './cc';
 import type { LessonPack, Room } from '../model/types';
 import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
@@ -35,6 +36,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
     out.bossM = mast.map((ok, i) => (ok ? 'o' : bs[i]?.n ? 'x' : any ? '-' : 'n')).join('');
     out.won = !!bossHp(L, R, now).won;
   }
+  { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)
   if (prev?.loot) out.loot = prev.loot;
   if (prev?.firstXp) out.firstXp = prev.firstXp;
   return mergeRow(prev, out);
@@ -82,6 +84,7 @@ export function mergeRow(prev: (Partial<RecRow> & Record<string, unknown>) | nul
   for (const [k, v] of Object.entries(pm)) if (did(v) && !did(mons[k])) mons[k] = v;
   const out: RecRow = { ...(prev as RecRow), ...cur, mons };
   // 📌 개념 칸 = 이번 수업에서 한 개념은 새 값 · 안 한 개념은 앞 값 그대로 · 🔎 오개념 = 앞 수업들 + 이번 수업(같은 수업을 다시 저장하면 이번 몫만 바뀜)
+  { const pc = (prev as { cc?: Record<string, number> }).cc, cc2 = (cur as { cc?: Record<string, number> }).cc; if (pc || cc2) (out as { cc?: Record<string, number> }).cc = { ...(pc || {}), ...(cc2 || {}) }; }
   out.conc = { ...((prev.conc as RecRow['conc']) || {}), ...(cur.conc || {}) }; out.names = { ...((prev.names as RecRow['names']) || {}), ...(cur.names || {}) };
   const base = (String(prev.code) === String(cur.code) ? prev.misBase : prev.mis) as RecRow['mis'] | undefined, mis: Record<string, [number, number]> = {};
   for (const src of [base || {}, cur.mis || {}]) for (const [k, v] of Object.entries(src)) { const a = (mis[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
