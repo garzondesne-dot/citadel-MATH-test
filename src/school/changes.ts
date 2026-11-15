@@ -8,8 +8,9 @@ import type { Store } from '../model/types';
 import { BETA, TEST_ADDR } from '../channel';
 import RAW from './changes.json';
 
-export interface ChangeItem { who: '교사' | '학생'; text: string; check?: string }
-export interface Change { ver: string; date: string; channel: 'release' | 'beta'; items: ChangeItem[]; student: string[] }
+// 📜 2026-11-15 선생님 「쪽지 내용 중요한 게 잘 보이게 압축해서」: top = 그 판에서 가장 중요한 것 한 줄(크게) · lines = 최대 5줄(중요한 순 · 20~30자 · 무엇이 어떻게)
+//   check = 「✔ 확인할 것」 최대 2줄 · more = 버그 고침 · 속도 · 눈에 안 보이는 것(「그 밖 n건」 · 누르면 펼침) · 원인 · 코드 · 파일 이름 없음 · student = 학생 새 소식 최대 3줄
+export interface Change { ver: string; date: string; channel: 'release' | 'beta'; top: string; lines: string[]; check: string[]; more: string[]; student: string[] }
 export const CHANGES = RAW as Change[];
 export const vnum = (v?: string | null) => Number(String(v ?? '').replace(/\D/g, '')) || 0;
 /** 이 판까지의 바뀐 것 (최신부터) */
@@ -25,14 +26,21 @@ export const studentLines = (list: Change[]) => list.flatMap((c) => c.student ||
 export type Chan = 'rel' | 'beta';
 export const teacherSeenPath = (uid: string, ch: Chan) => `school/teacher/seen/${uid}/${ch}`;
 export const studentSeenPath = (cls: string, num: number) => `accounts/${cls}/${num}/seen`;
-const tag = (w: ChangeItem['who']) => (w === '교사' ? '👩‍🏫' : '🎒');
+/** 소식 탭 글 = 맨 위 줄 · 줄 · ✔ 확인할 것 · 그 밖 n건 */
+export function changeBody(c: Change): string {
+  const out = [`★ ${c.top}`, ...c.lines.map((t) => `· ${t}`)];
+  if (c.check.length) out.push('', ...c.check.map((t) => `✔ 확인할 것: ${t}`));
+  if (c.more.length) out.push('', `▸ 그 밖 ${c.more.length}건: ${c.more.join(' · ')}`);
+  return out.join('\n');
+}
+/** 몇 가지 (소식 부제) */
+export const changeCount = (c: Change) => 1 + c.lines.length + c.more.length;
 /** 교사 소식 탭 한 통 (판 하나 · 같은 판 두 번 X = 칸 이름이 판) */
 export function teacherNews(S: Store, c: Change, ch: Chan, at: number): boolean {
   const id = `news_${ch}_${c.ver}`, p = `school/inbox/${id}`;
   if (S.get(p)) return false;
-  const lines = c.items.map((x) => `${tag(x.who)} ${x.text}${x.check ? `\n   ✔ 확인할 것: ${x.check}` : ''}`);
   const stu = ch === 'beta' && c.student?.length ? `\n\n🎒 학생에게 갈 새 소식 (정식 배포 때)\n${c.student.map((t) => `· ${t}`).join('\n')}` : '';
-  S.set(p, { id, kind: 'news', title: ch === 'rel' ? `📢 [✅ 정식 ${c.ver}] 바뀐 것` : `🧪 [베타 ${c.ver}] 바뀐 것 · 베타에서 확인할 것`, sub: `${c.date} · ${c.items.length}가지`, body: lines.join('\n') + stu, at });
+  S.set(p, { id, kind: 'news', title: ch === 'rel' ? `📢 [✅ 정식 ${c.ver}] 바뀐 것` : `🧪 [베타 ${c.ver}] 바뀐 것 · 베타에서 확인할 것`, sub: `${c.date} · ${changeCount(c)}가지`, body: changeBody(c) + stu, at });
   return true;
 }
 /** 교사 = 못 본 판마다 소식 한 통 · 본 판 = 지금 판 (정식은 창의 「확인했어요」 때 seen 을 씀) */

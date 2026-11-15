@@ -29,7 +29,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   const B2 = await teacher(false); v = await vers(B2); ok('② 두 번째 기기(같은 계정) = 창 없음', v.length === 0, v.join(','));
   // ③ 판 건너뛰기
   await rest(`school/teacher/seen/${uid}/rel`, 'PUT', 'b204'); await A.reload(); await A.waitForSelector('.tabs'); await A.waitForTimeout(1500);
-  v = await vers(A); ok('③ 판 건너뛰기(본 판 b204) = 못 본 판 모두 · 최신부터', v.join(',') === ['b207', 'b206', 'b205'].filter((x) => Number(x.slice(1)) <= Number(build.slice(1))).join(','), v.join(','));
+  v = await vers(A); ok('③ 판 건너뛰기(본 판 b204) = 못 본 판 모두 · 최신부터', v.join(',') === Array.from({ length: Number(build.slice(1)) - 204 }, (_, k) => `b${Number(build.slice(1)) - k}`).join(','), v.join(','));
   await A.screenshot({ path: `${SHOTS}/changes-skip.png` });
   await okBtn(A); await A.waitForTimeout(600);
   const inbox = Object.keys((await rest('school/inbox')) || {}).filter((k) => k.startsWith('news_'));

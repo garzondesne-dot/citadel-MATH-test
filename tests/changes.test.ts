@@ -5,18 +5,20 @@ import { BUILD } from '../src/build';
 import { memoryStore } from '../src/store/device';
 import type { Store } from '../src/model/types';
 
-const mk = (v: string, stu: string[] = []): Change => ({ ver: v, date: '2026-11-15', channel: 'release', items: [{ who: '교사', text: `${v} 고침` }], student: stu });
+const mk = (v: string, stu: string[] = []): Change => ({ ver: v, date: '2026-11-15', channel: 'release', top: `${v} 고침`, lines: [], check: [], more: [], student: stu });
 const ALL = [mk('b203', ['a']), mk('b204'), mk('b205', ['b', 'c']), mk('b206', ['d', 'e', 'f', 'g'])];
 const store = (): Store => ({ ...memoryStore(), kind: 'memory' as const });
 
 describe('🆕 바뀐 것', () => {
-  it('목록 꼴: 판마다 하나 · 지금 판(BUILD)까지 있음 · 교사 · 학생 꼬리표 · 학생 줄 3줄 안 · 코드 · 파일 이름 없음', () => {
+  it('목록 꼴(압축): 판마다 하나 · 지금 판까지 · 맨 위 줄 · 줄 5 · 확인할 것 2 · 줄 길이 · 학생 3줄 · 코드 · 파일 이름 없음', () => {
     const vers = CHANGES.map((c) => c.ver);
     expect(new Set(vers).size).toBe(vers.length);
     expect(vers).toContain(BUILD);
+    const len = (t: string) => [...t].length;
     for (const c of CHANGES) {
-      expect(c.items.length).toBeGreaterThan(0);
-      for (const x of c.items) { expect(['교사', '학생']).toContain(x.who); expect(x.text).not.toMatch(/\.(ts|svelte|js|json)\b|src\/|tools\//); }
+      expect(c.top.trim()).not.toBe('');
+      expect(c.lines.length).toBeLessThanOrEqual(5); expect(c.check.length).toBeLessThanOrEqual(2);
+      for (const t of [c.top, ...c.lines, ...c.check, ...c.more]) { expect(len(t), t).toBeLessThanOrEqual(34); expect(t).not.toMatch(/\.(ts|svelte|js|json)\b|src\/|tools\//); }
       expect(c.student.length).toBeLessThanOrEqual(3);
     }
   });
@@ -35,7 +37,7 @@ describe('🆕 바뀐 것', () => {
     expect(teacherNews(S, ALL[3]!, 'beta', 1)).toBe(true);
     expect(teacherNews(S, ALL[3]!, 'beta', 2)).toBe(false);
     const n = S.get<{ title: string; body: string }>('school/inbox/news_beta_b206')!;
-    expect(n.title).toMatch(/🧪 \[베타 b206\]/); expect(n.body).toMatch(/학생에게 갈 새 소식/);
+    expect(n.title).toMatch(/🧪 \[베타 b206\]/); expect(n.body).toMatch(/학생에게 갈 새 소식/); expect(n.body.split('\n')[0]).toBe('★ b206 고침');
     const got = teacherSync(S, 't1', 'rel', 'b206', 10, true);
     expect(got.map((c) => c.ver)).toEqual(['b206']); // 처음 = 이번 판만
     expect(S.get('school/inbox/news_rel_b206')).toBeTruthy();
