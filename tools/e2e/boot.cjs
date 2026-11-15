@@ -1,6 +1,6 @@
 // ⏳ 로딩 화면 + 당겨서 새로 고침 막기 (📜 2026-11-14 선생님 · 머리 🔨 · 모든 판 공통 화면 규칙)
 //   ① 느린 네트워크(스크립트 3초 · 10초 늦춤): 첫 그림부터 「⏳ 불러오는 중…」 + ↻ · 8초 = 「인터넷이 느려요」 + 🔄 새로 고침 · 앱이 뜨면 사라짐
-//   ② 학생 폰 · 교사 폰 · TV · 체험(?role=atk): html · body overscroll-behavior-y = none · 안쪽 스크롤 칸 = contain · 손가락 당겨 내림(터치) 뒤 새로 고침 없음
+//   ② 학생 폰 · 교사 폰 · TV · 체험(?role=atk): html · body overscroll-behavior-y = none · 손가락 당겨 내림(터치) 뒤 새로 고침 없음
 //   ③ 새 판 받는 중(?v=) 글자 · 교사 탭 새로 고침 뒤 복귀
 const { chromium, devices } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
@@ -33,7 +33,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
     const c = await p.context().newCDPSession(p);
     const tp = (type, y) => c.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x: 180, y }] });
     await tp('touchStart', 120); for (let y = 140; y <= 620; y += 40) { await tp('touchMove', y); await p.waitForTimeout(16); } await tp('touchEnd'); await p.waitForTimeout(1200);
-    const ok = ob.html === 'none' && ob.body === 'none' && ob.innerOk && reloads === 0;
+    const ok = ob.html === 'none' && ob.body === 'none' && reloads === 0; // 🐞 b207: 안쪽 칸 contain 은 뺌(표 · 막대가 세로 끌기를 먹던 원인) · 새로 고침은 맨 바깥 none 으로 막힘
     out.push(`📱 ${name}: html ${ob.html} · body ${ob.body} · 안쪽 스크롤 칸 ${ob.inner}개 ${ob.innerOk ? 'contain' : '❌ auto'} · 당겨 내린 뒤 새로 고침 ${reloads}번 ${ok ? '✅' : '❌'}`); if (!ok) errs.push(`${name} 당겨 내림`);
     await p.close();
   }
