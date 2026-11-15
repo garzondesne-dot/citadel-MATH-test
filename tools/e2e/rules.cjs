@@ -46,6 +46,13 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('hostKeys 는 본인도 못 읽음', await as(anon.tok, `hostKeys/111111/${anon.uid}`, 'GET'), false);
   want('TV hosts 뒤 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), true);
   want('학생 방 진행 쓰기', await as(B.tok, 'rooms/111111/state/step', 'PUT', 9), false);
+  // 👩‍🏫 📜 2026-11-15 TV 교사 캠프에서 「내 용사」 바꾸기 = school/tlook (지금 수업 방 hosts + 맞는 키인 TV 만) · 다른 school 칸은 여전히 교사만
+  want('TV tlook 수업 방 전 막힘', await as(anon.tok, 'school/tlook', 'PUT', { hero: 3 }), false);
+  await owner('school/live', 'PUT', { code: '111111' });
+  want('TV(hosts + 키) tlook 쓰기', await as(anon.tok, 'school/tlook', 'PUT', { hero: 3 }), true);
+  want('TV school/live 쓰기 여전히 막힘', await as(anon.tok, 'school/live', 'PUT', { code: 'x' }), false);
+  want('학생 tlook 쓰기 막힘', await as(B.tok, 'school/tlook', 'PUT', { hero: 1 }), false);
+  want('교사 tlook 쓰기', await as(T1.tok, 'school/tlook', 'PUT', { hero: 7 }), true);
   // 🔐 📜 2026-11-14 출시 막는 것 2: 학생 칸 주인(pids) · 💎 선물 · 우편 · 방 학생 칸 = 그 학생 본인 · 교사 · TV 만
   want('pids 내 칸 주인 표시(A = s1_3_1)', await as(A.tok, 'pids/s1_3_1', 'PUT', { u: A.uid, c: '1-3', n: '1' }), true);
   want('pids 남 칸 차지(B → s1_3_1)', await as(B.tok, 'pids/s1_3_1', 'PUT', { u: B.uid, c: '1-3', n: '1' }), false);

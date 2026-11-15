@@ -142,7 +142,7 @@
     <button type="button" class="top" bind:this={topEl} onclick={openHeroes} aria-label="용사 바꾸기">
       <span class="pic"><HeroSprite id={look.hero} play aura={lv} />{#if lv}<b class="enh">+{lv}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b>{me.nick}</b>{#if me.test}<i class="tester">테스터</i>{/if}</span>
+        <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b>{me.nick}</b>{#if me.test}<i class="tester">{teacher ? "선생님" : "테스터"}</i>{/if}</span>
         <span class="sub">{info.name} · {info.job} · {fam.name} · Lv.{xp.lv}</span>
         <span class="chg">용사 바꾸기 ›{#if dots.hero}<i class="bdot" aria-label="살 수 있는 용사 있음"></i>{/if}</span>
       </span>

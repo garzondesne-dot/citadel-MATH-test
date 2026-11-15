@@ -49,6 +49,7 @@
     "school": {
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins/' + auth.uid).val() === true",
+      "tlook": { ".write": "auth != null && root.child('rooms/' + root.child('school/live/code').val() + '/hosts/' + auth.uid).val() === true && root.child('hostKeys/' + root.child('school/live/code').val() + '/' + auth.uid).val() === root.child('secrets/' + root.child('school/live/code').val() + '/hallKey').val()" },
       "board": {
         "rank": { ".write": "auth != null" },
         "feed": { "$k": { ".write": "auth != null && !data.exists() && newData.exists()" } },
