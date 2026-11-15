@@ -11,7 +11,7 @@ let css = false;
 function style() {
   if (css || typeof document === 'undefined') return; css = true;
   const a = AURA, u = (f: string) => `url('${artUrl(`art/${f}`)}')`, st: string[] = [];
-  for (let i = 0; i <= 24; i++) { const t = (i / 24) * Math.PI * 2, x = Math.cos(t) * 32, y = Math.sin(t) * 5, f = Math.sin(t) > 0 && Math.abs(Math.cos(t)) > 0.7; /* 🔧 2026-11-13: 앞 = 궤도 앞쪽 반 중 몸 밖(양옆)일 때만 · 몸통 · 얼굴 앞은 늘 뒤 */ st.push(`${((i / 24) * 100).toFixed(2)}%{transform:translate(calc(var(--p)*${x.toFixed(1)}),calc(var(--p)*${y.toFixed(1)})) scale(${f ? 1 : 0.7});opacity:${f ? 1 : 0.55};z-index:${f ? 3 : 0}}`); }
+  for (let i = 0; i <= 24; i++) { const t = (i / 24) * Math.PI * 2, x = Math.cos(t) * 32, y = Math.sin(t) * 5, f = Math.sin(t) > 0; /* 📜 2026-11-15 정식 그대로(앞 반 바퀴 = 용사 앞) */ st.push(`${((i / 24) * 100).toFixed(2)}%{transform:translate(calc(var(--p)*${x.toFixed(1)}),calc(var(--p)*${y.toFixed(1)})) scale(${f ? 1 : 0.7});opacity:${f ? 1 : 0.45};z-index:${f ? 3 : 0}}`); }
   const s = document.createElement('style'); s.id = 'aura-css';
   s.textContent = `.art.au{container-type:inline-size;--p:1.55cqw;overflow:visible}
 /* 🔧 오라 자리 = 용사 몸 가운데 · 발 기준선 (--bx · --by = 그림 상자 밀림 · 옛 칸 px · 가운데 맞춘 상자는 0) */
@@ -25,12 +25,6 @@ function style() {
 .au-o>.au-s{left:calc(var(--p)*-6);top:calc(var(--p)*-6);width:calc(var(--p)*12);height:calc(var(--p)*12);background:${u(a.orbs)} 0 var(--ay)/400% 1000% no-repeat;animation:auF .6s steps(4) infinite;filter:drop-shadow(0 0 2px var(--au))}
 .au-h{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
 .au-hb{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${a.haloBurst ? u(a.haloBurst) : 'none'} 0 0/600% 100% no-repeat;animation:auF6 1.2s steps(6) infinite;z-index:0;opacity:.95}
-/* 🎨 다듬기 ⑥ (2026-11-13): +4~+9 바닥 고리 = 납작한 타원(세로 줄무늬 그림 대신) · 입자 = 별 모양 */
-.au-r.el{left:calc(50% - var(--p)*30);bottom:calc(var(--p)*-3);width:calc(var(--p)*60);height:calc(var(--p)*14);background:none;border-radius:50%;border:calc(var(--p)*1.8) solid var(--au);box-shadow:0 0 calc(var(--p)*3) var(--au),inset 0 0 calc(var(--p)*3) var(--au);filter:none;animation:auEl 1.4s ease-in-out infinite alternate;box-sizing:border-box}
-.au-r.el.f{clip-path:inset(50% 0 0 0)}
-@keyframes auEl{from{opacity:.95;transform:scale(1)}to{opacity:.6;transform:scale(1.06,1.1)}}
-.au-o.st>.au-s{left:calc(var(--p)*-5.5);top:calc(var(--p)*-5.5);width:calc(var(--p)*11);height:calc(var(--p)*11);background:radial-gradient(circle,#fff 0 22%,var(--au) 45%);clip-path:polygon(50% 0,61% 38%,100% 50%,61% 62%,50% 100%,39% 62%,0 50%,39% 38%);animation:auTw .9s ease-in-out infinite alternate;filter:drop-shadow(0 0 2px var(--au))}
-@keyframes auTw{from{transform:scale(.75) rotate(0)}to{transform:scale(1.1) rotate(45deg)}}
 /* 🔧 화면 고침 1 (2026-11-13 머리 방 Pixel 7): 용사 그림이 .art 자기 배경이면 오라 뒤 겹(고리 · 후광 · 빛살)이 그 위에 그려져 얼굴을 가림 → 용사 그림을 한 겹 더(au-me · z 1) 올려 오라는 늘 용사 뒤 · 앞 반쪽 고리 · 입자만 앞 */
 .au-me{inset:0;background:inherit;z-index:1}
 @keyframes auF6{to{background-position-x:120%}}
@@ -50,10 +44,10 @@ export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, n
   if (body) { art.style.setProperty('--bx', String(body[0])); art.style.setProperty('--by', String(body[1])); }
   art.style.setProperty('--ay', `${((i / 9) * 100).toFixed(3)}%`); art.style.setProperty('--au', col);
   const holy = lv >= 10 && !!AURA.halo;
-  const el = !holy && lv >= 4 ? ' el' : '', st = !holy && lv >= 4 ? ' st' : '';
-  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r${el}"></span>`;
+  // 📜 2026-11-15 선생님 「강화 시 오라가 기존의 에셋 사용한 게 아니더라 · 사용해 줘」 → 모든 단계 = 정식 그림(고리 aura-ring · 입자 aura-orbs) · CSS 타원 · 별(다듬기 ⑥) 안 씀
+  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r"></span>`;
   const n = nOrb(lv, tv), dur = (3.4 - lv * 0.1).toFixed(2);
-  const front = holy ? '' : `<span class="au-s au-r f${el}"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o${st}" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
+  const front = holy ? '' : `<span class="au-s au-r f"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
   const me = getComputedStyle(art).backgroundImage !== 'none' ? '<span class="au-s au-me"></span>' : '';
   art.insertAdjacentHTML('afterbegin', back + me); art.insertAdjacentHTML('beforeend', front);
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
