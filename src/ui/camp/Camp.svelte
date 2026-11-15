@@ -19,7 +19,8 @@
   import MyHero from './MyHero.svelte';
   import FirstHero from './FirstHero.svelte';
   import { isEnd } from '../../raid/raid';
-  import { CAMP, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
+  import { ANIM, CAMP, CAMP_PORTAL, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
+  import { fly } from 'svelte/transition';
   import CampProp from './CampProp.svelte';
   import { portalOf } from './portal.svelte';
   import { setTeacherSink, useMe } from '../../store/me.svelte';
@@ -225,10 +226,66 @@
     let was: number | null = null; try { const v = localStorage.getItem(nk); was = v == null ? null : Number(v) || 0; localStorage.setItem(nk, String(fresh)); } catch { /* 사생활 창 */ }
     if (feat('citadel') && was != null && fresh > was && !untrack(() => hero0)) { giftToast = untrack(() => giftToast) || `🏰 성채던전에 새 방 ${fresh - was}개가 열렸어요!`; sfx('castle-open', 0.8); setTimeout(() => (giftToast = ''), 3200); } // 🔊 2차 🏰
   }
+  // 🏕 B · D · E (📜 2026-11-15 선생님 「ABDE 까지 해 줘 · 베타판에서 해 보고 가려낼게」 · DECISIONS 맨 아래 · 손맛 = GAME-FEEL 짧게 · 소리 · 진동 25ms)
+  //   B 만지면 반응: 물건마다 짧은 반응(허수아비 기우뚱 · 우편함 덜컹 · 성채 종 + 창 불 · 모루 불똥 · 텐트 펄럭 · 문 빛 · 게시판 통 · 모닥불 불꽃) + 숨은 반응 넷(나무 · 버섯 · 달 · 반딧불) · 보상 없음
+  //   D 용사: 8~15초 가만히 두면 일어나 허수아비 · 모닥불로 걸어가 기웃(툭 · 손 쬐기) → 다시 앉음 · 물건을 누르면 그리로 걸어가서(0.6초) 들어감 · 다른 화면이 열리면 멈춤
+  //   E 친구 흔적: 게시판 모집 중 방 친구(최대 3명)가 포털 앞에 서 있음 + 「○○님이 기다려요」(최근 전투 숨김 = 「친구가」) · 방이 차거나 닫히면 포털로 사라짐
+  //   동작 줄이기 = 소리 · 진동 · 빛만(걷기 · 불똥 없음) · 움직임 = transform · opacity 만
+  const RM = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let stageEl = $state<HTMLDivElement | null>(null), stW = $state(0), stH = $state(0);
+  type Fx = { id: number; x: number; y: number; k: string };
+  let fxs = $state<Fx[]>([]), poked = $state<Record<string, boolean>>({}), fxN = 0;
+  const SND: Record<string, string> = { scare: 'dummy-hit', mail: 'mail', castle: 'castle-open', anvil: 'spark', dummy: 'board', tent: 'wind', gate: 'magic', fire: 'fire', tree: 'wind', shroom: 'star', moon: 'star', fly: 'star' };
+  const FXK: Record<string, string> = { fire: 'spark', anvil: 'spark', castle: 'bell', gate: 'glow', tree: 'leaf', shroom: 'glow', moon: 'twinkle', fly: 'fly' };
+  const ptOf = (e?: Event): [number, number] | null => { const r = stageEl?.getBoundingClientRect(), m = e as MouseEvent | undefined; if (!r || !m || m.clientX == null || !r.width) return null; return [((m.clientX - r.left) / r.width) * 100, ((m.clientY - r.top) / r.height) * 100]; };
+  function poke(k: string, e?: Event) {
+    sfx(SND[k] ?? 'click', 0.6); try { navigator.vibrate?.(25); } catch { /* 무시 */ }
+    poked = { ...poked, [k]: true }; setTimeout(() => { const p = { ...poked }; delete p[k]; poked = p; }, 650);
+    const pt = ptOf(e); if (!RM && FXK[k] && pt) { const id = ++fxN; fxs = [...fxs, { id, x: pt[0], y: pt[1], k: FXK[k]! }]; setTimeout(() => (fxs = fxs.filter((f) => f.id !== id)), 1100); }
+  }
+  // D 용사 걷기 (자리 = 캠프 그림 % · 앉은 자리 CAMP.hero)
+  const SEAT = { left: CAMP.hero.left, bottom: CAMP.hero.bottom };
+  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 34, bottom: 27 }, fire: { left: 39, bottom: 16 }, mail: { left: 40, bottom: 28 }, anvil: { left: 24, bottom: 10 }, dummy: { left: 58, bottom: 18 }, tent: { left: 24, bottom: 22 }, castle: { left: 48, bottom: 30 }, gate: { left: 70, bottom: 22 } };
+  type HP = 'sit' | 'walk' | 'attack' | 'idle';
+  let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
+  let walkTok = 0, idleT: ReturnType<typeof setTimeout> | null = null;
+  const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  async function walkTo(to: { left: number; bottom: number }, ms: number, tok: number): Promise<boolean> {
+    if (Math.abs(to.left - hp.left) + Math.abs(to.bottom - hp.bottom) < 0.5) return tok === walkTok;
+    hp = { ...hp, pose: 'walk', flip: to.left < hp.left, ms }; await wait(20); hp = { ...hp, left: to.left, bottom: to.bottom }; await wait(ms);
+    return tok === walkTok;
+  }
+  const heroRow = (p: HP) => (p === 'sit' ? HERO.sitRow : ANIM[p][0]);
+  const heroCol = $derived(hp.pose === 'sit' ? sitF : frame % ANIM[hp.pose][1]);
+  function arm() { if (idleT) clearTimeout(idleT); if (RM) return; idleT = setTimeout(wander, 8000 + Math.random() * 7000); }
+  async function wander() {
+    if (sheet || castleGo != null || hp.pose !== 'sit') { arm(); return; }
+    const tok = ++walkTok, tgt = Math.random() < 0.5 ? 'scare' : 'fire';
+    if (!(await walkTo(SPOT[tgt]!, 1500, tok))) return;
+    if (tgt === 'scare') { hp = { ...hp, pose: 'attack', flip: false }; await wait(240); if (tok !== walkTok) return; poked = { ...poked, scare: true }; sfx('dummy-hit', 0.35); setTimeout(() => { const p = { ...poked }; delete p.scare; poked = p; }, 650); await wait(500); }
+    else { hp = { ...hp, pose: 'idle', flip: false }; await wait(1800); }
+    if (tok !== walkTok) return;
+    if (!(await walkTo(SEAT, 1500, tok))) return;
+    hp = { ...hp, pose: 'sit', flip: false }; arm();
+  }
+  untrack(arm); onDestroy(() => { if (idleT) clearTimeout(idleT); walkTok++; });
+  // 시트가 닫히면 자리로 돌아가 앉음
+  $effect(() => { if (sheet || castleGo != null) return; untrack(() => { if (hp.pose === 'sit' && hp.left === SEAT.left) { arm(); return; } const tok = ++walkTok; void walkTo(SEAT, 900, tok).then((ok) => { if (ok) { hp = { ...hp, pose: 'sit', flip: false }; arm(); } }); }); });
+  /** 물건 누름 = 반응 → 용사가 걸어가서(0.6초) → 들어감 (동작 줄이기 = 바로) */
+  function go(k: string, e?: Event) {
+    e?.stopPropagation(); poke(k, e); arm();
+    if (RM || !SPOT[k]) { tap(k); return; }
+    const tok = ++walkTok;
+    void walkTo(SPOT[k]!, 600, tok).then((ok) => { if (ok) { hp = { ...hp, pose: 'idle' }; tap(k); } });
+  }
+  /** 모닥불 · 숨은 곳 = 반응만 */
+  function poke0(k: string, e: Event) { e.stopPropagation(); poke(k, e); arm(); }
+  // E 친구 흔적
+  const friends = $derived.by(() => { const me0 = pupil?.uid ?? 'me'; return feat('board') ? portal.waiting.filter((m) => m.uid !== me0).slice(0, 3) : []; });
+  const friendText = $derived.by(() => { const f = friends[0]; if (!f) return ''; const off = !!S.get(`accounts/${f.cls}/${f.num}/feedOff`); const who = off ? '친구가' : `${f.nick}님이`; return friends.length > 1 ? `${off ? '친구' : `${f.nick}님`} 외 ${friends.length - 1}명이 기다려요` : `${who} 기다려요`; });
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
-    if (id === 'scare') sfx('dummy-hit', 0.8); // 🔊 2차 🎯 허수아비 맞음 (정식 camp.js 같은 순간)
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
     if (id === 'dummy') boardJoin = portal.recruit?.pid ?? ''; // 🌀 모집 중 방 = 그 방에 바로 참여 (캠프 A)
     sheet = id;
@@ -282,25 +339,31 @@
   {:else}
   <!-- #145 ② 짧은 화면(360 × 640 등): 장면만 비율 그대로 줄여 가운데 · 정보판 · 주요 단추는 늘 같은 자리(겹침 0) -->
   <div class="stagebox" style:--ar={W / H}>
-  <div class="stage" role="presentation" onclick={ground} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
+  <div class="stage" role="presentation" bind:this={stageEl} bind:clientWidth={stW} bind:clientHeight={stH} onclick={(e) => { ground(); arm(); void e; }} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
     <img class="obj {hl('castle')}" alt="" src={CAMP.castle.src} style={objStyle(CAMP.castle)} />
-    <img class="obj lit" class:on={sheet === 'castle'} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
-    <img class="obj {anyTodo ? 'dim' : ''}" alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
-    <img class="obj gate-on" class:on={open} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
+    <img class="obj lit" class:on={sheet === 'castle' || !!poked.castle} alt="" src={CAMP.castle.lit} style={objStyle(CAMP.castle)} />
+    <img class="obj {anyTodo ? 'dim' : ''}" class:flap={!!poked.tent} alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
+    <img class="obj gate-on" class:on={open} class:flash={!!poked.gate} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
-    <i class="sp hero" style="translate:{heroNudge(me.hero, HERO.sitRow).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, HERO.sitRow).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(sitF / (HERO.cols - 1)) * 100}% {(HERO.sitRow / (HERO.rows - 1)) * 100}%"></i>
+    <i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} style="translate:{heroNudge(me.hero, heroRow(hp.pose)).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, heroRow(hp.pose)).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px) scaleX({hp.flip ? -1 : 1});transition:transform {hp.ms}ms linear;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i>
+    <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
+    <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
+    {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:3%;width:12%;height:9%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
+    {#each fxs as f (f.id)}<span class="cfx {f.k}" style="left:{f.x}%;top:{f.y}%" aria-hidden="true">{#each Array(f.k === 'bell' || f.k === 'glow' ? 1 : 6) as _, n (n)}<i style="--n:{n}"></i>{/each}{#if f.k === 'twinkle'}<b>✦</b>{/if}</span>{/each}
+    {#each friends as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
+    {#if friendText}<span class="fbub" style="left:{CAMP_PORTAL.left - 3}%;bottom:{CAMP_PORTAL.bottom - 13}%" data-k="friend-bub">{friendText}</span>{/if}
 
     {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
       {@const st = lab(k)}
-      <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
+      <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
         {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>{/if}
       </button>
     {/each}
     {#each CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)) as p (p.k)}
       {@const k = p.k}
       {@const st = lab(k)}
-      <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} onclick={(e) => tap(k, e)}>
-        <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} />
+      <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} onclick={(e) => go(k, e)}>
+        <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} />
         {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>{/if}
       </button>
     {/each}
@@ -589,4 +652,34 @@
   .top { pointer-events: none; } .top > :global(*) { pointer-events: auto; } .top > .sp2, .top > .ttl { pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .prop.todo :global(.img), img.obj.todo { animation: none; filter: drop-shadow(0 0 7px rgba(255, 214, 120, 0.95)) brightness(1.15); } .zone.todo::after, .bub, .spark { animation: none; } .spark { display: none; } }
   .snews { margin: 0; padding: 0 0 0 1.1em; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5; }
+
+  /* 🏕 B 만지면 반응 · D 걷기 · E 친구 (transform · opacity 만) */
+  .hot { position: absolute; z-index: 4; background: none; border: 0; padding: 0; min-width: 48px; min-height: 48px; }
+  .prop.pk :global(.img) { animation: pkBounce 0.45s ease-out; }
+  .prop[data-prop='scare'].pk :global(.img) { animation: pkWobble 0.55s ease-out; transform-origin: 50% 100%; }
+  .prop[data-prop='mail'].pk :global(.img) { animation: pkShake 0.4s linear; }
+  @keyframes pkBounce { 30% { transform: translateY(-8%) scale(1.04); } 60% { transform: translateY(0) scale(0.98); } }
+  @keyframes pkWobble { 20% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 70% { transform: rotate(-5deg); } }
+  @keyframes pkShake { 20%, 60% { transform: translateX(-6%); } 40%, 80% { transform: translateX(6%); } }
+  img.obj.flap { animation: pkFlap 0.55s ease-out; transform-origin: 50% 100%; }
+  @keyframes pkFlap { 25% { transform: skewX(-4deg) scaleY(1.02); } 55% { transform: skewX(3deg); } }
+  img.obj.gate-on.flash { animation: pkFlash 0.6s ease-out; }
+  @keyframes pkFlash { 40% { opacity: 1; filter: brightness(1.5); } }
+  .cfx { position: absolute; z-index: 8; width: 0; height: 0; pointer-events: none; }
+  .cfx i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; }
+  .cfx.spark i { background: #ffd27a; box-shadow: 0 0 6px 2px #ff9a3c; animation: fxSpark 0.7s ease-out forwards; }
+  @keyframes fxSpark { to { transform: rotate(calc(var(--n) * 60deg - 150deg)) translateX(34px); opacity: 0; } }
+  .cfx.leaf i { width: 7px; height: 4px; border-radius: 4px 0; background: #7fcf6a; animation: fxLeaf 1s ease-in forwards; }
+  @keyframes fxLeaf { from { transform: translate(calc((var(--n) - 2.5) * 10px), -6px) rotate(0); } to { transform: translate(calc((var(--n) - 2.5) * 16px), 46px) rotate(220deg); opacity: 0; } }
+  .cfx.fly i { width: 5px; height: 5px; background: #f6ff9e; box-shadow: 0 0 8px 3px rgba(220, 255, 120, 0.9); animation: fxFly 1s ease-out forwards; }
+  @keyframes fxFly { from { transform: translate(calc((var(--n) - 2.5) * 6px), 0); } to { transform: translate(calc((var(--n) - 2.5) * 14px), -60px); opacity: 0; } }
+  .cfx.bell i, .cfx.glow i { left: -24px; top: -24px; width: 48px; height: 48px; border: 3px solid rgba(255, 220, 120, 0.95); background: none; animation: fxRing 0.8s ease-out forwards; }
+  .cfx.glow i { border-color: rgba(120, 230, 255, 0.95); box-shadow: 0 0 14px rgba(120, 230, 255, 0.8); }
+  @keyframes fxRing { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+  .cfx.twinkle i { display: none; } .cfx.twinkle b { position: absolute; left: -12px; top: -14px; font-size: 24px; color: #fff7c2; text-shadow: 0 0 10px #ffe27a; animation: fxTw 0.9s ease-out forwards; }
+  @keyframes fxTw { 0% { transform: scale(0.3) rotate(0); } 40% { transform: scale(1.3) rotate(25deg); } 100% { transform: scale(0.6) rotate(60deg); opacity: 0; } }
+  .sp.hero { will-change: transform; pointer-events: none; } /* 걷는 용사가 물건 누름을 가리지 않게 */
+  .friend { position: absolute; z-index: 5; pointer-events: none; transform: translateX(-50%); }
+  .fbub { position: absolute; z-index: 7; transform: translateX(-50%); white-space: nowrap; font: 800 11px/1 var(--font); color: #e8f7ff; background: rgba(20, 40, 70, 0.85); border: 1.5px solid rgba(120, 200, 255, 0.9); border-radius: 10px; padding: 5px 8px; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .prop.pk :global(.img), img.obj.flap, img.obj.gate-on.flash { animation: none; } .cfx { display: none; } }
 </style>

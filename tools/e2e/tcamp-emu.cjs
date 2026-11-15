@@ -25,7 +25,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   ok('② 학생 로그인 기억 있는 교사 폰 → 내 캠프', /role=camp/.test(t.url()) && /선생님/.test(body2), `${t.url().replace(B, '')} · ${body2}`);
   // ③ 한 판씩: 🏰 성채 (모든 방 열림) · 🎯 허수아비 · 🧙 내 용사
   const shut = async () => { await t.keyboard.press('Escape').catch(() => {}); for (const sel of ['.sheet button:has-text("닫기")', '[data-k="castle"] .back', '.back']) { const x = await t.$(sel); if (x) { await x.click().catch(() => {}); break; } } await t.waitForTimeout(500); };
-  await t.click('button[aria-label="성채"]'); await t.waitForTimeout(500);
+  await t.click('button[aria-label="성채"]'); await t.waitForTimeout(1300); // 🏕 D 용사가 걸어간 뒤 열림
   const go = await t.$('.sheet button:has-text("성채 들어가기")'); if (go) { await go.click(); await t.waitForTimeout(600); }
   const fl = await t.$('[data-floor="eval-1"]'); if (fl) { await fl.click(); await t.waitForTimeout(300); const in1 = await t.$('button:has-text("1층 들어가기")'); if (in1) await in1.click(); }
   await t.waitForSelector('[data-k="castle"] [data-room]', { timeout: 8000 }).catch(() => {});
@@ -33,7 +33,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await t.screenshot({ path: `${SHOTS}/tcamp-castle.png` });
   ok('③ 🏰 성채 1층 = 방 12 · 잠김은 👑 보스 방 하나뿐(처치 60%)', rooms >= 12 && lockedR <= 1, `방 ${rooms} · 잠김 ${lockedR}`);
   await t.goto(`${B}?role=camp&from=me&${E}`); await t.waitForTimeout(3500);
-  await t.click('[data-prop="scare"]').catch(() => t.click('[data-todo="scare"]')); await t.waitForTimeout(800);
+  await t.click('[data-prop="scare"]').catch(() => t.click('[data-todo="scare"]')); await t.waitForTimeout(1400); // 🏕 D 용사가 걸어간 뒤 열림
   const sc = ((await t.textContent('.sheet').catch(() => '')) || '').replace(/\s+/g, ' ');
   await t.screenshot({ path: `${SHOTS}/tcamp-scare.png` });
   ok('③ 🎯 허수아비 시트 = 차시 목록', /차시/.test(sc), sc.slice(0, 120));

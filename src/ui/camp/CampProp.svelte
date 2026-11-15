@@ -3,8 +3,8 @@
   // 🏕 캠프 물건 그림 한 개 (학생 캠프 · TV 교사 캠프 같은 부품 · 자리는 바깥 칸이 CAMP_PROPS 로 잡음)
   //   📋 게시판(k = 'dummy') = ① 평소 / ② 모집 중(종이 금빛) 칸 + 오른쪽 옆 파란 포털(바깥 칸 밖 · 게시판 폭 기준으로 놓음)
   //   포털 기믹 = 평소 작은 불씨(0.15 · 흐림) · 모집 중 방 = 불씨에서 열림 크기로 커지며(📜 2026-11-15 캠프 A) 소용돌이 회전 · 파란 빛 맥박 · 반짝 입자 · 바닥 고리 퍼짐 · 출발 = 1.0 확 열림(0.4초 · 바닥 빛 고리) · 동작 줄이기 = 크기 · 빛만
-  const { p, phase = 'idle' }: { p: CampProp; phase?: 'idle' | 'recruit' | 'open' } = $props();
-  const col = $derived(p.k === 'dummy' && phase !== 'idle' ? 1 : 0);
+  const { p, phase = 'idle', hit = false }: { p: CampProp; phase?: 'idle' | 'recruit' | 'open'; /** 🏕 B 만지면 반응 = 맞은 그림 칸(허수아비 · 우편함) */ hit?: boolean } = $props();
+  const col = $derived((p.k === 'dummy' && phase !== 'idle') || (hit && (p.k === 'scare' || p.k === 'mail') && p.cols > 1) ? 1 : 0);
   // 포털 = 게시판 칸(폭 p.width%) 기준 상대 자리 → 캠프 그림 %(CAMP_PORTAL) 와 같아지게
   const pl = $derived(((CAMP_PORTAL.left - p.left) / p.width) * 100), pw = $derived((CAMP_PORTAL.width / p.width) * 100);
 </script>

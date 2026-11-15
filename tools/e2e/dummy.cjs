@@ -18,6 +18,6 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   log('문제 꼬리표:', tag, '· 노란 단추 하트', hearts); if (!/학습지 숫자|바뀐 숫자/.test(tag)) errs.push('꼬리표 없음'); if (hearts) errs.push('허수아비에 하트');
   await p.screenshot({ path: `${SHOTS}/dummy-run.png` });
   await p.click('.drun .quit'); await p.waitForTimeout(400); await p.click('.sheet .x'); await p.waitForTimeout(400);
-  await p.click('.prop[aria-label="📋 게시판"]'); await p.waitForTimeout(500); const bt = await p.$eval('button.pmain:has-text("팀 없이")', (x) => x.textContent).catch(() => '없음'); log('게시판 단추:', bt.trim()); if (!/팀 없이 도전/.test(bt)) errs.push('게시판 「팀 없이 도전」');
+  await p.click('.prop[aria-label="📋 게시판"]'); await p.waitForTimeout(1300); // 🏕 D 용사가 걸어간 뒤 열림 const bt = await p.$eval('button.pmain:has-text("팀 없이")', (x) => x.textContent).catch(() => '없음'); log('게시판 단추:', bt.trim()); if (!/팀 없이 도전/.test(bt)) errs.push('게시판 「팀 없이 도전」');
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
