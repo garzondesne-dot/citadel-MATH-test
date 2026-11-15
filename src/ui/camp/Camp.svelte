@@ -41,6 +41,8 @@
   import SurveySheet from './SurveySheet.svelte';
   import { donePath, pendingNo, REWARD, statePath } from '../../school/survey';
   import { isExcluded } from '../../school/school';
+  import MailBox from './MailBox.svelte';
+  import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
@@ -128,7 +130,20 @@
   const sitF = $derived(Math.floor(frame / 7) % 2);
 
   // 소식 수 (#111 ②) — 성채 새 방 · 허수아비 복습 · 우편 안 읽음 = 그 기능이 생기는 판에서 · 모루 ★ = 찜
-  const news: Record<string, number> = { castle: 0, dummy: 0, mail: 0 };
+  // 📮 우편함 (정식 mail.js · 📜 2026-11-15 「우편 기능 활성화」): 안 읽음 = 마지막으로 연 뒤 온 소식 + 안 받은 선물 · 빨간 숫자
+  const mbWho = untrack(() => (pupil && S.kind === 'server' ? { uid: pupil.uid, cls: pupil.cls, num: pupil.num } : null));
+  const mbG = untrack(() => liveValue<unknown>(S, mbWho ? `gifts/${mbWho.uid}` : 'gifts/_none')), mbN = untrack(() => liveValue<unknown>(S, mbWho ? `school/notice/${mbWho.cls}` : 'school/notice/_none'));
+  onDestroy(() => { mbG.stop(); mbN.stop(); });
+  let mbSeen = $state(untrack(() => (mbWho ? mailSeenGet(mbWho.cls, mbWho.num) : 0))), mbVer = $state(0);
+  const mailN = $derived.by(() => { void mbG.v.val; void mbN.v.val; void mv.v.val; void mbVer; return mbWho ? mailUnread(mailInbox(S, mbWho.uid, mbWho.cls), mbSeen) : 0; });
+  function mailTake(id: string): string {
+    if (!mbWho) return '';
+    const got = mailClaim(S, mbWho.uid, id); if (!got) return '이미 받은 선물이에요';
+    const n = got.petri ? earnDaily(me.wallet, got.g, kstDay(S.now()), GEM.dayCap) : (me.wallet.gem += got.g, got.g); // 🗿 석화 = 하루 한도 안 (캠프 받기와 같음)
+    me.wallet.scroll += got.s; me.xp += got.x; M.save(); mbVer++; sfx('mail', 0.6);
+    return `🎁 받았어요${n ? ` · 💎 +${n}` : ''}${got.s ? ` · 📜 +${got.s}` : ''}${got.x ? ` · EXP +${got.x}` : ''}`;
+  }
+  const news = $derived<Record<string, number>>({ castle: 0, dummy: 0, mail: mailN });
   let showAll = $state(false);
   let allTimer: ReturnType<typeof setTimeout> | null = null;
   function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
@@ -289,6 +304,8 @@
   <Castle {S} {me} save={M.save} all={fromMe0} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
+{:else if sheet === 'mail' && mbWho}
+  <MailBox {S} uid={mbWho.uid} cls={mbWho.cls} num={mbWho.num} gem={me.wallet.gem} survey={svNo && !svSent ? svNo : 0} onclaim={mailTake} onsurvey={() => (sheet = 'survey')} onclose={() => { sheet = null; mbSeen = mailSeenGet(mbWho.cls, mbWho.num); mbVer++; }} />
 {:else if sheet === 'castle'}
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
