@@ -12,11 +12,14 @@ export function helpOf(L: LessonPack, mid: string, i: number, q: Question | null
   if (!q || mid === 'boss' || !L.monsters[mid]) return null;
   const m = L.monsters[mid]!, base = (m.first?.[i] ?? (m.chain ? chainItems(L, mid, '', 0)[i] : null)) as Question | null | undefined;
   const firstRound = !!base && base.question === q.question && JSON.stringify((base as { answer?: unknown }).answer ?? (base as { answers?: unknown }).answers ?? null) === JSON.stringify((q as { answer?: unknown }).answer ?? (q as { answers?: unknown }).answers ?? null);
-  const own = q.help?.concept ? q.help : null, src = own ?? (base?.help?.concept ? base.help : m.help?.concept ? m.help : null);
+  // 📜 2026-11-16 꼴별: 찾는 순서 = 그 판 문항 help → 첫 판 그 문항 help → helps[문항 kind] → 몬스터 help · first = 그 판 문항 help 에 있으면 · 아니면 첫 판일 때만(첫 판 문항 → 꼴 → 몬스터 · 배열이면 소문항 번호)
+  const own = q.help?.concept ? q.help : null, kind = q.kind ?? (firstRound ? base?.kind : undefined), byKind = kind && m.helps?.[kind]?.concept ? m.helps[kind]! : null;
+  const bh = base?.help?.concept ? base.help : null, src = own ?? (firstRound ? bh : null) ?? byKind ?? bh ?? (m.help?.concept ? m.help : null); // 꼴 없는 숫자 바뀐 판 = 첫 판 그 문항 help(예전 규칙)
   if (!src) return null;
-  const f = Array.isArray(src.first) ? src.first[i] : src.first;
-  const showFirst = !!f && (own ? true : firstRound);
-  return { concept: src.concept, ...(showFirst ? { first: f } : {}), ...(src.example ? { example: src.example } : {}) };
+  const pick = (h: Help | null | undefined) => (h?.first == null ? null : Array.isArray(h.first) ? (h.first[i] ?? null) : h.first);
+  const f = own ? pick(own) : firstRound ? (pick(base?.help) ?? pick(byKind) ?? pick(m.help)) : null;
+  const example = src.example ?? (src !== m.help ? m.help?.example : undefined);
+  return { concept: src.concept, ...(f ? { first: f } : {}), ...(example ? { example } : {}) };
 }
 const ck = (s: string) => s.replace(/[.#$/[\]]/g, '_');
 /** 연 단계 기록 (가장 높이 연 것만 · 덮어쓰기 없음) */
@@ -33,5 +36,8 @@ export const handsOf = (R: Room, mid: string): string[] => Object.entries((R.pla
 export function reviewsOf(L: LessonPack, mid: string): { i: number; k: number; r: import('../model/types').Review }[] {
   const m = L.monsters[mid]; if (!m) return [];
   const qs = (m.first ?? (m.chain ? chainItems(L, mid, '', 0) : [])) as Question[];
-  return [...(m.reviews || []).map((r, k) => ({ i: -1, k, r })), ...qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })))]; // 몬스터 칸(13차시 덧칸 꼴 · i = −1) 먼저
+  // 몬스터 칸(i = −1) 먼저 = 첫 판 문항 꼴 순서의 꼴별 풀이 → 나머지 꼴 → 몬스터 풀이 (📜 2026-11-16) · 그다음 문항 칸
+  const kinds = [...new Set([...qs.map((q) => q?.kind).filter((x): x is string => !!x), ...Object.keys(m.reviewsBy || {})])];
+  const mon = [...kinds.flatMap((kd) => m.reviewsBy?.[kd] || []), ...(m.reviews || [])];
+  return [...mon.map((r, k) => ({ i: -1, k, r })), ...qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })))];
 }

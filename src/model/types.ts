@@ -20,6 +20,8 @@ interface QBase {
   help?: Help;
   /** 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 선택 칸): 교사가 TV 에 띄우는 풀이 카드들 · lines = 풀이 줄 · focus = 「함께 살펴볼 줄」 번호(0부터) · ask = 질문 · wrong = 「검토할 풀이」 */
   review?: Review[];
+  /** 🏷 문항 꼴 (📜 2026-11-16 · 도움 · 익명 풀이를 꼴별로: 몬스터 helps[꼴] · reviewsBy[꼴]) */
+  kind?: string;
 }
 export interface ConceptCheck { type: 'ox' | 'choice'; q: string; ch?: string[]; a: number | boolean; why: string }
 /** 💡 도움 3단 · first = 한 줄 또는 소문항마다 배열(첫 출제 판 숫자) · example.sol = 한 줄 또는 줄 배열 */
@@ -54,6 +56,8 @@ export interface MonsterPack {
   retry: Retry;
   /** 💡 도움 3단 · 🔎 익명 풀이 (📜 2026-11-15 · 13차시 덧칸 꼴 = 몬스터 칸 · 덧칸 파일의 review 배열 = 엔진 reviews · review(불) = 옛 「지난 시간 복습」 몬스터 표시와 이름이 겹쳐서) — 문항 칸 help · review 가 있으면 그것이 먼저 */
   help?: Help; reviews?: Review[];
+  /** 💡 🔎 꼴별 (📜 2026-11-16 · 덧칸 helps · reviews{꼴}): 문항 kind 로 찾음 · 찾는 순서 = 문항 help → helps[꼴] → help */
+  helps?: Record<string, Help>; reviewsBy?: Record<string, Review[]>;
   /** ⚔ 소레이드 (졸개 → 대장 단계) — 방 version ≥ 3 이면 이 꼴로 진행 */
   /** 판 0 = 첫 판 · 1~ = 한 판 더. gen = 이름 등록 생성기 · pool = 미리 쓴 판(엑셀 · 가벼운 판 #135 ③) */
   chain?: { gen: string } | { pool: Question[][] };

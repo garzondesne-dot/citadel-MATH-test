@@ -19,7 +19,7 @@
 | 🔎 `review` (문항 선택 칸 · 2026-11-15) | `[{ lines: ["풀이 줄", …], focus?: 줄 번호(1부터), ask?: "함께 생각할 질문", wrong?: true }]` · 문항에 달거나 몬스터(`mons.mN.review`)에 — 리모컨 그 단계 「🔎 익명 풀이 띄우기 / 내리기」 → TV 양피지 카드(이름 · 점수 · 정답/오답 글자 없음 · focus 줄 강조 · wrong = 「검토할 풀이」 꼬리표) · 학생 폰 = 「TV 를 봐요 · 내 학습지와 비교해 고칠 곳 표시」 |
 | 🖼 그림 파일 | 올리기 창 「🖼 칸 그림 같이 고르기」(png · webp · jpg 여러 장) · 파일 이름 = 칸 이름(`c1.png`)이면 그 칸 · webp 1280 · 0.85 로 줄여 `prep/{팩 id}/img/{칸}` 에 저장(같은 이름 = 덮어씀) · 안 맞는 파일 = 「쓰이지 않는 그림 n개」 · 그림을 같이 올리면 `imgOf` 빌리기는 끔 · 예시 그림 `tools/pack-upload/img/` |
 | `img` · `imgOf` | 🖼 학습지 칸 그림 목록(칸 = 단계 id · 단계의 `img`(예: 도입 `img: "review"`)) · `imgOf` = 그 그림을 가진 차시(없으면 팩 id) → 서버 `prep/{imgOf}/img/{칸}` 를 학생 · TV 와 같은 자리에 |
-| `video` | 🎬 `[{ file: "v11-49", at: ["c1", "m1"] }]` = 앱 `public/video/<file>.mp4` 를 그 칸에 연결(교사 🎬 단추 · TV 재생) · **있는 파일만 연결**(없으면 ⚠ 한 줄 · 그 칸은 빼고 저장) · 영상 파일 올리기는 나중에 |
+| `video` | 🎬 `[{ file: "v11-49", at: ["c1", "m1"] }]` = 그 칸에 영상 연결(교사 🎬 단추 · TV 재생) · zip 안에 이름 끝이 같은 `…v11-49.mp4` 가 있으면 그 파일을 붙여 저장 때 서버에 올림(zip 전체 20MB 까지) · 없으면 앱 · 서버에서 같은 이름을 찾음 · 못 찾으면 ⚠ 한 줄(그 칸은 빼고 저장) |
 | 그림 이름 | 입력판 그대로(`2` → base2:0 · `extra:4` → extra4:0 · `2@h250`) 또는 배치표 이름 |
 
 ## 검사 (틀리면 「칸 · 이유 한 줄」 · 오류가 하나라도 있으면 저장 못 함)
@@ -40,3 +40,5 @@
 `official/set-12.json` = 정식 `lessons/set-12.js`(5bb5c08 · 영상 a40ac77 · release af5b3be) 를 같은 길(convert.mjs --only set-12 → `tools/pack-from-release/freeze.ts` 판 0 ~ 6)로 굳힌 파일 · 몬스터 3(m3 = ⚔ 소레이드) · 형성평가 5문항 · 칸 그림 8칸 이름만(review · c1 · m1 · c2 · m2 · m3 · sum · boss) · 영상 v12-52(c1 · m1 · sum) · v12-53(c2 · m2) · v12-54(m3) — zip 에 같은 이름(끝이 v12-52 …)의 mp4 를 넣으면 연결 · 몬스터 그림(garden0 · garden4 · garden3 · gardenboss0)은 앱에 이미 있음.
 
 🧩 덧칸만 따로 받은 팩(13차시 `addons-13.json` 꼴: `mons.mN.help · review` · `steps.cN.check`) = `node tools/pack-addons/merge.mjs <팩.json> <덧칸.json> <합친.json>` → 합친 파일을 📦 차시 팩 올리기로 (그림 · 영상은 그대로).
+
+🏷 꼴별 도움 · 익명 풀이 (📜 2026-11-16): 문항 선택 칸 `kind`(글자) · 몬스터 `helps: { 꼴: help }` · `reviews: { 꼴: [review…] }`(엔진 꼴 = `reviewsBy`) · 찾는 순서 = 그 판 문항 help → helps[문항 kind] → 몬스터 help → 예전 💡 힌트 · first = 그 판 문항 help 에 있거나 첫 판일 때만 · helps · reviews 꼴 이름이 그 몬스터 문항 kind 에 없으면 ⚠(오류 아님) · 덧칸 `mons.mN.kinds` = 첫 판 소문항 꼴(소레이드 = 한 꼴) · 숫자 바뀐 판 꼴 = `tools/pack-addons/kinds.mjs` 차시 규칙.

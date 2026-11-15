@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import { checkUpload } from '../src/school/packUpload';
 import { SUBJ } from '../src/engine/subject';
 import { ATTACKS } from '../src/raid/attacks';
-import { items } from '../src/engine/lessons';
+import { chainItems, items } from '../src/engine/lessons';
 import { helpOf, handsOf, reviewsOf } from '../src/school/help';
-import type { Room } from '../src/model/types';
+import type { Question, Room } from '../src/model/types';
 
 const look = { sheet: (r: string) => (r.split(':')[0]!.replace(/@.*$/, '') in SUBJ.themes.sheets), theme: (t: string) => !t || t in SUBJ.themes.dungeons, attack: (a: string) => a in ATTACKS, builtIn: (id: string) => SUBJ.lessons.some((p) => p.id === id) };
 const base = () => JSON.parse(fs.readFileSync('tools/pack-upload/example-ex-11.json', 'utf8'));
@@ -61,5 +61,35 @@ describe('🧩 13차시 덧칸 꼴 (몬스터 칸 help · review · 단계 check
     const rv = reviewsOf(P, 'm1'); expect(rv[0]!.i).toBe(-1); expect(rv[0]!.r.focus).toBe(3); expect(rv[0]!.r.lines.length).toBeGreaterThanOrEqual(3);
     expect(P.steps.find((s) => s.id === 'c1')!.check).toMatchObject({ type: 'ox', a: false });
     expect(P.steps.find((s) => s.id === 'c3')!.check).toMatchObject({ type: 'choice', a: 0 });
+  });
+});
+
+describe('🧩 12차시 덧칸 = 꼴별 도움 (📜 2026-11-16 · helps[문항 kind] → help · first = 첫 판만 · 소레이드 = 한 꼴)', () => {
+  const raw = fs.readFileSync('docs/handoff/pack12/ex-12-with-addons.json', 'utf8');
+  const r = checkUpload(raw, look), P = r.pack!;
+  it('검사 통과 · 꼴 경고 없음(helps 꼴이 모두 문항 꼴에 있음)', () => {
+    expect(r.issues.filter((x) => x.lvl === 'err').map((x) => `${x.at} ${x.msg}`)).toEqual([]);
+    expect(r.issues.filter((x) => /꼴 「/.test(x.msg)).map((x) => x.msg)).toEqual([]);
+  });
+  it('m1 첫 판 = 소문항 꼴의 개념 · 예제 + help.first[소문항] / 숫자 바뀐 판 = 그 꼴 개념 · first 숨김', () => {
+    const m = P.monsters.m1!, q0 = items(P, 'm1', 's', 0);
+    expect(q0.map((q) => q.kind)).toEqual(['루트', '소수', '부등식']);
+    q0.forEach((q, i) => { const h = helpOf(P, 'm1', i, q)!; expect(h.concept).toBe(m.helps![q.kind!]!.concept); expect(h.first).toBe((m.help!.first as string[])[i]); expect(h.example!.q).toBe(m.helps![q.kind!]!.example!.q); });
+    const pool = (m.retry as { pool: Question[][] }).pool.flat(), q8 = pool.find((q) => q.kind === '인원')!, q4 = pool.find((q) => q.kind === '홀짝')!;
+    expect(helpOf(P, 'm1', 0, q8)).toMatchObject({ concept: m.helps!['인원']!.concept }); expect(helpOf(P, 'm1', 0, q8)!.first).toBeUndefined();
+    expect(helpOf(P, 'm1', 2, q4)!.concept).toBe(m.helps!['홀짝']!.concept);
+  });
+  it('m2 = 꼴 없음 → 몬스터 help · m3 소레이드 = 첫 판 덧셈 · 곱 꼴 판 = 곱 개념', () => {
+    const m2 = items(P, 'm2', 's', 0); expect(helpOf(P, 'm2', 1, m2[1])!.concept).toBe(P.monsters.m2!.help!.concept);
+    const c0 = chainItems(P, 'm3', 's', 0), c1 = chainItems(P, 'm3', 's', 1);
+    expect(c0.every((q) => q.kind === '덧셈')).toBe(true); expect(c1.every((q) => q.kind === '곱')).toBe(true);
+    expect(helpOf(P, 'm3', 1, c1[1])!.concept).toBe(P.monsters.m3!.helps!['곱']!.concept);
+    expect(helpOf(P, 'm3', 0, c0[0])!.concept).toBe(P.monsters.m3!.helps!['덧셈']!.concept);
+  });
+  it('검사기: helps 꼴이 문항 꼴에 없으면 ⚠(오류 아님)', () => {
+    const J = JSON.parse(raw); J.monsters.m1.helps['없는꼴'] = { concept: 'x' };
+    const r2 = checkUpload(JSON.stringify(J), look);
+    expect(r2.issues.filter((x) => x.lvl === 'err')).toEqual([]);
+    expect(r2.issues.some((x) => x.lvl === 'ask' && /없는꼴/.test(x.msg))).toBe(true);
   });
 });

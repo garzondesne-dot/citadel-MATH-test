@@ -14,8 +14,8 @@ export type Lvl = 'err' | 'ask';
 export interface Issue { at: string; msg: string; lvl: Lvl }
 /** 도감 찾기 (화면 쪽 배치표 · 공격 표가 알려 줌 · 시험은 가짜로) */
 export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => boolean; attack: (id: string) => boolean; builtIn: (id: string) => boolean }
-type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown; help?: unknown; review?: unknown };
-type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string; help?: unknown; review?: unknown };
+type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown; help?: unknown; review?: unknown; kind?: unknown };
+type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string; help?: unknown; review?: unknown; helps?: unknown; reviews?: unknown };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
 type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; find?: Record<string, string>; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
 
@@ -61,6 +61,24 @@ export function parseReview(x: unknown, err: (m: string) => null): Review[] | nu
   }
   return out;
 }
+/** 💡 🔎 꼴별 (📜 2026-11-16): helps = { 꼴: help } · reviews = { 꼴: [review…] } */
+export function parseHelps(x: unknown, err: (m: string) => null): Record<string, Help> | null {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return err('꼴별 도움(helps) = { 꼴 이름: { concept, … } } 꼴이에요');
+  const o: Record<string, Help> = {};
+  for (const [k, v] of Object.entries(x as Record<string, unknown>)) { const h = parseHelp(v, (m) => err(`꼴 「${k}」 — ${m}`)); if (!h) return null; o[k] = h; }
+  return o;
+}
+export function parseReviewsBy(x: unknown, err: (m: string) => null): Record<string, Review[]> | null {
+  if (!x || typeof x !== 'object' || Array.isArray(x)) return err('꼴별 익명 풀이(reviews) = { 꼴 이름: [{ lines, … }] } 꼴이에요');
+  const o: Record<string, Review[]> = {};
+  for (const [k, v] of Object.entries(x as Record<string, unknown>)) { const r = parseReview(v, (m) => err(`꼴 「${k}」 — ${m}`)); if (!r) return null; o[k] = r; }
+  return o;
+}
+/** 꼴 이름이 그 몬스터 문항 kind 에 없으면 ⚠ (오류 아님) */
+export function kindWarn(at: string, keys: string[], qs: (Question | null | undefined)[], what: string, out: Issue[]) {
+  const have = new Set(qs.map((q) => q?.kind).filter((x): x is string => !!x)), miss = keys.filter((k) => !have.has(k));
+  if (miss.length) out.push({ at, msg: `${what} 꼴 「${miss.join(' · ')}」 이 이 몬스터 문항 꼴(kind)에 없어요 — 쓰이지 않아요${have.size ? ` (있는 꼴: ${[...have].join(' · ')})` : ''}`, lvl: 'ask' });
+}
 /** ✔ 개념 체크 칸 (개념 단계만) · 틀리면 bad(이유) 후 null */
 export function parseCheck(x: unknown, kind: string, bad: (m: string) => void): Step['check'] | null {
   const c = x as Record<string, unknown>;
@@ -77,6 +95,7 @@ function extras(it: BItem, ch: string[] | null, err: (m: string) => null): { say
   const o: { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string; help?: Question['help']; review?: Question['review'] } = {};
   if (it.help != null) { const h = parseHelp(it.help, err); if (!h) return null; o.help = h; }
   if (it.review != null) { const r = parseReview(it.review, err); if (!r) return null; o.review = r; }
+  if (it.kind != null) { if (!str(it.kind)) return err('문항 꼴(kind)은 글 한 낱말이에요'); (o as { kind?: string }).kind = String(it.kind).trim(); }
   if (it.say != null) { if (typeof it.say !== 'string') return err('나의 풀이(say)는 글 한 줄이에요'); if (it.say.trim()) o.say = it.say; }
   if (it.ref != null) o.ref = String(it.ref);
   if (it.why != null) {
@@ -237,7 +256,9 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     // 💡 · 🔎 몬스터 칸 덧칸 (📜 2026-11-15 · 13차시 덧칸 꼴 mons.mN.help · review)
     const at2 = `${s.title}(mons.${s.id})`, merr = (msg: string) => { out.push({ at: at2, msg, lvl: 'err' }); return null; };
     const mh = m.help != null ? parseHelp(m.help, merr) : undefined, mr = m.review != null ? parseReview(m.review, merr) : undefined;
-    monsters[s.id] = { ...(mh ? { help: mh } : {}), ...(mr ? { reviews: mr } : {}), title: m.title || s.title, sprite, attack: m.attack || 'pause', first: vs[0], retry: { pool: vs.slice(1) }, ...(m.chain ? { chain: { pool: vs } } : {}), ...(m.note ? { noteText: m.note } : {}) };
+    const mhs = m.helps != null ? parseHelps(m.helps, merr) : undefined, mrs = m.reviews != null ? parseReviewsBy(m.reviews, merr) : undefined, allQ = vs.flat();
+    if (mhs) kindWarn(at2, Object.keys(mhs), allQ, '💡 도움(helps)', out); if (mrs) kindWarn(at2, Object.keys(mrs), allQ, '🔎 익명 풀이(reviews)', out);
+    monsters[s.id] = { ...(mh ? { help: mh } : {}), ...(mr ? { reviews: mr } : {}), ...(mhs ? { helps: mhs } : {}), ...(mrs ? { reviewsBy: mrs } : {}), title: m.title || s.title, sprite, attack: m.attack || 'pause', first: vs[0], retry: { pool: vs.slice(1) }, ...(m.chain ? { chain: { pool: vs } } : {}), ...(m.note ? { noteText: m.note } : {}) };
   }
   let boss: LessonPack['boss'];
   if (steps.some((x) => x.kind === 'boss')) {
@@ -281,6 +302,9 @@ function nativePack(p: LessonPack, out: Issue[], stats: Checked['stats']): Lesso
     const merr = (msg: string) => { out.push({ at: `몬스터 ${id}`, msg, lvl: 'err' }); return null; };
     if (m.help != null) { const h = parseHelp(m.help, merr); if (h) m.help = h; }
     if (m.reviews != null) { const r = parseReview(m.reviews, merr); if (r) m.reviews = r; }
+    const allQ = [...(m.first || []), ...(((m.retry as { pool?: Question[][] } | undefined)?.pool) || []).flat()];
+    if (m.helps != null) { const h = parseHelps(m.helps, merr); if (h) { m.helps = h; kindWarn(`몬스터 ${id}`, Object.keys(h), allQ, '💡 도움(helps)', out); } }
+    if (m.reviewsBy != null) { const r = parseReviewsBy(m.reviewsBy, merr); if (r) { m.reviewsBy = r; kindWarn(`몬스터 ${id}`, Object.keys(r), allQ, '🔎 익명 풀이(reviews)', out); } }
   }
   for (const st of p.steps) if (st.check != null) { const c = parseCheck(st.check, st.kind, (msg) => { out.push({ at: `단계 ${st.id}`, msg: `개념 체크(check) — ${msg}`, lvl: 'err' }); }); if (c) st.check = c; else delete st.check; }
   for (const [id, m] of Object.entries(p.monsters || {})) {
@@ -306,6 +330,8 @@ export function revive(p: LessonPack): LessonPack {
     if (m.first) m.first = arr<Question>(m.first);
     if (m.help) { const h = m.help as Help; m.help = { ...h, ...(h.first != null && typeof h.first !== 'string' ? { first: arr<string>(h.first) } : {}), ...(h.example ? { example: { q: h.example.q, sol: typeof h.example.sol === 'string' ? h.example.sol : arr<string>(h.example.sol) } } : {}) }; }
     if (m.reviews) m.reviews = arr<Review>(m.reviews).map((r) => ({ ...r, lines: arr<string>(r.lines) }));
+    if (m.reviewsBy) m.reviewsBy = Object.fromEntries(Object.entries(m.reviewsBy).map(([k, v]) => [k, arr<Review>(v).map((r) => ({ ...r, lines: arr<string>(r.lines) }))]));
+    if (m.helps) m.helps = Object.fromEntries(Object.entries(m.helps).map(([k, h]) => [k, { ...h, ...(h.first != null && typeof h.first !== 'string' ? { first: arr<string>(h.first) } : {}), ...(h.example ? { example: { q: h.example.q, sol: typeof h.example.sol === 'string' ? h.example.sol : arr<string>(h.example.sol) } } : {}) }]));
     if (m.chain && 'pool' in (m.chain as object)) m.chain = { pool: arr<unknown>((m.chain as { pool: unknown }).pool).map((v) => arr<Question>(v)) };
     monsters[id] = m;
   }
