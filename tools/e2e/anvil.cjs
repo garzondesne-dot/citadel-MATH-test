@@ -13,7 +13,7 @@ const log = (...a) => console.log(...a);
   await p.goto(B + '?role=camp&room=AV'); await p.waitForSelector('.stage');
   await p.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me') || '{}'); m.wishes = { sub: true }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); });
   await p.reload(); await p.waitForSelector('.stage');
-  const gem0 = await p.$eval('.pill', (x) => x.textContent.replace(/\D/g, ''));
+  const gem0 = await p.$eval('.pill .pv', (x) => x.textContent.replace(/\D/g, ''));
   await p.click('button[aria-label="모루"]'); await p.waitForSelector('.fg .stage'); await p.waitForTimeout(400);
   const fit = await p.evaluate(() => { const f = document.querySelector('.fg'); return { over: f.scrollHeight - f.clientHeight, x: document.documentElement.scrollWidth - innerWidth, ops: document.querySelectorAll('.shelf.ops .tile').length, mats: document.querySelectorAll('.shelf.mats .tile').length, wish: [...document.querySelectorAll('.wishes button')].map((x) => x.textContent).join(' ') }; });
   log('① 모루:', JSON.stringify(fit)); if (fit.over > 0 || fit.x > 0) errs.push('모루 넘침'); if (fit.ops !== 24 || fit.mats !== 13) errs.push('재료 13 · 연산 24');

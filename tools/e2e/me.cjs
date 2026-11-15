@@ -21,7 +21,7 @@ const log = (...a) => console.log(...a);
     await p.waitForTimeout(150); if (join && (await p.$('.pad'))) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
     await p.click('.title .pmain'); await p.waitForTimeout(2500);
   };
-  const gemText = (p) => p.$eval('.pill', (x) => x.textContent.trim()).catch(() => '?');
+  const gemText = (p) => p.$eval('.pill .pv', (x) => x.textContent.trim()).catch(() => '?');
   // 폰 A 가입
   const a = await open(`?${E}`); await enter(a, '1-3', 1, true);
   const g0 = await rest('gem/1-3/1'), acc0 = await rest('accounts/1-3/1');

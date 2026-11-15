@@ -19,7 +19,7 @@ async function login(p, c, n, pin) {
   await p.click('button.pw >> nth=0'); for (const d of pin) await p.click(`.pad .keys button:has-text("${d}")`);
   await p.waitForTimeout(200); await p.click('.title .pmain'); await p.waitForTimeout(3500);
   const err = await p.$eval('.err, .msg.bad', (x) => x.textContent).catch(() => '');
-  const pill = await p.$eval('.pill', (x) => x.textContent.replace(/\D/g, '')).catch(() => '');
+  const pill = await p.$eval('.pill .pv', (x) => x.textContent.replace(/\D/g, '')).catch(() => '');
   return { err, pill };
 }
 (async () => {

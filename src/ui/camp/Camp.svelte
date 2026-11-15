@@ -203,7 +203,7 @@
   const fromMe = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me';
 </script>
 
-<div class="camp" class:paper={paperOn()}>
+<div class="camp" class:paper={paperOn()} style:--ar={W / H}>
   {#if paperOn()}
   <!-- 📝 제출 모드 v2 ⑦ 수업 밖 = 「오늘 할 일」 (학습 이름 + 통일 용어 괄호 한 번 · 그림 없음 · 💎 없음) -->
   <header class="ptop" data-k="ptop">{#if pupil}<button type="button" class="pback" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="pback" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b>오늘 할 일</b><button type="button" class="pset" onclick={() => (sheet = 'set')}>설정</button><ModeSwitch dark /></header>
@@ -231,7 +231,7 @@
 
     {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
       {@const st = lab(k)}
-      <button type="button" class="zone" style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
+      <button type="button" class="zone" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => tap(k, e)}>
         <span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>
       </button>
     {/each}
@@ -246,8 +246,8 @@
 
     <div class="top">
       {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
-      <span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
-      <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>
+      <!-- 💎 · 📜 알약 = 누르면 🧙 내 용사 (정식 동작 · 📜 2026-11-15 선생님 「누르면 뭐 나올 것처럼 · 내 용사 연결」) -->
+      <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
@@ -425,6 +425,26 @@
   .slab { font-size: var(--fs-small); font-weight: 700; color: var(--text-2); }
   .pill { display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
   .info { padding: var(--s2) var(--s4) 0; display: flex; flex-direction: column; gap: var(--s3); }
+  /* 💎 · 📜 = 누를 수 있는 알약 (테두리 · › · 칼각 그림자 · 눌림) */
+  .pill.tap { border: 1px solid rgba(255, 255, 255, 0.35); font-family: var(--font); gap: 6px; padding: 0 8px 0 10px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); cursor: pointer; position: relative; }
+  .pill.tap::before { content: ''; position: absolute; inset: -8px -2px; }
+  .pill.tap:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+  .pill.tap:disabled { cursor: default; box-shadow: none; }
+  .pv { display: flex; align-items: center; gap: var(--s1); }
+  .psep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.3); }
+  .chev { font-size: 16px; line-height: 1; color: rgba(255, 255, 255, 0.8); margin-left: -1px; }
+  /* 이름표가 그림 밖으로 잘리지 않게: 차시 던전(오른쪽 끝) = 오른쪽에 붙임 · 모루(아래 끝) = 오른쪽 옆 */
+  .zone[data-zone='gate'] .label { left: auto; right: 4px; transform: none; }
+  .prop[data-prop='anvil'] .label { left: 100%; top: 50%; bottom: auto; transform: translate(2px, -50%); }
+  /* 📐 태블릿 · PC (📜 2026-11-15 선생님 「태블릿 모드 비율 조정 · 스마트폰은 잘 나와」): 폰은 그대로
+     세로 태블릿 = 기둥 640 · 가로(≥ 900) = 왼쪽 장면(화면 높이 가득 · 비율 유지) + 오른쪽 카드 · 단추 400 */
+  @media (min-width: 700px) and (orientation: portrait) { .camp:not(.paper) { max-width: max(430px, min(720px, calc((100dvh - 400px) * var(--ar)))); } } /* 장면 + 카드 · 단추(약 400)가 한 화면에 꼭 차게 */
+  @media (min-width: 900px) and (orientation: landscape) {
+    .camp:not(.paper) { max-width: 1280px; display: grid; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: minmax(0, 1fr) auto; column-gap: var(--s5); padding: 0 var(--s5); box-sizing: border-box; }
+    .camp:not(.paper) .stagebox { grid-column: 1; grid-row: 1 / span 2; align-items: center; }
+    .camp:not(.paper) .info { grid-column: 2; grid-row: 1; align-self: end; padding: 0; }
+    .camp:not(.paper) > :global(.act) { grid-column: 2; grid-row: 2; padding-left: 0; padding-right: 0; }
+  }
   .card { display: flex; gap: var(--s3); align-items: center; text-align: left; padding: var(--s3); border-radius: 14px; border: 0; background: var(--surface); color: var(--text); font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .card:active { transform: translateY(2px); box-shadow: none; }
   .pic { position: relative; flex: none; display: grid; place-items: center; width: 96px; height: 80px; }
