@@ -1,3 +1,4 @@
+import { level as heroLevel } from '../model/hero';
 import { SUBJ } from '../engine/subject';
 import { makeRng } from '../engine/rng';
 import type { Store } from '../model/types';
@@ -28,7 +29,7 @@ const stdOf = (no: number) => STANDARDS.find((s) => s.lessons.includes(no))?.id 
 export { MIS } from './seteuk';
 const LESSONS = SUBJ.lessonList; // 과목 팩 (#136)
 export const LESSON_LIST = LESSONS;
-const level = (xp: number) => Math.max(1, Math.min(20, Math.floor(Math.sqrt(xp / 40)) + 1));
+const level = (xp: number) => heroLevel(xp).lv; // 🐞 2026-11-15 「애들 레벨이 이상한데?」: 예전 = 가짜 대시보드용 임시 식(√) → 학생 캠프 · 내 용사와 같은 정식 grow.js level 하나
 
 /** 정식 build(): 수업한 차시 = 기록이 하나라도 있는 차시 · 학생마다 참여 · 형성평가 첫 시도 · 개념 첫 시도 · 성취기준 · 오개념 */
 export function build(cls: string, byN: Record<number, string>, records: Records, xp: Record<number, number>, extra: Record<number, Extra>, x: (n: number) => boolean) {
