@@ -5,6 +5,7 @@ import DATA from './subject.json';
 import THEMES from './themes.json';
 import MIS from './mis-codes.json';
 import LEGACY_OPENED from './legacy-opened.json';
+import { bossTag as misBossTag, classify as misClassify } from './mis';
 import { BY, segments } from './symtalk';
 import { SYM_CARD, wishLeft } from './symcard';
 import { optOf, plain, richParts } from './venn';
@@ -31,6 +32,7 @@ const SUBJECT: Subject = {
   standards: DATA.standards,
   lessonList: DATA.lessonList,
   legacyOpened: LEGACY_OPENED as Record<string, Record<string, string[]>>,
+  misLogic: { classify: misClassify, bossTag: misBossTag },
   titles: DATA.titles as Subject['titles'],
   camp: DATA.camp,
   skillNames: DATA.skillNames,

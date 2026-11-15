@@ -35,6 +35,8 @@ export interface Subject {
   lessonList: { id: string; no: number; title: string; concs: string[] }[];
   /** 📊 지난 수업에서 반마다 실제로 연 칸 (정식 보관 서버 rooms 에서 뽑음 · { 반: { 차시: [칸] } } · 반 통계 자동값) */
   legacyOpened?: Record<string, Record<string, string[]>>;
+  /** 🔎 오개념 분류 (틀린 답 → 코드 · 형성평가 꼬리표) · 없으면 오개념 기록 안 함 */
+  misLogic?: { classify(q: import('./types').Question | null, given: unknown, tag?: Record<string, unknown> | null): string[]; bossTag(lid: string, set: number, i: number): Record<string, unknown> | null };
   /** 과목 칭호 (엔진 칭호 목록의 after 뒤에 끼움) */
   titles: { after: string; list: { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[] };
   /** ⭕ 쉼터 수학 OX 문장 (차시 · 문장 · 참 · 한 줄 해설) — 없으면 OX 놀이 안 보임 */

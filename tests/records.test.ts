@@ -38,3 +38,46 @@ describe('🔁 정식 칸 꼴 (#163 ③)', () => {
     expect(roleOf({ mons: { u4: 'x', u5: 'o' } }, ['u4', 'u5', 'u6', 'u7']).role).toBe('c');
   });
 });
+
+// 📌 개념별 첫 시도 · 🔎 오개념 = 정식 result.js 꼴 (📜 2026-11-15 머리 「conc 옮기기 = 지금」)
+import { concOf, mergeRow } from '../src/school/records';
+describe('📌 conc · 🔎 mis (정식 summary 꼴)', () => {
+  const play = (L: ReturnType<typeof packOf> & object, wrongB = true) => {
+    const S: Store = { ...memoryStore(), kind: 'memory' };
+    openRoom(S, L, 'R1', PROFILES.test); heartbeat(S, 'R1', 'a', 1, '가'); heartbeat(S, 'R1', 'b', 2, '나');
+    const R = () => S.get<Room>(roomPath('R1')) as Room;
+    while (stepOf(L, R())?.kind !== 'monster') nextStep(S, L, 'R1');
+    const id = stepOf(L, R())!.id;
+    submit(S, L, 'R1', id, 'a', itemsFor(L, R(), id, 'a', 0).map(answerOf));
+    const wrong = (qs: Question[]) => qs.map((q) => (q.type === 'multi' ? [] : q.type === 'number' ? -999 : q.type === 'choice' ? 99 : [])) as Given[];
+    if (wrongB) submit(S, L, 'R1', id, 'b', wrong(itemsFor(L, R(), id, 'b', 0)));
+    return { S, R, id };
+  };
+  it('6차시 문제 1: 첫 시도 다 맞힘 = 개념 칸 [n, n] · 이름 · 안 한 몬스터는 안 넣음 · 틀린 학생 = [0, n] + 약한 개념', () => {
+    const L = packOf('set-06')!, { R, id } = play(L);
+    const a = summaryOf(L, R(), 'a', 'R1', 1), b = summaryOf(L, R(), 'b', 'R1', 1);
+    const c = Object.keys(a.conc!)[0]!, n = itemsFor(L, R(), id, 'a', 0).length;
+    expect(Object.keys(a.conc!)).toEqual([c]); expect(a.conc![c]).toEqual([n, n]); expect(b.conc![c]).toEqual([0, n]);
+    expect(a.names![c]).toBeTruthy(); expect(a.names!.boss).toBe('형성평가');
+    expect(a.weak).toEqual([]); expect(b.weak).toEqual([c]);
+    expect(Array.isArray(a.conc![c])).toBe(true); // 정식 꼴 = [첫 시도 맞힘, 문항]
+  });
+  it('개념 단계가 없는 차시 팩 = 그 칸만 review 로 · 오류 없음', () => {
+    const L0 = packOf('set-06')!, L = { ...L0, id: 'ex-99', steps: L0.steps.filter((s) => s.kind !== 'concept') };
+    const { R } = play(L as never, false);
+    const a = summaryOf(L as never, R(), 'a', 'R1', 1);
+    expect(Object.keys(a.conc!)).toEqual(['review']);
+  });
+  it('다시 연 수업 = 이번에 한 개념만 새 값 · 오개념은 앞 수업 + 이번 (같은 수업 다시 저장해도 두 번 안 셈)', () => {
+    const prev = { at: 1, code: 'A', no: 6, mons: { m1: 'o' }, conc: { c1: [1, 1], c2: [0, 2] }, mis: { M01: [2, 1] }, miss: [], perfects: 1, right: 0, total: 0 } as never;
+    const cur = { at: 2, code: 'B', no: 6, mons: { m1: 'n', m2: 'o' }, conc: { c2: [2, 2] }, mis: { M01: [1, 0], M03: [1, 1] }, miss: [], perfects: 1, right: 0, total: 0 } as never;
+    const m = mergeRow(prev, cur);
+    expect(m.conc).toEqual({ c1: [1, 1], c2: [2, 2] }); expect(m.mis).toEqual({ M01: [3, 1], M03: [1, 1] });
+    const again = mergeRow(m as never, { ...(cur as object), at: 3 } as never); // 같은 수업(B) 을 다시 저장
+    expect(again.mis).toEqual({ M01: [3, 1], M03: [1, 1] });
+  });
+  it('concOf = 형성평가 안 한 학생은 boss 칸 없음', () => {
+    const L = packOf('set-06')!, { R } = play(L);
+    expect(concOf(L, R(), 'a').conc.boss).toBeUndefined();
+  });
+});

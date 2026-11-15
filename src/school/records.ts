@@ -3,10 +3,11 @@
 //   bossM = 형성평가 문항마다 'o · x · - · n' 한 줄 · boss = 맞힌 문항 수(체력 문항까지) · bossN = 체력 문항 수 · won = 보스 처치
 //   더한 칸(정식에 없음 · 정식 앱은 무시): right · total = 맞힌 소문제 / 전체 (📋 게시판 수호자 기준) · loot · firstXp 는 있던 값 그대로
 import type { LessonPack, Room } from '../model/types';
-import { activeIds, bossHp, bossState, chainRecord, isChain, mastery, plainRecord, resultOf } from '../raid/raid';
+import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
+import { SUBJ } from '../engine/subject';
 
 export type St = 'o' | 'f' | 'x' | '-' | 'n';
-export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number }
+export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number }
 
 export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now: number, prev?: Partial<RecRow> | null): RecRow {
   const others = activeIds(R, now).filter((u) => u !== uid);
@@ -25,8 +26,9 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
     if (st === 'o') perfects++;
     mons[s.id] = st;
   }
+  const cm = concOf(L, R, uid);
   const res = resultOf(L, R, uid);
-  const out: RecRow = { at: now, code: String(code), no: L.no, mons, miss: Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k), perfects, right: res.right, total: res.total };
+  const out: RecRow = { at: now, code: String(code), no: L.no, mons, conc: cm.conc, names: cm.names, weak: cm.weak, ...(Object.keys(cm.mis).length ? { mis: cm.mis } : {}), miss: Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k), perfects, right: res.right, total: res.total };
   if (L.boss) {
     const mast = mastery(L, R, uid), bs = bossState(L, R, uid), any = others.some((u) => bossState(L, R, u).some((x) => x.n > 0)), hpN = L.boss.hpItems ?? L.boss.items;
     out.boss = mast.slice(0, hpN).filter(Boolean).length; out.bossN = hpN;
@@ -37,6 +39,36 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   if (prev?.firstXp) out.firstXp = prev.firstXp;
   return mergeRow(prev, out);
 }
+/** 📌 개념별 첫 시도 · 🔎 오개념 (정식 js/raid/result.js compute 그대로 · 📜 2026-11-15)
+ *  개념 칸 = 몬스터 바로 앞 개념 단계(처음 앞 = review) · L.split[몬스터] = 소문제마다 개념 · 형성평가 = boss.tags[문항] 없으면 'boss'
+ *  안 낸 몬스터 · 안 한 형성평가는 넣지 않음(늦게 온 학생) · 소레이드 = 단계별 첫 시도 · 개념 태그 없는 팩 = 그 칸만 review/boss 로 */
+export function concOf(L: LessonPack, R: Room, uid: string) {
+  const map: Record<string, string> = {}, names: Record<string, string> = { review: '지난 시간 복습', boss: '형성평가' };
+  let cur = 'review';
+  for (const s of L.steps) { if (s.kind === 'concept') { cur = s.id; names[s.id] = s.title.replace(/^개념 \d+ · /, ''); } if (s.kind === 'monster') map[s.id] = cur; }
+  const conc: Record<string, { ok: number; total: number }> = {}, mis: Record<string, [number, number]> = {}, ML = SUBJ.misLogic;
+  const bump = (c: string, ok: boolean) => { const v = (conc[c] ||= { ok: 0, total: 0 }); v.total++; if (ok) v.ok++; };
+  const addMis = (codes: string[], fixed: boolean) => { for (const c of codes) { const v = (mis[c] ||= [0, 0]); v[0]++; if (fixed) v[1]++; } };
+  const split = (L as unknown as { split?: Record<string, string[]> }).split || {};
+  for (const s of L.steps) {
+    if (s.kind !== 'monster' || !L.monsters[s.id]) continue;
+    const sp = split[s.id];
+    if (isChain(L, R, s.id)) { const r = chainRecord(L, R, s.id, uid); if (r.submitted) r.stFirst.forEach((ok, i) => bump(sp?.[i] || map[s.id]!, !!ok)); continue; }
+    const r = plainRecord(L, R, s.id, uid);
+    if (!r.submitted) continue;
+    const first = r.tries[0];
+    Array.from({ length: r.total }, (_, i) => !!(first && first.attempt === 0 && first.marks[i])).forEach((ok, i) => bump(sp?.[i] || map[s.id]!, ok));
+    if (ML) for (const tr of r.tries) { const items = itemsFor(L, R, s.id, uid, tr.attempt); items.forEach((q, i) => { if (tr.marks[i]) return; const later = r.tries.some((u) => u.attempt > tr.attempt && u.marks[i]); addMis(ML.classify(q, (tr.given || [])[i]), later); }); }
+  }
+  if (L.boss) {
+    const tags = (L.boss as { tags?: string[] }).tags || [], bs = bossState(L, R, uid), mast = mastery(L, R, uid);
+    if (bs.some((x) => x.firstTried)) bs.forEach((x, i) => bump(tags[i] || 'boss', x.first));
+    if (ML) for (const tr of bossTries(L, R, uid)) { if (tr.ok || !tr.q) continue; addMis(ML.classify(tr.q, tr.given, tr.a === 0 ? ML.bossTag(L.id, 1, tr.i) : null), !!mast[tr.i]); }
+  }
+  const order = Object.keys(conc).filter((c) => conc[c]!.total);
+  const weak = order.map((c) => ({ c, r: conc[c]!.ok / conc[c]!.total })).filter((x) => x.r < 0.8).sort((a, b) => a.r - b.r).slice(0, 2).map((x) => x.c);
+  return { conc: Object.fromEntries(order.map((c) => [c, [conc[c]!.ok, conc[c]!.total] as [number, number]])), names, weak, mis };
+}
 const did = (v: unknown) => v === 'o' || v === 'f' || v === 'x';
 /** 🔁 같은 차시를 다시 열어도 칸마다 합침 (📜 2026-11-15 · 이어 하기 = 앞 수업 칸도 그 차시 기록에)
  *  이미 o · f · x 인 칸은 새 수업의 - · n 로 덮지 않음 · 새로 낸 칸만 바꿈(둘 다 냈으면 나중 것) · 형성평가도 문항마다 같은 규칙
@@ -46,6 +78,12 @@ export function mergeRow(prev: (Partial<RecRow> & Record<string, unknown>) | nul
   const pm = (prev.mons || {}) as Record<string, St>, mons: Record<string, St> = { ...cur.mons };
   for (const [k, v] of Object.entries(pm)) if (did(v) && !did(mons[k])) mons[k] = v;
   const out: RecRow = { ...(prev as RecRow), ...cur, mons };
+  // 📌 개념 칸 = 이번 수업에서 한 개념은 새 값 · 안 한 개념은 앞 값 그대로 · 🔎 오개념 = 앞 수업들 + 이번 수업(같은 수업을 다시 저장하면 이번 몫만 바뀜)
+  out.conc = { ...((prev.conc as RecRow['conc']) || {}), ...(cur.conc || {}) }; out.names = { ...((prev.names as RecRow['names']) || {}), ...(cur.names || {}) };
+  const base = (String(prev.code) === String(cur.code) ? prev.misBase : prev.mis) as RecRow['mis'] | undefined, mis: Record<string, [number, number]> = {};
+  for (const src of [base || {}, cur.mis || {}]) for (const [k, v] of Object.entries(src)) { const a = (mis[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
+  if (Object.keys(mis).length) out.mis = mis; else delete out.mis;
+  if (base && Object.keys(base).length) out.misBase = base; else delete out.misBase;
   out.miss = Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k);
   out.perfects = Object.values(mons).filter((v) => v === 'o').length;
   const pb = String(prev.bossM || ''), cb = String(cur.bossM || '');
