@@ -78,9 +78,8 @@
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
-  // 🐞 2026-11-15 「들어온 학생 20/1」: 명단 밖 접속(시험 봇 · 다른 반 · 옛 계정)까지 셌음 → 들어온 = 명단 학생 중 들어온 수 / 명단 · 명단 밖 = 「그 밖 n」
+  // 「들어온 학생」 숫자 = 예전 그대로(봇 포함 · 📜 머리 정정 「20/1 은 버그 아님 · 가상 학생 봇」) · 대기실 줄에는 명단 밖 접속(봇)도 보임
   const tvWords = $derived(Object.entries(R?.words || {}).filter(([u, w]) => w && w.t && !w.bad && !R?.wordHide?.[u]).map(([u, w]) => ({ u, t: String(w!.t) })));
-  const inRoster = $derived(expected.filter((p) => inSet.has(p.uid)).length);
   const others = $derived(ids.filter((u) => !pupils.some((p) => p.uid === u)));
   let lobbyW = $state(0);
   const stuK = $derived(lobbyW ? Math.min(2.2, Math.max(1, lobbyW / 900)) : 1.3); // 학생 용사 = 대기실 폭에 맞춤 (1~2.2배)
@@ -171,8 +170,8 @@
     }
     if (R.state.rest && view !== 'camp') return { ic: '📱', lab: '입장', n: ids.length, m: expected.length, sub: '' };
     if (view === 'concept') return null;
-    if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: inRoster, m: expected.length, sub: others.length ? `그 밖 ${others.length}` : '' };
-    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: inRoster, m: expected.length, sub: [others.length ? `그 밖 ${others.length}` : '', oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > inRoster ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - inRoster > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
+    if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: ids.length, m: expected.length, sub: '' };
+    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
     if (scout?.on) return { ic: '✋', lab: '준비 완료', n: Object.keys(R.ready?.[scout.id] || {}).length, m: ids.length, sub: '' };
     if (view === 'end') return { ic: '✔', lab: '참여', n: ids.length, m: expected.length, sub: '' };
     return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? `📵 끊김 ${lost.map(nameOf).join(' · ')}` : '' };
