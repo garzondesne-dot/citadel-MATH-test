@@ -78,6 +78,12 @@
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
+  // 🐞 2026-11-15 「들어온 학생 20/1」: 명단 밖 접속(시험 봇 · 다른 반 · 옛 계정)까지 셌음 → 들어온 = 명단 학생 중 들어온 수 / 명단 · 명단 밖 = 「그 밖 n」
+  const inRoster = $derived(expected.filter((p) => inSet.has(p.uid)).length);
+  const others = $derived(ids.filter((u) => !pupils.some((p) => p.uid === u)));
+  let lobbyW = $state(0);
+  const stuK = $derived(lobbyW ? Math.min(2.2, Math.max(1, lobbyW / 900)) : 1.3); // 학생 용사 = 대기실 폭에 맞춤 (1~2.2배)
+  const tchK = $derived(stuK * 1.15); // 선생님 = 학생의 1.15배 (후광도 같이)
   const step = $derived(R ? stepOf(L, R) : null);
   const i = $derived(R ? stepIdx(R) : -1);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
@@ -164,8 +170,8 @@
     }
     if (R.state.rest && view !== 'camp') return { ic: '📱', lab: '입장', n: ids.length, m: expected.length, sub: '' };
     if (view === 'concept') return null;
-    if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: ids.length, m: expected.length, sub: '' };
-    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
+    if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: inRoster, m: expected.length, sub: others.length ? `그 밖 ${others.length}` : '' };
+    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: inRoster, m: expected.length, sub: [others.length ? `그 밖 ${others.length}` : '', oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > inRoster ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - inRoster > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
     if (scout?.on) return { ic: '✋', lab: '준비 완료', n: Object.keys(R.ready?.[scout.id] || {}).length, m: ids.length, sub: '' };
     if (view === 'end') return { ic: '✔', lab: '참여', n: ids.length, m: expected.length, sub: '' };
     return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? `📵 끊김 ${lost.map(nameOf).join(' · ')}` : '' };
@@ -321,9 +327,10 @@
     </div>
   {:else if view === 'lobby'}
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
-    <div class="lring">
-      <div class="tchr"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><HeroSprite id={M.me.hero} scale={3} aura={M.me.enh} pose="idle" /><span>🧙 선생님</span></div>
-      <div class="rows">{#each pupils.filter((p) => !absent[p.uid]) as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={1} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name.slice(1)}</span></div>{/each}</div>
+    <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
+    <div class="lring" bind:clientWidth={lobbyW}>
+      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name.slice(1)}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
+      <div class="tchr"><HeroSprite id={M.me.hero} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
@@ -396,6 +403,8 @@
   {#if ink}<Ink step={i} onclose={() => (ink = false)} />{/if}
 
   <!-- 조작 막대 (#119 덧붙임 2): 🔊 · ⛶ | 🏕 · 🎬 · 📄 · 🎮 · ✏ | 🔴 집중 · « 뒤로 · 앞으로 ▶ · 📌 — 캠프 · 메뉴 · 수업 끝 단추 없음 (수업 닫기 = 교사 폰) -->
+  <!-- 🐞 2026-11-15 「종합실에 리모컨 등장 안 함」: 조작 막대는 3초 가만히 두면 숨음(📌 고정 전) → 숨어 있을 때 오른쪽 아래 작은 손잡이 = 누르면 다시 나옴 -->
+  {#if !dockOn}<button type="button" class="dockh" data-k="dock-handle" onclick={poke}>🎛 조작 막대</button>{/if}
   <nav class="dock" class:on={dockOn} class:small={view === 'camp'} aria-label="조작 막대">
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
@@ -512,17 +521,18 @@
   .campqr small { font-size: var(--tv-small); color: #d6d9e0; }
   .cc { font-size: var(--tv-body); font-weight: 700; } .cc b { display: block; font-size: var(--tv-big); color: var(--accent); letter-spacing: 0.4cqw; line-height: 1.1; }
   .cc.wait { font-size: var(--tv-title); padding: 8cqh 0; color: #d6d9e0; }
-  .lring { position: absolute; left: 2cqw; right: 18cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2cqh; }
-  .tchr { display: flex; flex-direction: column; align-items: center; gap: 0.6cqh; }
+  .lring { position: absolute; left: 2cqw; right: 18cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2cqh; }
+  .tchr { display: flex; flex-direction: row; align-items: flex-end; gap: 2cqw; flex: none; } .tside { display: flex; flex-direction: column; align-items: flex-start; gap: 1cqh; padding-bottom: 2cqh; }
   .tchr span { font-size: var(--tv-body); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.3cqh 1cqw; border-radius: 999px; }
   .bub { font-style: normal; font-size: var(--tv-title); font-weight: 700; color: #1a1300; background: #fff7e0; padding: 1cqh 1.6cqw; border-radius: 2cqh; position: relative; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5); }
-  .bub::after { content: ''; position: absolute; left: 50%; bottom: -1.4cqh; margin-left: -1cqh; border: 1cqh solid transparent; border-top-color: #fff7e0; }
-  .rows { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2cqh 1.4cqw; max-width: 76cqw; }
+  .bub::after { content: ''; position: absolute; left: -1.8cqh; top: 50%; margin-top: -1cqh; border: 1cqh solid transparent; border-right-color: #fff7e0; } .h.oth { opacity: 0.85; }
+  .rows { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-end; gap: 1.2cqh 1.4cqw; max-width: 76cqw; flex: 1; min-height: 0; overflow: hidden; }
   .h { display: flex; flex-direction: column; align-items: center; gap: 0.3cqh; }
   .h span { font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.2cqh 0.7cqw; border-radius: 999px; white-space: nowrap; }
   .h.nin { opacity: 0.4; }
   .split { position: absolute; left: 2cqw; right: 2cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw; }
-  .split.z1 { grid-template-columns: 1fr 0fr; } .split.z2 { grid-template-columns: 0fr 1fr; }
+  /* 🐞 2026-11-15 「문제 1번 확대 = 좁은 세로 띠」: 0fr 1fr + 첫 칸 숨김 = 남은 칸이 0 폭 첫 줄로 들어감 → 확대 = 한 칸 1fr */
+  .split.z1, .split.z2 { grid-template-columns: 1fr; }
   .split.z1 .cpane:nth-child(2), .split.z2 .cpane:nth-child(1) { display: none; }
   .cpane { position: relative; text-align: left; border: 0; border-radius: 2cqh; background: #fbf8f1; color: #1b1a17; padding: 3cqh 2cqw; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; font: inherit; cursor: zoom-in; }
   .cpane .lab { font-size: var(--tv-body); font-weight: 700; color: #7a4a10; }
@@ -585,6 +595,7 @@
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
+  .dockh { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; cursor: pointer; padding: 0.8cqh 1.2cqw; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.6); color: rgba(255, 255, 255, 0.8); font: 700 var(--tv-small) var(--font); }
   .dock { scale: 0.7; transform-origin: right bottom; } /* 📜 2026-11-14 선생님 「리모컨 사이즈 0.7로」 = 수업 중에도 0.7배 (교사 캠프는 원래 0.7) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }
   .dock button:disabled { opacity: 0.35; cursor: default; }
