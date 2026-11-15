@@ -36,7 +36,7 @@
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
   import Castle from '../castle/Castle.svelte';
-  import { manualOf, bonusBase, castleState, floorName, progressOf, spanOf, type CastleRec } from '../../school/castle';
+  import { manualOf, bonusBase, castleState, floorName, progressOf, spanOf, withLegacy, type CastleRec } from '../../school/castle';
   import { visibleCastles } from '../../school/castles.svelte';
   import SurveySheet from './SurveySheet.svelte';
   import { donePath, pendingNo, REWARD, statePath } from '../../school/survey';
@@ -173,7 +173,7 @@
   const castleOpen = (): number => {
     const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
     const up = progressOf(S, castleWho.cls, (castleWho.cls && castleWho.num ? S.get<Record<string, unknown>>(`records/${castleWho.cls}/${castleWho.num}`) : null) || {}, fromMe0); // 👩‍🏫 교사 캠프 = 모든 방 열림 (정식 교사)
-    return visibleCastles().reduce((a, P) => a + castleState(P, up, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}, false, manualOf(S, P.id, castleWho.cls)).open.length, 0);
+    return visibleCastles().reduce((a, P) => a + castleState(P, up, withLegacy(P.id, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}), false, manualOf(S, P.id, castleWho.cls)).open.length, 0);
   };
   let castleGo = $state<string | null>(null); // 🏰 성채 화면 (층 id · '' = 층 고르기)
   {

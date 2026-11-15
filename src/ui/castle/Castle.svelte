@@ -10,7 +10,7 @@
   import { chainItems as phItems, type PhItem, codeRubrics, pendState, ready as phReady, rubric as phRubric } from '../../school/photo';
   import { stepDone } from '../../board/board';
   import { meBound } from '../../store/meSync';
-  import { CASTLE_PHOTO_GEM, CASTLE_XP, photoScrolls, manualOf, baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
+  import { withLegacy, CASTLE_PHOTO_GEM, CASTLE_XP, photoScrolls, manualOf, baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
   import { castles, visibleCastles } from '../../school/castles.svelte';
   import { spriteOf } from '../manifest';
   import { busy } from '../busy.svelte';
@@ -33,7 +33,7 @@
   // 🔓 교사 수동 해금 (school/castleOpen · castleAuto = 실시간) — 바뀌면 바로 다시 그림
   const mStop = untrack(() => [S.watch('school/castleOpen', () => ver++), S.watch('school/castleAuto', () => ver++)]); onDestroy(() => mStop.forEach((f) => f()));
   const manOf = (Px: CastlePack) => { void ver; return manualOf(S, Px.id, cls); };
-  const recsOf = (P: CastlePack): Record<string, CastleRec> => { void ver; return preview ? {} : RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}; };
+  const recsOf = (P: CastlePack): Record<string, CastleRec> => { void ver; return preview ? {} : withLegacy(P.id, RS.get<Record<string, CastleRec>>(`${base}/${P.id}`) || {}); }; // 옛 1층 7마리 기록 = 그 방들 처치 (정식 roomRec)
   const upto = untrack(() => (preview ? 99 : progressOf(S, cls, (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {}, all)));
   let fid = $state(untrack(() => floor || (floors.length === 1 ? floors[0]!.id : '')));
   let pickF = $state(untrack(() => floor || floors[floors.length - 1]?.id || ''));

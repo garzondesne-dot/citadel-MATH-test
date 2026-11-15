@@ -140,3 +140,12 @@ describe('🏰 성채 몬스터 시트', () => {
     expect(spriteOf('castle3:2@h200').hue).toBe(200);
   });
 });
+describe('🏰 옛 1층 7마리 기록 (정식 roomRec LEGACY)', async () => {
+  const { withLegacy } = await import('../src/school/castle');
+  it('e1 · e2 · e3 처치 = q01~q05 처치 · 서버 기록은 그대로 · 다른 층 = 그대로', () => {
+    const raw = { e1: { clear: true }, e2: { clear: true }, e3: { clear: true }, q06: { clear: true } };
+    const r = withLegacy('eval-1', raw);
+    expect(['q01', 'q02', 'q03', 'q04', 'q05', 'q06', 'q07'].map((k) => !!r[k]?.clear)).toEqual([true, true, true, true, true, true, false]);
+    expect(raw).not.toHaveProperty('q01'); expect(withLegacy('eval-2', raw)).toBe(raw);
+  });
+});

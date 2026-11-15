@@ -12,7 +12,7 @@ import { CLASSES, lastClass, lastTest } from './school';
 
 export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; vers: Question[][] }
 export interface CastlePack { kind: 'castle'; id: string; floor: number; title: string; unit: string; theme?: string; goal?: string; bossPct: number; rooms: CastleRoom[]; /** 👀 학생에게 숨김 */ hide?: boolean; /** 올린 때 */ at?: number; /** 올린 글 그대로 (⬇ 내려받기 · 다시 올리기) */ raw: Record<string, unknown> }
-export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number }
+export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ legacy?: boolean; ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number }
 export interface CastleChecked { pack: CastlePack | null; issues: Issue[]; stats: { rooms: number; items: number; versions: number; rechecked: number; ask: number } }
 
 /** 저장 자리 (교사 쓰기 · 로그인한 사람 읽기 = 규칙 prep/$lesson 그대로 · 규칙 바꿀 일 없음) */
@@ -126,6 +126,14 @@ export function castleState(P: CastlePack, upto: number, recs: Record<string, Ca
   return { open: P.rooms.filter(isOpen), plain, cleared, need, boss, bossOpen, isOpen, auto, byTeacher };
 }
 /** 🔁 다시 들어온 방의 첫 판 (정식: 처음 = 판 0 · 다시 = 판 1~) — 기회 4번이 판 6 을 넘지 않게 1 · 2 · 3 을 돌림 */
+/** 🏰 옛 기록 (정식 bonus.js roomRec · lessons/eval-1.js LEGACY): 예전 1층 7마리(e1 ~ eb) 처치 = 그 방들 처치로 봄 · 읽을 때만 (서버 기록은 그대로) */
+export const LEGACY: Record<string, Record<string, string[]>> = { 'eval-1': { e1: ['q01', 'q02'], e2: ['q03', 'q04'], e3: ['q05'], e4: ['q06', 'q07'], e5: ['q08'], e6: ['q09', 'q10'], eb: ['q11', 'q12'] } };
+export function withLegacy(packId: string, recs: Record<string, CastleRec>): Record<string, CastleRec> {
+  const L = LEGACY[packId]; if (!L) return recs;
+  const out = { ...recs };
+  for (const [old, ids] of Object.entries(L)) if (recs[old]?.clear) for (const id of ids) if (!out[id]?.clear) out[id] = { ...(out[id] || {}), clear: true, legacy: true } as CastleRec;
+  return out;
+}
 export const baseVer = (rec: CastleRec | undefined) => { const n = Number(rec?.runs) || 0; return n ? 1 + ((n - 1) % 3) : 0; };
 
 /** 방 하나 → 몬스터 하나짜리 차시 팩 (학생 레이드 화면 · MonsterForm · ChainView 를 그대로 씀 🪞) */

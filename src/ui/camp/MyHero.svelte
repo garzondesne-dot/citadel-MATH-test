@@ -247,10 +247,10 @@
     {#snippet title()}🏅 호칭 고르기{/snippet}
     <div class="ttls">
       {#each TITLES.filter((t) => earned.includes(t.id)) as t (t.id)}
-        <button type="button" class="tp {TIER_CLS[t.tier]}" class:on={t.id === look.title} onclick={() => { look.title = t.id; ttlSheet = false; }}>{t.name}{#if t.id === look.title} ✔{/if}</button>
+        <button type="button" class="ttp {TIER_CLS[t.tier]}" class:on={t.id === look.title} onclick={() => { look.title = t.id; ttlSheet = false; }}>{t.name}{#if t.id === look.title} ✔{/if}</button>
       {/each}
       {#each TITLES.filter((t) => !earned.includes(t.id)) as t (t.id)}
-        <span class="tp lock">{t.name}<small>{t.cond}</small></span>
+        <span class="ttp lock">{t.name}<small>{t.cond}</small></span>
       {/each}
     </div>
   </Sheet>
@@ -369,11 +369,11 @@
   .row2 { display: flex; gap: var(--s2); }
   .row2 .btn { flex: 1; }
   .toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 30; margin: 0; padding: var(--s2) var(--s3); border-radius: 12px; background: var(--surface-2); color: var(--text); font-size: var(--fs-small); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); max-width: 90vw; text-align: center; }
-  .ttls { display: flex; flex-direction: column; gap: 6px; }
-  .tp { min-height: var(--tap); display: flex; flex-direction: column; justify-content: center; padding: 4px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: left; }
-  .tp.on { border: 2px solid var(--accent); }
-  .tp.lock { opacity: 0.5; font-weight: 500; }
-  .tp small { font-size: var(--fs-small); color: var(--text-2); }
+  .ttls { display: flex; flex-direction: column; gap: 6px; } /* 🐞 2026-11-15 이름 .tp → .ttp (교사 화면 공용 .tp = 화면 전체 높이 틀과 겹쳐 첫 칸이 세로로 길어짐) */
+  .ttp { min-height: var(--tap); display: flex; flex-direction: column; justify-content: center; padding: 4px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: left; }
+  .ttp.on { border: 2px solid var(--accent); }
+  .ttp.lock { opacity: 0.5; font-weight: 500; }
+  .ttp small { font-size: var(--fs-small); color: var(--text-2); }
   .t-b { color: var(--gem); }
   .t-p { color: var(--scroll); }
   .t-o { color: var(--accent); }
