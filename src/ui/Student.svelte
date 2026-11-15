@@ -33,6 +33,7 @@
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
   import Vid from './q/Vid.svelte';
+  import Loot from './result/Loot.svelte';
   import { conceptOf } from '../school/prep';
   import { summaryOf } from '../school/records';
   import { rewardOf, settle } from '../school/reward';
@@ -190,7 +191,8 @@
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
-  let cpt = $state(false), vidOn = $state(false);
+  let cpt = $state(false), vidOn = $state(false), campArm = $state(false), armT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const c = !!R?.state.closed; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
   const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
   $effect(() => { void step?.id; vidOn = false; });
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
@@ -212,6 +214,9 @@
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
+{:else if result && R && !board && !paperOn()}
+  <!-- 🎒 수업 결과 위 = 던전 배경 + 내 용사 승리 자세(오라) + 띠 (📜 2026-11-15 ⑦) -->
+  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />
 {:else if talk && R && !board}
   <!-- 📣 도입 · 개념 (📜 2026-11-15 선생님 「빈 화면 · 고장 난 것 같아」): 위 = 그 차시 던전 배경 + 내 용사(오라 · 숨쉬기) + 설명 중 띠 · 몬스터 단계와 같은 장면 부품 -->
   <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} note="👩‍🏫 선생님 설명 중 · TV 를 봐요" />
@@ -229,13 +234,8 @@
     <div class="bcard"><span class="lab acc">{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p></div>
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
-    <div class="bcard">
-      <div class="okline"><span class="ic">{bhp?.won ? '🏆' : '🏁'}</span><span><b>{bhp?.won ? '승리!' : '수업 끝'}</b><span>{nick}</span></span></div>
-      <p class="big">{result.right} <small class="muted">/ {result.total} 맞힘</small></p>
-      {#if proof}<p class="proof" data-k="proof">{proof}</p>{/if}
-      {#if rewardLine}<p class="rwd" data-k="reward">{rewardLine}</p>{/if}
-      <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
-    </div>
+    <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />
+    {#if proof}<div class="bcard"><p class="proof" data-k="proof">{proof}</p>{#if rewardLine}<p class="rwd" data-k="reward">{rewardLine}</p>{/if}</div>{/if}
     {#if !R.state.closed}
       <div class="bcard words" data-k="last-words">
         <span class="lab acc">💬 마지막 한마디</span>
@@ -244,7 +244,9 @@
         {#if werr}<p class="werr" role="alert">{werr}</p>{/if}
       </div>
     {/if}
-    {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
+    <!-- 🐞 갑자기 넘어감 (📜 2026-11-15): 선생님이 수업을 닫는 순간 「마무리 중」(눌리지 않음) 자리가 「🏕 내 캠프로」 링크로 바뀌어 · 화면을 만지던 손가락이 그대로 눌러 캠프로 감
+         → 닫혀도 결과 화면은 그대로 · 단추는 바뀐 뒤 1.5초 동안 눌리지 않음(🏁 수업이 끝났어요) · 그다음에만 캠프로 -->
+    {#if R.state.closed}{#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" why="🏁 수업이 끝났어요" />{:else}<BottomAction text="🏁 수업이 끝났어요" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫아도 이 화면은 그대로예요" />{/if}
   {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
     <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
     <div class="bcard talk" data-k="talk">
@@ -333,8 +335,6 @@
   .row { display: flex; align-items: baseline; gap: var(--s2); }
   .q2 { margin: 0; font-size: 17px; font-weight: 700; }
   .say { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
-  .res { margin: 0; padding-left: 1.2rem; }
-  .big small { font-size: var(--fs-small); }
   .gift.mail { border-color: var(--accent); }
   .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
   .qwrap { position: relative; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
