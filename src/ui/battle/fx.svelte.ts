@@ -7,12 +7,13 @@ export const fx = $state<{ hold: number; pose: 'idle' | 'attack' | 'miss' | 'hea
 export function swing(ok: boolean) { heroAtk({ miss: !ok }); }
 /** ⚔ 용사 공격 한 번 (정식 DS.Attack.play 를 장면 띠가 부름 · 🔨 용사 fx): miss = 틀림(튕겨냄) · hits = 연타 수(Ⅲ · Ⅳ 근접) · ult = ⚡ 필살기(첫 시도 퍼펙트 + 내 속성 Ⅲ↑ · 장면이 판정) · finish = 끈기의 일격 · noDmg = 연습 */
 /** prac = 🔥 한 판 더 · 연습 공격에서 맞힌 수 (데미지 0 · 회색 「🔥 +1」 흔적) */
-export type HeroAtk = { id: number; miss: boolean; hits?: number; ult?: boolean; finish?: boolean; noDmg?: boolean; win?: boolean; prac?: number };
+export type HeroAtk = { id: number; /** 🐞 2026-11-15 낸 시각 (오래된 사건 = 다시 안 틂) */ at?: number; miss: boolean; hits?: number; ult?: boolean; finish?: boolean; noDmg?: boolean; win?: boolean; prac?: number };
 let atkN = 0;
 export const atkQ = $state<{ v: HeroAtk | null }>({ v: null });
 /** 🎞 용사 잠깐 모션 (힐 시전 · 힐 받음 · 기쁨) — 장면 띠가 ms 동안 그 줄을 돌림 */
 export function heroPose(p: 'heal' | 'healed' | 'win', ms = 1400) { fx.pose = p; fx.poseUntil = Date.now() + ms; }
-export function heroAtk(o: Omit<HeroAtk, 'id'>) { atkQ.v = { ...o, id: ++atkN }; fx.pose = o.miss ? 'miss' : 'attack'; fx.poseUntil = Date.now() + 320; }
+export function heroAtk(o: Omit<HeroAtk, 'id'>) { atkQ.v = { ...o, id: ++atkN, at: Date.now() }; fx.pose = o.miss ? 'miss' : 'attack'; fx.poseUntil = Date.now() + 320; }
+(globalThis as { __heroAtk?: typeof heroAtk }).__heroAtk = heroAtk; // 화면 시험 고리 (공격 다시 재생 시험)
 
 /** 🛡 홀리 방패 막기 연출 요청 (장면 띠가 날개 · 방패를 그림 · 정식 Aura.guard) */
 export const guardQ = $state<{ v: number }>({ v: 0 });

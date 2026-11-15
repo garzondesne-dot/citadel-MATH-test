@@ -24,7 +24,7 @@
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
   const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow, tstrike = null }:
-    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean; /** 🧑‍🏫 선생님 일격 (시연 다 맞힘) */ tstrike?: { ult: boolean; at: number; hero: number; fx: string } | null } = $props();
+    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean; /** 🧑‍🏫 선생님 일격 (시연 다 맞힘) */ tstrike?: { ult: boolean; at: number; hero: number; fx: string; key?: string } | null } = $props();
   let host: HTMLDivElement;
   let A = $state<Arena | null>(null), mode = $state<'wait' | 'pixi' | 'dom'>('wait');
   let W = $state(0), H = $state(0);
@@ -144,9 +144,11 @@
   //   「시연 · 데미지 없음」 · 이미 쓰러진 몬스터면 「💥 소멸!」 = 번쩍 → 조각 14개 사방 → 0.9초 뒤 사라짐(그 단계 동안) · 데미지 · 기록 없음
   let seenStrike = 0; // 🐞 새로 열린 전투 장면은 열리기 전 일격을 다시 틀지 않음 (born = 아래 · 한 번 누름 = 한 번)
   const stepKey = $derived(`${R.state.step}|${step?.id ?? ''}`);
-  $effect(() => { const t = tstrike; if (!t || t.at === seenStrike || t.at < born) return; seenStrike = t.at; untrack(() => void teacherStrike(t)); });
+  // 🐞 2026-11-15 다시: born 은 서버 시각 · 일격 at 은 이 기기 시각 → 기기 시계가 앞서면 지난 일격이 다음 몬스터에서 또 나옴 = 이 기기 시각(bornL) + 그 일격의 단계(key)가 지금 단계일 때만
+  const bornL = Date.now();
+  $effect(() => { const t = tstrike, sk = stepKey; if (!t || t.at === seenStrike || t.at < bornL || (t.key && t.key !== sk)) return; seenStrike = t.at; untrack(() => void teacherStrike(t)); });
   async function teacherStrike(t: { ult: boolean; hero: number; fx: string }) {
-    const lay = fxLayer; if (!lay || !step) return;
+    const lay = fxLayer; if (!lay || !step) return; const gs = globalThis as { __tstrikes?: number }; gs.__tstrikes = (gs.__tstrikes || 0) + 1;
     
     atkPreload(t.hero, t.fx); if (t.ult) preloadFaces();
     const mb = document.createElement('div'); let bb = ''; try { const sp = spriteOf(sprite); bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { /* 기본 몸통 */ }

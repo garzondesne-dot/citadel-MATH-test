@@ -102,10 +102,11 @@
   // ── 어떤 장면인가 ──
   let campPeek = $state(false), setOpen = $state(false);
   const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' ? 'concept' : 'battle');
-  let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string } | null>(null); // 🧑‍🏫 선생님 일격
+  let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
   let zoom = $state<0 | 1 | 2>(0);
   let hero = $state(false);
+  (globalThis as { __tvStrikeSet?: (ult?: boolean) => void }).__tvStrikeSet = (ult = true) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx, key: `${R?.state.step}|${step?.id ?? ''}` }; }; // 화면 시험 고리 (시연 다 맞힘과 같은 길)
   $effect(() => { void i; untrack(() => { demo = false; zoom = 0; tstrike = null; }); }); // 단계가 바뀌면 시연 · 크게 보기 닫힘 · 🧑‍🏫 선생님 일격 비움(📜 2026-11-14 🐞 다음 몬스터에서 저절로 또 필살기 = 지난 일격이 남아 새 전투 장면이 다시 틈) (필기는 Ink 가 지움)
   // 🎮 시연 창 = 실제 전투(정찰 · 몬스터 공격 시계 · 학생 공격 연출) 멈춤 · 닫으면 그 자리에서 이어서 (📜 2026-11-14 선생님 「멈춤」 · 학생 풀기 · 제출 · 데미지는 그대로)
   $effect(() => { const d = demo, c = code; if (c) untrack(() => setDemo(S, c, d)); });
@@ -353,7 +354,7 @@
       <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
     {#if demo}<div class="demoban" role="status" data-k="demo-ban">🎮 시연 중 · 전투 잠시 멈춤</div>{/if}
-    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} {tlook} onclose={() => (demo = false)} onstrike={(ult) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx }; demo = false; }} /></div>{/if}
+    {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} {tlook} onclose={() => (demo = false)} onstrike={(ult) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx, key: `${R?.state.step}|${step?.id ?? ''}` }; demo = false; }} /></div>{/if}
   {/if}
 
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->

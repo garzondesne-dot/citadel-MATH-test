@@ -47,17 +47,19 @@
   const after = (p: HPose, ms: number) => { flash = p; clearTimeout(flashT); flashT = setTimeout(() => (flash = ''), ms); }; // 공격 연출 끝 = 틀림 → 맞음 줄 · 다 맞힘 → 기쁨 줄
   const hpose = $derived<HPose>(apose ? apose : hitPh ? hitPh : flash ? flash : pose === 'miss' ? 'hit' : pose !== 'idle' ? pose : healing ? 'healed' : slump ? 'fall' : down ? 'win' : shadow ? 'think' : 'idle');
   const anim = $derived(ANIM[hpose]);
-  let lastAtk = 0, lastGuard = guardQ.v;
+  // 🐞 2026-11-15 「개념 단계 뒤 다음 몬스터에서 필살기 · 공격이 다시 재생」(학생 폰 · TV 시연 폰 · 교사 시연): 장면이 새로 열리면 그 전 공격(atkQ 에 남은 마지막 값)은 이미 본 것
+  //   + 3초 넘은 사건은 틀지 않음 (몬스터 · 단계가 바뀐 뒤 늦게 닿은 것)
+  let lastAtk = atkQ.v?.id ?? 0, lastGuard = guardQ.v;
   // 🛡 홀리 방패 막기 = 내 용사 날개 · 방패 (정식 Aura.guard · 장면 높이 안)
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
-    const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id;
+    const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id; if (a.at && Date.now() - a.at > 3000) return; const gp = globalThis as { __atkPlays?: number }; gp.__atkPlays = (gp.__atkPlays || 0) + 1;
     untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
   });
   // 👥 동료 공격 (📜 2026-11-14): 정식 attack(동료 칸 · 동료 스킬 · TV 와 같은 사건) · 줄 세워 하나씩 · 소리 작게(0.45)
   //   맞음 = 돌진 · 이펙트 · −1 / 틀림 = 튕겨냄 「팅!」 · 정답 · 오답 글자는 없음
   const mbox: Record<string, HTMLElement | null> = {};
-  let matePose = $state<Record<string, HPose>>({}), mact = $state(''), mq: MateHit[] = [], mlast = 0, mbusy = false;
+  let matePose = $state<Record<string, HPose>>({}), mact = $state(''), mq: MateHit[] = [], mlast = untrack(() => Math.max(0, ...(mateFeed || []).map((h) => h.k))), mbusy = false; // 🐞 새로 열린 장면 = 그 전 동료 공격 안 틂
   $effect(() => { const f = mateFeed; untrack(() => { const add = f.filter((h) => h.k > mlast); if (!add.length) return; mlast = Math.max(...add.map((h) => h.k)); mq = queueHits(mq, add); void mpump(); }); });
   async function mpump() { if (mbusy) return; mbusy = true; try { while (mq.length) await mplay(mq.shift()!); } finally { mbusy = false; } }
   const mset = (u: string, p: HPose) => (matePose = { ...matePose, [u]: p });
