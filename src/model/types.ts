@@ -190,6 +190,8 @@ export interface Room {
   };
   /** absent[uid] = 결석 (대기실에서 안 온 번호를 누름 · 인원에서 빠짐) */
   absent?: Record<string, boolean>;
+  /** 💬 마지막 한마디 (정식 rooms/{코드}/words/{학생} = { t, bad, n }) · hide = 선생님이 숨김 */ words?: Record<string, { t?: string; bad?: boolean | null; n?: number } | null>;
+  wordHide?: Record<string, boolean>;
   players?: Record<string, RoomPlayer>;
   /** subs[mid][uid][attempt] = 학생 답 배열 */
   subs?: Record<string, Record<string, Record<string, Given[]>>>;

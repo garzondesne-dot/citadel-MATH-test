@@ -20,6 +20,7 @@
         "heals": { "$mid": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
         "ready": { "$id": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } }},
         "help": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
+        "words": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid", ".validate": "newData.child('t').isString() && newData.child('t').val().length <= 20 && newData.child('n').isNumber() && newData.child('n').val() <= 2" } },
         "se": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
         "rh": { "$pid": { ".write": "auth != null && root.child('pids/' + $pid + '/u').val() === auth.uid" } },
         "bh": {

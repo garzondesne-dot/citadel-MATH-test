@@ -8,7 +8,7 @@
   import type { LessonPack, Store } from '../model/types';
   import { PROFILES } from '../model/profiles';
   import { atkClock, atkTrack, bossHp, chainDown, chainRecord, gameNow, isChain, isEnd, isLobby, monsterHp, resultOf, solveLock, stepIdx, stepOf } from '../raid/raid';
-  import { heartbeat, leave, scoutReady } from '../raid/actions';
+  import { heartbeat, leave, sayWords, scoutReady } from '../raid/actions';
   import { liveRoom, liveValue } from './room.svelte';
   import { clock, useClock } from './clock.svelte';
   import Scene from './battle/Scene.svelte';
@@ -178,6 +178,14 @@
     if (r.xp) b.S.set(`${xp}/total`, (Number(xr.total) || 0) + r.xp);
     rewardLine = r.lines.join(' · ');
   }
+  // 💬 마지막 한마디 (📜 2026-11-15 선생님 「A 되살림」 · 정식 그대로: 마무리에 20자 · 처음 + 고치기 1번 · 처음 남길 때 EXP +2(정식 XP.words))
+  let wtext = $state(''), werr = $state(''), wedit = $state(false);
+  const myWord = $derived(R?.words?.[uid] ?? null);
+  function saveWord() {
+    const first = !myWord, e = sayWords(S, code, uid, wtext); werr = e; if (e) return;
+    wedit = false; wtext = '';
+    const b = meBound(); if (first && b) { const k = `xp/${b.cls}/${b.num}`, key = `words_${code}`; if (!b.S.get(`${k}/log/${key}`)) { b.S.set(`${k}/log/${key}`, { xp: 2, why: '마지막 한마디', at: S.now() }); b.S.set(`${k}/total`, (Number(b.S.get(`${k}/total`)) || 0) + 2); } }
+  }
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
@@ -222,6 +230,14 @@
       {#if rewardLine}<p class="rwd" data-k="reward">{rewardLine}</p>{/if}
       <ul class="res">{#each result.mons as m (m.id)}<li>{m.title}: {m.best}/{m.total} {m.perfect ? '⭐' : ''}</li>{/each}{#if result.boss}<li>형성평가: {result.boss.ok}/{result.boss.items}</li>{/if}</ul>
     </div>
+    {#if !R.state.closed}
+      <div class="bcard words" data-k="last-words">
+        <span class="lab acc">💬 마지막 한마디</span>
+        {#if myWord && !wedit}<p class="said">「{myWord.t}」</p>{#if (myWord.n || 1) < 2}<button type="button" class="wedit" onclick={() => { wedit = true; wtext = myWord?.t ?? ''; }}>✏ 한 번 고치기</button>{:else}<small class="muted">고치기를 다 썼어요</small>{/if}
+        {:else}<div class="wrow"><input type="text" maxlength="20" bind:value={wtext} placeholder="오늘 수업 한마디 (20자)" aria-label="마지막 한마디" /><button type="button" class="wsend" disabled={!wtext.trim()} onclick={saveWord}>남기기</button></div><small class="muted">{wtext.length}/20 · 교실 TV 말풍선으로 보여요</small>{/if}
+        {#if werr}<p class="werr" role="alert">{werr}</p>{/if}
+      </div>
+    {/if}
     {#if R.state.closed}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫으면 캠프로 가요" />{/if}
   {:else if step?.kind === 'concept'}
     <div class="bcard"><span class="lab acc">{step.title}</span><p class="say"><SymText text={step.say ?? ''} /></p></div>
@@ -309,4 +325,8 @@
   .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
   .cover b { font-size: 28px; color: var(--accent); }
   .cover p { margin: 0; color: var(--text-2); }
+  .words { display: flex; flex-direction: column; gap: 8px; } .words .said { margin: 0; font-size: 17px; font-weight: 700; }
+  .wrow { display: flex; gap: 8px; } .wrow input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
+  .wsend, .wedit { flex: none; min-height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--accent); color: var(--on-accent, #1a1400); font: 700 15px var(--font); } .wedit { background: var(--surface-2); color: var(--text); align-self: flex-start; }
+  .wsend:disabled { opacity: 0.45; } .werr { margin: 0; color: var(--bad); font-size: 14px; }
 </style>

@@ -1,4 +1,5 @@
 import { join as usageJoin } from '../school/usage';
+import { cleanWords } from '../school/survey';
 import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
@@ -86,6 +87,17 @@ export function setRest(S: Store, code: string, on: boolean, min = 5): void {
 export function setVideo(S: Store, code: string, id: string | null): void { const R = getRoom(S, code); const p = R ? cpPatch(R.state as never, { video: id } as never, S.now()) : {}; Object.entries(p).forEach(([k, v]) => S.set(`${roomPath(code)}/state/${k}`, v)); S.set(`${roomPath(code)}/state/video`, id); }
 export function setSheet(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/sheet`, id); }
 /** 🏛 교실 TV 「⚔ 던전 입장」: 교사 캠프 → 던전 대기실 */
+/** 💬 마지막 한마디 (정식 actions.js say 그대로 · 📜 2026-11-15 선생님 「A 되살림」): 20자 · 처음 1번 + 고치기 1번 · 욕설 = ＊ 로 가리고 bad 표시 → 오류 글('' = 됨) */
+export function sayWords(S: Store, code: string, uid: string, text: string): string {
+  const p = `${roomPath(code)}/words/${uid}`, was = S.get<{ n?: number }>(p);
+  if (was && (was.n || 0) >= 2) return '한마디는 한 번 고칠 수 있어요. 이미 고쳤어요.';
+  const c = cleanWords(text, 20);
+  if (!c.text) return '한마디를 써 주세요.';
+  S.set(p, { t: c.text, bad: c.bad || null, n: (was ? was.n || 1 : 0) + 1 });
+  return '';
+}
+/** 👩‍🏫 한마디 숨김(오늘 이 수업만 · 정식 hideWord) */
+export const hideWords = (S: Store, code: string, uid: string, on: boolean) => S.set(`${roomPath(code)}/wordHide/${uid}`, on ? true : null);
 export function hallLobby(S: Store, code: string): void { S.set(`${roomPath(code)}/state/hall`, 'lobby'); }
 /** 💬 TV 대기실 선생님 말풍선 (20자) */
 export function setBubble(S: Store, code: string, text: string): void { S.set(`${roomPath(code)}/state/bubble`, text.slice(0, 20) || null); }

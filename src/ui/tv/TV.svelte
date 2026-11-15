@@ -79,6 +79,7 @@
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
   // 🐞 2026-11-15 「들어온 학생 20/1」: 명단 밖 접속(시험 봇 · 다른 반 · 옛 계정)까지 셌음 → 들어온 = 명단 학생 중 들어온 수 / 명단 · 명단 밖 = 「그 밖 n」
+  const tvWords = $derived(Object.entries(R?.words || {}).filter(([u, w]) => w && w.t && !w.bad && !R?.wordHide?.[u]).map(([u, w]) => ({ u, t: String(w!.t) })));
   const inRoster = $derived(expected.filter((p) => inSet.has(p.uid)).length);
   const others = $derived(ids.filter((u) => !pupils.some((p) => p.uid === u)));
   let lobbyW = $state(0);
@@ -342,7 +343,9 @@
       {/if}
     </div>
   {:else if view === 'end'}
-    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p></div>
+    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>
+      <!-- 💬 마지막 한마디 말풍선 (정식 hall.js 마무리 · 거른 말 · 선생님이 숨긴 말 = 안 보임) -->
+      {#if tvWords.length}<div class="wbubs" data-k="tv-words">{#each tvWords as w (w.u)}<span class="wb"><em>{w.t}</em><small>{nameOf(w.u)}</small></span>{/each}</div>{:else}<p class="wwait">💬 학생 폰에서 마지막 한마디를 남겨요</p>{/if}</div>
   {:else if step && R}
     <!-- ⚔ 전투: 몬스터 + 머리 위 체력 · 아래 용사 이름표 -->
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
@@ -595,6 +598,7 @@
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
+  .wbubs { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2cqh 1.2cqw; max-width: 80cqw; margin-top: 2cqh; } .wb { display: flex; flex-direction: column; align-items: center; gap: 0.4cqh; } .wb em { font-style: normal; font-size: var(--tv-body); font-weight: 700; color: #1a1300; background: #fff7e0; padding: 0.8cqh 1.2cqw; border-radius: 1.6cqh; } .wb small { font-size: var(--tv-small); opacity: 0.85; } .wwait { opacity: 0.7; }
   .dockh { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; cursor: pointer; padding: 0.8cqh 1.2cqw; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.6); color: rgba(255, 255, 255, 0.8); font: 700 var(--tv-small) var(--font); }
   .dock { scale: 0.7; transform-origin: right bottom; } /* 📜 2026-11-14 선생님 「리모컨 사이즈 0.7로」 = 수업 중에도 0.7배 (교사 캠프는 원래 0.7) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }

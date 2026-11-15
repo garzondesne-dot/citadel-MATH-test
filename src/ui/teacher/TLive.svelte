@@ -6,7 +6,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { appearNow, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
@@ -225,6 +225,11 @@
           <span class="unsub">{#if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           <span class="sub"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>
         </div>
+        {#if isEnd(L, R)}
+          <!-- 💬 마지막 한마디 관리 (정식 control.js: 거른 말 맨 위 · 숨김 = TV 에서 안 보임) -->
+          {@const ws = Object.entries(R.words || {}).filter(([, w]) => w && w.t).sort((a, b) => Number(!!b[1]!.bad) - Number(!!a[1]!.bad))}
+          <div class="wlist" data-k="tl-words"><span class="wlh">💬 마지막 한마디 {ws.length}</span>{#each ws as [u, w] (u)}<div class="wl" class:bad={w!.bad} class:off={R.wordHide?.[u]}><b>{nameOf(u)}</b><span>{w!.t}</span><button type="button" onclick={() => hideWords(S, code, u, !R.wordHide?.[u])}>{R.wordHide?.[u] ? '보이기' : '숨김'}</button></div>{/each}</div>
+        {/if}
         {#if isEnd(L, R) && feat('survey')}
           <!-- 📝 마무리 = 그 반 설문 열기 · 닫기 (정식 survey.js ctlHtml · 차시 번호 = 이 기기 기억) -->
           <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
@@ -490,4 +495,5 @@
   .ask .row { display: flex; gap: var(--s2); }
   .ask .btn { flex: 1; height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .ask .btn2 { width: 92px; height: 52px; border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); }
+  .wlist { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; } .wlh { font-size: 13px; font-weight: 700; color: var(--text-2); } .wl { display: flex; align-items: center; gap: 8px; font-size: 14px; } .wl b { flex: none; } .wl span { flex: 1; min-width: 0; overflow-wrap: anywhere; } .wl.bad span { color: var(--bad); } .wl.off { opacity: 0.45; } .wl button { flex: none; min-height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 600 13px var(--font); }
 </style>
