@@ -22,7 +22,7 @@
   const a = $derived(achieve(s));
   const days = $derived(s.extra.days.filter(Boolean).length);
   const live = $derived(liveOfCls(S, s.cls));
-  let toast = $state(''), memo = $state(false), gift = $state(false), amt = $state(10);
+  let toast = $state(''), memo = $state(false), gift = $state(false), amt = $state(3), why = $state(''); // 💎 주기 = 정식 그대로 1~5 · 이유 한 줄
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   const mark = (id: string) => { const r = s.rec[id]; if (!r) return { t: '불참', c: 'no' }; if (r.noBoss) return { t: '— 수업 안 함', c: 'no' }; const ok = r.boss / r.bossN; return { t: `${ok >= 0.8 ? '✔' : ok >= 0.5 ? '△' : '✘'} ${r.boss}/${r.bossN}`, c: ok >= 0.8 ? 'ok' : ok >= 0.5 ? 'mid' : 'bad' }; };
   // 차시 목록 = 과목 목록 + 이 학생 기록에 있는 차시(8 · 9차시 등) · 차시 순서
@@ -34,6 +34,8 @@
   const lvp = untrack(() => (S.kind === 'server' ? liveValue(S, 'photo') : null)); onDestroy(() => lvp?.stop());
   let phVer = $state(0);
   const phs = $derived.by(() => { void lvp?.v.val; void phVer; return S.kind === 'server' ? photoNeeds(S, s.cls, s.n) : []; });
+  // 📚 차시별 개념 기록 (정식 detail() 의 DS.Result.history 자리 · 첫 시도 맞힘 / 문항 · 차시 순)
+  const hist = $derived.by(() => { const by: Record<string, { no: number; cs: { name: string; ok: number; total: number }[] }> = {}; for (const c of Object.values(s.conc)) { const no = s.rec[c.lesson]?.no ?? 0; (by[c.lesson] ||= { no, cs: [] }).cs.push({ name: c.name, ok: c.ok, total: c.total }); } return Object.values(by).sort((a, b) => a.no - b.no); });
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); say('📋 복사했어요'); } catch { say('복사가 막혔어요 · 길게 눌러 복사'); } }
 </script>
 
@@ -55,6 +57,7 @@
         <span class="rc {m.c}"><small>{l.no}차시</small><b>{m.t}</b>{#if s.rec[l.id]?.star}<i>⭐</i>{/if}{#if s.rec[l.id]?.fixedBy}<i>→ ■</i>{/if}</span>
       {/each}
     </div>
+    {#if hist.length}<p class="lab">차시별 개념 · 첫 시도</p><div class="hist" data-k="pupil-hist">{#each hist as h (h.no)}<div class="hr"><small>{h.no}차시</small><span>{#each h.cs as c (c.name)}<i class:lo={c.total && c.ok / c.total < 0.6}>{c.name} {c.ok}/{c.total}</i>{/each}</span></div>{/each}</div>{/if}
     {#if s.extra.dummy?.length}<p class="dum" data-k="dummy-line">🎯 허수아비로 함 · {s.extra.dummy.map((d) => `${d.no}차시 ${d.cells.map((c) => cellName(d.lid, c)).join(' · ')}`).join(' / ')} <small>(반 통계에는 안 들어가요)</small></p>{/if}
     <p class="lab">방과후 · 최근 2주</p>
     <div class="cal" aria-label="방과후 접속 달력">{#each s.extra.days as d, k (k)}<i class="l{Math.min(4, d)}" title="{d}회"></i>{/each}</div>
@@ -65,17 +68,18 @@
     </div>
     {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}
     {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}
-    <p class="fake">🧪 이 기기 체험 = 가짜 기록 (반 · 번호로 늘 같은 값)</p>
+    {#if S.kind !== 'server'}<p class="fake">🧪 이 기기 체험 = 가짜 기록 (반 · 번호로 늘 같은 값)</p>{/if}
   </div>
   <div class="acts">
     <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 이 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
-    <button type="button" onclick={() => (gift = true)}>💎 선물</button>
+    <button type="button" onclick={() => (gift = true)}>💎 조각 주기</button>
     <button type="button" disabled={!live} title={live ? '' : '수업 중에만'} onclick={() => { if (live) { setAbsent(S, live.code, uidOf(s.cls, s.n), true); say('🚫 오늘 결석으로'); } }}>🚫 결석</button>
     {#if feat('seteuk')}<button type="button" onclick={() => (memo = true)}>📝 세특</button>{/if}
   </div>
   {#if gift}
-    <div class="pop"><b>💎 {s.name}에게 선물</b><div class="amt">{#each [5, 10, 20, 50] as v (v)}<button type="button" class:on={amt === v} onclick={() => (amt = v)}>{v}</button>{/each}</div>
-      <div class="row"><button type="button" class="b2" onclick={() => (gift = false)}>취소</button><button type="button" class="b1" onclick={() => { giveGift(S, live?.code ?? 'teacher', [uidOf(s.cls, s.n)], amt); gift = false; say(`🎁 💎 ${amt} 보냈어요`); }}>보내기</button></div></div>
+    <div class="pop" data-k="gem-give"><b>💎 {s.name}에게 조각 주기 <small>1~5 · 이유 한 줄 (세특 근거)</small></b><div class="amt">{#each [1, 2, 3, 4, 5] as v (v)}<button type="button" class:on={amt === v} onclick={() => (amt = v)}>{v}</button>{/each}</div>
+      <input class="why" type="text" maxlength="40" bind:value={why} placeholder="이유 한 줄 (예: 친구에게 풀이를 설명함)" aria-label="이유" />
+      <div class="row"><button type="button" class="b2" onclick={() => (gift = false)}>취소</button><button type="button" class="b1" disabled={!why.trim()} onclick={() => { const w = why.trim(); giveGift(S, live?.code ?? 'teacher', [uidOf(s.cls, s.n)], amt, false, w); gift = false; why = ''; say(`💎 ${amt}개를 줬어요 · 「${w}」`); }}>주기</button></div></div>
   {/if}
   {#if memo}
     {@const mp = memoParts(s)}
@@ -117,6 +121,8 @@
   .pop { position: absolute; left: var(--s4); right: var(--s4); bottom: 80px; z-index: 2; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s3); display: flex; flex-direction: column; gap: var(--s2); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }
   .memo { margin: 0; font-size: 14px; line-height: 1.6; }
   .more { font-size: 13px; color: var(--text-2); } .more summary { cursor: pointer; min-height: 32px; } .more p { margin: 4px 0; }
+  .hist { display: flex; flex-direction: column; gap: 4px; } .hr { display: flex; gap: 8px; align-items: baseline; font-size: 13px; } .hr small { flex: none; width: 40px; color: var(--text-3); } .hr span { display: flex; flex-wrap: wrap; gap: 4px; } .hr i { font-style: normal; padding: 2px 8px; border-radius: 8px; background: var(--surface-2); } .hr i.lo { color: var(--bad); }
+  .why { width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 500 15px var(--font); } .pop b small { display: block; font-size: 12px; color: var(--text-2); font-weight: 500; }
   .amt { display: flex; gap: 6px; } .amt button { flex: 1; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); } .amt button.on { background: var(--accent); color: var(--on-accent); }
   .row { display: flex; gap: var(--s2); } .b1 { flex: 1; height: 48px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent); font: 700 16px var(--font); } .b2 { width: 88px; height: 48px; border-radius: 12px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 14px var(--font); }
   .toast { position: absolute; left: var(--s4); right: var(--s4); top: 56px; margin: 0; z-index: 3; padding: var(--s2); border-radius: var(--r); background: var(--surface-2); text-align: center; font-weight: 700; font-size: 14px; }

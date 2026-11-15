@@ -128,11 +128,11 @@ export function setAbsent(S: Store, code: string, uid: string, on: boolean): voi
 export function sendReload(S: Store, code: string, uids: string[]): void { const t = S.now(); uids.forEach((u) => S.set(`${roomPath(code)}/state/reload/${u}`, t)); }
 /** 💎 선생님 선물 (정식 Gem.gift · 하루 한도 밖 · 학생 캠프 「🎁 선생님 선물」): gifts/{uid}/{k} = { g, at, code }
  *  TV 연출 = 반 전체에게 줄 때만 「🎁 선생님 선물! 모두 💎 n」 (#119 덧붙임 · 몇 명만 = TV 에 아무것도 없음 · 받은 학생 폰에만) */
-export function giveGift(S: Store, code: string, uids: string[], g: number, all = false): number {
+export function giveGift(S: Store, code: string, uids: string[], g: number, all = false, why = ''): number {
   const t = S.now(), n = Math.max(0, Math.round(g));
   if (!n || !uids.length) return 0;
   const r = Math.random().toString(36).slice(2, 6);
-  uids.forEach((u, i) => S.set(`gifts/${u}/${t}_${r}${i}`, { g: n, at: t, code }));
+  uids.forEach((u, i) => S.set(`gifts/${u}/${t}_${r}${i}`, { g: n, at: t, code, ...(why ? { fun: `👩‍🏫 ${why}` } : {}) })); // 💬 이유 한 줄 = 우편함 선물 이름 (정식 「👩‍🏫 이유」)
   if (all) S.set(`${roomPath(code)}/state/gift`, { at: t, n: uids.length, g: n });
   return uids.length;
 }

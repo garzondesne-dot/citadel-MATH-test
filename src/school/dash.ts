@@ -154,9 +154,9 @@ export function realClass(S: Store, cls: string) {
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   (out as { dropped?: string[] }).dropped = [...dropped];
   for (const st of out.studs) { // ❗ 남은 문제 = 정식 DS.Note.lesson(…).left (형성평가 있는 수업 차시만 · 성채 평가 차시 빼기)
-    let left = 0, done = 0; // ❗ 남은 문제 · 📕 오답 고침 완료(정식 noteDone = 허수아비로 바로잡은 칸 'p')
-    for (const [lid, r] of Object.entries(recAll[st.n] || {})) { if (!isObj(r) || /^eval-/.test(lid)) continue; const L = fullLesson(lid); if (!L?.boss) continue; const x = noteOf(L, r as Rec, (bonAll[st.n] || {})[lid] as Bon | undefined); left += x.left; done += x.mons.filter((m) => m === 'p').length + x.boss.slice(0, x.hp).filter((m) => m === 'p').length; }
-    st.left = left; st.extra.noteDone = done;
+    let left = 0, done = 0, sub = 0, opened = 0; // ❗ 남은 문제 · 📕 오답 고침 완료(정식 noteDone = 허수아비로 바로잡은 칸 'p')
+    for (const [lid, r] of Object.entries(recAll[st.n] || {})) { if (!isObj(r) || /^eval-/.test(lid)) continue; const L = fullLesson(lid); if (!L?.boss) continue; const x = noteOf(L, r as Rec, (bonAll[st.n] || {})[lid] as Bon | undefined); left += x.left; done += x.mons.filter((m) => m === 'p').length + x.boss.slice(0, x.hp).filter((m) => m === 'p').length; for (const m of Object.values(isObj((r as Record<string, unknown>).mons) ? ((r as Record<string, unknown>).mons as Record<string, string>) : {})) { if (m === 'o' || m === 'f' || m === 'x') { sub++; opened++; } else if (m === '-') opened++; } }
+    st.left = left; st.extra.noteDone = done; st.extra.submit = opened ? Math.round((100 * sub) / opened) : 0; // 제출률 = 수업에서 연 몬스터 중 낸 것
   }
   // 🔎 오개념 = 수업 기록 + 🏰 성채(평가 방 eval-) 기록 (정식 dash.js 그대로 · 🎯 허수아비는 빼기 · 📜 2026-11-15 머리 🔨 (c))
   for (const st of out.studs) for (const [lid, l] of Object.entries(bonAll[st.n] || {})) {
