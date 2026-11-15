@@ -140,6 +140,9 @@
     });
   });
   let gtoast = $state('');
+  // ✅ 도장 📜 (📜 2026-11-16 · 🌊 ⑤): 선생님이 리모컨에서 도장을 찍으면 그 자리에서 한 번 · 📜 는 캠프에 오면 받음(gifts)
+  let stampSeen: number | null | undefined = undefined;
+  $effect(() => { const v = R?.stamp?.[uid] ?? null; untrack(() => { if (stampSeen === undefined) { stampSeen = v; return; } if (v && v !== stampSeen) { gtoast = '✅ 도장! 📜 +1'; sfx('star', 0.7); setTimeout(() => (gtoast = ''), 2600); } stampSeen = v; }); });
   function guardStrike(us: string[], mid: string) {
     const mine = us.includes(uid), names = us.filter((u) => u !== uid).map((u) => R?.players?.[u]?.nick || '친구');
     if (mine) { holyUse(S, code, uid, mid); guardQ.v += 1; }

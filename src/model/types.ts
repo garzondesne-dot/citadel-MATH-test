@@ -209,6 +209,8 @@ export interface Room {
   };
   /** absent[uid] = 결석 (대기실에서 안 온 번호를 누름 · 인원에서 빠짐) */
   absent?: Record<string, boolean>;
+  /** ✅ 도장 (📜 2026-11-16 · 🌊 ⑤) stamp[uid] = 찍은 시각 · 한 수업에 한 번 · 📜 +1 은 gifts 로 */
+  stamp?: Record<string, number>;
   /** 💬 마지막 한마디 (정식 rooms/{코드}/words/{학생} = { t, bad, n }) · hide = 선생님이 숨김 */ words?: Record<string, { t?: string; bad?: boolean | null; n?: number } | null>;
   wordHide?: Record<string, boolean>;
   players?: Record<string, RoomPlayer>;

@@ -142,6 +142,17 @@ export function setAbsent(S: Store, code: string, uid: string, on: boolean): voi
 export function sendReload(S: Store, code: string, uids: string[]): void { const t = S.now(); uids.forEach((u) => S.set(`${roomPath(code)}/state/reload/${u}`, t)); }
 /** 💎 선생님 선물 (정식 Gem.gift · 하루 한도 밖 · 학생 캠프 「🎁 선생님 선물」): gifts/{uid}/{k} = { g, at, code }
  *  TV 연출 = 반 전체에게 줄 때만 「🎁 선생님 선물! 모두 💎 n」 (#119 덧붙임 · 몇 명만 = TV 에 아무것도 없음 · 받은 학생 폰에만) */
+/** ✅ 도장 📜 (📜 2026-11-16 선생님 「1개」 · DECISIONS 🌊 ⑤): 교사가 종이 도장을 찍으며 리모컨 학생 칸 → 📜 +1 · 한 수업에 한 번
+ *  📜 = gifts/{학생}/stamp_{수업} = { s: 1 } (캠프에 오면 받음 · 우편함에도) · 표시 = rooms/{수업}/stamp/{학생} = 시각(학생 폰 「✅ 도장! 📜 +1」 · 리모컨 「이미 도장」) */
+export const stamped = (R: Room | null | undefined, uid: string) => !!R?.stamp?.[uid];
+export function giveStamp(S: Store, code: string, uid: string): boolean {
+  const k = `stamp_${code.replace(/[.#$/[\]]/g, '_')}`;
+  if (S.get(`${roomPath(code)}/stamp/${uid}`) || S.get(`gifts/${uid}/${k}`)) return false;
+  const t = S.now();
+  S.set(`gifts/${uid}/${k}`, { g: 0, s: 1, at: t, code, fun: '✅ 도장' });
+  S.set(`${roomPath(code)}/stamp/${uid}`, t);
+  return true;
+}
 export function giveGift(S: Store, code: string, uids: string[], g: number, all = false, why = ''): number {
   const t = S.now(), n = Math.max(0, Math.round(g));
   if (!n || !uids.length) return 0;
