@@ -52,10 +52,13 @@
   const sv = S as Store & { onNet?: (fn: (s: { connected: boolean }) => void) => () => void };
   sv.onNet?.((s) => (netOk = s.connected));
   // 🧩 #132 차시 = 방이 기억한 차시(meta.lesson) → 지금 열린 수업 → 6차시 · 팩은 src/packs 모두
-  const DEF = packOf(SUBJ.defaultLesson) ?? PACKS[0]!;
+  // 🏫 학교판(빈 과목 팩) = 처음엔 차시가 하나도 없음 → 올린 엑셀 차시(뒤에 PACKS 에 들어옴) · 그것도 없으면 빈 차시 (🐞 학교판 첫 화면 「steps」 멈춤)
+  const NONE: LessonPack = { id: '', no: 0, title: '차시 없음', steps: [], monsters: {} } as unknown as LessonPack;
+  const defL = (): LessonPack => packOf(SUBJ.defaultLesson) ?? PACKS[0] ?? NONE;
+  const DEF = defL();
   const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
   // 🎲 그림 없는 차시 = 랜덤 던전을 입힘 · 방 meta.rdun = 시험으로 고른 던전 (ui/rdun.ts)
-  const lessonOf = (c: string): LessonPack => dressed(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? (q.get('mode') === 'test' ? packOf(q.get('lesson')) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? DEF, c ? S.get<string>(`rooms/${c}/meta/rdun`) : null);
+  const lessonOf = (c: string): LessonPack => dressed(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? (q.get('mode') === 'test' ? packOf(q.get('lesson')) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? defL(), c ? S.get<string>(`rooms/${c}/meta/rdun`) : null);
   // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름
   let modeKey = $state<'class' | 'test'>(q.get('mode') === 'class' ? 'class' : 'test');
   const P = $derived(PROFILES[modeKey]);

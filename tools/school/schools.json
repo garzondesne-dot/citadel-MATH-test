@@ -1,0 +1,17 @@
+{
+  "_": "🏫 학교판 목록 (📜 머리 🔨 · 정식 schools/schools.json 그대로) · 값 = Firebase 웹 공개 설정(비밀 아님 · 데이터는 그 학교 database.rules.json 이 지킴) · 빌드: VITE_SCHOOL=<코드> npx vite build --outDir <사이트>/s/<코드>",
+  "srzmf": {
+    "name": "무안행복중학교",
+    "subject": "중학수학1",
+    "fb": {
+      "apiKey": "AIzaSyCRA48IQMfgcwVbnggJr8CyEqnt5fvpUvo",
+      "authDomain": "dungeon-hpms.firebaseapp.com",
+      "databaseURL": "https://dungeon-hpms-default-rtdb.firebaseio.com",
+      "projectId": "dungeon-hpms",
+      "storageBucket": "dungeon-hpms.firebasestorage.app",
+      "messagingSenderId": "271517619583",
+      "appId": "1:271517619583:web:e191274034baedb401764a",
+      "measurementId": "G-Z5NNL2BMKV"
+    }
+  }
+}

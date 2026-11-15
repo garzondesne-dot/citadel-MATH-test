@@ -50,7 +50,8 @@ export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on:
 export interface FeatCfg { bundle: BundleId; on?: Partial<Record<FeatId, boolean>> }
 export const PATH = 'school/features';
 /** 설정이 없는 서버 = 🏰 전체 (지금 우리 학교 그대로 · 다른 학교는 처음 열 때 묶음을 고름) */
-export const DEFAULT_CFG: FeatCfg = { bundle: 'full' };
+// 🏫 학교판 빌드 = 표준 묶음이 처음 값 (VITE_BUNDLE · 과목 팩에 없는 기능은 어차피 잠김) · 우리 학교 = 전체
+export const DEFAULT_CFG: FeatCfg = { bundle: (((import.meta as { env?: Record<string, string | undefined> }).env?.VITE_BUNDLE) as BundleId) || 'full' };
 
 /** 켜 놓았나 (묶음 + 낱낱 스위치 · 필요한 것은 보지 않음) */
 export function wanted(c: FeatCfg | null | undefined, id: FeatId): boolean {

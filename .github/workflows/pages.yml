@@ -29,6 +29,7 @@ jobs:
       - run: npm run build
         env:
           VITE_CHANNEL: beta # 📲 베타 이름 · 아이콘 · id (정식 = release)
+      - run: VITE_SCHOOL=srzmf npx vite build --outDir dist/s/srzmf --emptyOutDir # 🏫 학교판(무안행복중) = 같은 코드 · 빈 과목 팩 · 그 학교 서버 (베타에서 먼저)
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
