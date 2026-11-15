@@ -35,6 +35,23 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   }
   if (prev?.loot) out.loot = prev.loot;
   if (prev?.firstXp) out.firstXp = prev.firstXp;
+  return mergeRow(prev, out);
+}
+const did = (v: unknown) => v === 'o' || v === 'f' || v === 'x';
+/** 🔁 같은 차시를 다시 열어도 칸마다 합침 (📜 2026-11-15 · 이어 하기 = 앞 수업 칸도 그 차시 기록에)
+ *  이미 o · f · x 인 칸은 새 수업의 - · n 로 덮지 않음 · 새로 낸 칸만 바꿈(둘 다 냈으면 나중 것) · 형성평가도 문항마다 같은 규칙
+ *  정식에서 온 칸(conc · mis · lad …)은 그대로 둠 (이 앱이 다시 계산하지 않는 칸) */
+export function mergeRow(prev: (Partial<RecRow> & Record<string, unknown>) | null | undefined, cur: RecRow): RecRow {
+  if (!prev || typeof prev !== 'object') return cur;
+  const pm = (prev.mons || {}) as Record<string, St>, mons: Record<string, St> = { ...cur.mons };
+  for (const [k, v] of Object.entries(pm)) if (did(v) && !did(mons[k])) mons[k] = v;
+  const out: RecRow = { ...(prev as RecRow), ...cur, mons };
+  out.miss = Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k);
+  out.perfects = Object.values(mons).filter((v) => v === 'o').length;
+  const pb = String(prev.bossM || ''), cb = String(cur.bossM || '');
+  if (pb && /[ox]/.test(pb) && !/[ox]/.test(cb)) { out.bossM = pb; out.boss = Number(prev.boss) || 0; out.bossN = Number(prev.bossN) || cur.bossN; out.won = !!prev.won || !!cur.won; } // 이번 수업에서 형성평가를 안 했으면 앞 수업 형성평가 그대로
+  else if (pb && cb && /[ox]/.test(pb)) { out.bossM = cb.split('').map((c, i) => (c === 'o' || c === 'x' ? c : pb[i] === 'o' || pb[i] === 'x' ? pb[i]! : c)).join(''); out.boss = out.bossM.slice(0, out.bossN || out.bossM.length).split('').filter((c) => c === 'o').length; }
+  if (!cur.total && Number(prev.total)) { out.right = Number(prev.right) || 0; out.total = Number(prev.total) || 0; }
   return out;
 }
 

@@ -43,6 +43,7 @@ export function scope(S: Store, cls: string, withX = false) {
 type Sc = ReturnType<typeof scope>;
 const lessonCell = (s: Stud, id: string): TCell => {
   const r = s.rec[id]; if (!r) return { t: '불참', tone: 'na', v: '불참' };
+  if (r.noBoss) return { t: '— 수업 안 함', tone: 'na', v: null }; // 📊 이 반 수업에서 형성평가를 안 엶 (0 점 아님)
   const ok = r.boss / r.bossN;
   return { t: `${r.boss}/${r.bossN}${r.star ? ' ⭐' : ''}${r.fixedBy ? ' → ■' : ''}`, tone: ok >= 0.8 ? 'ok' : ok > 0 ? 'md' : 'ng', v: r.boss };
 };

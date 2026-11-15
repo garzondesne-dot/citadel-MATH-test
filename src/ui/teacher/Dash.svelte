@@ -9,6 +9,7 @@
   import { liveValue } from '../room.svelte';
   import { modeLogs, modeSummary } from '../../school/study';
   import { loadCache, sheets as svSheets, surveyCache } from '../../school/survey';
+  import StatsPick from './StatsPick.svelte';
 
   // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
   //   폰 = 위 고정(묶음 3칸 → 보기 칩 · 가로 밀기) + 가운데만 넘김 · ⬇ 엑셀 = 학생 탭 [명단 · 대시보드] 줄 오른쪽 끝(#131)
@@ -25,12 +26,15 @@
   async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
   function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
-  const V = $derived.by(() => { void svVer; return view(S, cls, vid); });
+  const V = $derived.by(() => { void svVer; void pv; void lr.v.val; return view(S, cls, vid); });
   // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
   const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
   // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
   const lr = untrack(() => liveValue(S, 'records')), lx = untrack(() => liveValue(S, 'xp')), lg = untrack(() => liveValue(S, 'gem')); onDestroy(() => { lr.stop(); lx.stop(); lg.stop(); });
-  const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; return scope(S, cls); });
+  // 📊 통계 칸 (넣기 · 빼기 · 연 칸)이 바뀌면 다시 계산
+  let pickOpen = $state(false), pv = $state(0);
+  const pStop = untrack(() => [S.watch('school/statsPick', () => pv++), S.watch('school/opened', () => pv++)]); onDestroy(() => pStop.forEach((f) => f()));
+  const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; void pv; return scope(S, cls); });
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   function excel() {
@@ -57,6 +61,7 @@
     </details>
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
+    {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
     {#if V.table}
@@ -75,6 +80,7 @@
   </div>
 </div>
 
+{#if pickOpen}<StatsPick {S} {cls} onclose={() => (pickOpen = false)} onchange={() => pv++} />{/if}
 {#if xl}
   <Sheet onclose={() => (xl = false)}>
     {#snippet title()}⬇ 엑셀로 받기{/snippet}

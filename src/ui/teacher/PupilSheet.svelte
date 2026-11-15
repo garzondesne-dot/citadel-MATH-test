@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PACKS } from '../../engine/packs';
   import { feat } from '../../school/features.svelte';
   import { clearFlag, flagOf } from '../../school/gemwatch';
   import { untrack } from 'svelte';
@@ -19,7 +20,10 @@
   const live = $derived(liveOfCls(S, s.cls));
   let toast = $state(''), memo = $state(false), gift = $state(false), amt = $state(10);
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
-  const mark = (id: string) => { const r = s.rec[id]; if (!r) return { t: '불참', c: 'no' }; const ok = r.boss / r.bossN; return { t: `${ok >= 0.8 ? '✔' : ok >= 0.5 ? '△' : '✘'} ${r.boss}/${r.bossN}`, c: ok >= 0.8 ? 'ok' : ok >= 0.5 ? 'mid' : 'bad' }; };
+  const mark = (id: string) => { const r = s.rec[id]; if (!r) return { t: '불참', c: 'no' }; if (r.noBoss) return { t: '— 수업 안 함', c: 'no' }; const ok = r.boss / r.bossN; return { t: `${ok >= 0.8 ? '✔' : ok >= 0.5 ? '△' : '✘'} ${r.boss}/${r.bossN}`, c: ok >= 0.8 ? 'ok' : ok >= 0.5 ? 'mid' : 'bad' }; };
+  // 차시 목록 = 과목 목록 + 이 학생 기록에 있는 차시(8 · 9차시 등) · 차시 순서
+  const lessonRows = $derived([...LESSON_LIST.map((l) => ({ id: l.id, no: l.no })), ...Object.entries(s.rec).filter(([id]) => !LESSON_LIST.some((l) => l.id === id)).map(([id, r]) => ({ id, no: r.no }))].sort((a, b) => a.no - b.no));
+  const cellName = (lid: string, c: string) => (c === 'boss' ? '형성평가' : (PACKS.find((p) => p.id === lid)?.steps.find((x) => x.id === c)?.title.split(' · ')[0] ?? c));
   const misTop = $derived(Object.entries(s.mis).sort((x, y) => y[1][0] - x[1][0]).slice(0, 2));
   const weak = $derived(Object.values(s.conc).filter((c) => c.total && c.ok / c.total < 0.6).sort((x, y) => x.ok / x.total - y.ok / y.total).slice(0, 2));
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); say('📋 복사했어요'); } catch { say('복사가 막혔어요 · 길게 눌러 복사'); } }
@@ -38,11 +42,12 @@
     </div>
     <p class="lab">수업 기록</p>
     <div class="recs">
-      {#each LESSON_LIST as l (l.id)}
+      {#each lessonRows as l (l.id)}
         {@const m = mark(l.id)}
         <span class="rc {m.c}"><small>{l.no}차시</small><b>{m.t}</b>{#if s.rec[l.id]?.star}<i>⭐</i>{/if}{#if s.rec[l.id]?.fixedBy}<i>→ ■</i>{/if}</span>
       {/each}
     </div>
+    {#if s.extra.dummy?.length}<p class="dum" data-k="dummy-line">🎯 허수아비로 함 · {s.extra.dummy.map((d) => `${d.no}차시 ${d.cells.map((c) => cellName(d.lid, c)).join(' · ')}`).join(' / ')} <small>(반 통계에는 안 들어가요)</small></p>{/if}
     <p class="lab">방과후 · 최근 2주</p>
     <div class="cal" aria-label="방과후 접속 달력">{#each s.extra.days as d, k (k)}<i class="l{Math.min(4, d)}" title="{d}회"></i>{/each}</div>
     <div class="row3">
@@ -72,6 +77,7 @@
 </div>
 
 <style>
+  .dum { margin: 0; font-size: 13px; color: var(--text-2); } .dum small { color: var(--text-3); }
   .bg { position: absolute; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.5); }
   .ps { position: absolute; left: 0; right: 0; top: 64px; bottom: 0; z-index: 31; background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); }
   .hd { display: flex; align-items: baseline; gap: var(--s2); padding: var(--s3) var(--s3) var(--s2) var(--s4); }

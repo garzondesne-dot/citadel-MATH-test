@@ -1,3 +1,4 @@
+import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
 import { BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
@@ -37,7 +38,11 @@ export function nextStep(S: Store, L: LessonPack, code: string): void {
   // 📕 그 반이 게임으로 수업한 차시 = held/{반}/{차시} (정식 actions.js 수업 시작 · 🔁 연속 참여 💎 · 오답노트 불참 판단) · 🧪 테스트 수업은 안 적음
   if (isLobby(R) && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true); }
   // ⏯ 이어서 수업: 입장 → 저장된 단계부터 (정식 go() resumeFrom)
-  goTo(S, L, code, R, isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R));
+  const to = isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R);
+  goTo(S, L, code, R, to);
+  // 📊 반 통계 = 수업에서 연 칸만 (📜 2026-11-15 · school/statsCells.ts) — 몬스터 · 형성평가 단계로 넘어가면 「그 반이 이 칸을 열었다」 · 🧪 테스트 수업은 안 적음
+  const st = L.steps[to];
+  if (st && (st.kind === 'monster' || st.kind === 'boss') && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) markOpened(S, R.meta.cls, L.id, st.kind === 'boss' ? BOSS : st.id); }
 }
 /** ◀ 앞 단계 (「다음 판에서」 자리는 건너뜀 · 입장 화면까지는 안 돌아감) */
 export function prevStep(S: Store, L: LessonPack, code: string): void {

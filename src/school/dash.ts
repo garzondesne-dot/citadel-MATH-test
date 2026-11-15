@@ -3,12 +3,14 @@ import { makeRng } from '../engine/rng';
 import type { Store } from '../model/types';
 import { CLASSES, isExcluded, roster } from './school';
 import { PACKS } from '../engine/packs';
+import { conceptOf } from './prep';
+import { BOSS, cellsOf, fullLesson, includedCells } from './statsCells';
 import { MIS, seteukDraft, type SeteukIn } from './seteuk';
 
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
 //   records[번호][차시] = { conc: { 개념: [첫 시도 맞힘, 문항] }, names, boss(형성평가 첫 시도 맞힘), bossN, mis: { 오개념 코드: [틀림, 고침] } }
 //   테스트 판 = 서버 기록이 없어 가짜 기록(반 · 번호로 늘 같은 값 · fakeClass) · 출시 때 서버 꽂개로 바꿈
-export interface LessonRec { conc: Record<string, [number, number]>; names: Record<string, string>; boss: number; bossN: number; mis?: Record<string, [number, number]>; no: number; star?: boolean; fixedBy?: 'bonus' | null }
+export interface LessonRec { conc: Record<string, [number, number]>; names: Record<string, string>; boss: number; bossN: number; mis?: Record<string, [number, number]>; no: number; star?: boolean; fixedBy?: 'bonus' | null; /** 📊 이 반 수업에서 형성평가를 안 함(통계 칸 빠짐) */ noBoss?: boolean }
 export type Records = Record<number, Record<string, LessonRec>>;
 export interface Stud {
   cls: string; n: number; name: string; rec: Record<string, LessonRec>; went: number; heldN: number;
@@ -18,7 +20,7 @@ export interface Stud {
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
 export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
-  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean }
+  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
 export const STANDARDS = SUBJ.standards; // 과목 팩 (#136)
@@ -92,26 +94,36 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 export function realClass(S: Store, cls: string) {
   const bonAll = S.get<Record<string, Record<string, Record<string, { tries?: number; mis?: Record<string, [number, number]> } | null>>>>(`bonus/${cls}`) || {}, cardAll = S.get<Record<string, Record<string, unknown>>>(`cards/${cls}`) || {};
   const recAll = S.get<Record<string, Record<string, Partial<LessonRec> & Record<string, unknown>>>>(`records/${cls}`) || {}, xpAll = S.get<Record<string, { total?: number }>>(`xp/${cls}`) || {}, gemAll = S.get<Record<string, { total?: number; scroll?: number; day?: Record<string, number> }>>(`gem/${cls}`) || {};
-  const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {}, bmis: Record<number, Record<string, [number, number]>> = {};
+  const byN: Record<number, string> = {}, records: Records = {}, xp: Record<number, number> = {}, extra: Record<number, Extra> = {};
   const now = S.now(), dayK = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(0, 10), week = new Set(Array.from({ length: 7 }, (_, i) => dayK(now - i * 864e5)));
+  // 📊 반 통계 = 그 반 수업에서 연 칸만 (📜 2026-11-15 · statsCells.ts): 차시마다 통계에 넣는 칸 → 안 연 몬스터의 개념 칸 · 형성평가 점수는 뺌(학생 기록은 그대로)
+  const lids = [...new Set(Object.values(recAll).flatMap((x) => Object.keys(x || {})))];
+  const inc: Record<string, { cells: Set<string>; dropConc: Set<string> } | null> = {};
+  for (const lid of lids) {
+    const L = fullLesson(lid); if (!L) { inc[lid] = null; continue; }
+    const all = cellsOf(L).map((c) => c.id), recs = Object.values(recAll).map((x) => x?.[lid]).filter(isObj) as never[];
+    const cells = includedCells(S, cls, lid, recs, all), byC: Record<string, boolean[]> = {};
+    for (const id of all) if (id !== BOSS) { const c = conceptOf(L, id); if (c) (byC[c] ||= []).push(cells.has(id)); }
+    inc[lid] = { cells, dropConc: new Set(Object.entries(byC).filter(([, v]) => v.length && !v.some(Boolean)).map(([c]) => c)) };
+  }
   for (const p of roster(cls, S)) {
     byN[p.num] = p.name; records[p.num] = {};
     for (const [lid, r] of Object.entries(recAll[p.num] || {})) {
       if (!isObj(r)) continue;
       const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || PACKS.find((l) => l.id === lid)?.no || 0;
-      records[p.num]![lid] = { conc: (isObj(r.conc) ? r.conc : {}) as LessonRec['conc'], names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: Number(r.boss) || 0, bossN: Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null };
+      const f = inc[lid], noBoss = !!f && !f.cells.has(BOSS), conc = Object.fromEntries(Object.entries(isObj(r.conc) ? r.conc : {}).filter(([c]) => !f || !f.dropConc.has(c))) as LessonRec['conc'];
+      records[p.num]![lid] = { conc, names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: noBoss ? 0 : Number(r.boss) || 0, bossN: noBoss ? 0 : Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !noBoss && !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null, ...(noBoss ? { noBoss: true } : {}) };
     }
     xp[p.num] = Number(xpAll[p.num]?.total) || 0;
     const g = gemAll[p.num] || {}, day = isObj(g.day) ? g.day : {};
     // 🏰 성채 · 🎯 복습 기록(bonus/{반}/{번호}/{차시 · 평가}/{방}) = 정식 dash.js 그대로: 오개념(mis)을 학생 오개념에 합침 · 도전 수 · 평가 방(eval-) · 복습 방(set-) 따로
     const bon = bonAll[p.num] || {}, rows = Object.entries(bon).filter(([k, l]) => isObj(l) && k !== 'review' && k !== 'board').flatMap(([lid, l]) => Object.values(l as Record<string, unknown>).filter(isObj).map((m) => ({ lid, m: m as { tries?: number; mis?: Record<string, [number, number]> } })));
-    const bm: Record<string, [number, number]> = (bmis[p.num] = {});
-    for (const { m } of rows) if (isObj(m.mis)) for (const [k, v] of Object.entries(m.mis)) { const a = (bm[k] ||= [0, 0]); a[0] += Number(v?.[0]) || 0; a[1] += Number(v?.[1]) || 0; }
+    // 🎯 허수아비(복습) 기록 = 반 통계에 안 넣음 (📜 2026-11-15 · 예전 정식 dash.js 는 오개념에 합쳤음) · 학생 시트에 「🎯 허수아비로 함」만
+    const dummy = Object.entries(bon).filter(([k, l]) => isObj(l) && !/^eval-/.test(k) && k !== 'review' && k !== 'board').map(([lid, l]) => ({ lid, no: LESSONS.find((x) => x.id === lid)?.no ?? PACKS.find((x) => x.id === lid)?.no ?? 0, cells: Object.keys(l as Record<string, unknown>) })).filter((d) => d.cells.length).sort((a, b) => a.no - b.no);
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: 0, gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk: 0, photoRe: 0, submit: 0, stuck: 0, sym: 0, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
-  for (const st of out.studs) for (const [k, v] of Object.entries(bmis[st.n] || {})) { const a = (st.mis[k] ||= [0, 0]); a[0] += v[0]; a[1] += v[1]; } // 🏰 성채 오개념 합침 (정식 dash.js)
   return out;
 }
 /** 대시보드 · 학생 시트가 쓰는 한 곳: 서버 = 진짜 · 이 기기 = 가짜 */

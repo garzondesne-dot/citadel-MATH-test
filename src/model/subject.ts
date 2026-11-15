@@ -33,6 +33,8 @@ export interface Subject {
   standards: { id: string; name: string; lessons: number[] }[];
   /** 대시보드 · 학생 시트 · 「준비 안 됨」 차시 목록 (개념 3개씩) */
   lessonList: { id: string; no: number; title: string; concs: string[] }[];
+  /** 📊 지난 수업에서 반마다 실제로 연 칸 (정식 보관 서버 rooms 에서 뽑음 · { 반: { 차시: [칸] } } · 반 통계 자동값) */
+  legacyOpened?: Record<string, Record<string, string[]>>;
   /** 과목 칭호 (엔진 칭호 목록의 after 뒤에 끼움) */
   titles: { after: string; list: { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string }[] };
   /** ⭕ 쉼터 수학 OX 문장 (차시 · 문장 · 참 · 한 줄 해설) — 없으면 OX 놀이 안 보임 */
