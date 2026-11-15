@@ -9,11 +9,13 @@ import { setClockOffset } from '../ui/clock.svelte';
 //   시계 = 서버 시각(.info/serverTimeOffset) · 끊김 = .info/connected · 로그인 = 처음엔 익명(TV · 교사 · 둘러보기) · 학생은 계정으로 바꿔 탐
 //   ⚠ 시험 전용: 운영 프로젝트에는 연결하지 않음(config.ts 가 막음) · 맨 윗칸 통째로 받으므로 시험 규모용(출시 때 방 단위로 나눔)
 type Tree = Record<string, unknown>;
-const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held'] as const; // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
+const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held', 'survey', 'surveyDone'] as const; // 📝 survey = 열림 표시(누구나) · surveyDone = 응답했는지(그 학생 · 교사) · surveyA = 거울 밖(학생은 쓰기만 trySet · 교사는 fetch) // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
-const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins'];
-const BUCKET: Record<string, number> = { rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2 };
+const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey'];
+const BUCKET: Record<string, number> = { rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3 };
+// 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
+const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2 };
 const split = (p: string) => p.split('/').filter(Boolean);
 function getIn(t: unknown, parts: string[]): unknown { let cur = t; for (const k of parts) { if (cur == null || typeof cur !== 'object') return null; cur = (cur as Tree)[k]; } return cur === undefined ? null : cur; }
 function setIn(t: Tree, parts: string[], v: unknown): void {
@@ -63,7 +65,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const bucketOf = (path: string): string | null => {
     const p = split(path), d = BUCKET[p[0] ?? ''];
     if (d == null) return OPEN.includes(p[0] ?? '') ? (p[0] as string) : null;
-    if (admin) return p[0] as string;
+    if (admin) { const a = ADMIN_BUCKET[p[0] ?? '']; return a == null ? (p[0] as string) : p.length >= a ? p.slice(0, a).join('/') : null; }
     return p.length >= d ? p.slice(0, d).join('/') : null; // 덩어리보다 위(예: records/1-3) = 교사만 · 학생은 받지 않음
   };
   const ensure = (path: string) => { const b = bucketOf(path); return b ? sub(b) : Promise.resolve(); };
@@ -71,9 +73,9 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   await within(Promise.all(OPEN.map((k) => sub(k))), 10000);
   const meUid = () => auth.currentUser?.uid ?? null;
   admin = !!meUid() && getIn(mirror, ['admins', meUid() as string]) === true;
-  if (admin) await within(Promise.all(Object.keys(BUCKET).map((k) => sub(k))), 10000);
+  if (admin) await within(Promise.all(Object.keys(BUCKET).filter((k) => !(k in ADMIN_BUCKET)).map((k) => sub(k))), 10000);
   /** 로그인한 학생의 자기 칸을 먼저 받아 둠 (지갑을 「처음」으로 잘못 알고 덮어쓰지 않게) */
-  async function preload(cls: string, num: number) { await within(Promise.all(['gem', 'xp', 'cards', 'records', 'bonus'].map((k) => sub(`${k}/${cls}/${num}`)).concat([sub(`roster/${cls}`)])), 8000); }
+  async function preload(cls: string, num: number) { await within(Promise.all(['gem', 'xp', 'cards', 'records', 'bonus', 'surveyDone'].map((k) => sub(`${k}/${cls}/${num}`)).concat([sub(`roster/${cls}`)])), 8000); }
   { // 이미 로그인한 학생 = 내 계정 칸을 찾아 미리
     const u = meUid(), acc = (mirror.accounts || {}) as Record<string, Record<string, { uid?: string }>>;
     if (u && !admin) for (const [c, ns] of Object.entries(acc)) for (const [n, a] of Object.entries(ns || {})) if (a?.uid === u) await preload(c, Number(n));

@@ -13,6 +13,9 @@
   import { BUILD } from '../../build';
   import { unlocksOf } from '../../raid/raid';
   import { hhmm } from '../../school/bells';
+  import { keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
+  import { feat } from '../../school/features.svelte';
+  import { liveValue } from '../room.svelte';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
   import QR from '../QR.svelte';
@@ -45,6 +48,10 @@
   let talkOpen = $state(false); // 💬 말할 거리 전체
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string) => { toast = t; if (toastT) clearTimeout(toastT); toastT = setTimeout(() => (toast = ''), 1800); };
+  // 📝 설문 (마무리) — 그 반 열림 표시를 실시간으로 · 차시 번호 기본 = 이 기기 기억(없으면 이 차시)
+  const svLive = untrack(() => liveValue<unknown>(S, `survey/${live.cls.replace(/[.#$/[\]]/g, '_')}`)); onDestroy(svLive.stop);
+  const svSt = $derived.by(() => { void svLive.v.val; return stateOf(S, live.cls); });
+  let svNo = $state(pickNo(untrack(() => L.no) || 10));
 
   // ── 흐름 · 시간 ──
   const G = $derived(groups(L, R));
@@ -217,6 +224,10 @@
           <span class="unsub">{#if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           <span class="sub"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>
         </div>
+        {#if isEnd(L, R) && feat('survey')}
+          <!-- 📝 마무리 = 그 반 설문 열기 · 닫기 (정식 survey.js ctlHtml · 차시 번호 = 이 기기 기억) -->
+          <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
+        {/if}
         {#if scout?.on}
           <div class="adj" aria-label="정찰 시간 조정"><button type="button" aria-label="정찰 30초 줄이기" onclick={() => scoutAdd(S, L, code, -30)}>−30초</button>
             <div class="hpl"><div class="b sc"><i style:width="{Math.min(100, (scout.left / ((scout.end - scout.t0) || 1)) * 100)}%"></i></div><small>등장까지 <b>{Math.ceil(scout.left / 1000)}초</b> · 준비 완료 <b>{Object.keys(R.ready?.[scout.id] || {}).length}</b></small></div>
@@ -326,6 +337,9 @@
 
 <style>
   /* 📲 시안 v12 (2026-11-14 컨펌): 두 번째 칸 높이 36 · 번호 칸 = 대기실 · 수업 중 같은 자리 · 같은 크기 */
+  .svc { display: flex; align-items: center; gap: var(--s2); font: 700 14px var(--font); }
+  .svc > span { flex: 1; } .svc small { color: var(--text-3); font-weight: 500; } .svc b { color: var(--accent); }
+  .svc label { display: flex; align-items: center; gap: 4px; color: var(--text-2); } .svc input { width: 52px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: center; }
   .row2 { flex: none; height: 36px; }
   .join { display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press-sh); }
   .join span { font-size: 13px; font-weight: 700; color: var(--text-2); } .join b { flex: 1; text-align: left; font-size: 21px; letter-spacing: 2px; color: var(--accent); font-variant-numeric: tabular-nums; } .join em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--text-2); }

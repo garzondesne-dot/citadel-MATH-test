@@ -8,6 +8,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { liveValue } from '../room.svelte';
   import { modeLogs, modeSummary } from '../../school/study';
+  import { loadCache, sheets as svSheets, surveyCache } from '../../school/survey';
 
   // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
   //   폰 = 위 고정(묶음 3칸 → 보기 칩 · 가로 밀기) + 가운데만 넘김 · ⬇ 엑셀 = 학생 탭 [명단 · 대시보드] 줄 오른쪽 끝(#131)
@@ -18,7 +19,13 @@
   let lastCls = '';
   $effect(() => { if (cls !== lastCls) { lastCls = cls; vid = cls === ALL ? 'cmp' : vid === 'cmp' ? 'grid' : vid; } });
   const grp = $derived(GROUPS.findIndex((g) => g.views.some((x) => x[0] === vid)));
-  const V = $derived(view(S, cls, vid));
+  // 📝 설문 보기 = 응답(surveyA · 실시간 거울 밖)을 그 보기를 열 때 반마다 한 번 받음 · ↻ 다시 받기
+  let svVer = $state(0), svBusy = $state(false);
+  const svCls = () => (cls === ALL ? CLASSES.filter((c) => !isBeta(S, c)) : [cls]);
+  async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
+  $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
+  function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
+  const V = $derived.by(() => { void svVer; return view(S, cls, vid); });
   // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
   const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
   // 🚀 진짜 기록이 서버에서 오면 다시 계산 (기록 · EXP · 💎)
@@ -50,6 +57,7 @@
     </details>
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · 베타 반 ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
+    {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
     {#if V.table}
       <div class="tw"><table>

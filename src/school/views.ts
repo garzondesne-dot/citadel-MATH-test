@@ -3,6 +3,7 @@ import type { Store } from '../model/types';
 import { CLASSES, isBeta } from './school';
 import { achieve, classData, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
 import type { Cell, SheetData } from './xlsx';
+import { CMP, doneCount, summary, surveyCache, WHEN } from './survey';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
 //   색 + 글자 함께(도달 · 근접 · 미달 · ✔ △ ✘ · ⭐ · ■) · 「전체」 = 모든 반 합산(🧪 베타 반 · 시험 계정 빠짐)
@@ -99,10 +100,16 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
     }
     case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
     case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name} · ${SUBJ.demo.photoWhere}`, sub: s.extra.photoRe ? '다시 · 근거 빠짐' : '통과 · 근거 3줄', pc: s.extra.photoRe ? '다시' : '통과', pick: s })) };
-    case 'survey': {
-      const n = studs.length, r = Math.round(n * 0.85), fun = Math.round(r * 0.82);
-      return { id, title: '설문', info: '수업 설문 응답', kpis: [{ lab: `${SUBJ.demo.surveyLesson} 응답`, big: `${r} / ${n}`, sub: cls }, { lab: '「재밌었다」', big: p(pct(fun, r)), sub: `${fun}명` }],
-        list: [{ rk: '💬', nm: '가장 좋았던 것', sub: '박쥐 · 콤보 · 친구랑 같이', pc: '' }, { rk: '💬', nm: '어려웠던 것', sub: SUBJ.demo.surveyHard, pc: '' }, { rk: '💬', nm: '바라는 것', sub: '쉼터 놀이 더 · 보스 더 세게', pc: '' }] };
+    case 'survey': { // 📝 정식 대시보드 「📝 설문」 (응답 = surveyA · 이름 없음 · 🧪 베타 반 · 시험 계정은 처음부터 안 쌓임)
+      const cs = sc.classes.filter((c) => withX || !isBeta(S, c)), C = surveyCache();
+      const L = cs.flatMap((c) => C[c] ?? []), s = summary(L), done = cs.reduce((a, c) => a + doneCount(S, c), 0), size = cs.reduce((a, c) => a + (sc.per.find((x) => x.c === c)?.studs.filter((u) => withX || !u.x).length ?? 0), 0);
+      const sg = (v: number | null) => (v == null ? '—' : v > 0 ? `+${v}` : String(v));
+      return { id, title: '설문', info: `수업 설문 응답 · 이름 없이 · 점수 1~5 · 「${WHEN[0]}」 ↔ 「${WHEN[1]}」`,
+        kpis: [{ lab: '응답', big: `${s.n}`, sub: `응답 표시 ${done} / ${size}명` }, { lab: '9. 지금이 더 좋다', big: p(pct(s.cmp[0]?.n ?? 0, s.n)), sub: `${s.cmp[0]?.n ?? 0}명` }],
+        table: { head: ['문항', `${WHEN[0]}`, WHEN[1], '변화', '오름 · 같음 · 내림'], legend: [['ok', '변화 +0.5 이상'], ['md', '+0 ~ +0.5'], ['ng', '내림']],
+          rows: s.pairs.map((x, i) => ({ cells: [{ t: `${i + 1}. ${x.q}`, v: `${i + 1}. ${x.q}` }, { t: x.pre == null ? '—' : String(x.pre), v: x.pre }, { t: x.now == null ? '—' : String(x.now), v: x.now }, { t: sg(x.diff), tone: (x.diff == null ? 'na' : x.diff >= 0.5 ? 'ok' : x.diff >= 0 ? 'md' : 'ng') as Tone, v: x.diff }, { t: `${x.up} · ${x.same} · ${x.down}`, v: `${x.up} · ${x.same} · ${x.down}` }] })) },
+        list: [...s.picks.map((x) => ({ rk: '8', nm: x.t, sub: '가장 도움이 된 것 (2개까지)', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })), ...s.cmp.map((x, i) => ({ rk: '9', nm: CMP[i]!, sub: '쉼터 놀이 ↔ 예전 5분 퀴즈', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })),
+          ...s.say.map((x) => ({ rk: '10', nm: x, sub: '달라진 점', pc: '' })), ...s.want.map((x) => ({ rk: '11', nm: x, sub: '바꿨으면', pc: '' }))] };
     }
   }
   return { id, title: id, info: '' };

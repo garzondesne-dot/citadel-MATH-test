@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { upTag } from '../../engine/packs';
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { CLASSES, isBeta, roster, uidOf } from '../../school/school';
   import { inbox, type InboxItem } from '../../school/inbox';
   import { allUids, classUids, GEMS, QUICK, sendMail } from '../../school/mail';
   import { hhmm } from '../../school/bells';
+  import { doneCount, keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
+  import { feat } from '../../school/features.svelte';
 
   // 🔔 소식 탭 (#124 ⑱ · 스크롤 A) — 위 고정 = [받은 것 n · 보내기]
   //   받은 것 = 의견 · 📷 사진 채점 대기 · ✏ 출제 확인 · 📝 설문 결과를 한 목록(새 것 위 · 안 본 것 = 왼쪽 빨간 줄 + 점 · 종류 칩 거르기 · 누르면 그 자리에서 처리)
@@ -34,7 +35,7 @@
     rtext = ''; rg = 0; rgem = false; open = ''; ver++;
   }
   // 보내기
-  let ncls = $state('1-3'), note = $state(''), slid = $state(untrack(() => packs[0]?.id ?? ''));
+  let ncls = $state('1-3'), note = $state('');
   // 📮 메시지 (#130 ②) — 받는 사람 [반 전체 | 학생 고르기](반 ▾ 아래 번호 칩 · 여러 명 · 다른 반 섞기) · 💎 마정석도 같이
   let to = $state<'cls' | 'pick'>('cls'), mg = $state(0);
   let picks = $state<Record<string, { cls: string; num: number; name: string }>>({});
@@ -51,7 +52,11 @@
     note = ''; mg = 0; if (to === 'pick') picks = {};
   }
   const fg = (c: string) => { void ver; return !!S.get<boolean>(`school/cls/${c}/friendGift`); };
-  const sv = $derived.by(() => { void ver; return !!S.get<boolean>(`school/survey/${slid}`); });
+  // 📝 수업 설문 (정식 survey.js panel · 반마다 열기 · 닫기 · 응답 수 · 차시 번호 = 이 기기 기억 · 기본 10)
+  let svNo = $state(pickNo(untrack(() => packs[0]?.no ?? 10)));
+  const svRows = $derived.by(() => { void ver; return CLASSES.map((c) => ({ c, st: stateOf(S, c), done: doneCount(S, c), size: roster(c, S).length, beta: isBeta(S, c) })); });
+  const svStop = untrack(() => CLASSES.map((c) => S.watch(`surveyDone/${c}`, () => ver++))); onDestroy(() => svStop.forEach((f) => f())); // 응답 수 실시간 (반 덩어리)
+  function svSet(list: string[], on: boolean) { const no = keepNo(svNo); svNo = no; for (const c of list) setOpen(S, c, on, no); ver++; say(on ? `📝 ${no}차시 설문을 열었어요` : '📝 설문을 닫았어요'); }
 </script>
 
 <div class="tbar"><div class="t">소식</div></div>
@@ -107,16 +112,23 @@
       <span class="lab">🎁 친구 선물 (반마다 · 처음엔 꺼짐 · 하루 보내기 · 받기 💎 10)</span>
       <div class="tg">{#each CLASSES as c (c)}<button type="button" class:on={fg(c)} aria-pressed={fg(c)} onclick={() => { S.set(`school/cls/${c}/friendGift`, !fg(c) || null); ver++; }}>{c}{fg(c) ? ' ✔' : ''}</button>{/each}</div>
     </div>
-    <div class="card">
-      <span class="lab">📝 수업 설문 · 학생 폰에 버튼 · 3분</span>
-      <select bind:value={slid}>{#each packs as p (p.id)}<option value={p.id}>{p.no}차시 {p.title}{upTag(p.id, p.no)}</option>{/each}</select>
-      <div class="row"><button type="button" class="b1" disabled={sv} onclick={() => { S.set(`school/survey/${slid}`, true); ver++; say('📝 모든 반 설문을 열었어요'); }}>모든 반 열기</button><button type="button" class="b2" disabled={!sv} onclick={() => { S.set(`school/survey/${slid}`, null); ver++; say('📝 설문을 닫았어요'); }}>모든 반 닫기</button></div>
-    </div>
+    {#if feat('survey')}<div class="card" data-k="sv-panel">
+      <span class="lab">📝 수업 설문 · 열면 그 반 학생 폰(캠프)에 📝 단추 · 이름 없이 3분 · 결과 = 학생 탭 대시보드 「설문」</span>
+      <div class="row"><label class="svno">차시 <input type="number" min="1" max="30" bind:value={svNo} onchange={() => (svNo = keepNo(svNo))} data-k="sv-no" /></label><button type="button" class="b1" data-k="sv-all1" onclick={() => { if (confirm(`모든 반(${CLASSES.length}개) 설문을 ${keepNo(svNo)}차시로 열까요?`)) svSet(CLASSES, true); }}>모든 반 열기</button><button type="button" class="b2" data-k="sv-all0" onclick={() => { if (confirm('모든 반 설문을 닫을까요?')) svSet(CLASSES, false); }}>모든 반 닫기</button></div>
+      <div class="svt">{#each svRows as r (r.c)}<div class="svr" data-sv-cls={r.c}><b>{r.c}반{r.beta ? ' 🧪' : ''}</b><span class:open={!!r.st}>{r.st ? `열림 · ${r.st.no}차시` : '닫힘'}</span><small>{r.done}/{r.size}명</small><button type="button" class:b1={!r.st} class:b2={!!r.st} onclick={() => svSet([r.c], !r.st)}>{r.st ? '✕ 닫기' : '열기'}</button></div>{/each}</div>
+    </div>{/if}
   {/if}
 </div>
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
+  .svno { display: flex; align-items: center; gap: 6px; font: 700 14px var(--font); color: var(--text-2); }
+  .svno input { width: 56px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); text-align: center; }
+  .svt { display: flex; flex-direction: column; gap: 4px; }
+  .svr { display: grid; grid-template-columns: 64px 1fr auto 76px; align-items: center; gap: var(--s2); min-height: 44px; }
+  .svr span { color: var(--text-3); font-size: 14px; } .svr span.open { color: var(--accent); font-weight: 700; }
+  .svr small { font-size: 14px; color: var(--text-2); }
+  .svr button { height: 40px; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); }
   .seg button { height: 40px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font: 700 14px var(--font); }

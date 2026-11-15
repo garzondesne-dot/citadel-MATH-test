@@ -38,6 +38,9 @@
   import Castle from '../castle/Castle.svelte';
   import { bonusBase, castleState, floorName, progressOf, spanOf, type CastleRec } from '../../school/castle';
   import { visibleCastles } from '../../school/castles.svelte';
+  import SurveySheet from './SurveySheet.svelte';
+  import { donePath, pendingNo, REWARD, statePath } from '../../school/survey';
+  import { isExcluded } from '../../school/school';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
@@ -104,6 +107,13 @@
       setTimeout(() => (mailToast = ''), 3200);
     });
   });
+  // 📝 수업 설문 (정식 survey.js · 선생님이 반마다 열면 📝 단추 · 응답하면 사라짐) — 로그인한 학생 · 서버만 (🧪 테스트 · 👩‍🏫 체험판 = 없음)
+  const svWho = untrack(() => (pupil && S.kind === 'server' && meBound() ? { cls: pupil.cls, num: pupil.num } : null));
+  const svOpen = untrack(() => liveValue<unknown>(S, svWho ? statePath(svWho.cls) : 'survey/_none')), svDone = untrack(() => liveValue<unknown>(S, svWho ? donePath(svWho.cls, svWho.num) : 'surveyDone/_none/0'));
+  onDestroy(svOpen.stop); onDestroy(svDone.stop);
+  const svNo = $derived.by(() => { void svOpen.v.val; void svDone.v.val; return svWho && feat('survey') ? pendingNo(S, svWho.cls, svWho.num) : 0; });
+  let svSent = $state(false);
+  function svPaid(g: number, x: number) { svSent = true; if (g || x) { me.wallet.gem += g; me.xp += x; M.save(); } giftToast = `📝 고마워요! 설문이 전달됐어요${g || x ? ` (+${x} EXP · 💎+${g})` : ''}`; setTimeout(() => (giftToast = ''), 3200); }
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
   const R = $derived(code ? (live.v.room as Room | null) : null); // 코드 없음 = 열린 수업 없음 (rooms/ 전체를 방으로 읽지 않게)
@@ -204,6 +214,7 @@
       {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
       {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{visibleCastles().length ? `${visibleCastles().map((f) => `${f.floor}층`).join(' · ')} 평가` : '평가'} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
       {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
+      {#if svNo && !svSent}<li><button type="button" data-todo="survey" onclick={() => (sheet = 'survey')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>수업 설문 ({svNo}차시)</b><small>3분 · 이름 없이 · +{REWARD.xp} EXP · 💎+{REWARD.gem}</small></span><em>지금</em></button></li>{/if}
       <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
     </ul>
   </section>
@@ -244,6 +255,7 @@
   </div>
 
   <section class="info">
+    {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svNo}차시 · 3분 · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
     {#if feat('hero')}<button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
@@ -274,6 +286,8 @@
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
   <Castle {S} {me} save={M.save} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
+{:else if sheet === 'survey' && svWho && svNo && !svSent}
+  <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'castle'}
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
@@ -436,6 +450,12 @@
   .rung.buy { border-style: dashed; border-color: var(--gem); }
   .rung.lock { opacity: 0.45; box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
+  .svbtn { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
+  .svbtn:active { transform: translateY(2px); box-shadow: none; }
+  .svbtn > span { font-size: 22px; }
+  .svbtn b { flex: 1; font-size: 16px; }
+  .svbtn small { font-weight: 500; color: var(--text-2); font-size: 14px; }
+  .svbtn em { font-style: normal; font-size: 14px; color: var(--accent); font-weight: 700; }
   .next { margin: 0; font-size: var(--fs-small); color: var(--text-2); text-align: center; }
   .floor { min-height: 64px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s3); padding: 0 14px; border: 0; color: var(--text); font: inherit; text-align: left; width: 100%; box-shadow: 0 3px 0 var(--press-sh); }
   .floor:active { transform: translateY(2px); box-shadow: none; }
