@@ -410,6 +410,10 @@
   .cerr { margin: 0; color: var(--bad); font-size: 14px; font-weight: 700; }
   .cgo { min-height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .camp { max-width: 430px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  /* 🐞 b206 (📜 2026-11-15 선생님 「클래식 모드 내 캠프 테두리 · 밑에 네모칸 크기 · 태블릿도」): 캠프 바탕 = 캠프 폭 그대로(클래식의 430 기둥 바탕이 태블릿 640~720 캠프와 어긋나던 것)
+     낮은 폰(브라우저 주소창 · 640 높이 안팎) = 장면이 좁은 기둥으로 줄며 위 막대(💎 · ⚙)가 잘리던 것 → 장면은 폭 그대로 · 모자라면 캠프만 세로 스크롤 */
+  .camp:not(.paper) { background: var(--bg); }
+  @media (max-width: 699px), (orientation: landscape) and (max-width: 899px) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); } .camp:not(.paper) .stagebox { min-height: calc(min(100vw, 330px) / var(--ar)); } /* 330 = 위 막대(‹ · 제목 · 💎 📜 · ⚙)가 다 들어가는 폭 */ }
   .stagebox { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
   .camp > :global(.act) { flex: none; }
   .info { flex: none; }
