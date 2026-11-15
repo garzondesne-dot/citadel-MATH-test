@@ -23,7 +23,7 @@
   }));
 </script>
 
-{#if lastWrong && !flip && !v4}<div class="bad" role="status"><b>✘ 다시 생각해 봐요 — 같은 문제 · 빈칸으로</b><span>졸개 오답은 하트 반 칸 · 대장 오답은 한 칸</span></div>{:else if prac && stage === 0 && !says.length && !flip}<div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 새 숫자로 처음부터</b><span>답안 칸을 모두 비웠어요 · 판마다 하트 4칸 · 데미지 0</span></div>{/if}
+{#if lastWrong && !flip && !v4}<div class="bad" role="status"><b>✘ 다시 생각해 봐요 — 같은 문제 · 빈칸으로</b><span>졸개 오답은 칼 반 칸 · 대장 오답은 칼 하나</span></div>{:else if prac && stage === 0 && !says.length && !flip}<div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 새 숫자로 처음부터</b><span>답안 칸을 모두 비웠어요 · 판마다 칼 4개 · 데미지 0</span></div>{/if}
 <AnswerRow {cells} cur={stage < items.length ? stage : -1} label={stName} />
 <div class="bcard" class:badline={lastWrong}>
   {#if prob}<details class="story" open={stage === 0}><summary><b>📜 문제 (숫자가 바뀐 원문)</b></summary><p><SymText text={prob} /></p></details>{/if}

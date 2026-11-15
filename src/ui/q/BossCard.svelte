@@ -88,7 +88,7 @@
   {/if}
 {:else if s && q}
   <AnswerRow {cells} {cur} label={(i) => `${i + 1}번`} onpick={flip ? undefined : pick} />
-  {#if !s.ok && s.n > 0 && s.left > 0}<div class="bad" role="status"><b>{cur + 1}번이 아직이에요</b><span>숫자가 바뀐 빈칸으로 다시 · 공격 단추의 하트가 하나 줄었어요</span></div>{/if}
+  {#if !s.ok && s.n > 0 && s.left > 0}<div class="bad" role="status"><b>{cur + 1}번이 아직이에요</b><span>숫자가 바뀐 빈칸으로 다시 · 공격 단추의 칼 하나 사용</span></div>{/if}
   <div class="bcard" class:badline={!s.ok && s.n > 0 && s.left > 0}>
     <div class="head"><span class="lab acc">형성평가 {cur + 1}번 · {a === 0 ? '첫 시도' : `재도전 ${a} / ${R.meta.bossTries - 1}`}</span></div>
     {#if s.ok}

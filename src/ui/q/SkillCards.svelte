@@ -28,7 +28,7 @@
   const trueOn = $derived(!boss && !!rec.trueOk && canTrue(look.fx, look.hero) && !ultUsed(R, mid, uid) && !petrify(R, mid));
   const trueWhy = $derived(boss ? '형성평가 뒤엔 못 써요' : !canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '첫 공격 퍼펙트 + 재도전 판 2개를 한 번에 → 세 번째 ⚡');
   const CARDS: { k: Sk; ic: string; name: string; desc: string; main: string }[] = [
-    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ❤ +1 · 내 ❤ 는 그대로', main: '💚 힐 주고 🔥 재도전' },
+    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ⚔ 칼 보급 +1 · 내 칼은 그대로', main: '💚 힐 주고 🔥 재도전' },
     { k: 'bind', ic: '⛓', name: '묶기', desc: '몬스터 공격을 3초 늦춰요 · 반 전체', main: '⛓ 묶고 🔥 재도전' },
     { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 쓰고 🔥 재도전' },
   ];
@@ -63,7 +63,7 @@
 {:else if rec.roundOpen || rest}
   <div class="bcard sk">
     <span class="lab acc">{rec.roundOpen ? '🔥 재도전 판이 열려 있어요' : '⏸ 쉬는 중'}</span>
-    <p class="muted">{rec.roundOpen ? '다 맞히면 다음 ⚡ 를 쓸 수 있어요 · 틀려도 ❤ 는 그대로' : `남은 ⚡ ${rec.tokLeft} 그대로 · 몬스터가 살아 있는 동안 언제든 이어서`}</p>
+    <p class="muted">{rec.roundOpen ? '다 맞히면 다음 ⚡ 를 쓸 수 있어요 · 틀려도 칼은 그대로' : `남은 ⚡ ${rec.tokLeft} 그대로 · 몬스터가 살아 있는 동안 언제든 이어서`}</p>
   </div>
   <BottomAction battle onmain={act} mainLabel="이어서">
     {#snippet main()}<span>🔥 이어서</span><Hearts mode="energy" left={rec.tokLeft} lock={!!rec.roundOpen} />{/snippet}

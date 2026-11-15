@@ -67,7 +67,7 @@
 {#if r.explain}
   <AnswerRow {cells} {label} />
   <div class="bcard">
-    <span class="lab acc">📖 ❤ 를 다 썼어요 · 해설 보기 · 벌은 없어요</span>
+    <span class="lab acc">📖 칼을 다 썼어요 · 해설 보기 · 벌은 없어요</span>
     {#each todo as i (i)}<p class="sol"><b>{i + 1}번</b> {sol(i) || '해설을 보며 학습지에 정리해요'}</p>{/each}
   </div>
   <BottomAction battle disabled why="학습지에 정리하고 다음을 기다려요">{#snippet main()}<span>📖 해설 보는 중</span>{#if !dummy}<Hearts total={r.slots} left={0} memo={`${code}|boss|${uid}`} />{/if}{/snippet}</BottomAction>
@@ -80,7 +80,7 @@
   <AnswerRow {cells} cur={cur} {label} onpick={(i) => { if (todo.includes(i)) cur = i; }} />
   {#if r.roundOpen || bonusMode}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => { practice = false; bonusMode = false; }}>그만하기</button></p>{/if}
   <div class="bcard">
-    <div class="head">{#if numTag}<span class="tag">{numTag}</span> {/if}<span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 ❤ 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
+    <div class="head">{#if numTag}<span class="tag">{numTag}</span> {/if}<span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 칼 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
     {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>

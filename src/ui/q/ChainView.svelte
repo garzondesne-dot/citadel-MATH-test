@@ -11,7 +11,7 @@
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed, stone } from '../../raid/raid';
-  import { chainSubmit, petriAward, pracStart } from '../../raid/actions';
+  import { chainSubmit, heartRelease, petriAward, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { type Mark } from '../battle/Slots.svelte';
@@ -68,8 +68,8 @@
     if (okNow) petriAward(S, code, uid, mid, 1); // 🗿 석화 찬스 (진짜 · 🔥 한 판 더 모두 · 석화 한 번에 3까지) // ⚔ 정식 소레이드 = 단계마다 공격 한 번
     flip = { i: before, ok: okNow, text: sent }; if (flipT) clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); // #116 그 칸만 뒤집힘
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
-      : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 하트 −${before === pItems.length - 1 ? 1 : 0.5}`)
-      : r2.locked ? '🙋 하트 1칸 — 선생님 확인을 기다려요' : r2.fail ? '기회를 다 썼어요' : `✘ 틀렸어요 · 하트 −${before === rec.n - 1 ? 1 : 0.5}`;
+      : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 칸 ${before === pItems.length - 1 ? '하나' : '반'} 사용`)
+      : r2.locked ? '⚔ 칼이 다 떨어졌어요 · 🙋 선생님께 보급받기' : r2.fail ? '기회를 다 썼어요' : `✘ 틀렸어요 · 칼 ${before === rec.n - 1 ? '하나' : '반 칸'} 사용`;
     if (v4 && !dummy && !okNow && !prac && r2.locked) setTimeout(() => sfx('lock', 0.8), 500); // 🔊 2차 ❤ 0 잠김 (정식 student.js 같은 순간 · 💔 하트 쪼개짐 0.5초 뒤)
     if (v4 && !okNow) toast = ''; // 틀렸을 때 = 배너 · 안내 없이 하트 쪼개짐 · 나의 풀이 빨강 줄만 (📜 2026-11-13 밤)
   }
@@ -163,9 +163,10 @@
 {:else if rec.fail}
   <span></span>
 {:else if rec.locked && !prac}
-  <BottomAction battle disabled why={v4 ? '🙋 ❤ 0 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '🙋 하트 1칸 — 학습지에 풀이를 정리해 두면 선생님이 와서 확인해 줘요'}>
+  {#if v4 && R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-supply" onclick={() => heartRelease(S, code, mid, uid)}>✔ 테스트: 선생님 보급</button>{/if}<!-- 🧪 테스트 모드 = 선생님 「⚔ 보급」을 스스로 (📜 2026-11-15 칼) -->
+  <BottomAction battle disabled why={v4 ? '⚔ 칼이 다 떨어졌어요 · 🙋 학습지에 풀이를 정리하면 선생님이 「⚔ 보급」으로 칼 하나를 줘요' : '⚔ 칼이 다 떨어졌어요 · 🙋 학습지에 풀이를 정리해 두면 선생님이 와서 보급해 줘요'}>
     {#snippet right()}{#if canPhoto}{@render wrBtn()}{/if}{/snippet}
-    {#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
+    {#snippet main()}<span>🙋 선생님께 보급받기</span>{#if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
@@ -187,6 +188,7 @@
 {/if}
 
 <style>
+  .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }
   .wr-card .hand { margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface-2); font-size: 15px; line-height: 1.5; }
   .wrrow { display: flex; justify-content: flex-end; }
   .wrrow :global(.side.wr) { min-width: 120px; min-height: var(--tap); padding: 4px 12px; border-radius: 14px; border: 2px solid var(--scroll); background: rgba(199, 155, 255, 0.14); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }

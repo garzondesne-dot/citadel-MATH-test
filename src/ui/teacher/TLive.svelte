@@ -192,7 +192,7 @@
         {:else}
           <button type="button" class="qm" data-k="qm" aria-label="도움 요청 {order.length}명 · 누르면 옛 판 {oldIds.length}명 새로 고침" onclick={reload}><b>🙋{order.length}</b></button>
           <div class="qs" class:more={order.length > 3} data-k="qs">
-            {#each order.slice(0, order.length > 3 ? 4 : 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:wait={k === 3} class:slide={fresh[u] && k < 3} data-u={u} tabindex={k === 3 ? -1 : 0} aria-label="{nl(numOf(u))}번 {pname(u)} 풀어주기" onclick={() => k < 3 && release(u)}>{nl(numOf(u))}<span>{pname(u)}</span></button>{/each}
+            {#each order.slice(0, order.length > 3 ? 4 : 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:wait={k === 3} class:slide={fresh[u] && k < 3} data-u={u} tabindex={k === 3 ? -1 : 0} aria-label="{nl(numOf(u))}번 {pname(u)} ⚔ 보급" onclick={() => k < 3 && release(u)}>{nl(numOf(u))}<span>{pname(u)}</span></button>{/each}
             {#each Array.from({ length: Math.max(0, 3 - order.length) }) as _, k (k)}<span class="qslot"></span>{/each}
           </div>
         {/if}
@@ -260,7 +260,7 @@
     <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
-  {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} 풀어줬어요 (❤ +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
+  {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
   {#if talkOpen && step?.kind === 'concept'}
     <Sheet onclose={() => (talkOpen = false)} mainText="닫기">
       {#snippet title()}💬 말할 거리 · {short(step)}{/snippet}
@@ -274,11 +274,11 @@
       <div class="wst" data-k="who">
         <div>판<b>{R.players?.[whoP.uid]?.ver ? (isOld(R.players?.[whoP.uid]?.ver) ? `옛 판 ${R.players?.[whoP.uid]?.ver}` : `새 판 ${BUILD}`) : st === 'ab' ? '결석' : '안 들어옴'}</b></div>
         <div>지금<b>{isLobby(R) ? '대기실' : isEnd(L, R) ? '마무리' : short(step)}</b></div>
-        <div>하트<b>{whoRec ? `❤ ${whoRec.left} / ${whoRec.slots}${whoRec.locked ? ' · 잠김' : ''}` : '—'}</b></div>
+        <div>칼<b>{whoRec ? `⚔ ${whoRec.left} / ${whoRec.slots}${whoRec.locked ? ' · 잠김' : ''}` : '—'}</b></div>
         <div>이 몬스터<b>{whoRec ? `틀림 ${whoRec.wrong} · 맞힘 ${whoRec.right}` : '—'}</b></div>
       </div>
       <div class="wacts">
-        <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>✔ 풀어주기 (❤ +1)</button>
+        <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>⚔ 보급 (칼 +1)</button>
         <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name.slice(1)} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
         <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
         <button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>

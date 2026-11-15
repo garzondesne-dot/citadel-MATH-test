@@ -12,7 +12,7 @@
   import { shortQ } from './short';
   import { fx, heroAtk, type HeroAtk } from '../battle/fx.svelte';
   import { onDestroy } from 'svelte';
-  import { submit } from '../../raid/actions';
+  import { heartRelease, submit } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { markOf } from '../battle/Slots.svelte';
@@ -147,7 +147,7 @@
 {#if showDone}
   <GradeTable rows={reveal ? revealRows : lastRows} gold={reveal ? reveal.flash : lastGold} still={!reveal} />
   <div class="bcard">
-    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b>{#if !paperOn()}<span>데미지 {rec.best} · {v4 ? `⚡ ${rec.tokLeft} · 기술 하나 = 🔥 재도전 판` : '남은 기회는 연습'}</span>{/if}</span></div>
+    <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b>{#if !paperOn()}<span>데미지 {rec.best} · {v4 ? `⚔ 공격 기회 다 썼어요 · 🔥 한 판 더 풀 수 있어요 · ⚡ ${rec.tokLeft}` : '남은 기회는 연습'}</span>{/if}</span></div>
     {#if !v4}<EnergyCard {S} {L} {R} {code} {mid} {uid} {now} />{/if}
   </div>
   {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={() => { practice = true; tableHold = false; }} />{:else}
@@ -157,8 +157,9 @@
 {:else if spent}
   <GradeTable rows={reveal ? revealRows : lastRows} still={!reveal} />
   <div class="bcard">
-    <span class="lab acc">{no} · {v4 ? '❤ 를 다 썼어요' : '기회를 다 썼어요'}</span>
-    <p class="muted">{v4 ? '벌은 없어요 — 학습지에 풀이를 정리하면 선생님이 「풀어주기」로 ❤ 하나를 줘요' : '벌은 없어요 — 학습지에 풀이를 정리해요'}. 데미지 {rec.best}</p>
+    <span class="lab acc">{no} · {v4 ? '⚔ 칼이 다 떨어졌어요' : '기회를 다 썼어요'}</span>
+    <p class="muted">{v4 ? '🙋 선생님께 보급받기 — 학습지에 풀이를 정리하면 선생님이 「⚔ 보급」으로 칼 하나를 줘요 · 벌은 없어요' : '벌은 없어요 — 학습지에 풀이를 정리해요'}. 데미지 {rec.best}</p>
+  {#if v4 && R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-supply" onclick={() => heartRelease(S, code, mid, uid)}>✔ 테스트: 선생님 보급</button>{/if}
   </div>
   {#if v4}<BottomAction battle disabled why="🙋 학습지에 정리하고 기다려요">{#snippet main()}<span>🙋 선생님 확인 기다림</span>{#if !dummy}<Hearts total={rec.slots} left={0} memo={`${code}|${mid}|${uid}`} />{/if}{/snippet}</BottomAction>
   {:else}<BottomAction battle text="📝 학습지에 정리" why="기회를 다 썼어요 · 다음 몬스터를 기다려요" />{/if}
@@ -169,7 +170,7 @@
       <span class="lab acc">{no} · 채점 중…</span>
     {:else if !v4}
       <span class="lab acc">{no} · 데미지 {rec.best} · 소문제 {wrongIdx.map((i) => i + 1).join(', ')} 이 틀렸어요</span>
-      <p class="muted">맞힌 것은 그대로 잠기고, 틀린 것만 빈칸으로 다시 풀어요 · 공격 단추의 하트가 하나 줄었어요</p>
+      <p class="muted">맞힌 것은 그대로 잠기고, 틀린 것만 빈칸으로 다시 풀어요 · 공격 단추의 칼 하나 사용</p>
     {:else}
       <span class="lab acc">{no}{paperOn() ? ' 채점' : ''}</span>
     {/if}
@@ -185,7 +186,7 @@
   {:else if fixing}
     <div class="bad" role="status"><b>소문제 {wrongIdx.map((i) => i + 1).join(', ')} 을 고쳐요</b><span>맞힌 것은 초록으로 잠김 · 틀린 것을 모두 고쳐야 다시 공격</span></div>
   {:else if attempt > 0 && rec.perfect}
-    <div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 숫자가 바뀐 새 문제 (연습)</b><span>맞혀도 데미지는 그대로 · 틀리면 하트 −1</span></div>
+    <div class="bad" role="status" style="background:var(--surface-2)"><b>🆕 숫자가 바뀐 새 문제 (연습)</b><span>맞혀도 데미지는 그대로 · 틀리면 칼 하나 사용</span></div>
   {/if}
   <AnswerRow {cells} {cur} onpick={pickCell} />
   <div class="bcard" class:badline={fixing}>
@@ -195,7 +196,7 @@
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} prev={sameQ && last && !last.marks[cur] ? (last.given || [])[cur] : undefined} prevQ={lastItems[cur] ?? null} hintKey={`${code}|${mid}|${cur}`} prevAt={rec.tries.length} />
     {/key}
   </div>
-  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '❤' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
+  <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '⚔' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
     {#snippet left()}{#if v4 && onhint}<button type="button" class="side hint" aria-label="힌트" onclick={onhint}><i>💡</i>힌트</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 없음 · 소레이드만)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}
@@ -207,6 +208,7 @@
 {/if}
 
 <style>
+  .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }
   .tagl { margin: 0; display: flex; align-items: center; gap: var(--s2); }
   .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line, #2f3440); color: var(--text-2); font: 700 13px var(--font); }
   .stop { margin-left: 6px; padding: 0; border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; min-height: 32px; }
