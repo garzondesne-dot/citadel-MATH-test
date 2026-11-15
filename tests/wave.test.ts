@@ -98,15 +98,15 @@ describe('⚙ 🧩 수업 기능 스위치 7개 (📜 2026-11-16)', () => {
 import { estimate, packTier, timeSig, recordTime, ltimePath, T0, lessonCounts } from '../src/school/ltime';
 describe('⏱ 수업 시간 영향 (📜 2026-11-16)', () => {
   const L = SUBJ.lessons.find((l) => l.id === 'set-06')!;
-  it('기본 = 도입 · 개념 · 몬스터(정찰 + 소문제 × 1.5) · 형성평가 · 마무리 · 기능 = 체크 · 풀이 · 쉼터 · 연출', () => {
-    const c = lessonCounts(L), base = c.intro * T0.intro + c.concept * T0.concept + c.mons.reduce((a, m) => a + T0.scout + m.n * (m.chain ? T0.chainStage : T0.item), 0) + c.bossItems * T0.bossItem + T0.wrap;
+  it('기본 = 도입 · 개념 · 몬스터(정찰 포함 + 소문제) · 형성평가 · 마무리 · 기능 = 체크 · 풀이 · 쉼터 · 연출', () => {
+    const c = lessonCounts(L), base = c.intro * T0.intro + c.concept * T0.concept + c.mons.reduce((a, m) => a + T0.mon + m.n * (m.chain ? T0.chainStage : T0.item), 0) + c.bossItems * T0.bossItem + T0.wrap;
     const all = estimate(L, () => true), none = estimate(L, () => false);
     expect(all.base).toBeCloseTo(base, 5); expect(none.extra).toBe(0); expect(all.extra).toBeCloseTo(T0.rest + T0.fx + c.checks * T0.cc + c.reviews * T0.review, 5);
     expect(all.total).toBeCloseTo(all.base + all.extra, 5); expect(packTier(L)).toBe('basic');
   });
   it('50분 넘으면 빨강 + 가장 큰 기능 끄기 한 줄 · 실측 3번 이상 = 실측 평균', () => {
-    const big = SUBJ.lessons.find((l) => l.id === 'set-08')!, e = estimate(big, () => true);
-    expect(e.over).toBe(true); expect(e.cut?.id).toBe('rest');
+    const big = SUBJ.lessons.find((l) => l.id === 'set-08')!, e = estimate(big, () => true, null);
+    expect(e.over).toBe(true); expect(e.cut?.id).toBe('rest'); // 8차시 = 52.3 + 기능 3 > 50
     expect(estimate(L, () => true, { a: 40, b: 44 }).real).toBeNull();
     const r = estimate(L, () => true, { a: 40, b: 44, c: 48 }); expect(r.real).toEqual({ n: 3, min: 44 }); expect(r.total).toBe(44);
   });

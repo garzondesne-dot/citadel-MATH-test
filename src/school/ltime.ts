@@ -4,8 +4,9 @@
 import type { LessonPack, Store } from '../model/types';
 import { chainItems, items } from '../engine/lessons';
 
-/** 처음 값 (분) */
-export const T0 = { intro: 3, concept: 4, scout: 1, item: 1.5, chainStage: 2, bossItem: 1, wrap: 3, cc: 1, review: 2, rest: 2.5, fx: 0.5 } as const;
+/** 처음 값 (분) — 📜 2026-11-16 선생님 「추천대로」 = C: 운영 서버 지난 수업(11/5 ~ 11/13 · 5반 · 4차시)의 몬스터 사이 간격 15개를 읽기만 해서 맞춘 값
+ *  개념 단계 1.7 · 몬스터 하나 5.8(정찰 포함 · 소문제 수와 거의 상관없음 = 함께 풂) · 소문제 · 소레이드 단계 0.2 / 기록이 없는 도입 · 형성평가 · 마무리 = 머리 처음 값 그대로 */
+export const T0 = { intro: 3, concept: 1.7, mon: 5.8, item: 0.2, chainStage: 0.2, bossItem: 1, wrap: 3, cc: 1, review: 2, rest: 2.5, fx: 0.5 } as const;
 export const LIMIT = 50;
 export const REAL_MIN = 3;
 /** 시간에 들어가는 기능 (나머지 = 0분 · 「각자 · 돌면서」) */
@@ -46,7 +47,7 @@ export type Est = { base: number; feats: { id: TimeFeat; min: number; on: boolea
 /** 이 차시 예상 = 기본 + 켠 기능 (실측 3번 이상이면 실측 평균) */
 export function estimate(L: LessonPack, on: (id: string) => boolean, measured?: Record<string, number> | null): Est {
   const c = lessonCounts(L);
-  const base = r1(c.intro * T0.intro + c.concept * T0.concept + c.mons.reduce((a, m) => a + T0.scout + m.n * (m.chain ? T0.chainStage : T0.item), 0) + c.bossItems * T0.bossItem + T0.wrap);
+  const base = r1(c.intro * T0.intro + c.concept * T0.concept + c.mons.reduce((a, m) => a + T0.mon + m.n * (m.chain ? T0.chainStage : T0.item), 0) + c.bossItems * T0.bossItem + T0.wrap);
   const restOn = REST_IDS.some((id) => on(id));
   const feats: Est['feats'] = [
     { id: 'cc', min: r1(c.checks * T0.cc), on: on('cc') },
