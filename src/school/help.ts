@@ -6,13 +6,17 @@
 import type { Help, LessonPack, Question, Room, Store } from '../model/types';
 import { chainItems } from '../engine/lessons';
 
-/** 그 문항의 도움 (없으면 null) · i = 몬스터 안 문항 번호(소레이드 = 단계) */
+/** 그 문항의 도움 (없으면 null) · i = 몬스터 안 문항 번호(소레이드 = 단계)
+ *  문항 칸 help 가 먼저 · 없으면 몬스터 칸 help(13차시 덧칸 꼴) · first = 첫 출제 판(판 0) 문항일 때만(소문항마다 배열이면 그 칸) · 숫자 바뀐 판 = concept · example 만 */
 export function helpOf(L: LessonPack, mid: string, i: number, q: Question | null | undefined): Help | null {
   if (!q || mid === 'boss' || !L.monsters[mid]) return null;
-  if (q.help?.concept) return q.help;
   const m = L.monsters[mid]!, base = (m.first?.[i] ?? (m.chain ? chainItems(L, mid, '', 0)[i] : null)) as Question | null | undefined;
-  const h = base?.help; if (!h?.concept) return null;
-  return { concept: h.concept, ...(h.example ? { example: h.example } : {}) }; // 숫자 바뀐 판 = 개념 · 예제만 (first 는 그 판 숫자가 아니라서 숨김)
+  const firstRound = !!base && base.question === q.question && JSON.stringify((base as { answer?: unknown }).answer ?? (base as { answers?: unknown }).answers ?? null) === JSON.stringify((q as { answer?: unknown }).answer ?? (q as { answers?: unknown }).answers ?? null);
+  const own = q.help?.concept ? q.help : null, src = own ?? (base?.help?.concept ? base.help : m.help?.concept ? m.help : null);
+  if (!src) return null;
+  const f = Array.isArray(src.first) ? src.first[i] : src.first;
+  const showFirst = !!f && (own ? true : firstRound);
+  return { concept: src.concept, ...(showFirst ? { first: f } : {}), ...(src.example ? { example: src.example } : {}) };
 }
 const ck = (s: string) => s.replace(/[.#$/[\]]/g, '_');
 /** 연 단계 기록 (가장 높이 연 것만 · 덮어쓰기 없음) */
@@ -29,5 +33,5 @@ export const handsOf = (R: Room, mid: string): string[] => Object.entries((R.pla
 export function reviewsOf(L: LessonPack, mid: string): { i: number; k: number; r: import('../model/types').Review }[] {
   const m = L.monsters[mid]; if (!m) return [];
   const qs = (m.first ?? (m.chain ? chainItems(L, mid, '', 0) : [])) as Question[];
-  return qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })));
+  return [...(m.reviews || []).map((r, k) => ({ i: -1, k, r })), ...qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })))]; // 몬스터 칸(13차시 덧칸 꼴 · i = −1) 먼저
 }

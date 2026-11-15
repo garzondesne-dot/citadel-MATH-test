@@ -370,7 +370,7 @@
     <!-- 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기): 양피지 카드 · 이름 · 점수 · 정답/오답 글자 없음 · 「함께 살펴볼 줄」 강조 · 질문 · wrong = 「검토할 풀이」 꼬리표 -->
     <div class="ov rev" data-k="tv-review"><div class="parch">
       <div class="rh"><b>🔎 함께 살펴볼 풀이</b>{#if tvRev.wrong}<span class="rtag">검토할 풀이</span>{/if}</div>
-      <ol class="rl">{#each tvRev.lines as ln, k (k)}<li class:fo={k === tvRev.focus}>{#if k === tvRev.focus}<span class="fl">함께 살펴볼 줄</span>{/if}<SymText text={ln} on={false} /></li>{/each}</ol>
+      <ol class="rl">{#each tvRev.lines as ln, k (k)}<li class:fo={k + 1 === tvRev.focus}>{#if k + 1 === tvRev.focus}<span class="fl">함께 살펴볼 줄</span>{/if}<SymText text={ln} on={false} /></li>{/each}</ol>
       {#if tvRev.ask}<p class="rq">❓ <SymText text={tvRev.ask} on={false} /></p>{/if}
     </div></div>
   {/if}

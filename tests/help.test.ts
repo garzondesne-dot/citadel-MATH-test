@@ -46,3 +46,20 @@ describe('💡 도움 3단 · 🔎 익명 풀이 팩 칸', () => {
     expect(handsOf(R, 'm1')).toEqual(['a']);
   });
 });
+
+describe('🧩 13차시 덧칸 꼴 (몬스터 칸 help · review · 단계 check) = 운영 팩 + addons-13 합친 파일', () => {
+  const raw = fs.readFileSync('docs/handoff/pack13/ex-13-with-addons.json', 'utf8');
+  it('검사 통과 · first = 첫 출제 판만(소문항마다) · 숫자 바뀐 판 = 숨김 · 익명 풀이 focus 1부터 · 개념 체크 O/X · 선다 "0"', () => {
+    const r = checkUpload(raw, look);
+    expect(r.issues.filter((x) => x.lvl === 'err').map((x) => `${x.at} ${x.msg}`)).toEqual([]);
+    const P = r.pack!, m1 = P.monsters.m1!;
+    expect(Array.isArray(m1.help?.first)).toBe(true);
+    const q0 = items(P, 'm1', 's', 0);
+    q0.forEach((q, i) => { const h = helpOf(P, 'm1', i, q)!; expect(h.concept).toBeTruthy(); expect(h.first).toBe((m1.help!.first as string[])[i]); });
+    const q1 = items(P, 'm1', 's', 1)[0];
+    if (q1 && q1.question !== q0[0]!.question) expect(helpOf(P, 'm1', 0, q1)!.first).toBeUndefined();
+    const rv = reviewsOf(P, 'm1'); expect(rv[0]!.i).toBe(-1); expect(rv[0]!.r.focus).toBe(3); expect(rv[0]!.r.lines.length).toBeGreaterThanOrEqual(3);
+    expect(P.steps.find((s) => s.id === 'c1')!.check).toMatchObject({ type: 'ox', a: false });
+    expect(P.steps.find((s) => s.id === 'c3')!.check).toMatchObject({ type: 'choice', a: 0 });
+  });
+});

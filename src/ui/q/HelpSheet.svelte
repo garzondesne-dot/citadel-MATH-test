@@ -22,12 +22,12 @@
       <p class="big"><SymText text={help.concept} /></p>
     {:else if cur.k === 2}
       <p class="lab">✏ 풀이 첫 줄 · 빈칸 하나만 채워 봐요</p>
-      <p class="big line"><SymText text={help.first ?? ''} /></p>
+      <p class="big line"><SymText text={typeof help.first === 'string' ? help.first : ''} /></p>
     {:else if help.example}
       <p class="lab">📝 비슷한 예제</p>
       <p class="ex"><SymText text={help.example.q} /></p>
       <p class="lab">풀이</p>
-      <p class="sol"><SymText text={help.example.sol} /></p>
+      {#if Array.isArray(help.example.sol)}<ol class="sol">{#each help.example.sol as ln, k (k)}<li><SymText text={ln} /></li>{/each}</ol>{:else}<p class="sol"><SymText text={help.example.sol} /></p>{/if}
     {/if}
     {#if !last}<button type="button" class="next" data-k="help-next" onclick={() => (at += 1)}>💡 다음 도움 ({at + 2}단 · {steps[at + 1]?.t})</button>
     {:else if hand || raised}<p class="raised" role="status">✋ 손을 들었어요 · 선생님이 곧 와요</p>
@@ -46,6 +46,7 @@
   .big { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.5; }
   .line { padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); border: 2px dashed var(--line); }
   .ex, .sol { margin: 0; font-size: 17px; line-height: 1.6; }
+  ol.sol { margin: 0; padding: 10px 12px 10px 30px; display: flex; flex-direction: column; gap: 4px; }
   .sol { padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); }
   .next { min-height: var(--tap); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface-2); color: var(--text); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .next.hand { border-color: var(--bad); }

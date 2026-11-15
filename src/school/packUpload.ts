@@ -7,6 +7,7 @@
 //   엔진 꼴(v: 1 · monsters)도 그대로 받음 = 풀 판(우리) 차시를 같은 길로
 import type { LessonPack, MonsterPack, Question, Step } from '../model/types';
 import { SUBJ } from '../engine/subject';
+import type { Help, Review } from '../model/types';
 import { bossItem, forget, items, validate } from '../engine/lessons';
 
 export type Lvl = 'err' | 'ask';
@@ -14,7 +15,7 @@ export interface Issue { at: string; msg: string; lvl: Lvl }
 /** 도감 찾기 (화면 쪽 배치표 · 공격 표가 알려 줌 · 시험은 가짜로) */
 export interface Look { sheet: (ref: string) => boolean; theme: (id: string) => boolean; attack: (id: string) => boolean; builtIn: (id: string) => boolean }
 type BItem = { type?: string; q?: string; a?: unknown; ch?: unknown; sol?: string; say?: unknown; why?: unknown; groups?: unknown; ref?: unknown; help?: unknown; review?: unknown };
-type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string };
+type BMon = { title?: string; sprite?: unknown; attack?: string; chain?: boolean; first?: BItem[]; second?: BItem[]; vers?: BItem[][]; note?: string; help?: unknown; review?: unknown };
 type BBoss = { title?: string; sprite?: unknown; attack?: string | string[]; items?: number; hpItems?: number; tags?: string[]; first?: BItem[]; vers?: BItem[][] };
 type BPack = { id?: string; no?: number; title?: string; unit?: string; goal?: string; theme?: string; pct?: number; std?: string; sheet?: string; next?: LessonPack['next']; steps?: Partial<Step>[]; img?: string[]; imgOf?: string; find?: Record<string, string>; video?: { file?: string; at?: string | string[] }[]; mons?: Record<string, BMon>; boss?: BBoss };
 
@@ -36,30 +37,46 @@ export function spriteName(raw: unknown): string {
 
 // ➕ 덧칸 (📜 2026-11-14 🏰 성채 팩 · 차시 팩 같이): say = 나의 풀이 한 줄 · why = 💡 근거 줄 · groups = 두 칸 칩 고르기 · ref = 교과서 문항 번호
 const str = (x: unknown) => typeof x === 'string' && x.trim() !== '';
+const strs = (x: unknown) => (Array.isArray(x) ? (x as unknown[]).every((v) => typeof v === 'string' && v.trim() !== '') && (x as unknown[]).length > 0 : str(x));
+/** 💡 도움 3단 (📜 2026-11-15 · 13차시 덧칸 꼴): { concept(필수), first?(한 줄 또는 소문항마다 배열), example?: { q, sol(한 줄 또는 줄 배열) } } */
+export function parseHelp(x: unknown, err: (m: string) => null): Help | null {
+  const h = x as Record<string, unknown>;
+  if (!h || typeof h !== 'object' || !str(h.concept)) return err('도움 3단(help) = { concept: 「개념 한 줄」, first?: 「빈칸 하나 남긴 줄」 또는 소문항마다 [줄…], example?: { q, sol } } — concept 가 비었어요');
+  if (h.first != null && !strs(h.first)) return err('도움 2단(help.first)은 글 한 줄 또는 소문항마다 글 배열이에요');
+  const ex = h.example as Record<string, unknown> | undefined;
+  if (ex != null && (typeof ex !== 'object' || !str(ex.q) || !strs(ex.sol))) return err('도움 3단 예제(help.example) = { q: 「예제」, sol: 「풀이」 또는 [줄…] } 둘 다 글이에요');
+  const sol = ex ? (Array.isArray(ex.sol) ? (ex.sol as string[]).map(String) : String(ex.sol)) : null;
+  return { concept: String(h.concept), ...(h.first != null ? { first: Array.isArray(h.first) ? (h.first as unknown[]).map(String) : String(h.first) } : {}), ...(ex && sol ? { example: { q: String(ex.q), sol } } : {}) };
+}
+/** 🔎 익명 풀이: [{ lines: [줄…], focus?: 줄 번호(1부터), ask?, wrong? }] */
+export function parseReview(x: unknown, err: (m: string) => null): Review[] | null {
+  const rv = x as Record<string, unknown>[];
+  if (!Array.isArray(rv) || !rv.length) return err('익명 풀이(review) = [{ lines: […], focus?, ask?, wrong? }] 배열이에요');
+  const out: Review[] = [];
+  for (const [k, r] of rv.entries()) {
+    if (!r || typeof r !== 'object' || !Array.isArray(r.lines) || !r.lines.length || (r.lines as unknown[]).some((l) => typeof l !== 'string')) return err(`익명 풀이 ${k + 1}번 — lines 는 글 줄 배열이에요`);
+    const n = (r.lines as unknown[]).length, f = r.focus == null ? undefined : Number(r.focus);
+    if (f != null && (!Number.isInteger(f) || f < 1 || f > n)) return err(`익명 풀이 ${k + 1}번 — 「함께 살펴볼 줄」(focus ${String(r.focus)})이 줄 번호 범위(1 ~ ${n}) 밖이에요`);
+    out.push({ lines: (r.lines as string[]).map(String), ...(f != null ? { focus: f } : {}), ...(r.ask != null ? { ask: String(r.ask) } : {}), ...(r.wrong ? { wrong: true } : {}) });
+  }
+  return out;
+}
+/** ✔ 개념 체크 칸 (개념 단계만) · 틀리면 bad(이유) 후 null */
+export function parseCheck(x: unknown, kind: string, bad: (m: string) => void): Step['check'] | null {
+  const c = x as Record<string, unknown>;
+  if (kind !== 'concept') { bad('개념(concept) 단계에만 달아요'); return null; }
+  if (!c || typeof c !== 'object' || (c.type !== 'ox' && c.type !== 'choice')) { bad("type 은 'ox' 또는 'choice'"); return null; }
+  if (!str(c.q) || !str(c.why)) { bad('문제(q) · 틀렸을 때 한 줄(why)이 비었어요'); return null; }
+  if (c.type === 'ox') { const a = c.a === true || c.a === 'O' || c.a === 'o' ? true : c.a === false || c.a === 'X' || c.a === 'x' ? false : null; if (a == null) { bad('OX 정답(a)은 true/false 또는 O/X'); return null; } return { type: 'ox', q: String(c.q), a, why: String(c.why) }; }
+  const ch = Array.isArray(c.ch) ? (c.ch as unknown[]).map(String) : Object.values((c.ch as Record<string, unknown>) || {}).map(String), a = Number(c.a);
+  if (ch.length < 2) { bad('선다 보기(ch)가 2개 이상'); return null; }
+  if (!Number.isInteger(a) || a < 0 || a >= ch.length) { bad(`정답(a) 「${String(c.a)}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖`); return null; }
+  return { type: 'choice', q: String(c.q), ch, a, why: String(c.why) };
+}
 function extras(it: BItem, ch: string[] | null, err: (m: string) => null): { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string; help?: Question['help']; review?: Question['review'] } | null {
   const o: { say?: string; why?: Question['why']; groups?: { label: string; n: number }[]; ref?: string; help?: Question['help']; review?: Question['review'] } = {};
-  // 💡 도움 3단 (📜 2026-11-15): help = { concept(필수 · 글), first?(빈칸 하나 남긴 줄 · 글), example?: { q, sol } }
-  if (it.help != null) {
-    const h = it.help as Record<string, unknown>;
-    if (!h || typeof h !== 'object' || !str(h.concept)) return err('도움 3단(help) = { concept: 「개념 한 줄」, first?: 「빈칸 하나 남긴 줄」, example?: { q, sol } } — concept 가 비었어요');
-    if (h.first != null && !str(h.first)) return err('도움 2단(help.first)은 글 한 줄이에요');
-    const ex = h.example as Record<string, unknown> | undefined;
-    if (ex != null && (typeof ex !== 'object' || !str(ex.q) || !str(ex.sol))) return err('도움 3단 예제(help.example) = { q: 「예제」, sol: 「풀이」 } 둘 다 글이에요');
-    o.help = { concept: String(h.concept), ...(h.first != null ? { first: String(h.first) } : {}), ...(ex ? { example: { q: String(ex.q), sol: String(ex.sol) } } : {}) };
-  }
-  // 🔎 익명 풀이 (📜 2026-11-15): review = [{ lines: [줄…], focus?: 줄 번호(0부터), ask?: 질문, wrong?: true }]
-  if (it.review != null) {
-    const rv = it.review as Record<string, unknown>[];
-    if (!Array.isArray(rv) || !rv.length) return err('익명 풀이(review) = [{ lines: […], focus?, ask?, wrong? }] 배열이에요');
-    const out: NonNullable<Question['review']> = [];
-    for (const [k, r] of rv.entries()) {
-      if (!r || typeof r !== 'object' || !Array.isArray(r.lines) || !r.lines.length || (r.lines as unknown[]).some((l) => typeof l !== 'string')) return err(`익명 풀이 ${k + 1}번 — lines 는 글 줄 배열이에요`);
-      const f = r.focus == null ? undefined : Number(r.focus);
-      if (f != null && (!Number.isInteger(f) || f < 0 || f >= (r.lines as unknown[]).length)) return err(`익명 풀이 ${k + 1}번 — 「함께 살펴볼 줄」(focus ${String(r.focus)})이 줄 번호 범위(0 ~ ${(r.lines as unknown[]).length - 1}) 밖이에요`);
-      out.push({ lines: (r.lines as string[]).map(String), ...(f != null ? { focus: f } : {}), ...(r.ask != null ? { ask: String(r.ask) } : {}), ...(r.wrong ? { wrong: true } : {}) });
-    }
-    o.review = out;
-  }
+  if (it.help != null) { const h = parseHelp(it.help, err); if (!h) return null; o.help = h; }
+  if (it.review != null) { const r = parseReview(it.review, err); if (!r) return null; o.review = r; }
   if (it.say != null) { if (typeof it.say !== 'string') return err('나의 풀이(say)는 글 한 줄이에요'); if (it.say.trim()) o.say = it.say; }
   if (it.ref != null) o.ref = String(it.ref);
   if (it.why != null) {
@@ -202,15 +219,8 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     if (!s.id || !s.title) { out.push({ at, msg: 'id · 제목(title)이 비었어요', lvl: 'err' }); return; }
     if (steps.some((x) => x.id === s.id)) out.push({ at, msg: `id 「${s.id}」 가 겹쳐요`, lvl: 'err' });
     // ✔ 개념 체크 (📜 2026-11-15): 개념 단계만 · check = { type: 'ox' | 'choice', q, ch?(선다 보기 2개 이상), a(OX = true/false 또는 O/X · 선다 = 보기 번호 0부터), why }
-    let cc: Step['check'] | undefined;
-    if ((s as unknown as { check?: unknown }).check != null) {
-      const c = (s as unknown as { check: Record<string, unknown> }).check, bad = (m: string) => { out.push({ at, msg: `개념 체크(check) — ${m}`, lvl: 'err' }); };
-      if (s.kind !== 'concept') bad('개념(concept) 단계에만 달아요');
-      else if (!c || typeof c !== 'object' || (c.type !== 'ox' && c.type !== 'choice')) bad("type 은 'ox' 또는 'choice'");
-      else if (!str(c.q) || !str(c.why)) bad('문제(q) · 틀렸을 때 한 줄(why)이 비었어요');
-      else if (c.type === 'ox') { const a = c.a === true || c.a === 'O' || c.a === 'o' ? true : c.a === false || c.a === 'X' || c.a === 'x' ? false : null; if (a == null) bad('OX 정답(a)은 true/false 또는 O/X'); else cc = { type: 'ox', q: String(c.q), a, why: String(c.why) }; }
-      else { const ch = Array.isArray(c.ch) ? (c.ch as unknown[]).map(String) : []; const a = Number(c.a); if (ch.length < 2) bad('선다 보기(ch)가 2개 이상'); else if (!Number.isInteger(a) || a < 0 || a >= ch.length) bad(`정답(a) 「${String(c.a)}」 이 보기 번호 범위(0 ~ ${ch.length - 1}) 밖`); else cc = { type: 'choice', q: String(c.q), ch, a, why: String(c.why) }; }
-    }
+    const raw0 = (s as unknown as { check?: unknown }).check;
+    const cc = raw0 != null ? parseCheck(raw0, String(s.kind), (m) => { out.push({ at, msg: `개념 체크(check) — ${m}`, lvl: 'err' }); }) ?? undefined : undefined;
     steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}), ...(cc ? { check: cc } : {}) });
   });
   const monsters: Record<string, MonsterPack> = {};
@@ -224,7 +234,10 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     vs.forEach((v, k) => { const r = recheckAll(v, (i) => `${s.title} · 버전 ${k} · ${i + 1}번`, out); stats.rechecked += r.done; stats.ask += r.ask; });
     const sprite = spriteName(m.sprite) || 'base0:0';
     if (!spriteName(m.sprite)) out.push({ at: `${s.title} · 그림(sprite)`, msg: '그림이 비어 기본 그림(base0:0)으로 넣어요', lvl: 'ask' });
-    monsters[s.id] = { title: m.title || s.title, sprite, attack: m.attack || 'pause', first: vs[0], retry: { pool: vs.slice(1) }, ...(m.chain ? { chain: { pool: vs } } : {}), ...(m.note ? { noteText: m.note } : {}) };
+    // 💡 · 🔎 몬스터 칸 덧칸 (📜 2026-11-15 · 13차시 덧칸 꼴 mons.mN.help · review)
+    const at2 = `${s.title}(mons.${s.id})`, merr = (msg: string) => { out.push({ at: at2, msg, lvl: 'err' }); return null; };
+    const mh = m.help != null ? parseHelp(m.help, merr) : undefined, mr = m.review != null ? parseReview(m.review, merr) : undefined;
+    monsters[s.id] = { ...(mh ? { help: mh } : {}), ...(mr ? { reviews: mr } : {}), title: m.title || s.title, sprite, attack: m.attack || 'pause', first: vs[0], retry: { pool: vs.slice(1) }, ...(m.chain ? { chain: { pool: vs } } : {}), ...(m.note ? { noteText: m.note } : {}) };
   }
   let boss: LessonPack['boss'];
   if (steps.some((x) => x.kind === 'boss')) {
@@ -263,6 +276,13 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
 /** 엔진 꼴(풀 판 차시 · v: 1) — 첫 판(버전 0) 문항만 다시 계산 · 생성기 이름은 엔진 검사가 확인 */
 function nativePack(p: LessonPack, out: Issue[], stats: Checked['stats']): LessonPack | null {
   if (!p.id || !Array.isArray(p.steps)) { out.push({ at: '차시 팩', msg: 'id · steps 가 없어요', lvl: 'err' }); return null; }
+  // 💡 · 🔎 · ✔ 덧칸 검사 (엔진 꼴 · 13차시 덧칸을 합친 팩) — 틀리면 칸 · 이유
+  for (const [id, m] of Object.entries(p.monsters || {})) {
+    const merr = (msg: string) => { out.push({ at: `몬스터 ${id}`, msg, lvl: 'err' }); return null; };
+    if (m.help != null) { const h = parseHelp(m.help, merr); if (h) m.help = h; }
+    if (m.reviews != null) { const r = parseReview(m.reviews, merr); if (r) m.reviews = r; }
+  }
+  for (const st of p.steps) if (st.check != null) { const c = parseCheck(st.check, st.kind, (msg) => { out.push({ at: `단계 ${st.id}`, msg: `개념 체크(check) — ${msg}`, lvl: 'err' }); }); if (c) st.check = c; else delete st.check; }
   for (const [id, m] of Object.entries(p.monsters || {})) {
     const nm = p.steps.find((s) => s.id === id)?.title ?? id;
     try { const qs = items(p, id, 'check', 0); stats.mons++; stats.items += qs.length; stats.versions += 1; const r = recheckAll(qs, (i) => `${nm} · 버전 0 · ${i + 1}번`, out); stats.rechecked += r.done; stats.ask += r.ask; } catch (e) { out.push({ at: nm, msg: (e as Error).message, lvl: 'err' }); }
@@ -284,6 +304,8 @@ export function revive(p: LessonPack): LessonPack {
     const r = (m.retry || {}) as { gen?: string; pool?: unknown };
     m.retry = r.gen ? (m.retry as MonsterPack['retry']) : { pool: arr<unknown>(r.pool).map((v) => arr<Question>(v)) };
     if (m.first) m.first = arr<Question>(m.first);
+    if (m.help) { const h = m.help as Help; m.help = { ...h, ...(h.first != null && typeof h.first !== 'string' ? { first: arr<string>(h.first) } : {}), ...(h.example ? { example: { q: h.example.q, sol: typeof h.example.sol === 'string' ? h.example.sol : arr<string>(h.example.sol) } } : {}) }; }
+    if (m.reviews) m.reviews = arr<Review>(m.reviews).map((r) => ({ ...r, lines: arr<string>(r.lines) }));
     if (m.chain && 'pool' in (m.chain as object)) m.chain = { pool: arr<unknown>((m.chain as { pool: unknown }).pool).map((v) => arr<Question>(v)) };
     monsters[id] = m;
   }

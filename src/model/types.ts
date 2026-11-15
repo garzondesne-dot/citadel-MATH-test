@@ -22,7 +22,9 @@ interface QBase {
   review?: Review[];
 }
 export interface ConceptCheck { type: 'ox' | 'choice'; q: string; ch?: string[]; a: number | boolean; why: string }
-export interface Help { concept: string; first?: string; example?: { q: string; sol: string } }
+/** 💡 도움 3단 · first = 한 줄 또는 소문항마다 배열(첫 출제 판 숫자) · example.sol = 한 줄 또는 줄 배열 */
+export interface Help { concept: string; first?: string | string[]; example?: { q: string; sol: string | string[] } }
+/** 🔎 익명 풀이 · focus = 「함께 살펴볼 줄」 번호(1부터 · 13차시 덧칸 꼴) */
 export interface Review { lines: string[]; focus?: number; ask?: string; wrong?: boolean }
 export type Question =
   | (QBase & { type: 'choice'; choices: string[]; answerIndex: number; answer?: string })
@@ -50,6 +52,8 @@ export interface MonsterPack {
   /** 판 0 = 학습지 원문 · 판 1~ = 숫자 바꾼 문제. gen 이면 판 0 도 생성기가 만든다(정식과 같은 값) */
   first?: Question[];
   retry: Retry;
+  /** 💡 도움 3단 · 🔎 익명 풀이 (📜 2026-11-15 · 13차시 덧칸 꼴 = 몬스터 칸 · 덧칸 파일의 review 배열 = 엔진 reviews · review(불) = 옛 「지난 시간 복습」 몬스터 표시와 이름이 겹쳐서) — 문항 칸 help · review 가 있으면 그것이 먼저 */
+  help?: Help; reviews?: Review[];
   /** ⚔ 소레이드 (졸개 → 대장 단계) — 방 version ≥ 3 이면 이 꼴로 진행 */
   /** 판 0 = 첫 판 · 1~ = 한 판 더. gen = 이름 등록 생성기 · pool = 미리 쓴 판(엑셀 · 가벼운 판 #135 ③) */
   chain?: { gen: string } | { pool: Question[][] };
