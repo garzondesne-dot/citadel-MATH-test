@@ -58,7 +58,7 @@ describe('📊 통계에 넣는 칸', () => {
 
 describe('📊 대시보드 = 안 연 칸은 「— 수업 안 함」', () => {
   const base = { 'roster/1-2': { 1: '가', 2: '나' } };
-  const rec = (bossM: string, boss: number) => ({ at: 1, code: 'a', no: 6, mons: { m1: 'o', m2: 'o', m3: 'x', u4: 'o', u5: 'n', u6: 'n', u7: 'n' }, bossM, boss, bossN: 6, conc: { c1: [1, 1], c2: [1, 1], c3: [0, 1], c4: [3, 4] } });
+  const rec = (bossM: string, boss: number) => ({ at: Date.UTC(2026, 10, 12), code: 'a', no: 6, mons: { m1: 'o', m2: 'o', m3: 'x', u4: 'o', u5: 'n', u6: 'n', u7: 'n' }, bossM, boss, bossN: 6, conc: { c1: [1, 1], c2: [1, 1], c3: [0, 1], c4: [3, 4] } });
   it('1-2 6차시: 형성평가 안 엶 = 점수 0 이 아니라 빠짐 · 문제 7(u7) 안 엶 · 개념 칸은 남은 문제가 있으면 그대로', () => {
     const S = mem({ ...base, 'records/1-2/1/set-06': rec('nnnnnn', 0), 'records/1-2/2/set-06': rec('nnnnnn', 0) });
     const { studs } = realClass(S, '1-2');

@@ -117,7 +117,7 @@ export function realClass(S: Store, cls: string) {
     for (const [lid, r] of Object.entries(recAll[p.num] || {})) {
       if (!isObj(r)) continue;
       const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || PACKS.find((l) => l.id === lid)?.no || 0;
-      const bad = (c: string) => (SUBJ.badConc || []).some((b) => b.lid === lid && b.c === c && (Number(r.at) || 0) < b.before && (dropped.add(b.why), true)); // 🧹 옛 판 계산 오류
+      const bad = (c: string) => (SUBJ.badConc || []).some((b) => b.lid === lid && b.c === c && Number(r.at) > 0 && Number(r.at) < b.before && (dropped.add(b.why), true)); // 🧹 옛 판 계산 오류
       const f = inc[lid], noBoss = !!f && !f.cells.has(BOSS), conc = Object.fromEntries(Object.entries(isObj(r.conc) ? r.conc : {}).filter(([c]) => (!f || !f.dropConc.has(c)) && !bad(c))) as LessonRec['conc'];
       records[p.num]![lid] = { conc, names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: noBoss ? 0 : Number(r.boss) || 0, bossN: noBoss ? 0 : Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !noBoss && !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null, ...(noBoss ? { noBoss: true } : {}) };
     }
