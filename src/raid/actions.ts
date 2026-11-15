@@ -1,6 +1,7 @@
 import { join as usageJoin } from '../school/usage';
 import { armPre, lastClosePath } from '../school/pre';
 import { recordTime, timeSig } from '../school/ltime';
+import { leftSteps, sentKey } from '../school/sendReview';
 import { cleanWords } from '../school/survey';
 import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
@@ -141,8 +142,9 @@ export function doorStart(S: Store, code: string): void {
 export function endClass(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || R.state.closed) return;
+  const t0 = S.now(), autoSent = !isLobby(R) && !isEnd(L, R) ? Object.fromEntries(leftSteps(L, R, t0).map((s) => [sentKey(s), t0])) : {}; // 🎯 닫을 때 남은 몬스터 = 저절로 복습으로 (📜 2026-11-16 · A)
   const stop = isLobby(R) && R.meta.resumeFrom != null ? { step: R.meta.resumeFrom, fresh: Object.keys(R.meta.fresh || {})[0] ?? null, done: false } : stopOf(L, R, S.now());
-  S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null, stop });
+  S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null, stop, ...(Object.keys(autoSent).length ? { sent: { ...autoSent, ...((R.state as { sent?: Record<string, number> }).sent || {}) } } : {}) });
   if (R.meta.cls && !isLobby(R)) {
     const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
     S.set(lastClosePath(R.meta.cls, test), S.now());

@@ -7,12 +7,12 @@ import type { LessonPack, Room } from '../model/types';
 import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
 
-export type St = 'o' | 'f' | 'x' | '-' | 'n';
-export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; /** 🔁 고친 소문제 */ fixed?: number; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number }
+export type St = 'o' | 'f' | 'x' | '-' | 'n' | 's'; // s = 🎯 수업에서 복습으로 넘어온 문제 (📜 2026-11-16)
+export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; /** 🔁 고친 소문제 */ fixed?: number; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number; /** 🎯 형성평가를 복습으로 보냄 · 복습에서 풂(시각) */ bossSent?: boolean; bossReview?: number }
 
 export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now: number, prev?: Partial<RecRow> | null): RecRow {
   const others = activeIds(R, now).filter((u) => u !== uid);
-  const mons: Record<string, St> = {};
+  const mons: Record<string, St> = {}, sent = (R.state as { sent?: Record<string, number> }).sent || {};
   let perfects = 0;
   for (const s of L.steps) {
     if (s.kind !== 'monster' || s.later || !L.monsters[s.id]) continue;
@@ -25,6 +25,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
       st = r.submitted ? (first && first.correct === first.total ? 'o' : r.best >= r.total ? 'f' : 'x') : others.some((u) => plainRecord(L, R, s.id, u).submitted) ? '-' : 'n';
     }
     if (st === 'o') perfects++;
+    if ((st === 'n' || st === '-') && sent[s.id]) st = 's'; // 🎯 안 푼 채 복습으로 보낸 몬스터
     mons[s.id] = st;
   }
   const cm = concOf(L, R, uid);
@@ -33,7 +34,8 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   if (L.boss) {
     const mast = mastery(L, R, uid), bs = bossState(L, R, uid), any = others.some((u) => bossState(L, R, u).some((x) => x.n > 0)), hpN = L.boss.hpItems ?? L.boss.items;
     out.boss = mast.slice(0, hpN).filter(Boolean).length; out.bossN = hpN;
-    out.bossM = mast.map((ok, i) => (ok ? 'o' : bs[i]?.n ? 'x' : any ? '-' : 'n')).join('');
+    out.bossM = mast.map((ok, i) => (ok ? 'o' : bs[i]?.n ? 'x' : sent.boss ? 's' : any ? '-' : 'n')).join('');
+    if (sent.boss && !mast.some(Boolean)) out.bossSent = true; // 🎯 👑 형성평가를 복습으로 보냄 → 허수아비 「⭐ 꼭 풀기」 · 대시보드 「수업 안 함 · 복습」
     out.won = !!bossHp(L, R, now).won;
   }
   { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)

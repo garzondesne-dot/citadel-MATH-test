@@ -47,6 +47,7 @@
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
   import { shouldNudge } from '../school/idle';
+  import { isSent } from '../school/sendReview';
   import FunPhone from './rest/FunPhone.svelte';
   import { submitWho } from './submit.svelte';
   import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
@@ -182,7 +183,8 @@
   const locked = $derived(!!scout?.on || stunned);
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
-  $effect(() => { const b = meBound(); if (!result || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
+  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
   function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {
@@ -279,6 +281,7 @@
     </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
+    {#if isSent(R, step)}<div class="bcard idleband" role="status" data-k="sent-band"><b>🎯 이 문제는 허수아비에서 만나요</b><span>수업이 끝나면 캠프의 🎯 허수아비 「📚 수업에서 넘어온 문제」</span></div>{/if}
     {#if idleMid && idleMid === mid}<div class="bcard idleband" role="status" data-k="idle"><b>🤝 첫 줄만 같이 볼까?</b><button type="button" data-k="idle-go" onclick={() => { poke(); window.dispatchEvent(new CustomEvent('citadel-idlehelp')); }}>💡 같이 보기</button></div>{/if}<!-- 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①) -->
     {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band"><b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span></div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
     {#if scout?.on && paperOn()}
@@ -296,7 +299,7 @@
       <BottomAction disabled={readyNow} why={readyNow ? '✋ 준비 완료를 보냈어요' : ''} onmain={() => scout && scoutReady(S, code, scout.id, uid)} mainLabel="준비 완료">
         {#snippet main()}<span>{readyNow ? '✋ 준비 완료!' : '준비 완료'}</span>{/snippet}
       </BottomAction>
-    {:else}
+    {:else if !isSent(R, step)}
       <!-- 💥 피격 = 움직임 0 (#151): 알림은 장면 띠 안 · 문제 카드 위 덮개 + 줄어드는 원 · 고른 답 그대로 · 끝나면 덮개만 사라짐 -->
       <div class="qwrap">
       {#key `${stepIdx(R)}|${step.id}`}

@@ -14,7 +14,7 @@ import { seals as sealsOf } from '../model/titles';
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
 //   records[번호][차시] = { conc: { 개념: [첫 시도 맞힘, 문항] }, names, boss(형성평가 첫 시도 맞힘), bossN, mis: { 오개념 코드: [틀림, 고침] } }
 //   테스트 판 = 서버 기록이 없어 가짜 기록(반 · 번호로 늘 같은 값 · fakeClass) · 출시 때 서버 꽂개로 바꿈
-export interface LessonRec { conc: Record<string, [number, number]>; names: Record<string, string>; boss: number; bossN: number; mis?: Record<string, [number, number]>; no: number; star?: boolean; fixedBy?: 'bonus' | null; /** 📊 이 반 수업에서 형성평가를 안 함(통계 칸 빠짐) */ noBoss?: boolean }
+export interface LessonRec { conc: Record<string, [number, number]>; names: Record<string, string>; boss: number; bossN: number; mis?: Record<string, [number, number]>; no: number; star?: boolean; fixedBy?: 'bonus' | null; /** 📊 이 반 수업에서 형성평가를 안 함(통계 칸 빠짐) */ noBoss?: boolean; /** 🎯 형성평가를 복습으로 보냄 · 복습에서 풂 */ bossSent?: boolean; bossReview?: number; revBoss?: number; revBossN?: number }
 export type Records = Record<number, Record<string, LessonRec>>;
 export interface Stud {
   cls: string; n: number; name: string; rec: Record<string, LessonRec>; went: number; heldN: number;
@@ -119,7 +119,7 @@ export function realClass(S: Store, cls: string) {
       const no = Number(r.no) || LESSONS.find((l) => l.id === lid)?.no || PACKS.find((l) => l.id === lid)?.no || 0;
       const bad = (c: string) => (SUBJ.badConc || []).some((b) => b.lid === lid && b.c === c && Number(r.at) > 0 && Number(r.at) < b.before && (dropped.add(b.why), true)); // 🧹 옛 판 계산 오류
       const f = inc[lid], noBoss = !!f && !f.cells.has(BOSS), conc = Object.fromEntries(Object.entries(isObj(r.conc) ? r.conc : {}).filter(([c]) => (!f || !f.dropConc.has(c)) && !bad(c))) as LessonRec['conc'];
-      records[p.num]![lid] = { conc, names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: noBoss ? 0 : Number(r.boss) || 0, bossN: noBoss ? 0 : Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !noBoss && !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null, ...(noBoss ? { noBoss: true } : {}) };
+      records[p.num]![lid] = { conc, names: (isObj(r.names) ? r.names : {}) as LessonRec['names'], boss: noBoss ? 0 : Number(r.boss) || 0, bossN: noBoss ? 0 : Number(r.bossN) || 0, ...(isObj(r.mis) ? { mis: r.mis as LessonRec['mis'] } : {}), no, star: !noBoss && !!r.bossN && Number(r.boss) >= Number(r.bossN), fixedBy: null, ...(noBoss ? { noBoss: true } : {}), ...(r.bossSent ? { bossSent: true } : {}), ...(r.bossReview ? { bossReview: Number(r.bossReview), revBoss: Number(r.boss) || 0, revBossN: Number(r.bossN) || 0 } : {}) }; // 🎯 형성평가 복습으로 보냄 · 복습에서 풂 (📜 2026-11-16 · 통계는 빠진 채 칸에만)
     }
     xp[p.num] = Number(xpAll[p.num]?.total) || 0;
     const g = gemAll[p.num] || {}, day = isObj(g.day) ? g.day : {};

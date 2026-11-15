@@ -1,6 +1,7 @@
 <script lang="ts">
   import { handsOf, lowerHand, reviewsOf } from '../../school/help';
   import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
+  import { leftSteps, sendToReview, sentKey } from '../../school/sendReview';
   import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
   import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
@@ -139,7 +140,11 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest'>('');
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send'>('');
+  // 🎯 복습으로 보내기 (📜 2026-11-16 · A): 남은 몬스터 · 👑 형성평가 → 허수아비 · 형성평가 복습 완료 n / 인원
+  const leftS = $derived(R && !isLobby(R) && !isEnd(L, R) ? leftSteps(L, R, now) : []);
+  const bossRevN = $derived.by(() => { void now; const all = S.get<Record<string, Record<string, { bossReview?: number; bossSent?: boolean } | null>>>(`records/${live.cls}`) || {}; const rows = Object.values(all).map((x) => x?.[L.id]).filter(Boolean); return { done: rows.filter((r) => r!.bossReview).length, sent: rows.filter((r) => r!.bossSent).length }; });
+  function sendSome(keys: string[]) { if (!keys.length) return; sendToReview(S, code, keys); say(`🎯 ${keys.length}개 → 허수아비 복습`); if (keys.length >= leftS.length) sheet = ''; }
   // 🏕 쉼터 (#142 ①): 🏕 = 쉼터 켜고(지난 분) 놀이 고르기 시트 · 놀이 5칸 · ⭕ = 지난 · 오늘 · 분 −/＋ = 다음 쉼터 기본으로 기억 · 이 폰도 놀이 시계를 맡음(TV 가 없을 때)
   const stopDrive = untrack(() => driveFun(S, live.code, 'tp'));
   onDestroy(stopDrive);
@@ -275,6 +280,7 @@
       <button type="button" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><i>🎬</i>영상</button>
       <button type="button" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
+      {#if leftS.length}<button type="button" data-k="send-open" onclick={() => (sheet = 'send')}><i>🎯</i>복습으로</button>{/if}
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
       {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
       {#if revs.length && feat('review')}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
@@ -337,6 +343,14 @@
       <div class="ggrid">{#each ids as u (u)}<button type="button" class="gn" class:on={!!picked[u]} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
       <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === ids.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
     </Sheet>
+  {:else if sheet === 'send'}
+    <Sheet onclose={() => (sheet = '')}>
+      {#snippet title()}🎯 복습으로 보내기{/snippet}
+      {#snippet act()}<button type="button" class="btn big" data-k="send-all" disabled={!leftS.length} onclick={() => sendSome(leftS.map(sentKey))}>남은 {leftS.length}개 모두 보내기</button>{/snippet}
+      <p class="gnote">못 다 푼 몬스터는 수업에서 건너뛰고, 학생마다 🎯 허수아비 「📚 수업에서 넘어온 문제」로 가요 · 수업을 닫으면 남은 것은 저절로 보내져요</p>
+      <ul class="sendl" data-k="send-list">{#each leftS as s (s.id)}<li><span>{s.kind === 'boss' ? '👑 형성평가' : `🗡 ${short(s)}`}</span><button type="button" data-k="send-one" onclick={() => sendSome([sentKey(s)])}>보내기</button></li>{/each}</ul>
+      {#if bossRevN.sent}<p class="gnote" data-k="boss-rev">👑 형성평가 복습 완료 {bossRevN.done} / {expected.length}</p>{/if}
+    </Sheet>
   {:else if sheet === 'rest'}
     <Sheet onclose={() => (sheet = '')}>
       {#snippet title()}🏕 놀이 고르기{/snippet}
@@ -358,7 +372,7 @@
   {:else if sheet === 'ask'}
     <div class="askbg" role="presentation" onclick={() => (sheet = '')}></div>
     <div class="ask" role="alertdialog" aria-modal="true" aria-label="정말?">
-      <b>정말 수업을 닫을까요?</b><p>{isLobby(R) ? '학생들은 캠프로 돌아가요' : isEnd(L, R) ? '오늘 차시를 다 했어요 · 학생들은 캠프로' : '지금 자리를 기억해요 · 다음 수업 「이어서」'}</p>
+      <b>정말 수업을 닫을까요?</b><p>{isLobby(R) ? '학생들은 캠프로 돌아가요' : isEnd(L, R) ? '오늘 차시를 다 했어요 · 학생들은 캠프로' : leftS.length ? `남은 ${leftS.length}개는 🎯 허수아비 복습으로 가요` : '지금 자리를 기억해요 · 다음 수업 「이어서」'}</p>
       <div class="row"><button type="button" class="btn2" onclick={() => (sheet = '')}>아니요</button><button type="button" class="btn" onclick={() => { endClass(S, L, code); sheet = ''; onclose(); }}>수업 닫기</button></div>
     </div>
   {/if}
@@ -437,6 +451,7 @@
   .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }
+  .sendl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; } .sendl li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 0 12px; border-radius: var(--r); background: var(--surface-2); font-weight: 700; } .sendl button { min-height: 44px; padding: 0 14px; border-radius: var(--r-sm); border: 1px solid var(--accent); background: transparent; color: var(--text); font: 700 14px var(--font); }
   .stuck { margin: var(--s2) var(--s4) 0; width: calc(100% - 2 * var(--s4)); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r); border: 2px solid #f2994a; background: #3a2410; color: #fff; text-align: left; font: inherit; }
   .stuck b { font-size: 16px; } .stuck span { font-size: 13px; color: #ffd9b8; }
   .ccline { margin: var(--s2) var(--s4) 0; padding: 8px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 15px; }

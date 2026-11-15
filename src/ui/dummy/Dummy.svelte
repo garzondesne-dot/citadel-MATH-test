@@ -38,7 +38,7 @@
   const LESSONS = PACKS.filter((p) => p.steps.some((s) => s.kind === 'monster') || p.boss);
   const recOf = (p: LessonPack): Rec | undefined => recs[p.id] ?? (p.partOf ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack) => !cls || !!recOf(p) || p.no <= reach;
-  const WHY: Record<string, string> = { x: '틀림 (기회를 다 씀)', '-': '안 풂 (먼저 나감 · 늦게 옴)', n: '안 풂 (수업 시간 부족)', a: '안 풂 (불참)', o: '한 번에 맞힘', f: '재도전으로 고침', p: '보충 완료' };
+  const WHY: Record<string, string> = { x: '틀림 (기회를 다 씀)', '-': '안 풂 (먼저 나감 · 늦게 옴)', n: '안 풂 (수업 시간 부족)', a: '안 풂 (불참)', o: '한 번에 맞힘', f: '재도전으로 고침', p: '보충 완료', s: '수업에서 넘어온 문제' }; // s = 🎯 복습으로 보냄 (📜 2026-11-16)
 
   // 서버 칸: 묶인 학생 = 서버(정식 키) · 묶이지 않은 폰(교사 · 시험 · 이 기기) = 이 폰에만(같은 규칙 · 같은 키)
   const LOGK = 'citadel-v1-dummy-log', BONK = 'citadel-v1-dummy-bonus';
@@ -50,7 +50,7 @@
   const today = () => kstDay(S.now());
 
   // ── 목록 (정식 renderTrain) ──
-  type Row = { id: string; title: string; st: string | null; need: boolean; bossNeed: boolean; clear: boolean };
+  type Row = { id: string; title: string; st: string | null; need: boolean; bossNeed: boolean; clear: boolean; sent?: boolean; must?: boolean };
   type Card = { L: LessonPack; x: ReturnType<typeof noteOf>; sealed: boolean; rows: Row[]; cards: [number, number] };
   const view = $derived.by(() => {
     const all = bonAll(), log = logNow(), sl = seals(all as Parameters<typeof seals>[0]);
@@ -58,8 +58,9 @@
     const cards: Card[] = LESSONS.filter(isOpen).map((L) => {
       const bon = all[L.id] || {}, x = noteOf(L, recOf(L), bon), ids = [...fieldIds(L), ...(L.boss ? [BOSS_ID] : [])];
       const stOf = (id: string) => (id === BOSS_ID || x.none ? null : x.mons[x.ids.indexOf(id)] ?? null);
-      const rows: Row[] = ids.map((id) => { const st = stOf(id); return { id, title: id === BOSS_ID ? '형성평가 재대결' : (L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear }; });
-      const o = (r: Row) => (r.need ? 0 : r.id === BOSS_ID ? 1 : 2);
+      const bossSent = !!(recOf(L) as { bossSent?: boolean } | undefined)?.bossSent && !bon[BOSS_ID]?.clear; // 🎯 👑 형성평가를 수업에서 복습으로 보냄 → 맨 위 「⭐ 꼭 풀기」
+      const rows: Row[] = ids.map((id) => { const st = stOf(id), must = id === BOSS_ID && bossSent; return { id, title: id === BOSS_ID ? (must ? '형성평가 · ⭐ 꼭 풀기' : '형성평가 재대결') : (L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear, sent: st === 's', must }; });
+      const o = (r: Row) => (r.must ? -1 : r.need ? 0 : r.id === BOSS_ID ? 1 : 2);
       return { L, x, sealed: sl.includes(L.id), rows: rows.slice().sort((a, b) => o(a) - o(b)), cards: cardsOf(L) };
     }).sort((a, b) => (b.x.left ? 1 : 0) - (a.x.left ? 1 : 0) || b.L.no - a.L.no);
     const left = cards.reduce((t, c) => t + (c.x.none ? 0 : c.x.left), 0);
@@ -113,6 +114,8 @@
     // 기록 (정식 bonus.js: 판마다 tries +1 · 처치 = clear)
     const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}), ...(fixNow ? { fixAt: at } : {}) }; // ⚔ fixAt = 다음 수업 선제 공격 (📜 2026-11-16 · school/pre.ts)
     if (base) RS.set(`${base}/${L0.id}/${r.mid}`, rec);
+    // 🎯 👑 수업에서 복습으로 보낸 형성평가를 여기서 다 풂 = 그 차시 형성평가 기록 + 「복습에서 풂」 (📜 2026-11-16)
+    if (bnd && r.mid === BOSS_ID && o.clear) { const rp = `records/${bnd.cls}/${bnd.num}/${L0.id}`, rr = bnd.S.get<{ bossSent?: boolean; bossReview?: number; bossN?: number }>(rp); if (rr?.bossSent && !rr.bossReview) { const hp = Number(rr.bossN) || Number(L0.boss?.hpItems ?? L0.boss?.items) || 0; bnd.S.set(`${rp}/bossReview`, at); bnd.S.set(`${rp}/boss`, hp); bnd.S.set(`${rp}/bossM`, 'o'.repeat(hp)); } }
     else { const all = readLocal<Record<string, Bon>>(BONK); all[L0.id] = { ...(all[L0.id] || {}), [r.mid]: rec }; try { localStorage.setItem(BONK, JSON.stringify(all)); } catch { /* 무시 */ } }
     const why: string[] = fixNow && feat('pre') ? ['⚔ 다음 수업 선제 공격 +1'] : []; let got = 0, xp = 0;
     if (o.clear) {
@@ -186,7 +189,7 @@
               <li class:open={r.need} class:clear={!r.need && (r.clear || !!r.st)} class:boss={r.id === BOSS_ID} data-mid={r.id}>
                 {#if r.st}<i class="ni" class:blink={r.need} style={icon(r.st)} aria-hidden="true"></i>{:else}<span class="mi" aria-hidden="true">{r.id === BOSS_ID ? '👑' : r.clear ? '✔' : '🎯'}</span>{/if}
                 <span class="tx">{#if r.need}<b class="ex">❗</b> {/if}{r.title}{#if r.st}<small> · {WHY[r.st] ?? ''}</small>{/if}
-                  {#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
+                  {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
                 <button type="button" class="go" class:main={r.need || r.bossNeed} onclick={() => fight(c.L, r.id)}>{r.need || r.bossNeed ? '⚔ 풀기' : '다시'}</button>
               </li>
             {/each}
@@ -213,6 +216,7 @@
   .cnt { font: 700 13px var(--font); color: var(--bad); } .cnt.ok { color: var(--ok); }
   .stamp { font: 700 12px var(--font); color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 6px; }
   .tag { font-style: normal; font: 700 12px var(--font); color: var(--gem); border: 1px solid color-mix(in srgb, var(--gem) 50%, transparent); border-radius: 10px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
+  .tag.sent { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
   .tag.seal { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
   .cpts { display: flex; flex-wrap: wrap; gap: 6px; }
   .mini { min-height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ccOpen, ccStats } from '../../school/cc';
   import { reviewsOf } from '../../school/help';
+  import { sentOf, isSent } from '../../school/sendReview';
   import { siteUrl } from '../../channel';
   import { holdWake } from '../wake.svelte';
   import { SUBJ } from '../../engine/subject';
@@ -202,6 +203,9 @@
   const askLeft = $derived(door ? Math.max(0, 30 - Math.floor((now - door.at) / 1000)) : 0);
   $effect(() => { if (R && door && !R.state.closed && (door.ask ? askLeft <= 0 : now - door.at > 3000)) untrack(() => endClass(S, L, code)); });
   const extShow = $derived(!!R?.state.doorExt && now - Number(R.state.doorExt) < 3500);
+  // 🎯 복습으로 보냄 (📜 2026-11-16 · A): 새로 보낸 몬스터 · 👑 = 허수아비 쪽으로 날아감 「복습 던전으로 이동!」 6초
+  let sendSeen: string[] | null = null, sendShow = $state<{ names: string[]; at: number } | null>(null);
+  $effect(() => { const ks = Object.keys(sentOf(R)); untrack(() => { if (sendSeen === null) { sendSeen = ks; return; } const nw = ks.filter((k) => !sendSeen!.includes(k)); sendSeen = ks; if (!nw.length) return; const names = nw.map((k) => (k === 'boss' ? '👑 형성평가' : (L.steps.find((s) => s.id === k)?.title ?? k).split(' · ').pop()!)); sendShow = { names, at: Date.now() }; setTimeout(() => { if (sendShow && Date.now() - sendShow.at >= 5900) sendShow = null; }, 6000); }); });
   // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③): 첫 몬스터가 나오고 7초 · 이름 없이 수만
   const preShow = $derived(!!(R && mid && hp && (hp.pre ?? 0) > 0 && R.meta.pre?.mid === mid && now - Number(R.state.stepAt) < 7000));
   const giftShow = $derived(!!R?.state.gift && now - Number(R.state.gift.at) < 4000);
@@ -416,6 +420,7 @@
   {#if door && door.ask && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫으려 한다!</p><small>⏰ 선생님, 5분 연장할까요? <b>{askLeft}</b></small><button type="button" class="ext" onclick={() => extendTime(S, code)}>⏰ +5분</button></div>
   {:else if door && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫았다!</p></div>{/if}
   {#if extShow}<div class="ov door ext2"><div class="k">🧙🚪</div><p>선생님이 문을 밀어 열었다!</p><div class="plus">⏳ +5분!</div></div>{/if}
+  {#if sendShow}<div class="sendfly" role="status" data-k="tv-send"><span class="fly" aria-hidden="true">👾</span><b>🎯 {sendShow.names.join(' · ')} 복습 던전으로 이동!</b><small>학생마다 허수아비에서 만나요</small></div>{/if}
   {#if preShow && R?.meta.pre && hp}<div class="gift pre" role="status" data-k="tv-pre">⚔ 선제 공격! 복습한 친구 {R.meta.pre.who}명 · 체력 −{hp.pre}</div>{/if}
   {#if giftShow && R?.state.gift}<div class="gift" role="status">🎁 선생님 선물! 모두 💎 {R.state.gift.g}</div>{/if}
   {#if ink}<Ink step={i} onclose={() => (ink = false)} />{/if}
@@ -623,6 +628,10 @@
   .ov.door small b { color: var(--accent); font-size: var(--tv-title); }
   .ext { height: 9cqh; padding: 0 3cqw; border: 0; border-radius: 2cqh; background: var(--accent); color: var(--on-accent); font: 700 var(--tv-title) var(--font); box-shadow: 0 4px 0 var(--accent-sh); cursor: pointer; }
   .plus { font-size: var(--tv-big); font-weight: 700; color: var(--accent); }
+  .sendfly { position: absolute; left: 50%; top: 30cqh; transform: translateX(-50%); z-index: 8; display: flex; flex-direction: column; align-items: center; gap: 0.8cqh; padding: 2cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 2px solid var(--accent); text-align: center; }
+  .sendfly b { font-size: var(--tv-title); } .sendfly small { font-size: var(--tv-body); color: #cfd3dc; }
+  .sendfly .fly { font-size: 8cqh; animation: sendfly 2.2s ease-in forwards; }
+  @keyframes sendfly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 60% { transform: translate(18cqw, 8cqh) scale(0.6) rotate(25deg); opacity: 0.9; } 100% { transform: translate(40cqw, 30cqh) scale(0.2) rotate(60deg); opacity: 0; } }
   .gift.pre { border-color: var(--accent); top: 12cqh; font-size: var(--tv-title); white-space: nowrap; } /* 정찰 창(오른쪽 위)과 안 겹치게 한 줄 */
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }

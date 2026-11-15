@@ -36,7 +36,8 @@ export const isEnd = (L: LessonPack, R: Room) => stepIdx(R) >= L.steps.length;
 /** 다음에 갈 단계 번호 (「다음 판에서」 자리는 건너뜀 · 끝이면 steps.length) */
 export function nextIdx(L: LessonPack, R: Room): number {
   let i = stepIdx(R) + 1;
-  while (i < L.steps.length && L.steps[i]?.later) i++;
+  const sent = (R.state as { sent?: Record<string, number> }).sent || {}, skip = (s: Step | undefined) => !!s && (s.later || ((s.kind === 'monster' || s.kind === 'boss') && !!sent[s.kind === 'boss' ? 'boss' : s.id])); // 🎯 복습으로 보낸 단계도 건너뜀 (📜 2026-11-16)
+  while (i < L.steps.length && skip(L.steps[i])) i++;
   return Math.min(i, L.steps.length);
 }
 

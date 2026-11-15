@@ -8,7 +8,7 @@ import type { LessonPack } from '../model/types';
 export const DUMMY_G = { review: 3, reviewDay: 6, first: 4, bossRe: 14, seal: 12, note: 7 } as const; // 정식 gem.js G
 export const DUMMY_XP = { clear: 5, seal: 10 } as const; // 정식 grow.js XP.bonusClear · seal
 /** 📕 아직 해결 안 됨 (정식 note.js OPEN + 불참 a) */
-export const OPEN = new Set(['x', '-', 'n', 'a']);
+export const OPEN = new Set(['x', '-', 'n', 'a', 's']); // s = 🎯 수업에서 넘어온 문제 (📜 2026-11-16)
 export type Rec = { mons?: Record<string, string>; miss?: string[] | Record<string, string>; boss?: number; bossM?: string };
 export type Bon = Record<string, { clear?: boolean; tries?: number; at?: number } | undefined>;
 
