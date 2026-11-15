@@ -13,7 +13,7 @@ export const XCLS = BETA ? '베타 반' : '시험 반';
 export const HOOKS = [
   '__dbSet', '__dbGet', '__perfect', '__uid', '__TD_PICK', '__TD_SPEED', '__featSet', '__strike', '__bgm', '__board', '__BOARD_SEC', '__portalBurst', '__castle',
   '__sfxLog', '__pdfRects', '__fillHow', '__fillCut', '__fillRects', '__tvStrike', '__slash', '__tvAtk', '__tvKill', '__tvJuice', '__tvJuiceStats', '__tvTrue',
-  '__tvGuard', '__arena', '__tvFreeze', '__tvMon', '__tvMonNow', '__tvMonSeen', '__tvPoses', '__tvPose', '__bake', '__tvFake', '__wake', '__botSpeed',
+  '__tvGuard', '__arena', '__tvFreeze', '__tvMon', '__tvMonNow', '__tvMonSeen', '__tvPoses', '__tvPose', '__bake', '__tvFake', '__wake', '__botSpeed', '__dummyPerfect',
 ] as const;
 
 /** 출시 주소면 고리 이름을 잠금 (main.ts 가 맨 먼저 부름 · 다른 모듈이 고리를 걸기 전에) */
