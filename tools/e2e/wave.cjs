@@ -1,6 +1,7 @@
 // 🌊 파도 레이드에서 가져온 것 (📜 2026-11-16 · DECISIONS 🌊 · 머리 🔨) — 리모컨 · 학생 폰 · TV
 //   ③ ⚔ 선제 공격: 지난 수업 닫힘 뒤 허수아비로 고친 칸 2개(학생 2명) → 수업 시작 때 meta.pre · 첫 몬스터 체력 −2 · TV 「⚔ 선제 공격! 복습한 친구 2명 · 체력 −2」
 //   ① 🤝 손 놓은 학생: 정찰 뒤 90초 입력 없음 → 폰 「🤝 첫 줄만 같이 볼까?」 + 리모컨 노랑 「멈춤」 · 누르면 도움 · 입력하면 풀림
+//   ② 🧱 같은 칸 3명 막힘: ① 칸 두 번 틀린 학생 3명 → 리모컨 위 띠 · 누르면 닫힘 · 다시 안 뜸 · TV 없음
 //   ⑤ ✅ 도장: 리모컨 학생 칸 → ✅ 도장 → 학생 폰 「✅ 도장! 📜 +1」 · 다시 = 「✅ 이미 도장」
 //   NODE_PATH=$(npm root -g) node tools/e2e/wave.cjs <폴더> [주소]
 const { chromium } = require('playwright');
@@ -14,6 +15,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForSelector('.nums');
   const live = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB), code = live.code;
   const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push('폰 ' + e)); await s.goto(`${B}?role=student&room=${code}&as=1-3:2`); await s.waitForTimeout(1500);
+  for (const n of [4, 5, 6]) { const o = await ctx.newPage(); o.on('pageerror', (e) => errs.push('폰' + n + ' ' + e)); await o.goto(`${B}?role=student&room=${code}&as=1-3:${n}`); } // ② 막힌 칸용 학생 3명
   // ③ 지난 수업 닫힘 = 1시간 전 · 그 뒤 고친 칸 2개(2번 · 3번) · 그 전 1개(세면 안 됨)
   await t.evaluate((lid) => { const n = Date.now(), d = window.__dbSet; d('school/lastClose/1-3', n - 3600e3); d(`bonus/1-3/2/${lid}/m1`, { clear: true, fixAt: n - 60e3 }); d(`bonus/1-3/3/${lid}/m2`, { clear: true, fixAt: n - 30e3 }); d(`bonus/1-3/4/${lid}/m1`, { clear: true, fixAt: n - 7200e3 }); }, live.lesson || 'set-06');
   await t.bringToFront(); await t.waitForTimeout(600); await t.click('.tact .btn'); await t.waitForSelector('.rflow'); await t.waitForTimeout(900);
@@ -42,6 +44,16 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await s.keyboard.press('Escape'); const xx = await s.$('.sheet .x'); if (xx) await xx.click().catch(() => {});
   await t.bringToFront(); await t.waitForTimeout(800);
   ok('① 입력하면 리모컨 노랑 풀림', !(await t.$eval('.n[data-n="2"]', (e) => e.classList.contains('idle')).catch(() => true)));
+  // ② 같은 칸 3명 막힘: 4 · 5 · 6번이 ① 칸을 두 번씩 틀림 → 리모컨 위 띠 「문제 1 · ①칸 3명 막힘」 · 누르면 닫힘 · 다시 안 뜸
+  for (const n of [4, 5, 6]) await t.evaluate(([c, u]) => { for (let k = 0; k < 2; k++) window.__dbSet(`rooms/${c}/subs/m1/${u}/${k}`, [[]]); }, [code, `s1_3_${n}`]);
+  await t.waitForTimeout(1200);
+  const sb = (await t.textContent('[data-k="stuck"]').catch(() => '')) || '';
+  ok('② 리모컨 띠 = 문제 1 · ①칸 3명 막힘 · 전체 설명 권장', /문제 1 · 1칸 3명 막힘/.test(sb.replace(/\s+/g, " ").replace(/ 1 칸/, " 1칸")) && /전체 설명 권장/.test(sb) && !/\d번|이름/.test(sb), sb);
+  await t.screenshot({ path: `${SHOTS}/wave-stuck-remote.png` });
+  await t.click('[data-k="stuck"]'); await t.waitForTimeout(400);
+  await t.evaluate(([c]) => window.__dbSet(`rooms/${c}/subs/m1/s1_3_2/0`, [[]]), [code]); await t.waitForTimeout(800);
+  ok('② 누르면 닫힘 · 같은 칸은 다시 안 뜸', !(await t.$('[data-k="stuck"]')));
+  ok('② TV 에는 없음', !(await tv.$('[data-k="stuck"]')));
   // ⑤ 도장
   await t.click('.n[data-n="2"]'); await t.waitForSelector('[data-k="stamp"]');
   ok('⑤ 리모컨 학생 칸 = ✅ 도장 단추', /도장 \(📜 \+1\)/.test(await t.textContent('[data-k="stamp"]')));

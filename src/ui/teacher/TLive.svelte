@@ -1,6 +1,6 @@
 <script lang="ts">
   import { handsOf, lowerHand, reviewsOf } from '../../school/help';
-  import { idleOn } from '../../school/idle';
+  import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
   import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
   import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
@@ -24,6 +24,7 @@
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
   import QR from '../QR.svelte';
+  import SymText from '../q/SymText.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { talkOf } from '../tv/cards';
   import { driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
@@ -75,6 +76,10 @@
   // ── 지금 단계 ──
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));
+  // 🧱 같은 칸 막힘 (📜 2026-11-16 · 🌊 ②): 그 칸에서 2번 이상 틀렸고 못 맞힘 · 또는 멈춤 학생 ≥ 3 → 위 띠 · 누르면 닫힘 · 칸마다 한 번 · 이름 없이
+  let stuckSeen = $state<Record<string, boolean>>({});
+  const stuckNow = $derived.by(() => { if (!R || !mid || R.state.rest) return null; const c = stuckCells(L, R, mid, ids); const i = c.findIndex((n, k) => n >= STUCK_N && !stuckSeen[`${mid}|${k}`]); return i < 0 ? null : { i, n: c[i]! }; });
+  const circ = (i: number) => '①②③④⑤⑥⑦⑧⑨⑩'[i] ?? `${i + 1}`;
   const scout = $derived(R ? solveLock(L, R, now) : null);
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : R && step?.kind === 'boss' && L.boss ? bossHp(L, R, now) : null);
   const subd = $derived.by(() => {
@@ -234,6 +239,7 @@
         <div class="rfbar">{#each steps as x (x.s.id)}<i class:ok={x.k < i} class:now={x.k === i} style:flex={flex(x)} style:--c={COLOR[kindOf(L, R, x.s)]} title={short(x.s)}></i>{/each}</div>
         <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
       </div>
+      {#if stuckNow && mid}<button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{/if}
       {@render att()}
       <div class="card rstat">
         <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</span>
@@ -431,6 +437,8 @@
   .adj button { height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }
+  .stuck { margin: var(--s2) var(--s4) 0; width: calc(100% - 2 * var(--s4)); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r); border: 2px solid #f2994a; background: #3a2410; color: #fff; text-align: left; font: inherit; }
+  .stuck b { font-size: 16px; } .stuck span { font-size: 13px; color: #ffd9b8; }
   .ccline { margin: var(--s2) var(--s4) 0; padding: 8px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 15px; }
   .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
   .rdock button { height: 54px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); display: grid; place-items: center; align-content: center; gap: 1px; padding: 0; box-shadow: 0 3px 0 var(--press-sh); }

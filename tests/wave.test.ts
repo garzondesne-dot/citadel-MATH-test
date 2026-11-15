@@ -55,3 +55,21 @@ describe('① 🤝 손 놓은 학생', () => {
     expect(idleOn(R, 'a', 'm1')).toBe(true); expect(idleOn(R, 'a', 'm2')).toBe(false); expect(idleOn(R, 'b', 'm1')).toBe(false); expect(idleOn(R, 'a', null)).toBe(false);
   });
 });
+
+import { stuckCells, STUCK_N } from '../src/school/idle';
+import { itemsFor as itemsFor2, answerOf } from '../src/raid/raid';
+describe('② 🧱 같은 칸 막힘', () => {
+  it('2번 이상 틀리고 못 맞힘 · 또는 멈춤(못 맞힌 첫 칸) = 막힘 · 칸마다 수 · 맞히면 빠짐', () => {
+    const L = SUBJ.lessons.find((l) => l.id === 'set-06')!;
+    const R = { meta: { code: 'K', lesson: 'set-06', version: 4, created: 0 }, state: { step: 1 }, players: { d: { idle: { mid: 'm1', at: 1 } } }, subs: { m1: {} as Record<string, Record<number, unknown>> } } as unknown as Room;
+    const wrong2 = { 0: [[], null], 1: [[], null] }; // ① 칸 두 번 틀림 (빈 고르기)
+    const w = () => JSON.parse(JSON.stringify(wrong2)); (R.subs as Record<string, Record<string, unknown>>).m1 = { a: w(), b: w(), c: w() };
+    let c = stuckCells(L, R, 'm1', ['a', 'b', 'c']);
+    expect(c[0]).toBe(STUCK_N); expect(c[1] || 0).toBe(0);
+    expect(stuckCells(L, R, 'm1', ['a', 'b', 'c', 'd'])[0]).toBe(4); // 멈춤 학생 = 못 맞힌 첫 칸
+    const ok0 = itemsFor2(L, R, 'm1', 'c', 2).map(answerOf); // c 가 세 번째에 ① 맞힘
+    ((R.subs as Record<string, Record<string, Record<number, unknown>>>).m1!.c!)[2] = [ok0[0], null];
+    c = stuckCells(L, R, 'm1', ['a', 'b', 'c']);
+    expect(c[0]).toBe(2);
+  });
+});
