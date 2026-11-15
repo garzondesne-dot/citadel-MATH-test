@@ -49,6 +49,9 @@
     xl = false; toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600);
   }
   $effect(() => { if (xl) xlPick = untrack(() => (cls === ALL ? 'all' : 'cls')); });
+  function csvGo() { const c = V.csv; if (!c) return; const q = (x: string | number) => { const t = String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const url = URL.createObjectURL(new Blob(['\ufeff' + c.rows.map((r) => r.map(q).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a'); a.href = url; a.download = c.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast = `📥 ${c.name}`; setTimeout(() => (toast = ''), 2600); }
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); toast = '📋 복사했어요'; } catch { toast = '복사가 막혔어요'; } setTimeout(() => (toast = ''), 1600); }
 </script>
 
@@ -66,7 +69,11 @@
     {#if ['grid', 'cmp', 'weak', 'std'].includes(vid)}<div class="row"><button type="button" class="b2" data-k="stats-pick-go" onclick={() => (pickOpen = true)}>📊 통계에 넣는 칸</button><small>수업에서 연 칸만 · 안 연 칸 = 「— 수업 안 함」</small></div>{/if}
     {#if vid === 'photo' && S.kind === 'server'}<PhotoBoard {S} cls={cls === ALL ? '' : cls} />{/if}
     {#if vid === 'survey'}<div class="row svr" data-k="sv-dash"><button type="button" class="b2" disabled={svBusy} onclick={svLoad}>{svBusy ? '받는 중…' : '↻ 다시 받기'}</button><button type="button" class="b2" onclick={svExcel}>⬇ 설문 엑셀 (요약 · 응답 · 문항)</button></div>{/if}
+    {#snippet barsBlock()}{#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc" class:est={b.est?.[i]}><i style:height="{(v / mx) * 100}%"></i>{#if i === b.vals.length - 1}<b>{v}</b>{/if}<em>{b.est?.[i] ? '≈' : ''}{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}{/snippet}
+    {#if V.note}<p class="vnote" data-k="use-note">{V.note}</p>{/if}
+    {#if V.csv}<div class="row"><button type="button" class="b2" data-k="csv" onclick={csvGo}>📥 CSV 내려받기</button></div>{/if}
     {#if V.kpis}<div class="kpis">{#each V.kpis as k (k.lab)}<div class="kp"><small>{k.lab}</small><b>{k.big}</b><em>{k.sub}</em></div>{/each}</div>{/if}
+    {#if V.barsFirst}{@render barsBlock()}{/if}
     {#if V.table}
       <div class="tw"><table>
         <thead><tr>{#each V.table.head as h, i (i)}<th class:sk={i === 0}>{h}</th>{/each}</tr></thead>
@@ -74,7 +81,7 @@
       </table></div>
       <p class="leg">{#each V.table.legend as [t, s] (s)}<span class={t}>{s}</span>{/each}{cls === ALL && vid === 'cmp' ? ' · 반을 누르면 그 반' : ''}</p>
     {/if}
-    {#if V.bars}<div class="charts">{#each V.bars as b (b.title)}{@const mx = Math.max(1, ...b.vals)}<div class="chart"><small>{b.title}</small><div class="bars">{#each b.vals as v, i (i)}<span class="bc"><i style:height="{(v / mx) * 100}%"></i>{#if i === b.vals.length - 1}<b>{v}</b>{/if}<em>{b.labels[i]}</em></span>{/each}</div><p>{b.foot}</p></div>{/each}</div>{/if}
+    {#if !V.barsFirst}{@render barsBlock()}{/if}
     {#if V.list}<div class="list">{#each V.list as x, i (i)}<button type="button" class="dl" disabled={!x.pick} onclick={() => x.pick && onpick(x.pick)}><span class="rk">{x.rk}</span><span class="nm"><b>{x.nm}</b><small>{x.sub}</small></span>{#if x.pc}<span class="pc">{x.pc}</span>{/if}{#if x.bar != null}<i class="bar" style:width="{x.bar * 100}%"></i>{/if}</button>{/each}</div>{/if}
     {#if V.memos}
       <div class="row"><button type="button" class="b2" onclick={() => copy(V.memos!.map((m) => `${m.s.n}번 ${m.s.name} ${m.text}`).join('\n\n'))}>📋 전체 복사</button><small>기록의 사실만으로 만든 초안 · 관찰을 더해 다듬기</small></div>
@@ -136,6 +143,8 @@
   .bars { height: 110px; display: flex; gap: 6px; align-items: flex-end; padding-top: 18px; }
   .bc { position: relative; flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
   .bc i { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); display: block; min-height: 2px; }
+  .bc.est i { background: repeating-linear-gradient(45deg, var(--accent) 0 4px, color-mix(in srgb, var(--accent) 40%, transparent) 4px 8px); opacity: 0.75; }
+  .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .bc b { position: absolute; top: -16px; font-size: 12px; color: var(--text); } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }
   .dl { position: relative; overflow: hidden; display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 4px 10px; border-radius: var(--r); border: 0; background: var(--surface); color: var(--text); font: inherit; text-align: left; }

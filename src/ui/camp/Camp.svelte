@@ -45,6 +45,7 @@
   import MailBox from './MailBox.svelte';
   import { PACKS } from '../../engine/packs';
   import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
+  import { visit as usageVisit } from '../../school/usage';
   import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
 
@@ -180,6 +181,7 @@
   const hl = (k: string): 'todo' | 'dim' | '' => (todo[k] ? 'todo' : anyTodo ? 'dim' : '');
   let boardJoin = $state('');
   // 🆕 🎒 학생 새 소식 (📜 2026-11-15 · school/changes.ts): 정식에서만 · 실제 학생 · 캠프에서만(수업 화면 아님) · 마지막 본 판보다 새 판의 학생 줄 = 작은 창 한 번(최대 5줄) + 📮 「📢 새 소식」
+  untrack(() => { if (realStu && pupil) usageVisit(S, pupil.cls, pupil.num); }); // 📈 활용 추이 🚪 접속 (하루 한 번 · 실제 학생만 · 정식 usage.js visit)
   let stuNews = $state<string[]>([]);
   untrack(() => {
     if (!(realStu && pupil && chanOf() === 'rel')) return;

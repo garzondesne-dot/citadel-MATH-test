@@ -1,3 +1,4 @@
+import { join as usageJoin } from '../school/usage';
 import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
@@ -148,6 +149,7 @@ export function heartbeat(S: Store, code: string, uid: string, num: number, nick
   const base = `${roomPath(code)}/players/${uid}`;
   S.set(`${base}/num`, num); S.set(`${base}/nick`, nick); S.set(`${base}/seen`, S.now());
   if (more?.cls) S.set(`${base}/cls`, more.cls);
+  if (more?.cls && !more.x) usageJoin(S, more.cls, num, code); // 📈 활용 추이 ⚔ 수업 참여 (방마다 한 번 · 서버만 · 정식 usage.js join)
   if (more?.ver) S.set(`${base}/ver`, more.ver);
   if (more?.hero != null) S.set(`${base}/hero`, more.hero);
   if (more?.fx) S.set(`${base}/fx`, more.fx);

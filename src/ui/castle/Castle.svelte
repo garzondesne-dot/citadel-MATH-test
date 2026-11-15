@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { bump as usageBump } from '../../school/usage';
   import { onDestroy, untrack } from 'svelte';
   import type { Room, Store } from '../../model/types';
   import type { Me } from '../../store/me.svelte';
@@ -143,6 +144,7 @@
   }
   function save(x: NonNullable<typeof run>, clear: boolean, n: number, ans?: CastleRec['ans']) {
     if (preview || !n) return { first: false, bossNew: false, firstCastle: false };
+    if (meBound()) usageBump(S, cls, num, 'c'); // 📈 활용 추이 🏰 성채 풀이 (판마다 · 정식 bonus.js bump c)
     const path = `${base}/${x.P.id}/${x.r.id}`, old0 = RS.get<CastleRec>(path) || {}, old = ans ? { ...old0, ans } : old0;
     const before = castleState(x.P, upto, recsOf(x.P), false, manOf(x.P)).bossOpen, anyBefore = floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear));
     RS.set(path, { ...old, tries: (Number(old.tries) || 0) + n, runs: (Number(old.runs) || 0) + 1, at: S.now(), ...(clear || old.clear ? { clear: true } : {}) });

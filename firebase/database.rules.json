@@ -2,6 +2,7 @@
   "rules": {
     ".write": "auth != null && auth.uid === 'COPY_TOOL_UID'",
     "admins": { ".read": "auth != null", "$uid": { ".write": "auth != null && auth.uid === $uid && auth.token.firebase.sign_in_provider === 'password' && !root.child('admins').exists() && newData.val() === true" } },
+    "act": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", "$cls": { "$day": { "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" } } } },
     "secrets": { "$code": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" } },
     "hostKeys": { "$code": { "$uid": { ".read": false, ".write": "auth != null && auth.uid === $uid && (newData.val() === root.child('secrets/' + $code + '/hallKey').val() || !newData.exists())" } }},
     "rooms": {

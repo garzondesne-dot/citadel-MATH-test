@@ -5,6 +5,7 @@ import { CLASSES, isBeta } from './school';
 import { achieve, classData, LESSON_LIST, MIS, memoParts, pct, STANDARDS, type Stud } from './dash';
 import type { Cell, SheetData } from './xlsx';
 import { CMP, doneCount, summary, surveyCache, WHEN } from './survey';
+import { addDays, day as usageDay, loadUsage, perStudent, weekly, ymdLabel, type Days } from './usage';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
 //   색 + 글자 함께(도달 · 근접 · 미달 · ✔ △ ✘ · ⭐ · ■) · 「전체」 = 모든 반 합산(🧪 베타 반 · 시험 계정 빠짐)
@@ -15,7 +16,10 @@ export interface View {
   kpis?: { lab: string; big: string; sub: string }[];
   table?: { head: string[]; rows: { cells: TCell[]; pick?: Stud; cls?: string; sum?: boolean }[]; legend: [Tone, string][] };
   list?: { rk: string; nm: string; sub: string; pc: string; bar?: number; pick?: Stud }[];
-  bars?: { title: string; vals: number[]; labels: string[]; foot: string }[];
+  bars?: { title: string; vals: number[]; labels: string[]; foot: string; /** ≈ 기록 전 추정(줄무늬) */ est?: boolean[] }[];
+  /** 안내 한 줄 (📈 활용 추이 「참고 자료 · ≈ 추정」) */ note?: string;
+  /** 막대가 표보다 먼저 */ barsFirst?: boolean;
+  /** 📥 CSV (이름 · 줄) */ csv?: { name: string; rows: (string | number)[][] };
   memos?: { s: Stud; text: string; more: string[] }[];
 }
 export const GROUPS: { name: string; views: [string, string][] }[] = [
@@ -80,7 +84,9 @@ export function view(S: Store, cls: string, id: string, withX = false): View {
         table: { head, rows: [{ sum: true, cells: [{ t: '도달 비율', v: '도달 비율' }, ...reach.map((v) => ({ t: p(v), tone: tone(v), v: pv(v) } as TCell))] }, ...studs.map((s) => ({ pick: s, cells: [{ t: nm(s), v: nm(s) }, ...STANDARDS.map((d) => { const a = s.std[d.id]; if (!a || !a[1]) return { t: '—', tone: 'na', v: null } as TCell; const v = Math.round((100 * a[0]) / a[1]); const b = v >= 80 ? '도달' : v >= 50 ? '근접' : '미달'; return { t: `${b} ${v}%`, tone: v >= 80 ? 'ok' : v >= 50 ? 'md' : 'ng', v: pv(v) } as TCell; })] }))], legend: [['ok', '도달 80%↑'], ['md', '근접 50~79'], ['ng', '미달 50↓']] } };
     }
     case 'rank': return { id, title: '랭킹', info: 'EXP · 처치 순', list: [...studs].filter((s) => !s.x).sort((a, b) => b.xp - a.xp).slice(0, 15).map((s, i) => ({ rk: String(i + 1), nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}`, sub: `Lv.${s.lv} · 처치 ${s.bossRaw[0]}`, pc: `${s.xp} EXP`, pick: s })) };
-    case 'use': {
+    case 'use': if (S.kind === 'server') return useView(S, cls, sc, id); // 📈 서버 = 정식 usage.js 그대로 (act/ + 기록 전 ≈ 추정) · 이 기기 = 아래 가짜
+    // falls through
+    case 'use-fake': {
       const now7 = studs.filter(recent).length, prev7 = studs.filter((s) => s.extra.days.slice(0, 7).some(Boolean)).length;
       const solves = studs.reduce((a, s) => a + s.extra.solves, 0), fixes = studs.reduce((a, s) => a + s.extra.fixes, 0);
       const weeks = Array.from({ length: 6 }, (_, w) => studs.reduce((a, s) => a + (s.extra.weekly[w] ?? 0), 0)), act = Array.from({ length: 6 }, (_, w) => studs.filter((s) => (s.extra.weekly[w] ?? 0) > 25).length);
@@ -141,3 +147,37 @@ export function toSheet(v: View, withX = false): SheetData {
   return { name: v.title.replace(/ · /g, ' '), rows: rows.length ? rows : [[v.title]] };
 }
 export const ALL_VIEWS = GROUPS.flatMap((g) => g.views.map((x) => x[0]));
+
+/** 📈 활용 추이 = 정식 dash.js use() 그대로 (📜 2026-11-15 머리 🔨 「대시보드 = 옛 정식 그대로」 (a)) */
+function useView(S: Store, cls: string, sc: Sc, id: string): View {
+  const multi = sc.classes.length > 1, days: Days = {}; let since: string | null = null;
+  for (const c of sc.classes) {
+    const u = loadUsage(S, c); if (u.since && (!since || u.since < since)) since = u.since;
+    for (const [d, byN] of Object.entries(u.days)) { days[d] ||= {}; for (const [n, x] of Object.entries(byN || {})) days[d][multi ? `${c}|${n}` : n] = x; }
+  }
+  const names = new Map<string, Stud>(); for (const s of sc.studs.filter((x) => !x.x)) names.set(multi ? `${s.cls}|${s.n}` : String(s.n), s);
+  const T = names.size || 1, today = usageDay(S.now()), W = weekly(days, 8, today), now = W[W.length - 1]!;
+  const ps = perStudent(days, today), keep = (k: string) => names.has(k), vals = Object.entries(ps).filter(([k]) => keep(k)).map(([, v]) => v);
+  const r7 = vals.reduce((a, x) => a + x.now, 0), p7 = vals.reduce((a, x) => a + x.prev, 0), act7 = vals.filter((x) => x.now > 0).length, actP = vals.filter((x) => x.prev > 0).length;
+  const dPct = p7 ? Math.round(((r7 - p7) / p7) * 100) : r7 ? 100 : 0, seen7 = vals.filter((x) => x.last && x.last >= addDays(today, -6)).length;
+  const idle = (l: string) => !l || l < addDays(today, -13), labels = W.map((w) => ymdLabel(w.week)), est = W.map((w) => w.est);
+  const rows = [...names.entries()].map(([k, s]) => ({ s, ...(ps[k] || { now: 0, prev: 0, last: '', pf: 0 }) })).sort((a, b) => b.now - a.now || (b.last > a.last ? 1 : b.last < a.last ? -1 : 0) || a.s.n - b.s.n);
+  const nm = (s: Stud) => `${multi ? `${s.cls}-` : ''}${s.n}`;
+  return { id, title: '활용 추이', info: '수업 밖 스스로 한 활동(🎯 허수아비 복습 · 🏰 성채 · 📕 오답 고침)과 접속을 주마다 셈 · 성적이 아니라 활용도 참고 자료',
+    note: since ? `⚠ 참고 자료 · 기록 시작 ${ymdLabel(since)} — 그 전 주는 ≈ 추정(줄무늬)` : '⚠ 참고 자료 · 아직 새 기록이 없어 ≈ 추정만 보여요 (학생이 새 판으로 들어오면 쌓여요)',
+    kpis: [
+      { lab: '최근 7일 수업 밖 활동 학생', big: `${act7} / ${T}명`, sub: `${Math.round((act7 / T) * 100)}% · 그 전 7일 ${actP}명` },
+      { lab: '최근 7일 수업 밖 풀이', big: `${r7}회`, sub: `${dPct >= 0 ? '▲' : '▼'} ${Math.abs(dPct)}% · 그 전 7일 ${p7}` },
+      { lab: '1인당 풀이 (최근 7일)', big: `${(r7 / T).toFixed(1)}회`, sub: `이번 주 오답 고침 ${now.fixes}회` },
+      { lab: '최근 7일 접속 학생', big: `${seen7} / ${T}명`, sub: `이번 주 수업 참여 ${now.joins}회` },
+    ],
+    barsFirst: true,
+    bars: [
+      { title: '🧑‍🎓 수업 밖 활동 학생 수', vals: W.map((w) => w.active), labels, est, foot: `이번 주 ${now.active}명` },
+      { title: '🎯 수업 밖 문제 풀이 수', vals: W.map((w) => w.solves), labels, est, foot: `이번 주 ${now.solves}회` },
+      { title: '🚪 접속 학생 수', vals: W.map((w) => w.visits), labels, est, foot: `이번 주 ${now.visits}명` },
+    ],
+    table: { head: ['번호', '이름', '최근 7일', '그 전 7일', '증감', '마지막 활동'], legend: [['ng', '2주 넘게 없음'], ['ok', '▲ 늘어남']],
+      rows: rows.map((r) => { const dl = r.now - r.prev; return { pick: r.s, cells: [{ t: nm(r.s), v: nm(r.s) }, { t: r.s.name, v: r.s.name }, { t: String(r.now), v: r.now }, { t: String(r.prev), v: r.prev }, { t: `${dl > 0 ? '▲' : dl < 0 ? '▼' : '·'} ${Math.abs(dl)}`, tone: dl > 0 ? 'ok' : dl < 0 ? 'ng' : '', v: dl }, { t: r.last ? `${ymdLabel(r.last)}${idle(r.last) ? ' · 2주 넘게 없음' : ''}` : `-${idle(r.last) ? ' · 2주 넘게 없음' : ''}`, tone: idle(r.last) ? 'ng' : '', v: r.last ? ymdLabel(r.last) : '' }] }; }) },
+    csv: { name: `활용추이_${cls}_${today}.csv`, rows: [['반', '번호', '이름', '최근7일 수업밖 풀이', '그전7일', '증감', '마지막 활동'], ...rows.map((r) => [r.s.cls, r.s.n, r.s.name, r.now, r.prev, r.now - r.prev, r.last ? ymdLabel(r.last) : ''])] } };
+}

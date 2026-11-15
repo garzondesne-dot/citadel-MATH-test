@@ -23,6 +23,7 @@
   import Vid from '../q/Vid.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import { busy } from '../busy.svelte';
+  import { bump as usageBump } from '../../school/usage';
 
   // 🎯 복습 허수아비 = 옛 정식 그대로 (📜 2026-11-15 선생님 「A」 · 머리 🔨 · 정식 js/raid/bonus.js renderTrain · fight · win · note.js)
   //   차시 카드마다: 「🎯 복습! n차시 · 제목」 + ❗ 남은 문제 n / ✔ 복습 완료 · 🏆 업적 도장 · 📚 개념 다시 보기 · ⚒ 이 차시 카드 · 📕 수업 · 형성평가 칩 줄
@@ -105,6 +106,7 @@
   function credit(r: Run, RR: Room) {
     const o = outcome(r, RR), L0 = r.L0, day = today(), at = S.now(), bonL = { ...(bonAll()[L0.id] || {}) }, old = bonL[r.mid] || {};
     if (!o.tried) return null;
+    if (bnd) { usageBump(S, cls, num, 'r'); const x0 = noteOf(L0, recOf(L0), bonL), st0 = x0.none ? null : x0.mons[x0.ids.indexOf(r.mid)]; if (o.clear && st0 && OPEN.has(st0) && !old.clear) usageBump(S, cls, num, 'f'); } // 📈 활용 추이 (정식 bonus.js: 판마다 r · 틀림 · 안 풂 해결 = f)
     const sealedBefore = !!bonL[BOSS_ID]?.clear;
     // 기록 (정식 bonus.js: 판마다 tries +1 · 처치 = clear)
     const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}) };
