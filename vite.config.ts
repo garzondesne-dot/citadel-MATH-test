@@ -7,7 +7,15 @@ import { join } from 'node:path';
 const BUILD = /BUILD = '([^']+)'/.exec(readFileSync(new URL('./src/build.ts', import.meta.url), 'utf8'))?.[1] ?? '';
 // 📲 출시 막는 것 7 (📜 2026-11-14): 판 하나 = 이름 둘 — VITE_CHANNEL=release 로 빌드하면 정식 이름 · 아이콘 · manifest id(./ = 정식 앱과 같은 앱으로 이어짐) · 그 밖(베타 Pages · 시험) = 베타 그대로
 const CH = process.env.VITE_CHANNEL === 'release' ? 'release' : 'beta';
-const ID = CH === 'release'
+// 🏫 학교판 (📜 머리 🔨): VITE_SCHOOL=<코드> → tools/school/schools.json 의 그 학교 = 빈 과목 팩(school) + 과목 이름 + 표준 묶음 + 그 학교 server.json · 앱 이름 「모두의 던전 : <과목>」
+//   빌드: VITE_SCHOOL=srzmf npx vite build --outDir <사이트>/s/srzmf (정식 · 베타와 같은 코드 · 다른 점 = CLAUDE.md 「🏫 학교판 규칙」 목록만)
+const SCHOOL_CODE = process.env.VITE_SCHOOL || '';
+const SCHOOL = SCHOOL_CODE ? (JSON.parse(readFileSync(new URL('./tools/school/schools.json', import.meta.url), 'utf8')) as Record<string, { name: string; subject: string; fb: Record<string, string> }>)[SCHOOL_CODE] : null;
+if (SCHOOL_CODE && !SCHOOL) throw new Error(`학교 목록에 없는 코드: ${SCHOOL_CODE}`);
+const ID = SCHOOL
+  ? { name: `모두의 던전 : ${SCHOOL.subject}`, short: '모두의 던전', desc: `${SCHOOL.name} ${SCHOOL.subject} 협동 던전 학습 게임`, id: './', start: './index.html', bg: '#14110f',
+      icons: ['icons/icon-192-v2.png', 'icons/icon-512-v2.png', 'icons/icon-maskable-512-v2.png'], apple: 'icons/apple-touch-icon-v2.png', fav: 'icons/icon-192-v2.png' }
+  : CH === 'release'
   ? { name: '모두의 던전 : 공통수학2', short: '모두의 던전', desc: '함께 풀고, 모두 함께 돌파하라 — 공통수학2 협동 던전 학습 게임 (학생 폰 · 교사 폰 · 종합상황실)', id: './', start: './index.html', bg: '#14110f',
       icons: ['icons/icon-192-v2.png', 'icons/icon-512-v2.png', 'icons/icon-maskable-512-v2.png'], apple: 'icons/apple-touch-icon-v2.png', fav: 'icons/icon-192-v2.png' }
   : { name: '모두의 던전 베타', short: '던전 베타', desc: '공통수학2 교실 협동 레이드 · 베타(시험판)', id: '/citadel-MATH-test/', start: './', bg: '#0f1115',
@@ -20,7 +28,7 @@ const versionJson = { name: 'version-json', generateBundle(this: { emitFile: (f:
   this.emitFile({ type: 'asset', fileName: 'manifest.webmanifest', source: JSON.stringify(manifest, null, 2) });
 } };
 const htmlId = { name: 'html-id', transformIndexHtml(h: string) {
-  if (CH !== 'release') return h;
+  if (CH !== 'release' && !SCHOOL) return h;
   return h.replace('<title>모두의 던전 베타</title>', `<title>${ID.name}</title>`).replace('content="던전 베타"', `content="${ID.short}"`)
     .replace(/<link rel="icon"[^>]*favicon-32\.png" \/>/, `<link rel="icon" type="image/png" href="./${ID.fav}" />`).replace(/\s*<link rel="icon"[^>]*favicon-16\.png" \/>/, '')
     .replace('href="./icons/apple-touch-icon.png"', `href="./${ID.apple}"`);
@@ -37,11 +45,13 @@ const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bun
     ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)].filter((u) => u === './' || has(u.slice(2)));
   const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', BUILD).replace('__CORE__', JSON.stringify(core));
   writeFileSync(join(out, 'sw.js'), src);
+  if (SCHOOL) writeFileSync(join(out, 'server.json'), JSON.stringify({ mode: 'server', firebase: SCHOOL.fb, school: { code: SCHOOL_CODE, name: SCHOOL.name, subject: SCHOOL.subject } }, null, 2)); // 🏫 그 학교 서버(공개 설정값)
 } };
 
 // base './' = Pages 하위 경로(/citadel-MATH-test/)에서도 그대로 열림
 export default defineConfig({
   base: './',
+  define: SCHOOL ? { 'import.meta.env.VITE_SUBJECT': JSON.stringify('school'), 'import.meta.env.VITE_SCHOOL_SUBJECT': JSON.stringify(SCHOOL.subject), 'import.meta.env.VITE_SCHOOL_NAME': JSON.stringify(SCHOOL.name), 'import.meta.env.VITE_BUNDLE': JSON.stringify('standard') } : {},
   plugins: [svelte(), versionJson, htmlId, swPlugin],
   test: { include: ['tests/**/*.test.ts'] },
 });
