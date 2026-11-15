@@ -1,5 +1,6 @@
 <script lang="ts">
   import { handsOf, lowerHand, reviewsOf } from '../../school/help';
+  import { idleOn } from '../../school/idle';
   import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
   import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
@@ -111,7 +112,7 @@
   // ✔ 문제 결과 색 (📜 2026-11-14 선생님 「진행 · 베타 먼저」 · 머리 덧붙임 3): 지금 몬스터(보스)를 다 맞힘 = 초록 + ✔ (교사 폰만 · TV 아님) · 🙋 가 초록보다 앞 · 다음 단계 = 새로 · 쉼터 · 개념 · 영상 = 출석 · ⚠ · 🙋 만
   const okSet = $derived.by(() => { if (!R || !step || R.state.rest) return new Set<string>(); if (mid) return new Set(ids.filter((u) => (chain ? chainRecord(L, R, mid, u).done : plainRecord(L, R, mid, u).perfect))); if (step.kind === 'boss') return new Set(ids.filter((u) => { const b = bossState(L, R, u); return b.length > 0 && b.every((x) => x.ok); })); return new Set<string>(); });
   /** 칸 바탕 = 결석 · 안 옴 · 🙋 · ✔ · 들어옴 (⚠ 옛 판은 따로 덧붙임 = isOldU) */
-  const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : help.includes(uid) ? 'help' : okSet.has(uid) ? 'ok' : 'in';
+  const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : help.includes(uid) ? 'help' : okSet.has(uid) ? 'ok' : idleOn(R, uid, mid) ? 'idle' : 'in'; // 🤝 idle = 90초 입력 없음(노랑 「멈춤」 · 📜 2026-11-16 · 🌊 ①)
   const isOldU = (uid: string) => inSet.has(uid) && !absent[uid] && isOld(R?.players?.[uid]?.ver);
   const pname = (uid: string) => pupils.find((x) => x.uid === uid)?.name.slice(1) ?? '';
   // 🙋 풀어주기 (칩 한 번) · 3초 「되돌리기」
@@ -197,7 +198,7 @@
       <div class="nums c{COLS}" role="group" aria-label="번호 칸">
         {#each pupils as p (p.uid)}
           {@const st = stOf(p.uid)}
-          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
+          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
         {/each}
       </div>
       <div class="q">
@@ -386,6 +387,7 @@
   .n s { text-decoration: none; font-size: 10px; font-weight: 600; white-space: nowrap; overflow: hidden; max-width: 100%; opacity: 0.9; }
   .n.in { border: 1.5px solid var(--accent); background: var(--surface-2); color: var(--text); }
   .n.in.old { background: #3a2e10; }
+  .n.idle { border: 2px solid #f2c94c; background: #3a3210; color: #fff; } .n.idle::after { content: '멈춤'; position: absolute; left: -6px; top: -10px; font-size: 10px; font-weight: 900; color: #1b1300; background: #f2c94c; border-radius: 6px; padding: 0 3px; }
   .n.ok { border: 1.5px solid #3fae6a; background: #1f4b31; color: #fff; }
   .n.ok::after { content: '✔'; position: absolute; left: -4px; top: -9px; font-size: 11px; color: #7ee2a8; font-weight: 900; }
   .n.old::before { content: '⚠'; position: absolute; right: -4px; top: -9px; font-size: 11px; color: var(--accent); }

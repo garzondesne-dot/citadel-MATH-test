@@ -46,6 +46,7 @@
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
+  import { shouldNudge } from '../school/idle';
   import FunPhone from './rest/FunPhone.svelte';
   import { submitWho } from './submit.svelte';
   import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
@@ -140,6 +141,19 @@
     });
   });
   let gtoast = $state('');
+  // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ① · school/idle.ts): 공격 단계 · 아직 다 못 맞힘 · 90초 입력 없음 → 「🤝 첫 줄만 같이 볼까?」 + 리모컨 노랑 · 입력하면 풀림 · 몬스터마다 한 번
+  let idleLast = $state(0), idleMid = $state<string | null>(null);
+  const idleAsked = new Set<string>();
+  const idleAttack = $derived(!!(R && mid && !scout?.on && !R.state.rest && !R.state.focus && !R.state.holdAt && !R.state.closed && !paperOn()));
+  const idleDone = $derived(!R || !mid ? true : chain ? !!chainRecord(L, R, mid, uid).done : !!plainRecord(L, R, mid, uid).perfect);
+  function idleClear() { if (idleMid) { S.set(`rooms/${code}/players/${uid}/idle`, null); idleMid = null; } }
+  function poke() { idleLast = S.now(); idleClear(); }
+  $effect(() => { const on = (e: Event) => { if ((e.target as Element | null)?.closest?.('[data-k="idle"]')) return; poke(); }; const o = { capture: true, passive: true }; /* 🤝 띠 안 누름 = 단추가 처리(먼저 지우면 누르기 전에 사라짐) */ for (const e of ['pointerdown', 'keydown', 'input']) window.addEventListener(e, on, o); return () => { for (const e of ['pointerdown', 'keydown', 'input']) window.removeEventListener(e, on, o); }; });
+  $effect(() => { void mid; const a = idleAttack; untrack(() => { idleLast = S.now(); if (!a) idleClear(); }); }); // 공격 단계가 시작 · 멈춤이 끝나면 그때부터 셈
+  $effect(() => { const t = now, a = idleAttack, d = idleDone, m = mid; untrack(() => {
+    if (idleMid && (d || idleMid !== m)) idleClear();
+    if (m && shouldNudge({ attack: a, done: d, asked: idleAsked.has(m), now: t, last: idleLast })) { idleAsked.add(m); idleMid = m; S.set(`rooms/${code}/players/${uid}/idle`, { mid: m, at: t }); }
+  }); });
   // ✅ 도장 📜 (📜 2026-11-16 · 🌊 ⑤): 선생님이 리모컨에서 도장을 찍으면 그 자리에서 한 번 · 📜 는 캠프에 오면 받음(gifts)
   let stampSeen: number | null | undefined = undefined;
   $effect(() => { const v = R?.stamp?.[uid] ?? null; untrack(() => { if (stampSeen === undefined) { stampSeen = v; return; } if (v && v !== stampSeen) { gtoast = '✅ 도장! 📜 +1'; sfx('star', 0.7); setTimeout(() => (gtoast = ''), 2600); } stampSeen = v; }); });
@@ -265,6 +279,7 @@
     </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
+    {#if idleMid && idleMid === mid}<div class="bcard idleband" role="status" data-k="idle"><b>🤝 첫 줄만 같이 볼까?</b><button type="button" data-k="idle-go" onclick={() => { poke(); window.dispatchEvent(new CustomEvent('citadel-idlehelp')); }}>💡 같이 보기</button></div>{/if}<!-- 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①) -->
     {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band"><b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span></div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
     {#if scout?.on && paperOn()}
       <div class="pscout" data-k="pscout"><b class="ph1">학습지 {probNo} 을 먼저 풀어 두세요</b><p>{Math.ceil(scout.left / 1000)}초 뒤 답 칸이 열려요. 선생님이 일찍 열 수도 있어요.</p></div>
@@ -321,6 +336,8 @@
 {/if}
 
 <style>
+  .idleband { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 2px solid #f2c94c; background: color-mix(in srgb, #f2c94c 18%, var(--surface)); }
+  .idleband b { font-size: 17px; } .idleband button { min-height: 48px; padding: 0 14px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .revband { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
   .revband b { font-size: 18px; } .revband span { font-size: 15px; color: var(--text-2); }
   .talk .ttl { font-size: 19px; line-height: 1.4; }

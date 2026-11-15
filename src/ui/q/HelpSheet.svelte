@@ -3,11 +3,12 @@
   //   무료(칼 · 힐 · 보상 안 씀) · 연 단계만 기록 · 주 단추 「학습지에 써 보고 돌아가기」 · 마지막 단계 뒤 「✋ 손들어 선생님께」
   import type { Help, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
+  import { untrack } from 'svelte';
   import SymText from './SymText.svelte';
   import { noteHelp, raiseHand } from '../../school/help';
-  const { S, code, uid, mid, i, help, hand = false, onclose }: { S: Store; code: string; uid: string; mid: string; i: number; help: Help; /** 이미 손든 상태 */ hand?: boolean; onclose: () => void } = $props();
+  const { S, code, uid, mid, i, help, hand = false, start = 1, onclose }: { S: Store; code: string; uid: string; mid: string; i: number; help: Help; /** 이미 손든 상태 */ hand?: boolean; /** 🤝 처음 열 단계(1 · 2 · 3 · 없으면 가까운 앞 단계) */ start?: number; onclose: () => void } = $props();
   const steps = $derived([{ k: 1, t: '개념', has: true }, { k: 2, t: '첫 줄', has: !!help.first }, { k: 3, t: '예제', has: !!help.example }].filter((x) => x.has));
-  let at = $state(0), raised = $state(false);
+  let at = $state(untrack(() => Math.max(0, steps.reduce((a, s, k) => (s.k <= start ? k : a), 0)))), raised = $state(false);
   const cur = $derived(steps[at]!);
   $effect(() => { const k = cur.k; noteHelp(S, code, uid, mid, i, k); });
   const last = $derived(at >= steps.length - 1);

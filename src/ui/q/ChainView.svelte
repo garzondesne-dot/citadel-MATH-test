@@ -115,6 +115,9 @@
   // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
   let helpOpen = $state(false);
   const helpNow = $derived(helpOf(L, mid, stage, q ?? null));
+  // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①): 학생 폰 「첫 줄만 같이 볼까?」 → 도움 2단(없으면 1단) · 도움이 없으면 예전 💡 힌트
+  let helpStart = $state(1);
+  $effect(() => { const on = () => { if (helpNow) { helpStart = 2; helpOpen = true; } else onhint?.(); }; window.addEventListener('citadel-idlehelp', on); return () => window.removeEventListener('citadel-idlehelp', on); });
   const handUp = $derived(((R.players?.[uid] as { hand?: { mid?: string } | null } | undefined)?.hand?.mid) === mid);
 </script>
 
@@ -193,7 +196,7 @@
   <PhotoSheet {S} {cls} {num} lesson={rl} room={mid} {title} items={phItems(phRubric(S, rl, mid), title, rec.items, rec.says)} trial={trialPh} onclose={snapDone} />
 {/if}
 
-{#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={stage} help={helpNow} hand={handUp} onclose={() => (helpOpen = false)} />{/if}
+{#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={stage} help={helpNow} hand={handUp} start={helpStart} onclose={() => { helpOpen = false; helpStart = 1; }} />{/if}
 
 <style>
   .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }

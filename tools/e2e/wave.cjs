@@ -1,5 +1,6 @@
 // 🌊 파도 레이드에서 가져온 것 (📜 2026-11-16 · DECISIONS 🌊 · 머리 🔨) — 리모컨 · 학생 폰 · TV
 //   ③ ⚔ 선제 공격: 지난 수업 닫힘 뒤 허수아비로 고친 칸 2개(학생 2명) → 수업 시작 때 meta.pre · 첫 몬스터 체력 −2 · TV 「⚔ 선제 공격! 복습한 친구 2명 · 체력 −2」
+//   ① 🤝 손 놓은 학생: 정찰 뒤 90초 입력 없음 → 폰 「🤝 첫 줄만 같이 볼까?」 + 리모컨 노랑 「멈춤」 · 누르면 도움 · 입력하면 풀림
 //   ⑤ ✅ 도장: 리모컨 학생 칸 → ✅ 도장 → 학생 폰 「✅ 도장! 📜 +1」 · 다시 = 「✅ 이미 도장」
 //   NODE_PATH=$(npm root -g) node tools/e2e/wave.cjs <폴더> [주소]
 const { chromium } = require('playwright');
@@ -26,6 +27,21 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   for (let i = 0; i < 8 && !pb; i++) { await t.bringToFront(); await t.click('.tact .btn'); await tv.bringToFront(); await tv.waitForTimeout(1500); pb = (await tv.textContent('[data-k="tv-pre"]').catch(() => '')) || ''; if (!pb) log("  단계", i, await t.evaluate(([k, c]) => (JSON.parse(localStorage.getItem(`${k}|rooms/${c}/state`) || 'null') || {}).step, [DB, code])); }
   ok('③ TV = ⚔ 선제 공격! 복습한 친구 2명 · 체력 −k (이름 없음)', /선제 공격! 복습한 친구 2명 · 체력 −\d/.test(pb || ''), pb || '없음');
   await tv.screenshot({ path: `${SHOTS}/wave-pre-tv.png` });
+  // ① 손 놓은 학생: 정찰을 일찍 끝냄(리모컨 주 단추) → 학생 폰 90초 아무 입력 없음 → 「🤝 첫 줄만 같이 볼까?」 + 리모컨 2번 칸 노랑 「멈춤」
+  await t.bringToFront(); await t.click('.tact .btn'); await t.waitForTimeout(600);
+  log('  … 90초 기다림 (학생 폰 입력 없음)'); await s.waitForTimeout(91_000);
+  await s.bringToFront(); await s.waitForTimeout(1500);
+  ok('① 학생 폰 = 🤝 첫 줄만 같이 볼까?', /첫 줄만 같이 볼까/.test((await s.textContent('[data-k="idle"]').catch(() => '')) || ''));
+  await s.screenshot({ path: `${SHOTS}/wave-idle-phone.png` });
+  await t.bringToFront(); await t.waitForTimeout(800);
+  ok('① 리모컨 2번 칸 = 노랑 멈춤', await t.$eval('.n[data-n="2"]', (e) => e.classList.contains('idle')).catch(() => false));
+  await t.screenshot({ path: `${SHOTS}/wave-idle-remote.png` });
+  await s.bringToFront(); await s.click('[data-k="idle-go"]'); await s.waitForTimeout(700);
+  ok('① 누르면 = 💡 도움(또는 예전 힌트)이 열리고 띠 사라짐', !(await s.$('[data-k="idle"]')) && !!(await s.$('[data-k="help"], .sheet')));
+  await s.screenshot({ path: `${SHOTS}/wave-idle-help.png` });
+  await s.keyboard.press('Escape'); const xx = await s.$('.sheet .x'); if (xx) await xx.click().catch(() => {});
+  await t.bringToFront(); await t.waitForTimeout(800);
+  ok('① 입력하면 리모컨 노랑 풀림', !(await t.$eval('.n[data-n="2"]', (e) => e.classList.contains('idle')).catch(() => true)));
   // ⑤ 도장
   await t.click('.n[data-n="2"]'); await t.waitForSelector('[data-k="stamp"]');
   ok('⑤ 리모컨 학생 칸 = ✅ 도장 단추', /도장 \(📜 \+1\)/.test(await t.textContent('[data-k="stamp"]')));

@@ -39,3 +39,19 @@ describe('③ ⚔ 선제 공격', () => {
     expect(lastClosePath('1-3', true)).toBe('school/lastClose/1-3~test');
   });
 });
+
+import { IDLE_MS, idleOn, shouldNudge } from '../src/school/idle';
+describe('① 🤝 손 놓은 학생', () => {
+  it('공격 단계 · 다 못 맞힘 · 이 몬스터에서 처음 · 90초 → 띄움 / 아니면 안 띄움', () => {
+    const base = { attack: true, done: false, asked: false, now: 100_000 + IDLE_MS, last: 100_000 };
+    expect(shouldNudge(base)).toBe(true);
+    expect(shouldNudge({ ...base, now: base.now - 1 })).toBe(false);
+    expect(shouldNudge({ ...base, attack: false })).toBe(false);
+    expect(shouldNudge({ ...base, done: true })).toBe(false);
+    expect(shouldNudge({ ...base, asked: true })).toBe(false);
+  });
+  it('리모컨 노랑 = 그 몬스터의 idle 만', () => {
+    const R = { players: { a: { idle: { mid: 'm1', at: 1 } }, b: {} } } as unknown as Room;
+    expect(idleOn(R, 'a', 'm1')).toBe(true); expect(idleOn(R, 'a', 'm2')).toBe(false); expect(idleOn(R, 'b', 'm1')).toBe(false); expect(idleOn(R, 'a', null)).toBe(false);
+  });
+});
