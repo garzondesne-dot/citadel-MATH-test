@@ -8,6 +8,11 @@ export const BETA = TEST_ADDR || (!!loc && /-test\//i.test(loc.pathname));
 /** 화면 낱말 (📜 2026-11-15 머리 🔨 「정식에서 테스트 · 베타 낱말 빼기」): 앱 이름 · 통계에서 빠지는 반 이름 */
 export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';
 export const XCLS = BETA ? '베타 반' : '시험 반';
+/** 🏷 판 이름 (📜 2026-11-15 선생님 정정 · DECISIONS 맨 아래): 정식 = 「✅ 정식 bNNN」(초록) · 베타 = 「🧪 베타 bNNN」(주황) */
+export const verName = (build: string) => (BETA ? `🧪 베타 ${build}` : `✅ 정식 ${build}`);
+/** ✍ 만든 이 (첫 화면 · 학생 설정 맨 아래 · 교사 「나」) · 주소에 ?anon 이면 숨김 */
+export const CREDIT_NAME = '김찬우';
+export const showCredit = !(loc && new URLSearchParams(loc.search).has('anon'));
 
 /** 시험 고리 이름 (window.__이름) — 출시에서는 잠금 */
 export const HOOKS = [

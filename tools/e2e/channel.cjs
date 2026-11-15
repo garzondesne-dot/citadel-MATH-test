@@ -15,7 +15,7 @@ const [SHOTS = '.'] = process.argv.slice(2);
     await c.evaluate(() => { window.__BOARD_SEC = 0.1; window.__board = 1; }); const k = await c.evaluate(() => [window.__BOARD_SEC, window.__board]);
     ok(`${tag}: 시험 고리 쓰기 ${test ? '됨' : '무시'}`, test ? k[0] === 0.1 : k[0] === undefined && k[1] === undefined, JSON.stringify(k));
     const t = await page(base, '?role=teacher'); await t.waitForSelector('.beta-pill, .beta', { timeout: 8000 }).catch(() => {}); const pill = (await t.$$eval('.beta-pill, .beta, .srv', (xs) => xs.map((x) => x.textContent).join(' | ')).catch(() => ''));
-    ok(`${tag}: 교사 화면 ${test ? 'BETA 글자 있음' : 'BETA · 시험 서버 · 테스트 버전 글자 없음'}`, test ? /BETA/.test(pill) : !/BETA|시험 서버|테스트 버전/.test(pill) && pill.length > 0, pill.trim());
+    ok(`${tag}: 교사 화면 ${test ? 'BETA 글자 있음' : 'BETA · 시험 서버 · 테스트 버전 글자 없음'}`, test ? /BETA|🧪 베타/.test(pill) : !/BETA|베타|시험 서버|테스트 버전/.test(pill) && /✅ 정식/.test(pill), pill.trim());
     const d = await page(base, '?role=dev'); const dev = await d.evaluate(() => document.body.innerText.length);
     const dk = await d.evaluate(() => !!document.querySelector('.dev, [data-k="dev"], h1'));
     out.push(`ℹ ${tag}: ?role=dev 글자 ${dev}`);

@@ -7,7 +7,7 @@
   import { sfx } from '../sound.svelte';
   import { bgm } from '../bgm';
   import { BUILD } from '../../build';
-  import { BETA } from '../../channel';
+  import { BETA, CREDIT_NAME, showCredit } from '../../channel';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
@@ -384,6 +384,7 @@
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     <button type="button" class="out" disabled={open} onclick={() => (sheet = 'out')}>🚪 처음 화면으로 <small>{open ? '수업 중엔 못 나가요' : pupil ? `${pupil.cls}반 ${pupil.num}번` : ''}</small></button>
     <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? (BETA ? ' · 시험 서버' : ' · 서버') : ' · 이 기기'}</p>
+    {#if showCredit}<p class="build" data-k="credit">만든 이 · {CREDIT_NAME} ({SUBJ.name})</p>{/if}
   </Sheet>
 {:else if sheet === 'out'}
   <!-- 🚪 처음 화면으로 (📜 2026-11-13 밤 · 로그아웃 = 로그인 정보만 지움 · 이 기기 테스트 · 체험 저장은 그대로) -->

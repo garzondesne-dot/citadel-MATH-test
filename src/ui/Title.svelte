@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CREDIT_NAME, showCredit } from '../channel';
   import { SUBJ } from '../engine/subject';
   import type { Store } from '../model/types';
   import { CLASSES, enter, hasAccount, pupil, roster, saveLogin, type Pupil } from '../school/school';
@@ -74,6 +75,7 @@
     </div>
   </form>
   <BottomAction dock={false} disabled={!ready} onmain={() => { if (ready) go(); }} {why} text={join ? '⚔ 가입하고 모험 시작' : '⚔ 모험 시작'} mainLabel="모험 시작" />
+  {#if showCredit}<p class="credit" data-k="credit">만든 이 · {CREDIT_NAME} ({SUBJ.name})</p>{/if}
 </div>
 
 {#if pad}
@@ -129,4 +131,5 @@
   .keys button:active { transform: translateY(2px); box-shadow: none; }
   .big { display: flex; flex-direction: column; padding: var(--s3) var(--s4); min-height: 64px; justify-content: center; border-radius: var(--r); background: var(--surface-2); color: var(--text); text-decoration: none; font-weight: 700; font-size: 17px; box-shadow: 0 3px 0 var(--press-sh); }
   .big small { font-size: var(--fs-small); color: var(--text-2); font-weight: 500; }
+  .credit { position: relative; z-index: 1; margin: 0; padding: 0 0 calc(4px + env(safe-area-inset-bottom)); text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.6); text-shadow: 0 1px 2px #000; pointer-events: none; }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { APP_NAME, BETA } from '../../channel';
+  import { APP_NAME, BETA, CREDIT_NAME, showCredit, verName } from '../../channel';
   import { chanOf, upTo } from '../../school/changes';
   import ChangeList from './ChangeList.svelte';
   import { untrack } from 'svelte';
@@ -65,7 +65,7 @@
     <button type="button" class="item" data-k="install" disabled={pwa.installed} onclick={async () => { if (!(await install())) sheet = 'app'; }}><span class="ic">📲</span><span class="tx"><b>{pwa.installed ? '홈 화면 앱으로 열림' : '홈 화면에 추가'}</b><small>{pwa.installed ? BETA ? '「던전 베타」 앱 · 정식 앱과 따로' : '「모두의 던전」 앱' : pwa.prompt ? `누르면 바로 설치 · 「${APP_NAME}」` : pwa.ios ? '아이폰 = 공유 → 홈 화면에 추가' : BETA ? '앱처럼 바로 열기 · 정식 앱과 따로' : '앱처럼 바로 열기'}</small></span></button>
     <button type="button" class="item" data-k="out" onclick={() => (sheet = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
   </div>
-  <p class="ver">모두의 던전 v1.0 · {BETA ? '테스트 ' : ''}{BUILD}</p>
+  <p class="ver" data-k="ver">모두의 던전 v1.0 · {verName(BUILD)}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
 </div>
 
 {#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} />{/if}
