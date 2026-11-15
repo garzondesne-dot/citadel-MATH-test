@@ -202,6 +202,8 @@
   const askLeft = $derived(door ? Math.max(0, 30 - Math.floor((now - door.at) / 1000)) : 0);
   $effect(() => { if (R && door && !R.state.closed && (door.ask ? askLeft <= 0 : now - door.at > 3000)) untrack(() => endClass(S, L, code)); });
   const extShow = $derived(!!R?.state.doorExt && now - Number(R.state.doorExt) < 3500);
+  // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③): 첫 몬스터가 나오고 7초 · 이름 없이 수만
+  const preShow = $derived(!!(R && mid && hp && (hp.pre ?? 0) > 0 && R.meta.pre?.mid === mid && now - Number(R.state.stepAt) < 7000));
   const giftShow = $derived(!!R?.state.gift && now - Number(R.state.gift.at) < 4000);
 
   // ── 조작 막대 (마우스 · 터치로 나타나고 3초 뒤 숨음 · 📌 고정) ──
@@ -414,6 +416,7 @@
   {#if door && door.ask && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫으려 한다!</p><small>⏰ 선생님, 5분 연장할까요? <b>{askLeft}</b></small><button type="button" class="ext" onclick={() => extendTime(S, code)}>⏰ +5분</button></div>
   {:else if door && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫았다!</p></div>{/if}
   {#if extShow}<div class="ov door ext2"><div class="k">🧙🚪</div><p>선생님이 문을 밀어 열었다!</p><div class="plus">⏳ +5분!</div></div>{/if}
+  {#if preShow && R?.meta.pre && hp}<div class="gift pre" role="status" data-k="tv-pre">⚔ 선제 공격! 복습한 친구 {R.meta.pre.who}명 · 체력 −{hp.pre}</div>{/if}
   {#if giftShow && R?.state.gift}<div class="gift" role="status">🎁 선생님 선물! 모두 💎 {R.state.gift.g}</div>{/if}
   {#if ink}<Ink step={i} onclose={() => (ink = false)} />{/if}
 
@@ -620,6 +623,7 @@
   .ov.door small b { color: var(--accent); font-size: var(--tv-title); }
   .ext { height: 9cqh; padding: 0 3cqw; border: 0; border-radius: 2cqh; background: var(--accent); color: var(--on-accent); font: 700 var(--tv-title) var(--font); box-shadow: 0 4px 0 var(--accent-sh); cursor: pointer; }
   .plus { font-size: var(--tv-big); font-weight: 700; color: var(--accent); }
+  .gift.pre { border-color: var(--accent); top: 12cqh; font-size: var(--tv-title); white-space: nowrap; } /* 정찰 창(오른쪽 위)과 안 겹치게 한 줄 */
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }

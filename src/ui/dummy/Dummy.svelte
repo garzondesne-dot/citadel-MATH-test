@@ -106,13 +106,14 @@
   function credit(r: Run, RR: Room) {
     const o = outcome(r, RR), L0 = r.L0, day = today(), at = S.now(), bonL = { ...(bonAll()[L0.id] || {}) }, old = bonL[r.mid] || {};
     if (!o.tried) return null;
-    if (bnd) { usageBump(S, cls, num, 'r'); const x0 = noteOf(L0, recOf(L0), bonL), st0 = x0.none ? null : x0.mons[x0.ids.indexOf(r.mid)]; if (o.clear && st0 && OPEN.has(st0) && !old.clear) usageBump(S, cls, num, 'f'); } // 📈 활용 추이 (정식 bonus.js: 판마다 r · 틀림 · 안 풂 해결 = f)
+    const x0 = noteOf(L0, recOf(L0), bonL), st0 = x0.none ? null : x0.mons[x0.ids.indexOf(r.mid)], fixNow = !!(o.clear && st0 && OPEN.has(st0) && !old.clear); // 틀림 · 안 풂 → 처치 = 고친 칸
+    if (bnd) { usageBump(S, cls, num, 'r'); if (fixNow) usageBump(S, cls, num, 'f'); } // 📈 활용 추이 (정식 bonus.js: 판마다 r · 틀림 · 안 풂 해결 = f)
     const sealedBefore = !!bonL[BOSS_ID]?.clear;
     // 기록 (정식 bonus.js: 판마다 tries +1 · 처치 = clear)
-    const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}) };
+    const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}), ...(fixNow ? { fixAt: at } : {}) }; // ⚔ fixAt = 다음 수업 선제 공격 (📜 2026-11-16 · school/pre.ts)
     if (base) RS.set(`${base}/${L0.id}/${r.mid}`, rec);
     else { const all = readLocal<Record<string, Bon>>(BONK); all[L0.id] = { ...(all[L0.id] || {}), [r.mid]: rec }; try { localStorage.setItem(BONK, JSON.stringify(all)); } catch { /* 무시 */ } }
-    const why: string[] = []; let got = 0, xp = 0;
+    const why: string[] = fixNow ? ['⚔ 다음 수업 선제 공격 +1'] : []; let got = 0, xp = 0;
     if (o.clear) {
       const log = logNow(), rw = dummyReward(L0, recOf(L0), bonL, [r.mid], log, day), localLog = gemLogP ? null : { ...log };
       for (const g of rw.gems) {

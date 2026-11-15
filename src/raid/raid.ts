@@ -1,4 +1,5 @@
 import type { ChainSub, Given, LessonPack, Question, Room, Step } from '../model/types';
+import { preDmg } from '../school/pre';
 import { grade } from '../engine/grade';
 import { bindFor } from './combo';
 import { bossItem as packBossItem, chainItems as packChainItems, items } from '../engine/lessons';
@@ -302,8 +303,9 @@ export function monsterHp(L: LessonPack, R: Room, mid: string, now: number) {
   const n = isChain(L, R, mid) ? chainItems(L, R, mid, '_', 0).length : L.monsters[mid] ? itemsFor(L, R, mid, '_', 0).length : 0; // ⚔ 소레이드 = 인원 × 단계 수 × 기준%
   const pct = pctOf(L, R);
   const max = Math.floor((headcount(R, now) * n * pct) / 100);
-  const dmg = activeIds(R, now).reduce((a, u) => a + record(L, R, mid, u).best, 0);
-  return { max, dmg, left: Math.max(0, max - dmg), pct, items: n };
+  const pre = preDmg(R, mid, max); // ⚔ 선제 공격 (📜 2026-11-16 · 지난 수업 뒤 허수아비로 고친 칸 · 최대 10%)
+  const dmg = activeIds(R, now).reduce((a, u) => a + record(L, R, mid, u).best, 0) + pre;
+  return { max, dmg, left: Math.max(0, max - dmg), pct, items: n, ...(pre ? { pre } : {}) }; // pre 는 있을 때만 (정식과 같은 꼴 · parity)
 }
 export const cleared = (L: LessonPack, R: Room, mid: string, now: number) => {
   const h = monsterHp(L, R, mid, now);

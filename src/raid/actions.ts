@@ -1,4 +1,5 @@
 import { join as usageJoin } from '../school/usage';
+import { armPre, lastClosePath } from '../school/pre';
 import { cleanWords } from '../school/survey';
 import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
@@ -38,7 +39,11 @@ export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
   if (!R || isEnd(L, R)) return;
   // 📕 그 반이 게임으로 수업한 차시 = held/{반}/{차시} (정식 actions.js 수업 시작 · 🔁 연속 참여 💎 · 오답노트 불참 판단) · 🧪 테스트 수업은 안 적음
-  if (isLobby(R) && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true); }
+  if (isLobby(R) && R.meta.cls) {
+    const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
+    if (!test) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true);
+    if (!R.meta.castle && !(R.meta as { dummy?: boolean }).dummy && !R.meta.pre) void armPre(S, L, code, R.meta.cls, test); // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③ · 첫 몬스터 체력)
+  }
   // ⏯ 이어서 수업: 입장 → 저장된 단계부터 (정식 go() resumeFrom)
   const to = isLobby(R) && R.meta.resumeFrom != null ? Math.max(0, Math.min(L.steps.length - 1, R.meta.resumeFrom)) : nextIdx(L, R);
   goTo(S, L, code, R, to);
@@ -136,6 +141,7 @@ export function endClass(S: Store, L: LessonPack, code: string): void {
   if (!R || R.state.closed) return;
   const stop = isLobby(R) && R.meta.resumeFrom != null ? { step: R.meta.resumeFrom, fresh: Object.keys(R.meta.fresh || {})[0] ?? null, done: false } : stopOf(L, R, S.now());
   S.set(`${roomPath(code)}/state`, { ...R.state, closed: true, focus: false, rest: null, holdAt: null, door: null, stop });
+  if (R.meta.cls && !isLobby(R)) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); S.set(lastClosePath(R.meta.cls, !!(lv && lv.code === code && lv.test)), S.now()); } // ⚔ 선제 공격 기준 시각 = 그 반 마지막 수업 닫힌 시각
 }
 /** 대기실: 안 온 번호를 눌러 결석 (다시 누르면 풂) · 🔄 옛 판 학생에게 새로 고침 보내기 */
 export function setAbsent(S: Store, code: string, uid: string, on: boolean): void { S.set(`${roomPath(code)}/absent/${uid}`, on ? true : null); }

@@ -17,3 +17,25 @@ describe('⑤ ✅ 도장 📜', () => {
     expect(Object.keys(S.get<Record<string, unknown>>('gifts/s1_1_3')!)).toEqual(['stamp_K1', 'stamp_K2']);
   });
 });
+
+import { preCount, preDmg, firstMonster, lastClosePath, armPre } from '../src/school/pre';
+import { SUBJ } from '../src/engine/subject';
+describe('③ ⚔ 선제 공격', () => {
+  it('지난 수업 뒤 고친 칸만 · 학생 수 · 최대 10% · 첫 몬스터만', () => {
+    const bon = { 1: { 'set-05': { m1: { fixAt: 50 }, m2: { fixAt: 200 } } }, 2: { 'set-04': { m3: { fixAt: 300 }, boss: { at: 400 } } }, 3: { 'set-05': { m1: { clear: true } } } };
+    expect(preCount(bon as never, 100)).toEqual({ fixed: 2, who: 2 });
+    expect(preCount([null, { a: { m: { fixAt: 9 } } }] as never, 0)).toEqual({ fixed: 1, who: 1 }); // 서버 배열 꼴
+    const R = { meta: { pre: { mid: 'm1', fixed: 7, who: 3 } } } as unknown as Room;
+    expect(preDmg(R, 'm1', 48)).toBe(4); expect(preDmg(R, 'm1', 200)).toBe(7); expect(preDmg(R, 'm2', 200)).toBe(0); expect(preDmg(R, 'm1', 9)).toBe(0);
+  });
+  it('수업 시작 = 기준 시각(마지막 수업 닫힘) 뒤 고친 칸으로 meta.pre · 기준 없음 = 없음 · 테스트 수업 = 따로 칸', async () => {
+    const S = store(), L = SUBJ.lessons.find((l) => firstMonster(l))!;
+    S.set('bonus/1-3', { 4: { [L.id]: { m1: { fixAt: 500 } } } });
+    expect(await armPre(S, L, 'K9', '1-3', false)).toBeNull();
+    S.set(lastClosePath('1-3'), 100);
+    expect(await armPre(S, L, 'K9', '1-3', false)).toEqual({ mid: firstMonster(L), fixed: 1, who: 1 });
+    expect(S.get('rooms/K9/meta/pre')).toMatchObject({ fixed: 1 });
+    expect(await armPre(S, L, 'K8', '1-3', true)).toBeNull(); // 🧪 = lastClose~test
+    expect(lastClosePath('1-3', true)).toBe('school/lastClose/1-3~test');
+  });
+});

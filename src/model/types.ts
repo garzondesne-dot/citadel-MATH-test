@@ -192,7 +192,7 @@ export interface RoomRules {
   pct?: number;
 }
 export interface Room {
-  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean; /** ⏯ 이어서: 수업 시작 단계 · 숫자 바꾼 판으로 시작할 몬스터 */ resumeFrom?: number; fresh?: Record<string, boolean | number>; /** 🏰 성채 방 (📜 2026-11-14) = 틀린 소문제만 다음 판 숫자로 */ castle?: boolean } & RoomRules;
+  meta: { code: string; lesson: string; version: number; created: number; deadline?: number | null; /** 반 · 종합실 키(숫자 4) */ cls?: string; key?: string; /** 수업 시간 제한(50분 · 교시 끝) */ limit?: boolean; /** ⏯ 이어서: 수업 시작 단계 · 숫자 바꾼 판으로 시작할 몬스터 */ resumeFrom?: number; fresh?: Record<string, boolean | number>; /** 🏰 성채 방 (📜 2026-11-14) = 틀린 소문제만 다음 판 숫자로 */ castle?: boolean; /** ⚔ 선제 공격 (📜 2026-11-16 · school/pre.ts) */ pre?: { mid: string; fixed: number; who: number } } & RoomRules;
   /** step −1 = 입장(대기) · 0.. = 단계 · steps.length 이상 = 결과 */
   state: {
     step: number; stepAt: number; headcount?: number; solveEnd?: Record<string, number>;
