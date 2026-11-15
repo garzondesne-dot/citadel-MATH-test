@@ -7,6 +7,8 @@ import { PACKS } from '../engine/packs';
 import { conceptOf } from './prep';
 import { BOSS, cellsOf, fullLesson, includedCells } from './statsCells';
 import { MIS, seteukDraft, type SeteukIn } from './seteuk';
+import { noteOf, type Bon, type Rec } from './dummy';
+import { seals as sealsOf } from '../model/titles';
 
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
 //   records[번호][차시] = { conc: { 개념: [첫 시도 맞힘, 문항] }, names, boss(형성평가 첫 시도 맞힘), bossN, mis: { 오개념 코드: [틀림, 고침] } }
@@ -21,7 +23,8 @@ export interface Stud {
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
 export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
-  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
+  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📊 한눈에 표 (정식 dash.js COLS · 서버) ⭕ OX [맞힘, 문항] · 💡 그림 힌트 펼친 수 · 💡 힌트 준 수 · 🪜 사다리(몬스터 → 1 대장 · 2 근거 줄 · 4 서술형) · 🧩 근거 줄 n/m · 🟪 업적 · 🃏 카드 */ ox?: [number, number]; hintN?: number; lad?: Record<string, number>; ladW?: Record<string, string>; seals?: number; cardN?: number;
+  /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
 export const STANDARDS = SUBJ.standards; // 과목 팩 (#136)
@@ -127,7 +130,26 @@ export function realClass(S: Store, cls: string) {
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
     extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: false, dummy };
   }
+  // 📊 한눈에 표 덧붙임 (정식 dash.js build 그대로): OX · 힌트 · 사다리 · 업적 · 카드 · ❗ 남은 문제(오답노트 = 허수아비 목록과 같은 셈)
+  for (const p of roster(cls, S)) {
+    const e = extra[p.num]; if (!e) continue;
+    const raw = Object.entries(recAll[p.num] || {}).filter(([, r]) => isObj(r)) as [string, Record<string, unknown>][], bon = (bonAll[p.num] || {}) as Record<string, Bon>;
+    const ox: [number, number] = [0, 0], lad: Record<string, number> = {}, ladW: Record<string, string> = {};
+    let hintN = 0;
+    for (const [, r] of raw) {
+      if (Array.isArray(r.ox)) { ox[0] += Number(r.ox[0]) || 0; ox[1] += Number(r.ox[1]) || 0; }
+      hintN += Number(r.hints) || 0;
+      for (const [m, v] of Object.entries(isObj(r.lad) ? r.lad : {})) lad[m] = Math.max(lad[m] || 0, Number(v) || 0);
+      for (const [m, v] of Object.entries(isObj(r.ladW) ? r.ladW : {})) ladW[m] = String(v);
+    }
+    Object.assign(e, { ox, hintN, lad, ladW, hg: raw.reduce((a, [, r]) => a + (Number(r.hg) || 0), 0), seals: sealsOf(bon as never).length, cardN: Object.keys(isObj(cardAll[p.num]) ? cardAll[p.num]! : {}).length });
+  }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
+  for (const st of out.studs) { // ❗ 남은 문제 = 정식 DS.Note.lesson(…).left (형성평가 있는 수업 차시만 · 성채 평가 차시 빼기)
+    let left = 0;
+    for (const [lid, r] of Object.entries(recAll[st.n] || {})) { if (!isObj(r) || /^eval-/.test(lid)) continue; const L = fullLesson(lid); if (L?.boss) left += noteOf(L, r as Rec, (bonAll[st.n] || {})[lid] as Bon | undefined).left; }
+    st.left = left;
+  }
   // 🔎 오개념 = 수업 기록 + 🏰 성채(평가 방 eval-) 기록 (정식 dash.js 그대로 · 🎯 허수아비는 빼기 · 📜 2026-11-15 머리 🔨 (c))
   for (const st of out.studs) for (const [lid, l] of Object.entries(bonAll[st.n] || {})) {
     if (!/^eval-/.test(lid) || !isObj(l)) continue;

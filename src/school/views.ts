@@ -16,7 +16,7 @@ export interface TCell { t: string; tone?: Tone; v?: Cell }
 export interface View {
   id: string; title: string; info: string;
   kpis?: { lab: string; big: string; sub: string }[];
-  table?: { head: string[]; rows: { cells: TCell[]; pick?: Stud; cls?: string; sum?: boolean }[]; legend: [Tone, string][] };
+  table?: { /** 칸 제목 눌러 정렬 */ sort?: boolean; head: string[]; rows: { cells: TCell[]; pick?: Stud; cls?: string; sum?: boolean }[]; legend: [Tone, string][] };
   list?: { rk: string; nm: string; sub: string; pc: string; bar?: number; pick?: Stud }[];
   bars?: { title: string; vals: number[]; labels: string[]; foot: string; /** ≈ 기록 전 추정(줄무늬) */ est?: boolean[] }[];
   /** 안내 한 줄 (📈 활용 추이 「참고 자료 · ≈ 추정」) */ note?: string;
@@ -74,8 +74,21 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
         kpis: [{ lab: '전체 학생', big: `${studs.length}명`, sub: `${sc.per.length - (withX ? 0 : sc.betas.length)}반${sc.betas.length && !withX ? ` · 🧪 ${sc.betas.join(' · ')} 빠짐` : ''}` }, { lab: '형성평가 평균 통과', big: p(pct(bo, bt)), sub: '첫 시도' }, { lab: '최근 7일 수업 밖 활동', big: p(pct(studs.filter(recent).length, studs.length)), sub: `${studs.filter(recent).length} / ${studs.length}명` }, { lab: '약점 1위 개념', big: wk?.nm ?? '-', sub: wk ? `전체 ${wk.pc}` : '' }],
         table: { head: ['반', '인원', ...held.map((h) => `${h.no}차시`), '수업 밖 7일 활동', '남은 문제 1인 평균'], rows: [...rows, tot], legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓'], ['na', '— 아직 안 함']] } };
     }
-    case 'grid': return { id, title: '한눈에 표', info: '칸 = 형성평가(맞힌 문항 / 문항) · 이름을 누르면 개인 기록',
-      table: { head: ['번호 · 이름', ...held.map((h) => `${h.no}차시`), '남은 문제', 'Lv'], rows: studs.map((s) => ({ pick: s, cells: [{ t: nm(s), v: nm(s) }, ...held.map((h) => lessonCell(s, h.id)), { t: `${s.left > 20 ? '❗ ' : ''}${s.left}`, tone: s.left > 20 ? 'ng' : '', v: s.left }, { t: String(s.lv), v: s.lv }] as TCell[] })), legend: [['ok', '✔ 통과'], ['md', '△ 일부'], ['ng', '✘ 0점'], ['na', '불참'], ['bo', '→ ■ 보충함'], ['', '⭐ 첫 시도 만점']] } };
+    case 'grid': { // 📊 정식 dash.js 「① 한눈에 표」 COLS 그대로 (📜 2026-11-15 머리 🔨 「대시보드 = 옛 정식 그대로」) · 칸 제목을 누르면 정렬
+      const num = (v: number | null | undefined, t?: string): TCell => ({ t: t ?? (v ? String(v) : ''), v: v ?? null });
+      const per = (v: number | null): TCell => ({ t: p(v), tone: tone(v), v: pv(v) });
+      const ladT = (s: Stud) => Object.entries(s.extra.lad || {}).map(([m, v]) => `${m.replace(/^u/, '')}${v >= 4 ? '✍' : v >= 2 ? '🧩' : '👣'}${v < 2 && s.extra.ladW?.[m] ? `🧩${s.extra.ladW[m]}` : ''}`).join(' ');
+      const ladN = (s: Stud) => Object.values(s.extra.lad || {}).reduce((a, v) => a + v, 0);
+      const G: View = { id, title: '한눈에 표', info: '칸 제목을 누르면 정렬 · 차시 칸 = 형성평가(맞힌 문항 / 문항) · 색이 진할수록 높음 · 이름을 누르면 개인 기록 · 🪜 = 👣 대장 처치 · 🧩 근거 줄 · ✍ 서술형 통과',
+        table: { sort: true, head: ['번호 · 이름', ...held.map((h) => `${h.no}차시`), '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv'],
+          rows: studs.map((s) => { const ox = s.extra.ox, oxp = ox && ox[1] ? pct(ox[0], ox[1]) : null; return { pick: s, cells: [{ t: nm(s), v: s.n }, ...held.map((h) => lessonCell(s, h.id)),
+            { t: s.left ? `❗ ${s.left}` : '✔', tone: s.left ? 'ng' : 'ok', v: s.left }, { t: `${s.went}/${s.heldN}`, tone: tone(s.part), v: s.part }, per(s.boss), per(s.first), per(oxp),
+            num(s.extra.fixes, String(s.extra.fixes)), num(s.extra.hintN), num(s.extra.hg), { t: ladT(s), v: ladN(s) }, num(s.extra.seals, String(s.extra.seals ?? 0)), num(s.tries, String(s.tries)), num(s.extra.cardN, String(s.extra.cardN ?? 0)), { t: `Lv.${s.lv}`, v: s.xp }] }; }),
+          legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓'], ['na', '불참 · 안 함']] },
+      };
+      G.csv = { name: `한눈에표_${cls}.csv`, rows: [G.table!.head, ...G.table!.rows.map((r) => r.cells.map((c) => c.t))] };
+      return G;
+    }
     case 'watch': { // 👀 정식 dash.js 「③ 주의 학생」 그대로 (📜 2026-11-15 머리 🔨 (c)) · 5 기준 · 벌이 아니라 확인용
       const heldOf = (c: string) => sc.per.find((x) => x.c === c)?.held ?? held;
       const rows = studs.filter((s) => withX || !s.x).map((s) => {

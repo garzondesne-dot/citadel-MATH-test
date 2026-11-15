@@ -20,7 +20,7 @@ describe('📖 기호 톡 기록', () => {
     unbindMe(); vi.useRealTimers();
   });
   it('rank = 많이 누른 순 · 누른 학생 수 · 차시 거르기 · 사전에 없는 기호 뺌', () => {
-    const st = [{ 'set-06': { in: 3, zz: 9 }, 'set-07': { notin: 1 } }, { 'set-06': { in: 1, notin: 2 } }, null];
+    const st: (Record<string, Record<string, number>> | null)[] = [{ 'set-06': { in: 3, zz: 9 }, 'set-07': { notin: 1 } }, { 'set-06': { in: 1, notin: 2 } }, null];
     expect(rank(st, (k) => k !== 'zz')).toEqual([{ id: 'in', n: 4, who: 2 }, { id: 'notin', n: 3, who: 2 }]);
     expect(rank(st, (k) => k !== 'zz', 'set-07')).toEqual([{ id: 'notin', n: 1, who: 1 }]);
   });

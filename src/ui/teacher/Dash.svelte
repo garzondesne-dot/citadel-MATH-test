@@ -29,6 +29,17 @@
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
   function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
   let vopt = $state('');
+  // 📊 칸 제목 눌러 정렬 (정식 dash.js sortKey · sortDir) · 처음 누르면 큰 값부터(번호 · 이름은 작은 값부터) · 같은 칸 다시 = 반대로 · 합계 줄은 맨 위 그대로
+  let sortCol = $state(-1), sortDir = $state(1);
+  const sortBy = (i: number) => { if (sortCol === i) sortDir = -sortDir; else { sortCol = i; sortDir = i === 0 ? 1 : -1; } };
+  const keyOf = (v: unknown): number | string | null => (v == null || v === '' ? null : typeof v === 'object' ? (v as { pct: number }).pct : (v as number | string));
+  const sortedRows = $derived.by(() => {
+    const T = V.table; if (!T) return [];
+    if (!T.sort || sortCol < 0) return T.rows;
+    const sum = T.rows.filter((r) => r.sum), rest = T.rows.filter((r) => !r.sum);
+    return [...sum, ...rest.slice().sort((a, b) => { const x = keyOf(a.cells[sortCol]?.v), y = keyOf(b.cells[sortCol]?.v); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (x < y ? -1 : x > y ? 1 : 0) * sortDir; })];
+  });
+  $effect(() => { void vid; void cls; sortCol = -1; });
   const V = $derived.by(() => { void svVer; void pv; void lr.v.val; return view(S, cls, vid, false, vopt); });
   // 📝 모드 바꾼 기록 (2026-11-14 제출 모드 v2 덧붙임 D · 이 기기 저장 · 서버는 출시 때 같은 꼴): 반별 한 줄 + 펼치면 학생별
   const ms = $derived(modeSummary(modeLogs(), cls === ALL ? null : cls, S.now()));
@@ -78,8 +89,8 @@
     {#if V.barsFirst}{@render barsBlock()}{/if}
     {#if V.table}
       <div class="tw"><table>
-        <thead><tr>{#each V.table.head as h, i (i)}<th class:sk={i === 0}>{h}</th>{/each}</tr></thead>
-        <tbody>{#each V.table.rows as r, ri (ri)}<tr class:sum={r.sum} class:click={!!r.pick || !!r.cls} onclick={() => (r.pick ? onpick(r.pick) : r.cls ? onclass(r.cls) : null)}>{#each r.cells as c, i (i)}<td class="{c.tone ?? ''}" class:sk={i === 0}>{c.t}</td>{/each}</tr>{/each}</tbody>
+        <thead><tr>{#each V.table.head as h, i (i)}<th class:sk={i === 0}>{#if V.table.sort}<button type="button" class="srt" data-k="sort" onclick={() => sortBy(i)}>{h}{sortCol === i ? (sortDir > 0 ? ' ▲' : ' ▼') : ''}</button>{:else}{h}{/if}</th>{/each}</tr></thead>
+        <tbody>{#each sortedRows as r, ri (ri)}<tr class:sum={r.sum} class:click={!!r.pick || !!r.cls} onclick={() => (r.pick ? onpick(r.pick) : r.cls ? onclass(r.cls) : null)}>{#each r.cells as c, i (i)}<td class="{c.tone ?? ''}" class:sk={i === 0}>{c.t}</td>{/each}</tr>{/each}</tbody>
       </table></div>
       <p class="leg">{#each V.table.legend as [t, s] (s)}<span class={t}>{s}</span>{/each}{cls === ALL && vid === 'cmp' ? ' · 반을 누르면 그 반' : ''}</p>
     {/if}
@@ -147,6 +158,7 @@
   .bc i { width: 100%; border-radius: 4px 4px 0 0; background: var(--accent); display: block; min-height: 2px; }
   .bc.est i { background: repeating-linear-gradient(45deg, var(--accent) 0 4px, color-mix(in srgb, var(--accent) 40%, transparent) 4px 8px); opacity: 0.75; }
   .vpick { gap: var(--s2); font-size: 14px; color: var(--text-2); } .vpick select { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); background: var(--surface); color: var(--text); border: 1px solid var(--surface-2); font: inherit; }
+  .srt { all: unset; cursor: pointer; display: block; white-space: nowrap; min-height: 32px; line-height: 32px; } .srt:focus-visible { outline: 2px solid var(--accent); }
   .vnote { margin: 0 0 var(--s2); padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface); color: var(--text-2); font-size: 13px; }
   .bc b { position: absolute; top: -16px; font-size: 12px; color: var(--text); } .bc em { font-style: normal; font-size: 10.5px; color: var(--text-3); margin-top: 2px; }
   .list { display: flex; flex-direction: column; gap: 5px; }
