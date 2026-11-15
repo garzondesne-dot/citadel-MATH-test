@@ -23,7 +23,8 @@
   import Title from './ui/Title.svelte';
   import AtkGallery from './ui/AtkGallery.svelte';
   import TeacherApp from './ui/teacher/TeacherApp.svelte';
-  import { pupil, savedLogin, type Live, type Pupil } from './school/school';
+  import { pupil, saveLogin, savedLogin, type Live, type Pupil } from './school/school';
+  import { meBound } from './store/meSync';
   import { liveValue } from './ui/room.svelte';
   import { holdWake, wakeTip } from './ui/wake.svelte';
 
@@ -77,6 +78,23 @@
   // 🧑 학생 기록 = 그 학생으로 로그인한 폰이면 시험 서버 정식 경로에 (#141 · ?as 시험 · 교사 · TV 는 이 기기)
   const bindFor = (p: Pupil | null) => { if (p && !q.get('as') && where.kind !== 'device') bindMe(S, p.cls, p.num); };
   bindFor(untrack(() => login));
+  // 🔑 로그인 기억(이 기기)은 있는데 서버 계정 주인(accounts/{반}/{번호}/uid)이 지금 로그인과 다름 = 다른 기기 · 다른 앱에서 로그인 · 세션이 바뀜
+  //   예전 = 묶이지 않은 채 「이 기기 테스트 저장소」(💎 9,999 · 테스터)로 캠프가 열려 성채 · 기록이 0 으로 보임(🐞 2026-11-15 1-6 베타테 캡처) → 다시 로그인 화면
+  //   계정 칸이 늦게 오면(거울) 그때 다시 묶음 · 다르다고 확인된 때만 로그아웃
+  let relogin = $state(false), bindVer = $state(0);
+  {
+    const l0 = untrack(() => login), au = (S as Store & { auth?: { currentUser: { uid: string } | null } }).auth;
+    if (l0 && where.kind !== 'device' && !q.get('as') && S.kind === 'server' && !meBound()) {
+      let off: (() => void) | null = null, done = false;
+      off = S.watch<{ uid?: string }>(`accounts/${l0.cls}/${l0.num}`, (a) => {
+        if (done || meBound() || !a?.uid) return;
+        const me = au?.currentUser?.uid;
+        if (me && a.uid === me) { bindFor(l0); if (meBound()) { done = true; bindVer++; } }
+        else { done = true; saveLogin(null); login = null; relogin = true; }
+        if (done) queueMicrotask(() => off?.());
+      });
+    }
+  }
   // 🚪 QR 입장 (#138 ③): ?join=코드 → 로그인한 폰은 바로 그 수업 · 아니면 로그인 뒤 그 수업
   const joinCode = (q.get('join') || '').trim();
   if (joinCode && !role && untrack(() => login)) location.replace(`?role=student&room=${encodeURIComponent(joinCode)}`);
@@ -128,8 +146,9 @@
   {:else if role === 'student' && me}
     <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
   {:else if !role && login}
-    {#key campCode}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
+    {#key `${campCode}|${bindVer}`}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}
+    {#if relogin}<p class="relogin" role="alert" data-k="relogin">🔑 이 기기의 로그인이 풀렸어요 · 반 · 번호 · 비밀번호로 다시 로그인해 주세요</p>{/if}
     <Title {S} onin={(p, joined) => { if (joined) { try { sessionStorage.setItem('citadel-hero0', '1'); } catch { /* 무시 */ } } bindFor(p); login = p; if (joinCode) location.href = `?role=student&room=${encodeURIComponent(joinCode)}`; }} />
   {:else if role === 'fxbake' && TEST_ADDR}
     {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
@@ -182,4 +201,5 @@
   .modes small { color: var(--text-2); }
   .err { color: var(--bad); }
   .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
+  .relogin { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 10px 14px; max-width: 92vw; border-radius: 12px; background: #2b1e10; border: 1px solid #f5b84a; color: #ffe3a8; font: 700 14px var(--font); text-align: center; }
 </style>
