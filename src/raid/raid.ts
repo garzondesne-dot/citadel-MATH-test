@@ -133,6 +133,18 @@ export function stone(R: Room, mid: string): { by: string; all?: string[]; at: n
   return ho.at > pt.at ? ho : pt;
 }
 export const healsReceived = (R: Room, mid: string, uid: string, L?: LessonPack) => Math.min(R.meta.healMax, healsTo(R, mid, uid, L).length);
+/** 💚 힐 받을 친구 = 정식 model.js healTarget 그대로 (📜 2026-11-15 머리 규칙 점검): 지금 접속 · 나 · 선생님 아님 · 낸 적 있음 · 아직 다 못 맞힘(소레이드 = 대장 못 잡음) · 받은 힐 healMax(2) 미만
+ *  무게 = 남은 기회 0칸 8 · 1칸 4 · 2칸 2 · 그 밖 1 (대부분 막힌 친구에게 · 가끔 다른 친구 = 티 안 나게) · rnd = 0~1 (없으면 Math.random) · 후보 없음 = null */
+export function healTarget(L: LessonPack, R: Room, mid: string, healer: string, now: number, rnd?: number): string | null {
+  const cand = activeIds(R, now).filter((u) => u !== healer && !R.players?.[u]?.teacher).map((u) => {
+    const r = mid === BOSS_ID ? bossRecord(L, R, u) : isChain(L, R, mid) ? chainRecord(L, R, mid, u) : plainRecord(L, R, mid, u);
+    const sub = 'submitted' in r ? !!r.submitted : (r as { subs: number }).subs > 0, done = 'perfect' in r && !('chain' in r) ? !!(r as Rec).perfect : !!(r as { done?: boolean }).done;
+    return { u, sub, done, left: Number(r.left) || 0 };
+  }).filter((c) => c.sub && !c.done && healsTo(R, mid, c.u, L).length < R.meta.healMax).map((c) => ({ u: c.u, w: c.left <= 0 ? 8 : c.left <= 1 ? 4 : c.left <= 2 ? 2 : 1 }));
+  const sum = cand.reduce((a, c) => a + c.w, 0); if (!sum) return null;
+  let r = (rnd ?? Math.random()) * sum; for (const c of cand) { r -= c.w; if (r < 0) return c.u; }
+  return cand[cand.length - 1]!.u;
+}
 
 export interface Rec {
   chain?: false;

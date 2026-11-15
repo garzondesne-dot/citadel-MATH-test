@@ -5,12 +5,11 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, bossRecord, chainRecord, healsReceived, isChain, plainRecord, petrify, ultUsed } from '../../raid/raid';
-  import { spendEnergy, trueUlt } from '../../raid/actions';
+  import { bossRecord, chainRecord, isChain, plainRecord, petrify, ultUsed } from '../../raid/raid';
+  import { healAuto, spendEnergy, trueUlt } from '../../raid/actions';
   import { canTrue, cutin, ultBlast } from '../fx/attack';
   import { savedLook } from '../../store/me.svelte';
   import { HERO, heroUrl } from '../manifest';
-  import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Hearts from '../battle/Hearts.svelte';
   import { paperOn } from '../submit.svelte';
@@ -24,9 +23,8 @@
   type RecLike = { tokLeft: number; canHeal: boolean; roundOpen?: boolean; rounds?: number; trueOk?: boolean };
   const rec = $derived((boss ? bossRecord(L, R, uid) : isChain(L, R, mid) ? chainRecord(L, R, mid, uid) : plainRecord(L, R, mid, uid)) as RecLike);
   type Sk = 'heal' | 'bind' | 'true';
-  let sel = $state<Sk>('heal'), pick = $state(false), rest = $state(false), msg = $state('');
+  let sel = $state<Sk>('heal'), rest = $state(false), msg = $state('');
   const look = untrack(() => savedLook());
-  const friends = $derived(activeIds(R, now).filter((u) => u !== uid && !R.players?.[u]?.teacher).map((u) => ({ u, nick: R.players?.[u]?.nick || u, full: healsReceived(R, mid, u, L) >= R.meta.healMax })));
   const trueOn = $derived(!boss && !!rec.trueOk && canTrue(look.fx, look.hero) && !ultUsed(R, mid, uid) && !petrify(R, mid));
   const trueWhy = $derived(boss ? '형성평가 뒤엔 못 써요' : !canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '첫 공격 퍼펙트 + 재도전 판 2개를 한 번에 → 세 번째 ⚡');
   const CARDS: { k: Sk; ic: string; name: string; desc: string; main: string }[] = [
@@ -35,7 +33,7 @@
     { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 쓰고 🔥 재도전' },
   ];
   const cur = $derived(CARDS.find((c) => c.k === sel)!);
-  const can = (k: Sk) => rec.canHeal && (k === 'true' ? trueOn : k === 'heal' ? friends.some((f) => !f.full) : true);
+  const can = (k: Sk) => rec.canHeal && (k === 'true' ? trueOn : true);
   $effect(() => { if (!can(sel) && can('bind')) untrack(() => (sel = 'bind')); });
   async function useTrue() {
     const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
@@ -44,18 +42,20 @@
     onround(); retrySnd();
   }
   const retrySnd = () => setTimeout(() => sfx('retry-start', 0.75), 700); // 🔊 2차 🔥 재도전 판 (정식 student.js 같은 순간 · 기술을 쓴 뒤 0.7초)
-  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { pick = false; onround(); retrySnd(); } else msg = '지금은 쓸 수 없어요'; }
+  // 💚 힐 = 받을 친구 자동 (정식 healTarget · 📜 2026-11-15 머리 규칙 점검: 남은 기회 적은 친구에게 무게 · 다 맞힘 · 접속 안 함 빼고 · 몬스터당 +2 까지 · 받을 친구 없으면 응원)
+  function healNow() { const to = healAuto(S, L, code, mid, uid); if (!to) { msg = '지금은 쓸 수 없어요'; return; } msg = to === '_' ? '💚 응원 보냄!' : `💚 ${R.players?.[to]?.nick || ''}에게 +1`; onround(); retrySnd(); }
+  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { onround(); retrySnd(); } else msg = '지금은 쓸 수 없어요'; }
   // 🔊 2차 ⚡ 카드 펼침 (정식 student.js 같은 순간 · ⚡ 칸마다 한 번)
   const cardsOn = $derived(!paperOn() && !rec.roundOpen && !rest && rec.tokLeft > 0);
   $effect(() => { if (!cardsOn) return; const ck = `${code}|${mid}|${uid}|${rec.tokLeft}`; untrack(() => { if (!cardSnd.has(ck)) { cardSnd.add(ck); sfx('energy-card', 0.7); } }); });
-  function act() { msg = ''; if (rec.roundOpen) { rest = false; onround(); return; } if (rest) { rest = false; return; } if (sel === 'heal') pick = true; else if (sel === 'bind') spend('bind'); else void useTrue(); }
+  function act() { msg = ''; if (rec.roundOpen) { rest = false; onround(); return; } if (rest) { rest = false; return; } if (sel === 'heal') healNow(); else if (sel === 'bind') spend('bind'); else void useTrue(); }
 </script>
 
 {#if paperOn() && !rec.roundOpen && !rest && rec.tokLeft > 0}
   <!-- 📝 제출 모드 「더 해 볼 것」 = 두 줄만 (친구 돕기 · 연습 문제 · 묶기 · 진필살기 · 전리품 표시 없음 · 2026-11-14 추천대로) -->
   <div class="bcard sk pmore" data-k="more">
     <span class="lab">더 해 볼 것 ({rec.tokLeft}번 남음)</span>
-    <button type="button" class="pm" disabled={!can('heal')} onclick={() => { msg = ''; pick = true; }}>친구 돕기 · 기회가 0 인 친구에게 1번</button>
+    <button type="button" class="pm" disabled={!can('heal')} onclick={() => { msg = ''; healNow(); }}>친구 돕기 · 기회가 0 인 친구에게 1번</button>
     <button type="button" class="pm" disabled={!rec.canHeal} onclick={() => { msg = ''; spend('bind'); }}>연습 문제 · 숫자를 바꿔 한 번 더</button>
     {#if msg}<p class="muted">{msg}</p>{/if}
   </div>
@@ -78,7 +78,7 @@
         </button>
       {/each}
     </div>
-    <div class="line"><span>{msg || (can(sel) ? cur.desc : sel === 'true' ? `🔒 ${trueWhy}` : sel === 'heal' ? '힐 받을 친구가 없어요' : '')}</span><button type="button" class="stop" onclick={() => (rest = true)}>그만하기</button></div>
+    <div class="line"><span>{msg || (can(sel) ? cur.desc : sel === 'true' ? `🔒 ${trueWhy}` : '')}</span><button type="button" class="stop" onclick={() => (rest = true)}>그만하기</button></div>
   </div>
   <BottomAction battle disabled={!can(sel)} onmain={act} mainLabel={cur.main}>
     {#snippet main()}<span>{cur.main}</span><Hearts mode="energy" left={rec.tokLeft} />{/snippet}
@@ -86,12 +86,6 @@
 {:else}
   <div class="bcard sk"><span class="lab acc">⚡ 다 썼어요</span><p class="muted">🔥 재도전 판 {rec.rounds ?? 0}개 완성 · 다음 몬스터를 기다려요</p></div>
   <BottomAction battle text="✔ 다 했어요" why="데미지 · 기록은 그대로" />
-{/if}
-{#if pick}
-  <Sheet onclose={() => (pick = false)} mainText="닫기">
-    {#snippet title()}💚 누구에게 힐을 줄까요?{/snippet}
-    <div class="fr">{#each friends as f (f.u)}<button type="button" class="btn2" disabled={f.full} onclick={() => spend(f.u)}>{f.nick}{f.full ? ' · 가득' : ''}</button>{:else}<p class="muted">같이 싸우는 친구가 아직 없어요</p>{/each}</div>
-  </Sheet>
 {/if}
 
 <style>
@@ -109,6 +103,4 @@
   .line span { flex: 1; min-width: 0; }
   .stop { flex: none; min-height: 44px; padding: 0 var(--s3); border: 0; background: none; color: var(--text-2); font: 700 14px var(--font); text-decoration: underline; }
   .muted { margin: 0; color: var(--text-3); font-size: 14px; }
-  .fr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
-  .fr .btn2 { min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); }
 </style>

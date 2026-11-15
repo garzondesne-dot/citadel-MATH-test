@@ -5,7 +5,7 @@
 //   실제 학생과 똑같은 경로(rooms/{code}/…)에 씀 → 교사 폰 · TV 는 진짜 수업과 똑같이 움직임 · 집중 모드면 손을 멈춤
 //   기록: 수업 끝 기록(records/{반}/{번호})은 학생 폰만 씀 → 가상 학생은 랭킹 · 대시보드 · 서버 학생 기록에 남지 않음 · players/{uid}/bot = true · 이름 앞 🤖
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
-import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, itemsFor } from './raid';
+import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
 
 export const BOT_MAX = 28, BOT_DEF = 20;
@@ -89,7 +89,7 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
         if (rec.canHeal && rec.perfect) {
           later(`heal?|${st.id}|${u}|${rec.spent ?? 0}`, rand(3000, 8000), () => {
             if (Math.random() >= 0.5) return; const R1 = getR(); if (!R1) return;
-            const to = activeIds(R1, S.now()).find((x) => x !== u && !plainRecord(L, R1, st.id, x).perfect && healsReceived(R1, st.id, x, L) < R1.meta.healMax);
+            const to = healTarget(L, R1, st.id, u, S.now()); // 💚 학생과 같은 길(정식 healTarget)
             spendEnergy(S, L, code, st.id, u, to ?? 'bind');
           });
         }

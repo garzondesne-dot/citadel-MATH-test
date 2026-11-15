@@ -3,7 +3,7 @@ import { cleanWords } from '../school/survey';
 import { BOSS, markOpened } from '../school/statsCells';
 import type { DungeonProfile, Given, LessonPack, Question, Room, Store } from '../model/types';
 import { rulesOf } from '../model/profiles';
-import { BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
+import { healTarget, BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
 import { answerOf, bossRecord, cleared, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { activeNow, cpPatch } from './combo';
 import { classPeriodEnd } from '../school/bells';
@@ -269,11 +269,18 @@ export function petriAward(S: Store, code: string, me: string, mid: string, n: n
   const pt = stone(R, mid); if (!pt || S.now() >= pt.until) return 0;
   return petriGem(S, code, me, pt.at, mid, n);
 }
+/** 💚 친구 힐 (정식 actions.js heal · student.js #st-heal): 받을 친구 = 정식 healTarget 자동(남은 기회 적은 친구에게 무게 · 다 맞힘 · 접속 안 함 · 선생님 · 힐 2번 받은 친구 빼고)
+ *  → 받은 친구 uid · '_' = 받을 친구 없음(정식처럼 기력은 쓰고 「응원」) · '' = 못 씀 */
+export function healAuto(S: Store, L: LessonPack, code: string, mid: string, me: string): string {
+  const R = getRoom(S, code); if (!R) return '';
+  const to = healTarget(L, R, mid, me, S.now()) || '_';
+  return spendEnergy(S, L, code, mid, me, to) ? to : '';
+}
 export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, me: string, to: string | 'bind'): boolean {
   const R = getRoom(S, code); if (!R) return false;
   const rec = mid === BOSS_ID && V4(R) ? bossRecord(L, R, me) : isChain(L, R, mid) ? chainRecord(L, R, mid, me) : plainRecord(L, R, mid, me);
   if (rec.tokLeft <= 0 || (V4(R) && !rec.canHeal)) return false; // v4: 🔥 재도전 판을 다 맞혀야 다음 ⚡
-  if (to !== 'bind' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
+  if (to !== 'bind' && to !== '_' && (to === me || healsReceived(R, mid, to, L) >= R.meta.healMax)) return false;
   S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, to === 'bind' ? `!bind@${S.now()}` : to);
   return true;
 }
