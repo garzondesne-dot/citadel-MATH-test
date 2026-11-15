@@ -26,6 +26,7 @@ describe('교사 쪽 엔진 (#119)', () => {
   it('수업 시작 = 그 교시 끝까지 마감 · 집중에도 남은 시간 흐름 · +5분 한 번', () => {
     setFeatCfg({ bundle: 'full', on: { schedule: true } }); // 📅 시간표 켬 = 교시 끝
     const { S, R } = setup();
+    S.set(`${roomPath('T')}/meta/cls`, '1-3'); S.set('school/sched', { 4: { 3: '1-3' } }); // 📜 2026-11-15 = 그 반 시간표 교시일 때만 교시 끝
     nextStep(S, L, 'T');
     expect(R().state.deadline).toBe(Date.UTC(2026, 10, 12, 2, 50)); // 11:50 KST
     setFeatCfg(null);

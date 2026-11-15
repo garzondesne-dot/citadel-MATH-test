@@ -16,5 +16,10 @@ export function periodNow(now: number): number {
 }
 /** 지금 교시가 끝나는 시각 (정식 periodEnd) · 교시 밖이면 null */
 export function periodEnd(now: number): number | null { const p = periodNow(now), b = BELLS[p]; return p && b ? at(now, mins(b[1])) : null; }
+/** ⏳ 보스 타임바 끝 (📜 2026-11-15 「시간표 켜도 수동 열기」): 지금이 그 반의 시간표 교시 안이면 그 교시 끝 · 아니면 null(= 열 때부터 50분) — week = 요일 → 교시 → 반 */
+export function classPeriodEnd(week: Record<string, Record<string, string>>, cls: string, now: number): number | null {
+  const p = periodNow(now); if (!p) return null;
+  return week[String(kst(now).dow)]?.[String(p)] === cls ? periodEnd(now) : null;
+}
 export const hhmm = (t: number) => { const d = new Date(t + KST); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
 export const DOW = ['', '월', '화', '수', '목', '금', '토', '일'];

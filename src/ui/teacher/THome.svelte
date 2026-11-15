@@ -42,6 +42,9 @@
     const n = nextNo(c), Lp = packs.find((x) => x.no === n) ?? packs.find((x) => x.no > n) ?? null;
     return { p, c, L: Lp, now: p === pNow };
   });
+  // 📅 시간표 켜짐 = 추천(지금 · 다음 교시)을 기본 선택으로 채워 둠 · 반 · 차시 칩으로 바꿀 수 있음 (📜 2026-11-15 「시간표 선택해도 수동으로 열 수 있게」)
+  let prefilled = false;
+  $effect(() => { const r = rec; if (prefilled || !r) return; prefilled = true; if (!cls) cls = r.c; if (!lessonId && r.L) lessonId = r.L.id; });
   const L = $derived(packs.find((p) => p.id === lessonId) ?? null);
   const last = $derived(cls ? lastClass(S, cls) : null);
   const md = (t: number) => { const x = kst(t); return `${x.m}/${x.d}`; };
@@ -74,7 +77,9 @@
         </button>
       {/each}
     </div>
-    {#if rec}<button type="button" class="rec" data-k="rec" onclick={() => { cls = rec.c; if (rec.L) lessonId = rec.L.id; }}>🕘 {rec.now ? '지금' : '다음'} {rec.p}교시 · <b>{rec.c}반</b> · {rec.L ? `${rec.L.no}차시` : '다음 차시 없음'} <small>고르기 ›</small></button>{/if}
+    {#if rec}<button type="button" class="rec" data-k="rec" disabled={!rec.L || !!resume} onclick={() => { if (rec.L && !resume) onopen(rec.c, rec.L); }}>📅 {rec.now ? '지금' : '다음'} {rec.p}교시 = <b>{rec.c}반</b> · {rec.L ? `${rec.L.no}차시` : '다음 차시 없음'} <small>{rec.L ? '바로 열기 ›' : ''}</small></button>{/if}
+    <span class="lab sub">또는 반 직접 고르기 (시간표 밖 · 다른 반도)</span>
+    <div class="grid4" role="group" aria-label="반" data-k="cls-manual">{#each CLASSES as c (c)}<button type="button" class="pk" class:on={cls === c} aria-pressed={cls === c} data-cls={c} onclick={() => (cls = c)}><b>{c}{isBeta(S, c) ? ' 🧪' : ''}</b></button>{/each}</div>
     <p class="hint">{#if cls}{cls}반 마지막 수업 · {#if last}<b>{last.no}차시</b> ({md(last.at)} · {last.done ? '끝까지' : '이어서 남음'}){:else}아직 없음{/if}{:else}칸을 눌러 반을 골라요{/if}</p>
   </div>
   {:else}
@@ -155,4 +160,5 @@
   .sub2 { display: flex; gap: var(--s2); }
   .sub2 .chipbtn { flex: 1; display: flex; align-items: center; justify-content: center; text-decoration: none; height: 40px; }
   .sub2 .chipbtn:disabled { opacity: 0.4; }
+  .lab.sub { display: block; margin-top: var(--s3); font-size: 13px; color: var(--text-2); }
 </style>

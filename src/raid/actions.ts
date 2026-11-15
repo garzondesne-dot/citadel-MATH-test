@@ -4,7 +4,7 @@ import { rulesOf } from '../model/profiles';
 import { BOSS_ID, battleNow, bossState, chainRecord, gameNow, held, isChain, isEnd, isLobby, nextIdx, plainRecord, PRAC_MAX, pracUsed, solveLock, stepIdx, stepOf, stopOf, healsGiven, healsReceived } from './raid';
 import { answerOf, bossRecord, cleared, perfStreak, petrify, stone, ultUsed, unlocksOf, V4 } from './raid';
 import { activeNow, cpPatch } from './combo';
-import { periodEnd } from '../school/bells';
+import { classPeriodEnd } from '../school/bells';
 import { feat } from '../school/features.svelte';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
@@ -29,7 +29,7 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
  *  입장 → 첫 단계(수업 시작) 때 마감 시각을 잡음: 방에 limit 가 있으면 그 교시 끝(교시 밖이면 지금 + 50분) — 정식 go() · 📅 시간표 스위치 끔(기본) = 늘 지금 + 50분 */
 function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
   const t = S.now(), st = R.state;
-  const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? periodEnd(t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
+  const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? classPeriodEnd(S.get<Record<string, Record<string, string>>>('school/sched') || {}, String(R.meta.cls || ''), t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
   S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
 }
 export function nextStep(S: Store, L: LessonPack, code: string): void {
