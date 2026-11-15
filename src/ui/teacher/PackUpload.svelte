@@ -235,7 +235,7 @@
       <div class="chips2" role="tablist">{#each cres.pack.rooms as r (r.id)}<button type="button" role="tab" class:on={cpick === r.id} aria-selected={cpick === r.id} onclick={() => { cpick = r.id; cver = 0; }}>{r.boss ? '👑 ' : ''}{r.id}</button>{/each}</div>
       {#if croom}<div class="chips2 vers" role="tablist" aria-label="판">{#each croom.vers as _v, k (k)}<button type="button" role="tab" class:on={cver === k} aria-selected={cver === k} onclick={() => (cver = k)}>{k ? `재도전 ${k}` : '첫 판'}</button>{/each}</div>
       <p class="msum">{croom.title} · {croom.no}차시부터{croom.chain ? ' · ⚔ 소레이드' : ''}{croom.photo ? ' · 📷 서술형(답 확인만)' : ''}</p>
-      <div class="prev" data-k="packprev">{#each croom.vers[cver] ?? [] as q, i (`${cpick}|${cver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>{/if}
+      <div class="prev" data-k="packprev">{#each croom.vers[cver] ?? [] as q, i (`${cpick}|${cver}|${i}`)}<div class="pq qpaper"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>{/if}
     {/if}
     {#if saved}<p class="ok" role="status">{saved}</p>{/if}{#if failed}<p class="fail" role="alert">{failed}</p>{/if}
   </div>
@@ -275,7 +275,7 @@
           <!-- svelte-ignore a11y_media_has_caption -->
           {#if P.videos?.[pick]}<video src={P.videos[pick]} controls preload="metadata" playsinline data-k="packvid"></video>{/if}
         </div>{/if}
-        <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
+        <div class="prev" data-k="packprev">{#each shown as q, i (`${pick}|${ver}|${i}`)}<div class="pq qpaper"><QItem {q} {i} value={answerOf(q)} disabled onchange={() => {}} />{#if q.type === 'choice' || q.type === 'multi'}<p class="sol" data-k="ansno">정답 = 보기 {(q.type === 'choice' ? [q.answerIndex] : q.answer).map((k) => `${k}번(${(q.type === 'choice' ? q.choices : q.options)[k]})`).join(' · ')}</p>{/if}{#if q.solution}<p class="sol">💡 {q.solution}</p>{/if}</div>{/each}</div>
       {/if}
     {/if}
     {#if vidNote}<p class="msum" role="status" data-k="vidnote">{vidNote}</p>{/if}

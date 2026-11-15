@@ -342,7 +342,7 @@
       <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={step.id} alt="{short(step)} 개념">{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {#if nextMon}
         {@const qs = qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id)}
-        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+        <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg qpaper"><PrepImg zoom={false} {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {/if}
     </div>
   {:else if view === 'end'}
@@ -363,7 +363,7 @@
   <!-- 덮개: 🔴 집중 · 🏕 쉼터 · 📄 문제 · 🎬 영상 · 👑 문 닫기 · 🎁 선물 -->
   {#if R?.state.sheet && sheetQs.length}
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
-    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
+    <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg qpaper"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
   {#if R && step && ccOpen(R, step, now)}<div class="ccband" data-k="tv-cc" role="status">✔ 개념 체크 · 준비 완료 <b>{ccStats(R, step).n}</b> / {ids.length}</div>{/if}<!-- ✔ 개념 체크 (📜 2026-11-15): TV 는 낸 수만 · 맞힘 · 오답은 리모컨 -->
   {#if tvRev}
@@ -454,7 +454,7 @@
       </div>
     </div>
   {/if}
-  {#if themeOpen}<div class="thov" role="dialog" aria-label="TV 테마"><div class="thbox"><div class="thh"><b>🎨 교실 TV 테마</b><small>이 TV 에만 · 교사 폰과 따로</small><button type="button" aria-label="닫기" onclick={() => (themeOpen = false)}>✕</button></div><ThemePicker now={tvTheme} feats={null} onpick={pickTv} /></div></div>{/if}
+  {#if themeOpen}<div class="thov" role="dialog" aria-label="TV 테마"><div class="thbox"><div class="thh"><b>🎨 교실 TV 테마</b><small>이 TV 에만 · 교사 폰과 따로</small><button type="button" aria-label="닫기" onclick={() => (themeOpen = false)}>✕</button></div><ThemePicker now={tvTheme} feats={null} onpick={pickTv} paper /></div></div>{/if}
 
   {#if tvSheet}<div class="heroov" data-k="tv-sheet"><div class="hk" style:transform="translateZ(0) scale({hk})">
     {#if tvSheet === 'anvil'}<Anvil me={M.me} save={M.save} who="me" onclose={() => (tvSheet = '')} />
@@ -557,6 +557,7 @@
   .pimg { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.4cqh; }
   .pimg { background: #fff; border-radius: 1cqh; } .pimg :global(.pi.fill) { width: 100%; height: 100%; } /* 🐞 2026-11-15 그림 전체가 칸 안에(PrepImg fill = contain · 아주 긴 칸만 스크롤) */ /* 🐞 2026-11-14 「좌우 전부 차지 · 하얀 배경」: 폭 가득 · 위에서부터 · 넘치면 「↗ 누르면 크게」(카드가 커짐) */
   .simg { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; gap: 1.4cqh; overflow: hidden; }
+  :global(:root[data-qpaper]) .pimg.qpaper, :global(:root[data-qpaper]) .simg.qpaper { padding: 2cqh 1.6cqw; border-radius: 1cqh; } /* 📜 2026-11-15 양피지 기본 켬: 선생님 쪽 문제 = 학생 문제 카드와 같은 양피지 */
   .simg :global(.pi.fill) { width: 100%; height: 100%; } /* 🐞 2026-11-15 📄 문제 창도 칸 안에 전체 · 아주 긴 칸만 스크롤(PrepImg fill) */
   .zm { position: absolute; right: 1.4cqw; bottom: 1.4cqh; font-style: normal; font-size: var(--tv-small); color: #7a6850; border: 1px solid #d8cdb8; border-radius: 99px; padding: 0.2cqh 0.8cqw; background: #fffdf8; }
   /* 📺 시안: 개념 = 제목 + 회색 수식 상자 + 요약 한 줄 · 문제 = 공통 조건 위에 한 번 + (1)~(n) 짧게 */
