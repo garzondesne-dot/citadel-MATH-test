@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { b64u, encrypt, ub64, vapidAuth } from '../tools/relay/push.js';
 // @ts-expect-error 순수 JS 도구
 import { run } from '../tools/relay/worker.js';
-import { generateKeyPairSync } from 'node:crypto';
 
 const te = new TextEncoder();
 type B = Uint8Array<ArrayBuffer>;
@@ -51,7 +50,6 @@ describe('🔔 무료 중계', () => {
     expect(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, v.verifyKey, b64u(s!), te.encode(`${a}.${b}`))).toBe(true);
   });
   it('한 번 돌리기: 첫 번 = 기준만 · 새 사진 → 켠 교사에게만 · 끝난 주소(410) 지움 · 옛 정식 서버면 멈춤', async () => {
-    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } });
     const v = await vapidPair(), ua = await uaKeys();
     const sub = (e: string) => ({ endpoint: e, keys: { p256dh: ub64(ua.pub), auth: ub64(ua.auth) } });
     const db: Record<string, unknown> = {
@@ -62,18 +60,18 @@ describe('🔔 무료 중계', () => {
     const doFetch = vi.fn(async (url: string, init?: { method?: string; body?: unknown }) => {
       if (url.startsWith('https://push.example/')) { calls.push(url); expect(await decrypt(init!.body as Uint8Array, ua)).toContain('사진 확인'); return new Response(null, { status: url.endsWith('gone') ? 410 : 201 }); }
       if (url.includes('version.json')) return Response.json({ build: 'b300' });
-      const p = url.replace('https://db.test/', '').replace('.json', '');
+      if (url.includes('signInWithPassword')) return Response.json({ idToken: 'idt' });
+      expect(url).toContain('auth=idt');
+      const p = url.replace('https://db.test/', '').replace(/\.json.*$/, '');
       if (init?.method) { writes.push([init.method, p]); if (p === 'relay/seen') db['relay/seen'] = JSON.parse(String(init.body)); return new Response('null'); }
       return Response.json(db[p] ?? null);
     });
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ access_token: 'tok' })));
-    const env = { DB_URL: 'https://db.test', SITE: 'https://site.test/', SA_JSON: JSON.stringify({ client_email: 'x@y', private_key: privateKey }), VAPID_PUBLIC: v.publicKey, VAPID_PRIVATE: v.privateKey, VAPID_SUBJECT: v.subject };
+    const env = { DB_URL: 'https://db.test', SITE: 'https://site.test/', API_KEY: 'k', RELAY_EMAIL: 'relay@x', RELAY_PASSWORD: 'p', VAPID_PUBLIC: v.publicKey, VAPID_PRIVATE: v.privateKey, VAPID_SUBJECT: v.subject };
     expect(await run(env, { doFetch })).toEqual({ notes: 0, sent: 0, gone: 0 }); // 첫 번
     db.photo = { '1-3': { 2: { k: { a: { status: 'check' } } } } };
     expect(await run(env, { doFetch })).toEqual({ notes: 1, sent: 1, gone: 1 });
     expect(calls.sort()).toEqual(['https://push.example/gone', 'https://push.example/ok']);
     expect(writes).toContainEqual(['DELETE', 'teacherPush/t1/b']);
     await expect(run({ ...env, DB_URL: 'https://citadel-math-default-rtdb.firebaseio.com' }, { doFetch })).rejects.toThrow('멈춤');
-    vi.unstubAllGlobals();
   });
 });
