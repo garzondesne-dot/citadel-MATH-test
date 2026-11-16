@@ -364,7 +364,7 @@
   {:else if view === 'end'}
     <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>
       <!-- 💬 마지막 한마디 말풍선 (정식 hall.js 마무리 · 거른 말 · 선생님이 숨긴 말 = 안 보임) -->
-      {#if tvWords.length}<div class="wbubs" data-k="tv-words">{#each tvWords as w (w.u)}<span class="wb"><em>{w.t}</em><small>{nameOf(w.u)}</small></span>{/each}</div>{:else}<p class="wwait">💬 학생 폰에서 마지막 한마디를 남겨요</p>{/if}</div>
+      {#if tvWords.length}<div class="wbubs" data-k="tv-words">{#each tvWords as w (w.u)}<span class="wb"><em style="font-family: var(--font-plain)">{w.t}</em><small>{nameOf(w.u)}</small></span>{/each}</div>{:else}<p class="wwait">💬 학생 폰에서 마지막 한마디를 남겨요</p>{/if}</div>
   {:else if step && R}
     <!-- ⚔ 전투: 몬스터 + 머리 위 체력 · 아래 용사 이름표 -->
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->

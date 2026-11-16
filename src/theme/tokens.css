@@ -1,9 +1,12 @@
+@font-face { font-family: 'Dungeon Icons'; src: url('/fonts/dungeon-icons-v1.woff') format('woff'); font-display: block; unicode-range: U+23F0, U+23F1, U+23F3, U+23F8, U+2692, U+2694, U+26A0, U+26A1, U+26D3, U+2702, U+270B, U+270D, U+270F, U+2728, U+2B50, U+E101, U+E102, U+E103, U+1F31F, U+1F331, U+1F381, U+1F389, U+1F392, U+1F3A8, U+1F3AC, U+1F3C5, U+1F3C6, U+1F41E, U+1F440, U+1F451, U+1F48E, U+1F49A, U+1F4A1, U+1F4A4, U+1F4A5, U+1F4A7, U+1F4AC, U+1F4BE, U+1F4C4, U+1F4C5, U+1F4C8, U+1F4CA, U+1F4DC, U+1F4DD, U+1F4E3, U+1F4E4, U+1F4E6, U+1F4F7, U+1F4F8, U+1F501, U+1F504, U+1F50A, U+1F50D, U+1F50E, U+1F510, U+1F511, U+1F512, U+1F513, U+1F514, U+1F525, U+1F5BC, U+1F5FF, U+1F64B, U+1F6E1, U+1F91D, U+1F9D9, U+1F9EA; }
 /* 🎨 디자인 토큰 (스킬 ui-senior 2절 · 2-1절 = 원본 · 2026-11-12 선생님 컨펌 금빛 던전)
    테마 = 이 묶음만 바꿔 끼움 · 의미 색(맞음 · 틀림 · 💎 · 📜 · 체력)은 모든 테마 같음 (#144 테마 11개 · 고르기 = theme.ts) */
 :root {
   /* 공통 (테마와 상관없음) */
   --ok: #4cc38a; --bad: #f0605d; --gem: #6cc6ff; --scroll: #c79bff; --hp: #e5484d;
-  --font: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
+  /* 🎨 (📜 2026-11-17 #4 「앱 이모지 → 픽셀 아이콘 · 전부다」): 'Dungeon Icons' = 픽셀 아이콘 색 글꼴(그 이모지 글자만 · unicode-range) · 그림 없는 이모지 = 원래 그대로 · 학생이 쓴 글 = --font-plain */
+  --font: 'Dungeon Icons', 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
+  --font-plain: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
   --r-sm: 8px; --r: 12px; --r-lg: 20px;
   --tap: 48px; --bar-top: 56px; --bar-bottom: 72px;

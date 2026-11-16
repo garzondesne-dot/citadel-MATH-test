@@ -276,7 +276,7 @@
       <div class="bcard words" data-k="last-words">
         <span class="lab acc">💬 마지막 한마디</span>
         {#if myWord && !wedit}<p class="said">「{myWord.t}」</p>{#if (myWord.n || 1) < 2}<button type="button" class="wedit" onclick={() => { wedit = true; wtext = myWord?.t ?? ''; }}>✏ 한 번 고치기</button>{:else}<small class="muted">고치기를 다 썼어요</small>{/if}
-        {:else}<div class="wrow"><input type="text" maxlength="20" bind:value={wtext} placeholder="오늘 수업 한마디 (20자)" aria-label="마지막 한마디" /><button type="button" class="wsend" disabled={!wtext.trim()} onclick={saveWord}>남기기</button></div><small class="muted">{wtext.length}/20 · 교실 TV 말풍선으로 보여요</small>{/if}
+        {:else}<div class="wrow"><input type="text" maxlength="20" style="font-family: var(--font-plain)" bind:value={wtext} placeholder="오늘 수업 한마디 (20자)" aria-label="마지막 한마디" /><button type="button" class="wsend" disabled={!wtext.trim()} onclick={saveWord}>남기기</button></div><small class="muted">{wtext.length}/20 · 교실 TV 말풍선으로 보여요</small>{/if}
         {#if werr}<p class="werr" role="alert">{werr}</p>{/if}
       </div>
     {/if}
@@ -398,7 +398,7 @@
   @keyframes warnPulse { 50% { background: #e0241a; } }
   .fbody { margin-top: 16vh; max-width: 90%; padding: 14px 18px; border: 2px solid #ff5a4a; border-radius: var(--r); background: rgba(26, 22, 18, 0.92); color: #fff; text-align: center; }
   .fstep { margin: 0 0 6px; font-size: 21px; font-weight: 800; color: var(--accent); } .fsay { margin: 0 0 8px; font-size: 16px; line-height: 1.5; } .fm { margin: 0; font-size: 14px; color: #c9ccd3; }
-  .words { display: flex; flex-direction: column; gap: 8px; } .words .said { margin: 0; font-size: 17px; font-weight: 700; }
+  .words { display: flex; flex-direction: column; gap: 8px; } .words .said { margin: 0; font-size: 17px; font-weight: 700; font-family: var(--font-plain); } /* 🎨 학생이 쓴 글 속 이모지 = 그대로 (11/17 #4) */
   .wrow { display: flex; gap: 8px; } .wrow input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
   .wsend, .wedit { flex: none; min-height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--accent); color: var(--on-accent, #1a1400); font: 700 15px var(--font); } .wedit { background: var(--surface-2); color: var(--text); align-self: flex-start; }
   .wsend:disabled { opacity: 0.45; } .werr { margin: 0; color: var(--bad); font-size: 14px; }
