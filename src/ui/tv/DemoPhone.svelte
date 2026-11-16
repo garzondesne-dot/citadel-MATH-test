@@ -25,7 +25,7 @@
   // 🐞 (📜 2026-11-15 「풀이 칸과 테두리 사이 공백 · 테두리까지 맞춰 늘려」): 폭도 칸에 맞춤 = 배율 k 는 그대로(글자 크기 그대로) · 폰 폭 = 칸 폭 ÷ k (390 아래로는 안 줄임)
   let PWv = $state(PW);
   $effect(() => { const w = boxW && k ? Math.max(PW, Math.floor(boxW / k)) : PW; if (Math.abs(w - untrack(() => PWv)) > 3) PWv = w; }); // 3px 넘게 바뀔 때만 (폭 ↔ 내용 높이 ↔ 배율이 서로 쫓는 고리 막기)
-  $effect(() => { void tick; const el = scr; if (!el) return; const body = el.querySelector('section.body') as HTMLElement | null, act = el.querySelector('.act.dock') as HTMLElement | null; if (!body) return; const h = body.offsetTop + body.scrollHeight + 4; void act; /* 아래 단추 자리(spacer)는 body 안에 이미 있음 */ if (Math.abs(h - need) > 2) need = h; const q = el.querySelector('.q2, .qt') as HTMLElement | null; if (q) { const f = parseFloat(getComputedStyle(q).fontSize) || 15; if (f !== qfs) qfs = f; } });
+  $effect(() => { void tick; const el = scr; if (!el) return; const body = el.querySelector('section.body') as HTMLElement | null, act = el.querySelector('.act.dock') as HTMLElement | null; if (!body) return; const h = body.offsetTop + body.scrollHeight + 4; void act; /* 아래 단추 자리(spacer)는 body 안에 이미 있음 */ if (Math.abs(h - need) > 2 && Date.now() - fitAt < 1500) need = h; /* 📜 2026-11-16 선생님 「보기 단추 누르면 화면이 재조정 · 규격이 바뀜」 = 문제가 바뀐 뒤 1.5초만 맞추고 그다음엔 배율 고정 */ const q = el.querySelector('.q2, .qt') as HTMLElement | null; if (q) { const f = parseFloat(getComputedStyle(q).fontSize) || 15; if (f !== qfs) qfs = f; } });
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   // 판마다 다른 방 = 숫자가 바뀜 (seed = 방 코드) · 방을 먼저 만들고 나서 학생 화면을 띄움(접속 신호가 빈 방을 만들지 않게)
   //   실제 방 규칙 그대로(재도전 · 체력 기준 …) · 정찰만 끔 · 지금 단계로 바로
@@ -33,6 +33,9 @@
   let dcode = $state(untrack(() => mk(0)));
   const again = () => { round += 1; dcode = mk(round); };
   const D = $derived.by(() => { void tick; return S.get<Room>(roomPath(dcode)); });
+  // 📐 배율 맞춤 열쇠 = 판 · 단계 · 문항(소레이드 단계) — 바뀌면 다시 1.5초 맞춤
+  let fitKey = '', fitAt = Date.now();
+  $effect(() => { const D0 = D, k0 = `${dcode}|${D0?.state.step}|${JSON.stringify((D0?.state as { chainAt?: unknown } | undefined)?.chainAt ?? '')}`; if (k0 !== fitKey) { fitKey = k0; fitAt = Date.now(); } });
   let tick = $state(0); const iv = setInterval(() => tick++, 500); $effect(() => () => clearInterval(iv));
   // 💡 지금 문제의 정답 (학생 폰과 같은 숫자 · 같은 함수)
   const ans = $derived.by(() => {

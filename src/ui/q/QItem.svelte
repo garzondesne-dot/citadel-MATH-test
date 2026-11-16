@@ -65,7 +65,7 @@
   .no { color: var(--accent); }
   .was { font-size: var(--fs-small); color: var(--bad); font-weight: 700; }
   .box { display: inline-block; min-width: 2em; text-align: center; border: 2px solid var(--accent); border-radius: 6px; }
-  .ans { min-height: 46px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s2); padding: 0 14px; font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+  .ans { min-height: 46px; height: 46px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: var(--s2); padding: 0 14px; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* 📜 2026-11-16 「보기 누르면 규격이 바뀜」 = 답 줄 높이 고정(길면 … ) */
   .ans small { font-size: var(--fs-small); font-weight: 500; color: var(--text-2); flex: none; }
   .ans .ph { font-size: var(--fs-small); font-weight: 500; color: var(--text-3); }
   .all { background: #ffe066; color: #1b1408; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; border-radius: 4px; padding: 0 2px; }
