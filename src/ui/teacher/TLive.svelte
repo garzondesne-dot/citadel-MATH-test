@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { handsOf, lowerHand, reviewsOf } from '../../school/help';
+  import { handsOf, lowerHand, reviewStep } from '../../school/help';
   import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
   import { leftSteps, sendToReview, sentKey } from '../../school/sendReview';
   import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
@@ -106,10 +106,8 @@
   const ccIsOpen = $derived(!!R && ccOpen(R, step, now));
   const ccSt = $derived(R && step?.check && ccRan(R, step) ? ccStats(R, step) : null);
   // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
-  const revs = $derived(mid ? reviewsOf(L, mid) : []);
-  const revNow = $derived(R?.state.review && R.state.review.mid === mid ? R.state.review : null);
-  const revIdx = $derived(revNow ? revs.findIndex((x) => x.i === revNow.i && x.k === revNow.k) : -1);
-  function nextReview() { if (!mid) return; const n = revIdx + 1; setReview(S, code, n < revs.length ? { mid, i: revs[n]!.i, k: revs[n]!.k } : null); }
+  const rv = $derived(reviewStep(L, R, mid)); // 종합실 막대와 같은 함수 (🪞 11/17 #13)
+  function nextReview() { if (!mid) return; setReview(S, code, rv.next); }
   const help = $derived([...new Set([...stuck.filter((x) => x.lock).map((x) => x.u), ...hands])]);
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
@@ -283,7 +281,7 @@
       {#if leftS.length}<button type="button" data-k="send-open" onclick={() => (sheet = 'send')}><i>🎯</i>복습으로</button>{/if}
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
       {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
-      {#if revs.length && feat('review')}<button type="button" class:on={!!revNow} aria-pressed={!!revNow} data-k="review" onclick={nextReview}><i>🔎</i>{revNow ? `${revIdx + 1}/${revs.length}` : '풀이'}</button>{/if}
+      {#if rv.revs.length && feat('review')}<button type="button" class:on={!!rv.cur} aria-pressed={!!rv.cur} data-k="review" onclick={nextReview}><i>🔎</i>{rv.label}</button>{/if}
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>

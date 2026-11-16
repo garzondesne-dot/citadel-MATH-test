@@ -41,3 +41,11 @@ export function reviewsOf(L: LessonPack, mid: string): { i: number; k: number; r
   const mon = [...kinds.flatMap((kd) => m.reviewsBy?.[kd] || []), ...(m.reviews || [])];
   return [...mon.map((r, k) => ({ i: -1, k, r })), ...qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })))];
 }
+/** 🔎 리모컨 「풀이」 단추 하나 = 교사 폰 · 종합실 막대가 같이 씀 (📜 2026-11-17 #13 🪞) — 지금 띄운 장 · 몇째 · 누르면 갈 다음(없으면 내리기 null) */
+export function reviewStep(L: LessonPack, R: Room | null | undefined, mid: string | null) {
+  const revs = mid ? reviewsOf(L, mid) : [];
+  const cur = R?.state.review && R.state.review.mid === mid ? R.state.review : null;
+  const idx = cur ? revs.findIndex((x) => x.i === cur.i && x.k === cur.k) : -1;
+  const n = revs[idx + 1];
+  return { revs, cur, idx, label: cur ? `${idx + 1}/${revs.length}` : '풀이', next: mid && n ? { mid, i: n.i, k: n.k } : null };
+}

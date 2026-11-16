@@ -23,7 +23,11 @@ const C1T = C1.title.split(' · ')[0];
   for (let i = 0; i < 6 && !(await s.$('[data-k="talk"]')) ; i++) await go();
   for (let i = 0; i < 4 && !(await s.textContent('[data-k="talk"]').catch(() => '') || '').includes(C1T) && !/x^/.test((await s.textContent('[data-k="talk"]').catch(() => '')) || ''); i++) await go();
   ok(`${C1.id} 개념 단계`, ((await s.textContent('[data-k="talk"]').catch(() => '')) || '').includes(C1T));
-  await t.evaluate((a) => { const n = Date.now(); window.__dbSet(`rooms/${a.R}/state/cc`, { id: a.id, at: n, end: n + 30000 }); }, { R, id: C1.id }); await s.waitForTimeout(1200);
+  // 📺 종합실 막대 「✔ 체크」 (📜 2026-11-17 #13) = 교사 폰과 같은 함수로 엶
+  await t.bringToFront(); const dcc = await t.$('[data-k="dock-cc"]'); ok('📺 종합실 막대 ✔ 체크 단추', !!dcc && /체크/.test(await dcc.textContent()));
+  if (dcc) await dcc.click(); else await t.evaluate((a) => { const n = Date.now(); window.__dbSet(`rooms/${a.R}/state/cc`, { id: a.id, at: n, end: n + 30000 }); }, { R, id: C1.id });
+  await t.waitForTimeout(400); ok('📺 누르면 「닫기 n」', /닫기\s*\d+/.test((await t.textContent('[data-k="dock-cc"]').catch(() => '')) || ''));
+  await s.bringToFront(); await s.waitForTimeout(1200);
   ok('✔ 학생 폰 = 개념 체크 카드', !!(await s.$('[data-k="cc"]')));
   await s.screenshot({ path: `${SHOTS}/ad${NO}-cc-0.png` });
   await s.locator('[data-k="cc"] button').nth(WRONG).click(); await s.waitForTimeout(600); // 틀린 보기
@@ -48,7 +52,9 @@ const C1T = C1.title.split(' · ')[0];
   await s.click('[data-k="help-hand"]'); await s.waitForTimeout(300); ok('✋ 손들기', /손을 들었어요/.test(await s.textContent('[data-k="help"]')));
   await s.screenshot({ path: `${SHOTS}/ad${NO}-help-3.png` });
   await s.keyboard.press('Escape'); const x = await s.$('.sheet .x'); if (x) await x.click().catch(() => {}); await s.waitForTimeout(300);
-  await t.evaluate((R) => window.__dbSet(`rooms/${R}/state/review`, { mid: 'm1', i: -1, k: 0 }), R); await t.bringToFront(); await t.waitForTimeout(800);
+  await t.bringToFront(); const drv = await t.$('[data-k="dock-review"]'); ok('📺 종합실 막대 🔎 풀이 단추', !!drv && /풀이/.test(await drv.textContent()));
+  if (drv) await drv.click(); else await t.evaluate((R) => window.__dbSet(`rooms/${R}/state/review`, { mid: 'm1', i: -1, k: 0 }), R);
+  await t.waitForTimeout(800); ok('📺 누르면 「1/n」', /1\/\d+/.test((await t.textContent('[data-k="dock-review"]').catch(() => '')) || ''));
   const rv = await t.evaluate(() => { const c = document.querySelector('[data-k="tv-review"]'); return c ? { lines: c.querySelectorAll('.rl li').length, fo: [...c.querySelectorAll('.rl li')].findIndex((l) => l.classList.contains('fo')), tag: !!c.querySelector('.rtag') } : null; });
   ok(`🔎 TV 양피지 · ${FO + 1}번째 줄 강조 · 꼬리표 ${REV.wrong ? '있음' : '없음'}`, !!rv && rv.fo === FO && rv.tag === !!REV.wrong, JSON.stringify(rv));
   await t.screenshot({ path: `${SHOTS}/ad${NO}-review-tv.png` });

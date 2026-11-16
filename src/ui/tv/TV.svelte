@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { ccOpen, ccStats } from '../../school/cc';
+  import { ccOpen, ccStats, closeCC, openCC } from '../../school/cc';
+  import { reviewStep } from '../../school/help';
   import { reviewsOf } from '../../school/help';
   import { sentOf, isSent } from '../../school/sendReview';
   import { siteUrl } from '../../channel';
@@ -9,7 +10,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setSheet, setVideo } from '../../raid/actions';
+  import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
@@ -90,6 +91,7 @@
   const step = $derived(R ? stepOf(L, R) : null);
   const i = $derived(R ? stepIdx(R) : -1);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
+  const ccOnTv = $derived(!!R && ccOpen(R, step, now)), rvTv = $derived(reviewStep(L, R, mid)); // ✔ · 🔎 막대 단추 (교사 폰과 같은 함수)
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : null);
   const bhp = $derived(R && L.boss ? bossHp(L, R, now) : null);
@@ -447,6 +449,9 @@
       <button type="button" class="t" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}>📄<small>문제</small></button>
       <button type="button" class="t" class:on={demo} disabled={!mid && step?.kind !== 'boss'} onclick={() => (demo = !demo)}>🎮<small>시연</small></button>
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>
+      <!-- ✔ · 🔎 (📜 2026-11-17 #13 「종합실 리모컨에 체크랑 풀이」): 교사 폰 리모컨과 같은 함수 · 같은 조건 · 같은 글 (🪞) -->
+      {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" onclick={() => (ccOnTv ? closeCC(S, code, R) : openCC(S, code, step!.id))}>✔<small>{ccOnTv ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : '체크'}</small></button>{/if}
+      {#if rvTv.revs.length && feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" onclick={() => mid && setReview(S, code, rvTv.next)}>🔎<small>{rvTv.label}</small></button>{/if}
     {/if}
     {#if R && !R.state.closed}
       <span class="sep"></span>
