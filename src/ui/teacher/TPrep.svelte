@@ -5,16 +5,15 @@
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
-  import { CLASSES, isBeta, lastClass, lastTest, week } from '../../school/school';
-  import { DOW, kst, PERIODS } from '../../school/bells';
+  import { CLASSES, lastClass, lastTest } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
-  import SchedEdit from './SchedEdit.svelte';
   import { feat } from '../../school/features.svelte';
   import { LESSON_LIST } from '../../school/dash';
   import PackUpload from './PackUpload.svelte';
   import AddonPacks from './AddonPacks.svelte';
   import PdfFill from './PdfFill.svelte';
   import VidList from './VidList.svelte';
+  import StuTry from './StuTry.svelte';
   import { prepImg } from '../../school/prep';
   import { UPLOADED } from '../../engine/packs';
 
@@ -54,8 +53,8 @@
   $effect(() => { const Lc = L; void imgVer; hasImg = {}; if (!Lc) return; for (const st of Lc.steps.filter((x) => !x.later)) { const c = st.img ?? st.id; void prepImg(S, Lc, c).then((u) => { if (L === Lc) hasImg = { ...hasImg, [st.id]: u }; }); } });
   const nv = $derived.by(() => { void imgVer; return L ? new Set(Object.values(L.videos || {})).size : 0; }); // 저장 뒤 다시 셈(imgVer)
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
-  let seg = $state<'lesson' | 'week' | 'packs' | 'tools'>('lesson');
-  let ver = $state(0);
+  let seg = $state<'lesson' | 'packs'>('lesson'); // 📜 2026-11-16 준비 탭 2개 (시간표 = 👥 반 · 시간표 · 도구 = 📦 팩 · 도구 안)
+  let ver = $state(0), tryOpen = $state(false); // 🎒 학생으로 해 보기
   type Prep = { pct: number; retries: number; think: number; solve: number };
   const base = $derived<Prep>({ pct: L?.defaultPct ?? 90, retries: PROFILES.class.retries, think: PROFILES.class.thinkSec, solve: PROFILES.class.scoutSec });
   const prep = $derived.by((): Prep => { void ver; return { ...base, ...(S.get<Partial<Prep>>(`school/prep/${lid}`) || {}) }; });
@@ -63,16 +62,12 @@
   const STEP: Record<keyof Prep, [number, number, number, string, string]> = { pct: [5, 10, 100, '%', '체력 기준'], retries: [1, 0, 5, '번', '재도전'], think: [1, 0, 30, '초', '생각 시간'], solve: [10, 0, 300, '초', '정찰'] };
   // 🐞 (📜 2026-11-15 「정찰 50초로 하면 실제로 60」 · 원인 = 준비 값은 수업을 열 때만 방에 옮겨 적힘 → 이미 열린 수업은 옛 값): 이 차시 수업이 열려 있으면 그 방에도 바로
   const bump = (k: keyof Prep, d: number) => { const [st, lo, hi] = STEP[k], v = Math.max(lo, Math.min(hi, prep[k] + d * st)); S.set(`school/prep/${lid}/${k}`, v); const lv = S.get<{ code?: string; lesson?: string }>('school/live'); if (lv?.code && lv.lesson === lid) S.set(`rooms/${lv.code}/meta/${k}`, v); ver++; };
-  // 시간표 · 진도
-  const W = $derived.by(() => { void ver; return week(S); });
-  const prog = (c: string) => { void ver; return Number(S.get<number>(`school/prog/${c}`)) || (L?.no ?? 6) + 1; };
-  const nextSlot = (c: string) => { const k = kst(now); for (let d = 0; d < 7; d++) { const dow = ((k.dow - 1 + d) % 7) + 1; for (const p of PERIODS[dow] || []) if (W[String(dow)]?.[String(p)] === c) return `${DOW[dow]} ${p}교시`; } return '시간표 없음'; };
 </script>
 
 <div class="tbar"><div class="t">준비</div></div>
 <div class="fixed">
   {#if packs.length && seg !== 'packs'}{@const cur = opts.find((o) => o.id === lid)}<button type="button" class="lsel lbtn" data-k="lpick-go" aria-haspopup="dialog" onclick={() => (pickOpen = true)}><span class="sr">차시</span><b>{cur ? `${cur.no}차시` : '차시'}</b><span class="lt">{cur ? `${cur.title}${upTag(cur.id, cur.no)}${cur.ready ? '' : ' (준비 안 됨)'}` : '고르기'}</span><i aria-hidden="true">▾</i></button>{/if}
-  <div class="seg3" role="tablist">{#each (feat('schedule') ? [['lesson', '차시 준비'], ['week', '시간표'], ['packs', '📦 팩'], ['tools', '도구']] as const : [['lesson', '차시 준비'], ['packs', '📦 팩'], ['tools', '도구']] as const) as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
+  <div class="seg3" role="tablist">{#each [['lesson', '📚 차시 준비'], ['packs', '📦 팩 · 도구']] as const as [k, t] (k)}<button type="button" role="tab" class:on={seg === k} aria-selected={seg === k} onclick={() => (seg = k)}>{t}</button>{/each}</div>
 </div>
 <div class="mid scroll">
   {#if seg === 'lesson' && !packs.length}
@@ -90,22 +85,12 @@
     <button type="button" class="item" data-k="pack-dl" disabled={expBusy} onclick={() => L && exportZip(L)}><span class="ic">📦</span><span class="tx"><b>이 차시 팩 내려받기 (zip)</b><small>{expNote || '팩 JSON + 칸 그림 + 영상 · 「차시 팩 올리기」에 그대로 다시 올릴 수 있어요'}</small></span></button>
     <p class="lab" data-k="stepimgs">단계별 그림 {L.steps.filter((s) => !s.later && hasImg[s.id]).length} / {L.steps.filter((s) => !s.later).length}</p>
     <div class="steps">{#each L.steps.filter((s) => !s.later) as s (s.id)}<div class="st" class:has={!!hasImg[s.id]}>{#if hasImg[s.id]}<img class="th" src={hasImg[s.id]} alt="" />{:else}<i>⚠</i>{/if}<b>{s.title.split(' · ')[0]}</b><small>{s.title.split(' · ').slice(1).join(' · ') || (s.kind === 'boss' ? `${L.boss?.items ?? 0}문항` : '')}</small><em>{hasImg[s.id] ? '✔ 있음' : '넣기 ›'}</em></div>{/each}</div>
-  {:else if seg === 'week' && feat('schedule')}
-    <SchedEdit {S} />
-    <p class="lab">진도 맞추기 · 반마다 다음 차시</p>
-    <div class="list">
-      {#each CLASSES as c (c)}
-        <div class="pg"><b>{c}{isBeta(S, c) ? ' 🧪' : ''}</b><span>다음 {prog(c)}차시 · <small>{nextSlot(c)}</small></span>
-          <button type="button" aria-label="{c} 진도 당기기" onclick={() => { S.set(`school/prog/${c}`, Math.max(1, prog(c) - 1)); ver++; }}>−</button><button type="button" aria-label="{c} 진도 밀기" onclick={() => { S.set(`school/prog/${c}`, prog(c) + 1); ver++; }}>＋</button></div>
-      {/each}
-    </div>
   {:else if seg === 'packs'}
-    <AddonPacks {S} onup={() => (upOpen = true)} /><!-- 📦 팩 탭 (📜 2026-11-15 · 🏰 성채 층 = 한 줄 · 누르면 시트) -->
-  {:else}
-    <div class="list">
-      {#each [['📦', '차시 팩 올리기', '새 차시(v1.0) 파일 · 🏰 성채 팩도 같은 단추(kind 로 가름)'], ['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
-        {#if ic === '📦'}<button type="button" class="item" data-k="packup-go" onclick={() => (upOpen = true)}><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d}</small></span></button>
-        {:else}<button type="button" class="item" disabled><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d} · 준비 중</small></span></button>{/if}
+    <AddonPacks {S} onup={() => (upOpen = true)} /><!-- 📦 팩 · 도구 (📜 2026-11-16 · 📦 팩 올리기 하나 = 차시 · 🏰 성채 · 추가 팩 · 아래 = 옛 「도구」 탭) -->
+    <p class="lab">도구</p>
+    <div class="list" data-k="tools">
+      {#each [['📊', '엑셀로 차시 만들기', '선생님 본인용 문제 은행 · 미리보기에서 정답 확인 뒤 저장'], ['🗄', '지난 차시 정리', '백업 받고 서버에서 지우기 · 사용량 줄이기']] as [ic, t, d] (t)}
+        <button type="button" class="item" disabled><span class="ic">{ic}</span><span class="tx"><b>{t}</b><small>{d} · 준비 중</small></span></button>
       {/each}
     </div>
   {/if}
@@ -114,7 +99,8 @@
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 {#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
 {#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}
-{#if seg !== 'packs'}<div class="tact"><button type="button" class="btn" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 {L.no}차시 테스트 해 보기{:else}🧪 테스트 해 보기<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button></div>{/if}
+{#if seg !== 'packs'}<div class="tact two"><button type="button" class="btn" data-k="test-go" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 수업 테스트<small>{L.no}차시 · 교사 폰 + TV + 학생 폰</small>{:else}🧪 수업 테스트<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button><button type="button" class="btn2 try" data-k="try-go" disabled={!L} onclick={() => (tryOpen = true)}>🎒 학생으로 해 보기<small>폰 하나 · 가상 친구 4명</small></button></div>{/if}
+{#if tryOpen && L}<StuTry {L} onclose={() => (tryOpen = false)} />{/if}
 
 {#if edit}
   {@const k = edit}
@@ -126,6 +112,7 @@
 {/if}
 
 <style>
+  .tact.two .btn { font-size: 17px; } .tact.two .btn2.try { flex: 1; width: auto; height: 68px; border-radius: 16px; border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: 800 16px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; } .tact.two .btn2.try small { font: 600 12px var(--font); color: var(--text-2); } .tact.two .btn2.try:disabled { opacity: 0.4; } /* 🧪 · 🎒 나란히 (📜 2026-11-16 시안 ①) */
   .lbtn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); text-align: left; box-shadow: 0 3px 0 var(--surface); margin-bottom: 8px; }
   .lbtn:active { transform: translateY(2px); box-shadow: none; }
   .lbtn b { font: 800 17px var(--font); flex: none; } .lbtn .lt { flex: 1; min-width: 0; font: 600 14px var(--font); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lbtn i { font-style: normal; color: var(--text-3); }
@@ -144,9 +131,6 @@
   .st { box-sizing: border-box; width: 100%; }
   .st { display: grid; grid-template-columns: 22px 70px minmax(0, 1fr) auto; gap: 6px; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 10px; background: var(--surface); font-size: 13px; }
   .st i { font-style: normal; color: #f0a24a; } .st small { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .st em { font-style: normal; color: var(--text-3); font-size: 12px; }
-  .pg { display: grid; grid-template-columns: 60px minmax(0, 1fr) 44px 44px; gap: 6px; align-items: center; min-height: 48px; padding: 0 0 0 12px; border-radius: var(--r); background: var(--surface); font-size: 13.5px; }
-  .pg small { color: var(--text-2); }
-  .pg button { height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 18px var(--font); }
   .stp { display: grid; grid-template-columns: 64px 1fr 64px; gap: var(--s2); align-items: center; text-align: center; }
   .stp b { font-size: 28px; color: var(--accent); }
   .stp button { height: 56px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 24px var(--font); }
