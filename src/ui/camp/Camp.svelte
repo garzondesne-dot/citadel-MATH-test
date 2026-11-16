@@ -589,7 +589,7 @@
   .zone::before, .prop::before { content: ''; position: absolute; inset: -6px; }
   .gtoast.mail { border-color: var(--accent); }
   .gtoast { position: absolute; top: 60px; left: var(--s4); right: var(--s4); z-index: 7; margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); color: var(--text); font-weight: 700; text-align: center; }
-  .top { position: absolute; top: 0; left: 0; right: 0; z-index: 6; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
+  .top { position: absolute; top: 0; left: 0; right: 0; z-index: 9; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s4); }
   .ttl { color: #fff; font-size: var(--fs-title); text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.8); white-space: nowrap; flex: none; }
   .sp2 { flex: 1; }
   .gear { width: 40px; height: 40px; margin: 0 -4px 0 0; position: relative; border: 0; border-radius: 20px; background: rgba(8, 9, 12, 0.55); color: #fff; font-size: 18px; display: grid; place-items: center; }
@@ -678,6 +678,7 @@
   .bub::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #e3a92d; border-bottom: 0; }
   .zone .bub { bottom: auto; top: 0; transform: translate(-50%, -100%); animation-name: bobZ; }
   .zone[data-zone='gate'] .bub { left: 50%; top: 18%; }
+  .zone[data-zone='castle'] .bub { top: 42%; } /* 🐞 11/17: 성채 꼬리표가 그림 위로 떠서 위 막대 💎 · 📜 알약에 겹치던 것 → 그림 안쪽 */
   @keyframes bob { 50% { transform: translate(-50%, -4px); } }
   @keyframes bobZ { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, calc(-100% - 4px)); } }
   .spark { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff7c2; box-shadow: 0 0 8px 3px #ffd863; pointer-events: none; z-index: 6; animation: orbit 2.2s linear infinite; }
