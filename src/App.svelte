@@ -19,12 +19,10 @@
   import { bindMe } from './store/meSync';
   import { BUILD } from './build';
   import { BETA, TEST_ADDR, verName } from './channel';
-  import Hall from './ui/Hall.svelte';
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
   import Title from './ui/Title.svelte';
-  import AtkGallery from './ui/AtkGallery.svelte';
-  import TeacherApp from './ui/teacher/TeacherApp.svelte';
+  import { loadAtk, loadHall, loadTeacher } from './ui/lazy'; // 📦 교사 · TV · 갤러리 = 따로 받는 묶음 (main.ts 가 미리 받아 둠)
   import { pupil, saveLogin, savedLogin, type Live, type Pupil } from './school/school';
   import { meBound } from './store/meSync';
   import { liveValue } from './ui/room.svelte';
@@ -149,11 +147,11 @@
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
-    <Hall {S} L={lessonOf(q.get('room') ? code : '')} {code} {P} fixed={!!q.get('room')} />
+    {#await loadHall() then M}<M.default {S} L={lessonOf(q.get('room') ? code : '')} {code} {P} fixed={!!q.get('room')} />{/await}
   {:else if role === 'camp'}
     <Camp {S} L={lessonOf(code)} {code} />
   {:else if role === 'teacher'}
-    <TeacherApp {S} packs={TEST_ADDR && q.get('packs') === '0' ? [] : PACKS} />
+    {#await loadTeacher() then M}<M.default {S} packs={TEST_ADDR && q.get('packs') === '0' ? [] : PACKS} />{/await}
   {:else if role === 'student' && me}
     <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
   {:else if !role && login}
@@ -164,7 +162,7 @@
   {:else if role === 'fxbake' && TEST_ADDR}
     {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
   {:else if role === 'atk'}
-    <AtkGallery />
+    {#await loadAtk() then M}<M.default />{/await}
   {:else if role === 'dev' && TEST_ADDR}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>

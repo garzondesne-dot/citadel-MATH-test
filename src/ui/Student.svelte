@@ -49,7 +49,7 @@
   import { meBound } from '../store/meSync';
   import { shouldNudge } from '../school/idle';
   import { isSent } from '../school/sendReview';
-  import FunPhone from './rest/FunPhone.svelte';
+  import { loadFunPhone } from './lazy'; // 📦 쉼터 놀이 = 따로 받는 묶음 (화면이 뜬 뒤 미리 받아 둠 · 쉼터가 열릴 때 멈칫 없음)
   import { submitWho } from './submit.svelte';
   import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
   import { solvedN } from '../raid/raid';
@@ -339,7 +339,7 @@
   </Sheet>
 {/if}
 {#if paperOn() || cardOnly}<!-- 📝 제출 모드 · 🎮 시연 = 💎 · 선물 알림 없음 -->{:else if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
-{#if R && !R.state.closed && R.state.rest}<FunPhone {S} {R} {code} {uid} {now} />{/if}
+{#if R && !R.state.closed && R.state.rest}{#await loadFunPhone() then K}<K.default {S} {R} {code} {uid} {now} />{/await}{/if}
 {#if R && !R.state.closed && R.state.focus && !board}
   <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
   <div class="cover" role="status" aria-live="polite">

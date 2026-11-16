@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Dummy from '../dummy/Dummy.svelte';
+  import { loadBoard, loadCastle, loadDummy } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
@@ -30,13 +30,11 @@
   import { changePw, saveLogin, type Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
-  import Board from '../board/Board.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
   import { paperOn, submitWho } from '../submit.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
-  import Castle from '../castle/Castle.svelte';
   import { manualOf, bonusBase, castleState, floorName, progressOf, spanOf, withLegacy, type CastleRec } from '../../school/castle';
   import { visibleCastles } from '../../school/castles.svelte';
   import SurveySheet from './SurveySheet.svelte';
@@ -418,7 +416,7 @@
 
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
-  <Castle {S} {me} save={M.save} all={fromMe0} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />
+  {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'mail' && mbWho}
@@ -480,10 +478,10 @@
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'scare'}
   <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬) -->
-  <Dummy {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />
+  {#await loadDummy() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />{/await}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
-  <Board {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onclose={() => { sheet = null; boardJoin = ''; }} />
+  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} teacher={fromMe0} onreset={fromMe0 ? M.reset : undefined} />
 {:else if sheet}
