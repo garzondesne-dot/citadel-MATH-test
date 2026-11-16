@@ -92,7 +92,7 @@
   const headIn = (id: number): [number, number] => { const h = heroHead(id), n = heroNudge(id, 0); return [h[0] - n.dx, h[1] + n.dy]; };
 </script>
 
-<div class="edge" bind:this={edge} class:hit class:rage class:iced={ice} class:lift style:background-image="url({dungeonOf(theme)})" style:--lh={lift ? `${LH}px` : undefined} style:--hy={lift ? `${HY}px` : undefined} style:--my={lift ? `${MY}px` : undefined} style:--mh={lift ? `${MH}px` : undefined} style:--hx={HX ? `${HX}px` : undefined}>
+<div class="edge" data-scene bind:this={edge} class:hit class:rage class:iced={ice} class:lift style:background-image="url({dungeonOf(theme)})" style:--lh={lift ? `${LH}px` : undefined} style:--hy={lift ? `${HY}px` : undefined} style:--my={lift ? `${MY}px` : undefined} style:--mh={lift ? `${MH}px` : undefined} style:--hx={HX ? `${HX}px` : undefined}>
   <div class="top">
     <a class="back" href={backHref} aria-label="뒤로">‹</a>
     {#if onconcept}<button type="button" class="pill cpt" onclick={onconcept}>📘 이 문제의 개념</button>{/if}

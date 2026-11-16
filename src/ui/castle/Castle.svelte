@@ -188,7 +188,7 @@
 <div class="cs" role="dialog" aria-modal="true" aria-label="성채 던전" data-k="castle">
   <header class="bar">
     <button type="button" class="back" aria-label="뒤로" onclick={back}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
-    <b class="t">{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>
+    <b class="t" class:long={!res && title.length > 9}>{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>
     {#if me && !preview}<span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
     <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
   </header>
@@ -251,7 +251,9 @@
   .cs { position: fixed; inset: 0; z-index: 20; max-width: 430px; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s2); }
   .back { flex: none; width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text); display: grid; place-items: center; }
-  .t { flex: 1; min-width: 0; font-size: var(--fs-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 📜 2026-11-17 #17 「성채 층 제목 잘림」: 한 줄 … → 두 줄까지 (긴 층 이름 = 17px) */
+  .t { flex: 1; min-width: 0; font-size: var(--fs-title); line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; word-break: keep-all; }
+  .t.long { font-size: 17px; }
   .pill { flex: none; display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: var(--surface); font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pv2 { color: var(--accent); }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4) var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
