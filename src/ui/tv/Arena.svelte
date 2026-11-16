@@ -10,6 +10,7 @@
   import Sprite from '../Sprite.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import { atkClock, atkTrack, bossHp, monsterHp, isChain } from '../../raid/raid';
+  import { gaugeView } from '../battle/gauge';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
   import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
   import { deco } from '../fx/aura';
@@ -281,7 +282,7 @@
   let minSeen = ''; const CIRC = '①②③④⑤⑥⑦⑧';
   $effect(() => { const key = `${step?.id}`, d = mins.filter((m) => m.down).map((m) => m.k); untrack(() => { const [k0, prev] = minSeen.split('#'); const was = k0 === key ? (prev ? prev.split(',').map(Number) : []) : null; minSeen = `${key}#${d.join(',')}`; if (!was || !W) return; d.filter((k) => !was.includes(k)).forEach((k, j) => setTimeout(() => domPop(`💥 졸개 ${CIRC[k] ?? k + 1} 쓰러짐!`, box.mon.cx, box.mon.top + box.mon.size * 0.35, 'mdown'), j * 500)); }); });
   // ⏳ 몬스터 공격 게이지 (📜 2026-11-16 b13 「공격 게이지도 보였었는데 지금 없음」 · 옛 정식 #rh-atk = 체력바 바로 밑): 다 차면 몬스터 공격
-  const gauge = $derived.by(() => { if (!step || shadow || !feat('mon-attack')) return null; const c = atkClock(L, R, now); return c && !c.paused ? c.p : null; });
+  const gauge = $derived.by(() => (!step || shadow || !feat('mon-attack') ? null : gaugeView(L, R, now))); // ⏱ 옛 정식 표시 (11/17 #3 · 폰과 같은 함수)
 
 </script>
 
@@ -303,7 +304,7 @@
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
   {#if W && step && mins.length}{@const sz = box.mon.size * 0.3}{@const gap = sz * 1.35}<div class="mins" data-k="tv-minions">{#each mins as m (m.k)}<div class="mn" class:down={m.down} style:left="{box.mon.cx + (m.k - (mins.length - 1) / 2) * gap - sz / 2}px" style:top="{box.mon.top + box.mon.size * 1.02 - sz}px" style:width="{sz}px"><span class="mtag"><b>졸개{m.k + 1}</b><span class="mbar"><i style:width="{m.max ? (m.left / m.max) * 100 : 100}%"></i></span></span><Sprite ref={sprite} pose={m.down ? 'down' : 'idle'} size={sz} /></div>{/each}</div>{/if}
-  {#if W && gauge != null}<div class="agauge" data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge * 100)}%"></i></div>{/if}
+  {#if W && gauge}<div class="agauge" class:hot={gauge.hot} class:blue={gauge.blue} data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
   {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}
@@ -344,7 +345,13 @@
   .tvfx :global(.ttag.demo) { font-size: var(--tv-title); color: #e8ecf4; }
   .mins { position: absolute; inset: 0; pointer-events: none; z-index: 5; } .mn { position: absolute; display: flex; flex-direction: column; align-items: center; transition: opacity 0.4s, filter 0.4s; } .mn.down { opacity: 0.35; filter: grayscale(1); }
   .mtag { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: var(--tv-small); color: #fff; text-shadow: 0 1px 2px #000; } .mn.down .mtag { visibility: hidden; } .mbar { width: 70%; height: 0.8cqh; border-radius: 99px; background: #2a0d10; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6); overflow: hidden; } .mbar i { display: block; height: 100%; background: #e5484d; transition: width 0.4s; }
-  .agauge { position: absolute; height: 1.1cqh; border-radius: 99px; background: rgba(0, 0, 0, 0.55); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6); overflow: hidden; z-index: 6; pointer-events: none; } .agauge i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #f5b84a, #ff6b3d); }
+  /* ⏱ 옛 정식 TV 게이지 (.raid-atk): 막대 + 가운데 「⏱ 남은 초 · ⛓ n초 · ⏸ 집중모드」 · 80% 넘으면 빨강 깜빡 · 묶임 · 멈춤 = 파랑 */
+  .agauge { position: absolute; height: 2.6cqh; border-radius: 0.6cqh; background: rgba(21, 18, 15, 0.9); border: 2px solid #6a4a1c; overflow: hidden; z-index: 6; pointer-events: none; }
+  .agauge i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
+  .agauge span { position: relative; display: block; text-align: center; font: 800 1.9cqh/2.3cqh var(--font); color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; font-variant-numeric: tabular-nums; }
+  .agauge.hot i { background: linear-gradient(90deg, #ff8a2a, #ff2a3a); animation: gaugeHot 0.3s steps(2) infinite; }
+  .agauge.blue { border-color: #5ab0ff; box-shadow: 0 0 6px #5ab0ff88; } .agauge.blue i { background: linear-gradient(90deg, #5ab0ff, #8fd0ff); animation: none; }
+  @keyframes gaugeHot { 50% { filter: brightness(1.6); } }
   .pop.mdown { font-size: var(--tv-title); color: #ffd166; }
   .pop.perfect { transform: translate(-50%, -50%) rotate(-4deg); font-size: calc(var(--tv-big) * 1.6); font-weight: 900; color: #fff; -webkit-text-stroke: 3px #b3006b; text-shadow: 0 0 18px #ff4fd8, 0 0 40px #ffd84a; letter-spacing: 4px; z-index: 30; }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }

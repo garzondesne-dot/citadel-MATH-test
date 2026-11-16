@@ -110,3 +110,11 @@ export function bindFor(L: LessonPack, R: Room, mid: string, now = Infinity, an?
   if (m !== 'boss' && L.monsters[m]) { const hits = hitsOf(R); ids.forEach((u) => { if (!keys(hits[u]).some((k) => k.startsWith(`m_${m}_`))) total += NEWR(R) ? tokBinds(R, m, u).length * BIND_TOKEN : 0; }); }
   return Math.round(total * 10) / 10;
 }
+/** ⛓ 지금 묶여 있는 남은 초 (📜 2026-11-17 #3 옛 정식 게이지 「⏱ n · ⛓ n초」) — 묶기 사건 · 🛡 홀리 방패 중 가장 늦게 풀리는 것 · 0 = 안 묶임 */
+export function bindLeft(L: LessonPack, R: Room, mid: string, now: number): number {
+  const A = analyze(L, R, now), m = mid === BOSS_ID ? 'boss' : mid;
+  let left = 0;
+  A.binds.filter((b) => b.m === m && b.at <= now).forEach((b) => { left = Math.max(left, (b.at + b.sec * 1000 - now) / 1000); });
+  holyTimes(R, mid).forEach((h) => { if (h.at <= now) left = Math.max(left, (h.at + HOLY_SEC * 1000 - now) / 1000); });
+  return Math.max(0, Math.ceil(left));
+}

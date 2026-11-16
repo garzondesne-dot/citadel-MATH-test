@@ -18,8 +18,8 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { noMon = false, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
-    { /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
+  const { noMon = false, gauge = null, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
+    { /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; /** ⏱ 공격 게이지 (11/17 #3 · battle/gauge.ts = TV 와 같은 함수) */ gauge?: import('./gauge').GaugeView | null; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
       minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number;
       /** 📋 게시판 = 장면 낮게 · 용사 · 몬스터 위로 (📜 2026-11-14 「너무 아래에 있음」) */ lift?: boolean; /** 👥 게시판 팀 동료 (없으면 수업 그대로) */ mates?: Mate[]; /** 👥 동료 공격 사건 (k 순서 · 늘기만 함) */ mateFeed?: MateHit[] } = $props();
   // 📋 lift (📜 2026-11-14 머리 🔨 게시판 동료): 장면 높이 −56 · 용사 −68 · 몬스터 −44 · 체력 −12 → SE(375 × 667)에서 답 단추가 스크롤 없이 · 동료가 있으면 내 용사 = 앞 오른쪽(+120)
@@ -105,7 +105,7 @@
   {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
   {#if chips.length}<div class="buffs">{#each chips as c, k (k)}<span class="buff" class:on={c.on}>{c.text}</span>{/each}</div>{/if}
   {#if hp && !shadow && !noMon}
-    <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div></div>
+    <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div>{#if gauge}<div class="ag" class:hot={gauge.hot} class:blue={gauge.blue} data-k="atk-gauge"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}</div>
   {/if}
   {#if minions && !noMon}
     <div class="minions">
@@ -156,6 +156,13 @@
   .mhp { position: absolute; z-index: 2; top: calc(62px - var(--mh, 0px)); right: var(--s3); width: 170px; display: flex; flex-direction: column; gap: var(--s1); color: #fff; font-size: var(--fs-small); font-weight: 700; text-shadow: 0 1px 0 #000; text-align: right; }
   .mhp .b { height: 10px; border-radius: 5px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); }
   .mhp .b i { display: block; height: 8px; border-radius: 4px; background: var(--hp); transition: width 0.4s; }
+  /* ⏱ 공격 게이지 (옛 정식 .atk-gauge + 남은 초) · 80% 빨강 깜빡 · 묶임 · 멈춤 파랑 */
+  .mhp .ag { position: relative; height: 16px; border-radius: 4px; background: rgba(21, 18, 15, 0.85); border: 1px solid #6a4a1c; overflow: hidden; }
+  .mhp .ag i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
+  .mhp .ag span { position: relative; display: block; text-align: center; font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
+  .mhp .ag.hot i { background: linear-gradient(90deg, #ff8a2a, #ff2a3a); animation: agHot 0.3s steps(2) infinite; }
+  .mhp .ag.blue { border-color: #5ab0ff; box-shadow: 0 0 6px #5ab0ff88; } .mhp .ag.blue i { background: linear-gradient(90deg, #5ab0ff, #8fd0ff); animation: none; }
+  @keyframes agHot { 50% { filter: brightness(1.6); } }
   .mon { position: absolute; z-index: 1; right: 24px; top: calc(108px - var(--my, 0px)); display: block; image-rendering: pixelated; background-repeat: no-repeat; }
   /* ⚔ 소레이드 (#160 · 정식 소레이드 1단계 배치): 대장 = 오른쪽 뒤(조금 위) · 졸개 셋 = 대장 앞 한 줄(오른쪽 정렬 · 간격 8) · 용사 = 왼쪽 · 용사 칸(160)과 겹침 0 */
   .mon.minboss { right: 8px; top: calc(90px - var(--my, 0px)); }

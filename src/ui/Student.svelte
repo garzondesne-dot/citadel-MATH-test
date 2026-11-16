@@ -2,6 +2,7 @@
   import { serverNow } from './clock.svelte';
   import { holdWake } from './wake.svelte';
   import { keepScroll } from './keepScroll';
+  import { gaugeView } from './battle/gauge';
   import BossForm from './q/BossForm.svelte';
   import { V4 } from '../raid/raid';
   import { feat } from '../school/features.svelte';
@@ -235,7 +236,7 @@
   <!-- 📝 제출 모드 머리줄 (시안 ①~⑥): ‹ 뒤로 · n차시 · 문제 k · 게임 | 제출 -->
   <header class="ptop" class:pboard={board} data-k="ptop">{#if !board}<a class="pback" href="?" aria-label="뒤로">‹</a>{/if}<b>{L.no}차시 · {step ? (step.kind === 'boss' ? '형성평가' : step.kind === 'concept' ? (step.title.split(' · ')[0] ?? step.title) : probNo) : '수업'}</b><ModeSwitch dark /></header>{#if board}<div class="pgap" aria-hidden="true"></div>{/if}
 {:else if battle && step && R}
-  <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')}
+  <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')} gauge={cardOnly || !feat('mon-attack') || scout?.on ? null : gaugeView(L, R, now)}
     hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN} lift={board} {mates} {mateFeed}
     onconcept={cptId ? () => (cpt = true) : undefined}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
