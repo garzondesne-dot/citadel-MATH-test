@@ -213,7 +213,7 @@
 
   // ── 조작 막대 (마우스 · 터치로 나타나고 3초 뒤 숨음 · 📌 고정) ──
   let dockAt = $state(Date.now()), pin = $state(false), mini = $state(false), sound = $state(true);
-  const dockOn = $derived(pin || now - dockAt < 3000);
+  const dockOn = true; // 🚨 2026-11-16 핫픽스(정식 b210) 선생님 「리모컨 안 나와 · 리모컨은 그냥 계속 표시되게」 = 조작 막대 늘 보임 · 늘 누름 (마우스 없는 터치 교실 PC)
   const poke = () => (dockAt = Date.now());
   const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : '앞으로 ▶'); // 🌫 정찰 중 = 리모컨과 같게 「⚔ 지금 등장」 (🐞 2026-11-14 · 예전엔 몬스터를 건너뜀)
   const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
@@ -429,7 +429,6 @@
 
   <!-- 조작 막대 (#119 덧붙임 2): 🔊 · ⛶ | 🏕 · 🎬 · 📄 · 🎮 · ✏ | 🔴 집중 · « 뒤로 · 앞으로 ▶ · 📌 — 캠프 · 메뉴 · 수업 끝 단추 없음 (수업 닫기 = 교사 폰) -->
   <!-- 🐞 2026-11-15 「종합실에 리모컨 등장 안 함」: 조작 막대는 3초 가만히 두면 숨음(📌 고정 전) → 숨어 있을 때 오른쪽 아래 작은 손잡이 = 누르면 다시 나옴 -->
-  {#if !dockOn}<button type="button" class="dockh" data-k="dock-handle" onclick={poke}>🎛 조작 막대</button>{/if}
   <nav class="dock" class:on={dockOn} class:small={view === 'camp'} aria-label="조작 막대">
     {#if R && !isLobby(R) && !R.state.closed && view !== 'camp' && R.state.rest}
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
@@ -450,8 +449,6 @@
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
-    <span class="sep"></span>
-    <button type="button" class="t" class:on={pin} aria-pressed={pin} onclick={() => (pin = !pin)}>📌<small>고정</small></button>
   </nav>
   {#if setOpen}
     <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
@@ -640,7 +637,6 @@
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
   .wbubs { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2cqh 1.2cqw; max-width: 80cqw; margin-top: 2cqh; } .wb { display: flex; flex-direction: column; align-items: center; gap: 0.4cqh; } .wb em { font-style: normal; font-size: var(--tv-body); font-weight: 700; color: #1a1300; background: #fff7e0; padding: 0.8cqh 1.2cqw; border-radius: 1.6cqh; } .wb small { font-size: var(--tv-small); opacity: 0.85; } .wwait { opacity: 0.7; }
-  .dockh { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; cursor: pointer; padding: 0.8cqh 1.2cqw; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(8, 9, 12, 0.6); color: rgba(255, 255, 255, 0.8); font: 700 var(--tv-small) var(--font); }
   .dock { scale: 0.7; transform-origin: right bottom; } /* 📜 2026-11-14 선생님 「리모컨 사이즈 0.7로」 = 수업 중에도 0.7배 (교사 캠프는 원래 0.7) */
   .dock button { cursor: pointer; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #fff; border-radius: 1.4cqh; font: 700 var(--tv-body) var(--font); }
   .dock button:disabled { opacity: 0.35; cursor: default; }
