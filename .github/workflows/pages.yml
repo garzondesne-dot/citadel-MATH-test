@@ -30,6 +30,7 @@ jobs:
         env:
           VITE_CHANNEL: beta # 📲 베타 이름 · 아이콘 · id (정식 = release)
       - run: VITE_SCHOOL=srzmf npx vite build --outDir dist/s/srzmf --emptyOutDir # 🏫 학교판(무안행복중) = 같은 코드 · 빈 과목 팩 · 그 학교 서버 (베타에서 먼저)
+      - run: node tools/school/moved.mjs dist # 🏫 정식으로 옮긴 학교판 = 넘김 페이지 (tools/school/moved.json 에서 true 일 때만 · 정식 「배포」 뒤)
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
