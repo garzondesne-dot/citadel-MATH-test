@@ -134,7 +134,7 @@
     const pose = (q: Pose) => rowAnim(rowEl, q);
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); if (h.kind === 'practice') domPop('연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
-    void attack(lay, { custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
+    void attack(lay, { who: whoOf(h.u), custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
@@ -190,10 +190,11 @@
   (globalThis as { __tvJuice?: (on?: boolean) => boolean; __tvJuiceStats?: () => unknown }).__tvJuice = (on) => A?.juice(on) ?? false;
   (globalThis as { __tvJuiceStats?: () => unknown }).__tvJuiceStats = () => A?.juiceStats();
   // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음
+  const whoOf = (u: string) => nameOf(u).replace(/^\d+\s+/, ''); // 📜 2026-11-16 컷인 = 「(학생 전체 이름)의 (기술)」 · 번호 뺌
   let guardBusy = false;
   async function tvGuard(us: string[]) {
     if (guardBusy) return; guardBusy = true;
-    const p0 = R.players?.[us[0]!]; await cutin(p0?.hero ?? 0, p0?.fx || 'twinkle', { guard: true }); guardBusy = false;
+    const p0 = R.players?.[us[0]!]; await cutin(p0?.hero ?? 0, p0?.fx || 'twinkle', { guard: true, who: us.length === 1 ? whoOf(us[0]!) : `${whoOf(us[0]!)} 외 ${us.length - 1}명` }); guardBusy = false;
     const lay = fxLayer; if (!lay) return;
     us.forEach((u) => {
       const k = ids.indexOf(u), sl = slots[k]; if (!sl) return;
@@ -218,7 +219,7 @@
   });
   async function tvTrue(u: string) {
     const p0 = R.players?.[u], hero = p0?.hero ?? 0, fxk = p0?.fx || ladder(hero)[3]!;
-    await cutin(hero, fxk, { gold: true });
+    await cutin(hero, fxk, { gold: true, who: whoOf(u) });
     const lay = fxLayer; if (!lay) return;
     const mb = document.createElement('div'); mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; lay.appendChild(mb);
     await ultBlast(lay, mb, fxk); mb.remove();
