@@ -4,6 +4,7 @@
 //   묶음(시작값) = 🪶 기본(뼈대만) · ⚔ 표준 · 🏰 전체 → 고른 뒤 낱낱이 더하고 뺌 · 설정이 없는 서버 = 🏰 전체(우리 학교 그대로)
 //   잠김 = 켜 놓았어도 「필요한 것」이 없으면 꺼진 것과 같이(화면에서 통째로 사라짐) + 채우는 길 한 줄
 import type { Store } from '../model/types';
+import { applyRd, RD_PATH, type RdCfg } from './rdunCfg';
 import { SUBJ } from '../engine/subject';
 import { applySchoolInfo, type SchoolInfo } from './school';
 import { BELLS, PERIODS } from './bells';
@@ -90,7 +91,8 @@ export function bindFeatures(S: Store) {
   // 🏫 학교 정보 (반 목록 · 교시) = school/info → 그 자리에서 바꿈
   const info = (v: SchoolInfo | null) => { applySchoolInfo(v, BELLS, PERIODS, { bells: BELLS0, periods: PERIODS0 }); schoolInfo.ver++; };
   info(S.get<SchoolInfo>('school/info')); const s2 = S.watch<SchoolInfo>('school/info', info);
-  stop = () => { s1(); s2(); };
+  applyRd(S.get<Record<string, RdCfg>>(RD_PATH)); const s3 = S.watch<Record<string, RdCfg>>(RD_PATH, (v) => { applyRd(v); schoolInfo.ver++; }); // 🎲 던전 교사 설정 (📜 2026-11-17 #22)
+  stop = () => { s1(); s2(); s3(); };
   (globalThis as { __featSet?: (c: FeatCfg | null) => void }).__featSet = (c) => S.set(PATH, c); // 화면 시험 고리(시험 3판 · 교사 화면과 같은 길)
 }
 export const setFeatCfg = (c: FeatCfg | null) => { cfg = c; };

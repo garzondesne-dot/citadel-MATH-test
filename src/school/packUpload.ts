@@ -252,7 +252,7 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     stats.mons++; stats.items += vs[0]!.length; stats.versions += vs.length;
     vs.forEach((v, k) => { const r = recheckAll(v, (i) => `${s.title} · 버전 ${k} · ${i + 1}번`, out); stats.rechecked += r.done; stats.ask += r.ask; });
     const sprite = spriteName(m.sprite) || 'base0:0';
-    if (!spriteName(m.sprite)) out.push({ at: `${s.title} · 그림(sprite)`, msg: '그림이 비어 기본 그림(base0:0)으로 넣어요', lvl: 'ask' });
+    if (!spriteName(m.sprite)) out.push({ at: `${s.title} · 그림(sprite)`, msg: '그림이 비어 있어요 → 🎲 랜덤 던전 그림을 입혀요(📦 차시 카드 「🎲 던전」에서 바꿈)', lvl: 'ask' });
     // 💡 · 🔎 몬스터 칸 덧칸 (📜 2026-11-15 · 13차시 덧칸 꼴 mons.mN.help · review)
     const at2 = `${s.title}(mons.${s.id})`, merr = (msg: string) => { out.push({ at: at2, msg, lvl: 'err' }); return null; };
     const mh = m.help != null ? parseHelp(m.help, merr) : undefined, mr = m.review != null ? parseReview(m.review, merr) : undefined;
@@ -318,6 +318,8 @@ function nativePack(p: LessonPack, out: Issue[], stats: Checked['stats']): Lesso
 
 /** 저장 자리 (교사 쓰기 · 로그인한 사람 읽기 = 규칙 prep 그대로 · 규칙 바꿀 일 없음) */
 export const PACK_PATH = 'prep/packs';
+/** ↩ 바로 전 판 하나 (📜 2026-11-17 #22) */
+export const PREV_PATH = 'prep/packPrev';
 
 /** 서버에서 돌아온 팩 되살리기 — Firebase 는 빈 배열 · 빈 칸을 지움(retry.pool [] → 칸 없음) → 엔진이 읽는 칸을 다시 채움 */
 export function revive(p: LessonPack): LessonPack {
