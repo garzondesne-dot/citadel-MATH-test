@@ -228,6 +228,9 @@
     nextStep(S, L, code);
   }
   function full() { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.().catch(() => {}); }
+  // ⛶ (📜 2026-11-17 #20 「전체화면 버튼 던전입장 리모컨 옆에」): 막대의 앞으로 · 던전 입장 단추 바로 옆 한 곳 · 설정 창에서는 뺌
+  let isFull = $state(typeof document !== 'undefined' && !!document.fullscreenElement);
+  $effect(() => { const f = () => (isFull = !!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); });
   // 📄 문제 창 · 📖 개념 오른쪽 = 학생 폰과 같은 함수(🪞) · 첫 판 숫자
   const nextMon = $derived(step ? L.steps.slice(i).find((s) => s.kind === 'monster' || s.kind === 'boss') ?? null : null);
   const qsOf = (id: string) => (id === BOSS_ID ? (L.boss ? Array.from({ length: L.boss.items }, (_, k) => bossItem(L, `${code}|tv`, k, 0)).filter((q): q is NonNullable<typeof q> => !!q) : []) : L.monsters[id]?.chain ? chainItems(L, id, `${code}|tv`, 0) : items(L, id, `${code}|tv`, 0));
@@ -451,13 +454,13 @@
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
+    <button type="button" class="n" data-k="tv-full" onclick={full}>⛶<small>{isFull ? '창으로' : '전체 화면'}</small></button>
   </nav>
   {#if setOpen}
     <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
       <div class="setbox" role="menu" aria-label="TV 설정" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') setOpen = false; }}>
         {#if R && !R.state.closed}<button type="button" role="menuitem" class:on={campPeek} onclick={() => { campPeek = !campPeek; setOpen = false; }}>⛺<span>{campPeek ? '수업으로 돌아가기' : '내 캠프'}</span></button>{/if}
         <button type="button" role="menuitem" data-k="tvtheme" onclick={() => { themeOpen = true; setOpen = false; }}>🎨<span>테마</span></button>
-        <button type="button" role="menuitem" onclick={() => { full(); setOpen = false; }}>⛶<span>전체 화면</span></button>
         <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
         <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
       </div>

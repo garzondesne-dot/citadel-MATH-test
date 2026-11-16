@@ -16,9 +16,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', W = 1280, H 
   const subs = await hall.$$eval('.campv .ob', (xs) => xs.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
   ok('⑦ 캠프 부제', ['단원 평가', '차시 던전', '복습', '연성', '용사 바꾸기'].every((w) => subs.some((s) => s.includes(w))), subs.join(' | '));
   // 📺 아래 막대 정리 · ⚙ 설정 (📜 2026-11-14): 막대 = 📌 고정이 맨 끝 · 처음 · 테마 · 소리 · 전체 없음 / ⚙ 펼침 = 내 캠프(수업 중) · 테마 · 전체 화면 · 소리 · 처음으로
-  { const cd = await dock(); ok('📌 고정 맨 끝 · 막대에 처음 · 테마 · 소리 · 전체 없음', /고정/.test(cd[cd.length - 1] || '') && !cd.some((t) => /처음|테마|소리|꺼짐|⛶/.test(t)), cd.join(' | ')); // 「반 전체 던전 대기실로」(던전 입장 아래 글) 는 제외
+  // ⛶ (📜 2026-11-17 #20): 전체 화면 = 막대의 「⚔ 던전 입장」 바로 옆 한 곳 · ⚙ 설정에는 없음
+  { const cd = await dock(); const gi = cd.findIndex((t) => /던전 입장/.test(t)); ok('⛶ 던전 입장 바로 옆 · 막대에 처음 · 테마 · 소리 없음', gi >= 0 && /⛶/.test(cd[gi + 1] || '') && !cd.some((t) => /처음|테마|소리|꺼짐/.test(t)), cd.join(' | '));
     await hall.click('.gear[data-k="tvset"]'); await hall.waitForTimeout(250); const menu = await hall.$$eval('.setbox button', (bs) => bs.map((b) => b.innerText.replace(/\s+/g, ' ').trim()));
-    ok('⚙ 설정 펼침', ['테마', '전체 화면', '소리', '처음으로'].every((w) => menu.some((t) => t.includes(w))), menu.join(' | '));
+    ok('⚙ 설정 펼침 (전체 화면 없음)', ['테마', '소리', '처음으로'].every((w) => menu.some((t) => t.includes(w))) && !menu.some((t) => t.includes('전체 화면')), menu.join(' | '));
     await hall.screenshot({ path: `${SHOTS}/tv-0-settings.png` }); await hall.mouse.click(40, H / 2); await hall.waitForTimeout(200); ok('⚙ 바깥 누르면 닫힘', !(await hall.$('.setbox'))); }
   // ⚔ 던전 대기실
   await hall.evaluate(() => window.__tvFake(5)); await go(); await hall.waitForTimeout(1200); await shot('2-lobby');
