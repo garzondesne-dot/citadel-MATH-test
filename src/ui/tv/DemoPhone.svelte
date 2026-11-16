@@ -66,18 +66,20 @@
     <button type="button" onclick={onclose}>✕ 닫기</button>
   </div>
   {#if reveal && ans.length}<p class="rev">💡 {ans.join(' · ')}</p>{/if}
-  {#if win && onstrike}<div class="strike" data-k="tstrike" role="group" aria-label="선생님 일격">
-    <p>⚔ 모두 맞혔다! 어떤 공격으로 갈까요?</p>
-    <div class="sbtn"><button type="button" class="s0" onclick={() => onstrike(false)}>⚔ 일반 공격</button><button type="button" class="s1" disabled={!tUlt} onclick={() => onstrike(true)}>⚡ 필살기{tUlt && tName ? ` · ${tName}` : ''}</button></div>
-    {#if !tUlt}<small>⚙ 스킬 고르기에서 Ⅳ 전설이나 🪶 특별 스킬로 바꾸면 필살기를 쓸 수 있어요</small>{/if}
-  </div>{/if}
-  <div class="box" class:hide={win && !!onstrike} bind:clientHeight={boxH} bind:clientWidth={boxW}>
+
+  <!-- 🧑‍🏫 (📜 2026-11-17 #12 「정답체크장면 급하게 나오고 공격 고르기로 넘어감 · 차분히 둘다 보이게」): 다 맞혀도 폰(문항마다 ✔ · 풀이 줄)은 그대로 · 그 아래에 일격 단추 · 저절로 넘어가지 않음(누를 때만) · 학생용 ⚡ 기술 고르기 · 이어서 단추는 시연에서 숨김 -->
+  <div class="box" class:won={win && !!onstrike} bind:clientHeight={boxH} bind:clientWidth={boxW}>
     {#key dcode}
       <div class="phone" style:width="{PWv}px" style:height="{PH}px" style:transform="scale({k})">
         <div class="scr" data-k="demo-scr" bind:this={scr}><Student {S} {L} code={dcode} uid="demo" num={0} nick="시연" board cardOnly /></div>
       </div>
     {/key}
   </div>
+  {#if win && onstrike}<div class="strike" data-k="tstrike" role="group" aria-label="선생님 일격">
+    <p>⚔ 모두 맞혔다! 어떤 공격으로 갈까요?</p>
+    <div class="sbtn"><button type="button" class="s0" onclick={() => onstrike(false)}>⚔ 일반 공격</button><button type="button" class="s1" disabled={!tUlt} onclick={() => onstrike(true)}>⚡ 필살기{tUlt && tName ? ` · ${tName}` : ''}</button></div>
+    {#if !tUlt}<small>⚙ 스킬 고르기에서 Ⅳ 전설이나 🪶 특별 스킬로 바꾸면 필살기를 쓸 수 있어요</small>{/if}
+  </div>{/if}
 </div>
 
 <style>
@@ -94,7 +96,8 @@
   .strike .sbtn { display: flex; gap: 0.8cqw; } .strike button { flex: 1; min-height: 8cqh; border-radius: 1.4cqh; font: 800 var(--tv-body) var(--font); cursor: pointer; border: 0; box-shadow: 0 0.5cqh 0 rgba(0, 0, 0, 0.35); }
   .strike .s0 { background: var(--accent); color: #1b1408; } .strike .s1 { background: #6d3df0; color: #fff; } .strike .s1:disabled { opacity: 0.4; cursor: default; }
   .strike small { font-size: var(--tv-small); color: #d6d9e0; }
-  .box.hide { display: none; }
+  .box.won :global(.bcard.sk), .box.won :global(.act.dock), .box.won :global(.spacer) { display: none !important; } /* 학생용 ⚡ 기술 고르기 · 이어서 = 시연에선 숨김 (일격 단추가 대신) */
+  .strike { flex: none; }
   .box { flex: 1; min-height: 0; display: flex; justify-content: center; overflow: hidden; }
   /* 폰 틀: transform 이 있는 상자 = 안쪽 「화면 바닥 고정」(주요 단추 · 시트)이 이 틀 기준이 됨 → 학생 폰과 같은 자리 */
   .phone { flex: none; transform-origin: top center; border-radius: 12px; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
