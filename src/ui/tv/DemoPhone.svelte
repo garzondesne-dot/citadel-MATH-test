@@ -87,7 +87,8 @@
   .tag { padding: 0.2cqh 0.6cqw; border-radius: 99px; border: 1px solid var(--accent); color: var(--accent); }
   .bar button { margin-left: auto; height: 4cqh; padding: 0 0.8cqw; border-radius: 1cqh; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; font-size: var(--tv-small); cursor: pointer; }
   .bar button + button { margin-left: 0; }
-  .rev { margin: 0; font-size: var(--tv-small); color: #ffe7a6; }
+  /* 🐞 (📜 2026-11-17 #11 「시연 칸 미세하게 밀림」): 💡 정답 줄 = 폰 위에 겹쳐 띄움(자리 차지 안 함) → 펼치고 접어도 폰 · 칸 자리 그대로 */
+  .rev { position: absolute; z-index: 3; left: 0.8cqw; right: 0.8cqw; top: 5.4cqh; margin: 0; padding: 0.8cqh 1cqw; border-radius: 1cqh; background: rgba(20, 16, 6, 0.94); border: 1px solid var(--accent); font-size: var(--tv-small); color: #ffe7a6; box-shadow: 0 1cqh 2cqh rgba(0, 0, 0, 0.5); }
   .strike { display: flex; flex-direction: column; gap: 1.6cqh; padding: 2cqh 1cqw; border-radius: 1.6cqh; background: rgba(245, 184, 74, 0.12); border: 1px solid var(--accent); }
   .strike p { margin: 0; font-size: var(--tv-title); font-weight: 800; color: #ffe7a6; }
   .strike .sbtn { display: flex; gap: 0.8cqw; } .strike button { flex: 1; min-height: 8cqh; border-radius: 1.4cqh; font: 800 var(--tv-body) var(--font); cursor: pointer; border: 0; box-shadow: 0 0.5cqh 0 rgba(0, 0, 0, 0.35); }
