@@ -12,7 +12,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push('리모컨 ' + e));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp');
   if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
-  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const live = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB), code = live.code;
   const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push('폰 ' + e)); await s.goto(`${B}?role=student&room=${code}&as=1-3:2`); await s.waitForTimeout(1500);
   for (const n of [4, 5, 6]) { const o = await ctx.newPage(); o.on('pageerror', (e) => errs.push('폰' + n + ' ' + e)); await o.goto(`${B}?role=student&room=${code}&as=1-3:${n}`); } // ② 막힌 칸용 학생 3명

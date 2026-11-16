@@ -30,7 +30,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   // 수업 열기 → 학생 칸 → 도장 보임 → 끄면 숨김
   await t.click('.tabs button:has-text("학생")').catch(() => {}); await t.goto(B + '?role=teacher'); await t.waitForSelector('.tp');
   if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
-  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const code = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)).code, DB);
   const s = await ctx.newPage(); await s.goto(`${B}?role=student&room=${code}&as=1-3:2`); await s.waitForTimeout(1500);
   await t.bringToFront(); await t.click('.tact .btn'); await t.waitForTimeout(500); await t.click('.tact .btn'); await t.waitForTimeout(500); if (await t.$('.badge.sc')) await t.click('.tact .btn'); await t.waitForTimeout(800);

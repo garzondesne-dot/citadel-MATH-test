@@ -27,6 +27,7 @@
   let cls = $state('');
   let lessonId = $state('');
   let sheet = $state<'' | 'cls' | 'sched'>('');
+  let openAsk = $state(false); // 📜 2026-11-16 선생님 b3 「차시를 잘못 열어 모두 다시 들어옴」 = 열기 전 반 · 차시 · 학습지 제목 크게 확인
   let ver = $state(0); // 시간표 고친 뒤 다시 읽기
   const k = $derived(kst(now));
   const W = $derived.by(() => { void ver; return week(S); });
@@ -132,11 +133,18 @@
   </div>
 </div>
 <div class="tact">
-  <button type="button" class="btn" disabled={!cls || !L || !!resume} onclick={() => L && onopen(cls, L, undefined, carry)}>
+  <button type="button" class="btn" disabled={!cls || !L || !!resume} onclick={() => { if (L) openAsk = true; }}>
     {#if resume}수업이 열려 있어요<small>위 「이어서」 · 아래 「수업 닫기」</small>{:else if cls && L}▶ {cls}반 · {L.no}차시 수업 열기{:else}▶ 수업 열기<small>{!cls ? '① 반' : '② 차시'}을 골라요</small>{/if}
   </button>
 </div>
 
+{#if openAsk && L}
+  <Sheet onclose={() => (openAsk = false)}>
+    {#snippet title()}이 수업을 열까요?{/snippet}
+    {#snippet act()}<div class="oarow"><button type="button" class="btn2" onclick={() => (openAsk = false)}>아니요</button><button type="button" class="btn" data-k="open-yes" onclick={() => { openAsk = false; if (L) onopen(cls, L, undefined, carry); }}>▶ 열기</button></div>{/snippet}
+    <div class="oabox" data-k="open-ask"><b class="oacls">{cls}반</b><b class="oano">{L.no}차시</b><span class="oatt">{L.title}</span>{#if carry}<small>📦 지난 {offer?.no}차시 몬스터 {carry.ids.length}마리 · {CARRY_AT[carry.at]}</small>{/if}</div>
+  </Sheet>
+{/if}
 {#if sheet === 'cls'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}다른 반{/snippet}
@@ -166,6 +174,8 @@
   .pk3.five { grid-template-columns: repeat(5, minmax(0, 1fr)); } /* 차시 7개 이상 = 5칸 2줄 (#132 · 360 × 640 스크롤 0) */
   .pk3.five .pk { padding: 4px 1px; font-size: 13.5px; }
   .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .oabox { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 0 4px; text-align: center; } .oacls { font-size: 22px; color: var(--text-2); } .oano { font-size: 40px; color: var(--accent); line-height: 1.1; } .oatt { font-size: 18px; font-weight: 700; } .oabox small { color: var(--text-2); }
+  .oarow { display: flex; gap: 8px; } .oarow button { flex: 1; min-height: 52px; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
   .hint.over { color: var(--bad); }
   .pk { position: relative; min-height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; box-shadow: 0 3px 0 var(--press-sh); }

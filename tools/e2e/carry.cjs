@@ -11,7 +11,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const pickCls = async () => { if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); } };
   await pickCls(); await t.click('.pk:has-text("6차시")');
   ok('지난 수업 없음 = 📦 칸 없음', !(await t.$('[data-k="carry"]')));
-  await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   { const c0 = (await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB)).code; const s0 = await ctx.newPage(); await s0.goto(`${B}?role=student&room=${c0}&as=1-3:2`); await s0.waitForTimeout(1200); await t.bringToFront(); await t.waitForTimeout(400); }
   await t.click('.tact .btn'); await t.waitForSelector('.rflow'); await t.waitForSelector('.tact .btn:not([disabled])'); await t.click('.tact .btn'); await t.waitForTimeout(500);
   await t.click('.lbar button'); await t.waitForSelector('.ask'); await t.click('.ask .btn'); await t.waitForTimeout(800);
@@ -26,7 +26,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('⏱ = + n분(넘어온 몬스터)', /\+ [\d.]+분\(넘어온 몬스터\)/.test(e1), e1);
   ok('50분 넘으면 = 「안 함」 권유 한 줄', !/50분을 넘어요/.test(e1) || /허수아비 복습으로 두기를 권해요/.test(e1), e0.slice(0, 40));
   await t.screenshot({ path: `${SHOTS}/carry-home.png` });
-  await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const live = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB), code = live.code;
   const meta = await t.evaluate((c) => window.__dbGet(`rooms/${c}/meta/carry`), code);
   ok('방 meta/carry = { from: set-06 · at: intro }', meta?.from === 'set-06' && meta.at === 'intro' && meta.ids.length > 0, JSON.stringify(meta));

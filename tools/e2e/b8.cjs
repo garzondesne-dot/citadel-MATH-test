@@ -59,7 +59,7 @@ const DB = 'citadel-v1-test-db';
     if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); } // 주말 = 오늘 시간표 비어 있음
     await t.click('.pk:has-text("6차시")'); await shot(t, 'b8-t-home'); const mh1 = await meas('⑫ 고름');
     log(tag, '⑫ 주요 단추:', (await t.textContent('.tact .btn')).trim(), '| 자리', mh1.main, '바닥에서', mh1.fromBottom, '| 빈 판과 같은 자리', JSON.stringify(mh0.main) === JSON.stringify(mh1.main));
-    await t.click('.tact .btn'); await t.waitForSelector('.nums');
+    await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
     const live = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);
     // ⑬ 대기실 (학생 0 → 5명 · 5번 = 옛 판)
     const ml0 = await meas('⑬ 대기실 0명');

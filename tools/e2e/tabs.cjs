@@ -51,7 +51,7 @@ const B = 'http://localhost:4173/';
   await tab('나'); await fixedOk('⑲ 나'); log('⑲ 나:', (await p.textContent('.hc')).replace(/\s+/g, ' ').trim(), '|', (await p.textContent('.ver')).trim()); await shot('b11-me');
   await p.click('.item:has-text("종합실 비밀번호")'); await p.fill('.in', '3369'); await p.click('.sheet .act .btn'); await p.waitForTimeout(100);
   // 준비 값 · 종합실 키 → 수업 열기 때 방에
-  await tab('수업'); await p.click('text=다른 반'); await p.click('.sheet .pk:has-text("1-3반")'); await p.click('.pk:has-text("6차시")'); await p.click('.tact .btn'); await p.waitForSelector('.nums');
+  await tab('수업'); await p.click('text=다른 반'); await p.click('.sheet .pk:has-text("1-3반")'); await p.click('.pk:has-text("6차시")'); await p.click('.tact .btn'); await p.click('[data-k="open-yes"]'); await p.waitForSelector('.nums');
   log('수업 열기: 키', (await p.textContent('.codek small')).trim(), '| 체력 기준 칩', (await p.textContent('.setrow button >> nth=0').catch(() => '(접힘)')).trim());
   // 펼친 화면 (1280)
   await p.click('.lbar button'); await p.click('.ask .btn'); await p.waitForSelector('.tabs');

@@ -9,7 +9,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp');
   if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
   await t.evaluate(() => window.__dbSet('roster/1-3', { 1: '가나다', 2: '라마바사', 3: '아자차' }));
-  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const code = await t.evaluate(() => { for (const k of Object.keys(localStorage)) if (k.endsWith('|school/live')) return JSON.parse(localStorage.getItem(k)).code; });
   const names = await t.evaluate((c) => window.__dbGet(`rooms/${c}/meta/names`), code);
   ok('② 수업 열 때 방에 전체 이름', names && names.s1_3_2 === '라마바사', JSON.stringify(names));

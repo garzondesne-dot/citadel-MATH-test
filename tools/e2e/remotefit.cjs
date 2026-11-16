@@ -8,7 +8,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push('리모컨 ' + e));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp');
   if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); }
-  await t.click(`.pk:has-text("${LN}")`); await t.click('.tact .btn'); await t.waitForSelector('.nums');
+  await t.click(`.pk:has-text("${LN}")`); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const code = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)).code, DB);
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) { const s = await ctx.newPage(); await s.goto(`${B}?role=student&room=${code}&as=1-3:${n}`); }
   await t.bringToFront(); await t.waitForTimeout(1200);
