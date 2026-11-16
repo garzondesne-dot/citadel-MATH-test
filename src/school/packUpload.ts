@@ -204,7 +204,10 @@ export function checkUpload(text: string, look: Look): Checked {
   if (!raw || typeof raw !== 'object') return { pack: null, issues: [{ at: '파일', msg: '차시 팩 꼴이 아니에요', lvl: 'err' }], stats };
   const r = raw as Record<string, unknown>;
   if (typeof r.id === 'string') forget(r.id); // 같은 id 를 다시 올림 = 지난 판 문항 기억 지움
-  const pack = r.v === 1 && r.monsters ? nativePack(r as unknown as LessonPack, out, stats) : boardPack(r as BPack, out, stats, look);
+  // 엔진 꼴 = v 1 · 2 (앱 ⬇ 내보내기 · 머리가 고친 판 · 📜 11/17 #26) → 받은 뒤 v 1 로
+  const native = (r.v === 1 || r.v === 2) && !!r.monsters && Array.isArray(r.steps);
+  if (native) r.v = 1;
+  const pack = native ? nativePack(r as unknown as LessonPack, out, stats) : boardPack(r as BPack, out, stats, look);
   if (!pack) return { pack: null, issues: out, stats };
   // 공통: 도감 이름표 · 엔진 검사(문항 0개 · 보스 문항 없음 …)
   if (!look.theme(pack.theme ?? '')) out.push({ at: '배경(theme)', msg: `던전 배경 「${pack.theme ?? ''}」 이 도감에 없어요`, lvl: 'err' });
@@ -240,7 +243,7 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
     // ✔ 개념 체크 (📜 2026-11-15): 개념 단계만 · check = { type: 'ox' | 'choice', q, ch?(선다 보기 2개 이상), a(OX = true/false 또는 O/X · 선다 = 보기 번호 0부터), why }
     const raw0 = (s as unknown as { check?: unknown }).check;
     const cc = raw0 != null ? parseCheck(raw0, String(s.kind), (m) => { out.push({ at, msg: `개념 체크(check) — ${m}`, lvl: 'err' }); }) ?? undefined : undefined;
-    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}), ...(cc ? { check: cc } : {}) });
+    steps.push({ kind: s.kind as Step['kind'], id: String(s.id), title: String(s.title), ...(s.say ? { say: String(s.say) } : {}), ...(Number(s.min) > 0 ? { min: Number(s.min) } : {}), ...(s.img ? { img: String(s.img) } : {}), ...(cc ? { check: cc } : {}), ...(s.later ? { later: true } : {}) }); // 🎯 later = 수업 밖 허수아비 「도전」 (📜 11/17 #26 · 빠지던 것)
   });
   const monsters: Record<string, MonsterPack> = {};
   for (const s of steps.filter((x) => x.kind === 'monster')) {
