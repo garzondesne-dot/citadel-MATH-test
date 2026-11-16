@@ -17,7 +17,7 @@ const REST_IDS = ['rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'r
 /** 그 차시 팩에서 세는 것 */
 export function lessonCounts(L: LessonPack) {
   const st = L.steps || [];
-  const mons = st.filter((s) => s.kind === 'monster' && L.monsters[s.id]).map((s) => {
+  const mons = st.filter((s) => s.kind === 'monster' && !s.later && L.monsters[s.id]).map((s) => { // 🎯 later = 수업 밖(허수아비 도전) → 시간 0 (📜 11/17 #26 ④)
     const m = L.monsters[s.id]!, chain = !!m.chain;
     let n = 0; try { n = chain ? chainItems(L, s.id, 'est', 0).length : items(L, s.id, 'est', 0).length; } catch { n = 0; }
     const rv = (m.reviews?.length || 0) + Object.values(m.reviewsBy || {}).reduce((a, x) => a + (x?.length || 0), 0) + (m.first || []).reduce((a, q) => a + (q?.review?.length || 0), 0);
