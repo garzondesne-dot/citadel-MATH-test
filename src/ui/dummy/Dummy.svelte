@@ -38,7 +38,7 @@
   const LESSONS = PACKS.filter((p) => p.steps.some((s) => s.kind === 'monster') || p.boss);
   const recOf = (p: LessonPack): Rec | undefined => recs[p.id] ?? (p.partOf ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack) => !cls || !!recOf(p) || p.no <= reach;
-  const WHY: Record<string, string> = { x: '틀림 (기회를 다 씀)', '-': '안 풂 (먼저 나감 · 늦게 옴)', n: '안 풂 (수업 시간 부족)', a: '안 풂 (불참)', o: '한 번에 맞힘', f: '재도전으로 고침', p: '보충 완료', s: '수업에서 넘어온 문제' }; // s = 🎯 복습으로 보냄 (📜 2026-11-16)
+  const WHY: Record<string, string> = { x: '틀림 (기회를 다 씀)', '-': '안 풂 (먼저 나감 · 늦게 옴)', n: '안 풂 (수업 시간 부족)', a: '안 풂 (불참)', o: '한 번에 맞힘', f: '재도전으로 고침', p: '보충 완료', s: '수업에서 넘어온 문제', c: '⭐ 도전 (수업 밖 문제)' }; // s = 🎯 복습으로 보냄 (📜 2026-11-16)
 
   // 서버 칸: 묶인 학생 = 서버(정식 키) · 묶이지 않은 폰(교사 · 시험 · 이 기기) = 이 폰에만(같은 규칙 · 같은 키)
   const LOGK = 'citadel-v1-dummy-log', BONK = 'citadel-v1-dummy-bonus';
@@ -59,7 +59,7 @@
       const bon = all[L.id] || {}, x = noteOf(L, recOf(L), bon), ids = [...fieldIds(L), ...(L.boss ? [BOSS_ID] : [])];
       const stOf = (id: string) => (id === BOSS_ID || x.none ? null : x.mons[x.ids.indexOf(id)] ?? null);
       const bossSent = !!(recOf(L) as { bossSent?: boolean } | undefined)?.bossSent && !bon[BOSS_ID]?.clear; // 🎯 👑 형성평가를 수업에서 복습으로 보냄 → 맨 위 「⭐ 꼭 풀기」
-      const rows: Row[] = ids.map((id) => { const st = stOf(id), must = id === BOSS_ID && bossSent; return { id, title: id === BOSS_ID ? (must ? '형성평가 · ⭐ 꼭 풀기' : '형성평가 재대결') : (L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear, sent: st === 's', must }; });
+      const rows: Row[] = ids.map((id) => { const st = stOf(id), must = id === BOSS_ID && bossSent; return { id, title: id === BOSS_ID ? (must ? '형성평가 · ⭐ 꼭 풀기' : '형성평가 재대결') : `${st === 'c' ? '⭐ 도전 · ' : ''}${(L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id}`, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear, sent: st === 's', must }; });
       const o = (r: Row) => (r.must ? -1 : r.need ? 0 : r.id === BOSS_ID ? 1 : 2);
       return { L, x, sealed: sl.includes(L.id), rows: rows.slice().sort((a, b) => o(a) - o(b)), cards: cardsOf(L) };
     }).sort((a, b) => (b.x.left ? 1 : 0) - (a.x.left ? 1 : 0) || b.L.no - a.L.no);

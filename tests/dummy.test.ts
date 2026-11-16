@@ -69,3 +69,15 @@ describe('🏕 캠프 🎯 할 일 (시안 A)', () => {
     expect(reviewTodo([L], {}, {}, {}, day)).toEqual({ left: 0, gem: 0 });
   });
 });
+
+describe('⭐ 도전 = 수업 밖으로 뺀 몬스터(later) (📜 11/17 #26)', () => {
+  const L2 = { ...L, steps: L.steps.map((s) => (s.id === ids[ids.length - 1] ? { ...s, later: true } : s)) } as LessonPack;
+  const last = ids[ids.length - 1]!;
+  it('수업 기록이 「안 풂」이어도 도전(c) · 남은 것에 안 셈 · 깨면 보충 완료', () => {
+    const r = { mons: Object.fromEntries(ids.map((id) => [id, 'o'])) };
+    const x = noteOf(L2, { mons: { ...r.mons, [last]: 'n' } }, {});
+    expect(x.mons[ids.indexOf(last)]).toBe('c');
+    expect(x.left).toBe(noteOf(L2, r, {}).left);
+    expect(noteOf(L2, r, { [last]: { clear: true } }).mons[ids.indexOf(last)]).toBe('p');
+  });
+});

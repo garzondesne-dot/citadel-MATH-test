@@ -29,6 +29,9 @@ export function noteOf(L: LessonPack, rec: Rec | undefined, bon: Bon | undefined
   }
   const fixd = (st: string, ok: boolean) => (ok && OPEN.has(st) ? 'p' : st);
   mons = mons.map((st, i) => fixd(st, !!b[ids[i]!]?.clear));
+  // ⭐ 도전 = 수업 밖으로 뺀 몬스터(단계 later) · 숙제처럼 혼자 · 안 풀어도 「남은 것」에 안 셈 · 깨면 보충 완료 (📜 11/17 #26 · DECISIONS 「넘치는 문제 = 🎯 허수아비 도전」)
+  const later = new Set(L.steps.filter((s) => s.later).map((s) => s.id));
+  mons = mons.map((st, i) => (later.has(ids[i]!) ? (b[ids[i]!]?.clear ? 'p' : 'c') : st));
   const bossClear = !!b.boss?.clear;
   boss = boss.map((st, i) => (i < hp ? fixd(st, bossClear) : st === 'o' ? 'star' : ''));
   const left = mons.filter((s) => OPEN.has(s)).length + boss.slice(0, hp).filter((s) => OPEN.has(s)).length;
