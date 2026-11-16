@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { zipSync } from 'fflate';
 import { join } from 'node:path';
 
 // 🔄 #134 ① 사이트의 판 번호 = version.json (src/build.ts BUILD 그대로) → 화면이 옛 판인지 BETA 알약이 확인
@@ -51,9 +52,19 @@ const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bun
 } };
 
 // base './' = Pages 하위 경로(/citadel-MATH-test/)에서도 그대로 열림
+// 📦 차시 팩 만들기 꾸러미 (📜 2026-11-17 #22 ④ 1단계) = 저장소 kit/ (머리 hero-v2 docs/handoff/kit/ 원본 · README 빼고) → 사이트 kit/ 에 zip 하나 · 빌드 때마다 다시 묶음
+export const KIT_ZIP = '모두의던전_차시팩_만들기_꾸러미.zip';
+const kitZip = {
+  name: 'kit-zip',
+  generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: Uint8Array }) => void }) {
+    const dir = new URL('./kit/', import.meta.url); if (!existsSync(dir)) return;
+    const files = Object.fromEntries(readdirSync(dir).filter((n) => n !== 'README.md' && !n.startsWith('.')).sort().map((n) => [n, new Uint8Array(readFileSync(new URL(n, dir)))]));
+    if (Object.keys(files).length) this.emitFile({ type: 'asset', fileName: `kit/${KIT_ZIP}`, source: zipSync(files, { level: 6, mtime: new Date('2026-11-17T00:00:00Z') }) });
+  },
+};
 export default defineConfig({
   base: './',
   define: SCHOOL ? { 'import.meta.env.VITE_SUBJECT': JSON.stringify('school'), 'import.meta.env.VITE_SCHOOL_SUBJECT': JSON.stringify(SCHOOL.subject), 'import.meta.env.VITE_SCHOOL_NAME': JSON.stringify(SCHOOL.name), 'import.meta.env.VITE_BUNDLE': JSON.stringify('basic') } : {},
-  plugins: [svelte(), versionJson, htmlId, swPlugin],
+  plugins: [svelte(), versionJson, htmlId, swPlugin, kitZip],
   test: { include: ['tests/**/*.test.ts'] },
 });
