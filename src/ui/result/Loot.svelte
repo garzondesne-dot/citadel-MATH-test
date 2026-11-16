@@ -13,6 +13,7 @@
   import { TITLES } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { SUBJ } from '../../engine/subject';
+  import { CHEST } from '../manifest';
   import { partsOf, xpOf } from '../../school/reward';
   import { kstDay } from '../../board/board';
   import { sfx } from '../sound.svelte';
@@ -49,16 +50,17 @@
   const cards = $derived(SUBJ.forge ? SUBJ.forge.unit.CARDS.filter((c) => c.no === L.no).length : 0);
   // ── 상자 열림 · 줄마다 차례로 (정식 lootPlay · STEP 0.65초 · 숫자 0.52초) · 탭 = 건너뛰기만 ──
   const STEP = 650;
-  let shown = $state(0), nums = $state<Record<string, number>>({}), done = $state(false), open = $state(false);
+  let shown = $state(0), nums = $state<Record<string, number>>({}), done = $state(false), open = $state(false), cf = $state(0); // cf = 상자 칸 (0 닫힘 · 1 흔들림 · 2 열림)
   const keys = $derived(['xp', 'gem', 'scroll', ...(lt.titles.length ? ['ttl'] : []), ...(lt.rooms.length ? ['room'] : []), 'goal']);
   const to = (k: string) => (k === 'xp' ? lt.xp : k === 'gem' ? lt.gem : k === 'scroll' ? lt.scroll : 0);
   let timers: ReturnType<typeof setTimeout>[] = [];
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function finish() { if (done) return; done = true; timers.forEach(clearTimeout); shown = keys.length; nums = Object.fromEntries(keys.map((k) => [k, to(k)])); }
+  function finish() { if (done) return; done = true; cf = 2; timers.forEach(clearTimeout); shown = keys.length; nums = Object.fromEntries(keys.map((k) => [k, to(k)])); }
   $effect(() => {
     const ks = keys; untrack(() => {
-      timers.forEach(clearTimeout); timers = []; open = true;
+      timers.forEach(clearTimeout); timers = []; open = true; cf = 0;
       if (reduce) { finish(); return; }
+      [[120, 1], [240, 0], [360, 1], [480, 0], [600, 2]].forEach(([ms, f]) => timers.push(setTimeout(() => { if (!done) cf = f!; }, ms))); // 흔들림 2번 → 열림
       ks.forEach((k, i) => timers.push(setTimeout(() => {
         if (done) return; shown = i + 1; const T = to(k), t0 = performance.now();
         const tick = (t: number) => { if (done) return; const f = Math.min(1, (t - t0) / 520); nums = { ...nums, [k]: Math.round(T * f) }; if (f < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick);
@@ -93,7 +95,8 @@
 <div class="bcard loot" class:done data-k="loot" role="button" aria-label="오늘의 전리품 (누르면 바로 보기)" onclick={finish} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') finish(); }} tabindex="0">
   <h2 class="lt-h">🎒 오늘의 전리품</h2>
   <p class="muted c">{noT}{L.title} · {nick}</p>
-  <div class="chest" class:open aria-hidden="true"><i class="lid"></i><i class="body"></i><i class="glow"></i></div>
+  <!-- 🎒 옛 정식 상자 그림 3칸 (11/17 #7): ① 닫힘 → ② 흔들림 2번 → ③ 열림 + 빛 → 줄마다 숫자 -->
+  <div class="chest" class:open={cf === 2} class:shake={cf === 1} aria-hidden="true" data-k="loot-chest" data-f={cf}><i class="glow"></i><i class="cimg" style:background-image="url({CHEST.src})" style:background-position="{(cf / (CHEST.frames - 1)) * 100}% 0"></i></div>
   <div class="list">
     <div class="row" class:on={on('xp')} data-k="lt-xp"><span>⭐ EXP</span><b class="num">+{n('xp')}</b>
       <div class="lv" class:up={lt.up}><small>Lv.{lt.lv.lv} {lt.lv.title}{#if lt.up && on('xp')} <b class="upb">🎉 레벨 업!</b>{/if}</small><div class="bar"><i style:width="{barW}%"></i><span>{lt.lv.into} / {lt.lv.next}</span></div></div></div>
@@ -143,12 +146,12 @@
   .loot { cursor: default; text-align: left; }
   .lt-h { margin: 0; text-align: center; font-size: 22px; color: var(--accent); }
   .c { text-align: center; margin: 0; }
-  .chest { position: relative; width: 96px; height: 72px; margin: 4px auto 0; }
-  .chest .body { position: absolute; left: 8px; right: 8px; bottom: 0; height: 40px; border-radius: 6px; background: linear-gradient(#a8652b, #6b3a14); box-shadow: inset 0 0 0 3px #3b1e08, inset 0 -6px 0 #4d2a0c; }
-  .chest .lid { position: absolute; left: 4px; right: 4px; bottom: 34px; height: 28px; border-radius: 14px 14px 4px 4px; background: linear-gradient(#c27a33, #8a4a19); box-shadow: inset 0 0 0 3px #3b1e08; transform-origin: 50% 100%; transition: transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
-  .chest .glow { position: absolute; left: 50%; bottom: 30px; width: 0; height: 0; border-radius: 50%; background: radial-gradient(#fff6c0, #ffcf5a00 70%); transform: translateX(-50%); transition: width 0.5s, height 0.5s; }
-  .chest.open .lid { transform: rotate(-28deg) translateY(-8px); }
-  .chest.open .glow { width: 120px; height: 80px; }
+  .chest { position: relative; width: 112px; height: 112px; margin: 0 auto; }
+  .chest .cimg { position: absolute; inset: 0; background-size: 300% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+  .chest.shake .cimg { animation: chestShake 0.12s steps(2) infinite; }
+  @keyframes chestShake { 0% { transform: translateX(-3px) rotate(-3deg); } 100% { transform: translateX(3px) rotate(3deg); } }
+  .chest .glow { position: absolute; left: 50%; top: 45%; width: 0; height: 0; border-radius: 50%; background: radial-gradient(#fff6c0, #ffcf5a00 70%); transform: translate(-50%, -50%); transition: width 0.5s, height 0.5s; }
+  .chest.open .glow { width: 170px; height: 130px; }
   .list { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s2); }
   .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); opacity: 0; transform: translateY(8px); transition: opacity var(--t), transform var(--t); }
   .row.on { opacity: 1; transform: none; }
@@ -179,5 +182,5 @@
   .perk { padding: 10px 12px; border-radius: var(--r); background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); }
   .forge { margin-top: var(--s2); }
   .cimg { display: block; width: 100%; height: auto; border-radius: 8px; margin-bottom: var(--s2); }
-  @media (prefers-reduced-motion: reduce) { .row, .chest .lid, .chest .glow, .bar i { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .row, .chest .glow, .bar i { transition: none; } .chest.shake .cimg { animation: none; } }
 </style>

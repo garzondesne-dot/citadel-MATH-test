@@ -17,6 +17,9 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('결과 = 🎒 오늘의 전리품', !!(await s.$('[data-k="loot"]')));
   if (!(await s.$('[data-k="loot"]'))) { await s.screenshot({ path: `${SHOTS}/loot-stuck.png` }); log(errs.join('\n')); await b.close(); return; }
   ok('처음 1.5초 = 캠프 단추 잠김 (갑자기 넘어감 막음)', !lk0);
+  // 🎒 상자 = 옛 정식 그림 3칸 (11/17 #7): 칸 번호가 0 · 1 을 지나 2(열림)로
+  { const seen = new Set(); for (let k = 0; k < 14; k++) { const f = await s.$eval('[data-k="loot-chest"]', (e) => e.dataset.f).catch(() => null); if (f != null) seen.add(f); await s.waitForTimeout(60); } const bg = await s.$eval('[data-k="loot-chest"] .cimg', (e) => getComputedStyle(e).backgroundImage).catch(() => '');
+    ok('🎒 상자 그림(thrill-chest) · 흔들림 → 열림', /thrill-chest/.test(bg) && seen.has('2') && (seen.has('1') || seen.has('0')), [...seen].join(',')); }
   const early = await s.evaluate(() => ({ on: document.querySelectorAll('[data-k="loot"] .row.on').length, all: document.querySelectorAll('[data-k="loot"] .row').length, scene: !!document.querySelector('.edge'), mon: !!document.querySelector('.edge .mon'), note: document.querySelector('.edge .tag')?.textContent }));
   ok('위 = 장면(배경 · 용사 · 띠 · 몬스터 없음) · 처음엔 줄이 다 안 보임(차례로)', early.scene && !early.mon && !!early.note && early.on < early.all, JSON.stringify(early));
   await s.screenshot({ path: `${SHOTS}/loot-0.png` });
