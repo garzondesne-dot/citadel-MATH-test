@@ -14,6 +14,8 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
   import Sheet from '../battle/Sheet.svelte';
+  import NoteSet from './NoteSet.svelte';
+  import { notePerm, notePref } from '../../school/notify.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import FeatSettings from './FeatSettings.svelte';
   import PhotoSettings from './PhotoSettings.svelte';
@@ -26,7 +28,7 @@
   //   옛 ⚙ 설정(비밀번호 · 선생님 모습 · 로그아웃)이 모두 여기 · 내 용사 = 학생 폰과 같은 창
   const { S, login0 = false }: { S: Store; /** 수업 열기에서 「🔐 교사 로그인하러」로 옴 = 로그인 창을 바로 엶 */ login0?: boolean } = $props();
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
-  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app' | 'photo' | 'changes'>(untrack(() => (login0 ? 'login' : ''))), key = $state(''), ver = $state(0), toast = $state('');
+  let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app' | 'photo' | 'changes' | 'note'>(untrack(() => (login0 ? 'login' : ''))), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
@@ -61,6 +63,7 @@
     <button type="button" class="item" onclick={() => { key = hk; sheet = 'key'; }}><span class="ic">🖥</span><span class="tx"><b>종합실 비밀번호</b><small>{hk ? `고정 ${hk}` : '비우면 수업마다 새로'}</small></span></button>
     <a class="item" href="?role=atk&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>{BETA ? '테스트 · ' : ''}몬스터 공격 15개 눌러 보기</small></span></a>
     <button type="button" class="item" data-k="photo-set-go" disabled={!srv || !admin} onclick={() => (sheet = 'photo')}><span class="ic">📷</span><span class="tx"><b>사진 채점 설정</b><small>{!srv || !admin ? '교사 로그인 뒤' : cfgOf(S).url ? `${cfgOf(S).on ? '켜짐' : '꺼짐'} · 웹 앱 주소 있음` : '웹 앱 주소를 넣으면 켜져요'}</small></span></button>
+    <button type="button" class="item" data-k="note-go" onclick={() => (sheet = 'note')}><span class="ic">{notePref.on && notePerm() === 'granted' ? '🔔' : '🔕'}</span><span class="tx"><b>알림</b><small>{notePref.on && notePerm() === 'granted' ? '사진 · 메시지 · 로그인 실패 · 새 판 · 이 기기' : '꺼짐 · 눌러서 켜기'}</small></span></button>
     <button type="button" class="item" onclick={() => (sheet = 'sound')}><span class="ic">{(!soundPref.sfx && !soundPref.bgm) || sound === '끔' ? '🔇' : '🔊'}</span><span class="tx"><b>소리</b><small>교사 폰 · {sound} · 효과음 {soundPref.sfx ? '켜짐' : '꺼짐'} · 배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}</small></span></button>
     <button type="button" class="item" data-k="install" disabled={pwa.installed} onclick={async () => { if (!(await install())) sheet = 'app'; }}><span class="ic">📲</span><span class="tx"><b>{pwa.installed ? '홈 화면 앱으로 열림' : '홈 화면에 추가'}</b><small>{pwa.installed ? BETA ? '「던전 베타」 앱 · 정식 앱과 따로' : '「모두의 던전」 앱' : pwa.prompt ? `누르면 바로 설치 · 「${APP_NAME}」` : pwa.ios ? '아이폰 = 공유 → 홈 화면에 추가' : BETA ? '앱처럼 바로 열기 · 정식 앱과 따로' : '앱처럼 바로 열기'}</small></span></button>
     <button type="button" class="item" data-k="out" onclick={() => (sheet = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
@@ -138,6 +141,11 @@
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🎨 테마{/snippet}
     <ThemePicker now={theme} feats={null} onpick={pickTheme} paper />
+  </Sheet>
+{:else if sheet === 'note'}
+  <Sheet onclose={() => (sheet = '')}>
+    {#snippet title()}🔔 알림 · 이 교사 폰{/snippet}
+    <NoteSet />
   </Sheet>
 {:else if sheet === 'sound'}
   <Sheet onclose={() => (sheet = '')}>

@@ -4,6 +4,7 @@
   import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
   import { onDestroy, untrack } from 'svelte';
   import { setTeacherSink } from '../../store/me.svelte';
+  import { watchTeacherNotes } from '../../school/notify.svelte';
   import './teacher.css';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
@@ -29,7 +30,8 @@
   setTeacherSink(untrack(() => S), true); // 👩‍🏫 교사 「내 용사」 → 서버 school/tlook (교실 TV 🎮 시연이 따름)
   const stopClock = useClock();
   const lv = untrack(() => liveValue<Live>(S, 'school/live'));
-  onDestroy(() => { stopClock(); lv.stop(); });
+  const stopNotes = untrack(() => watchTeacherNotes(S)); // 🔔 교사 알림 ① (교사 폰이 열려 있는 동안 · 「나」 → 🔔 알림 에서 켬)
+  onDestroy(() => { stopClock(); lv.stop(); stopNotes(); });
   const now = $derived(clock.now);
   const live = $derived(lv.v.val);
   const liveR = $derived(live ? S.get<Room>(roomPath(live.code)) : null);

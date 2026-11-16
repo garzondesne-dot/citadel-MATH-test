@@ -50,3 +50,14 @@ self.addEventListener('fetch', (e) => {
   if (p.startsWith('assets/') && /\.(js|css)$/.test(p)) { e.respondWith(cacheFirst(req, CORE_CACHE)); return; }
   e.respondWith(cacheFirst(req, MEDIA));
 });
+
+// 🔔 교사 알림 누름 (📜 2026-11-16 · src/school/notify.svelte.ts) = 열린 교사 창이 있으면 그 창을 앞으로 + 그 주소로 · 없으면 새로 염
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '?role=teacher&tab=news', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
+    const c = cs.find((x) => x.url.startsWith(self.registration.scope));
+    if (c) return c.focus().then((w) => (w && w.navigate ? w.navigate(url) : w)).catch(() => self.clients.openWindow(url));
+    return self.clients.openWindow(url);
+  }));
+});

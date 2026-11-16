@@ -122,9 +122,12 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
         }
       }
     }
+    noteLoginFail(S, cls, num);
     return '비밀번호가 달라요 · 잊었으면 선생님께';
   }
 }
+/** 🔑 로그인 실패 한 번 = loginFail/{반}/{번호}/{시각} (📜 2026-11-16 · 교사 알림 「로그인 여러 번 실패」 · 학생은 쓰기만 · 읽기 = 교사만 · 규칙 게시 필요) */
+function noteLoginFail(S: Store, cls: string, num: number) { const t = S.now(); S.set(`loginFail/${cls.replace(/[.#$/[\]]/g, '_')}/${num}/${t}`, t); }
 /** 옮긴 계정 잇기: uid = 이 서버 로그인 · reset 지움 (용사 · 스킬 · 호칭 등 다른 칸은 그대로) */
 function claim(S: Store, cls: string, num: number, uid: string | undefined) { if (!uid) return; S.set(`${accPath(cls, num)}/uid`, uid); S.set(`${accPath(cls, num)}/reset`, null); }
 /** 선생님 0000 초기화가 되는 저장인가 */

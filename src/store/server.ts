@@ -9,11 +9,11 @@ import { setClockOffset } from '../ui/clock.svelte';
 //   시계 = 서버 시각(.info/serverTimeOffset) · 끊김 = .info/connected · 로그인 = 처음엔 익명(TV · 교사 · 둘러보기) · 학생은 계정으로 바꿔 탐
 //   ⚠ 시험 전용: 운영 프로젝트에는 연결하지 않음(config.ts 가 막음) · 맨 윗칸 통째로 받으므로 시험 규모용(출시 때 방 단위로 나눔)
 type Tree = Record<string, unknown>;
-const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held', 'survey', 'surveyDone', 'gcfg', 'photo_rubric', 'photo', 'photo_q', 'act'] as const; // 📈 act = 활용 추이(학생 = 자기 칸 · 교사 = 통째로) // 📝 survey = 열림 표시(누구나) · surveyDone = 응답했는지(그 학생 · 교사) · surveyA = 거울 밖(학생은 쓰기만 trySet · 교사는 fetch) // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
+const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held', 'survey', 'surveyDone', 'gcfg', 'photo_rubric', 'photo', 'photo_q', 'act', 'loginFail'] as const; // 🔑 loginFail = 로그인 실패 기록(학생 = 쓰기만 · 교사 = 통째로 · 📜 2026-11-16 교사 알림) // 📈 act = 활용 추이(학생 = 자기 칸 · 교사 = 통째로) // 📝 survey = 열림 표시(누구나) · surveyDone = 응답했는지(그 학생 · 교사) · surveyA = 거울 밖(학생은 쓰기만 trySet · 교사는 fetch) // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
 const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held', 'gcfg', 'photo_rubric']; // 📷 gcfg/photo · 기준표 = 누구나 읽기 // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
-const BUCKET: Record<string, number> = { rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
+const BUCKET: Record<string, number> = { loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
 // 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
 const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2 };
 const split = (p: string) => p.split('/').filter(Boolean);
@@ -89,7 +89,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     set(path: string, value: unknown) {
       const v = value == null ? null : clone(value);
       if (!ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) console.warn('시험 서버: 거울 밖 경로', path);
-      void ensure(path);
+      if (admin || split(path)[0] !== 'loginFail') void ensure(path); // 🔑 학생 = 로그인 실패 칸은 쓰기만(읽기 규칙 없음 · 받지 않음)
       setIn(mirror, split(path), v); fire(path); // 거울 먼저 (화면이 바로 바뀜)
       fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\/|^\/?hostKeys\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
     },
