@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
-  import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted, schoolInfo } from '../../school/features.svelte';
-  import { CLASSES } from '../../school/school';
+  import { BUNDLES, FEATS, featCfg, saveBundle, saveOne, stateOf, lockOf, wanted } from '../../school/features.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { PACKS, packOf } from '../../engine/packs';
   import { estimate, estLine, cutLine, ltimePath, packTier, timeSig, LIMIT, TIME_NAME, ZERO_FEATS } from '../../school/ltime';
@@ -14,9 +13,6 @@
   const c = $derived(featCfg());
   const groups = [...new Set(FEATS.map((f) => f.group))];
   // 🏫 학교 정보 · 반 목록 (school/info/classes · 처음 반 = 첫째) — 교시 시각 · 요일 교시는 같은 칸(bells · periods)에 저장 · 화면은 다음 판
-  let cls = $state((() => { void schoolInfo.ver; return CLASSES.join(', '); })());
-  const clsList = $derived(cls.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean));
-  let saved = $state('');
   // ⚙ 확인 창 (📜 2026-11-15 선생님 「B + C 추천대로」 · DECISIONS 「⚙ 우리 학교 기능 = 확인 창 두 가지」 · 문구 그대로)
   //   B = 🧙 용사 · 🏰 성채 · 📋 게시판 던전을 끌 때만 (켤 때 안 물음) / C = 묶음 단추 · 낱낱 설정이 있을 때만 (바뀌는 기능 목록)
   const BIG: FeatId[] = ['hero', 'citadel', 'board'];
@@ -42,7 +38,6 @@
   onDestroy(() => meas.stop());
   const est = $derived.by(() => { if (!L) return null; const all = meas.v.val || {}; void all; return estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, sig))); });
   const tmin = (id: FeatId) => { if (!est) return ''; if ((ZERO_FEATS as readonly string[]).includes(id)) return '각자 · 돌면서'; const k = id.startsWith('rest-') ? 'rest' : id; const f = est.feats.find((x) => x.id === k); return f ? `+${f.min}분${k === 'rest' ? ' (쉼터 1판)' : ''}` : ''; };
-  function saveCls() { S.set('school/info/classes', clsList); saved = `✔ 반 ${clsList.length}개 저장`; setTimeout(() => (saved = ''), 1600); }
 </script>
 
 <div class="fs">
@@ -76,8 +71,7 @@
     </ul>
   {/each}{/if}
   <h4>🏫 학교 정보</h4>
-  <label class="cls"><span>반 목록 <small>쉼표로 · 처음 반 = 첫째</small></span><input class="in" bind:value={cls} placeholder="1-1, 1-2, 1-3" data-k="classes" /></label>
-  <button type="button" class="save" disabled={!clsList.length} onclick={saveCls}>반 목록 저장 · {clsList.length}개</button>{#if saved}<small class="ok">{saved}</small>{/if}
+  <p class="foot" data-k="cls-moved">🏫 반(학년 · 반)은 「학생」 탭 → 「＋ 명단」에서 만들고 명단을 넣어요</p>
   <p class="foot">🦴 기본 뼈대(수업 레이드 · 엑셀 차시 · 학습지 · 결과 · 대시보드 · 복습 · 소리)는 늘 켜져 있어요</p>
 </div>
 
@@ -98,10 +92,6 @@
 
 <style>
   .fs { display: flex; flex-direction: column; gap: var(--s3); }
-  .cls { display: flex; flex-direction: column; gap: var(--s1); font-size: 14px; color: var(--text-2); } .cls small { color: var(--text-3); }
-  .cls .in { min-height: 48px; padding: 0 var(--s3); border-radius: var(--r); border: 1px solid #3a3f4c; background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
-  .save { min-height: 48px; border-radius: var(--r); border: 0; background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); } .save:disabled { opacity: 0.5; }
-  .ok { color: var(--ok); }
   .lead, .foot { margin: 0; color: var(--text-2); font-size: 14px; }
   .bund { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
   .b { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 88px; padding: var(--s2); border-radius: var(--r); border: 2px solid transparent; background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
