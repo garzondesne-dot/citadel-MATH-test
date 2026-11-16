@@ -17,7 +17,7 @@ const [SHOTS = '.', ...FILES] = process.argv.slice(2), B = process.env.B || 'htt
     await p.screenshot({ path: `${SHOTS}/l26-${name}-check.png` });
     const save = await p.$('.sheet .btn.pmain') || await p.$('.sheet .act .btn');
     if (save && !(await save.isDisabled())) { await save.click(); await p.waitForTimeout(2000); }
-    const pk = await p.evaluate(() => { const all = window.__dbGet('prep/packs') || {}; return Object.values(all).map((x) => ({ id: x.id, no: x.no, rev: x.rev, later: (x.steps || []).filter((s) => s.later).map((s) => s.id), boss: x.boss?.items })); });
+    const pk = await p.evaluate(() => { const all = window.__dbGet('prep/packs') || {}; return Object.values(all).map((x) => ({ id: x.id, no: x.no, rev: x.rev, later: (x.steps || []).filter((s) => s.later).map((s) => s.id), boss: x.boss?.items, links: x.boss?.links })); });
     console.log('   저장된 팩', JSON.stringify(pk));
   }
   await p.goto(B + '?role=teacher&tab=prep'); await p.waitForSelector('[data-k="packs-tab"]'); await p.click('[data-k="pack-more"]').catch(() => {});
