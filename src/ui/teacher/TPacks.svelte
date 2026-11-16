@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import { liveValue } from '../room.svelte';
+  import { castles } from '../../school/castles.svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { BETA, FORMS, KIT_PUBLIC, siteUrl } from '../../channel';
   import { BUILD } from '../../build';
@@ -35,7 +37,12 @@
   const est = (L: LessonPack) => estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, timeSig(on))));
   const rdName = (L: LessonPack) => { void ver; const c = rdOf(L.id), d = rdunOf(L); return c?.m === 'pack' || !d ? '🖼 팩 그림' : `🎲 ${RDUN[d]?.name ?? d}`; };
   const md = (t?: number) => { if (!t) return ''; const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  // 🏰 성채 팩 카드 (📜 11/17 「차시올리기에 목록아래」): 층 수 · 연 방이 있는 층 수
+  const castleOpen = untrack(() => liveValue<Record<string, Record<string, Record<string, unknown>>>>(S, 'school/castleOpen')); onDestroy(castleOpen.stop);
+  const castleOpenN = $derived(castles.list.filter((P) => Object.values(castleOpen.v.val?.[P.id] || {}).some((c) => Object.values(c || {}).some(Boolean))).length);
   const revOf = (L: LessonPack) => (L as LessonPack & { rev?: number }).rev ?? 1;
+  /** 📦 카드 판 표시 = 올린 날짜 「11/17 올림」 · 날짜 모름 = 「올림」 · 앱 기본 차시 = 없음 (📜 2026-11-17 선생님 「1 날짜로」) */
+  const upTag = (L: LessonPack) => { const t = md((L as LessonPack & { upAt?: number }).upAt); return t ? `${t} 올림` : UPLOADED.has(L.id) ? '올림' : ''; };
   const nMon = (L: LessonPack) => L.steps.filter((s) => s.kind === 'monster' && L.monsters[s.id] && !s.later).length;
   // ── ② 차시 카드 ──
   let cur = $state<LessonPack | null>(null), hasPrev = $state(false), ask = $state<'' | 'del' | 'prev'>(''), busy = $state(false);
@@ -111,18 +118,18 @@
   {#each more ? list : list.slice(0, 3) as L (L.id)}
     {@const e = est(L)}
     <button type="button" class="lc" data-k="pack-card" data-id={L.id} onclick={() => openCard(L)}>
-      <span class="t"><b>{L.no} · {L.title.split(' · ')[0]}</b><em>v{revOf(L)} · {Math.round(e.total)}분</em></span>
+      <span class="t"><b>{L.no} · {L.title.split(' · ')[0]}</b><em data-k="pack-up">{upTag(L) ? `${upTag(L)} · ` : ''}{Math.round(e.total)}분</em></span>
       <span class="tags"><span class="tag" class:full={packTier(L) === 'full'} class:basic={packTier(L) === 'basic'}>{packTier(L) === 'full' ? '🏰 풀 팩' : '🪶 기본 팩'}</span><span class="tag">{rdName(L)}</span>{#if e.total > 45}<span class="tag warn">⏱ 45분 넘음</span>{/if}{#if L.hide}<span class="tag">🙈 숨김</span>{/if}</span>
     </button>
   {/each}
   {#if list.length > 3 && !more}<button type="button" class="lc more" data-k="pack-more" onclick={() => (more = true)}>{list[list.length - 1]?.no}~{list[3]?.no}차시 · {list.length - 3}개 더 ▾</button>{/if}
-  <button type="button" class="fold" data-k="tools-fold" aria-expanded={tools} onclick={() => (tools = !tools)}>🧰 도구 (사진 채점 · 공격 갤러리 · 입장 QR · 성채 · 백업)<span>{tools ? '▴' : '▾'}</span></button>
+  <button type="button" class="lc castle" data-k="castle-go" onclick={() => (tool = 'castle')}><span class="t"><b>🏰 성채 팩</b><em>층 {castles.list.length}개 · 열린 층 {castleOpenN}</em></span><span class="tags"><span class="tag">층 해금 · 보임/숨김 · 내려받기</span></span></button>
+  <button type="button" class="fold" data-k="tools-fold" aria-expanded={tools} onclick={() => (tools = !tools)}>🧰 도구 (사진 채점 · 공격 갤러리 · 입장 QR · 백업)<span>{tools ? '▴' : '▾'}</span></button>
   {#if tools}
     <div class="list" data-k="tools">
       <button type="button" class="item" data-k="photo-set-go" disabled={!admin} onclick={() => (tool = 'photo')}><span class="ic">📷</span><span class="tx"><b>사진 채점 설정</b><small>{admin ? '웹 앱 주소 · 켜고 끄기' : '교사 로그인 뒤'}</small></span></button>
       <a class="item" href="?role=atk&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=prep'); } catch { /* 무시 */ } }}><span class="ic">💥</span><span class="tx"><b>공격 갤러리</b><small>몬스터 공격 15개 눌러 보기</small></span></a>
       <button type="button" class="item" data-k="qr-go" onclick={() => (tool = 'qr')}><span class="ic">📱</span><span class="tx"><b>입장 QR</b><small>학생 폰 카메라로 찍으면 로그인 화면</small></span></button>
-      <button type="button" class="item" data-k="castle-go" onclick={() => (tool = 'castle')}><span class="ic">🏰</span><span class="tx"><b>성채 팩</b><small>층 해금 · 보임/숨김 · 내려받기</small></span></button>
       <button type="button" class="item" disabled><span class="ic">🗄</span><span class="tx"><b>백업</b><small>지난 차시 백업 받고 정리 · 준비 중</small></span></button>
     </div>
   {/if}
@@ -171,7 +178,7 @@
     <p class="note">통째로만 고름 · 몬스터 하나씩은 팩에서 · 팩 파일은 바뀌지 않음(교사 설정) · 학생 · TV · 테스트가 같은 던전</p>
     {:else}
     <div class="card2" data-k="pack-detail">
-      <div class="tags"><span class="tag" class:full={packTier(L) === 'full'} class:basic={packTier(L) === 'basic'}>{packTier(L) === 'full' ? '🏰 풀 팩' : '🪶 기본 팩'}</span><span class="tag">v{revOf(L)}{md((L as LessonPack & { upAt?: number }).upAt) ? ` · ${md((L as LessonPack & { upAt?: number }).upAt)} 올림` : UPLOADED.has(L.id) ? '' : ' · 앱 기본'}</span><span class="tag">몬스터 {nMon(L)} · 형성평가 {L.boss?.items ?? 0}</span></div>
+      <div class="tags"><span class="tag" class:full={packTier(L) === 'full'} class:basic={packTier(L) === 'basic'}>{packTier(L) === 'full' ? '🏰 풀 팩' : '🪶 기본 팩'}</span><span class="tag">{upTag(L) || '앱 기본'}</span><span class="tag">몬스터 {nMon(L)} · 형성평가 {L.boss?.items ?? 0}</span></div>
       <div class="btns">
         <button type="button" class="p" data-k="pack-test" onclick={() => { const id = L.id; cur = null; ontest(id); }}>🧪 테스트로 열기</button>
         <button type="button" data-k="pack-dl" onclick={() => exportZip(L)}>⬇ 팩 내려받기</button>

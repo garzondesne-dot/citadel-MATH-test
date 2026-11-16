@@ -13,6 +13,9 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('① 두 갈래 · 처음 값 = 📦 차시 올리기', !!(await p.$('[data-k="side-up"].on')) && /0\/6/.test(await txt('[data-k="side-make"]')), await txt('.side'));
   const up0 = await box('[data-k="upbar"]'), tabs0 = await box('.tabs'), title0 = await box('.tbar');
   ok('② 아래 고정 「📦 차시 팩 올리기」 = 탭 막대 바로 위 · 맨 위 큰 카드 · 🛠 진행 카드 없음', up0 && tabs0 && Math.abs(up0.y + up0.h - tabs0.y) <= 12 && !(await p.$('.upbig')) && !(await p.$('.prog')), JSON.stringify({ up0, tabs0 }));
+  { const cg = await box('[data-k="castle-go"]'), pm = await box('[data-k="pack-more"]'), tf = await box('[data-k="tools-fold"]');
+    ok('#26 덧 2 🏰 성채 팩 카드 = 목록 아래 · 도구 위 · 도구 이름에 성채 없음', cg && pm && tf && cg.y > pm.y && cg.y < tf.y && !/성채/.test(await txt('[data-k="tools-fold"]')), JSON.stringify({ cg, pm, tf })); }
+  ok('#26 덧 카드 판 = 올린 날짜 (v1 없음 · 앱 기본 차시 = 표시 없음)', !/\bv\d/.test(await txt('[data-k="pack-card"]')), await txt('[data-k="pack-card"]'));
   const more = await box('[data-k="pack-more"]'); ok('⑤ 「n개 더」 = 한 줄 높이', more && more.h <= 48, JSON.stringify(more));
   await p.click('[data-k="pack-more"]'); await p.waitForTimeout(200);
   ok('② 목록 펼쳐도 올리기 단추 자리 그대로', JSON.stringify(await box('[data-k="upbar"]')) === JSON.stringify(up0));
