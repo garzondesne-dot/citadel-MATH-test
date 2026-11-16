@@ -27,7 +27,7 @@ const related = (a: string, b: string) => { const A = split(a).join('/'), B = sp
 const clone = <T>(v: T): T => (v == null ? v : (JSON.parse(JSON.stringify(v)) as T));
 
 export interface NetState { connected: boolean; uid: string | null }
-export interface ServerStore extends Store { /** 쓰기 결과를 기다림(거울 먼저 바꾸지 않음 · 규칙이 막으면 false) — 🔒 게시판 암호 */ trySet(path: string, value: unknown): Promise<boolean>; net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean }
+export interface ServerStore extends Store { /** 익명 로그인 실패 코드 ('' = 됨) */ anonErr?: string; /** 쓰기 결과를 기다림(거울 먼저 바꾸지 않음 · 규칙이 막으면 false) — 🔒 게시판 암호 */ trySet(path: string, value: unknown): Promise<boolean>; net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean }
 export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null; /** 앱 이름 (같은 이름 = 새로 고침해도 로그인 그대로 · 시험에서 여러 명을 한 곳에 띄울 때만 다르게) */ name?: string }
 
 /** 기다리되 ms 넘으면 그냥 넘어감 (서버가 안 닿거나 규칙 게시 전이어도 화면이 멈추지 않게) */
@@ -39,7 +39,8 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const db = getDatabase(app), auth = tabAuth ? initializeAuth(app, { persistence: inMemoryPersistence }) : getAuth(app);
   if (o.emulator) { connectDatabaseEmulator(db, o.emulator.host, o.emulator.db); connectAuthEmulator(auth, `http://${o.emulator.host}:${o.emulator.auth}`, { disableWarnings: true }); }
   // 로그인 (규칙 = 로그인한 사람만) — 이미 계정으로 들어와 있으면 그대로
-  await within(new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), (e) => { console.error('시험 서버 로그인 실패', e); res(); }); }); }), 8000);
+  let anonErr = ''; // 🔐 익명 로그인이 막히면(그 학교 Firebase 에서 「익명」 꺼짐) 화면 위 안내 (📜 2026-11-16 학교판)
+  await within(new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), (e) => { anonErr = String((e as { code?: string }).code || ''); console.error('시험 서버 로그인 실패', e); res(); }); }); }), 8000);
   const mirror: Tree = {};
   const subs = new Set<{ path: string; fn: (v: unknown) => void; last: string }>();
   const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = isLoaded(s.path) ? getIn(mirror, split(s.path)) : null, j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
@@ -81,7 +82,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     if (u && !admin) for (const [c, ns] of Object.entries(acc)) for (const [n, a] of Object.entries(ns || {})) if (a?.uid === u) await preload(c, Number(n));
   }
   return {
-    kind: 'server', net, auth, db,
+    kind: 'server', net, auth, db, anonErr,
     onNet(fn) { netSubs.add(fn); fn({ ...net }); return () => netSubs.delete(fn); },
     preload, isAdmin: () => admin,
     get<T>(path: string) { void ensure(path); return isLoaded(path) ? (clone(getIn(mirror, split(path))) as T | null) : null; },

@@ -9,6 +9,8 @@ import { BETA, TEST_ADDR } from '../channel';
 //   내 컴퓨터(localhost)에서는 늘 이 기기(?server=on 으로만 서버) · 시험(에뮬레이터): 주소에 ?emu=127.0.0.1 → 이 브라우저에 기억 · ?emu=off 로 끔 (Firebase 에뮬레이터 · 프로젝트 demo-citadel-test)
 //   ⚠ 운영 프로젝트(citadel-math)는 절대 연결하지 않음 → 이 기기로 돌아가고 붉은 띠
 export const FORBIDDEN_PROJECTS = ['citadel-math'];
+/** 🔐 그 학교 Firebase 에서 로그인 방법이 꺼져 있을 때 한 줄 (📜 2026-11-16 학교판 · 교사 계정 만들기 · 익명) */
+export const AUTH_OFF = '서버에서 로그인이 꺼져 있어요 · Firebase → Authentication → 로그인 방법 → 「이메일/비밀번호」 · 「익명」 사용';
 export type Where = { kind: 'device' | 'server' | 'emulator'; label: string; blocked?: string };
 export interface ServerJson { mode?: 'device' | 'server'; firebase?: FirebaseOptions }
 const EMU_KEY = 'citadel-v1-emu';
@@ -38,7 +40,7 @@ export async function chooseStore(): Promise<{ S: Store; where: Where }> {
   if (cfg.mode === 'server' && cfg.firebase) {
     if (isForbidden(cfg.firebase)) return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `운영 서버(${cfg.firebase.projectId}) 설정이라 연결하지 않았어요 · server.json 을 시험 프로젝트로 바꿔 주세요` } };
     const { serverStore } = await import('./server');
-    try { const S = await serverStore({ firebase: cfg.firebase }); return { S, where: { kind: 'server', label: BETA ? '🔌 시험 서버' : '☁ 서버' } }; }
+    try { const S = await serverStore({ firebase: cfg.firebase }); const off = /operation-not-allowed|admin-restricted/.test(S.anonErr || ''); return { S, where: { kind: 'server', label: BETA ? '🔌 시험 서버' : '☁ 서버', ...(off ? { blocked: AUTH_OFF } : {}) } }; }
     catch (e) { return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `시험 서버에 닿지 못했어요 (${(e as Error).message})` } }; }
   }
   return { S: deviceStore(), where: { kind: 'device', label: '이 기기' } };

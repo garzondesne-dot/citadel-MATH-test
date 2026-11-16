@@ -1,6 +1,7 @@
 import type { Auth } from 'firebase/auth';
 import type { Store } from '../../model/types';
 import { loginEmails, makeEmail } from '../../school/teacherId';
+import { AUTH_OFF } from '../../store/config';
 
 // 🔐 교사 로그인 한 곳 (#163-① · 정식 그대로) — 「나」 탭 로그인 창 · 교사 화면 입구(TGate) 가 같이 씀
 //   이메일 · 비번 · 처음 만든 비번 계정 = 교사(admins/{uid}) · 이 폰은 계속 로그인 · 성공하면 새로 고침(교사 칸을 다시 받음)
@@ -23,6 +24,7 @@ export async function teacherIn(S: Store, id: string, pw: string, make: boolean)
     return '';
   } catch (e) {
     const code = String((e as { code?: string }).code);
+    if (/operation-not-allowed|admin-restricted/.test(code)) return AUTH_OFF; // 📜 2026-11-16 학교판: 이메일 로그인이 꺼진 서버
     return /email-already/.test(code) ? '이미 있는 계정 · 「로그인」을 눌러요' : /weak-password/.test(code) ? '비밀번호는 6자 이상' : '아이디(이메일) · 비밀번호를 다시 확인해요';
   }
 }
