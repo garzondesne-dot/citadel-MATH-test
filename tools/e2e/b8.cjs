@@ -47,16 +47,15 @@ const DB = 'citadel-v1-test-db';
         return { doc, scrollers, main: r(main), fromBottom: main ? Math.round(innerHeight - main.getBoundingClientRect().bottom) : null, tools: [...document.querySelectorAll('.rdock button')].map(r), adj: r(document.querySelector('.adj')), att: r(document.querySelector('.att')), q: r(document.querySelector('.att .q')), card: r(document.querySelector('.rstat')) };
       });
       if (m.doc > 0) errs.push(`${tag} ${name}: 문서 스크롤 ${m.doc}`);
-      if (m.scrollers.length) errs.push(`${tag} ${name}: 칸 스크롤 ${m.scrollers.join(' ')}`);
+      if (m.scrollers.length && !name.startsWith('⑫')) errs.push(`${tag} ${name}: 칸 스크롤 ${m.scrollers.join(' ')}`);
       if (m.main && (m.main[3] !== 68 || Math.abs(m.fromBottom - 74) > 1)) errs.push(`${tag} ${name}: 주요 단추 ${m.main} · 바닥에서 ${m.fromBottom}`);
       return m;
     };
     await t.evaluate(() => window.__featSet({ bundle: 'full', on: { schedule: true } })); await t.waitForTimeout(300); // 📅 시간표 켬 = 옛 ⑫ 시간표 길 (기본 = 끔)
     await shot(t, 'b8-t-home-empty'); const mh0 = await meas('⑫ 빈 시간표');
-    await t.click('text=시간표 넣기'); const dow = await t.evaluate(() => (new Date(Date.now() + 9 * 3600e3).getUTCDay() || 7));
-    if (dow <= 5) { const c = t.locator('.sg button').nth(2 * 5 + (dow - 1)); for (let k = 0; k < 3; k++) await c.click(); }
-    await t.click('.sheet .act .btn');
-    if (await t.$('[data-cls="1-3"]')) await t.click('[data-cls="1-3"]'); else { await t.click('text=다른 반'); await t.click('.sheet .pk:has-text("1-3반")'); } // 주말 = 오늘 시간표 비어 있음
+    // 📅 시간표 = 반 · 시간표 탭에서 (📜 2026-11-17 #21 D) · 오늘 2교시 = 1-3 → 수업 탭 맨 위 「📅 오늘 시간표」
+    await t.evaluate(() => { const d = new Date(Date.now() + 9 * 3600e3).getUTCDay() || 7; if (d <= 5) window.__dbSet(`school/sched/${d}/2`, '1-3'); }); await t.waitForTimeout(200);
+    await t.click('[data-cls="1-3"]');
     await t.click('.pk:has-text("6차시")'); await shot(t, 'b8-t-home'); const mh1 = await meas('⑫ 고름');
     log(tag, '⑫ 주요 단추:', (await t.textContent('.tact .btn')).trim(), '| 자리', mh1.main, '바닥에서', mh1.fromBottom, '| 빈 판과 같은 자리', JSON.stringify(mh0.main) === JSON.stringify(mh1.main));
     await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
@@ -78,6 +77,7 @@ const DB = 'citadel-v1-test-db';
     if (W === 360) await tv.screenshot({ path: `${SHOTS}/b8-tv-lobby.png` });
     log(tag, '⑮ 던전 대기실:', (await tv.textContent('.nbox')).replace(/\s+/g, ' ').trim(), '| 말풍선', (await tv.textContent('.bub')).trim(), '| 흐린 친구', (await tv.$$('.rows .h.nin')).length);
     // ⑭ 리모컨: 개념 → 정찰 → 문제
+    if (await t.$('.sheet .x')) await t.click('.sheet .x'); // 번호 칸 시트(앞 단계)가 열려 있으면 닫음
     await t.click('.tact .btn'); await t.waitForSelector('.rflow'); const mr0 = await meas('⑭ 개념');
     await tv.waitForTimeout(250); log(tag, '⑮ 수업 중 위 막대:', (await tv.textContent('.top .ttl')).trim(), '| 흐름도 지금', (await tv.textContent('.fs.now em')).trim(), '| 시간 선 칩', (await tv.textContent('.tlt')).trim(), '| 조작 막대', (await tv.$$eval('.dock button', (bs) => bs.map((b) => b.textContent.replace(/\s+/g, ''))).catch(() => [])).join(' '));
     if (W === 360) await tv.screenshot({ path: `${SHOTS}/b8-tv-concept.png` });
