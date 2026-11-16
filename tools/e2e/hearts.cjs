@@ -15,6 +15,10 @@ const SHOTS = process.argv[2] || '.';
   await s.click('.ids .a[data-h="clear"]'); await s.waitForTimeout(1800);
   st.cards = await s.$$eval('.cards .card', (x) => x.map((e) => `${e.dataset.sk}${e.disabled ? '✗' : ''}`).join(' ')); st.main3 = await main(); await s.evaluate(() => document.querySelector('.cards')?.scrollIntoView({ block: 'center' })); await s.waitForTimeout(200); await shot('2-cards');
   await s.click('.pmain:not([disabled])'); await s.waitForTimeout(800);
+  // ⚡ 두 단계 (📜 2026-11-17 #5): 시전 = 연출만 → 「🔥 한 번 더」 · 「⏸ 여기서 쉬기」 고름 (판은 저절로 안 열림)
+  st.cast = await s.$eval('[data-k="cast-done"]', (x) => x.innerText.replace(/\s+/g, ' ')).catch(() => ''); st.castBtn = await main(); st.castRest = !!(await s.$('[data-k="cast-rest"]')); st.noRound = !(await s.$('.qwrap .tagl:has-text("숫자 바뀜")')); await shot('2b-cast');
+  if (!/시전/.test(st.cast) || !/한 번 더/.test(st.castBtn) || !st.castRest || !st.noRound) errs.push(`시전 뒤 고르기 화면 ${JSON.stringify({ c: st.cast, b: st.castBtn, r: st.castRest, n: st.noRound })}`);
+  await s.click('.pmain:not([disabled])'); await s.waitForTimeout(800);
   st.round = await s.$eval('.qwrap .tagl', (x) => x.innerText.replace(/\s+/g, ' ')).catch(() => ''); await shot('3-round');
   const stop = await s.$('button.stop'); if (stop) { await stop.click(); await s.waitForTimeout(400); }
   st.cont = await main(); await shot('4-continue');

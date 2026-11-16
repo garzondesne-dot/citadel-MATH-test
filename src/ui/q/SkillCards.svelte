@@ -24,13 +24,18 @@
   const rec = $derived((boss ? bossRecord(L, R, uid) : isChain(L, R, mid) ? chainRecord(L, R, mid, uid) : plainRecord(L, R, mid, uid)) as RecLike);
   type Sk = 'heal' | 'bind' | 'true';
   let sel = $state<Sk>('heal'), rest = $state(false), msg = $state('');
+  // ⚡ 두 단계 (📜 2026-11-17 #5 「힐이나 묶기 먼저 하고 · 그다음 한 번 더 할지 말지는 플레이어 판단」): ① 카드 → 「○ 시전」(연출만) ② 「🔥 한 번 더」 · 「⏸ 여기서 쉬기」
+  let cast = $state<{ ic: string; line: string } | null>(null);
+  const afterCast = (ic: string, line: string) => { if (paperOn()) { onround(); return; } cast = { ic, line }; }; // 📝 제출 모드 = 예전처럼 바로 연습 판
+  function more() { cast = null; rest = false; onround(); retrySnd(); }
+  function pause() { cast = null; rest = true; }
   const look = untrack(() => savedLook());
   const trueOn = $derived(!boss && !!rec.trueOk && canTrue(look.fx, look.hero) && !ultUsed(R, mid, uid) && !petrify(R, mid));
   const trueWhy = $derived(boss ? '형성평가 뒤엔 못 써요' : !canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '첫 공격 퍼펙트 + 한 번 더 판 2개를 한 번에 → 세 번째 ⚡');
   const CARDS: { k: Sk; ic: string; name: string; desc: string; main: string }[] = [
-    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ⚔ 칼 보급 +1 · 내 칼은 그대로', main: '💚 힐 주고 🔥 한 번 더' },
-    { k: 'bind', ic: '⛓', name: '묶기', desc: '몬스터 공격을 3초 늦춰요 · 반 전체', main: '⛓ 묶고 🔥 한 번 더' },
-    { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 쓰고 🔥 한 번 더' },
+    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ⚔ 칼 보급 +1 · 내 칼은 그대로', main: '💚 힐 시전' },
+    { k: 'bind', ic: '⛓', name: '묶기', desc: '몬스터 공격을 3초 늦춰요 · 반 전체', main: '⛓ 묶기 시전' },
+    { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 진필살기 시전' },
   ];
   const cur = $derived(CARDS.find((c) => c.k === sel)!);
   const can = (k: Sk) => rec.canHeal && (k === 'true' ? trueOn : true);
@@ -39,14 +44,14 @@
     const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
     await cutin(look.hero, look.fx, { gold: true, heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>` });
     const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultBlast(sc, sc.querySelector('.mon'), look.fx);
-    onround(); retrySnd();
+    afterCast('🌟', '🌟 진필살기 시전!');
   }
   const retrySnd = () => setTimeout(() => sfx('retry-start', 0.75), 700); // 🔊 2차 🔥 재도전 판 (정식 student.js 같은 순간 · 기술을 쓴 뒤 0.7초)
   // 💚 힐 = 받을 친구 자동 (정식 healTarget · 📜 2026-11-15 머리 규칙 점검: 남은 기회 적은 친구에게 무게 · 다 맞힘 · 접속 안 함 빼고 · 몬스터당 +2 까지 · 받을 친구 없으면 응원)
-  function healNow() { const to = healAuto(S, L, code, mid, uid); if (!to) { msg = '지금은 쓸 수 없어요'; return; } msg = to === '_' ? '💚 응원 보냄!' : `💚 ${R.players?.[to]?.nick || ''}에게 +1`; onround(); retrySnd(); }
-  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { onround(); retrySnd(); } else msg = '지금은 쓸 수 없어요'; }
+  function healNow() { const to = healAuto(S, L, code, mid, uid); if (!to) { msg = '지금은 쓸 수 없어요'; return; } const t = to === '_' ? '💚 힐 시전! 응원을 보냈어요' : `💚 힐 시전! ${R.players?.[to]?.nick || ''}에게 ⚔ +1`; afterCast('💚', t); }
+  function spend(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) afterCast('⛓', '⛓ 묶기 시전! 몬스터 공격이 늦춰져요'); else msg = '지금은 쓸 수 없어요'; }
   // 🔊 2차 ⚡ 카드 펼침 (정식 student.js 같은 순간 · ⚡ 칸마다 한 번)
-  const cardsOn = $derived(!paperOn() && !rec.roundOpen && !rest && rec.tokLeft > 0);
+  const cardsOn = $derived(!paperOn() && !cast && !rec.roundOpen && !rest && rec.tokLeft > 0);
   $effect(() => { if (!cardsOn) return; const ck = `${code}|${mid}|${uid}|${rec.tokLeft}`; untrack(() => { if (!cardSnd.has(ck)) { cardSnd.add(ck); sfx('energy-card', 0.7); } }); });
   function act() { msg = ''; if (rec.roundOpen) { rest = false; onround(); return; } if (rest) { rest = false; return; } if (sel === 'heal') healNow(); else if (sel === 'bind') spend('bind'); else void useTrue(); }
 </script>
@@ -60,6 +65,16 @@
     {#if msg}<p class="muted">{msg}</p>{/if}
   </div>
   <BottomAction battle text="다음 문제를 기다려요" why="선생님이 다음으로 넘기면 바로 이어져요" />
+{:else if cast}
+  <!-- ⚡ ② 시전 뒤 = 플레이어가 고름 (11/17 #5) -->
+  <div class="bcard sk" data-k="cast-done">
+    <span class="lab acc">{cast.line}</span>
+    <p class="muted">숫자 바뀐 문제로 한 번 더 할까요? · 다 맞혀야 다음 ⚡ · 틀려도 칼은 그대로</p>
+  </div>
+  <BottomAction battle onmain={more} mainLabel="한 번 더">
+    {#snippet main()}<span>🔥 한 번 더</span>{/snippet}
+    {#snippet aux()}<button type="button" class="stop" data-k="cast-rest" onclick={pause}>⏸ 여기서 쉬기</button>{/snippet}
+  </BottomAction>
 {:else if rec.roundOpen || rest}
   <div class="bcard sk">
     <span class="lab acc">{rec.roundOpen ? '🔥 한 번 더 판이 열려 있어요' : '⏸ 쉬는 중'}</span>
