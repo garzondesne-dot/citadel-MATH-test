@@ -85,12 +85,15 @@
   let seen: Record<string, Snap> = {}, seenKey = '', wasDown = false, qT: ReturnType<typeof setTimeout> | undefined;
   const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean; perfect?: boolean }[] = [];
   let domFx = $state<{ k: number; text: string; x: number; y: number; cls: string }[]>([]), domBan = $state(''), fk = 0, lunge = $state<Record<string, boolean>>({});
+  let lastHitU = ''; // ⚔ 마지막 일격 = 체력을 깎은 마지막 학생 (옛 정식 hall.js lastHit)
   function play() {
     if (qT) return;
     const h = queue.shift(); if (!h) return;
     if (fxLayer && W && tvAttack(h)) { /* ⚔ 정식 attack.js (DOM 층) */ }
     else if (A) A.hit(h.u, h.dmg, h.kind);
     else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); if (h.kind !== 'miss') domPop(h.kind === 'hit' ? `-${h.dmg}` : '연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); /* 틀림 = 글자 없음(돌진 · 튕김만) */ }
+    if (h.kind === 'hit' && h.perfect && W) { const b = arenaBox(W, H, boss, split); setTimeout(() => domPop('PERFECT!', b.mon.cx, b.mon.top + b.mon.size * 0.5, 'perfect'), 250); } // 📜 2026-11-16 선생님 c3 「퍼펙트 표기 사라짐(옛)」 = 옛 정식 hall.js 「PERFECT!」
+    if (h.kind === 'hit' && h.dmg > 0) lastHitU = h.u;
     qT = setTimeout(() => { qT = undefined; play(); }, 350);
   }
   // ⚔ 🔨 용사 fx (정식 hall.js 606~618 · 학생 폰과 같은 attack()): Pixi = 캔버스 위 DOM 층에 그 용사 대역(같은 자리 · 같은 크기)을 두고 Pixi 용사는 잠깐 숨김
@@ -260,8 +263,8 @@
       const d = !!hp?.down;
       if (d && !wasDown) {
         A?.armKill(); // 🎆 마지막 일격 = 느리게 · 충격파 · 조각
-        const pn = st0.kind === 'monster' ? pracHitsAll(L, R, st0.id) : 0, text = boss ? '🎉 보스 격파! 모두 함께 이겼다!' : `⚔ 몬스터 격파!${pn ? `\n🔥 연습 타격 ${pn}번` : ''}`;
-        setTimeout(() => { if (A) A.banner(text); else domBan = text; }, 350 * (queue.length + 1));
+        const pn = st0.kind === 'monster' ? pracHitsAll(L, R, st0.id) : 0, text0 = boss ? '🎉 보스 격파! 모두 함께 이겼다!' : `⚔ 몬스터 격파!${pn ? `\n🔥 연습 타격 ${pn}번` : ''}`;
+        setTimeout(() => { const fin = [...hs].reverse().find((h) => h.kind === 'hit' && h.dmg > 0)?.u || lastHitU, text = fin ? `⚔ 마지막 일격 · ${whoOf(fin)}\n${text0}` : text0; if (A) A.banner(text); else domBan = text; }, 350 * (queue.length + 1)); // 📜 2026-11-16 c3 「마지막 일격 표기」
         setTimeout(() => ids.forEach((u, k) => { const x = xpOf(L, R, st0, u); if (!x) return; setTimeout(() => { if (A) A.exp(u, `+${x} EXP`); else { const sl = partyLayout(ids.length, W, H, split)[k]; if (sl) domPop(`+${x} EXP`, sl.x, sl.y - 64 * sl.s, 'exp'); } }, (k % 6) * 120); }), 350 * (queue.length + 1) + 600);
       }
       wasDown = d;
@@ -290,9 +293,9 @@
         <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📵 ' : ''}{h.name}</span>
       </div>
     {/if}{/each}
-    {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
+  {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}
   <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
@@ -330,6 +333,7 @@
   .pop { position: absolute; transform: translate(-50%, -100%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; text-shadow: 0 3px 0 #000; animation: up 1.1s ease-out forwards; pointer-events: none; }
   .tvfx :global(.ttag) { position: absolute; z-index: 20; transform: translate(-50%, -100%); font-weight: 800; text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: up 1.6s ease-out forwards; }
   .tvfx :global(.ttag.demo) { font-size: var(--tv-title); color: #e8ecf4; }
+  .pop.perfect { transform: translate(-50%, -50%) rotate(-4deg); font-size: calc(var(--tv-big) * 1.6); font-weight: 900; color: #fff; -webkit-text-stroke: 3px #b3006b; text-shadow: 0 0 18px #ff4fd8, 0 0 40px #ffd84a; letter-spacing: 4px; z-index: 30; }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
