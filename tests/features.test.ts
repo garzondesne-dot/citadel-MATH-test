@@ -7,7 +7,9 @@ import type { Store } from '../src/model/types';
 const S: Store = { ...memoryStore(), kind: 'memory', now: () => 0 } as Store;
 describe('⚙ 스위치 틀', () => {
   it('설정 없음 = 🏰 전체 (우리 학교 그대로) · 모든 기능 켬 · 📅 시간표만 끔(모든 묶음 기본 끔)', () => {
-    for (const f of FEATS) expect(wanted(null, f.id)).toBe(f.id !== 'schedule');
+    for (const f of FEATS) expect(wanted(null, f.id)).toBe(f.id !== 'schedule' && f.id !== 'rest-defense');
+    for (const b of BUNDLES) expect(wanted({ bundle: b.id }, 'rest-defense')).toBe(false); // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16)
+    expect(wanted({ bundle: 'full', on: { 'rest-defense': true } }, 'rest-defense')).toBe(true); // 스위치로 되살림
     for (const b of BUNDLES) expect(wanted({ bundle: b.id }, 'schedule')).toBe(false);
     expect(wanted({ bundle: 'basic', on: { schedule: true } }, 'schedule')).toBe(true);
     expect(DEFAULT_CFG.bundle).toBe('full');
@@ -15,7 +17,7 @@ describe('⚙ 스위치 틀', () => {
   it('🪶 기본 = 모두 끔 · ⚔ 표준 = 용사 · 쉼터 · 몬스터 공격 · 🏰 전체 = 모두', () => {
     for (const f of FEATS) expect(wanted({ bundle: 'basic' }, f.id)).toBe(f.id === 'scarecrow' || f.id === 'board'); // 🪶 기본 = 뼈대 + 복습(🎯 · 📋) · 📜 2026-11-16 기능 단계: 🧩 수업 기능은 ⚔ 표준 · 🏰 풀부터
     const std = BUNDLES.find((b) => b.id === 'standard')!.on;
-    for (const id of ['hero', 'rest-balance', 'rest-defense', 'mon-attack'] as FeatId[]) expect(std).toContain(id);
+    for (const id of ['hero', 'rest-balance', 'mon-attack'] as FeatId[]) expect(std).toContain(id);
     for (const id of ['forge', 'citadel', 'photo', 'contest'] as FeatId[]) expect(wanted({ bundle: 'standard' }, id)).toBe(false);
   });
   it('낱낱 스위치가 묶음보다 먼저 (더하고 뺌)', () => {
