@@ -226,6 +226,7 @@
   let dockAt = $state(Date.now()), pin = $state(false), mini = $state(false), sound = $state(true);
   const dockOn = true; // 🚨 2026-11-16 핫픽스(정식 b210) 선생님 「리모컨 안 나와 · 리모컨은 그냥 계속 표시되게」 = 조작 막대 늘 보임 · 늘 누름 (마우스 없는 터치 교실 PC)
   const poke = () => (dockAt = Date.now());
+  let offTip = $state(''); $effect(() => { if (!offTip) return; const t = setTimeout(() => (offTip = ''), 1800); return () => clearTimeout(t); }); // 꺼진 칸 누름 = 「⚙ 기능에서 켜요」
   const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : '앞으로 ▶'); // 🌫 정찰 중 = 리모컨과 같게 「⚔ 지금 등장」 (🐞 2026-11-14 · 예전엔 몬스터를 건너뜀)
   const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
   function go() {
@@ -463,8 +464,11 @@
       <button type="button" class="t" class:on={demo} disabled={!mid && step?.kind !== 'boss'} onclick={() => (demo = !demo)}>🎮<small>시연</small></button>
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>
       <!-- ✔ · 🔎 (📜 2026-11-17 #13 「종합실 리모컨에 체크랑 풀이」): 교사 폰 리모컨과 같은 함수 · 같은 조건 · 같은 글 (🪞) -->
-      {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" onclick={() => (ccOnTv ? closeCC(S, code, R) : openCC(S, code, step!.id))}>✔<small>{ccOnTv ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : '체크'}</small></button>{/if}
-      {#if rvTv.show && feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" onclick={() => R && stepReview(S, code, L, R as Room, now)}>{rvTv.gobi ? '📊' : '🔎'}<small>{rvTv.label}</small></button>{/if}
+      <!-- 🧭 #24 ⑦ 자리 고정: ✔ · 🔎 늘 같은 자리 · 못 쓸 때 흐림 · ⚙ 에서 끔 = 점선 「꺼짐」(누르면 안내) -->
+      {#if feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccOnTv ? closeCC(S, code, R) : openCC(S, code, step!.id))}>✔<small>{ccOnTv ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : '체크'}</small></button>
+      {:else}<button type="button" class="t off" data-k="dock-cc" aria-disabled="true" title="⚙ 기능에서 켜요" onclick={() => (offTip = '⚙ 기능에서 켜요 (✔ 개념 체크)')}>✔<small>꺼짐</small></button>{/if}
+      {#if feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" disabled={!rvTv.show} onclick={() => R && stepReview(S, code, L, R as Room, now)}>{rvTv.gobi ? '📊' : '🔎'}<small>{rvTv.show ? rvTv.label : '풀이'}</small></button>
+      {:else}<button type="button" class="t off" data-k="dock-review" aria-disabled="true" title="⚙ 기능에서 켜요" onclick={() => (offTip = '⚙ 기능에서 켜요 (🔎 익명 풀이)')}>🔎<small>꺼짐</small></button>{/if}
     {/if}
     {#if R && !R.state.closed}
       <span class="sep"></span>
@@ -475,6 +479,7 @@
     {#if R?.state.closed && showRes}<button type="button" class="n" data-k="tv-entry-back" onclick={() => (showRes = false)}>‹ 입장 대기</button>{/if}
     <!-- ⛶ 전체 화면 = 입장 대기 화면 QR 옆으로 (📜 2026-11-17 #21 C · #20 자리 대신) -->
   </nav>
+  {#if offTip}<p class="offtip" role="status" data-k="dock-off">{offTip}</p>{/if}
   {#if setOpen}
     <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
       <div class="setbox" role="menu" aria-label="TV 설정" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') setOpen = false; }}>
@@ -658,6 +663,8 @@
   .dock .t { width: 7cqh; height: 7.6cqh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2cqh; padding: 0; }
   .dock .t small { font-size: var(--tv-small); color: #d6d9e0; }
   .dock .t.on { border: 2px solid var(--accent); }
+  .dock .t.off { border-style: dashed; background: none; color: #8a8f9c; } .dock .t.off small { color: #8a8f9c; }
+  .offtip { position: absolute; right: 2cqw; bottom: 13cqh; z-index: 9; margin: 0; padding: 1cqh 1.4cqw; border-radius: 1.4cqh; background: rgba(8, 9, 12, 0.92); color: #fff; font: 700 var(--tv-body) var(--font); }
   .dock .n { height: 7.6cqh; padding: 0 1.2cqw; font-size: var(--tv-body); display: flex; flex-direction: column; align-items: center; justify-content: center; white-space: nowrap; }
   .dock .n small { font-size: var(--tv-small); color: inherit; opacity: 0.8; }
   .dock .n.go { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh); }
