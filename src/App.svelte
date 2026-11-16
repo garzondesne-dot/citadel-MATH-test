@@ -1,7 +1,8 @@
 <script lang="ts">
   import { swUpdate } from './pwa.svelte';
   import { busy } from './ui/busy.svelte';
-  import { bindFeatures } from './school/features.svelte';
+  import { bindFeatures, feat } from './school/features.svelte';
+  import { rememberBoot } from './boot';
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
   import { PACKS, packOf } from './engine/packs';
@@ -35,6 +36,9 @@
   const props: { S: Store; where: Where } = $props(); // 🔌 「어느 서버」 = main.ts 가 고름 (#137) · 한 번 정하면 그대로
   const S = untrack(() => props.S), where = untrack(() => props.where);
   bindFeatures(S); // ⚙ 우리 학교 기능 (school/features) — 모든 화면이 feat('id') 로 읽음
+  // 🚶 💡 로딩 첫 화면 기억 = 켜진 기능의 팁 + 내 용사 (기능이 바뀌면 · 화면을 떠날 때마다 다시 적음 · src/boot.ts)
+  $effect(() => { rememberBoot(feat); });
+  $effect(() => { const f = () => rememberBoot(feat); addEventListener('pagehide', f); document.addEventListener('visibilitychange', f); return () => { removeEventListener('pagehide', f); document.removeEventListener('visibilitychange', f); }; });
   // 🚪 뒤로 가기를 계속 눌러도 첫 화면(로그인)까지는 오지 않게 (📜 2026-11-13 밤 · 실수 방지) — 처음 화면은 「🚪 처음 화면으로」 단추로만
   //   로그인한 학생 캠프 · 교사 폰 · 교실 TV: 지금 자리에 문지기 기록 하나를 쌓고, 그 밖으로 나가려 하면 다시 쌓음
   const gateRole = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('role') : null;
