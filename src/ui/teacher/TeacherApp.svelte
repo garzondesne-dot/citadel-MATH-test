@@ -1,6 +1,6 @@
 <script lang="ts">
   import { BETA } from '../../channel';
-  import { HALLKEY } from '../../school/school';
+  import { roster, HALLKEY } from '../../school/school';
   import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
   import { onDestroy, untrack } from 'svelte';
   import { setTeacherSink } from '../../store/me.svelte';
@@ -61,6 +61,7 @@
     const pr = S.get<Record<string, number>>(`school/prep/${L.id}`); // 📋 차시 준비 기본값 (⑰) → 방에 옮겨 적음
     if (pr) Object.entries(pr).forEach(([k, v]) => S.set(`${roomPath(code)}/meta/${k}`, v)); // 🧪 테스트 수업도 차시 준비 값 그대로 (📜 2026-11-14)
     if (test && pr?.solve == null) S.set(`${roomPath(code)}/meta/solve`, PROFILES.class.scoutSec); // 🌫 몬스터 등장(정찰) 기본 60초 = 실제 수업 · 🧪 테스트 수업 같음 (📜 2026-11-14 선생님 「등장 시간 기본값 60초로」 · 학생 혼자 🧪 테스트 모드 5초는 그대로)
+    S.set(`${roomPath(code)}/meta/names`, Object.fromEntries(roster(cls, S).map((p) => [p.uid, p.name]))); // 📜 2026-11-16 선생님 「이름 전부 표기」 = TV 는 가린 명단만 읽을 수 있어서 교사가 연 방에 전체 이름을 적음 (방 = 그 수업 사람만)
     S.set(`${roomPath(code)}/meta/cls`, cls); S.set(`secrets/${code}/hallKey`, key); // 🔐 TV 는 이 키를 쳐서 hosts 에 등록 (방 meta · school/live 에는 키를 안 둠)
     if (from) { S.set(`${roomPath(code)}/meta/resumeFrom`, from.step); if (from.fresh) S.set(`${roomPath(code)}/meta/fresh/${from.fresh}`, true); } // ⏯ 이어서
     if (!test) S.set(`${roomPath(code)}/meta/limit`, true);

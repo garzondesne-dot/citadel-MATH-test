@@ -50,7 +50,7 @@
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
   const inSet = $derived(new Set(ids));
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
-  const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name.slice(1)}` : R?.players?.[u]?.nick ?? u; };
+  const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name}` : R?.players?.[u]?.nick ?? u; };
   const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? R?.players?.[u]?.num ?? 0;
   let talkOpen = $state(false); // 💬 말할 거리 전체
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
@@ -120,7 +120,7 @@
   /** 칸 바탕 = 결석 · 안 옴 · 🙋 · ✔ · 들어옴 (⚠ 옛 판은 따로 덧붙임 = isOldU) */
   const stOf = (uid: string) => absent[uid] ? 'ab' : !inSet.has(uid) ? 'no' : help.includes(uid) ? 'help' : okSet.has(uid) ? 'ok' : idleOn(R, uid, mid) ? 'idle' : 'in'; // 🤝 idle = 90초 입력 없음(노랑 「멈춤」 · 📜 2026-11-16 · 🌊 ①)
   const isOldU = (uid: string) => inSet.has(uid) && !absent[uid] && isOld(R?.players?.[uid]?.ver);
-  const pname = (uid: string) => pupils.find((x) => x.uid === uid)?.name.slice(1) ?? '';
+  const pname = (uid: string) => pupils.find((x) => x.uid === uid)?.name ?? '';
   // 🙋 풀어주기 (칩 한 번) · 3초 「되돌리기」
   let undoU = $state<{ u: string; mid: string; v4: boolean; n: number; at: number } | null>(null), undoT: ReturnType<typeof setTimeout> | null = null;
   function release(u: string) {
@@ -208,7 +208,7 @@
       <div class="nums c{COLS}" role="group" aria-label="번호 칸">
         {#each pupils as p (p.uid)}
           {@const st = stOf(p.uid)}
-          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name.slice(1)} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name.slice(1)}</s>{/if}</button>
+          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name}</s>{/if}</button>
         {/each}
       </div>
       <div class="q">
@@ -300,7 +300,7 @@
   {#if whoP}
     {@const st = stOf(whoP.uid)}
     <Sheet onclose={() => (who = '')} mainText="닫기">
-      {#snippet title()}{whoP.num} {whoP.name.slice(1)} {#if st === 'help'}<span class="chip r">🙋 도움 요청</span>{:else if st === 'ok'}<span class="chip g">✔ 다 맞힘</span>{/if}{#if isOldU(whoP.uid)}<span class="chip y">⚠ 옛 판</span>{/if}{/snippet}
+      {#snippet title()}{whoP.num} {whoP.name} {#if st === 'help'}<span class="chip r">🙋 도움 요청</span>{:else if st === 'ok'}<span class="chip g">✔ 다 맞힘</span>{/if}{#if isOldU(whoP.uid)}<span class="chip y">⚠ 옛 판</span>{/if}{/snippet}
       <div class="wst" data-k="who">
         <div>판<b>{R.players?.[whoP.uid]?.ver ? (isOld(R.players?.[whoP.uid]?.ver) ? `옛 판 ${R.players?.[whoP.uid]?.ver}` : `새 판 ${BUILD}`) : st === 'ab' ? '결석' : '안 들어옴'}</b></div>
         <div>지금<b>{isLobby(R) ? '대기실' : isEnd(L, R) ? '마무리' : short(step)}</b></div>
@@ -309,12 +309,12 @@
       </div>
       <div class="wacts">
         <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>⚔ 보급 (칼 +1)</button>
-        <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name.slice(1)} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
+        <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name} 새로 고침`); who = ''; }}>🔄 새로 고침 보내기</button>
         <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
-        {#if feat('stamp')}<button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name.slice(1)} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>{/if}
+        {#if feat('stamp')}<button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>{/if}
         <button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>
       </div>
-      {#if pwAsk}<div class="conf" data-k="pwask"><span><b>{whoP.num} {whoP.name.slice(1)}</b> 비밀번호를 0000 으로 바꿀까요? 다음 로그인 때 0000 으로 들어와요.</span><div><button type="button" onclick={() => (pwAsk = false)}>취소</button><button type="button" class="y" data-k="pwgo" onclick={() => { resetPw(S, live.cls, whoP.num); pwAsk = false; pwDone = true; }}>0000 으로 바꾸기</button></div></div>{/if}
+      {#if pwAsk}<div class="conf" data-k="pwask"><span><b>{whoP.num} {whoP.name}</b> 비밀번호를 0000 으로 바꿀까요? 다음 로그인 때 0000 으로 들어와요.</span><div><button type="button" onclick={() => (pwAsk = false)}>취소</button><button type="button" class="y" data-k="pwgo" onclick={() => { resetPw(S, live.cls, whoP.num); pwAsk = false; pwDone = true; }}>0000 으로 바꾸기</button></div></div>{/if}
     </Sheet>
   {/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}

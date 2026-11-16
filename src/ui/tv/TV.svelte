@@ -76,7 +76,7 @@
   $effect(() => { applyTheme(tvTheme, { tv: true }); });
   function pickTv(t: Theme) { tvTheme = t; try { localStorage.setItem(TVK, t); } catch { /* 무시 */ } themeOpen = false; }
   // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
-  const pupils = $derived(live ? roster(live.cls, S) : []);
+  const pupils = $derived.by(() => { const nm = (R?.meta as { names?: Record<string, string> } | undefined)?.names || {}; return live ? roster(live.cls, S).map((p) => (nm[p.uid] ? { ...p, name: nm[p.uid]! } : p)) : []; }); // 📜 2026-11-16 전체 이름 = 방 meta/names (교사가 열 때 적음)
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});
@@ -97,7 +97,7 @@
   const left = $derived(R ? timeLeft(R, now) : null);
   const closeAt = $derived(R?.state.deadline ? R.state.deadline + (Number(R.state.extend) || 0) * 60e3 : null);
   const started = $derived(R?.state.stepAt && !isLobby(R as Room) ? (R as Room).state.stepAt : null);
-  const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name.slice(1)}` : R?.players?.[u]?.nick ?? u; };
+  const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name}` : R?.players?.[u]?.nick ?? u; };
   const submitted = (u: string) => !!R && !!step && (step.kind === 'boss' ? bossState(L, R, u).some((x) => x.n > 0) : mid ? (chain ? chainRecord(L, R, mid, u).submitted : plainRecord(L, R, mid, u).submitted) : false);
   const lost = $derived(R ? Object.keys(R.players || {}).filter((u) => !R.players?.[u]?.teacher && !inSet.has(u) && !absent[u]) : []);
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
@@ -119,7 +119,7 @@
   const ff = $derived(fun && fun.kind !== 'nun' ? norm(fun as Fun) : null);
   const nn = $derived(fun && fun.kind === 'nun' ? (fun as unknown as Nun) : null);
   // 🔄 🙊 쉼터 무리(❓#2 B): 이름 = 번호 뺀 이름 · 번호 = 명단(없으면 방 기록) · TV 높이 1000 넘으면 용사 1.5배
-  const nmOnly = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? p.name.slice(1) : R?.players?.[u]?.nick ?? u; };
+  const nmOnly = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? p.name : R?.players?.[u]?.nick ?? u; };
   const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? Number((R?.players?.[u] as { num?: number } | undefined)?.num) ?? 0;
   let tvH = $state(720);
   const crowdK = $derived(tvH >= 1000 ? 1.5 : 1);
@@ -175,7 +175,7 @@
     if (R.state.rest && view !== 'camp') return { ic: '📱', lab: '입장', n: ids.length, m: expected.length, sub: '' };
     if (view === 'concept') return null;
     if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: ids.length, m: expected.length, sub: '' };
-    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name.slice(1)).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
+    if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
     if (scout?.on) return { ic: '✋', lab: '준비 완료', n: Object.keys(R.ready?.[scout.id] || {}).length, m: ids.length, sub: '' };
     if (view === 'end') return { ic: '✔', lab: '참여', n: ids.length, m: expected.length, sub: '' };
     return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? `📵 끊김 ${lost.map(nameOf).join(' · ')}` : '' };
@@ -340,7 +340,7 @@
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
     <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
     <div class="lring" bind:clientWidth={lobbyW}>
-      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name.slice(1)}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
+      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
       <div class="tchr"><HeroSprite id={M.me.hero} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
   {:else if view === 'concept' && step}
