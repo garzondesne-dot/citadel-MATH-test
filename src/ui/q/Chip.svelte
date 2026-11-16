@@ -11,6 +11,8 @@
   //   아주 긴 보기(12자 넘음) = 한 줄에 하나 · 짧은 칩(1 · 2 · ∅)은 예전 그대로
   const longest = $derived(Math.max(0, ...q.options.map((o) => String(o).length)));
   const wide = $derived(longest > 3), one = $derived(longest > 12);
+  // 📜 2026-11-16 선생님 「보기 10개 이상 고르는 문제도 단추가 너무 커서 어색함」: 보기 8개 이상 = 작은 단추 · 여러 열 격자 (글자는 16px 이상)
+  const many = $derived(q.options.length >= 8);
   const parts = $derived.by(() => {
     if (!q.groups?.length) return [{ label: '', from: 0, n: q.options.length }];
     let b0 = 0;
@@ -21,7 +23,7 @@
 {#each parts as p (p.from)}
   <div class="grp">
     {#if p.label}<b class="grp-h">{p.label}</b>{/if}
-    <div class="chips" class:wide class:one>
+    <div class="chips" class:wide class:one class:many>
       {#each q.options.slice(p.from, p.from + p.n) as o, j (p.from + j)}
         {@const k = p.from + j}
         <button type="button" class="chip" class:on={on.has(k)} aria-pressed={on.has(k)} class:empty={(q.empty || []).includes(k)} class:m-ok={okS.has(k)} class:m-bad={badS.has(k)} class:box {disabled} onclick={() => onchange(chipToggle(q, value, k))}>{#if box}<span class="cb" aria-hidden="true">{on.has(k) ? '☑' : '☐'}</span>{/if}{o}{#if okS.has(k)}<i class="mk ok" aria-label="맞은 보기">✔</i>{:else if badS.has(k)}<i class="mk bad" aria-label="틀린 보기">✘</i>{/if}</button>
@@ -41,6 +43,12 @@
   .chips.one { grid-template-columns: 1fr; }
   .chips.wide .chip { min-height: 56px; padding: 0 var(--s2); font-size: 21px; white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
   .chips.one .chip { white-space: normal; word-break: keep-all; font-size: 19px; }
+  .chips.many { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+  .chips.many .chip { min-height: 44px; font-size: 16px; }
+  .chips.many.wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .chips.many.wide .chip { min-height: 44px; font-size: 16px; padding: 0 4px; }
+  .chips.many.one { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chips.many.one .chip { font-size: 15px; white-space: normal; }
   .chip.empty { border-style: dashed; border-color: var(--line); }
   .chip { position: relative; overflow: visible; }
   .chip.m-ok { border-color: var(--ok); }
