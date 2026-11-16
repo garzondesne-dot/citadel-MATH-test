@@ -4,7 +4,9 @@
 //   출시(정식 주소) = 둘 다 끔 → 시험 고리 이름은 잠가서 써도 무시 · 읽어도 없음 (아래 HOOKS · 새 고리는 여기에 더해야 tests/channel.test.ts 통과)
 const loc = typeof location !== 'undefined' ? location : null;
 export const TEST_ADDR = !!loc && /^(localhost|127\.0\.0\.1)$/.test(loc.hostname);
-export const BETA = TEST_ADDR || (!!loc && /-test\//i.test(loc.pathname));
+/** 🏫 학교판 빌드 (VITE_SCHOOL) = 늘 정식 표시 (📜 2026-11-16 선생님 「내 친구는 베타 버전하고 정식 버전 굳이 나눌 필요 없게」 · 베타 주소에 있어도 「BETA」 · 「시험 서버」 · 🧪 낱말 없음) */
+export const SCHOOL_BUILD = !!(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_SCHOOL_NAME;
+export const BETA = !SCHOOL_BUILD && (TEST_ADDR || (!!loc && /-test\//i.test(loc.pathname)));
 /** 화면 낱말 (📜 2026-11-15 머리 🔨 「정식에서 테스트 · 베타 낱말 빼기」): 앱 이름 · 통계에서 빠지는 반 이름 */
 export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';
 export const XCLS = BETA ? '베타 반' : '시험 반';
