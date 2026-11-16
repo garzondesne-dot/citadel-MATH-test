@@ -104,7 +104,7 @@
 
   // ── 어떤 장면인가 ──
   let campPeek = $state(false), setOpen = $state(false);
-  const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' ? 'concept' : 'battle');
+  const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
   let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
   let zoom = $state<0 | 1 | 2>(0);
@@ -348,7 +348,7 @@
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
     <div class="split" class:z1={zoom === 1} class:z2={zoom === 2}>
-      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{short(step)} · 개념</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={step.id} alt="{short(step)} 개념">{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
+      <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 1 ? 0 : 1)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 1 ? 0 : 1; }}><span class="lab">{step.kind === 'intro' ? short(step) : `${short(step)} · 개념`}</span><div class="pimg"><PrepImg zoom={false} {S} {L} id={step.img ?? step.id} fb={step.id} alt={short(step)}>{@const cp = conceptParts(step.say ?? '')}<h4>{step.title.split(' · ').slice(1).join(' · ') || step.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 1 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>
       {#if nextMon}
         {@const qs = qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id)}
         <div class="cpane" role="button" tabindex="0" onclick={() => (zoom = zoom === 2 ? 0 : 2)} onkeydown={(e) => { if (e.key === 'Enter') zoom = zoom === 2 ? 0 : 2; }}><span class="lab">{short(nextMon)} · 문제</span><div class="pimg qpaper"><PrepImg zoom={false} {S} {L} id={nextMon.kind === 'boss' ? BOSS_ID : nextMon.id} alt="{short(nextMon)} 문제">{@const pp = problemParts(qs.slice(0, 4).map((q) => q.question))}{#if pp.head.length}<div class="qhead">{#each pp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each pp.items as t, k (k)}<p class="qi"><SymText text={t} /></p>{/each}</PrepImg></div><em class="zm">{zoom === 2 ? '⤡ 누르면 작게' : '⤢ 누르면 크게'}</em></div>

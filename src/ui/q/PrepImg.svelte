@@ -4,13 +4,13 @@
   import { prepImg } from '../../school/prep';
   // 📄 학습지 칸 그림 (#158): 서버의 칸 그림을 크게 · 누르면 화면 가득 · 그림이 없을 때만 글자(children)
   //   TV 📄 문제 창 · 📖 개념 2분할 · 학생 「📘 이 문제의 개념」 모두 이 하나
-  const { S, L, id, alt = '', children, big = true, zoom = true }: { S: Store; L: LessonPack; id: string; alt?: string; children?: Snippet; big?: boolean; /** 누르면 화면 가득(검은 바탕) — TV 카드는 false (카드가 커짐 · 🐞 2026-11-14 「좌우 전부 · 하얀 배경」) */ zoom?: boolean } = $props();
+  const { S, L, id, fb = '', alt = '', children, big = true, zoom = true }: { S: Store; L: LessonPack; id: string; /** 📜 2026-11-16 그 칸 그림이 없으면 이 칸 (도입 img 칸 ↔ 단계 id 칸이 어긋난 팩) */ fb?: string; alt?: string; children?: Snippet; big?: boolean; /** 누르면 화면 가득(검은 바탕) — TV 카드는 false (카드가 커짐 · 🐞 2026-11-14 「좌우 전부 · 하얀 배경」) */ zoom?: boolean } = $props();
   let src = $state<string | null>(null), done = $state(false), full = $state(false);
   // 📺 TV 카드(fill) = 그림 전체를 칸 안에 맞춤(비율 유지 · 가운데) · 그림이 폭의 2.2배 넘게 길고 칸 높이의 2배를 넘을 때만 폭 가득 + 스크롤 + 「⬇ 더 보기」 (🐞 2026-11-15 「누르면 사진이 너무 커져 위쪽만 보임」)
   let box = $state<HTMLDivElement | null>(null), tall = $state(false), nat = $state<[number, number] | null>(null), more = $state(true);
   const fit = () => { const b = box; if (!b || !nat) return; const [w, h] = nat; tall = h / w > 2.2 && (h / w) * b.clientWidth > 2 * b.clientHeight; }; // 그림 자체가 폭의 2.2배 넘게 길고 · 폭에 맞추면 칸 높이 2배를 넘을 때만 스크롤 (크게 보기 = 넓은 칸이어도 보통 칸은 전체)
   $effect(() => { const b = box; if (!b || typeof ResizeObserver === 'undefined') return; const ro = new ResizeObserver(fit); ro.observe(b); return () => ro.disconnect(); });
-  $effect(() => { const k = id; src = null; done = false; void prepImg(S, L, k).then((x) => { if (k === id) { src = x; done = true; } }); });
+  $effect(() => { const k = id, f = fb; src = null; done = false; void prepImg(S, L, k).then((x) => (x || !f || f === k ? x : prepImg(S, L, f))).then((x) => { if (k === id) { src = x; done = true; } }); });
 </script>
 
 {#if src && !zoom}

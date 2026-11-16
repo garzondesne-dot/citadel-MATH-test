@@ -277,7 +277,7 @@
       <span class="lab acc">📣 {step.kind === 'intro' ? '도입 · 수업을 시작해요' : '개념 설명'}</span>
       <b class="ttl">{step.title}</b>
       {#if step.say}<p class="say"><SymText text={step.say} /></p>{/if}
-      <PrepImg {S} {L} id={step.img || step.id} alt={step.title} />
+      <PrepImg {S} {L} id={step.img || step.id} fb={step.id} alt={step.title} />
       {#if L.videos?.[step.id]}<button type="button" class="vbtn" data-k="talk-vid" onclick={() => (vidOn = !vidOn)}>{vidOn ? '🎬 영상 닫기' : '🎬 개념 영상 보기'}</button>{#if vidOn}<Vid {S} url={L.videos[step.id]!} autoplay />{/if}{/if}
       <p class="muted">학습지를 펴고 선생님 설명을 들어요.</p>
     </div>
