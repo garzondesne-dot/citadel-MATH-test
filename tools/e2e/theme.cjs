@@ -36,9 +36,10 @@ const log = (...a) => console.log(...a);
   await tp.screenshot({ path: `${SHOTS}/b27-remote-classic.png` });
   // 🏛 클래식 네 상태 (캠프 입장 단추 · ⚙ 테마 칸)
   await set(camp, 'classic'); await camp.waitForTimeout(600);
-  const src = (p, sel) => p.$eval(sel, (x) => (getComputedStyle(x).borderImageSource.match(/ui-[a-z-]+v1/) || ['없음'])[0]);
+  const src = (p, sel) => p.$eval(sel, (x) => (getComputedStyle(x).borderImageSource.match(/ui-[a-z-]+v\d+/) || ['없음'])[0]);
   const main = '.act .btn';
   const s1 = await src(camp, main), dis = await camp.$eval(main, (x) => x.disabled);
+  await camp.$eval(main, (x) => x.scrollIntoView({ block: 'center' })); // 캠프 입장 단추가 화면 밖이면 누름 상태를 못 봄
   const box = await camp.$eval(main, (x) => { const r = x.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
   await camp.mouse.move(box.x, box.y); await camp.mouse.down(); await camp.waitForTimeout(100); const s2 = await src(camp, main); await camp.mouse.move(box.x, 10); await camp.mouse.up(); await camp.waitForTimeout(300);
   await camp.click('button[aria-label="설정"]'); await camp.waitForSelector('.tgrid'); await camp.waitForTimeout(300);

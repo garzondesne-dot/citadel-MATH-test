@@ -19,14 +19,14 @@ const log = (...a) => console.log(...a);
   await t.click('.tabs button:has-text("수업")'); await t.waitForTimeout(500);
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1500);
   const live = await rest('school/live'); log('① 교사 계정 → 수업 열기:', live ? `${live.cls} · ${live.code}` : '✗ 안 열림'); if (!live) errs.push('① 수업 열기');
-  const key = (await t.textContent('.codek small').catch(() => '')).replace(/\D/g, ''); log('   교사 폰 종합실 키:', key);
+  const key = live ? String(await rest(`secrets/${live.code}/hallKey`)) : ''; log('   종합실 키 받음:', /^\d{4}$/.test(key)); // 교사 폰은 키를 가려 보여 줌 → 시험은 서버 칸에서 (값은 찍지 않음)
   await t.screenshot({ path: `${SHOTS}/b46-teacher-live.png` });
   // ② TV
   const tv = await open(`?role=hall&${E}`, 1280, 720); await tv.waitForSelector('.kin', { timeout: 20000 }); await tv.fill('.kin', key); await tv.click('.kgo');
   await tv.waitForSelector('.dock', { state: 'attached', timeout: 15000 }).catch(() => {}); const tvOk = !!(await tv.$('.dock')); log('② TV 키 → 진행:', tvOk ? '○' : '✗'); if (!tvOk) errs.push('② TV');
-  // ③ 학생
+  // ③ 학생 (📜 2026-11-17 #21: 🧪 테스트 = 테스트 반 1-6 학생이 들어옴)
   const s = await open(`?${E}`); await s.waitForSelector('select', { timeout: 20000 });
-  await s.selectOption('select >> nth=0', '1-3'); await s.waitForTimeout(200); await s.selectOption('select >> nth=1', '1'); await s.waitForTimeout(300);
+  await s.selectOption('select >> nth=0', '1-6'); await s.waitForTimeout(200); await s.selectOption('select >> nth=1', '1'); await s.waitForTimeout(300);
   await s.click('.links button:has-text("가입")'); await s.click('button.pw >> nth=0'); for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`);
   await s.waitForTimeout(200); if (await s.$('.pad')) for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`); else { await s.click('button.pw >> nth=1'); for (const d of '1234') await s.click(`.pad .keys button:has-text("${d}")`); }
   await s.waitForTimeout(200); await s.click('.title .pmain'); await s.waitForSelector('.stage', { timeout: 20000 }); await s.waitForTimeout(1500);

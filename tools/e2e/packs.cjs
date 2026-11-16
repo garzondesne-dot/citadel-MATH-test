@@ -10,13 +10,14 @@ const B = 'http://localhost:4173/', DB = 'citadel-v1-test-db';
     const ctx = await b.newContext({ viewport: { width: 360, height: 640 } });
     const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push(`${no}차시 교사: ${e}`));
     await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tabs');
+    await t.click('[data-cls="test"]'); // 📜 2026-11-17 #21: 🧪 테스트 = ① 반 줄 끝 🧪 → ② 차시
     const cell = t.locator('.pk3 .pk', { hasText: `${no}차시` }).first();
     const cls = await cell.getAttribute('class'); if (/\badd\b/.test(cls)) errs.push(`${no}차시: ⑫ 칸이 아직 「준비 안 됨」`);
-    await cell.click(); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(300);
+    await require('./_cls.cjs').testOpen(t, { no }); await t.waitForTimeout(300);
     const flow = (await t.textContent('.mid')).replace(/\s+/g, ' ');
     const lv = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);
     const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push(`${no}차시 학생: ${e}`)); s.on('console', (m) => { if (m.type() === 'error') errs.push(`${no}차시 학생 콘솔: ${m.text()}`); });
-    await s.goto(`${B}?role=student&room=${lv.code}&as=1-1:1`); await s.waitForTimeout(500); await t.bringToFront();
+    await s.goto(`${B}?role=student&room=${lv.code}&as=1-6:1`); await s.waitForTimeout(500); await t.bringToFront();
     log(`${no}차시 · 대기실 흐름: ${(/약 \d+분/.exec(flow) || ['?'])[0]} · 끝 예상 ${(/끝 예상 [\d:]+/.exec(flow) || ['?'])[0]}`);
     await t.waitForSelector('.tact .btn:not([disabled])'); await t.click('.tact .btn'); await t.waitForTimeout(300);
     const seen = [];

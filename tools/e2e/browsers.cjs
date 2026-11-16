@@ -40,12 +40,12 @@ const SIZES = [[360, 640], [412, 915], [830, 1000], [1280, 800]];
       await p.evaluate(() => document.fonts.ready);
       const font = await p.evaluate(() => document.fonts.check('16px "Pretendard Variable"', '수업 열기'));
       log(`${uaName} · color-scheme 메타 ${m.cs} · 루트 ${m.root} · Pretendard 그려짐 ${font}`);
-      if (m.cs !== 'dark' || !font) errs.push(`${tag}: color-scheme · 글꼴`);
+      if (!/\bdark\b/.test(m.cs) || !font) errs.push(`${tag}: color-scheme · 글꼴`); // 📜 #63 「only dark」 = 강제 어둡게 막음
     }
     await check('⑫ 수업 열기');
     const col = await p.$eval('.tp .mid', (e) => Math.round(e.getBoundingClientRect().width));
     // 학생 탭 · 명단
-    await p.click('.tabs button:has-text("학생")'); await p.waitForTimeout(120); await check('⑯ 명단');
+    await p.click('.tabs button:has-text("반 · 시간표")'); await p.waitForTimeout(120); await check('⑯ 명단');
     // 대시보드
     await p.click('.seg button:has-text("대시보드")'); await p.waitForTimeout(200); await scale(); await check('⑳ 대시보드');
     const wide = !!(await p.$('.dash.wide'));
@@ -68,7 +68,7 @@ const SIZES = [[360, 640], [412, 915], [830, 1000], [1280, 800]];
       log(`${tag} · 열 폭 ${col} · 펼침 ${wide} · 반 비교 ${t.n}줄 · 마지막 「${t.last}」 닿음 ${t.seen} · 표 안 세로 ${t.inner}`);
     }
     // 대기실 · 리모컨 (🧪 테스트로 열기)
-    await p.click('.tabs button:has-text("수업")'); await p.click('.pk3 .pk:not(.add)'); await require('./_cls.cjs').testOpen(p); await p.waitForTimeout(300); await scale();
+    await p.click('.tabs button:has-text("수업")'); await p.click('[data-cls="test"]'); await require('./_cls.cjs').testOpen(p); await p.waitForTimeout(300); await scale();
     await check('⑬ 대기실');
     if (fs === 130 && ua && w === 830) await p.screenshot({ path: `${SHOTS}/b15-lobby-830.png` });
     const lv = await p.evaluate(() => JSON.parse(localStorage.getItem('citadel-v1-test-db|school/live')));

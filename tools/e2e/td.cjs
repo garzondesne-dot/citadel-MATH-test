@@ -19,7 +19,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const code = (await rest('school/live')).code;
   const ph = []; for (let n = 1; n <= 3; n++) ph.push(await open(`?role=student&room=${code}&as=1-3:${n}&${E}`));
   await wait(2500); await t.click('.tact .btn'); await wait(1500);
-  await t.evaluate(() => { window.__TD_PICK = 8000; });
+  await t.evaluate(() => { window.__TD_PICK = 8000; window.__featSet({ bundle: 'full', on: { 'rest-defense': true } }); }); await wait(400); // 🏰 디펜스 = 처음엔 꺼짐(전체 묶음에서도 · 📜 2026-11-16) → 시험은 켬
   const fun = () => rest(`rooms/${code}/fun`);
   // TV 없이 → 안내
   await t.click('.rdock button:has-text("쉼터")'); await t.click('.games .game:has-text("디펜스")'); await t.click('.sheet .act .btn.rbig'); await wait(700);

@@ -17,23 +17,23 @@ const log = (...a) => console.log(...a);
   await rest('school/sched', 'PUT', W);
   const b = await chromium.launch(), errs = [];
   const open = async (url, w = 360, h = 640) => { const ctx = await b.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(`${url}: ${e}`)); p.on('console', (m) => { if (m.type() === 'error') errs.push(`${url}: ${m.text()}`); }); await p.goto(B + url); return p; };
-  // 리모컨: 1-3반 · 6차시 · 🧪 테스트로 열기
+  // 리모컨: 1-6반 · 6차시 · 🧪 테스트로 열기
   const t = await open(`?role=teacher${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   log('리모컨 표시:', (await t.textContent('.srv')).trim());
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(800);
+  await require('./_cls.cjs').testOpen(t, { no: 6 }); await t.waitForTimeout(800); // 📜 2026-11-17 #21 · 🧪 테스트 = 테스트 반 1-6
   const live = await rest('school/live'); log('서버 school/live:', JSON.stringify(live));
   const tv = await open(`?role=hall${E}`, 1280, 720); await tv.waitForTimeout(1500); await require('./_emu.cjs').asHost(tv, live.code); // 🔐 TV = 종합실 키로 hosts
   // 폰 1 = 가입(Firebase 로그인) → 그 다음 방으로 · 폰 2 · 3 = 반 · 번호로 바로
   const p1 = await open(`${E.replace('&', '?')}`); await p1.waitForSelector('select', { timeout: 15000 });
-  await p1.selectOption('select >> nth=0', '1-3'); await p1.waitForTimeout(200); await p1.selectOption('select >> nth=1', '1'); await p1.waitForTimeout(300);
+  await p1.selectOption('select >> nth=0', '1-6'); await p1.waitForTimeout(200); await p1.selectOption('select >> nth=1', '1'); await p1.waitForTimeout(300);
   await p1.click('.links button:has-text("가입")'); await p1.waitForTimeout(200);
   await p1.click('button.pw >> nth=0'); for (const d of '1234') await p1.click(`.pad .keys button:has-text("${d}")`);
   await p1.waitForTimeout(200); if (await p1.$('.pad')) for (const d of '1234') await p1.click(`.pad .keys button:has-text("${d}")`);
   await p1.waitForTimeout(200); await p1.click('.title .pmain'); await p1.waitForTimeout(2500);
   log('폰 1 가입 뒤 화면:', (await p1.textContent('body')).replace(/\s+/g, ' ').slice(0, 60));
-  const acc = await rest('accounts/1-3/1'); log('가입 → 서버 accounts/1-3/1:', JSON.stringify(acc), '| 비밀번호 칸 없음', acc && !('pw' in acc));
+  const acc = await rest('accounts/1-6/1'); log('가입 → 서버 accounts/1-6/1:', JSON.stringify(acc), '| 비밀번호 칸 없음', acc && !('pw' in acc));
   if (!acc || !acc.uid || 'pw' in acc) errs.push('가입이 서버 계정(uid · 비밀번호 없음)으로 안 됨');
-  const phones = [p1, await open(`?role=student&room=${live.code}&as=1-3:2${E}`), await open(`?role=student&room=${live.code}&as=1-3:3${E}`)];
+  const phones = [p1, await open(`?role=student&room=${live.code}&as=1-6:2${E}`), await open(`?role=student&room=${live.code}&as=1-6:3${E}`)];
   await p1.goto(`${B}?role=student&room=${live.code}${E}`); // 폰 1 = 진짜 로그인 그대로(?as 없음 = 학생 칸에 묶임 · 기록 · 💎 저장)
   await t.waitForTimeout(2500);
   const lobbyT = (await t.textContent('.mid')).replace(/\s+/g, ' '); log('리모컨 대기실:', (/(\d+)\s*\/\s*\d+\s*(명|들어옴)?/.exec(lobbyT) || [''])[0], '|', lobbyT.slice(0, 80));
@@ -61,7 +61,7 @@ const log = (...a) => console.log(...a);
   // 폰 3 끊었다 다시 들어오기 (창 닫기 → 새 창 · 같은 학생)
   const c3 = phones[2].context(); await c3.close();
   await t.waitForTimeout(500);
-  const p3 = await open(`?role=student&room=${live.code}&as=1-3:3${E}`); phones[2] = p3; await p3.waitForTimeout(2500);
+  const p3 = await open(`?role=student&room=${live.code}&as=1-6:3${E}`); phones[2] = p3; await p3.waitForTimeout(2500);
   const back = await p3.$$eval('.row .cell', (cs) => cs.map((c) => (c.className.match(/\b(ok|bad|oldbad|keep)\b/) || ['-'])[0]).join(''));
   log('폰 3 다시 들어옴 → 지난 답 칸 상태:', back || '(없음)');
   // 집중 · 💎 선물(모두)
@@ -75,15 +75,15 @@ const log = (...a) => console.log(...a);
   log('💎 선물(모두) → 폰 알림:', gift.join(' | '), '| TV', await tv.$eval('.gift', (x) => x.textContent.replace(/\s+/g, ' ').trim()).catch(() => '(없음)'));
   // 수업 중간(문제 1)에 닫기 → 서버에 그 자리 → 리모컨 새로 고침해도 ⏯ → 이어서 열기 → 형성평가 → 마무리
   await t.click('.lbar button:has-text("수업 닫기")'); await t.click('.ask .btn'); await t.waitForTimeout(800);
-  const stop = await rest(`rooms/${live.code}/state/stop`), lastT = await rest('school/lastTest/1-3');
+  const stop = await rest(`rooms/${live.code}/state/stop`), lastT = await rest('school/lastTest/1-6');
   log('중간에 닫기 → 서버 stop:', JSON.stringify(stop), '| lastTest:', JSON.stringify(lastT && { lesson: lastT.lesson, done: lastT.done }));
-  await t.reload(); await t.waitForSelector('.tabs', { timeout: 15000 }); await t.click('[data-cls="1-3"]'); await t.waitForTimeout(400);
+  await t.reload(); await t.waitForSelector('.tabs', { timeout: 15000 }); await t.click('[data-cls="test"]'); await t.waitForTimeout(400);
   const it = (await t.textContent('.mid .item')).replace(/\s+/g, ' ').trim(); log('리모컨 새로 고침 뒤 ⑫:', it);
   if (!it.includes('이어서')) errs.push('서버에서 ⏯ 이어서 안 뜸');
   await t.screenshot({ path: `${SHOTS}/b20-remote-resume.png` });
   await t.click('.mid .item'); await t.waitForTimeout(800);
   const live2 = await rest('school/live');
-  for (const [k, p] of phones.entries()) await p.goto(`${B}?role=student&room=${live2.code}${k ? `&as=1-3:${k + 1}` : ""}${E}`);
+  for (const [k, p] of phones.entries()) await p.goto(`${B}?role=student&room=${live2.code}${k ? `&as=1-6:${k + 1}` : ""}${E}`);
   await t.waitForTimeout(2000); await main();
   log('이어서 연 수업:', ((await t.textContent('.mid')).match(/지금 · ([^🌫]+?)(?:🌫|\d+\s*\/|$)/) || ['', '?'])[1].trim(), '| 새 방', live2.code !== live.code);
   for (let k = 0; k < 25; k++) { const m = (await t.textContent('.tact .btn')).trim(); if (/수업 닫기/.test(m)) break; await main(); }
@@ -91,13 +91,13 @@ const log = (...a) => console.log(...a);
   await tv.screenshot({ path: `${SHOTS}/b20-tv-end.png` });
   // 💎 · 🌱 수업 보상 (출시 막는 것 3 · 정식 값 · 폰 1 = 진짜 로그인 · ?as 폰은 학생 칸에 안 묶여 기록 · 보상 없음): 끝난 수업마다 gem/log/raid_{수업} = 참여 4 + 맞힌 소문제 · xp/log/raid_{수업} · total 이 늘어남
   await phones[0].waitForSelector('[data-k="reward"]', { timeout: 8000 }).catch(() => {});
-  const rw = await Promise.all([1].map(async (n) => { const g = await rest(`gem/1-3/${n}`), x = await rest(`xp/1-3/${n}`); return { n, total: g?.total, raid: g?.log?.[`raid_${live2.code}`]?.g, xp: x?.total, xlog: x?.log?.[`raid_${live2.code}`]?.xp }; }));
+  const rw = await Promise.all([1].map(async (n) => { const g = await rest(`gem/1-6/${n}`), x = await rest(`xp/1-6/${n}`); return { n, total: g?.total, raid: g?.log?.[`raid_${live2.code}`]?.g, xp: x?.total, xlog: x?.log?.[`raid_${live2.code}`]?.xp }; }));
   log('💎 수업 보상:', rw.map((r) => `${r.n}번 💎 ${r.total} (레이드 ${r.raid}) · EXP ${r.xp} (${r.xlog})`).join(' | '), '| 폰 1 줄:', await phones[0].$eval('[data-k="reward"]', (x) => x.textContent).catch(() => '(없음)'));
   if (rw.some((r) => !(r.raid >= 4) || !(r.total >= 4) || !(r.xp >= 50))) errs.push('수업 보상 💎 · EXP(🎁 첫 출정 40 이상 포함) 안 쌓임');
-  const heldT = await rest('held'), fx = await rest(`records/1-3/1/set-06/firstXp`); log('   🎁 첫 출정 EXP', fx, '| 🧪 테스트 수업 held 안 적음', heldT == null); if (!(fx >= 40) || heldT != null) errs.push('첫 출정 · held');
+  const heldT = await rest('held'), fx = await rest(`records/1-6/1/set-06/firstXp`); log('   🎁 첫 출정 EXP', fx, '| 🧪 테스트 수업 held 안 적음', heldT == null); if (!(fx >= 40) || heldT != null) errs.push('첫 출정 · held');
   // 같은 수업을 다시 그려도 두 번 받지 않음
   const tot1 = rw[0].total; await phones[0].reload(); await phones[0].waitForTimeout(3000);
-  const tot2 = (await rest('gem/1-3/1'))?.total; log('   다시 그린 뒤 1번 💎', tot1, '→', tot2); if (tot2 !== tot1) errs.push('수업 보상 두 번 받음');
+  const tot2 = (await rest('gem/1-6/1'))?.total; log('   다시 그린 뒤 1번 💎', tot1, '→', tot2); if (tot2 !== tot1) errs.push('수업 보상 두 번 받음');
   log(errs.length ? `❌ 오류 ${errs.length}\n${[...new Set(errs)].slice(0, 15).join('\n')}` : '✅ 오류 0');
   await b.close();
 })();

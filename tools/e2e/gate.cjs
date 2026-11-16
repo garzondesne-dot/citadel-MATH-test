@@ -1,5 +1,5 @@
 // #138 시험 서버(에뮬레이터)에서 학생 캠프 → 수업 입장 두 길 (브라우저 3개 · 창마다 저장 따로)
-//   ① 교사가 1-3반 🧪 테스트로 열기 → 1-3반 1번(가입) 캠프 차원문이 저절로 열림 → 「n차시 던전 입장」 → 대기실 1명
+//   ① 교사가 1-3반 수업 열기 → 1-3반 1번(가입) 캠프 차원문이 저절로 열림 → 「n차시 던전 입장」 → 대기실 1명
 //   ② 1-4반 1번(가입 · 다른 반이라 차원문 닫힘) → 「🚪 코드」 → 수업 코드 6자리 → 대기실 2명 · 틀린 코드 = 한 줄 안내
 //   ③ 교사 대기실 맨 위 「🚪 코드 ### ###」 → QR 시트(주소 ?join=코드 · TV 주소) → 새 폰이 그 주소로 → 1-5반 1번 가입 → 바로 대기실 3명
 // 사용: 에뮬레이터 + npm run build → npx vite preview --port 4173 → NODE_PATH=$(npm root -g) node tools/e2e/gate.cjs <그림 폴더>
@@ -24,9 +24,9 @@ const log = (...a) => console.log(...a);
   const s1 = await open(`?${E}`); await signup(s1, '1-3', 1);
   const s2 = await open(`?${E}`); await signup(s2, '1-4', 1);
   const before = await s1.$eval('.act .btn', (x) => x.disabled); log('수업 전 1-3 캠프 입장 단추 막힘:', before);
-  // 교사: 1-3 · 6차시 🧪 테스트로 열기
+  // 교사: 1-3 · 6차시 수업 열기
   const t = await open(`?role=teacher&${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForTimeout(1500); // 📜 2026-11-17 #21: 🧪 테스트 = 테스트 반만 → 1-3 반 차원문 시험은 실제 수업으로
   const live = await rest('school/live'); log('school/live:', live.cls, live.code, '테스트', live.test);
   // ① 1-3 학생 = 차원문 저절로 열림
   await s1.waitForFunction(() => { const g = document.querySelector('.act .btn'); return g && !g.disabled; }, null, { timeout: 10000 }).catch(() => errs.push('① 1-3 캠프 차원문이 안 열림'));
