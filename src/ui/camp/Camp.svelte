@@ -124,6 +124,10 @@
   onDestroy(svOpen.stop); onDestroy(svDone.stop);
   const svNo = $derived.by(() => { void svOpen.v.val; void svDone.v.val; return svWho && feat('survey') ? pendingNo(S, svWho.cls, svWho.num) : 0; });
   let svSent = $state(false);
+  // 📝 설문이 열려 있으면 캠프 들어올 때 한 번 안내 띠 (📜 2026-11-16 선생님 b19 「하단에 크게 있긴 한데 못 찾았음」) · 설문(차시)마다 이 폰에서 한 번 · 6초 뒤 접힘
+  const SVK = 'citadel-v1-svband';
+  let svBand = $state(false);
+  $effect(() => { const n = svNo; if (!n || svSent) return; untrack(() => { let seen = ''; try { seen = localStorage.getItem(SVK) || ''; } catch { /* 무시 */ } const k = `${svWho?.cls}|${n}`; if (seen === k) return; try { localStorage.setItem(SVK, k); } catch { /* 무시 */ } svBand = true; setTimeout(() => (svBand = false), 6000); }); });
   function svPaid(g: number, x: number) { svSent = true; if (g || x) { me.wallet.gem += g; me.xp += x; M.save(); } giftToast = `📝 고마워요! 설문이 전달됐어요${g || x ? ` (+${x} EXP · 💎+${g})` : ''}`; setTimeout(() => (giftToast = ''), 3200); }
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
@@ -376,6 +380,7 @@
       <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
+    {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svNo}차시 · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
   </div>
@@ -610,6 +615,7 @@
   .rung.buy { border-style: dashed; border-color: var(--gem); }
   .rung.lock { opacity: 0.45; box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
+  .svband { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
   .svbtn { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
   .svbtn:active { transform: translateY(2px); box-shadow: none; }
   .svbtn > span { font-size: 22px; }
