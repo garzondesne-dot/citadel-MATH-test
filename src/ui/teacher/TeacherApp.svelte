@@ -118,6 +118,8 @@
       <nav class="tabs" aria-label="교사 메뉴">{#each TABS as [k, ic, t] (k)}<button type="button" class:on={tab === k} aria-current={tab === k ? 'page' : undefined} onclick={() => (tab = k)}>{#if k === 'news' && unread}<i class="rdot" aria-label="안 본 소식 {unread}">{unread}</i>{/if}<span class="ico">{ic}</span>{t}</button>{/each}</nav>
     {/if}
   {/if}
+  <!-- ⚙ 설정 창 = .tp 안 (🐞 11/17: 밖에 그려져 .tp .item 카드 모양이 안 먹던 것) -->
+  {#if setOpen}<TSettings {S} login0={setOpen === 'login'} onclose={() => (setOpen = '')} />{/if}
 </div>
 
 {#if soon && soonKey !== soonSeen}
@@ -128,7 +130,6 @@
     {#if soonPick}<div class="spk">{#each packs as P (P.id)}<button type="button" class="btn2" class:on={P.id === soon.L?.id} data-no={P.no} onclick={() => { if (soon) pickToday(S, now, soon.p, P.id); soonPick = false; }}>{P.no}차시</button>{/each}</div>{/if}
   </Sheet>
 {/if}
-{#if setOpen}<TSettings {S} login0={setOpen === 'login'} onclose={() => (setOpen = '')} />{/if}
 {#if sim}{#if sim.kind === 'stu'}<StuTry L={sim.L} bots={sim.n} onclose={() => (sim = null)} />{:else}<TSim L={sim.L} bots={sim.n} onclose={() => (sim = null)} />{/if}{/if}
 {#if newsOpen}
   <Sheet onclose={newsOk} tall mainText="확인했어요" onmain={newsOk}>

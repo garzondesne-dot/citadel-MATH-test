@@ -72,6 +72,8 @@
   .lk { border: 0; background: none; color: var(--text-2); text-decoration: underline; font: 500 14px var(--font); min-height: var(--tap); }
   .err { margin: 0; color: var(--bad); font-size: 14px; } .ok { margin: 0; color: var(--ok); font-weight: 700; }
   .item.warn { border-color: var(--accent); } .item.on { border: 2px solid var(--accent); } .item.off { border-color: var(--bad); }
+  .list[data-k="tset"] .item::after { content: "›"; flex: none; font-size: 22px; color: var(--text-3); } /* 누르면 각 설정 창 */
+  .list[data-k="tset"] .item { min-height: 56px; }
   .lab2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
   .lrow { display: grid; grid-template-columns: 64px 1fr 64px; gap: 8px; align-items: center; } .lrow b { text-align: center; font-size: 28px; color: var(--accent); font-variant-numeric: tabular-nums; }
   .lrow button { height: 52px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 17px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
