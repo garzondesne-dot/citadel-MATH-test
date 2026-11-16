@@ -27,7 +27,7 @@
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
-  import { saveLogin, type Pupil } from '../../school/school';
+  import { changePw, saveLogin, type Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Board from '../board/Board.svelte';
@@ -128,6 +128,8 @@
   const SVK = 'citadel-v1-svband';
   let svBand = $state(false);
   $effect(() => { const n = svNo; if (!n || svSent) return; untrack(() => { let seen = ''; try { seen = localStorage.getItem(SVK) || ''; } catch { /* 무시 */ } const k = `${svWho?.cls}|${n}`; if (seen === k) return; try { localStorage.setItem(SVK, k); } catch { /* 무시 */ } svBand = true; setTimeout(() => (svBand = false), 6000); }); });
+  let pwCur = $state(''), pwNew = $state(''), pwNew2 = $state(''), pwMsg = $state(''), pwBusy = $state(false);
+  async function pwGo() { if (!pupil || pwBusy) return; if (pwNew !== pwNew2) { pwMsg = '새 비밀번호 두 번이 달라요'; return; } pwBusy = true; const e = await changePw(S, pupil.cls, pupil.num, pwCur, pwNew); pwBusy = false; if (e) { pwMsg = e; return; } sheet = 'set'; giftToast = '🔑 비밀번호를 바꿨어요 · 다음부터 새 4자리'; setTimeout(() => (giftToast = ''), 2500); }
   function svPaid(g: number, x: number) { svSent = true; if (g || x) { me.wallet.gem += g; me.xp += x; M.save(); } giftToast = `📝 고마워요! 설문이 전달됐어요${g || x ? ` (+${x} EXP · 💎+${g})` : ''}`; setTimeout(() => (giftToast = ''), 3200); }
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
@@ -451,10 +453,21 @@
       <button type="button" class="fsw" class:on={!off} role="switch" aria-checked={!off} data-k="feed-switch" onclick={() => { S.set(`accounts/${pupil.cls}/${pupil.num}/feedOff`, off ? null : true); feedTick++; }}>{#key feedTick}<span>📣</span><b>내 전투 결과 공개</b><span class="st">{off ? '꺼짐' : '켜짐'}</span><i class="kn" aria-hidden="true"></i>{/key}</button>
       <small class="fnote">익명(반 · 용사)으로 「최근 전투」에 한 줄 · 꺼도 내 기록 · 랭킹은 남아요</small>
     {/if}
+    {#if pupil}<button type="button" class="out" data-k="pw-open" onclick={() => { pwCur = ''; pwNew = ''; pwNew2 = ''; pwMsg = ''; sheet = 'pw'; }}>🔑 비밀번호 바꾸기</button>{/if}
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     <button type="button" class="out" disabled={open} onclick={() => (sheet = 'out')}>🚪 처음 화면으로 <small>{open ? '수업 중엔 못 나가요' : pupil ? `${pupil.cls}반 ${pupil.num}번` : ''}</small></button>
     <p class="build">판 {BUILD}{(S as Store & { auth?: unknown }).auth ? (BETA ? ' · 시험 서버' : ' · 서버') : ' · 이 기기'}</p>
     {#if showCredit}<p class="build" data-k="credit">만든 이 · {CREDIT_NAME} ({SUBJ.name})</p>{/if}
+  </Sheet>
+{:else if sheet === 'pw' && pupil}
+  <!-- 🔑 비밀번호 바꾸기 (📜 2026-11-16 · 학생 스스로 · 잊었으면 선생님 🔑 0000) -->
+  <Sheet onclose={() => (sheet = 'set')} mainText={pwBusy ? '바꾸는 중…' : '바꾸기'} mainDisabled={pwBusy || pwCur.length !== 4 || pwNew.length !== 4 || pwNew2.length !== 4} why={pwNew && pwNew2 && pwNew !== pwNew2 ? '새 비밀번호 두 번이 달라요' : ''} onmain={pwGo}>
+    {#snippet title()}🔑 비밀번호 바꾸기{/snippet}
+    <label class="pwl">지금 비밀번호<input class="pwi" data-k="pw-cur" type="password" inputmode="numeric" maxlength="4" autocomplete="current-password" bind:value={pwCur} /></label>
+    <label class="pwl">새 비밀번호 (숫자 4자리)<input class="pwi" data-k="pw-new" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" bind:value={pwNew} /></label>
+    <label class="pwl">새 비밀번호 한 번 더<input class="pwi" data-k="pw-new2" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" bind:value={pwNew2} /></label>
+    {#if pwMsg}<p class="pwm" role="alert" data-k="pw-msg">{pwMsg}</p>{/if}
+    <p class="outq">잊었으면 선생님께 「0000 으로 바꿔 주세요」라고 말해요</p>
   </Sheet>
 {:else if sheet === 'out'}
   <!-- 🚪 처음 화면으로 (📜 2026-11-13 밤 · 로그아웃 = 로그인 정보만 지움 · 이 기기 테스트 · 체험 저장은 그대로) -->
@@ -616,6 +629,7 @@
   .rung.lock { opacity: 0.45; box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
   .svband { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
+  .pwl { display: flex; flex-direction: column; gap: 4px; font: 600 14px var(--font); color: var(--text-2); margin-bottom: 10px; } .pwi { min-height: 48px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 22px var(--font); letter-spacing: 0.4em; text-align: center; } .pwm { color: var(--bad); font-weight: 700; }
   .svbtn { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
   .svbtn:active { transform: translateY(2px); box-shadow: none; }
   .svbtn > span { font-size: 22px; }

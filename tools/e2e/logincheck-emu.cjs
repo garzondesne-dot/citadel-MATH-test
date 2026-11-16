@@ -54,6 +54,13 @@ const B = 'http://localhost:4173/', E = 'emu=127.0.0.1';
   ok('③ 새 4자리 → 캠프 · 기록 · 💎 그대로', (await inCamp(p3)) && (await p3.evaluate(() => document.body.innerText.includes('21'))), JSON.stringify({ reset: await rest('accounts/1-3/3/reset') }));
   const p3b = await phone(); await toTitle(p3b); await enter(p3b, 3, '0000'); ok('③ 다른 폰 · 0000 = 안 됨 (이미 새 비밀번호)', !(await inCamp(p3b)), await errText(p3b));
   await p3b.reload(); await p3b.waitForTimeout(1500); await enter(p3b, 3, '5678'); ok('③ 다른 폰 · 새 4자리 = 캠프', await inCamp(p3b));
+  // 🔑 학생 스스로 비밀번호 바꾸기 (📜 2026-11-16 · ⚙ → 🔑) : 틀린 지금 비번 = 안내 · 맞으면 바뀜 → 다른 폰 새 4자리로
+  await p3b.click('button.gear'); await p3b.waitForTimeout(400); await p3b.click('[data-k="pw-open"]'); await p3b.waitForTimeout(300);
+  await p3b.fill('[data-k="pw-cur"]', '1111'); await p3b.fill('[data-k="pw-new"]', '2468'); await p3b.fill('[data-k="pw-new2"]', '2468'); await p3b.click('.sheet .act .pmain, .sheet button.pmain'); await p3b.waitForTimeout(2500);
+  ok('🔑 지금 비번 틀림 = 안내', /지금 비밀번호가 달라요/.test((await p3b.textContent('[data-k="pw-msg"]').catch(() => '')) || ''));
+  await p3b.fill('[data-k="pw-cur"]', '5678'); await p3b.click('.sheet .act .pmain, .sheet button.pmain'); await p3b.waitForTimeout(3000);
+  ok('🔑 맞으면 바뀜 (창 닫힘)', !(await p3b.$('[data-k="pw-cur"]')));
+  const p3c = await phone(); await toTitle(p3c); await enter(p3c, 3, '2468'); ok('🔑 다른 폰 · 새 비번 2468 = 캠프', await inCamp(p3c));
   // 옛 폰(p0)은 이제 다른 로그인 → 새로 고침하면 「로그인 풀림」 (정식도 초기화 뒤 다시 로그인)
   await p0.reload(); await p0.waitForTimeout(4500); log('   (참고) 초기화 전 로그인한 폰 새로 고침 →', (await inCamp(p0)) ? '캠프' : '첫 화면 · 다시 로그인');
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();

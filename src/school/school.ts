@@ -144,6 +144,20 @@ export function logIn(S: Store, cls: string, num: number, pw: string): string | 
   return null;
 }
 /** 선생님: 비밀번호 0000 으로 */
+/** 🔑 학생이 스스로 비밀번호 바꾸기 (📜 2026-11-16 머리 🔨 b4 · b8 · b20 「학생들 비번 바꾸는 게 있는지」) → 오류 글 또는 '' (됨)
+ *  서버 = 지금 4자리로 다시 확인(reauthenticate) 뒤 새 4자리로 · 이 기기 = 계정 칸 pw */
+export async function changePw(S: Store, cls: string, num: number, cur: string, nw: string): Promise<string> {
+  if (!/^\d{4}$/.test(cur) || !/^\d{4}$/.test(nw)) return '비밀번호는 숫자 4자리예요';
+  if (nw === '0000') return '새 비밀번호는 0000 말고 다른 숫자로 정해요';
+  if (nw === cur) return '지금 비밀번호와 달라야 해요';
+  const A = (S as AuthStore).auth;
+  if (!A) { const a = S.get<{ pw?: string }>(accPath(cls, num)); if (!a || a.pw !== cur) return '지금 비밀번호가 달라요'; S.set(`${accPath(cls, num)}/pw`, nw); return ''; }
+  const u = A.currentUser; if (!u) return '로그인이 풀렸어요 · 다시 로그인해 주세요';
+  const fa = await import('firebase/auth');
+  try { await fa.reauthenticateWithCredential(u, fa.EmailAuthProvider.credential(u.email || authEmail(cls, num, genOf(S, cls, num)), authPw(cur))); }
+  catch { return '지금 비밀번호가 달라요'; }
+  try { await fa.updatePassword(u, authPw(nw)); return ''; } catch { return '바꾸지 못했어요 · 잠시 뒤 다시'; }
+}
 export function resetPw(S: Store, cls: string, num: number): void {
   if (!hasAccount(S, cls, num)) return;
   if ((S as AuthStore).auth) { S.set(`${accPath(cls, num)}/g`, genOf(S, cls, num) + 1); S.set(`${accPath(cls, num)}/reset`, true); return; } // 🔑 시험 서버 = 로그인 판 올림
