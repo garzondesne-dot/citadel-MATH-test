@@ -33,11 +33,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   ok('D 가만히 두면(최대 20초) 용사가 일어나 걸어 다님', seen.has('walk'), [...seen].join(','));
   for (let t = 0; t < 20 && (await p.$eval('[data-k="camp-hero"]', (e) => e.dataset.pose)) !== 'sit'; t++) await p.clock.runFor(500);
   ok('D 한 바퀴 뒤 다시 앉음', (await p.$eval('[data-k="camp-hero"]', (e) => e.dataset.pose)) === 'sit');
+  // 📋 아무도 없을 때 = 오늘의 용사 + 말풍선 차례로 · 누르면 게시판 던전 (11/17 #9)
+  { const b0 = await p.$eval('[data-k="board-buddy"]', (e) => ({ real: e.dataset.real, t: e.textContent.trim() })).catch(() => null); await p.clock.runFor(3400); const t1 = await p.textContent('[data-k="board-buddy"]').catch(() => '');
+    ok('📋 게시판 옆 오늘의 용사 · 말풍선이 바뀜', !!b0 && b0.real === '0' && /같이 도전|💎 더|한 판만/.test(b0.t) && t1.trim() !== b0.t, `${JSON.stringify(b0)} → ${t1.trim()}`);
+    await p.screenshot({ path: `${SHOTS}/campE-buddy.png` });
+    await p.click('[data-k="board-buddy"]'); await p.clock.runFor(800); ok('   누르면 게시판 던전', !!(await p.$('.bd'))); await p.click('.bd .back').catch(() => {}); await p.clock.runFor(800); }
   // E 친구 흔적
   await p.evaluate(() => window.__dbSet('school/board/posts/pE', { pid: 'pE', lesson: 'set-02', no: 2, at: Date.now(), host: 'a', phase: 'wait', mem: { a: { uid: 'a', cls: '1-4', num: 1, nick: '하늘', hero: 1, role: 'c', why: '', at: 1 }, b: { uid: 'b', cls: '1-4', num: 2, nick: '바다', hero: 2, role: 'g', why: '', at: 2 } } }));
   await p.clock.runFor(1500);
-  const fr = await p.$$eval('[data-k="friend"]', (x) => x.length), fb = await p.textContent('[data-k="friend-bub"]').catch(() => '');
-  ok('E 모집 중 방 친구 = 포털 앞 용사 2 · 「○○님 외 1명이 기다려요」', fr === 2 && /외 1명이 기다려요/.test(fb), `${fr} · ${fb}`);
+  // 📋 (📜 2026-11-17 #9): 첫 친구 = 게시판 옆 「같이 하자」 용사 · 나머지 = 포털 앞
+  const fr = await p.$$eval('[data-k="friend"]', (x) => x.length), bd = await p.$eval('[data-k="board-buddy"]', (e) => ({ real: e.dataset.real, t: e.textContent })).catch(() => null);
+  ok('E 모집 중 방 친구 = 게시판 옆 「하늘님이 같이 하재요!」 + 포털 앞 1', fr === 1 && !!bd && bd.real === '1' && /하늘님이 같이 하재요/.test(bd.t), `${fr} · ${JSON.stringify(bd)}`);
   await p.screenshot({ path: `${SHOTS}/campE-friends.png` });
   await p.clock.resume(); // 나가는 연출(포털로 사라짐)은 진짜 시계로
   await p.evaluate(() => window.__dbSet('school/board/posts/pE', null)); await p.waitForTimeout(1500);

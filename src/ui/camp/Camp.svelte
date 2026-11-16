@@ -19,7 +19,7 @@
   import MyHero from './MyHero.svelte';
   import FirstHero from './FirstHero.svelte';
   import { isEnd } from '../../raid/raid';
-  import { ANIM, CAMP, CAMP_PORTAL, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
+  import { ANIM, CAMP, CAMP_BUDDY, CAMP_PORTAL, CAMP_PROPS, HERO, heroGeo, heroNudge, heroUrl, propPos } from '../manifest';
   import { fly } from 'svelte/transition';
   import CampProp from './CampProp.svelte';
   import { portalOf } from './portal.svelte';
@@ -292,6 +292,17 @@
   // E 친구 흔적
   const friends = $derived.by(() => { const me0 = pupil?.uid ?? 'me'; return feat('board') ? portal.waiting.filter((m) => m.uid !== me0).slice(0, 3) : []; });
   const friendText = $derived.by(() => { const f = friends[0]; if (!f) return ''; const off = !!S.get(`accounts/${f.cls}/${f.num}/feedOff`); const who = off ? '친구가' : `${f.nick}님이`; return friends.length > 1 ? `${off ? '친구' : `${f.nick}님`} 외 ${friends.length - 1}명이 기다려요` : `${who} 기다려요`; });
+  // 📋 게시판 옆 「같이 하자」 용사 (📜 2026-11-17 #9 「게시판던전 옆에 용사 한 명 배치해서 같이 하자고 유도」): 늘 서 있음(숨쉬기) + 말풍선 · 누르면 게시판(모집 중 방이면 바로 참여)
+  //   진짜 친구가 모집 중 = 그 친구 용사 · 「○○님이 같이 하재요!」(feedOff = 「친구가」) / 아무도 없음 = 오늘의 용사(날마다 · 내 용사 빼고) · 말풍선 차례로 3줄 · ⚙ 게시판 꺼짐 · 수업 열림 = 안 보임
+  const BUDDY_LINES = ['같이 도전할래? ⚔', '둘이 하면 💎 더!', '한 판만 하자!'];
+  let buddyI = $state(0); { const bt = setInterval(() => (buddyI = (buddyI + 1) % BUDDY_LINES.length), 3200); onDestroy(() => clearInterval(bt)); }
+  const buddy = $derived.by(() => {
+    if (!feat('board') || open) return null;
+    const f = friends[0];
+    if (f) { const off = !!S.get(`accounts/${f.cls}/${f.num}/feedOff`); return { hero: f.hero, line: `${off ? '친구가' : `${f.nick}님이`} 같이 하재요!`, real: true }; }
+    const ids = Object.keys(HERO_NAMES).map(Number).filter((h) => h !== me.hero), day = Math.floor((Date.now() + 9 * 3600e3) / 86400e3);
+    return ids.length ? { hero: ids[day % ids.length]!, line: BUDDY_LINES[buddyI]!, real: false } : null;
+  });
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
@@ -360,8 +371,9 @@
     <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
     {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:3%;width:12%;height:9%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
     {#each fxs as f (f.id)}<span class="cfx {f.k}" style="left:{f.x}%;top:{f.y}%" aria-hidden="true">{#each Array(f.k === 'bell' || f.k === 'glow' ? 1 : 6) as _, n (n)}<i style="--n:{n}"></i>{/each}{#if f.k === 'twinkle'}<b>✦</b>{/if}</span>{/each}
-    {#each friends as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
-    {#if friendText}<span class="fbub" style="left:{CAMP_PORTAL.left - 3}%;bottom:{CAMP_PORTAL.bottom - 13}%" data-k="friend-bub">{friendText}</span>{/if}
+    {#if buddy}<button type="button" class="buddy" style="left:{CAMP_BUDDY.left}%;bottom:{CAMP_BUDDY.bottom}%" aria-label="게시판 던전 같이 하기" data-k="board-buddy" data-real={buddy.real ? '1' : '0'} onclick={(e) => tap('dummy', e)}><span class="bbub" class:real={buddy.real}>{buddy.line}</span><HeroSprite id={buddy.hero} scale={0.8} play /></button>{/if}
+    {#each friends.slice(1) as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
+    {#if friendText && !buddy}<span class="fbub" style="left:{CAMP_PORTAL.left - 3}%;bottom:{CAMP_PORTAL.bottom - 13}%" data-k="friend-bub">{friendText}</span>{/if}
 
     {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
       {@const st = lab(k)}
@@ -705,6 +717,11 @@
   .hmove { position: absolute; z-index: 2; display: block; pointer-events: none; will-change: transform; }
   .sp.hero { will-change: transform; pointer-events: none; } /* 걷는 용사가 물건 누름을 가리지 않게 */
   .friend { position: absolute; z-index: 5; pointer-events: none; transform: translateX(-50%); }
+  .buddy { position: absolute; z-index: 6; transform: translateX(-50%); border: 0; padding: 0; background: none; cursor: pointer; min-width: 48px; min-height: 48px; }
+  .bbub { position: absolute; left: 50%; bottom: calc(100% + 4px); transform: translateX(-50%); white-space: nowrap; font: 800 12px/1 var(--font); color: #2a1d05; background: #fff3cf; border: 2px solid #e3a92d; border-radius: 12px; padding: 5px 9px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35); animation: bobB 2.4s ease-in-out infinite; pointer-events: none; }
+  @keyframes bobB { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -3px); } }
+  .bbub::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #e3a92d; border-bottom: 0; }
+  .bbub.real { background: #dff3ff; border-color: #5ab0ff; color: #0d2a44; } .bbub.real::after { border-top-color: #5ab0ff; }
   .fbub { position: absolute; z-index: 7; transform: translateX(-50%); white-space: nowrap; font: 800 11px/1 var(--font); color: #e8f7ff; background: rgba(20, 40, 70, 0.85); border: 1.5px solid rgba(120, 200, 255, 0.9); border-radius: 10px; padding: 5px 8px; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .prop.pk :global(.img), img.obj.flap, img.obj.gate-on.flash { animation: none; } .cfx { display: none; } }
 </style>
