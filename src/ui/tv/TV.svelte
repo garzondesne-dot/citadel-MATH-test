@@ -25,6 +25,7 @@
   import Sprite from '../Sprite.svelte';
   import DemoPhone from './DemoPhone.svelte';
   import QR from '../QR.svelte';
+  import { nextAuto, todaySlots } from '../../school/autoOpen';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
   import Anvil from '../forge/Anvil.svelte';
@@ -56,7 +57,7 @@
   //   위 막대 = 차시 · 단계 이름 · 단계 알약 · 시간 막대(👑 = 문 닫는 시각) · 🚪 코드 · 오른쪽 끝 🧙 · ⚙ 없음
   //   왼쪽 위 숫자 한 칸(같은 자리 · 같은 크기) · 오른쪽 위 정찰 상자 · 가운데 몬스터 + 체력 · 아래 용사 이름표 · 오른쪽 아래 조작 막대(3초 뒤 숨음 · 📌)
   //   정답 · 오답 글자 · 종합실 키는 TV 에 없음
-  const { S, L, live, now }: { S: Store; L: LessonPack; live: Live | null; now: number } = $props();
+  const { S, L, live, now, embed = false }: { S: Store; L: LessonPack; live: Live | null; now: number; /** 🖥 테스트 한 화면(교사 폰 위쪽 · 📜 2026-11-17 #21) = 화면 고정 대신 부모 폭 16:9 */ embed?: boolean } = $props();
   const unwake = holdWake(); onDestroy(unwake); // 📺 교실 TV = 화면 꺼짐 방지 (정식 screen-hall)
   const code = untrack(() => live?.code ?? '');
   const lr = untrack(() => (code ? liveRoom(S, code) : null));
@@ -107,8 +108,12 @@
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
 
   // ── 어떤 장면인가 ──
-  let campPeek = $state(false), setOpen = $state(false);
-  const view = $derived(!R || R.state.closed ? 'camp' : campPeek ? 'camp' : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
+  let setOpen = $state(false), showRes = $state(false); // 🏫 학급 결과 = 끝난 수업의 마무리 화면 다시 (입장 대기 화면 단추)
+  // 📅 입장 대기 화면: 다음 수업 · ⏰ 자동 열기 (📜 2026-11-17 #21 C · E)
+  const nx = $derived(feat('schedule') ? todaySlots(S, now, PACKS).find((r) => r.next) ?? null : null);
+  const nxa = $derived(feat('schedule') ? nextAuto(S, now, PACKS) : null);
+  const tvAdmin = untrack(() => S.kind !== 'server' || ((S as Store & { isAdmin?: () => boolean }).isAdmin?.() ?? false));
+  const view = $derived(!R || R.state.closed ? (R && showRes ? 'end' : 'camp') : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
   let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
   let zoom = $state<0 | 1 | 2>(0);
@@ -225,7 +230,6 @@
   const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
   function go() {
     if (!R) return;
-    campPeek = false;
     if (view === 'camp' && isLobby(R)) { hallLobby(S, code); return; }
     if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「앞으로 ▶」 = 쉼터 끝 + 수업으로 (#142)
     else if (scout?.on) { appearNow(S, L, code); return; } // 🌫 정찰 중 = 지금 등장
@@ -290,13 +294,13 @@
 </script>
 
 <svelte:window bind:innerHeight={tvH} onmousemove={poke} ontouchstart={poke} onkeydown={poke} onresize={fit} />
-<div class="tvout" style:background-image="url({CAMP.bg})" aria-hidden="true"></div>
-<div class="tv" class:dim={!!R?.state.focus}>
+{#if !embed}<div class="tvout" style:background-image="url({CAMP.bg})" aria-hidden="true"></div>{/if}
+<div class="tv" class:emb={embed} class:dim={!!R?.state.focus}>
   <div class="bg" style:background-image="url({view === 'camp' ? CAMP.bg : dungeonOf(L.theme)})" class:campbg={view === 'camp'}></div>
 
   <!-- 위 막대 (#119 덧붙임 3 · 7 · 9): 반 칩 · n차시 + 소단원 주제 · 흐름도(리모컨 단계 막대와 같은 함수) · 🚪 코드 · ⛺ 내 캠프 / 아래 가장자리 = 남은 시간 선 -->
   <header class="top">
-    <span class="ttl">{#if live}<span class="cls">{clsLabel(S, live.cls)}</span>{/if}{#if view === 'camp'}🏛 교사 캠프 · {/if}{L.no}차시 <b>{topic}</b></span>
+    <span class="ttl">{#if view === 'camp' && (!R || R.state.closed)}📺 입장 대기{:else}{#if live}<span class="cls">{clsLabel(S, live.cls)}</span>{/if}{#if view === 'camp'}📺 입장 대기 · {/if}{L.no}차시 <b>{topic}</b>{/if}</span>
     <div class="tflow" class:dim={view === 'lobby'} class:hide={view === 'camp'} aria-label="오늘 흐름">
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>
@@ -319,31 +323,37 @@
   {/if}
 
   {#if view === 'camp'}
-    <!-- 🏛 교사 캠프: 캠프 그림 통째 + 물건 이름표 늘 · 오른쪽 QR · 코드 = 가운데 한 묶음 -->
-    <div class="campwrap">
-    <div class="campv" style:aspect-ratio="{CW} / {CH}" bind:clientWidth={campW}>
-      <img class="cl0" alt="" src={CAMP.bg} />
-      <img class="obj" alt="" src={CAMP.castle.src} style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)}" />
-      <img class="obj" alt="" src={CAMP.tent.src} style="left:{pct(CAMP.tent.x, CW)};top:{pct(CAMP.tent.y, CH)};width:{pct(CAMP.tent.w, CW)}" />
-      <img class="obj gate" alt="" class:on={!!R && !R.state.closed} src={CAMP.gateOn.src} style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)}" />
-      <span class="me" style:left="{CAMP.hero.left + 1}%" style:bottom="{CAMP.hero.bottom - 3.5}%"><HeroSprite id={M.me.hero} pose="sit" aura={M.me.enh} scale={heroK} /></span>
-      <i class="tfire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"><span class="ob blw"><b>🔥 모닥불</b></span></i>
-      {#each tvProps as p (p.k)}<button type="button" class="tprop" style={propPos(p)} data-prop={p.k} aria-label={PNAME[p.k]} onclick={() => tvTap(p.k)}><CampProp {p} phase={p.k === 'dummy' ? portal.phase : 'idle'} /><span class="ob blw"><b>{PNAME[p.k]}</b>{#if SUBS[p.k]}<small>{SUBS[p.k]}</small>{/if}</span></button>{/each}
-      {#each ZONES as [k, t] (k)}{@const z = zoneLab(k)}<button type="button" class="ob zl" data-zone={k} style:left="{z.x}%" style:top="{z.y}%" onclick={() => tvTap(k)}><b>{t}</b>{#if SUBS[k]}<small>{SUBS[k]}</small>{/if}</button>{/each}
-      <button type="button" class="zhit" aria-label="성채던전" data-hit="castle" style="left:{pct(CAMP.castle.x, CW)};top:{pct(CAMP.castle.y, CH)};width:{pct(CAMP.castle.w, CW)};aspect-ratio:1" onclick={() => tvTap('castle')}></button>
-      <button type="button" class="zhit" aria-label="차원문" data-hit="gate" style="left:{pct(CAMP.gateOn.x, CW)};top:{pct(CAMP.gateOn.y, CH)};width:{pct(CAMP.gateOn.w, CW)};aspect-ratio:1" onclick={() => tvTap('gate')}></button>
-      <button type="button" class="ob me2" style:left="{CAMP.hero.left + 5}%" style:top="{100 - CAMP.hero.bottom + 1.5}%" onclick={() => { fit(); hero = true; }}><b>🧙 내 용사</b><small>용사 바꾸기</small></button>
-    </div>
-    <div class="campqr">
-      {#if R && !R.state.closed}
-        <QR text={`${site}?join=${encodeURIComponent(code)}`} size={220} />
-        <small>📱 휴대폰 카메라로 QR 을 찍어요 · 반 · 번호로 로그인</small>
-        <div class="cc">수업 코드 <b>{code}</b></div>
-      {:else}
-        <div class="cc wait">수업을 열면<br />QR · 코드가 나와요</div>
-        <small>교사 폰 「수업 열기」</small>
-      {/if}
-    </div>
+    <!-- 📺 종합실 = 입장 대기 화면 (📜 2026-11-17 #21 C · 옛 TV 교사 캠프 대신 · 교사 캠프 = 교사 폰 「나 → ⛺ 내 캠프」에만) -->
+    <div class="entry" data-k="tv-entry">
+      <div class="eqr">
+        <QR text={R && !R.state.closed ? `${site}?join=${encodeURIComponent(code)}` : site} size={360} />
+        <small>📱 휴대폰 카메라로 찍어요 · 반 · 번호로 로그인</small>
+        {#if R && !R.state.closed}<div class="ecode">수업 코드 <b>{code}</b></div>{/if}
+      </div>
+      <div class="einfo">
+        {#if R && !R.state.closed && live}
+          <span class="etag">오늘 수업</span>
+          <b class="ecls" data-k="entry-cls">{clsLabel(S, live.cls)} · {L.no}차시</b>
+          <span class="ettl">{topic}</span>
+          <div class="ein" data-k="entry-n">들어온 학생 <b>{box?.n ?? 0}</b><small> / {box?.m ?? 0}</small></div>
+          <p class="ewait">선생님이 「⚔ 던전 입장」을 누르면 시작해요</p>
+        {:else}
+          {#if nx}
+            <span class="etag">다음 수업 · {nx.p}교시 {nx.hm}</span>
+            <b class="ecls" data-k="entry-cls">{nx.cls}반 · {nx.L ? `${nx.L.no}차시` : ''}</b>
+            {#if nx.L}<span class="ettl">{nx.L.title.split(' · ')[0]}</span>{/if}
+          {:else}
+            <span class="etag">모두의 던전</span>
+            <b class="ecls" data-k="entry-cls">입장 대기</b>
+          {/if}
+          <p class="ewait" data-k="entry-wait">선생님이 수업을 열면 시작해요</p>
+          {#if nxa}<p class="eauto" data-k="entry-auto">⏰ {nxa.hm} {nxa.cls}반 · {nxa.L?.no}차시 자동으로 열려요{#if !tvAdmin}<br /><small>⚠ 자동 열기는 교사 로그인한 종합실 PC 에서만 · 이 PC 는 교사 폰으로 열어 주세요</small>{/if}</p>{/if}
+        {/if}
+        <div class="ebtn">
+          {#if R && R.state.closed}<button type="button" data-k="tv-result" onclick={() => (showRes = true)}>🏫 학급 결과</button>{/if}
+          <button type="button" data-k="tv-full2" onclick={full}>⛶ {isFull ? '창으로' : '전체 화면'}</button>
+        </div>
+      </div>
     </div>
   {:else if view === 'lobby'}
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
@@ -462,12 +472,12 @@
         <button type="button" class="n" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>« 뒤로</button>{/if}
       {#if !isEnd(L, R)}<button type="button" class="n go" disabled={isLobby(R) && view === 'lobby' && !ids.length} onclick={go}>{goLabel}<small>{goSub}</small></button>{/if}
     {/if}
-    <button type="button" class="n" data-k="tv-full" onclick={full}>⛶<small>{isFull ? '창으로' : '전체 화면'}</small></button>
+    {#if R?.state.closed && showRes}<button type="button" class="n" data-k="tv-entry-back" onclick={() => (showRes = false)}>‹ 입장 대기</button>{/if}
+    <!-- ⛶ 전체 화면 = 입장 대기 화면 QR 옆으로 (📜 2026-11-17 #21 C · #20 자리 대신) -->
   </nav>
   {#if setOpen}
     <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
       <div class="setbox" role="menu" aria-label="TV 설정" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') setOpen = false; }}>
-        {#if R && !R.state.closed}<button type="button" role="menuitem" class:on={campPeek} onclick={() => { campPeek = !campPeek; setOpen = false; }}>⛺<span>{campPeek ? '수업으로 돌아가기' : '내 캠프'}</span></button>{/if}
         <button type="button" role="menuitem" data-k="tvtheme" onclick={() => { themeOpen = true; setOpen = false; }}>🎨<span>테마</span></button>
         <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
         <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
@@ -490,6 +500,7 @@
   /* 📺 16:9 무대 (📜 2026-11-13 밤 선생님 「화면마다 비율이 달라도 16:9 에 맞춰 정돈」): 창이 어떤 비율이든 가운데 16:9 틀 하나 · 남는 곳 = 흐린 캠프 바탕(.tvout) · 모든 TV 화면이 이 틀 */
   .tvout { position: fixed; inset: 0; background: #0b0a08 center / cover no-repeat; filter: blur(18px) brightness(0.45); transform: scale(1.06); }
   .tv { position: fixed; left: 50%; top: 50%; width: min(100vw, calc(100vh * 16 / 9)); height: min(100vh, calc(100vw * 9 / 16)); translate: -50% -50%; container-type: size; overflow: hidden; color: #fff; font-family: var(--font); font-weight: 500; background: #0b0a08; --tv-big: 6cqh; --tv-title: 3.2cqh; --tv-body: 2.4cqh; --tv-small: 1.8cqh; }
+  .tv.emb { position: relative; left: auto; top: auto; translate: none; width: 100%; height: auto; aspect-ratio: 16 / 9; }
   .tv :global(button) { font-family: var(--font); font-weight: 700; }
   .tv :global(b), .tv :global(strong), .tv :global(h3), .tv :global(h4) { font-weight: 700; }
   .bg { position: absolute; inset: 0; background: center 60% / cover no-repeat; image-rendering: pixelated; }
@@ -515,7 +526,6 @@
   .setov { position: absolute; inset: 0; z-index: 40; }
   .setbox { position: absolute; right: 1.5cqw; top: 9cqh; min-width: 22cqw; display: flex; flex-direction: column; gap: 0.6cqh; padding: 1.2cqh; border-radius: 1.6cqh; background: rgba(14, 16, 22, 0.96); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, 0.5); }
   .setbox button { display: flex; align-items: center; gap: 1cqw; padding: 1.1cqh 1.2cqw; border: 0; border-radius: 1.1cqh; background: rgba(255, 255, 255, 0.06); color: #fff; font: 700 var(--tv-body) var(--font); text-align: left; cursor: pointer; }
-  .setbox button.on { background: color-mix(in srgb, var(--accent) 30%, transparent); }
   .code b { margin-left: 0.5cqw; color: var(--text); font-size: var(--tv-title); letter-spacing: 0.1cqw; }
   .ib { flex: none; width: 3.6cqw; height: 3.6cqw; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: var(--tv-title); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .ib.on { border: 2px solid var(--accent); }
@@ -536,26 +546,15 @@
   .nbox b span { font-size: var(--tv-title); color: #fff; }
   .nbox em { font-style: normal; font-size: var(--tv-small); color: #ffd7a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* 캠프 그림 + QR 카드 = 한 묶음 가운데 (높이 80% · 사이 3%) */
-  .campwrap { position: absolute; left: 0; right: 0; top: 3.8cqw; bottom: 0; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 3cqw; }
-  .campv { position: relative; flex: none; height: 80cqh; z-index: 1; }
-  .campv img { position: absolute; image-rendering: pixelated; }
-  .campv .cl0 { inset: 0; width: 100%; height: 100%; position: absolute; }
-  .campv .obj.on { filter: brightness(1.3); }
-  .campv .me { position: absolute; z-index: 1; transform: translateX(-50%); }
-  .ob.me2 { cursor: pointer; border-color: #6cc6ff; color: #fff; font: inherit; } .ob.me2 small { color: #6cc6ff; }
-  .campv .gate { opacity: 0; } .campv .gate.on { opacity: 1; }
-  .tprop, .tfire { position: absolute; z-index: 2; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
-  button.tprop { padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; } button.tprop:hover :global(.cp), button.tprop:focus-visible { filter: brightness(1.2); }
-  button.ob.zl { cursor: pointer; font: inherit; } .zhit { position: absolute; z-index: 1; padding: 0; border: 0; background: none; cursor: pointer; }
-  .ob.blw { left: 50%; top: 100%; transform: translate(-50%, 2px); } .ob.zl { transform: translate(-50%, -110%); }
-  .ob { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; padding: 0.5cqh 0.9cqw; border-radius: 1.4cqh; background: rgba(10, 12, 18, 0.82); border: 1px solid rgba(255, 255, 255, 0.22); white-space: nowrap; box-shadow: 0 3px 0 #000; }
-  .ob b { font-size: calc(var(--tv-body) * 0.55); } .ob small { font-size: calc(var(--tv-body) * 0.42); font-weight: 700; color: #ebb84f; white-space: nowrap; } /* TV 이름표 = 이름 + 부제 한 줄 (📺 시안 2026-11-14) */
-  .ob { padding: 0.25cqh 0.5cqw !important; border-radius: 0.8cqh !important; box-shadow: 0 2px 0 #000 !important; }
-  .campqr { position: relative; flex: none; width: 26cqw; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 1.4cqh; padding: 2cqh 1.4cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.8); border: 1px solid rgba(255, 255, 255, 0.18); text-align: center; }
-  .campqr :global(svg) { width: 34cqh; height: 34cqh; border-radius: 1.2cqh; }
-  .campqr small { font-size: var(--tv-small); color: #d6d9e0; }
-  .cc { font-size: var(--tv-body); font-weight: 700; } .cc b { display: block; font-size: var(--tv-big); color: var(--accent); letter-spacing: 0.4cqw; line-height: 1.1; }
-  .cc.wait { font-size: var(--tv-title); padding: 8cqh 0; color: #d6d9e0; }
+  .entry { position: absolute; left: 0; right: 0; top: 3.8cqw; bottom: 0; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 5cqw; padding: 0 6cqw; }
+  .eqr { display: flex; flex-direction: column; align-items: center; gap: 1.4cqh; padding: 2.4cqh; border-radius: 2cqh; background: #fff; color: #222; }
+  .eqr :global(canvas), .eqr :global(img), .eqr :global(svg) { width: 42cqh !important; height: 42cqh !important; }
+  .eqr small { font-size: var(--tv-small); color: #555; } .ecode { font-size: var(--tv-body); } .ecode b { font-size: var(--tv-title); letter-spacing: 0.3em; color: #b8860b; }
+  .einfo { display: flex; flex-direction: column; gap: 1.6cqh; max-width: 46cqw; }
+  .etag { font-size: var(--tv-body); color: #f5b84a; font-weight: 700; } .ecls { font-size: 8cqh; line-height: 1.1; } .ettl { font-size: var(--tv-title); color: #ddd; }
+  .ein { font-size: var(--tv-title); } .ein b { font-size: 7cqh; color: #f5b84a; } .ein small { font-size: var(--tv-title); color: #aaa; }
+  .ewait { margin: 0; font-size: var(--tv-title); color: #fff; } .eauto { margin: 0; font-size: var(--tv-body); color: #9be7ff; }
+  .ebtn { display: flex; gap: 1.4cqw; margin-top: 1cqh; } .ebtn button { min-height: 7cqh; padding: 0 2.4cqw; border-radius: 1.4cqh; border: 0.3cqh solid rgba(255, 255, 255, 0.3); background: rgba(0, 0, 0, 0.5); color: #fff; font-size: var(--tv-body); }
   .lring { position: absolute; left: 2cqw; right: 18cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2cqh; }
   .tchr { display: flex; flex-direction: row; align-items: flex-end; gap: 2cqw; flex: none; } .tside { display: flex; flex-direction: column; align-items: flex-start; gap: 1cqh; padding-bottom: 2cqh; }
   .tchr span { font-size: var(--tv-body); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.3cqh 1cqw; border-radius: 999px; }

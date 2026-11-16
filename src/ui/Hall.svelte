@@ -10,7 +10,10 @@
   import TV from './tv/TV.svelte';
   import { PACKS, packOf } from '../engine/packs';
   import { carryOfRoom, withCarry } from '../school/carry';
-  import { dressed } from './rdun'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
+  import { dressed } from './rdun';
+  import { dueSlot, isOpenCls, markOpened } from '../school/autoOpen';
+  import { openLesson } from '../school/openLesson';
+  import { feat } from '../school/features.svelte'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
 
   // 🖥 교실 TV (#119 ⑮) — 교사 폰이 연 수업(school/live)을 따라감 · 수업이 없으면 교사 캠프
   //   주소에 ?room= 이 있으면 그 방(시험 · 두 탭 체험: 없으면 그 던전으로 만들고 1-1반으로 봄)
@@ -59,15 +62,27 @@
     kerr = '';
     if (byCode) {
       const c = codeIn.trim(), meta = await (S as AS).fetch?.<{ cls?: string; lesson?: string }>(`rooms/${c}/meta`);
-      if (!meta?.lesson || !(await register(c, keyIn))) { kerr = '코드나 비밀번호가 달라요 · 교사 폰에서 다시 확인해요'; return; }
+      if (!meta?.lesson || !(await register(c, keyIn))) { kerr = '코드나 종합실 키가 달라요 · 교사 폰에서 다시 확인해요'; return; }
       pick = { code: c, cls: meta.cls ?? firstClass(), lesson: meta.lesson } as Live; return;
     }
     if (!live?.code) { kerr = '열린 수업이 없어요 · 교사 폰에서 ▶ 수업 열기'; return; }
-    if (!(await register(live.code, keyIn))) kerr = '비밀번호가 달라요 · 교사 폰에서 다시 확인해요';
+    if (!(await register(live.code, keyIn))) kerr = '종합실 키가 달라요 · 교사 폰에서 다시 확인해요';
   }
   const ready = $derived(!trying && /^\d{4}$/.test(keyIn) && (!byCode || /^\d{6}$/.test(codeIn.trim())));
   // 🔗 옛 정식 TV 주소(?role=hall&code=…&key=…) = 코드로 들어가기에 채워 한 번 (키는 oldUrl 이 이미 주소에서 지움)
   if (oldHall && srv && !admin) untrack(() => { byCode = true; codeIn = oldHall!.code; keyIn = oldHall!.key; void enter().then(() => { keyIn = ''; }); });
+  // ⏰ 자동 열기 (📜 2026-11-17 #21 E): 여는 기기 = 이 종합실 PC(입장 대기 화면) · 교사 로그인한 PC(또는 이 기기 저장)만 · 서버 중계 없음
+  //   시작종 ~ 5분 · 그 반이 이미 열려 있으면 열지 않고 표시만 · 다른 수업이 열려 있으면 열지 않음(닫지 않음) · 끝날 때 닫지 않음
+  const canAuto = untrack(() => !fixed && (S.kind !== 'server' || admin));
+  const autoT = untrack(() => (canAuto ? setInterval(() => {
+    if (!feat('schedule')) return;
+    const t = Date.now(), d = dueSlot(S, t, PACKS); if (!d?.L) return;
+    const lv0 = S.get<Live>('school/live');
+    if (isOpenCls(S, lv0, d.cls)) { markOpened(S, t, d.p, lv0!.code); return; }
+    if (lv0 && !S.get<boolean>(`rooms/${lv0.code}/state/closed`)) return;
+    markOpened(S, t, d.p, openLesson(S, d.cls, d.L));
+  }, 10e3) : 0));
+  onDestroy(() => clearInterval(autoT));
 </script>
 
 {#if !gated}
@@ -77,15 +92,15 @@
     <b>🔐 종합실 입장</b>
     {#if trying && !keyIn}<p>확인 중…</p>
     {:else}
-      <p>{byCode ? '교사 폰 수업 화면의 방 코드 6자리와 종합실 비밀번호를 넣어요' : live?.code ? '교사 폰 「나」 탭의 종합실 비밀번호 4자리를 넣어요 · 이 TV 는 기억해요' : '열린 수업이 없어요 · 교사 폰에서 ▶ 수업 열기'}</p>
+      <p>{byCode ? '교사 폰 수업 화면의 방 코드 6자리와 종합실 키를 넣어요' : live?.code ? '교사 폰 수업 화면의 종합실 키 4자리를 넣어요 · 이 TV 는 기억해요' : '열린 수업이 없어요 · 교사 폰에서 ▶ 수업 열기'}</p>
       <div class="kins">
         {#if byCode}<input class="kin code" data-k="tv-code" inputmode="numeric" maxlength="6" bind:value={codeIn} placeholder="방 코드" />{/if}
-        <input class="kin" data-k="tv-key" type="text" class:mask={!showKey} name="dungeon-room-key" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" maxlength="4" bind:value={keyIn} placeholder="○○○○" aria-label="종합실 비밀번호" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
-        <button type="button" class="keye" data-k="tv-key-eye" aria-label={showKey ? '비밀번호 가리기' : '비밀번호 보기'} aria-pressed={showKey} onpointerdown={() => (showKey = true)} onpointerup={() => (showKey = false)} onpointerleave={() => (showKey = false)}>👁</button>
+        <input class="kin" data-k="tv-key" type="text" class:mask={!showKey} name="dungeon-room-key" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" maxlength="4" bind:value={keyIn} placeholder="○○○○" aria-label="종합실 키" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
+        <button type="button" class="keye" data-k="tv-key-eye" aria-label={showKey ? '키 가리기' : '키 보기'} aria-pressed={showKey} onpointerdown={() => (showKey = true)} onpointerup={() => (showKey = false)} onpointerleave={() => (showKey = false)}>👁</button>
       </div>
       {#if kerr}<p class="kerr">{kerr}</p>{/if}
       <button type="button" class="kgo" disabled={!ready} onclick={enter}>{trying ? '확인 중…' : '✔ 입장'}</button>
-      <button type="button" class="kalt" data-k="tv-bycode" onclick={() => { byCode = !byCode; kerr = ''; }}>{byCode ? '‹ 비밀번호만으로 (지금 열린 수업)' : '코드로 들어가기 ›'}</button>
+      <button type="button" class="kalt" data-k="tv-bycode" onclick={() => { byCode = !byCode; kerr = ''; }}>{byCode ? '‹ 종합실 키만으로 (지금 열린 수업)' : '코드로 들어가기 ›'}</button>
     {/if}
   </div>
 {/if}

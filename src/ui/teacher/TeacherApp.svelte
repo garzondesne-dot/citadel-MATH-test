@@ -1,15 +1,23 @@
 <script lang="ts">
   import { BETA } from '../../channel';
-  import { roster, HALLKEY } from '../../school/school';
   import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
   import { onDestroy, untrack } from 'svelte';
   import { setTeacherSink } from '../../store/me.svelte';
   import { notePref, syncPush, watchTeacherNotes } from '../../school/notify.svelte';
   import './teacher.css';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { PROFILES } from '../../model/profiles';
-  import { openRoom, roomPath } from '../../raid/actions';
-  import { liveNow, newCode, newKey, setLast, setLastTest, setLive, type Live } from '../../school/school';
+    import { roomPath } from '../../raid/actions';
+  import { liveNow, setLast, setLastTest, setLive, type Live } from '../../school/school';
+  import { openLesson, type KeyMode } from '../../school/openLesson';
+  import { testCls, type TestMode } from './flow';
+  import { setBots } from '../../raid/botRun.svelte';
+  import { endClass } from '../../raid/actions';
+  import StuTry from './StuTry.svelte';
+  import TSim from './TSim.svelte';
+  import TSettings from './TSettings.svelte';
+  import { dayKey, pickToday, skipToday, soonSlot } from '../../school/autoOpen';
+  import { feat } from '../../school/features.svelte';
+  import { notify } from '../../school/notify.svelte';
   import { clock, useClock } from '../clock.svelte';
   import { liveValue } from '../room.svelte';
   import THome from './THome.svelte';
@@ -49,7 +57,7 @@
   //   → 열기 전에 막고 「🔐 교사 로그인」으로 안내 (로그인 뒤 같은 반 · 차시로 다시 누름)
   type AS = Store & { auth?: unknown; isAdmin?: () => boolean };
   const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
-  let loginAsk = $state(false), loginGo = $state(false);
+  let loginAsk = $state(false), setOpen = $state<'' | 'main' | 'login'>(''); // ⚙ 상시 설정 (📜 2026-11-17 #21 A)
   const gate = needAdmin(); // 🔐 입구 (📜 2026-11-13 밤 선생님 「진행」): 서버인데 교사 로그인 안 한 폰 = 교사 화면 대신 로그인 화면만 (로그인하면 새로 고침)
   // 🆕 바뀐 것 (📜 2026-11-15 · school/changes.ts): 교사 로그인한 폰 · 정식 = 못 본 판을 아래 창으로(확인했어요 = 본 판) + 소식 탭 한 통씩 / 베타 = 창 없이 소식 탭 한 통씩(그 자리에서 본 판)
   const tUid = untrack(() => (S as Store & { auth?: { currentUser: { uid: string } | null } }).auth?.currentUser?.uid ?? ((S as AS).auth ? '' : 'local'));
@@ -57,22 +65,19 @@
   let newsList = $state<Change[]>(untrack(() => (!gate && tUid ? teacherSync(S, tUid, chan, BUILD, S.now(), chan === 'beta') : [])));
   const newsOpen = $derived(chan === 'rel' && newsList.length > 0);
   function newsOk() { if (tUid) S.set(teacherSeenPath(tUid, 'rel'), BUILD); newsList = []; }
-  function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }, carry?: Carry | null) {
+  // 🧪 테스트 (📜 2026-11-17 #21): 📱 리모컨만 = 실제와 같은 방(테스트 반 계정 · 🤖 봇) · 🖥 = 이 폰 한 화면(종합실 + 리모컨) · 🎒 = 학생 폰 + 진행 리모컨 — 기록 안 남음
+  let sim = $state<{ kind: 'tv' | 'stu'; L: LessonPack; n: number } | null>(null);
+  function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode, bots = 0) {
     if (needAdmin()) { loginAsk = true; return; }
-    const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
-    openRoom(S, L, code, test ? PROFILES.test : PROFILES.class);
-    const pr = S.get<Record<string, number>>(`school/prep/${L.id}`); // 📋 차시 준비 기본값 (⑰) → 방에 옮겨 적음
-    if (pr) Object.entries(pr).forEach(([k, v]) => S.set(`${roomPath(code)}/meta/${k}`, v)); // 🧪 테스트 수업도 차시 준비 값 그대로 (📜 2026-11-14)
-    if (test && pr?.solve == null) S.set(`${roomPath(code)}/meta/solve`, PROFILES.class.scoutSec); // 🌫 몬스터 등장(정찰) 기본 60초 = 실제 수업 · 🧪 테스트 수업 같음 (📜 2026-11-14 선생님 「등장 시간 기본값 60초로」 · 학생 혼자 🧪 테스트 모드 5초는 그대로)
-    S.set(`${roomPath(code)}/meta/names`, Object.fromEntries(roster(cls, S).map((p) => [p.uid, p.name]))); // 📜 2026-11-16 선생님 「이름 전부 표기」 = TV 는 가린 명단만 읽을 수 있어서 교사가 연 방에 전체 이름을 적음 (방 = 그 수업 사람만)
-    S.set(`${roomPath(code)}/meta/cls`, cls); S.set(`secrets/${code}/hallKey`, key); // 🔐 TV 는 이 키를 쳐서 hosts 에 등록 (방 meta · school/live 에는 키를 안 둠)
-    if (from) { S.set(`${roomPath(code)}/meta/resumeFrom`, from.step); if (from.fresh) S.set(`${roomPath(code)}/meta/fresh/${from.fresh}`, true); } // ⏯ 이어서
-    if (!test) S.set(`${roomPath(code)}/meta/limit`, true);
-    if (carry && !from) S.set(`${roomPath(code)}/meta/carry`, carry); // 📦 B 지난 차시에서 넘어온 몬스터 (이어서 = 그 방의 것 그대로)
-    setLive(S, { code, cls, lesson: L.id, ...(test ? { test: true } : {}) });
-    (test ? setLastTest : setLast)(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code }); // ⏯ 🧪 테스트도 이어서 (#133 · 따로 저장)
+    const code = openLesson(S, cls, L, { test, from, carry, keyMode });
+    if (test && bots > 0) setBots(S, L, code, true, bots);
     page = 'live';
   }
+  function openTest(L: LessonPack, mode: TestMode, bots: number, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode) {
+    if (mode === 'remote') open(testCls(S), L, true, from, carry, keyMode, bots);
+    else sim = { kind: mode === 'tv' ? 'tv' : 'stu', L, n: bots };
+  }
+  function stopLive() { if (live && liveL) endClass(S, liveL, live.code); closed(); }
   function closed() {
     if (live && liveL) { const R2 = S.get<Room>(roomPath(live.code)); if (R2) (live.test ? setLastTest : setLast)(S, live.cls, { lesson: live.lesson, no: liveL.no, at: S.now(), done: !!R2.state.stop?.done, code: live.code }); } // ⏯ 닫힌 그때 자리 = 방 state.stop
     setLive(S, null); page = 'home';
@@ -80,6 +85,11 @@
   let wideDash = $state(false); // 📊 대시보드 펼친 화면이면 교사 폰 기둥(430) 대신 화면 전체
   let unread = $state(untrack(() => unreadN(S))); // 🔔 소식 탭 빨간 점 = 안 본 수 + 📷 확인할 사진
   const phStop = untrack(() => (S.kind === 'server' ? S.watch('photo', () => (unread = unreadN(S))) : () => {})); onDestroy(phStop);
+  // ⏰ 자동 열기 1분 전 🔔 (📜 2026-11-17 #21 E): 「1분 뒤 자동으로 열려요 · [취소] · [다른 차시]」 · 여는 것은 종합실 PC
+  const soon = $derived(feat('schedule') ? soonSlot(S, now, packs) : null);
+  const soonKey = $derived(soon ? `${dayKey(now)}|${soon.p}|${soon.L?.id ?? ''}` : '');
+  let soonSeen = $state(''), soonPick = $state(false), soonRang = '';
+  $effect(() => { const k = soonKey, sl = soon; if (!k || !sl || k === soonRang) return; soonRang = k; untrack(() => void notify('test', '⏰ 1분 뒤 자동으로 열려요', `${sl.p}교시 · ${sl.cls}반 · ${sl.L?.no ?? ''}차시`)); });
   const TABS = [['class', '⚔', '수업'], ['pupil', '👥', '반 · 시간표'], ['prep', '📋', '준비'], ['news', '✉', '소식'], ['me', '🙂', '나']] as const;
 </script>
 
@@ -90,24 +100,35 @@
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}
-      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from, cv) => open(c, L, false, from, cv)} onresume={() => (page = 'live')} ontest={(L, c, from, cv) => open(c || '1-1', L, true, from, cv)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
+      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from, cv, km) => open(c, L, false, from, cv, km)} onresume={() => (page = 'live')} onstop={stopLive} ontest={openTest} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
     {:else if tab === 'pupil'}
       <TPupils {S} {now} ondash={(w) => (wideDash = w)} />
     {:else if tab === 'prep'}
-      {#key prepWant}<TPrep {S} {packs} {now} want={prepWant} ontest={(L) => open('1-1', L, true)} />{/key}
+      {#key prepWant}<TPrep {S} {packs} {now} want={prepWant} />{/key}
     {:else if tab === 'news'}
       <TNews {S} {packs} onread={() => (unread = unreadN(S))} />
     {:else}
-      {#key loginGo}<TMe {S} login0={loginGo} />{/key}
+      <TMe {S} />
     {/if}
+    <button type="button" class="gear" data-k="tgear" aria-label="설정" onclick={() => (setOpen = 'main')}>⚙</button>
     {#if live && liveL}
-      <div class="lbar"><i class="live"></i><span>{live.cls}반 · {liveL.no}차시 · <b>{liveR && (liveR.state.step ?? -1) < 0 ? '대기실' : '수업 중'}</b></span><button type="button" onclick={() => (page = 'live')}>돌아가기 ›</button></div>
+      <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {liveL.no}차시 · <b>{liveR && (liveR.state.step ?? -1) < 0 ? '대기실' : '수업 중'}</b></span><button type="button" onclick={() => (page = 'live')}>돌아가기 ›</button></div>
     {:else}
       <nav class="tabs" aria-label="교사 메뉴">{#each TABS as [k, ic, t] (k)}<button type="button" class:on={tab === k} aria-current={tab === k ? 'page' : undefined} onclick={() => (tab = k)}>{#if k === 'news' && unread}<i class="rdot" aria-label="안 본 소식 {unread}">{unread}</i>{/if}<span class="ico">{ic}</span>{t}</button>{/each}</nav>
     {/if}
   {/if}
 </div>
 
+{#if soon && soonKey !== soonSeen}
+  <Sheet onclose={() => { soonSeen = soonKey; soonPick = false; }}>
+    {#snippet title()}🔔 1분 뒤 자동으로 열려요{/snippet}
+    {#snippet act()}{#if !soonPick}<div class="oarow"><button type="button" class="btn2" data-k="soon-cancel" onclick={() => { if (soon) skipToday(S, now, soon.p, true); soonSeen = soonKey; }}>취소</button><button type="button" class="btn2" data-k="soon-other" onclick={() => (soonPick = true)}>다른 차시</button><button type="button" class="btn" data-k="soon-ok" onclick={() => (soonSeen = soonKey)}>그대로</button></div>{/if}{/snippet}
+    <p class="lq" data-k="soon">{soon.p}교시 {soon.hm} · <b>{soon.cls}반 · {soon.L?.no}차시</b><br /><small>종합실 PC 가 시작종에 열어요</small></p>
+    {#if soonPick}<div class="spk">{#each packs as P (P.id)}<button type="button" class="btn2" class:on={P.id === soon.L?.id} data-no={P.no} onclick={() => { if (soon) pickToday(S, now, soon.p, P.id); soonPick = false; }}>{P.no}차시</button>{/each}</div>{/if}
+  </Sheet>
+{/if}
+{#if setOpen}<TSettings {S} login0={setOpen === 'login'} onclose={() => (setOpen = '')} />{/if}
+{#if sim}{#if sim.kind === 'stu'}<StuTry L={sim.L} bots={sim.n} onclose={() => (sim = null)} />{:else}<TSim L={sim.L} bots={sim.n} onclose={() => (sim = null)} />{/if}{/if}
 {#if newsOpen}
   <Sheet onclose={newsOk} tall mainText="확인했어요" onmain={newsOk}>
     {#snippet title()}🆕 바뀐 것 · {newsList.length > 1 ? `${newsList[newsList.length - 1]?.ver} → ${BUILD}` : BUILD}{/snippet}
@@ -115,14 +136,19 @@
   </Sheet>
 {/if}
 {#if loginAsk}
-  <Sheet onclose={() => (loginAsk = false)} mainText="🔐 교사 로그인하러" onmain={() => { loginAsk = false; loginGo = true; tab = 'me'; }}>
+  <Sheet onclose={() => (loginAsk = false)} mainText="🔐 교사 로그인하러" onmain={() => { loginAsk = false; setOpen = 'login'; }}>
     {#snippet title()}🔐 교사 로그인이 필요해요{/snippet}
-    <p class="lq" data-k="need-login">{BETA ? '시험 서버' : '서버'}에 수업 방을 만들려면 이 폰이 교사로 로그인되어 있어야 해요<br /><small>「나」 탭 → 🔐 교사 로그인 → 다시 「▶ 수업 열기」</small></p>
+    <p class="lq" data-k="need-login">{BETA ? '시험 서버' : '서버'}에 수업 방을 만들려면 이 폰이 교사로 로그인되어 있어야 해요<br /><small>오른쪽 위 ⚙ → 🔐 교사 로그인 → 다시 「▶ 수업 열기」</small></p>
   </Sheet>
 {/if}
 
 
 <style>
+  /* ⚙ = 모든 탭 위 막대 오른쪽 끝 (기둥 640 안) */
+  .gear { position: absolute; top: 0; right: max(4px, calc((100% - 640px) / 2 + 4px)); z-index: 5; width: 48px; height: var(--bar-top); border: 0; background: none; color: var(--text-2); font-size: 22px; }
+  .tp :global(.tbar) { padding-right: 52px; }
+  .oarow { display: flex; gap: 8px; } .oarow button { flex: 1; min-height: 52px; }
+  .spk { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .spk .on { border: 2px solid var(--accent); }
   .lq { margin: 0; text-align: center; color: var(--text-2); font-size: 15px; line-height: 1.5; } .lq small { color: var(--text-3); font-size: 13px; }
   .rdot { position: absolute; top: 6px; left: 55%; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--bad); color: #fff; font: 700 11px var(--font); font-style: normal; display: grid; place-items: center; }
 </style>
