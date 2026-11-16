@@ -215,7 +215,9 @@
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
   let cpt = $state(false), vidOn = $state(false), campArm = $state(false), armT: ReturnType<typeof setTimeout> | undefined;
-  $effect(() => { const c = !!R?.state.closed; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
+  // 🏕 (📜 2026-11-17 #8 「수업 끝나면 선생님이 수업끝 누르기 전까지 아무것도 못함 → 바로 캠프로」): 마무리(결과) 화면에 들어온 뒤 1.5초부터 「🏕 내 캠프로」 · 선생님이 닫을 때 단추가 바뀌지 않음(갑자기 넘어감 막음 그대로)
+  const inEnd = $derived(!!result); // 값이 바뀔 때만 (결과 객체는 R 이 바뀔 때마다 새로 만들어져 타이머가 밀리지 않게)
+  $effect(() => { const c = inEnd; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
   const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
   $effect(() => { void step?.id; vidOn = false; });
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
@@ -269,7 +271,7 @@
     {/if}
     <!-- 🐞 갑자기 넘어감 (📜 2026-11-15): 선생님이 수업을 닫는 순간 「마무리 중」(눌리지 않음) 자리가 「🏕 내 캠프로」 링크로 바뀌어 · 화면을 만지던 손가락이 그대로 눌러 캠프로 감
          → 닫혀도 결과 화면은 그대로 · 단추는 바뀐 뒤 1.5초 동안 눌리지 않음(🏁 수업이 끝났어요) · 그다음에만 캠프로 -->
-    {#if R.state.closed}{#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" why="🏁 수업이 끝났어요" />{:else}<BottomAction text="🏁 수업이 끝났어요" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}{:else}<BottomAction text="🏁 마무리 중" why="선생님이 수업을 닫아도 이 화면은 그대로예요" />{/if}
+    {#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" why={R.state.closed ? '🏁 수업이 끝났어요' : '수업이 열려 있으면 캠프 🌀 차원문으로 다시 와요'} />{:else}<BottomAction text="🏁 마무리" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}
   {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
     <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
     {#if step.kind === 'concept' && step.check && ccRan(R, step)}<ConceptCheckCard {S} {R} {code} {uid} {step} {now} />{/if}<!-- ✔ 개념 체크 (📜 2026-11-15 · 리모컨이 열 때만) -->
