@@ -73,7 +73,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.evaluate(() => window.__featSet({ bundle: 'full', on: { cc: false } })); await t.waitForTimeout(300);
   const cc = await t.$eval('[data-slot="cc"]', (e) => ({ off: e.classList.contains('off'), t: e.textContent.trim() }));
   await t.$eval('[data-slot="cc"]', (e) => e.click()); await t.waitForTimeout(200);
-  ok('⑦ ⚙ 끈 기능 = 점선 「꺼짐」 · 누르면 「⚙ 기능에서 켜요」 · 자리 그대로', cc.off && /꺼짐/.test(cc.t) && /⚙ 기능에서 켜요/.test(await txt('.toast')) && (await t.$$eval('[data-k="rdock"] button', (xs) => xs.map((x) => x.dataset.slot).join(','))) === 'focus,rest,video,sheet,t5,cc,review,send,gift,heal');
+  ok('⑦ ⚙ 끈 기능 = 점선 「꺼짐」 · 누르면 「⚙ 기능에서 켜요」 · 자리 그대로', cc.off && /꺼짐/.test(cc.t) && /⚙ 기능에서 켜요/.test(await txt('.toast:not(.utoast)')) && (await t.$$eval('[data-k="rdock"] button', (xs) => xs.map((x) => x.dataset.slot).join(','))) === 'focus,rest,video,sheet,t5,cc,review,send,gift,heal');
   await t.evaluate(() => window.__featSet(null));
   // ③ 숫자 누름 = 반짝 · 오늘 · 막힌 순
   await t.click('[data-sum="🔥 푸는 중"]').catch(() => {}); await t.waitForTimeout(100);
@@ -93,10 +93,24 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   // ② 폭 360 · 412 · 태블릿
   for (const [w, h] of [[360, 640], [360, 780], [412, 915], [800, 1280]]) {
     await t.setViewportSize({ width: w, height: h }); await t.waitForTimeout(400);
-    const m = await t.evaluate(() => { const d = document.querySelector('[data-k="rdock"]').getBoundingClientRect(), n = document.querySelector('.nums'), tact = document.querySelector('.tact')?.getBoundingClientRect(); return { hx: document.documentElement.scrollWidth > innerWidth + 1, dockIn: d.bottom <= innerHeight + 1, numsOver: n.scrollWidth > n.clientWidth + 1, tact: tact ? tact.bottom <= innerHeight + 1 : false, name: getComputedStyle(document.querySelector('.nums .n s')).display !== 'none' }; });
+    const m = await t.evaluate(() => { const d = document.querySelector('[data-k="rdock"]').getBoundingClientRect(), n = document.querySelector('.nums'), tact = document.querySelector('.tact')?.getBoundingClientRect(); return { hx: document.documentElement.scrollWidth > innerWidth + 1, dockIn: d.bottom <= innerHeight + 1, numsOver: n.scrollWidth > n.clientWidth + 8 /* 🙋 배지 · 손 흔들기 기울기만큼은 봐줌 */, tact: tact ? tact.bottom <= innerHeight + 1 : false, name: getComputedStyle(document.querySelector('.nums .n s')).display !== 'none' }; });
     ok(`② ${w}×${h} 가로 넘침 0 · 막대 · 주요 단추 화면 안 · 칸 안 넘침`, !m.hx && m.dockIn && m.tact && !m.numsOver, JSON.stringify(m));
     await t.screenshot({ path: `${SHOTS}/b24-w${w}x${h}.png` });
   }
+  // 📌 자리 고정: 단계가 바뀌어도(정찰 → 등장 → 개념 → 마무리) 🙋 줄 · 학생판 · 「지금」 칸 · 막대의 y 가 같음
+  await t.setViewportSize({ width: 390, height: 844 }); await t.waitForTimeout(400);
+  const ys = async () => t.evaluate(() => ['[data-k="rq"]', '[data-k="board"]', '[data-k="now-cell"]', '[data-k="rdock"]'].map((q) => { const e = document.querySelector(q); if (!e) return -1; const r = e.getBoundingClientRect(); return `${Math.round(r.top)}/${Math.round(r.height)}`; }).join(' '));
+  const seen = new Map();
+  for (let i = 0; i < 30; i++) {
+    const k = await t.evaluate(() => { const b = document.querySelector('.rstat .badge')?.textContent || ''; const l = document.querySelector('.rstat .lab')?.textContent || ''; return /정찰/.test(b) ? '정찰' : /마무리/.test(l) ? '마무리' : document.querySelector('.adj.talk') ? '개념' : '몬스터'; });
+    if (!seen.has(k)) seen.set(k, await ys());
+    const mt = (await txt('.tact .btn')) || '';
+    if (/수업 닫기/.test(mt)) break;
+    await t.click('.tact .btn'); await t.waitForTimeout(700);
+  }
+  const vs = [...seen.values()];
+  ok(`📌 단계가 바뀌어도 🙋 줄 · 학생판 · 지금 칸 · 막대 자리 그대로 (${[...seen.keys()].join(' → ')})`, seen.size >= 3 && vs.every((v) => v === vs[0]), JSON.stringify(Object.fromEntries(seen)));
+  await t.screenshot({ path: `${SHOTS}/b24-7-end.png` });
   void m2;
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

@@ -165,7 +165,7 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send'>('');
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey'>('');
   // 🎯 복습으로 보내기 (📜 2026-11-16 · A): 남은 몬스터 · 👑 형성평가 → 허수아비 · 형성평가 복습 완료 n / 인원
   const leftS = $derived(R && !isLobby(R) && !isEnd(L, R) ? leftSteps(L, R, now) : []);
   const bossRevN = $derived.by(() => { void now; const all = S.get<Record<string, Record<string, { bossReview?: number; bossSent?: boolean } | null>>>(`records/${live.cls}`) || {}; const rows = Object.values(all).map((x) => x?.[L.id]).filter(Boolean); return { done: rows.filter((r) => r!.bossReview).length, sent: rows.filter((r) => r!.bossSent).length }; });
@@ -221,6 +221,16 @@
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
 
+  {#snippet queue()}
+    <div class="q rq" data-k="rq">
+          <button type="button" class="qm" data-k="qm" aria-label="도움 요청 {order.length}명 · 누르면 옛 판 {oldIds.length}명 새로 고침" onclick={reload}><b>🙋{order.length}</b></button>
+          <div class="qs" data-k="qs">
+            {#each order.slice(0, 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:slide={fresh[u]} data-u={u} aria-label="{k + 1}번째 · {nl(numOf(u))}번 {pname(u)} · 기다린 {waitOf(u)} · ⚔ 보급" onclick={() => release(u)}><b>{ordNo(u)} {nl(numOf(u))}<span>{givenName(pname(u))}</span></b><small data-k="qwait">{waitOf(u)}</small></button>{/each}
+            {#each Array.from({ length: Math.max(0, 3 - order.length) }) as _, k (k)}<span class="qslot">{'①②③'[order.length + k]}</span>{/each}
+            {#if order.length > 3}<span class="qmore" data-k="qmore">+{order.length - 3}</span>{/if}
+          </div>
+    </div>
+  {/snippet}
   {#snippet att()}
     <div class="card att" aria-label="학생판" data-k="board" data-mid={curMid ?? ""}>
       <div class="hd"><span class="lab">👥 학생판{isLobby(R) ? ' · 대기실' : scouting ? ' · 정찰 중' : ''}</span>
@@ -234,18 +244,8 @@
         <button type="button" class="bst" aria-label="한 명 늘리기" disabled={bot.n >= BOT_MAX} onclick={() => (bot.on && bot.code === code ? setBots(S, L, code, true, bot.n + 1) : (bot.n = bot.n + 1))}>＋</button>
       </div>{/if}
       <div class="sums" data-k="sums" role="group" aria-label="반 숫자 · 누르면 그 학생 반짝">{#each sums as x (x.t)}<button type="button" class="sm {x.k}" data-sum={x.t} disabled={!x.us.length} onclick={() => blink(x.us)}>{x.t} <b>{x.us.length}</b></button>{/each}</div>
-      <div class="q">
-        {#if isLobby(R)}
-          <button type="button" class="qm lob" data-k="qm" aria-label="옛 판 {oldIds.length}명 · 누르면 새로 고침" onclick={reload}><b>⚠{oldIds.length}</b></button><span class="hint">⚠ 옛 판 학생 수 · 누르면 새로 고침<br />번호를 누르면 🔑 0000 · 결석</span>
-        {:else}
-          <button type="button" class="qm" data-k="qm" aria-label="도움 요청 {order.length}명 · 누르면 옛 판 {oldIds.length}명 새로 고침" onclick={reload}><b>🙋{order.length}</b></button>
-          <div class="qs" data-k="qs">
-            {#each order.slice(0, 3) as u, k (u)}<button type="button" class="qc" class:first={k === 0} class:slide={fresh[u]} data-u={u} aria-label="{k + 1}번째 · {nl(numOf(u))}번 {pname(u)} · 기다린 {waitOf(u)} · ⚔ 보급" onclick={() => release(u)}><b>{ordNo(u)} {nl(numOf(u))}<span>{givenName(pname(u))}</span></b><small data-k="qwait">{waitOf(u)}</small></button>{/each}
-            {#each Array.from({ length: Math.max(0, 3 - order.length) }) as _, k (k)}<span class="qslot">{'①②③'[order.length + k]}</span>{/each}
-            {#if order.length > 3}<span class="qmore" data-k="qmore">+{order.length - 3}</span>{/if}
-          </div>
-        {/if}
-      </div>
+      {#if isLobby(R)}<div class="q">          <button type="button" class="qm lob" data-k="qm" aria-label="옛 판 {oldIds.length}명 · 누르면 새로 고침" onclick={reload}><b>⚠{oldIds.length}</b></button><span class="hint">⚠ 옛 판 학생 수 · 누르면 새로 고침<br />번호를 누르면 🔑 0000 · 결석</span>
+      </div>{/if}
       {#if view === 'now' || isLobby(R)}
         <div class="nums c{bCols}" class:scr={bScroll} role="group" aria-label="학생 칸">
           {#each pupils as p (p.uid)}
@@ -286,24 +286,21 @@
         <div class="rfbar">{#each steps as x (x.s.id)}<i class:ok={x.k < i} class:now={x.k === i} style:flex={flex(x)} style:--c={COLOR[kindOf(L, R, x.s)]} title={short(x.s)}></i>{/each}</div>
         <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
       </div>
-      {#if stuckNow && mid}<button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{#if feat('review')}<button type="button" class="stuckg" data-k="stuck-gobi" onclick={() => mid && openGobi(S, code, mid)}>📊 고비 보기</button>{/if}{/if}
+      {@render queue()}
       {@render att()}
-      <div class="card rstat">
+      <div class="card rstat" data-k="now-cell">
         <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</span>
           {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
           <span class="unsub">{#if scout?.on}{''}{:else if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           {#if scout?.on}<span class="sub rdy" data-k="ready-n">📝 준비 완료 <b>{ids.filter((u) => readyIds[u]).length}</b> / {ids.length}</span>{:else}<span class="sub" data-k="sub-n"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>{/if}
         </div>
-        {#if isEnd(L, R)}
-          <!-- 💬 마지막 한마디 관리 (정식 control.js: 거른 말 맨 위 · 숨김 = TV 에서 안 보임) -->
-          {@const ws = Object.entries(R.words || {}).filter(([, w]) => w && w.t).sort((a, b) => Number(!!b[1]!.bad) - Number(!!a[1]!.bad))}
-          <div class="wlist" data-k="tl-words"><span class="wlh">💬 마지막 한마디 {ws.length}</span>{#each ws as [u, w] (u)}<div class="wl" class:bad={w!.bad} class:off={R.wordHide?.[u]}><b>{nameOf(u)}</b><span>{w!.t}</span><button type="button" onclick={() => hideWords(S, code, u, !R.wordHide?.[u])}>{R.wordHide?.[u] ? '보이기' : '숨김'}</button></div>{/each}</div>
-        {/if}
-        {#if isEnd(L, R) && feat('survey')}
-          <!-- 📝 마무리 = 그 반 설문 열기 · 닫기 (정식 survey.js ctlHtml · 차시 번호 = 이 기기 기억) -->
-          <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
-        {/if}
-        {#if scout?.on}
+        <!-- 📌 「지금」 칸 = 높이 고정 · 이 자리에서만 내용 교체 (🧱 막힘 띠가 먼저 · 닫으면 원래 내용) -->
+        {#if stuckNow && mid}
+          <div class="adj stk"><button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{#if feat('review')}<button type="button" class="stuckg" data-k="stuck-gobi" onclick={() => mid && openGobi(S, code, mid)}>📊 고비</button>{/if}</div>
+        {:else if isEnd(L, R)}
+          {@const wn = Object.values(R.words || {}).filter((w) => w && w.t).length}
+          <div class="adj endc"><button type="button" data-k="words-open" onclick={() => (sheet = 'words')}>💬 마지막 한마디 {wn}</button>{#if feat('survey')}<button type="button" data-k="sv-open" onclick={() => (sheet = 'survey')}>📝 설문{svSt ? ` · 열림 ${svSt.no}차시` : ''}</button>{/if}</div>
+        {:else if scout?.on}
           <div class="adj" aria-label="정찰 시간 조정"><button type="button" aria-label="정찰 30초 줄이기" onclick={() => scoutAdd(S, L, code, -30)}>−30초</button>
             <div class="hpl"><div class="b sc"><i style:width="{Math.min(100, (scout.left / ((scout.end - scout.t0) || 1)) * 100)}%"></i></div><small>등장까지 <b>{Math.ceil(scout.left / 1000)}초</b></small></div>
             <button type="button" aria-label="정찰 30초 늘리기" onclick={() => scoutAdd(S, L, code, 30)}>+30초</button></div>
@@ -415,6 +412,17 @@
       {#if tdf && tdf.phase === 'play'}<div class="tdc"><button type="button" disabled={!!tdf.sh} onclick={() => { tdShield(S, code); say('🛡 수호 방패! 성에 닿는 몬스터 3마리를 막아요'); }}>🛡 수호 방패<small>{tdf.sh ? '썼어요' : '한 판 한 번'}</small></button><button type="button" disabled={!!tdf.ch?.[tdWave]} onclick={() => { tdCheer(S, code, tdWave); say('✨ 응원! 5초 동안 공격 속도 +20%'); }}>✨ 응원 마법<small>{tdf.ch?.[tdWave] ? '이번 웨이브 씀' : `웨이브 ${tdWave} · 한 번`}</small></button></div>{/if}
       <div class="rstep"><button type="button" aria-label="1분 줄이기" onclick={() => setMin(-1)}>−</button><b>{rmin}분<small>{R.state.rest ? `남은 ${mmss(Math.max(0, R.state.rest.at + R.state.rest.min * 60e3 - now))}` : ''}</small></b><button type="button" aria-label="1분 늘리기" onclick={() => setMin(1)}>＋</button></div>
     </Sheet>
+  {:else if sheet === 'words'}
+    <Sheet onclose={() => (sheet = '')} mainText="닫기">
+      {#snippet title()}💬 마지막 한마디{/snippet}
+          {@const ws = Object.entries(R.words || {}).filter(([, w]) => w && w.t).sort((a, b) => Number(!!b[1]!.bad) - Number(!!a[1]!.bad))}
+          <div class="wlist" data-k="tl-words"><span class="wlh">💬 마지막 한마디 {ws.length}</span>{#each ws as [u, w] (u)}<div class="wl" class:bad={w!.bad} class:off={R.wordHide?.[u]}><b>{nameOf(u)}</b><span>{w!.t}</span><button type="button" onclick={() => hideWords(S, code, u, !R.wordHide?.[u])}>{R.wordHide?.[u] ? '보이기' : '숨김'}</button></div>{/each}</div>
+    </Sheet>
+  {:else if sheet === 'survey'}
+    <Sheet onclose={() => (sheet = '')} mainText="닫기">
+      {#snippet title()}📝 수업 설문{/snippet}
+          <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
+    </Sheet>
   {:else if sheet === 'qr'}
     <Sheet onclose={() => (sheet = '')} mainText="닫기">
       {#snippet title()}🚪 수업 입장{/snippet}
@@ -454,7 +462,13 @@
   .cnt { font-size: 18px; font-variant-numeric: tabular-nums; } .cnt small { font-size: 12px; color: var(--text-2); }
   /* 👥 학생판 (📜 #24): 늘 4줄 · 칸 높이 46 · 한 줄 5~7칸 · 29명부터 판 안 세로 밀기 · 이름 = 글자 줄이기 먼저 → 그래도 좁으면 숨김(번호만) */
   .att { container-type: inline-size; }
-  .mid.rem { overflow-y: auto; overscroll-behavior: contain; } /* 짧은 폰(640) = 가운데만 밀기 · 막대 · 주요 단추는 그대로 */
+  /* 📌 리모컨: 학생판 = 남는 높이 안에서 4줄(칸 38~46px) · 다른 칸은 높이 고정 → 단계가 바뀌어도 자리 그대로 · 아주 짧은 폰만 가운데 밀기 */
+  .mid.rem { overflow-y: auto; overscroll-behavior: contain; }
+  .mid.rem .att { flex: 1 0 auto; display: flex; flex-direction: column; }
+  .mid.rem .nums:not(.scr) { flex: 1 1 0; min-height: calc(4 * 38px + 3 * 5px); max-height: calc(4 * 46px + 3 * 5px); height: auto; grid-template-rows: repeat(4, minmax(38px, 1fr)); }
+  .mid.rem .nums:not(.scr) .n { height: auto; }
+  .mid.rem .nums.scr { flex: 1 1 0; min-height: calc(4 * 38px); height: auto; }
+  .mid.rem .tday { flex: 1 1 0; min-height: calc(4 * 38px); height: auto; }
   .nums { --ch: 46px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, var(--ch)); grid-auto-rows: var(--ch); gap: 5px; height: calc(4 * var(--ch) + 3 * 5px); padding-top: 6px; margin-top: -6px; }
   .nums.c6 { grid-template-columns: repeat(6, minmax(0, 1fr)); } .nums.c7 { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
   .nums.scr { overflow-y: auto; overscroll-behavior: contain; height: calc(4 * var(--ch) + 3 * 4px + 6px); }
@@ -503,7 +517,7 @@
     .n.help.old { animation: wave 1.4s ease-in-out infinite, glowy 2.4s ease-in-out infinite; }
     .qc.slide { animation: slin 0.35s ease-out; }
   }
-  @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-12deg); } 20% { transform: rotate(10deg); } 30% { transform: rotate(-10deg); } 40% { transform: rotate(8deg); } 50% { transform: rotate(-4deg); } }
+  @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(-6deg); } 20% { transform: rotate(5deg); } 30% { transform: rotate(-5deg); } 40% { transform: rotate(4deg); } 50% { transform: rotate(-2deg); } }
   @keyframes beat { 0%, 30%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(242, 182, 50, 0); } 8% { transform: scale(1.1); box-shadow: 0 0 10px 3px rgba(242, 182, 50, 0.75); } 16% { transform: scale(1); } 22% { transform: scale(1.06); box-shadow: 0 0 8px 2px rgba(242, 182, 50, 0.55); } }
   @keyframes glowy { 0%, 30%, 100% { box-shadow: 0 0 0 0 rgba(242, 182, 50, 0); } 8% { box-shadow: 0 0 10px 3px rgba(242, 182, 50, 0.75); } 22% { box-shadow: 0 0 8px 2px rgba(242, 182, 50, 0.55); } }
   @keyframes slin { from { transform: translateX(72px); opacity: 0.2; } to { transform: none; opacity: 1; } }
@@ -520,8 +534,15 @@
   .qmore { flex: none; align-self: center; min-width: 30px; text-align: center; font: 800 13px var(--font); color: #ffb4b6; }
   .fl1 { flex: none; padding: 10px 12px; gap: 6px; }
   .setl { border: 0; background: none; padding: 0; font: 700 13px var(--font); color: var(--text); }
-  .rstat { flex: none; padding: 8px 12px; gap: 4px; }
-  .rs1 { display: flex; align-items: baseline; gap: 6px; height: 26px; overflow: hidden; white-space: nowrap; }
+  .rstat { flex: none; height: 74px; padding: 6px 10px; gap: 4px; display: grid; grid-template-rows: 20px 40px; overflow: hidden; } /* 📌 「지금」 칸 = 높이 고정 · 내용만 바뀜 (#24) */
+  .rstat .adj { height: 40px; } .rstat .adj button { height: 40px; }
+  .adj.stk, .adj.endc { display: flex; gap: 6px; }
+  .adj.stk .stuck { flex: 1; min-width: 0; margin: 0; width: auto; height: 40px; padding: 2px 10px; justify-content: center; overflow: hidden; } .adj.stk .stuck b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .adj.stk .stuck span { font-size: 11px; }
+  .adj.stk .stuckg { flex: none; margin: 0; min-height: 0; padding: 0 10px; font-size: 13px; }
+  .adj.endc button { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rq { flex: none; }
+  .rstat .sub b { font-size: 17px; } .rstat .sub.rdy { font-size: 14px; } .rstat .sub.rdy b { font-size: 18px; }
+  .rs1 { display: flex; align-items: baseline; gap: 6px; height: 20px; line-height: 20px; overflow: hidden; white-space: nowrap; }
   .rs1 .lab { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; font-weight: 700; }
   .unsub { font-size: 13px; color: var(--text-2); }
   .sub { margin-left: auto; font-size: 13px; color: var(--text-2); } .sub b { font-size: 22px; font-weight: 800; color: var(--text); }
