@@ -119,6 +119,8 @@
   const ff = $derived(fun && fun.kind !== 'nun' ? norm(fun as Fun) : null);
   const nn = $derived(fun && fun.kind === 'nun' ? (fun as unknown as Nun) : null);
   // 🔄 🙊 쉼터 무리(❓#2 B): 이름 = 번호 뺀 이름 · 번호 = 명단(없으면 방 기록) · TV 높이 1000 넘으면 용사 1.5배
+  // 📵 끊긴 학생도 레이드 줄에 남김 (📜 2026-11-16 선생님 「접속이 끊기면 레이드 표시에서 사라진 점」) = 흐리게 + 📵 · 다시 들어오면 그대로 · 자리 = 번호 순(끊겨도 자리 안 바뀜)
+  const arenaIds = $derived([...new Set([...ids, ...lost])].sort((a, b) => numOf(a) - numOf(b)));
   const nmOnly = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? p.name : R?.players?.[u]?.nick ?? u; };
   const numOf = (u: string) => pupils.find((x) => x.uid === u)?.num ?? Number((R?.players?.[u] as { num?: number } | undefined)?.num) ?? 0;
   let tvH = $state(720);
@@ -359,7 +361,7 @@
   {:else if step && R}
     <!-- ⚔ 전투: 몬스터 + 머리 위 체력 · 아래 용사 이름표 -->
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
-    <Arena {L} R={R as Room} {step} {now} {ids} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} />
+    <Arena {L} R={R as Room} {step} {now} ids={arenaIds} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} />
     {#if scout?.on}
       <div class="sc"><div class="q">🌫 정찰 — {L.carryOf?.[step.id] ? `${step.title.split(' · ')[1] ?? ''} ` : ''}학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
