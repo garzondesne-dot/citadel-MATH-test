@@ -14,7 +14,8 @@ export interface Change { ver: string; date: string; channel: 'release' | 'beta'
 export const CHANGES = RAW as Change[];
 export const vnum = (v?: string | null) => Number(String(v ?? '').replace(/\D/g, '')) || 0;
 /** 이 판까지의 바뀐 것 (최신부터) */
-export const upTo = (build: string, all: Change[] = CHANGES) => all.filter((c) => vnum(c.ver) <= vnum(build)).sort((a, b) => vnum(b.ver) - vnum(a.ver));
+// 🎒 (📜 2026-11-17 머리 덧붙임 「학생 소식 줄 · b213 학생 소식이 실제로 뜨는지」): 정식 판(이 판 줄이 release) = 정식 줄만 — 베타 판 줄(같은 내용)이 섞여 두 번 뜨지 않게 · 베타 판 = 그대로 전부
+export const upTo = (build: string, all: Change[] = CHANGES) => { const rel = all.some((c) => c.channel === 'release' && vnum(c.ver) === vnum(build)); return all.filter((c) => vnum(c.ver) <= vnum(build) && (!rel || c.channel === 'release')).sort((a, b) => vnum(b.ver) - vnum(a.ver)); };
 /** 못 본 판 (최신부터) · 본 판 기록이 없으면 이번 판만 */
 export function unseen(last: string | null | undefined, build: string, all: Change[] = CHANGES): Change[] {
   const list = upTo(build, all), l = vnum(last);

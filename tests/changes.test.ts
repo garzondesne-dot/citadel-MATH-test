@@ -29,6 +29,12 @@ describe('🆕 바뀐 것', () => {
     expect(upTo('b205', ALL).map((c) => c.ver)).toEqual(['b205', 'b204', 'b203']);
     expect(vnum('b207')).toBe(207);
   });
+  it('정식 판 = 정식 줄만 (베타 판 줄이 섞여 두 번 뜨지 않게) · 베타 판 = 전부 (📜 2026-11-17)', () => {
+    const MIX = [mk('b207', ['x']), { ...mk('b209', ['x 베타']), channel: 'beta' as const }, mk('b211', ['y']), { ...mk('b212', ['z 베타']), channel: 'beta' as const }];
+    expect(unseen('b207', 'b211', MIX).map((c) => c.ver)).toEqual(['b211']);
+    expect(studentLines(unseen('b207', 'b211', MIX))).toEqual(['y']);
+    expect(upTo('b212', MIX).map((c) => c.ver)).toEqual(['b212', 'b211', 'b209', 'b207']);
+  });
   it('🎒 학생 줄 = 여러 판 묶어 최대 5줄', () => {
     expect(studentLines(unseen('b202', 'b206', ALL))).toEqual(['d', 'e', 'f', 'g', 'b']);
   });
