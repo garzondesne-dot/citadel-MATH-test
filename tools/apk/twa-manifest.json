@@ -21,8 +21,8 @@
     "path": "<비공개 폴더>/teacher.keystore",
     "alias": "dungeon-teacher"
   },
-  "appVersionName": "1.0.0",
-  "appVersionCode": 1,
+  "appVersionName": "1.0.1",
+  "appVersionCode": 2,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "fallbackType": "customtabs",
@@ -40,5 +40,5 @@
   "retainedBundles": [],
   "protocolHandlers": [],
   "fileHandlers": [],
-  "appVersion": "1.0.0"
+  "appVersion": "1.0.1"
 }
