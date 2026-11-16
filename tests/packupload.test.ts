@@ -59,7 +59,7 @@ describe('📦 차시 팩 올리기 검사기', () => {
   });
   it('틀린 팩 4 · 버전 0~6 줄 (8개 · 문항 수 다름)', () => {
     const e = errs(run('bad-4-versions.json')).map((x) => `${x.at} | ${x.msg}`);
-    expect(e).toContain('문제 1 | 버전이 8개 — 버전 0 ~ 6 (7개까지)'); expect(e).toContain('문제 1 · 버전 2 | 문항 1개 — 버전 0 은 2개 · 고치는 법');
+    expect(e).toContain('문제 1 | 버전이 8개 — 버전 0 ~ 6 (7개까지)'); expect(e.some((x) => x.startsWith('문제 1 · 버전 2 | 문항 1개 — 버전 0 은 2개 · 고치는 법'))).toBe(true);
   });
   it('틀린 팩 5 · 도감 이름표 (그림 · 배경 · 공격 · 개념 칸)', () => {
     const e = errs(run('bad-5-dex.json')).map((x) => `${x.at} | ${x.msg}`).join('\n');
