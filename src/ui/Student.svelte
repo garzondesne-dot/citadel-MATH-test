@@ -30,7 +30,8 @@
   import { holyArm, holyUse } from '../raid/actions';
   import { guardQ } from './battle/fx.svelte';
   import { ELEM_FX } from './manifest';
-  import { sfx } from './sound.svelte';
+  import { sfx, soundPref } from './sound.svelte';
+  import { actx } from './webaudio';
   import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
@@ -218,6 +219,14 @@
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
   let cpt = $state(false), vidOn = $state(false), campArm = $state(false), armT: ReturnType<typeof setTimeout> | undefined;
   // 🏕 (📜 2026-11-17 #8 「수업 끝나면 선생님이 수업끝 누르기 전까지 아무것도 못함 → 바로 캠프로」): 마무리(결과) 화면에 들어온 뒤 1.5초부터 「🏕 내 캠프로」 · 선생님이 닫을 때 단추가 바뀌지 않음(갑자기 넘어감 막음 그대로)
+  // ⚠ 집중 켜지는 순간 (11/17 #6): 경고음 두 번(옛 정식 Sound.warn) + 진동 · 재생 중인 영상 멈춤 · 전체 화면이면 나옴
+  const focusOn = $derived(!!R && !R.state.closed && !!R.state.focus && !board && !cardOnly);
+  $effect(() => { if (!focusOn) return; untrack(() => {
+    try { document.querySelectorAll('video').forEach((v) => v.pause()); if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); } catch { /* 무시 */ }
+    vidOn = false; cpt = false;
+    try { navigator.vibrate?.([80, 60, 80]); } catch { /* 무시 */ }
+    if (soundPref.sfx) { const a = actx(); if (a) [0, 0.28].forEach((d) => { const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + d; o.type = 'square'; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(660, t + 0.2); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.22); }); }
+  }); });
   const inEnd = $derived(!!result); // 값이 바뀔 때만 (결과 객체는 R 이 바뀔 때마다 새로 만들어져 타이머가 밀리지 않게)
   $effect(() => { const c = inEnd; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
   const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
@@ -344,10 +353,12 @@
 {/if}
 {#if paperOn() || cardOnly}<!-- 📝 제출 모드 · 🎮 시연 = 💎 · 선물 알림 없음 -->{:else if mailNew}<p class="gift mail" role="status">{mailLine(mailNew, mailNew.g)}</p>{:else if giftNew.length}<p class="gift" role="status">🎁 선생님 선물 · 💎 +{giftNew.reduce((a, x) => a + x.g, 0)}</p>{/if}
 {#if R && !R.state.closed && R.state.rest}{#await loadFunPhone() then K}<K.default {S} {R} {code} {uid} {now} />{/await}{/if}
-{#if R && !R.state.closed && R.state.focus && !board}
-  <!-- ⏸ 집중 · 🏕 쉼터 덮개 (#118 · #119): 게임 시계 멈춤 · 화면은 그대로 둔 채 위에 덮음(입력 · 스크롤 보존) -->
-  <div class="cover" role="status" aria-live="polite">
-    <b>📣 선생님에게 주목</b><p>{R.state.rest ? '놀이 시계도 멈춰 있어요' : '게임은 멈춰 있어요'} · 끝나면 그 자리에서 이어가요</p>
+{#if focusOn}
+  <!-- ⚠ 집중 = 옛 정식 WARNING (📜 2026-11-17 #6 「설명 중에는 개념 영상 보는 것도 안 돼 · 옛 정식은 WARNING 띄우고 폰이 먹통되게」 · student.js focus · .focus-ov)
+       모든 창 · 영상 · 크게 보기(z 60)보다 위(z 95) · 빨간 띠 깜빡 · 처음 한 번 경고음 + 진동 · 터치 전부 막음(💬 💎 ⚙ 포함) · 켜지는 순간 영상 멈춤 · 아래 화면(입력 · 스크롤)은 그대로(#118) -->
+  <div class="fwarn" role="alertdialog" aria-modal="true" aria-label="선생님에게 주목하세요" data-k="focus-warn" tabindex="-1" onpointerdowncapture={(e) => e.preventDefault()} ontouchmove={(e) => e.preventDefault()} onwheel={(e) => e.preventDefault()}>
+    <div class="ftop"><b>⚠ WARNING</b><span>선생님에게 주목하세요</span></div>
+    <div class="fbody">{#if step}<p class="fstep">{step.title}</p>{#if step.say}<p class="fsay"><SymText text={step.say} /></p>{/if}{/if}<p class="fm">화면이 잠깐 멈췄어요 · 선생님이 풀어 주면 그 자리에서 이어서 해요</p></div>
   </div>
 {/if}
 
@@ -381,9 +392,12 @@
   .gift.mail { border-color: var(--accent); }
   .gift { position: fixed; top: 64px; left: var(--s4); right: var(--s4); z-index: 25; margin: 0 auto; max-width: 398px; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--gem); font-weight: 700; text-align: center; }
   .qwrap { position: relative; display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
-  .cover { position: fixed; inset: 0; z-index: 30; background: rgba(8, 9, 12, 0.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2); padding: var(--s5); text-align: center; }
-  .cover b { font-size: 28px; color: var(--accent); }
-  .cover p { margin: 0; color: var(--text-2); }
+  .fwarn { position: fixed; inset: 0; z-index: 95; background: rgba(0, 0, 0, 0.62); display: flex; flex-direction: column; align-items: center; touch-action: none; overscroll-behavior: contain; user-select: none; -webkit-user-select: none; }
+  .ftop { width: 100%; background: #b3140b; color: #fff; text-align: center; padding: calc(14px + env(safe-area-inset-top, 0px)) 8px 14px; border-bottom: 4px solid #ffcf5a; box-shadow: 0 0 30px #ff3b2e; animation: warnPulse 1s ease-in-out infinite; }
+  .ftop b { display: block; font-size: 34px; letter-spacing: 3px; } .ftop span { font-size: 22px; font-weight: 700; }
+  @keyframes warnPulse { 50% { background: #e0241a; } }
+  .fbody { margin-top: 16vh; max-width: 90%; padding: 14px 18px; border: 2px solid #ff5a4a; border-radius: var(--r); background: rgba(26, 22, 18, 0.92); color: #fff; text-align: center; }
+  .fstep { margin: 0 0 6px; font-size: 21px; font-weight: 800; color: var(--accent); } .fsay { margin: 0 0 8px; font-size: 16px; line-height: 1.5; } .fm { margin: 0; font-size: 14px; color: #c9ccd3; }
   .words { display: flex; flex-direction: column; gap: 8px; } .words .said { margin: 0; font-size: 17px; font-weight: 700; }
   .wrow { display: flex; gap: 8px; } .wrow input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
   .wsend, .wedit { flex: none; min-height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--accent); color: var(--on-accent, #1a1400); font: 700 15px var(--font); } .wedit { background: var(--surface-2); color: var(--text); align-self: flex-start; }

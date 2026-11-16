@@ -66,7 +66,7 @@ const log = (...a) => console.log(...a);
   log('폰 3 다시 들어옴 → 지난 답 칸 상태:', back || '(없음)');
   // 집중 · 💎 선물(모두)
   await t.click('.rdock button:has-text("집중")'); await t.waitForTimeout(1200);
-  const cover = await Promise.all(phones.map((p) => p.$('.focus, .cover, [class*="focus"]').then((x) => !!x)));
+  const cover = await Promise.all(phones.map((p) => p.$('.focus, .fwarn, [class*="focus"]').then((x) => !!x)));
   log('🔴 집중 → 폰 덮개:', cover.join(' · '));
   await phones[0].screenshot({ path: `${SHOTS}/b20-phone1-focus.png` });
   await t.click('.rdock button:has-text("집중")'); await t.waitForTimeout(600);

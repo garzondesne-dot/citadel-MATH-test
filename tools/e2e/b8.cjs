@@ -98,7 +98,7 @@ const DB = 'citadel-v1-test-db';
     await shot(t, 'b8-t-remote-play'); await tv.mouse.move(660, 300); if (W === 360) await tv.screenshot({ path: `${SHOTS}/b8-tv-play.png` });
     // 🔴 집중: 학생 폰 덮개 · TV ⏸ · 남은 시간은 흐름
     await t.click('.rdock button:has-text("집중")'); await t.waitForTimeout(300);
-    log(tag, '🔴 집중: 학생 폰', (await studs[0].textContent('.cover b')).trim(), '| TV', (await tv.textContent('.ov.fo')).replace(/\s+/g, ' ').trim(), '| 배지', (await t.textContent('.rs1 .badge')).trim(), '| ⏳ 멈춤', !!(await tv.$('.tline em.still')));
+    log(tag, '🔴 집중: 학생 폰', (await studs[0].textContent('.fwarn .ftop b')).trim(), '| TV', (await tv.textContent('.ov.fo')).replace(/\s+/g, ' ').trim(), '| 배지', (await t.textContent('.rs1 .badge')).trim(), '| ⏳ 멈춤', !!(await tv.$('.tline em.still')));
     if (W === 360) { await tv.screenshot({ path: `${SHOTS}/b8-tv-focus.png` }); await studs[0].screenshot({ path: `${SHOTS}/b8-s-focus-360.png` }); }
     const mr3 = await meas('⑭ 집중'); if (!same(mr3.tools, mr2.tools)) errs.push(`${tag} 집중 때 도구가 움직임`);
     await t.click('.rdock button:has-text("집중")'); await t.waitForTimeout(150);
