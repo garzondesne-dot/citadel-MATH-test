@@ -177,8 +177,8 @@ export function versions(raw: BItem[][], at: string, out: Issue[], qat: (v: numb
   const v0 = vs[0] ?? [];
   vs.forEach((v, k) => {
     if (!k) return;
-    if (v.length !== v0.length) out.push({ at: `${at} · 버전 ${k}`, msg: `문항 ${v.length}개 — 버전 0 은 ${v0.length}개`, lvl: 'err' });
-    v.forEach((q, i) => { const q0 = v0[i]; if (q && q0 && q.type !== q0.type) out.push({ at: qat(k, i), msg: `형식 ${q.type} — 버전 0 은 ${q0.type}`, lvl: 'err' }); });
+    if (v.length !== v0.length) out.push({ at: `${at} · 버전 ${k}`, msg: `문항 ${v.length}개 — 버전 0 은 ${v0.length}개 · 고치는 법: 버전 ${k} 의 문항 수를 버전 0 과 같게`, lvl: 'err' });
+    v.forEach((q, i) => { const q0 = v0[i]; if (q && q0 && q.type !== q0.type) out.push({ at: qat(k, i), msg: `형식 ${q.type} — 버전 0 은 ${q0.type} · 고치는 법: 버전 ${k} 의 ${i + 1}번 문항 꼴을 버전 0 과 같게(${q0.type}) — 숫자 바꾼 판(버전 1~)은 문제 꼴이 같아야 해요`, lvl: 'err' }); });
   });
   return vs.map((v) => v.filter((q): q is Question => !!q));
 }
