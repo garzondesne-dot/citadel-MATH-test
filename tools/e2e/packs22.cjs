@@ -17,7 +17,7 @@ const KIT = JSON.parse(fs.readFileSync(`${__dirname}/../../kit/${fs.readdirSync(
   ok('① 큰 「📦 차시 팩 올리기」', !!(await p.$('[data-k="packup-go"]')));
   const n0 = (await p.$$('[data-k="pack-card"]')).length;
   ok('① 차시 카드 3 + 「n개 더 ▾」', n0 === 3 && !!(await p.$('[data-k="pack-more"]')), `${n0}`);
-  ok('① 🛠 6단계 막대 · 🧰 도구 접힘 · ❓ 문의(폼 주소 없음 = 숨김)', !!(await p.$('[data-k="build-go"]')) && !!(await p.$('[data-k="tools-fold"]')) && !(await p.$('[data-k="tools"]')) && !(await p.$('[data-k="ask-go"]')));
+  ok('① 🛠 차시 만들기 갈래 · 🧰 도구 접힘 · ❓ 문의(폼 주소 없음 = 숨김)', !!(await p.$('[data-k="side-make"]')) && !!(await p.$('[data-k="tools-fold"]')) && !(await p.$('[data-k="tools"]')) && !(await p.$('[data-k="ask-go"]')));
   await p.screenshot({ path: `${SHOTS}/p22-1-tab.png` });
   await p.click('[data-k="pack-more"]'); const nAll = (await p.$$('[data-k="pack-card"]')).length; ok('「n개 더」 = 모두 펼침', nAll > 3, `${nAll}`);
   // ② 카드 · ③ 던전
@@ -43,15 +43,15 @@ const KIT = JSON.parse(fs.readFileSync(`${__dirname}/../../kit/${fs.readdirSync(
   await p.click('.lbar button:has-text("수업 닫기")').catch(() => {}); await p.click('.ask .btn').catch(() => {});
   await p.goto(B + '?role=teacher&tab=prep'); await p.waitForSelector('[data-k="packs-tab"]');
   // ④ 🛠 6단계
-  await p.click('[data-k="build-go"]'); await p.waitForSelector('[data-k="build"]');
+  await p.click('[data-k="side-make"]'); await p.waitForSelector('[data-k="build"]');
   ok('④ 6단계 · 꾸러미 받기 = 공개 전 숨김(「공개 준비 중」 · 📜 #23)', (await p.$$('[data-step]')).length === 6 && !(await p.$('[data-k="kit-dl"]')) && !!(await p.$('[data-k="kit-soon"]')));
   // 베타 빌드에는 zip 있음(정식 빌드는 공개 전 뺌)
   const href = new URL('kit/모두의던전_차시팩_만들기_꾸러미.zip', B).href; const r = await p.evaluate(async (u) => { const x = await fetch(u); return { ok: x.ok, t: x.headers.get('content-type'), n: (await x.arrayBuffer()).byteLength }; }, href);
   ok('④ 꾸러미 zip 받아짐', r.ok && r.n > 10000 && !/html/.test(r.t || ''), JSON.stringify(r));
-  await p.click('[data-k="ws-hand"]'); ok('⑦ ✍ 직접 탭 · 「우리 양식 지킬 것」', /틀\.docx/.test(await txt('[data-k="build"]')) && /칸 제목 글자 그대로/.test(await txt('[data-k="ws-rule"]')));
-  await p.click('[data-k="step-done-1"]'); await p.screenshot({ path: `${SHOTS}/p22-4-build.png` });
+  await p.click('[data-step="2"]'); await p.click('[data-k="ws-hand"]'); ok('⑦ ✍ 직접 탭 · 「우리 양식 지킬 것」', /틀\.docx/.test(await txt('[data-k="build"]')) && /칸 제목 글자 그대로/.test(await txt('[data-k="ws-rule"]')));
+  await p.click('[data-step="1"]'); await p.click('[data-k="step-done-1"]'); await p.screenshot({ path: `${SHOTS}/p22-4-build.png` });
   await p.reload(); await p.waitForSelector('[data-k="packs-tab"]');
-  ok('④ ✔ = 이 기기 기억 (1/6)', /6단계 중 1단계 끝/.test(await txt('[data-k="build-go"]')), await txt('[data-k="build-go"]'));
+  ok('④ ✔ = 이 기기 기억 (1/6)', /1\/6/.test(await txt('[data-k="build-n"]')), await txt('[data-k="side-make"]'));
   // ⑤ 꾸러미 예시 팩 올리기 · ⑥ 고칠 칸
   const mk = (o) => JSON.stringify({ ...KIT, id: 'kit-test', no: 20, ...o });
   await p.click('[data-k="packup-go"]'); await p.click('button:has-text("글로 붙여 넣기")'); await p.fill('[data-k="packtext"]', mk({})); await p.click('button:has-text("검사하기")'); await p.waitForTimeout(400);

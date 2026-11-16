@@ -74,10 +74,10 @@
   let done = $state<boolean[]>((() => { try { const v = JSON.parse(localStorage.getItem(SK) || '[]'); return Array.from({ length: 6 }, (_, i) => !!v[i]); } catch { return Array(6).fill(false); } })());
   const setDone = (i: number, v: boolean) => { done = done.map((x, k) => (k === i ? v : x)); try { localStorage.setItem(SK, JSON.stringify(done)); } catch { /* 이 기기만 */ } };
   const nDone = $derived(done.filter(Boolean).length), nowStep = $derived(done.findIndex((x) => !x));
-  let build = $state(false), wsTab = $state<'ai' | 'hand'>('ai');
+  let wsTab = $state<'ai' | 'hand'>('ai'), side = $state<'up' | 'make'>('up'), mstep = $state(0);
   const KIT = `${import.meta.env.BASE_URL}kit/모두의던전_차시팩_만들기_꾸러미.zip`;
   let kitOk = $state<boolean | null>(null);
-  $effect(() => { if (!build || kitOk != null || !KIT_PUBLIC) return; fetch(KIT, { method: 'HEAD', cache: 'no-store' }).then((r) => (kitOk = r.ok && !/text\/html/.test(r.headers.get('content-type') || ''))).catch(() => (kitOk = false)); });
+  $effect(() => { if (side !== 'make' || kitOk != null || !KIT_PUBLIC) return; fetch(KIT, { method: 'HEAD', cache: 'no-store' }).then((r) => (kitOk = r.ok && !/text\/html/.test(r.headers.get('content-type') || ''))).catch(() => (kitOk = false)); });
   const STEPS: { t: string; d: string }[] = [
     { t: '자료 한 번에 받기', d: '학습지 틀 · 학습지 도우미 · 팩 도우미 지침 · 설치 안내 · 예시 · 도감 ID (zip 1개)' },
     { t: '📝 우리 양식 학습지 만들기', d: '🤖 AI 로 · ✍ 직접 — 둘 중 하나 · 끝 = 학습지 PDF' },
@@ -100,10 +100,14 @@
 
 <div class="tbar"><div class="t">차시 팩</div></div>
 <div class="mid scroll" data-k="packs-tab">
-  <button type="button" class="upbig" data-k="packup-go" onclick={() => (upOpen = true)}><i>📦</i><span><b>차시 팩 올리기</b><small>zip(팩 + 학습지 PDF + 영상) 또는 팩 파일 하나</small></span></button>
-
+  <!-- 📦 두 갈래 (📜 11/17 #26): 탭을 열면 늘 「📦 차시 올리기」 · 「🛠 차시 만들기」는 누를 때만 · 갈래를 바꿔도 위 제목 · 아래 탭 막대 그대로 -->
+  <div class="side" role="tablist" aria-label="차시 팩 갈래">
+    <button type="button" role="tab" class:on={side === 'up'} aria-selected={side === 'up'} data-k="side-up" onclick={() => (side = 'up')}>📦 차시 올리기</button>
+    <button type="button" role="tab" class:on={side === 'make'} aria-selected={side === 'make'} data-k="side-make" onclick={() => { side = 'make'; mstep = nowStep >= 0 ? nowStep : 5; }}>🛠 차시 만들기 <small data-k="build-n">{nDone}/6</small></button>
+  </div>
+  {#if side === 'up'}
   <p class="g">📚 올린 차시 <span>{list.length}개</span></p>
-  {#if !list.length}<div class="empty"><b>아직 차시가 없어요</b><small>🛠 아래 「차시 팩 직접 만들기」로 첫 팩을 만들어 올려요</small></div>{/if}
+  {#if !list.length}<div class="empty" data-k="packs-empty"><b>아직 차시가 없어요</b><small>아래 📦 단추로 첫 팩을 올려 보세요</small></div>{/if}
   {#each more ? list : list.slice(0, 3) as L (L.id)}
     {@const e = est(L)}
     <button type="button" class="lc" data-k="pack-card" data-id={L.id} onclick={() => openCard(L)}>
@@ -112,10 +116,6 @@
     </button>
   {/each}
   {#if list.length > 3 && !more}<button type="button" class="lc more" data-k="pack-more" onclick={() => (more = true)}>{list[list.length - 1]?.no}~{list[3]?.no}차시 · {list.length - 3}개 더 ▾</button>{/if}
-
-  <button type="button" class="prog" data-k="build-go" onclick={() => (build = true)}><b>🛠 차시 팩 직접 만들기</b><span class="bar"><i style:width="{(nDone / 6) * 100}%"></i></span><small>{nDone ? (nDone === 6 ? '6단계 모두 끝 · 다시 보기 ›' : `6단계 중 ${nDone}단계 끝 · 이어서 하기 ›`) : '자료 받기부터 6단계 ›'}</small></button>
-  {#if FORMS.ask}<button type="button" class="ask" data-k="ask-go" onclick={() => (askOpen = true)}>❓ 막히면 만든 선생님께 문의<span>›</span></button>{/if}
-
   <button type="button" class="fold" data-k="tools-fold" aria-expanded={tools} onclick={() => (tools = !tools)}>🧰 도구 (사진 채점 · 공격 갤러리 · 입장 QR · 성채 · 백업)<span>{tools ? '▴' : '▾'}</span></button>
   {#if tools}
     <div class="list" data-k="tools">
@@ -126,7 +126,34 @@
       <button type="button" class="item" disabled><span class="ic">🗄</span><span class="tx"><b>백업</b><small>지난 차시 백업 받고 정리 · 준비 중</small></span></button>
     </div>
   {/if}
+  {:else}
+  <div class="mk" data-k="build">
+    <div class="map" role="group" aria-label="6단계">
+      {#each STEPS as st, i (i)}<button type="button" class="mp" class:ok={done[i]} class:now={i === mstep} data-step={i + 1} aria-current={i === mstep ? 'step' : undefined} onclick={() => (mstep = i)}><b>{done[i] ? '✔' : i + 1}</b><span>{st.t.replace(/^\p{Extended_Pictographic}\S*\s*/u, '')}</span></button>{/each}
+      {#if FORMS.ask}<button type="button" class="mp ask" data-k="ask-go" onclick={() => (askOpen = true)}><b>❓</b><span>막히면 문의</span></button>{/if}
+    </div>
+    <div class="now" data-k="step-now" data-now={mstep + 1}>
+      <p class="nt">{mstep + 1}. {STEPS[mstep]?.t}</p><small>{STEPS[mstep]?.d}</small>
+      {#if mstep === 0}{#if !KIT_PUBLIC}<em class="soon" data-k="kit-soon">📥 공개 준비 중 · 곧 받을 수 있어요</em>{:else if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl">📥 꾸러미 받기 (zip)</a>{/if}{/if}
+      {#if mstep === 1}
+        <div class="seg" role="tablist"><button type="button" role="tab" class:on={wsTab === 'ai'} aria-selected={wsTab === 'ai'} data-k="ws-ai" onclick={() => (wsTab = 'ai')}>🤖 AI 로</button><button type="button" role="tab" class:on={wsTab === 'hand'} aria-selected={wsTab === 'hand'} data-k="ws-hand" onclick={() => (wsTab = 'hand')}>✍ 직접</button></div>
+        {#if wsTab === 'ai'}<ol class="sub"><li><b>학습지 도우미 만들기</b> GPT · Gemini · Claude 에 「학습지 도우미 지침」 붙여 넣기 (설치 안내 그대로)</li><li><b>재료 주기</b> 교과서 쪽 · 지금 쓰는 학습지(있으면) · 차시 목표 → 우리 양식 학습지 글이 나옴</li><li><b>PDF 로 저장</b> 도우미가 준 파일을 열어 인쇄 → PDF</li></ol>
+        {:else}<p class="hand">「레이드용 학습지 틀.docx」를 한글 · 워드 · 구글 문서로 열어 칸을 채우고 PDF 로 저장 · 「예시 10차시」를 옆에 띄워 보며</p>{/if}
+        <div class="rule" data-k="ws-rule"><b>✔ 우리 양식 지킬 것 (AI · 직접 같음)</b><small>① 칸 제목 글자 그대로: 「전시 확인 · 생각 열기 · STEP n · 몬스터 n · 문제 n · 형성평가」(올릴 때 이 글자로 칸 그림을 자름) ② 몬스터 3 · 형성평가 3~4 ③ 문제마다 학습지에 쓸 빈칸 ④ A4 · 글자 너무 작지 않게</small></div>
+      {/if}
+      {#if mstep === 4}<button type="button" class="dl" data-k="step-up" onclick={() => (upOpen = true)}>📦 올리기 창 열기</button>{/if}
+      {#if mstep === 5 && list.length}<button type="button" class="dl" data-k="step-test" onclick={() => ontest(list[0]!.id)}>🧪 {list[0]!.no}차시 테스트로 열기</button>{/if}
+      {#if done[mstep]}<button type="button" class="mark on" data-k="step-undo" onclick={() => setDone(mstep, false)}>✔ 했어요 · 되돌리기</button>{/if}
+    </div>
+    <p class="note">✔ 는 이 기기에 기억 · 막히면 {FORMS.ask ? '❓ 문의' : '만든 선생님께 문의(곧 열림)'}</p>
+  </div>
+  {/if}
 </div>
+{#if side === 'up'}
+  <div class="tact" data-k="upbar"><button type="button" class="btn" data-k="packup-go" onclick={() => (upOpen = true)}>📦 차시 팩 올리기</button></div>
+{:else}
+  <div class="tact mkfoot"><button type="button" class="btn2" data-k="step-prev" disabled={mstep <= 0} onclick={() => (mstep = Math.max(0, mstep - 1))}>◀ {mstep > 0 ? `${mstep}단계` : '이전'}</button><button type="button" class="btn" data-k="step-done-{mstep + 1}" onclick={() => { setDone(mstep, true); if (mstep < 5) mstep += 1; }}>{mstep < 5 ? `✔ 했어요 · ${mstep + 2}단계 ▶` : '✔ 했어요 · 끝'}</button></div>
+{/if}
 
 {#if upOpen}<PackUpload {S} onclose={() => { upOpen = false; ver++; }} />{/if}
 
@@ -185,30 +212,6 @@
   </Sheet>
 {/if}
 
-{#if build}
-  <Sheet onclose={() => (build = false)} tall mainText="닫기">
-    {#snippet title()}🛠 차시 팩 만들기 · {nDone}/6{/snippet}
-    <div class="st" data-k="build">
-      {#each STEPS as s, i (i)}
-        <div class="s" class:ok={done[i]} class:now={i === nowStep} data-step={i + 1}>
-          <span class="n">{done[i] ? '✔' : i + 1}</span>
-          <div class="sx"><b>{s.t}</b><small>{s.d}</small>
-            {#if i === 0}{#if !KIT_PUBLIC}<em class="soon" data-k="kit-soon">📥 공개 준비 중 · 곧 받을 수 있어요</em>{:else if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl">📥 꾸러미 받기 (zip)</a>{/if}{/if}
-            {#if i === 1}
-              <div class="seg" role="tablist"><button type="button" role="tab" class:on={wsTab === 'ai'} aria-selected={wsTab === 'ai'} data-k="ws-ai" onclick={() => (wsTab = 'ai')}>🤖 AI 로</button><button type="button" role="tab" class:on={wsTab === 'hand'} aria-selected={wsTab === 'hand'} data-k="ws-hand" onclick={() => (wsTab = 'hand')}>✍ 직접</button></div>
-              {#if wsTab === 'ai'}<ol class="sub"><li><b>학습지 도우미 만들기</b> GPT · Gemini · Claude 에 「학습지 도우미 지침」 붙여 넣기 (설치 안내 그대로)</li><li><b>재료 주기</b> 교과서 쪽 · 지금 쓰는 학습지(있으면) · 차시 목표 → 우리 양식 학습지 글이 나옴</li><li><b>PDF 로 저장</b> 도우미가 준 파일을 열어 인쇄 → PDF</li></ol>
-              {:else}<p class="hand">「레이드용 학습지 틀.docx」를 한글 · 워드 · 구글 문서로 열어 칸을 채우고 PDF 로 저장 · 「예시 10차시」를 옆에 띄워 보며</p>{/if}
-              <div class="rule" data-k="ws-rule"><b>✔ 우리 양식 지킬 것 (AI · 직접 같음)</b><small>① 칸 제목 글자 그대로: 「전시 확인 · 생각 열기 · STEP n · 몬스터 n · 문제 n · 형성평가」(올릴 때 이 글자로 칸 그림을 자름) ② 몬스터 3 · 형성평가 3~4 ③ 문제마다 학습지에 쓸 빈칸 ④ A4 · 글자 너무 작지 않게</small></div>
-            {/if}
-            {#if i === 4}<button type="button" class="dl" onclick={() => { build = false; upOpen = true; }}>📦 올리기 창 열기</button>{/if}
-            <button type="button" class="mark" class:on={done[i]} data-k="step-done-{i + 1}" onclick={() => setDone(i, !done[i])}>{done[i] ? '✔ 했어요 · 되돌리기' : '✔ 했어요'}</button>
-          </div>
-        </div>
-      {/each}
-    </div>
-    <p class="note">✔ 는 이 폰에 기억 · 막히면 {FORMS.ask ? '❓ 문의' : '만든 선생님께 문의(곧 열림)'}</p>
-  </Sheet>
-{/if}
 
 {#if askOpen}
   <Sheet onclose={() => (askOpen = false)}>
@@ -235,15 +238,12 @@
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
-  .upbig { display: flex; gap: 12px; align-items: center; min-height: 72px; padding: 12px 14px; border: 0; border-radius: 16px; background: var(--accent); color: var(--on-accent); text-align: left; font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); } .upbig i { font-style: normal; font-size: 30px; } .upbig b { display: block; font-size: 17px; } .upbig small { font-size: 13px; opacity: 0.85; }
   .g { margin: 6px 2px 0; font-size: 13px; font-weight: 800; color: var(--accent); display: flex; justify-content: space-between; } .g span { color: var(--text-3); font-weight: 600; }
   .empty { display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: var(--r); background: var(--surface); } .empty small { color: var(--text-2); }
   .lc { display: grid; gap: 4px; min-height: 56px; padding: 8px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); text-align: left; font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh); }
-  .lc.more { color: var(--text-2); font-weight: 700; font-size: 14px; }
+  .lc.more { display: flex; align-items: center; min-height: 44px; color: var(--text-2); font-weight: 700; font-size: 14px; } /* 접힌 「n개 더」 = 한 줄 높이 (#26 ⑤) */
   .lc .t { display: flex; gap: 6px; align-items: center; } .lc .t b { font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lc .t em { font-style: normal; font-size: 12.5px; color: var(--text-3); }
   .tags { display: flex; gap: 4px; flex-wrap: wrap; } .tag { font-size: 12px; font-weight: 800; border-radius: 99px; padding: 1px 8px; background: var(--surface-2); color: var(--text-2); } .tag.full { background: #2a2340; color: #e9d5ff; } .tag.basic { background: #13321f; color: #9ff0c6; } .tag.warn { background: #3a1d1f; color: #ffb4b6; }
-  .prog { display: grid; gap: 6px; padding: 10px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); text-align: left; font-family: var(--font); } .prog b { font-size: 15px; } .prog small { color: var(--text-2); font-size: 13px; }
-  .bar { display: block; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--ok); }
   .ask, .fold { display: flex; gap: 8px; align-items: center; min-height: 48px; padding: 0 12px; border-radius: var(--r); border: 1px dashed var(--line); background: none; color: var(--text); font: 700 14px var(--font); text-align: left; } .ask span, .fold span { margin-left: auto; color: var(--text-3); } .fold { border-style: solid; color: var(--text-2); }
   a.item { text-decoration: none; }
   .card2 { display: flex; flex-direction: column; gap: 10px; }
@@ -259,9 +259,6 @@
   .row2 { display: flex; gap: 8px; } .row2 > * { flex: 1; min-height: 52px; } .lnk { display: flex; align-items: center; justify-content: center; text-decoration: none; }
   .dg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } .dg button { min-height: 60px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-family: var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; } .dg b { font-size: 20px; } .dg small { font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .dg .on { border: 2px solid var(--accent); }
   .pv { display: grid; gap: 6px; justify-items: center; padding: 10px; border-radius: 12px; background: #120d0a center / cover; color: #f3e6c4; } .pv small { font-size: 12px; text-shadow: 0 1px 2px #000; } .ms { display: flex; justify-content: space-around; width: 100%; } .bs { display: grid; place-items: center; }
-  .st { display: flex; flex-direction: column; gap: 8px; } .s { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); } .s.now { border-color: var(--accent); }
-  .n { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 900 13px var(--font); background: var(--surface-2); } .s.ok .n { background: var(--ok); color: #0b1a12; } .s.now .n { background: var(--accent); color: var(--on-accent); }
-  .sx { flex: 1; min-width: 0; display: grid; gap: 6px; } .sx > b { font-size: 15px; } .sx > small { color: var(--text-2); font-size: 13px; }
   .dl { justify-self: start; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 14px var(--font); display: inline-flex; align-items: center; text-decoration: none; }
   .soon { font-style: normal; color: var(--text-3); font-size: 13px; }
   .mark { justify-self: start; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text-2); font: 700 13px var(--font); } .mark.on { color: var(--ok); border-color: var(--ok); }
@@ -270,4 +267,24 @@
   .rule { display: grid; gap: 2px; padding: 8px; border-radius: 10px; border: 1px solid #5a4a1a; } .rule b { font-size: 13.5px; } .rule small { color: var(--text-2); font-size: 12.5px; }
   .lab2 { margin: 0; font-weight: 700; font-size: 13px; color: var(--text-2); } .ask-t { margin: 0; padding: 10px; border-radius: 10px; background: var(--surface-2); white-space: pre-wrap; font: 13px var(--font); }
   .qr { display: grid; justify-items: center; gap: 8px; padding: 12px; background: #fff; border-radius: 12px; } .qr small { color: #333; word-break: break-all; }
+  /* 📦 두 갈래 (#26) */
+  .side { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .side button { min-height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .side button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .side small { font-weight: 600; font-size: 12px; }
+  .mk { display: flex; flex-direction: column; gap: 10px; }
+  .map { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+  .mp { min-height: 44px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text-3); font: 800 13px var(--font); padding: 0; display: grid; place-items: center; }
+  .mp span { display: none; } .mp.ok { background: #13321f; color: #9ff0c6; border-color: #13321f; } .mp.now { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .mp.ask { display: none; }
+  .now { display: grid; gap: 8px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+  .now .nt { margin: 0; font-size: 16px; font-weight: 900; } .now > small { color: var(--text-2); font-size: 13px; }
+  .mkfoot { display: grid; grid-template-columns: auto 1fr; gap: 8px; } .mkfoot .btn2 { white-space: nowrap; padding: 0 14px; }
+  /* 🖥 PC (≥ 900) = 왼쪽 단계 목록 + ❓ 문의 · 오른쪽 지금 단계 */
+  @media (min-width: 900px) {
+    .mk { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+    .map { grid-template-columns: 1fr; } .mp { justify-items: start; grid-template-columns: 26px 1fr; gap: 6px; padding: 0 10px; text-align: left; }
+    .mp span { display: inline; font-weight: 700; } .mp.ask { display: grid; border-style: dashed; background: none; }
+    .mk .note { grid-column: 1 / -1; }
+  }
 </style>
