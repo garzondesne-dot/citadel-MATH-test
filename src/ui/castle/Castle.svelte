@@ -212,7 +212,7 @@
       </div>
     {:else}
       <!-- 🏰 옛 정식 「게임처럼」 배치 (📜 2026-11-17 #16 · js/raid/bonus.js render): 큰 띠(보스 방 배경 + 소개) → 💎 보상 줄 → 🌀 층 포털 → 그 층 방 지도(몬스터 · 번호 · 이름 · 상태 · 💎) · 값 · 열림 규칙은 그대로 -->
-      <div class="cshero" style:background-image="url({dungeonOf('citadel-boss')})" data-k="castle-hero"><p>교과서 단원 평가를 숫자만 바꾼 문제 · <b>방 하나에 몬스터 한 마리</b><br /><small>순서 없이 아무 방이나 · 그 차시 진도를 나가면 방이 열려요 · 👑 보스 방은 열린 방의 60%를 처치하면!</small></p></div>
+      <div class="cshero" style:background-image="url({dungeonOf('citadel-boss')})" data-k="castle-hero"><p>교과서 평가 문제를 숫자만 바꾼 문제 · <b>방 하나에 몬스터 한 마리</b><br /><small>순서 없이 아무 방이나 · 그 차시 진도를 나가면 방이 열려요 · 👑 보스 방은 열린 방의 60%를 처치하면!</small></p></div>
       <p class="fxl">✨ 🏆 업적 {seals}개 · 층마다 👑 보스 방을 처음 처치하면 업적 +1 (🎯 허수아비 형성평가 재대결도)</p>
       {#if !preview}<p class="gml" data-k="castle-gem">💎 방을 처음 처치하면 <b>+{CASTLE_GEM.room}</b> · 👑 보스 방 <b>+{CASTLE_GEM.roomBoss}</b> + 🏆 업적 <b>+{CASTLE_GEM.seal}</b>{anyClear ? '' : ` · 🎁 첫 방은 +${CASTLE_GEM.first} 더!`}</p>{/if}
       {#if !floors.length}
