@@ -62,7 +62,8 @@ const norm = (t) => String(t).replace(/\s+/g, '').replace(/^\d+[⑴⑵⑶⑷⑸�
   const curQ = async () => findQ(await s.$eval('.drun .q2', (e) => e.textContent));
   const pick = async (k) => { await s.click(`.drun .opts .opt >> nth=${k}`); await s.waitForTimeout(150); };
   const main = async () => { await s.waitForFunction(() => { const x = document.querySelector('.drun button.pmain'); return x && !x.disabled; }, null, { timeout: 15000 }); await s.click('.drun button.pmain'); await s.waitForTimeout(250); };
-  await s.click('[data-room="q03"]'); await s.click('[data-k="castle"] button.pmain'); await s.waitForSelector('.drun .q2', { timeout: 10000 });
+  await s.click('[data-room="q03"]'); // 🏰 방 칸 누르면 바로 도전 (11/17 #16)
+  await s.waitForSelector('.drun .q2', { timeout: 10000 });
   const a1 = await curQ(); ok('③ 첫 판 = 판 0 숫자', a1 && a1.k === 0, a1 && a1.q.q);
   await pick((Number(a1.q.a) + 1) % 4); await main();
   const a2 = await curQ(); await pick(Number(a2.q.a)); await s.screenshot({ path: `${SHOTS}/castle-6-q.png` }); await main(); // 공격
@@ -93,7 +94,7 @@ const norm = (t) => String(t).replace(/\s+/g, '').replace(/^\d+[⑴⑵⑶⑷⑸�
   await openRow('eval-1'); await t.click('.sheet [data-k="addon-look"]'); await t.waitForSelector('[data-k="castle"] [data-room]');
   const pv = await t.$$eval('[data-k="castle"] [data-room]', (x) => x.filter((e) => e.getAttribute('data-open') === '1').length);
   ok('⑤ 미리 보기 = 12방 모두 열림', pv === 12, String(pv));
-  await t.click('[data-room="q03"]'); await t.click('[data-k="castle"] button.pmain'); await t.waitForSelector('.drun .q2', { timeout: 10000 });
+  await t.click('[data-room="q03"]'); await t.waitForSelector('.drun .q2', { timeout: 10000 });
   const same = await t.evaluate(() => !!document.querySelector('.drun .qwrap') && !!document.querySelector('.drun .pmain'));
   await t.click('.drun .opts .opt >> nth=0'); await t.waitForTimeout(150); await t.click('.drun button.pmain');
   await t.screenshot({ path: `${SHOTS}/castle-11-preview.png` });

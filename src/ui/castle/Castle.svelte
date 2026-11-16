@@ -11,9 +11,10 @@
   import { chainItems as phItems, type PhItem, codeRubrics, pendState, ready as phReady, rubric as phRubric } from '../../school/photo';
   import { stepDone } from '../../board/board';
   import { meBound } from '../../store/meSync';
-  import { withLegacy, CASTLE_PHOTO_GEM, CASTLE_XP, photoScrolls, manualOf, baseVer, bonusBase, castleReward, castleState, floorName, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
+  import { withLegacy, CASTLE_GEM, CASTLE_PHOTO_GEM, CASTLE_XP, photoScrolls, manualOf, baseVer, bonusBase, castleReward, castleState, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
   import { castles, visibleCastles } from '../../school/castles.svelte';
-  import { spriteOf } from '../manifest';
+  import { dungeonOf, spriteOf } from '../manifest';
+  import Sprite from '../Sprite.svelte';
   import { busy } from '../busy.svelte';
   import { sfx } from '../sound.svelte';
   import { earnDaily } from '../../model/wallet';
@@ -173,8 +174,14 @@
   }
   /** ‹ 그만하기 = 낸 답이 있으면 💧 한 번으로 셈 (정식: 판마다 기록) */
   function quit() { const x = run; if (!x) return; const RR = x.S.get<Room>(roomPath(x.code)); if (RR) { const o = outcome(x, RR); save(x, o.clear, o.n); } run = null; }
-  function back() { if (res) { res = null; return; } if (fid && !floor && floors.length > 1) { fid = ''; return; } onclose(); }
-  const title = $derived(P ? `🏰 ${floorName(P)}` : '🏰 성채 던전');
+  function back() { if (res) { res = null; return; } onclose(); }
+  // 🏰 옛 정식 배치 (11/17 #16): 층은 위 포털에서 고름(처음 = 마지막 층) · 방 칸을 누르면 바로 도전 · 잠긴 방 = 까닭 한 줄
+  $effect(() => { if (!fid && floors.length) untrack(() => (fid = pickF || floors[floors.length - 1]!.id)); });
+  const sealedOf = (f: CastlePack) => f.rooms.some((r) => r.boss && recsOf(f)[r.id]?.clear);
+  const seals = $derived(floors.filter((f) => sealedOf(f)).length);
+  const anyClear = $derived(floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear)));
+  function tile(r: CastleRoom) { if (!st?.isOpen(r)) { toast = lineOf(r); sfx('click', 0.3); setTimeout(() => (toast = ''), 2600); return; } pickR = r.id; start(); }
+  const title = $derived('🏰 성채던전');
   (globalThis as { __castle?: unknown }).__castle = { upto, base }; // 화면 시험 고리 (학생 화면엔 안 보임)
 </script>
 
@@ -188,9 +195,9 @@
 <div class="cs" role="dialog" aria-modal="true" aria-label="성채 던전" data-k="castle">
   <header class="bar">
     <button type="button" class="back" aria-label="뒤로" onclick={back}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
-    <b class="t" class:long={!res && title.length > 9}>{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>
+    <b class="t" class:long={!res && title.length > 9}>{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>{#if !res}<span class="pill seal" data-k="castle-seal">🏆 업적 {seals}개</span>{/if}
     {#if me && !preview}<span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
-    <span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
+    {#if res}<span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{/if}{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
   </header>
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
   <div class="body">
@@ -203,29 +210,39 @@
         {#if res.got?.length}<ul class="got" data-k="castle-got">{#each res.got as g (g)}<li>{g}</li>{/each}</ul>{:else if res.clear && !preview && !res.first}<p class="sub">다시 처치 · 보상은 처음 처치 때만</p>{/if}
         {#if P && st && !preview}<p class="sub">처치 {st.cleared} / 열린 방 {st.plain.length}{st.boss ? ` · 👑 ${st.bossOpen ? '보스 방 열림' : `${st.need}방 처치하면 보스`}` : ''}</p>{/if}
       </div>
-    {:else if !P}
+    {:else}
+      <!-- 🏰 옛 정식 「게임처럼」 배치 (📜 2026-11-17 #16 · js/raid/bonus.js render): 큰 띠(보스 방 배경 + 소개) → 💎 보상 줄 → 🌀 층 포털 → 그 층 방 지도(몬스터 · 번호 · 이름 · 상태 · 💎) · 값 · 열림 규칙은 그대로 -->
+      <div class="cshero" style:background-image="url({dungeonOf('citadel-boss')})" data-k="castle-hero"><p>교과서 단원 평가를 숫자만 바꾼 문제 · <b>방 하나에 몬스터 한 마리</b><br /><small>순서 없이 아무 방이나 · 그 차시 진도를 나가면 방이 열려요 · 👑 보스 방은 열린 방의 60%를 처치하면!</small></p></div>
+      <p class="fxl">✨ 🏆 업적 {seals}개 · 층마다 👑 보스 방을 처음 처치하면 업적 +1 (🎯 허수아비 형성평가 재대결도)</p>
+      {#if !preview}<p class="gml" data-k="castle-gem">💎 방을 처음 처치하면 <b>+{CASTLE_GEM.room}</b> · 👑 보스 방 <b>+{CASTLE_GEM.roomBoss}</b> + 🏆 업적 <b>+{CASTLE_GEM.seal}</b>{anyClear ? '' : ` · 🎁 첫 방은 +${CASTLE_GEM.first} 더!`}</p>{/if}
       {#if !floors.length}
         <div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요</p><small>선생님이 성채 팩을 올리면 열려요</small></div>
       {:else}
-        <p class="lab">층 고르기</p>
-        <div class="list" role="radiogroup" aria-label="층">
-          {#each floors as f (f.id)}{@const s = castleState(f, upto, recsOf(f), preview, manOf(f))}
-            <button type="button" role="radio" class="row" class:on={pickF === f.id} aria-checked={pickF === f.id} data-floor={f.id} onclick={() => (pickF = f.id)}>
-              <span class="no">{f.floor}층</span><span class="tx"><b>{f.title}</b><small>열린 방 {s.open.length} / {f.rooms.length} · 처치 {s.cleared} · {spanOf(f)}</small></span>{#if f.hide}<em class="st">숨김</em>{/if}
+        <div class="portals" role="radiogroup" aria-label="층">
+          {#each floors as f (f.id)}{@const s2 = castleState(f, upto, recsOf(f), preview, manOf(f))}{@const nNew = f.rooms.filter((r) => s2.isOpen(r) && !recsOf(f)[r.id]?.clear && !recsOf(f)[r.id]?.tries && !recsOf(f)[r.id]?.runs).length}
+            <button type="button" role="radio" class="portal" class:on={fid === f.id} class:sealed={sealedOf(f)} aria-checked={fid === f.id} data-floor={f.id} onclick={() => { fid = f.id; sfx('click', 0.4); }}>
+              <i aria-hidden="true">🌀</i><b>{f.floor}층</b><span>{f.title}</span><em>처치 {s2.cleared} / {f.rooms.length}{sealedOf(f) ? ' · 🏆' : ''}</em>{#if nNew && !preview}<span class="rnew">NEW {nNew}</span>{/if}{#if f.hide}<span class="rnew hid">숨김</span>{/if}
             </button>
           {/each}
         </div>
+        {#if P && st}
+          <div class="floor" class:sealed={sealedOf(P)}>
+            <p class="fh" data-k="castle-sum"><b>{P.floor}층 · {P.title}</b><small>처치 <b>{st.cleared}</b> / 열린 방 {st.plain.length} · {st.boss ? (st.bossOpen ? '👑 보스 방 열림' : `👑 ${st.need}방 처치하면 보스`) : ''}{preview ? '' : ` · 진도 ${upto}차시`}</small></p>
+            <div class="rooms" role="radiogroup" aria-label="방">
+              {#each P.rooms as r (r.id)}{@const on = st.isOpen(r)}{@const rr = recs[r.id]}
+                <button type="button" role="radio" class="room" class:on={pickR === r.id} class:boss={!!r.boss} class:lock={!on} class:clear={!!rr?.clear} aria-checked={pickR === r.id} data-room={r.id} data-open={on ? '1' : '0'} onclick={() => tile(r)}>
+                  {#if badge(r) === 'NEW'}<span class="rnew">NEW</span>{/if}
+                  <span class="rno">{r.boss ? '👑' : nn(r)}</span>
+                  <span class="mon">{#if on}<Sprite ref={safe(r.sprite)} pose={rr?.clear ? 'down' : 'idle'} size={64} />{:else}<i class="lk" aria-hidden="true">🔒</i>{/if}</span>
+                  <b class="rt">{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small class="rs">{rr?.clear ? '✔ 처치' : lineOf(r)}</small>
+                  {#if on && !rr?.clear && !preview}<span class="gm">💎+{r.boss ? CASTLE_GEM.roomBoss + (sealedOf(P) ? 0 : CASTLE_GEM.seal) : CASTLE_GEM.room}</span>{/if}
+                </button>
+              {/each}
+            </div>
+          </div>
+          {#if room?.note}<p class="note">💡 {room.note}</p>{/if}
+        {/if}
       {/if}
-    {:else if st}
-      <p class="sum" data-k="castle-sum">처치 <b>{st.cleared}</b> / 열린 방 {st.plain.length} · {st.boss ? (st.bossOpen ? '👑 보스 방 열림' : `👑 ${st.need}방 처치하면 보스`) : ''}{preview ? '' : ` · 진도 ${upto}차시`}</p>
-      <div class="list" role="radiogroup" aria-label="방">
-        {#each P.rooms as r (r.id)}{@const on = st.isOpen(r)}
-          <button type="button" role="radio" class="row" class:on={pickR === r.id} class:boss={!!r.boss} class:lock={!on} aria-checked={pickR === r.id} disabled={!on} data-room={r.id} data-open={on ? '1' : '0'} onclick={() => (pickR = r.id)}>
-            <span class="no">{r.boss ? '👑' : nn(r)}</span><span class="tx"><b>{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small>{lineOf(r)}</small></span><em class="st" class:ok={badge(r) === '✔'} class:new={badge(r) === 'NEW'}>{badge(r)}</em>
-          </button>
-        {/each}
-      </div>
-      {#if room?.note}<p class="note">💡 {room.note}</p>{/if}
     {/if}
   </div>
   {#if res}
@@ -236,8 +253,6 @@
     {:else}
       <BottomAction dock={false} text="🏰 방 목록으로" mainLabel="방 목록으로" onmain={() => (res = null)} />
     {/if}
-  {:else if !P}
-    <BottomAction dock={false} disabled={!floors.length} why={floors.length ? '' : '선생님이 팩을 올리면 열려요'} text={pickF ? `🏰 ${floors.find((f) => f.id === pickF)?.floor ?? ''}층 들어가기` : '층을 골라요'} mainLabel="층 들어가기" onmain={() => (fid = pickF)} />
   {:else}
     <BottomAction dock={false} disabled={!room} why={room ? (room.photo && P && !phOn(P, room) ? '📷 사진 채점은 아직 · 답만 확인해요' : room.photo && recs[room.id]?.pend ? '⏳ 선생님이 풀이를 확인하고 있어요' : '') : '열린 방이 없어요'} text={room ? (room.photo && !room.chain && P && phOn(P, room) && recs[room.id]?.ans && !recs[room.id]?.clear && !recs[room.id]?.pend ? '📷 풀이 사진 올리기' : room.chain && room.photo && P && phOn(P, room) && recs[room.id]?.clear && !recs[room.id]?.ph && !recs[room.id]?.pend ? '✍ 서술형 도전 📸' : `⚔ ${room.boss ? '👑 보스 방' : `${nn(room)}번 방`} 도전`) : '방을 골라요'} mainLabel="방 도전" onmain={start} />
 {/if}
@@ -257,21 +272,33 @@
   .pill { flex: none; display: flex; align-items: center; gap: var(--s1); height: 32px; padding: 0 10px; border-radius: 16px; background: var(--surface); font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
   .pv2 { color: var(--accent); }
   .body { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4) var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
-  .lab { margin: 0; font-size: var(--fs-small); font-weight: 700; color: var(--text-2); }
-  .sum { margin: 0; font-size: var(--fs-small); color: var(--text-2); }
-  .sum b { color: var(--accent); font-size: 16px; }
-  .list { display: flex; flex-direction: column; gap: var(--s2); }
-  .row { display: flex; align-items: center; gap: var(--s3); min-height: 64px; padding: var(--s2) var(--s3); border-radius: var(--r); border: 2px solid transparent; background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
-  .row:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
-  .row.on { border-color: var(--accent); }
-  .row.lock { opacity: 0.5; box-shadow: none; }
-  .row .no { flex: none; width: 44px; height: 44px; border-radius: var(--r-sm); background: var(--surface-2); display: grid; place-items: center; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .row.boss .no { font-size: 22px; }
-  .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .tx b { font-size: 16px; overflow-wrap: anywhere; } .tx small { font-size: var(--fs-small); color: var(--text-2); }
-  .st { flex: none; font-style: normal; font-size: var(--fs-small); font-weight: 700; color: var(--text-3); }
-  .st.ok { color: var(--ok); } .st.new { color: var(--accent); }
   .note { margin: 0; font-size: 14px; color: var(--text-2); }
+  /* 🏰 옛 정식 배치 (11/17 #16) */
+  .cshero { flex: none; min-height: 132px; border-radius: var(--r); background-size: cover; background-position: center 60%; display: flex; align-items: flex-end; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+  .cshero p { margin: 0; width: 100%; padding: 10px 12px; background: linear-gradient(transparent, rgba(5, 6, 10, 0.88) 35%); color: #fff; font-size: 14px; line-height: 1.45; text-shadow: 0 1px 0 #000; }
+  .cshero small { font-size: 13px; color: #d6d9e0; }
+  .fxl, .gml { margin: 0; font-size: 14px; color: var(--text-2); line-height: 1.45; } .gml b { color: var(--gem); }
+  .portals { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: var(--s2); }
+  .portal { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 76px; padding: 8px 10px; border-radius: var(--r); border: 2px solid var(--line); background: linear-gradient(160deg, #1d2a44, var(--surface)); color: var(--text); text-align: left; font: inherit; box-shadow: 0 3px 0 var(--press, #0a0c10); }
+  .portal i { font-style: normal; font-size: 20px; } .portal b { font-size: 16px; } .portal span { font-size: 13px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; } .portal em { font-style: normal; font-size: 12px; color: var(--text-3); }
+  .portal.on { border-color: var(--accent); background: linear-gradient(160deg, #3a2c10, var(--surface)); } .portal.sealed em { color: var(--accent); }
+  .portal:active { transform: translateY(2px); box-shadow: none; }
+  .rnew { position: absolute; right: 6px; top: 6px; padding: 1px 6px; border-radius: 99px; background: #e5484d; color: #fff; font: 800 11px/1.4 var(--font); } .rnew.hid { background: var(--surface-2); color: var(--text-3); }
+  .floor { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
+  .floor.sealed { border-color: var(--accent); }
+  .fh { margin: 0; display: flex; flex-direction: column; gap: 2px; } .fh b { font-size: 17px; } .fh small { font-size: 13px; color: var(--text-2); } .fh small b { font-size: 14px; color: var(--accent); }
+  .rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+  .room { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 132px; padding: 6px 4px 8px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press, #0a0c10); }
+  .room:active:not(.lock) { transform: translateY(2px); box-shadow: none; }
+  .room.on { border-color: var(--accent); } .room.clear { opacity: 0.8; } .room.clear .rs { color: var(--ok); }
+  .room.boss { border-color: #b48a2c; background: linear-gradient(#2a2010, var(--surface-2)); }
+  .room.lock { opacity: 0.55; box-shadow: none; }
+  .rno { position: absolute; left: 6px; top: 4px; font: 800 12px var(--font); color: var(--text-3); }
+  .mon { width: 64px; height: 64px; display: grid; place-items: center; } .lk { font-style: normal; font-size: 26px; }
+  .rt { font-size: 13px; line-height: 1.25; text-align: center; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .rs { font-size: 11px; color: var(--text-3); text-align: center; line-height: 1.3; }
+  .gm { font: 800 11px var(--font); color: var(--gem); }
+  .pill.seal { color: var(--accent); }
   .empty { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s6) 0; color: var(--text-2); text-align: center; }
   .empty .ic { font-size: 44px; } .empty p { margin: 0; font-weight: 700; color: var(--text); } .empty small { font-size: var(--fs-small); }
   .card.res { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s5) var(--s4); border-radius: var(--r); background: var(--surface); text-align: center; }
