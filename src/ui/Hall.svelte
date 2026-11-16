@@ -80,7 +80,7 @@
       <p>{byCode ? '교사 폰 수업 화면의 방 코드 6자리와 종합실 비밀번호를 넣어요' : live?.code ? '교사 폰 「나」 탭의 종합실 비밀번호 4자리를 넣어요 · 이 TV 는 기억해요' : '열린 수업이 없어요 · 교사 폰에서 ▶ 수업 열기'}</p>
       <div class="kins">
         {#if byCode}<input class="kin code" data-k="tv-code" inputmode="numeric" maxlength="6" bind:value={codeIn} placeholder="방 코드" />{/if}
-        <input class="kin" data-k="tv-key" type={showKey ? 'text' : 'password'} inputmode="numeric" autocomplete="off" maxlength="4" bind:value={keyIn} placeholder="○○○○" aria-label="종합실 비밀번호" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
+        <input class="kin" data-k="tv-key" type="text" class:mask={!showKey} name="dungeon-room-key" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore spellcheck="false" maxlength="4" bind:value={keyIn} placeholder="○○○○" aria-label="종합실 비밀번호" onkeydown={(e) => { if (e.key === 'Enter' && ready) void enter(); }} />
         <button type="button" class="keye" data-k="tv-key-eye" aria-label={showKey ? '비밀번호 가리기' : '비밀번호 보기'} aria-pressed={showKey} onpointerdown={() => (showKey = true)} onpointerup={() => (showKey = false)} onpointerleave={() => (showKey = false)}>👁</button>
       </div>
       {#if kerr}<p class="kerr">{kerr}</p>{/if}
@@ -97,6 +97,7 @@
   .kerr { color: #ffb4ae !important; }
   .kgo { height: 9vh; padding: 0 4vh; border: 0; border-radius: 2vh; background: var(--accent); color: var(--on-accent); font: 700 3.4vh var(--font); }
   .kgo:disabled { opacity: 0.45; }
+  .kin.mask { -webkit-text-security: disc; } /* 비밀번호 칸 아님(브라우저 「비밀번호 저장?」 안 뜨게) · 글자만 가림 */
   .kins { display: flex; gap: 2vh; } .kin.code { width: 40vh; }
   .kalt { border: 0; background: none; color: #c9ccd6; text-decoration: underline; font: 600 2.4vh var(--font); min-height: 6vh; }
   .keye { min-width: 7vh; min-height: 7vh; border: 0; border-radius: 1.2vh; background: rgba(255, 255, 255, 0.12); color: #fff; font-size: 3.4vh; cursor: pointer; touch-action: none; user-select: none; }

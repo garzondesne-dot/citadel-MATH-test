@@ -30,6 +30,7 @@
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
   let hero = $state(false), sheet = $state<'' | 'key' | 'theme' | 'sound' | 'login' | 'feat' | 'out' | 'app' | 'photo' | 'changes' | 'note'>(untrack(() => (login0 ? 'login' : ''))), key = $state(''), ver = $state(0), toast = $state('');
   const hk = $derived.by(() => { void ver; return (S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey')) || ''; });
+  untrack(() => { void (S as Store & { fetch?: (p: string) => Promise<unknown> }).fetch?.(HALLKEY).then(() => ver++).catch(() => null); }); // 🐞 서버 칸이 다 받아진 뒤 다시 그림 (나갔다 오면 「고정」이 사라져 보이던 것)
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   const info = $derived(heroOf(M.me.hero));
@@ -91,7 +92,7 @@
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🖥 종합실 비밀번호 고정{/snippet}
     {#snippet act()}<button type="button" class="btn" disabled={!!key && !/^\d{4}$/.test(key)} onclick={() => { S.set(HALLKEY, key || null); ver++; sheet = ''; say(key ? `고정 ${key}` : '수업마다 새로'); }}>{key ? '이 번호로 고정' : '비우기 (수업마다 새로)'}</button>{/snippet}
-    <input class="in" inputmode="numeric" maxlength="4" placeholder="숫자 4자리 · 비우면 수업마다 새로" bind:value={key} />
+    <input class="in" type="text" name="dungeon-fixed-key" inputmode="numeric" autocomplete="off" data-lpignore="true" data-1p-ignore maxlength="4" placeholder="숫자 4자리 · 비우면 수업마다 새로" bind:value={key} />
   </Sheet>
 {:else if sheet === 'out'}
   <Sheet onclose={() => (sheet = '')}>
