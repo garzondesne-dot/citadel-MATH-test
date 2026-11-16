@@ -44,8 +44,9 @@ const KIT = JSON.parse(fs.readFileSync(`${__dirname}/../../kit/${fs.readdirSync(
   await p.goto(B + '?role=teacher&tab=prep'); await p.waitForSelector('[data-k="packs-tab"]');
   // ④ 🛠 6단계
   await p.click('[data-k="build-go"]'); await p.waitForSelector('[data-k="build"]');
-  ok('④ 6단계 · 꾸러미 받기 단추', (await p.$$('[data-step]')).length === 6 && !!(await p.$('[data-k="kit-dl"]')));
-  const href = await p.$eval('[data-k="kit-dl"]', (e) => e.href); const r = await p.evaluate(async (u) => { const x = await fetch(u); return { ok: x.ok, t: x.headers.get('content-type'), n: (await x.arrayBuffer()).byteLength }; }, href);
+  ok('④ 6단계 · 꾸러미 받기 = 공개 전 숨김(「공개 준비 중」 · 📜 #23)', (await p.$$('[data-step]')).length === 6 && !(await p.$('[data-k="kit-dl"]')) && !!(await p.$('[data-k="kit-soon"]')));
+  // 베타 빌드에는 zip 있음(정식 빌드는 공개 전 뺌)
+  const href = new URL('kit/모두의던전_차시팩_만들기_꾸러미.zip', B).href; const r = await p.evaluate(async (u) => { const x = await fetch(u); return { ok: x.ok, t: x.headers.get('content-type'), n: (await x.arrayBuffer()).byteLength }; }, href);
   ok('④ 꾸러미 zip 받아짐', r.ok && r.n > 10000 && !/html/.test(r.t || ''), JSON.stringify(r));
   await p.click('[data-k="ws-hand"]'); ok('⑦ ✍ 직접 탭 · 「우리 양식 지킬 것」', /틀\.docx/.test(await txt('[data-k="build"]')) && /칸 제목 글자 그대로/.test(await txt('[data-k="ws-rule"]')));
   await p.click('[data-k="step-done-1"]'); await p.screenshot({ path: `${SHOTS}/p22-4-build.png` });

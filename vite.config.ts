@@ -58,6 +58,8 @@ const kitZip = {
   name: 'kit-zip',
   generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: Uint8Array }) => void }) {
     const dir = new URL('./kit/', import.meta.url); if (!existsSync(dir)) return;
+    // 📜 #23: 공개 전 = 정식 빌드에는 zip 안 넣음(베타만) · 공개 = src/channel.ts KIT_PUBLIC = true
+    if (CH === 'release' && !/KIT_PUBLIC = true/.test(readFileSync(new URL('./src/channel.ts', import.meta.url), 'utf8'))) return;
     const files = Object.fromEntries(readdirSync(dir).filter((n) => n !== 'README.md' && !n.startsWith('.')).sort().map((n) => [n, new Uint8Array(readFileSync(new URL(n, dir)))]));
     if (Object.keys(files).length) this.emitFile({ type: 'asset', fileName: `kit/${KIT_ZIP}`, source: zipSync(files, { level: 6, mtime: new Date('2026-11-17T00:00:00Z') }) });
   },

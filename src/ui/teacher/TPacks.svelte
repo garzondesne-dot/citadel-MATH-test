@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { LessonPack, Store } from '../../model/types';
-  import { BETA, FORMS, siteUrl } from '../../channel';
+  import { BETA, FORMS, KIT_PUBLIC, siteUrl } from '../../channel';
   import { BUILD } from '../../build';
   import { UPLOADED } from '../../engine/packs';
   import { feat, type FeatId } from '../../school/features.svelte';
@@ -77,7 +77,7 @@
   let build = $state(false), wsTab = $state<'ai' | 'hand'>('ai');
   const KIT = `${import.meta.env.BASE_URL}kit/모두의던전_차시팩_만들기_꾸러미.zip`;
   let kitOk = $state<boolean | null>(null);
-  $effect(() => { if (!build || kitOk != null) return; fetch(KIT, { method: 'HEAD', cache: 'no-store' }).then((r) => (kitOk = r.ok && !/text\/html/.test(r.headers.get('content-type') || ''))).catch(() => (kitOk = false)); });
+  $effect(() => { if (!build || kitOk != null || !KIT_PUBLIC) return; fetch(KIT, { method: 'HEAD', cache: 'no-store' }).then((r) => (kitOk = r.ok && !/text\/html/.test(r.headers.get('content-type') || ''))).catch(() => (kitOk = false)); });
   const STEPS: { t: string; d: string }[] = [
     { t: '자료 한 번에 받기', d: '학습지 틀 · 학습지 도우미 · 팩 도우미 지침 · 설치 안내 · 예시 · 도감 ID (zip 1개)' },
     { t: '📝 우리 양식 학습지 만들기', d: '🤖 AI 로 · ✍ 직접 — 둘 중 하나 · 끝 = 학습지 PDF' },
@@ -193,7 +193,7 @@
         <div class="s" class:ok={done[i]} class:now={i === nowStep} data-step={i + 1}>
           <span class="n">{done[i] ? '✔' : i + 1}</span>
           <div class="sx"><b>{s.t}</b><small>{s.d}</small>
-            {#if i === 0}{#if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl">📥 꾸러미 받기 (zip)</a>{/if}{/if}
+            {#if i === 0}{#if !KIT_PUBLIC}<em class="soon" data-k="kit-soon">📥 공개 준비 중 · 곧 받을 수 있어요</em>{:else if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl">📥 꾸러미 받기 (zip)</a>{/if}{/if}
             {#if i === 1}
               <div class="seg" role="tablist"><button type="button" role="tab" class:on={wsTab === 'ai'} aria-selected={wsTab === 'ai'} data-k="ws-ai" onclick={() => (wsTab = 'ai')}>🤖 AI 로</button><button type="button" role="tab" class:on={wsTab === 'hand'} aria-selected={wsTab === 'hand'} data-k="ws-hand" onclick={() => (wsTab = 'hand')}>✍ 직접</button></div>
               {#if wsTab === 'ai'}<ol class="sub"><li><b>학습지 도우미 만들기</b> GPT · Gemini · Claude 에 「학습지 도우미 지침」 붙여 넣기 (설치 안내 그대로)</li><li><b>재료 주기</b> 교과서 쪽 · 지금 쓰는 학습지(있으면) · 차시 목표 → 우리 양식 학습지 글이 나옴</li><li><b>PDF 로 저장</b> 도우미가 준 파일을 열어 인쇄 → PDF</li></ol>
