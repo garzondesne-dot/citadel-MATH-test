@@ -8,15 +8,14 @@ import { TEST_ADDR } from '../channel';
 import { inbox } from './inbox';
 import { photoNeeds } from './photo';
 
-export type NoteKind = 'photo' | 'hand' | 'login' | 'deploy';
+import { diffData, type Note, type NoteData, type NoteKind, type NoteSnap } from './noteDiff';
+export { LOGIN_FAIL_N, type NoteKind, type NoteSnap } from './noteDiff';
 export const NOTE_KINDS: { k: NoteKind; ic: string; name: string; sub: string }[] = [
   { k: 'photo', ic: '📷', name: '사진 들어옴', sub: '채점 확인이 필요한 사진' },
   { k: 'hand', ic: '💬', name: '학생 메시지 · 손들기', sub: '수업 밖에서 보낸 메시지' },
   { k: 'login', ic: '🔑', name: '로그인 여러 번 실패', sub: '같은 학생이 오늘 3번 이상 틀림' },
   { k: 'deploy', ic: '🆕', name: '새 판 배포', sub: '게임이 새 판으로 바뀜' },
 ];
-/** 로그인 실패 = 오늘 이 횟수부터 알림 */
-export const LOGIN_FAIL_N = 3;
 const PREF_KEY = 'citadel-v1-notify', SEEN_KEY = 'citadel-v1-notify-seen';
 type Pref = Record<NoteKind, boolean> & { on: boolean };
 const read = <T>(k: string, d: T): T => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v && typeof v === 'object' ? { ...d, ...v } : d; } catch { return d; } };
@@ -47,30 +46,11 @@ export async function notify(kind: NoteKind | 'test', title: string, body: strin
   } catch { return false; }
 }
 
-/** 반별로 묶은 한 줄 (이름 · 번호 없음) 「1-3반 2 · 1-5반 1」 */
-const byClass = (cls: string[], unit: string) => { const m = new Map<string, number>(); for (const c of cls) m.set(c, (m.get(c) ?? 0) + 1); return [...m].map(([c, n]) => `${c.replace(/_/g, '-')}반 ${n}${unit}`).join(' · '); };
-const today0 = (now: number) => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d.getTime(); };
-
-export interface NoteSnap { photo: string[]; hand: string[]; login: Record<string, string>; deploy: string }
-/** 지금 서버 값에서 알릴 것 고르기 (순수 함수 · 시험이 직접 부름) — seen = 지난번까지 본 것 · 첫 번 = 알리지 않고 기준만 */
-export function diffNotes(S: Store, seen: NoteSnap | null, now: number, site: string | null): { notes: { kind: NoteKind; title: string; body: string }[]; next: NoteSnap } {
-  const ph = S.kind === 'server' ? photoNeeds(S) : [];
-  const phIds = ph.map((x) => `${x.c}_${x.n}_${x.k}_${x.id}`);
-  const msgs = inbox(S).filter((x) => x.kind === 'idea' && x.from && !x.read);
-  const fails = S.get<Record<string, Record<string, Record<string, number>>>>('loginFail') || {}, t0 = today0(now), day = new Date(now).toDateString();
-  const loginHot: Record<string, string> = {};
-  for (const [c, byN] of Object.entries(fails)) for (const [n, byT] of Object.entries(byN || {})) { const k = Object.values(byT || {}).filter((at) => Number(at) >= t0).length; if (k >= LOGIN_FAIL_N) loginHot[`${c}/${n}`] = day; }
-  const next: NoteSnap = { photo: phIds, hand: msgs.map((x) => x.id), login: Object.fromEntries(Object.entries({ ...(seen?.login ?? {}), ...loginHot }).filter(([, d]) => d === day)), deploy: site ?? seen?.deploy ?? BUILD };
-  if (!seen) return { notes: [], next };
-  const notes: { kind: NoteKind; title: string; body: string }[] = [];
-  const newPh = ph.filter((x, i) => !seen.photo.includes(phIds[i]!));
-  if (newPh.length) notes.push({ kind: 'photo', title: `📷 사진 확인 ${newPh.length}장`, body: `${byClass(newPh.map((x) => x.c), '장')} · 소식 탭에서 확인` });
-  const newMsg = msgs.filter((x) => !seen.hand.includes(x.id));
-  if (newMsg.length) notes.push({ kind: 'hand', title: `💬 학생 메시지 ${newMsg.length}개`, body: `${byClass(newMsg.map((x) => x.from!.cls), '개')} · 소식 탭에서 답장` });
-  const newFail = Object.keys(loginHot).filter((k) => seen.login[k] !== day);
-  if (newFail.length) notes.push({ kind: 'login', title: `🔑 로그인 실패 여러 번 · ${newFail.length}명`, body: `${byClass(newFail.map((k) => k.split('/')[0]!), '명')} · 오늘 ${LOGIN_FAIL_N}번 이상 · 반 탭에서 0000 초기화` });
-  if (site && site !== seen.deploy && site !== BUILD) notes.push({ kind: 'deploy', title: `🆕 새 판 ${site}`, body: '게임이 새 판으로 바뀌었어요 · 열면 새로 고침' });
-  return { notes, next };
+/** 지금 서버 값에서 알릴 것 고르기 (순수 · 시험이 직접 부름) — 고르는 법 = noteDiff.ts(무료 중계와 같은 것) */
+export function diffNotes(S: Store, seen: NoteSnap | null, now: number, site: string | null): { notes: Note[]; next: NoteSnap } {
+  const photo = S.kind === 'server' ? photoNeeds(S).map((x) => ({ c: x.c, n: x.n, k: x.k, id: x.id })) : [];
+  const msgs = inbox(S).filter((x) => x.kind === 'idea' && x.from && !x.read).map((x) => ({ id: x.id, cls: x.from!.cls }));
+  return diffData({ photo, msgs, fails: S.get<NoteData['fails']>('loginFail') || {} }, seen, now, site, BUILD);
 }
 
 /** 교사 폰이 열려 있는 동안 지켜보기 (20초마다 · 사이트 판은 5분마다) · 끝내기 함수를 돌려줌 */

@@ -1,0 +1,13 @@
+# 🔔 무료 중계 (Cloudflare Workers 무료) — 1분마다 · 비밀값은 wrangler secret 으로만(SA_JSON · VAPID_PRIVATE · RUN_KEY) · 저장소에 열쇠 없음
+name = "dungeon-teacher-relay"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+DB_URL = "https://citadel-math-test-c6a9b-default-rtdb.asia-southeast1.firebasedatabase.app"
+SITE = "https://garzondesne-dot.github.io/Citadel-MATH/"
+VAPID_PUBLIC = "BHLbfxRkAOne6F2gfZMYrY0B9GeD5AqXrkLsKnmEPkSUs9VvCEZbsGoEznyjAix-LygAMty0tKAxA6MA7tz6NIk"
+VAPID_SUBJECT = "mailto:noreply@example.invalid"
