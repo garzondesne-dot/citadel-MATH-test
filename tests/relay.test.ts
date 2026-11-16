@@ -7,8 +7,9 @@ import { run } from '../tools/relay/worker.js';
 import { generateKeyPairSync } from 'node:crypto';
 
 const te = new TextEncoder();
-const hmac = async (key: Uint8Array, data: Uint8Array) => new Uint8Array(await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), data));
-const cat = (...a: Uint8Array[]) => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
+type B = Uint8Array<ArrayBuffer>;
+const hmac = async (key: B, data: B): Promise<B> => new Uint8Array(await crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), data));
+const cat = (...a: Uint8Array[]): B => { const o = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
 async function uaKeys() {
   const k = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
   const pub = new Uint8Array(await crypto.subtle.exportKey('raw', k.publicKey));
