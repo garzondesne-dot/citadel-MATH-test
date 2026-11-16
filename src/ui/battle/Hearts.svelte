@@ -50,7 +50,7 @@
     {/each}
   </span>
 {:else}
-  <span class="hs en" class:bolt role="img" aria-label="기력 {left}{lock ? ' · 재도전 판을 다 맞혀야 다음 기력' : ''}"><b>⚡ {left}</b>{#if lock}<i>🔒</i>{/if}</span>
+  <span class="hs en" class:bolt role="img" aria-label="기력 {left}{lock ? ' · 한 번 더 판을 다 맞혀야 다음 기력' : ''}"><b>⚡ {left}</b>{#if lock}<i>🔒</i>{/if}</span>
 {/if}
 
 <style>

@@ -52,7 +52,7 @@
     if (!r.roundOpen) petriAward(S, code, uid, BOSS_ID, gain); else petriAward(S, code, uid, BOSS_ID, ok);
     heroAtk({ miss: ok === 0, hits: Math.max(1, gain), noDmg: r.roundOpen, prac: r.roundOpen ? ok : 0, ult: r.subs === 0 && ok === todo.length });
     const bad = todo.length - ok;
-    toast = bad ? '' : r.roundOpen ? '🔥 재도전 판 완성!' : '✔ 모두 도달!'; // 틀렸을 때 = 배너 · 안내 없이 하트 쪼개짐만 (📜 2026-11-13 밤)
+    toast = bad ? '' : r.roundOpen ? '🔥 한 번 더 판 완성!' : '✔ 모두 도달!'; // 틀렸을 때 = 배너 · 안내 없이 하트 쪼개짐만 (📜 2026-11-13 밤)
     setTimeout(() => (toast = ''), 2000);
     if (bonusMode && !r2.bonusTodo.length) bonusMode = false;
     if (r2.roundOpen === false && r.roundOpen) practice = false;
@@ -73,7 +73,7 @@
   <BottomAction battle disabled why="학습지에 정리하고 다음을 기다려요">{#snippet main()}<span>📖 해설 보는 중</span>{#if !dummy}<Hearts total={r.slots} left={0} memo={`${code}|boss|${uid}`} />{/if}{/snippet}</BottomAction>
 {:else if r.done && !practice && !bonusMode}
   <AnswerRow {cells} {label} />
-  <div class="bcard"><div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>형성평가 {r.n}문항 모두 끝!</b><span>⚡ {r.tokLeft} · 기술 하나 = 🔥 재도전 판</span></span></div>
+  <div class="bcard"><div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>형성평가 {r.n}문항 모두 끝!</b><span>⚡ {r.tokLeft} · 기술 하나 = 🔥 한 번 더 판</span></span></div>
     {#if r.bonusTodo.length}<button type="button" class="bon" onclick={() => (bonusMode = true)}>⭐ 보너스 {r.bonusTodo.length}문항 다시</button>{/if}</div>
   <SkillCards {S} {L} {R} {code} mid={BOSS_ID} {uid} {now} boss onround={() => (practice = true)} />
 {:else if q}
@@ -84,7 +84,7 @@
     {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>
-    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{paperOn() ? (bonusMode ? '보너스 문항 제출' : r.roundOpen ? '재도전 제출' : '모두 제출') : bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 재도전 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
+    {#snippet main()}{#if allFilled || nextUnfilled < 0}<span>{paperOn() ? (bonusMode ? '보너스 문항 제출' : r.roundOpen ? '한 번 더 제출' : '모두 제출') : bonusMode ? '⭐ 보너스 공격' : r.roundOpen ? '🔥 한 번 더 공격' : '공격'}</span>{#if r.roundOpen}{#if !dummy}<Hearts mode="energy" left={r.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={r.slots} left={r.left} memo={`${code}|boss|${uid}`} />{/if}{/if}{:else}<span>다음 문항 ▶</span>{/if}{/snippet}
   </BottomAction>
 {/if}
 

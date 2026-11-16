@@ -26,11 +26,11 @@
   let sel = $state<Sk>('heal'), rest = $state(false), msg = $state('');
   const look = untrack(() => savedLook());
   const trueOn = $derived(!boss && !!rec.trueOk && canTrue(look.fx, look.hero) && !ultUsed(R, mid, uid) && !petrify(R, mid));
-  const trueWhy = $derived(boss ? '형성평가 뒤엔 못 써요' : !canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '첫 공격 퍼펙트 + 재도전 판 2개를 한 번에 → 세 번째 ⚡');
+  const trueWhy = $derived(boss ? '형성평가 뒤엔 못 써요' : !canTrue(look.fx, look.hero) ? '내 속성 Ⅳ 스킬을 끼우면' : petrify(R, mid) ? '이미 굳었어요' : ultUsed(R, mid, uid) ? '이 몬스터에선 썼어요' : '첫 공격 퍼펙트 + 한 번 더 판 2개를 한 번에 → 세 번째 ⚡');
   const CARDS: { k: Sk; ic: string; name: string; desc: string; main: string }[] = [
-    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ⚔ 칼 보급 +1 · 내 칼은 그대로', main: '💚 힐 주고 🔥 재도전' },
-    { k: 'bind', ic: '⛓', name: '묶기', desc: '몬스터 공격을 3초 늦춰요 · 반 전체', main: '⛓ 묶고 🔥 재도전' },
-    { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 쓰고 🔥 재도전' },
+    { k: 'heal', ic: '💚', name: '힐', desc: '친구 한 명 ⚔ 칼 보급 +1 · 내 칼은 그대로', main: '💚 힐 주고 🔥 한 번 더' },
+    { k: 'bind', ic: '⛓', name: '묶기', desc: '몬스터 공격을 3초 늦춰요 · 반 전체', main: '⛓ 묶고 🔥 한 번 더' },
+    { k: 'true', ic: '🌟', name: '진필살기', desc: '금빛 광역 · 🗿 석화 20초(그동안 맞히면 💎)', main: '🌟 쓰고 🔥 한 번 더' },
   ];
   const cur = $derived(CARDS.find((c) => c.k === sel)!);
   const can = (k: Sk) => rec.canHeal && (k === 'true' ? trueOn : true);
@@ -62,7 +62,7 @@
   <BottomAction battle text="다음 문제를 기다려요" why="선생님이 다음으로 넘기면 바로 이어져요" />
 {:else if rec.roundOpen || rest}
   <div class="bcard sk">
-    <span class="lab acc">{rec.roundOpen ? '🔥 재도전 판이 열려 있어요' : '⏸ 쉬는 중'}</span>
+    <span class="lab acc">{rec.roundOpen ? '🔥 한 번 더 판이 열려 있어요' : '⏸ 쉬는 중'}</span>
     <p class="muted">{rec.roundOpen ? '다 맞히면 다음 ⚡ 를 쓸 수 있어요 · 틀려도 칼은 그대로' : `남은 ⚡ ${rec.tokLeft} 그대로 · 몬스터가 살아 있는 동안 언제든 이어서`}</p>
   </div>
   <BottomAction battle onmain={act} mainLabel="이어서">
@@ -70,7 +70,7 @@
   </BottomAction>
 {:else if rec.tokLeft > 0}
   <div class="bcard sk">
-    <span class="lab acc">⚡ 기술 고르기 · 하나 쓰면 🔥 재도전 판</span>
+    <span class="lab acc">⚡ 기술 고르기 · 하나 쓰면 🔥 한 번 더 판</span>
     <div class="cards" role="radiogroup" aria-label="기술">
       {#each CARDS as c (c.k)}
         <button type="button" role="radio" class="card" class:on={sel === c.k} class:gold={c.k === 'true' && trueOn} aria-checked={sel === c.k} disabled={!can(c.k)} data-sk={c.k} onclick={() => (sel = c.k)}>
@@ -84,7 +84,7 @@
     {#snippet main()}<span>{cur.main}</span><Hearts mode="energy" left={rec.tokLeft} />{/snippet}
   </BottomAction>
 {:else}
-  <div class="bcard sk"><span class="lab acc">⚡ 다 썼어요</span><p class="muted">🔥 재도전 판 {rec.rounds ?? 0}개 완성 · 다음 몬스터를 기다려요</p></div>
+  <div class="bcard sk"><span class="lab acc">⚡ 다 썼어요</span><p class="muted">🔥 한 번 더 판 {rec.rounds ?? 0}개 완성 · 다음 몬스터를 기다려요</p></div>
   <BottomAction battle text="✔ 다 했어요" why="데미지 · 기록은 그대로" />
 {/if}
 
