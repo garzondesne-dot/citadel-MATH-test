@@ -52,9 +52,14 @@ const C1T = C1.title.split(' · ')[0];
   await s.click('[data-k="help-hand"]'); await s.waitForTimeout(300); ok('✋ 손들기', /손을 들었어요/.test(await s.textContent('[data-k="help"]')));
   await s.screenshot({ path: `${SHOTS}/ad${NO}-help-3.png` });
   await s.keyboard.press('Escape'); const x = await s.$('.sheet .x'); if (x) await x.click().catch(() => {}); await s.waitForTimeout(300);
+  await t.evaluate((R) => window.__dbSet(`rooms/${R}/bossTry/zz/0/0`, '1'), R); await t.waitForTimeout(500); // 📊 단추 = 반이 하나라도 풀면 보임 (11/17 #14)
   await t.bringToFront(); const drv = await t.$('[data-k="dock-review"]'); ok('📺 종합실 막대 🔎 풀이 단추', !!drv && /풀이/.test(await drv.textContent()));
-  if (drv) await drv.click(); else await t.evaluate((R) => window.__dbSet(`rooms/${R}/state/review`, { mid: 'm1', i: -1, k: 0 }), R);
-  await t.waitForTimeout(800); ok('📺 누르면 「1/n」', /1\/\d+/.test((await t.textContent('[data-k="dock-review"]').catch(() => '')) || ''));
+  // 📊 (📜 2026-11-17 #14): 첫 장 = 우리 반 고비 · 몬스터가 살아 있으면 다음 누름 = 닫힘(자주 하는 실수는 쓰러진 뒤) → 풀이 카드는 직접 띄워 확인
+  if (drv) await drv.click(); await t.waitForTimeout(800);
+  ok('📺 누르면 첫 장 = 📊 고비', /고비/.test((await t.textContent('[data-k="dock-review"]').catch(() => '')) || '') && !!(await t.$('[data-k="tv-gobi"]')));
+  if (drv) await drv.click(); await t.waitForTimeout(500);
+  await t.evaluate((R) => window.__dbSet(`rooms/${R}/state/review`, { mid: 'm1', i: -1, k: 0 }), R); await t.waitForTimeout(800);
+  ok('📺 풀이 카드 = 「1/n」', /1\/\d+/.test((await t.textContent('[data-k="dock-review"]').catch(() => '')) || ''));
   const rv = await t.evaluate(() => { const c = document.querySelector('[data-k="tv-review"]'); return c ? { lines: c.querySelectorAll('.rl li').length, fo: [...c.querySelectorAll('.rl li')].findIndex((l) => l.classList.contains('fo')), tag: !!c.querySelector('.rtag') } : null; });
   ok(`🔎 TV 양피지 · ${FO + 1}번째 줄 강조 · 꼬리표 ${REV.wrong ? '있음' : '없음'}`, !!rv && rv.fo === FO && rv.tag === !!REV.wrong, JSON.stringify(rv));
   await t.screenshot({ path: `${SHOTS}/ad${NO}-review-tv.png` });

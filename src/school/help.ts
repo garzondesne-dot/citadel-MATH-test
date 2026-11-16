@@ -5,6 +5,9 @@
 //   help 없는 문항 = 지금 💡 힌트(📘 이 문제의 개념) 그대로
 import type { Help, LessonPack, Question, Room, Store } from '../model/types';
 import { chainItems } from '../engine/lessons';
+import { anySolved, gobiTarget } from './gobi';
+import { BOSS_ID, bossHp, cleared } from '../raid/raid';
+import { setDemo } from '../raid/actions';
 
 /** 그 문항의 도움 (없으면 null) · i = 몬스터 안 문항 번호(소레이드 = 단계)
  *  문항 칸 help 가 먼저 · 없으면 몬스터 칸 help(13차시 덧칸 꼴) · first = 첫 출제 판(판 0) 문항일 때만(소문항마다 배열이면 그 칸) · 숫자 바뀐 판 = concept · example 만 */
@@ -41,11 +44,23 @@ export function reviewsOf(L: LessonPack, mid: string): { i: number; k: number; r
   const mon = [...kinds.flatMap((kd) => m.reviewsBy?.[kd] || []), ...(m.reviews || [])];
   return [...mon.map((r, k) => ({ i: -1, k, r })), ...qs.flatMap((q, i) => (q?.review || []).map((r, k) => ({ i, k, r })))];
 }
-/** 🔎 리모컨 「풀이」 단추 하나 = 교사 폰 · 종합실 막대가 같이 씀 (📜 2026-11-17 #13 🪞) — 지금 띄운 장 · 몇째 · 누르면 갈 다음(없으면 내리기 null) */
-export function reviewStep(L: LessonPack, R: Room | null | undefined, mid: string | null) {
-  const revs = mid ? reviewsOf(L, mid) : [];
-  const cur = R?.state.review && R.state.review.mid === mid ? R.state.review : null;
-  const idx = cur ? revs.findIndex((x) => x.i === cur.i && x.k === cur.k) : -1;
-  const n = revs[idx + 1];
-  return { revs, cur, idx, label: cur ? `${idx + 1}/${revs.length}` : '풀이', next: mid && n ? { mid, i: n.i, k: n.k } : null };
+/** 🔎 리모컨 「풀이」 단추 하나 = 교사 폰 · 종합실 막대가 같이 씀 (📜 2026-11-17 #13 🪞 · #14 📊 우리 반 고비)
+ *  누를 때마다 다음 장: ① 📊 우리 반 고비(i = -2 · 지금 몬스터 · 👑 문항별 · 마무리 = 오늘 고비 3곳) → ② 🔎 자주 하는 실수(팩 풀이 · 몬스터가 쓰러진 뒤만) → 닫기
+ *  단추 = 반이 몬스터를 하나라도 풀었으면 모든 차시에서 늘 보임(준비된 풀이가 없어도) */
+export function reviewStep(L: LessonPack, R: Room | null | undefined, _mid: string | null, now = Date.now()) {
+  const target = R && anySolved(R) ? gobiTarget(L, R) ?? '_day' : null;
+  const alive = !!R && !!target && target !== '_day' && (target === BOSS_ID ? !bossHp(L, R, now).won : !cleared(L, R, target, now));
+  const revs = R && target && target !== '_day' && target !== BOSS_ID && !alive ? reviewsOf(L, target) : [];
+  const deck = target ? [{ mid: target, i: -2, k: 0 }, ...revs.map((x) => ({ mid: target, i: x.i, k: x.k }))] : [];
+  const cur = R?.state.review && R.state.review.mid === target ? R.state.review : null;
+  const idx = cur ? deck.findIndex((x) => x.i === cur.i && x.k === cur.k) : -1;
+  return { revs, deck, target, cur, idx, show: deck.length > 0, gobi: !!cur && cur.i === -2, label: !cur ? '풀이' : cur.i === -2 ? '고비' : `${idx}/${revs.length}`, next: deck[idx + 1] ?? null };
 }
+/** 「🔎 풀이」 누름 = 다음 장 · 📊 고비가 떠 있는 동안 몬스터 공격 시계 멈춤(시연과 같은 멈춤 · 빨간 WARNING 없음) · 닫으면 다시 */
+export function stepReview(S: Store, code: string, L: LessonPack, R: Room, now = Date.now()): void {
+  const rv = reviewStep(L, R, null, now);
+  S.set(`rooms/${code}/state/review`, rv.next);
+  setDemo(S, code, !!rv.next && rv.next.i === -2);
+}
+/** 🧱 「n칸 3명 막힘」 띠의 📊 고비 보기 = 바로 그 몬스터 고비 장 (시계 멈춤 같음) */
+export function openGobi(S: Store, code: string, mid: string): void { S.set(`rooms/${code}/state/review`, { mid, i: -2, k: 0 }); setDemo(S, code, true); }

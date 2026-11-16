@@ -298,7 +298,7 @@
   {:else if battle && step}
     {#if isSent(R, step)}<div class="bcard idleband" role="status" data-k="sent-band"><b>🎯 이 문제는 허수아비에서 만나요</b><span>수업이 끝나면 캠프의 🎯 허수아비 「📚 수업에서 넘어온 문제」</span></div>{/if}
     {#if idleMid && idleMid === mid}<div class="bcard idleband" role="status" data-k="idle"><b>🤝 첫 줄만 같이 볼까?</b><button type="button" data-k="idle-go" onclick={() => { poke(); window.dispatchEvent(new CustomEvent('citadel-idlehelp')); }}>💡 같이 보기</button></div>{/if}<!-- 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①) -->
-    {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band"><b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span></div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
+    {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band">{#if R.state.review.i === -2}<b>📺 TV 를 봐요</b><span>📊 우리 반 고비를 함께 봐요 · 입력은 그대로예요</span>{:else}<b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span>{/if}</div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
     {#if scout?.on && paperOn()}
       <div class="pscout" data-k="pscout"><b class="ph1">학습지 {probNo} 을 먼저 풀어 두세요</b><p>{Math.ceil(scout.left / 1000)}초 뒤 답 칸이 열려요. 선생님이 일찍 열 수도 있어요.</p></div>
       <BottomAction disabled={readyNow} why={readyNow ? '준비 완료를 보냈어요' : ''} onmain={() => { if (scout) readyAsk = scout.id; }} mainLabel="준비 완료">

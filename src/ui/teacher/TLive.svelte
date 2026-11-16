@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { handsOf, lowerHand, reviewStep } from '../../school/help';
+  import { handsOf, lowerHand, openGobi, reviewStep, stepReview } from '../../school/help';
   import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
   import { leftSteps, sendToReview, sentKey } from '../../school/sendReview';
   import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
@@ -106,8 +106,8 @@
   const ccIsOpen = $derived(!!R && ccOpen(R, step, now));
   const ccSt = $derived(R && step?.check && ccRan(R, step) ? ccStats(R, step) : null);
   // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
-  const rv = $derived(reviewStep(L, R, mid)); // 종합실 막대와 같은 함수 (🪞 11/17 #13)
-  function nextReview() { if (!mid) return; setReview(S, code, rv.next); }
+  const rv = $derived(reviewStep(L, R, mid, now)); // 종합실 막대와 같은 함수 (🪞 11/17 #13 · #14 📊 고비)
+  function nextReview() { if (R) stepReview(S, code, L, R, now); }
   const help = $derived([...new Set([...stuck.filter((x) => x.lock).map((x) => x.u), ...hands])]);
   // 🙋 줄 = 온 순서 (이 폰이 본 순서 · 먼저 온 학생 = 맨 왼쪽) · 풀리면 빠짐 · 새 요청 = 오른쪽에서 밀려 들어옴
   let order = $state<string[]>([]), fresh = $state<Record<string, boolean>>({});
@@ -242,7 +242,7 @@
         <div class="rfbar">{#each steps as x (x.s.id)}<i class:ok={x.k < i} class:now={x.k === i} style:flex={flex(x)} style:--c={COLOR[kindOf(L, R, x.s)]} title={short(x.s)}></i>{/each}</div>
         <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
       </div>
-      {#if stuckNow && mid}<button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{/if}
+      {#if stuckNow && mid}<button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{#if feat('review')}<button type="button" class="stuckg" data-k="stuck-gobi" onclick={() => mid && openGobi(S, code, mid)}>📊 고비 보기</button>{/if}{/if}
       {@render att()}
       <div class="card rstat">
         <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</span>
@@ -281,7 +281,7 @@
       {#if leftS.length}<button type="button" data-k="send-open" onclick={() => (sheet = 'send')}><i>🎯</i>복습으로</button>{/if}
       <button type="button" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
       {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class:on={ccIsOpen} aria-pressed={ccIsOpen} data-k="cc" onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>{/if}
-      {#if rv.revs.length && feat('review')}<button type="button" class:on={!!rv.cur} aria-pressed={!!rv.cur} data-k="review" onclick={nextReview}><i>🔎</i>{rv.label}</button>{/if}
+      {#if rv.show && feat('review')}<button type="button" class:on={!!rv.cur} aria-pressed={!!rv.cur} data-k="review" onclick={nextReview}><i>{rv.gobi ? '📊' : '🔎'}</i>{rv.label}</button>{/if}
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
@@ -451,6 +451,7 @@
   .adj button:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .adj button:disabled { opacity: 0.35; box-shadow: none; }
   .sendl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; } .sendl li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 0 12px; border-radius: var(--r); background: var(--surface-2); font-weight: 700; } .sendl button { min-height: 44px; padding: 0 14px; border-radius: var(--r-sm); border: 1px solid var(--accent); background: transparent; color: var(--text); font: 700 14px var(--font); }
+  .stuckg { min-height: 44px; margin: var(--s1) var(--s4) 0; padding: 0 14px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .stuck { margin: var(--s2) var(--s4) 0; width: calc(100% - 2 * var(--s4)); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r); border: 2px solid #f2994a; background: #3a2410; color: #fff; text-align: left; font: inherit; }
   .stuck b { font-size: 16px; } .stuck span { font-size: 13px; color: #ffd9b8; }
   .ccline { margin: var(--s2) var(--s4) 0; padding: 8px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 15px; }

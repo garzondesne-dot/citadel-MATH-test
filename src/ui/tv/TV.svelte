@@ -1,6 +1,8 @@
 <script lang="ts">
   import { ccOpen, ccStats, closeCC, openCC } from '../../school/cc';
-  import { reviewStep } from '../../school/help';
+  import { reviewStep, stepReview } from '../../school/help';
+  import { gobiCard } from '../../school/gobi';
+  import GobiCardView from './GobiCard.svelte';
   import { reviewsOf } from '../../school/help';
   import { sentOf, isSent } from '../../school/sendReview';
   import { siteUrl } from '../../channel';
@@ -91,7 +93,7 @@
   const step = $derived(R ? stepOf(L, R) : null);
   const i = $derived(R ? stepIdx(R) : -1);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
-  const ccOnTv = $derived(!!R && ccOpen(R, step, now)), rvTv = $derived(reviewStep(L, R, mid)); // ✔ · 🔎 막대 단추 (교사 폰과 같은 함수)
+  const ccOnTv = $derived(!!R && ccOpen(R, step, now)), rvTv = $derived(reviewStep(L, R, mid, now)); // ✔ · 🔎 막대 단추 (교사 폰과 같은 함수)
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : null);
   const bhp = $derived(R && L.boss ? bossHp(L, R, now) : null);
@@ -380,10 +382,11 @@
     <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg qpaper"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
   {#if R && step && ccOpen(R, step, now)}<div class="ccband" data-k="tv-cc" role="status">✔ 개념 체크 · 준비 완료 <b>{ccStats(R, step).n}</b> / {ids.length}</div>{/if}<!-- ✔ 개념 체크 (📜 2026-11-15): TV 는 낸 수만 · 맞힘 · 오답은 리모컨 -->
+  {#if R?.state.review && R.state.review.i === -2}<GobiCardView g={gobiCard(L, R as Room, R.state.review.mid, now)} />{/if}<!-- 📊 우리 반 고비 (11/17 #14) -->
   {#if tvRev}
     <!-- 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기): 양피지 카드 · 이름 · 점수 · 정답/오답 글자 없음 · 「함께 살펴볼 줄」 강조 · 질문 · wrong = 「검토할 풀이」 꼬리표 -->
     <div class="ov rev" data-k="tv-review"><div class="parch">
-      <div class="rh"><b>🔎 함께 살펴볼 풀이</b>{#if tvRev.wrong}<span class="rtag">검토할 풀이</span>{/if}</div>
+      <div class="rh"><b>🔎 함께 살펴볼 풀이</b>{#if tvRev.wrong}<span class="rtag">자주 하는 실수</span>{/if}</div>
       <ol class="rl">{#each tvRev.lines as ln, k (k)}<li class:fo={k + 1 === tvRev.focus}>{#if k + 1 === tvRev.focus}<span class="fl">함께 살펴볼 줄</span>{/if}<SymText text={ln} on={false} /></li>{/each}</ol>
       {#if tvRev.ask}<p class="rq">❓ <SymText text={tvRev.ask} on={false} /></p>{/if}
     </div></div>
@@ -451,7 +454,7 @@
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>
       <!-- ✔ · 🔎 (📜 2026-11-17 #13 「종합실 리모컨에 체크랑 풀이」): 교사 폰 리모컨과 같은 함수 · 같은 조건 · 같은 글 (🪞) -->
       {#if step?.kind === 'concept' && step.check && feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" onclick={() => (ccOnTv ? closeCC(S, code, R) : openCC(S, code, step!.id))}>✔<small>{ccOnTv ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : '체크'}</small></button>{/if}
-      {#if rvTv.revs.length && feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" onclick={() => mid && setReview(S, code, rvTv.next)}>🔎<small>{rvTv.label}</small></button>{/if}
+      {#if rvTv.show && feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" onclick={() => R && stepReview(S, code, L, R as Room, now)}>{rvTv.gobi ? '📊' : '🔎'}<small>{rvTv.label}</small></button>{/if}
     {/if}
     {#if R && !R.state.closed}
       <span class="sep"></span>
