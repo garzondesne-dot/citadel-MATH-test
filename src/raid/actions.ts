@@ -52,7 +52,7 @@ export function nextStep(S: Store, L: LessonPack, code: string): void {
   goTo(S, L, code, R, to);
   // 📊 반 통계 = 수업에서 연 칸만 (📜 2026-11-15 · school/statsCells.ts) — 몬스터 · 형성평가 단계로 넘어가면 「그 반이 이 칸을 열었다」 · 🧪 테스트 수업은 안 적음
   const st = L.steps[to];
-  if (st && (st.kind === 'monster' || st.kind === 'boss') && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) markOpened(S, R.meta.cls, L.id, st.kind === 'boss' ? BOSS : st.id); }
+  if (st && (st.kind === 'monster' || st.kind === 'boss') && R.meta.cls) { const lv = S.get<{ code?: string; test?: boolean }>('school/live'); if (!(lv && lv.code === code && lv.test)) { const cf = L.carryOf?.[st.id]; markOpened(S, R.meta.cls, cf ? cf.from : L.id, st.kind === 'boss' ? BOSS : cf ? cf.mid : st.id); } } // 📦 넘어온 몬스터 = 원래 차시 칸
 }
 /** ◀ 앞 단계 (「다음 판에서」 자리는 건너뜀 · 입장 화면까지는 안 돌아감) */
 export function prevStep(S: Store, L: LessonPack, code: string): void {

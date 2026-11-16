@@ -8,7 +8,8 @@
   import { clock, useClock } from './clock.svelte';
   import { liveValue } from './room.svelte';
   import TV from './tv/TV.svelte';
-  import { packOf } from '../engine/packs';
+  import { PACKS, packOf } from '../engine/packs';
+  import { carryOfRoom, withCarry } from '../school/carry';
   import { dressed } from './rdun'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
 
   // 🖥 교실 TV (#119 ⑮) — 교사 폰이 연 수업(school/live)을 따라감 · 수업이 없으면 교사 캠프
@@ -70,7 +71,7 @@
 </script>
 
 {#if !gated}
-  {#key live?.code ?? ''}<TV {S} L={live ? dressed(packOf(live.lesson) ?? L, S.get<string>(`rooms/${live.code}/meta/rdun`)) : L} {live} {now} />{/key} <!-- 🧩 #132 TV 차시 = 연 수업의 차시 · 🔐 비밀번호로 hosts 가 된 뒤에 (그 전엔 방에 쓰지 않음) -->
+  {#key live?.code ?? ''}<TV {S} L={live ? dressed(withCarry(packOf(live.lesson) ?? L, carryOfRoom(S, live.code), PACKS), S.get<string>(`rooms/${live.code}/meta/rdun`)) : L} {live} {now} />{/key} <!-- 🧩 #132 TV 차시 = 연 수업의 차시 · 🔐 비밀번호로 hosts 가 된 뒤에 (그 전엔 방에 쓰지 않음) -->
 {:else}
   <div class="kov" role="dialog" aria-label="종합실 입장">
     <b>🔐 종합실 입장</b>

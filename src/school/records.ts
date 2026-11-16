@@ -10,20 +10,28 @@ import { SUBJ } from '../engine/subject';
 export type St = 'o' | 'f' | 'x' | '-' | 'n' | 's'; // s = 🎯 수업에서 복습으로 넘어온 문제 (📜 2026-11-16)
 export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; /** 🔁 고친 소문제 */ fixed?: number; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number; /** 🎯 형성평가를 복습으로 보냄 · 복습에서 풂(시각) */ bossSent?: boolean; bossReview?: number }
 
+/** 몬스터 하나 기록 칸 (o 한 번에 · f 고침 · x 틀림 · - 안 냄(다른 친구는 냄) · n 아무도 안 냄) */
+function monSt(L: LessonPack, R: Room, id: string, uid: string, others: string[]): St {
+  if (isChain(L, R, id)) {
+    const r = chainRecord(L, R, id, uid);
+    return r.submitted ? (r.done ? (r.wrong === 0 ? 'o' : 'f') : 'x') : others.some((u) => chainRecord(L, R, id, u).submitted) ? '-' : 'n';
+  }
+  const r = plainRecord(L, R, id, uid), first = r.tries[0];
+  return r.submitted ? (first && first.correct === first.total ? 'o' : r.best >= r.total ? 'f' : 'x') : others.some((u) => plainRecord(L, R, id, u).submitted) ? '-' : 'n';
+}
+/** 📦 넘어온 몬스터 칸 (단계 id → 칸) — 원래 차시 기록에 넣을 것 (school/carry.ts carryRecords) */
+export function carryStates(L: LessonPack, R: Room, uid: string, now: number): Record<string, St> {
+  const others = activeIds(R, now).filter((u) => u !== uid), out: Record<string, St> = {};
+  for (const id of Object.keys(L.carryOf || {})) if (L.monsters[id]) out[id] = monSt(L, R, id, uid, others);
+  return out;
+}
 export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now: number, prev?: Partial<RecRow> | null): RecRow {
   const others = activeIds(R, now).filter((u) => u !== uid);
   const mons: Record<string, St> = {}, sent = (R.state as { sent?: Record<string, number> }).sent || {};
   let perfects = 0;
   for (const s of L.steps) {
-    if (s.kind !== 'monster' || s.later || !L.monsters[s.id]) continue;
-    let st: St;
-    if (isChain(L, R, s.id)) {
-      const r = chainRecord(L, R, s.id, uid);
-      st = r.submitted ? (r.done ? (r.wrong === 0 ? 'o' : 'f') : 'x') : others.some((u) => chainRecord(L, R, s.id, u).submitted) ? '-' : 'n';
-    } else {
-      const r = plainRecord(L, R, s.id, uid), first = r.tries[0];
-      st = r.submitted ? (first && first.correct === first.total ? 'o' : r.best >= r.total ? 'f' : 'x') : others.some((u) => plainRecord(L, R, s.id, u).submitted) ? '-' : 'n';
-    }
+    if (s.kind !== 'monster' || s.later || !L.monsters[s.id] || L.carryOf?.[s.id]) continue; // 📦 넘어온 몬스터 = 원래 차시 기록 (carryStates)
+    let st = monSt(L, R, s.id, uid, others);
     if (st === 'o') perfects++;
     if ((st === 'n' || st === '-') && sent[s.id]) st = 's'; // 🎯 안 푼 채 복습으로 보낸 몬스터
     mons[s.id] = st;
@@ -49,7 +57,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
 export function concOf(L: LessonPack, R: Room, uid: string) {
   const map: Record<string, string> = {}, names: Record<string, string> = { review: '지난 시간 복습', boss: '형성평가' };
   let cur = 'review';
-  for (const s of L.steps) { if (s.kind === 'concept') { cur = s.id; names[s.id] = s.title.replace(/^개념 \d+ · /, ''); } if (s.kind === 'monster') map[s.id] = cur; }
+  for (const s of L.steps) { if (s.kind === 'concept') { cur = s.id; names[s.id] = s.title.replace(/^개념 \d+ · /, ''); } if (s.kind === 'monster' && !L.carryOf?.[s.id]) map[s.id] = cur; }
   const conc: Record<string, { ok: number; total: number }> = {}, mis: Record<string, [number, number]> = {}, ML = SUBJ.misLogic;
   let fixed = 0; // 🔁 처음 틀렸다가 고친 소문제 수 (정식 result.js fixed + bossFixed · 대시보드 🔍 고침 패턴 · 세특)
   const bump = (c: string, ok: boolean) => { const v = (conc[c] ||= { ok: 0, total: 0 }); v.total++; if (ok) v.ok++; };

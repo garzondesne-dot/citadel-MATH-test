@@ -4,7 +4,8 @@
   import { bindFeatures } from './school/features.svelte';
   import { untrack } from 'svelte';
   import type { LessonPack } from './model/types';
-  import { PACKS, packOf } from './engine/packs'; // 📦 올린 차시 팩은 main.ts 가 띄우기 전에 더함
+  import { PACKS, packOf } from './engine/packs';
+  import { carryOfRoom, withCarry } from './school/carry'; // 📦 올린 차시 팩은 main.ts 가 띄우기 전에 더함
   import { dressed } from './ui/rdun';
   import { submitScreen } from './ui/submit.svelte';
   import { answerOf, itemsFor } from './raid/raid';
@@ -58,7 +59,7 @@
   const DEF = defL();
   const errs = PACKS.flatMap((p) => validate(p).map((e) => `${p.no}차시 ${e}`));
   // 🎲 그림 없는 차시 = 랜덤 던전을 입힘 · 방 meta.rdun = 시험으로 고른 던전 (ui/rdun.ts)
-  const lessonOf = (c: string): LessonPack => dressed(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? (q.get('mode') === 'test' ? packOf(q.get('lesson')) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? defL(), c ? S.get<string>(`rooms/${c}/meta/rdun`) : null);
+  const lessonOf = (c: string): LessonPack => dressed(withCarry(packOf(c ? S.get<string>(`rooms/${c}/meta/lesson`) : null) ?? (q.get('mode') === 'test' ? packOf(q.get('lesson')) : null) ?? packOf(S.get<Live>('school/live')?.lesson) ?? defL(), carryOfRoom(S, c || (S.get<Live>('school/live')?.code ?? '')), PACKS), c ? S.get<string>(`rooms/${c}/meta/rdun`) : null); // 📦 B 넘어온 몬스터 (meta/carry)
   // 던전 고르기 (다른 점 표 한 줄) — 주소 ?mode=class|test · 첫 화면에서 고름
   let modeKey = $state<'class' | 'test'>(q.get('mode') === 'class' ? 'class' : 'test');
   const P = $derived(PROFILES[modeKey]);

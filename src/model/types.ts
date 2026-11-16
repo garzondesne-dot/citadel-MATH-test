@@ -122,6 +122,8 @@ export interface LessonPack {
   parts?: { no: number; from: string; title: string; boss?: number[]; /** 💥 나눈 수업 보스 공격 (짝 표 「@번호」) */ attack?: string[] }[];
   /** 이 팩이 parts 로 나뉜 다른 팩의 뒷부분이면 그 팩 id (예: 7차시 = 6차시 팩의 문제 4부터) */
   partOf?: string;
+  /** 📦 B 넘어온 몬스터 (school/carry.ts withCarry 가 붙임 · 단계 id → 원래 차시 · 몬스터) */
+  carryOf?: Record<string, { from: string; mid: string }>;
   next?: { title: string; ask?: string; link?: string };
   crops?: Record<string, unknown>;
   /** 🖼 차시 팩 올리기: 학습지 칸 그림 목록(칸 = 단계 id 또는 단계 img) · imgOf = 그 그림을 가진 차시(prep/{imgOf}/img) */

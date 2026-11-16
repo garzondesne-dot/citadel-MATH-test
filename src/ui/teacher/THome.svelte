@@ -10,7 +10,9 @@
   import { LESSON_LIST } from '../../school/dash';
   import Sheet from '../battle/Sheet.svelte';
   import SchedEdit from './SchedEdit.svelte';
-  import { feat, schoolInfo } from '../../school/features.svelte';
+  import { feat, schoolInfo, type FeatId } from '../../school/features.svelte';
+  import { CARRY_AT, carryMin, carryOffer, type Carry, type CarryAt } from '../../school/carry';
+  import { estimate, LIMIT, ltimePath, timeSig } from '../../school/ltime';
 
   // ⑫ 교사 첫 화면 = 「수업 열기」 (#119 · DECISIONS 「📱 ⑫ 교사 첫 화면 컨펌」)
   //   ① 반 = 오늘 시간표 칸(지금 교시 금빛 테두리 · 누를 때만 골라짐) · 「다른 반 ›」 · 비어 있으면 「시간표 넣기 ›」 · 고른 반 마지막 수업 한 줄
@@ -19,7 +21,7 @@
   //   ＋ 목록에 있지만 차시 팩이 안 된 차시 = 점선 칸 + 가운데 ＋ + 「n차시 · 준비 안 됨」 · 누르면 ⑰ 준비 탭 그 차시 (고르기는 안 됨 · #130 ③)
   const { S, packs, now, live, liveRoom, onopen, onresume, ontest, onprep }: {
     S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null;
-    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }) => void; onresume: () => void; ontest: (L: LessonPack, cls?: string, from?: { step: number; fresh: string | null }) => void; onprep: (id: string) => void;
+    onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }, carry?: Carry | null) => void; onresume: () => void; ontest: (L: LessonPack, cls?: string, from?: { step: number; fresh: string | null }, carry?: Carry | null) => void; onprep: (id: string) => void;
   } = $props();
   const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id || p.no === l.no)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
   let cls = $state('');
@@ -54,6 +56,14 @@
   //   🧪 테스트로 연 수업도 같은 규칙(#133) · 실제 반 기록과 따로 저장 · 둘 다 있으면 나중 것
   const savedOf = (lc: typeof last, test: boolean) => { if (!lc || lc.done) return null; const Rl = S.get<Room>(roomPath(lc.code)); const st = Rl?.state.stop; const Lp = packs.find((p) => p.id === lc.lesson); return st && !st.done && Lp ? { L: Lp, st, test, at: lc.at } : null; };
   const saved = $derived.by(() => { void now; if (!cls) return null; const a = savedOf(last, false), b = savedOf(lastTest(S, cls), true); return a && b ? (b.at > a.at ? b : a) : a || b; });
+  // 📦 B 지난 차시에서 넘어온 몬스터 (📜 2026-11-16 · 기본 = 안 함 → 허수아비 A 그대로)
+  const offer = $derived.by(() => { void now; return cls && L && !resume ? carryOffer(S, cls, L, packs) : null; });
+  let carryAt = $state<CarryAt | 'none'>('none');
+  const offerKey = $derived(offer ? `${cls}|${lessonId}|${offer.from}|${offer.ids.join(',')}` : '');
+  $effect(() => { void offerKey; carryAt = 'none'; }); // 반 · 차시 · 넘어온 것이 바뀔 때만 처음으로 (now 마다 아님)
+  const carry = $derived<Carry | null>(offer && carryAt !== 'none' ? { from: offer.from, ids: offer.ids, at: carryAt } : null);
+  const cvMin = $derived.by(() => { const P = offer ? packs.find((p) => p.id === offer.from) : null; return P && offer ? carryMin(P, offer.ids) : 0; });
+  const cvEst = $derived.by(() => { if (!offer || !L) return null; const on = (id: string) => feat(id as FeatId); const e = estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, timeSig(on)))); const tot = Math.round((e.total + (carry ? cvMin : 0)) * 10) / 10; return { base: e.total, tot, over: tot > LIMIT }; });
   const resumeText = $derived.by(() => {
     if (!resume) return '';
     const Lr = packs.find((p) => p.id === resume.live.lesson), st = Lr ? stepOf(Lr, resume.room) : null;
@@ -101,6 +111,14 @@
       {/each}
     </div>
   </div>
+  {#if offer && cvEst}
+  <div class="card cv" data-k="carry">
+    <span class="lab">📦 지난 {offer.no}차시에서 넘어온 몬스터 {offer.ids.length}마리</span>
+    <p class="hint">{offer.names.join(' · ')}</p>
+    <div class="grid3" role="group" aria-label="넘어온 몬스터">{#each ['intro', 'mid', 'none'] as const as a (a)}<button type="button" class="pk" class:on={carryAt === a} aria-pressed={carryAt === a} data-at={a} onclick={() => (carryAt = a)}><b>{CARRY_AT[a]}</b></button>{/each}</div>
+    <p class="hint" class:over={cvEst.over} data-k="carry-est">⏱ 이 차시 {cvEst.base}분{#if carry} + {cvMin}분(넘어온 몬스터) = <b>{cvEst.tot}분</b>{/if} / {LIMIT}분{#if carry && cvEst.over}<br />⚠ 50분을 넘어요 · 「안 함」= 🎯 허수아비 복습으로 두기를 권해요{:else if !carry}<br />안 함 = 🎯 허수아비 「📚 수업에서 넘어온 문제」 그대로{/if}</p>
+  </div>
+  {/if}
   {#if resume}
     <button type="button" class="item" onclick={onresume}><span class="ic">▶</span><span class="tx"><b>{resumeText}</b><small>끝나지 않은 수업 · 누르면 그 자리로</small></span></button>
   {:else if saved}
@@ -109,12 +127,12 @@
     <div class="item none fold"><span class="ic">이어</span><span class="tx"><b>끝나지 않은 수업 없음</b><small>있으면 여기에 「n차시 · 문제 4부터 이어서」</small></span></div>
   {/if}
   <div class="sub2">
-    <button type="button" class="chipbtn" disabled={!L} onclick={() => L && ontest(L, cls)}>🧪 테스트로 열기</button>
+    <button type="button" class="chipbtn" disabled={!L} onclick={() => L && ontest(L, cls, undefined, carry)}>🧪 테스트로 열기</button>
     <a class="chipbtn" href="?role=hall" target="_blank">🏛 교사 캠프 (TV)</a>
   </div>
 </div>
 <div class="tact">
-  <button type="button" class="btn" disabled={!cls || !L || !!resume} onclick={() => L && onopen(cls, L)}>
+  <button type="button" class="btn" disabled={!cls || !L || !!resume} onclick={() => L && onopen(cls, L, undefined, carry)}>
     {#if resume}수업이 열려 있어요<small>위 「이어서」 · 아래 「수업 닫기」</small>{:else if cls && L}▶ {cls}반 · {L.no}차시 수업 열기{:else}▶ 수업 열기<small>{!cls ? '① 반' : '② 차시'}을 골라요</small>{/if}
   </button>
 </div>
@@ -148,6 +166,8 @@
   .pk3.five { grid-template-columns: repeat(5, minmax(0, 1fr)); } /* 차시 7개 이상 = 5칸 2줄 (#132 · 360 × 640 스크롤 0) */
   .pk3.five .pk { padding: 4px 1px; font-size: 13.5px; }
   .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
+  .hint.over { color: var(--bad); }
   .pk { position: relative; min-height: 48px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 2px; box-shadow: 0 3px 0 var(--press-sh); }
   .pk small { font-size: 11px; font-weight: 500; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .pk.on { border: 2px solid var(--accent); background: var(--surface); }

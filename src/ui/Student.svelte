@@ -37,7 +37,8 @@
   import ConceptCheckCard from './q/ConceptCheckCard.svelte';
   import { ccRan } from '../school/cc';
   import { conceptOf } from '../school/prep';
-  import { summaryOf } from '../school/records';
+  import { carryStates, summaryOf } from '../school/records';
+  import { carryRecords } from '../school/carry';
   import { rewardOf, settle } from '../school/reward';
   import { SUBJ } from '../engine/subject';
   import { kstDay } from '../board/board';
@@ -184,7 +185,7 @@
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
   const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
-  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
   function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {

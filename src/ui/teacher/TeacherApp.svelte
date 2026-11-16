@@ -1,6 +1,7 @@
 <script lang="ts">
   import { BETA } from '../../channel';
   import { HALLKEY } from '../../school/school';
+  import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
   import { onDestroy, untrack } from 'svelte';
   import { setTeacherSink } from '../../store/me.svelte';
   import './teacher.css';
@@ -32,7 +33,7 @@
   const now = $derived(clock.now);
   const live = $derived(lv.v.val);
   const liveR = $derived(live ? S.get<Room>(roomPath(live.code)) : null);
-  const liveL = $derived(live ? packs.find((p) => p.id === live.lesson) ?? null : null);
+  const liveL = $derived.by(() => { const b = live ? packs.find((p) => p.id === live.lesson) ?? null : null; return b && live ? withCarry(b, carryOfRoom(S, live.code), packs) : b; }); // 📦 B 넘어온 몬스터
   let page = $state<'home' | 'live'>(untrack(() => (liveNow(S) ? 'live' : 'home')));
   // ?tab=me 등 = 처음 열 탭 (공격 갤러리 「‹ 나가기」 · 뒤로 가기 = 「나」 탭으로)
   const tab0 = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('tab') : null;
@@ -53,7 +54,7 @@
   let newsList = $state<Change[]>(untrack(() => (!gate && tUid ? teacherSync(S, tUid, chan, BUILD, S.now(), chan === 'beta') : [])));
   const newsOpen = $derived(chan === 'rel' && newsList.length > 0);
   function newsOk() { if (tUid) S.set(teacherSeenPath(tUid, 'rel'), BUILD); newsList = []; }
-  function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }) {
+  function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }, carry?: Carry | null) {
     if (needAdmin()) { loginAsk = true; return; }
     const code = newCode(), key = S.get<string>(HALLKEY) || S.get<string>('school/teacher/hallKey') || newKey(); // 🖥 종합실 비밀번호 고정 (⑲) · 🔐 #163-① 교사만 읽는 secrets
     openRoom(S, L, code, test ? PROFILES.test : PROFILES.class);
@@ -63,6 +64,7 @@
     S.set(`${roomPath(code)}/meta/cls`, cls); S.set(`secrets/${code}/hallKey`, key); // 🔐 TV 는 이 키를 쳐서 hosts 에 등록 (방 meta · school/live 에는 키를 안 둠)
     if (from) { S.set(`${roomPath(code)}/meta/resumeFrom`, from.step); if (from.fresh) S.set(`${roomPath(code)}/meta/fresh/${from.fresh}`, true); } // ⏯ 이어서
     if (!test) S.set(`${roomPath(code)}/meta/limit`, true);
+    if (carry && !from) S.set(`${roomPath(code)}/meta/carry`, carry); // 📦 B 지난 차시에서 넘어온 몬스터 (이어서 = 그 방의 것 그대로)
     setLive(S, { code, cls, lesson: L.id, ...(test ? { test: true } : {}) });
     (test ? setLastTest : setLast)(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code }); // ⏯ 🧪 테스트도 이어서 (#133 · 따로 저장)
     page = 'live';
@@ -84,7 +86,7 @@
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}
-      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from) => open(c, L, false, from)} onresume={() => (page = 'live')} ontest={(L, c, from) => open(c || '1-1', L, true, from)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
+      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from, cv) => open(c, L, false, from, cv)} onresume={() => (page = 'live')} ontest={(L, c, from, cv) => open(c || '1-1', L, true, from, cv)} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
     {:else if tab === 'pupil'}
       <TPupils {S} ondash={(w) => (wideDash = w)} />
     {:else if tab === 'prep'}

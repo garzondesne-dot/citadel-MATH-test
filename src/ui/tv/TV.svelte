@@ -207,6 +207,7 @@
   let sendSeen: string[] | null = null, sendShow = $state<{ names: string[]; at: number } | null>(null);
   $effect(() => { const ks = Object.keys(sentOf(R)); untrack(() => { if (sendSeen === null) { sendSeen = ks; return; } const nw = ks.filter((k) => !sendSeen!.includes(k)); sendSeen = ks; if (!nw.length) return; const names = nw.map((k) => (k === 'boss' ? '👑 형성평가' : (L.steps.find((s) => s.id === k)?.title ?? k).split(' · ').pop()!)); sendShow = { names, at: Date.now() }; setTimeout(() => { if (sendShow && Date.now() - sendShow.at >= 5900) sendShow = null; }, 6000); }); });
   // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③): 첫 몬스터가 나오고 7초 · 이름 없이 수만
+  const backShow = $derived.by(() => { if (!R || !mid || !L.carryOf?.[mid] || now - Number(R.state.stepAt) >= 7000) return ''; const [h = '', no = ''] = (L.steps.find((x) => x.id === mid)?.title ?? '').split(' · '); return `${no} ${h.replace(/^⏪\s*/, '')}`.trim(); }); // 📦 B 넘어온 몬스터 첫 7초
   const preShow = $derived(!!(R && mid && hp && (hp.pre ?? 0) > 0 && R.meta.pre?.mid === mid && now - Number(R.state.stepAt) < 7000));
   const giftShow = $derived(!!R?.state.gift && now - Number(R.state.gift.at) < 4000);
 
@@ -360,7 +361,7 @@
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
     <Arena {L} R={R as Room} {step} {now} {ids} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} />
     {#if scout?.on}
-      <div class="sc"><div class="q">🌫 정찰 — 학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
+      <div class="sc"><div class="q">🌫 정찰 — {L.carryOf?.[step.id] ? `${step.title.split(' · ')[1] ?? ''} ` : ''}학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}
     {#if demo}<div class="demoban" role="status" data-k="demo-ban">🎮 시연 중 · 전투 잠시 멈춤</div>{/if}
     {#if demo}<div class="dpane"><DemoPhone {L} R={R as Room} {code} {tlook} onclose={() => (demo = false)} onstrike={(ult) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx, key: `${R?.state.step}|${step?.id ?? ''}` }; demo = false; }} /></div>{/if}
@@ -421,6 +422,7 @@
   {:else if door && !R?.state.closed}<div class="ov door"><div class="k">👑🚪</div><p>보스가 던전 문을 닫았다!</p></div>{/if}
   {#if extShow}<div class="ov door ext2"><div class="k">🧙🚪</div><p>선생님이 문을 밀어 열었다!</p><div class="plus">⏳ +5분!</div></div>{/if}
   {#if sendShow}<div class="sendfly" role="status" data-k="tv-send"><span class="fly" aria-hidden="true">👾</span><b>🎯 {sendShow.names.join(' · ')} 복습 던전으로 이동!</b><small>학생마다 허수아비에서 만나요</small></div>{/if}
+  {#if backShow}<div class="gift back" role="status" data-k="tv-back">⏪ 지난번에 놓친 「{backShow}」 몬스터가 돌아왔다!</div>{/if}
   {#if preShow && R?.meta.pre && hp}<div class="gift pre" role="status" data-k="tv-pre">⚔ 선제 공격! 복습한 친구 {R.meta.pre.who}명 · 체력 −{hp.pre}</div>{/if}
   {#if giftShow && R?.state.gift}<div class="gift" role="status">🎁 선생님 선물! 모두 💎 {R.state.gift.g}</div>{/if}
   {#if ink}<Ink step={i} onclose={() => (ink = false)} />{/if}
@@ -633,6 +635,7 @@
   .sendfly .fly { font-size: 8cqh; animation: sendfly 2.2s ease-in forwards; }
   @keyframes sendfly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 60% { transform: translate(18cqw, 8cqh) scale(0.6) rotate(25deg); opacity: 0.9; } 100% { transform: translate(40cqw, 30cqh) scale(0.2) rotate(60deg); opacity: 0; } }
   .gift.pre { border-color: var(--accent); top: 12cqh; font-size: var(--tv-title); white-space: nowrap; } /* 정찰 창(오른쪽 위)과 안 겹치게 한 줄 */
+  .gift.back { border-color: var(--accent); top: 40cqh; font-size: var(--tv-title); white-space: nowrap; } /* 📦 B ⏪ 돌아온 몬스터 (선제 공격 띠 아래) */
   .gift { position: absolute; left: 50%; top: 16cqh; transform: translateX(-50%); z-index: 7; font-size: var(--tv-big); font-weight: 700; padding: 1.4cqh 3cqw; border-radius: 999px; background: rgba(8, 9, 12, 0.85); border: 2px solid var(--gem); }
   .dock { position: absolute; right: 1.5cqw; bottom: 2cqh; z-index: 8; display: flex; align-items: center; gap: 0.5cqw; padding: 0.8cqh 0.8cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.88); border: 1px solid rgba(255, 255, 255, 0.18); opacity: 0; transform: translateY(1cqh); transition: opacity var(--t), transform var(--t); pointer-events: none; max-width: 97cqw; }
   .dock.on { opacity: 1; transform: none; pointer-events: auto; }
