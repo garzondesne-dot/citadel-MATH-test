@@ -6,7 +6,7 @@ import { ccRecord } from './cc';
 import { helpCount } from './help';
 import { hgOf } from './hintGive';
 import type { LessonPack, Room } from '../model/types';
-import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
+import { activeIds, bossHp, bossLive, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
 
 export type St = 'o' | 'f' | 'x' | '-' | 'n' | 's'; // s = 🎯 수업에서 복습으로 넘어온 문제 (📜 2026-11-16)
@@ -42,9 +42,10 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   const res = resultOf(L, R, uid);
   const out: RecRow = { at: now, code: String(code), no: L.no, mons, conc: cm.conc, names: cm.names, weak: cm.weak, ...(Object.keys(cm.mis).length ? { mis: cm.mis } : {}), ...(cm.fixed ? { fixed: cm.fixed } : {}), miss: Object.entries(mons).filter(([, v]) => v === 'x' || v === '-').map(([k]) => k), perfects, right: res.right, total: res.total };
   if (L.boss) {
-    const mast = mastery(L, R, uid), bs = bossState(L, R, uid), any = others.some((u) => bossState(L, R, u).some((x) => x.n > 0)), hpN = L.boss.hpItems ?? L.boss.items;
-    out.boss = mast.slice(0, hpN).filter(Boolean).length; out.bossN = hpN;
-    out.bossM = mast.map((ok, i) => (ok ? 'o' : bs[i]?.n ? 'x' : sent.boss ? 's' : any ? '-' : 'n')).join('');
+    const mast = mastery(L, R, uid), bs = bossState(L, R, uid), any = others.some((u) => bossState(L, R, u).some((x) => x.n > 0)), hpN = L.boss.hpItems ?? L.boss.items, lv = bossLive(L, R), dr = new Set(lv.drop); // 👑 #27 빠진 문항 = 셈에서 뺌 · 칸 표시 k(허수아비로)
+    out.boss = mast.slice(0, hpN).filter((ok, i) => ok && !dr.has(i)).length; out.bossN = lv.hp;
+    out.bossM = mast.map((ok, i) => (dr.has(i) ? 'k' : ok ? 'o' : bs[i]?.n ? 'x' : sent.boss ? 's' : any ? '-' : 'n')).join('');
+    if (lv.drop.length) (out as RecRow & { bossDrop?: number[] }).bossDrop = lv.drop;
     if (sent.boss && !mast.some(Boolean)) out.bossSent = true; // 🎯 👑 형성평가를 복습으로 보냄 → 허수아비 「⭐ 꼭 풀기」 · 대시보드 「수업 안 함 · 복습」
     out.won = !!bossHp(L, R, now).won;
   }

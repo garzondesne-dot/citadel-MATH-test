@@ -10,7 +10,7 @@
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay, boardPack, stepDone } from '../../board/board';
   import { nextStep, openRoom, roomPath } from '../../raid/actions';
-  import { answerOf, BOSS_ID, bossState, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
+  import { answerOf, BOSS_ID, bossState, droppedFor, pickBoss, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
   import { TEST_ADDR } from '../../channel';
   import { bonusBase } from '../../school/castle';
   import { meBound } from '../../store/meSync';
@@ -59,7 +59,7 @@
       const bon = all[L.id] || {}, x = noteOf(L, recOf(L), bon), ids = [...fieldIds(L), ...(L.boss ? [BOSS_ID] : [])];
       const stOf = (id: string) => (id === BOSS_ID || x.none ? null : x.mons[x.ids.indexOf(id)] ?? null);
       const bossSent = !!(recOf(L) as { bossSent?: boolean } | undefined)?.bossSent && !bon[BOSS_ID]?.clear; // 🎯 👑 형성평가를 수업에서 복습으로 보냄 → 맨 위 「⭐ 꼭 풀기」
-      const rows: Row[] = ids.map((id) => { const st = stOf(id), must = id === BOSS_ID && bossSent; return { id, title: id === BOSS_ID ? (must ? '형성평가 · ⭐ 꼭 풀기' : '형성평가 재대결') : `${st === 'c' ? '⭐ 도전 · ' : ''}${(L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id}`, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear, sent: st === 's', must }; });
+      const rows: Row[] = ids.map((id) => { const st = stOf(id), must = id === BOSS_ID && bossSent; return { id, title: id === BOSS_ID ? (must ? '형성평가 · ⭐ 꼭 풀기' : '형성평가 재대결') : `${st === 'c' ? '⭐ 도전 · ' : ''}${(L.steps.find((s) => s.id === id)?.title ?? id).split(' · ').pop() ?? id}${(() => { const d = droppedFor(L, recOf(L), id); return d.length ? ` · 👑 형성평가 ${d.map((i) => i + 1).join('·')}번` : ''; })()}`, st, need: !!st && OPEN.has(st), bossNeed: id === BOSS_ID && !bon[BOSS_ID]?.clear, clear: !!bon[id]?.clear, sent: st === 's', must }; });
       const o = (r: Row) => (r.must ? -1 : r.need ? 0 : r.id === BOSS_ID ? 1 : 2);
       return { L, x, sealed: sl.includes(L.id), rows: rows.slice().sort((a, b) => o(a) - o(b)), cards: cardsOf(L) };
     }).sort((a, b) => (b.x.left ? 1 : 0) - (a.x.left ? 1 : 0) || b.L.no - a.L.no);
@@ -70,10 +70,12 @@
   });
 
   // ── 한 판 = 문제 하나 (정식 fight) ──
-  type Run = { L0: LessonPack; L: LessonPack; mid: string; S: Store; code: string };
+  type Run = { L0: LessonPack; L: LessonPack; mid: string; S: Store; code: string; drops?: number[] };
   let run = $state<Run | null>(null), res = $state<{ L: LessonPack; title: string; clear: boolean; got: number; xp: number; why: string[]; sealed: boolean } | null>(null), shelf = $state<LessonPack | null>(null);
   function fight(L0: LessonPack, mid: string) {
-    const BL = boardPack(L0), L = { ...BL, steps: BL.steps.filter((s) => (mid === BOSS_ID ? s.kind === 'boss' : s.id === mid)) };
+    // 👑 #27 짝 몬스터를 복습으로 보내 수업에서 빠진 형성평가 문항 = 그 몬스터 다음에 이어서 (원래 번호 · 판 그대로)
+    const BL = boardPack(L0), drops = mid === BOSS_ID ? [] : droppedFor(L0, recOf(L0), mid).filter((i) => !(recOf(L0)?.bossM ?? '')[i] || (recOf(L0)?.bossM ?? '')[i] === 'k');
+    const L = { ...BL, steps: BL.steps.filter((s) => (mid === BOSS_ID ? s.kind === 'boss' : s.id === mid || (drops.length > 0 && s.kind === 'boss'))), ...(drops.length && BL.boss ? { boss: pickBoss(BL.boss, drops) } : {}) };
     if (!L.steps.length) return;
     const S2: Store = { ...memoryStore(), kind: 'memory' as const }, code = `D${Date.now() % 1e6}`, b0 = bonAll()[L0.id]?.[mid];
     openRoom(S2, L, code, PROFILES.board);
@@ -81,7 +83,7 @@
     S2.set(`${roomPath(code)}/meta/fresh`, { [mid]: mid !== BOSS_ID || !first });
     S2.set(`${roomPath(code)}/meta/dummy`, true);
     S2.set(`${roomPath(code)}/meta/retries`, 3); S2.set(`${roomPath(code)}/meta/bossTries`, 3); S2.set(`${roomPath(code)}/meta/think`, 0); S2.set(`${roomPath(code)}/meta/solve`, 0);
-    run = { L0, L, mid, S: S2, code }; res = null;
+    run = { L0, L, mid, S: S2, code, drops }; res = null;
     // 🧪 시험 고리(시험 주소만 · 출시 막는 것 9): 이 판의 몬스터를 첫 시도에 다 맞힘으로 (e2e 가 서버 기록 · 보상을 확인)
     if (TEST_ADDR) (globalThis as { __dummyPerfect?: (mid: string) => void }).__dummyPerfect = (m) => { const RR = S2.get<Room>(roomPath(code)); if (RR) S2.set(`${roomPath(code)}/subs/${m}/${uid}/0`, itemsFor(L, RR, m, uid, 0).map(answerOf)); };
   }
@@ -114,6 +116,7 @@
     // 기록 (정식 bonus.js: 판마다 tries +1 · 처치 = clear)
     const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}), ...(fixNow ? { fixAt: at } : {}) }; // ⚔ fixAt = 다음 수업 선제 공격 (📜 2026-11-16 · school/pre.ts)
     if (base) RS.set(`${base}/${L0.id}/${r.mid}`, rec);
+    if (bnd && r.drops?.length && bossState(r.L, RR, uid).every((x) => x.ok)) { const rp = `records/${bnd.cls}/${bnd.num}/${L0.id}`, rr = bnd.S.get<{ bossM?: string }>(rp); if (rr?.bossM) { const m = rr.bossM.split(''); r.drops.forEach((i) => { if (m[i] === 'k') m[i] = 'p'; }); bnd.S.set(`${rp}/bossM`, m.join('')); } } // 👑 #27 그 차시 형성평가 문항 = 복습으로 풂
     // 🎯 👑 수업에서 복습으로 보낸 형성평가를 여기서 다 풂 = 그 차시 형성평가 기록 + 「복습에서 풂」 (📜 2026-11-16)
     if (bnd && r.mid === BOSS_ID && o.clear) { const rp = `records/${bnd.cls}/${bnd.num}/${L0.id}`, rr = bnd.S.get<{ bossSent?: boolean; bossReview?: number; bossN?: number }>(rp); if (rr?.bossSent && !rr.bossReview) { const hp = Number(rr.bossN) || Number(L0.boss?.hpItems ?? L0.boss?.items) || 0; bnd.S.set(`${rp}/bossReview`, at); bnd.S.set(`${rp}/boss`, hp); bnd.S.set(`${rp}/bossM`, 'o'.repeat(hp)); } }
     else { const all = readLocal<Record<string, Bon>>(BONK); all[L0.id] = { ...(all[L0.id] || {}), [r.mid]: rec }; try { localStorage.setItem(BONK, JSON.stringify(all)); } catch { /* 무시 */ } }

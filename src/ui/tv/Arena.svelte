@@ -9,7 +9,7 @@
   import type { Arena, ArenaState, Hero } from './arena/pixi';
   import Sprite from '../Sprite.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
-  import { atkClock, atkTrack, bossHp, monsterHp, isChain } from '../../raid/raid';
+  import { atkClock, atkTrack, bossHp, bossNote, monsterHp, isChain } from '../../raid/raid';
   import { tvHint } from '../../school/hintGive';
   import { gaugeView } from '../battle/gauge';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
@@ -38,7 +38,7 @@
   const sprite = $derived(boss ? (L.boss?.sprite ?? '') : (L.monsters[step?.id ?? '']?.sprite ?? ''));
   // 📺 시안 (2026-11-14): 머리 위 = 몬스터 이름(그림 시트 이름 · 폰 장면 띠와 같음) — 「문제 1」 아님 · 이름이 없으면 단계 이름
   const monName = $derived.by(() => { try { const sp = spriteOf(sprite); return sp.sheet.names[sp.row] || ''; } catch { return ''; } });
-  const hpLabel = $derived(`${boss ? '👑 ' : step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${monName || (boss ? L.boss?.title.split(' · ').pop() ?? '보스' : step?.title.split(' · ').pop() ?? '')}`);
+  const hpLabel = $derived(`${boss ? '👑 ' : step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${monName || (boss ? L.boss?.title.split(' · ').pop() ?? '보스' : step?.title.split(' · ').pop() ?? '')}${boss && R && bossNote(L, R) ? ` · ${bossNote(L, R)}` : ''}`); // 👑 #27
   const heroes = $derived<Hero[]>(ids.map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, name: nameOf(u), ok: submitted(u), off: lost.has(u) })));
   const st = $derived<ArenaState>({ boss, split, sprite, hp: hp ? { left: hp.left, max: hp.max } : null, hpLabel, down: !!hp?.down, shadow, heroes });
 

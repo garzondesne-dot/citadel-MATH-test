@@ -209,6 +209,17 @@ export function checkUpload(text: string, look: Look): Checked {
   if (native) r.v = 1;
   const pack = native ? nativePack(r as unknown as LessonPack, out, stats) : boardPack(r as BPack, out, stats, look);
   if (!pack) return { pack: null, issues: out, stats };
+  // 👑 형성평가 짝 (📜 2026-11-17 #27 · PACK-GUIDE 16): boss.links = 문항마다 짝 몬스터 id 또는 "" · 길이 = items
+  { const ln = (pack.boss as { links?: unknown } | undefined)?.links;
+    if (ln != null && pack.boss) {
+      if (!Array.isArray(ln)) out.push({ at: '형성평가 · 짝(links)', msg: 'links 는 목록이어야 해요 (문항마다 몬스터 id 또는 "")', lvl: 'err' });
+      else {
+        if (ln.length !== pack.boss.items) out.push({ at: '형성평가 · 짝(links)', msg: `links ${ln.length}개 — 형성평가 문항은 ${pack.boss.items}개 (같은 길이)`, lvl: 'err' });
+        ln.forEach((m, i) => { const id = String(m ?? ''); if (id && !pack.monsters[id]) out.push({ at: `형성평가 ${i + 1}번 · 짝(links)`, msg: `몬스터 「${id}」 가 이 팩에 없어요 ("" = 개념만)`, lvl: 'err' }); });
+        pack.boss.links = ln.map((m) => String(m ?? ''));
+      }
+    }
+  }
   // 공통: 도감 이름표 · 엔진 검사(문항 0개 · 보스 문항 없음 …)
   if (!look.theme(pack.theme ?? '')) out.push({ at: '배경(theme)', msg: `던전 배경 「${pack.theme ?? ''}」 이 도감에 없어요`, lvl: 'err' });
   const concepts = new Set(pack.steps.filter((s) => s.kind === 'concept').map((s) => s.id));
@@ -278,7 +289,7 @@ function boardPack(b: BPack, out: Issue[], stats: Checked['stats'], _look: Look)
       vs.forEach((v, k) => { const r = recheckAll(v, (i) => `형성평가 · 버전 ${k} · ${i + 1}번`, out); stats.rechecked += r.done; stats.ask += r.ask; });
       stats.items += vs[0]?.length ?? 0; stats.versions += vs.length;
       const sprite = spriteName(bo.sprite) || 'base0:0';
-      if (n) boss = { title: bo.title || '형성평가', sprite, items: n, hpItems: Math.min(Math.max(1, hp), n), tags: bo.tags ?? [], sets: { '1': vs[0]! }, pool: Array.from({ length: n }, (_, i) => vs.slice(1).map((v) => v[i]).filter((q): q is Question => !!q)), ...(bo.attack ? { attack: Array.isArray(bo.attack) ? bo.attack : [bo.attack] } : {}) };
+      if (n) boss = { title: bo.title || '형성평가', sprite, items: n, hpItems: Math.min(Math.max(1, hp), n), tags: bo.tags ?? [], ...(Array.isArray((bo as { links?: unknown }).links) ? { links: ((bo as { links: unknown[] }).links).map((x) => String(x ?? '')) } : {}), sets: { '1': vs[0]! }, pool: Array.from({ length: n }, (_, i) => vs.slice(1).map((v) => v[i]).filter((q): q is Question => !!q)), ...(bo.attack ? { attack: Array.isArray(bo.attack) ? bo.attack : [bo.attack] } : {}) };
     }
   }
   if (!b.id || !b.title || !Array.isArray(b.steps)) return null;

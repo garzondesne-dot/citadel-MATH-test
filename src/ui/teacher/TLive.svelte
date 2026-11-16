@@ -10,7 +10,7 @@
   import { hallKeyOf } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
+  import { activeIds, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
@@ -165,7 +165,7 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey'>('');
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey' | 'bossask'>(''), bossAsked = $state(false);
   // 🎯 복습으로 보내기 (📜 2026-11-16 · A): 남은 몬스터 · 👑 형성평가 → 허수아비 · 형성평가 복습 완료 n / 인원
   const leftS = $derived(R && !isLobby(R) && !isEnd(L, R) ? leftSteps(L, R, now) : []);
   const bossRevN = $derived.by(() => { void now; const all = S.get<Record<string, Record<string, { bossReview?: number; bossSent?: boolean } | null>>>(`records/${live.cls}`) || {}; const rows = Object.values(all).map((x) => x?.[L.id]).filter(Boolean); return { done: rows.filter((r) => r!.bossReview).length, sent: rows.filter((r) => r!.bossSent).length }; });
@@ -207,6 +207,7 @@
     if (scout?.on) { appearNow(S, L, code); return; }
     if (isEnd(L, R)) { sheet = 'ask'; return; }
     if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「다음 ▶」 = 쉼터 끝 + 수업으로
+    if (nextStepObj?.kind === 'boss' && L.boss?.links?.length && bossLive(L, R).items <= 1 && !bossAsked) { sheet = 'bossask'; return; } // 👑 #27 ④ 남은 문항 ≤ 1 = 형성평가도 복습으로?
     nextStep(S, L, code);
   }
   const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
@@ -289,7 +290,7 @@
       {@render queue()}
       {@render att()}
       <div class="card rstat" data-k="now-cell">
-        <div class="rs1"><span class="lab acc">{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</span>
+        <div class="rs1"><span class="lab acc" data-k="now-lab">{isEnd(L, R) ? '마무리' : step?.kind === 'boss' && bossNote(L, R) ? `지금 · ${bossNote(L, R)}` : `지금 · ${short(step)}`}</span>
           {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
           <span class="unsub">{#if scout?.on}{''}{:else if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           {#if scout?.on}<span class="sub rdy" data-k="ready-n">📝 준비 완료 <b>{ids.filter((u) => readyIds[u]).length}</b> / {ids.length}</span>{:else}<span class="sub" data-k="sub-n"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>{/if}
@@ -422,6 +423,13 @@
     <Sheet onclose={() => (sheet = '')} mainText="닫기">
       {#snippet title()}📝 수업 설문{/snippet}
           <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
+    </Sheet>
+  {:else if sheet === 'bossask'}
+    {@const lv = bossLive(L, R)}
+    <Sheet onclose={() => (sheet = '')}>
+      {#snippet title()}👑 형성평가도 복습으로 보낼까요?{/snippet}
+      {#snippet act()}<div class="row"><button type="button" class="btn2" data-k="bossask-keep" onclick={() => { bossAsked = true; sheet = ''; nextStep(S, L, code); }}>그대로</button><button type="button" class="btn" data-k="bossask-send" onclick={() => { bossAsked = true; sendSome(['boss']); sheet = ''; }}>🎯 보내기</button></div>{/snippet}
+      <p class="gnote" data-k="bossask">짝 몬스터를 복습으로 보내서 수업 형성평가가 {lv.items}문항만 남았어요 ({lv.drop.length}문항은 허수아비로) · 보내면 형성평가도 학생마다 🎯 허수아비 「⭐ 꼭 풀기」로 가요</p>
     </Sheet>
   {:else if sheet === 'qr'}
     <Sheet onclose={() => (sheet = '')} mainText="닫기">

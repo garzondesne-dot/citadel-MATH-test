@@ -18,7 +18,7 @@ export interface Cell { /** 남은 칼 */ left: number; /** 칼 칸 수 */ slots
 /** 지금 몬스터(또는 👑) 한 학생 칸 */
 export function cellOf(L: LessonPack, R: Room, mid: string, uid: string): Cell {
   if (mid === BOSS_ID) {
-    if (V4(R)) { const b = bossRecord(L, R, uid), w = Math.max(0, b.slots - b.left); return { left: b.left, slots: b.slots, prog: b.hpN ? Math.min(1, b.solved.filter((i) => i < b.hpN).length / b.hpN) : 0, done: b.done, zero: b.out, wrong: w, sub: b.subs > 0, got: b.solved.filter((i) => i < b.hpN).length, of: b.hpN }; }
+    if (V4(R)) { const b = bossRecord(L, R, uid), w = Math.max(0, b.slots - b.left); return { left: b.left, slots: b.slots, prog: b.need.length ? Math.min(1, b.solved.filter((i) => b.need.includes(i)).length / b.need.length) : 0, done: b.done, zero: b.out, wrong: w, sub: b.subs > 0, got: b.solved.filter((i) => b.need.includes(i)).length, of: b.need.length }; }
     const s = bossState(L, R, uid), ok = s.filter((x) => x.ok).length; return { left: 0, slots: 0, prog: s.length ? ok / s.length : 0, done: s.length > 0 && ok === s.length, zero: false, wrong: s.reduce((a, x) => a + Math.max(0, x.n - (x.ok ? 1 : 0)), 0), sub: s.some((x) => x.n > 0), got: ok, of: s.length, noSword: true };
   }
   if (!L.monsters[mid]) return { left: 0, slots: 0, prog: 0, done: false, zero: false, wrong: 0, sub: false, got: 0, of: 0, noSword: true };

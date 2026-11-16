@@ -11,7 +11,7 @@
   import { PACKS } from '../../engine/packs';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, BOSS_ID, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
+  import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, roster, type Live } from '../../school/school';
@@ -242,7 +242,7 @@
   $effect(() => { const f = () => (isFull = !!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f); });
   // 📄 문제 창 · 📖 개념 오른쪽 = 학생 폰과 같은 함수(🪞) · 첫 판 숫자
   const nextMon = $derived(step ? L.steps.slice(i).find((s) => s.kind === 'monster' || s.kind === 'boss') ?? null : null);
-  const qsOf = (id: string) => (id === BOSS_ID ? (L.boss ? Array.from({ length: L.boss.items }, (_, k) => bossItem(L, `${code}|tv`, k, 0)).filter((q): q is NonNullable<typeof q> => !!q) : []) : L.monsters[id]?.chain ? chainItems(L, id, `${code}|tv`, 0) : items(L, id, `${code}|tv`, 0));
+  const qsOf = (id: string) => (id === BOSS_ID ? (L.boss ? Array.from({ length: L.boss.items }, (_, k) => k).filter((k) => !bossDrop(L, R).includes(k)).map((k) => bossItem(L, `${code}|tv`, k, 0)).filter((q): q is NonNullable<typeof q> => !!q) : []) : L.monsters[id]?.chain ? chainItems(L, id, `${code}|tv`, 0) : items(L, id, `${code}|tv`, 0));
   const tvRev = $derived.by(() => { const v = R?.state.review; if (!v || !mid || v.mid !== mid) return null; return reviewsOf(L, mid).find((x) => x.i === v.i && x.k === v.k)?.r ?? null; });
   const sheetQs = $derived(R?.state.sheet ? (L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? qsOf(nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : qsOf(R.state.sheet)) : []);
   // 위 막대 흐름도 · 남은 시간 선 (#119 덧붙임 3 · 4 · 6)
