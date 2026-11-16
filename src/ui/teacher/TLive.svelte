@@ -132,7 +132,7 @@
   function undo() { const x = undoU; if (!x) return; if (x.v4) S.set(`${roomPath(code)}/unlock/${x.mid}/${x.u}`, x.n || null); else S.set(`${roomPath(code)}/chainOk/${x.mid}/${x.u}`, null); const o = order.filter((u) => u !== x.u); o.splice(Math.max(0, x.at), 0, x.u); order = o; undoU = null; } // 되돌리면 원래 자리로
   // 번호 칸 누름 = 상태 창 (대기실의 안 온 번호 = 바로 결석 표시)
   let who = $state(''), pwAsk = $state(false), pwDone = $state(false);
-  function tapNum(uid: string) { const st = stOf(uid); if (R && isLobby(R) && (st === 'no' || st === 'ab')) { setAbsent(S, code, uid, st !== 'ab'); return; } who = uid; pwAsk = false; pwDone = false; }
+  function tapNum(uid: string) { who = uid; pwAsk = false; pwDone = false; } // 🚨 2026-11-16 핫픽스: 대기실에서 안 들어온 학생도 창이 열림(결석 표시 · 🔑 0000 같은 창) — 예전엔 누르면 결석 표시만 돼서 접속 안 한 학생의 비밀번호를 못 바꿨음
   const whoP = $derived(pupils.find((x) => x.uid === who) ?? null);
   const whoRec = $derived.by(() => { if (!R || !who || !mid) return null; const r = chain ? chainRecord(L, R, mid, who) : plainRecord(L, R, mid, who); const tries = 'tries' in r ? r.tries : []; return { left: r.left, slots: r.slots, locked: !!r.locked, wrong: tries.filter((t) => !(t.total > 0 && t.correct === t.total)).length, right: tries.filter((t) => t.total > 0 && t.correct === t.total).length, chain: 'chain' in r && !!r.chain }; });
   const reload = () => { if (!oldIds.length) { say('옛 판 학생이 없어요'); return; } sendReload(S, code, oldIds); say(`🔄 옛 판 ${oldIds.length}명에게 새로 고침을 보냈어요`); };

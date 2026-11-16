@@ -77,7 +77,9 @@ const genOf = (S: Store, cls: string, num: number) => { const a = S.get<{ g?: nu
 export const authPw = (pw: string) => `${pw}#cm`;
 const oldPw = (pw: string) => `cdm-${pw}`;
 /** 가입 · 로그인 (시험 서버면 Firebase 로그인까지) → 오류 글 또는 null */
-export async function enter(S: Store, cls: string, num: number, pw: string, pw2: string, join: boolean): Promise<string | null> {
+/** 🔑 선생님 0000 초기화 뒤 첫 로그인 = 새 4자리를 정해야 함 (정식 account.js login needNewPin 그대로 · 📜 2026-11-16 핫픽스) */
+export const NEED_NEW_PIN = '__needNewPin__';
+export async function enter(S: Store, cls: string, num: number, pw: string, pw2: string, join: boolean, newPin?: string): Promise<string | null> {
   const A = (S as AuthStore).auth;
   if (!A) return join ? signUp(S, cls, num, pw, pw2) : logIn(S, cls, num, pw);
   const fa = await import('firebase/auth');
@@ -92,6 +94,18 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
   }
   if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
   const g0 = genOf(S, cls, num);
+  // 🔑 선생님 0000 초기화(reset · 로그인 판 g ≥ 1) = 정식 그대로: 0000 → 새 4자리 정하기 → 그 4자리로 새 판 로그인을 만들어 그 학생 칸에 이음 (접속 안 한 학생도 · 📜 2026-11-16 핫픽스)
+  if (S.get<boolean>(`${accPath(cls, num)}/reset`) && g0 > 0) {
+    if (pw !== '0000') return '선생님이 0000 으로 바꿨어요 · 0000 으로 들어와요';
+    if (!newPin) return NEED_NEW_PIN;
+    if (!/^\d{4}$/.test(newPin)) return '새 비밀번호는 숫자 4자리예요';
+    if (newPin === '0000') return '새 비밀번호는 0000 말고 다른 숫자로 정해요';
+    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, g0), authPw(newPin)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); }
+    catch (e) {
+      if (/email-already/.test(String((e as { code?: string }).code))) { try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, g0 + 1), authPw(newPin)); claim(S, cls, num, c.user.uid); S.set(`${accPath(cls, num)}/g`, g0 + 1); return ready(S, cls, num); } catch { /* 아래 */ } }
+      return '새 비밀번호를 저장하지 못했어요 · 잠시 뒤 다시';
+    }
+  }
   const signIn = async () => { try { return await fa.signInWithEmailAndPassword(A, authEmail(cls, num, g0), authPw(pw)); } catch (e) { try { return await fa.signInWithEmailAndPassword(A, oldEmail(cls, num, g0), oldPw(pw)); } catch { throw e; } } }; // 정식 꼴 → 옛 베타 꼴
   try { const c = await signIn(); if (S.get<boolean>(`${accPath(cls, num)}/reset`) || S.get<string>(`${accPath(cls, num)}/uid`) !== c.user.uid) claim(S, cls, num, c.user.uid); return ready(S, cls, num); }
   catch (e) {

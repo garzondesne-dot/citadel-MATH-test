@@ -2,7 +2,7 @@
   import { CREDIT_NAME, showCredit } from '../channel';
   import { SUBJ } from '../engine/subject';
   import type { Store } from '../model/types';
-  import { CLASSES, enter, hasAccount, pupil, roster, saveLogin, type Pupil } from '../school/school';
+  import { CLASSES, enter, hasAccount, NEED_NEW_PIN, pupil, roster, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
   import { bgm } from './bgm';
   import { onDestroy } from 'svelte';
@@ -18,28 +18,30 @@
   let cls = $state('');
   let num = $state(0);
   let join = $state(false);
+  let npin = $state(false); // 🔑 선생님 0000 초기화 뒤 = 새 비밀번호 4자리 (pw2 칸을 씀)
   let pw = $state('');
   let pw2 = $state('');
   let pad = $state<0 | 1 | 2>(0); // 키패드: 0 닫힘 · 1 비밀번호 · 2 한 번 더
   let err = $state('');
   let more = $state(false);
   const who = $derived(cls && num ? pupil(cls, num, S) : null);
-  const ready = $derived(!!who && pw.length === 4 && (!join || pw2.length === 4));
+  const ready = $derived(!!who && pw.length === 4 && (!(join || npin) || pw2.length === 4));
   $effect(() => { if (who && !join && !hasAccount(S, who.cls, who.num)) join = true; });
   function key(k: string) {
     err = '';
     const cur = pad === 2 ? pw2 : pw, next = k === '⌫' ? cur.slice(0, -1) : cur.length < 4 ? cur + k : cur;
     if (pad === 2) pw2 = next; else pw = next;
-    if (next.length === 4 && k !== '⌫') pad = join && pad === 1 && pw2.length < 4 ? 2 : 0;
+    if (next.length === 4 && k !== '⌫') pad = (join || npin) && pad === 1 && pw2.length < 4 ? 2 : 0;
   }
   let busy = $state(false);
   async function go() {
     if (!who || busy) return;
-    busy = true; const e = await enter(S, who.cls, who.num, pw, pw2, join); busy = false; // 🔌 시험 서버면 Firebase 로그인 (#137)
-    if (e) { err = e; pw = ''; pw2 = ''; return; }
+    busy = true; const e = await enter(S, who.cls, who.num, pw, pw2, join, npin ? pw2 : undefined); busy = false; // 🔌 시험 서버면 Firebase 로그인 (#137)
+    if (e === NEED_NEW_PIN) { npin = true; pw2 = ''; err = '🔑 선생님이 0000 으로 바꿨어요 · 새 비밀번호 4자리를 정해요'; pad = 2; return; }
+    if (e) { err = e; if (npin) pw2 = ''; else { pw = ''; pw2 = ''; } return; }
     saveLogin(who); onin(who, join);
   }
-  const why = $derived(!cls ? '반을 골라요' : !num ? '번호를 골라요' : pw.length < 4 ? '비밀번호 4자리를 눌러요' : join && pw2.length < 4 ? '비밀번호를 한 번 더' : '');
+  const why = $derived(!cls ? '반을 골라요' : !num ? '번호를 골라요' : pw.length < 4 ? '비밀번호 4자리를 눌러요' : npin && pw2.length < 4 ? '새 비밀번호 4자리' : join && pw2.length < 4 ? '비밀번호를 한 번 더' : '');
 </script>
 
 <div class="title" style:background-image="url({ART})">
@@ -47,13 +49,13 @@
   <form class="form" onsubmit={(e) => { e.preventDefault(); if (ready) go(); }}>
     <div class="row">
       <label class="sel"><span class="sr">반</span>
-        <select bind:value={cls} onchange={() => { num = 0; pw = ''; pw2 = ''; err = ''; join = false; }}>
+        <select bind:value={cls} onchange={() => { num = 0; pw = ''; pw2 = ''; err = ''; join = false; npin = false; }}>
           <option value="" disabled>반 ▾</option>
           {#each CLASSES as c (c)}<option value={c}>{c}반</option>{/each}
         </select>
       </label>
       <label class="sel"><span class="sr">번호</span>
-        <select bind:value={num} disabled={!cls} onchange={() => { pw = ''; pw2 = ''; err = ''; join = false; }}>
+        <select bind:value={num} disabled={!cls} onchange={() => { pw = ''; pw2 = ''; err = ''; join = false; npin = false; }}>
           <option value={0} disabled>번호 ▾</option>
           {#each cls ? roster(cls, S) : [] as p (p.num)}<option value={p.num}>{p.num}번</option>{/each}
         </select>
@@ -63,14 +65,14 @@
     <button type="button" class="pw" class:on={pad === 1} disabled={!who} aria-label="비밀번호 4자리 {pw.length}자리 눌렀음" onclick={() => (pad = 1)}>
       {#each [0, 1, 2, 3] as i (i)}<i class:fill={pw.length > i}>{pw.length > i ? '●' : ''}</i>{/each}
     </button>
-    {#if join && who}
-      <button type="button" class="pw" class:on={pad === 2} aria-label="비밀번호 한 번 더 {pw2.length}자리" onclick={() => (pad = 2)}>
-        {#each [0, 1, 2, 3] as i (i)}<i class:fill={pw2.length > i}>{pw2.length > i ? '●' : ''}</i>{/each}<small>한 번 더</small>
+    {#if (join || npin) && who}
+      <button type="button" class="pw" class:on={pad === 2} data-k={npin ? 'newpin' : null} aria-label="{npin ? '새 비밀번호' : '비밀번호 한 번 더'} {pw2.length}자리" onclick={() => (pad = 2)}>
+        {#each [0, 1, 2, 3] as i (i)}<i class:fill={pw2.length > i}>{pw2.length > i ? '●' : ''}</i>{/each}<small>{npin ? '새 비밀번호' : '한 번 더'}</small>
       </button>
     {/if}
     {#if err}<p class="err" role="alert">{err}</p>{/if}
     <div class="links">
-      <button type="button" class="lk" onclick={() => { join = !join; pw = ''; pw2 = ''; err = ''; }}>{join ? '가입했어요 · 로그인' : '처음이에요 · 가입'}</button>
+      <button type="button" class="lk" onclick={() => { join = !join; npin = false; pw = ''; pw2 = ''; err = ''; }}>{join ? '가입했어요 · 로그인' : '처음이에요 · 가입'}</button>
       <button type="button" class="lk" onclick={() => (more = true)}>교사 · 종합실 ›</button>
     </div>
   </form>
@@ -81,7 +83,7 @@
 {#if pad}
   <div class="padbg" role="presentation" onclick={() => (pad = 0)}></div>
   <div class="pad" role="group" aria-label="숫자 키패드">
-    <p class="padt">{pad === 2 ? '비밀번호 한 번 더' : '비밀번호 4자리'} <span>{'●'.repeat((pad === 2 ? pw2 : pw).length)}{'○'.repeat(4 - (pad === 2 ? pw2 : pw).length)}</span></p>
+    <p class="padt">{pad === 2 ? (npin ? '새 비밀번호 4자리' : '비밀번호 한 번 더') : '비밀번호 4자리'} <span>{'●'.repeat((pad === 2 ? pw2 : pw).length)}{'○'.repeat(4 - (pad === 2 ? pw2 : pw).length)}</span></p>
     <div class="keys">
       {#each ['1', '2', '3', '4', '5', '6', '7', '8', '9', '닫기', '0', '⌫'] as k (k)}
         <button type="button" class:aux={k === '닫기' || k === '⌫'} onclick={() => (k === '닫기' ? (pad = 0) : key(k))}>{k}</button>

@@ -46,7 +46,14 @@ const B = 'http://localhost:4173/', E = 'emu=127.0.0.1';
   const p3 = await phone(); await toTitle(p3); await enter(p3, 3, '1234'); const m3 = await errText(p3);
   ok('③ 초기화 뒤 옛 4자리 → 「0000 으로」 안내', !(await inCamp(p3)) && /0000/.test(m3), m3);
   await p3.reload(); await p3.waitForTimeout(1500); await enter(p3, 3, '0000');
-  ok('③ 0000 → 캠프 · 기록 · 💎 그대로', (await inCamp(p3)) && (await p3.evaluate(() => document.body.innerText.includes('21'))), JSON.stringify({ reset: await rest('accounts/1-3/3/reset') }));
+  const m3b = await errText(p3); ok('③ 0000 → 「새 비밀번호 4자리를 정해요」 (정식 그대로)', !(await inCamp(p3)) && /새 비밀번호/.test(m3b) && !!(await p3.$('[data-k="newpin"]')), m3b);
+  for (const k of '0000') await p3.click(`.pad button:text-is("${k}")`); await p3.click('.title .act .pmain'); await p3.waitForTimeout(2500);
+  ok('③ 새 비밀번호 0000 = 안 됨', !(await inCamp(p3)) && /0000 말고/.test(await errText(p3)), await errText(p3));
+  await p3.click('[data-k="newpin"]'); for (const k of '5678') await p3.click(`.pad button:text-is("${k}")`); await p3.click('.title .act .pmain'); await p3.waitForTimeout(3500);
+  { const fh = await p3.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await p3.waitForTimeout(1200); } }
+  ok('③ 새 4자리 → 캠프 · 기록 · 💎 그대로', (await inCamp(p3)) && (await p3.evaluate(() => document.body.innerText.includes('21'))), JSON.stringify({ reset: await rest('accounts/1-3/3/reset') }));
+  const p3b = await phone(); await toTitle(p3b); await enter(p3b, 3, '0000'); ok('③ 다른 폰 · 0000 = 안 됨 (이미 새 비밀번호)', !(await inCamp(p3b)), await errText(p3b));
+  await p3b.reload(); await p3b.waitForTimeout(1500); await enter(p3b, 3, '5678'); ok('③ 다른 폰 · 새 4자리 = 캠프', await inCamp(p3b));
   // 옛 폰(p0)은 이제 다른 로그인 → 새로 고침하면 「로그인 풀림」 (정식도 초기화 뒤 다시 로그인)
   await p0.reload(); await p0.waitForTimeout(4500); log('   (참고) 초기화 전 로그인한 폰 새로 고침 →', (await inCamp(p0)) ? '캠프' : '첫 화면 · 다시 로그인');
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
