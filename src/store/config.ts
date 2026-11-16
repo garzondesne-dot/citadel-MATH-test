@@ -31,15 +31,18 @@ export async function chooseStore(): Promise<{ S: Store; where: Where }> {
   let cfg: ServerJson = { mode: 'device' };
   // 내 컴퓨터(localhost) = 늘 이 기기 (개발 · 시험이 진짜 서버에 닿지 않게) · ?server=on 이면 그래도 서버
   const local = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && q.get('server') !== 'on';
+  // 📦 (📜 2026-11-16 로딩 줄이기) 서버 묶음(Firebase)을 server.json 받는 동안 같이 받기 시작 (차례로 기다리지 않게 · 주소가 이 기기면 안 받음)
+  const srv = emu || !local ? import('./server') : null;
+  void srv?.catch(() => null);
   if (!emu && !local) { try { const r = await fetch(`./server.json?t=${Date.now()}`, { cache: 'no-store' }); if (r.ok) cfg = (await r.json()) as ServerJson; } catch { /* 없음 = 이 기기 */ } }
   if (emu) {
-    const { serverStore } = await import('./server');
+    const { serverStore } = await (srv ?? import('./server'));
     const S = await serverStore({ firebase: { apiKey: 'demo-key', projectId: 'demo-citadel-test', databaseURL: `http://${emu}:9000/?ns=demo-citadel-test-default-rtdb`, authDomain: 'demo-citadel-test.firebaseapp.com' }, emulator: { host: emu, db: 9000, auth: 9099 } });
     return { S, where: { kind: 'emulator', label: '🔌 시험 서버(에뮬레이터)' } };
   }
   if (cfg.mode === 'server' && cfg.firebase) {
     if (isForbidden(cfg.firebase)) return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `운영 서버(${cfg.firebase.projectId}) 설정이라 연결하지 않았어요 · server.json 을 시험 프로젝트로 바꿔 주세요` } };
-    const { serverStore } = await import('./server');
+    const { serverStore } = await (srv ?? import('./server'));
     try { const S = await serverStore({ firebase: cfg.firebase }); const off = /operation-not-allowed|admin-restricted/.test(S.anonErr || ''); return { S, where: { kind: 'server', label: BETA ? '🔌 시험 서버' : '☁ 서버', ...(off ? { blocked: AUTH_OFF } : {}) } }; }
     catch (e) { return { S: deviceStore(), where: { kind: 'device', label: '이 기기', blocked: `시험 서버에 닿지 못했어요 (${(e as Error).message})` } }; }
   }
