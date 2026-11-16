@@ -10,6 +10,7 @@ import { summaryOf, perfectsOf, wonOf, bossFullOf } from '../src/school/records'
 import { buysOf } from '../src/store/me.svelte';
 import { maskName } from '../src/school/school';
 import { roleOf } from '../src/board/team';
+import { noteHelp } from '../src/school/help';
 
 describe('🔁 정식 칸 꼴 (#163 ③)', () => {
   it('수업 기록 = mons o · f · x · n · bossM · boss · bossN (정식 result.js summary 꼴)', () => {
@@ -27,6 +28,15 @@ describe('🔁 정식 칸 꼴 (#163 ③)', () => {
     expect(perfectsOf(a)).toBe(1); expect(wonOf(a)).toBe(false);
     expect(perfectsOf({ mons: { m1: { perfect: true }, m2: { perfect: false } } })).toBe(1); // 옛 v1.0 꼴도
     expect(bossFullOf({ boss: 3, bossN: 3 })).toBe(true); expect(bossFullOf({ boss: { ok: 6, items: 6 } })).toBe(true);
+  });
+  it('💡 도움 연 칸 수 · 단계별 = 수업 끝 기록 hints · help (📜 2026-11-17 미래교육상 ① · 옛 💡 힌트 한 장 = 1단 칸)', () => {
+    const L = packOf('set-06')!, S: Store = { ...memoryStore(), kind: 'memory' };
+    openRoom(S, L, 'R2', PROFILES.test); heartbeat(S, 'R2', 'a', 1, '가'); heartbeat(S, 'R2', 'b', 2, '나');
+    noteHelp(S, 'R2', 'a', 'm1', 0, 1); noteHelp(S, 'R2', 'a', 'm1', 0, 3); noteHelp(S, 'R2', 'a', 'm1', 1, 2); noteHelp(S, 'R2', 'a', 'm2', 'c', 1); noteHelp(S, 'R2', 'a', 'm1', 0, 1);
+    const R = S.get<Room>(roomPath('R2')) as Room;
+    const a = summaryOf(L, R, 'a', 'R2', S.now()) as ReturnType<typeof summaryOf> & { hints?: number; help?: number[] }, b = summaryOf(L, R, 'b', 'R2', S.now()) as typeof a;
+    expect(a.hints).toBe(3); expect(a.help).toEqual([3, 2, 1]);
+    expect(b.hints).toBeUndefined(); expect(b.help).toBeUndefined(); // 안 연 학생 = 칸 없음(빈칸 · 0 을 지어내지 않음)
   });
   it('💎 buy: 정식 { 물건: 시각 } = 경제 0판으로 읽음 · v1.0 목록은 그대로', () => {
     expect(buysOf({ buy: { h7: 100, fx2: 200 } })).toEqual({ buys: [{ id: 'h7', ver: 0, at: 100 }, { id: 'fx2', ver: 0, at: 200 }], ver: 0 });

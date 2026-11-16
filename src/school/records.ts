@@ -3,6 +3,7 @@
 //   bossM = 형성평가 문항마다 'o · x · - · n' 한 줄 · boss = 맞힌 문항 수(체력 문항까지) · bossN = 체력 문항 수 · won = 보스 처치
 //   더한 칸(정식에 없음 · 정식 앱은 무시): right · total = 맞힌 소문제 / 전체 (📋 게시판 수호자 기준) · loot · firstXp 는 있던 값 그대로
 import { ccRecord } from './cc';
+import { helpCount } from './help';
 import type { LessonPack, Room } from '../model/types';
 import { activeIds, bossHp, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
@@ -47,6 +48,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
     out.won = !!bossHp(L, R, now).won;
   }
   { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)
+  { const h = helpCount(R, uid); if (h.hints) Object.assign(out, { hints: h.hints, help: h.help }); } // 💡 도움 연 칸 수 · 단계별 (📜 2026-11-17 미래교육상 ① · 옛 정식 hints 칸 · 성적 아님 · 대시보드 「💡 힌트」 · 엑셀 「그림 힌트(소문제)」)
   if (prev?.loot) out.loot = prev.loot;
   if (prev?.firstXp) out.firstXp = prev.firstXp;
   return mergeRow(prev, out);

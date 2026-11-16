@@ -5,6 +5,7 @@
   import { gaugeView } from './battle/gauge';
   import BossForm from './q/BossForm.svelte';
   import { V4 } from '../raid/raid';
+  import { noteHelp } from '../school/help';
   import { feat } from '../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Store } from '../model/types';
@@ -321,9 +322,9 @@
         {#if step.kind === 'boss'}
           {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} {cls} {num} demo={cardOnly} photo={!board} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} {cls} {num} demo={cardOnly} photo={!board} onhint={cptId && !cardOnly ? () => { cpt = true; noteHelp(S, code, uid, mid, 'c', 1); } : undefined} />
         {:else if mid}
-          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => (cpt = true) : undefined} />
+          <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => { cpt = true; noteHelp(S, code, uid, mid, 'c', 1); } : undefined} />
         {/if}
       {/key}
       {#if atkOn && atk && paperOn()}

@@ -26,7 +26,7 @@ export function helpOf(L: LessonPack, mid: string, i: number, q: Question | null
 }
 const ck = (s: string) => s.replace(/[.#$/[\]]/g, '_');
 /** 연 단계 기록 (가장 높이 연 것만 · 덮어쓰기 없음) */
-export function noteHelp(S: Store, code: string, uid: string, mid: string, i: number, stage: number): void {
+export function noteHelp(S: Store, code: string, uid: string, mid: string, i: number | 'c', stage: number): void { // i = 'c' = 옛 💡 힌트 한 장(개념 카드) = 1단과 같은 칸 (📜 2026-11-17)
   const p = `rooms/${code}/players/${uid}/hp/${ck(`${mid}_${i}`)}`, had = Number(S.get<number>(p)) || 0;
   if (stage > had) S.set(p, stage);
 }
@@ -64,3 +64,10 @@ export function stepReview(S: Store, code: string, L: LessonPack, R: Room, now =
 }
 /** 🧱 「n칸 3명 막힘」 띠의 📊 고비 보기 = 바로 그 몬스터 고비 장 (시계 멈춤 같음) */
 export function openGobi(S: Store, code: string, mid: string): void { S.set(`rooms/${code}/state/review`, { mid, i: -2, k: 0 }); setDemo(S, code, true); }
+
+/** 📊 수업 끝 기록 💡 (📜 2026-11-17 미래교육상 ① · 옛 정식 records hints): 칸(몬스터 · 소문항)마다 연 가장 높은 단계 → [1단 이상 · 2단 이상 · 3단] 칸 수 · hints = 1단 이상(💡 연 칸 수 · 옛 💡 힌트 한 장 포함) */
+export function helpCount(R: Room, uid: string): { hints: number; help: [number, number, number] } {
+  const hp = ((R.players?.[uid] as { hp?: Record<string, number> } | undefined)?.hp) || {}, v = Object.values(hp).map(Number).filter((x) => x > 0);
+  const help: [number, number, number] = [v.filter((x) => x >= 1).length, v.filter((x) => x >= 2).length, v.filter((x) => x >= 3).length];
+  return { hints: help[0], help };
+}
