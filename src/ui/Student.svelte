@@ -1,6 +1,7 @@
 <script lang="ts">
   import { serverNow } from './clock.svelte';
   import { holdWake } from './wake.svelte';
+  import { keepScroll } from './keepScroll';
   import BossForm from './q/BossForm.svelte';
   import { V4 } from '../raid/raid';
   import { feat } from '../school/features.svelte';
@@ -248,7 +249,7 @@
 {:else if R && !board}
   <div class="gtop"><ModeSwitch /></div><!-- 📝 장면이 없는 화면(대기 · 개념 · 결과)에도 「게임 | 제출」 -->
 {/if}
-<section class="body" class:battle>
+<section class="body" class:battle use:keepScroll>
   {#if R?.state.closed && !result}
     <div class="bcard"><span class="lab acc">수업이 끝났어요</span><p class="muted">캠프로 돌아가요.</p></div>
     <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
