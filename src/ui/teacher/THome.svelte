@@ -79,6 +79,8 @@
   const ready = $derived(!!cls && !!L && (!isTest || !!tmode) && keyOk && !keyEdit);
   const modeOf = (m: TestMode | '') => TEST_MODES.find((x) => x.k === m);
   const summary = $derived(!ready || !L ? '' : isTest ? `🧪 ${L.no}차시 · ${modeOf(tmode)?.ic} ${modeOf(tmode)?.t} · 🤖 ${botN}명${tmode === 'remote' ? ` · 🔑 ${keyPick === 'fixed' ? fk : '새로'}` : ''}` : `${cls}반 · ${L.no}차시${carry ? ` · 📦 ${carry.ids.length}` : ''} · 🔑 ${keyPick === 'fixed' ? `${fk} 고정` : '수업마다 새로'}`);
+  // ⬇ 새 칸이 열리면 그 칸까지 저절로 내려감 (위에서 아래로 한 칸씩 · 작은 폰에서 아래 칸이 화면 밖에 열리지 않게)
+  $effect(() => { const k = `${cls}|${lessonId}|${tmode}|${keyEdit}`; if (!cls) return; void k; requestAnimationFrame(() => { const el = document.querySelector(lessonId ? '[data-k="summary"], [data-k="step3"]' : '.pk3'); el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }); });
   function go() { if (!L) return; openAsk = false; if (isTest) ontest(L, tmode as TestMode, botN, undefined, null, keyPick); else onopen(cls, L, undefined, carry, keyPick); }
 </script>
 
