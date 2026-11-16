@@ -10,6 +10,7 @@
   import Sprite from '../Sprite.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import { atkClock, atkTrack, bossHp, monsterHp, isChain } from '../../raid/raid';
+  import { tvHint } from '../../school/hintGive';
   import { gaugeView } from '../battle/gauge';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
   import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
@@ -275,6 +276,9 @@
   $effect(() => { (globalThis as { __arena?: unknown }).__arena = { mode, W, H, hp: hp ? `${hp.left} / ${hp.max}` : '', hpName: hpLabel, names: heroes.map((h) => `${h.ok ? '✓ ' : ''}${h.name}`), box: arenaBox(W, H, boss, split, vis), party: partyLayout(heroes.length, W, H, split) }; });
 
   const slots = $derived(partyLayout(heroes.length, W, H, split));
+  // 💡 친구 힌트 말풍선 (📜 2026-11-17 #23 · 옛 정식 hall.js h-hint): 근거 줄마다 처음 준 1명 용사 머리 위 「💡 ○○의 힌트」 + 근거 문장 + 👍 +n (용사를 못 찾으면 왼쪽 위)
+  const tvh = $derived(step?.kind === 'monster' && isChain(L, R, step.id) ? tvHint(L, R, step.id) : null);
+  const tvhAt = $derived.by(() => { if (!tvh) return null; const k = heroes.findIndex((h) => h.u === tvh.uid), sl = k >= 0 ? slots[k] : null; return sl ? { x: sl.x, y: sl.y - 74 * (sl.s || 1), on: true } : { x: W * 0.16, y: H * 0.12, on: false }; });
   const vis = $derived.by(() => { try { const sp = spriteOf(sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } });
   const box = $derived(arenaBox(W, H, boss, split, vis));
   // 🐾 소레이드 졸개 (📜 2026-11-16 선생님 b13 「종합실에서 졸개들이 구현 안 되어 있음 · 학생 폰은 구현」 · 옛 정식 hall.js minionTags): 대장 앞 졸개 줄 · 이름표 「졸개 n」 + 반 체력(넘은 학생 / 기준) · 기준을 넘으면 쓰러짐 + 「💥 졸개 ① 쓰러짐!」
@@ -303,6 +307,7 @@
     {/if}{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
+  {#if tvh && tvhAt && W}{#key `${tvh.s}|${tvh.uid}|${tvh.more}`}<div class="hhint" class:free={!tvhAt.on} data-k="tv-hint" style:left="{tvhAt.x}px" style:top="{tvhAt.y}px"><b>💡 {tvh.nick}의 힌트</b><span>{tvh.text}</span>{#if tvh.more}<i>👍 +{tvh.more}</i>{/if}</div>{/key}{/if}
   {#if W && step && mins.length}{@const sz = box.mon.size * 0.3}{@const gap = sz * 1.35}<div class="mins" data-k="tv-minions">{#each mins as m (m.k)}<div class="mn" class:down={m.down} style:left="{box.mon.cx + (m.k - (mins.length - 1) / 2) * gap - sz / 2}px" style:top="{box.mon.top + box.mon.size * 1.02 - sz}px" style:width="{sz}px"><span class="mtag"><b>졸개{m.k + 1}</b><span class="mbar"><i style:width="{m.max ? (m.left / m.max) * 100 : 100}%"></i></span></span><Sprite ref={sprite} pose={m.down ? 'down' : 'idle'} size={sz} /></div>{/each}</div>{/if}
   {#if W && gauge}<div class="agauge" class:hot={gauge.hot} class:blue={gauge.blue} data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
   {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
@@ -334,6 +339,10 @@
   .art.iced :global(.hs) { filter: saturate(0.6) brightness(1.15) hue-rotate(160deg) sepia(0.15); }
   .iceb { position: absolute; left: 22%; right: 22%; top: 6%; bottom: 0; clip-path: polygon(18% 0, 62% 3%, 92% 14%, 100% 46%, 94% 82%, 70% 100%, 26% 98%, 4% 80%, 0 40%, 6% 12%); background: linear-gradient(135deg, rgba(225, 248, 255, 0.55), rgba(150, 210, 240, 0.35) 45%, rgba(190, 235, 255, 0.5)); box-shadow: inset 0 0 10px #fff; }
   .iceb.melt { animation: imelt 0.6s ease-in forwards; } @keyframes imelt { to { opacity: 0; transform: translateY(4px); } }
+  .hhint { position: absolute; z-index: 60; transform: translate(-50%, -100%); max-width: 34cqw; padding: 0.8cqh 1.2cqw; border-radius: 1.4cqh; background: #fff8e1; color: #2a1d05; box-shadow: 0 0.6cqh 1.6cqh rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 0.3cqh; font-size: var(--tv-small, 1.8cqh); animation: hpop 0.3s ease-out; pointer-events: none; }
+  .hhint.free { transform: none; } .hhint b { color: #b45309; } .hhint span { font-size: var(--tv-body, 2.4cqh); font-weight: 700; } .hhint i { font-style: normal; align-self: flex-end; color: #1f5d3a; font-weight: 800; }
+  .hhint:not(.free)::after { content: ''; position: absolute; left: 50%; bottom: -1cqh; border: 1cqh solid transparent; border-top-color: #fff8e1; border-bottom: 0; transform: translateX(-50%); }
+  @keyframes hpop { from { transform: translate(-50%, -100%) scale(0.6); opacity: 0; } }
   .hr { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; transition: translate 0.18s ease-out; }
   .hr.lunge { translate: calc(var(--dir) * 4cqw) 0; }
   /* 📶 끊긴 학생 = 투명하게 하지 않음 (📜 2026-11-17 「끊긴학생 투명화 막아」) · 이름표 📶✕ 만 */

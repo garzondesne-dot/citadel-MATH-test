@@ -7,11 +7,12 @@
 //   🎁 첫 출정 = 다른 차시 기록 없고 이 차시도 처음 → 다음 레벨까지 EXP (최소 40 · 정식 parts.first · 기록 firstXp)
 //   (아직 안 옮김: 🔥 연습 사슬 · 💡 힌트 EXP — HANDOVER 메모)
 import type { LessonPack, Room } from '../model/types';
+import { hgOf } from './hintGive';
 import { bossHp, bossState, chainRecord, isChain, mastery, plainRecord } from '../raid/raid';
 
 export const G = { join: 4, solvedMax: 12, perfect: 6, bossPerfect: 6, level5: 6, dayCap: 100, streak: { 3: 4, 5: 6, 10: 12 } as Record<number, number> } as const;
-export const XP = { first: 1, join: 10, submit: 2, correct: 2, fixed: 0, bossWin: 10, perfect: 5 } as const;
-export type Parts = { first?: number; join: number; submit: number; correct: number; fixed: number; bossWin: number; perfect: number };
+export const XP = { first: 1, join: 10, submit: 2, correct: 2, fixed: 0, bossWin: 10, perfect: 5, hintGive: 1 } as const; // 💡 hintGive = 친구에게 힌트 1번마다 +1 (📜 #23 · 옛 정식 grow.js 그대로)
+export type Parts = { first?: number; join: number; submit: number; correct: number; fixed: number; bossWin: number; perfect: number; hintGive?: number };
 const XP_MAX = 300;
 const xpSum = (p: Parts) => (Object.keys(XP) as (keyof Parts)[]).reduce((a, k) => a + XP[k] * (Number(p[k]) || 0), 0);
 /** 정식 Grow.add0: 한 수업 EXP 최대 300 (🎁 첫 출정 포함) */
@@ -52,7 +53,8 @@ export function partsOf(L: LessonPack, R: Room, uid: string, now: number): { par
     bossWin = bossHp(L, R, now).won && tried ? 1 : 0;
     perfect = mast.length > 0 && mast.every(Boolean) ? 1 : 0;
   }
-  return { parts: { join: 1, submit, correct: best + mast.filter(Boolean).length, fixed, bossWin, perfect }, perfects };
+  const hintGive = hgOf(R, uid);
+  return { parts: { join: 1, submit, correct: best + mast.filter(Boolean).length, fixed, bossWin, perfect, ...(hintGive ? { hintGive } : {}) }, perfects };
 }
 
 /** 받을 것 (키 → 💎 · 한도 안?) · EXP · ctx = 이 수업을 저장하기 전 내 기록 · 그 반 held · 차시 목록 · 지금 EXP (없으면 연속 · 첫 출정 안 셈) */

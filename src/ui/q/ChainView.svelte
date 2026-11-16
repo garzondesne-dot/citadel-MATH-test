@@ -13,7 +13,8 @@
   import { untrack } from 'svelte';
   import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
-  import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed, stone } from '../../raid/raid';
+  import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed, stone, whyStages } from '../../raid/raid';
+  import { giveHint, hintLines, hintState } from '../../school/hintGive';
   import { chainSubmit, heartRelease, petriAward, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -34,6 +35,12 @@
   const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
   $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const rec = $derived(chainRecord(L, R, mid, uid));
+  // 💡 친구에게 힌트 주기 (📜 2026-11-17 #23 · 옛 정식 #26 · #52 ②): 근거 줄을 맞힌 학생만 · 줄마다 한 번 · EXP +1 · TV 첫 1명 말풍선 · 풀고 있는 친구 = 「💡 친구 힌트 n개」
+  const hs = $derived(hintState(L, R, mid, uid));
+  const fh = $derived(hintLines(L, R, mid, uid));
+  const fhN = $derived(fh.reduce((a, x) => a + x.by.length, 0));
+  const nick = (u: string) => (R.players?.[u] as { nick?: string } | undefined)?.nick || '친구';
+  function doHint() { if (hs.next == null) return; const r = giveHint(S, L, R, code, mid, uid, hs.next); toast = r.ok ? '💡 힌트를 줬어요 · 종합실에 떠요 · EXP +1' : r.why; setTimeout(() => (toast = ''), 2400); }
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   let pracPass = $state<number | null>(null);
   const prac = $derived(rec.done && pracPass != null);
@@ -144,6 +151,7 @@
   <div class="bcard">
     <div class="okline"><span class="ic" aria-label="맞음">{pFail ? '✘' : '✔'}</span><span><b>{pFail ? '이번 연습 판은 기회를 다 썼어요' : pDone ? '연습 사슬 완성!' : rec.perfect ? '퍼펙트 사슬!' : '대장 처치!'}</b><span>{prac ? '데미지 없음 · 수업 기록 그대로' : `데미지 ${rec.best}`}</span></span></div>
     <div class="story"><b>📜 나의 풀이</b><ol>{#each pFail ? pItems.map((x) => x.say || '') : says as t, k (k)}<li>{t}</li>{/each}</ol></div>
+    {#if hs.next != null}<button type="button" class="hgive" data-k="hint-give" onclick={doHint}>💡 힌트 주기{hs.lines > 1 ? ` (근거 줄 ${whyStages(rec.items).indexOf(hs.next) + 1})` : ''}<small>근거 한 줄이 종합실에 떠요 · 줄마다 한 번 · EXP +1</small></button>{:else if hs.gave}<p class="hgave" data-k="hint-gave">💡 친구에게 힌트를 줬어요</p>{/if}
     {#if !v4}<p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>{/if}
   </div>
   {#if canPhoto && !pFail}<div class="wrrow">{@render wrBtn()}</div>{/if}
@@ -151,6 +159,7 @@
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />
 {:else}
+  {#if fhN && !rec.done}<details class="fhints" data-k="friend-hints"><summary>💡 친구 힌트 {fhN}개 <small>(누르면 펼침)</small></summary>{#each fh as x (x.s)}<p class="fht">{x.text}</p><p class="fhb">{x.by.slice(0, 5).map(nick).join(' · ')}{x.by.length > 5 ? ` 외 ${x.by.length - 5}` : ''}</p>{/each}</details>{/if}
   {#if numTag && !prac}<p class="tagl"><span class="tag">{numTag}</span></p>{/if}
   {#if v4 && prac}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></p>{/if}
   <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} prev={rec.lastWrong?.given} prevAt={rec.nextK} hintKey={`${code}|${mid}|s${stage}`} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
@@ -200,6 +209,9 @@
 {#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={stage} help={helpNow} hand={handUp} start={helpStart} onclose={() => { helpOpen = false; helpStart = 1; }} />{/if}
 
 <style>
+  .hgive { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 52px; margin-top: 8px; border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface-2); color: var(--text); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .hgive small { font-size: 12px; font-weight: 500; color: var(--text-2); }
+  .hgave { margin: 8px 0 0; text-align: center; font-size: 13px; color: var(--text-2); }
+  .fhints { margin: 0 0 6px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--surface-2); font-size: 14px; } .fhints summary { font-weight: 800; cursor: pointer; } .fhints small { color: var(--text-3); font-weight: 500; } .fht { margin: 6px 0 0; } .fhb { margin: 0; font-size: 12px; color: var(--text-3); }
   .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); }
   .wr-card .hand { margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface-2); font-size: 15px; line-height: 1.5; }
   .wrrow { display: flex; justify-content: flex-end; }
