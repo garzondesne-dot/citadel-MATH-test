@@ -1,6 +1,13 @@
 import { TEST_ADDR } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
 import './oldUrl'; // 🔗 옛 정식 주소(?code= · &key=)를 지금 꼴로 · 키는 주소에서 곧바로 지움 (출시 막는 것 8)
 import { mount } from 'svelte';
+// 🔍 iOS 사파리는 user-scalable=no 를 무시 → 두 손가락 확대 · 두 번 톡 확대를 직접 막음 (📜 2026-11-16 선생님 「줌이 당겨짐 · 안 당겨지게」)
+if (typeof document !== 'undefined') {
+  const stop = (e: Event) => e.preventDefault();
+  for (const k of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(k, stop, { passive: false });
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  // 두 번 톡 확대 = CSS touch-action (빠른 숫자 두 번 누름은 그대로 들어가야 해서 touchend 는 막지 않음)
+}
 import App from './App.svelte';
 import { applyTheme, savedTheme } from './theme/theme';
 import { chooseStore } from './store/config';

@@ -44,6 +44,9 @@
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* 📱 당겨서 새로 고침 막기 (📜 2026-11-14 선생님 · 모든 판 공통): 바깥 = none · 안쪽 스크롤 칸 = contain (끝까지 내려도 바깥으로 안 번짐) · 새로 고침은 단추로만 */
 html, body { overscroll-behavior-y: none; }
+/* 🔍 확대 막기 (📜 2026-11-16 선생님 「두 손가락으로 당기면 줌이 당겨짐 · 안 당겨지게」 · 모든 판): 핀치 · 두 번 톡 확대 없음 · 스크롤만 (iOS 는 main.ts gesture 막기도) */
+html { touch-action: pan-x pan-y; }
+button, a, input, select, textarea, [role="button"] { touch-action: manipulation; }
 /* 🐞 b207 (선생님 「태블릿 대시보드 모든 창이 스크롤 틈 사이로만 터치 스크롤」): 예전 `* { overscroll-behavior-y: contain }` = overflow:hidden · 가로 스크롤 칸(표 · 막대 · 카드)까지 세로 끌기를 붙잡아 바깥 스크롤 칸으로 안 넘김 → 지움
    당겨서 새로 고침은 html · body 의 none 만으로 막힘(새로 고침은 맨 바깥 스크롤에서만 일어남) */
 /* 옛 이름 (b1~b3 화면) → 토큰 */
