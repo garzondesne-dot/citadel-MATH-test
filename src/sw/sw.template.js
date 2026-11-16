@@ -1,5 +1,5 @@
 /* 📲 모두의 던전 베타 · 서비스 워커 (#38 · vite.config.ts 가 빌드 때 판 번호 · 파일 목록을 넣음 · 직접 고치지 말 것)
- *  ① 미리 저장 = 첫 화면 · 엔진(CORE) · 판마다 새 칸(dgb-core-판) · 옛 판 칸은 지움
+ *  ① 미리 저장 = 첫 화면 · 엔진(CORE) · 판마다 새 칸(dgb-core-판) · 옛 판 칸은 지움 · 이름이 같은 엔진 조각(지문 hash 같음)은 옛 칸에서 옮겨 담음 = 새 판 때 바뀐 조각만 받음
  *  ② index.html · version.json · server.json = 늘 네트워크 먼저(안 되면 저장본) → 옛 판에 갇히지 않음
  *  ③ 그림 · 소리 · 배경음 · 글꼴 = 쓸 때 저장(dgb-media · 판이 바뀌어도 둠 · 그림을 바꾸면 파일 이름을 바꿈)
  *  ④ 다른 곳(Firebase · 구글) · GET 아닌 것 = 손대지 않음 */
@@ -10,7 +10,11 @@ const scopeUrl = new URL(self.registration.scope);
 const rel = (u) => { const p = new URL(u).pathname; return p.startsWith(scopeUrl.pathname) ? p.slice(scopeUrl.pathname.length) : p; };
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CORE_CACHE).then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
+  // 📦 (📜 2026-11-16 로딩 줄이기) assets/ 의 js · css 는 파일 이름에 내용 지문(hash)이 있음 → 옛 판 칸에 같은 이름이 있으면 그대로 옮겨 담고 바뀐 조각만 받음
+  e.waitUntil(caches.open(CORE_CACHE).then((c) => Promise.all(CORE.map(async (u) => {
+    if (/^\.\/assets\/.+\.(js|css)$/.test(u)) { const old = await caches.match(new URL(u, self.registration.scope).href); if (old) return c.put(u, old); }
+    return c.add(new Request(u, { cache: 'reload' }));
+  }))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => (k.startsWith('dgb-core-') && k !== CORE_CACHE) || k.startsWith('ds-') /* 🚀 출시: 옛 정식 앱 저장(ds-citadel-* · ds-assets)도 지움 */).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
