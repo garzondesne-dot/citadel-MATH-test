@@ -10,11 +10,14 @@
   import { liveValue } from '../room.svelte';
   import PupilSheet from './PupilSheet.svelte';
   import Dash from './Dash.svelte';
+  import SchedTab from './SchedTab.svelte';
   import { schoolInfo } from '../../school/features.svelte';
 
   // 👥 학생 탭 (#124 ⑯ · 스크롤 A = 위 막대 · 반 칩 · [명단 · 대시보드] 고정 + 가운데 목록만 넘김)
   //   명단 = 3칸 격자(번호 · 이름 · Lv · 오늘 결석 흐림 · 막힘 많음 금빛 테) · 번호 누름 = 학생 한 명 시트 · 오른쪽 위 「＋ 명단」 = 붙여넣기
-  const { S, ondash }: { S: Store; ondash?: (on: boolean) => void } = $props();
+  const { S, ondash, now = Date.now() }: { S: Store; ondash?: (on: boolean) => void; now?: number } = $props();
+  // 👥 반 · 시간표 (📜 2026-11-16 DECISIONS 「📋 교사 준비 탭 2개」): 위 탭 = 👥 학생 · 📅 시간표(옛 준비 탭 시간표 · 자리만)
+  let top = $state<'stu' | 'sched'>((() => { try { return new URLSearchParams(location.search).get('sub') === 'sched' ? 'sched' : 'stu'; } catch { return 'stu'; } })());
   let cls = $state('1-3');
   let seg = $state<'list' | 'dash'>('list');
   let who = $state<Stud | null>(null);
@@ -43,7 +46,11 @@
 </script>
 
 <svelte:window bind:innerWidth={iw} />
-<div class="tbar"><div class="t">학생</div><button type="button" class="tlink plus" data-k="roster-open" onclick={openPaste}>＋ 명단</button></div>
+<div class="tbar"><div class="t">반 · 시간표</div>{#if top === 'stu'}<button type="button" class="tlink plus" data-k="roster-open" onclick={openPaste}>＋ 명단</button>{/if}</div>
+<div class="toptab" role="tablist" aria-label="반 · 시간표"><button type="button" role="tab" data-k="top-stu" class:on={top === 'stu'} aria-selected={top === 'stu'} onclick={() => (top = 'stu')}>👥 학생</button><button type="button" role="tab" data-k="top-sched" class:on={top === 'sched'} aria-selected={top === 'sched'} onclick={() => { top = 'sched'; seg = 'list'; }}>📅 시간표</button></div>
+{#if top === 'sched'}
+  <div class="mid scroll"><SchedTab {S} {now} /></div>
+{:else}
 <div class="fixed">
   <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow] : clsNow as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
   <div class="segrow"><div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>{#if seg === 'dash'}<button type="button" class="xlb" onclick={() => (xl = true)}>⬇ 엑셀</button>{/if}</div>
@@ -62,6 +69,7 @@
   <Dash {S} {cls} {wide} bind:xl onpick={(s) => (who = s)} onclass={(c) => (cls = c)} />
 {/if}
 
+{/if}
 {#if who}<PupilSheet {S} s={who} onclose={() => (who = null)} />{/if}
 {#if paste}
   <Sheet onclose={() => (paste = false)}>
@@ -82,6 +90,7 @@
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
+  .toptab { display: flex; gap: 6px; margin: 0 0 8px; padding: 4px; border-radius: var(--r); background: var(--surface); } .toptab button { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 2px solid transparent; background: none; color: var(--text-2); font: 700 15px var(--font); } .toptab button.on { border-color: var(--accent); color: var(--text); }
   .pcl { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; } .pcl button { min-height: 44px; min-width: 56px; padding: 0 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); } .pcl button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); } .pcl .mk { color: var(--accent); border-style: dashed; }
   .mkrow { display: flex; gap: 8px; margin-bottom: 8px; } .mkrow .in { flex: 1; min-width: 0; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 600 15px var(--font); padding: 0 10px; } .btn.sm { min-height: 44px; padding: 0 16px; }
   .hint2.bad { color: var(--bad); } .dl { display: block; margin: 8px 0 0; background: none; border: 0; color: var(--text-3); font: 600 13px var(--font); text-decoration: underline; min-height: 44px; }
