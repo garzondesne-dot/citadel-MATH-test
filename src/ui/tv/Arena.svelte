@@ -187,6 +187,7 @@
   // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
   (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean, perfect?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now, perfect) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult, perfect }); else { queue.push({ u, dmg, kind, fx, ult, perfect }); play(); } };
   (globalThis as { __tvKill?: () => void; __tvJuice?: (on?: boolean) => boolean }).__tvKill = () => A?.armKill(); // 화면 시험 고리
+  (globalThis as { __tvHeroes?: () => Hero[] }).__tvHeroes = () => heroes.map((h) => ({ ...h })); // 🧪 레이드 줄 (끊김 시험)
   (globalThis as { __tvJuice?: (on?: boolean) => boolean; __tvJuiceStats?: () => unknown }).__tvJuice = (on) => A?.juice(on) ?? false;
   (globalThis as { __tvJuiceStats?: () => unknown }).__tvJuiceStats = () => A?.juiceStats();
   // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음

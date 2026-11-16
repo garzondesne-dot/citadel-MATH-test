@@ -196,7 +196,8 @@ export function heartbeat(S: Store, code: string, uid: string, num: number, nick
   if (more?.x != null) S.set(`${base}/x`, more.x || null);
 }
 export function leave(S: Store, code: string, uid: string): void {
-  S.set(`${roomPath(code)}/players/${uid}`, null);
+  // 📵 (📜 2026-11-16 선생님 「학생들이 접속이 끊기면 레이드 표시에서 사라진 점」): 화면을 떠나도(앱 전환 · 탭 닫기 · 잠금) 지우지 않고 「끊김」만 = seen 0 → TV 레이드 줄에 흐리게 + 📵 · 다시 들어오면 그대로
+  S.set(`${roomPath(code)}/players/${uid}/seen`, 0);
 }
 
 /** 몬스터 답 내기: 기회가 남아 있을 때만 · 시도 번호 = 지금까지 낸 수 */
