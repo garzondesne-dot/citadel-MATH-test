@@ -11,13 +11,20 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   // 교사 폰: 알림 허락 + showNotification 기록
   const tc = await b.newContext({ viewport: { width: 390, height: 844 } }); await tc.grantPermissions(['notifications'], { origin: B.replace(/\/$/, '') });
   // 헤드리스 크로미움 = 허락해도 Notification.permission 이 늘 denied → 시험에서는 허락된 폰처럼
-  await tc.addInitScript(() => { Object.defineProperty(Notification, 'permission', { get: () => 'granted' }); Notification.requestPermission = async () => 'granted'; window.__notes = []; const P = ServiceWorkerRegistration.prototype; P.showNotification = function (t, o) { window.__notes.push({ t, b: o && o.body }); return Promise.resolve(); }; });
+  await tc.addInitScript(() => { Object.defineProperty(Notification, 'permission', { get: () => 'granted' }); Notification.requestPermission = async () => 'granted'; window.__notes = [];
+    // 헤드리스 = 푸시 서버 없음 → 받는 주소(구독)를 가짜로
+    PushManager.prototype.getSubscription = async function () { return window.__sub || null; }; PushManager.prototype.subscribe = async function () { window.__sub = { endpoint: 'https://push.example.invalid/abc', toJSON: () => ({ endpoint: 'https://push.example.invalid/abc', keys: { p256dh: 'x', auth: 'y' } }), unsubscribe: async () => { window.__sub = null; return true; } }; return window.__sub; }; const P = ServiceWorkerRegistration.prototype; P.showNotification = function (t, o) { window.__notes.push({ t, b: o && o.body }); return Promise.resolve(); }; });
   const t = await tc.newPage(); t.on('pageerror', (e) => errs.push('교사 ' + e));
   await t.goto(`${B}?role=teacher&${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
   await t.goto(`${B}?role=teacher&tab=me&${E}`); await t.waitForSelector('[data-k="note-go"]', { timeout: 20000 });
   await t.click('[data-k="note-go"]'); await t.click('[data-k="note-enable"]'); await t.waitForTimeout(500);
   ok('🔔 알림 켜기 → 켜짐 · 종류 스위치 4개', !!(await t.$('[data-k="note-on"]')) && (await t.$$('[data-k^="note-"][role="switch"]')).length === 5);
   await t.screenshot({ path: `${SHOTS}/note-set.png` });
+  await t.waitForTimeout(800); const tp = await rest('teacherPush');
+  const one = tp && Object.values(Object.values(tp)[0] || {})[0];
+  ok('🔔 받는 주소(구독) = teacherPush/{교사}/… · 켠 종류 같이', !!one && one.sub && one.sub.endpoint && one.kinds && one.kinds.login === true, JSON.stringify(one).slice(0, 160));
+  const anonP = await fetch('http://127.0.0.1:9000/teacherPush.json?ns=demo-citadel-test-default-rtdb').then((r) => r.status);
+  ok('teacherPush = 교사만 읽음 (규칙)', anonP === 401, `HTTP ${anonP}`);
   await t.click('[data-k="note-test"]'); await t.waitForTimeout(600);
   const n0 = await t.evaluate(() => window.__notes);
   ok('시험 알림 한 장', n0.length === 1, JSON.stringify(n0));

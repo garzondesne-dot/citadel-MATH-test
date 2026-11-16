@@ -145,7 +145,7 @@
 {:else if sheet === 'note'}
   <Sheet onclose={() => (sheet = '')}>
     {#snippet title()}🔔 알림 · 이 교사 폰{/snippet}
-    <NoteSet />
+    <NoteSet {S} />
   </Sheet>
 {:else if sheet === 'sound'}
   <Sheet onclose={() => (sheet = '')}>

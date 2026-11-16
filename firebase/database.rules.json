@@ -87,6 +87,7 @@
     "roster": { ".read": "auth != null && (root.child('admins/' + auth.uid).val() === true || auth.token.firebase.sign_in_provider === 'password')", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
     "rosterMask": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
     "tester": { ".read": "auth != null", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true" },
+    "teacherPush": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", "$uid": { ".write": "auth != null && auth.uid === $uid && root.child('admins/' + auth.uid).val() === true" } },
     "loginFail": { ".read": "auth != null && root.child('admins/' + auth.uid).val() === true", ".write": "auth != null && root.child('admins/' + auth.uid).val() === true", "$cls": { "$num": { "$t": { ".write": "auth != null && !data.exists()", ".validate": "newData.isNumber() && $num.matches(/^[0-9]{1,2}$/)" } } } },
     "accounts": {
       ".read": "auth != null",

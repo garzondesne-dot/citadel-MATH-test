@@ -90,3 +90,25 @@ export function watchTeacherNotes(S: Store, every = 20000): () => void {
   void tick();
   return () => { stop = true; clearInterval(iv); };
 }
+
+// ── 🔔 ② · ④ 앱을 닫아도 오는 알림 (웹 푸시) — 교사 폰이 「받는 주소(구독)」를 teacherPush/{교사 uid}/{주소 지문} 에 둠(교사만 읽고 씀)
+//   보내는 쪽(무료 중계 · 다음 단계)이 그 주소로 보냄 · kinds = 켜 둔 종류(중계가 거름) · VAPID 공개 열쇠는 공개값(비밀 열쇠는 저장소 밖)
+export const VAPID_PUBLIC = 'BHLbfxRkAOne6F2gfZMYrY0B9GeD5AqXrkLsKnmEPkSUs9VvCEZbsGoEznyjAix-LygAMty0tKAxA6MA7tz6NIk';
+const b64u = (s: string) => { const p = (s + '='.repeat((4 - (s.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/'); const r = atob(p); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
+const fp = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); };
+type PushStore = Store & { net?: { uid: string | null }; isAdmin?: () => boolean };
+/** 이 교사 폰을 받는 주소로 등록 · 켠 종류도 같이 (서버 · 교사 로그인 때만) — 돌려줌 = 됨 / 안 되는 까닭 */
+export async function syncPush(S: Store): Promise<string> {
+  const P = S as PushStore, uid = P.net?.uid;
+  if (S.kind !== 'server' || !uid || !P.isAdmin?.()) return '교사 로그인 뒤에 돼요';
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || typeof window === 'undefined' || !('PushManager' in window)) return '이 브라우저는 닫힌 앱 알림을 못 받아요';
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!notePref.on) { if (sub) { S.set(`teacherPush/${uid}/${fp(sub.endpoint)}`, null); await sub.unsubscribe().catch(() => null); } return '꺼짐'; }
+    sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(VAPID_PUBLIC) });
+    const kinds = Object.fromEntries(NOTE_KINDS.map((n) => [n.k, !!notePref[n.k]]));
+    S.set(`teacherPush/${uid}/${fp(sub.endpoint)}`, { sub: sub.toJSON(), kinds, at: S.now(), ua: navigator.userAgent.slice(0, 80) });
+    return '';
+  } catch (e) { return `등록하지 못했어요 (${String((e as Error).message || e).slice(0, 40)})`; }
+}

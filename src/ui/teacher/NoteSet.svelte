@@ -1,27 +1,31 @@
 <script lang="ts">
   // 🔔 교사 알림 설정 (📜 2026-11-16 · src/school/notify.svelte.ts) — 위 = 알림 켜기(브라우저 허락) · 아래 = 종류별 스위치 4개 · 시험 알림 한 장
   //   ① 단계 = 교사 앱이 열려 있을 때(막 내린 때 포함) · 앱을 닫아도 오는 알림은 다음 단계(무료 중계)
-  import { enableNotes, NOTE_KINDS, notePerm, notePref, notify, setNotePref } from '../../school/notify.svelte';
+  import { enableNotes, NOTE_KINDS, notePerm, notePref, notify, setNotePref, syncPush } from '../../school/notify.svelte';
+  import type { Store } from '../../model/types';
+  const { S }: { S: Store } = $props();
+  let push = $state('');
+  const sync = async () => { push = await syncPush(S); };
   let perm = $state(notePerm()), msg = $state('');
   const live = $derived(notePref.on && perm === 'granted');
-  async function turnOn() { const ok = await enableNotes(); perm = notePerm(); msg = ok ? '켜졌어요' : perm === 'denied' ? '이 폰에서 알림이 막혀 있어요 · 폰 설정 → 앱(브라우저) → 알림 허용' : perm === 'unsupported' ? '이 브라우저는 알림을 못 띄워요 · 홈 화면 앱으로 열어 주세요' : '허락하지 않았어요'; }
+  async function turnOn() { const ok = await enableNotes(); perm = notePerm(); void sync(); msg = ok ? '켜졌어요' : perm === 'denied' ? '이 폰에서 알림이 막혀 있어요 · 폰 설정 → 앱(브라우저) → 알림 허용' : perm === 'unsupported' ? '이 브라우저는 알림을 못 띄워요 · 홈 화면 앱으로 열어 주세요' : '허락하지 않았어요'; }
   async function test() { msg = (await notify('test', '🔔 시험 알림', '모두의 던전 선생님 알림이 이렇게 와요')) ? '시험 알림을 보냈어요' : '보내지 못했어요 · 알림을 먼저 켜 주세요'; }
 </script>
 
 <div class="ns" data-k="note-set">
   {#if live}
-    <button type="button" class="sw on main" role="switch" aria-checked="true" data-k="note-on" onclick={() => { setNotePref({ on: false }); msg = '꺼졌어요'; }}><span class="ic">🔔</span><b>알림 켜짐</b><span class="st">이 폰</span><i class="kn" aria-hidden="true"></i></button>
+    <button type="button" class="sw on main" role="switch" aria-checked="true" data-k="note-on" onclick={() => { setNotePref({ on: false }); msg = '꺼졌어요'; void sync(); }}><span class="ic">🔔</span><b>알림 켜짐</b><span class="st">이 폰</span><i class="kn" aria-hidden="true"></i></button>
   {:else}
     <button type="button" class="go" data-k="note-enable" onclick={turnOn}>🔔 알림 켜기</button>
   {/if}
   {#each NOTE_KINDS as n (n.k)}
-    <button type="button" class="sw" class:on={notePref[n.k]} role="switch" aria-checked={notePref[n.k]} data-k="note-{n.k}" disabled={!live} onclick={() => setNotePref({ [n.k]: !notePref[n.k] })}>
+    <button type="button" class="sw" class:on={notePref[n.k]} role="switch" aria-checked={notePref[n.k]} data-k="note-{n.k}" disabled={!live} onclick={() => { setNotePref({ [n.k]: !notePref[n.k] }); void sync(); }}>
       <span class="ic">{n.ic}</span><span class="tx"><b>{n.name}</b><small>{n.sub}</small></span><i class="kn" aria-hidden="true"></i>
     </button>
   {/each}
   {#if live}<button type="button" class="ghost" data-k="note-test" onclick={test}>시험 알림 한 장</button>{/if}
   {#if msg}<p class="msg" role="status">{msg}</p>{/if}
-  <small class="foot">교사 앱이 열려 있을 때 와요 · 알림 글에 학생 이름은 안 나와요 · 앱을 닫아도 오는 알림은 준비 중</small>
+  <small class="foot">교사 앱이 열려 있을 때 와요 · 알림 글에 학생 이름은 안 나와요 · 앱을 닫아도 오는 알림은 준비 중{#if live && push} · {push}{/if}</small>
 </div>
 
 <style>
