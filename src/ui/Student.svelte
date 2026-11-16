@@ -143,6 +143,7 @@
     });
   });
   let gtoast = $state('');
+  let readyAsk = $state(''); // 📝 준비 완료 = 「학습지 빈칸을 모두 채웠나요?」 확인 (📜 2026-11-16 선생님 d4)
   // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ① · school/idle.ts): 공격 단계 · 아직 다 못 맞힘 · 90초 입력 없음 → 「🤝 첫 줄만 같이 볼까?」 + 리모컨 노랑 · 입력하면 풀림 · 몬스터마다 한 번
   let idleLast = $state(0), idleMid = $state<string | null>(null);
   const idleAsked = new Set<string>();
@@ -287,7 +288,7 @@
     {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band"><b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span></div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->
     {#if scout?.on && paperOn()}
       <div class="pscout" data-k="pscout"><b class="ph1">학습지 {probNo} 을 먼저 풀어 두세요</b><p>{Math.ceil(scout.left / 1000)}초 뒤 답 칸이 열려요. 선생님이 일찍 열 수도 있어요.</p></div>
-      <BottomAction disabled={readyNow} why={readyNow ? '준비 완료를 보냈어요' : ''} onmain={() => scout && scoutReady(S, code, scout.id, uid)} mainLabel="준비 완료">
+      <BottomAction disabled={readyNow} why={readyNow ? '준비 완료를 보냈어요' : ''} onmain={() => { if (scout) readyAsk = scout.id; }} mainLabel="준비 완료">
         {#snippet main()}<span>준비 완료</span>{/snippet}
       </BottomAction>
     {:else if scout?.on}
@@ -297,7 +298,7 @@
         <p class="q2">학습지 「{probNo}」를 먼저 풀어 두세요</p>
         <p class="muted">선생님이 일찍 부를 수도 있어요</p>
       </div>
-      <BottomAction disabled={readyNow} why={readyNow ? '✋ 준비 완료를 보냈어요' : ''} onmain={() => scout && scoutReady(S, code, scout.id, uid)} mainLabel="준비 완료">
+      <BottomAction disabled={readyNow} why={readyNow ? '✋ 준비 완료를 보냈어요' : ''} onmain={() => { if (scout) readyAsk = scout.id; }} mainLabel="준비 완료">
         {#snippet main()}<span>{readyNow ? '✋ 준비 완료!' : '준비 완료'}</span>{/snippet}
       </BottomAction>
     {:else if !isSent(R, step)}
@@ -324,6 +325,13 @@
 </section>
 {#if gtoast && !paperOn()}<div class="gtoast" role="status">{gtoast}</div>{/if}
 <SymSheet />
+{#if readyAsk}
+<Sheet onclose={() => (readyAsk = '')}>
+  {#snippet title()}📝 학습지 빈칸을 모두 채웠나요?{/snippet}
+  {#snippet act()}<div class="rdyrow"><button type="button" class="btn2" data-k="ready-no" onclick={() => (readyAsk = '')}>아직</button><button type="button" class="btn" data-k="ready-yes" onclick={() => { scoutReady(S, code, readyAsk, uid); readyAsk = ''; }}>네 · 준비 완료</button></div>{/snippet}
+  <p class="muted">준비 완료를 보내면 선생님 화면에 ✋ 가 떠요</p>
+</Sheet>
+{/if}
 {#if cpt && cptId}
   <Sheet onclose={() => (cpt = false)} mainText="문제로 돌아가기" tall>
     {#snippet title()}📘 이 문제의 개념{/snippet}
@@ -340,6 +348,7 @@
 {/if}
 
 <style>
+  .rdyrow { display: flex; gap: 8px; } .rdyrow button { flex: 1; min-height: 52px; border-radius: var(--r); font: 800 16px var(--font); border: 0; } .rdyrow .btn { background: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-sh); } .rdyrow .btn2 { background: var(--surface-2); color: var(--text); }
   .idleband { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 2px solid #f2c94c; background: color-mix(in srgb, #f2c94c 18%, var(--surface)); }
   .idleband b { font-size: 17px; } .idleband button { min-height: 48px; padding: 0 14px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .revband { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
