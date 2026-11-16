@@ -23,3 +23,23 @@ export function classPeriodEnd(week: Record<string, Record<string, string>>, cls
 }
 export const hhmm = (t: number) => { const d = new Date(t + KST); return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
 export const DOW = ['', '월', '화', '수', '목', '금', '토', '일'];
+
+// 📅 수업 길이 한 곳 (📜 2026-11-17 #21 D · ⚙ 설정 · 모든 교시 같음 · 기본 50분) → 교시 끝 = 시작종 + 길이
+export const LEN_PATH = 'school/info/len';
+type LS = { get<T>(p: string): T | null | undefined; set(p: string, v: unknown): void };
+export const lessonLen = (S: LS) => { const v = Number(S.get<number>(LEN_PATH)); return v >= 20 && v <= 120 ? v : 50; };
+export const addMin = (hm: string, m: number) => { const t = Math.max(0, Math.min(24 * 60 - 1, mins(hm) + m)); return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`; };
+/** 월~금 × 7교시 늘 (📜 2026-11-17 「월~금 7교시 전부 열어 놓으면 되는 일」) */
+export const DAYS5 = [1, 2, 3, 4, 5], P7 = [1, 2, 3, 4, 5, 6, 7];
+/** 교시 시종 저장: 시작 · 끝(= 시작 + 수업 길이) · 요일마다 7교시 */
+export function setBell(S: LS, p: number, start: string) {
+  const len = lessonLen(S), bl: Record<number, [string, string]> = {};
+  for (const q of P7) { const b = q === p ? start : BELLS[q]?.[0] ?? addMin('09:00', (q - 1) * 60); bl[q] = [b, addMin(b, len)]; }
+  S.set('school/info/bells', bl); S.set('school/info/periods', Object.fromEntries(DAYS5.map((d) => [d, P7])));
+}
+export function setLessonLen(S: LS, n: number) {
+  const len = Math.max(20, Math.min(120, Math.round(n / 5) * 5)); S.set(LEN_PATH, len);
+  const bl: Record<number, [string, string]> = {};
+  for (const q of P7) { const b = BELLS[q]?.[0] ?? addMin('09:00', (q - 1) * 60); bl[q] = [b, addMin(b, len)]; }
+  S.set('school/info/bells', bl); S.set('school/info/periods', Object.fromEntries(DAYS5.map((d) => [d, P7])));
+}
