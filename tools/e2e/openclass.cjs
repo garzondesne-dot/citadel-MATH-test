@@ -14,7 +14,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   log('① 로그인 없음: 입구', gate, '· 탭', tabs, '· 서버 live', JSON.stringify(live0), '· rooms', rooms0 ? Object.keys(rooms0).length : 0); if (!gate || tabs || live0 || rooms0) errs.push('로그인 없이 = 입구 아님');
   await t.screenshot({ path: `${SHOTS}/openclass-gate.png` });
   // ② 교사 로그인 → 수동 열기
-  await asAdmin(t, '.tabs'); await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForTimeout(1500);
+  await asAdmin(t, '.tabs'); await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForTimeout(1500);
   const live = await rest('school/live'), room = live ? await rest(`rooms/${live.code}/meta`) : null;
   log('② 교사 로그인 → 열기: live', JSON.stringify(live), '· 방', room ? `${room.lesson} · ${room.cls} · v${room.version}` : '없음'); if (!live || !room || live.test) errs.push('수업 방 안 생김');
   const lobby = (await t.textContent('.tp')).replace(/\s+/g, ' '); if (!/대기실/.test(lobby) || /찾지 못했어요/.test(lobby)) errs.push('리모컨 대기실 아님');

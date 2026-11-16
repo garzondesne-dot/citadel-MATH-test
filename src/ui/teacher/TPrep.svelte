@@ -13,7 +13,6 @@
   import AddonPacks from './AddonPacks.svelte';
   import PdfFill from './PdfFill.svelte';
   import VidList from './VidList.svelte';
-  import StuTry from './StuTry.svelte';
   import { prepImg } from '../../school/prep';
   import { UPLOADED } from '../../engine/packs';
 
@@ -21,7 +20,7 @@
   //   차시 준비 = 기본값 네 칸(체력 기준 · 재도전 · 생각 시간 · 정찰 · 누르면 바꾸기 → 그 차시 수업을 열 때 방에 옮겨 적음) · 학습지 PDF · 영상 · 단계별 그림 n/m
   //   시간표 = 주간 표(교시 × 요일 · 칸에 반 · 누르면 반 고르기) + 진도 맞추기(반마다 다음 차시 · ±) / 도구 = 테스트 판은 준비 중
   //   ＋ 준비 안 된 차시(목록에만 있음 · #130 ③) = 차시 ▾ 에 「(준비 안 됨)」 · 차시 준비 = 빈 상태 + 「📦 차시 팩 올리기」 · 테스트 단추 흐림
-  const { S, packs, now, ontest, want = '' }: { S: Store; packs: LessonPack[]; now: number; ontest: (L: LessonPack) => void; want?: string } = $props();
+  const { S, packs, now, want = '' }: { S: Store; packs: LessonPack[]; now: number; want?: string } = $props();
   const todo = LESSON_LIST.filter((l) => !untrack(() => packs).some((p) => p.id === l.id || p.no === l.no));
   const opts = [...untrack(() => packs).map((p) => ({ id: p.id, no: p.no, title: p.title, ready: true })), ...todo.map((l) => ({ id: l.id, no: l.no, title: l.title, ready: false }))].sort((a, b) => a.no - b.no);
   let upOpen = $state(false); // 📦 차시 팩 올리기 (L1)
@@ -54,7 +53,7 @@
   const nv = $derived.by(() => { void imgVer; return L ? new Set(Object.values(L.videos || {})).size : 0; }); // 저장 뒤 다시 셈(imgVer)
   const T = $derived(L ? null : todo.find((l) => l.id === lid) ?? null);
   let seg = $state<'lesson' | 'packs'>('lesson'); // 📜 2026-11-16 준비 탭 2개 (시간표 = 👥 반 · 시간표 · 도구 = 📦 팩 · 도구 안)
-  let ver = $state(0), tryOpen = $state(false); // 🎒 학생으로 해 보기
+  let ver = $state(0);
   type Prep = { pct: number; retries: number; think: number; solve: number };
   const base = $derived<Prep>({ pct: L?.defaultPct ?? 90, retries: PROFILES.class.retries, think: PROFILES.class.thinkSec, solve: PROFILES.class.scoutSec });
   const prep = $derived.by((): Prep => { void ver; return { ...base, ...(S.get<Partial<Prep>>(`school/prep/${lid}`) || {}) }; });
@@ -99,8 +98,7 @@
 {#if upOpen}<PackUpload {S} onclose={() => (upOpen = false)} />{/if}
 {#if fillOpen && L}<PdfFill {S} {L} onclose={() => (fillOpen = false)} ondone={() => imgVer++} />{/if}
 {#if vidOpen && L}<VidList {S} {L} onclose={() => (vidOpen = false)} />{/if}
-{#if seg !== 'packs'}<div class="tact two"><button type="button" class="btn" data-k="test-go" disabled={!L} onclick={() => L && ontest(L)}>{#if L}🧪 수업 테스트<small>{L.no}차시 · 교사 폰 + TV + 학생 폰</small>{:else}🧪 수업 테스트<small>{T ? `${T.no}차시는 아직 준비 안 됨` : packs.length ? '차시를 골라요' : '차시를 먼저 만들어요'}</small>{/if}</button><button type="button" class="btn2 try" data-k="try-go" disabled={!L} onclick={() => (tryOpen = true)}>🎒 학생으로 해 보기<small>폰 하나 · 가상 친구 4명</small></button></div>{/if}
-{#if tryOpen && L}<StuTry {L} onclose={() => (tryOpen = false)} />{/if}
+<!-- 🧪 수업 테스트 · 🎒 학생으로 해 보기 = ⚔ 수업 탭 ① 🧪 테스트로 옮김 (📜 2026-11-17 #21) -->
 
 {#if edit}
   {@const k = edit}
@@ -112,7 +110,6 @@
 {/if}
 
 <style>
-  .tact.two .btn { font-size: 17px; } .tact.two .btn2.try { flex: 1; width: auto; height: 68px; border-radius: 16px; border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: 800 16px var(--font); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; } .tact.two .btn2.try small { font: 600 12px var(--font); color: var(--text-2); } .tact.two .btn2.try:disabled { opacity: 0.4; } /* 🧪 · 🎒 나란히 (📜 2026-11-16 시안 ①) */
   .lbtn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 0 12px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); text-align: left; box-shadow: 0 3px 0 var(--surface); margin-bottom: 8px; }
   .lbtn:active { transform: translateY(2px); box-shadow: none; }
   .lbtn b { font: 800 17px var(--font); flex: none; } .lbtn .lt { flex: 1; min-width: 0; font: 600 14px var(--font); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .lbtn i { font-style: normal; color: var(--text-3); }

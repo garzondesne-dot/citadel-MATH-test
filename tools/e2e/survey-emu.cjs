@@ -77,7 +77,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   const c1 = await rest('survey/1-3'), c6 = await rest('survey/1-6'); log('⑬ 모든 반 닫기 →', c1, c6); if (c1 || c6) errs.push('닫기');
   // ⑭ 리모컨 마무리 = 그 반 설문 열기 · 닫기 (정식 ctlHtml)
   await t.click('.tabs button:has-text("수업")').catch(() => {}); await t.waitForTimeout(500);
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1500);
   { const code = (await rest('school/live')).code; await rest(`rooms/${code}/players/u-test3`, 'PUT', { num: 3, nick: '시험삼', cls: '1-3', seen: Date.now() }); await t.waitForTimeout(1000); } // 대기실 1명 (시작 단추가 열리게)
   for (let k = 0; k < 30; k++) { const m = ((await t.textContent('.tact .btn').catch(() => '')) || '').trim(); if (/수업 닫기/.test(m)) break; await t.click('.tact .btn', { timeout: 3000 }).catch(() => {}); await t.waitForTimeout(500); }
   const ctl = await t.$eval('[data-k="sv-ctl"]', (x) => x.textContent).catch(() => ''); log('⑭ 리모컨 마무리 칸:', ctl.replace(/\s+/g, ' ').trim() || '✗ 없음'); if (!ctl) errs.push('리모컨 칸');

@@ -11,7 +11,7 @@ const rest = (p, method = 'GET', body) => fetch(`${DBU}/${p}.json?ns=${NS}`, { m
   const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
   const t = await (await b.newContext({ viewport: { width: 360, height: 640 } })).newPage();
   await t.goto(`${B}?role=teacher${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs');
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1200);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1200);
   const live = await rest('school/live'), code = live.code, key = String(await rest(`secrets/${code}/hallKey`));
   // ① TV 옛 주소
   const tv = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage(); tv.on('pageerror', (e) => errs.push(String(e)));

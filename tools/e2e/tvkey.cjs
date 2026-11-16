@@ -12,7 +12,7 @@ const rest = (p, method = 'GET', body) => fetch(`${DBU}/${p}.json?ns=${NS}`, { m
   const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
   const tc = await b.newContext({ viewport: { width: 360, height: 640 } }), t = await tc.newPage();
   await t.goto(`${B}?role=teacher${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs');
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1200);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1200);
   const live = await rest('school/live'), code = live.code, key = await rest(`secrets/${code}/hallKey`);
   ok('교사가 수업 열기 · 키 만들어짐', /^\d{4}$/.test(String(key)), `방 ${code}`);
   const vc = await b.newContext({ viewport: { width: 1280, height: 720 } }), tv = await vc.newPage(); tv.on('console', (m) => logs.push(m.text()));

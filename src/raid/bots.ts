@@ -8,7 +8,7 @@ import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
 
-export const BOT_MAX = 28, BOT_DEF = 20;
+export const BOT_MAX = 30, BOT_DEF = 5; // 📜 2026-11-17 #21 🧪 테스트 봇 0~30 · 기본 5
 export const NICK = ['민준', '서연', '도윤', '하은', '시우', '지유', '주원', '서아', '하준', '지안', '은우', '수아', '건우', '윤서', '선우', '채원', '유준', '다은', '이안', '소율', '태윤', '예린', '로운', '하린', '지호', '아린', '준서', '서윤', '현우'];
 export const botId = (i: number) => `bot${String(i + 1).padStart(2, '0')}`;
 export const isBot = (uid: string, R?: Room | null) => uid.startsWith('bot') && (!R || !!(R.players?.[uid] as { bot?: boolean } | undefined)?.bot);

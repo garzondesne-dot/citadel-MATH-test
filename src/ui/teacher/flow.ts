@@ -1,5 +1,6 @@
 import type { LessonPack, Room, Step } from '../../model/types';
 import { isChain } from '../../raid/raid';
+import { CLASSES, isBeta as isBetaCls } from '../../school/school';
 
 // 📱 교사 폰 「오늘 흐름」 · 단계 색 막대 (#119 ⑬ ⑭) — 화면 표시만(규칙 아님)
 //   분 = 팩의 min(#132 · 입력판) · 없으면 어림값(도입 3 · 개념 2 · 문제 5 · ⚔ 소레이드 9 · 👑 형성평가 6) · 색 = 묶음(도입 · 개념 · 문제 · 소레이드 · 형성평가)
@@ -46,3 +47,15 @@ export function groups(L: LessonPack, R: Room | null) {
   flush();
   return out;
 }
+
+// 🧪 수업 탭 테스트 (📜 2026-11-17 #21): 📱 리모컨만 · 🖥 종합실 + 리모컨 한 화면 · 🎒 학생 폰
+export type TestMode = 'remote' | 'tv' | 'stu';
+export const TEST_MODES: { k: TestMode; ic: string; t: string; sub: string }[] = [
+  { k: 'remote', ic: '📱', t: '리모컨만', sub: '교사 폰 + 종합실 + 테스트 반 폰' },
+  { k: 'tv', ic: '🖥', t: '종합실 + 리모컨', sub: '이 폰 한 화면' },
+  { k: 'stu', ic: '🎒', t: '학생 폰', sub: '학생 화면 + 진행 리모컨' },
+];
+/** 🧪 테스트 전용 반 = 수업 탭 · 시간표 · 대시보드 반 목록에서 숨김 (우리 학교 = 1-6 · 계정 · 명단 그대로) */
+export const hiddenCls = (S: import('../../model/types').Store | null, c: string) => isBetaCls(S, c);
+/** 📱 리모컨만 = 테스트 반 학생 계정만 들어옴 · 테스트 반이 없는 학교판 = 'test'(아무도 못 들어옴 · 🤖 봇만) */
+export const testCls = (S: import('../../model/types').Store | null) => CLASSES.find((c) => isBetaCls(S, c)) ?? 'test';

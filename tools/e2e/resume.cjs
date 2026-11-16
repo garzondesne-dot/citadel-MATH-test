@@ -13,19 +13,20 @@ const B = 'http://localhost:4173/', DB = 'citadel-v1-test-db';
     await p.goto(B + '?role=teacher');
     await p.evaluate((k) => { localStorage.clear(); const w = {}; for (let d = 1; d <= 5; d++) { w[d] = {}; for (let q = 1; q <= 7; q++) w[d][q] = '1-3'; } localStorage.setItem(`${k}|school/sched`, JSON.stringify(w)); }, DB);
     await p.reload(); await p.waitForSelector('.tabs');
-    const pick = async () => { const c = await p.$('[data-cls="1-3"]'); if (c) await c.click(); else { await p.click('.tlink:has-text("다른 반")'); await p.click('.grid4 .pk:has-text("1-3")'); } await p.waitForTimeout(150); };
+    const CLS = test ? '1-6' : '1-3'; // 🧪 = 테스트 반 (📜 2026-11-17 #21)
+    const pick = async () => { const c = await p.$(test ? '[data-cls="test"]' : '[data-cls="1-3"]'); if (c) await c.click(); else { await p.click('.tlink:has-text("다른 반")'); await p.click('.grid4 .pk:has-text("1-3")'); } await p.waitForTimeout(150); };
     const openAndStart = async (how) => {
       await how(); await p.waitForTimeout(300);
       const lv = await p.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);
-      if (lv.cls !== '1-3') errs.push(`${name}: 연 반 ${lv.cls}`);
-      const s = await ctx.newPage(); await s.goto(`${B}?role=student&room=${lv.code}&as=1-3:1`); await s.waitForTimeout(400); await p.bringToFront();
+      if (lv.cls !== CLS) errs.push(`${name}: 연 반 ${lv.cls}`);
+      const s = await ctx.newPage(); await s.goto(`${B}?role=student&room=${lv.code}&as=${CLS}:1`); await s.waitForTimeout(400); await p.bringToFront();
       await p.waitForSelector('.tact .btn:not([disabled])'); await p.click('.tact .btn'); await p.waitForTimeout(300);
       return lv;
     };
     const now = async () => ((await p.textContent('.mid')).match(/지금 · ([^🌫]+?)(?:🌫|\d+\s*\/|$)/)?.[1] ?? '').trim();
     // ① 처음 열기 → 문제 1 까지
     await pick(); await p.click('.pk3 .pk:not(.add)');
-    const lv1 = await openAndStart(() => p.click(test ? '.sub2 button:has-text("테스트")' : '.tact .btn'));
+    const lv1 = await openAndStart(() => (test ? require('./_cls.cjs').testOpen(p) : p.click('.tact .btn').then(() => p.click('[data-k="open-yes"]'))));
     for (let i = 0; i < 8 && !(await now()).startsWith('문제 1'); i++) { await p.click('.tact .btn'); await p.waitForTimeout(250); }
     log(`${name} · 닫기 전 지금:`, await now());
     // ② 수업 닫기 (실제 단추 · 정말?)

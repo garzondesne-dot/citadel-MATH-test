@@ -12,7 +12,7 @@ const B = 'http://localhost:4173/', DB = 'citadel-v1-test-db';
     await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tabs');
     const cell = t.locator('.pk3 .pk', { hasText: `${no}차시` }).first();
     const cls = await cell.getAttribute('class'); if (/\badd\b/.test(cls)) errs.push(`${no}차시: ⑫ 칸이 아직 「준비 안 됨」`);
-    await cell.click(); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(300);
+    await cell.click(); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(300);
     const flow = (await t.textContent('.mid')).replace(/\s+/g, ' ');
     const lv = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);
     const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push(`${no}차시 학생: ${e}`)); s.on('console', (m) => { if (m.type() === 'error') errs.push(`${no}차시 학생 콘솔: ${m.text()}`); });

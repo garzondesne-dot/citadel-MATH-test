@@ -31,7 +31,7 @@ export function roster(cls: string, S?: Store | null): Pupil[] {
   const up = ok(S?.get(`roster/${cls}`)) || ok(S?.get(`rosterMask/${cls}`)) || ok(S?.get(`school/roster/${cls}`));
   // 🚀 정식 기록 = 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, 1번, 2번 …]) → 빈칸 · 0번 뺌
   if (up && Object.keys(up).length) return Object.entries(up).filter(([n, name]) => !!name && Number(n) > 0).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
-  const k = CLASSES.indexOf(cls);
+  const k = Math.max(0, CLASSES.indexOf(cls)); // 목록 밖 반('test') = 첫 반 이름표
   return GIVEN.map((g, i) => ({ cls, num: i + 1, name: `${FAMILY[(i + k * 3) % FAMILY.length]}${g}`, uid: uidOf(cls, i + 1) }));
 }
 /** ＋ 명단 붙여넣기: 한 줄에 「번호 이름」(탭 · 쉼표 · 띄어쓰기) · 같은 번호는 이름만 바뀜 → 올린 수 */
@@ -48,7 +48,7 @@ export const isBeta = (S: Store | null, cls: string): boolean => { const v = S?.
 export const isTester = (S: Store | null, cls: string, num: number) => !!S?.get<boolean>(`tester/${cls}/${num}`) || !!S?.get<boolean>(`school/test/${cls}/${num}`); // 정식 tester/{반}/{번호} (#163) · 옛 칸도
 /** 통계 · 체력 머릿수에서 빼는가 = 베타 반이거나 시험 계정 (#123 · 함수 하나로) — 대시보드 「전체」 · 반 비교 · 랭킹 · 대항전 · 설문 집계 · 몬스터 체력 머릿수 · 세특 초안 */
 export const isExcluded = (S: Store | null, cls: string, num: number) => isBeta(S, cls) || isTester(S, cls, num);
-export const clsLabel = (S: Store | null, cls: string) => `${cls}반${isBeta(S, cls) ? ' 🧪' : ''}`;
+export const clsLabel = (S: Store | null, cls: string) => (cls === 'test' ? '🧪 테스트' : `${cls}반${isBeta(S, cls) ? ' 🧪' : ''}`); // 'test' = 테스트 반이 없는 학교 · 🖥 한 화면 테스트 (📜 2026-11-17 #21)
 export const pupilOf = (uid: string) => { const m = /^s(\d+)_(\d+)_(\d+)$/.exec(uid); return m ? pupil(`${m[1]}-${m[2]}`, Number(m[3])) : null; };
 
 // ── 계정 ──

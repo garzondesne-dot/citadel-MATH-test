@@ -11,6 +11,7 @@
   import PupilSheet from './PupilSheet.svelte';
   import Dash from './Dash.svelte';
   import SchedTab from './SchedTab.svelte';
+  import { hiddenCls } from './flow'; // 🧪 테스트 전용 반(1-6) = 대시보드 반 목록에서 숨김 · 명단은 그대로 (📜 2026-11-17 #21)
   import { schoolInfo } from '../../school/features.svelte';
 
   // 👥 학생 탭 (#124 ⑯ · 스크롤 A = 위 막대 · 반 칩 · [명단 · 대시보드] 고정 + 가운데 목록만 넘김)
@@ -52,7 +53,7 @@
   <div class="mid scroll"><SchedTab {S} {now} /></div>
 {:else}
 <div class="fixed">
-  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow] : clsNow as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
+  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow.filter((c) => !hiddenCls(S, c))] : clsNow as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
   <div class="segrow"><div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>{#if seg === 'dash'}<button type="button" class="xlb" onclick={() => (xl = true)}>⬇ 엑셀</button>{/if}</div>
 </div>
 {#if seg === 'list'}

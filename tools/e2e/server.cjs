@@ -20,7 +20,7 @@ const log = (...a) => console.log(...a);
   // 리모컨: 1-3반 · 6차시 · 🧪 테스트로 열기
   const t = await open(`?role=teacher${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await require('./_emu.cjs').asAdmin(t, '.tabs'); // 🔐 #163-① 교사 = admins
   log('리모컨 표시:', (await t.textContent('.srv')).trim());
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(800);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(800);
   const live = await rest('school/live'); log('서버 school/live:', JSON.stringify(live));
   const tv = await open(`?role=hall${E}`, 1280, 720); await tv.waitForTimeout(1500); await require('./_emu.cjs').asHost(tv, live.code); // 🔐 TV = 종합실 키로 hosts
   // 폰 1 = 가입(Firebase 로그인) → 그 다음 방으로 · 폰 2 · 3 = 반 · 번호로 바로

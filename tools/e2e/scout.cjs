@@ -20,7 +20,7 @@ const skew = (ms) => `(() => { const R = Date, d = ${ms}; class F extends R { co
   // 수업 열기 (리모컨 첫 화면 · 6차시 · 진짜 수업)
   await t.click('.tabs button:has-text("학생"), .tabs button >> nth=0'); await t.waitForTimeout(400);
   await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); const openBtn = await t.$('.sub2 button:has-text("수업 열기"), .sub2 button:has-text("열기")');
-  if (openBtn) await openBtn.click(); else await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
+  if (openBtn) await openBtn.click(); else await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1500);
   const live = await rest('school/live'), code = live.code, meta = await rest(`rooms/${code}/meta`);
   ok('① 연 수업 meta.solve = 50', meta.solve === 50, `meta.solve ${meta.solve} · lesson ${meta.lesson} · ${live.test ? '테스트' : '진짜'} 수업`);
   const key = String(await rest(`secrets/${code}/hallKey`));

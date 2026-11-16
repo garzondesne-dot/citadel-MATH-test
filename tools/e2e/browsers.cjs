@@ -68,7 +68,7 @@ const SIZES = [[360, 640], [412, 915], [830, 1000], [1280, 800]];
       log(`${tag} · 열 폭 ${col} · 펼침 ${wide} · 반 비교 ${t.n}줄 · 마지막 「${t.last}」 닿음 ${t.seen} · 표 안 세로 ${t.inner}`);
     }
     // 대기실 · 리모컨 (🧪 테스트로 열기)
-    await p.click('.tabs button:has-text("수업")'); await p.click('.pk3 .pk:not(.add)'); await p.click('.sub2 button:has-text("테스트")'); await p.waitForTimeout(300); await scale();
+    await p.click('.tabs button:has-text("수업")'); await p.click('.pk3 .pk:not(.add)'); await require('./_cls.cjs').testOpen(p); await p.waitForTimeout(300); await scale();
     await check('⑬ 대기실');
     if (fs === 130 && ua && w === 830) await p.screenshot({ path: `${SHOTS}/b15-lobby-830.png` });
     const lv = await p.evaluate(() => JSON.parse(localStorage.getItem('citadel-v1-test-db|school/live')));

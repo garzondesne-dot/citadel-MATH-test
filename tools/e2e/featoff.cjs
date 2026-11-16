@@ -37,7 +37,7 @@ const rest = (p, method = 'GET', body) => fetch(`${DBU}/${p}.json?ns=${NS}`, { m
   const allOff = Object.fromEntries(['hero', 'citadel', 'board', 'scarecrow', 'forge', 'theme', 'symtalk', 'mon-attack', 'lesson-fx', 'juice', 'seteuk', 'author', 'contest', 'survey'].map((k) => [k, false]));
   await rest('school/features', 'PUT', { bundle: 'basic', on: allOff });
   await t.click('.sheet .x').catch(() => {}); await t.click('.tabs button:has-text("학생"), .tabs button >> nth=0').catch(() => {}); await t.waitForTimeout(300);
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.sub2 button:has-text("테스트")'); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await require('./_cls.cjs').testOpen(t); await t.waitForTimeout(1500);
   const code = (await rest('school/live')).code;
   const s = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); s.on('pageerror', (e) => errs.push(String(e)));
   await s.goto(`${B}?role=student&room=${code}&as=1-3:5${E}`); await s.waitForTimeout(3500);

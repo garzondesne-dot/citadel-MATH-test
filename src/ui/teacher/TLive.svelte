@@ -190,7 +190,7 @@
 {#if R}
   <div class="tbar">
     <button type="button" class="back" aria-label="수업 열기로" onclick={onhome}>‹</button>
-    <div class="t">{live.cls}반 · {L.no}차시{live.test ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
+    <div class="t">{live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
 
@@ -234,7 +234,7 @@
     </div>
     {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
-    <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
     <!-- ⑭ 리모컨 -->
     <div class="mid rem">
@@ -285,7 +285,7 @@
       <button type="button" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
-    <div class="lbar"><i class="live"></i><span>{live.cls}반 · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
