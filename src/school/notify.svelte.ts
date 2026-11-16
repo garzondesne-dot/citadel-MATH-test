@@ -38,7 +38,7 @@ export async function enableNotes(): Promise<boolean> {
 export async function notify(kind: NoteKind | 'test', title: string, body: string, url = '?role=teacher&tab=news'): Promise<boolean> {
   if (kind !== 'test' && (!notePref.on || !notePref[kind])) return false;
   if (!noteSupported() || Notification.permission !== 'granted') return false;
-  const opt: NotificationOptions = { body, tag: `citadel-${kind}`, icon: './icons/icon-192-v2.png', badge: './icons/icon-192-v2.png', data: { url } };
+  const opt: NotificationOptions = { body, tag: `citadel-${kind}`, icon: './icons/icon-192-v2.png', badge: './icons/badge-dungeon-v2-96.png' /* 🔔 흰 실루엣 ∩ 던전 문 + 세 용사 (📜 2026-11-17 #19) */, data: { url } };
   try {
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
     if (reg) { await reg.showNotification(title, opt); return true; }

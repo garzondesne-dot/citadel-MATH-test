@@ -20,8 +20,10 @@ const ID = SCHOOL
       icons: ['icons/icon-192-v2.png', 'icons/icon-512-v2.png', 'icons/icon-maskable-512-v2.png'], apple: 'icons/apple-touch-icon-v2.png', fav: 'icons/icon-192-v2.png' }
   : { name: '모두의 던전 베타', short: '던전 베타', desc: '공통수학2 교실 협동 레이드 · 베타(시험판)', id: '/citadel-MATH-test/', start: './', bg: '#0f1115',
       icons: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'], apple: 'icons/apple-touch-icon.png', fav: 'icons/favicon-32.png' };
+// 🔔 알림 작은 아이콘 = 흰 실루엣 (📜 2026-11-17 #19 · 알림 badge 96 · manifest monochrome 192)
+const BADGE = 'icons/badge-dungeon-v2-192.png', BADGE96 = 'icons/badge-dungeon-v2-96.png';
 const manifest = { name: ID.name, short_name: ID.short, description: ID.desc, id: ID.id, start_url: ID.start, scope: './', display: 'standalone', lang: 'ko', background_color: ID.bg, theme_color: ID.bg,
-  icons: [{ src: ID.icons[0], sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: ID.icons[1], sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: ID.icons[2], sizes: '512x512', type: 'image/png', purpose: 'maskable' }] };
+  icons: [{ src: ID.icons[0], sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: ID.icons[1], sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: ID.icons[2], sizes: '512x512', type: 'image/png', purpose: 'maskable' }, { src: BADGE, sizes: '192x192', type: 'image/png', purpose: 'monochrome' }] };
 // version.json = build(베타 화면이 읽음) + v(정식 fresh.js 가 읽음 → 옛 정식 폰이 판이 바뀐 걸 알고 한 번 새로 고침)
 const versionJson = { name: 'version-json', generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }) {
   this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD, v: `citadel-1.0-${BUILD}` }) });
@@ -41,7 +43,7 @@ const htmlId = { name: 'html-id', transformIndexHtml(h: string) {
 type Bundle = Record<string, { fileName: string }>;
 const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bundle) {
   const out = o.dir ?? 'dist', has = (f: string) => existsSync(join(out, f));
-  const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
+  const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav, BADGE, BADGE96].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
     ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)].filter((u) => u === './' || has(u.slice(2)));
   const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', BUILD).replace('__CORE__', JSON.stringify(core));
   writeFileSync(join(out, 'sw.js'), src);

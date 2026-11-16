@@ -65,5 +65,5 @@ self.addEventListener('notificationclick', (e) => {
 // 🔔 밀어 온 알림 (📜 2026-11-16 · 앱을 닫아도 오는 교사 알림) = 중계가 보낸 { title, body, url, kind } 를 그대로 띄움
 self.addEventListener('push', (e) => {
   let d = {}; try { d = e.data ? e.data.json() : {}; } catch (x) { d = { title: '모두의 던전', body: e.data ? e.data.text() : '' }; }
-  e.waitUntil(self.registration.showNotification(d.title || '모두의 던전', { body: d.body || '', tag: `citadel-${d.kind || 'push'}`, icon: './icons/icon-192-v2.png', badge: './icons/icon-192-v2.png', data: { url: d.url || '?role=teacher&tab=news' } }));
+  e.waitUntil(self.registration.showNotification(d.title || '모두의 던전', { body: d.body || '', tag: `citadel-${d.kind || 'push'}`, icon: './icons/icon-192-v2.png', badge: './icons/badge-dungeon-v2-96.png', data: { url: d.url || '?role=teacher&tab=news' } }));
 });

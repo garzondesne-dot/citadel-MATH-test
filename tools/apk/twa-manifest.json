@@ -16,6 +16,7 @@
   "startUrl": "/Citadel-MATH/?role=teacher",
   "iconUrl": "http://localhost:4180/icons/icon-512-v2.png",
   "maskableIconUrl": "http://localhost:4180/icons/icon-maskable-512-v2.png",
+  "monochromeIconUrl": "http://localhost:4180/icons/badge-dungeon-v2-192.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "<비공개 폴더>/teacher.keystore",
