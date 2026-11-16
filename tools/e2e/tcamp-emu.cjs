@@ -31,14 +31,19 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await t.waitForSelector('[data-k="castle"] [data-room]', { timeout: 8000 }).catch(() => {});
   const rooms = await t.$$eval('[data-k="castle"] [data-room]', (x) => x.length).catch(() => 0), lockedR = await t.$$eval('[data-k="castle"] [data-room][disabled], [data-k="castle"] [data-room].lock', (x) => x.length).catch(() => -1);
   await t.screenshot({ path: `${SHOTS}/tcamp-castle.png` });
-  ok('③ 🏰 성채 1층 = 방 12 · 잠김은 👑 보스 방 하나뿐(처치 60%)', rooms >= 12 && lockedR <= 1, `방 ${rooms} · 잠김 ${lockedR}`);
+  // 🏰 성채 = 올린 성채 팩이 있어야 층이 열림 (📜 2026-11-14 · 팩 있는 길 = tools/e2e/castle.cjs) → 팩 없는 시험 서버 = 빈 안내 한 줄
+  const empty = /아직 열린 층이 없어요/.test((await t.textContent('.sheet').catch(() => '')) || '');
+  ok('③ 🏰 성채 = 팩 없으면 「아직 열린 층이 없어요」 · 있으면 1층 방 12 · 잠김은 👑 하나뿐', empty || (rooms >= 12 && lockedR <= 1), empty ? '팩 없음 안내' : `방 ${rooms} · 잠김 ${lockedR}`);
   await t.goto(`${B}?role=camp&from=me&${E}`); await t.waitForTimeout(3500);
-  await t.click('[data-prop="scare"]').catch(() => t.click('[data-todo="scare"]')); await t.waitForTimeout(1400); // 🏕 D 용사가 걸어간 뒤 열림
+  // ⏳ 새로 고침 뒤 보던 장면 복귀(#52) = 성채 시트가 다시 열려 있음 → 닫고 누름
+  for (let i = 0; i < 3 && (await t.$('.sheet')); i++) { const x = await t.$('.sheet button[aria-label="닫기"], .sheet .x, .sheet button:has-text("닫기")'); if (x) await x.click().catch(() => {}); await t.waitForTimeout(400); }
+  const scErr = await t.click('[data-prop="scare"]', { timeout: 8000 }).then(() => '', (e) => String(e).split('\n').slice(0, 6).join(' | ')); if (scErr) log('   허수아비 누름 실패:', scErr); await t.waitForTimeout(1400); // 🏕 D 용사가 걸어간 뒤 열림
   const sc = ((await t.textContent('.sheet').catch(() => '')) || '').replace(/\s+/g, ' ');
   await t.screenshot({ path: `${SHOTS}/tcamp-scare.png` });
   ok('③ 🎯 허수아비 시트 = 차시 목록', /차시/.test(sc), sc.slice(0, 120));
   await t.goto(`${B}?role=camp&from=me&${E}`); await t.waitForTimeout(3500);
   for (let i = 0; i < 3 && (await t.$('.sheet')); i++) { const x = await t.$('.sheet button[aria-label="닫기"], .sheet .x, .sheet button:has-text("✕")'); if (x) await x.click().catch(() => {}); else await t.mouse.click(195, 40); await t.waitForTimeout(500); } // 새로 고침 뒤 보던 시트 복귀(설계) 닫기
+  await rest('school/tlook', 'PATCH', { hero: 7, enh: 10 }); await t.waitForTimeout(800); // 🧙 서버 교사 용사 = +10 으로 둠 (교사 탭은 이 값을 씀 · 없으면 현자 +0)
   await t.click('[data-k="wallet"]', { timeout: 5000 }); await t.waitForTimeout(800);
   const hv = ((await t.evaluate(() => document.body.innerText)) || '').replace(/\s+/g, ' ');
   await t.screenshot({ path: `${SHOTS}/tcamp-hero.png` });

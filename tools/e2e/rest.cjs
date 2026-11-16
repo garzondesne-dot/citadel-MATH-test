@@ -1,5 +1,5 @@
 // #142-1 🏕 쉼터 놀이 (에뮬레이터 · TV + 리모컨 + 폰 3대 · 창마다 저장 따로)
-//   리모컨 🏕 → 시트(놀이 5칸 · 분 · 주요 단추 68 · 바닥 75 · 스크롤 0) → 폰 ② 기다림
+//   리모컨 🏕 → 시트(놀이 4칸 · 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16) · 분 · 주요 단추 68 · 바닥 75 · 스크롤 0) → 폰 ② 기다림
 //   ⚖ 밸런스(3명 = ✊✌️✋) 한 판: 폰 둘 고름 · 하나 안 고름 → 💤 덮개 + 🙋 · TV 숫자 칸 살아남음
 //   🔄 반대로 = TV 막대에서 시작 · ⭕ OX 타임(오늘) 한 문장 + 🔴 집중 = 놀이 시계 멈춤 · 🙊 눈치 끝까지 → 보상 gifts · 리모컨 「다음 ▶」 = 쉼터 끝
 // 사용: 에뮬레이터 + npm run build → npx vite preview --port 4173 → NODE_PATH=$(npm root -g) node tools/e2e/rest.cjs <그림 폴더>
@@ -27,7 +27,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.games'); await wait(500);
   const sh = await t.evaluate(() => { const m = document.querySelector('.sheet .act .btn.rbig').getBoundingClientRect(), bd = document.querySelector('.sheet .body'); return { h: Math.round(m.height), gap: Math.round(innerHeight - m.bottom), games: document.querySelectorAll('.games .game').length, scroll: bd.scrollHeight > bd.clientHeight + 1, gh: Math.round(document.querySelector('.games .game').getBoundingClientRect().height), txt: document.querySelector('.sheet .act .btn.rbig').textContent.trim() }; });
   log('① 시트: 놀이', sh.games, '칸 · 칸 높이', sh.gh, '· 주요 단추', sh.h, '· 바닥', sh.gap, '· 스크롤', sh.scroll, '·', sh.txt);
-  if (sh.games !== 5 || sh.h !== 68 || Math.abs(sh.gap - 75) > 1 || sh.scroll || sh.gh !== 84) errs.push('① 시트 치수');
+  if (sh.games !== 4 || sh.h !== 68 || Math.abs(sh.gap - 75) > 1 || sh.scroll || sh.gh !== 84) errs.push('① 시트 치수');
   await t.screenshot({ path: `${SHOTS}/b26-remote-sheet.png` });
   await t.click('.rstep button[aria-label="1분 늘리기"]'); await wait(300);
   const rm = await rest('school/teacher/restMin'), rmin = (await rest(`rooms/${code}/state/rest`)).min; log('   분 ＋ → 기억', rm, '· 쉼터', rmin, '분'); if (rm !== 6 || rmin !== 6) errs.push('① 분 기억');
@@ -42,7 +42,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await ph[0].screenshot({ path: `${SHOTS}/b26-phone-pick.png` });
   await tv.screenshot({ path: `${SHOTS}/b26-tv-pick.png` });
   const tvBox = await tv.textContent('.nbox').catch(() => ''); log('   TV 숫자 칸:', tvBox.replace(/\s+/g, ' ').trim()); if (!/살아남음/.test(tvBox)) errs.push('③ TV 숫자 칸');
-  const dock = await tv.evaluate(() => { document.dispatchEvent(new MouseEvent('mousemove')); return [...document.querySelectorAll('.dock .t small')].map((x) => x.textContent).join(' '); }); log('   TV 막대:', dock); if (!/밸런스 반대로 OX 눈치게임 디펜스/.test(dock)) errs.push('③ TV 막대 놀이 5개');
+  const dock = await tv.evaluate(() => { document.dispatchEvent(new MouseEvent('mousemove')); return [...document.querySelectorAll('.dock .t small')].map((x) => x.textContent).join(' '); }); log('   TV 막대:', dock); if (!/밸런스 반대로 OX 눈치게임/.test(dock) || /디펜스/.test(dock)) errs.push('③ TV 막대 놀이 4개 (디펜스 숨김)');
   await wait(15500);
   f = await fun(); log('   판정:', f.phase, '· 💤', JSON.stringify(f.zz || {}), '· 남음', Object.keys(f.alive).join(','));
   await wait(700);
