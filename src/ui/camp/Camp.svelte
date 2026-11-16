@@ -256,9 +256,12 @@
   let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
   let walkTok = 0, idleT: ReturnType<typeof setTimeout> | null = null;
   const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  const TURN = 120; // 돌아서기 (ms)
   async function walkTo(to: { left: number; bottom: number }, ms: number, tok: number): Promise<boolean> {
     if (Math.abs(to.left - hp.left) + Math.abs(to.bottom - hp.bottom) < 0.5) return tok === walkTok;
-    hp = { ...hp, pose: 'walk', flip: to.left < hp.left, ms }; await wait(20); hp = { ...hp, left: to.left, bottom: to.bottom }; await wait(ms);
+    const f = to.left < hp.left; // 먼저 짧게 돌아서고(TURN) 그다음 걸음
+    if (f !== hp.flip) { hp = { ...hp, flip: f, ms: 0 }; await wait(TURN); if (tok !== walkTok) return false; }
+    hp = { ...hp, pose: 'walk', ms }; await wait(20); hp = { ...hp, left: to.left, bottom: to.bottom }; await wait(ms);
     return tok === walkTok;
   }
   const heroRow = (p: HP) => (p === 'sit' ? HERO.sitRow : ANIM[p][0]);
@@ -351,7 +354,8 @@
     <img class="obj {anyTodo ? 'dim' : ''}" class:flap={!!poked.tent} alt="" src={CAMP.tent.src} style={objStyle(CAMP.tent)} />
     <img class="obj gate-on" class:on={open} class:flash={!!poked.gate} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
-    <i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} style="translate:{heroNudge(me.hero, heroRow(hp.pose)).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, heroRow(hp.pose)).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px) scaleX({hp.flip ? -1 : 1});transition:transform {hp.ms}ms linear;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i>
+    <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
+    <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(me.hero, heroRow(hp.pose)).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, heroRow(hp.pose)).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:0;bottom:0;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
     <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
     <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
     {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:3%;width:12%;height:9%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
@@ -698,6 +702,7 @@
   @keyframes fxRing { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
   .cfx.twinkle i { display: none; } .cfx.twinkle b { position: absolute; left: -12px; top: -14px; font-size: 24px; color: #fff7c2; text-shadow: 0 0 10px #ffe27a; animation: fxTw 0.9s ease-out forwards; }
   @keyframes fxTw { 0% { transform: scale(0.3) rotate(0); } 40% { transform: scale(1.3) rotate(25deg); } 100% { transform: scale(0.6) rotate(60deg); opacity: 0; } }
+  .hmove { position: absolute; z-index: 2; display: block; pointer-events: none; will-change: transform; }
   .sp.hero { will-change: transform; pointer-events: none; } /* 걷는 용사가 물건 누름을 가리지 않게 */
   .friend { position: absolute; z-index: 5; pointer-events: none; transform: translateX(-50%); }
   .fbub { position: absolute; z-index: 7; transform: translateX(-50%); white-space: nowrap; font: 800 11px/1 var(--font); color: #e8f7ff; background: rgba(20, 40, 70, 0.85); border: 1.5px solid rgba(120, 200, 255, 0.9); border-radius: 10px; padding: 5px 8px; pointer-events: none; }
