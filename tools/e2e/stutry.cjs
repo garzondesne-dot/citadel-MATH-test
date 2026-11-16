@@ -11,16 +11,9 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.click('[data-k="top-sched"]'); await t.waitForTimeout(300);
   ok('👥 반 · 시간표 → 📅 시간표 탭 (처음 = 「📅 시간표 쓰기 시작」)', !!(await t.$('[data-k="sched-start"]')) || !!(await t.$('.pg')));
   await t.click('[data-k="top-stu"]'); await t.waitForTimeout(200); ok('👥 학생 탭 = 명단 · ＋ 명단', !!(await t.$('[data-k="roster-open"]')));
-  // 준비 탭 2개
-  await t.click('.tabs button:has-text("준비")'); await t.waitForTimeout(500);
-  const segs = await t.$$eval('.seg3 button', (x) => x.map((e) => e.textContent.trim()));
-  ok('준비 = 📚 차시 준비 · 📦 팩 · 도구 2개', segs.length === 2 && /차시 준비/.test(segs[0]) && /팩 · 도구/.test(segs[1]), segs.join(' | '));
-  ok('준비 탭 = 🧪 수업 테스트 · 🎒 없음(수업 탭으로)', !(await t.$('[data-k="test-go"]')) && !(await t.$('[data-k="try-go"]')));
-  await t.screenshot({ path: `${SHOTS}/prep-lesson.png` });
-  await t.click('.seg3 button:has-text("팩 · 도구")'); await t.waitForTimeout(400);
-  ok('📦 팩 · 도구 = 팩 올리기 + 도구', !!(await t.$('[data-k="addon-up"]')) && !!(await t.$('[data-k="tools"]')));
-  await t.screenshot({ path: `${SHOTS}/prep-packs.png` });
-  await t.click('.seg3 button:has-text("차시 준비")'); await t.waitForTimeout(300);
+  // 📦 차시 팩 탭 (📜 2026-11-17 #22 · 옛 준비 탭 2개 대신): 🧪 · 🎒 단추 없음 · 🧰 도구 접힘
+  await t.click('.tabs button:has-text("차시 팩")'); await t.waitForSelector('[data-k="packs-tab"]');
+  ok('📦 차시 팩 탭 = 🧪 수업 테스트 · 🎒 없음(수업 탭으로)', !(await t.$('[data-k="test-go"]')) && !(await t.$('[data-k="try-go"]')) && !!(await t.$('[data-k="tools-fold"]')));
   // 🎒 = 수업 탭 ① 🧪 → ② 차시 → ③ 🎒 (봇 5)
   await t.click('.tabs button:has-text("수업")'); await t.waitForTimeout(300);
   await t.click('[data-cls="test"]'); await t.click('.pk3 [data-no="6"]'); await t.click('[data-mode="stu"]'); await t.click('[data-k="open-go"]'); await t.click('[data-k="open-yes"]');

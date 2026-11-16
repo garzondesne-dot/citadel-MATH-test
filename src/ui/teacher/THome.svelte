@@ -21,16 +21,16 @@
   //   ② 차시 단추 · ⭐ = 그 반 다음 차시 · 📦 넘어온 몬스터 한 줄
   //   ③ 실제 반 = 종합실 키 [🎲 수업마다 새로 · 📌 고정] / 🧪 = 테스트 모드 3개 + 🤖 봇 0~30(기본 5) · 📱 리모컨만일 때만 종합실 키
   //   → 요약 한 줄 → ▶ 수업 열기(🧪 = 보라 「🧪 테스트 열기」) → 확인 창
-  const { S, packs, now, live, liveRoom, onopen, onresume, onstop, ontest, onprep }: {
-    S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null;
+  const { S, packs, now, live, liveRoom, onopen, onresume, onstop, ontest, onprep, pre = '' }: {
+    S: Store; packs: LessonPack[]; now: number; live: Live | null; liveRoom: Room | null; /** 📦 차시 카드 「🧪 테스트로 열기」 = 🧪 + 이 차시 골라진 채 (📜 2026-11-17 #22) */ pre?: string;
     onopen: (cls: string, L: LessonPack, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode) => void; onresume: () => void; onstop: () => void;
     ontest: (L: LessonPack, mode: TestMode, bots: number, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode) => void; onprep: (id: string) => void;
   } = $props();
   const TEST = '🧪';
   const cells = $derived([...packs.map((p) => ({ id: p.id, no: p.no, title: p.title, p })), ...LESSON_LIST.filter((l) => !packs.some((p) => p.id === l.id || p.no === l.no)).map((l) => ({ id: l.id, no: l.no, title: l.title, p: null }))].sort((a, b) => a.no - b.no));
   const shown = $derived.by(() => { void schoolInfo.ver; return CLASSES.filter((c) => !hiddenCls(S, c)); });
-  let cls = $state('');
-  let lessonId = $state('');
+  let cls = $state(untrack(() => (pre ? '🧪' : '')));
+  let lessonId = $state(untrack(() => pre));
   let tmode = $state<TestMode | ''>('');
   let botN = $state(5);
   let ver = $state(0);

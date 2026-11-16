@@ -34,3 +34,6 @@ lockHooks();
 /** 🔗 지금 열린 사이트 주소 (QR · 안내 글) = 이 페이지가 있는 폴더 (정식 /Citadel-MATH/ · 베타 /citadel-MATH-test/ · 학교판 /…/s/<코드>/ · 체험판)
  *  🐞 2026-11-15 「QR 안 먹혀」: 예전 = location.origin + BASE_URL('./') → 「https://…github.io./」(경로가 빠지고 점이 붙음) */
 export const siteUrl = (): string => (typeof location === 'undefined' ? './' : new URL('./', location.href).href);
+
+/** ❓ 문의 · 📤 나눔 구글 폼 주소 (📜 2026-11-17 #22 · 선생님이 폼을 만들면 머리가 주소를 보냄 → 여기 한 곳 · 비면 단추 · 칸 숨김) */
+export const FORMS = { ask: '', share: '' };

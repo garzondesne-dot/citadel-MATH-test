@@ -2,7 +2,9 @@
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
-  import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, recordedN, revive, slotDiff, unpackZip, type Checked, type Issue } from '../../school/packUpload';
+  import { checkMedia, checkUpload, deletable, matchCells, PACK_PATH, PREV_PATH, recordedN, revive, slotDiff, unpackZip, type Checked, type Issue } from '../../school/packUpload';
+  import { fixAuto } from '../rdun';
+  import { RD } from '../../school/rdunCfg';
   import PrepImg from '../q/PrepImg.svelte';
   import { prepPath, prepPut } from '../../school/prep';
   import { autoRects, nudge, slotsOf, type Rect } from '../../school/pdfcrop';
@@ -199,10 +201,16 @@
     removePack(id); ask = ''; gone = `「${id}」 팩을 지웠어요 · 차시 목록에서 빠져요`;
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.delete('lesson'); location.href = u.toString(); }, 900);
   }
+  // 📋 AI 에 붙일 문구 (📜 2026-11-17 #22 ① · 팩 도우미 지침 v3 [출력] 마지막 줄과 같은 꼴) · ❓ 문의 「오류 문구」 자동 채움용으로 이 기기에 기억
+  let aiNote = $state('');
+  const aiText = () => ['이 팩을 아래대로 고쳐 다시 줘', ...errs.map((x) => `- ${x.at} : ${x.msg}`)].join('\n');
+  $effect(() => { if (errs.length) { const t = errs.map((x) => `${x.at} : ${x.msg}`).join(' / '); try { localStorage.setItem('citadel-pack-lasterr', `${name} · ${t}`.slice(0, 600)); } catch { /* 이 기기만 */ } } });
+  async function copyAi() { try { await navigator.clipboard.writeText(aiText()); aiNote = '✔ 복사했어요 · AI 대화창에 붙여 넣어요'; } catch { aiNote = '복사가 막혔어요 · 아래 ✘ 줄을 길게 눌러 복사해요'; } }
   async function save() {
     if (!P || errs.length || needOk) return;
     const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
     if (oldP?.hide) v.hide = true; // 👀 숨김은 새 판에도 그대로
+    { const o = oldP as (LessonPack & { rev?: number }) | null; Object.assign(v, { rev: (o?.rev ?? (o ? 1 : 0)) + 1, upAt: Date.now() }); } // 📦 차시 카드 「v2 · 11/20 올림」 (📜 2026-11-17 #22)
     // 🎬 영상 이름은 지금 서고에 없어도 그대로 저장 (🐞 2026-11-14 「13차시 팩에 영상이 포함 안 됨」 = 올릴 때 없던 영상을 빼 버려 나중에 서고에 생겨도 안 붙었음)
     //   재생할 때 다시 찾음(video.ts videoSrc = 앱 → 정식 사이트) · 그때도 없으면 그 칸 🎬 = 「영상을 받지 못했어요」 한 줄
     const put = (p: string, x: unknown) => (S.trySet ? S.trySet(p, x) : Promise.resolve((S.set(p, x), true)));
@@ -214,9 +222,12 @@
       (v.videos ??= {})[c] = upv[n]!;
     }
     vidNote = '';
+    // ↩ 바로 전 판 하나 보관 (📜 2026-11-17 #22 ② 「↩ 바로 전 판으로 되돌리기」) = prep/packPrev/{id}
+    { const prev = S.fetch ? await S.fetch<LessonPack>(path).catch(() => null) : S.get<LessonPack>(path); if (prev && typeof prev === 'object') await put(`${PREV_PATH}/${P.id}`, prev); }
     const ok = await put(path, v); // 서버 = 실제로 써졌는지 확인(교사 로그인 · 규칙)
     if (!ok) { failed = '저장하지 못했어요 · 교사로 로그인했는지 · 인터넷을 확인해요'; return; }
     addPacks([revive(v)]); // 새로 고침 전에도 차시 목록에
+    fixAuto(S, revive(v), RD); // 🎲 자동 던전 = 올릴 때 한 번 고정 (그림 없는 팩 · 📜 2026-11-17 #22)
     saved = `${P.no}차시 ${P.title} 저장${Object.keys(imgs).length ? ` · 그림 ${Object.keys(imgs).length}칸` : ''}${Object.keys(upv).length ? ` · 영상 ${Object.keys(upv).length}편` : ''} · 차시 목록에 들어갔어요`;
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.set('lesson', P.id); location.href = u.toString(); }, 900);
   }
@@ -261,6 +272,7 @@
       {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 이름만 저장(서고에 생기면 저절로 붙음)` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
       {#if pdfNote}<p class="msum" data-k="pdfnote">{pdfNote}</p>{/if}
       {#if issues.length}<ul class="iss" data-k="packiss">{#each issues as x, i (i)}<li class={x.lvl}><b>{x.lvl === 'err' ? '✘' : '⚠'} {x.at}</b><span>{x.msg}</span></li>{/each}</ul>{/if}
+      {#if errs.length}<button type="button" class="aicopy" data-k="ai-copy" onclick={copyAi}>📋 AI 에 붙일 문구 복사</button><small class="aihint">{aiNote || '복사 = 「이 팩을 아래대로 고쳐 다시 줘」 + 위 ✘ 줄 · AI 가 준 팩을 다시 올리면 끝'}</small>{/if}
       {#if P && stepsQ.length}
         <p class="lab">미리 보기 · 학생 폰과 같은 문제 꼴 (💡 정답 펼침)</p>
         <div class="chips2" role="tablist">{#each stepsQ as s (s.id)}<button type="button" role="tab" class:on={pick === s.id} aria-selected={pick === s.id} onclick={() => { pick = s.id; ver = 0; }}>{s.title.split(' · ')[0]}</button>{/each}</div>
@@ -285,6 +297,7 @@
 {/if}
 
 <style>
+  .aicopy { min-height: 48px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .aihint { color: var(--text-2); font-size: 13px; }
   .ask { margin: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--r-sm); border-left: 4px solid var(--accent); background: var(--surface-2); font-size: 14px; } .ask span { color: var(--text-2); font-size: 13px; }
   .up { display: flex; flex-direction: column; gap: 10px; }
   .file { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 12px; border: 1.5px dashed var(--line); border-radius: var(--r); cursor: pointer; }

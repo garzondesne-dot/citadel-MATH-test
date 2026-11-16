@@ -15,6 +15,7 @@
   import StuTry from './StuTry.svelte';
   import TSim from './TSim.svelte';
   import TSettings from './TSettings.svelte';
+  import { dressed, rdunMeta } from '../rdun';
   import { dayKey, pickToday, skipToday, soonSlot } from '../../school/autoOpen';
   import { feat } from '../../school/features.svelte';
   import { notify } from '../../school/notify.svelte';
@@ -23,7 +24,7 @@
   import THome from './THome.svelte';
   import TLive from './TLive.svelte';
   import TPupils from './TPupils.svelte';
-  import TPrep from './TPrep.svelte';
+  import TPacks from './TPacks.svelte';
   import TNews from './TNews.svelte';
   import TMe from './TMe.svelte';
   import TGate from './TGate.svelte';
@@ -51,7 +52,7 @@
   let tab = $state<'class' | 'pupil' | 'prep' | 'news' | 'me'>((['class', 'pupil', 'prep', 'news', 'me'] as const).find((k) => k === tab0) ?? 'class');
   // 🔁 새로 고침돼도 보던 탭으로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 탭이 바뀌면 주소 ?tab= 만 고침(기록 안 늘림)
   $effect(() => { const t = tab; untrack(() => { try { const q = new URLSearchParams(location.search); if (q.get('tab') === t || (t === 'class' && !q.has('tab'))) return; q.set('tab', t); history.replaceState(history.state, '', `${location.pathname}?${q}`); } catch { /* 주소를 못 고치는 곳 */ } }); });
-  let prepWant = $state(''); // ⑫ 「＋ n차시 · 준비 안 됨」 → 준비 탭 그 차시 (#130 ③)
+  let testWant = $state(''); // 📦 차시 카드 「🧪 테스트로 열기」 → ⚔ 수업 탭 🧪 + 그 차시 (📜 2026-11-17 #22)
 
   // 🔐 시험 서버 = 교사 로그인(admins)이 있어야 방을 만들 수 있음 (🚨 2026-11-13 밤 선생님 「수업 방이 개설 안 되네?」 · 로그인 없이 누르면 서버가 거부 → 「수업 방을 찾지 못했어요」)
   //   → 열기 전에 막고 「🔐 교사 로그인」으로 안내 (로그인 뒤 같은 반 · 차시로 다시 누름)
@@ -75,7 +76,7 @@
   }
   function openTest(L: LessonPack, mode: TestMode, bots: number, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode) {
     if (mode === 'remote') open(testCls(S), L, true, from, carry, keyMode, bots);
-    else sim = { kind: mode === 'tv' ? 'tv' : 'stu', L, n: bots };
+    else sim = { kind: mode === 'tv' ? 'tv' : 'stu', L: dressed(L, rdunMeta(S, L)), n: bots }; // 🎲 던전 = 교사 설정 그대로 (📜 #22)
   }
   function stopLive() { if (live && liveL) endClass(S, liveL, live.code); closed(); }
   function closed() {
@@ -90,7 +91,7 @@
   const soonKey = $derived(soon ? `${dayKey(now)}|${soon.p}|${soon.L?.id ?? ''}` : '');
   let soonSeen = $state(''), soonPick = $state(false), soonRang = '';
   $effect(() => { const k = soonKey, sl = soon; if (!k || !sl || k === soonRang) return; soonRang = k; untrack(() => void notify('test', '⏰ 1분 뒤 자동으로 열려요', `${sl.p}교시 · ${sl.cls}반 · ${sl.L?.no ?? ''}차시`)); });
-  const TABS = [['class', '⚔', '수업'], ['pupil', '👥', '반 · 시간표'], ['prep', '📋', '준비'], ['news', '✉', '소식'], ['me', '🙂', '나']] as const;
+  const TABS = [['class', '⚔', '수업'], ['pupil', '👥', '반 · 시간표'], ['prep', '📦', '차시 팩'], ['news', '✉', '소식'], ['me', '🙂', '나']] as const;
 </script>
 
 <div class="tp" class:wide={wideDash && tab === 'pupil' && page === 'home'}>
@@ -100,11 +101,11 @@
     {#key live.code}<TLive {S} L={liveL} {live} {now} onhome={() => (page = 'home')} onclose={closed} />{/key}
   {:else}
     {#if tab === 'class'}
-      <THome {S} {packs} {now} {live} liveRoom={liveR} onopen={(c, L, from, cv, km) => open(c, L, false, from, cv, km)} onresume={() => (page = 'live')} onstop={stopLive} ontest={openTest} onprep={(id) => { prepWant = id; tab = 'prep'; }} />
+      {#key testWant}<THome {S} {packs} {now} {live} liveRoom={liveR} pre={testWant} onopen={(c, L, from, cv, km) => open(c, L, false, from, cv, km)} onresume={() => (page = 'live')} onstop={stopLive} ontest={openTest} onprep={() => (tab = 'prep')} />{/key}
     {:else if tab === 'pupil'}
       <TPupils {S} {now} ondash={(w) => (wideDash = w)} />
     {:else if tab === 'prep'}
-      {#key prepWant}<TPrep {S} {packs} {now} want={prepWant} />{/key}
+      <TPacks {S} {packs} ontest={(id) => { testWant = id; tab = 'class'; }} />
     {:else if tab === 'news'}
       <TNews {S} {packs} onread={() => (unread = unreadN(S))} />
     {:else}
