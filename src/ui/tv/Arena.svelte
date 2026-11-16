@@ -297,7 +297,7 @@
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
         <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} aura={Number(R.players?.[h.u]?.enh) || 0} tv pose={domPose[h.u] || baseOf(h.u) || undefined} />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
-        <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📵 ' : ''}{h.name}</span>
+        <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📶✕ ' : ''}{h.name}</span>
       </div>
     {/if}{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
@@ -335,7 +335,7 @@
   .iceb.melt { animation: imelt 0.6s ease-in forwards; } @keyframes imelt { to { opacity: 0; transform: translateY(4px); } }
   .hr { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; transition: translate 0.18s ease-out; }
   .hr.lunge { translate: calc(var(--dir) * 4cqw) 0; }
-  .hr.off { opacity: 0.45; }
+  /* 📶 끊긴 학생 = 투명하게 하지 않음 (📜 2026-11-17 「끊긴학생 투명화 막아」) · 이름표 📶✕ 만 */
   .art { display: block; line-height: 0; }
   .nm { margin-top: 0.4cqh; font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.1cqh 0.6cqw; border-radius: 99px; white-space: nowrap; }
   .nm.ok { color: var(--ok); }

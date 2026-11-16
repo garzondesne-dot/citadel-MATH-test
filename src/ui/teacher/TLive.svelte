@@ -208,7 +208,7 @@
       <div class="nums c{COLS}" role="group" aria-label="번호 칸">
         {#each pupils as p (p.uid)}
           {@const st = stOf(p.uid)}
-          <button type="button" class="n {st}" class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name}</s>{/if}</button>
+          <button type="button" class="n {st}" class:lost={st === 'no' && !!R.players?.[p.uid]} class:old={isOldU(p.uid)} class:sel={who === p.uid} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? '도움 요청' : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : '안 옴'}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}><b>{nl(p.num)}</b>{#if named}<s>{p.name}</s>{/if}</button>
         {/each}
       </div>
       <div class="q">
@@ -411,6 +411,7 @@
   .n.ok { border: 1.5px solid #3fae6a; background: #1f4b31; color: #fff; }
   .n.ok::after { content: '✔'; position: absolute; left: -4px; top: -9px; font-size: 11px; color: #7ee2a8; font-weight: 900; }
   .n.old::before { content: '⚠'; position: absolute; right: -4px; top: -9px; font-size: 11px; color: var(--accent); }
+  .n.lost { border: 1.5px solid var(--line); color: var(--text); } .n.lost::after { content: '📶✕'; position: absolute; right: -6px; top: -10px; font-size: 10px; line-height: 1; } /* 📶 들어왔다 끊긴 학생 = 흐리게 하지 않고 귀퉁이 표시만 (📜 2026-11-17) */
   .n.ab { border: 0; background: var(--surface-2); color: var(--text-3); } .n.ab b { text-decoration: line-through; }
   .n.ab::after { content: '결'; position: absolute; right: 3px; top: 2px; font-size: 9px; line-height: 1; color: var(--text-2); }
   .n.help { border: 2px solid var(--bad); background: #3a1416; color: #fff; transform-origin: 50% 100%; } .n.help.old { background: #3a2e10; }

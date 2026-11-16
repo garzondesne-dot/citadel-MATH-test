@@ -173,8 +173,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
       }
-      v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📵 ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
-      v.c.alpha = hh.off ? 0.45 : 1;
+      v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
+      v.c.alpha = 1; // 📶 끊긴 학생 = 투명하게 하지 않음 · 머리 위 📶✕ 만 (📜 2026-11-17)
     }
     partyC.sortableChildren = true;
     partyKey = key;
