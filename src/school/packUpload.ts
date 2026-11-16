@@ -377,12 +377,19 @@ export function matchCells(names: string[], cells: string[]): { map: Record<stri
   }
   return { map, unused: names.filter((n) => !Object.values(map).includes(n)) };
 }
+/** 🔤 zip 안 파일 이름 바로잡기 (📜 2026-11-16 학교판 「(ì¤‘1í†µê³„…)」): UTF-8 표시 없는 zip 을 fflate 가 한 바이트 = 한 글자로 읽음 → 그 바이트를 UTF-8 로 다시 · 안 되면 EUC-KR(윈도 압축) · 둘 다 아니면 그대로 */
+export function fixZipName(p: string): string {
+  if (![...p].some((c) => c.charCodeAt(0) >= 0x80) || [...p].some((c) => c.charCodeAt(0) > 0xff)) return p;
+  const bytes = Uint8Array.from([...p].map((c) => c.charCodeAt(0)));
+  for (const enc of ['utf-8', 'euc-kr']) { try { return new TextDecoder(enc, { fatal: true }).decode(bytes); } catch { /* 다음 */ } }
+  return p;
+}
 /** zip 풀기 = .json 1개(팩) + 그림들 · 폴더 상관없음 · 숨김 · __MACOSX 빼고 */
 export async function unpackZip(buf: Uint8Array): Promise<{ json: string | null; name: string; images: { name: string; data: Uint8Array }[]; pdfs: { name: string; data: Uint8Array }[]; videos: { name: string; data: Uint8Array }[]; files: string[]; error?: string }> {
   if (buf.byteLength > ZIP_MAX) return { json: null, name: '', images: [], pdfs: [], videos: [], files: [], error: `zip 이 ${(buf.byteLength / 1048576).toFixed(1)}MB — 20MB 까지만` };
   const { unzipSync, strFromU8 } = await import('fflate');
   let files: Record<string, Uint8Array>;
-  try { files = unzipSync(buf); } catch (e) { return { json: null, name: '', images: [], pdfs: [], videos: [], files: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
+  try { files = Object.fromEntries(Object.entries(unzipSync(buf)).map(([k, v]) => [fixZipName(k), v])); } catch (e) { return { json: null, name: '', images: [], pdfs: [], videos: [], files: [], error: `zip 을 풀 수 없어요 — ${(e as Error).message}` }; }
   const ok = (p: string) => !/(^|\/)(__MACOSX|\.)/.test(p) && !p.endsWith('/');
   const js = Object.keys(files).filter((p) => ok(p) && /\.json$/i.test(p));
   const images = Object.keys(files).filter((p) => ok(p) && IMG_RE.test(p)).map((p) => ({ name: p.replace(/^.*\//, ''), data: files[p]! }));
