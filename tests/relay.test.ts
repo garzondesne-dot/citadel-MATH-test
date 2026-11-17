@@ -63,7 +63,8 @@ describe('🔔 무료 중계', () => {
       if (url.includes('signInWithPassword')) return Response.json({ idToken: 'idt' });
       expect(url).toContain('auth=idt');
       const p = url.replace('https://db.test/', '').replace(/\.json.*$/, '');
-      if (init?.method) { writes.push([init.method, p]); if (p === 'relay/seen') db['relay/seen'] = JSON.parse(String(init.body)); return new Response('null'); }
+      const badKey = (o: unknown): boolean => !!o && typeof o === 'object' && Object.entries(o as object).some(([k, v]) => /[.#$/[\]]/.test(k) || badKey(v)); // 진짜 Firebase 처럼: 칸 이름에 / . # $ [ ] = 400
+      if (init?.method) { writes.push([init.method, p]); if (init.body && typeof init.body === 'string' && badKey(JSON.parse(init.body))) return new Response('{"error":"Invalid key"}', { status: 400 }); if (p === 'relay/seen') db['relay/seen'] = JSON.parse(String(init.body)); return new Response('null'); }
       return Response.json(db[p] ?? null);
     });
     const env = { DB_URL: 'https://db.test', SITE: 'https://site.test/', API_KEY: 'k', RELAY_EMAIL: 'relay@x', RELAY_PASSWORD: 'p', VAPID_PUBLIC: v.publicKey, VAPID_PRIVATE: v.privateKey, VAPID_SUBJECT: v.subject };
@@ -73,5 +74,28 @@ describe('🔔 무료 중계', () => {
     expect(calls.sort()).toEqual(['https://push.example/gone', 'https://push.example/ok']);
     expect(writes).toContainEqual(['DELETE', 'teacherPush/t1/b']);
     await expect(run({ ...env, DB_URL: 'https://citadel-math-default-rtdb.firebaseio.com' }, { doFetch })).rejects.toThrow('멈춤');
+  });
+  it('🐞 #47 로그인 실패 3번 = 알림 한 번만 (본 것 저장 성공 · 다음 판에 또 안 보냄) · 저장 실패면 보내지 않음', async () => {
+    const v = await vapidPair(), ua = await uaKeys(), sent: string[] = [];
+    const now = Date.UTC(2026, 10, 17, 3, 0), t = now - 60000;
+    const db: Record<string, unknown> = { photo: {}, 'school/inbox': {}, loginFail: {}, 'relay/seen': null, teacherPush: { t1: { a: { sub: { endpoint: 'https://push.example/ok', keys: { p256dh: ub64(ua.pub), auth: ub64(ua.auth) } }, kinds: { login: true, deploy: true } } } } };
+    let failSave = false;
+    const doFetch = vi.fn(async (url: string, init?: { method?: string; body?: unknown }) => {
+      if (url.startsWith('https://push.example/')) { sent.push(await decrypt(init!.body as Uint8Array, ua)); return new Response(null, { status: 201 }); }
+      if (url.includes('version.json')) return Response.json({ build: 'b216' });
+      if (url.includes('signInWithPassword')) return Response.json({ idToken: 'idt' });
+      const p = url.replace('https://db.test/', '').replace(/\.json.*$/, '');
+      if (init?.method) { const b = init.body ? JSON.parse(String(init.body)) : null; const bad = (o: unknown): boolean => !!o && typeof o === 'object' && Object.entries(o as object).some(([k, x]) => /[.#$/[\]]/.test(k) || bad(x)); if (failSave || bad(b)) return new Response('{}', { status: 400 }); if (p === 'relay/seen') db['relay/seen'] = b; return new Response('null'); }
+      return Response.json(db[p] ?? null);
+    });
+    const env = { DB_URL: 'https://db.test', SITE: 'https://site.test/', API_KEY: 'k', RELAY_EMAIL: 'r', RELAY_PASSWORD: 'p', VAPID_PUBLIC: v.publicKey, VAPID_PRIVATE: v.privateKey, VAPID_SUBJECT: v.subject };
+    await run(env, { doFetch, now }); // 첫 번 = 기준만
+    db.loginFail = { '1-2': { 5: { a: t, b: t, c: t } } };
+    expect((await run(env, { doFetch, now })).sent).toBe(1); // 로그인 알림 한 번
+    expect((await run(env, { doFetch, now: now + 60000 })).sent).toBe(0); // 1분 뒤 = 또 안 보냄
+    expect((await run(env, { doFetch, now: now + 120000 })).sent).toBe(0);
+    expect(sent.filter((x) => /로그인/.test(x)).length).toBe(1);
+    failSave = true; db.photo = { '1-3': { 2: { k: { a: { status: 'check' } } } } };
+    const r = await run(env, { doFetch, now: now + 180000 }); expect(r.sent).toBe(0); expect(r.error).toBeTruthy(); // 저장 실패 = 안 보냄(되풀이 막기)
   });
 });

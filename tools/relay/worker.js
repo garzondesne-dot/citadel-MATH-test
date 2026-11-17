@@ -18,7 +18,8 @@ export async function run(env, { doFetch = fetch, now = Date.now() } = {}) {
   const [photo, inbox, fails, seen, subs] = await Promise.all([db('photo'), db('school/inbox'), db('loginFail'), db('relay/seen'), db('teacherPush')]);
   let site = null; try { const v = await (await doFetch(`${env.SITE}version.json?t=${now}`, { cf: { cacheTtl: 0 } })).json(); site = String(v.build || '') || null; } catch { /* 사이트 잠깐 안 됨 */ }
   const { notes, next } = diffData(rawNoteData(photo, inbox, fails), seen && seen.at ? { photo: seen.photo || [], hand: seen.hand || [], login: seen.login || {}, deploy: seen.deploy || '' } : null /* 빈 목록은 서버에 안 남음 → at 으로 「본 적 있음」 */, now, site, '');
-  await db('relay/seen', { method: 'PUT', body: JSON.stringify({ ...next, at: now }) });
+  // 🐞 #47 본 것 저장이 실패하면 보내지 않음 (저장 실패 = 다음 번에 같은 알림을 또 보냄 → 1분마다 되풀이되던 것)
+  if (!(await db('relay/seen', { method: 'PUT', body: JSON.stringify({ ...next, at: now }) }))) return { notes: notes.length, sent: 0, gone: 0, error: 'seen 저장 실패' };
   let sent = 0, gone = 0;
   const vapid = { publicKey: env.VAPID_PUBLIC, privateKey: env.VAPID_PRIVATE, subject: env.VAPID_SUBJECT };
   for (const [uid, byFp] of Object.entries(subs || {})) for (const [fp, row] of Object.entries(byFp || {})) {

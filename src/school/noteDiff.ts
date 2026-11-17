@@ -30,7 +30,7 @@ const byClass = (cls: string[], unit: string) => { const m = new Map<string, num
 export function diffData(d: NoteData, seen: NoteSnap | null, now: number, site: string | null, build: string): { notes: Note[]; next: NoteSnap } {
   const phIds = d.photo.map((x) => `${x.c}_${x.n}_${x.k}_${x.id}`);
   const t0 = kstToday0(now), day = kstDay(now), loginHot: Record<string, string> = {};
-  for (const [c, byN] of Object.entries(d.fails || {})) for (const [n, byT] of Object.entries(byN || {})) { const k = Object.values(byT || {}).filter((at) => Number(at) >= t0).length; if (k >= LOGIN_FAIL_N) loginHot[`${c}/${n}`] = day; }
+  for (const [c, byN] of Object.entries(d.fails || {})) for (const [n, byT] of Object.entries(byN || {})) { const k = Object.values(byT || {}).filter((at) => Number(at) >= t0).length; if (k >= LOGIN_FAIL_N) loginHot[`${c}|${n}`] = day; /* 🐞 #47 서버 칸 이름에 「/」 금지 → 「|」 (중계가 relay/seen 저장에 실패해 같은 알림을 1분마다 다시 보내던 것) */ }
   const next: NoteSnap = { photo: phIds, hand: d.msgs.map((x) => x.id), login: Object.fromEntries(Object.entries({ ...(seen?.login ?? {}), ...loginHot }).filter(([, v]) => v === day)), deploy: site ?? seen?.deploy ?? build };
   if (!seen) return { notes: [], next };
   const notes: Note[] = [];
@@ -39,7 +39,7 @@ export function diffData(d: NoteData, seen: NoteSnap | null, now: number, site: 
   const newMsg = d.msgs.filter((x) => !seen.hand.includes(x.id));
   if (newMsg.length) notes.push({ kind: 'hand', title: `💬 학생 메시지 ${newMsg.length}개`, body: `${byClass(newMsg.map((x) => x.cls), '개')} · 소식 탭에서 답장` });
   const newFail = Object.keys(loginHot).filter((k) => seen.login[k] !== day);
-  if (newFail.length) notes.push({ kind: 'login', title: `🔑 로그인 실패 여러 번 · ${newFail.length}명`, body: `${byClass(newFail.map((k) => k.split('/')[0]!), '명')} · 오늘 ${LOGIN_FAIL_N}번 이상 · 반 탭에서 0000 초기화` });
+  if (newFail.length) notes.push({ kind: 'login', title: `🔑 로그인 실패 여러 번 · ${newFail.length}명`, body: `${byClass(newFail.map((k) => k.split(/[|/]/)[0]!), '명')} · 오늘 ${LOGIN_FAIL_N}번 이상 · 반 탭에서 0000 초기화` });
   if (site && site !== seen.deploy && site !== build) notes.push({ kind: 'deploy', title: `🆕 새 판 ${site}`, body: '게임이 새 판으로 바뀌었어요 · 열면 새로 고침' });
   return { notes, next };
 }
