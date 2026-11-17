@@ -1,5 +1,5 @@
 // 📖 기호 톡 — 정식 js/engine/symtalk.js (문구 원본 = hero-v2 docs/SYMBOL-TALK.md · 집합 단원 16줄 + 개념 톡) 을 그대로 옮김
-//   pick(줄, 자리) = 문맥으로 기호 고르기 (A ∩ B = ∅ → 서로소 · n(A ∪ B) → 개수 공식 · Aᶜ → 여집합 …) · 명제 단원 낱말은 그 차시가 생길 때
+//   pick(줄, 자리) = 문맥으로 기호 고르기 (A ∩ B = ∅ → 서로소 · n(A ∪ B) → 개수 공식 · Aᶜ → 여집합 …) · 명제 단원(8 · 9차시 8줄) = PROP · 명제 차시에서만 (#49)
 export interface SymRow { id: string; sym: string; easy: string; def: string; memo: string }
 export const ROWS: SymRow[] = [
   { id: 'in', sym: 'a ∈ A', easy: 'a 는 A 팀 소속!', def: '「a 는 집합 A 에 속한다」 · a 가 집합 A 의 원소일 때', memo: '∈ = 원소(element)의 e 를 바꾼 기호 · 왼쪽 = 원소, 오른쪽 = 집합' },
@@ -22,7 +22,27 @@ export const ROWS: SymRow[] = [
 export const CONCEPTS: (SymRow & { where: RegExp })[] = [
   { id: '2^n', sym: '2ⁿ', easy: '원소마다 「넣을까 뺄까」 2가지씩 → 2 × 2 × … (원소 수만큼)', def: '원소가 n 개인 집합의 부분집합의 개수는 2ⁿ 개', memo: '2³ = 2 × 2 × 2 = 8 · 2⁵ = 2 × 2 × 2 × 2 × 2 = 32 (25 아님) · 지수 n = 원소의 개수', where: /집합 X 의 개수는\?|부분집합의 개수/ },
 ];
-export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS].map((r) => [r.id, r]));
+/** 📖 명제 단원 (📜 #49 · SYMBOL-TALK.md 「명제 단원」 8 · 9차시 절 그대로 · 정식 symtalk.js PROP) — ~ · → 기호 + 낱말(명제 · 조건 · 진리집합 · 반례 · 역 · 대우) · 명제 차시에서만 */
+export const PROP: SymRow[] = [
+  { id: 'neg', sym: '~p', easy: 'p를 거꾸로 뒤집은 말', def: '「p가 아니다」 = p의 부정 · p가 참이면 ~p는 거짓, p가 거짓이면 ~p는 참', memo: '~(~p) = p · 「x > 2」의 부정은 「x ≤ 2」 (같다도 들어감)' },
+  { id: 'prop', sym: '명제', easy: '참 · 거짓이 딱 정해지는 말', def: '참 또는 거짓을 명확하게 판별할 수 있는 문장이나 식', memo: '「아름답다」 · 「높다」처럼 기준이 사람마다 다르면 명제가 아님' },
+  { id: 'cond', sym: '조건', easy: 'x가 정해져야 참 · 거짓이 정해지는 말', def: '변수의 값에 따라 참, 거짓을 판별할 수 있는 문장이나 식', memo: '「x는 3의 배수」 → x = 6이면 참, x = 5이면 거짓' },
+  { id: 'truth', sym: '진리집합 P', easy: 'U에서 조건을 통과한 것만 모은 집합', def: '전체집합 U의 원소 중 조건 p를 참이 되게 하는 모든 원소의 집합', memo: 'U가 바뀌면 진리집합도 바뀜(x² = 4 → 자연수면 {2}, 정수면 {−2, 2}) · ~p의 진리집합 = Pᶜ' },
+  { id: 'imp', sym: 'p → q', easy: 'p이면 q (p일 때 꼭 q)', def: '명제 「p이면 q이다」를 기호로 나타낸 것 · p = 가정, q = 결론', memo: 'P ⊂ Q이면 참 · 하나라도 어긋나면 거짓' },
+  { id: 'counter', sym: '반례', easy: '「아닌데?」 하나면 끝', def: '명제가 거짓임을 보이는 예', memo: '「소수는 홀수」 → 2' },
+  { id: 'conv', sym: '역', easy: '앞뒤를 바꾼 말', def: 'p → q의 가정과 결론을 서로 바꾼 명제 q → p', memo: '원래가 참이어도 역은 거짓일 수 있음' },
+  { id: 'contra', sym: '대우', easy: '앞뒤를 바꾸고 둘 다 뒤집은 말', def: 'p → q의 가정과 결론을 각각 부정하여 서로 바꾼 명제 ~q → ~p', memo: '원래 명제와 참 · 거짓이 같음' },
+];
+export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS, ...PROP].map((r) => [r.id, r]));
+/** 명제 낱말 · 기호를 붙이는 차시 = 명제 차시(8차시부터 · 성채 제외) + 성채 2층(명제 방) — 정식 propOn 그대로 */
+export const propOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && (L.id === 'eval-2' || (!/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 8));
+const PROPRE = /~(?=\s*[pqr](?![A-Za-z]))|(?<=~?[pqr] )→(?= ~?[pqr](?![A-Za-z]))|반례|(?<![가-힣])대우(?=[은는이가를와의도]|[\s」:.,]|$)|(?<![가-힣])역(?=[은는이을과의도]|[\s」:.,]|$)|진리집합|명제|조건(?!제시)|(?<![A-Za-z])P(?![A-Za-z])/g;
+/** 명제 낱말 · 기호 찾기 (정식 propHits 그대로) — 진리집합 기호 P 는 같은 글에 「진리집합」 낱말이 있을 때만 */
+export function propHits(t: string, whole = t): { i: number; len: number; id: string }[] {
+  const out: { i: number; len: number; id: string }[] = [], tp = /진리집합/.test(whole); PROPRE.lastIndex = 0; let m;
+  while ((m = PROPRE.exec(t))) { const w = m[0]; const id = w === '~' ? 'neg' : w === '→' ? 'imp' : w === '반례' ? 'counter' : w === '역' ? 'conv' : w === '대우' ? 'contra' : w === '명제' ? 'prop' : w === '조건' ? 'cond' : 'truth'; if (w === 'P' && !tp) continue; out.push({ i: m.index, len: w.length, id }); }
+  return out;
+}
 
 const SETR = /[A-ZU)ᶜ}∅]$/;
 const before = (t: string, i: number) => t.slice(0, i).replace(/\s+$/, ''), after = (t: string, i: number, n = 1) => t.slice(i + n).replace(/^\s+/, '');
@@ -52,7 +72,7 @@ export function pick(t: string, i: number): string | null {
 const CH = /[∈∉⊂⊄∅∩∪=−ᶜ]|n(?=\()/g;
 export type Seg = { text: string; id?: string };
 /** 문제 글 → 글 조각 · 기호 조각 (기호 = 한 글자 · ᶜ 는 앞 글자와 함께 「Aᶜ」 로 묶어 누르는 칸을 넓힘) · 끝에 개념 톡 칩 */
-export function segments(t: string): Seg[] {
+export function segments(t: string, o: { prop?: boolean } = {}): Seg[] {
   const hits: { i: number; len: number; id: string }[] = [];
   CH.lastIndex = 0; let m;
   while ((m = CH.exec(t))) {
@@ -60,6 +80,7 @@ export function segments(t: string): Seg[] {
     if (id === 'compl' && m.index > 0 && /[A-Z]/.test(t[m.index - 1] as string)) { const prev = hits[hits.length - 1]; if (prev && prev.i === m.index - 1) hits.pop(); hits.push({ i: m.index - 1, len: 2, id }); continue; }
     hits.push({ i: m.index, len: 1, id });
   }
+  if (o.prop) { hits.push(...propHits(t)); hits.sort((a, b) => a.i - b.i); } // 📜 #49 명제 차시 = 명제 낱말 · ~ · → 도
   const out: Seg[] = []; let at = 0;
   for (const h of hits) { if (h.i < at) continue; if (h.i > at) out.push({ text: t.slice(at, h.i) }); out.push({ text: t.slice(h.i, h.i + h.len), id: h.id }); at = h.i + h.len; }
   if (at < t.length) out.push({ text: t.slice(at) });

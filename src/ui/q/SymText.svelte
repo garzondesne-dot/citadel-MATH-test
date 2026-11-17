@@ -7,7 +7,7 @@
   const { text, on = true }: { text: string; on?: boolean } = $props();
   // 그림 조각 = 과목 팩 SUBJ.rich (#132 · #136) · 나머지 글 = 기호 톡(SUBJ.symtalk · 없으면 글 그대로)
   const F = SUBJ.rich?.Figure;
-  const segOf = (t: string) => (on && SUBJ.symtalk && feat('symtalk') ? SUBJ.symtalk.segments(t) : [{ text: t }]);
+  const segOf = (t: string) => (on && SUBJ.symtalk && feat('symtalk') ? SUBJ.symtalk.segments(t, { prop: symState.prop }) : [{ text: t }]);
   const parts = $derived((SUBJ.rich ? SUBJ.rich.parts(text) : [{ text }]).map((p) => ('fig' in p ? p : { segs: segOf(p.text) })));
   const CIRC = '①②③④⑤⑥⑦⑧⑨';
   const key = (e: KeyboardEvent, id: string) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSym(id); } };

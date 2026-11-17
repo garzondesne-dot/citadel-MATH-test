@@ -1,9 +1,9 @@
 <script lang="ts">
+  import { setSymPack } from '../battle/symsheet.svelte';
   import { helpOf } from '../../school/help';
   import { feat } from '../../school/features.svelte';
   import HelpSheet from './HelpSheet.svelte';
-  import { setSymLesson } from '../../school/symtap';
-  import { paperOn, pw } from '../submit.svelte';
+    import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
@@ -31,7 +31,7 @@
   //   카드 맨 위 「문제 n · 소문제 k / m」 · 한 장에 소문제 하나 · 다 채우면 「공격」(하트 = 남은 기회)
   //   틀림 → 채점표 → 같은 문제 · ✔ 잠김 · ✘ 빈칸(재도전 v4) · 생각 시간 / 퍼펙트 → ✔ 카드 + 보조 줄(힐 · 묶기 · 진필살기 = 자리만)
   const { S, L, R, code, mid, uid, now, locked, title, onhint }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void } = $props();
-  $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
+  $effect(() => setSymPack(L as { id: string; no?: number; kind?: string })); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const rec = $derived(plainRecord(L, R, mid, uid));
   const v4 = $derived(V4(R)); // ❤ ⚡ 베타 v4 (📜 2026-11-13 밤)
   const healers = $derived([...new Set(healsTo(R, mid, uid, L).map((h) => R.players?.[h.from]?.nick || '친구'))].join(' · '));
