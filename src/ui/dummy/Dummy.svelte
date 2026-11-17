@@ -80,20 +80,22 @@
     void ver; if (!cls) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
     return !RS.get(ultKey(uid, rl, mid));
   }
-  /** 📜 #57 학습지 숫자 📜 를 받은 소레이드 문항 = 「✍ 혼자 다시 쓰기 · 📜 +1」 (숫자 바꾼 판 · 문항당 한 번 더) */
+  /** 📜 #57 학습지 숫자 📜 를 받은 소레이드 문항 = 「✍ 실력 쓰기 · 📜 +1」 (숫자 바꾼 판 · 문항당 한 번 더) */
   function phV(L: LessonPack, mid: string): boolean {
     void ver; if (!cls || !L.monsters?.[mid]?.chain) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
     return !!RS.get(ultKey(uid, rl, mid)) && !RS.get(ultKey(uid, rl, mid, true));
   }
+  /** ✔ 실력 쓰기 통과 (📜 칸 ult_…_v 있음) */
+  function phVok(L: LessonPack, mid: string): boolean { void ver; if (!cls) return false; return !!RS.get(ultKey(uid, rubricLesson(RS, L), mid, true)); }
   let rw = $state<{ L: LessonPack; mid: string; rl: string; items: import('../../model/types').Question[]; title: string } | null>(null);
   function rewrite(L: LessonPack, mid: string) {
     const items = chainOf(L, mid, `${uid}|rw`, rewriteVer(uid, mid, 6)); if (!items.length) return; // 학생 · 문항마다 늘 같은 판 (불통과 = 같은 숫자로 다시)
     rw = { L, mid, rl: rubricLesson(RS, L), items, title: (L.steps.find((s) => s.id === mid)?.title ?? mid) }; res = null;
   }
-  function rwPass() {
+  function rwPass(v: { id?: string }) {
     const x = rw; rw = null; if (!x) return;
-    photoScroll(RS, uid, x.rl, x.mid, true); ver++; // 사진 창이 이미 줬으면 그대로 (한 번만)
-    res = { L: x.L, title: `${x.title} · ✍ 혼자 다시 쓰기`, clear: true, got: 0, xp: 0, why: ['📜 +1 서술 조각 (캠프에서 받아요)'], sealed: false };
+    photoScroll(RS, uid, x.rl, x.mid, true, String(v?.id || '')); ver++; // 사진 창이 이미 줬으면 그대로 (한 번만)
+    res = { L: x.L, title: `${x.title} · ✍ 실력 쓰기`, clear: true, got: 0, xp: 0, why: ['📜 +1 서술 조각 (캠프에서 받아요)'], sealed: false };
   }
   function fight(L0: LessonPack, mid: string) {
     // 👑 #27 짝 몬스터를 복습으로 보내 수업에서 빠진 형성평가 문항 = 그 몬스터 다음에 이어서 (원래 번호 · 판 그대로)
@@ -185,7 +187,7 @@
       <ul class="got" data-k="dummy-got">{#if res.xp}<li class="xp">+{res.xp} EXP</li>{/if}{#each res.why as w (w)}<li>{w}</li>{/each}</ul>
       {#if !res.xp && !res.why.length}<p class="muted">이미 받은 보상이에요 · 💎 은 틀림 · 안 푼 문제를 해결하면 받아요</p>{/if}
     {:else}<p class="muted">벌은 없어요 · 다시 풀면 숫자가 바뀌어 나와요</p>{/if}
-    {#if res.go && phLeft(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-ph-go" onclick={() => fight(res!.go!.L, res!.go!.mid)}>✍ 서술형 📷 찍고 📜 받기<small>처치해도 사진은 언제든 · 문제당 📜 1</small></button>{:else if res.go && phV(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-rw-go" onclick={() => rewrite(res!.go!.L, res!.go!.mid)}>✍ 혼자 다시 쓰기 · 📜 +1<small>숫자 바꾼 판 · 소레이드 없이 손글씨 → 📷</small></button>{/if}
+    {#if res.go && phLeft(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-ph-go" onclick={() => fight(res!.go!.L, res!.go!.mid)}>✍ 서술형 📷 찍고 📜 받기<small>처치해도 사진은 언제든 · 문제당 📜 1</small></button>{:else if res.go && phV(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-rw-go" onclick={() => rewrite(res!.go!.L, res!.go!.mid)}>✍ 실력 쓰기 · 📜 +1<small>숫자 바꾼 판 · 소레이드 없이 손글씨 → 📷</small></button>{/if}
   </Sheet>
 {:else if shelf}
   <Sheet onclose={() => (shelf = null)} tall mainText="허수아비로" onmain={() => (shelf = null)}>
@@ -218,9 +220,9 @@
               <li class:open={r.need} class:clear={!r.need && (r.clear || !!r.st)} class:boss={r.id === BOSS_ID} data-mid={r.id}>
                 {#if r.st}<i class="ni" class:blink={r.need} style={icon(r.st)} aria-hidden="true"></i>{:else}<span class="mi" aria-hidden="true">{r.id === BOSS_ID ? '👑' : r.clear ? '✔' : '🎯'}</span>{/if}
                 <span class="tx">{#if r.need}<b class="ex">❗</b> {/if}{r.title}{#if r.st}<small> · {WHY[r.st] ?? ''}</small>{/if}
-                  {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if phLeft(c.L, r.id)}<em class="tag ph" data-k="ph-left">📷 서술형 남음 · 📜 1</em>{:else if phV(c.L, r.id)}<em class="tag ph" data-k="ph-v">✔ 서술형 · 다시 쓰기 가능</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
+                  {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if phLeft(c.L, r.id)}<em class="tag ph" data-k="ph-left">📷 서술형 남음 · 📜 1</em>{:else if phV(c.L, r.id)}<em class="tag ph" data-k="ph-v">✔ 서술형 · 실력 쓰기 가능</em>{:else if phVok(c.L, r.id)}<em class="tag ph" data-k="ph-vok">✔ 실력 쓰기 통과</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
                 <button type="button" class="go" class:main={r.need || r.bossNeed} onclick={() => fight(c.L, r.id)}>{r.need || r.bossNeed ? '⚔ 풀기' : '다시'}</button>
-                {#if phV(c.L, r.id)}<button type="button" class="rwb" data-k="rw-go" onclick={() => rewrite(c.L, r.id)}>✍ 혼자 다시 쓰기 · 📜 +1</button>{/if}
+                {#if phV(c.L, r.id)}<button type="button" class="rwb" data-k="rw-go" onclick={() => rewrite(c.L, r.id)}>✍ 실력 쓰기 · 📜 +1</button>{/if}
               </li>
             {/each}
           </ul>
