@@ -76,6 +76,35 @@ export const appealPath = (cls: string, num: number, lid: string, rid: string, i
 export function chainItems(rub: Rubric | null, stepTitle: string, items: Question[], says: string[]): PhItem[] {
   return [{ question: rub?.ask || stepTitle, answer: (items[items.length - 1] as { answer?: unknown } | undefined)?.answer, solution: says.join(' / '), check: Object.assign({}, ...items.map((x) => ((x as { check?: Record<string, unknown> }).check || {}))) }];
 }
+// ── 📜 #57 ✍ 혼자 다시 쓰기 = 숫자 바꾼 판 (학습지 숫자 📜 를 받은 뒤 문항당 한 번 더 · 소레이드 단계 없이 문제 → 손글씨 → 📷) ──
+/** 학생 · 문항마다 늘 같은 판 (불통과 = 같은 숫자로 다시) · 1 ~ n−1 (판 0 = 학습지 숫자) */
+export function rewriteVer(uid: string, mid: string, n: number): number {
+  let h = 7; for (const c of `${uid}|${mid}`) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return n > 1 ? 1 + (h % (n - 1)) : 0;
+}
+const qText = (q: Question) => String((q as { question?: string }).question ?? '');
+const ansText = (q: Question | undefined): string => {
+  if (!q) return '';
+  if (q.type === 'choice') return q.choices[q.answerIndex] ?? '';
+  if (q.type === 'multi') { const ch = (q as { choices?: string[] }).choices || []; return (q.answer as number[]).map((i) => ch[i] ?? i).join(', '); }
+  const a = (q as { answer?: unknown; answers?: string[] }).answer ?? (q as { answers?: string[] }).answers?.[0];
+  return Array.isArray(a) ? a.join(', ') : String(a ?? '');
+};
+/** 그 판의 문제 = 공통 문제 글(단계 글 첫 줄이 모두 같으면) + 단계 질문들 · 사진 채점에 보낼 한 칸 (기준표 = 같은 문항 · 숫자만 그 판) */
+export function rewriteOf(items: Question[]): { stem: string; lines: string[]; ph: PhItem[] } {
+  const qs = items.map(qText), cut = qs.map((t) => t.indexOf('\n'));
+  const head = cut.every((i) => i > 0) ? qs[0]!.slice(0, cut[0]) : '';
+  const stem = head && qs.every((t) => t.startsWith(`${head}\n`)) ? head : '';
+  const lines = qs.map((t) => (stem ? t.slice(stem.length + 1) : t).trim());
+  const ask = `${[stem, ...lines].filter(Boolean).join(' / ')} (숫자 바꾼 판 · 기준표 단계는 같고 숫자만 이 문제 숫자)`;
+  const sol = items.map((q) => (q as { say?: string; solution?: string }).say || (q as { solution?: string }).solution || '').filter(Boolean).join(' / ');
+  return { stem, lines, ph: [{ question: ask, answer: ansText(items[items.length - 1]), solution: sol, check: Object.assign({}, ...items.map((x) => ((x as { check?: Record<string, unknown> }).check || {}))) }] };
+}
+/** 🏰 성채 방의 다시 쓰기 판 = 1 ~ 6 중 하나 · 문제 글이 판 0 과 같으면(숫자 없는 증명 · 3층 17) 판 0 */
+export function rewriteCastle(vers: Question[][], uid: string, rid: string): Question[] {
+  const k = rewriteVer(uid, rid, vers.length), v = vers[k] ?? vers[0] ?? [];
+  return rewriteOf(v).stem && rewriteOf(v).stem === rewriteOf(vers[0] ?? []).stem ? (vers[0] ?? []) : v;
+}
 // ── 교사: 결과 모으기 · 확인할 것 · 사용량 ──
 export interface PhotoRow { c: string; n: number; k: string; id: string; status: string; score?: number; total?: number; pass?: number; conf?: string; at?: number; ask?: string; right?: string; ans?: string; fb?: string; steps: { id?: string; pts?: number; earned?: number; note?: string }[]; flags: string[]; appeal?: { t?: string }; ok?: boolean; tok?: { in?: number; out?: number } }
 export function allRows(S: Store): PhotoRow[] {
@@ -98,15 +127,15 @@ export async function markPhoto(S: Store, x: Pick<PhotoRow, 'c' | 'n' | 'k' | 'i
   const p = `photo/${x.c}/${x.n}/${x.k}/${x.id}`, at = S.now();
   const done = S.trySet ? (await S.trySet(`${p}/ok`, ok)) && (await S.trySet(`${p}/okAt`, at)) : (S.set(`${p}/ok`, ok), S.set(`${p}/okAt`, at), true);
   // 📜 #38 ① 선생님 ✔ 인정 = 교사 폰이 그 자리에서 📜 1 (학생 폰이 그 화면에 없어도 · 문제당 한 번 · 차시 문제만 = 성채는 성채 보상 길)
-  if (done && ok) { const i = x.k.indexOf('_'), lid = x.k.slice(0, i), mid = x.k.slice(i + 1), num = Number(x.n); if (i > 0 && lessonKey(lid) && num) photoScroll(S, uidOf(String(x.c).replace(/_/g, '-'), num), lid, mid); }
+  if (done && ok) { const i = x.k.indexOf('_'), lid = x.k.slice(0, i), mid = x.k.slice(i + 1), num = Number(x.n); if (i > 0 && lessonKey(lid) && num) { const u = uidOf(String(x.c).replace(/_/g, '-'), num); if (!photoScroll(S, u, lid, mid)) photoScroll(S, u, lid, mid, true); } } // 📜 #57 학습지 숫자 📜 를 이미 받았으면 = ✍ 혼자 다시 쓰기(숫자 바꾼 판) 사진
   return done;
 }
 /** 성채 팩 문항이 아님 (성채 사진 = 성채 보상 길 · 📜 는 Castle 이 줌) */
 const lessonKey = (lid: string) => !!lid && !castles.list.some((p) => p.id === lid);
 /** 📜 #38 ① 서술형 사진 통과 = 결과가 온 그 자리에서 📜 1 (화면을 닫거나 새로 고쳐도 · 문제당 한 번 · 차시 문제만) */
-export function passScroll(S: Store, cls: string, num: number, lid: string, mid: string): boolean {
+export function passScroll(S: Store, cls: string, num: number, lid: string, mid: string, v = false): boolean {
   if (!cls || !num || !lessonKey(lid)) return false;
-  return photoScroll(S, uidOf(cls, num), lid, mid);
+  return photoScroll(S, uidOf(cls, num), lid, mid, v); // v = 📜 #57 ✍ 혼자 다시 쓰기 (숫자 바꾼 판)
 }
 /** 📷 확인할 것 (⏳ 확신 낮음 · 🙋 이의 신청 · 아직 ✔ ✖ 안 함) · cls · num 으로 좁히기 (📜 2026-11-15 머리 🔨 「사진 승인 = 소식 탭 📷」) */
 export const photoNeeds = (S: Store, cls = '', num = 0) => allRows(S).filter((x) => needs(x) && (!cls || x.c === ck(cls)) && (!num || Number(x.n) === num));

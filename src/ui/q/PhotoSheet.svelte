@@ -11,8 +11,8 @@
   import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, passScroll, post, PRE_MSG, precheckOf, QUAL, rubric, roomMax, type PhotoRes } from '../../school/photo';
 
   export interface PhotoOut { status: 'pass' | 'check' | 'retry' | 'appeal'; id?: string; score?: number; total?: number; scores: number[]; steps?: PhotoRes['steps'] }
-  const { S, cls, num, lesson, room, title, items, trial = false, test = false, onclose }:
-    { S: Store; cls: string; num: number; lesson: string; room: string; title: string; items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[]; trial?: boolean; test?: boolean; onclose: (v: PhotoOut | null) => void } = $props();
+  const { S, cls, num, lesson, room, title, items, trial = false, test = false, again = false, onclose }:
+    { S: Store; cls: string; num: number; lesson: string; room: string; title: string; items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[]; trial?: boolean; /** 📜 #57 ✍ 혼자 다시 쓰기 (숫자 바꾼 판 · 📜 칸 따로) */ again?: boolean; test?: boolean; onclose: (v: PhotoOut | null) => void } = $props();
   const P = untrack(() => pack(items)), cfg = untrack(() => cfgOf(S)), r0 = untrack(() => rubric(S, lesson, room)) || { total: 4, pass: 3 };
   const rk = untrack(() => keyOf(lesson, room).replace(/[.#$/[\]]/g, '_'));
   type View = 'intro' | 'edit' | 'wait' | 'pass' | 'check' | 'retry' | 'appeal';
@@ -98,7 +98,7 @@
     if (lastHash) keepHash(lastHash);
     left = r.left ?? left; roomLeft = r.roomLeft ?? roomLeft; coolUntil = Date.now() + (r.cool != null ? Number(r.cool) : coolSec(cfg)) * 1000;
     res = r; scores.push(Number(r.score) || 0); view = r.status === 'pass' ? 'pass' : r.status === 'check' ? 'check' : 'retry'; stamp(r);
-    if (r.status === 'pass' && !trial && !test) passScroll(S, cls, num, lesson, room); // 📜 #38 ① 결과가 온 자리에서 바로 (닫기 전에 화면을 떠나도)
+    if (r.status === 'pass' && !trial && !test) passScroll(S, cls, num, lesson, room, again); // 📜 #38 ① 결과가 온 자리에서 바로 (닫기 전에 화면을 떠나도)
   }
   // 📷 도장 쾅쾅 (정식 2026-11-06): 단계마다 0.45초 간격 ✅/✏ → 점수가 올라감 → 만점이면 💯 금도장
   const stepsOf = (r: PhotoRes | null) => Object.values(r?.steps || {}).filter((x) => x && x.note);
@@ -124,7 +124,7 @@
     if (view === 'intro') return { text: wait ? `📷 찍기 (${wait}초 뒤)` : '📷 찍기', on: () => choose(true), dis: !!wait || left === 0 || roomLeft === 0, why: left === 0 ? '오늘 사진 채점을 다 썼어요 — 내일 또 해요!' : roomLeft === 0 ? `이 방은 오늘 ${roomMax(cfg)}번 다 해 봤어요` : '' };
     if (view === 'edit') return { text: '📨 채점 받기', on: sendIt };
     if (view === 'wait') return { text: '채점 중…', dis: true, why: 'AI 가 풀이를 읽고 있어요 (10~20초) — 창을 닫지 말아 주세요' };
-    if (view === 'pass') return { text: '⚔ 처치하러!', on: () => close(passOut()) };
+    if (view === 'pass') return { text: again ? '📜 +1 받기' : '⚔ 처치하러!', on: () => close(passOut()) };
     if (view === 'check') return { text: '알겠어요', on: () => close({ status: 'check', id: res?.id }) };
     if (view === 'appeal') return { text: '📨 보내기', on: () => void sendAppeal() };
     return canAgain ? { text: wait ? `📷 고쳐서 다시 찍기 (${wait}초 뒤)` : '📷 고쳐서 다시 찍기', on: () => { msg = ''; view = 'intro'; }, dis: !!wait } : { text: '나중에', on: () => close(null) };

@@ -365,7 +365,9 @@ export function chainPhotoFill(S: Store, L: LessonPack, code: string, me: string
   return rec.n - rec.stage;
 }
 /** 📜 서술 조각 +1 (정식 #27 「통과하면 누구나 📜 1」 · 문제당 한 번 · 연습 쓰기 = 없음) = 선물 칸 (캠프에서 지갑에) */
-export function photoScroll(S: Store, me: string, lid: string, mid: string): boolean {
-  const k = `gifts/${me}/ult_${lid}_${mid}`.replace(/[.#$[\]]/g, '_'); if (S.get(k)) return false;
-  S.set(k, { g: 0, s: 1, at: S.now(), fun: '🌟 진필살기 서술' }); return true;
+export function photoScroll(S: Store, me: string, lid: string, mid: string, v = false): boolean {
+  const k = ultKey(me, lid, mid, v); if (S.get(k)) return false;
+  S.set(k, { g: 0, s: 1, at: S.now(), fun: v ? '✍ 혼자 다시 쓰기' : '🌟 진필살기 서술' }); return true;
 }
+/** 📜 #57 서술형 📜 칸 — v = 숫자 바꾼 판 (✍ 혼자 다시 쓰기 · 학습지 숫자 📜 를 받은 뒤 문항당 한 번 더 = 최대 📜 2) */
+export const ultKey = (me: string, lid: string, mid: string, v = false) => `gifts/${me}/ult_${lid}_${mid}${v ? '_v' : ''}`.replace(/[.#$[\]]/g, '_');
