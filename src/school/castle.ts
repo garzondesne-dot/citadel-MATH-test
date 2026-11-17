@@ -10,7 +10,7 @@ import { PACKS } from '../engine/packs';
 import { forget } from '../engine/lessons';
 import { CLASSES, lastClass, lastTest } from './school';
 
-export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; vers: Question[][] }
+export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; /** 방 카드 글 (#53 · 예 「⚔ 소레이드 · 5단계 · 📷 서술형」) */ card?: string; vers: Question[][] }
 export interface CastlePack { kind: 'castle'; id: string; floor: number; title: string; unit: string; theme?: string; goal?: string; bossPct: number; rooms: CastleRoom[]; /** 👀 학생에게 숨김 */ hide?: boolean; /** 올린 때 */ at?: number; /** 올린 글 그대로 (⬇ 내려받기 · 다시 올리기) */ raw: Record<string, unknown> }
 export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ legacy?: boolean; ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number }
 export interface CastleChecked { pack: CastlePack | null; issues: Issue[]; stats: { rooms: number; items: number; versions: number; rechecked: number; ask: number } }
@@ -67,7 +67,7 @@ export function checkCastle(src: string | unknown, look: { sheet: (ref: string) 
     if (vs.length < MAXV) out.push({ at: `${at} · 판(vers)`, msg: `판 ${vs.length}개 — 재도전 판이 모자라면 앞 판을 다시 써요 (판 0 ~ 6 · 7개 권장)`, lvl: 'ask' });
     vs.forEach((v, kk) => { const rc = recheckAll(v, (i) => `${at} · 판 ${kk} · ${i + 1}번`, out); stats.rechecked += rc.done; stats.ask += rc.ask; });
     stats.rooms++; stats.items += vs[0]?.length ?? 0; stats.versions += vs.length;
-    rooms.push({ id: rid, no, title, sprite, ...(m.boss ? { boss: true } : {}), ...(m.photo ? { photo: true } : {}), ...(m.chain ? { chain: true } : {}), ...(m.note ? { note: String(m.note) } : {}), ...(m.video ? { video: String(m.video) } : {}), vers: vs });
+    rooms.push({ id: rid, no, title, sprite, ...(m.boss ? { boss: true } : {}), ...(m.photo ? { photo: true } : {}), ...(m.chain ? { chain: true } : {}), ...(m.note ? { note: String(m.note) } : {}), ...(m.card ? { card: String(m.card).slice(0, 60) } : {}), ...(m.video ? { video: String(m.video) } : {}), vers: vs });
   });
   const bosses = rooms0.filter((m) => m && m.boss).length;
   if (bosses !== 1) err('👑 보스 방(boss)', bosses ? `보스 방이 ${bosses}개 — 한 층에 하나만` : '보스 방이 없어요 — 한 방에 "boss": true');
