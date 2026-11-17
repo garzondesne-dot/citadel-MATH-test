@@ -6,7 +6,7 @@
 #   ③ 키 맞춤 = 서 있기(0줄 1칸) 키를 TARGET 으로 (시트마다 그림 크기가 달라서) · 가장 가까운 점(도트 그대로)
 #   ④ 새 칸 CW × CH 에 놓기: 가로 = 다리(아래 40%) 가운데 → 칸 가운데 · 세로 = 발 → 칸 아래 BASE 위 · 넘치면 「잘림」 수 · 서 있기 1칸 → 2~4칸 채움(깜빡임 막기)
 #   ⑤ 줄마다 칸 수 = 주문(1 · 4 · 4 · 1 · 2 · 2 · 2 · 4 · 2 · 2 · 2 · 2)과 다르면 「⚠」 (넣기는 함 · 머리에 목록)
-# 사용: python3 tools/hero-hd/cut_v4.py <입력.png> <출력.webp> [미리보기.png]
+# 사용: python3 tools/hero-hd/cut_v4.py <입력.png> <출력.webp> [미리보기.png] [unmix]  (unmix = 흰 빛 고리가 마젠타와 섞인 시트 · 각성 로안)
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cut
@@ -34,12 +34,25 @@ def holes(im, minn=20):  # 몸 · 이펙트로 둘러싸여 가장자리와 안 
                         if 0 <= u < W and 0 <= v < H and px[u, v][3] and cut.fringe(px[u, v]): px[u, v] = (0, 0, 0, 0)
     return n
 
-def run(src, dst, prev=None):
+def unmix(im, F=(255, 250, 238)):  # 흰 빛(고리 · 반짝이)과 마젠타가 섞인 가장자리 = 바탕 몫을 빼 흰빛으로 되돌림 (각성 로안 · 「unmix」 일 때만)
+    M = cut.MAG; px = im.load(); n = 0
+    for y in range(im.height):
+        for x in range(im.width):
+            r, g, b, a = px[x, y]
+            if not a or not (r > 200 and b > 170 and g < r - 40 and g < b - 40): continue
+            k = g / F[1]
+            if k < 0.3: px[x, y] = (0, 0, 0, 0)
+            else: px[x, y] = tuple(max(0, min(255, round((c - (1 - k) * m) / k))) for c, m in zip((r, g, b), M)) + (255,)
+            n += 1
+    return n
+
+def run(src, dst, prev=None, mode=None):
     raw = Image.open(src).convert('RGB'); W, H = raw.size
     bg = raw.getpixel((2, 2)); cut.MAG = bg
     if bg[1] > 200 and bg[0] < 80 and bg[2] < 80:
         cut.fringe = lambda p: p[1] > 150 and p[0] < 0.6 * p[1] and p[2] < 0.6 * p[1] and abs(p[0] - p[2]) < 70
     im = cut.unmatte(raw); s = H / 1536; ph = H / ROWS; nh = holes(im)
+    if mode == 'unmix': print('흰빛 되돌림', unmix(im))
     cs = cut.comps(im)
     big = [c for c in cs if c['n'] >= 600 * s * s and (c['y1'] - c['y0'] >= 45 * s or c['x1'] - c['x0'] >= 70 * s)]  # 누운 자세(쓰러짐 2칸) = 납작해도 몸
     big = [c for c in big if c['n'] >= 2500 * s * s]  # 어지러움 소용돌이 같은 작은 이펙트는 몸 아님
