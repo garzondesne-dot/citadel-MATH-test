@@ -139,7 +139,7 @@ const DS = Object.assign(Object.create(BASE), { Lessons: { register: (x) => { L 
         `P = ${st(P)} · Q = ${st(Q)} → ${t ? 'P ⊂ Q → 참' : 'P ⊄ Q → 거짓'}`, { U, k, m }); },
     bCounter({ a, b }) { const c = range(a - 1, b + 1), bad = c.filter((x) => x > a && !(x > b));
       return groups(`x 가 실수일 때 명제 「x > ${a} 이면 x > ${b} 이다.」 의 참 · 거짓을 고르고, 아래 수 중 반례를 모두 고르시오.`, [{ label: '명제는', opts: ['참', '거짓'], want: ['거짓'] }, { label: '반례 (모두)', opts: c.map(num), want: bad.map(num) }],
-        `${a} < x ≤ ${b} 인 수는 가정은 맞고 결론이 틀림 → 거짓 (반례 ${bad.map(num).join(', ')})`, { gt: [a, b] }); },
+        `${a} < x ≤ ${b} 인 수는 가정은 맞고 결론이 틀림 → 거짓 (반례 ${bad.map(num).join(', ')}) · x = ${num(b)} 도 반례: ${num(b)} > ${num(a)} 참이지만 ${num(b)} > ${num(b)} 은 거짓`, { gt: [a, b] }); },
     bCC({ a }, r) { const conv = `x² = ${a * a} 이면 x = ${a} 이다.`, contra = `x² ≠ ${a * a} 이면 x ≠ ${a} 이다.`, inv = `x ≠ ${a} 이면 x² ≠ ${a * a} 이다.`;
       return chR(`명제 「x = ${a} 이면 x² = ${a * a} 이다.」 의 역과 대우, 그 참 · 거짓을 바르게 짝지은 것은?`, [`역 「${conv}」 참 · 대우 「${contra}」 거짓`, `역 「${contra}」 거짓 · 대우 「${conv}」 참`, `역 「${conv}」 거짓 · 대우 「${inv}」 참`],
         `역 「${conv}」 거짓 · 대우 「${contra}」 참`, `역: x = −${a} 이면 x² = ${a * a} 이지만 x ≠ ${a} → 거짓 · 대우: 원래 명제가 참이므로 참`, { cc: a }, r); },
