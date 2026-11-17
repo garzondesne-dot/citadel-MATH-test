@@ -17,6 +17,7 @@
   import { giveHint, hintLines, hintState } from '../../school/hintGive';
   import { chainSubmit, heartRelease, petriAward, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
+  import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { type Mark } from '../battle/Slots.svelte';
   import EnergyCard from './EnergyCard.svelte';
@@ -164,6 +165,7 @@
 {:else}
   {#if fhN && !rec.done}<details class="fhints" data-k="friend-hints"><summary>💡 친구 힌트 {fhN}개 <small>(누르면 펼침)</small></summary>{#each fh as x (x.s)}<p class="fht">{x.text}</p><p class="fhb">{x.by.slice(0, 5).map(nick).join(' · ')}{x.by.length > 5 ? ` 외 ${x.by.length - 5}` : ''}</p>{/each}</details>{/if}
   {#if numTag && !prac}<p class="tagl"><span class="tag">{numTag}</span></p>{/if}
+  {#if !prac}<KeyTag {L} {R} {uid} at={mid} n={stage + 1} />{/if}<!-- 🔑 #59 -->
   {#if v4 && prac}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => (pracPass = null)}>그만하기</button></p>{/if}
   <ChainStage items={pItems} {stage} {says} {title} value={given} {lastWrong} {prac} {flip} disabled={locked} onchange={(v) => (given = v)} {v4} prev={rec.lastWrong?.given} prevAt={rec.nextK} hintKey={`${code}|${mid}|s${stage}`} wrongText={lastWrong && rec.lastWrong && q ? (() => { const l = penLine(q, rec.lastWrong.given, 0); return l ? stripNo(l) : null; })() : null} />
 {/if}

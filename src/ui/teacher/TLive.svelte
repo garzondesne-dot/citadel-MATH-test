@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { keyBoard, keysOf, keyWindow } from '../../school/keys';
   import { handsOf, lowerHand, openGobi, reviewStep, stepReview } from '../../school/help';
   import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
   import { leftSteps, sendToReview, sentKey } from '../../school/sendReview';
@@ -52,6 +53,7 @@
   const nl = (n: number) => (n > 100 ? `🤖${n - 100}` : String(n));
   $effect(() => { if (R?.state.closed && bot.code === code) untrack(botsOff); });
   const ids = $derived(R ? activeIds(R, now) : []);
+  const kb = $derived(R && keysOf(L).length ? keyBoard(L, R, ids) : null); // 🔑 #59
   const absent = $derived(R?.absent || {});
   const expected = $derived(pupils.filter((p) => !absent[p.uid]));
   const inSet = $derived(new Set(ids));
@@ -304,6 +306,7 @@
       {/if}
     </div>
   {/snippet}
+  {#snippet keyLine()}{#if kb && kb.n}<p class="ccline" data-k="key-stats">🔑 열쇠 <b>{kb.all}</b> / {kb.total}{#if kb.worst} · 많이 틀린 열쇠 = {kb.worst.name}({kb.worst.wrong}명){/if}<small> · {kb.per.map((x) => `${x.name} ${x.got}`).join(' · ')}</small></p>{/if}{/snippet}<!-- 🔑 #59 선수 학습 점검 · 도입에서 짚을지 -->
   {#if isLobby(R)}
     <!-- ⑬ 대기실 -->
     <div class="mid lob">
@@ -315,6 +318,7 @@
       </div>
     </div>
     {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
+    {@render keyLine()}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
     <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
@@ -325,6 +329,7 @@
         <div class="rfcap"><span>{Math.max(0, steps.findIndex((x) => x.k === i)) + 1} / {steps.length}</span><b>{isEnd(L, R) ? '마무리' : `지금 · ${short(step)}`}</b><span>{nextStepObj ? `다음 · ${short(nextStepObj)} ›` : '다음 · 마무리'}</span></div>
       </div>
       {@render queue()}
+      {#if keyWindow(L, R)}{@render keyLine()}{/if}
       {@render att()}
       <div class="card rstat" data-k="now-cell">
         {#if recallStep}<div class="rs1 gband rc" data-k="recall-band"><span class="gt">📺 {short(recallStep)} 칸 TV 에 띄움</span><button type="button" class="ga" data-k="recall-off" onclick={() => setRecall(S, code, null)}>닫기</button></div>

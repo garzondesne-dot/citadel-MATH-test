@@ -8,6 +8,7 @@
 //   (아직 안 옮김: 🔥 연습 사슬 · 💡 힌트 EXP — HANDOVER 메모)
 import type { LessonPack, Room } from '../model/types';
 import { hgOf } from './hintGive';
+import { chestsOf, KEY_CHEST } from './keys';
 import { bossHp, bossState, chainRecord, isChain, mastery, plainRecord } from '../raid/raid';
 
 export const G = { join: 4, solvedMax: 12, perfect: 6, bossPerfect: 6, level5: 6, dayCap: 100, streak: { 3: 4, 5: 6, 10: 12 } as Record<number, number> } as const;
@@ -71,6 +72,7 @@ export function rewardOf(L: LessonPack, R: Room, uid: string, code: string, now:
   const gems: { key: string; g: number; why: string; upsert?: boolean; free?: boolean }[] = [{ key: `raid_${code}`, g: G.join + Math.min(G.solvedMax, parts.correct), why: '레이드', upsert: true }];
   if (perfects > 0) gems.push({ key: `perfect_${code}`, g: G.perfect, why: '⚡ 퍼펙트' });
   if (parts.perfect) gems.push({ key: `bossperfect_${code}`, g: G.bossPerfect, why: '👑 형성평가 만점' });
+  { const c = chestsOf(L, R, uid); if (c) gems.push({ key: `keychest_${code}`, g: KEY_CHEST.gem * c, why: `🔑 열쇠 보물상자 ${c}`, upsert: true }); } // 🔑 #59 한 차시 최대 3 · 하루 한도 안
   if (ctx) { const s = streakOf({ ...ctx.records, [L.id]: true }, { ...ctx.held, [L.id]: true }, ctx.lessons), g = G.streak[s]; if (g) gems.push({ key: `streak${s}_${L.id}`, g, why: `${s}차시 연속 참여`, free: true }); }
   return { parts, perfects, gems, firstXp, xp: { key: `raid_${code}`, n: xpOf(parts) } };
 }

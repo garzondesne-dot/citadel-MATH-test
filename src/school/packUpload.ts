@@ -9,6 +9,7 @@ import type { LessonPack, MonsterPack, Question, Step } from '../model/types';
 import { SUBJ } from '../engine/subject';
 import type { Help, Review } from '../model/types';
 import { bossItem, forget, items, validate } from '../engine/lessons';
+import { parseKeys, type EntryKey } from './keys';
 
 export type Lvl = 'err' | 'ask';
 export interface Issue { at: string; msg: string; lvl: Lvl }
@@ -220,6 +221,8 @@ export function checkUpload(text: string, look: Look): Checked {
       }
     }
   }
+  // 🔑 입장 열쇠 (📜 #59 · PACK-GUIDE 17) = 엔진 꼴 · 팩 꼴 모두 · 문항은 팩 꼴(q · a · ch) 또는 엔진 꼴
+  { const ks = parseKeys(r.keys, pack, (it, at, o) => toQ(it as BItem, at, o as Issue[]), out); if (ks && ks.length) (pack as LessonPack & { keys?: EntryKey[] }).keys = ks; else delete (pack as { keys?: unknown }).keys; }
   // 공통: 도감 이름표 · 엔진 검사(문항 0개 · 보스 문항 없음 …)
   if (!look.theme(pack.theme ?? '')) out.push({ at: '배경(theme)', msg: `던전 배경 「${pack.theme ?? ''}」 이 도감에 없어요`, lvl: 'err' });
   const concepts = new Set(pack.steps.filter((s) => s.kind === 'concept').map((s) => s.id));

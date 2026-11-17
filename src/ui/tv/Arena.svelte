@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { keysOf, keyUses } from '../../school/keys';
   import { serverNow } from '../clock.svelte';
   import { NEW_SKILLS } from '../fx/twin';
   import { OLD_CUT } from '../fx/fx'; // 📜 11/17 #37 베기 Ⅲ · Ⅳ = 옛 대각선 띠
@@ -210,6 +211,18 @@
   (globalThis as { __tvJuiceStats?: () => unknown }).__tvJuiceStats = () => A?.juiceStats();
   // 🛡 홀리 방패 막기 (정식 hall.js 545~567): HOLY GUARD 컷인 → 막은 용사마다 날개 · 방패 (Pixi = 같은 자리 대역) · 몬스터 공격 연출 없음
   const whoOf = (u: string) => nameOf(u).replace(/^\d+\s+/, ''); // 📜 2026-11-16 컷인 = 「(학생 전체 이름)의 (기술)」 · 번호 뺌
+  // 🎁 열쇠 보물상자 (📜 #59 화면문구 「🎁 ○○ · 열쇠로 보물상자!」 · 짧은 띠 · 정답 글자 없음) — 방 기록에서 셈 · 처음 그린 때 이미 연 상자는 안 띄움
+  let kSeen: Set<string> | null = null, kBan = $state(''), kT: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    if (!keysOf(L).length) return; const r0 = R, us = ids;
+    untrack(() => {
+      const cur = us.flatMap((u) => keyUses(L, r0, u).filter((x) => x.chest).map((x) => `${u}|${x.at}#${x.n}`));
+      if (!kSeen) { kSeen = new Set(cur); return; }
+      const fresh = cur.filter((k) => !kSeen!.has(k)); if (!fresh.length) return; fresh.forEach((k) => kSeen!.add(k));
+      const names = [...new Set(fresh.map((k) => whoOf(k.split('|')[0]!)))];
+      kBan = `🎁 ${names.slice(0, 3).join(' · ')}${names.length > 3 ? ` 외 ${names.length - 3}` : ''} · 열쇠로 보물상자!`; if (kT) clearTimeout(kT); kT = setTimeout(() => (kBan = ''), 2800);
+    });
+  });
   let guardBusy = false;
   async function tvGuard(us: string[]) {
     if (guardBusy) return; guardBusy = true;
@@ -320,6 +333,7 @@
     {/if}{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
   {/if}
+  {#if kBan}<div class="kban" role="status" data-k="tv-keychest">{kBan}</div>{/if}
   {#if tvh && tvhAt && W}{#key `${tvh.s}|${tvh.uid}|${tvh.more}`}<div class="hhint" class:free={!tvhAt.on} data-k="tv-hint" style:left="{tvhAt.x}px" style:top="{tvhAt.y}px"><b>💡 {tvh.nick}의 힌트</b><span>{tvh.text}</span>{#if tvh.more}<i>👍 +{tvh.more}</i>{/if}</div>{/key}{/if}
   {#if W && step && mins.length}{@const sz = box.mon.size * 0.3}{@const gap = sz * 1.35}<div class="mins" data-k="tv-minions">{#each mins as m (m.k)}<div class="mn" class:down={m.down} style:left="{box.mon.cx + (m.k - (mins.length - 1) / 2) * gap - sz / 2}px" style:top="{box.mon.top + box.mon.size * 1.02 - sz}px" style:width="{sz}px"><span class="mtag"><b>졸개{m.k + 1}</b><span class="mbar"><i style:width="{m.max ? (m.left / m.max) * 100 : 100}%"></i></span></span><Sprite ref={sprite} pose={m.down ? 'down' : 'idle'} size={sz} /></div>{/each}</div>{/if}
   {#if W && gauge}<div class="agauge" class:hot={gauge.hot} class:blue={gauge.blue} data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
@@ -352,6 +366,7 @@
   .art.iced :global(.hs) { filter: saturate(0.6) brightness(1.15) hue-rotate(160deg) sepia(0.15); }
   .iceb { position: absolute; left: 22%; right: 22%; top: 6%; bottom: 0; clip-path: polygon(18% 0, 62% 3%, 92% 14%, 100% 46%, 94% 82%, 70% 100%, 26% 98%, 4% 80%, 0 40%, 6% 12%); background: linear-gradient(135deg, rgba(225, 248, 255, 0.55), rgba(150, 210, 240, 0.35) 45%, rgba(190, 235, 255, 0.5)); box-shadow: inset 0 0 10px #fff; }
   .iceb.melt { animation: imelt 0.6s ease-in forwards; } @keyframes imelt { to { opacity: 0; transform: translateY(4px); } }
+  .kban { position: absolute; z-index: 61; left: 50%; top: 9cqh; transform: translateX(-50%); padding: 1cqh 2.4cqw; border-radius: 2cqh; background: #ffd25a; color: #2a1d05; font: 800 3.2cqh var(--font); box-shadow: 0 0.6cqh 1.6cqh rgba(0, 0, 0, 0.5); white-space: nowrap; }
   .hhint { position: absolute; z-index: 60; transform: translate(-50%, -100%); max-width: 34cqw; padding: 0.8cqh 1.2cqw; border-radius: 1.4cqh; background: #fff8e1; color: #2a1d05; box-shadow: 0 0.6cqh 1.6cqh rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 0.3cqh; font-size: var(--tv-small, 1.8cqh); animation: hpop 0.3s ease-out; pointer-events: none; }
   .hhint.free { transform: none; } .hhint b { color: #b45309; } .hhint span { font-size: var(--tv-body, 2.4cqh); font-weight: 700; } .hhint i { font-style: normal; align-self: flex-end; color: #1f5d3a; font-weight: 800; }
   .hhint:not(.free)::after { content: ''; position: absolute; left: 50%; bottom: -1cqh; border: 1cqh solid transparent; border-top-color: #fff8e1; border-bottom: 0; transform: translateX(-50%); }

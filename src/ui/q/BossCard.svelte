@@ -5,6 +5,7 @@
   import { bossItem, bossState, bossTries, stone } from '../../raid/raid';
   import { bossSubmit, petriAward } from '../../raid/actions';
   import QItem from './QItem.svelte';
+  import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { type Mark } from '../battle/Slots.svelte';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
@@ -96,6 +97,7 @@
     {:else if s.left <= 0}
       <p class="muted">📖 기회를 모두 썼어요 — {lastSol || '해설을 보며 학습지에 정리해요'}</p>
     {:else}
+      <KeyTag {L} {R} {uid} at="boss" n={cur + 1} /><!-- 🔑 #59 -->
       {#key key}<QItem {q} i={cur} value={given} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
     {/if}
   </div>
