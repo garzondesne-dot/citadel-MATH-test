@@ -1,5 +1,5 @@
 // 📖 기호 톡 — 정식 js/engine/symtalk.js (문구 원본 = hero-v2 docs/SYMBOL-TALK.md · 집합 단원 16줄 + 개념 톡) 을 그대로 옮김
-//   pick(줄, 자리) = 문맥으로 기호 고르기 (A ∩ B = ∅ → 서로소 · n(A ∪ B) → 개수 공식 · Aᶜ → 여집합 …) · 명제 단원(8 · 9차시 8줄) = PROP · 명제 차시에서만 (#49)
+//   pick(줄, 자리) = 문맥으로 기호 고르기 (A ∩ B = ∅ → 서로소 · n(A ∪ B) → 개수 공식 · Aᶜ → 여집합 …) · 명제 단원(8 · 9차시 8줄 + 10 ~ 13차시 9줄) = PROP · 명제 차시에서만 (#49)
 export interface SymRow { id: string; sym: string; easy: string; def: string; memo: string }
 export const ROWS: SymRow[] = [
   { id: 'in', sym: 'a ∈ A', easy: 'a 는 A 팀 소속!', def: '「a 는 집합 A 에 속한다」 · a 가 집합 A 의 원소일 때', memo: '∈ = 원소(element)의 e 를 바꾼 기호 · 왼쪽 = 원소, 오른쪽 = 집합' },
@@ -32,15 +32,28 @@ export const PROP: SymRow[] = [
   { id: 'counter', sym: '반례', easy: '「아닌데?」 하나면 끝', def: '명제가 거짓임을 보이는 예', memo: '「소수는 홀수」 → 2' },
   { id: 'conv', sym: '역', easy: '앞뒤를 바꾼 말', def: 'p → q의 가정과 결론을 서로 바꾼 명제 q → p', memo: '원래가 참이어도 역은 거짓일 수 있음' },
   { id: 'contra', sym: '대우', easy: '앞뒤를 바꾸고 둘 다 뒤집은 말', def: 'p → q의 가정과 결론을 각각 부정하여 서로 바꾼 명제 ~q → ~p', memo: '원래 명제와 참 · 거짓이 같음' },
+  // 📖 10 ~ 13차시 (#49 ② · SYMBOL-TALK.md 「10 ~ 13차시」 절 9줄 그대로 · 2026-11-17 선생님 「컨펌」)
+  { id: 'all', sym: '모든 x 에 대하여', easy: '하나도 빠짐없이 전부', def: '전체집합의 모든 원소에 대하여 성립한다', memo: '부정 = 「어떤 x 에 대하여 ~p」' },
+  { id: 'some', sym: '어떤 x 에 대하여', easy: '딱 하나라도 있으면 OK', def: '전체집합의 원소 중 적어도 하나에 대하여 성립한다', memo: '부정 = 「모든 x 에 대하여 ~p」' },
+  { id: 'dimp', sym: 'p ⇒ q', easy: '「p이면 q」가 참! (줄 하나 더 = 확신)', def: '명제 p → q 가 참일 때 p ⇒ q 로 나타낸다', memo: 'P ⊂ Q 와 같은 뜻 · 거짓이면 ⇒ 를 쓰지 않음' },
+  { id: 'suff', sym: '충분조건', easy: '화살을 쏘는 쪽 (출발 = 충분 · ㅊ)', def: 'p ⇒ q 일 때 p 는 q 이기 위한 충분조건', memo: '주어가 화살을 쏘면 충분 · 진리집합이 안쪽(P ⊂ Q 의 P)' },
+  { id: 'need', sym: '필요조건', easy: '화살을 맞는 쪽 (피 = 필요 · ㅍ)', def: 'p ⇒ q 일 때 q 는 p 이기 위한 필요조건', memo: '주어가 화살을 맞으면 필요 · 진리집합이 바깥쪽(P ⊂ Q 의 Q)' },
+  { id: 'iff', sym: 'p ⇔ q', easy: '서로 쏘고 서로 맞는다 = 진리집합이 똑같다', def: 'p ⇒ q 이고 q ⇒ p 일 때 p ⇔ q · p 는 q 이기 위한 필요충분조건', memo: 'P = Q · 「나도 너를 포함 · 너도 나를 포함」' },
+  { id: 'absurd', sym: '귀류법', easy: '「아니라고 치자」 → 말이 안 됨 → 그러니 맞다', def: '명제의 결론을 부정하여 가정이나 이미 알려진 사실에 모순됨을 보여 원래 명제가 참임을 증명하는 방법', memo: '첫 줄 = 결론을 부정하기 · 끝 줄 = 「모순이므로」' },
+  { id: 'absineq', sym: '절대부등식', easy: '문자에 무엇을 넣어도 늘 참인 부등식', def: '부등식의 문자에 어떤 실수를 대입해도 항상 성립하는 부등식', memo: '예 x² ≥ 0 · 등호가 언제 성립하는지 꼭 적기' },
+  { id: 'amgm', sym: '(a + b)/2 ≥ √(ab)', easy: '양수 둘: 더해서 반 ≥ 곱해서 루트', def: 'a > 0, b > 0 일 때 산술평균은 기하평균보다 크거나 같다', memo: '등호 = a = b 일 때 · 양수일 때만 씀' },
 ];
 export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS, ...PROP].map((r) => [r.id, r]));
 /** 명제 낱말 · 기호를 붙이는 차시 = 명제 차시(8차시부터 · 성채 제외) + 성채 2층(명제 방) — 정식 propOn 그대로 */
 export const propOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && (L.id === 'eval-2' || (!/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 8));
-const PROPRE = /~(?=\s*[pqr](?![A-Za-z]))|(?<=~?[pqr] )→(?= ~?[pqr](?![A-Za-z]))|반례|(?<![가-힣])대우(?=[은는이가를와의도]|[\s」:.,]|$)|(?<![가-힣])역(?=[은는이을과의도]|[\s」:.,]|$)|진리집합|명제|조건(?!제시)|(?<![A-Za-z])P(?![A-Za-z])/g;
-/** 명제 낱말 · 기호 찾기 (정식 propHits 그대로) — 진리집합 기호 P 는 같은 글에 「진리집합」 낱말이 있을 때만 */
+// 긴 낱말 먼저: 필요충분조건(⇔ 줄) → 충분조건 · 필요조건 → 조건 · ⇒ · ⇔ 는 → 와 다른 글자 · 산술기하 = 그 식 꼴 또는 「산술평균」 · 「기하평균」
+const AMGM = String.raw`\(\s*[a-z]\s*\+\s*[a-z]\s*\)\s*\/\s*2\s*≥\s*√\s*\(?\s*[a-z]\s*[a-z]\s*\)?|산술평균|기하평균`;
+const PROPRE = new RegExp(String.raw`~(?=\s*[pqr](?![A-Za-z]))|(?<=~?[pqr] )→(?= ~?[pqr](?![A-Za-z]))|⇔|⇒|모든\s*[a-z]\s*에\s*대하여|어떤\s*[a-z]\s*에\s*대하여|필요충분조건|충분조건|필요조건|귀류법|절대부등식|${AMGM}|반례|(?<![가-힣])대우(?=[은는이가를와의도]|[\s」:.,]|$)|(?<![가-힣])역(?=[은는이을과의도]|[\s」:.,]|$)|진리집합|명제|조건(?!제시)|(?<![A-Za-z])P(?![A-Za-z])`, 'g');
+const PROPID: [RegExp, string][] = [[/^~$/, 'neg'], [/^→$/, 'imp'], [/^⇒$/, 'dimp'], [/^⇔$|^필요충분조건$/, 'iff'], [/^모든/, 'all'], [/^어떤/, 'some'], [/^충분조건$/, 'suff'], [/^필요조건$/, 'need'], [/^귀류법$/, 'absurd'], [/^절대부등식$/, 'absineq'], [new RegExp(`^(?:${AMGM})$`), 'amgm'], [/^반례$/, 'counter'], [/^역$/, 'conv'], [/^대우$/, 'contra'], [/^명제$/, 'prop'], [/^조건$/, 'cond']];
+/** 명제 낱말 · 기호 찾기 (정식 propHits 그대로 + 10 ~ 13차시 9줄) — 진리집합 기호 P 는 같은 글에 「진리집합」 낱말이 있을 때만 */
 export function propHits(t: string, whole = t): { i: number; len: number; id: string }[] {
   const out: { i: number; len: number; id: string }[] = [], tp = /진리집합/.test(whole); PROPRE.lastIndex = 0; let m;
-  while ((m = PROPRE.exec(t))) { const w = m[0]; const id = w === '~' ? 'neg' : w === '→' ? 'imp' : w === '반례' ? 'counter' : w === '역' ? 'conv' : w === '대우' ? 'contra' : w === '명제' ? 'prop' : w === '조건' ? 'cond' : 'truth'; if (w === 'P' && !tp) continue; out.push({ i: m.index, len: w.length, id }); }
+  while ((m = PROPRE.exec(t))) { const w = m[0]; const id = PROPID.find(([r]) => r.test(w))?.[1] ?? 'truth'; if (w === 'P' && !tp) continue; out.push({ i: m.index, len: w.length, id }); }
   return out;
 }
 
