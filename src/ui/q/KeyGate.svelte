@@ -39,12 +39,12 @@
   {/if}
 {/if}
 {#if sheet && cur}
-  <Sheet onclose={() => (sheet = false)} mainText={res ? (ks.some((x) => !myKeys(R, uid)[x.id]) ? '다음 열쇠 ▶' : '🔑 다 모았어요') : '확인'} mainDisabled={!res && !filled(keyQ(cur), given)} onmain={res ? after : check}>
+  <Sheet onclose={() => (sheet = false)} mainText={res ? (!res.ok ? '알겠어요 · 🔑 열쇠 받기' : ks.some((x) => !myKeys(R, uid)[x.id]) ? '다음 열쇠 ▶' : '🔑 다 모았어요') : '확인'} mainDisabled={!res && !filled(keyQ(cur), given)} onmain={res ? after : check}>
     {#snippet title()}🔑 열쇠 {idx} / {ks.length} · {cur.name}{/snippet}
     <div class="ks" data-k="key-sheet">
       {#if res}
         {#if res.ok}<p class="kok" data-k="key-ok">🔑 열쇠 획득! · {res.name}</p>
-        {:else}<div class="kno" data-k="key-no"><b>💡 {res.help}</b><span>정답 · {res.ans}</span><em>🔑 열쇠 받기 — 오늘 이 내용이 나오면 기억해요</em></div>{/if}
+        {:else}<div class="kno" data-k="key-no"><b>💡 {res.help}</b><span>답 = {res.ans}</span></div>{/if}
       {:else}
         <QItem q={keyQ(cur)} i={0} value={given} showNo={false} onchange={(v) => (given = v)} />
       {/if}

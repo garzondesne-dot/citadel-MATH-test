@@ -47,7 +47,7 @@ export const FEATS: Feat[] = [
   { id: 'cc', ic: '✔', name: '개념 체크', sub: '끄면 리모컨 「✔ 체크」 단추 숨김', prep: 'addon', group: '🧩 수업 기능' },
   { id: 'pre', ic: '⚔', name: '선제 공격', sub: '복습한 칸만큼 첫 몬스터 체력 깎임 · 끄면 체력 그대로', group: '🧩 수업 기능' },
   { id: 'keys', ic: '🔑', name: '입장 열쇠 (선수 학습 점검)', sub: '대기실 열쇠 문제 · 🔑 칸 첫 시도 = 🎁 보물상자 · 팩에 열쇠(keys) 칸이 있는 차시만 · 끄면 안 보임', prep: 'addon', group: '🧩 수업 기능' }, // 📜 #59
-  { id: 'keygem', ic: '🔑', name: '허수아비 열쇠 연습 💎 +1', sub: '차시마다 한 번 · 끄면 기록만 (기본 끔 · 선생님 답 기다림)', group: '복습' }, // 📜 #59 ⏳ 선생님: 보상
+  { id: 'keygem', ic: '🔑', name: '허수아비 열쇠 연습 💎 +1', sub: '그 차시 열쇠 연습을 처음 다 맞히면 · 차시마다 한 번 · 끄면 기록만', group: '복습' }, // 📜 #59 선생님 「추천대로」 = 기본 켬
   { id: 'stamp', ic: '✅', name: '도장 📜', sub: '끄면 리모컨 「✅ 도장」 숨김', group: '🧩 수업 기능' },
   { id: 'guide', ic: '📊', name: '길잡이', sub: '리모컨 「지금」 칸 한 줄 · 이 속도면 +n분 · 약한 개념 · 선생님 폰에만', group: '🧩 수업 기능' }, // 📜 2026-11-17 #30 · 우리 학교(모두) 켬 · 학교판(가볍게) · 게임처럼 = 끔
   { id: 'qpaper', ic: '📜', name: '문제 칸 양피지 기본', sub: '끄면 처음 값만 끔 · 학생 🎨 테마 창 스위치는 그대로', group: '🧩 수업 기능' },
@@ -58,7 +58,7 @@ export const FEATS: Feat[] = [
 ];
 // 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
 // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16 선생님 「디펜스는 단추 없애고 보존만」): 어느 묶음에도 처음엔 안 켜짐 · ⚙ 자세히 스위치로 켜면 되살아남(코드 · 데이터 그대로)
-const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule' && id !== 'rest-defense' && id !== 'keygem'); // 🔑 열쇠 연습 💎 = 처음엔 끔 (📜 #59 · 선생님 답 기다림)
+const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule' && id !== 'rest-defense');
 // 📦 기능 단계 (📜 2026-11-16 · DECISIONS 「📦 차시 팩 · 기능 단계」): 🪶 기본 = 뼈대 · ⚔ 표준 = + 칼 · 양피지 · 선제 공격 · 도장(준비 0) · 🏰 풀 = + 도움 3단 · 익명 풀이 · 개념 체크(팩 덧칸) + 과목 팩 · AI 키
 const STD_NEW: FeatId[] = ['sword', 'qpaper', 'pre', 'stamp', 'keys'];
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [

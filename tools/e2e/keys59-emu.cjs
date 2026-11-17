@@ -47,7 +47,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await pick(ans('k1', true)); ok('② 열쇠 1 맞힘 = 「🔑 열쇠 획득!」', !!(await s.$('[data-k="key-ok"]')));
   await s.click('.sheet .pmain'); await s.waitForTimeout(300);
   await pick(ans('k2', false)); const no = (await s.textContent('[data-k="key-no"]').catch(() => '')).replace(/\s+/g, ' ');
-  ok('② 열쇠 2 틀림 = 💡 한 줄 + 정답 · 다시 풀기 없음 · 🔑 받음', /💡/.test(no) && /정답 · 2k² − 2k/.test(no) && !(await s.$('.sheet .pmain:has-text("다시")')), no.slice(0, 90));
+  ok('② 열쇠 2 틀림 = 💡 한 줄 + 정답 · 다시 풀기 없음 · 🔑 받음', /💡/.test(no) && /답 = 2k² − 2k/.test(no) && !(await s.$('.sheet .pmain:has-text("다시")')), no.slice(0, 90));
   await s.screenshot({ path: `${SHOTS}/k59-wrong.png` });
   await s.click('.sheet .pmain'); await s.waitForTimeout(300); await pick(ans('k3', true)); await s.click('.sheet .pmain'); await s.waitForTimeout(500);
   const pk = await rest(`rooms/${code}/players/s1_3_3/keys`);
@@ -108,7 +108,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   ok('⑥ 판 2 틀림 = 💡 + 정답', /💡/.test(await s.textContent('[data-k="kp-no"]').catch(() => '')));
   await s.click('.sheet .pmain'); await s.waitForTimeout(800);
   const kp = await rest('bonus/1-3/3/review/keyp_ex-11'), gl = await rest('gem/1-3/3/log/keyp_ex-11');
-  ok('⑥ 기록 = k2 맞힘 1 · 연습 1번 · 💎 없음(스위치 끔 · 기록만)', kp && kp.k2 === 1 && kp.n === 1 && !gl, JSON.stringify(kp));
+  ok('⑥ 기록 = k2 맞힘 1 · 연습 1번 · 다 맞히지 못함 = 💎 없음', kp && kp.k2 === 1 && kp.n === 1 && !gl, JSON.stringify(kp));
+  await s.click('.sheet .pmain'); await s.waitForTimeout(500); // 결과 창 → 허수아비로
+  // 다시 = 판 1 · 2 다 맞힘 → 💎 +1 (차시마다 한 번 · 스위치 기본 켬)
+  await s.click('[data-lesson="ex-11"] [data-k="key-prac"]'); await s.waitForSelector('[data-k="key-practice"]');
+  for (const j of [1, 2]) { await s.click(`[data-k="key-practice"] .opt:text-is("${v[j].ch[Number(v[j].a)]}")`); await s.click('.sheet .pmain'); await s.waitForTimeout(300); await s.click('.sheet .pmain'); await s.waitForTimeout(400); }
+  const gl2 = await rest('gem/1-3/3/log/keyp_ex-11'); ok('⑥ 다 맞힘 = 💎 +1 (gem log keyp_ex-11)', gl2 && gl2.g === 1, JSON.stringify(gl2));
   await s.screenshot({ path: `${SHOTS}/k59-dummy-done.png` });
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
