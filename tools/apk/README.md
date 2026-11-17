@@ -1,3 +1,5 @@
+> ⛔ **폐기 (📜 2026-11-17 선생님 「APK 그만 폐기해」 · 머리 🔨 #28)** — 교사 앱 = PWA(홈 화면에 추가)만. 새 APK 빌드 · 「알림 아이콘 APK 빌드」 대기 일 취소. 드라이브 APK 2개 = 휴지통(되살릴 수 있음) · 서명 키 = 비공개 폴더 그대로 · garzondesne-dot.github.io `assetlinks.json` = 그대로. 아래는 기록용.
+
 # 📲 교사 앱 APK (안드로이드 TWA · Bubblewrap) — 📜 2026-11-16 선생님 「교사 APK + 알림 진행」
 
 - 앱 = 정식 교사 화면 `https://garzondesne-dot.github.io/Citadel-MATH/?role=teacher` 을 띄우는 껍데기 · 화면 · 기능은 사이트에서 저절로 바뀜

@@ -54,6 +54,7 @@
     <ThemePicker now={theme} feats={null} onpick={(t) => { theme = t; setTheme(t); }} paper />
   {:else if page === 'app'}
     <p class="outq">{pwa.ios ? '사파리 아래 공유 → 목록을 내려 「홈 화면에 추가」 → 오른쪽 위 「추가」' : `브라우저 메뉴(⋮)에서 「앱 설치」 또는 「홈 화면에 추가」 · 이미 설치했으면 홈 화면의 「${APP_NAME}」로 열어요`}</p>
+    {#if pwa.ios}<p class="outq" data-k="ios-note">아이폰 = 홈 화면에 추가한 뒤 그 앱으로 열어 ⚙ 🔔 알림을 켜요 (사파리 창에서는 알림이 안 와요)</p>{/if}
     {#if BETA}<p class="outq">「던전 베타」는 정식 「모두의 던전」 앱과 따로 깔려요</p>{/if}
   {:else if page === 'out'}
     <p class="outq">교사 로그인만 끝나요 · 수업 기록 · 이 기기 저장은 그대로예요</p>
