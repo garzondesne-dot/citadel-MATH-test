@@ -13,7 +13,8 @@ export function inbox(S: Store): InboxItem[] {
   if (all && S.kind !== 'server' && Object.values(all).some((x) => x.kind === 'idea' && !x.from)) all = null; // 옛 가짜 소식(보낸 사람 없음) → 다시 넣음
   // 🐞 b207 (선생님 캡처 「받은 것 0 인데 가짜 같은 줄」): 가짜 소식 = 이 기기 체험(device)에서만 · 서버(베타 · 정식 = 같은 운영 서버)에는 절대 안 씀
   //   예전 = 서버에서도 칸이 비면 n1~n6 가짜 소식을 운영 서버 school/inbox 에 써 넣었음 (지우기 = 선생님 허락 뒤 손발이 n1~n6 만)
-  if (!all && S.kind !== 'server') { const t = Date.now(); all = Object.fromEntries(SEED.map((x, i) => [x.id, { ...x, at: t - i * 3600e3 }])); S.set('school/inbox', all); }
+  // 🐞 11/17: 이 기기 체험에 「📢 바뀐 것」 소식이 먼저 들어가 있으면 가짜 소식이 안 들어가던 것 → 가짜 소식 칸이 하나도 없으면 더함
+  if (S.kind !== 'server' && !Object.keys(all || {}).some((k) => SEED_IDS.has(k))) { const t = Date.now(); const seed = Object.fromEntries(SEED.map((x, i) => [x.id, { ...x, at: t - i * 3600e3 }])); all = { ...(all || {}), ...seed }; S.set('school/inbox', all); }
   if (!all) return [];
   if (S.kind === 'server') return Object.values(all).filter((x) => x && !SEED_IDS.has(x.id)).sort((a, b) => b.at - a.at); // 이미 써진 가짜 줄은 서버에서 안 보임
   return Object.values(all).sort((a, b) => b.at - a.at);
