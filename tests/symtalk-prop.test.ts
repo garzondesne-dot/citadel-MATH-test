@@ -42,9 +42,9 @@ describe('📖 #49 기호 톡 명제 단원', () => {
     expect(ids('역사 · 대우주 · 역할')).toEqual([]); // 낱말 안의 「역」 · 「대우」 = 안 칠함
     expect(ids('x → 3')).toEqual([]); // p q r 사이 화살표만
   });
-  it('명제 차시에서만: 8차시부터 · 성채 2층(eval-2) = 켬 / 집합 차시 · 성채 1 · 3층 = 끔', () => {
+  it('명제 차시에서만: 8차시부터 · 성채 2층 · 3층 = 켬 / 집합 차시 · 성채 1층 = 끔', () => {
     expect(propOn({ id: 'set-08', no: 8 })).toBe(true); expect(propOn({ id: 'set-09', no: 9 })).toBe(true); expect(propOn({ id: 'ex-12', no: 12 })).toBe(true);
-    expect(propOn({ id: 'set-06', no: 6 })).toBe(false); expect(propOn({ id: 'eval-2', no: 0 })).toBe(true); expect(propOn({ id: 'eval-3', no: 13 })).toBe(false);
+    expect(propOn({ id: 'set-06', no: 6 })).toBe(false); expect(propOn({ id: 'eval-2', no: 0 })).toBe(true); expect(propOn({ id: 'eval-3', no: 13 })).toBe(true); expect(propOn({ id: 'eval-1', no: 6 })).toBe(false); // 📜 #51 3층 켬 · 1층(집합) 끔
     const t = '명제 「A ⊂ B 이면 x ∈ B」의 대우';
     expect(segments(t).filter((s) => s.id).map((s) => s.id)).toEqual(['sub', 'in']); // 끔 = 집합 기호만
     expect(segments(t, { prop: true }).filter((s) => s.id).map((s) => s.id)).toEqual(['prop', 'sub', 'in', 'contra']); // 켬 = 낱말도 (차례대로)

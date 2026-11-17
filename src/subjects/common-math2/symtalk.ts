@@ -44,8 +44,8 @@ export const PROP: SymRow[] = [
   { id: 'amgm', sym: '(a + b)/2 ≥ √(ab)', easy: '양수 둘: 더해서 반 ≥ 곱해서 루트', def: 'a > 0, b > 0 일 때 산술평균은 기하평균보다 크거나 같다', memo: '등호 = a = b 일 때 · 양수일 때만 씀' },
 ];
 export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS, ...PROP].map((r) => [r.id, r]));
-/** 명제 낱말 · 기호를 붙이는 차시 = 명제 차시(8차시부터 · 성채 제외) + 성채 2층(명제 방) — 정식 propOn 그대로 */
-export const propOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && (L.id === 'eval-2' || (!/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 8));
+/** 명제 낱말 · 기호를 붙이는 차시 = 명제 차시(8차시부터 · 성채 제외) + 성채 2층(명제 방) + 3층(대단원 · 📜 #51 2026-11-17 선생님 「3층 켜기」) */
+export const propOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && (L.id === 'eval-2' || L.id === 'eval-3' || (!/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 8));
 // 긴 낱말 먼저: 필요충분조건(⇔ 줄) → 충분조건 · 필요조건 → 조건 · ⇒ · ⇔ 는 → 와 다른 글자 · 산술기하 = 그 식 꼴 또는 「산술평균」 · 「기하평균」
 const AMGM = String.raw`\(\s*[a-z]\s*\+\s*[a-z]\s*\)\s*\/\s*2\s*≥\s*√\s*\(?\s*[a-z]\s*[a-z]\s*\)?|산술평균|기하평균`;
 const PROPRE = new RegExp(String.raw`~(?=\s*[pqr](?![A-Za-z]))|(?<=~?[pqr] )→(?= ~?[pqr](?![A-Za-z]))|⇔|⇒|모든\s*[a-z]\s*에\s*대하여|어떤\s*[a-z]\s*에\s*대하여|필요충분조건|충분조건|필요조건|귀류법|절대부등식|${AMGM}|반례|(?<![가-힣])대우(?=[은는이가를와의도]|[\s」:.,]|$)|(?<![가-힣])역(?=[은는이을과의도]|[\s」:.,]|$)|진리집합|명제|조건(?!제시)|(?<![A-Za-z])P(?![A-Za-z])`, 'g');
