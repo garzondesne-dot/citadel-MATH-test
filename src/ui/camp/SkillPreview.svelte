@@ -32,6 +32,6 @@
   .mon { position: absolute; right: 22px; bottom: 22px; z-index: 1; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
   .cap { position: absolute; left: 10px; top: 8px; z-index: 2; display: flex; flex-direction: column; color: #fff; text-shadow: 0 1px 2px #000; }
   .cap b { font-size: 15px; } .cap small { font-size: 12.5px; opacity: 0.9; }
-  .again { position: absolute; right: 8px; top: 8px; z-index: 2; width: 40px; height: 40px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(8, 10, 14, 0.55); color: #fff; font-size: 15px; }
+  .again { position: absolute; right: 8px; top: 8px; z-index: 2; width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(8, 10, 14, 0.55); color: #fff; font-size: 15px; }
   .again:disabled { opacity: 0.4; }
 </style>

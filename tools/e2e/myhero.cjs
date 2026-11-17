@@ -15,7 +15,7 @@ const base = 'http://localhost:4173/';
   const gold = async (w) => { const n = await p.$$eval('.mh .btn, .sheet .btn', (bs) => bs.filter((x) => x.offsetParent && !x.disabled).length); if (n > 1) errs.push(`금빛 단추 ${n}개 · ${w}`); return n; };
   await p.goto(base + '?role=camp&room=MH'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('.stage');
   await p.click('button[aria-label="내 용사 보기"]'); await p.waitForSelector('.mh');
-  log('맨 위 카드:', await t('.mh .top'), '| 탭 점', await p.$$eval('.tabs button', (bs) => bs.map((x) => `${x.textContent.trim()}${x.querySelector('.bdot') ? '•' : ''}`).join(' ')));
+  log('맨 위 카드:', await t('.mh .top'), '| 탭 점', await p.$$eval('.htabs button', (bs) => bs.map((x) => `${x.textContent.trim()}${x.querySelector('.bdot') ? '•' : ''}`).join(' ')));
   // ① 강화
   log('강화 탭:', await t('.enhbox'), '| 주요 단추', await t('.mh .pmain'), '| 금빛', await gold('강화'));
   await p.screenshot({ path: `${SHOTS}/b7-enh-360.png` }); await over('강화'); await small('강화');
@@ -23,7 +23,7 @@ const base = 'http://localhost:4173/';
   log('강화 고름 뒤:', await t('.enhbox .muted'), '| 막대', await t('.savebar'), '| 주요', await t('.mh .pmain'), '| 💎', await t('.mh .bar .pill'), '| 금빛', await gold('강화 고름'));
   await p.screenshot({ path: `${SHOTS}/b9-enh-dirty-360.png` });
   // ② 스킬
-  await p.click('.tabs button:nth-child(2)'); await p.waitForTimeout(150);
+  await p.click('.htabs button:nth-child(2)'); await p.waitForTimeout(150);
   log('스킬 탭 안내:', (await p.$('.tip')) ? await t('.tip') : '(없음)', '| 칸', await p.$$eval('.lr', (ls) => ls.map((x) => `${x.querySelector('b').textContent}[${[...x.classList].filter((c) => !/svelte|lr/.test(c))}] ${x.querySelector('small').textContent}`).join(' / ')));
   await p.click('.lr:nth-child(2)'); await p.waitForTimeout(250);
   log('Ⅱ 고름:', await p.$$eval('.lr', (ls) => ls.map((x) => `${x.querySelector('b').textContent}[${[...x.classList].filter((c) => !/svelte|lr/.test(c))}]`).join(' ')), '| 미리 보기', (await p.$('.prev')) ? await t('.prev') : '없음');
@@ -31,16 +31,17 @@ const base = 'http://localhost:4173/';
   await p.click('.lr:nth-child(4)'); await p.waitForTimeout(150); log('Ⅳ 누름(잠김):', (await p.$('.toast')) ? await t('.toast') : '');
   await p.waitForTimeout(1700); log('미리 보기 1.6초 뒤:', (await p.$('.prev')) ? '남음' : '사라짐');
   // ③ 기록 · 호칭
-  await p.click('.tabs button:nth-child(3)'); await p.waitForTimeout(150);
+  await p.click('.htabs button:nth-child(3)'); await p.waitForTimeout(150);
   log('기록 탭:', await t('.tiles'), '|', await t('.stats'), '|', await t('.mh .body .row'), '|', await t('.mh .body > .muted'));
   await p.waitForFunction(() => !document.querySelector('.toast'), null, { timeout: 4000 }); await p.screenshot({ path: `${SHOTS}/b7-record-360.png` }); await over('기록'); await small('기록');
-  await p.click('.mh .body .row'); await p.waitForSelector('.sheet'); log('호칭 시트:', (await p.$$('.tp:not(.lock)')).length, '개 얻음 (테스트 = 모두)');
-  await p.click('.tp:has-text("새벽의 개척자")'); await p.waitForTimeout(150); log('호칭 고름 뒤 카드:', await t('.mh .top .nm'));
+  await p.click('.mh .body .row'); await p.waitForSelector('.sheet'); log('호칭 시트:', (await p.$$('.ttp:not(.lock)')).length, '개 얻음');
+  if (await p.$('.sheet .ttp:not(.lock)')) await p.$eval('.sheet .ttp:not(.lock)', (e) => e.click()); // 얻은 호칭 하나 (새 기록이면 0개 → 닫기)
+  else await p.$eval('.sheet [aria-label="닫기"]', (e) => e.click()).catch(() => p.mouse.click(10, 10)); await p.waitForTimeout(150); log('호칭 고름 뒤 카드:', await t('.mh .top .nm'));
   // ④ 용사 바꾸기
-  await p.click('.mh .top'); await p.waitForSelector('.hsw');
+  await p.$$eval('.mh button', (bs) => bs.find((x) => /용사 바꾸기/.test(x.textContent || ''))?.click()); await p.waitForSelector('.hsw');
   log('용사 바꾸기 시트: 위', await p.evaluate(() => Math.round(document.querySelector('.hsw').getBoundingClientRect().top)), '| 내 카드 아래', await p.evaluate(() => Math.round(document.querySelector('.mh .top').getBoundingClientRect().bottom)), '| 칸', (await p.$$('.swc')).length, '| 출전 중', await t('.swc.cur'));
   await p.click('.swc[aria-label*="연금술사"]'); await p.waitForTimeout(150);
-  log('상세:', await t('.swd'), '| 단추', await t('.hsw .pmain'));
+  log('상세:', await t('.hsw .hi'), '| 단추', await t('.hsw .pmain'));
   await p.screenshot({ path: `${SHOTS}/b9-hero-switch-360.png` }); await over('용사 바꾸기');
   await p.click('.hsw .pmain'); await p.waitForTimeout(100); log('사기 고름 뒤 단추:', await t('.hsw .pmain'));
   await p.click('.hsw .pmain'); await p.waitForTimeout(150); log('출전 고름 뒤 카드:', await t('.mh .top .sub'), '| 막대', await t('.savebar .chg2'));
