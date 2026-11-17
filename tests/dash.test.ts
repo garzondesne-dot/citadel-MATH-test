@@ -5,6 +5,7 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { memoryStore } from '../src/store/device';
 import { ALL, ALL_VIEWS, scope, toSheet, view } from '../src/school/views';
 import { makeXlsx } from '../src/school/xlsx';
+import { spawnSync } from 'node:child_process';
 import { fakeClass } from '../src/school/dash';
 
 describe('대시보드 (#125)', () => {
@@ -42,4 +43,19 @@ describe('대시보드 (#125)', () => {
     expect(s1).toMatch(/<c r="B2"><v>\d+<\/v><\/c>/);
     expect(strFromU8(z['xl/styles.xml']!)).toContain('numFmtId="9"');
   });
+  // 📄 #54 다른 AI(파이썬 openpyxl · pandas)가 그대로 읽는 표준 xlsx — 파이썬 · openpyxl 이 없는 기기면 건너뜀
+  it('엑셀: openpyxl · pandas 로 경고 없이 읽힘 (공유 문자열 · 기본 서식 · 제어 글자 · NaN · 긴/겹친 시트 이름)', () => {
+    const py = spawnSync('python3', ['-c', 'import openpyxl, pandas'], { encoding: 'utf8' });
+    if (py.status !== 0) return;
+    const S = memoryStore();
+    const bytes = makeXlsx([toSheet(view(S, ALL, 'cmp')), toSheet(view(S, '1-3', 'grid')), { name: '아주 긴 시트 이름이 서른한 글자를 넘어가면 잘려야 함', rows: [['글', '수'], ['줄\u0001바꿈\u0008 & <b> "q"', NaN], ['⭐ 6/6', Infinity], [null, 3]] }, { name: '아주 긴 시트 이름이 서른한 글자를 넘어가면 잘려야 함', rows: [['같은 이름']] }]);
+    const f = '/tmp/dash-test-std.xlsx'; writeFileSync(f, bytes);
+    const r = spawnSync('python3', ['-W', 'error', '-c', `import openpyxl, pandas as pd
+wb = openpyxl.load_workbook('${f}'); assert len(wb.sheetnames) == 4 and all(len(n) <= 31 for n in wb.sheetnames) and len(set(wb.sheetnames)) == 4
+d = pd.read_excel('${f}', sheet_name=None); x = d[wb.sheetnames[2]]
+assert list(x.columns) == ['글', '수'] and x.iloc[0, 0] == '줄바꿈 & <b> "q"' and pd.isna(x.iloc[0, 1]) and x.iloc[2, 1] == 3
+print('ok')`], { encoding: 'utf8' });
+    expect(r.stderr + r.stdout).toContain('ok');
+  });
 });
+
