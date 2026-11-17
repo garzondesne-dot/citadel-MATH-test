@@ -32,7 +32,26 @@ export function relabel(qs: Question[]): Question[] {
 export function items(L: LessonPack, mid: string, seed: string, variant: number): Question[] {
   const m = L.monsters[mid];
   if (!m) return [];
-  return remember(`${L.id}|${mid}|${seed}|${variant}`, () => relabel(itemsRaw(L, m, mid, seed, variant)));
+  return remember(`${L.id}|${mid}|${seed}|${variant}`, () => fresh(L, m, mid, seed, variant));
+}
+/** 생성기 그대로의 문항 (다시 뽑기 전 · 정식 출력과 같은지 시험할 때) */
+export function baseItems(L: LessonPack, mid: string, seed: string, variant: number): Question[] {
+  const m = L.monsters[mid];
+  return m ? relabel(itemsRaw(L, m, mid, seed, variant)) : [];
+}
+/** 🐞 11/17 ⓓ 「한 번 더 했는데 문제가 안 바뀌어요」(선생님 A): 생성기 판이 바로 앞 판과 같은 소문제 = 다른 난수로 다시 뽑음(최대 8번 · 정해진 순서라 어느 기기에서나 같음)
+ *  판 0 (교과서 · first) · 엑셀 차시(pool) = 그대로 */
+const sig = (q: unknown) => JSON.stringify(q, (k, v) => (k === 'say' || k === 'why' ? undefined : v));
+function fresh(L: LessonPack, m: LessonPack['monsters'][string], mid: string, seed: string, variant: number): Question[] {
+  const raw = relabel(itemsRaw(L, m, mid, seed, variant));
+  if (variant <= 0 || !('gen' in m.retry)) return raw;
+  const prev = items(L, mid, seed, variant - 1).map(sig);
+  if (!raw.some((q, i) => sig(q) === prev[i])) return raw;
+  const gen = getGen(m.retry.gen), out = raw.slice();
+  out.forEach((_, i) => {
+    for (let k = 1; k <= 8 && sig(out[i]) === prev[i]; k++) { const alt = relabel(gen(variant, makeRng(`${seed}|${mid}|${variant}|alt${k}`), m.retry.params))[i]; if (alt) out[i] = alt; }
+  });
+  return out;
 }
 function itemsRaw(L: LessonPack, m: LessonPack['monsters'][string], mid: string, seed: string, variant: number): Question[] {
   {

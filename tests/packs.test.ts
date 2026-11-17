@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { PACKS, packOf } from '../src/engine/packs';
-import { bossItem, chainItems, items, relabel, validate } from '../src/engine/lessons';
+import { baseItems, bossItem, chainItems, items, relabel, validate } from '../src/engine/lessons';
 import type { Question } from '../src/model/types'; // 🔢 정식 기대값도 번호 겹침 정리(relabel)를 거쳐 비교 (2026-11-14)
 import { SHEETS, DUNGEONS } from '../src/ui/manifest';
 
@@ -20,7 +20,14 @@ describe.each(Object.keys(OFFICIAL_TEST))('%s 차시 팩', (id) => {
   }, 60000);
   it('엔진 문항 = 정식 출력 (몬스터 · 시드 3 × 판 0 · 1 · 2 · 3 · 5 · 9)', () => {
     for (const [mid, bySeed] of Object.entries(fix.monsters as Record<string, unknown[][]>))
-      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(items(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(relabel(bySeed[k]![j] as Question[]))));
+      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(baseItems(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(relabel(bySeed[k]![j] as Question[]))));
+  });
+  it('🐞 ⓓ 한 번 더 판 = 바로 앞 판과 같은 소문제 없음 (판 0 = 정식 그대로)', () => {
+    const sig = (q: unknown) => JSON.stringify(q, (kk, vv) => (kk === 'say' || kk === 'why' ? undefined : vv));
+    for (const mid of Object.keys(fix.monsters as object)) SEEDS.forEach((sd) => {
+      expect(JSON.parse(JSON.stringify(items(L, mid, sd, 0)))).toEqual(JSON.parse(JSON.stringify(baseItems(L, mid, sd, 0))));
+      for (let v = 1; v <= 6; v++) { const a = items(L, mid, sd, v - 1).map(sig), b = items(L, mid, sd, v).map(sig); b.forEach((x, i) => { if (x === a[i]) { const alts = new Set(Array.from({ length: 12 }, (_, t) => sig(baseItems(L, mid, sd, t)[i]))); expect(alts.size, `${mid} ${sd} 판 ${v} 소문제 ${i + 1} = 꼴이 하나뿐인 문항만 같아도 됨`).toBe(1); } }); }
+    });
   });
   it('⚔ 소레이드 = 정식 chainItems (시드 3 × 판 0 ~ 3)', () => {
     for (const [mid, bySeed] of Object.entries((fix.chain || {}) as Record<string, unknown[][]>))

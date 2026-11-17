@@ -6,7 +6,7 @@ import type { Given, LessonPack, Question, Room } from '../src/model/types';
 import pack from '../src/subjects/common-math2/lessons/set-06.json';
 import fx from './fixtures/parity-set06.json';
 import { makeRng } from '../src/engine/rng';
-import { bossItem as packBossItem, items, relabel } from '../src/engine/lessons';
+import { baseItems as items, bossItem as packBossItem, relabel } from '../src/engine/lessons'; // 정식 출력 비교 = 다시 뽑기 전 생성기 그대로 (🐞 ⓓ)
 // 🔢 다른 점 하나 (🐞 2026-11-14): 같은 소문제 번호가 겹치면 「(3) ①」「(3) ②」 → 정식 기대값도 같은 정리를 거쳐 비교
 const RL = (qs: { question: string }[]) => relabel(qs as unknown as Question[]) as unknown as typeof qs;
 const norm = (t: string) => t.replace(/^(\(\d+\)) [①-⑨] /, '$1 ');
