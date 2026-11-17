@@ -169,6 +169,13 @@ export function giveStamp(S: Store, code: string, uid: string): boolean {
   S.set(`${roomPath(code)}/stamp/${uid}`, t);
   return true;
 }
+/** ✅ 도장 모드 되돌리기 (📜 2026-11-17 #32 · 3초 안) — 학생이 아직 안 받은 도장만 거둠 · 받았으면 false */
+export function unStamp(S: Store, code: string, uid: string): boolean {
+  const k = `stamp_${code.replace(/[.#$/[\]]/g, '_')}`, g = S.get<{ got?: boolean }>(`gifts/${uid}/${k}`);
+  if (g?.got) return false;
+  S.set(`gifts/${uid}/${k}`, null); S.set(`${roomPath(code)}/stamp/${uid}`, null);
+  return true;
+}
 export function giveGift(S: Store, code: string, uids: string[], g: number, all = false, why = ''): number {
   const t = S.now(), n = Math.max(0, Math.round(g));
   if (!n || !uids.length) return 0;

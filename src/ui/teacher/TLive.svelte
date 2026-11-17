@@ -11,7 +11,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { appearNow, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
@@ -163,6 +163,15 @@
   let who = $state(''), pwAsk = $state(false), pwDone = $state(false);
   function tapNum(uid: string) { who = uid; pwAsk = false; pwDone = false; } // 🚨 2026-11-16 핫픽스: 대기실에서 안 들어온 학생도 창이 열림(결석 표시 · 🔑 0000 같은 창) — 예전엔 누르면 결석 표시만 돼서 접속 안 한 학생의 비밀번호를 못 바꿨음
   const whoP = $derived(pupils.find((x) => x.uid === who) ?? null);
+  // ✅ 도장 모드 (📜 2026-11-17 선생님 「일일이 누르기 좀 빡셌어」 → 「A만」 #32): 보기 줄 끝 「✅ 도장」 · 켜면 칸 한 번 톡 = 도장 📜 +1(창 없음 · 한 수업 한 번 · giveStamp) · 3초 되돌리기 · 결석 칸 안 눌림 · 다른 보기 · 다시 누름 = 끝
+  let stampOn = $state(false), stampNew = $state<Record<string, boolean>>({}), sUndo = $state<string | null>(null), sUndoT: ReturnType<typeof setTimeout> | null = null;
+  function tapCell(uid: string) {
+    if (!(stampOn && feat('stamp') && R)) { tapNum(uid); return; }
+    if (absent[uid] || stamped(R, uid)) return;
+    if (!giveStamp(S, code, uid)) return;
+    stampNew = { ...stampNew, [uid]: true }; sUndo = uid; if (sUndoT) clearTimeout(sUndoT); sUndoT = setTimeout(() => (sUndo = null), 3000);
+  }
+  function stampBack() { const u = sUndo; if (!u) return; if (sUndoT) clearTimeout(sUndoT); sUndo = null; if (unStamp(S, code, u)) { const n = { ...stampNew }; delete n[u]; stampNew = n; say(`↺ ${numOf(u)} 도장 되돌렸어요`); } else say('학생이 벌써 받아서 되돌릴 수 없어요'); }
   const reload = () => { if (!oldIds.length) { say('옛 판 학생이 없어요'); return; } sendReload(S, code, oldIds); say(`🔄 옛 판 ${oldIds.length}명에게 새로 고침을 보냈어요`); };
   const boss5 = $derived(left != null && left > 0 && left <= 5 * 60e3 && !R?.state.extend);
   const doorAsk = $derived(!!R?.state.door);
@@ -255,7 +264,7 @@
     <div class="card att" aria-label="학생판" data-k="board" data-mid={curMid ?? ""}>
       <div class="hd"><span class="lab">👥 학생판{isLobby(R) ? ' · 대기실' : scouting ? ' · 정찰 중' : ''}</span>
         {#if isLobby(R)}<b class="cnt">{ids.length} <small>/ {expected.length}</small></b>
-        {:else}<div class="vtg" role="group" aria-label="보기">{#each [['now', '지금'], ['today', '오늘'], ['stuck', '막힌 순']] as const as [k, t] (k)}<button type="button" class:on={view === k} aria-pressed={view === k} data-view={k} onclick={() => (view = k)}>{t}</button>{/each}</div>{/if}
+        {:else}<div class="vtg" role="group" aria-label="보기">{#each [['now', '지금'], ['today', '오늘'], ['stuck', '막힌 순']] as const as [k, t] (k)}<button type="button" class:on={view === k} aria-pressed={view === k} data-view={k} onclick={() => { view = k; stampOn = false; }}>{t}</button>{/each}{#if feat('stamp')}<button type="button" class="stm" class:on={stampOn} aria-pressed={stampOn} data-k="stamp-mode" onclick={() => { stampOn = !stampOn; if (stampOn) view = 'now'; }}>✅ 도장</button>{/if}</div>{/if}
       </div>
       {#if live.test}<div class="bots" data-k="bots" role="group" aria-label="가상 학생">
         <button type="button" class="bsw" class:on={bot.on && bot.code === code} aria-pressed={bot.on && bot.code === code} data-k="bot-sw" onclick={() => setBots(S, L, code, !(bot.on && bot.code === code), bot.n)}>🤖 가상 학생 <b>{bot.on && bot.code === code ? '켬' : '끔'}</b></button>
@@ -270,11 +279,11 @@
         <div class="nums c{bCols}" class:scr={bScroll} role="group" aria-label="학생 칸">
           {#each pupils as p (p.uid)}
             {@const st = stOf(p.uid)}{@const c = cells[p.uid]}{@const lf = lfOf(p)}{@const rdy = scouting && !!readyIds[p.uid]}{@const dots = c && !c.noSword ? swordDots(c) : null}
-            <button type="button" class="n {st}" class:lost={st === 'no' && !!R.players?.[p.uid]} class:old={isOldU(p.uid)} class:sel={who === p.uid} class:zero={!!c?.zero} class:lf={lf > 0} class:rdy class:fl={!!flash[p.uid]} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? `도움 요청 ${order.indexOf(p.uid) + 1}번째` : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : lf ? `안 들어옴 · 로그인 실패 ${lf}번` : '안 옴'}{c && !c.noSword ? ` · 칼 ${c.left}` : ''}{c ? ` · 맞힘 ${c.got}/${c.of}` : ''}{rdy ? ' · 준비 완료' : ''}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapNum(p.uid)}>
+            <button type="button" class="n {st}" class:lost={st === 'no' && !!R.players?.[p.uid]} class:old={isOldU(p.uid)} class:sel={who === p.uid} class:zero={!!c?.zero} class:lf={lf > 0} class:rdy class:fl={!!flash[p.uid]} class:stmp={stampOn && stamped(R, p.uid)} class:stmpnew={stampOn && !!stampNew[p.uid]} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? `도움 요청 ${order.indexOf(p.uid) + 1}번째` : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : lf ? `안 들어옴 · 로그인 실패 ${lf}번` : '안 옴'}{c && !c.noSword ? ` · 칼 ${c.left}` : ''}{c ? ` · 맞힘 ${c.got}/${c.of}` : ''}{rdy ? ' · 준비 완료' : ''}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapCell(p.uid)}>
               <span class="nm"><b>{nl(p.num)}</b><s>{givenName(p.name)}</s></span>
               {#if dots}<span class="sw" aria-hidden="true">{#if feat('sword')}{#each Array.from({ length: dots.on }) as _, k (k)}<i></i>{/each}{#each Array.from({ length: dots.off }) as _, k (k)}<i class="u"></i>{/each}{#if dots.more}<small>+{dots.more}</small>{/if}{:else}<small>{c!.left}번</small>{/if}</span>{/if}
               {#if c}<span class="pg" aria-hidden="true"><i style:width="{Math.round(c.prog * 100)}%"></i></span>{/if}
-              {#if st === 'help'}<em class="bd r">🙋{ordNo(p.uid)}</em>{:else if c?.zero}<em class="bd r">⚔0</em>{:else if lf}<em class="bd o">🔑{lf}</em>{:else if rdy}<em class="bd y">📝</em>{/if}
+              {#if stampOn && stamped(R, p.uid)}<em class="bd g" data-k="stamped">✅</em>{:else if st === 'help'}<em class="bd r">🙋{ordNo(p.uid)}</em>{:else if c?.zero}<em class="bd r">⚔0</em>{:else if lf}<em class="bd o">🔑{lf}</em>{:else if rdy}<em class="bd y">📝</em>{/if}
             </button>
           {/each}
         </div>
@@ -390,6 +399,7 @@
       {#if pwDone && !away}<p class="pwok">학생에게 0000 으로 들어오라고 말해 주세요</p>{/if}
     </Sheet>
   {/if}
+  {#if sUndo}<p class="toast utoast" role="status" data-k="stamp-undo">✅ {numOf(sUndo)} {pname(sUndo)} 도장 · 📜 +1<button type="button" data-k="stamp-back" onclick={stampBack}>되돌리기</button></p>{/if}
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
   {#if wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 
@@ -531,6 +541,8 @@
   .n.fl { box-shadow: 0 0 0 3px #fff; }
   @media (prefers-reduced-motion: no-preference) { .n.fl { animation: flb 0.4s ease-in-out 4; } }
   @keyframes flb { 50% { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0); } }
+  .vtg .stm.on { background: var(--ok); border-color: var(--ok); color: #05121f; } /* ✅ 도장 모드 켬 */
+  .n.stmp:not(.stmpnew) .bd.g { opacity: 0.45; } .n.stmpnew { box-shadow: inset 0 0 0 2px var(--ok); } .bd.g { background: var(--ok); color: #05121f; }
   .vtg { margin-left: auto; display: flex; gap: 3px; } .vtg button { min-height: 28px; padding: 0 9px; border-radius: 99px; border: 1px solid var(--line); background: none; color: var(--text-2); font: 700 12px var(--font); } .vtg button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .sums { display: flex; flex-wrap: nowrap; gap: 4px; overflow-x: auto; scrollbar-width: none; } .sums::-webkit-scrollbar { display: none; }
   .sm { flex: none; min-height: 28px; padding: 0 7px; border-radius: 8px; border: 0; background: var(--surface-2); color: var(--text); font: 700 12px var(--font); white-space: nowrap; } .sm b { font-variant-numeric: tabular-nums; }
