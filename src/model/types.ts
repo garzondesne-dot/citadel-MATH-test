@@ -205,6 +205,7 @@ export interface Room {
     /** 🌫 정찰 늘리고 줄인 합(ms · 리모컨 ±30초) */ solveAdd?: Record<string, number>;
     /** ⏸ 집중 · 🏕 쉼터 = 게임 시계 멈춤 (#118) · holdAt = 멈추기 시작한 시각 · pauseMs = 이 단계에서 멈춘 합 */
     focus?: boolean; rest?: { at: number; min: number } | null; holdAt?: number | null; pauseMs?: number | null;
+    /** 📊 길잡이 ⑤ TV 에 다시 띄운 개념 칸 (단계 id · 단계를 옮기면 null) */ recall?: string | null;
     /** ⏱ 수업 마감 시각 · 늘린 분 (정식 같은 이름 · 한 번) · 문 닫기 장면 */ deadline?: number | null; extend?: number; door?: { at: number; ask: boolean } | null; doorExt?: number | null;
     /** 🎬 영상 · 📄 문제 창 (단계 id) · 💬 TV 대기실 선생님 말 · 🎁 마지막 선물(TV 표시) · 🔄 새로 고침 보낸 시각 */
     /** ✔ 개념 체크 열림 (리모컨 · 30초 · 교사 일찍 닫기) = 단계 id · 연 시각 · 닫는 시각 */ cc?: { id: string; at: number; end: number } | null;

@@ -395,6 +395,10 @@
     {@const sid = L.steps.find((s) => s.id === R.state.sheet)?.kind === 'concept' && nextMon ? (nextMon.kind === 'boss' ? BOSS_ID : nextMon.id) : R.state.sheet}
     <div class="ov sheet"><b>📄 {short(L.steps.find((s) => s.id === R.state.sheet))}</b><div class="simg qpaper"><PrepImg {S} {L} id={sid} alt="학습지 문제" zoom={false}>{@const sp = problemParts(sheetQs.slice(0, 6).map((q) => q.question))}{#if sp.head.length}<div class="qhead">{#each sp.head as h (h)}<b><SymText text={h} /></b>{/each}</div>{/if}{#each sp.items as t, k (k)}<p><SymText text={t} /></p>{/each}</PrepImg></div></div>
   {/if}
+  {#if R?.state.recall}{@const cs = L.steps.find((s) => s.id === R.state.recall && s.kind === 'concept')}{#if cs}
+    <!-- 📊 길잡이 ⑤ 지난 개념 칸 다시 보기 (리모컨 단추 · 다시 누르거나 단계를 옮기면 닫힘) -->
+    <div class="ov sheet recall" data-k="tv-recall"><b>📺 {short(cs)} · 다시 보기</b><div class="simg pimg"><PrepImg zoom={false} {S} {L} id={cs.img ?? cs.id} fb={cs.id} alt={short(cs)}>{@const cp = conceptParts(cs.say ?? '')}<h4>{cs.title.split(' · ').slice(1).join(' · ') || cs.title}</h4>{#each cp.boxes as f (f)}<div class="fbox"><SymText text={f} /></div>{/each}{#each cp.lines as t (t)}<p class="sum"><SymText text={t} /></p>{/each}</PrepImg></div></div>
+  {/if}{/if}
   {#if R && step && ccOpen(R, step, now)}<div class="ccband" data-k="tv-cc" role="status">✔ 개념 체크 · 준비 완료 <b>{ccStats(R, step).n}</b> / {ids.length}</div>{/if}<!-- ✔ 개념 체크 (📜 2026-11-15): TV 는 낸 수만 · 맞힘 · 오답은 리모컨 -->
   {#if R?.state.review && R.state.review.i === -2}<GobiCardView g={gobiCard(L, R as Room, R.state.review.mid, now)} />{/if}<!-- 📊 우리 반 고비 (11/17 #14) -->
   {#if tvRev}

@@ -35,7 +35,7 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
 function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
   const t = S.now(), st = R.state;
   const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? classPeriodEnd(S.get<Record<string, Record<string, string>>>('school/sched') || {}, String(R.meta.cls || ''), t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
-  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
+  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, recall: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
 }
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
@@ -96,6 +96,8 @@ export function setRest(S: Store, code: string, on: boolean, min = 5): void {
 /** 🎬 영상 · 📄 문제 창 (TV) — 단계 id 또는 끄기 */
 export function setVideo(S: Store, code: string, id: string | null): void { const R = getRoom(S, code); const p = R ? cpPatch(R.state as never, { video: id } as never, S.now()) : {}; Object.entries(p).forEach(([k, v]) => S.set(`${roomPath(code)}/state/${k}`, v)); S.set(`${roomPath(code)}/state/video`, id); }
 export function setSheet(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/sheet`, id); }
+/** 📊 길잡이 ⑤ 「📺 개념 n 칸 다시 띄우기」 = 지난 개념 칸 그림을 TV 에 다시 (교사 · 단계를 옮기면 닫힘) */
+export function setRecall(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/recall`, id); }
 /** 🏛 교실 TV 「⚔ 던전 입장」: 교사 캠프 → 던전 대기실 */
 /** 💬 마지막 한마디 (정식 actions.js say 그대로 · 📜 2026-11-15 선생님 「A 되살림」): 20자 · 처음 1번 + 고치기 1번 · 욕설 = ＊ 로 가리고 bad 표시 → 오류 글('' = 됨) */
 export function sayWords(S: Store, code: string, uid: string, text: string): string {

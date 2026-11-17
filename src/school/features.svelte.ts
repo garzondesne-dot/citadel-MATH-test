@@ -12,7 +12,7 @@ import { setPaperDefault } from '../theme/theme';
 const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 
 export type FeatId =
-  | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox' | 'rest-dragon'
+  | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox' | 'rest-dragon' | 'guide'
   | 'mon-attack' | 'forge' | 'symtalk' | 'citadel' | 'seteuk' | 'schedule' | 'photo'
   | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board'
   | 'sword' | 'help3' | 'review' | 'cc' | 'pre' | 'stamp' | 'qpaper';
@@ -47,6 +47,7 @@ export const FEATS: Feat[] = [
   { id: 'cc', ic: '✔', name: '개념 체크', sub: '끄면 리모컨 「✔ 체크」 단추 숨김', prep: 'addon', group: '🧩 수업 기능' },
   { id: 'pre', ic: '⚔', name: '선제 공격', sub: '복습한 칸만큼 첫 몬스터 체력 깎임 · 끄면 체력 그대로', group: '🧩 수업 기능' },
   { id: 'stamp', ic: '✅', name: '도장 📜', sub: '끄면 리모컨 「✅ 도장」 숨김', group: '🧩 수업 기능' },
+  { id: 'guide', ic: '📊', name: '길잡이', sub: '리모컨 「지금」 칸 한 줄 · 이 속도면 +n분 · 약한 개념 · 선생님 폰에만', group: '🧩 수업 기능' }, // 📜 2026-11-17 #30 · 우리 학교(모두) 켬 · 학교판(가볍게) · 게임처럼 = 끔
   { id: 'qpaper', ic: '📜', name: '문제 칸 양피지 기본', sub: '끄면 처음 값만 끔 · 학생 🎨 테마 창 스위치는 그대로', group: '🧩 수업 기능' },
   { id: 'survey', ic: '📝', name: '수업 설문', sub: '', group: '그 밖' },
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },

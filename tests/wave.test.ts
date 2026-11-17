@@ -77,7 +77,7 @@ describe('② 🧱 같은 칸 막힘', () => {
 import { BUNDLES, FEATS, wanted } from '../src/school/features.svelte';
 import { savedPaper, setPaperDefault } from '../src/theme/theme';
 describe('⚙ 🧩 수업 기능 스위치 7개 (📜 2026-11-16)', () => {
-  const NEW = ['sword', 'help3', 'review', 'cc', 'pre', 'stamp', 'qpaper'] as const;
+  const NEW = ['sword', 'help3', 'review', 'cc', 'pre', 'stamp', 'guide', 'qpaper'] as const; // 📊 길잡이 = 📜 2026-11-17 #30 (모두 = 켬 · 가볍게 · 게임처럼 = 끔)
   it('7개 · 🤝 · 🧱 는 스위치 없음 · 모든 묶음 처음 값 켬 · 설정 없음 = 켬 · 끄면 끔', () => {
     expect(FEATS.filter((f) => f.group === '🧩 수업 기능').map((f) => f.id)).toEqual([...NEW]);
     // 📦 기능 단계 (📜 2026-11-16): 🪶 기본 = 모두 끔 · ⚔ 표준 = 칼 · 양피지 · 선제 공격 · 도장 · 🏰 풀 = 모두 · 우리 학교 처음 값 = 🏰 풀

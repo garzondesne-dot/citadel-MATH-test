@@ -20,7 +20,10 @@
   import { unlocksOf } from '../../raid/raid';
   import { hhmm } from '../../school/bells';
   import { keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
-  import { feat } from '../../school/features.svelte';
+  import { feat, type FeatId } from '../../school/features.svelte';
+  import { FOLD_MS, guideOf } from '../../school/guide';
+  import { estimate, ltimePath, timeSig } from '../../school/ltime';
+  import { setRecall } from '../../raid/actions';
   import { liveValue } from '../room.svelte';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
@@ -165,10 +168,24 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey' | 'bossask'>(''), bossAsked = $state(false);
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey' | 'bossask' | 'guide'>(''), bossAsked = $state(false);
   // 🎯 복습으로 보내기 (📜 2026-11-16 · A): 남은 몬스터 · 👑 형성평가 → 허수아비 · 형성평가 복습 완료 n / 인원
   const leftS = $derived(R && !isLobby(R) && !isEnd(L, R) ? leftSteps(L, R, now) : []);
   const bossRevN = $derived.by(() => { void now; const all = S.get<Record<string, Record<string, { bossReview?: number; bossSent?: boolean } | null>>>(`records/${live.cls}`) || {}; const rows = Object.values(all).map((x) => x?.[L.id]).filter(Boolean); return { done: rows.filter((r) => r!.bossReview).length, sent: rows.filter((r) => r!.bossSent).length }; });
+  // 📊 길잡이 (📜 2026-11-17 #30): 「지금」 칸 윗줄 한 줄 · 🙋 · 🧱 가 있으면 물러남 · 단계마다 1개 · 8초 뒤 📊 점 · 넘기기 = 그 단계 다시 안 뜸 · 선생님 폰에만
+  let gDone = $state<Record<string, boolean>>({}), gAt = $state<Record<string, number>>({});
+  const gK = $derived.by(() => { const on = (id: string) => feat(id as FeatId), e = estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, timeSig(on)))); return e.real ? e.real.min / Math.max(1, e.base + e.extra) : 1; });
+  const guide = $derived.by(() => { if (!R || !feat('guide') || isLobby(R) || isEnd(L, R) || hands.length || stuckNow) return null; const key = String(stepIdx(R)); if (gDone[key]) return null; const g = guideOf(L, R, ids, now, gK); return g ? { ...g, key } : null; });
+  $effect(() => { const k = guide?.key; if (k) untrack(() => { if (gAt[k] == null) gAt = { ...gAt, [k]: Date.now() }; }); });
+  const gFold = $derived(!!guide && now - (gAt[guide.key] ?? now) > FOLD_MS);
+  const recallStep = $derived(R?.state.recall ? L.steps.find((x) => x.id === R.state.recall) : null);
+  function gGo() {
+    const g = guide; if (!g || !R) return;
+    if (g.k === 'time' && g.mon) { const st = L.steps.find((x) => x.id === g.mon); if (st) sendSome([sentKey(st)]); }
+    if (g.k === 'weak' && g.concept) { setRecall(S, code, g.concept); say(`📺 ${short(L.steps.find((x) => x.id === g.concept))} 칸을 TV 에 다시 띄웠어요`); }
+    gDone = { ...gDone, [g.key]: true }; if (sheet === 'guide') sheet = '';
+  }
+  function gSkip() { const g = guide; if (g) gDone = { ...gDone, [g.key]: true }; sheet = ''; }
   function sendSome(keys: string[]) { if (!keys.length) return; sendToReview(S, code, keys); say(`🎯 ${keys.length}개 → 허수아비 복습`); if (keys.length >= leftS.length) sheet = ''; }
   // 🏕 쉼터 (#142 ①): 🏕 = 쉼터 켜고(지난 분) 놀이 고르기 시트 · 놀이 5칸 · ⭕ = 지난 · 오늘 · 분 −/＋ = 다음 쉼터 기본으로 기억 · 이 폰도 놀이 시계를 맡음(TV 가 없을 때)
   const stopDrive = untrack(() => driveFun(S, live.code, 'tp'));
@@ -290,11 +307,14 @@
       {@render queue()}
       {@render att()}
       <div class="card rstat" data-k="now-cell">
+        {#if recallStep}<div class="rs1 gband rc" data-k="recall-band"><span class="gt">📺 {short(recallStep)} 칸 TV 에 띄움</span><button type="button" class="ga" data-k="recall-off" onclick={() => setRecall(S, code, null)}>닫기</button></div>
+        {:else if guide && !gFold}<div class="rs1 gband" data-k="guide"><button type="button" class="gt" data-k="guide-open" onclick={() => (sheet = 'guide')}>{guide.text}</button><button type="button" class="ga" data-k="guide-go" onclick={gGo}>{guide.act}</button></div>
+        {:else}
         <div class="rs1"><span class="lab acc" data-k="now-lab">{isEnd(L, R) ? '마무리' : step?.kind === 'boss' && bossNote(L, R) ? `지금 · ${bossNote(L, R)}` : `지금 · ${short(step)}`}</span>
           {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
           <span class="unsub">{#if scout?.on}{''}{:else if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           {#if scout?.on}<span class="sub rdy" data-k="ready-n">📝 준비 완료 <b>{ids.filter((u) => readyIds[u]).length}</b> / {ids.length}</span>{:else}<span class="sub" data-k="sub-n"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>{/if}
-        </div>
+        {#if guide && gFold}<button type="button" class="gdot" data-k="guide-dot" aria-label="📊 길잡이 다시 보기" onclick={() => (gAt = { ...gAt, [guide.key]: Date.now() })}>📊</button>{/if}</div>{/if}
         <!-- 📌 「지금」 칸 = 높이 고정 · 이 자리에서만 내용 교체 (🧱 막힘 띠가 먼저 · 닫으면 원래 내용) -->
         {#if stuckNow && mid}
           <div class="adj stk"><button type="button" class="stuck" data-k="stuck" onclick={() => (stuckSeen = { ...stuckSeen, [`${mid}|${stuckNow.i}`]: true })}><b><SymText text={`🧱 ${(/문제 \d+/.exec(step?.title ?? '') || [short(step)])[0]} · ${circ(stuckNow.i)}칸 ${stuckNow.n}명 막힘`} /></b><span>전체 설명 권장 · 누르면 닫힘</span></button>{#if feat('review')}<button type="button" class="stuckg" data-k="stuck-gobi" onclick={() => mid && openGobi(S, code, mid)}>📊 고비</button>{/if}</div>
@@ -401,6 +421,14 @@
       <p class="gnote">못 다 푼 몬스터는 수업에서 건너뛰고, 학생마다 🎯 허수아비 「📚 수업에서 넘어온 문제」로 가요 · 수업을 닫으면 남은 것은 저절로 보내져요</p>
       <ul class="sendl" data-k="send-list">{#each leftS as s (s.id)}<li><span>{s.kind === 'boss' ? '👑 형성평가' : `🗡 ${short(s)}`}</span><button type="button" data-k="send-one" onclick={() => sendSome([sentKey(s)])}>보내기</button></li>{/each}</ul>
       {#if bossRevN.sent}<p class="gnote" data-k="boss-rev">👑 형성평가 복습 완료 {bossRevN.done} / {expected.length}</p>{/if}
+    </Sheet>
+  {:else if sheet === 'guide' && guide}
+    <Sheet onclose={() => (sheet = '')}>
+      {#snippet title()}📊 길잡이{/snippet}
+      {#snippet act()}<div class="row"><button type="button" class="btn2" data-k="guide-skip" onclick={gSkip}>넘기기</button><button type="button" class="btn" data-k="guide-go2" onclick={gGo}>{guide.act}</button></div>{/snippet}
+      <p class="gnote"><b>{guide.text.replace(/^📊 /, '')}</b></p>
+      <ul class="gwhy" data-k="guide-why">{#each guide.why as w (w)}<li>{w}</li>{/each}</ul>
+      <p class="gnote">사실만 알려 줘요 · 누를지는 선생님이 정해요 · 학생 화면 · TV 에는 안 보여요</p>
     </Sheet>
   {:else if sheet === 'rest'}
     <Sheet onclose={() => (sheet = '')}>
@@ -544,6 +572,13 @@
   .fl1 { flex: none; padding: 10px 12px; gap: 6px; }
   .setl { border: 0; background: none; padding: 0; font: 700 13px var(--font); color: var(--text); }
   .rstat { flex: none; height: 74px; padding: 6px 10px; gap: 4px; display: grid; grid-template-rows: 20px 40px; overflow: hidden; } /* 📌 「지금」 칸 = 높이 고정 · 내용만 바뀜 (#24) */
+  .gband { display: flex; align-items: center; gap: 6px; min-width: 0; } /* 📊 길잡이 = 윗줄(20px) 그대로 · 누르는 칸은 위아래로 넓힘 */
+  .gband .gt { flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; color: var(--accent); font: 800 14px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+  .gband .ga { flex: none; height: 24px; margin: -2px 0; padding: 0 10px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 13px var(--font); white-space: nowrap; position: relative; }
+  .gband .gt::before, .gband .ga::before, .gdot::before { content: ''; position: absolute; inset: -12px -4px; }
+  .gband.rc .gt { color: var(--text); }
+  .gdot { position: relative; flex: none; margin-left: 4px; padding: 0 2px; border: 0; background: none; font-size: 13px; line-height: 1; }
+  .gwhy { margin: 0 0 var(--s2); padding-left: 1.2em; display: grid; gap: 4px; font-size: 15px; color: var(--text); }
   .rstat .adj { height: 40px; } .rstat .adj button { height: 40px; }
   .adj.stk, .adj.endc { display: flex; gap: 6px; }
   .adj.stk .stuck { flex: 1; min-width: 0; margin: 0; width: auto; height: 40px; padding: 2px 10px; justify-content: center; overflow: hidden; } .adj.stk .stuck b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .adj.stk .stuck span { font-size: 11px; }
