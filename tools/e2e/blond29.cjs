@@ -51,7 +51,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e)); const tvReq = []; tv.on('request', (r) => tvReq.push(r.url()));
   await tv.goto(`${B}?role=hall&room=${live.code}`); await tv.waitForTimeout(2500);
   await tv.click('button:has-text("앞으로")').catch(() => {}); await tv.waitForTimeout(3500); // 개념 → 문제 1 (레이드 줄에 용사)
-  ok('종합실 전투 장면 = 금발 시트를 받음 (캔버스)', tvReq.some((u) => /hero-blond-v1\.webp/.test(u)), tvReq.filter((u) => /art\/heroes\//.test(u)).map((u) => u.split('/').pop()).join(' '));
+  ok('종합실 전투 장면 = 금발 시트를 받음 (캔버스)', tvReq.some((u) => /hero-blond-v5\.webp/.test(u)), tvReq.filter((u) => /art\/heroes\//.test(u)).map((u) => u.split('/').pop()).join(' '));
   await tv.screenshot({ path: `${SHOTS}/blond-tv.png` });
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

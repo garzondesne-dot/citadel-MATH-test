@@ -19,7 +19,7 @@ describe('각성한 로안', () => {
     expect(isBlond({ hero: 0, enh: 10, fx: 'twin', title: 'slash10k' })).toBe(true);
   });
   it('모습만 바뀜 = 속성 · 사다리는 로안 그대로 · 금발 시트', () => {
-    expect(heroOf(BLOND.to).sprite).toBe('hero-blond-v1.webp');
+    expect(heroOf(BLOND.to).sprite).toBe('hero-blond-v5.webp');
     expect(heroOf(BLOND.to).name).toBe('각성한 로안');
     expect(attrOf(16)).toBe(attrOf(0));
     expect(ladder(16)).toEqual(ladder(0));
