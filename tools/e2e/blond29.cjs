@@ -1,5 +1,5 @@
 // 🌟 #29 각성한 로안 (📜 2026-11-17) — 이 기기 저장
-//   ① 캠프: 로안 +9 · 쌍월 참 = 로안 그림 → +10 = 금발 그림 · 「?」 카드 체크 ✔ ✕ ✔ → ✔ ✔ ✔
+//   ① 캠프: 로안 +9 · 쌍월 참 · 만 번째 베기 = 로안 그림 → +10 = 금발 그림 · 「?」 카드 체크 4칸 · ⓪ 호칭 빼면 로안
 //   ② 수업 방: 학생 폰이 들어오면 players.hero = 16 · base = 0 · 종합실 레이드 줄 그림 = 금발
 //   NODE_PATH=$(npm root -g) node tools/e2e/blond29.cjs <폴더> [주소]
 const { chromium } = require('playwright');
@@ -9,11 +9,13 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push('캠프 ' + e));
-  const setMe = (enh) => p.evaluate((enh) => { const m = JSON.parse(localStorage.getItem('citadel-v1-me') || '{}'); m.hero = 0; m.enh = enh; m.socket = { ...(m.socket || {}), 0: 'twin' }; m.seen = { ...(m.seen || {}), hero0: true }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); }, enh);
+  const setMe = (enh) => p.evaluate((enh) => { const m = JSON.parse(localStorage.getItem('citadel-v1-me') || '{}'); m.hero = 0; m.enh = enh; m.title = 'slash10k'; m.socket = { ...(m.socket || {}), 0: 'twin' }; m.seen = { ...(m.seen || {}), hero0: true }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); }, enh);
   const art = (sel) => p.$eval(sel, (e) => [...e.querySelectorAll('[data-hero]')].map((h) => `hero=${h.dataset.hero}`).join(' ')).catch(() => '');
   await p.goto(B + '?role=camp&room=BL'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('.stage');
   await setMe(9); await p.reload(); await p.waitForSelector('.stage'); await p.waitForTimeout(600);
   const a9 = await art('.hero-card .pic'), w9 = await art('[data-k="camp-hero"]').catch(() => '');
+  await setMe(10); await p.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me')); m.title = 'none'; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); }); await p.reload(); await p.waitForSelector('.stage'); await p.waitForTimeout(600);
+  const aNo = await art('.hero-card .pic'); ok('+10 · 쌍월 참이어도 호칭 「만 번째 베기」가 없으면 로안', /hero=0\b/.test(aNo), aNo);
   await setMe(10); await p.reload(); await p.waitForSelector('.stage'); await p.waitForTimeout(600);
   const a10 = await art('.hero-card .pic');
   const camp10 = await p.$eval('[data-k="camp-hero"]', (e) => getComputedStyle(e).backgroundImage).catch(() => '');
@@ -26,7 +28,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await p.evaluate(() => { const bs = [...document.querySelectorAll('.mh button')]; const x = bs.find((b) => /용사 바꾸기|바꾸기/.test(b.textContent || '')); x && x.click(); }); await p.waitForTimeout(400);
   const card = await p.$('[data-k="blond-card"]');
   ok('용사 바꾸기에 「?」 카드', !!card);
-  if (card) { await card.click(); await p.waitForTimeout(200); const ck = ((await p.textContent('[data-k="blond-checks"]')) || '').replace(/\s+/g, ' '); ok('조건 3 체크 = ✔ ✔ ✔', (ck.match(/✔/g) || []).length === 3, ck); await p.screenshot({ path: `${SHOTS}/blond-card.png` }); }
+  if (card) { await card.click(); await p.waitForTimeout(200); const ck = ((await p.textContent('[data-k="blond-checks"]')) || '').replace(/\s+/g, ' '); ok('조건 4 체크 = ✔ ✔ ✔ ✔', (ck.match(/✔/g) || []).length === 4, ck); await p.screenshot({ path: `${SHOTS}/blond-card.png` }); }
   // ①-2 처음 금발이 되는 저장 = 변신 컷인 한 번 (+9 → 🔨 +10 저장)
   await p.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me')); m.enh = 9; m.wallet = { ...(m.wallet || {}), gem: 99999, scroll: 99 }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); localStorage.removeItem('citadel-v1-blond-seen'); });
   await p.reload(); await p.waitForSelector('.stage'); await p.waitForTimeout(800); await p.$eval('button[aria-label="내 용사 보기"]', (e) => e.click()); await p.waitForSelector('.mh');

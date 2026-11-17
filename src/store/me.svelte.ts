@@ -101,19 +101,19 @@ export function setTeacherSink(S: Pick<Store, 'set' | 'get' | 'watch'>, publish 
 }
 /** 교사 용사 (서버 값 · 없으면 기본 용사 = 현자 7) */
 export function teacherLook(v: Partial<TLook> | null | undefined): Looked {
-  if (v && v.hero != null) { const hero = Number(v.hero) || 0; return looked(hero, Number(v.enh) || 0, v.fx || equipOf({ hero, socket: v.socket || {} } as Look)); }
+  if (v && v.hero != null) { const hero = Number(v.hero) || 0; return looked(hero, Number(v.enh) || 0, v.fx || equipOf({ hero, socket: v.socket || {} } as Look), v.title); }
   return looked(7, 0, equipOf({ hero: 7, socket: {} } as Look));
 }
 /** 🌟 #29 보이는 모습 — hero = 보이는 모습(각성한 로안이면 16) · base = 고른 용사 */
 export type Looked = { hero: number; base: number; enh: number; fx: string };
-export const looked = (base: number, enh: number, fx: string): Looked => ({ hero: lookId({ hero: base, enh, fx }), base, enh, fx });
+export const looked = (base: number, enh: number, fx: string, title?: string | null): Looked => ({ hero: lookId({ hero: base, enh, fx, title }), base, enh, fx });
 /** 캠프 · 내 용사 = 지금 장착 그대로의 보이는 모습 */
-export const meLookId = (m: Pick<Me, 'hero' | 'enh' | 'socket'>) => lookId({ hero: m.hero, enh: m.enh, fx: equipOf({ hero: m.hero, socket: m.socket || {} } as Look) });
+export const meLookId = (m: Pick<Me, 'hero' | 'enh' | 'socket' | 'title'>) => lookId({ hero: m.hero, enh: m.enh, fx: equipOf({ hero: m.hero, socket: m.socket || {} } as Look), title: m.title });
 /** 출전 용사 · 강화 (전투 장면이 읽음 · 없으면 로안) — 서버에 묶였으면 서버 값 */
 export function savedLook(): Looked {
   if (asTeacher) return teacherLook(tCache); // 👩‍🏫 교사 탭 = 서버 교사 용사 하나 (없으면 현자 7)
   const b = meBound();
-  if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return looked(hero, Number(sv.enh) || 0, equipOf({ hero, socket: sv.socket || {} } as Look)); }
+  if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return looked(hero, Number(sv.enh) || 0, equipOf({ hero, socket: sv.socket || {} } as Look), sv.title); }
   const m = readLocal(KEY), hero = Number(m?.hero) || 0;
-  return looked(hero, Number(m?.enh) || 0, equipOf({ hero, socket: m?.socket || {} } as Look)); // ⚔ 끼운 스킬 (빈 칸 = 내 속성 Ⅰ)
+  return looked(hero, Number(m?.enh) || 0, equipOf({ hero, socket: m?.socket || {} } as Look), m?.title); // ⚔ 끼운 스킬 (빈 칸 = 내 속성 Ⅰ)
 }

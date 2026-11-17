@@ -10,14 +10,15 @@ export const HEROES: HeroInfo[] = DATA.heroes.filter((h) => !(h as { teacher?: b
 /** 👩‍🏫 선생님 전용 용사 (현자 7 · 수학자 17 · 📜 2026-11-13 밤 교사 B안 = 교사 로그인에서만 · 모두 열림) */
 export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teacher?: boolean }).teacher);
 /** 🌟 각성한 로안 = 보이는 모습만 (📜 2026-11-17 선생님 「각성한 로안 다시 부활 · 로안장착 +10강 4쌍월참 으로 기준」 · 머리 🔨 #29)
- *   조건 3 = 출전 용사 로안(0) · 🔨 강화 +10 이상 · ⚔ 쌍월 참(twin) 장착 → 금발 모습 16 · 하나라도 빠지면 로안 · 호칭 조건 없음
+ *   조건 4 = 출전 용사 로안(0) · 🔨 강화 +10 이상 · ⚔ 쌍월 참(twin) 장착 · 🏅 호칭 「만 번째 베기」(slash10k) 장착 → 금발 모습 16 · 하나라도 빠지면 로안
  *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 로안) · 고르는 칸 아님(HEROES 에 없음) · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것 */
-export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin' } as const;
-export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null };
+export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin', title: 'slash10k' } as const; // 📜 11/17 선생님 「만번째베기 넣어줘」 = 조건 4
+export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null; title?: string | null };
 export const blondChecks = (p: LookIn) => [
   { k: 'hero', t: '로안 출전', ok: Number(p.hero) === BLOND.base },
   { k: 'enh', t: `🔨 강화 +${BLOND.enh}`, ok: (Number(p.enh) || 0) >= BLOND.enh },
   { k: 'fx', t: '⚔ 쌍월 참 장착', ok: p.fx === BLOND.fx },
+  { k: 'title', t: '🏅 호칭 「만 번째 베기」 장착', ok: p.title === BLOND.title },
 ];
 export const isBlond = (p: LookIn) => blondChecks(p).every((c) => c.ok);
 /** 보이는 모습 id (조건이 맞으면 16 · 아니면 고른 용사) */
