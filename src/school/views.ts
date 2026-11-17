@@ -192,7 +192,7 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
         kpis: [{ lab: '응답', big: `${s.n}`, sub: `응답 표시 ${done} / ${size}명` }, { lab: '9. 지금이 더 좋다', big: p(pct(s.cmp[0]?.n ?? 0, s.n)), sub: `${s.cmp[0]?.n ?? 0}명` }],
         table: { head: ['문항', `${WHEN[0]}`, WHEN[1], '변화', '오름 · 같음 · 내림'], legend: [['ok', '변화 +0.5 이상'], ['md', '+0 ~ +0.5'], ['ng', '내림']],
           rows: s.pairs.map((x, i) => ({ cells: [{ t: `${i + 1}. ${x.q}`, v: `${i + 1}. ${x.q}` }, { t: x.pre == null ? '—' : String(x.pre), v: x.pre }, { t: x.now == null ? '—' : String(x.now), v: x.now }, { t: sg(x.diff), tone: (x.diff == null ? 'na' : x.diff >= 0.5 ? 'ok' : x.diff >= 0 ? 'md' : 'ng') as Tone, v: x.diff }, { t: `${x.up} · ${x.same} · ${x.down}`, v: `${x.up} · ${x.same} · ${x.down}` }] })) },
-        list: [...s.picks.map((x) => ({ rk: '8', nm: x.t, sub: '가장 도움이 된 것 (2개까지)', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })), ...s.cmp.map((x, i) => ({ rk: '9', nm: CMP[i]!, sub: '쉼터 놀이 ↔ 예전 5분 퀴즈', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })),
+        list: [...s.picks.map((x) => ({ rk: '8', nm: x.t, sub: '가장 도움이 된 것 (2개까지)', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })), ...s.cmp.map((x, i) => ({ rk: '9', nm: CMP[i]!, sub: '쉼터 놀이를 예전 5분 퀴즈와 비교하면', pc: `${x.n}명`, bar: s.n ? x.n / s.n : 0 })),
           ...s.say.map((x) => ({ rk: '10', nm: x, sub: '달라진 점', pc: '' })), ...s.want.map((x) => ({ rk: '11', nm: x, sub: '바꿨으면', pc: '' }))] };
     }
   }
