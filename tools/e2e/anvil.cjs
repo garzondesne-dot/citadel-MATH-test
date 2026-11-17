@@ -14,7 +14,7 @@ const log = (...a) => console.log(...a);
   await p.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me') || '{}'); m.wishes = { sub: true }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); });
   await p.reload(); await p.waitForSelector('.stage');
   const gem0 = await p.$eval('.pill .pv', (x) => x.textContent.replace(/\D/g, ''));
-  await p.click('button[aria-label="모루"]'); await p.waitForSelector('.fg .stage'); await p.waitForTimeout(400);
+  await p.$eval('[data-prop="anvil"]', (e) => e.click()); await p.waitForSelector('.fg .stage'); await p.waitForTimeout(400);
   const fit = await p.evaluate(() => { const f = document.querySelector('.fg'); return { over: f.scrollHeight - f.clientHeight, x: document.documentElement.scrollWidth - innerWidth, ops: document.querySelectorAll('.shelf.ops .tile').length, mats: document.querySelectorAll('.shelf.mats .tile').length, wish: [...document.querySelectorAll('.wishes button')].map((x) => x.textContent).join(' ') }; });
   log('① 모루:', JSON.stringify(fit)); if (fit.over > 0 || fit.x > 0) errs.push('모루 넘침'); if (fit.ops !== 24 || fit.mats !== 13) errs.push('재료 13 · 연산 24');
   await p.screenshot({ path: `${SHOTS}/b35-anvil.png` });
@@ -50,7 +50,7 @@ const log = (...a) => console.log(...a);
   await p.click('.cw >> nth=0'); await p.waitForSelector('.zm'); log('   카드 시트:', (await p.textContent('.zm p')).trim()); await p.click('.sheet .x');
   // 11 테마 넘침
   const rows = [];
-  for (const t of IDS) { await p.evaluate((t) => localStorage.setItem('citadel-v1-theme', t), t); await p.reload(); await p.waitForSelector('.stage'); await p.click('button[aria-label="모루"]'); await p.waitForSelector('.fg .stage'); await p.waitForTimeout(250); const o = await p.evaluate(() => { const f = document.querySelector('.fg'); return Math.max(f.scrollHeight - f.clientHeight, document.documentElement.scrollWidth - innerWidth); }); rows.push(`${t} ${o}`); if (o > 0) errs.push(`${t} 넘침`); if (t === 'classic' || t === 'cloud') await p.screenshot({ path: `${SHOTS}/b35-anvil-${t}.png` }); }
+  for (const t of IDS) { await p.evaluate((t) => localStorage.setItem('citadel-v1-theme', t), t); await p.reload(); await p.waitForSelector('.stage'); await p.$eval('[data-prop="anvil"]', (e) => e.click()); await p.waitForSelector('.fg .stage'); await p.waitForTimeout(250); const o = await p.evaluate(() => { const f = document.querySelector('.fg'); return Math.max(f.scrollHeight - f.clientHeight, document.documentElement.scrollWidth - innerWidth); }); rows.push(`${t} ${o}`); if (o > 0) errs.push(`${t} 넘침`); if (t === 'classic' || t === 'cloud') await p.screenshot({ path: `${SHOTS}/b35-anvil-${t}.png` }); }
   log('11 테마 넘침:', rows.join(' · '));
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
   await b.close();

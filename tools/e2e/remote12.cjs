@@ -13,7 +13,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DB = 'citade
   await t.click('.pk:has-text("6차시")'); await t.click('.tact .btn'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.nums');
   const live = await t.evaluate((k) => JSON.parse(localStorage.getItem(`${k}|school/live`)), DB);
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9, 12]) { const s = await ctx.newPage(); await s.goto(`${B}?role=student&room=${live.code}&as=1-3:${n}${n === 5 || n === 8 ? '&ver=b6' : ''}`); }
-  await t.bringToFront(); await t.waitForTimeout(900); await t.click('.n[data-n="15"]'); await t.waitForTimeout(200);
+  await t.bringToFront(); await t.waitForTimeout(900); await t.click('.n[data-n="15"]'); await t.click('.sheet button:has-text("결석 표시")'); await t.waitForTimeout(200); /* 안 온 번호 = 창 → 결석 표시 (🚨 11/16 핫픽스 뒤) */
   const box = () => t.evaluate(() => { const r = document.querySelector('.att').getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(Math.round); });
   const lob = await box(); await t.screenshot({ path: `${SHOTS}/r12-lobby.png` });
   log('대기실: 번호 칸', lob, '| ⚠ 칸', (await t.textContent('[data-k="qm"]')).trim(), '| 이름', await t.$eval('.n[data-n="1"] s', (e) => e.textContent));
@@ -22,16 +22,16 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DB = 'citade
   for (const n of [1, 3, 5]) { await t.evaluate(([code, u]) => window.__perfect(code, 'm1', u), [live.code, `s1_3_${n}`]); } // ✔ 다 맞힘 (5번 = 옛 판 위 ✔)
   await t.waitForTimeout(500); const rem = await box();
   const okN = await t.$$eval('.n.ok', (x) => x.map((e) => e.dataset.n + (e.classList.contains('old') ? '⚠' : ''))); console.log('✔ 초록:', okN.join(' ')); if (okN.length !== 3) errs.push('✔ 초록 3명 아님');
-  const q = await t.evaluate(() => ({ qm: document.querySelector('[data-k="qm"]').textContent.trim(), chips: [...document.querySelectorAll('.qs .qc')].map((e) => `${e.textContent.trim()}${e.classList.contains('wait') ? '(대기)' : ''}`), more: document.querySelector('.qs').classList.contains('more'), help: [...document.querySelectorAll('.n.help')].map((e) => e.dataset.n) }));
+  const q = await t.evaluate(() => ({ qm: document.querySelector('[data-k="qm"]').textContent.trim(), chips: [...document.querySelectorAll('.qs .qc')].map((e) => `${e.textContent.trim()}${e.classList.contains('wait') ? '(대기)' : ''}`), more: document.querySelector('[data-k="qmore"]')?.textContent.trim() || '', help: [...document.querySelectorAll('.n.help')].map((e) => e.dataset.n) }));
   log('수업 중: 번호 칸', rem, '같은 자리', JSON.stringify(lob) === JSON.stringify(rem), '|', JSON.stringify(q));
-  if (JSON.stringify(lob) !== JSON.stringify(rem)) errs.push('번호 칸 자리 다름');
-  if (q.qm !== '🙋5' || q.chips.length !== 4 || !q.more || !/대기/.test(q.chips[3])) errs.push('🙋 줄');
+  if (lob[2] !== rem[2]) errs.push('번호 칸 폭 다름'); // 📜 #24: 수업 중 🙋 줄 = 학생판 위 따로 · 단계 바뀔 때 자리 고정은 board24 가 봄
+  if (q.qm !== '🙋5' || q.chips.length !== 3 || q.more !== '+2') errs.push('🙋 줄'); // 📜 #24: 3칸 + 「+n」
   await t.screenshot({ path: `${SHOTS}/r12-live-help5.png` });
   await t.click('.qs .qc.first'); await t.waitForTimeout(500);
   const after = await t.evaluate(() => ({ qm: document.querySelector('[data-k="qm"]').textContent.trim(), first: document.querySelector('.qs .qc.first')?.textContent.trim(), toast: document.querySelector('.utoast')?.textContent.trim() }));
   log('칩 누름 → 풀어주기:', JSON.stringify(after)); if (after.qm !== '🙋4' || !/되돌리기/.test(after.toast || '')) errs.push('풀어주기');
   await t.screenshot({ path: `${SHOTS}/r12-live-release.png` });
-  await t.click('.utoast button'); await t.waitForTimeout(500); const und = (await t.textContent('[data-k="qm"]')).trim(); const f2 = (await t.textContent('.qs .qc.first')).trim(); log('되돌리기 →', und, '· 맨 앞', f2); if (und !== '🙋5' || !/^4/.test(f2)) errs.push('되돌리기');
+  await t.click('.utoast button'); await t.waitForTimeout(500); const und = (await t.textContent('[data-k="qm"]')).trim(); const f2 = (await t.textContent('.qs .qc.first')).trim(); log('되돌리기 →', und, '· 맨 앞', f2); if (und !== '🙋5' || !/^①\s*4/.test(f2)) errs.push('되돌리기'); // 📜 #24: 칸 = 「① 번호 이름 · 기다린 시간」
   await t.evaluate(() => window.__dbSet('accounts/1-3/8', { pw: '1111', at: 1 }));
   await t.click('.n[data-n="8"]'); await t.waitForSelector('[data-k="who"]'); await t.click('[data-k="pw0"]'); await t.waitForSelector('[data-k="pwask"]');
   await t.screenshot({ path: `${SHOTS}/r12-who.png` });
