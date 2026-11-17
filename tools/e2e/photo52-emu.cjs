@@ -3,7 +3,7 @@
 //   ① 사진 켜짐 + 9차시 문제 5 기준표 켬 → 허수아비 9차시 문제 5 = 단추 있음 ② 기준표 끔 → 단추 없음 · 🏰 성채 2층 07 = 기준표 켬일 때만 단추
 const { chromium } = require('playwright');
 const { rest } = require('./_emu.cjs');
-const R = require('../../src/subjects/common-math2/rubrics.json');
+const R = require('../../src/subjects/common-math2/rubrics.json'), P2 = require('../pack-upload/castle/eval-2.json');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1';
 (async () => {
   await rest('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' }).catch(() => {});
@@ -49,11 +49,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   // ④ 🏰 성채 2층 10 = 답으로 처치된 방(기준표 켬) → 방 목록 「📷 서술형 남음」
   await rest('photo_rubric/eval-2/q10', 'PUT', { ...R['eval-2'].q10, on: true });
   await rest('bonus/1-3/3/eval-2/q10', 'PUT', { clear: true, tries: 1, at: 1 });
+  await rest('prep/addons/castle/eval-2', 'PUT', P2); await rest('school/castleOpen/eval-2/1-3', 'PUT', { q10: true });
   await s.reload(); await s.waitForTimeout(3500);
-  await s.$eval('[data-prop="castle"], .prop[aria-label*="성채"]', (e) => e.click()).catch(() => {}); await s.waitForTimeout(2000);
-  const fl = await s.$('button:has-text("2층")'); if (fl) { await fl.click(); await s.waitForTimeout(1200); }
-  const body = (await s.textContent('body')) || '';
-  ok('④ 🏰 2층 10 처치한 방 = 「📷 서술형 남음」', /서술형 남음/.test(body));
+  for (let k = 0; k < 3 && (await s.$('.sheet .x')); k++) { await s.$eval('.sheet .x', (e) => e.click()).catch(() => {}); await s.waitForTimeout(500); } // 새로 고침 뒤 보던 허수아비 창 닫기
+  await s.click('button[aria-label="성채"]'); await s.waitForTimeout(500); await s.click('.sheet button:has-text("성채 들어가기")'); await s.waitForSelector('[data-k="castle"]');
+  await s.waitForSelector('[data-floor="eval-2"]', { timeout: 8000 }); await s.click('[data-floor="eval-2"]'); await s.waitForSelector('[data-k="castle-sum"]', { timeout: 8000 }); await s.waitForTimeout(600);
+  const card = await s.$eval('[data-room="q10"]', (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
   await s.screenshot({ path: `${SHOTS}/photo52-castle-list.png` });
+  await s.click('[data-room="q10"]'); await s.waitForTimeout(800);
+  if (!(await s.$('.sheet:has-text("풀이 사진")'))) { const info = (await s.textContent('body')) || ''; ok('④ 🏰 2층 10 처치한 방 = 「📷 서술형 남음」', /서술형 남음/.test(card + info), card); const en = await s.$('button.pmain:has-text("찍고")'); ok('⑤ 아래 큰 단추 = 「✍ 서술형 📷 찍고 📜 받기」', !!en); if (en) { await en.click(); await s.waitForTimeout(1200); } }
+  else ok('④ 🏰 2층 10 방 카드 = 「✔ 처치 · 📷 서술형 남음」 · 누르면 바로 📷 사진 창', /서술형 남음/.test(card), card);
+  ok('⑤ 처치한 방 = 전투 없이 「📷 풀이 사진 올리기」 창', !!(await s.$('.sheet:has-text("풀이 사진")')) && !(await s.$('[data-castle-run]')));
+  await s.screenshot({ path: `${SHOTS}/photo52-castle-shot.png` });
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

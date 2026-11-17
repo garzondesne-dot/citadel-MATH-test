@@ -242,7 +242,7 @@
                   {#if badge(r) === 'NEW'}<span class="rnew">NEW</span>{/if}
                   <span class="rno">{r.boss ? '👑' : nn(r)}</span>
                   <span class="mon">{#if on}<Sprite ref={safe(r.sprite)} pose={rr?.clear ? 'down' : 'idle'} size={64} />{:else}<i class="lk" aria-hidden="true">🔒</i>{/if}</span>
-                  <b class="rt">{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small class="rs">{rr?.clear ? '✔ 처치' : lineOf(r)}</small>
+                  <b class="rt">{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small class="rs">{rr?.clear ? (r.photo && phOn(P, r) && !rr.ph && !rr.pend ? '✔ 처치 · 📷 서술형 남음' : '✔ 처치') : lineOf(r)}</small>
                   {#if on && !rr?.clear && !preview}<span class="gm">💎+{r.boss ? CASTLE_GEM.roomBoss + (sealedOf(P) ? 0 : CASTLE_GEM.seal) : CASTLE_GEM.room}</span>{/if}
                 </button>
               {/each}
@@ -262,7 +262,7 @@
       <BottomAction dock={false} text="🏰 방 목록으로" mainLabel="방 목록으로" onmain={() => (res = null)} />
     {/if}
   {:else}
-    <BottomAction dock={false} disabled={!room} why={room ? (room.photo && P && !phOn(P, room) ? '📷 사진 채점은 아직 · 답만 확인해요' : room.photo && recs[room.id]?.pend ? '⏳ 선생님이 풀이를 확인하고 있어요' : '') : '열린 방이 없어요'} text={room ? (room.photo && !room.chain && P && phOn(P, room) && recs[room.id]?.ans && !recs[room.id]?.clear && !recs[room.id]?.pend ? '📷 풀이 사진 올리기' : room.chain && room.photo && P && phOn(P, room) && recs[room.id]?.clear && !recs[room.id]?.ph && !recs[room.id]?.pend ? '✍ 서술형 도전 📸' : `⚔ ${room.boss ? '👑 보스 방' : `${nn(room)}번 방`} 도전`) : '방을 골라요'} mainLabel="방 도전" onmain={start} />
+    <BottomAction dock={false} disabled={!room} why={room ? (room.photo && P && !phOn(P, room) ? '📷 사진 채점은 아직 · 답만 확인해요' : room.photo && recs[room.id]?.pend ? '⏳ 선생님이 풀이를 확인하고 있어요' : '') : '열린 방이 없어요'} text={room ? (room.photo && !room.chain && P && phOn(P, room) && recs[room.id]?.ans && !recs[room.id]?.clear && !recs[room.id]?.pend ? '📷 풀이 사진 올리기' : room.photo && P && phOn(P, room) && recs[room.id]?.clear && !recs[room.id]?.ph && !recs[room.id]?.pend ? '✍ 서술형 📷 찍고 📜 받기' : `⚔ ${room.boss ? '👑 보스 방' : `${nn(room)}번 방`} 도전`) : '방을 골라요'} mainLabel="방 도전" onmain={start} />
 {/if}
 {#if shot}
   <PhotoSheet S={RS} {cls} {num} lesson={shot.P.id} room={shot.r.id} title={shot.r.title} items={shot.items} trial={phTrial} onclose={photoDone} />
