@@ -12,9 +12,25 @@ describe('📖 #49 기호 톡 명제 단원', () => {
   it('8 · 9차시 8줄 = SYMBOL-TALK.md 와 한 글자씩 같음', () => {
     const md8 = rows(sect('## 명제 단원', '### 9차시')), md9 = rows(sect('### 9차시', '- 다음 차시'));
     const all = [...md8, ...md9];
-    expect(all.length).toBe(8); expect(PROP.length).toBe(8);
+    expect(all.length).toBe(8); expect(PROP.length).toBe(17);
     all.forEach((r, i) => { const p = PROP[i]!; expect(strip(r[1]!), p.id).toBe(p.easy); expect(r[2], p.id).toBe(p.def); expect(r[3], p.id).toBe(p.memo); });
     for (const p of PROP) expect(BY[p.id]).toBe(p); // 대시보드 기호 톡 칸 = BY 에 있는 것만
+  });
+  it('10 ~ 13차시 9줄 = SYMBOL-TALK.md 와 한 글자씩 같음 (#49 ②)', () => {
+    const m = rows(sect('### 10 ~ 13차시', '## 개념 톡')); expect(m.length).toBe(9);
+    m.forEach((r, i) => { const p = PROP[8 + i]!; expect(r[0]!.replace(/\s*\((?:개념 톡|기호)\)$/, ''), p.id).toBe(p.sym); expect(strip(r[1]!), p.id).toBe(p.easy); expect(r[2], p.id).toBe(p.def); expect(r[3], p.id).toBe(p.memo); expect(BY[p.id]).toBe(p); });
+  });
+  it('10 ~ 13차시 붙는 곳: 긴 낱말 먼저 · ⇒ ⇔ 따로 · 산술기하 식 꼴', () => {
+    const ids = (t: string) => propHits(t).map((h) => `${t.slice(h.i, h.i + h.len)}:${h.id}`);
+    expect(ids('p 는 q 이기 위한 필요충분조건')).toEqual(['필요충분조건:iff']);
+    expect(ids('p 는 q 이기 위한 충분조건이고 q 는 p 이기 위한 필요조건이다')).toEqual(['충분조건:suff', '필요조건:need']);
+    expect(ids('p ⇒ q 이고 q ⇒ p 이면 p ⇔ q')).toEqual(['⇒:dimp', '⇒:dimp', '⇔:iff']);
+    expect(ids('p → q 가 참이면 p ⇒ q')).toEqual(['→:imp', '⇒:dimp']);
+    expect(ids('모든 x 에 대하여 x² ≥ 0 · 어떤 x에 대하여 x > 1')).toEqual(['모든 x 에 대하여:all', '어떤 x에 대하여:some']);
+    expect(ids('귀류법으로 증명하시오 · 절대부등식')).toEqual(['귀류법:absurd', '절대부등식:absineq']);
+    expect(ids('a > 0, b > 0 일 때 (a + b)/2 ≥ √(ab)')).toEqual(['(a + b)/2 ≥ √(ab):amgm']);
+    expect(ids('산술평균과 기하평균')).toEqual(['산술평균:amgm', '기하평균:amgm']);
+    expect(ids('조건 p')).toEqual(['조건:cond']); // 충분 · 필요 없는 「조건」 = 그대로
   });
   it('붙는 곳: ~ · → (p q r 사이) · 명제 · 조건(조건제시법 빼고) · 진리집합 · P(진리집합 있을 때만) · 반례 · 역 · 대우(낱말 경계)', () => {
     const ids = (t: string) => propHits(t).map((h) => `${t.slice(h.i, h.i + h.len)}:${h.id}`);
