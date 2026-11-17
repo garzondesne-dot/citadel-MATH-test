@@ -4,14 +4,14 @@ import type { LessonPack, Room, Step } from '../../../model/types';
 import { bossTries, chainRecord, chainSubs, healsGiven, isChain, plainRecord, unlocksOf, V4 } from '../../../raid/raid';
 
 /** 🎞 모션용 (📜 2026-11-14): heal = 받은 힐 + 풀어주기 · gave = 쓴 ⚡ · slump = ❤ 0 잠김 · done = 다 맞힘 */
-export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean; heal?: number; gave?: number; slump?: boolean; done?: boolean }
+export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean; heal?: number; gave?: number; /** ⛓ 묶기 쓴 수 (#44 ⑦ 힐 모션과 나눔) */ bound?: number; slump?: boolean; done?: boolean }
 /** perfect = 이번 공격으로 그 학생이 다 맞힘(🎆 숫자 크고 노랗게) */
 export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; perfect?: boolean; /** ⚡ 필살기 (큐에 넣을 때 판정 · 🐞 11/17 ⓒ) */ ult?: boolean; fx?: string }
 
 export function snapOf(L: LessonPack, R: Room, step: Step, u: string): Snap {
   if (step.kind === 'boss') { const t = bossTries(L, R, u); return { n: t.length, dmg: new Set(t.filter((x) => x.ok).map((x) => x.i)).size, prac: false }; }
   if (step.kind !== 'monster' || !L.monsters[step.id]) return { n: 0, dmg: 0, prac: false };
-  const mid = step.id, mo = { heal: unlocksOf(R, mid, u), gave: healsGiven(R, mid, u) };
+  const mid = step.id, gv = Object.values(R.heals?.[mid]?.[u] || {}).map(String), bound = gv.filter((v) => v.startsWith('!bind')).length, mo = { heal: unlocksOf(R, mid, u), gave: healsGiven(R, mid, u) - bound, bound }; // 🐞 #44 ⑦ ⛓ 묶기 = 힐 모션 아님
   if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, u); return { n: chainSubs(R, mid, u).length, dmg: r.stage, prac: r.practice, perf: r.practice, ...mo, heal: mo.heal + r.healed, slump: r.locked || r.fail, done: r.done }; }
   const r = plainRecord(L, R, mid, u); return { n: r.tries.length, dmg: r.best, prac: r.practice, perf: r.perfectAt >= 0, ...mo, heal: mo.heal + r.healed, slump: !!r.locked || (!r.perfect && r.submitted && r.left <= 0 && !r.canRetry), done: r.perfect };
 }

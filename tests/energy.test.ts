@@ -7,6 +7,7 @@ import { PROFILES } from '../src/model/profiles';
 import { chainSubmit, heartbeat, nextStep, openRoom, roomPath, spendEnergy } from '../src/raid/actions';
 import { answerOf, bindSec, chainRecord, healsReceived, stepOf } from '../src/raid/raid';
 import { PACKS, packOf } from '../src/engine/packs';
+import { snapOf } from '../src/ui/tv/arena/events';
 import { attackMs, attackOf, attackStrong, ATTACKS, bossAttacks } from '../src/raid/attacks';
 
 describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
@@ -22,6 +23,7 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(spendEnergy(S, L, 'E1', id, 'a', 'bind')).toBe(true); expect(bindSec(R(), id)).toBe(3);
     expect(spendEnergy(S, L, 'E1', id, 'a', 'b')).toBe(true); expect(healsReceived(R(), id, 'b')).toBe(1);
     expect(spendEnergy(S, L, 'E1', id, 'a', 'a')).toBe(false); // 나에게 힐 ✗
+    { const sp = snapOf(L, R(), stepOf(L, R())!, 'a'); expect(sp.bound).toBe(1); expect(sp.gave).toBe(1); } // 🐞 #44 ⑦ TV 모션: ⛓ 묶기 1 · 💚 힐 1 따로 (묶기가 힐 모션으로 보이던 것)
     while (chainRecord(L, R(), id, 'a').tokLeft > 0) spendEnergy(S, L, 'E1', id, 'a', 'bind');
     expect(spendEnergy(S, L, 'E1', id, 'a', 'bind')).toBe(false);
     expect(spendEnergy(S, L, 'E1', id, 'b', 'bind')).toBe(false); // 기력 없음
