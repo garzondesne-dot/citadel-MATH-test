@@ -119,3 +119,24 @@ type Any = { mons?: Record<string, unknown>; boss?: number | { ok?: number; item
 export const perfectsOf = (r: Any) => Object.values(r.mons || {}).filter((m) => m === 'o' || (typeof m === 'object' && !!(m as { perfect?: boolean })?.perfect)).length;
 export const wonOf = (r: Any) => !!r.won || (typeof r.boss === 'object' && !!r.boss?.won);
 export const bossFullOf = (r: Any) => (typeof r.boss === 'number' ? !!r.bossN && r.boss === r.bossN : !!r.boss?.items && r.boss.ok === r.boss.items);
+
+/** 📜 #39 수업 닫을 때 교사 폰이 반 전체 수업 기록을 한 번에 (📜 2026-11-17 머리 · DECISIONS 「📋 1-3반 9차시 형성평가 「2명」 = 기록 버그」)
+ *  예전 = 학생 폰이 그 방 화면에 있어야만 기록을 씀 → 형성평가 화면에서 바로 닫으면 대부분 빠짐 · 이제 방 기록(subs · chain · bossSub)으로 교사 폰이 씀
+ *  학생 폰이 쓴 기록과 겹치면 mergeRow(더 좋은 쪽 · 같은 수업 다시 저장 = 이번 몫만) · 💎 · EXP 보상은 학생 폰만(두 번 안 줌) */
+export async function classRecords(S: { get: <T>(p: string) => T | null; set: (p: string, v: unknown) => void; fetch?: <T>(p: string) => Promise<T | null>; now: () => number }, L: LessonPack, R: Room, code: string): Promise<number> {
+  const cls0 = R.meta.cls; if (!cls0) return 0;
+  const who = new Set<string>([...Object.keys(R.players || {}), ...Object.keys((R as { bossSub?: object }).bossSub || {})]);
+  for (const byU of Object.values(R.subs || {})) Object.keys(byU || {}).forEach((u) => who.add(u));
+  for (const byU of Object.values((R as { chain?: Record<string, object> }).chain || {})) Object.keys(byU || {}).forEach((u) => who.add(u));
+  let n = 0;
+  for (const u of who) {
+    const m = /^s(\d+)_(\d+)_(\d+)$/.exec(u); if (!m) continue; // 학생 계정만 (봇 · 교사 · 탭 체험 빼고)
+    const p = (R.players?.[u] || {}) as { teacher?: boolean; bot?: boolean };
+    if (p.teacher || p.bot) continue;
+    const cls = `${m[1]}-${m[2]}`, num = Number(m[3]); if (cls !== cls0) continue;
+    const path = `records/${cls.replace(/[.#$/[\]]/g, '_')}/${num}/${L.id}`;
+    const prev = (S.fetch ? await S.fetch<Partial<RecRow>>(path).catch(() => null) : S.get<Partial<RecRow>>(path)) ?? null;
+    try { S.set(path, summaryOf(L, R, u, code, S.now(), prev)); n++; } catch (e) { console.warn('수업 기록', u, e); } // 한 학생 기록이 깨져도 나머지는 씀
+  }
+  return n;
+}
