@@ -99,9 +99,9 @@
   const rl = $derived(rubricLesson(PS, L));
   const srv = untrack(() => (PS as { kind?: string }).kind === 'server');
   const trialPh = $derived(demo || !srv); // 서버 없는 이 기기 체험 · 시연 = 사진 안 받음
-  const canPhoto = $derived(!photo || (!cls && !demo && srv) ? false /* 🎯 허수아비 · 📋 게시판 · 🏰 성채 전투 = 사진 없음 */ : trialPh ? !!(phRubric(PS, rl, mid) ?? codeRubrics()[rl]?.[mid]) : phReady(S, rl, mid));
+  const canPhoto = $derived(!photo || (!cls && !demo && srv) ? false /* 🎯 허수아비 · 📋 게시판 · 🏰 성채 전투 = 사진 없음 */ : trialPh ? !!(phRubric(PS, rl, mid) ?? codeRubrics()[rl]?.[mid]) : phReady(PS, rl, mid)); // 🐞 #52 켜짐 · 기준표 = 서버 저장소(PS) — 🎯 허수아비 방(S)은 이 탭 메모리라 설정이 없어 단추가 안 보였음
   const myP = $derived((R.players?.[uid] || {}) as { ph?: Record<string, number>; wr?: Record<string, string>; pp?: Record<string, string | number> });
-  const phN = $derived(Number(myP.ph?.[mid]) || 0), wrOk = $derived(myP.wr?.[mid]), phMax = $derived(raidMax(cfgOf(S)));
+  const phN = $derived(Number(myP.ph?.[mid]) || 0), wrOk = $derived(myP.wr?.[mid]), phMax = $derived(raidMax(cfgOf(PS))); // #52 설정 = 서버
   const pendId = $derived(myP.pp?.[mid]);
   // 📷 사진 문제 숫자 = 늘 학습지 숫자 (🎯 허수아비 = 바뀐 숫자 판이라 fresh 를 뺀 판으로 · 📜 11/13 「서술형은 늘 학습지 숫자」 · #40)
   const phRec = $derived(isDummy(R) && R.meta.fresh?.[mid] ? chainRecord(L, { ...R, meta: { ...R.meta, fresh: {} } } as Room, mid, uid) : rec);
