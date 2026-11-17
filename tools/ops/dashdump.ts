@@ -3,10 +3,12 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { memoryStore } from '../../src/store/device';
 import { ALL, ALL_VIEWS, view } from '../../src/school/views';
+import { loadCache } from '../../src/school/survey';
 const [src, out] = process.argv.slice(2).filter((a) => a !== '--');
 const snap = JSON.parse(readFileSync(src!, 'utf8')) as Record<string, unknown>;
 const S = { ...memoryStore(), kind: 'server' as const }; /* 서버 사본 = 실제 기록 (memory 면 가짜 시연 판) */ for (const [k, v] of Object.entries(snap)) S.set(k, v);
 const CL = ['1-1', '1-2', '1-3', '1-4', '1-5'], res: Record<string, unknown> = {};
+await loadCache(S, CL); // 📝 설문 답 = 미리 받아 둠 (대시보드도 엑셀 전에 받음 · #55)
 for (const c of [ALL, ...CL]) for (const id of ALL_VIEWS) {
   if (id === 'cmp' && c !== ALL) continue;
   try { const v = view(S, c, id, false); res[`${c}|${id}`] = { ...v, table: v.table && { head: v.table.head, rows: v.table.rows.map((r) => ({ cells: r.cells.map((x) => (x.v !== undefined && x.v !== null && typeof x.v === 'object' ? { t: x.t, v: x.v } : { t: x.t, v: x.v })), cls: r.cls ?? r.pick?.cls, n: r.pick?.n, sum: r.sum })) }, list: v.list?.map((x) => ({ ...x, cls: x.pick?.cls, n: x.pick?.n, pick: undefined })), boards: v.boards?.map((b) => ({ ...b, rows: b.rows.map((r) => ({ ...r, cls: r.pick?.cls, n: r.pick?.n, pick: undefined })) })), memos: undefined, csv: undefined }; }
