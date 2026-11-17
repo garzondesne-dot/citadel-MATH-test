@@ -81,6 +81,8 @@ export function tick(S: Store, code: string, me: string): boolean {
     const d = f as unknown as Drg & { nx?: number }, prog = ((R as unknown as { dg?: Record<string, Record<string, Record<string, Prog>>> }).dg?.[d.g]?.[d.round]) ?? {};
     nx = stepDrg(d, prog, now, !!d.nx) as unknown as AnyFun | null;
     if (nx) (nx as unknown as { nx?: null }).nx = null;
+    // 🐞 #44 ⑩ 1판 출발 순간에 들어와 있는 학생 = 모두 참가 (안내 10초 동안 들어온 학생 · 새 판 받느라 늦은 학생 · 전엔 「시작」 누른 순간 명단만 → 단추가 안 먹힘)
+    if (nx && d.phase === 'intro' && d.round === 1 && (nx as unknown as Drg).phase === 'play') { const n2 = nx as unknown as Drg, add = studentsIn(R, now).filter((u) => !n2.alive?.[u]); if (add.length) { n2.alive = { ...(n2.alive || {}), ...Object.fromEntries(add.map((u) => [u, 1 as const])) }; n2.total = Object.keys(n2.alive).length; } }
   } else if (f.kind === 'nun') {
     const g = (f as Nun).g, rd = (f as Nun).round, x = R as unknown as { nun?: Record<string, Record<string, Record<string, number>>>; nunE?: Record<string, Record<string, { e: string; at: number }>> };
     nx = stepNun(f as Nun, f.phase === 'play' ? x.nun?.[g]?.[rd] ?? {} : {}, now, f.phase === 'show' ? x.nunE?.[g] ?? {} : null) as AnyFun | null;
