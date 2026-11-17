@@ -63,7 +63,7 @@
     <div class="cal" aria-label="방과후 접속 달력">{#each s.extra.days as d, k (k)}<i class="l{Math.min(4, d)}" title="{d}회"></i>{/each}</div>
     <div class="row3">
       <div><small>💎 마정석</small><b>{s.extra.gem}</b><em>이번 주 +{s.extra.gemWeek}</em></div>
-      <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>📷 통과 {s.extra.photoOk} · 다시 {s.extra.photoRe}</em></div>
+      <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>✍ 연습 통과 {s.extra.photoOk} · ✍ 실력 통과 {s.extra.photoV || 0} · 다시 {s.extra.photoRe}</em></div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
     {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}

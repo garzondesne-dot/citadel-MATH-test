@@ -81,13 +81,13 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
     case 'grid': { // 📊 정식 dash.js 「① 한눈에 표」 COLS 그대로 (📜 2026-11-15 머리 🔨 「대시보드 = 옛 정식 그대로」) · 칸 제목을 누르면 정렬
       const num = (v: number | null | undefined, t?: string): TCell => ({ t: t ?? (v ? String(v) : ''), v: v ?? null });
       const per = (v: number | null): TCell => ({ t: p(v), tone: tone(v), v: pv(v) });
-      const ladT = (s: Stud) => Object.entries(s.extra.lad || {}).map(([m, v]) => `${m.replace(/^u/, '')}${v >= 4 ? '✍' : v >= 2 ? '🧩' : '👣'}${v < 2 && s.extra.ladW?.[m] ? `🧩${s.extra.ladW[m]}` : ''}`).join(' ');
+      const ladT = (s: Stud) => Object.entries(s.extra.lad || {}).map(([m, v]) => `${m.replace(/^u/, '')}${v >= 4 ? '✍' : v >= 2 ? '🧩' : '👣'}${v < 2 && s.extra.ladW?.[m] ? `🧩${s.extra.ladW[m]}` : ''}`).join(' ') + (s.extra.photoV ? ` 💪✍${s.extra.photoV}` : ''); // 💪✍ = 실력 통과 (📜 #57 덧)
       const ladN = (s: Stud) => Object.values(s.extra.lad || {}).reduce((a, v) => a + v, 0);
-      const G: View = { id, title: '한눈에 표', info: '칸 제목을 누르면 정렬 · 차시 칸 = 형성평가(맞힌 문항 / 문항) · 색이 진할수록 높음 · 이름을 누르면 개인 기록 · 🪜 = 👣 대장 처치 · 🧩 근거 줄 · ✍ 서술형 통과',
-        table: { sort: true, head: ['번호 · 이름', ...held.map((h) => `${h.no}차시`), '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv'],
+      const G: View = { id, title: '한눈에 표', info: '칸 제목을 누르면 정렬 · 차시 칸 = 형성평가(맞힌 문항 / 문항) · 색이 진할수록 높음 · 이름을 누르면 개인 기록 · 🪜 = 👣 대장 처치 · 🧩 근거 줄 · ✍ 서술형 통과 · 💪✍ 실력 통과(숫자 바꾼 판) · ✍ 연습 = 학습지 숫자 · ✍ 실력 = 숫자 바꾼 판',
+        table: { sort: true, head: ['번호 · 이름', ...held.map((h) => `${h.no}차시`), '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '✍ 연습 통과', '✍ 실력 통과', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv'],
           rows: studs.map((s) => { const ox = s.extra.ox, oxp = ox && ox[1] ? pct(ox[0], ox[1]) : null; return { pick: s, cells: [{ t: nm(s), v: s.n }, ...held.map((h) => lessonCell(s, h.id)),
             { t: s.left ? `❗ ${s.left}` : '✔', tone: s.left ? 'ng' : 'ok', v: s.left }, { t: `${s.went}/${s.heldN}`, tone: tone(s.part), v: s.part }, per(s.boss), per(s.first), per(oxp),
-            num(s.extra.fixes, String(s.extra.fixes)), num(s.extra.hintN), num(s.extra.hg), { t: ladT(s), v: ladN(s) }, num(s.extra.seals, String(s.extra.seals ?? 0)), num(s.tries, String(s.tries)), num(s.extra.cardN, String(s.extra.cardN ?? 0)), { t: `Lv.${s.lv}`, v: s.xp }] }; }),
+            num(s.extra.fixes, String(s.extra.fixes)), num(s.extra.hintN), num(s.extra.hg), num(s.extra.photoOk, String(s.extra.photoOk ?? 0)), num(s.extra.photoV, String(s.extra.photoV ?? 0)), { t: ladT(s), v: ladN(s) }, num(s.extra.seals, String(s.extra.seals ?? 0)), num(s.tries, String(s.tries)), num(s.extra.cardN, String(s.extra.cardN ?? 0)), { t: `Lv.${s.lv}`, v: s.xp }] }; }),
           legend: [['ok', '80%↑'], ['md', '60~79'], ['ng', '60↓'], ['na', '불참 · 안 함']] },
       };
       // 📥 CSV = 정식 downloadCsv 그대로: 반 · 번호 · 이름 · 차시 형성평가 · 남은 문제 · … · 레벨 · EXP + 🔁 화폐 전환 기록(💎) 8칸
@@ -183,7 +183,7 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
     case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
-    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과', list: studs.filter((s) => s.extra.photoOk + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}${S?.kind === 'server' ? '' : ` · ${SUBJ.demo.photoWhere}`}`, sub: `통과 ${s.extra.photoOk} · 다시 ${s.extra.photoRe}`, pc: s.extra.photoOk ? '통과' : '다시', pick: s })) };
+    case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과 · ✍ 연습 통과 = 학습지 숫자(풀이를 보고 써도 인정) · ✍ 실력 통과 = 숫자 바꾼 판(혼자 씀)', list: studs.filter((s) => s.extra.photoOk + (s.extra.photoV || 0) + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}${S?.kind === 'server' ? '' : ` · ${SUBJ.demo.photoWhere}`}`, sub: `✍ 연습 통과 ${s.extra.photoOk} · ✍ 실력 통과 ${s.extra.photoV || 0} · 다시 ${s.extra.photoRe}`, pc: s.extra.photoV ? '💪 실력' : s.extra.photoOk ? '연습' : '다시', pick: s })) };
     case 'survey': { // 📝 정식 대시보드 「📝 설문」 (응답 = surveyA · 이름 없음 · 🧪 베타 반 · 시험 계정은 처음부터 안 쌓임)
       const cs = sc.classes.filter((c) => withX || !isBeta(S, c)), C = surveyCache();
       const L = cs.flatMap((c) => C[c] ?? []), s = summary(L), done = cs.reduce((a, c) => a + doneCount(S, c), 0), size = cs.reduce((a, c) => a + (sc.per.find((x) => x.c === c)?.studs.filter((u) => withX || !u.x).length ?? 0), 0);

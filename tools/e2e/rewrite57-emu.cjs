@@ -1,12 +1,12 @@
-// 📜 #57 ✍ 혼자 다시 쓰기 · 📜 +1 (숫자 바꾼 판) — 에뮬레이터 실제 학생 로그인 (가짜 중계소)
-//   ① 🎯 허수아비 9차시 문제 5: 학습지 숫자 📜 받은 뒤 = 목록 「✔ 서술형 · 다시 쓰기 가능」 + 단추 → 다시 쓰기 창(소레이드 없이 바뀐 숫자 문제)
+// 📜 #57 ✍ 실력 쓰기 · 📜 +1 (숫자 바꾼 판) — 에뮬레이터 실제 학생 로그인 (가짜 중계소)
+//   ① 🎯 허수아비 9차시 문제 5: 학습지 숫자 📜 받은 뒤 = 목록 「✔ 서술형 · 실력 쓰기 가능」 + 단추 → 다시 쓰기 창(소레이드 없이 바뀐 숫자 문제)
 //      → 불통과 → 같은 숫자로 다시 → 통과 = ult_set-09_m5_v · 단추 사라짐
-//   ② 🏰 성채 2층 10: 서술형 통과한 방 → 카드 「다시 쓰기 가능」 → 「✍ 혼자 다시 쓰기 · 📜 +1」 → 판 1~6 숫자 → 불통과 → 같은 숫자 → 통과 = ph2 · 📜 +1
+//   ② 🏰 성채 2층 10: 서술형 통과한 방 → 카드 「다시 쓰기 가능」 → 「✍ 실력 쓰기 · 📜 +1」 → 판 1~6 숫자 → 불통과 → 같은 숫자 → 통과 = ph2 · 📜 +1
 //   ③ 🏰 3층 17 (숫자 없는 증명) = 판 0 그대로 → 통과 = ph2 · 📜 +1
 const { chromium } = require('playwright');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
-const { rest } = require('./_emu.cjs');
+const { rest, asAdmin } = require('./_emu.cjs');
 const R = require('../../src/subjects/common-math2/rubrics.json'), P2 = require('../pack-upload/castle/eval-2.json'), P3 = require('../pack-upload/castle/eval-3.json');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1', URL = 'https://script.google.com/macros/s/FAKE-relay/exec';
 const img = (f, lines, seed) => { execFileSync('python3', ['-c', `
@@ -71,7 +71,7 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
   await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
   const row = '[data-lesson="set-09"] li[data-mid="m5"]';
   const tg = await s.$eval(`${row} [data-k="ph-v"]`, (e) => e.textContent.trim()).catch(() => ''), bt = await s.$eval(`${row} [data-k="rw-go"]`, (e) => e.textContent.trim()).catch(() => '');
-  ok('① 🎯 목록 = 「✔ 서술형 · 다시 쓰기 가능」 + 「✍ 혼자 다시 쓰기 · 📜 +1」', tg === '✔ 서술형 · 다시 쓰기 가능' && bt === '✍ 혼자 다시 쓰기 · 📜 +1', `${tg} | ${bt}`);
+  ok('① 🎯 목록 = 「✔ 서술형 · 실력 쓰기 가능」 + 「✍ 실력 쓰기 · 📜 +1」', tg === '✔ 서술형 · 실력 쓰기 가능' && bt === '✍ 실력 쓰기 · 📜 +1', `${tg} | ${bt}`);
   ok('① 「📷 서술형 남음」 은 없음 (학습지 숫자 📜 받음)', !(await s.$(`${row} [data-k="ph-left"]`)));
   await s.$eval(row, (e) => e.scrollIntoView({ block: 'center' })); await s.screenshot({ path: `${SHOTS}/rw57-dummy-list.png` });
   await s.$eval(`${row} [data-k="rw-go"]`, (e) => e.click()); await s.waitForSelector('[data-k="rewrite"]'); await s.waitForTimeout(400);
@@ -87,7 +87,7 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
   ok('① 결과 창 = 📜 +1', /📜 \+1/.test(kill), kill.slice(0, 100));
   await s.screenshot({ path: `${SHOTS}/rw57-dummy-done.png` });
   await s.$eval('.sheet .pmain', (e) => e.click()).catch(() => {}); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
-  ok('① 받은 뒤 = 목록 단추 · 꼬리표 사라짐 (문항당 한 번)', !(await s.$(`${row} [data-k="rw-go"]`)) && !(await s.$(`${row} [data-k="ph-v"]`)));
+  ok('① 받은 뒤 = 단추 · 「실력 쓰기 가능」 사라짐 · 「✔ 실력 쓰기 통과」', !(await s.$(`${row} [data-k="rw-go"]`)) && !(await s.$(`${row} [data-k="ph-v"]`)) && !!(await s.$(`${row} [data-k="ph-vok"]`)));
 
   // ── ② 🏰 성채 2층 10 ──
   await rest('bonus/1-3/3/eval-2/q10', 'PUT', { clear: true, ph: 'p0', tries: 1, at: 1 });
@@ -100,11 +100,11 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
   const sc = async () => Number((await rest('gem/1-3/3/scroll'))) || 0;
   await castle('eval-2');
   const c10 = await s.$eval('[data-room="q10"]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
-  ok('② 🏰 2층 10 카드 = 「✔ 서술형 · 다시 쓰기 가능」', /다시 쓰기 가능/.test(c10), c10);
+  ok('② 🏰 2층 10 카드 = 「✔ 서술형 · 실력 쓰기 가능」', /실력 쓰기 가능/.test(c10), c10);
   await s.screenshot({ path: `${SHOTS}/rw57-castle-list.png` });
   await s.click('[data-room="q10"]'); await s.waitForSelector('[data-k="castle-res"]'); await s.waitForTimeout(400);
   const mainT = (await s.textContent('[data-k="castle"] button.pmain')).trim(), refight = !!(await s.$('[data-k="castle-refight"]'));
-  ok('② 방을 누르면 = 「✍ 혼자 다시 쓰기 · 📜 +1」 + 「⚔ 다시 싸우기」', /혼자 다시 쓰기/.test(mainT) && refight, mainT);
+  ok('② 방을 누르면 = 「✍ 실력 쓰기 · 📜 +1」 + 「⚔ 다시 싸우기」', /실력 쓰기/.test(mainT) && refight, mainT);
   await s.screenshot({ path: `${SHOTS}/rw57-castle-pick.png` });
   await s.click('[data-k="castle"] button.pmain'); await s.waitForSelector('[data-k="rewrite"]'); await s.waitForTimeout(300);
   const stem = (await s.textContent('[data-k="rw-stem"]')).trim(), v0 = P2.rooms.find((r) => r.id === 'q10').vers.map((v) => v[0].q.split('\n')[0]);
@@ -119,7 +119,7 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
   await s.screenshot({ path: `${SHOTS}/rw57-castle-done.png` });
   await s.click('[data-k="castle"] button.pmain'); await s.waitForTimeout(500);
   const c10b = await s.$eval('[data-room="q10"]', (e) => e.textContent.replace(/\s+/g, ' ').trim());
-  ok('② 받은 뒤 카드 = 「다시 쓰기」 없음', !/다시 쓰기/.test(c10b), c10b);
+  ok('② 받은 뒤 카드 = 「실력 쓰기 가능」 없음 · 「✔ 실력 쓰기 통과」', !/실력 쓰기 가능/.test(c10b) && /실력 쓰기 통과/.test(c10b), c10b);
 
   // ── ③ 🏰 3층 17 ──
   await castle('eval-3');
@@ -130,6 +130,20 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
   const t0 = await sc(); await shootTwice('castle17', I[4], I[5], 'br1', 'bp1');
   const r17 = await rest('bonus/1-3/3/eval-3/q17'), t1 = await sc();
   ok('③ 통과 = ph2 · 📜 +1', r17 && r17.ph2 === 'bp1' && t1 - t0 === 1, `📜 ${t0}→${t1}`);
+  // ── ④ 교사 대시보드 = ✍ 연습 통과 · ✍ 실력 통과 두 칸 (한눈에 표 · 서술형 보기) ──
+  const t = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); t.on('pageerror', (e) => errs.push(String(e))); t.setDefaultTimeout(15000);
+  await t.goto(B.replace('?', '?role=teacher&')); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
+  await t.click('.tabs button:has-text("반")'); await t.waitForTimeout(500); await t.click('.seg button:has-text("대시보드")'); await t.waitForTimeout(500);
+  await t.click('.chips button:text-is("1-3")'); await t.waitForTimeout(1200);
+  const grid = await t.evaluate(() => { const h = [...document.querySelectorAll('.dash thead th')].map((x) => x.textContent.trim()); const r = [...document.querySelectorAll('.dash tbody tr')].map((tr) => [...tr.children].map((x) => x.textContent.trim())).find((c) => /시험삼/.test(c[0])); return { h, r }; });
+  const iP = grid.h.findIndex((x) => /연습 통과/.test(x)), iV = grid.h.findIndex((x) => /실력 통과/.test(x)), iL = grid.h.findIndex((x) => /사다리/.test(x));
+  ok('④ 대시보드 한눈에 표 = 「✍ 연습 통과」 · 「✍ 실력 통과」 칸 · 실력 3 (허수아비 1 + 성채 2)', iP > 0 && iV > 0 && grid.r && grid.r[iV] === '3', grid.r ? `연습 ${grid.r[iP]} · 실력 ${grid.r[iV]} · 사다리 「${grid.r[iL]}」` : '줄 없음');
+  ok('④ 사다리 칸 = 💪✍ 실력 표시', !!grid.r && /💪✍3/.test(grid.r[iL] || ''));
+  await t.screenshot({ path: `${SHOTS}/rw57-dash-grid.png` });
+  await t.click('.grp button:has-text("기록 남기기")'); await t.waitForTimeout(300); await t.click('.vws button:has-text("서술형")'); await t.waitForTimeout(800);
+  const pl = await t.$$eval('.dash .dl', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim())).catch(() => []);
+  ok('④ 서술형 보기 = 「✍ 연습 통과 n · ✍ 실력 통과 n」', pl.some((x) => /시험삼/.test(x) && /연습 통과 \d+/.test(x) && /실력 통과 3/.test(x)), pl.find((x) => /시험삼/.test(x)) || '없음');
+  await t.screenshot({ path: `${SHOTS}/rw57-dash-photo.png` });
   console.log(`보낸 사진 ${sent.length}장`);
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

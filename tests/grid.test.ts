@@ -11,15 +11,17 @@ describe('📊 한눈에 표', () => {
     S.set('roster/1-3', { 5: '가', 6: '나' });
     const rec5 = { no: 6, conc: { c1: [2, 4] }, boss: 4, bossN: 6, bossM: 'ooooxx', mons: { m1: 'o', m2: 'x', m3: 'f', u4: 'x', u5: 'o', u6: 'o', u7: 'n' }, ox: [3, 4], hints: 2, hg: 1, lad: { u4: 1, u5: 4 }, fixed: 3 };
     S.set('records/1-3', { 5: { 'set-06': rec5 } });
-    S.set('bonus/1-3', { 5: { 'set-06': { m2: { clear: true, tries: 1 }, boss: { clear: true } } } });
+    S.set('bonus/1-3', { 5: { 'set-06': { m2: { clear: true, tries: 1 }, boss: { clear: true } }, 'eval-1': { q07: { clear: true, ph: 'p0', ph2: 'p1' } } } });
+    S.set('photo/1-3/5', { 'set-06_u4': { a: { status: 'retry' }, b: { status: 'pass' }, c: { status: 'pass' } } }); // ✍ 연습 1 (같은 문항 두 번 통과 = 1)
+    S.set('gifts/s1_3_5', { 'ult_set-06_u4': { s: 1 }, 'ult_set-06_u4_v': { s: 1, ph: 'c' } }); // ✍ 실력 = 📜 칸 _v 1 + 성채 ph2 1
     S.set('cards/1-3', { 5: { sub: true, emp: true } });
     const v = view(S, '1-3', 'grid'), T = v.table!;
     expect(T.sort).toBe(true);
-    expect(T.head).toEqual(['번호 · 이름', '6차시', '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv']);
+    expect(T.head).toEqual(['번호 · 이름', '6차시', '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '✍ 연습 통과', '✍ 실력 통과', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv']);
     const r5 = T.rows.find((r) => r.pick?.n === 5)!.cells.map((c) => c.t), r6 = T.rows.find((r) => r.pick?.n === 6)!.cells.map((c) => c.t);
     const left = noteOf(fullLesson('set-06')!, rec5, { m2: { clear: true }, boss: { clear: true } }).left;
     expect(left).toBeGreaterThan(0);
-    expect(r5.slice(1)).toEqual(['4/6', `❗ ${left}`, '1/1', '67%', '50%', '75%', '3', '2', '1', '4👣 5✍', '1', '1', '2', expect.stringMatching(/^Lv\.\d+$/)]);
+    expect(r5.slice(1)).toEqual(['4/6', `❗ ${left}`, '1/1', '67%', '50%', '75%', '3', '2', '1', '1', '2', '4👣 5✍ 💪✍2', '1', '1', '2', expect.stringMatching(/^Lv\.\d+$/)]);
     expect(r6[1]).toBe('불참'); expect(r6[2]).toBe('✔');
     const H = v.csv!.rows[0]!; expect(H.slice(0, 4)).toEqual(['번호', '이름', '6차시 형성평가', '남은 문제(오답노트)']); expect(H.slice(-9)).toEqual(['EXP', '전환 시각', '전환 때 업적', '전환 전 깃털', '깃털→💎', '💎 소급 카드', '카드→💎', '전환 전 💎', '전환 뒤 💎']);
     expect(v.csv!.rows.length).toBe(3);

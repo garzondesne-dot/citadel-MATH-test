@@ -23,7 +23,7 @@ export interface Stud {
   xp: number; lv: number; left: number; tries: number; x: boolean;
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
-export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; photoOk: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
+export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; /** ✍ 연습 통과 = 학습지 숫자 서술형 통과한 문항 수 (옛 기록 = 모두 연습) */ photoOk: number; /** ✍ 실력 통과 = 숫자 바꾼 판 통과 (📜 #57 · 차시 = 📜 칸 ult_…_v · 성채 = ph2) */ photoV: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
   /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📊 한눈에 표 (정식 dash.js COLS · 서버) ⭕ OX [맞힘, 문항] · 💡 그림 힌트 펼친 수 · 💡 힌트 준 수 · 🪜 사다리(몬스터 → 1 대장 · 2 근거 줄 · 4 서술형) · 🧩 근거 줄 n/m · 🟪 업적 · 🃏 카드 */ ox?: [number, number]; hintN?: number; /** 🔁 화폐 전환 기록 (정식 gem/{반}/{번호}/conv · 2026-11-07) */ conv?: { at?: number; seals?: number; feather?: number; featherGem?: number; cardsUnpaid?: number; cardGem?: number; gemBefore?: number; gemAfter?: number } | null; lad?: Record<string, number>; ladW?: Record<string, string>; seals?: number; cardN?: number;
   /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
@@ -83,7 +83,7 @@ export function fakeClass(S: Store | null, cls: string) {
     const days = Array.from({ length: 14 }, () => (r() < diligence * 0.75 ? 1 + Math.floor(r() * 4) : 0));
     extra[p.num] = {
       days, solves: days.reduce((a, b) => a + b, 0) * 3, fixes: Math.floor(r() * 8 * diligence), gem: Math.round(40 + 260 * diligence), gemWeek: Math.round(60 * diligence), scroll: Math.floor(r() * 6),
-      photoOk: Math.floor(r() * 3), photoRe: Math.floor(r() * 2), submit: Math.round(70 + 30 * diligence), stuck: Math.floor((1 - skill) * 6 * r()), sym: Math.floor(r() * 30 * diligence),
+      photoOk: Math.floor(r() * 3), photoV: Math.floor(r() * 2), photoRe: Math.floor(r() * 2), submit: Math.round(70 + 30 * diligence), stuck: Math.floor((1 - skill) * 6 * r()), sym: Math.floor(r() * 30 * diligence),
       weekly: Array.from({ length: 6 }, (_, w) => Math.round((10 + 40 * diligence) * (0.6 + 0.1 * w) * (0.8 + 0.4 * r()))),
       hg: r() < 0.4 ? 1 + Math.floor(r() * 3) : 0, hints: Math.floor(r() * 4 * (1 - skill)), tryEval: r() < diligence ? Math.floor(r() * 12) : 0, trySet: Math.floor(r() * 6 * diligence), noteDone: Math.floor(r() * 4 * diligence), cards: Math.floor(r() * 10 * diligence), surveyed: r() < 0.8,
     };
@@ -130,8 +130,9 @@ export function realClass(S: Store, cls: string) {
     // 📷 서술형 (photo/{반}/{번호}/{차시_방}/{id} · 중계소가 씀): 통과 = 통과했거나 선생님 ✔ 인정한 방 수 · 다시 = ✏ 재도전 장 수
     const ph = (S.get<Record<string, Record<string, { status?: string; ok?: boolean }>>>(`photo/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`)) || {};
     const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
+    const gv = S.get<Record<string, unknown>>(`gifts/${p.uid}`) || {}, photoV = Object.keys(gv).filter((k) => /^ult_.+_v$/.test(k)).length + rows.filter((x) => /^eval-/.test(x.lid) && !!(x.m as { ph2?: string }).ph2).length; // ✍ 실력 통과 (📜 #57 덧)
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: S.get(`surveyDone/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`) === true, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoV, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: S.get(`surveyDone/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`) === true, dummy };
   }
   // 📈 최근 14일 수업 밖 활동(풀이 수 · 앞 7 = 그 전 7일 · 뒤 7 = 최근 7일) = 활용 추이 기록(act · 기록 전 ≈ 추정) · 반 비교 「수업 밖 7일 활동」 · 학생 시트
   const U = loadUsage(S, cls).days, today = usageDay(now);
@@ -168,7 +169,7 @@ export function realClass(S: Store, cls: string) {
 /** 대시보드 · 학생 시트가 쓰는 한 곳: 서버 = 진짜 · 이 기기 = 가짜 */
 export const classData = (S: Store | null, cls: string) => (S && S.kind === 'server' ? realClass(S, cls) : fakeClass(S, cls));
 /** 📝 세특 초안 (#127 · 함수 하나 seteukDraft · 학생 시트 · 대시보드 · 엑셀 모두) — 대시보드 기록 → 세특 기록 */
-export const seteukOf = (s: Stud): SeteukIn => ({ went: s.went, heldN: s.heldN, conc: s.conc, std: s.std, boss: s.boss, hg: s.extra.hg, fixed: s.extra.fixes, mis: s.mis, photoN: s.extra.photoOk + s.extra.photoRe, photoRev: s.extra.photoRe, hints: s.extra.hints, tryEval: s.extra.tryEval, trySet: s.extra.trySet, noteDone: s.extra.noteDone, cards: s.extra.cards, symN: s.extra.sym, surveyed: s.extra.surveyed });
+export const seteukOf = (s: Stud): SeteukIn => ({ went: s.went, heldN: s.heldN, conc: s.conc, std: s.std, boss: s.boss, hg: s.extra.hg, fixed: s.extra.fixes, mis: s.mis, photoN: s.extra.photoOk + (s.extra.photoV || 0) + s.extra.photoRe, photoRev: s.extra.photoRe, hints: s.extra.hints, tryEval: s.extra.tryEval, trySet: s.extra.trySet, noteDone: s.extra.noteDone, cards: s.extra.cards, symN: s.extra.sym, surveyed: s.extra.surveyed });
 export const stdName = (id: string) => STANDARDS.find((d) => d.id === id)?.name ?? null;
 export const memoParts = (s: Stud) => seteukDraft(seteukOf(s), stdName);
 export const memoOf = (s: Stud) => memoParts(s).main;
