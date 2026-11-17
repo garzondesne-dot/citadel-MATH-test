@@ -118,9 +118,6 @@
   const view = $derived(!R || R.state.closed ? (R && showRes ? 'end' : 'camp') : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
   let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
-  // ✏ 판서 = 단계가 바뀌면(다음 ▶ · ◀ · 리모컨 · TV 어디서든) 저절로 꺼짐 (📜 11/17 선생님 「다음으로 누르면 필기 모드가 알아서 풀렸으면」 · ⓗ)
-  let inkStep = -2;
-  $effect(() => { const k = i; untrack(() => { if (inkStep !== -2 && k !== inkStep && ink) ink = false; inkStep = k; }); });
   let zoom = $state<0 | 1 | 2>(0);
   let hero = $state(false);
   (globalThis as { __tvStrikeSet?: (ult?: boolean) => void }).__tvStrikeSet = (ult = true) => { const lk = teacherLook(tlook); tstrike = { ult, at: Date.now(), hero: lk.hero, fx: lk.fx, key: `${R?.state.step}|${step?.id ?? ''}` }; }; // 화면 시험 고리 (시연 다 맞힘과 같은 길)
