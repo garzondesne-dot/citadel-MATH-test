@@ -122,13 +122,13 @@ export function sheets(byCls: Record<string, (Saved | null)[]>): SheetData[] {
     sum.push([`${c}${no ? ` · ${no}차시` : ''} · 응답 ${s.n}명`]);
     sum.push(['문항', `${WHEN[0]} 평균`, `${WHEN[1]} 평균`, '변화', '오름', '같음', '내림']);
     s.pairs.forEach((p, i) => sum.push([`${i + 1}. ${p.q}`, p.pre, p.now, p.diff, p.up, p.same, p.down]));
-    sum.push(['8. 도움이 된 것(1~2개)', ...s.picks.map((x) => `${x.t} ${x.n}`)]);
-    sum.push(['9. 예전 수업과 비교', ...s.cmp.map((x) => `${x.t} ${x.n}`)]);
+    sum.push(['8. 가장 도움이 된 것 (2개까지)', ...s.picks.map((x) => `${x.t} ${x.n}`)]);
+    sum.push(['9. 쉼터 놀이를 예전 5분 퀴즈와 비교하면', ...s.cmp.map((x) => `${x.t} ${x.n}`)]);
     sum.push([]);
   }
   const rows = csvRows(byCls);
   const qs: Cell[][] = [['번호', '문항(원문)', '보기'], ...PAIR.map((q, i) => [i + 1, q, `${WHEN[0]} / ${WHEN[1]} 각각 1~5`] as Cell[]),
-    [8, '도움이 된 것 (1~2개)', PICKS.join(' · ')], [9, '예전 수업과 비교', CMP.join(' · ')], [10, '달라진 점 (100자)', '서술'], [11, '바꿨으면 하는 것 (100자)', '서술']];
+    [8, '가장 도움이 된 것 (2개까지)', PICKS.join(' · ')], [9, '쉼터 놀이를 예전 5분 퀴즈와 비교하면', CMP.join(' · ')], [10, '달라진 점 (100자)', '서술'], [11, '바꿨으면 하는 것 (100자)', '서술']];
   return [{ name: '요약', rows: sum }, { name: '응답', rows }, { name: '문항', rows: qs }];
 }
 
