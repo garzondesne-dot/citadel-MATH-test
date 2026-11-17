@@ -58,6 +58,14 @@ print('ok')`], { encoding: 'utf8' });
     expect(r.stderr + r.stdout).toContain('ok');
   });
   // 📜 #58 「전체 · 한 파일」 = 읽어보기 → 반 비교 → 보기 11개(맨 앞 「반」 열) · 시트 아래 📌 요약 줄
+  it('📥 CSV 차시 칸 = 옛 정식 「(보충)」 · 「보충」 (허수아비 형성평가 클리어 · bonus/{반}/{번호}/{차시}/boss/clear)', () => {
+    const S = memoryStore(), g = view(S, '1-1', 'grid'), st = g.table!.rows[0]!.pick!, n = st.n;
+    const before = g.csv!.rows.find((r) => r[0] === n)!, cols = (g.csv!.rows[0] as string[]).map((h, i) => (/차시 형성평가$/.test(h) ? i : -1)).filter((i) => i >= 0);
+    expect(cols.length).toBeGreaterThan(0); expect(before.some((v) => /보충/.test(String(v)))).toBe(false);
+    for (const lid of [...Object.keys(st.rec), 'set-99']) S.set(`bonus/1-1/${n}/${lid}/boss/clear`, true);
+    const after = view(S, '1-1', 'grid').csv!.rows.find((r) => r[0] === n)!;
+    for (const i of cols) expect(String(after[i]), String(before[i])).toMatch(String(before[i]) === '불참' ? /^보충$/ : / \(보충\)$/);
+  });
   it('엑셀 전체 한 파일: 읽어보기 · 반 비교 · 보기 11개 · 반 열 · 요약 줄 · 반마다 차시 열 합침', () => {
     const S = memoryStore(), B = bookAll(S, false, '2026-11-18');
     expect(B.map((x) => x.name)).toEqual(['읽어보기', '반 비교', ...ALL_VIEWS.filter((v) => v !== 'cmp').map((id) => view(S, ALL, id).title.replace(/ · /g, ' '))]);

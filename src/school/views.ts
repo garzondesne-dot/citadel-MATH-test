@@ -94,7 +94,7 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
       const cvAt = (t?: number) => (t ? new Date(Number(t)).toLocaleString('ko-KR') : '');
       G.csv = { name: `한눈에표_${cls === ALL ? '전체' : cls}.csv`, rows: [
         [...(cls === ALL ? ['반'] : []), '번호', '이름', ...held.map((h) => `${h.no}차시 형성평가`), '남은 문제(오답노트)', '참여', '형성평가 평균(%)', '첫 시도 정답률(%)', '재도전으로 고친 수', '그림 힌트(소문제)', '업적', '던전 도전', '카드', '레벨', 'EXP', '전환 시각', '전환 때 업적', '전환 전 깃털', '깃털→💎', '💎 소급 카드', '카드→💎', '전환 전 💎', '전환 뒤 💎'],
-        ...studs.map((s) => { const x = s.extra.conv; return [...(cls === ALL ? [s.cls] : []), s.n, s.name, ...held.map((h) => { const r = s.rec[h.id]; return !r ? '불참' : r.noBoss ? '수업 안 함' : `${Math.min(r.boss, r.bossN)}/${r.bossN}`; }), s.left, `${s.went}/${s.heldN}`, s.boss ?? '', s.first ?? '', s.extra.fixes, s.extra.hintN ?? 0, s.extra.seals ?? 0, s.tries, s.extra.cardN ?? 0, s.lv, s.xp,
+        ...studs.map((s) => { const x = s.extra.conv; return [...(cls === ALL ? [s.cls] : []), s.n, s.name, ...held.map((h) => { const r = s.rec[h.id], fill = !!S.get(`bonus/${String(s.cls).replace(/[.#$/[\]]/g, '_')}/${s.n}/${h.id}/boss/clear`); return !r ? (fill ? '보충' : '불참') : r.noBoss ? (fill ? '수업 안 함 (보충)' : '수업 안 함') : `${Math.min(r.boss, r.bossN)}/${r.bossN}${fill ? ' (보충)' : ''}`; }), s.left, `${s.went}/${s.heldN}`, s.boss ?? '', s.first ?? '', s.extra.fixes, s.extra.hintN ?? 0, s.extra.seals ?? 0, s.tries, s.extra.cardN ?? 0, s.lv, s.xp,
           ...(x ? [cvAt(x.at), x.seals ?? '', x.feather ?? '', x.featherGem ?? '', x.cardsUnpaid ?? '', x.cardGem ?? '', x.gemBefore ?? '', x.gemAfter ?? ''] : ['', '', '', '', '', '', '', ''])]; })] };
       return G;
     }
