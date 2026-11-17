@@ -210,7 +210,8 @@
   {:else if savedFlash}
     <BottomAction dock={false} text="✔ 저장했어요" />
   {:else if tab === 'enh'}
-    <BottomAction dock={false} disabled={!nx} onmain={enh} text={nx ? `+${lv + 1}으로 강화 · 💎 ${nx.g}${nx.s ? ` · 📜 ${nx.s}` : ''}` : '🌈 최고 단계'} mainLabel="강화" />
+    {#if nx?.s}<p class="scw" data-k="enh-scroll">📜 서술 조각 −{nx.s} <small>+{lv + 1} 강화부터 서술 조각도 써요 · 남은 📜 {lf.scroll}</small></p>{/if}<!-- 📜 #38 ② 강화 +7 부터 「📜 −n」 크게 -->
+    <BottomAction dock={false} disabled={!nx} onmain={enh} text={nx ? `+${lv + 1}으로 강화 · 💎 ${nx.g}${nx.s ? ` · 📜 −${nx.s}` : ''}` : '🌈 최고 단계'} mainLabel="강화" />
   {:else}
     <BottomAction dock={false} text={tab === 'sk' ? '스킬 칸을 눌러 고르세요' : '호칭 · 기록 보기'} />
   {/if}
@@ -275,6 +276,7 @@
     <div class="askbox">
       <b>정말 저장할까요?</b>
       <p>💎 {c.g}개{c.s ? ` · 📜 ${c.s}개` : ''}를 써요 · 저장하면 돌려받지 않아요</p>
+      {#if c.s}<p class="scv" data-k="scroll-change">📜 서술 조각 <b>{W.scroll}</b> → <b>{W.scroll - c.s}</b></p>{/if}<!-- 📜 #38 ② 사기 전 「📜 n → n−k」 (강화 +7~ · Ⅳ 스킬) -->
       <div class="row2"><button type="button" class="btn2" onclick={() => (confirm = false)}>취소</button><button type="button" class="btn" onclick={commit}>💾 저장</button></div>
     </div>
   </div>
@@ -392,6 +394,8 @@
   .ttp small { font-size: var(--fs-small); color: var(--text-2); }
   .t-b { color: var(--gem); }
   .t-p { color: var(--scroll); }
+  .scw { margin: 0 16px 6px; padding: 8px 12px; border-radius: 10px; border: 2px solid var(--scroll); color: var(--scroll); font: 900 20px var(--font); text-align: center; } .scw small { display: block; font: 600 13px var(--font); color: var(--text-2); }
+  .scv { margin: 6px 0 0; font: 800 18px var(--font); color: var(--scroll); }
   .t-o { color: var(--accent); }
   .ask { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.6); display: grid; place-items: center; padding: var(--s4); }
   .askbox { width: 100%; max-width: 340px; border-radius: var(--r-lg); background: var(--surface); padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); }

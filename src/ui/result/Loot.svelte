@@ -22,6 +22,8 @@
   import { battleCard, mathCard, saveCanvas, shareCanvas } from './shareCard';
 
   const { S, L, R, uid, code, nick, me = null, gem = 0 }: { S: Store; L: LessonPack; R: Room; uid: string; code: string; nick: string; /** 서버 계정 (반 · 번호) — 없으면 이 기기(테스트 · 체험) */ me?: { S: Store; cls: string; num: number } | null; gem?: number } = $props();
+  // 📜 #38 ③ 아직 캠프에서 안 받은 📜 (✅ 도장 · ✍ 서술형 선물) — 수업 중엔 지갑 숫자가 그대로라 「사라졌다」로 보이지 않게
+  const campScroll = $derived.by(() => { const G = (me ? me.S : S).get<Record<string, { s?: number; got?: boolean }>>(`gifts/${uid}`) || {}; return Object.values(G).reduce((a, x) => a + (x && !x.got ? Number(x.s) || 0 : 0), 0); });
   const now = untrack(() => S.now());
   const rows = $derived(lootRows(L, R, uid, now));
   // ── 전리품 숫자 (정식 lootOf) ──
@@ -102,6 +104,7 @@
       <div class="lv" class:up={lt.up}><small>Lv.{lt.lv.lv} {lt.lv.title}{#if lt.up && on('xp')} <b class="upb">🎉 레벨 업!</b>{/if}</small><div class="bar"><i style:width="{barW}%"></i><span>{lt.lv.into} / {lt.lv.next}</span></div></div></div>
     <div class="row" class:on={on('gem')} data-k="lt-gem"><span>💎</span><b class="num">+{n('gem')}</b>{#if lt.day != null}<small class="muted">오늘 받은 💎 {lt.day} / {DAY_CAP}</small>{/if}</div>
     <div class="row" class:on={on('scroll')} data-k="lt-scroll"><span>📜 서술 조각</span>{#if lt.scroll}<b class="num">+{n('scroll')}</b>{:else}<small class="muted">✍ 서술형에 도전하면 📜!</small>{/if}</div>
+    {#if campScroll > 0}<div class="row camp" data-k="lt-camp-scroll"><span>📜 캠프에서 받기</span><b class="num">{campScroll}개</b></div>{/if}<!-- 📜 #38 ③ 도장 · 서술형 📜 = 캠프에 가야 지갑에 -->
     {#if lt.titles.length}<div class="row" class:on={on('ttl')}><span>🔓 새 호칭</span><b class="txt">{lt.titles.slice(0, 2).map((t) => `[${t}]`).join(' ')}{lt.titles.length > 2 ? ` 외 ${lt.titles.length - 2}개` : ''}</b></div>{/if}
     {#if lt.rooms.length}<div class="row" class:on={on('room')}><span>🏰 새 성채 방</span><b class="txt">{lt.rooms.length}개 <small>{lt.rooms.slice(0, 3).join(' · ')}{lt.rooms.length > 3 ? ` 외 ${lt.rooms.length - 3}개` : ''}</small></b></div>{/if}
     <div class="row goal" class:on={on('goal')}><span>🎯 다음 목표</span><b class="txt">{lt.goal}</b></div>

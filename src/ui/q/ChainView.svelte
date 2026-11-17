@@ -104,13 +104,13 @@
   const pendId = $derived(myP.pp?.[mid]);
   const pendPh = $derived(!!pendId && wrOk !== 'ok' && cls ? pendState(S, cls, num, rl, mid, String(pendId)) : null);
   let wm = $state<{ peek: boolean } | null>(null), shot = $state(false), peekAsk = $state(false);
-  $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(S, uid, L.id, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
+  $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(S, uid, rl, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
   function snapOpen() { if (!wm || phN >= phMax) return; if (!trialPh) snapStart(S, code, uid, mid); sfx('block', 0.5); shot = true; }
   function snapDone(res: PhotoOut | null) {
     shot = false; const peek = !!wm?.peek;
     if (trialPh && demo) { if (res?.status === 'pass') { wm = null; toast = '🌟 서술형 통과! (시연 · 데미지 · 기록 없음)'; } return; }
     const out = snapEnd(S, L, code, uid, mid, res, peek);
-    if (!peek && out) photoScroll(S, uid, L.id, mid);
+    if (!peek && out) photoScroll(S, uid, rl, mid);
     const missOf = (r: PhotoOut | null) => Object.values(r?.steps || {}).map((x, i) => (x && !x.earned ? (i === rec.n - 1 ? '👑' : '①②③④⑤⑥'[i]) : null)).filter(Boolean);
     if (res?.status === 'pass') {
       const nFill = !peek && !rec.done ? chainPhotoFill(S, L, code, uid, mid) : 0;

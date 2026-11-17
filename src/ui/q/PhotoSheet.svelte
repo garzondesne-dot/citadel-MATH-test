@@ -8,7 +8,7 @@
   import type { Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import { sfx } from '../sound.svelte';
-  import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, post, PRE_MSG, precheckOf, QUAL, rubric, roomMax, type PhotoRes } from '../../school/photo';
+  import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, passScroll, post, PRE_MSG, precheckOf, QUAL, rubric, roomMax, type PhotoRes } from '../../school/photo';
 
   export interface PhotoOut { status: 'pass' | 'check' | 'retry' | 'appeal'; id?: string; score?: number; total?: number; scores: number[]; steps?: PhotoRes['steps'] }
   const { S, cls, num, lesson, room, title, items, trial = false, test = false, onclose }:
@@ -98,6 +98,7 @@
     if (lastHash) keepHash(lastHash);
     left = r.left ?? left; roomLeft = r.roomLeft ?? roomLeft; coolUntil = Date.now() + (r.cool != null ? Number(r.cool) : coolSec(cfg)) * 1000;
     res = r; scores.push(Number(r.score) || 0); view = r.status === 'pass' ? 'pass' : r.status === 'check' ? 'check' : 'retry'; stamp(r);
+    if (r.status === 'pass' && !trial && !test) passScroll(S, cls, num, lesson, room); // 📜 #38 ① 결과가 온 자리에서 바로 (닫기 전에 화면을 떠나도)
   }
   // 📷 도장 쾅쾅 (정식 2026-11-06): 단계마다 0.45초 간격 ✅/✏ → 점수가 올라감 → 만점이면 💯 금도장
   const stepsOf = (r: PhotoRes | null) => Object.values(r?.steps || {}).filter((x) => x && x.note);

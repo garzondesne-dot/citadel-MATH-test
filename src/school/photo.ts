@@ -1,3 +1,6 @@
+import { castles } from './castles.svelte';
+import { photoScroll } from '../raid/actions';
+import { uidOf } from './school';
 // 📷 서술형 사진 채점 (정식 js/raid/photo.js 그대로 옮김 · 📜 2026-11-15 선생님 「오늘 사진 채점 기능까지」 · 수치 · 문구 정식 그대로)
 //   학생: 풀이 사진 → 자르기 · 돌리기 → 긴 변 1024 JPEG → Apps Script 중계소(gcfg/photo.url) → AI → pass(통과) · retry(점수 · 다시) · check(⏳ 선생님 확인 · 장 수 안 깎임)
 //   서버: gcfg/photo = { url, on, daily, room, cool, raid, warnDay, warnMonth } · photo_rubric/{차시}/{방} · photo/{반}/{번호}/{차시_방}/{id}(중계소만 씀 · 사진 ✗) · photo_q/{반}/{번호}/{날짜}
@@ -93,7 +96,17 @@ export function roomTitle(S: Store, k: string) { const i = k.indexOf('_'), l = k
 /** ✔ 처치 인정 / ✖ 그대로 (정식 photo.js board 그대로 · 그 학생이 다음에 들어올 때 반영) → 저장됐나 */
 export async function markPhoto(S: Store, x: Pick<PhotoRow, 'c' | 'n' | 'k' | 'id'>, ok: boolean): Promise<boolean> {
   const p = `photo/${x.c}/${x.n}/${x.k}/${x.id}`, at = S.now();
-  return S.trySet ? (await S.trySet(`${p}/ok`, ok)) && (await S.trySet(`${p}/okAt`, at)) : (S.set(`${p}/ok`, ok), S.set(`${p}/okAt`, at), true);
+  const done = S.trySet ? (await S.trySet(`${p}/ok`, ok)) && (await S.trySet(`${p}/okAt`, at)) : (S.set(`${p}/ok`, ok), S.set(`${p}/okAt`, at), true);
+  // 📜 #38 ① 선생님 ✔ 인정 = 교사 폰이 그 자리에서 📜 1 (학생 폰이 그 화면에 없어도 · 문제당 한 번 · 차시 문제만 = 성채는 성채 보상 길)
+  if (done && ok) { const i = x.k.indexOf('_'), lid = x.k.slice(0, i), mid = x.k.slice(i + 1), num = Number(x.n); if (i > 0 && lessonKey(lid) && num) photoScroll(S, uidOf(String(x.c).replace(/_/g, '-'), num), lid, mid); }
+  return done;
+}
+/** 성채 팩 문항이 아님 (성채 사진 = 성채 보상 길 · 📜 는 Castle 이 줌) */
+const lessonKey = (lid: string) => !!lid && !castles.list.some((p) => p.id === lid);
+/** 📜 #38 ① 서술형 사진 통과 = 결과가 온 그 자리에서 📜 1 (화면을 닫거나 새로 고쳐도 · 문제당 한 번 · 차시 문제만) */
+export function passScroll(S: Store, cls: string, num: number, lid: string, mid: string): boolean {
+  if (!cls || !num || !lessonKey(lid)) return false;
+  return photoScroll(S, uidOf(cls, num), lid, mid);
 }
 /** 📷 확인할 것 (⏳ 확신 낮음 · 🙋 이의 신청 · 아직 ✔ ✖ 안 함) · cls · num 으로 좁히기 (📜 2026-11-15 머리 🔨 「사진 승인 = 소식 탭 📷」) */
 export const photoNeeds = (S: Store, cls = '', num = 0) => allRows(S).filter((x) => needs(x) && (!cls || x.c === ck(cls)) && (!num || Number(x.n) === num));
