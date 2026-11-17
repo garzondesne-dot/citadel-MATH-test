@@ -7,7 +7,7 @@ import MIS from './mis-codes.json';
 import LEGACY_OPENED from './legacy-opened.json';
 import RUBRICS from './rubrics.json';
 import { bossTag as misBossTag, classify as misClassify } from './mis';
-import { BY, segments } from './symtalk';
+import { BY, propOn, segments } from './symtalk';
 import { SYM_CARD, wishLeft } from './symcard';
 import { optOf, plain, richParts } from './venn';
 import { BOSS_GENS, CHAIN_GENS, GENS } from './gens';
@@ -27,7 +27,7 @@ const SUBJECT: Subject = {
   defaultLesson: DATA.defaultLesson,
   lessons,
   generators: { gens: GENS, chains: CHAIN_GENS, boss: BOSS_GENS },
-  symtalk: { BY, segments },
+  symtalk: { BY, segments, propOn },
   cards: { bySym: SYM_CARD, wishLeft },
   forge: { unit: UNIT, kit: CARD_KIT, perks: PERKS },
   misconceptions: MIS,

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { setSymLesson } from '../../school/symtap';
-  import { paperOn, pw } from '../submit.svelte';
+  import { setSymPack } from '../battle/symsheet.svelte';
+    import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
@@ -19,7 +19,7 @@
   //   틀린 문항만 숫자 바뀐 새 문제로 다시 · 맞힌 문항 = 초록으로 잠김 · ❤ 0 = 📖 해설 보기 · 💡 힌트 숨김 · 데미지 = 맞힌 문항마다 1
   //   다 끝내면 ⚡ 3 → 기술 💚 · ⛓ 두 장(🌟 흐림) → 형성평가 🔥 재도전 판(모든 문항 새 숫자 · 무료 · 데미지 0)
   const { S, L, R, code, uid, now, locked }: { S: Store; L: LessonPack; R: Room; code: string; uid: string; now: number; locked: boolean } = $props();
-  $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
+  $effect(() => setSymPack(L as { id: string; no?: number; kind?: string })); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const r = $derived(bossRecord(L, R, uid));
   const tries = $derived(bossTries(L, R, uid));
   let practice = $state(false), bonusMode = $state(false), toast = $state('');
