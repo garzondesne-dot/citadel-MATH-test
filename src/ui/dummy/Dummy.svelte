@@ -9,7 +9,9 @@
   import { memoryStore } from '../../store/device';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay, boardPack, stepDone } from '../../board/board';
-  import { chainPhotoFill, nextStep, openRoom, roomPath } from '../../raid/actions';
+  import { chainPhotoFill, nextStep, openRoom, photoScroll, roomPath, ultKey } from '../../raid/actions';
+  import { chainItems as chainOf } from '../../engine/lessons';
+  import RewriteSheet from '../q/RewriteSheet.svelte';
   import { answerOf, BOSS_ID, bossItem, bossState, bossTries, droppedFor, pickBoss, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
   import { TEST_ADDR } from '../../channel';
   import { bonusBase } from '../../school/castle';
@@ -25,7 +27,7 @@
   import PrepImg from '../q/PrepImg.svelte';
   import { busy } from '../busy.svelte';
   import { bump as usageBump } from '../../school/usage';
-  import { ready as phReady, rubricLesson } from '../../school/photo';
+  import { ready as phReady, rewriteVer, rubricLesson } from '../../school/photo';
 
   // 🎯 복습 허수아비 = 옛 정식 그대로 (📜 2026-11-15 선생님 「A」 · 머리 🔨 · 정식 js/raid/bonus.js renderTrain · fight · win · note.js)
   //   차시 카드마다: 「🎯 복습! n차시 · 제목」 + ❗ 남은 문제 n / ✔ 복습 완료 · 🏆 업적 도장 · 📚 개념 다시 보기 · ⚒ 이 차시 카드 · 📕 수업 · 형성평가 칩 줄
@@ -76,7 +78,22 @@
   /** 📷 #52 서술형 몬스터인데 아직 📜 를 안 받음 (기준표 켬 · 문제당 한 번 · 처치 뒤에도 사진만 내러 다시 들어갈 수 있게) */
   function phLeft(L: LessonPack, mid: string): boolean {
     void ver; if (!cls) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
-    return !RS.get(`gifts/${uid}/ult_${rl}_${mid}`.replace(/[.#$[\]]/g, '_'));
+    return !RS.get(ultKey(uid, rl, mid));
+  }
+  /** 📜 #57 학습지 숫자 📜 를 받은 소레이드 문항 = 「✍ 혼자 다시 쓰기 · 📜 +1」 (숫자 바꾼 판 · 문항당 한 번 더) */
+  function phV(L: LessonPack, mid: string): boolean {
+    void ver; if (!cls || !L.monsters?.[mid]?.chain) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
+    return !!RS.get(ultKey(uid, rl, mid)) && !RS.get(ultKey(uid, rl, mid, true));
+  }
+  let rw = $state<{ L: LessonPack; mid: string; rl: string; items: import('../../model/types').Question[]; title: string } | null>(null);
+  function rewrite(L: LessonPack, mid: string) {
+    const items = chainOf(L, mid, `${uid}|rw`, rewriteVer(uid, mid, 6)); if (!items.length) return; // 학생 · 문항마다 늘 같은 판 (불통과 = 같은 숫자로 다시)
+    rw = { L, mid, rl: rubricLesson(RS, L), items, title: (L.steps.find((s) => s.id === mid)?.title ?? mid) }; res = null;
+  }
+  function rwPass() {
+    const x = rw; rw = null; if (!x) return;
+    photoScroll(RS, uid, x.rl, x.mid, true); ver++; // 사진 창이 이미 줬으면 그대로 (한 번만)
+    res = { L: x.L, title: `${x.title} · ✍ 혼자 다시 쓰기`, clear: true, got: 0, xp: 0, why: ['📜 +1 서술 조각 (캠프에서 받아요)'], sealed: false };
   }
   function fight(L0: LessonPack, mid: string) {
     // 👑 #27 짝 몬스터를 복습으로 보내 수업에서 빠진 형성평가 문항 = 그 몬스터 다음에 이어서 (원래 번호 · 판 그대로)
@@ -152,7 +169,9 @@
   let shelfOn = $state('');
 </script>
 
-{#if run}
+{#if rw}
+  <RewriteSheet S={RS} {cls} {num} lesson={rw.rl} room={rw.mid} title={`${rw.L.no}차시 · ${rw.title}`} items={rw.items} trial={(RS as { kind?: string }).kind !== 'server'} onpass={rwPass} onclose={() => (rw = null)} />
+{:else if run}
   <div class="drun" data-dummy>
     <button type="button" class="quit" aria-label="그만하기" onclick={quit}>‹</button>
     <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me.nick} {cls} board photoS={S} />
@@ -166,7 +185,7 @@
       <ul class="got" data-k="dummy-got">{#if res.xp}<li class="xp">+{res.xp} EXP</li>{/if}{#each res.why as w (w)}<li>{w}</li>{/each}</ul>
       {#if !res.xp && !res.why.length}<p class="muted">이미 받은 보상이에요 · 💎 은 틀림 · 안 푼 문제를 해결하면 받아요</p>{/if}
     {:else}<p class="muted">벌은 없어요 · 다시 풀면 숫자가 바뀌어 나와요</p>{/if}
-    {#if res.go && phLeft(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-ph-go" onclick={() => fight(res!.go!.L, res!.go!.mid)}>✍ 서술형 📷 찍고 📜 받기<small>처치해도 사진은 언제든 · 문제당 📜 1</small></button>{/if}
+    {#if res.go && phLeft(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-ph-go" onclick={() => fight(res!.go!.L, res!.go!.mid)}>✍ 서술형 📷 찍고 📜 받기<small>처치해도 사진은 언제든 · 문제당 📜 1</small></button>{:else if res.go && phV(res.go.L, res.go.mid)}<button type="button" class="phgo" data-k="dummy-rw-go" onclick={() => rewrite(res!.go!.L, res!.go!.mid)}>✍ 혼자 다시 쓰기 · 📜 +1<small>숫자 바꾼 판 · 소레이드 없이 손글씨 → 📷</small></button>{/if}
   </Sheet>
 {:else if shelf}
   <Sheet onclose={() => (shelf = null)} tall mainText="허수아비로" onmain={() => (shelf = null)}>
@@ -199,8 +218,9 @@
               <li class:open={r.need} class:clear={!r.need && (r.clear || !!r.st)} class:boss={r.id === BOSS_ID} data-mid={r.id}>
                 {#if r.st}<i class="ni" class:blink={r.need} style={icon(r.st)} aria-hidden="true"></i>{:else}<span class="mi" aria-hidden="true">{r.id === BOSS_ID ? '👑' : r.clear ? '✔' : '🎯'}</span>{/if}
                 <span class="tx">{#if r.need}<b class="ex">❗</b> {/if}{r.title}{#if r.st}<small> · {WHY[r.st] ?? ''}</small>{/if}
-                  {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if phLeft(c.L, r.id)}<em class="tag ph" data-k="ph-left">📷 서술형 남음 · 📜 1</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
+                  {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if phLeft(c.L, r.id)}<em class="tag ph" data-k="ph-left">📷 서술형 남음 · 📜 1</em>{:else if phV(c.L, r.id)}<em class="tag ph" data-k="ph-v">✔ 서술형 · 다시 쓰기 가능</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
                 <button type="button" class="go" class:main={r.need || r.bossNeed} onclick={() => fight(c.L, r.id)}>{r.need || r.bossNeed ? '⚔ 풀기' : '다시'}</button>
+                {#if phV(c.L, r.id)}<button type="button" class="rwb" data-k="rw-go" onclick={() => rewrite(c.L, r.id)}>✍ 혼자 다시 쓰기 · 📜 +1</button>{/if}
               </li>
             {/each}
           </ul>
@@ -234,12 +254,13 @@
   .ni { display: inline-block; width: 28px; height: 28px; flex: none; image-rendering: pixelated; } .ni.chip { width: 22px; height: 22px; }
   .blink { animation: ntb 1.2s ease-in-out infinite alternate; } @keyframes ntb { to { opacity: 0.45; } }
   .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .rows li { display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 4px var(--s2); border-radius: 10px; background: var(--surface-2); }
+  .rows li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-height: 52px; padding: 4px var(--s2); border-radius: 10px; background: var(--surface-2); }
   .rows li.open { border: 1px solid color-mix(in srgb, var(--bad) 55%, transparent); }
   .rows li.clear .tx { color: var(--text-2); }
   .mi { width: 28px; text-align: center; font-size: 18px; flex: none; }
   .tx { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; } .tx small { color: var(--text-3); font-size: 12px; } .ex { color: var(--bad); }
   .phgo { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 56px; margin-top: 12px; border-radius: 12px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 16px var(--font); } .phgo small { font: 500 13px var(--font); color: var(--text-2); } .tag.ph { color: var(--scroll); border-color: var(--scroll); }
+  .rwb { flex: 1 0 100%; min-height: 44px; border-radius: 10px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 14px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); } .rwb:active { transform: translateY(2px); box-shadow: none; }
   .go { flex: none; min-height: 40px; min-width: 64px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line, #2f3440); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
   .go.main { background: var(--accent); color: var(--on-accent, #1d1406); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh, #9a6a10); }
   .rt { margin: 0; text-align: center; font: 700 16px var(--font); }

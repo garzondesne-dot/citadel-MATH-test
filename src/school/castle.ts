@@ -12,7 +12,7 @@ import { CLASSES, lastClass, lastTest } from './school';
 
 export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; /** 방 카드 글 (#53 · 예 「⚔ 소레이드 · 5단계 · 📷 서술형」) */ card?: string; vers: Question[][] }
 export interface CastlePack { kind: 'castle'; id: string; floor: number; title: string; unit: string; theme?: string; goal?: string; bossPct: number; rooms: CastleRoom[]; /** 👀 학생에게 숨김 */ hide?: boolean; /** 올린 때 */ at?: number; /** 올린 글 그대로 (⬇ 내려받기 · 다시 올리기) */ raw: Record<string, unknown> }
-export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ legacy?: boolean; ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number }
+export interface CastleRec { clear?: boolean; tries?: number; runs?: number; at?: number; /** 📷 답은 맞힘 · 사진 단계 (그 숫자 그대로) */ ans?: { items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[] }; /** 📷 통과한 결과 id */ legacy?: boolean; ph?: string; /** ⏳ 선생님 확인 기다리는 결과 id */ pend?: string; /** 📷 지난 최고 점수 (점수가 오르면 📜) */ phs?: number; /** 📜 #57 ✍ 혼자 다시 쓰기(숫자 바꾼 판) 통과 · 기다림 */ ph2?: string; pend2?: string }
 export interface CastleChecked { pack: CastlePack | null; issues: Issue[]; stats: { rooms: number; items: number; versions: number; rechecked: number; ask: number } }
 
 /** 저장 자리 (교사 쓰기 · 로그인한 사람 읽기 = 규칙 prep/$lesson 그대로 · 규칙 바꿀 일 없음) */

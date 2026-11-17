@@ -8,7 +8,9 @@
   import { nextStep, openRoom, roomPath } from '../../raid/actions';
   import { chainRecord, isChain, itemsFor, plainRecord } from '../../raid/raid';
   import PhotoSheet, { type PhotoOut } from '../q/PhotoSheet.svelte';
-  import { chainItems as phItems, type PhItem, codeRubrics, pendState, ready as phReady, rubric as phRubric } from '../../school/photo';
+  import { chainItems as phItems, type PhItem, codeRubrics, pendState, ready as phReady, rewriteCastle, rubric as phRubric } from '../../school/photo';
+  import RewriteSheet from '../q/RewriteSheet.svelte';
+  import type { Question } from '../../model/types';
   import { stepDone } from '../../board/board';
   import { meBound } from '../../store/meSync';
   import { withLegacy, CASTLE_GEM, CASTLE_PHOTO_GEM, CASTLE_XP, photoScrolls, manualOf, baseVer, bonusBase, castleReward, castleState, progressOf, roomPack, spanOf, type CastlePack, type CastleRec, type CastleRoom } from '../../school/castle';
@@ -55,7 +57,7 @@
     if (r.boss && !st.bossOpen) return r.no > upto && !preview ? `🔒 ${r.no}차시를 배우면 · 열린 방 ${st.need}개 처치` : `🔒 열린 방 ${st.cleared} / ${st.need} 처치하면 열려요`;
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     const rr = recs[r.id], ph = P ? phOn(P, r) : false;
-    const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : rr?.clear && !rr.ph ? '✔ 처치 · 📷 서술형 남음 · 📜 1' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
+    const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : rr?.clear && !rr.ph ? '✔ 처치 · 📷 서술형 남음 · 📜 1' : rr?.ph && !rr.ph2 && P && canRw(P, r) ? '✔ 서술형 · 다시 쓰기 가능' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
     return [r.card ? r.card.replace(/\s*·\s*📷 서술형\s*$/, '') : r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, r.photo && !photoHero ? '🎁 🧑‍🎓' : '', `${r.no}차시`].filter(Boolean).join(' · ');
   }
   // 📷 서술형 방 (정식 bonus.js · 📜 2026-11-15): 기준표를 켠 방만 · 답을 맞히면 그 숫자 그대로 사진 단계 · 통과 = 처치 (+ 💎 6 · 📜 · EXP 6)
@@ -102,6 +104,18 @@
     if (rr?.ans?.items?.length) { shot = { P: Px, r, items: rr.ans.items, chain: false }; return; }
     { const qs = Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []; shot = { P: Px, r, items: phItemsOf(qs as unknown as PhItem[]), chain: false }; } // 📜 #41 답 맞히기 전에도 = 성채 학습지 숫자(판 0)
   }
+  // 📜 #57 ✍ 혼자 다시 쓰기 · 📜 +1 = 학습지 숫자 📷 를 통과한 방만 · 숫자 바꾼 판(1~6 중 학생마다 하나 · 숫자 없는 증명 = 판 0) · 방마다 한 번 · 📜 1 만 (💎 · EXP · 수식 책사 = 첫 통과 그대로)
+  const canRw = (Px: CastlePack, r: CastleRoom) => !preview && !!r.photo && phOn(Px, r) && !!recs[r.id]?.ph && !recs[r.id]?.ph2 && !recs[r.id]?.pend2 && Px.id === P?.id;
+  let rw = $state<{ P: CastlePack; r: CastleRoom; items: Question[] } | null>(null);
+  function openRw(Px: CastlePack, r: CastleRoom) { const v = (Px.rooms.find((y) => y.id === r.id)?.vers ?? []) as unknown as Question[][]; const items = rewriteCastle(v, uid, r.id); if (!items.length) return; res = null; rw = { P: Px, r, items }; }
+  function rwWin(Px: CastlePack, r: CastleRoom, id: string): string[] {
+    const path = `${base}/${Px.id}/${r.id}`, old = RS.get<CastleRec>(path) || {}; if (old.ph2) return [];
+    const { pend2: _p, ...keep } = old; void _p;
+    RS.set(path, { ...keep, ph2: id || 'ok', at: S.now() }); ver++;
+    if (!me) return []; me.wallet.scroll += 1; persist(); return ['📜 +1 서술 조각 (✍ 혼자 다시 쓰기)'];
+  }
+  function rwPass(v: PhotoOut) { const x = rw; rw = null; if (!x) return; const got = rwWin(x.P, x.r, String(v.id || 'ok')); sfx('game-ok', 0.8); res = { clear: true, r: x.r, first: false, bossNew: false, got, photo: 'pass' }; }
+  function rwPend(v: PhotoOut) { const x = rw; if (!x || !v.id) return; const path = `${base}/${x.P.id}/${x.r.id}`; RS.set(path, { ...(RS.get<CastleRec>(path) || {}), pend2: String(v.id) }); ver++; }
   /** 📜 #41 전투 화면 「✍ 서술형 · 📷」 = 수업과 같게 (앞 단계 다 풀기 전에도 · 통과 = 처치) */
   const canShot = (Px: CastlePack, r: CastleRoom) => !!r.photo && phOn(Px, r) && !recs[r.id]?.ph && !recs[r.id]?.pend;
   function shotNow() { const x = run; if (!x || !canShot(x.P, x.r)) return; if (drive) clearInterval(drive); drive = null; run = null; openShot(x.P, x.r); }
@@ -109,7 +123,9 @@
   $effect(() => {
     if (preview || phTrial || !cls) return; void ver;
     untrack(() => { for (const f of floors) for (const r of f.rooms.filter((y) => y.photo)) {
-      const rr = recsOf(f)[r.id]; if (!rr?.pend) continue;
+      const rr = recsOf(f)[r.id];
+      if (rr?.pend2) { const s2 = pendState(RS, cls, num, f.id, r.id, rr.pend2); if (s2 === 'ok') { const got = rwWin(f, r, rr.pend2); if (got.length) { toast = `✔ 선생님이 「${r.title}」 다시 쓰기를 인정했어요 — ${got.join(' · ')}`; setTimeout(() => (toast = ''), 4000); } } else if (s2 === 'no') { const { pend2: _q, ...k2 } = rr; void _q; RS.set(`${base}/${f.id}/${r.id}`, k2); ver++; } }
+      if (!rr?.pend) continue;
       const s = pendState(RS, cls, num, f.id, r.id, rr.pend); if (s === 'wait') continue;
       const path = `${base}/${f.id}/${r.id}`;
       if (s === 'no') { const { pend: _p, ...keep } = rr; void _p; RS.set(path, keep); ver++; toast = `✏ ${r.title} — 선생님이 풀이를 다시 보고 싶대요. 고쳐서 다시 찍어요!`; setTimeout(() => (toast = ''), 3600); continue; }
@@ -120,10 +136,11 @@
 
   // ── 방 하나 = 메모리 방 하나 (허수아비 · 게시판과 같은 길) ──
   let run = $state<{ L: ReturnType<typeof roomPack>; S: Store; code: string; r: CastleRoom; P: CastlePack } | null>(null);
-  let res = $state<{ clear: boolean; r: CastleRoom; first: boolean; bossNew: boolean; firstCastle?: boolean; got?: string[]; /** 📷 사진 단계: ask = 답 맞힘 → 사진 올리기 · bonus = 소레이드 처치 뒤 보너스 · pend = 선생님 확인 · pass = 통과 */ photo?: 'ask' | 'bonus' | 'pend' | 'pass' } | null>(null);
+  let res = $state<{ clear: boolean; r: CastleRoom; first: boolean; bossNew: boolean; firstCastle?: boolean; got?: string[]; /** 📷 사진 단계: ask = 답 맞힘 → 사진 올리기 · bonus = 소레이드 처치 뒤 보너스 · pend = 선생님 확인 · pass = 통과 · rw = 📜 #57 다시 쓰기 고르기 */ photo?: 'ask' | 'bonus' | 'pend' | 'pass' | 'rw' } | null>(null);
   let toast = $state('');
-  function start() {
+  function start(fight = false) {
     const p = P, r = room; if (!p || !r || !st?.isOpen(r)) return;
+    if (!fight && canRw(p, r)) { res = { clear: true, r, first: false, bossNew: false, got: [], photo: 'rw' }; return; } // 📜 #57 서술형까지 통과한 방 = 「✍ 혼자 다시 쓰기」 먼저 (⚔ 다시 싸우기도 됨)
     if (r.photo && !r.chain && phOn(p, r) && recs[r.id]?.ans && !recs[r.id]?.clear && !recs[r.id]?.pend) { openShot(p, r); return; } // 📷 답은 이미 맞힘 → 같은 숫자로 사진 단계
     if (r.photo && phOn(p, r) && recs[r.id]?.clear && !recs[r.id]?.ph && !recs[r.id]?.pend) { openShot(p, r); return; } // 처치 뒤 = 📷 서술형만 (⚔ 소레이드 방 · 🐞 #52 답으로 처치된 방도 · 문제당 📜 1)
     const L = roomPack(p, r, safe(r.sprite)), S2: Store = { ...memoryStore(), kind: 'memory' as const }, code = `C${Date.now() % 1e6}`;
@@ -213,9 +230,9 @@
       <div class="card res" data-k="castle-res" data-clear={res.clear ? '1' : '0'}>
         <span class="big" aria-hidden="true">{res.clear ? '⚔' : '💧'}</span>
         <b>{res.r.title}</b>
-        <p>{res.photo === 'ask' ? '✔ 답을 맞혔어요! 이제 풀이를 손으로 써서 📷 찍으면 처치돼요' : res.photo === 'pend' ? '⏳ 선생님이 풀이를 확인하면 처치로 바뀌어요' : res.clear ? (preview ? '미리 보기 · 기록하지 않았어요' : res.photo === 'pass' ? '📷 서술형 통과!' : res.first ? '처음 처치했어요!' : '다시 처치했어요') : '벌은 없어요 · 다음엔 새 숫자로 다시 도전해요'}</p>
+        <p>{res.photo === 'rw' ? '✔ 처치 · 📷 서술형 통과 — 숫자 바꾼 판으로 혼자 한 번 더 쓰면 📜 +1' : res.photo === 'ask' ? '✔ 답을 맞혔어요! 이제 풀이를 손으로 써서 📷 찍으면 처치돼요' : res.photo === 'pend' ? '⏳ 선생님이 풀이를 확인하면 처치로 바뀌어요' : res.clear ? (preview ? '미리 보기 · 기록하지 않았어요' : res.photo === 'pass' ? '📷 서술형 통과!' : res.first ? '처음 처치했어요!' : '다시 처치했어요') : '벌은 없어요 · 다음엔 새 숫자로 다시 도전해요'}</p>
         {#if res.photo === 'bonus'}<p class="sub">✍ 서술형도 📷 찍으면 보너스 (💎 · 📜 · EXP)</p>{/if}
-        {#if res.got?.length}<ul class="got" data-k="castle-got">{#each res.got as g (g)}<li>{g}</li>{/each}</ul>{:else if res.clear && !preview && !res.first}<p class="sub">다시 처치 · 보상은 처음 처치 때만</p>{/if}
+        {#if res.got?.length}<ul class="got" data-k="castle-got">{#each res.got as g (g)}<li>{g}</li>{/each}</ul>{:else if res.clear && !preview && !res.first && res.photo !== 'rw'}<p class="sub">다시 처치 · 보상은 처음 처치 때만</p>{/if}
         {#if P && st && !preview}<p class="sub">처치 {st.cleared} / 열린 방 {st.plain.length}{st.boss ? ` · 👑 ${st.bossOpen ? '보스 방 열림' : `${st.need}방 처치하면 보스`}` : ''}</p>{/if}
       </div>
     {:else}
@@ -242,7 +259,7 @@
                   {#if badge(r) === 'NEW'}<span class="rnew">NEW</span>{/if}
                   <span class="rno">{r.boss ? '👑' : nn(r)}</span>
                   <span class="mon">{#if on}<Sprite ref={safe(r.sprite)} pose={rr?.clear ? 'down' : 'idle'} size={64} />{:else}<i class="lk" aria-hidden="true">🔒</i>{/if}</span>
-                  <b class="rt">{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small class="rs">{rr?.clear ? (r.photo && phOn(P, r) && !rr.ph && !rr.pend ? '✔ 처치 · 📷 서술형 남음' : '✔ 처치') : lineOf(r)}</small>
+                  <b class="rt">{r.title.replace(/^👑\s*/, '').replace(/^\d+\s+/, '')}</b><small class="rs">{rr?.clear ? (r.photo && phOn(P, r) && !rr.ph && !rr.pend ? '✔ 처치 · 📷 서술형 남음' : canRw(P, r) ? '✔ 서술형 · 다시 쓰기 가능' : '✔ 처치') : lineOf(r)}</small>
                   {#if on && !rr?.clear && !preview}<span class="gm">💎+{r.boss ? CASTLE_GEM.roomBoss + (sealedOf(P) ? 0 : CASTLE_GEM.seal) : CASTLE_GEM.room}</span>{/if}
                 </button>
               {/each}
@@ -258,11 +275,18 @@
       <BottomAction dock={false} text={res.photo === 'ask' ? '📷 풀이 사진 올리기' : '✍ 서술형 📷 찍고 📜 받기'} mainLabel="풀이 사진 올리기" onmain={() => { const r = res!.r; if (res!.photo === 'ask' && !recs[r.id]?.ans && !preview) return; openShot(P!, r); }}>
         {#snippet aux()}<button type="button" class="later" onclick={() => (res = null)}>나중에</button>{/snippet}
       </BottomAction>
+    {:else if res.clear && P && canRw(P, res.r)}
+      <BottomAction dock={false} text="✍ 혼자 다시 쓰기 · 📜 +1" mainLabel="혼자 다시 쓰기" onmain={() => openRw(P!, res!.r)}>
+        {#snippet aux()}{#if res?.photo === 'rw'}<button type="button" class="later" data-k="castle-refight" onclick={() => { res = null; start(true); }}>⚔ 다시 싸우기</button>{:else}<button type="button" class="later" onclick={() => (res = null)}>나중에</button>{/if}{/snippet}
+      </BottomAction>
     {:else}
       <BottomAction dock={false} text="🏰 방 목록으로" mainLabel="방 목록으로" onmain={() => (res = null)} />
     {/if}
   {:else}
-    <BottomAction dock={false} disabled={!room} why={room ? (room.photo && P && !phOn(P, room) ? '📷 사진 채점은 아직 · 답만 확인해요' : room.photo && recs[room.id]?.pend ? '⏳ 선생님이 풀이를 확인하고 있어요' : '') : '열린 방이 없어요'} text={room ? (room.photo && !room.chain && P && phOn(P, room) && recs[room.id]?.ans && !recs[room.id]?.clear && !recs[room.id]?.pend ? '📷 풀이 사진 올리기' : room.photo && P && phOn(P, room) && recs[room.id]?.clear && !recs[room.id]?.ph && !recs[room.id]?.pend ? '✍ 서술형 📷 찍고 📜 받기' : `⚔ ${room.boss ? '👑 보스 방' : `${nn(room)}번 방`} 도전`) : '방을 골라요'} mainLabel="방 도전" onmain={start} />
+    <BottomAction dock={false} disabled={!room} why={room ? (room.photo && P && !phOn(P, room) ? '📷 사진 채점은 아직 · 답만 확인해요' : room.photo && recs[room.id]?.pend ? '⏳ 선생님이 풀이를 확인하고 있어요' : '') : '열린 방이 없어요'} text={room ? (room.photo && !room.chain && P && phOn(P, room) && recs[room.id]?.ans && !recs[room.id]?.clear && !recs[room.id]?.pend ? '📷 풀이 사진 올리기' : room.photo && P && phOn(P, room) && recs[room.id]?.clear && !recs[room.id]?.ph && !recs[room.id]?.pend ? '✍ 서술형 📷 찍고 📜 받기' : `⚔ ${room.boss ? '👑 보스 방' : `${nn(room)}번 방`} 도전`) : '방을 골라요'} mainLabel="방 도전" onmain={() => start()} />
+{/if}
+{#if rw}
+  <RewriteSheet S={RS} {cls} {num} lesson={rw.P.id} room={rw.r.id} title={rw.r.title} items={rw.items} trial={phTrial} onpass={rwPass} onpend={rwPend} onclose={() => (rw = null)} />
 {/if}
 {#if shot}
   <PhotoSheet S={RS} {cls} {num} lesson={shot.P.id} room={shot.r.id} title={shot.r.title} items={shot.items} trial={phTrial} onclose={photoDone} />
