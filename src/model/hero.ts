@@ -23,7 +23,7 @@ export const blondChecks = (p: LookIn) => [
 export const isBlond = (p: LookIn) => blondChecks(p).every((c) => c.ok);
 /** 보이는 모습 id (조건이 맞으면 16 · 아니면 고른 용사) */
 export const lookId = (p: LookIn) => (isBlond(p) ? BLOND.to : Number(p.hero) || 0);
-const BLOND_INFO = (() => { const r = DATA.heroes.find((h) => h.id === 0) as HeroInfo; return { ...r, id: 16, name: '각성한 로안', nick: '만 번을 넘은 검', sprite: 'hero-blond-v1.webp', price: null } as unknown as HeroInfo; })();
+const BLOND_INFO = (() => { const r = DATA.heroes.find((h) => h.id === 0) as HeroInfo; return { ...r, id: 16, name: '각성한 로안', nick: '만 번을 넘은 검', sprite: 'hero-blond-v5.webp', price: null } as unknown as HeroInfo; })();
 export const heroOf = (id: number): HeroInfo => (id === BLOND.to ? BLOND_INFO : DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo));
 export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설'];
 export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];

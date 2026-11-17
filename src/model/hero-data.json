@@ -33,7 +33,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-sword-v3c.webp"
+   "sprite": "hero-sword-v5.webp"
   },
   {
    "id": 1,
@@ -541,7 +541,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-valkyrie-v2c.webp"
+   "sprite": "hero-valkyrie-v5.webp"
   },
   {
    "id": 32,

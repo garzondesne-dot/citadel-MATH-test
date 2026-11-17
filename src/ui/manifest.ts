@@ -69,7 +69,10 @@ type Box = [number, number, number, number];
 export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: number }> = {
   'hero-sword-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
   'hero-priest-v4a.webp': { cw: 192, ch: 144, k: 2, base: 8 },
-  // 🧙 #50 용사 세밀화 v4 시트 31명 (tools/hero-hd/cut_v4.py · 칸 256 × 144 · 서 있기 키 118 · 발 = 아래 8) · 로안 · 에이라는 옛 그림
+  // 🧙 #50 용사 세밀화 v4 시트 31명 (tools/hero-hd/cut_v4.py · 칸 256 × 144 · 서 있기 키 118 · 발 = 아래 8) · 11/17 덧: 로안 · 에이라 · 🌟 각성한 로안(unmix = 흰 빛 고리 되돌림) → 33명 + 각성 모두 새 시트
+  'hero-sword-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-valkyrie-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-blond-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-witch-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-elf-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-ninja-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
