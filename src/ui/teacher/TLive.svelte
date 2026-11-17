@@ -217,7 +217,9 @@
   const pickN = $derived(Object.values(picked).filter(Boolean).length);
   const perfectIds = $derived(R && mid ? ids.filter((u) => (chain ? chainRecord(L, R, mid, u).perfect : plainRecord(L, R, mid, u).perfect)) : []);
   const quick = (xs: string[]) => { picked = Object.fromEntries(xs.map((u) => [u, true])); };
-  function sendGift() { const us = Object.keys(picked).filter((u) => picked[u]); const all = ids.length > 0 && ids.every((u) => picked[u]); const n = giveGift(S, code, us, amt, all); sheet = ''; picked = {}; say(`🎁 ${n}명에게 💎 ${amt} 보냈어요`); }
+  // 💎 선물 대상 = 그 반 명단 전원 − 결석 표시 (📜 2026-11-17 선생님 「접속 잠깐 끊긴 학생에게 안 가는 부분 · 결석이라고 표기한 학생 빼고는 전부」 #31) — 예전 = 지금 접속한 학생(activeIds)만이라 끊긴 · 대기실 학생이 빠졌음
+  const giftIds = $derived(expected.map((p) => p.uid)), giftAbs = $derived(pupils.length - expected.length);
+  function sendGift() { const us = Object.keys(picked).filter((u) => picked[u]); const all = giftIds.length > 0 && giftIds.every((u) => picked[u]); const n = giveGift(S, code, us, amt, all); sheet = ''; picked = {}; say(`🎁 ${n}명에게 💎 ${amt} 보냈어요`); }
 
   function main() {
     if (!R) return;
@@ -408,11 +410,12 @@
   {:else if sheet === 'gift'}
     <Sheet onclose={() => (sheet = '')}>
       {#snippet title()}💎 마정석 선물{/snippet}
-      {#snippet act()}<button type="button" class="btn big" disabled={!pickN} onclick={sendGift}>{pickN ? `고른 ${pickN}명에게 💎 ${amt} 보내기` : '받을 학생을 골라요'}</button>{/snippet}
+      {#snippet act()}<button type="button" class="btn big" disabled={!pickN} onclick={sendGift}>{pickN ? `${pickN === giftIds.length ? '전체 ' : '고른 '}${pickN}명에게 💎 ${amt} 보내기` : '받을 학생을 골라요'}</button>{/snippet}
       <div class="gamt">{#each [5, 10, 20, 50] as a (a)}<button type="button" class:on={amt === a} onclick={() => (amt = a)}>{a}</button>{/each}<span class="gpm"><button type="button" aria-label="5 줄이기" onclick={() => (amt = Math.max(5, amt - 5))}>−5</button><b>💎 {amt}</b><button type="button" aria-label="5 늘리기" onclick={() => (amt = Math.min(100, amt + 5))}>+5</button></span></div>
-      <div class="gquick"><button type="button" onclick={() => quick(ids)}>모두 {ids.length}</button><button type="button" disabled={!stuck.length} onclick={() => quick(stuck.map((x) => x.u))}>🔒 막힌 학생 {stuck.length}</button><button type="button" disabled={!perfectIds.length} onclick={() => quick(perfectIds)}>✨ 퍼펙트 {perfectIds.length}</button><button type="button" onclick={() => quick(subd.length ? subd : ids)}>미제출 빼고</button></div>
-      <div class="ggrid">{#each ids as u (u)}<button type="button" class="gn" class:on={!!picked[u]} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
-      <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === ids.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
+      <div class="gquick"><button type="button" data-k="gift-all" onclick={() => quick(giftIds)}>모두 {giftIds.length}</button><button type="button" disabled={!stuck.length} onclick={() => quick(stuck.map((x) => x.u))}>🔒 막힌 학생 {stuck.length}</button><button type="button" disabled={!perfectIds.length} onclick={() => quick(perfectIds)}>✨ 퍼펙트 {perfectIds.length}</button><button type="button" onclick={() => quick(subd.length ? subd : ids)}>미제출 빼고</button></div>
+      <div class="ggrid" data-k="gift-grid">{#each giftIds as u (u)}<button type="button" class="gn" class:on={!!picked[u]} class:off={!ids.includes(u)} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
+      <p class="gnote" data-k="gift-who">명단 {giftIds.length}명에게 (결석 {giftAbs}명 빼고) · 접속이 끊긴 학생도 받아요 · 흐린 칸 = 지금 접속 안 함 → 다음 접속 때 「💎 선물」 알림</p>
+      <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === giftIds.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
     </Sheet>
   {:else if sheet === 'send'}
     <Sheet onclose={() => (sheet = '')}>
@@ -684,6 +687,7 @@
   .ggrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; max-height: 172px; overflow: auto; }
   .gn { height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); }
   .gn.on { background: var(--gem); color: #05121f; border-color: var(--gem); }
+  .gn.off:not(.on) { opacity: 0.55; border-style: dashed; } /* 💎 #31 지금 접속 안 한 학생 = 흐림 (그래도 받음) */
   .gn b { font-size: 13px; opacity: 0.7; }
   .gnote { margin: 0; font-size: 12px; color: var(--text-3); }
   :global(.sheet .act .btn.big) { min-height: 68px; font-size: 19px; }
