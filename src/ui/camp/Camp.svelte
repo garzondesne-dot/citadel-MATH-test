@@ -433,7 +433,7 @@
   </section>
   {/if}
   <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
-    {#snippet aux()}{#if !open}<button type="button" class="codebtn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}
+    {#snippet right()}{#if !open}<button type="button" class="side codebtn" data-k="code-btn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}<!-- 📜 #62 코드 = 입장 단추 옆 같은 줄(입장 넓게 · 코드 좁게 오른쪽 · 높이 같게) -->
     {#snippet main()}<span>{trial ? '⚔ 다른 차시로' : open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
   </BottomAction>
 </div>
@@ -557,7 +557,7 @@
   .build { margin: var(--s2) 0 0; text-align: center; font-size: 13px; color: var(--text-3); }
   .out { margin-top: var(--s3); min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); display: flex; align-items: center; justify-content: center; gap: var(--s2); }
   .out small { color: var(--text-3); font-weight: 500; }
-  .codebtn { flex: 1; min-height: var(--btn-h); padding: 0 var(--s3); border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .codebtn { width: 96px; padding: 0 var(--s2); font-size: 15px !important; flex-direction: row !important; gap: 4px !important; background: var(--surface) !important; }
   .cg { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text-2); } .cg b { color: var(--text); }
   .cin { width: 100%; box-sizing: border-box; height: 56px; border-radius: var(--r); border: 2px solid var(--line); background: var(--bg); color: var(--text); font: 700 26px var(--font); letter-spacing: 6px; text-align: center; }
   .cin:focus { border-color: var(--accent); outline: none; }
@@ -569,6 +569,8 @@
   .camp:not(.paper) { background: var(--bg); }
   @media (max-width: 699px), (orientation: landscape) and (max-width: 899px) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); } .camp:not(.paper) .stagebox { min-height: calc(min(100vw, 330px) / var(--ar)); } /* 330 = 위 막대(‹ · 제목 · 💎 📜 · ⚙)가 다 들어가는 폭 */ }
   .stagebox { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
+  /* 📜 #62 (2026-11-18 선생님 캡처): 장면 좌우 끝 = 아래 카드 줄과 같은 선(양옆 16) · 비율 · 물건 자리 그대로 · 모자라는 높이는 캠프 세로 스크롤 (가로 PC = 장면 | 카드 두 칸이라 그대로) */
+  @media not ((min-width: 900px) and (orientation: landscape)) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; } .camp:not(.paper) .stagebox { flex: none; min-height: 0; container-type: inline-size; padding: 0 var(--s4); } .camp:not(.paper) .stage { width: 100%; } .camp:not(.paper) > :global(.act) { margin-top: auto; } }
   .camp > :global(.act) { flex: none; }
   .info { flex: none; }
   .stage { position: relative; width: min(100cqw, 100cqh * var(--ar)); flex: none; background-size: 100% 100%; overflow: hidden; }
