@@ -4,7 +4,7 @@
   import { keepScroll } from './keepScroll';
   import { gaugeView } from './battle/gauge';
   import BossForm from './q/BossForm.svelte';
-  import { V4 } from '../raid/raid';
+  import { V4, isDummy } from '../raid/raid';
   import { noteHelp } from '../school/help';
   import { feat } from '../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
@@ -61,7 +61,7 @@
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
-  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false, mates, mateFeed }: { S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean; /** 👥 게시판 팀 동료 · 동료 공격 사건 (📜 2026-11-14 · 없으면 수업 화면 그대로) */ mates?: Mate[]; mateFeed?: MateHit[] } = $props();
+  const { S, L, code, uid, num, nick: nick0 = '', cls = '', board = false, cardOnly = false, mates, mateFeed, photoS = null }: { /** 📷 🎯 허수아비 사진 = 서버 저장소 (#40) */ photoS?: Store | null; S: Store; L: LessonPack; code: string; uid: string; num: number; nick?: string; cls?: string; /** 📋 게시판 던전(#143) = 수업 기록(records)을 쓰지 않음 */ board?: boolean; /** 🎮 종합실 시연 (📜 2026-11-14 「전투 장면은 없애도 될 것 같아」) = 문제 카드부터 아래만 · 장면 띠 · 용사 · 몬스터 · 체력 · 💎 · 개념 · 게임/제출 스위치 없음 */ cardOnly?: boolean; /** 👥 게시판 팀 동료 · 동료 공격 사건 (📜 2026-11-14 · 없으면 수업 화면 그대로) */ mates?: Mate[]; mateFeed?: MateHit[] } = $props();
   const unwake = holdWake(); onDestroy(unwake); // 📱 수업 화면 = 화면 꺼짐 방지 (정식 WAKE_SCREENS screen-student) · 안내 띠 = 학생 앱 입구(App) 한 곳
   const nick = untrack(() => nick0 || `학생 ${String(num).padStart(2, '0')}`);
   // 🔄 들어온 판 (옛 판 확인 · 시험은 ?ver= 로 옛 판 흉내) · 선생님이 「새로 고침」을 보내면 다시 불러옴
@@ -322,7 +322,7 @@
         {#if step.kind === 'boss'}
           {#if V4(R)}<BossForm {S} {L} {R} {code} {uid} now={gnow} {locked} />{:else}<BossCard {S} {L} {R} {code} {uid} now={gnow} {locked} />{/if}
         {:else if mid && chain}
-          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} {cls} {num} demo={cardOnly} photo={!board} onhint={cptId && !cardOnly ? () => { cpt = true; noteHelp(S, code, uid, mid, 'c', 1); } : undefined} />
+          <ChainView {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} {cls} {num} demo={cardOnly} photo={!board || isDummy(R)} {photoS} onhint={cptId && !cardOnly ? () => { cpt = true; noteHelp(S, code, uid, mid, 'c', 1); } : undefined} />
         {:else if mid}
           <MonsterForm {S} {L} {R} {code} {mid} {uid} now={gnow} {locked} title={step.title} onhint={cptId && !cardOnly ? () => { cpt = true; noteHelp(S, code, uid, mid, 'c', 1); } : undefined} />
         {/if}

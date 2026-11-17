@@ -32,7 +32,7 @@
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
   //   ✍ 서술형 📸 (정식 #50 · 📜 2026-11-15): 언제나(시작 전 · 졸개 도중 · 대장 뒤 · 한 판 더 중) · 학습지 숫자 그대로 · 통과 = 🌟 진필살기 + 📜 1 + 남은 단계 처치
-  const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true }: { S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
+  const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true, photoS = null }: { /** 📷 사진 · 📜 · 기준표 = 이 저장소 (🎯 허수아비 = 이 탭 방이라 서버 저장소를 따로 · #40) */ photoS?: Store | null; S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
   $effect(() => setSymLesson(L.id)); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const rec = $derived(chainRecord(L, R, mid, uid));
   // 💡 친구에게 힌트 주기 (📜 2026-11-17 #23 · 옛 정식 #26 · #52 ②): 근거 줄을 맞힌 학생만 · 줄마다 한 번 · EXP +1 · TV 첫 1명 말풍선 · 풀고 있는 친구 = 「💡 친구 힌트 n개」
@@ -95,22 +95,25 @@
   const dummy = $derived(isDummy(R));
   const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
   // ── ✍ 서술형 📸 ──
-  const rl = $derived(rubricLesson(S, L));
-  const srv = untrack(() => (S as { kind?: string }).kind === 'server');
+  const PS = untrack(() => photoS ?? S); // 📷 사진 저장소 (#40)
+  const rl = $derived(rubricLesson(PS, L));
+  const srv = untrack(() => (PS as { kind?: string }).kind === 'server');
   const trialPh = $derived(demo || !srv); // 서버 없는 이 기기 체험 · 시연 = 사진 안 받음
-  const canPhoto = $derived(!photo || (!cls && !demo && srv) ? false /* 🎯 허수아비 · 📋 게시판 · 🏰 성채 전투 = 사진 없음 */ : trialPh ? !!(phRubric(S, rl, mid) ?? codeRubrics()[rl]?.[mid]) : phReady(S, rl, mid));
+  const canPhoto = $derived(!photo || (!cls && !demo && srv) ? false /* 🎯 허수아비 · 📋 게시판 · 🏰 성채 전투 = 사진 없음 */ : trialPh ? !!(phRubric(PS, rl, mid) ?? codeRubrics()[rl]?.[mid]) : phReady(S, rl, mid));
   const myP = $derived((R.players?.[uid] || {}) as { ph?: Record<string, number>; wr?: Record<string, string>; pp?: Record<string, string | number> });
   const phN = $derived(Number(myP.ph?.[mid]) || 0), wrOk = $derived(myP.wr?.[mid]), phMax = $derived(raidMax(cfgOf(S)));
   const pendId = $derived(myP.pp?.[mid]);
-  const pendPh = $derived(!!pendId && wrOk !== 'ok' && cls ? pendState(S, cls, num, rl, mid, String(pendId)) : null);
+  // 📷 사진 문제 숫자 = 늘 학습지 숫자 (🎯 허수아비 = 바뀐 숫자 판이라 fresh 를 뺀 판으로 · 📜 11/13 「서술형은 늘 학습지 숫자」 · #40)
+  const phRec = $derived(isDummy(R) && R.meta.fresh?.[mid] ? chainRecord(L, { ...R, meta: { ...R.meta, fresh: {} } } as Room, mid, uid) : rec);
+  const pendPh = $derived(!!pendId && wrOk !== 'ok' && cls ? pendState(PS, cls, num, rl, mid, String(pendId)) : null);
   let wm = $state<{ peek: boolean } | null>(null), shot = $state(false), peekAsk = $state(false);
-  $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(S, uid, rl, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
+  $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(PS, uid, rl, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
   function snapOpen() { if (!wm || phN >= phMax) return; if (!trialPh) snapStart(S, code, uid, mid); sfx('block', 0.5); shot = true; }
   function snapDone(res: PhotoOut | null) {
     shot = false; const peek = !!wm?.peek;
     if (trialPh && demo) { if (res?.status === 'pass') { wm = null; toast = '🌟 서술형 통과! (시연 · 데미지 · 기록 없음)'; } return; }
     const out = snapEnd(S, L, code, uid, mid, res, peek);
-    if (!peek && out) photoScroll(S, uid, rl, mid);
+    if (!peek && out) photoScroll(PS, uid, rl, mid);
     const missOf = (r: PhotoOut | null) => Object.values(r?.steps || {}).map((x, i) => (x && !x.earned ? (i === rec.n - 1 ? '👑' : '①②③④⑤⑥'[i]) : null)).filter(Boolean);
     if (res?.status === 'pass') {
       const nFill = !peek && !rec.done ? chainPhotoFill(S, L, code, uid, mid) : 0;
@@ -132,7 +135,7 @@
 {#if wm}
   <div class="bcard wr-card" data-k="write-mode">
     <span class="lab acc">✍ {title} · {wm.peek ? '✍ 연습 쓰기 (진필살기 없음)' : '게임 풀이를 보지 말고 처음부터 · 학습지 숫자 그대로'}</span>
-    <PrepImg {S} {L} id={mid} alt="학습지 문제"><p class="wq">{phRubric(S, rl, mid)?.ask || title}</p></PrepImg>
+    <PrepImg {S} {L} id={mid} alt="학습지 문제"><p class="wq">{phRubric(PS, rl, mid)?.ask || title}</p></PrepImg>
     {#if wm.peek}<div class="story"><b>📜 나의 풀이</b><ol>{#each rec.says as t2, k (k)}<li>{t2}</li>{/each}</ol></div>{/if}
     {#if pendPh === 'wait'}<p class="muted">⏳ 서술형 사진은 <b>선생님이 직접 확인</b>하고 있어요 (AI 가 확신하지 못함) · 더 또렷하게 다시 찍어도 돼요</p>{/if}
     <p class="hand">✍ 학습지 서술형 칸에 <b>직접 손으로 쓴 풀이</b>만 찍어요 · 화면 · 인쇄 글은 통과 안 돼요</p>
@@ -203,7 +206,7 @@
   </Sheet>
 {/if}
 {#if shot && wm}
-  <PhotoSheet {S} {cls} {num} lesson={rl} room={mid} {title} items={phItems(phRubric(S, rl, mid), title, rec.items, rec.says)} trial={trialPh} onclose={snapDone} />
+  <PhotoSheet S={PS} {cls} {num} lesson={rl} room={mid} {title} items={phItems(phRubric(PS, rl, mid), title, phRec.items, phRec.says)} trial={trialPh} onclose={snapDone} />
 {/if}
 
 {#if helpOpen && helpNow}<HelpSheet {S} {code} {uid} {mid} i={stage} help={helpNow} hand={handUp} start={helpStart} onclose={() => { helpOpen = false; helpStart = 1; }} />{/if}

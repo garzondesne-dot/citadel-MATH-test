@@ -149,7 +149,7 @@
 {#if run}
   <div class="drun" data-dummy>
     <button type="button" class="quit" aria-label="그만하기" onclick={quit}>‹</button>
-    <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me.nick} {cls} board />
+    <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me.nick} {cls} board photoS={S} />
   </div>
 {:else if res}
   <Sheet onclose={() => (res = null)} mainText="🎯 허수아비로" onmain={() => (res = null)}>
