@@ -55,7 +55,7 @@
     if (r.boss && !st.bossOpen) return r.no > upto && !preview ? `🔒 ${r.no}차시를 배우면 · 열린 방 ${st.need}개 처치` : `🔒 열린 방 ${st.cleared} / ${st.need} 처치하면 열려요`;
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     const rr = recs[r.id], ph = P ? phOn(P, r) : false;
-    const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : r.chain && rr?.clear && !rr.ph ? '✔ 처치 · 📷 보너스' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
+    const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : rr?.clear && !rr.ph ? '✔ 처치 · 📷 서술형 남음 · 📜 1' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
     return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, r.photo && !photoHero ? '🎁 🧑‍🎓' : '', `${r.no}차시`].filter(Boolean).join(' · ');
   }
   // 📷 서술형 방 (정식 bonus.js · 📜 2026-11-15): 기준표를 켠 방만 · 답을 맞히면 그 숫자 그대로 사진 단계 · 통과 = 처치 (+ 💎 6 · 📜 · EXP 6)
@@ -125,7 +125,7 @@
   function start() {
     const p = P, r = room; if (!p || !r || !st?.isOpen(r)) return;
     if (r.photo && !r.chain && phOn(p, r) && recs[r.id]?.ans && !recs[r.id]?.clear && !recs[r.id]?.pend) { openShot(p, r); return; } // 📷 답은 이미 맞힘 → 같은 숫자로 사진 단계
-    if (r.photo && r.chain && phOn(p, r) && recs[r.id]?.clear && !recs[r.id]?.ph && !recs[r.id]?.pend) { openShot(p, r); return; } // ⚔ 소레이드 방 처치 뒤 = 📷 보너스
+    if (r.photo && phOn(p, r) && recs[r.id]?.clear && !recs[r.id]?.ph && !recs[r.id]?.pend) { openShot(p, r); return; } // 처치 뒤 = 📷 서술형만 (⚔ 소레이드 방 · 🐞 #52 답으로 처치된 방도 · 문제당 📜 1)
     const L = roomPack(p, r, safe(r.sprite)), S2: Store = { ...memoryStore(), kind: 'memory' as const }, code = `C${Date.now() % 1e6}`;
     openRoom(S2, L, code, PROFILES.board);
     const M = `${roomPath(code)}/meta`;
@@ -176,7 +176,7 @@
       if (rw.xp) { me.xp += rw.xp; got.unshift(`+${rw.xp} EXP`); }
       persist();
     }
-    res = { clear: o.clear, r: x.r, ...s, got, ...(o.clear && x.r.photo && x.r.chain && phOn(x.P, x.r) && !recs[x.r.id]?.ph ? { photo: 'bonus' as const } : {}) }; run = null;
+    res = { clear: o.clear, r: x.r, ...s, got, ...(o.clear && x.r.photo && phOn(x.P, x.r) && !recs[x.r.id]?.ph ? { photo: 'bonus' as const } : {}) }; run = null;
     if (s.bossNew) { toast = '👑 보스 방이 열렸어요!'; sfx('castle-open', 0.8); setTimeout(() => (toast = ''), 3000); }
   }
   /** ‹ 그만하기 = 낸 답이 있으면 💧 한 번으로 셈 (정식: 판마다 기록) */
@@ -255,7 +255,7 @@
   </div>
   {#if res}
     {#if (res.photo === 'ask' || res.photo === 'bonus') && P}
-      <BottomAction dock={false} text={res.photo === 'ask' ? '📷 풀이 사진 올리기' : '✍ 서술형 도전 📸'} mainLabel="풀이 사진 올리기" onmain={() => { const r = res!.r; if (res!.photo === 'ask' && !recs[r.id]?.ans && !preview) return; openShot(P!, r); }}>
+      <BottomAction dock={false} text={res.photo === 'ask' ? '📷 풀이 사진 올리기' : '✍ 서술형 📷 찍고 📜 받기'} mainLabel="풀이 사진 올리기" onmain={() => { const r = res!.r; if (res!.photo === 'ask' && !recs[r.id]?.ans && !preview) return; openShot(P!, r); }}>
         {#snippet aux()}<button type="button" class="later" onclick={() => (res = null)}>나중에</button>{/snippet}
       </BottomAction>
     {:else}

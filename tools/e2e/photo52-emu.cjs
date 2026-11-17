@@ -33,5 +33,27 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   const w2 = await openDummy();
   ok('② 기준표 끔 = 단추 없음 (선생님 스위치 그대로 따름)', !w2);
   await rest('photo_rubric/set-09/m5/on', 'PUT', true);
+  // ③ 답만으로 처치 → 처치 화면 「✍ 서술형 📷 찍고 📜 받기」 → 누르면 그 몬스터로 다시(단추 있음) · 목록 「📷 서술형 남음」
+  await openDummy();
+  await s.evaluate(() => window.__dummyPerfect('m5')); await s.waitForSelector('[data-k="dummy-got"], .sheet:has-text("처치")', { timeout: 15000 }).catch(() => {}); await s.waitForTimeout(800);
+  const go = await s.$('[data-k="dummy-ph-go"]');
+  ok('③ 🎯 처치 화면 = 「✍ 서술형 📷 찍고 📜 받기」', !!go, go ? (await go.textContent()).trim().replace(/\s+/g, ' ') : '없음');
+  await s.screenshot({ path: `${SHOTS}/photo52-dummy-kill.png` });
+  if (go) { await go.click(); await s.waitForSelector('.drun', { timeout: 15000 }); await s.waitForTimeout(2500); }
+  ok('③ 누르면 그 몬스터 · 「✍ 서술형」 단추', !!(await s.$('[data-k="wr-btn"]')));
+  await s.click('.quit').catch(() => {}); await s.waitForTimeout(800);
+  if (!(await s.$('[data-k="dummy-list"]'))) { await s.$eval('.sheet .pmain', (e) => e.click()).catch(() => {}); await s.waitForTimeout(600); } // 처치 화면이면 「허수아비로」
+  const tag = await s.$('[data-lesson="set-09"] li[data-mid="m5"] [data-k="ph-left"]');
+  ok('③ 목록 9차시 문제 5 = 「📷 서술형 남음」', !!tag);
+  await s.screenshot({ path: `${SHOTS}/photo52-dummy-list.png` });
+  // ④ 🏰 성채 2층 10 = 답으로 처치된 방(기준표 켬) → 방 목록 「📷 서술형 남음」
+  await rest('photo_rubric/eval-2/q10', 'PUT', { ...R['eval-2'].q10, on: true });
+  await rest('bonus/1-3/3/eval-2/q10', 'PUT', { clear: true, tries: 1, at: 1 });
+  await s.reload(); await s.waitForTimeout(3500);
+  await s.$eval('[data-prop="castle"], .prop[aria-label*="성채"]', (e) => e.click()).catch(() => {}); await s.waitForTimeout(2000);
+  const fl = await s.$('button:has-text("2층")'); if (fl) { await fl.click(); await s.waitForTimeout(1200); }
+  const body = (await s.textContent('body')) || '';
+  ok('④ 🏰 2층 10 처치한 방 = 「📷 서술형 남음」', /서술형 남음/.test(body));
+  await s.screenshot({ path: `${SHOTS}/photo52-castle-list.png` });
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
