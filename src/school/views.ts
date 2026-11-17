@@ -263,3 +263,50 @@ function useView(S: Store, cls: string, sc: Sc, id: string): View {
       rows: rows.map((r) => { const dl = r.now - r.prev; return { pick: r.s, cells: [{ t: nm(r.s), v: nm(r.s) }, { t: r.s.name, v: r.s.name }, { t: String(r.now), v: r.now }, { t: String(r.prev), v: r.prev }, { t: `${dl > 0 ? '▲' : dl < 0 ? '▼' : '·'} ${Math.abs(dl)}`, tone: dl > 0 ? 'ok' : dl < 0 ? 'ng' : '', v: dl }, { t: r.last ? `${ymdLabel(r.last)}${idle(r.last) ? ' · 2주 넘게 없음' : ''}` : `-${idle(r.last) ? ' · 2주 넘게 없음' : ''}`, tone: idle(r.last) ? 'ng' : '', v: r.last ? ymdLabel(r.last) : '' }] }; }) },
     csv: { name: `활용추이_${cls}_${today}.csv`, rows: [['반', '번호', '이름', '최근7일 수업밖 풀이', '그전7일', '증감', '마지막 활동'], ...rows.map((r) => [r.s.cls, r.s.n, r.s.name, r.now, r.prev, r.now - r.prev, r.last ? ymdLabel(r.last) : ''])] } };
 }
+
+// ── 📜 #58 엑셀 「전체 · 한 파일」 = 📖 읽어보기 → 반 비교 → 보기 11개(반마다 줄 · 맨 앞 「반」 열) · 시트 아래 📌 요약 줄(대시보드 표 위 숫자 카드) ──
+//   반마다 수업한 차시가 달라 열 = 모든 반의 열을 합침(그 반에 없는 열 = 빈 칸) · 다른 AI · 피벗이 「반」 열로 거를 수 있게
+const kpiCell = (t: string): Cell => { const m = /^(-?\d+(?:\.\d+)?)%$/.exec(t.trim()); if (m) return { pct: Number(m[1]) / 100 }; const n = /^(-?\d+(?:\.\d+)?)(명|회|개|장)?$/.exec(t.trim()); return n ? Number(n[1]) : t; };
+const bodyOf = (v: View, withX: boolean): Cell[][] => { const s = toSheet({ ...v, kpis: undefined }, withX).rows; return s.length === 1 && s[0]!.length === 1 && s[0]![0] === v.title ? [] : s; };
+export function bookAll(S: Store, withX = false, today = ''): SheetData[] {
+  const has = (p: string) => { const v = S.get<Record<string, unknown>>(p); return !!v && typeof v === 'object' && Object.keys(v).length > 0; };
+  const real = (c: string) => S.kind !== 'server' || has(`roster/${c}`) || has(`rosterMask/${c}`) || has(`school/roster/${c}`) || has(`records/${c}`); // 명단도 기록도 없는 반 = 가짜 이름뿐이라 뺌
+  const classes = CLASSES.filter((c) => (withX || !isBeta(S, c)) && real(c));
+  const sumRows = (by: [string, View][]): Cell[][] => { const out: Cell[][] = []; for (const [c, v] of by) for (const k of v.kpis || []) out.push([c, k.lab, kpiCell(k.big), k.sub]); return out.length ? [[], ['📌 요약 (대시보드 표 위 숫자 카드)'], ['반', '지표', '값', '덧붙임'], ...out] : []; };
+  const cmpV = view(S, ALL, 'cmp', withX), cmp: SheetData = { name: '반 비교', rows: [...bodyOf(cmpV, withX), ...sumRows([[ALL, cmpV]])] };
+  const ids = ALL_VIEWS.filter((v) => v !== 'cmp');
+  const sheets = ids.map((id): SheetData => {
+    const per = classes.map((c) => [c, view(S, c, id, withX)] as [string, View]), all = view(S, ALL, id, withX);
+    // 열 합치기: 반마다 열 이름(같은 이름 n번째 = 따로) · 새 열은 그 반에서 바로 앞 열 뒤에 끼움 (차시 열 = 「번호 · 이름」 뒤 차시 순)
+    const keys: string[] = [], parts: { c: string; ks: string[]; rows: Cell[][] }[] = [];
+    for (const [c, v] of per) {
+      const b = bodyOf(v, withX); if (b.length < 2) continue;
+      const cnt = new Map<string, number>(), ks = (b[0] || []).map((h) => { const k = String(h ?? ''), n = (cnt.get(k) || 0) + 1; cnt.set(k, n); return `${k}#${n}`; });
+      ks.forEach((k, i) => { if (keys.includes(k)) return; const at = i > 0 ? keys.indexOf(ks[i - 1]!) + 1 : 0; keys.splice(at, 0, k); });
+      parts.push({ c: (b[0] || []).includes('반') ? '' : c, ks, rows: b.slice(1) });
+    }
+    const head = keys.map((k) => k.slice(0, k.lastIndexOf('#')));
+    const bodies = parts.map((x) => ({ c: x.c, map: x.ks.map((k) => keys.indexOf(k)), rows: x.rows }));
+    const addCls = bodies.some((x) => x.c);
+    const rows: Cell[][] = head.length ? [[...(addCls ? ['반'] : []), ...head]] : [];
+    for (const x of bodies) for (const r of x.rows) { if (!r.length) continue; const o: Cell[] = Array(head.length).fill(null); r.forEach((v, i) => { o[x.map[i]!] = typeof v === 'string' && /^-?\d+(?:\.\d+)?%$/.test(v) ? kpiCell(v) : v; }); rows.push([...(addCls ? [x.c] : []), ...o]); }
+    const sum = sumRows([...(all.kpis?.length ? [[ALL, all] as [string, View]] : []), ...per]);
+    return { name: all.title.replace(/ · /g, ' '), rows: rows.length || sum.length ? [...(rows.length ? rows : [['이 보기는 아직 기록이 없어요']]), ...sum] : [['이 보기는 아직 기록이 없어요']] };
+  });
+  const readme: SheetData = { name: '읽어보기', rows: [
+    ['모두의 던전 · 대시보드 전체 한 파일'],
+    ['만든 날', today], ['반', classes.join(', ')], ['빠진 것', withX ? '없음 (🧪 시험 계정 · 베타 반 포함 · 「구분」 열 = 🧪)' : '🧪 시험 계정 · 베타 반'],
+    [],
+    ['시트', '무엇', '줄 하나 ='],
+    ['반 비교', cmpV.info, '반 하나'],
+    ...ids.map((id, i) => { const v = view(S, ALL, id, withX); return [sheets[i]!.name, v.info, id === 'memo' ? '학생 한 명 (반 · 번호 열)' : id === 'cmp' ? '반 하나' : v.table ? '학생 · 항목 하나 (맨 앞 「반」 열)' : '항목 하나 (맨 앞 「반」 열)'] as Cell[]; }),
+    [],
+    ['읽는 법'],
+    ['반 열', '맨 앞 열 = 그 줄의 반 · 반끼리 거르기 · 피벗 · 다른 AI 에 그대로'],
+    ['📌 요약', '시트 맨 아래 = 대시보드 표 위 숫자 카드 (전체 · 반마다)'],
+    ['% 칸', '0.78 = 78% (숫자 칸 · 서식만 %)'],
+    ['빈 칸', '그 반에는 없는 열 (반마다 수업한 차시가 다름) · 「— 수업 안 함」 = 그 칸을 수업에서 안 엶'],
+    ['성적 아님', '게임 기록은 성적이 아니에요 · 수업 · 지도 참고 자료'],
+  ] };
+  return [readme, cmp, ...sheets];
+}

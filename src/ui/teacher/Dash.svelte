@@ -4,7 +4,7 @@
   import PhotoBoard from './PhotoBoard.svelte';
   import type { Store } from '../../model/types';
   import type { Stud } from '../../school/dash';
-  import { ALL, ALL_VIEWS, GROUPS, scope, toSheet, view } from '../../school/views';
+  import { ALL, ALL_VIEWS, bookAll, GROUPS, scope, toSheet, view } from '../../school/views';
   import { CLASSES, isBeta } from '../../school/school';
   import { download, makeXlsx } from '../../school/xlsx';
   import Sheet from '../battle/Sheet.svelte';
@@ -70,13 +70,17 @@
     await svLoad().catch(() => {}); // 🐞 #55 설문 답은 「설문」 보기를 열 때만 받아 와서 엑셀에 0명 · — 로 나갔음 → 엑셀 만들기 전에 늘 받기
     const name = `모두의던전_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
     let sheets;
-    if (xlPick === 'all') sheets = [toSheet(view(S, ALL, 'cmp', withX), withX), ...CLASSES.filter((c) => withX || !isBeta(S, c)).map((c) => ({ ...toSheet(view(S, c, 'grid', withX), withX), name: `${c}반` }))];
+    if (xlPick === 'all') sheets = bookAll(S, withX, ymd()); // 📜 #58 읽어보기 → 반 비교 → 보기 11개(반 열) · 요약 줄
     else if (xlPick === 'cls') sheets = ALL_VIEWS.filter((v) => cls === ALL || v !== 'cmp').map((v) => toSheet(view(S, cls, v, withX), withX));
     else sheets = [toSheet(view(S, cls, vid, withX), withX)];
     download(makeXlsx(sheets), name);
     xl = false; toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600);
   }
   $effect(() => { if (xl) xlPick = untrack(() => (cls === ALL ? 'all' : 'cls')); });
+  // 📜 #58 받기 단추 = 서버 기록을 다 받은 뒤 (기록 · 경험치 · 💎 · 성채 · 허수아비 · 카드 · 활용 · 명단 · 사진 · 설문 덩어리 · 다 받기 전엔 빈 칸으로 나갈 수 있어서)
+  let xlReady = $state(false);
+  $effect(() => { if (!xl) return; xlReady = false; untrack(() => { const c0 = CLASSES[0] ?? '1-1', f = S.fetch; const roots = ['records', 'xp', 'gem', 'bonus', 'cards', 'act', 'roster', 'accounts', 'photo', 'surveyDone', 'school'];
+    void Promise.all([...(f && S.kind === 'server' ? roots.map((k) => f.call(S, `${k}/${c0}`).catch(() => null)) : []), svLoad().catch(() => {})]).then(() => { xlReady = true; pv++; }); }); });
   function csvGo() { const c = V.csv; if (!c) return; const q = (x: string | number) => { const t = String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
     const url = URL.createObjectURL(new Blob(['\ufeff' + c.rows.map((r) => r.map(q).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a'); a.href = url; a.download = c.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast = `📥 ${c.name}`; setTimeout(() => (toast = ''), 2600); }
@@ -126,8 +130,8 @@
 {#if xl}
   <Sheet onclose={() => (xl = false)}>
     {#snippet title()}⬇ 엑셀로 받기{/snippet}
-    {#snippet act()}<button type="button" class="btn" onclick={excel}>받기</button>{/snippet}
-    <button type="button" class="xo" class:on={xlPick === 'all'} onclick={() => (xlPick = 'all')}><span>🏫</span><span><b>전체 · 한 파일</b><small>「반 비교」 시트 + 반마다 시트{withX ? '' : ` (🧪 ${XCLS} 빠짐)`}</small></span></button>
+    {#snippet act()}<button type="button" class="btn" data-k="xl-go" disabled={!xlReady} onclick={excel}>{xlReady ? '받기' : '기록 받는 중…'}</button>{/snippet}
+    <button type="button" class="xo" class:on={xlPick === 'all'} onclick={() => (xlPick = 'all')}><span>🏫</span><span><b>전체 · 한 파일</b><small>📖 읽어보기 + 반 비교 + 보기 11개(「반」 열 · 아래 요약 줄){withX ? '' : ` (🧪 ${XCLS} 빠짐)`}</small></span></button>
     <button type="button" class="xo" class:on={xlPick === 'cls'} disabled={cls === ALL} onclick={() => (xlPick = 'cls')}><span>{cls === ALL ? '—' : cls}</span><span><b>지금 반만</b><small>{cls === ALL ? '반 칩을 고르면' : `${cls}반 보기 11개를 시트로`}</small></span></button>
     <button type="button" class="xo" class:on={xlPick === 'view'} onclick={() => (xlPick = 'view')}><span>📄</span><span><b>지금 보는 표만</b><small>{V.title} · 시트 1개</small></span></button>
     <label class="ck"><input type="checkbox" bind:checked={withX} /> 🧪 {XCLS} · 시험 계정도 넣기 (「구분」 열)</label>

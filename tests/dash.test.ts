@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import { unzipSync, strFromU8 } from 'fflate';
 import { memoryStore } from '../src/store/device';
-import { ALL, ALL_VIEWS, scope, toSheet, view } from '../src/school/views';
+import { ALL, ALL_VIEWS, bookAll, scope, toSheet, view } from '../src/school/views';
 import { makeXlsx } from '../src/school/xlsx';
 import { spawnSync } from 'node:child_process';
 import { fakeClass } from '../src/school/dash';
@@ -57,5 +57,26 @@ assert list(x.columns) == ['글', '수'] and x.iloc[0, 0] == '줄바꿈 & <b> "q
 print('ok')`], { encoding: 'utf8' });
     expect(r.stderr + r.stdout).toContain('ok');
   });
+  // 📜 #58 「전체 · 한 파일」 = 읽어보기 → 반 비교 → 보기 11개(맨 앞 「반」 열) · 시트 아래 📌 요약 줄
+  it('엑셀 전체 한 파일: 읽어보기 · 반 비교 · 보기 11개 · 반 열 · 요약 줄 · 반마다 차시 열 합침', () => {
+    const S = memoryStore(), B = bookAll(S, false, '2026-11-18');
+    expect(B.map((x) => x.name)).toEqual(['읽어보기', '반 비교', ...ALL_VIEWS.filter((v) => v !== 'cmp').map((id) => view(S, ALL, id).title.replace(/ · /g, ' '))]);
+    expect(B).toHaveLength(13);
+    const rd = B[0]!.rows.map((r) => String(r[0] ?? ''));
+    for (const n of B.slice(1).map((x) => x.name)) expect(rd, n).toContain(n);
+    const grid = B.find((x) => x.name === '한눈에 표')!;
+    expect(grid.rows[0]![0]).toBe('반');
+    const cls = new Set(grid.rows.slice(1).map((r) => r[0]).filter((c) => typeof c === 'string' && /^\d-\d$/.test(c)));
+    expect(cls.size).toBeGreaterThan(1); expect(cls.has('1-6')).toBe(false); // 🧪 베타 반 빠짐
+    for (const x of B.slice(2)) { const h = (x.rows[0] || []).map(String); if (h.length > 1) expect(h.includes('반'), x.name).toBe(true); }
+    const withSum = B.filter((x) => x.rows.some((r) => r[0] === '📌 요약 (대시보드 표 위 숫자 카드)'));
+    expect(withSum.length).toBeGreaterThan(2);
+    const w = makeXlsx(B); writeFileSync('/tmp/dash-book.xlsx', w);
+    const py = spawnSync('python3', ['-c', 'import openpyxl, pandas'], { encoding: 'utf8' }); if (py.status !== 0) return;
+    const r = spawnSync('python3', ['-W', 'error', '-c', `import pandas as pd
+d = pd.read_excel('/tmp/dash-book.xlsx', sheet_name=None); assert list(d)[0] == '읽어보기' and len(d) == 13
+g = d['한눈에 표']; assert g.columns[0] == '반'
+print('ok')`], { encoding: 'utf8' });
+    expect(r.stderr + r.stdout).toContain('ok');
+  });
 });
-
