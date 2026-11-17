@@ -42,5 +42,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await round('m2');
   const g3 = await rest('gem/1-3/3'), xp3 = Number(await rest('xp/1-3/3/total')) || 0;
   ok('④ 맞힌 적 있는 문제 = 복습 💎 없음 · EXP 5', Number(g3.total) === 7 && xp3 - xp2 === 5, `total ${g3.total} · xp +${xp3 - xp2}`);
+  // ⑤ 🐞 #44 ① 👑 형성평가 재대결 = 수업과 같은 bossTry 에 답 → 서버 기록 clear · 💎 재대결 + 🏆 업적 · 다시 들어가면 「⚔ 풀기」 아님
+  const g4a = await rest('gem/1-3/3'); const t5 = await round('boss');
+  const bonB = await rest('bonus/1-3/3/set-02/boss'), g5 = await rest('gem/1-3/3'), k5 = Object.keys((g5 && g5.log) || {});
+  ok('⑤ 👑 재대결 = 기록 clear · 💎 bossre + seal', !!bonB && bonB.clear === true && k5.includes('bossre_set-02') && k5.includes('seal_set-02') && Number(g5.total) > Number(g4a.total), `${JSON.stringify(bonB && { clear: bonB.clear, tries: bonB.tries })} · 💎 ${g4a.total} → ${g5.total} · 화면 「${t5.slice(0, 50)}」`);
+  await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
+  const bl = await s.$eval('[data-lesson="set-02"] li[data-mid="boss"] .go', (e) => e.textContent.trim()).catch(() => '?');
+  ok('⑤ 👑 칸 단추 = 「다시」 (「⚔ 풀기」 아님)', bl === '다시', bl); await s.screenshot({ path: `${SHOTS}/dummy-boss-after.png` });
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

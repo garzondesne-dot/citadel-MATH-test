@@ -10,7 +10,7 @@
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay, boardPack, stepDone } from '../../board/board';
   import { nextStep, openRoom, roomPath } from '../../raid/actions';
-  import { answerOf, BOSS_ID, bossState, droppedFor, pickBoss, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
+  import { answerOf, BOSS_ID, bossItem, bossState, bossTries, droppedFor, pickBoss, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
   import { TEST_ADDR } from '../../channel';
   import { bonusBase } from '../../school/castle';
   import { meBound } from '../../store/meSync';
@@ -85,7 +85,7 @@
     S2.set(`${roomPath(code)}/meta/retries`, 3); S2.set(`${roomPath(code)}/meta/bossTries`, 3); S2.set(`${roomPath(code)}/meta/think`, 0); S2.set(`${roomPath(code)}/meta/solve`, 0);
     run = { L0, L, mid, S: S2, code, drops }; res = null;
     // 🧪 시험 고리(시험 주소만 · 출시 막는 것 9): 이 판의 몬스터를 첫 시도에 다 맞힘으로 (e2e 가 서버 기록 · 보상을 확인)
-    if (TEST_ADDR) (globalThis as { __dummyPerfect?: (mid: string) => void }).__dummyPerfect = (m) => { const RR = S2.get<Room>(roomPath(code)); if (RR) S2.set(`${roomPath(code)}/subs/${m}/${uid}/0`, itemsFor(L, RR, m, uid, 0).map(answerOf)); };
+    if (TEST_ADDR) (globalThis as { __dummyPerfect?: (mid: string) => void }).__dummyPerfect = (m) => { const RR = S2.get<Room>(roomPath(code)); if (!RR) return; if (m === BOSS_ID) { for (let i = 0; i < (L.boss?.items || 0); i++) { const q = bossItem(L, RR, uid, i, 0); if (q) S2.set(`${roomPath(code)}/bossTry/${uid}/${i}/0`, answerOf(q)); } return; } S2.set(`${roomPath(code)}/subs/${m}/${uid}/0`, itemsFor(L, RR, m, uid, 0).map(answerOf)); }; // 👑 = 수업과 같은 bossTry 에 씀 (#44 ①)
   }
   let lr: ReturnType<typeof liveRoom> | null = null, drive: ReturnType<typeof setInterval> | null = null;
   $effect(() => {
@@ -103,7 +103,7 @@
   });
   /** 이번 판에 처치했나 · 낸 답이 있나 */
   function outcome(r: Run, RR: Room): { clear: boolean; tried: boolean } {
-    if (r.mid === BOSS_ID) { const st = bossState(r.L, RR, uid); return { clear: st.length > 0 && st.every((x) => x.ok), tried: !!RR.subs?.[BOSS_ID]?.[uid] }; }
+    if (r.mid === BOSS_ID) { const st = bossState(r.L, RR, uid), hpN = Math.min(st.length, r.L.boss?.hpItems || st.length), need = st.filter((x, i) => i < hpN && !x.drop); return { clear: need.length > 0 && need.every((x) => x.ok), tried: bossTries(r.L, RR, uid).length > 0 || !!RR.subs?.[BOSS_ID]?.[uid] }; } // 🐞 #44 ① v1.0 형성평가 답 = bossTry (옛 subs/boss 만 보던 탓에 「안 풂」 → 보상 · 기록 0) · ⭐ 보너스 문항은 처치에 안 셈
     if (isChain(r.L, RR, r.mid)) { const c = chainRecord(r.L, RR, r.mid, uid); return { clear: !!c.done, tried: !!c.done || !!c.fail || c.nextK > 0 }; }
     const p = plainRecord(r.L, RR, r.mid, uid); return { clear: p.perfect, tried: p.tries.length > 0 };
   }
