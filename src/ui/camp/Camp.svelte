@@ -23,7 +23,7 @@
   import { fly } from 'svelte/transition';
   import CampProp from './CampProp.svelte';
   import { portalOf } from './portal.svelte';
-  import { setTeacherSink, useMe } from '../../store/me.svelte';
+  import { meLookId, setTeacherSink, useMe } from '../../store/me.svelte';
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -312,6 +312,7 @@
   }
 
   // 정보판 (#111 ④)
+  const lk = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안이면 16)
   const fam = $derived(famOfHero(me.hero));
   const lv = $derived(level(me.xp));
   const ladderRows = $derived(rungs(me.hero, ladder(me.hero).filter((id) => ownsSkill(me.wallet, emptyPlan(), me.hero, id)), equipOf({ hero: me.hero, enh: me.enh, socket: me.socket, title: me.title }), me.wallet));
@@ -366,7 +367,7 @@
     <img class="obj gate-on" class:on={open} class:flash={!!poked.gate} alt="" src={CAMP.gateOn.src} style={objStyle(CAMP.gateOn)} />
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
-    <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(me.hero, heroRow(hp.pose)).dx + heroGeo(me.hero).dx}px {heroNudge(me.hero, heroRow(hp.pose)).dy + heroGeo(me.hero).dy - HERO.h + heroGeo(me.hero).h}px;left:0;bottom:0;width:{heroGeo(me.hero).w}px;height:{heroGeo(me.hero).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(me.hero)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
+    <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
     <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
     <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
     {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:3%;width:12%;height:9%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
@@ -404,7 +405,7 @@
   <section class="info">
     {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svNo}차시 · 3분 · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
     {#if feat('hero')}<button type="button" class="card hero-card" onclick={() => tap('hero')} aria-label="내 용사 보기">
-      <span class="pic"><HeroSprite id={me.hero} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
+      <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b>{fromMe ? '선생님' : me.nick}</b></span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>

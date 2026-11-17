@@ -14,7 +14,7 @@
   const i8 = $derived(play && !an && row === 0 ? idle8Of(id) : null); // 🫁 #169 대기 8프레임 (그 용사 줄) // 새 화풍(세밀 시트)은 같은 자리에서 위 · 옆으로 넘쳐 그림 // 🎯 보이는 부분 정중앙 · 발 기준선 (#121)
 </script>
 
-<span class="hs art" class:aura={aura > 0} class:au-on={aura > 0 && HERO.w * scale >= 40} use:auraAct={{ lv: dim ? 0 : aura, tv, head: heroHead(id, !!i8) }} style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:--a1={a[0]} style:--a2={a[1]} style:--ar="{a[2]}px" role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}>
+<span class="hs art" data-hero={id} class:aura={aura > 0} class:au-on={aura > 0 && HERO.w * scale >= 40} use:auraAct={{ lv: dim ? 0 : aura, tv, head: heroHead(id, !!i8) }} style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:--a1={a[0]} style:--a2={a[1]} style:--ar="{a[2]}px" role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}>
   {#if i8}
     <i class="i8" class:dim style:left="0" style:top="0" style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:translate="{(IDLE8.nd[id]?.[0] ?? 0) * scale}px {(IDLE8.nd[id]?.[1] ?? 0) * scale}px" style:background-image="url({i8})" style:background-size="{IDLE8.frames * 100}% {IDLE8.rows * 100}%" style:background-position-y="{(id / (IDLE8.rows - 1)) * 100}%" style:animation-duration="{IDLE8.ms}ms"></i>
   {:else}

@@ -3,20 +3,20 @@
   import type { Store } from '../../model/types';
   import { BUILD } from '../../build';
   import { heroOf, famOfHero } from '../../model/hero';
-  import { useMe } from '../../store/me.svelte';
+  import { meLookId, useMe } from '../../store/me.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
   // 🧙 나 탭 (📜 2026-11-17 #21 A · #22): 선생님 용사 카드(누르면 내 용사) · ⛺ 내 캠프 뿐 — 계정 · 소리 · 테마 · 앱 · 로그아웃 = 오른쪽 위 ⚙ · 🔔 알림 · 📜 바뀐 것 = ✉ 소식 · 종합실 키 = ⚔ 수업 ③ · 기능 단계 = 📦 차시 카드 · 사진 채점 · 공격 갤러리 = 📦 🧰 도구
   const { S }: { S: Store } = $props();
   const M = useMe(9999, 30, true, true); // 👩‍🏫 교사 기록 = 따로 칸 (B안)
   let hero = $state(false), toast = $state('');
-  const info = $derived(heroOf(M.me.hero));
+  const info = $derived(heroOf(meLookId(M.me))); // 🌟 #29
 </script>
 
 <div class="tbar"><div class="t">나</div></div>
 <div class="mid scroll">
   <button type="button" class="hc" onclick={() => (hero = true)}>
-    <span class="pic"><HeroSprite id={M.me.hero} aura={M.me.enh} play />{#if M.me.enh}<b>+{M.me.enh}</b>{/if}</span>
+    <span class="pic"><HeroSprite id={meLookId(M.me)} aura={M.me.enh} play />{#if M.me.enh}<b>+{M.me.enh}</b>{/if}</span>
     <span class="tx"><b>선생님</b><small>{famOfHero(M.me.hero).name.split(' ')[0]} {info.name} · {info.job} · 강화 +{M.me.enh}</small></span><span class="go">›</span>
   </button>
   <div class="list">

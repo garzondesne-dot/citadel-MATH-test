@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import type { Me } from '../../store/me.svelte';
+  import { meLookId, type Me } from '../../store/me.svelte';
   import { PACKS } from '../../engine/packs';
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
@@ -53,7 +53,8 @@
       if (nw.length) sfx('board', 0.8);
     });
   });
-  const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: me.hero });
+  const lkB = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안 16) — 동료 · 게시글 · 달리기 화면
+  const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: lkB });
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   const RK2 = 'school/board/rk2', FEED = 'school/board/feed';
@@ -109,15 +110,15 @@
       const myRole: 'g' | 'c' = team ? role : roleOf(recOf(L) ?? null).role;
       S.set(`bonus/${cls}/${num}/board/${key}`, { at: t, lid: L.id, no: L.no, n, role: myRole, grade: myGrade, right: r.right, total: r.total, sec: r.sec, clear: r.clear, left: left || undefined });
       const cr = S.get<{ right?: number; total?: number }>(`records/${cls}/${num}/${L.id}`), base = cr && cr.total ? (cr.right ?? 0) / cr.total : null;
-      const sem = semOf(t), rp = `${RK2}/${sem}/${pidMe}`, was = S.get<Agg>(rp) ?? { cls, hero: me.hero, enh: me.enh };
-      const ad = addRun({ ...was, cls, hero: me.hero, enh: me.enh, x: isBeta(S, cls) || undefined, at: t }, { lid: L.id, role: myRole, grade: myGrade, acc: myAcc, sec: r.sec, base });
+      const sem = semOf(t), rp = `${RK2}/${sem}/${pidMe}`, was = S.get<Agg>(rp) ?? { cls, hero: lkB, enh: me.enh };
+      const ad = addRun({ ...was, cls, hero: lkB, enh: me.enh, x: isBeta(S, cls) || undefined, at: t }, { lid: L.id, role: myRole, grade: myGrade, acc: myAcc, sec: r.sec, base });
       if (r.rescue?.g) ad.agg.rz = (ad.agg.rz ?? 0) + r.rescue.g;
       S.set(rp, ad.agg);
       rank = { sem, role: myRole, lid: L.id, up: ad.up };
       if (ad.up) sfx('skill-unlock', 0.9);
     }
     if (S.kind !== 'memory' && (!team || r.drv)) { // 📣 판마다 한 줄 (팀 = 진행 맡은 폰이 · 공개를 끈 사람은 아이콘에서 빠짐 · 이름 · 번호 없음)
-      const ms = team ? membersOf(team) : [{ uid, cls, num, hero: me.hero }], open1 = ms.filter((m) => !S.get<boolean>(`accounts/${m.cls}/${m.num}/feedOff`));
+      const ms = team ? membersOf(team) : [{ uid, cls, num, hero: lkB }], open1 = ms.filter((m) => !S.get<boolean>(`accounts/${m.cls}/${m.num}/feedOff`));
       if (open1.length) { S.set(`${FEED}/${key}`, { at: t, no: L.no, n, grade: r.grade, sec: r.sec, clear: r.clear, who: open1.map((m) => ({ c: m.cls, h: m.hero })) }); myFeed(key); }
     }
     if (team && r.drv) S.set(`${POSTS}/${team.pid}/phase`, 'done');
@@ -272,10 +273,10 @@
     {/if}
   </Sheet>
 {/if}
-{#if run}<BoardRun L0={run} {uid} {num} hero={me.hero} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
+{#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
-  {#if L}<BoardRun L0={L} {uid} {num} hero={me.hero} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
+  {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}
 
 <style>

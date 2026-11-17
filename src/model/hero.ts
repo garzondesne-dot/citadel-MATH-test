@@ -9,7 +9,21 @@ export type HeroInfo = (typeof DATA.heroes)[number];
 export const HEROES: HeroInfo[] = DATA.heroes.filter((h) => !(h as { teacher?: boolean }).teacher);
 /** 👩‍🏫 선생님 전용 용사 (현자 7 · 수학자 17 · 📜 2026-11-13 밤 교사 B안 = 교사 로그인에서만 · 모두 열림) */
 export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teacher?: boolean }).teacher);
-export const heroOf = (id: number): HeroInfo => DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo);
+/** 🌟 각성한 로안 = 보이는 모습만 (📜 2026-11-17 선생님 「각성한 로안 다시 부활 · 로안장착 +10강 4쌍월참 으로 기준」 · 머리 🔨 #29)
+ *   조건 3 = 출전 용사 로안(0) · 🔨 강화 +10 이상 · ⚔ 쌍월 참(twin) 장착 → 금발 모습 16 · 하나라도 빠지면 로안 · 호칭 조건 없음
+ *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 로안) · 고르는 칸 아님(HEROES 에 없음) · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것 */
+export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin' } as const;
+export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null };
+export const blondChecks = (p: LookIn) => [
+  { k: 'hero', t: '로안 출전', ok: Number(p.hero) === BLOND.base },
+  { k: 'enh', t: `🔨 강화 +${BLOND.enh}`, ok: (Number(p.enh) || 0) >= BLOND.enh },
+  { k: 'fx', t: '⚔ 쌍월 참 장착', ok: p.fx === BLOND.fx },
+];
+export const isBlond = (p: LookIn) => blondChecks(p).every((c) => c.ok);
+/** 보이는 모습 id (조건이 맞으면 16 · 아니면 고른 용사) */
+export const lookId = (p: LookIn) => (isBlond(p) ? BLOND.to : Number(p.hero) || 0);
+const BLOND_INFO = (() => { const r = DATA.heroes.find((h) => h.id === 0) as HeroInfo; return { ...r, id: 16, name: '각성한 로안', nick: '만 번을 넘은 검', sprite: 'hero-blond-v1.webp', price: null } as unknown as HeroInfo; })();
+export const heroOf = (id: number): HeroInfo => (id === BLOND.to ? BLOND_INFO : DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo));
 export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설'];
 export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
 export const FAMS: { id: string; name: string; ids: string[] }[] = DATA.fams;

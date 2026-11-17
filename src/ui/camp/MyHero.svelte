@@ -3,6 +3,8 @@
   import { meBound } from '../../store/meSync';
   import { untrack } from 'svelte';
   import type { Me } from '../../store/me.svelte';
+  import { blondChecks, isBlond, lookId, BLOND } from '../../model/hero';
+  import { cutin } from '../fx/attack';
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
@@ -33,6 +35,10 @@
 
   const W = $derived(me.wallet);
   const lv = $derived(L0.enh + P.enh);
+  // 🌟 #29 각성한 로안 = 보이는 모습만 (고른 그대로 · 저장 전 미리 보기도 금발) · 조건 3 체크
+  const lkM = $derived(lookId({ hero: look.hero, enh: lv, fx: equipOf(look) }));
+  const bChecks = $derived(blondChecks({ hero: look.hero, enh: lv, fx: equipOf(look) }));
+  let blondOpen = $state(false);
   const lf = $derived(left(W, P, L0.enh));
   const isDirty = $derived(dirty(P, L0, look));
   const c = $derived(cost(P, L0.enh));
@@ -120,6 +126,8 @@
     if (typeof r === 'string') { say(r, 3000); return; }
     // 🔊 2차 🔨 강화 · 🌟 대성공 · 🔓 스킬 해금 (정식 camp.js 같은 순간 · 강화가 있으면 강화 소리만 · 정식 강화는 실패 없음 · +10 각성 소리는 베타에 없음)
     if (P.enh) { if (r.great) sfx('enh-great', 0.85); else sfx('enh-ok', 0.85); } else if (P.sk.length) sfx('skill-unlock', 0.85);
+    const wasB = isBlond({ hero: L0.hero, enh: L0.enh, fx: equipOf(L0) }), nowB = isBlond({ hero: r.look.hero, enh: r.look.enh, fx: equipOf(r.look) });
+    if (nowB && !wasB) { let seen = false; try { seen = localStorage.getItem('citadel-v1-blond-seen') === '1'; localStorage.setItem('citadel-v1-blond-seen', '1'); } catch { /* 없음 */ } if (!seen) setTimeout(() => void cutin(BLOND.to, BLOND.fx, { peek: true, name: '🌟 각성한 로안', sub: '로안 · +10 · 쌍월 참' }), 300); } // 🌟 #29 처음 한 번 변신 컷인
     me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title;
     persist();
     L0 = { ...r.look, socket: { ...r.look.socket } }; look = { ...r.look, socket: { ...r.look.socket } }; P = emptyPlan();
@@ -140,7 +148,7 @@
 
   <div class="body">
     <button type="button" class="top" bind:this={topEl} onclick={openHeroes} aria-label="용사 바꾸기">
-      <span class="pic"><HeroSprite id={look.hero} play aura={lv} />{#if lv}<b class="enh">+{lv}</b>{/if}</span>
+      <span class="pic"><HeroSprite id={lkM} play aura={lv} />{#if lv}<b class="enh">+{lv}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b>{me.nick}</b>{#if me.test}<i class="tester">{teacher ? "선생님" : "테스터"}</i>{/if}</span>
         <span class="sub">{info.name} · {info.job} · {fam.name} · Lv.{xp.lv}</span>
@@ -158,8 +166,8 @@
     {#if tab === 'enh'}
       <div class="enhbox">
         <div class="enhrow">
-          <span class="esp"><HeroSprite id={look.hero} play aura={lv} /><b>+{lv}</b></span>
-          {#if nx}<span class="arrow" aria-hidden="true">→</span><span class="esp next"><HeroSprite id={look.hero} play aura={lv + 1} /><b>+{lv + 1}</b></span>{/if}
+          <span class="esp"><HeroSprite id={lkM} play aura={lv} /><b>+{lv}</b></span>
+          {#if nx}<span class="arrow" aria-hidden="true">→</span><span class="esp next"><HeroSprite id={lookId({ hero: look.hero, enh: lv + 1, fx: equipOf(look) })} play aura={lv + 1} /><b>+{lv + 1}</b></span>{/if}
         </div>
         <p class="aname">{nx ? `다음 오라 · ${AURA_NAMES[lv + 1]}` : `🌈 최고 단계 +${lv} · ${AURA_NAMES[lv]}`}</p>
         <p class="muted">가진 용사 모두에게 함께 · 실패 없음{P.enh ? ` · 고름 +${L0.enh} → +${lv}` : ''}</p>
@@ -225,7 +233,11 @@
           {#if h.id === look.hero}<em>출전 중</em>{:else if P.heroes.includes(h.id)}<em class="pend">고름</em>{/if}
         </button>
       {/each}
+      <button type="button" class="swc blond" class:open={blondOpen} data-k="blond-card" aria-expanded={blondOpen} aria-label="숨은 모습 · 조건 {bChecks.filter((c) => c.ok).length} / 3" onclick={() => (blondOpen = !blondOpen)}>
+        <span class="swi q">{#if bChecks.every((c) => c.ok)}<HeroSprite id={BLOND.to} />{:else}<b>?</b>{/if}</span><b>{bChecks.every((c) => c.ok) ? '각성한 로안' : '???'}</b><small>{bChecks.map((c) => (c.ok ? '✔' : '✕')).join(' ')}</small>
+      </button>
     </div>
+    {#if blondOpen}<ul class="bchk" data-k="blond-checks">{#each bChecks as c (c.k)}<li class:ok={c.ok}>{c.ok ? '✔' : '✕'} {c.t}</li>{/each}<li class="note">셋 다 맞으면 로안이 금발로 · 모습만 바뀌어요</li></ul>{/if}
     {#if ownsPick}
       <BottomAction dock={false} disabled={pickH === look.hero} onmain={useHero} mainLabel="출전">{#snippet main()}{pickH === look.hero ? '✔ 지금 출전 중' : `⚔ ${pick.name}${ro(pick.name)} 출전`}{#if pickH !== look.hero}<small> · 고름 · 저장하면 바뀜</small>{/if}{/snippet}</BottomAction>
     {:else if pick.price != null}
@@ -364,6 +376,8 @@
   .swi :global(.hs) { scale: 0.8; }
   .swc b { font-size: 13px; } .swc small { font-size: 11px; color: var(--text-2); white-space: nowrap; }
   .swc.cur { border: 2px solid var(--accent); }
+  .swc.blond { border-style: dashed; } .swc.blond.open { border-color: var(--accent); } .swi.q { display: grid; place-items: center; min-height: 64px; } .swi.q > b { font: 900 34px var(--font); color: var(--text-3); }
+  .bchk { list-style: none; margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); display: grid; gap: 4px; font-size: 15px; color: var(--bad); } .bchk .ok { color: var(--ok); } .bchk .note { color: var(--text-2); font-size: 14px; }
   .swc.sel { border: 2px solid #6cc6ff; box-shadow: 0 0 0 3px rgba(108, 198, 255, 0.25); }
   .swc.lk { opacity: 0.75; }
   .swc em { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-style: normal; font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; background: var(--accent); color: var(--on-accent); white-space: nowrap; }

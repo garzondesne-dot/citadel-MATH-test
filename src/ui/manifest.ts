@@ -58,6 +58,10 @@ export const ANIM: Record<HPose, [number, number, number, boolean?]> = { idle: [
 // 🎯 캐릭터 정중앙 (#121): 그림 틀(80 × 64 · 256)이 아니라 보이는 부분(알파 상자 · tools/make-sprite-bbox.py) 가운데를 칸 가운데 · 발을 칸 아래 기준선에
 //   가로 = 서 있는 줄(0) 상자 가운데(공격 줄도 몸이 같은 자리 · 무기가 뻗어도 흔들리지 않게) · 앉기 줄(8)은 그 줄 상자 · 세로 = 그 줄 상자 아래
 import BBOX from './sprite-bbox.json';
+{ // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
+  const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
+  B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
+}
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
 //   옛 80 × 64 칸과 섞여도 됨: 화면 자리(레이아웃)는 옛 칸 80 × 64 그대로 · 새 그림은 그 칸 바닥 가운데에 발을 맞춰 위 · 옆으로 넘쳐 그림
@@ -68,7 +72,7 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
 };
 // 🫁 대기 = PixelLab 숨쉬기 8프레임 · 34명 모두 (#169 시험 → #170 · DECISIONS 「🧍 v1.0 용사 대기 = PixelLab 숨쉬기 34명」) — 되돌리기 = on: false 한 줄 (파일 하나: 줄 = 용사 번호 · 칸 80 × 64 · 8칸)
 //   그 용사 줄에 그림이 있을 때만 · 새 화풍 세밀 시트(HERO_HD) 용사는 그 시트 그대로 · 늘이기 없이 칸만 차례로(약 1.3초에 8장)
-export const IDLE8 = { on: true, src: 'art/heroes/hero-idle8-pl-v3.webp', frames: 8, rows: 34, ms: 1300, has: Array.from({ length: 34 }, (_, i) => i),
+export const IDLE8 = { on: true, src: 'art/heroes/hero-idle8-pl-v4.webp', frames: 8, rows: 34, ms: 1300, has: Array.from({ length: 34 }, (_, i) => i),
   /** 정중앙 (#121): 8칸을 합친 보이는 상자(알파 > 40) 가운데 → 칸 가운데 · 발 → 칸 바닥 = [dx, dy] */ nd: {0: [6, 1], 1: [8, 1], 2: [8, 1], 3: [14, 1], 4: [5, 1], 5: [2, 1], 6: [4, 1], 7: [7, 1], 8: [4, 1], 9: [18, 1], 10: [10, 1], 11: [9, 1], 12: [6, 1], 13: [10, 1], 14: [8, 1], 15: [12, 1], 16: [6, 1], 17: [13, 1], 18: [11, 1], 19: [16, 1], 20: [12, 1], 21: [14, 1], 22: [7, 1], 23: [4, 1], 24: [4, 1], 25: [8, 1], 26: [10, 1], 27: [10, 1], 28: [10, 1], 29: [11, 1], 30: [0, 1], 31: [3, 1], 32: [5, 1], 33: [8, 1]} as Record<number, [number, number]> };
 export const idle8Of = (id: number) => (IDLE8.on && IDLE8.has.includes(id) && !HERO_HD[heroOf(id).sprite || ''] ? `${import.meta.env.BASE_URL}${IDLE8.src}` : null);
 /** 👑 머리 자리 (tools/make-hero-head.py · 「후광 = 머리 뒤 중앙」 2026-11-13): [가로(보이는 상자 가운데에서), 높이(발에서 위로)] · 옛 칸 80 × 64 px · idle8 = 캠프 숨쉬기 시트 */

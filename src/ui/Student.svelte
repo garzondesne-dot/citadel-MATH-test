@@ -69,7 +69,7 @@
   const loadedAt = serverNow(); // ⏱ 선물 at(서버 시각)과 같은 시계
   const live = untrack(() => {
     const x = untrack(() => !!cls && isExcluded(S, cls, num));
-    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, fx: savedLook().fx, enh: savedLook().enh, x });
+    const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, base: savedLook().base, fx: savedLook().fx, enh: savedLook().enh, x });
     hb();
     const beat = setInterval(hb, 3000);
     const bye = () => leave(S, code, uid);

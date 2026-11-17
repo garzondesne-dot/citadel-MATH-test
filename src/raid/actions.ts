@@ -184,13 +184,14 @@ export function appearNow(S: Store, L: LessonPack, code: string): void {
 }
 
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */
-export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number; x?: boolean; fx?: string; enh?: number }): void {
+export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number; base?: number; x?: boolean; fx?: string; enh?: number }): void {
   const base = `${roomPath(code)}/players/${uid}`;
   S.set(`${base}/num`, num); S.set(`${base}/nick`, nick); S.set(`${base}/seen`, S.now());
   if (more?.cls) S.set(`${base}/cls`, more.cls);
   if (more?.cls && !more.x) usageJoin(S, more.cls, num, code); // 📈 활용 추이 ⚔ 수업 참여 (방마다 한 번 · 서버만 · 정식 usage.js join)
   if (more?.ver) S.set(`${base}/ver`, more.ver);
-  if (more?.hero != null) S.set(`${base}/hero`, more.hero);
+  if (more?.hero != null) S.set(`${base}/hero`, more.hero); // 🌟 #29 hero = 보이는 모습(각성한 로안 16) · base = 고른 용사
+  if (more?.base != null) S.set(`${base}/base`, more.base);
   if (more?.fx) S.set(`${base}/fx`, more.fx);
   if (more?.enh != null) S.set(`${base}/enh`, more.enh);
   if (more?.x != null) S.set(`${base}/x`, more.x || null);

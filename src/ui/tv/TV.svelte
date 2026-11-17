@@ -21,7 +21,7 @@
   import CampProp from '../camp/CampProp.svelte';
   import { portalOf } from '../camp/portal.svelte';
   import { feat } from '../../school/features.svelte';
-  import { useMe } from '../../store/me.svelte';
+  import { meLookId, useMe } from '../../store/me.svelte';
   import Sprite from '../Sprite.svelte';
   import DemoPhone from './DemoPhone.svelte';
   import QR from '../QR.svelte';
@@ -364,7 +364,7 @@
     <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
     <div class="lring" bind:clientWidth={lobbyW}>
       <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
-      <div class="tchr"><HeroSprite id={M.me.hero} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
+      <div class="tchr"><HeroSprite id={meLookId(M.me)} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
