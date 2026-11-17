@@ -32,7 +32,7 @@
   // ⚔ 소레이드 학생 카드 (정식 chainView · ⑤): 지금 단계 하나 · 졸개 오답 −½ · 대장 오답 −1 · 1칸 남으면 🙋 선생님 확인
   //   대장 처치 뒤 = 「🔥 한 판 더 (n/3)」 (저절로 넘어가지 않음 · 나타난 뒤 1.5초 잠금) · 연습 판 = 숫자 바뀜 · 📜 원문 · 💡 근거 빈칸
   //   ✍ 서술형 📸 (정식 #50 · 📜 2026-11-15): 언제나(시작 전 · 졸개 도중 · 대장 뒤 · 한 판 더 중) · 학습지 숫자 그대로 · 통과 = 🌟 진필살기 + 📜 1 + 남은 단계 처치
-  const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true, photoS = null }: { /** 📷 사진 · 📜 · 기준표 = 이 저장소 (🎯 허수아비 = 이 탭 방이라 서버 저장소를 따로 · #40) */ photoS?: Store | null; S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
+  const { S, L, R, code, mid, uid, now, locked, title, onhint, cls = '', num = 0, demo = false, photo = true, photoS = null, extWr = null }: { /** 🏰 성채 = 방이 사진을 처리 · 단추만 문제 칸 안에 (#56) */ extWr?: { label: string; sub: string; on: () => void } | null; /** 📷 사진 · 📜 · 기준표 = 이 저장소 (🎯 허수아비 = 이 탭 방이라 서버 저장소를 따로 · #40) */ photoS?: Store | null; S: Store; L: LessonPack; R: Room; code: string; mid: string; uid: string; now: number; locked: boolean; title: string; onhint?: () => void; cls?: string; num?: number; /** 🎮 선생님 시연 = 사진 없이 「✔ 테스트: 사진 통과로 보기」 (데미지 · 기록 없음) */ demo?: boolean; /** 📷 수업 레이드만 (정식: 🎯 허수아비 · 📋 게시판 = 사진 없음 · 🏰 성채 = 방 목록에서 따로) */ photo?: boolean } = $props();
   $effect(() => setSymPack(L as { id: string; no?: number; kind?: string })); // 📖 기호 톡 누른 횟수 = 이 차시 칸에
   const rec = $derived(chainRecord(L, R, mid, uid));
   // 💡 친구에게 힌트 주기 (📜 2026-11-17 #23 · 옛 정식 #26 · #52 ②): 근거 줄을 맞힌 학생만 · 줄마다 한 번 · EXP +1 · TV 첫 1명 말풍선 · 풀고 있는 친구 = 「💡 친구 힌트 n개」
@@ -187,17 +187,18 @@
 {:else if rec.locked && !prac}
   {#if v4 && R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-supply" onclick={() => heartRelease(S, code, mid, uid)}>✔ 테스트: 선생님 보급</button>{/if}<!-- 🧪 테스트 모드 = 선생님 「⚔ 보급」을 스스로 (📜 2026-11-15 칼) -->
   <BottomAction battle disabled why={v4 ? '⚔ 칼이 다 떨어졌어요 · 🙋 학습지에 풀이를 정리하면 선생님이 「⚔ 보급」으로 칼 하나를 줘요' : '⚔ 칼이 다 떨어졌어요 · 🙋 학습지에 풀이를 정리해 두면 선생님이 와서 보급해 줘요'}>
-    {#snippet right()}{#if canPhoto}{@render wrBtn()}{/if}{/snippet}
+    {#snippet right()}{#if extWr}{@render extBtn()}{:else if canPhoto}{@render wrBtn()}{/if}{/snippet}
     {#snippet main()}<span>🙋 선생님께 보급받기</span>{#if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}{/snippet}
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
     {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" aria-label="힌트" data-k="hint" onclick={() => (helpNow ? (helpOpen = true) : onhint?.())}><i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
-    {#snippet right()}{#if canPhoto}{@render wrBtn()}{:else if v4}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 준비 중)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
+    {#snippet right()}{#if extWr}{@render extBtn()}{:else if canPhoto}{@render wrBtn()}{:else if v4}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 준비 중)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}<span>{pw(`${stName(stage, pItems.length)} ${prac ? (v4 ? '한 번 더 ' : '연습 ') : ''}공격`)}</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>
 {/if}
 
+{#snippet extBtn()}<button type="button" class="side wr" data-k="castle-wr" onclick={() => extWr?.on()}>{extWr?.label}<small>{extWr?.sub}</small></button>{/snippet}
 {#snippet wrBtn()}{#if wrOk === 'ok'}<button type="button" class="side wr" disabled data-k="wr-btn">🌟 통과<small>서술형</small></button>{:else if phN >= phMax}<button type="button" class="side wr" disabled data-k="wr-btn">📸 다 씀<small>{phN}/{phMax}</small></button>{:else}<button type="button" class="side wr" data-k="wr-btn" onclick={() => (wm = { peek: false })}>✍ 서술형<small>📄 학습지 숫자</small></button>{/if}{/snippet}
 {#if peekAsk}
   <Sheet onclose={() => (peekAsk = false)} mainText="📜 볼게요" onmain={() => { peekAsk = false; if (wm) wm.peek = true; }}>

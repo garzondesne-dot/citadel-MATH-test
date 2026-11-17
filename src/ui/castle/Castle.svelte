@@ -196,8 +196,8 @@
   <div class="drun" data-castle-run data-room={run.r.id}>
     <button type="button" class="quit" aria-label="그만하기" onclick={quit}>‹</button>
     {#if preview}<p class="pv" role="status">👁 미리 보기 · 기록 없음</p>{/if}
-    <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me?.nick ?? ''} {cls} board />
-    {#if canShot(run.P, run.r)}<button type="button" class="wrc" data-k="castle-wr" onclick={shotNow}>✍ 서술형 · 📷 <small>{run.r.chain ? '통과 = 남은 단계 처치' : '통과 = 처치'} · 📜 1{photoHero ? '' : ' · 🎁 🧑‍🎓'}</small></button>{/if}
+    <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me?.nick ?? ''} {cls} board extWr={run.r.chain && canShot(run.P, run.r) ? { label: '✍ 서술형', sub: `📷 · 📜 1${photoHero ? '' : ' · 🎁'}`, on: shotNow } : null} />
+    {#if !run.r.chain && canShot(run.P, run.r)}<button type="button" class="wrc" data-k="castle-wr" onclick={shotNow}>✍ 서술형 · 📷 <small>{run.r.chain ? '통과 = 남은 단계 처치' : '통과 = 처치'} · 📜 1{photoHero ? '' : ' · 🎁 🧑‍🎓'}</small></button>{/if}
   </div>
 {:else}
 <div class="cs" role="dialog" aria-modal="true" aria-label="성채 던전" data-k="castle">
