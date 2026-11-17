@@ -7,7 +7,7 @@ import type { Store } from '../src/model/types';
 const S: Store = { ...memoryStore(), kind: 'memory', now: () => 0 } as Store;
 describe('⚙ 스위치 틀', () => {
   it('설정 없음 = 🏰 전체 (우리 학교 그대로) · 모든 기능 켬 · 📅 시간표만 끔(모든 묶음 기본 끔)', () => {
-    for (const f of FEATS) expect(wanted(null, f.id)).toBe(f.id !== 'schedule' && f.id !== 'rest-defense' && f.id !== 'keygem'); // 🔑 #59 열쇠 연습 💎 = 처음엔 끔
+    for (const f of FEATS) expect(wanted(null, f.id)).toBe(f.id !== 'schedule' && f.id !== 'rest-defense');
     for (const b of BUNDLES) expect(wanted({ bundle: b.id }, 'rest-defense')).toBe(false); // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16)
     expect(wanted({ bundle: 'full', on: { 'rest-defense': true } }, 'rest-defense')).toBe(true); // 스위치로 되살림
     for (const b of BUNDLES) expect(wanted({ bundle: b.id }, 'schedule')).toBe(false);

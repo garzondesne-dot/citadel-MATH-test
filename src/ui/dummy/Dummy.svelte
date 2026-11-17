@@ -87,7 +87,7 @@
     void ver; if (!cls || !L.monsters?.[mid]?.chain) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
     return !!RS.get(ultKey(uid, rl, mid)) && !RS.get(ultKey(uid, rl, mid, true));
   }
-  // 🔑 열쇠 연습 (📜 #59 · 정정 2): 그 차시 수업에서 열쇠를 틀렸거나(x) 못 받은(-) 학생만 · 판 1 · 2 · 기록 bonus/{반}/{번호}/review/keyp_{차시} · 💎 +1 = 스위치(keygem · 기본 끔)
+  // 🔑 열쇠 연습 (📜 #59 · 정정 2): 그 차시 수업에서 열쇠를 틀렸거나(x) 못 받은(-) 학생만 · 판 1 · 2 · 기록 bonus/{반}/{번호}/review/keyp_{차시} · 💎 +1 = 그 차시 연습을 처음 다 맞힘 · 차시마다 한 번 · 스위치(keygem · 기본 켬 · 📜 선생님 「추천대로」)
   const keyNeed = (L: LessonPack): EntryKey[] => { const by = (recOf(L) as { keys?: { by?: Record<string, string> } } | undefined)?.keys?.by; return by ? keysOf(L).filter((k) => by[k.id] && by[k.id] !== 'o' && k.vers.length > 1) : []; };
   const keypOf = (L: LessonPack): Record<string, number> => (void ver, (base ? RS.get<Record<string, number>>(`${base}/review/keyp_${L.id}`) : null) || {});
   let kp = $state<{ L: LessonPack; ks: EntryKey[] } | null>(null);
@@ -97,7 +97,7 @@
     if (base) RS.set(`${base}/review/keyp_${x.L.id}`, { ...old, ...Object.fromEntries(Object.entries(right).map(([k, n]) => [k, (Number(old[k]) || 0) + n])), n: (Number(old.n) || 0) + 1, at });
     const why = [`🔑 맞힘 ${ok} / ${total}`]; let got = 0;
     const lk = `keyp_${x.L.id}`;
-    if (feat('keygem') && ok > 0 && gemLogP && !logNow()[lk]) { got = earnDaily(me.wallet, 1, today(), GEM.dayCap); if (got) { RS.set(`${gemLogP}/${lk}`, { g: got, at, why: '🔑 열쇠 연습' }); why.push(`💎 +${got} 열쇠 연습`); save(); } }
+    if (feat('keygem') && ok === total && total > 0 && gemLogP && !logNow()[lk]) { got = earnDaily(me.wallet, 1, today(), GEM.dayCap); if (got) { RS.set(`${gemLogP}/${lk}`, { g: got, at, why: '🔑 열쇠 연습' }); why.push(`💎 +${got} 열쇠 연습`); save(); } }
     ver++; res = { L: x.L, title: '🔑 열쇠 연습', clear: ok > 0, got, xp: 0, why, sealed: false };
   }
   /** ✔ 실력 쓰기 통과 (📜 칸 ult_…_v 있음) */
