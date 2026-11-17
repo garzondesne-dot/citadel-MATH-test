@@ -27,7 +27,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await t.click('.rdock button:has-text("쉼터")'); await t.waitForSelector('.games'); await wait(500);
   const sh = await t.evaluate(() => { const m = document.querySelector('.sheet .act .btn.rbig').getBoundingClientRect(), bd = document.querySelector('.sheet .body'); return { h: Math.round(m.height), gap: Math.round(innerHeight - m.bottom), games: document.querySelectorAll('.games .game').length, scroll: bd.scrollHeight > bd.clientHeight + 1, gh: Math.round(document.querySelector('.games .game').getBoundingClientRect().height), txt: document.querySelector('.sheet .act .btn.rbig').textContent.trim() }; });
   log('① 시트: 놀이', sh.games, '칸 · 칸 높이', sh.gh, '· 주요 단추', sh.h, '· 바닥', sh.gap, '· 스크롤', sh.scroll, '·', sh.txt);
-  if (sh.games !== 4 || sh.h !== 68 || Math.abs(sh.gap - 75) > 1 || sh.scroll || sh.gh !== 84) errs.push('① 시트 치수');
+  if (sh.games !== 5 || sh.h !== 68 || Math.abs(sh.gap - 75) > 1 || sh.scroll || sh.gh !== 84) errs.push('① 시트 치수');
   await t.screenshot({ path: `${SHOTS}/b26-remote-sheet.png` });
   await t.click('.rstep button[aria-label="1분 늘리기"]'); await wait(300);
   const rm = await rest('school/teacher/restMin'), rmin = (await rest(`rooms/${code}/state/rest`)).min; log('   분 ＋ → 기억', rm, '· 쉼터', rmin, '분'); if (rm !== 6 || rmin !== 6) errs.push('① 분 기억');

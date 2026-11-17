@@ -11,6 +11,8 @@
   import { funOf, nunCheer, nunPress, payFun, pick, type AnyFun } from '../../rest/run';
   import FUNQ from '../../rest/funq.json';
   import TdPhone from './TdPhone.svelte';
+  import DrgPhone from './DrgPhone.svelte';
+  import type { Drg } from '../../rest/dragon';
   import FunArena from './FunArena.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
@@ -27,7 +29,8 @@
 
   // ── 고르기 놀이 (⚖ 🔄 ⭕) ──
   const isTd = $derived((f?.kind as string) === 'td');
-  const ff = $derived(f && f.kind !== 'nun' && !isTd ? norm(f as Fun) : null);
+  const isDrg = $derived((f?.kind as string) === 'drg'); // 🐉 #25
+  const ff = $derived(f && f.kind !== 'nun' && !isTd && !isDrg ? norm(f as Fun) : null);
   const fv = $derived((R as unknown as { fv?: Record<string, Record<string, string>> }).fv);
   const mine = $derived(ff ? fv?.[ff.rk]?.[uid] ?? '' : '');
   const alive = $derived(!!f && !!(f.alive || {})[uid]);
@@ -37,7 +40,7 @@
   const outN = $derived(ff ? (ff.outAt || {})[uid] : undefined);
   let wake = $state(''); // 🙋 누른 판 (덮개 걷음)
   const cover = $derived.by(() => {
-    if (!f || f.phase === 'end' || isTd) return '';
+    if (!f || f.phase === 'end' || isTd || isDrg) return '';
     if (f.kind === 'quiz') return alive ? '' : 'see';
     if (alive) return '';
     // 🎬 공개(show) 동안 이번 판에 고른 사람 = 덮개 없이 무대 연출(내 용사 추락)까지 봄 → 다음 판부터 덮개 · 💤 안 고른 사람은 지금처럼 덮개 + 🙋 (정식 phone 도 공개 중엔 무대 + 결과 글)
@@ -46,7 +49,7 @@
     return outN != null || f.kind === 'nun' ? 'out' : 'see';
   });
   const secs = $derived(f && f.phase !== 'end' ? Math.max(0, Math.ceil(((f.phase === 'show' ? (ff?.until ?? (f as Nun).to) : f.to) - fnow) / 1000)) : 0);
-  const title = $derived(!f ? '🏕 쉼터' : isTd ? '🏰 디펜스' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
+  const title = $derived(!f ? '🏕 쉼터' : isTd ? '🏰 디펜스' : isDrg ? '🐉 용이 잠든 사이' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
   const card = $derived.by(() => {
     if (!ff) return '';
     if (ff.s) return ff.s;
@@ -92,7 +95,7 @@
 </script>
 
 <div class="fun" role="region" aria-label="쉼터">
-  <div class="bar"><div class="tt">{title}</div>{#if isTd}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
+  <div class="bar"><div class="tt">{title}</div>{#if isTd || isDrg}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
   <div class="mid" class:dimd={!!cover}>
     {#if !f}
       <div class="ic">🏕</div><b class="h">잠깐 쉬어 가요</b>
@@ -100,6 +103,8 @@
       <p class="bub">선생님이 놀이를 고르는 중</p>
     {:else if isTd}
       <TdPhone {S} {R} {code} {uid} {now} />
+    {:else if isDrg}
+      <DrgPhone {S} {R} {code} {uid} {now} f={f as unknown as Drg} />
     {:else if nn}
       {#if nn.phase === 'end'}
         <div class="ic">{won ? '🏆' : '🙊'}</div><b class="h">{won ? '우승! 끝까지 살아남았어요' : `우승 ${(nn.win || []).length}명`}</b>
@@ -142,8 +147,8 @@
         {#each opts as o (o.v)}<button type="button" class="opt {o.v}" class:on={mine === o.v} aria-pressed={mine === o.v} disabled={ff.phase !== 'pick' || (!!cover && cover !== 'zz')} onclick={() => choose(o.v)}>{o.t}{#if mine === o.v} ✓{/if}</button>{/each}
       </div>{/snippet}
     </BottomAction>
-  {:else if isTd}
-    <!-- 🏰 디펜스 = TdPhone 이 주요 단추를 그림 -->
+  {:else if isTd || (isDrg && f?.phase !== 'end')}
+    <!-- 🏰 디펜스 · 🐉 = 그 놀이 화면이 단추를 그림 -->
   {:else}
     <BottomAction dock={false} text="다음 놀이를 기다려요" why={f.kind === 'quiz' ? '맞힌 문장 × 2 EXP' : '선생님이 다음 놀이를 골라요'} />
   {/if}

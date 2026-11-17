@@ -7,6 +7,7 @@
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
+import { dragonAt, FIN, type Drg } from '../rest/dragon';
 
 export const BOT_MAX = 30, BOT_DEF = 5; // 📜 2026-11-17 #21 🧪 테스트 봇 0~30 · 기본 5
 export const NICK = ['민준', '서연', '도윤', '하은', '시우', '지유', '주원', '서아', '하준', '지안', '은우', '수아', '건우', '윤서', '선우', '채원', '유준', '다은', '이안', '소율', '태윤', '예린', '로운', '하린', '지호', '아린', '준서', '서윤', '현우'];
@@ -53,6 +54,11 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
     const f = (R0 as { fun?: Record<string, unknown> }).fun as { kind?: string; phase?: string; to?: number; rk?: string; alive?: Record<string, true>; ans?: string | null; rps?: boolean; g?: number; round?: number } | undefined;
     if (!f) return; const now = S.now();
     if (f.kind === 'td') return; // 🏰 디펜스 = 베타 가상 학생은 안 함(자리 고르기 · 능력치 규칙이 따로)
+    if (f.kind === 'drg') { // 🐉 #25 가상 친구 = 잘 때 0.7초마다 2~5칸 · 눈 뜰 때 가끔(20%) 걸림
+      const d = f as unknown as Drg; if (d.phase !== 'play') return; const t = now - d.at; if (t < 0) return; const slot = Math.floor(t / 700);
+      ids.forEach((u) => { if (!d.alive?.[u]) return; later(`drg|${d.g}|${d.round}|${u}|${slot}`, rand(0, 600), () => { const RR = S.get<Room>(roomPath(code)) as Room & { dg?: Record<string, Record<string, Record<string, { p?: number; h?: number; f?: number }>>> }; const cur = RR?.dg?.[d.g]?.[d.round]?.[u] || {}; if (cur.f != null) return; const st = dragonAt(d, S.now() - d.at).st; let p = Number(cur.p) || 0, h = Number(cur.h) || 0; if (st === 'eye') { if (Math.random() < 0.2) { p = Math.max(0, p - 10); h += 1; } else return; } else p = Math.min(FIN, p + 2 + Math.floor(Math.random() * 4)); S.set(P(`dg/${d.g}/${d.round}/${u}`), { p, h, ...(p >= FIN ? { f: S.now() } : {}) }); }); });
+      return;
+    }
     if (f.kind === 'nun') { if (f.phase !== 'play') return; ids.forEach((u) => { if (!f.alive?.[u]) return; later(`nun|${f.g}|${f.round}|${u}`, rand(900, 9000), () => S.set(P(`nun/${f.g}/${f.round}/${u}`), S.now())); }); return; }
     const left = (f.to || 0) - now; if (f.phase !== 'pick' || left < 800) return;
     ids.forEach((u) => {

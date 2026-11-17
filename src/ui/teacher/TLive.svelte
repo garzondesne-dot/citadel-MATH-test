@@ -28,7 +28,7 @@
   import SymText from '../q/SymText.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { talkOf } from '../tv/cards';
-  import { driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
+  import { drgNext, driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
   import { status as funStatus, norm, type Fun } from '../../rest/fun';
   import { boardCols, boardScroll, cellOf, givenName, swordDots, todayCols, todayRow, type Cell } from '../../school/stuBoard';
   import { kstToday0 } from '../../school/noteDiff';
@@ -178,7 +178,7 @@
   const funOn = $derived(!!fun && fun.phase !== 'end');
   const tdf = $derived(fun && (fun.kind as string) === 'td' ? (fun as unknown as { g: number; phase: string; sh?: number; ch?: Record<string, number>; res?: { win: boolean } }) : null);
   const tdWave = $derived(tdf ? Number((R as unknown as { tdl?: Record<string, { wave?: number; life?: number }> }).tdl?.[tdf.g]?.wave) || 1 : 1);
-  const funLine = $derived(tdf ? `🏰 디펜스 · ${tdf.phase === 'pick' ? '자리 고르는 중' : tdf.phase === 'play' ? `웨이브 ${tdWave}/5` : tdf.res?.win ? '🏆 승리' : '끝'}` : !fun ? '' : fun.kind === 'nun' ? `🙊 눈치게임 · ${fun.phase === 'end' ? '끝' : `${(fun as unknown as { round: number }).round}판 · 생존 ${Object.keys(fun.alive || {}).length}명`}` : funStatus(norm(fun as Fun)));
+  const funLine = $derived(tdf ? `🏰 디펜스 · ${tdf.phase === 'pick' ? '자리 고르는 중' : tdf.phase === 'play' ? `웨이브 ${tdWave}/5` : tdf.res?.win ? '🏆 승리' : '끝'}` : !fun ? '' : (fun.kind as string) === 'drg' ? `🐉 용이 잠든 사이 · ${fun.phase === 'intro' ? '안내' : fun.phase === 'end' ? '시상' : `${(fun as unknown as { round: number }).round}판`}` : fun.kind === 'nun' ? `🙊 눈치게임 · ${fun.phase === 'end' ? '끝' : `${(fun as unknown as { round: number }).round}판 · 생존 ${Object.keys(fun.alive || {}).length}명`}` : funStatus(norm(fun as Fun)));
   const gameOf = (k: Game) => GAMES.find((g) => g.k === k)!;
   function openRest() { if (!R) return; if (!R.state.rest) restOn(S, code, R, rmin); sheet = 'rest'; }
   function setMin(d: number) { if (!R) return; rmin = Math.max(1, Math.min(20, rmin + d)); restOn(S, code, R, rmin); }
@@ -410,6 +410,7 @@
         {#each gamesOn() as g (g.k)}<button type="button" class="game" class:on={game === g.k} aria-pressed={game === g.k} disabled={funOn} onclick={() => (game = g.k)}><i>{g.ic}</i>{g.name}</button>{/each}
         {#if game === 'quiz'}<div class="oxw" role="group" aria-label="OX 문장"><button type="button" class:on={oxWhich === 'prev'} onclick={() => (oxWhich = 'prev')}>지난 차시</button><button type="button" class:on={oxWhich === 'now'} onclick={() => (oxWhich = 'now')}>오늘</button></div>{/if}
       </div>{/if}
+      {#if fun && (fun.kind as string) === 'drg' && fun.phase !== 'end'}<div class="tdc"><button type="button" data-k="drg-next" onclick={() => drgNext(S, code)}>⏭ 다음 판<small>지금 단계를 바로 끝내요</small></button></div>{/if}
       {#if tdf && tdf.phase === 'play'}<div class="tdc"><button type="button" disabled={!!tdf.sh} onclick={() => { tdShield(S, code); say('🛡 수호 방패! 성에 닿는 몬스터 3마리를 막아요'); }}>🛡 수호 방패<small>{tdf.sh ? '썼어요' : '한 판 한 번'}</small></button><button type="button" disabled={!!tdf.ch?.[tdWave]} onclick={() => { tdCheer(S, code, tdWave); say('✨ 응원! 5초 동안 공격 속도 +20%'); }}>✨ 응원 마법<small>{tdf.ch?.[tdWave] ? '이번 웨이브 씀' : `웨이브 ${tdWave} · 한 번`}</small></button></div>{/if}
       <div class="rstep"><button type="button" aria-label="1분 줄이기" onclick={() => setMin(-1)}>−</button><b>{rmin}분<small>{R.state.rest ? `남은 ${mmss(Math.max(0, R.state.rest.at + R.state.rest.min * 60e3 - now))}` : ''}</small></b><button type="button" aria-label="1분 늘리기" onclick={() => setMin(1)}>＋</button></div>
     </Sheet>
