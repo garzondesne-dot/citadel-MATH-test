@@ -1,5 +1,6 @@
 import { join as usageJoin } from '../school/usage';
 import { armPre, lastClosePath } from '../school/pre';
+import { bossIdx, bossOpened, lastLessonPath } from '../school/formative';
 import { recordTime, timeSig } from '../school/ltime';
 import { leftSteps, sentKey } from '../school/sendReview';
 import { cleanWords } from '../school/survey';
@@ -150,8 +151,16 @@ export function endClass(S: Store, L: LessonPack, code: string): void {
   if (R.meta.cls && !isLobby(R)) {
     const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
     S.set(lastClosePath(R.meta.cls, test), S.now());
+    S.set(lastLessonPath(R.meta.cls, test), { lesson: L.id, no: L.no, code, boss: bossOpened(L, R), at: S.now() }); // 📝 #35 A 다음 수업 도입 「지난 차시 형성평가 미제출 n명」
     if (!test && R.meta.t0) recordTime(S, L.id, code, Number(R.meta.t0), S.now(), timeSig((id) => feat(id as never))); // ⏱ 실측 (📜 2026-11-16 · 성적 아님 · 같은 차시 · 같은 기능 3번 이상 = 실측 평균)
   } // ⚔ 선제 공격 기준 시각 = 그 반 마지막 수업 닫힌 시각
+}
+/** ⏰ #35 C 「👑 형성평가 지금 열기」: 형성평가 앞 남은 몬스터 = 🎯 복습으로(수업 닫을 때 저절로 보내는 것과 같은 길 · 짝 문항도 빠짐) → 형성평가 단계로 */
+export function goBoss(S: Store, L: LessonPack, code: string): void {
+  const R = getRoom(S, code), bi = bossIdx(L); if (!R || bi < 0 || R.state.closed) return;
+  const t = S.now(), sent = (R.state as { sent?: Record<string, number> }).sent || {};
+  L.steps.forEach((s, i) => { if (i >= stepIdx(R) && i < bi && s.kind === 'monster' && !s.later && L.monsters[s.id] && !cleared(L, R, s.id, t) && !sent[s.id]) S.set(`${roomPath(code)}/state/sent/${s.id}`, t); });
+  goTo(S, L, code, getRoom(S, code) ?? R, bi);
 }
 /** 대기실: 안 온 번호를 눌러 결석 (다시 누르면 풂) · 🔄 옛 판 학생에게 새로 고침 보내기 */
 export function setAbsent(S: Store, code: string, uid: string, on: boolean): void { S.set(`${roomPath(code)}/absent/${uid}`, on ? true : null); }

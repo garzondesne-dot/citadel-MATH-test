@@ -65,6 +65,8 @@
 </script>
 
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
+<!-- 📝 #35 B 한 번이라도 「제출」 = 크게 「✅ 형성평가 제출 완료」 (선생님께 보여 주고 ✅ 도장) · 수업만 (허수아비 없음) -->
+{#if r.subs > 0 && !dummy}<p class="subok" data-k="boss-subok">✅ 형성평가 제출 완료</p>{/if}
 {#if r.explain}
   <AnswerRow {cells} {label} />
   <div class="bcard">
@@ -90,6 +92,7 @@
 {/if}
 
 <style>
+  .subok { margin: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--ok) 18%, transparent); border: 2px solid var(--ok); color: var(--ok); font: 900 22px var(--font); text-align: center; }
   .bon { margin-top: var(--s2); width: 100%; min-height: 48px; border-radius: 12px; border: 1px solid var(--accent); background: none; color: var(--accent); font: 700 15px var(--font); }
   .tagl { margin: 0; display: flex; align-items: center; gap: var(--s2); }
   .tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 13px; background: var(--surface-2); border: 1px solid var(--line, #2f3440); color: var(--text-2); font: 700 13px var(--font); }

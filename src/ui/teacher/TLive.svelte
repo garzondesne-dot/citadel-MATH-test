@@ -11,7 +11,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { appearNow, goBoss, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
@@ -22,6 +22,7 @@
   import { keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
   import { feat, type FeatId } from '../../school/features.svelte';
   import { FOLD_MS, guideOf } from '../../school/guide';
+  import { bossClock, prevPending, stampBlocked } from '../../school/formative';
   import { estimate, ltimePath, timeSig } from '../../school/ltime';
   import { setRecall } from '../../raid/actions';
   import { liveValue } from '../room.svelte';
@@ -168,6 +169,7 @@
   function tapCell(uid: string) {
     if (!(stampOn && feat('stamp') && R)) { tapNum(uid); return; }
     if (absent[uid] || stamped(R, uid)) return;
+    if (stampBlocked(L, R, uid)) { say(`👑 ${numOf(uid)} 형성평가 먼저 제출해야 도장`); return; } // 📝 #35 B
     if (!giveStamp(S, code, uid)) return;
     stampNew = { ...stampNew, [uid]: true }; sUndo = uid; if (sUndoT) clearTimeout(sUndoT); sUndoT = setTimeout(() => (sUndo = null), 3000);
   }
@@ -177,14 +179,21 @@
   const doorAsk = $derived(!!R?.state.door);
 
   // ── 시트 ──
-  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey' | 'bossask' | 'guide'>(''), bossAsked = $state(false);
+  let sheet = $state<'' | 'bubble' | 'set' | 'gift' | 'ask' | 'qr' | 'rest' | 'send' | 'words' | 'survey' | 'bossask' | 'guide' | 'prev'>(''), bossAsked = $state(false);
   // 🎯 복습으로 보내기 (📜 2026-11-16 · A): 남은 몬스터 · 👑 형성평가 → 허수아비 · 형성평가 복습 완료 n / 인원
   const leftS = $derived(R && !isLobby(R) && !isEnd(L, R) ? leftSteps(L, R, now) : []);
   const bossRevN = $derived.by(() => { void now; const all = S.get<Record<string, Record<string, { bossReview?: number; bossSent?: boolean } | null>>>(`records/${live.cls}`) || {}; const rows = Object.values(all).map((x) => x?.[L.id]).filter(Boolean); return { done: rows.filter((r) => r!.bossReview).length, sent: rows.filter((r) => r!.bossSent).length }; });
   // 📊 길잡이 (📜 2026-11-17 #30): 「지금」 칸 윗줄 한 줄 · 🙋 · 🧱 가 있으면 물러남 · 단계마다 1개 · 8초 뒤 📊 점 · 넘기기 = 그 단계 다시 안 뜸 · 선생님 폰에만
   let gDone = $state<Record<string, boolean>>({}), gAt = $state<Record<string, number>>({});
   const gK = $derived.by(() => { const on = (id: string) => feat(id as FeatId), e = estimate(L, on, S.get<Record<string, number>>(ltimePath(L.id, timeSig(on)))); return e.real ? e.real.min / Math.max(1, e.base + e.extra) : 1; });
-  const guide = $derived.by(() => { if (!R || !feat('guide') || isLobby(R) || isEnd(L, R) || hands.length || stuckNow) return null; const key = String(stepIdx(R)); if (gDone[key]) return null; const g = guideOf(L, R, ids, now, gK); return g ? { ...g, key } : null; });
+  // ⏰ #35 C 형성평가 지금 열기 (순서 🙋 > ⏰ > 🧱 > 📊 · 교사 폰만 · 넘기기 = 이 수업 다시 안 뜸)
+  let bcDone = $state(false);
+  const bClock = $derived(!R || !feat('guide') || isLobby(R) || isEnd(L, R) || hands.length || bcDone ? null : bossClock(L, R, now));
+  // 📋 #35 A 도입 단계: 지난 차시 형성평가 미제출 n명 (그 반 · 수업 · 허수아비 모두 안 냄 · 형성평가를 연 차시만)
+  let prevP = $state<{ no: number; nums: number[] } | null>(null), prevDone = $state(false);
+  untrack(() => { if (live.cls && L.boss !== undefined) void prevPending(S, live.cls, !!live.test, L.id, roster(live.cls, S).map((p) => p.num)).then((r) => { if (r && r.nums.length) prevP = { no: Number(r.last.no) || 0, nums: r.nums }; }).catch(() => {}); });
+  const prevBand = $derived(!!prevP && !prevDone && !!R && !isLobby(R) && step?.kind === 'intro' && !hands.length);
+  const guide = $derived.by(() => { if (!R || !feat('guide') || isLobby(R) || isEnd(L, R) || hands.length || stuckNow || bClock) return null; const key = String(stepIdx(R)); if (gDone[key]) return null; const g = guideOf(L, R, ids, now, gK); return g ? { ...g, key } : null; });
   $effect(() => { const k = guide?.key; if (k) untrack(() => { if (gAt[k] == null) gAt = { ...gAt, [k]: Date.now() }; }); });
   const gFold = $derived(!!guide && now - (gAt[guide.key] ?? now) > FOLD_MS);
   const recallStep = $derived(R?.state.recall ? L.steps.find((x) => x.id === R.state.recall) : null);
@@ -283,7 +292,7 @@
               <span class="nm"><b>{nl(p.num)}</b><s>{givenName(p.name)}</s></span>
               {#if dots}<span class="sw" aria-hidden="true">{#if feat('sword')}{#each Array.from({ length: dots.on }) as _, k (k)}<i></i>{/each}{#each Array.from({ length: dots.off }) as _, k (k)}<i class="u"></i>{/each}{#if dots.more}<small>+{dots.more}</small>{/if}{:else}<small>{c!.left}번</small>{/if}</span>{/if}
               {#if c}<span class="pg" aria-hidden="true"><i style:width="{Math.round(c.prog * 100)}%"></i></span>{/if}
-              {#if stampOn && stamped(R, p.uid)}<em class="bd g" data-k="stamped">✅</em>{:else if st === 'help'}<em class="bd r">🙋{ordNo(p.uid)}</em>{:else if c?.zero}<em class="bd r">⚔0</em>{:else if lf}<em class="bd o">🔑{lf}</em>{:else if rdy}<em class="bd y">📝</em>{/if}
+              {#if stampOn && stamped(R, p.uid)}<em class="bd g" data-k="stamped">✅</em>{:else if stampOn && stampBlocked(L, R, p.uid)}<em class="bd y" data-k="stamp-boss">👑</em>{:else if st === 'help'}<em class="bd r">🙋{ordNo(p.uid)}</em>{:else if c?.zero}<em class="bd r">⚔0</em>{:else if lf}<em class="bd o">🔑{lf}</em>{:else if rdy}<em class="bd y">📝</em>{/if}
             </button>
           {/each}
         </div>
@@ -319,6 +328,8 @@
       {@render att()}
       <div class="card rstat" data-k="now-cell">
         {#if recallStep}<div class="rs1 gband rc" data-k="recall-band"><span class="gt">📺 {short(recallStep)} 칸 TV 에 띄움</span><button type="button" class="ga" data-k="recall-off" onclick={() => setRecall(S, code, null)}>닫기</button></div>
+        {:else if bClock}<div class="rs1 gband bc" data-k="boss-clock"><span class="gt">⏰ 남은 {bClock.left}분</span><button type="button" class="ga" data-k="boss-go" onclick={() => { goBoss(S, L, code); bcDone = true; say('👑 형성평가를 열었어요 · 남은 몬스터는 🎯 허수아비로'); }}>👑 형성평가 지금 열기</button><button type="button" class="gx" aria-label="넘기기" data-k="boss-skip" onclick={() => (bcDone = true)}>✕</button></div>
+        {:else if prevBand && prevP}<div class="rs1 gband pv" data-k="prev-pend"><button type="button" class="gt" data-k="prev-open" onclick={() => (sheet = 'prev')}>📋 지난 {prevP.no ? `${prevP.no}차시 ` : '차시 '}형성평가 미제출 {prevP.nums.length}명</button><button type="button" class="ga" data-k="prev-ok" onclick={() => (prevDone = true)}>🎯 허수아비로 안내</button></div>
         {:else if guide && !gFold}<div class="rs1 gband" data-k="guide"><button type="button" class="gt" data-k="guide-open" onclick={() => (sheet = 'guide')}>{guide.text}</button><button type="button" class="ga" data-k="guide-go" onclick={gGo}>{guide.act}</button></div>
         {:else}
         <div class="rs1"><span class="lab acc" data-k="now-lab">{isEnd(L, R) ? '마무리' : step?.kind === 'boss' && bossNote(L, R) ? `지금 · ${bossNote(L, R)}` : `지금 · ${short(step)}`}</span>
@@ -390,7 +401,7 @@
       </div>
       <div class="wacts">
         <button type="button" class="p" disabled={st !== 'help'} onclick={() => { release(whoP.uid); who = ''; }}>⚔ 보급 (칼 +1)</button>
-        {#if feat('stamp')}<button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>{/if}
+        {#if feat('stamp') && stampBlocked(L, R, whoP.uid) && !stamped(R, whoP.uid)}<button type="button" class="st" data-k="stamp" disabled>👑 형성평가 먼저 제출</button>{:else if feat('stamp')}<button type="button" class="st" data-k="stamp" disabled={stamped(R, whoP.uid)} onclick={() => { if (giveStamp(S, code, whoP.uid)) say(`✅ ${whoP.num} ${whoP.name} 도장 · 📜 +1`); }}>{stamped(R, whoP.uid) ? '✅ 이미 도장' : '✅ 도장 (📜 +1)'}</button>{/if}
         <button type="button" disabled={!inSet.has(whoP.uid)} onclick={() => { sendReload(S, code, [whoP.uid]); say(`🔄 ${whoP.num} ${whoP.name} 새로 고침`); who = ''; }}>🔄 새로 고침</button>
         <button type="button" onclick={() => { setAbsent(S, code, whoP.uid, st !== 'ab'); who = ''; }}>{st === 'ab' ? '결석 풀기' : '결석 표시'}</button>
         {#if !away}<button type="button" class="k" data-k="pw0" disabled={!hasAccount(S, live.cls, whoP.num) || pwDone} onclick={() => (pwAsk = true)}>{pwDone ? '✅ 0000 으로 바꿨어요' : '🔑 비밀번호 0000'}</button>{/if}
@@ -434,6 +445,14 @@
       <p class="gnote">못 다 푼 몬스터는 수업에서 건너뛰고, 학생마다 🎯 허수아비 「📚 수업에서 넘어온 문제」로 가요 · 수업을 닫으면 남은 것은 저절로 보내져요</p>
       <ul class="sendl" data-k="send-list">{#each leftS as s (s.id)}<li><span>{s.kind === 'boss' ? '👑 형성평가' : `🗡 ${short(s)}`}</span><button type="button" data-k="send-one" onclick={() => sendSome([sentKey(s)])}>보내기</button></li>{/each}</ul>
       {#if bossRevN.sent}<p class="gnote" data-k="boss-rev">👑 형성평가 복습 완료 {bossRevN.done} / {expected.length}</p>{/if}
+    </Sheet>
+  {:else if sheet === 'prev' && prevP}
+    {@const pp = prevP}
+    <Sheet onclose={() => (sheet = '')}>
+      {#snippet title()}📋 지난 {pp.no ? `${pp.no}차시` : '차시'} 형성평가 미제출 {pp.nums.length}명{/snippet}
+      {#snippet act()}<div class="row"><button type="button" class="btn" data-k="prev-ok2" onclick={() => { prevDone = true; sheet = ''; }}>🎯 허수아비로 안내했어요</button></div>{/snippet}
+      <p class="gnote" data-k="prev-nums">{pp.nums.map((n) => `${n}번`).join(' · ')}</p>
+      <p class="gnote">수업에서도 🎯 허수아비에서도 👑 형성평가를 내지 않았어요 · 말로 「캠프 🎯 허수아비 → 지난 차시 👑 형성평가」 안내</p>
     </Sheet>
   {:else if sheet === 'guide' && guide}
     <Sheet onclose={() => (sheet = '')}>
@@ -589,6 +608,8 @@
   .rstat { flex: none; height: 74px; padding: 6px 10px; gap: 4px; display: grid; grid-template-rows: 20px 40px; overflow: hidden; } /* 📌 「지금」 칸 = 높이 고정 · 내용만 바뀜 (#24) */
   .gband { display: flex; align-items: center; gap: 6px; min-width: 0; } /* 📊 길잡이 = 윗줄(20px) 그대로 · 누르는 칸은 위아래로 넓힘 */
   .gband .gt { flex: 1; min-width: 0; padding: 0; border: 0; background: none; text-align: left; color: var(--accent); font: 800 14px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+  .gband .gx { flex: none; width: 28px; height: 24px; margin: -2px 0; padding: 0; border: 0; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font: 800 13px var(--font); position: relative; }
+  .gband.bc .gt { color: var(--bad); }
   .gband .ga { flex: none; height: 24px; margin: -2px 0; padding: 0 10px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 13px var(--font); white-space: nowrap; position: relative; }
   .gband .gt::before, .gband .ga::before, .gdot::before { content: ''; position: absolute; inset: -12px -4px; }
   .gband.rc .gt { color: var(--text); }
