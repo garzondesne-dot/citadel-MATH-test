@@ -110,7 +110,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
     const all = await t.$('.chips button:has-text("전체")'); if (all) { await all.click(); await t.waitForTimeout(300); }
     const line = (await t.textContent('[data-k="modesum"] summary').catch(() => '')).trim(), logs = await t.evaluate(() => JSON.parse(localStorage.getItem('citadel-v1-modelog') || '[]'));
     const today = logs.length, last = new Map(); logs.forEach((l) => last.set(l.who, l.dir)); const subN = [...last.values()].filter((d) => d === 'g2s').length;
-    ok('D 대시보드 「학습지 테마 n명 · 오늘 바꾼 횟수 m」 = 기록과 같음', line === `학습지 테마 ${subN}명 · 오늘 바꾼 횟수 ${today}` && today >= 6, `「${line}」 · 기록 ${today}줄 · 화면 ${[...new Set(logs.map((l) => l.screen))].join(' / ')}`);
+    ok('D 대시보드 「📷 사진 모드 n명 · 오늘 바꾼 횟수 m」 = 기록과 같음', line === `📷 사진 모드 ${subN}명 · 오늘 바꾼 횟수 ${today}` && today >= 6, `「${line}」 · 기록 ${today}줄 · 화면 ${[...new Set(logs.map((l) => l.screen))].join(' / ')}`);
     await t.click('[data-k="modesum"] summary'); await t.waitForTimeout(200); await t.screenshot({ path: `${SHOTS}/submit-10-dash.png` });
     ok('D 학생 화면에는 안 보임', !(await s.$('[data-k="modesum"]')) && !(await s2.$('[data-k="modesum"]'))); }
   ok('📺 TV = 게임 꼴 그대로', await hall.evaluate(() => !document.documentElement.dataset.submit));

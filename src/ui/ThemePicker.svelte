@@ -18,7 +18,7 @@
   {/each}
   {#if sub}<button type="button" class="th" data-th="submit" data-k="th-submit" class:on={submit.on} aria-pressed={submit.on} onclick={() => setSubmit(true)}>
     <span class="sw" aria-hidden="true"><i></i><i></i><i></i></span>
-    <b>학습지{#if submit.on} ✓{/if}</b><small>종이 꼴 · 글자만 · 진행 그대로</small>
+    <b>📷 사진 모드{#if submit.on} ✓{/if}</b><small>종이 꼴 · 글자만 · 진행 그대로</small>
   </button>{/if}
 </div>
 {#if paper}<button type="button" class="qp" role="switch" aria-checked={qp} data-k="qpaper" onclick={() => { qp = !qp; setPaper(qp); }}><span class="pv" aria-hidden="true"></span><span class="tx"><b>📜 문제 칸만 양피지</b><small>어느 테마든 문제 카드만 양피지 바탕 · 진한 글씨</small></span><i class="sw2" class:on={qp}></i></button>{/if}

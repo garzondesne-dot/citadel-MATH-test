@@ -88,8 +88,8 @@
     <div class="vws" role="tablist" aria-label="보기">{#each wide ? GROUPS.flatMap((g) => g.views) : GROUPS[grp]?.views ?? [] as [k, t] (k)}<button type="button" role="tab" class:on={vid === k} aria-selected={vid === k} disabled={k === 'cmp' && cls !== ALL} onclick={() => (vid = k)}>{t}</button>{/each}</div>
   </div>
   <div class="body">
-    <details class="msum" data-k="modesum"><summary>학습지 테마 {ms.submitN}명 · 오늘 바꾼 횟수 {ms.todayN}</summary>
-      {#if ms.rows.length}<ul>{#each ms.rows as r (r.who)}<li><b>{r.num != null ? `${r.num}번` : r.who}</b><span>바꾼 횟수 {r.n} · 오늘 {r.today}</span><em class:sub={r.last === 'submit'}>{r.last === 'submit' ? '학습지' : '게임'}</em></li>{/each}</ul>{:else}<p>아직 바꾼 학생이 없어요</p>{/if}
+    <details class="msum" data-k="modesum"><summary>📷 사진 모드 {ms.submitN}명 · 오늘 바꾼 횟수 {ms.todayN}</summary>
+      {#if ms.rows.length}<ul>{#each ms.rows as r (r.who)}<li><b>{r.num != null ? `${r.num}번` : r.who}</b><span>바꾼 횟수 {r.n} · 오늘 {r.today}</span><em class:sub={r.last === 'submit'}>{r.last === 'submit' ? '📷 사진 모드' : '게임'}</em></li>{/each}</ul>{:else}<p>아직 바꾼 학생이 없어요</p>{/if}
     </details>
     {#if sc.xN || sc.betas.length}<p class="excl">🧪 시험 계정 {sc.xN}{sc.betas.length ? ` · ${XCLS} ${sc.betas.join(' · ')}` : ''} 은 {cls === ALL ? '빠졌어요' : isBeta(S, cls) ? '이 반 = 통계에서 빠짐' : '전체 통계에서 빠져요'}</p>{/if}
     <div class="vh"><b>{V.title}</b><span class="ib" title={V.info}>ⓘ</span><small>{V.info}</small></div>
