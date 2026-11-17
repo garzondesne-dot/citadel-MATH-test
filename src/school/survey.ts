@@ -150,7 +150,7 @@ export async function answers(S: Store, c: string): Promise<Saved[]> {
   const v = (S.fetch ? await S.fetch<Record<string, unknown>>(`surveyA/${ck(c)}`).catch(() => null) : S.get<Record<string, unknown>>(`surveyA/${ck(c)}`)) || {};
   return Object.values(v).map(norm).filter((a): a is Saved => !!a);
 }
-export const doneCount = (S: Store, c: string) => Object.keys(S.get<Record<string, unknown>>(`surveyDone/${ck(c)}`) || {}).length;
+export const doneCount = (S: Store, c: string) => Object.values(S.get<Record<string, unknown>>(`surveyDone/${ck(c)}`) || {}).filter((v) => v === true).length; // 🐞 #61 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, true …]) → 빈칸까지 세어 「97 / 91」
 
 type Writer = Store & { trySet?: (path: string, v: unknown) => Promise<boolean> };
 /** 보내기 = 응답(시험 계정 · 베타 반은 빼고) → 응답 표시 → 이 기기 표시 · 보상은 부르는 쪽(지갑 · EXP 를 가진 화면)이 줌

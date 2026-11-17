@@ -80,3 +80,11 @@ print('ok')`], { encoding: 'utf8' });
     expect(r.stderr + r.stdout).toContain('ok');
   });
 });
+
+describe('🐞 #61 설문 응답 표시', () => {
+  it('서버가 배열로 준 응답 표시([빈칸, true …]) = true 만 셈', async () => {
+    const { doneCount } = await import('../src/school/survey');
+    const S = memoryStore(); S.set('surveyDone/1-3', [null, true, null, true, true] as unknown as Record<string, boolean>);
+    expect(doneCount(S, '1-3')).toBe(3);
+  });
+});

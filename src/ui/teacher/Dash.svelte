@@ -26,6 +26,7 @@
   // 📝 설문 보기 = 응답(surveyA · 실시간 거울 밖)을 그 보기를 열 때 반마다 한 번 받음 · ↻ 다시 받기
   let svVer = $state(0), svBusy = $state(false);
   const svCls = () => (cls === ALL ? CLASSES.filter((c) => !isBeta(S, c)) : [cls]);
+  const svAll = () => CLASSES.filter((c) => withX || !isBeta(S, c)); // 🐞 #61 「전체 · 한 파일」 = 지금 고른 반이 아니라 모든 반 설문을 받음
   async function svLoad() { svBusy = true; await loadCache(S, svCls()); svBusy = false; svVer++; }
   $effect(() => { if (vid === 'survey') { void cls; untrack(svLoad); } });
   // 💬 마지막 한마디 모아 보기 (정식 dash.js #sv-words 그대로: 수업 방 rooms/*/words · 반 거르기 · 거른 말 빼기 · 차시 · 반 순 · 이름 없음)
@@ -67,7 +68,7 @@
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   async function excel() {
-    await svLoad().catch(() => {}); // 🐞 #55 설문 답은 「설문」 보기를 열 때만 받아 와서 엑셀에 0명 · — 로 나갔음 → 엑셀 만들기 전에 늘 받기
+    await loadCache(S, xlPick === 'all' ? svAll() : svCls()).catch(() => {}); svVer++; // 🐞 #61 · #55 설문 답은 「설문」 보기를 열 때만 받아 와서 엑셀에 0명 · — 로 나갔음 → 엑셀 만들기 전에 늘 받기
     const name = `모두의던전_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
     let sheets;
     if (xlPick === 'all') sheets = bookAll(S, withX, ymd()); // 📜 #58 읽어보기 → 반 비교 → 보기 11개(반 열) · 요약 줄
@@ -80,7 +81,7 @@
   // 📜 #58 받기 단추 = 서버 기록을 다 받은 뒤 (기록 · 경험치 · 💎 · 성채 · 허수아비 · 카드 · 활용 · 명단 · 사진 · 설문 덩어리 · 다 받기 전엔 빈 칸으로 나갈 수 있어서)
   let xlReady = $state(false);
   $effect(() => { if (!xl) return; xlReady = false; untrack(() => { const c0 = CLASSES[0] ?? '1-1', f = S.fetch; const roots = ['records', 'xp', 'gem', 'bonus', 'cards', 'act', 'roster', 'accounts', 'photo', 'surveyDone', 'school'];
-    void Promise.all([...(f && S.kind === 'server' ? roots.map((k) => f.call(S, `${k}/${c0}`).catch(() => null)) : []), svLoad().catch(() => {})]).then(() => { xlReady = true; pv++; }); }); });
+    void Promise.all([...(f && S.kind === 'server' ? roots.map((k) => f.call(S, `${k}/${c0}`).catch(() => null)) : []), loadCache(S, svAll()).catch(() => {})]).then(() => { xlReady = true; pv++; svVer++; }); }); });
   function csvGo() { const c = V.csv; if (!c) return; const q = (x: string | number) => { const t = String(x); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
     const url = URL.createObjectURL(new Blob(['\ufeff' + c.rows.map((r) => r.map(q).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a'); a.href = url; a.download = c.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast = `📥 ${c.name}`; setTimeout(() => (toast = ''), 2600); }
