@@ -47,4 +47,12 @@ describe('🔑 #59 팩 v4', () => {
     const firstMon = L.steps.findIndex((s) => s.kind === 'monster');
     expect(keyWindow(L, mk({}, firstMon - 1))).toBe(true); expect(keyWindow(L, mk({}, firstMon))).toBe(false);
   });
+  it('🐞 #60 옛 앱(b221)으로 올려 팩 꼴(q · a · ch) 그대로 저장된 열쇠 = 받을 때 엔진 꼴로 · 잘못된 열쇠 = 빼기', () => {
+    const raw = JSON.parse(F('ex-11-v4.json')); // 운영 11 · 12차시와 같은 꼴 (keys 를 바꾸지 않고 저장)
+    const L = revive(raw), ks = keysOf(L);
+    expect(ks).toHaveLength(3);
+    expect(ks.every((k) => k.vers.every((q) => typeof q.question === 'string'))).toBe(true);
+    expect(answerText(ks[0]!.vers[0]!)).toBe('2k − 1');
+    expect(keysOf({ ...L, keys: [{ id: 'k1', name: 'x', help: 'y', vers: [{ type: 'choice', q: 'a' }], uses: [] }] } as unknown as LessonPack)).toEqual([]);
+  });
 });

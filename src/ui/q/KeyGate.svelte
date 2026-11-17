@@ -34,7 +34,7 @@
     <div class="bcard kcard" data-k="key-gate">
       {#if next}<button type="button" class="kbtn" data-k="key-go" onclick={start}><b>🔑 열쇠 얻기 ({got} / {ks.length})</b><small>친구들을 기다리는 동안 · 오늘 쓸 중학교 내용 {ks.length}문제</small></button>
       {:else}<p class="kdone" data-k="key-done">🔑 열쇠 {ks.length}개 준비 끝!</p>{/if}
-      <ul class="kl">{#each ks as k (k.id)}<li class:on={!!mine[k.id]}>{mine[k.id] ? '🔑' : '🔒'} {k.name}</li>{/each}</ul>
+      <ul class="kl">{#each ks as k (k.id)}<li class:on={!!mine[k.id]}>{#if mine[k.id]}🔑 {k.name}{:else}<button type="button" class="kchip" data-k="key-chip" onclick={start}>🔒 {k.name}</button>{/if}</li>{/each}</ul><!-- 🐞 #60 꼬리표도 눌리게 -->
     </div>
   {/if}
 {/if}
@@ -58,6 +58,7 @@
   .kbtn small { font: 500 13px var(--font); color: var(--text-2); } .kbtn:active { transform: translateY(2px); box-shadow: none; }
   .kdone { margin: 0; text-align: center; font: 800 16px var(--font); color: var(--accent); }
   .kl { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .kchip { all: unset; cursor: pointer; min-height: 28px; display: inline-flex; align-items: center; }
   .kl li { padding: 2px 10px; border-radius: 12px; background: var(--surface-2); color: var(--text-3); font: 700 13px var(--font); } .kl li.on { color: var(--accent); }
   .kband { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 52px; margin-bottom: var(--s2); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: 800 16px var(--font); }
   .kband span { font: 500 13px var(--font); color: var(--text-2); }
