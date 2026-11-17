@@ -56,7 +56,7 @@
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     const rr = recs[r.id], ph = P ? phOn(P, r) : false;
     const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : rr?.clear && !rr.ph ? '✔ 처치 · 📷 서술형 남음 · 📜 1' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
-    return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, r.photo && !photoHero ? '🎁 🧑‍🎓' : '', `${r.no}차시`].filter(Boolean).join(' · ');
+    return [r.card ? r.card.replace(/\s*·\s*📷 서술형\s*$/, '') : r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, r.photo && !photoHero ? '🎁 🧑‍🎓' : '', `${r.no}차시`].filter(Boolean).join(' · ');
   }
   // 📷 서술형 방 (정식 bonus.js · 📜 2026-11-15): 기준표를 켠 방만 · 답을 맞히면 그 숫자 그대로 사진 단계 · 통과 = 처치 (+ 💎 6 · 📜 · EXP 6)
   //   ⚔ 소레이드 방 = 답으로 먼저 처치 · 사진은 처치 뒤 보너스 · 꺼져 있으면 지금처럼 「답 확인만」 · 미리 보기 · 서버 없는 체험 = 「✔ 테스트: 사진 통과로 보기」
