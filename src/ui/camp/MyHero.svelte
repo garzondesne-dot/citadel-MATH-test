@@ -86,7 +86,9 @@
   }
   // ── 🧑 용사 바꾸기 ──
   const pick = $derived(heroOf(pickH));
-  const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id);
+  // 🧑‍🎓 수식 책사 남 · 여 (19 · 20) = 성채 서술형 사진 첫 통과(gem log s_ph_ · 정식 photoPassed · 📜 #41) · 🧪 테스트 기록 = 열림
+  const phOpen = $derived.by(() => { const b = meBound(); return me.test || (!!b && Object.keys(b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}).some((k) => k.startsWith('s_ph_'))) ? [19, 20] : []; });
+  const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id, phOpen);
   const ownsPick = $derived(ownH(pickH));
   const mine = $derived(POOL.filter((h) => ownH(h.id)));
   const locked = $derived(POOL.filter((h) => !ownH(h.id)));

@@ -30,6 +30,8 @@
   const floors = $derived(preview ? castles.list : visibleCastles());
   // 🧑 기록 자리 = 그 학생으로 로그인한 폰이면 서버 정식 경로 · 아니면 이 기기(테스트 · 체험)
   const RS = untrack(() => meBound()?.S ?? S);
+  /** 🧑‍🎓 수식 책사가 이미 열렸나 (gem log s_ph_ · 정식 photoPassed) */
+  const photoHero = $derived.by(() => { void ver; const b = meBound(); return !!b && Object.keys(b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}).some((k) => k.startsWith('s_ph_')); });
   const base = untrack(() => { const b = meBound(); return b ? bonusBase(b.cls, b.num) : bonusBase(cls, num || uid); });
   let ver = $state(0);
   // 🔓 교사 수동 해금 (school/castleOpen · castleAuto = 실시간) — 바뀌면 바로 다시 그림
@@ -54,7 +56,7 @@
     if (!st.isOpen(r)) return `🔒 ${r.no}차시를 배우면 열려요`;
     const rr = recs[r.id], ph = P ? phOn(P, r) : false;
     const phT = !r.photo ? '' : !ph ? '📷 답 확인만' : rr?.pend ? '⏳ 선생님 확인 중' : rr?.ans && !rr.clear ? '📷 풀이 사진 올리기' : r.chain && rr?.clear && !rr.ph ? '✔ 처치 · 📷 보너스' : rr?.ph ? '📷 서술형 통과' : '📷 서술형';
-    return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, `${r.no}차시`].filter(Boolean).join(' · ');
+    return [r.chain ? '⚔ 소레이드' : `소문제 ${r.vers[0]?.length ?? 0}`, phT, r.photo && !photoHero ? '🎁 🧑‍🎓' : '', `${r.no}차시`].filter(Boolean).join(' · ');
   }
   // 📷 서술형 방 (정식 bonus.js · 📜 2026-11-15): 기준표를 켠 방만 · 답을 맞히면 그 숫자 그대로 사진 단계 · 통과 = 처치 (+ 💎 6 · 📜 · EXP 6)
   //   ⚔ 소레이드 방 = 답으로 먼저 처치 · 사진은 처치 뒤 보너스 · 꺼져 있으면 지금처럼 「답 확인만」 · 미리 보기 · 서버 없는 체험 = 「✔ 테스트: 사진 통과로 보기」
@@ -73,7 +75,8 @@
       const day = kstDay(S.now());
       if (firstClear) { const rw = castleReward({ first: true, boss: !!r.boss, firstCastle: !anyBefore, flawless: false, sealed: !!r.boss }); for (const g of rw.gems) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) got.push(`💎 +${n} ${g.why}`); } me.xp += rw.xp; if (rw.xp) got.unshift(`+${rw.xp} EXP`); }
       const g = earnDaily(me.wallet, CASTLE_PHOTO_GEM, day, GEM.dayCap); if (g) got.push(`💎 +${g} ${why}`);
-      const sc = photoScrolls(out); me.wallet.scroll += sc; got.push(`📜 +${sc} 서술 조각`);
+      const sc = 1; void photoScrolls; me.wallet.scroll += sc; got.push(`📜 +${sc} 서술 조각`); // 📜 #41 통과 = 📜 1 (문제당 한 번 · 수업 · 허수아비와 같게)
+      { const b = meBound(); if (b) { const lp = `gem/${b.cls}/${b.num}/log`, had = Object.keys(b.S.get<Record<string, unknown>>(lp) || {}).some((k) => k.startsWith('s_ph_')); b.S.set(`${lp}/s_ph_${Px.id}_${r.id}`, { s: 1, at: S.now(), why: '📷 성채 서술형' }); if (!had) { got.push('🧑‍🎓 수식 책사 남 · 여가 열렸어요!'); setTimeout(() => { toast = '🧑‍🎓 수식 책사 남 · 여가 열렸어요! (내 용사 → 용사 바꾸기)'; setTimeout(() => (toast = ''), 4000); }, 600); } } } // 🧑‍🎓 정식 photoPassed · s_ph_ (성채 서술형 첫 사진 통과)
       me.xp += CASTLE_XP.photo; got.push(`+${CASTLE_XP.photo} EXP 서술형`);
       persist();
     }
@@ -96,8 +99,12 @@
   function openShot(Px: CastlePack, r: CastleRoom) {
     const rr = recs[r.id];
     if (r.chain) { const qs = Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []; shot = { P: Px, r, items: phItems(phRubric(S, Px.id, r.id), r.title, qs, qs.map((q) => q.solution || '')), chain: true }; return; }
-    if (rr?.ans?.items?.length) shot = { P: Px, r, items: rr.ans.items, chain: false };
+    if (rr?.ans?.items?.length) { shot = { P: Px, r, items: rr.ans.items, chain: false }; return; }
+    { const qs = Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []; shot = { P: Px, r, items: phItemsOf(qs as unknown as PhItem[]), chain: false }; } // 📜 #41 답 맞히기 전에도 = 성채 학습지 숫자(판 0)
   }
+  /** 📜 #41 전투 화면 「✍ 서술형 · 📷」 = 수업과 같게 (앞 단계 다 풀기 전에도 · 통과 = 처치) */
+  const canShot = (Px: CastlePack, r: CastleRoom) => !!r.photo && phOn(Px, r) && !recs[r.id]?.ph && !recs[r.id]?.pend;
+  function shotNow() { const x = run; if (!x || !canShot(x.P, x.r)) return; if (drive) clearInterval(drive); drive = null; run = null; openShot(x.P, x.r); }
   // ⏳ 기다리던 선생님 확인 → ✔ 인정 = 처치 + 보상 · ✖ = 기다림 지우고 다시 사진 (정식 photoSync)
   $effect(() => {
     if (preview || phTrial || !cls) return; void ver;
@@ -190,6 +197,7 @@
     <button type="button" class="quit" aria-label="그만하기" onclick={quit}>‹</button>
     {#if preview}<p class="pv" role="status">👁 미리 보기 · 기록 없음</p>{/if}
     <Student S={run.S} L={run.L} code={run.code} {uid} {num} nick={me?.nick ?? ''} {cls} board />
+    {#if canShot(run.P, run.r)}<button type="button" class="wrc" data-k="castle-wr" onclick={shotNow}>✍ 서술형 · 📷 <small>{run.r.chain ? '통과 = 남은 단계 처치' : '통과 = 처치'} · 📜 1{photoHero ? '' : ' · 🎁 🧑‍🎓'}</small></button>{/if}
   </div>
 {:else}
 <div class="cs" role="dialog" aria-modal="true" aria-label="성채 던전" data-k="castle">
@@ -308,4 +316,5 @@
   .quit { position: fixed; z-index: 30; left: 4px; top: 4px; width: 44px; height: 44px; border: 0; background: none; color: #fff; font-size: 28px; text-shadow: 0 1px 2px #000; }
   .pv { position: fixed; z-index: 30; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 2px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.6); color: var(--accent); font-size: var(--fs-small); font-weight: 700; }
   .got { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; align-items: center; } .got li { font: 700 15px var(--font); color: var(--gem); } .got li:first-child { color: var(--accent); }
+  .wrc { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; justify-items: center; min-height: 48px; padding: 6px 16px; border-radius: 12px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .wrc small { font: 600 12px var(--font); color: var(--text-2); }
 </style>

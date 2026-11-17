@@ -7,7 +7,7 @@
   //   쓰는 곳 = 내 용사 「용사 바꾸기」(학생 · 교사 「나」 · TV 교사 캠프 같은 창) · 몽타주가 없는 용사 = 게임 속 모습
   const { id, owned = true, lv = 0, stage = 0 }: { id: number; owned?: boolean; lv?: number; stage?: number } = $props();
   const h = $derived(heroOf(id)), pt = $derived(portraitOf(id)), fam = $derived(famOfHero(id));
-  const cond = $derived(owned ? '' : h.price != null ? `💎 ${h.price} 으로 열어요` : h.cond ? `🔓 ${h.cond}` : '🔓 조건으로 열어요');
+  const cond = $derived(owned ? '' : h.price != null ? `💎 ${h.price} 으로 열어요` : h.cond ? `${h.price == null && /성채 서술형/.test(h.cond) ? '🎁 조건 · ' : '🔓 '}${h.cond}` : '🔓 조건으로 열어요');
 </script>
 
 <div class="hi" class:lock={!owned} data-hero={id}>
