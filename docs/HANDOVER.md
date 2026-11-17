@@ -264,6 +264,7 @@
 | b39 | #157 · #158 · #159 · #160 | 📺 TV 전투 장면 = PixiJS 8.6.6 캔버스(TV 에서만 불러옴 · WebGL 없으면 같은 배치 DOM · `?dom`) · TV 글자 4 크기 · 2 굵기 · 🎮 시연 = 학생 폰 화면 그대로(메모리 방) · 📄 학습지 칸 그림(prep) · ⌨ 정식 룬 · ⚔ 졸개 자리 · 형광펜 · 게시판 7차시 |
 | b38 | #151 | 🟡 주요 단추 = 모든 학생 화면 한 자리(BottomAction 하나 · 56 · 바닥 20 · 폭 양옆 16) · 💥 피격 = 장면 띠 안 알림 + 문제 카드 덮개(움직임 0) |
 | b37 | #149 | ✂ 6차시 = 문제 1 ~ 3 + 형성평가 1 ~ 3 · 7차시 = 문제 4 ~ 7 + 형성평가 4 ~ 6 (`parts[].boss` · 재도전 = 원래 번호) |
+| b210 | 📜 👩‍🏫 #33 체험판 v1.0 (머리 🔨 · CLAUDE.md 「👩‍🏫 체험판 규칙」): 주소 `trial/` = 같은 빌드(vite trialPlugin 이 dist/index.html → trial/index.html · `<meta name="dungeon-trial">` · manifest 「던전 체험판」) · channel `TRIAL` · `src/trial/shim.ts`(localStorage = 이 탭 sessionStorage) · main.ts 체험판 길 = 서버 · server.json 안 받음 · PACKS = 체험판 두 장 · 성채 = 실은 1층 · 차시 설정 = 과목 팩 `SUBJ.trial`(`src/subjects/common-math2/trial/` · 12차시 운영 팩 그대로 묶음 · 성채 eval-1) · 엔진 `src/trial/trial.ts`(단계 거르기 · 영상 = 사이트 `video/` · 방 = 정찰 5 · 기준 100 · 첫 판 = 판 1 · 문제 2 = 🎯 넘김) · `TrialApp`(이름 → 학생 = 🧙 용사 고르기 → 카드 → StuTry(🤖 4 · 📺 · 문제 1 뒤 🏕) → 🏕 캠프(💎 200 → 첫 차시 끝 620 · 📜 9 · 아래 「⚔ 다른 차시로」 · 📋 게시판 · ✉ · ✏ 숨김 · 성채 방 모두 열림) / 선생님 = TSim(🤖 20 · 900+ = TV 왼쪽 + 리모컨 · 좁으면 📺 단추)) · 기능 = 전체 묶음 − 🏰 디펜스 · 📝 설문 · 🏆 대항전 · 📋 게시판 · ✏ 출제 · 📅 시간표 · 시험 tests/trial.test.ts · e2e tools/e2e/trial33.cjs |
 
 ## 2. 서버 칸 (이 판이 쓰는 곳)
 | 칸 | 쓰는 곳 | 내용 |

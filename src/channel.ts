@@ -6,6 +6,8 @@ const loc = typeof location !== 'undefined' ? location : null;
 export const TEST_ADDR = !!loc && /^(localhost|127\.0\.0\.1)$/.test(loc.hostname);
 /** 🏫 학교판 빌드 (VITE_SCHOOL) = 늘 정식 표시 (📜 2026-11-16 선생님 「내 친구는 베타 버전하고 정식 버전 굳이 나눌 필요 없게」 · 베타 주소에 있어도 「BETA」 · 「시험 서버」 · 🧪 낱말 없음) */
 export const SCHOOL_BUILD = !!(import.meta as { env?: Record<string, string | undefined> }).env?.VITE_SCHOOL_NAME;
+/** 👩‍🏫 체험판 (📜 2026-11-17 #33 · 같은 빌드의 trial/index.html = <meta name="dungeon-trial"> · 로그인 없이 🧪 테스트 모드 · 서버 안 닿음) */
+export const TRIAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="dungeon-trial"]');
 export const BETA = !SCHOOL_BUILD && (TEST_ADDR || (!!loc && /-test\//i.test(loc.pathname)));
 /** 화면 낱말 (📜 2026-11-15 머리 🔨 「정식에서 테스트 · 베타 낱말 빼기」): 앱 이름 · 통계에서 빠지는 반 이름 */
 export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { zipSync } from 'fflate';
 import { join } from 'node:path';
 
@@ -51,6 +51,19 @@ const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bun
   if (SCHOOL) writeFileSync(join(out, 'server.json'), JSON.stringify({ mode: 'server', firebase: SCHOOL.fb, school: { code: SCHOOL_CODE, name: SCHOOL.name, subject: SCHOOL.subject } }, null, 2)); // 🏫 그 학교 서버(공개 설정값)
 } };
 
+// 👩‍🏫 체험판 (📜 2026-11-17 #33): 같은 빌드를 trial/ 에서 = trial/index.html(<base href="../"> · 그림 · 엔진은 위 폴더 그대로 · <meta dungeon-trial>) + trial/manifest(「던전 체험판」 따로 설치) · 학교판엔 없음
+let OUT_DIR = 'dist';
+const trialPlugin = { name: 'trial', configResolved(c: { root: string; build: { outDir: string } }) { OUT_DIR = join(c.root, c.build.outDir).replace(/^(.*?)(\/\/?)$/, '$1'); if (c.build.outDir.startsWith('/')) OUT_DIR = c.build.outDir; }, closeBundle() {
+  if (SCHOOL) return;
+  const out = OUT_DIR, ix = join(out, 'index.html'); if (!existsSync(ix)) return;
+  const h = readFileSync(ix, 'utf8').replace('<head>', '<head>\n    <base href="../" />\n    <meta name="dungeon-trial" content="1" />')
+    .replace(/<title>[^<]*<\/title>/, '<title>모두의 던전 체험판</title>').replace(/(name="apple-mobile-web-app-title" content=")[^"]*"/, '$1던전 체험판"')
+    .replace(/href="\.\/manifest\.webmanifest"/, 'href="./trial/manifest.webmanifest"');
+  mkdirSync(join(out, 'trial'), { recursive: true }); writeFileSync(join(out, 'trial', 'index.html'), h);
+  const up = (u: string) => `../${u}`;
+  writeFileSync(join(out, 'trial', 'manifest.webmanifest'), JSON.stringify({ ...manifest, name: '모두의 던전 체험판', short_name: '던전 체험판', description: '선생님이 혼자 10분 해 보는 체험판 · 로그인 없음 · 기록 안 남음', id: './', start_url: './', scope: './',
+    icons: manifest.icons.map((i: { src: string }) => ({ ...i, src: up(i.src) })) }, null, 2));
+} };
 // base './' = Pages 하위 경로(/citadel-MATH-test/)에서도 그대로 열림
 // 📦 차시 팩 만들기 꾸러미 (📜 2026-11-17 #22 ④ 1단계) = 저장소 kit/ (머리 hero-v2 docs/handoff/kit/ 원본 · README 빼고) → 사이트 kit/ 에 zip 하나 · 빌드 때마다 다시 묶음
 export const KIT_ZIP = '모두의던전_차시팩_만들기_꾸러미.zip';
@@ -67,6 +80,6 @@ const kitZip = {
 export default defineConfig({
   base: './',
   define: SCHOOL ? { 'import.meta.env.VITE_SUBJECT': JSON.stringify('school'), 'import.meta.env.VITE_SCHOOL_SUBJECT': JSON.stringify(SCHOOL.subject), 'import.meta.env.VITE_SCHOOL_NAME': JSON.stringify(SCHOOL.name), 'import.meta.env.VITE_BUNDLE': JSON.stringify('basic') } : {},
-  plugins: [svelte(), versionJson, htmlId, swPlugin, kitZip],
+  plugins: [svelte(), versionJson, htmlId, swPlugin, kitZip, trialPlugin],
   test: { include: ['tests/**/*.test.ts'] },
 });

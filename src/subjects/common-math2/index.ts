@@ -14,6 +14,7 @@ import { BOSS_GENS, CHAIN_GENS, GENS } from './gens';
 import { FORMATS } from './formats';
 import { recheck } from './recheck';
 import Figure from './ui/Figure.svelte';
+import { TRIAL } from './trial';
 
 // 📦 공통수학2 풀 팩 (#136) — 이 과목의 모든 내용: 차시 팩 · 생성기 · 기호 톡 · 모루 카드 · 오개념 · 성취기준 · 차시 목록 · 칭호 · 캠프 이름표 · 세특 낱말 · 그림 · 문항 꼴 · 테스트 판 가짜 글
 //   엔진은 engine/subject.ts 의 SUBJ 로만 읽음 (이 폴더 밖에 과목 낱말 · 차시 id 없음 · tests/engine-clean.test.ts)
@@ -50,6 +51,7 @@ const SUBJECT: Subject = {
   recheck,
   themes: THEMES as Subject['themes'],
   demo: DATA.demo as Subject['demo'],
+  trial: TRIAL,
 };
 export default SUBJECT;
 export type { Question };

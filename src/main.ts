@@ -1,4 +1,5 @@
-import { TEST_ADDR } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
+import './trial/shim'; // 👩‍🏫 체험판 = 이 탭 저장 (맨 먼저 · 다른 모듈이 localStorage 를 읽기 전에)
+import { TEST_ADDR, TRIAL } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
 import './oldUrl'; // 🔗 옛 정식 주소(?code= · &key=)를 지금 꼴로 · 키는 주소에서 곧바로 지움 (출시 막는 것 8)
 import { mount } from 'svelte';
 // 🔍 iOS 사파리는 user-scalable=no 를 무시 → 두 손가락 확대 · 두 번 톡 확대를 직접 막음 (📜 2026-11-16 선생님 「줌이 당겨짐 · 안 당겨지게」)
@@ -26,6 +27,16 @@ if (!target) throw new Error('#app 없음');
 // 🔌 「어느 서버」 (#137): 사이트 server.json · ?emu= → 이 기기 / 시험 서버 꽂개를 고른 뒤 화면을 띄움
 // 🔐 #163-① 방은 필요할 때 받음 → 주소에 방이 있으면(학생 · TV 시험) 그 방을 먼저 받고 화면을 띄움
 // 📦 (📜 2026-11-16 로딩 줄이기) 교사 · TV · 갤러리 화면 묶음 = 서버 연결과 같이 받기 시작
+// 👩‍🏫 체험판 (📜 2026-11-17 #33): trial/ = 서버 · server.json 안 받음 · 차시 = 체험판 두 장만 · 첫 화면 = TrialApp
+if (TRIAL) {
+  void (async () => {
+    const [{ trialPacks, trialCastles }, { default: TrialApp }] = await Promise.all([import('./trial/trial'), import('./trial/TrialApp.svelte')]);
+    const tp = trialPacks(); PACKS.splice(0, PACKS.length, ...tp); // 🎯 허수아비 · 모루 = 체험판 차시 두 장
+    addCastles(trialCastles()); // 🏰 성채 1층만
+    mount(TrialApp, { target, props: {} });
+    requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.());
+  })();
+} else {
 const rolePre = preloadRole(new URLSearchParams(location.search).get('role')).catch(() => null);
 void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void }).bootShow?.('⚠ 서버에 닿지 않아요'); throw e; }).then(async ({ S, where }) => {
   const room = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('join');
@@ -40,3 +51,4 @@ void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void })
   { const r = new URLSearchParams(location.search).get('role'); if (!r || r === 'student' || r === 'camp') prefetchStudent(); } // 📦 학생 화면 = 쉬는 틈에 캠프 · 쉼터 묶음 미리
   requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.()); // ⏳ 첫 화면(index.html) 지움 = 앱이 그려진 다음 프레임
 });
+}

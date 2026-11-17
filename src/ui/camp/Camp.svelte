@@ -50,21 +50,26 @@
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
   //   이름표 = 상황에 따라: 차시 던전 = 늘(열림 금빛 반짝 · 닫힘 흐림) · 새 소식 = 이름 + 빨간 숫자 · 모루 = ★n · 처음 = 흰 이름표 · 써 봤고 소식 없음 = 숨김 · 빈 땅 = 2초 모두
-  const { S, L, code, pupil = null }: { S: Store; L: LessonPack; code: string; pupil?: Pupil | null } = $props();
+  const { S, L, code, pupil = null, trial = null }: { S: Store; L: LessonPack; code: string; pupil?: Pupil | null;
+    /** 👩‍🏫 체험판 (📜 2026-11-17 #33 · CLAUDE.md 「👩‍🏫 체험판 규칙」): 이름 · 시작 💎 200 → 첫 차시를 끝내면 한 번 💎 620 · 📜 9 · 아래 단추 = 「⚔ 다른 차시로」 · 📋 게시판 · ✉ 우편함 · 출제 공방 숨김 · 성채 = 실은 층 방 모두 열림 */
+    trial?: { nick: string; grant: boolean; ongate: () => void } | null } = $props();
   async function logout() {
     saveLogin(null); unbindMe();
     const A = (S as Store & { auth?: import('firebase/auth').Auth }).auth;
     if (A) { try { const fa = await import('firebase/auth'); await fa.signOut(A); } catch { /* 무시 */ } }
     location.replace(`${location.pathname}`);
   }
+  const TRIAL_GEM = [200, 620] as const, TRIAL_SCROLL = 9; // 👩‍🏫 체험판 지갑 (CLAUDE.md 체험판 규칙 · 💎 · 📜 줄)
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
   const fromMe0 = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me'; // 👩‍🏫 교사 「나」 → 내 캠프 = 교사 기록(B안)
   if (fromMe0) setTeacherSink(untrack(() => S)); // 🧙 교사 캠프 = 교사 「내 용사」 서버 하나 (게시판 · 허수아비 · 성채도 같은 용사)
   // 🧑 실제 학생(서버 계정에 묶임 · 시험 반 · 시험 계정 아님) = 테스트 꼴 아님 (📜 2026-11-15 머리 「정식과 같게」: 테스터 표시 = 시험 반 · 테스트 계정만 · 호칭 = 얻은 것 · 새 계정 시작 💎 0)
   //   교사 캠프 · 🧪 시험 반 · 시험 계정 · 이 기기 체험 = 그대로 테스트 꼴(💎 9,999 · 📜 30 시작 · 호칭 모두)
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
-  const M = realStu ? useMe(0, 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
+  const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
+  // 👩‍🏫 체험판: 이름 = 첫 화면에 적은 이름 · 첫 차시를 끝내면 한 번 💎 620 · 📜 9 (10강 🛡 홀리 방패 + Ⅳ 🌟 진필살기를 써 볼 만큼 · 원래 수업은 풀어서 벌고 하루 한도 100)
+  { const tr = untrack(() => trial); if (tr) { let ch = false; if (me.nick !== tr.nick) { me.nick = tr.nick; ch = true; } if (tr.grant && !me.seen['trial-grant']) { me.seen['trial-grant'] = true; me.wallet.gem = Math.max(me.wallet.gem, TRIAL_GEM[1]); me.wallet.scroll = Math.max(me.wallet.scroll, TRIAL_SCROLL); ch = true; } if (ch) M.save(); } }
   // 🎨 테마 (#144): 서버 accounts 에 고른 테마가 있으면(다른 폰에서 고름) 이 폰도 그 테마로
   let theme = $state<Theme>(untrack(() => (isTheme(me.theme) ? me.theme : savedTheme())));
   if (untrack(() => theme) !== savedTheme()) setTheme(untrack(() => theme));
@@ -132,7 +137,7 @@
   const live = untrack(() => liveRoom(S, code));
   onDestroy(live.stop);
   const R = $derived(code ? (live.v.room as Room | null) : null); // 코드 없음 = 열린 수업 없음 (rooms/ 전체를 방으로 읽지 않게)
-  const open = $derived(!!R && !isEnd(L, R));
+  const open = $derived(trial ? true : !!R && !isEnd(L, R)); // 👩‍🏫 체험판 = 차원문 늘 열림 (누르면 「⚔ 다른 차시로」)
 
   // 장면 움직임: 모닥불 8프레임(0.12초) · 앉은 용사 2프레임(0.8초) — 이 화면 안 시계 하나
   let frame = $state(0);
@@ -177,7 +182,7 @@
     if (cn > 0) t.castle = `새 방 ${cn}`;
     if (mailN > 0) t.mail = `소식 ${mailN}`;
     if (feat('forge') && wishN > 0) t.anvil = `카드 ${wishN}`;
-    if (open) t.gate = '⚔ 수업 열림 · 입장!';
+    if (open && !trial) t.gate = '⚔ 수업 열림 · 입장!'; // 👩‍🏫 체험판 = 차원문 = 「다른 차시」 이름표만
     if (rc) t.dummy = `⚔ 모집 중 ${rc.n}/${rc.max} · 참여!`;
     return t;
   });
@@ -208,7 +213,7 @@
     return showAll ? 'new' : 'hide';
   }
   const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', scare: '🎯 허수아비', mail: '우편함', hero: '내 용사' };
-  const gateText = $derived(open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
+  const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
   const SK = 'citadel-camp-sheet';
@@ -297,7 +302,7 @@
   const BUDDY_LINES = ['같이 도전할래? ⚔', '둘이 하면 💎 더!', '한 판만 하자!'];
   let buddyI = $state(0); { const bt = setInterval(() => (buddyI = (buddyI + 1) % BUDDY_LINES.length), 3200); onDestroy(() => clearInterval(bt)); }
   const buddy = $derived.by(() => {
-    if (!feat('board') || open) return null;
+    if (!feat('board') || open || trial) return null;
     const f = friends[0];
     if (f) { const off = !!S.get(`accounts/${f.cls}/${f.num}/feedOff`); return { hero: f.hero, line: `${off ? '친구가' : `${f.nick}님이`} 같이 하재요!`, real: true }; }
     const ids = Object.keys(HERO_NAMES).map(Number).filter((h) => h !== me.hero), day = Math.floor((Date.now() + 9 * 3600e3) / 86400e3);
@@ -306,6 +311,7 @@
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
+    if (id === 'gate' && trial) { trial.ongate(); return; }
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
     if (id === 'dummy') boardJoin = portal.recruit?.pid ?? ''; // 🌀 모집 중 방 = 그 방에 바로 참여 (캠프 A)
     sheet = id;
@@ -376,13 +382,13 @@
     {#each friends.slice(1) as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
     {#if friendText && !buddy}<span class="fbub" style="left:{CAMP_PORTAL.left - 3}%;bottom:{CAMP_PORTAL.bottom - 13}%" data-k="friend-bub">{friendText}</span>{/if}
 
-    {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || feat(k === 'castle' ? 'citadel' : 'author')) as k (k)}
+    {#each ['castle', 'tent', 'gate'].filter((k) => k === 'gate' || (k === 'castle' ? feat('citadel') : feat('author') && !trial)) as k (k)}
       {@const st = lab(k)}
       <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
         {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{k === 'gate' ? gateText : NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{/if}</span>{/if}
       </button>
     {/each}
-    {#each CAMP_PROPS.filter((p) => !p.feat || feat(p.feat)) as p (p.k)}
+    {#each CAMP_PROPS.filter((p) => (!p.feat || feat(p.feat)) && !(trial && (p.k === 'dummy' || p.k === 'mail'))) as p (p.k)}
       {@const k = p.k}
       {@const st = lab(k)}
       <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} onclick={(e) => go(k, e)}>
@@ -425,15 +431,15 @@
     <p class="next">{nextLine}</p>{/if}
   </section>
   {/if}
-  <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel="{L.no}차시 던전 입장">
+  <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
     {#snippet aux()}{#if !open}<button type="button" class="codebtn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}
-    {#snippet main()}<span>{open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
+    {#snippet main()}<span>{trial ? '⚔ 다른 차시로' : open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
   </BottomAction>
 </div>
 
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
-  {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
+  {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0 || !!trial} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'mail' && mbWho}

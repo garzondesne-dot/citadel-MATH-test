@@ -64,6 +64,23 @@ export interface Subject {
   recheck?: (q: import('./types').Question) => { ok: boolean | null; want?: string };
   /** 몬스터 줄 · 던전 배경 (변환기가 만든 표) */
   themes: { sheets: Record<string, { src: string; cell: number; names: string[] }>; dungeons: Record<string, string> };
+  /** 👩‍🏫 체험판 (📜 2026-11-17 #33): 차시 카드 · 단계 · 쉼터 자리 · 방 설정 · 같이 싣는 팩 글(차시 팩 json) — 없으면 체험판 없음 */
+  trial?: TrialCfg;
   /** 테스트 판 가짜 자료 글 (소식 · 설문 · 서술형 · 기호 표) */
   demo: { inbox: { id: string; kind: 'idea' | 'photo' | 'quiz' | 'survey'; title: string; sub: string; body?: string; from?: { cls: string; num: number } }[]; syms: [string, string][]; photoWhere: string; surveyLesson: string; surveyHard: string };
+}
+/** 👩‍🏫 체험판 차시 설정 (과목 팩이 정함 · 엔진 src/trial 이 읽음) */
+export interface TrialCfg {
+  /** 첫 화면 차시 카드 (위 = 풀 체험) · id = 차시 id */
+  cards: { id: string; ic: string; name: string; tag: string; sub: string }[];
+  /** 같이 싣는 차시 팩 글 (id → json 글 · 올리기 검사와 같은 길) · 없는 id = 내장 차시 */
+  raw?: Record<string, string>;
+  /** 🏰 같이 싣는 성채 팩 글 (체험판 = 이 층만 · 방 모두 열림) */
+  castle?: string;
+  /** 차시마다 체험판에서 쓰는 단계 id (순서 그대로) */
+  keep: Record<string, string[]>;
+  /** 이 몬스터 다음 「다음 ▶」 = 🏕 쉼터 먼저 */
+  restAfter: Record<string, string>;
+  /** 방 설정: fresh1 = 첫 판 숫자 = 한 번 더 판 1 · sent = 🎯 복습으로 넘긴 것으로 둘 몬스터 · bossItems = 형성평가 문항 수 */
+  room: Record<string, { fresh1?: boolean; sent?: string[]; bossItems?: number }>;
 }
