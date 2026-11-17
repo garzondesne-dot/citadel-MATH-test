@@ -93,7 +93,8 @@
       const sc = fresh.reduce((a, [, x]) => a + (Number(x.s) || 0), 0); // 📜 ✍ 📸 서술형 통과 (정식 ult_{차시}_{몬스터} · 문제당 한 번)
       me.wallet.gem += sum - petri; me.wallet.scroll += sc; me.xp += xp; M.save();
       fresh.forEach(([k]) => S.set(`gifts/${u}/${k}/got`, true));
-      giftToast = `${fresh.every(([k]) => k.startsWith('stamp_')) ? '✅ 수업 도장' : funOnly ? (fresh.every(([k]) => k.startsWith('ult_')) ? '🌟 진필살기 서술' : '🏕 쉼터 놀이') : '🎁 선생님 선물'}${sum - petri + petriGot ? ` · 💎 +${sum - petri + petriGot}` : ''}${sc ? ` · 📜 +${sc}` : ''}${xp ? ` · EXP +${xp}` : ''}`;
+      const oneFun = new Set(fresh.map(([, x]) => x.fun || '')).size === 1 && fresh[0]![1].fun && fresh.every(([k]) => k.startsWith('sorry_')) ? fresh[0]![1].fun : ''; // 🎁 #45 사과 선물 = 그 이름 그대로
+      giftToast = `${oneFun ? oneFun : fresh.every(([k]) => k.startsWith('stamp_')) ? '✅ 수업 도장' : funOnly ? (fresh.every(([k]) => k.startsWith('ult_')) ? '🌟 진필살기 서술' : '🏕 쉼터 놀이') : '🎁 선생님 선물'}${sum - petri + petriGot ? ` · 💎 +${sum - petri + petriGot}` : ''}${sc ? ` · 📜 +${sc}` : ''}${xp ? ` · EXP +${xp}` : ''}`;
       setTimeout(() => (giftToast = ''), 2600);
     }
   }
