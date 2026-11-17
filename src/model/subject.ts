@@ -23,7 +23,7 @@ export interface Subject {
   lessons: LessonPack[];
   generators: { gens: Record<string, Generator>; chains: Record<string, ChainGenerator>; boss: Record<string, BossGenerator> };
   /** 📖 기호 톡: 사전 + 문제 글에서 기호 찾기 (없으면 기호 톡 숨김) */
-  symtalk?: { BY: Record<string, SymRow>; segments(t: string, o?: { prop?: boolean }): Seg[]; /** 명제 낱말을 붙이는 차시인가 (#49) */ propOn?(L: { id: string; no?: number; kind?: string }): boolean };
+  symtalk?: { BY: Record<string, SymRow>; segments(t: string, o?: { prop?: boolean }): Seg[]; /** 단원 낱말(과목 팩 PROP)을 붙이는 차시인가 (#49) */ propOn?(L: { id: string; no?: number; kind?: string }): boolean };
   /** ⭐ 기호 → 모루 카드 */
   cards?: { bySym: Record<string, SymCard>; wishLeft(wishes: Record<string, true> | undefined, made: Record<string, true> | undefined): number };
   /** ⚒ 모루 연성법 (#148 · 정식 unit-set.js 원문) · 카드 그림 틀 */

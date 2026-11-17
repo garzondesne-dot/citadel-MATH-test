@@ -5,5 +5,5 @@ export const symState = $state<{ open: string | null; seen: Record<string, true>
 export function openSym(id: string) { symState.open = id; symState.seen[id] = true; tapSym(id); }
 export function closeSym() { symState.open = null; }
 
-/** 📖 지금 문제의 차시 = 누른 횟수 칸 + 명제 낱말 켜기(과목 팩 propOn · #49) */
+/** 📖 지금 문제의 차시 = 누른 횟수 칸 + 단원 낱말 켜기(과목 팩 propOn · #49) */
 export function setSymPack(L: { id: string; no?: number; kind?: string }) { setSymLesson(L.id); symState.prop = !!SUBJ.symtalk?.propOn?.(L); }
