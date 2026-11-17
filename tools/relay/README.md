@@ -7,4 +7,5 @@
 - 비밀값: `RELAY_PASSWORD` · `VAPID_PRIVATE`(손발 비공개 폴더 vapid.json) · `RUN_KEY` = **Cloudflare 비밀값으로만** · 저장소 금지 · 공개값: DB_URL · API_KEY(웹 설정 공개값) · RELAY_EMAIL
 - 옛 정식 서버(citadel-math)면 멈춤
 - 올리기: `npx esbuild tools/relay/worker.js --bundle --format=esm --outfile=<폴더>/worker.js` → Cloudflare API(스크립트 + cron + 비밀값)
+- 📥 꾸러미 내려받기 수 = `/kit`(세고 사이트 zip 으로 302) · `/kit-hit`(세기만 · 앱 「📥 꾸러미 받기」가 누를 때 신호) → 운영 서버 `relay/kit/{한국 날짜}` +1 · IP · 기기 정보 없음 · 읽기 = 손발이 읽어 머리에
 - 시험: `tests/relay.test.ts` (암호화를 받는 쪽처럼 풀어 봄 · VAPID 서명 · 가짜 서버로 한 번 돌리기)

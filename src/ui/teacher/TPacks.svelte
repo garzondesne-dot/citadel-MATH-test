@@ -3,7 +3,7 @@
   import { liveValue } from '../room.svelte';
   import { castles } from '../../school/castles.svelte';
   import type { LessonPack, Store } from '../../model/types';
-  import { BETA, FORMS, KIT_PUBLIC, siteUrl } from '../../channel';
+  import { BETA, FORMS, KIT_COUNT, KIT_PUBLIC, siteUrl } from '../../channel';
   import { BUILD } from '../../build';
   import { UPLOADED } from '../../engine/packs';
   import { feat, type FeatId } from '../../school/features.svelte';
@@ -141,7 +141,7 @@
     </div>
     <div class="now" data-k="step-now" data-now={mstep + 1}>
       <p class="nt">{mstep + 1}. {STEPS[mstep]?.t}</p><small>{STEPS[mstep]?.d}</small>
-      {#if mstep === 0}{#if !KIT_PUBLIC}<em class="soon" data-k="kit-soon">📥 공개 준비 중 · 곧 받을 수 있어요</em>{:else if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl">📥 꾸러미 받기 (zip)</a>{/if}{/if}
+      {#if mstep === 0}{#if !KIT_PUBLIC}<em class="soon" data-k="kit-soon">📥 공개 준비 중 · 곧 받을 수 있어요</em>{:else if kitOk === false}<em class="soon" data-k="kit-soon">📥 준비 중 · 곧 받을 수 있어요</em>{:else}<a class="dl" href={KIT} download data-k="kit-dl" onclick={() => { try { if (KIT_COUNT) navigator.sendBeacon?.(KIT_COUNT); } catch { /* 세기만 실패 */ } }}>📥 꾸러미 받기 (zip)</a>{/if}{/if}
       {#if mstep === 1}
         <div class="seg" role="tablist"><button type="button" role="tab" class:on={wsTab === 'ai'} aria-selected={wsTab === 'ai'} data-k="ws-ai" onclick={() => (wsTab = 'ai')}>🤖 AI 로</button><button type="button" role="tab" class:on={wsTab === 'hand'} aria-selected={wsTab === 'hand'} data-k="ws-hand" onclick={() => (wsTab = 'hand')}>✍ 직접</button></div>
         {#if wsTab === 'ai'}<ol class="sub"><li><b>학습지 도우미 만들기</b> GPT · Gemini · Claude 에 「학습지 도우미 지침」 붙여 넣기 (설치 안내 그대로)</li><li><b>재료 주기</b> 교과서 쪽 · 지금 쓰는 학습지(있으면) · 차시 목표 → 우리 양식 학습지 글이 나옴</li><li><b>PDF 로 저장</b> 도우미가 준 파일을 열어 인쇄 → PDF</li></ol>
