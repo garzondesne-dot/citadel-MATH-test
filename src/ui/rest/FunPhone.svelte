@@ -90,7 +90,7 @@
     return (ff.hist || []).map((h, k) => (mk[k] && mk[k] !== 'o' ? oxList()[h.qi] : null)).filter((x): x is NonNullable<typeof x> => !!x);
   });
   const opts = $derived(ff ? ff.q.map((t, k) => ({ v: 'abc'[k] as string, t })) : []);
-  function choose(v: string) { if (ff && ff.phase === 'pick' && !cover) pick(S, code, ff.rk, uid, v); }
+  function choose(v: string) { if (ff && ff.phase === 'pick' && !cover && fnow < ff.to) pick(S, code, ff.rk, uid, v); } // ⏱ 마감 뒤 = 안 받음 (판정은 0.5초 뒤 · #44 ⑨)
   function back() { if (!f) return; if (f.kind === 'nun') nunCheer(S, code, f.g, uid, '🙋'); wake = `${f.g}|${(f as Fun).n ?? (f as Nun).round}`; }
 </script>
 

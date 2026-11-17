@@ -27,7 +27,13 @@ export interface Fun {
   drv?: { u: string; at: number }; frz?: number | null; saved?: boolean;
 }
 export interface Res { a: string[]; b: string[]; c?: string[]; none: string[]; zz?: string[]; lose: string; hand?: string; out: string[]; voided: boolean; sa: number; sb: number }
-export const rpsOn = (f: Pick<Fun, 'kind' | 'alive'>) => (f.kind === 'bal' || f.kind === 'rev' || !f.kind) && Object.keys(f.alive || {}).length <= RPS_AT;
+/** ✊ 가위바위보 시작 인원 · 🔄 반대로 = 3명 이하 (📜 #46 선생님 「반대로 밸런스는 2~3명에서 가위바위보로」) · ⚖ 밸런스 = 5명 이하 그대로 */
+/** ⏱ 판정 여유 (ms) — 폰은 마감(to)에 고르기를 막고 · 시계 기기는 to + LATE 에 판정 */
+export const LATE = 500;
+export const rpsAt = (kind?: Kind | null) => (kind === 'rev' ? 3 : RPS_AT);
+/** 끝나는 인원 · 🔄 반대로 = 1명 남을 때까지(가위바위보로 승자 · 시간이 다 되면 그때 남은 학생) · 나머지 = 2명 이하 그대로 */
+export const endAt = (kind?: Kind | null) => (kind === 'rev' ? 1 : 2);
+export const rpsOn = (f: Pick<Fun, 'kind' | 'alive'>) => (f.kind === 'bal' || f.kind === 'rev' || !f.kind) && Object.keys(f.alive || {}).length <= rpsAt(f.kind);
 export const tHand = (g: number, n: number) => { let h = 2166136261; for (const ch of `${g}|${n}|rps`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995); h ^= h >>> 15; return 'abc'[(h >>> 0) % 3] as string; };
 export function judgeRps(alive: string[], votes: Record<string, string> | null, hand: string) {
   const v = votes || {}, by = (k: string) => alive.filter((u) => v[u] === k), a = by('a'), b = by('b'), c = by('c'), none = alive.filter((u) => !['a', 'b', 'c'].includes(v[u] as string));
@@ -69,7 +75,7 @@ export function round(f: Pick<Fun, 'queue' | 'kind' | 'alive' | 'at0'>, n: numbe
 export function step(f0: Fun | null, votes: Record<string, string> | null, now: number): Fun | null {
   let f = norm(f0);
   if (!f || f.phase === 'end') return null;
-  if (f.phase === 'pick' && now >= f.to) {
+  if (f.phase === 'pick' && now >= f.to + LATE) { // ⏱ 마감 뒤 0.5초 기다렸다 판정 (🐞 #44 ⑨ 「골랐는데 안 골랐다고」 · 마감 순간 누른 표가 서버에 닿을 시간 · 폰은 마감에 잠김)
     const alive = Object.keys(f.alive || {});
     if (f.kind === 'quiz') {
       const r = judge(alive, votes, 'ox', f.ans || ''), ok = f.ans === 'a' ? r.a : r.b, marks = { ...(f.marks || {}) };
@@ -91,7 +97,7 @@ export function step(f0: Fun | null, votes: Record<string, string> | null, now: 
     back.forEach((u) => { delete zz[u]; });
     if (back.length) f = { ...f, alive: Object.fromEntries(left.map((u) => [u, true])) as Record<string, true>, zz, back: [] };
     if (f.kind === 'quiz') return f.n >= Math.min(QN, f.queue.length) ? { ...f, phase: 'end', win: [], endAt: now } : { ...f, ...round(f, f.n + 1, now) } as Fun;
-    if (left.length <= 2 || f.final) return { ...f, phase: 'end', win: left, endAt: now };
+    if (left.length <= endAt(f.kind) || f.final) return { ...f, phase: 'end', win: left, endAt: now };
     return { ...f, ...round(f, f.n + 1, now) } as Fun;
   }
   return null;

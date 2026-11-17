@@ -13,7 +13,8 @@ import { packOf } from '../src/engine/packs';
 import { PROFILES } from '../src/model/profiles';
 import type { Room, Store } from '../src/model/types';
 
-const DS = { Fun: { ...Fun }, FunQ: FUNQ, FunOX: { list: SUBJ.funOx }, Nunchi: { step: (f: Nun.Nun, p: Record<string, number> | null, now: number, c: Record<string, { e: string; at: number }> | null) => Nun.stepNun(f, p, now, c) } };
+// ⏱ #44 ⑨ 판정 = 마감 + 0.5초 → 정식 시험(마감 순간 판정)은 그 0.5초를 더해 돌림
+const DS = { Fun: { ...Fun, step: (f: Fun.Fun | null, v: Record<string, string> | null, now: number) => Fun.step(f, v, f && now >= f.to ? now + Fun.LATE : now) }, FunQ: FUNQ, FunOX: { list: SUBJ.funOx }, Nunchi: { step: (f: Nun.Nun, p: Record<string, number> | null, now: number, c: Record<string, { e: string; at: number }> | null) => Nun.stepNun(f, p, now, c) } };
 function runOfficial(file: string, fix: (src: string) => string) {
   const out: string[] = [], bad: string[] = [];
   const log = (...a: unknown[]) => { const t = a.join(' '); (t.startsWith('FAIL') ? bad : out).push(t); };
@@ -25,7 +26,8 @@ function runOfficial(file: string, fix: (src: string) => string) {
 describe('정식 시험 그대로 (src/rest 판)', () => {
   it('⚖ 밸런스 · 🔄 반대로 · ⭕ 수학 OX · OX 타임 (tests/fun.test.js)', () => {
     const r = runOfficial('fun.test.js', (s) => s);
-    expect(r.bad).toEqual([]);
+    // 📜 #46 반대로 = 3명 이하에서 가위바위보 → 정식 「5명 = 가위바위보」 줄만 다름 (아래 새 시험이 대신)
+    expect(r.bad.filter((b: string) => !/반대로: 6명 = 그대로 · 5명 = 가위바위보/.test(b) && b !== 'exit 1')).toEqual([]);
     expect(r.out.join('\n')).toMatch(/OK: 밸런스 게임/);
   });
   it('🙊 눈치 게임 (tests/nunchi.test.js)', () => {
@@ -60,7 +62,7 @@ describe('진행 층 (run.ts)', () => {
     expect(f.phase).toBe('pick'); expect(f.total).toBe(7);
     // 7명(가위바위보 아님): u1 · u2 · u5 · u6 = a, u3 = b, u4 · u7 안 고름(💤)
     ['u1', 'u2', 'u5', 'u6'].forEach((u) => pick(S, 'T', f.rk, u, 'a')); pick(S, 'T', f.rk, 'u3', 'b');
-    S.tick(15000); tick(S, 'T', 'tv');
+    S.tick(15000 + Fun.LATE); tick(S, 'T', 'tv');
     f = funOf(R()) as unknown as Fun.Fun;
     expect(f.phase).toBe('show');
     expect(Object.keys(f.alive).sort()).toEqual(['u1', 'u2', 'u5', 'u6']); // 적은 쪽(u3) 탈락 · u4 · u7 = 💤
@@ -70,7 +72,7 @@ describe('진행 층 (run.ts)', () => {
     expect(f.rps).toBe(true); // 4명 = ✊✌️✋ 선생님과 가위바위보
     const h = Fun.tHand(f.g, f.n), lose = { a: 'b', b: 'c', c: 'a' }[h]!, win = { a: 'c', b: 'a', c: 'b' }[h]!;
     pick(S, 'T', f.rk, 'u1', win); pick(S, 'T', f.rk, 'u2', win); pick(S, 'T', f.rk, 'u5', lose); pick(S, 'T', f.rk, 'u6', lose);
-    S.tick(15000); tick(S, 'T', 'tv'); S.tick(Fun.SHOW); tick(S, 'T', 'tv');
+    S.tick(15000 + Fun.LATE); tick(S, 'T', 'tv'); S.tick(Fun.SHOW); tick(S, 'T', 'tv');
     f = funOf(R()) as unknown as Fun.Fun;
     expect(f.phase).toBe('end'); expect(f.win?.sort()).toEqual(['u1', 'u2']);
     const r1 = payFun(S, f as unknown as AnyFun, 'u1', 'T'), r3 = payFun(S, f as unknown as AnyFun, 'u3', 'T');
@@ -116,5 +118,39 @@ describe('🙊 ⓕ 한 번도 안 누른 학생 = 관전 (📜 11/17 선생님 A
     g = { ...g, act: { d: 1 } } as Nun.Nun; // d 는 앞 판에서 눌렀던 학생
     g = Nun.stepNun(g, { a: 3100, b: 3800, c: 4600 }, 6000, null)!;
     expect(g.out.d).toBe('last');
+  });
+});
+
+describe('📜 #46 반대로 밸런스 · 🐞 #44 ⑨ 판정 여유', () => {
+  const alive = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`u${i + 1}`, true])) as Record<string, true>;
+  it('반대로 = 4명까지 문항 · 3명 이하 가위바위보 · 1명 남을 때까지 / 밸런스 = 5명 이하 그대로', () => {
+    expect(Fun.rpsOn({ kind: 'rev', alive: alive(4) })).toBe(false); expect(Fun.rpsOn({ kind: 'rev', alive: alive(3) })).toBe(true); expect(Fun.rpsOn({ kind: 'rev', alive: alive(2) })).toBe(true);
+    expect(Fun.rpsOn({ kind: 'bal', alive: alive(5) })).toBe(true); expect(Fun.rpsOn({ kind: 'bal', alive: alive(6) })).toBe(false);
+    expect(Fun.endAt('rev')).toBe(1); expect(Fun.endAt('bal')).toBe(2);
+    // 반대로 2명 남음 = 끝나지 않고 다음 판(가위바위보)
+    const f0 = { kind: 'rev', g: 1, n: 3, rk: 'r3', qi: 0, rps: false, q: ['a', 'b'], s: null, ans: null, why: null, phase: 'show', from: 0, to: 1000, until: 2000, final: false, alive: alive(2), queue: [0, 1, 2, 3], at0: 0, total: 6, outAt: {}, zz: {} } as unknown as Fun.Fun;
+    const f1 = Fun.step(f0, null, 2000)!; expect(f1.phase).toBe('pick'); expect(f1.rps).toBe(true);
+    const f2 = Fun.step({ ...f0, alive: alive(1) } as Fun.Fun, null, 2000)!; expect(f2.phase).toBe('end');
+    const f3 = Fun.step({ ...f0, final: true } as Fun.Fun, null, 2000)!; expect(f3.phase).toBe('end'); expect(f3.win?.length).toBe(2); // 시간 다 됨 = 남은 학생
+  });
+  it('⑨ 마감 순간엔 판정 안 함 · 0.5초 뒤 판정 (그 사이 도착한 표도 셈)', () => {
+    const f0 = { kind: 'bal', g: 1, n: 1, rk: 'r1', qi: 0, rps: false, q: ['a', 'b'], s: null, ans: null, why: null, phase: 'pick', from: 0, to: 15000, final: false, alive: alive(8), queue: [0, 1, 2], at0: 0, total: 8, outAt: {}, zz: {} } as unknown as Fun.Fun;
+    expect(Fun.step(f0, {}, 15000)).toBeNull(); expect(Fun.step(f0, {}, 15000 + Fun.LATE - 1)).toBeNull();
+    const v = { u1: 'a', u2: 'a', u3: 'a', u4: 'a', u5: 'a', u6: 'b', u7: 'b', u8: 'b' }; // u8 = 마감 0.3초 뒤 도착
+    const f1 = Fun.step(f0, v, 15000 + Fun.LATE)!; expect(f1.phase).toBe('show'); expect(f1.res?.none).toEqual([]);
+  });
+});
+
+describe('🐞 #44 ⑩ 용이 잠든 사이 = 1판 출발 때 들어와 있는 학생 모두', () => {
+  it('시작 뒤 안내 10초 동안 들어온 학생도 참가 · 2판부터는 그대로', async () => {
+    const { S, R } = setup(4);
+    restOn(S, 'T', R(), 7);
+    expect(startFun(S, 'T', R(), 'drg', { no: 1, me: 'tv' })).toBeNull();
+    expect(Object.keys((funOf(R()) as unknown as { alive: object }).alive).length).toBe(4);
+    S.tick(3000); heartbeat(S, 'T', 'u9', 9, '학생 9'); // 늦게 들어옴(새 판 받느라)
+    S.tick(7000); ['u1', 'u2', 'u3', 'u4', 'u9'].forEach((u, k) => heartbeat(S, 'T', u, u === 'u9' ? 9 : k + 1, `학생 ${k + 1}`)); // 폰은 몇 초마다 소식
+    S.tick(1000); tick(S, 'T', 'tv');
+    const f = funOf(R()) as unknown as { phase: string; alive: Record<string, 1>; total: number };
+    expect(f.phase).toBe('play'); expect(f.alive.u9).toBe(1); expect(f.total).toBe(5);
   });
 });
