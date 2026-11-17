@@ -106,7 +106,7 @@
    "retry": {
     "gen": "set08.m1"
    },
-   "attack": "dark"
+   "attack": "wind"
   },
   "m2": {
    "title": "문제 3 · 진리집합",
@@ -141,7 +141,7 @@
    "retry": {
     "gen": "set08.m5"
    },
-   "attack": "wind"
+   "attack": "poison"
   }
  },
  "boss": {
@@ -398,8 +398,8 @@
    ]
   },
   "attack": [
-   "dark",
-   "glitch"
+   "ice",
+   "dark"
   ]
  },
  "crops": {

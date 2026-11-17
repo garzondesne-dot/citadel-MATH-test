@@ -18,8 +18,8 @@
     6
    ],
    "attack": [
-    "bind",
-    "glitch"
+    "fire",
+    "smash"
    ]
   }
  ],
@@ -118,7 +118,7 @@
    "retry": {
     "gen": "set06.m1"
    },
-   "attack": "fog"
+   "attack": "poison"
   },
   "m2": {
    "title": "문제 2",
@@ -126,7 +126,7 @@
    "retry": {
     "gen": "set06.m2"
    },
-   "attack": "sleep"
+   "attack": "ice"
   },
   "m3": {
    "title": "문제 3",
@@ -134,7 +134,7 @@
    "retry": {
     "gen": "set06.m3"
    },
-   "attack": "wind"
+   "attack": "poison"
   },
   "u4": {
    "title": "문제 4 · 조건을 만족하는 X",
@@ -145,7 +145,7 @@
    "chain": {
     "gen": "set06.u4"
    },
-   "attack": "bind"
+   "attack": "smash"
   },
   "u5": {
    "title": "문제 5 · 미지수 x",
@@ -168,7 +168,7 @@
    "chain": {
     "gen": "set06.u6"
    },
-   "attack": "poison"
+   "attack": "ice"
   },
   "u7": {
    "title": "문제 7 · 「~이 아니거나」",
@@ -179,7 +179,7 @@
    "chain": {
     "gen": "set06.u7"
    },
-   "attack": "confuse"
+   "attack": "smash"
   },
   "m4": {
    "title": "문제 4 (v2 명제)",
@@ -187,7 +187,7 @@
    "retry": {
     "gen": "set06.m4"
    },
-   "attack": "pause"
+   "attack": "smash"
   },
   "m42": {
    "title": "문제 4-2 · 삼단논법 · 명제 고르기 (v2)",
@@ -195,7 +195,7 @@
    "retry": {
     "gen": "set06.m42"
    },
-   "attack": "pause"
+   "attack": "smash"
   },
   "m5": {
    "title": "문제 5 (v2 명제의 부정)",
@@ -485,8 +485,8 @@
    ]
   },
   "attack": [
-   "bind",
-   "fog"
+   "fire",
+   "smash"
   ]
  },
  "crops": {

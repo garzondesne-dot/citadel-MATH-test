@@ -14,6 +14,7 @@
   import { tvHint } from '../../school/hintGive';
   import { gaugeView } from '../battle/gauge';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
+  import { atkSfx, sfx, tvHurt } from '../sound.svelte';
   import { attack, canUlt, preload as atkPreload, preloadFaces, setForce, type Pose } from '../fx/attack';
   import { deco } from '../fx/aura';
   import { ladder } from '../../model/hero';
@@ -26,8 +27,8 @@
   import { monVis, spriteOf } from '../manifest';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
-  const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow, tstrike = null }:
-    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean; /** 🧑‍🏫 선생님 일격 (시연 다 맞힘) */ tstrike?: { ult: boolean; at: number; hero: number; fx: string; key?: string } | null } = $props();
+  const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow, tstrike = null, quiet = false }:
+    { L: LessonPack; R: Room; step: Step | null; now: number; ids: string[]; nameOf: (u: string) => string; submitted: (u: string) => boolean; lost: Set<string>; split: boolean; shadow: boolean; /** 🧑‍🏫 선생님 일격 (시연 다 맞힘) */ tstrike?: { ult: boolean; at: number; hero: number; fx: string; key?: string } | null; /** 🔇 TV 소리 끔 (📜 #43 맞음 · 몬스터 공격 소리) */ quiet?: boolean } = $props();
   let host: HTMLDivElement;
   let A = $state<Arena | null>(null), mode = $state<'wait' | 'pixi' | 'dom'>('wait');
   let W = $state(0), H = $state(0);
@@ -63,7 +64,7 @@
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { if (split) return; /* 🎮 시연 중 = TV 공격 연출 없음 (시계 · 게이지 · 학생 폰은 그대로) */ const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
+    untrack(() => { if (split) return; /* 🎮 시연 중 = TV 공격 연출 없음 (시계 · 게이지 · 학생 폰은 그대로) */ const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); if (!quiet) sfx(atkSfx(d), 0.5); /* 🔊 #43 몬스터 공격 = 종류 소리 · 수업 사건 소리보다 작게 */ tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 · 정식 hall.js pose): Pixi = A.pose · DOM 장면 = HeroSprite pose · 잠깐 모션(ms) 위에 바탕 모션(쓰러짐 · 기쁨 · 생각)
@@ -106,6 +107,7 @@
     else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); if (h.kind !== 'miss') domPop(h.kind === 'hit' ? `-${h.dmg}` : '연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); /* 틀림 = 글자 없음(돌진 · 튕김만) */ }
     if (h.kind === 'hit' && h.perfect && W) { const b = arenaBox(W, H, boss, split); setTimeout(() => domPop('PERFECT!', b.mon.cx, b.mon.top + b.mon.size * 0.5, 'perfect'), 250); } // 📜 2026-11-16 선생님 c3 「퍼펙트 표기 사라짐(옛)」 = 옛 정식 hall.js 「PERFECT!」
     if (h.kind === 'hit' && h.dmg > 0) lastHitU = h.u;
+    if (h.kind === 'hit' && !quiet && !(fxLayer && W)) tvHurt(); // 🔊 #43 정식 층이 없을 때 맞는 소리 (정식 층은 onHit 에서)
     qT = setTimeout(() => { qT = undefined; play(); }, gapOf(queue.length)); // 🐞 11/17 ⓒ 많이 몰리면 간격을 줄여 밀리지 않게 (단계가 바뀌기 전에 다 보이게)
   }
   // ⚔ 🔨 용사 fx (정식 hall.js 606~618 · 학생 폰과 같은 attack()): Pixi = 캔버스 위 DOM 층에 그 용사 대역(같은 자리 · 같은 크기)을 두고 Pixi 용사는 잠깐 숨김
@@ -151,7 +153,7 @@
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => A!.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
     void attack(lay, { who: whoOf(h.u), custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
-      onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
+      onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (last && !quiet) tvHurt(); /* 🔊 #43 맞는 순간 */ if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
     return true;
   }

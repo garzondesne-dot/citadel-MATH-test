@@ -59,7 +59,7 @@ export function dressed(L: LessonPack, pick?: string | null): LessonPack {
   ids.forEach((id, i) => {
     const m = L.monsters[id]!, hue = Math.floor(i / 5) * 72;
     const sprite = `${d}:${i % 5}${hue ? `@h${hue}` : ''}${m.chain ? '@e' : ''}@r${runeOf(L, id)}`;
-    monsters[id] = { ...m, sprite: force || noArt(m.sprite) ? sprite : m.sprite, attack: force || !m.attack ? D.attack[i % D.attack.length] : m.attack };
+    monsters[id] = { ...m, sprite: force || noArt(m.sprite) ? sprite : m.sprite, attack: force || !m.attack ? (D.rowAttack?.[i % 5] ?? D.attack[i % D.attack.length]) : m.attack /* 📜 #43 그림 줄마다 공격 하나 */ };
   });
   const bsym = runeOf(L, ids[ids.length - 1] ?? '') || String(L.no);
   const boss = L.boss ? { ...L.boss, sprite: force || noArt(L.boss.sprite) ? (D.boss != null ? `${d}:${D.boss}@r${bsym}` : D.bossRef ? `${D.bossRef}@r${bsym}` : `${d}:4@h180@e@r${bsym}`) : L.boss.sprite, attack: force || !L.boss.attack?.length ? D.bossAttack : L.boss.attack } : L.boss;

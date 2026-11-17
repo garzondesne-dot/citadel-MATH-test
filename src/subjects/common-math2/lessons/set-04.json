@@ -93,7 +93,7 @@
    "retry": {
     "gen": "set04.m1"
    },
-   "attack": "fog"
+   "attack": "wind"
   },
   "m2": {
    "title": "문제 2",
@@ -109,7 +109,7 @@
    "retry": {
     "gen": "set04.m3"
    },
-   "attack": "ice"
+   "attack": "poison"
   },
   "b1": {
    "title": "보강 ① · 한 걸음 더 (∪ ∩)",
@@ -406,7 +406,7 @@
    ]
   },
   "attack": [
-   "fire",
+   "ice",
    "confuse"
   ]
  },

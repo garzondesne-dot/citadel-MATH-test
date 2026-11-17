@@ -103,7 +103,7 @@
    "retry": {
     "gen": "set10.m2"
    },
-   "attack": "dark"
+   "attack": "scale"
   },
   "m3": {
    "title": "문제 3 · 세 조건 (생각 넓히기)",
@@ -112,7 +112,7 @@
    "retry": {
     "gen": "set10.m3"
    },
-   "attack": "sleep"
+   "attack": "bind"
   },
   "m4": {
    "title": "문제 4 · 어떤 조건인지 (중단원)",
@@ -124,7 +124,7 @@
    "chain": {
     "gen": "set10.m4"
    },
-   "attack": "fire"
+   "attack": "wind"
   }
  },
  "boss": {
@@ -294,7 +294,7 @@
    ]
   },
   "attack": [
-   "dark",
+   "scale",
    "bind"
   ]
  },

@@ -100,7 +100,7 @@
    "retry": {
     "gen": "set09.m1"
    },
-   "attack": "sleep"
+   "attack": "bind"
   },
   "m2": {
    "title": "문제 2 · 참 · 거짓과 반례",
@@ -109,7 +109,7 @@
    "retry": {
     "gen": "set09.m2"
    },
-   "attack": "dark"
+   "attack": "bind"
   },
   "m3": {
    "title": "문제 3 · 역과 대우",
@@ -118,7 +118,7 @@
    "retry": {
     "gen": "set09.m3"
    },
-   "attack": "glitch"
+   "attack": "dark"
   },
   "m4": {
    "title": "문제 4 · 대우로 참 · 거짓",
@@ -139,7 +139,7 @@
    "chain": {
     "gen": "set09.m5"
    },
-   "attack": "confuse"
+   "attack": "wind"
   }
  },
  "boss": {

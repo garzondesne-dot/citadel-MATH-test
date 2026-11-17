@@ -30,8 +30,7 @@
   import { holyArmed, holyCan, holyOn, pracHitsAll, stone, BOSS_ID as BID, plainRecord, unlocksOf, healsGiven } from '../raid/raid';
   import { holyArm, holyUse } from '../raid/actions';
   import { guardQ } from './battle/fx.svelte';
-  import { ELEM_FX } from './manifest';
-  import { sfx, soundPref } from './sound.svelte';
+  import { atkSfx, sfx, soundPref } from './sound.svelte';
   import { actx } from './webaudio';
   import { symState } from './battle/symsheet.svelte';
   import Sheet from './battle/Sheet.svelte';
@@ -127,14 +126,13 @@
   // 👾 몬스터 공격: 모든 기기가 같은 시계로 같은 순간에 맞음 → 문제 화면이면 lock 초 동안 공격 효과 (정식 monsterStrike · #152 공격 종류 = 차시 팩 attack)
   //   멈춤 · 파지직 = 입력 막힘 / 안개 · 얼음 · 화염 = 손풀기로 일찍 풀림 / 강타 = 흔들기만 · 모두 lock 초 지나면 저절로
   //   #161 세기 = 몬스터(보스) 체력 50% 아래면 강(분노 · 효과 조금 길게 · 소리 · 장면 붉게 · 멈춤 시간 상한 안) · 속성 소리
-  const ATK_SFX: Record<string, string> = { confuse: 'dizzy', dark: 'ink', poison: 'poison', sleep: 'yawn', glitch: 'glitch' };
   let atk = $state<{ def: AttackDef; at: number; until: number; strong: boolean } | null>(null);
   const memo = {};
   function strike(def: AttackDef, ms: number, strong = false) {
     if (cardOnly) return; // 🎮 시연 = 몬스터 공격 · 효과 · 소리 없음 (📜 2026-11-14 「교사용 시연에 전투 모션도 나와」)
     atk = { def, at: gnow, until: gnow + ms, strong }; iceEnd = 'melt';
     fx.ice = def.id === 'ice' ? 4 : 0; fx.fire = def.id === 'fire'; fx.bind = def.id === 'bind'; fx.chain = { cut: 0, broken: false, open: false };
-    sfx(ATK_SFX[def.id] ?? (def.id === 'wind' ? ELEM_FX.gale : ELEM_FX[def.elem])?.sfx ?? 'smash'); // 🔊 2차: 혼란 = 어질 · 어둠 = 먹물 · 독 = 거품 · 수면 = 하품 · 파지직 = 지지직 (속박 = 사슬 철컥은 사슬 그림이 냄) if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
+    sfx(atkSfx(def)); // 🔊 2차: 혼란 = 어질 · 어둠 = 먹물 · 독 = 거품 · 수면 = 하품 · 파지직 = 지지직 (속박 = 사슬 철컥은 사슬 그림이 냄) if (strong) setTimeout(() => sfx('hurt', 0.5), 180);
   }
   $effect(() => {
     if (!R) return;

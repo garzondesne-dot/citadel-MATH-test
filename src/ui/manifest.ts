@@ -10,7 +10,7 @@ import { SUBJ } from '../engine/subject';
 import RDUN_JSON from './rdun.json';
 import RDUN_BOSS from './rdun-boss.json'; // 👑 보스 묶음 시트 (보스 줄이 없는 던전 · bossRef = '묶음:줄')
 /** 🎲 랜덤 던전 (DECISIONS 「🎲 랜덤 던전」 · 그림 없는 차시에 차례로) — 과목과 상관없는 그림 표 */
-export interface Rdun { name: string; src: string; cell: number; rows: number; names: string[]; boss: number | null; bossRef?: string; bossName: string; attack: string[]; bossAttack: string[]; bg: string; rune: ([number, number, number] | null)[][] }
+export interface Rdun { name: string; src: string; cell: number; rows: number; names: string[]; boss: number | null; bossRef?: string; bossName: string; attack: string[]; rowAttack?: string[]; bossAttack: string[]; bg: string; rune: ([number, number, number] | null)[][] }
 export const RDUN = RDUN_JSON as unknown as Record<string, Rdun>;
 export const RDUN_IDS = Object.keys(RDUN).sort();
 /** 🔍 확대 품질 비교 (2026-11-14 머리 📎): 주소 ?rdx2 = 도트 전용 2배(Scale2x)로 미리 구운 시트 + 부드러운 축소 (tools/rdun/scale2x.py) */

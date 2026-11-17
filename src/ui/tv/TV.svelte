@@ -385,7 +385,7 @@
   {:else if step && R}
     <!-- ⚔ 전투: 몬스터 + 머리 위 체력 · 아래 용사 이름표 -->
     <!-- ⚔ 전투 (#157): PixiJS 캔버스 장면(몬스터 크게 · 머리 위 굵은 체력 · 용사단 · 공격 연출) · WebGL 없으면 같은 배치 DOM -->
-    <Arena {L} R={R as Room} {step} {now} ids={arenaIds} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} />
+    <Arena {L} R={R as Room} {step} {now} ids={arenaIds} {nameOf} {submitted} lost={new Set(lost)} split={demo} shadow={!!scout?.on} {tstrike} quiet={!sound} />
     {#if scout?.on}
       <div class="sc"><div class="q">🌫 정찰 — {L.carryOf?.[step.id] ? `${step.title.split(' · ')[1] ?? ''} ` : ''}학습지 「{short(step)}」을 먼저 풀어요</div><div class="r">등장까지 <b>{Math.ceil(scout.left / 1000)}</b>초</div></div>
     {/if}

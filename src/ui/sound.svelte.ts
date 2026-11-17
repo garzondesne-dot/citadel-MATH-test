@@ -1,5 +1,5 @@
 // 🔊 효과음 · 🎵 배경음 켜기 · 끄기 (#161 속성 소리 · B5 소리 탭 = 둘 따로 · 이 기기 기억 localStorage 'citadel-sound')
-import { artUrl, SFX } from './manifest';
+import { artUrl, ELEM_FX, SFX } from './manifest';
 import { paperOn } from './submit.svelte';
 import { playOnce } from './webaudio';
 export type SoundPref = { sfx: boolean; bgm: boolean };
@@ -33,3 +33,10 @@ export function sfx(k: string, vol = 0.7): void {
   let a = pool.get(k); if (!a) { a = new Audio(artUrl(SFX[k]!)); pool.set(k, a); }
   try { a.currentTime = 0; a.volume = vol * duckK(); void a.play().catch(() => { /* 아직 화면을 누르지 않음 */ }); } catch { /* 무시 */ }
 }
+
+/** 💥 몬스터 공격 종류 소리 (폰 · TV 같은 표 · 📜 #43) — 혼란 = 어질 · 어둠 = 먹물 · 독 = 거품 · 수면 = 하품 · 파지직 = 지지직 · 나머지 = 속성 소리 */
+const ATK_SFX: Record<string, string> = { confuse: 'dizzy', dark: 'ink', poison: 'poison', sleep: 'yawn', glitch: 'glitch' };
+export const atkSfx = (d: { id: string; elem?: string }): string => ATK_SFX[d.id] ?? (d.id === 'wind' ? ELEM_FX.gale : ELEM_FX[d.elem ?? ''])?.sfx ?? 'smash';
+/** 🖥 TV 맞는 소리 = 「hurt」 작게 · 여럿이 몰리면 0.15초에 한 번 (📜 #43) */
+let hurtAt = 0;
+export function tvHurt(now = Date.now()): boolean { if (now - hurtAt < 150) return false; hurtAt = now; sfx('hurt', 0.35); return true; }

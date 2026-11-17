@@ -1,3 +1,4 @@
+import { RDUN } from '../src/ui/manifest';
 // ⚡ #152 기력 (정식 heals 칸): 소레이드 대장 처치 = 남은 칸이 기력 · 묶기 = 공격 3초 늦춤 · 힐 = 친구 도전 칸 +1 · 기력이 없으면 못 씀
 import { describe, expect, it } from 'vitest';
 import type { Room, Store } from '../src/model/types';
@@ -29,10 +30,10 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     const L6 = packOf('set-06')!, L7 = packOf('set-06@7')!, L2 = packOf('set-02')!;
     const st = (L: typeof L6, id: string) => L.steps.find((s) => s.id === id)!;
     // 2026-11-13 짝 표(❓#1 B · 선생님 「짝표대로」)
-    expect(attackOf(L6, st(L6, 'm1'), 0).id).toBe('fog'); expect(attackOf(L6, st(L6, 'm2'), 0).id).toBe('sleep'); expect(attackOf(L7, st(L7, 'u4'), 0).id).toBe('bind');
-    expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['bind', 'fog', 'bind']);
-    expect([0, 1, 2].map((k) => attackOf(L7, st(L7, 'boss'), k).id)).toEqual(['bind', 'glitch', 'bind']); // 나눈 7차시 보스 = 「@7」
-    expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('wind');
+    expect(attackOf(L6, st(L6, 'm1'), 0).id).toBe('poison'); expect(attackOf(L6, st(L6, 'm2'), 0).id).toBe('ice'); expect(attackOf(L7, st(L7, 'u4'), 0).id).toBe('smash'); // 📜 #43 그림에 맞춤 (이끼 미믹 · 서리 늑대 · 이끼 골렘)
+    expect([0, 1, 2].map((k) => attackOf(L6, st(L6, 'boss'), k).id)).toEqual(['fire', 'smash', 'fire']); // 📜 #43 성채 드래곤
+    expect([0, 1, 2].map((k) => attackOf(L7, st(L7, 'boss'), k).id)).toEqual(['fire', 'smash', 'fire']); // 나눈 7차시 보스 = 「@7」
+    expect(attackOf(L2, st(L2, 'm4'), 0).id).toBe('poison'); // 📜 #43 자수정 슬라임
     expect(Object.keys(ATTACKS)).toEqual(['pause', 'glitch', 'fog', 'ice', 'fire', 'smash', 'confuse', 'wind', 'poison', 'bind', 'sleep', 'dark', 'mirror', 'scale']);
     expect(Object.values(ATTACKS).filter((a) => a.lockInput).map((a) => a.id)).toEqual(['pause', 'glitch', 'bind']);
     // 2026-11-13 선생님 「B1」: 모든 공격 3초 · 분노 4초 (멈춤 시간 lock 과 상관없음)
@@ -43,11 +44,12 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     const els = new Set(Object.values(ATTACKS).map((a) => a.elem)); expect(els.size).toBe(8);
     const g = Object.values(ATTACKS).map((a) => a.gesture).filter(Boolean); expect(new Set(g).size).toBe(g.length);
     const L8 = packOf('set-08')!, L9 = packOf('set-09')!, L10 = packOf('set-10')!, L6 = packOf('set-06')!;
-    expect(bossAttacks(L8)).toEqual(['dark', 'glitch', 'mirror']); expect(bossAttacks(L9)).toEqual(['bind', 'dark']); // 🔒 자물쇠 뺌 (2026-11-14) expect(bossAttacks(L10)).toEqual(['dark', 'bind', 'scale']);
-    expect(bossAttacks(L6)).toEqual(['bind', 'fog']);
-    const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['dark', 'glitch', 'mirror', 'dark']);
-    // 15개 모두 실제 수업(단계에 있는 몬스터 · 보스)에서 한 번 이상 쓰임
+    expect(bossAttacks(L8)).toEqual(['ice', 'dark', 'mirror']); // 📜 #43 부정의 수정 여왕 expect(bossAttacks(L9)).toEqual(['bind', 'dark']); // 🔒 자물쇠 뺌 (2026-11-14) expect(bossAttacks(L10)).toEqual(['dark', 'bind', 'scale']);
+    expect(bossAttacks(L6)).toEqual(['fire', 'smash']);
+    const b8 = L8.steps.find((s) => s.kind === 'boss')!; expect([0, 1, 2, 3].map((k) => attackOf(L8, b8, k).id)).toEqual(['ice', 'dark', 'mirror', 'ice']);
+    // 모두 실제 수업(단계에 있는 몬스터 · 보스) 또는 🎲 랜덤 던전에서 한 번 이상 쓰임
     const used = new Set<string>(); for (const P of PACKS) for (const x of P.steps) { if (x.kind === 'monster' && P.monsters[x.id]) used.add(attackOf(P, x, 0).id); if (x.kind === 'boss') bossAttacks(P).forEach((a) => used.add(a)); }
+    for (const D of Object.values(RDUN)) [...(D.rowAttack ?? []), ...D.bossAttack].forEach((a) => used.add(a)); // 📜 #43 ⚡ 파지직 = 이제 랜덤 던전(태엽 공장 · 구름 섬)에서만
     expect([...used].sort()).toEqual(Object.keys(ATTACKS).sort());
     expect(attackStrong({ left: 49, max: 100 })).toBe(true); expect(attackStrong({ left: 50, max: 100 })).toBe(false); expect(attackStrong({ left: 0, max: 100 })).toBe(false); expect(attackStrong(null)).toBe(false);
   });
