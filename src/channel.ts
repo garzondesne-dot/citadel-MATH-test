@@ -38,6 +38,6 @@ export const siteUrl = (): string => (typeof location === 'undefined' ? './' : n
 /** ❓ 문의 · 📤 나눔 구글 폼 주소 (📜 2026-11-17 #22 · 선생님이 폼을 만들면 머리가 주소를 보냄 → 여기 한 곳 · 비면 단추 · 칸 숨김) */
 export const FORMS = { ask: '', share: '' };
 /** 📥 차시 팩 만들기 꾸러미 공개 (📜 2026-11-17 #23 · 미래교육상 확약서 확인 뒤 머리가 「공개」 알리면 true) — false = 🛠 1단계 「📥 꾸러미 받기」 숨김 · 정식 빌드에 kit/ zip 안 넣음(vite.config 같은 값) */
-export const KIT_PUBLIC = false;
+export const KIT_PUBLIC = true;
 /** 📥 꾸러미 내려받기 수 = 중계 Worker 신호 주소 (📜 2026-11-17 · 날짜별 횟수만 · 실패해도 zip 은 사이트에서 직접) · '' = 안 셈 */
 export const KIT_COUNT = 'https://dungeon-teacher-relay.garzondesne.workers.dev/kit-hit';
