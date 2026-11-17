@@ -32,7 +32,9 @@ const NEW = NEWJ as unknown as { fx: Record<string, Spec>; bb: Record<string, nu
 // 📜 2026-11-14 선생님 「아직 용사 스킬이 예전 거네? 지금 옮겨 줘」 = 다시 만든 것은 만들면 바로 기본 (쌍월 참 A + 👎 다시 만든 스킬 NEW_SKILLS) · 👍 받은 옛 띠(베기 Ⅰ · 달빛 베기 Ⅱ 등)는 그대로
 //   mode: auto = 기본(채택한 것만 새 띠) · all = 시제품 모두(?newfx) · old = 옛 띠만(갤러리 「옛 것」 비교)
 import { NEW_SKILLS } from './twin';
-const ADOPTED = new Set(['twin', ...NEW_SKILLS]);
+// 📜 11/17 #37 선생님 「⚔ 베기 연출 = 예전 대각선 긋기 모양으로」(학생 「전에 대각선으로 긋는 게 나았어」) = 베기 Ⅲ 연타 · Ⅳ 쌍월 참은 옛 대각선 띠 (속성 색은 띠 그대로) · ?newfx = 새 것 비교
+export const OLD_CUT = new Set(['slash', 'twin']);
+const ADOPTED = new Set(['twin', ...NEW_SKILLS].filter((k) => !OLD_CUT.has(k)));
 let mode: 'auto' | 'all' | 'old' = 'auto';
 export const setNewFx = (on: boolean | 'auto') => { mode = on === 'auto' ? 'auto' : on ? 'all' : 'old'; };
 // 🌙 쌍월 참 시제품 (twin-a · b · c) = 갤러리 · TV ?twin= 이 고른 것 (slash.ts setTwin)
