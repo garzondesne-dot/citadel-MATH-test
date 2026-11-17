@@ -13,7 +13,7 @@ export interface KeyUse { at: string; n: number }
 export interface EntryKey { id: string; name: string; grade?: string; help: string; vers: Question[]; uses: KeyUse[] }
 export const KEY_CHEST = { gem: 3, max: 3 } as const;
 
-export const keysOf = (L: LessonPack | null | undefined): EntryKey[] => ((L as { keys?: EntryKey[] } | null | undefined)?.keys || []).filter((k) => k && k.id && k.vers?.length);
+export const keysOf = (L: LessonPack | null | undefined): EntryKey[] => ((L as { keys?: EntryKey[] } | null | undefined)?.keys || []).filter((k) => k && k.id && Array.isArray(k.vers) && k.vers.length > 0 && k.vers.every((q) => !!q && typeof (q as { question?: unknown }).question === 'string')); // 🔑 #60 엔진 꼴 아닌 열쇠 = 빼기(화면이 멈추지 않게)
 /** 그 소문제를 쓰는 열쇠 (at = 몬스터 id | 'boss' · n = 1부터) */
 export const keyFor = (L: LessonPack, at: string, n: number): EntryKey | null => keysOf(L).find((k) => k.uses.some((u) => u.at === at && u.n === n)) ?? null;
 

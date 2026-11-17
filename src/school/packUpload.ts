@@ -355,7 +355,10 @@ export function revive(p: LessonPack): LessonPack {
     monsters[id] = m;
   }
   const boss = p.boss ? { ...p.boss, tags: arr<string>(p.boss.tags), ...(p.boss.pool || !p.boss.gen ? { pool: Array.from({ length: p.boss.items }, (_, i) => arr<Question>(arr<unknown>(p.boss!.pool)[i])) } : {}), ...(p.boss.attack ? { attack: arr<string>(p.boss.attack) } : {}) } : undefined;
-  return { ...p, steps: arr<Step>(p.steps), monsters, ...(boss ? { boss } : {}) };
+  const out: LessonPack = { ...p, steps: arr<Step>(p.steps), monsters, ...(boss ? { boss } : {}) };
+  // 🔑 #60 열쇠 = 받을 때마다 엔진 꼴로 (🐞 옛 판 앱(b221)으로 올린 팩은 keys 를 팩 꼴(q · a · ch) 그대로 저장 → 대기실 문제 창이 안 열렸음)
+  if (p.keys != null) { const ks = parseKeys(arr<unknown>(p.keys).map((k) => ({ ...(k as object), vers: arr<unknown>((k as { vers?: unknown }).vers), uses: arr<unknown>((k as { uses?: unknown }).uses) })), out, (it, at, o) => toQ(it as BItem, at, o as Issue[]), []); if (ks && ks.length) out.keys = ks; else delete out.keys; }
+  return out;
 }
 /** 📦 올린 차시 팩 받기 (앱 시작 때 한 번 · 서버 = 거울 밖 칸이라 fetch · 이 기기 = get) → 엔진 검사 통과분만 */
 export async function loadUploaded(S: { get<T>(p: string): T | null; fetch?<T>(p: string): Promise<T | null> }): Promise<LessonPack[]> {
