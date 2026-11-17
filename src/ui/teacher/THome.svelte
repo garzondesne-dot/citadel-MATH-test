@@ -56,6 +56,14 @@
   function setMode(m: KeyMode) { keyPick = m; S.set(KEYMODE, m); if (m === 'fixed' && !fk) { keyIn = ''; keyEdit = true; } else keyEdit = false; }
   function saveKey() { if (!/^\d{4}$/.test(keyIn)) return; S.set(HALLKEY, keyIn); S.set(KEYMODE, 'fixed'); keyPick = 'fixed'; keyEdit = false; ver++; }
   const L = $derived(packs.find((p) => p.id === lessonId) ?? null);
+  // 📜 #36 반별 진도 (서버 held/{반}/{차시} = 그 반이 그 차시 수업을 시작함 · true 또는 시작 시각): 차시 카드 「✔ 11/16」 · 앞 차시를 안 했으면 열기 확인 창에 한 줄(막지 않음)
+  const heldOf = (c: string) => (c && c !== TEST ? S.get<Record<string, boolean | number>>(`held/${c.replace(/[.#$/[\]]/g, '_')}`) || {} : {});
+  const held = $derived.by(() => { void now; return heldOf(cls); });
+  // 날짜 = 그 반 수업 기록(records/{반}/{번호}/{차시}.at) 중 가장 이른 날 (held 는 true 만 · 새 쓰기 없음) · 반을 고를 때 한 번 받음
+  let dayOf = $state<Record<string, number>>({});
+  $effect(() => { const c = cls; if (!c || c === TEST) { dayOf = {}; return; } const p = `records/${c.replace(/[.#$/[\]]/g, '_')}`; void (async () => { const all = ((S.fetch ? await S.fetch<Record<string, Record<string, { at?: number }>>>(p).catch(() => null) : S.get<Record<string, Record<string, { at?: number }>>>(p)) || {}) as Record<string, Record<string, { at?: number }> | null>; const m: Record<string, number> = {}; for (const byL of Object.values(all)) for (const [lid, r] of Object.entries(byL || {})) { const t = Number(r?.at) || 0; if (t && (!m[lid] || t < m[lid]!)) m[lid] = t; } if (cls === c) dayOf = m; })(); });
+  const heldTag = (id: string) => { if (!held[id]) return ''; const t = dayOf[id]; if (!t) return '✔'; const d = new Date(t + 9 * 3600e3); return `✔ ${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
+  const prevMiss = $derived.by(() => { if (!L || isTest) return null; const prev = cells.filter((c) => c.p && c.no < L.no).pop(); return prev && !held[prev.id] ? prev.no : null; });
   const last = $derived(cls && !isTest ? lastClass(S, cls) : null);
   const md = (t: number) => { const x = kst(t); return `${x.m}/${x.d}`; };
   // ⏯ 이어서 (#119 덧붙임 2 · #133): 고른 반의 지난 수업이 닫힌 그때 자리(방 state.stop) · 🧪 = 테스트 기록(따로 저장)
@@ -106,7 +114,7 @@
       <div class="pk3" class:five={cells.length > 6} role="group" aria-label="차시">
         {#each cells as p (p.id)}
           {#if p.p}
-            <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} data-no={p.no} onclick={() => (lessonId = p.id)}><b>{star === p.no ? '⭐' : ''}{p.no}차시</b><small>{p.title.split(' · ')[0]}{upTag(p.id, p.no)}</small></button>
+            <button type="button" class="pk" class:on={lessonId === p.id} class:last={last?.lesson === p.id} aria-pressed={lessonId === p.id} data-no={p.no} onclick={() => (lessonId = p.id)}><b>{star === p.no ? '⭐' : ''}{p.no}차시</b><small>{p.title.split(' · ')[0]}{upTag(p.id, p.no)}</small>{#if heldTag(p.id)}<em class="held" data-k="held">{heldTag(p.id)}</em>{/if}</button>
           {:else}
             <button type="button" class="pk add" aria-label="{p.no}차시 준비 안 됨 · 차시 준비로" onclick={() => onprep(p.id)}><b>＋</b><small>{p.no}차시 · 준비 안 됨</small></button>
           {/if}
@@ -160,7 +168,7 @@
   <Sheet onclose={() => (openAsk = false)}>
     {#snippet title()}{isTest ? '이 테스트를 열까요?' : '이 수업을 열까요?'}{/snippet}
     {#snippet act()}<div class="oarow"><button type="button" class="btn2" onclick={() => (openAsk = false)}>아니요</button><button type="button" class="btn" class:tbtn={isTest} data-k="open-yes" onclick={go}>{isTest ? '🧪 열기' : '▶ 열기'}</button></div>{/snippet}
-    <div class="oabox" data-k="open-ask"><b class="oacls">{isTest ? `🧪 테스트 · ${modeOf(tmode)?.ic} ${modeOf(tmode)?.t}` : `${cls}반`}</b><b class="oano">{L.no}차시</b><span class="oatt">{L.title}</span>{#if carry}<small>📦 지난 {offer?.no}차시 몬스터 {carry.ids.length}마리 · {CARRY_AT[carry.at]}</small>{/if}{#if isTest}<small>🤖 봇 {botN}명 · 기록 안 남음</small>{/if}</div>
+    <div class="oabox" data-k="open-ask">{#if prevMiss}<p class="pmiss" data-k="prev-miss">⚠ {cls}반은 {prevMiss}차시를 아직 안 했어요 · 그대로 열까요?</p>{/if}<b class="oacls">{isTest ? `🧪 테스트 · ${modeOf(tmode)?.ic} ${modeOf(tmode)?.t}` : `${cls}반`}</b><b class="oano">{L.no}차시</b><span class="oatt">{L.title}</span>{#if carry}<small>📦 지난 {offer?.no}차시 몬스터 {carry.ids.length}마리 · {CARRY_AT[carry.at]}</small>{/if}{#if isTest}<small>🤖 봇 {botN}명 · 기록 안 남음</small>{/if}</div>
   </Sheet>
 {/if}
 {#if stopAsk}
@@ -175,6 +183,8 @@
   .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .held { display: block; font-style: normal; font-size: 12px; font-weight: 800; color: var(--ok); }
+  .pmiss { margin: 0 0 6px; padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--text); font: 700 14px var(--font); }
   .pk3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .pk3.five { grid-template-columns: repeat(5, minmax(0, 1fr)); } /* 차시 7개 이상 = 5칸 2줄 (#132) */
   .pk3.five .pk { padding: 4px 1px; font-size: 13.5px; }
