@@ -9,7 +9,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=teacher&e
   const rec = (no, id, b) => ({ at: 1, no, mons: { m1: 'o', m2: 'x' }, boss: b, bossN: 4, bossM: 'oo' + (b > 2 ? 'oo' : 'xx') });
   await rest('', 'PATCH', { roster: { '1-2': { 1: '가나', 2: '다라' }, '1-3': { 1: '마바', 2: '사아', 3: '자차' } }, rosterMask: { '1-2': { 1: '가*', 2: '다*' }, '1-3': { 1: '마*', 2: '사*', 3: '자*' } },
     records: { '1-2': { 1: { 'set-08': rec(8, 'set-08', 3) }, 2: { 'set-08': rec(8, 'set-08', 2) } }, '1-3': { 1: { 'set-09': rec(9, 'set-09', 4) }, 2: { 'set-09': rec(9, 'set-09', 1) }, 3: { 'set-08': rec(8, 'set-08', 3) } } },
-    xp: { '1-3': { 1: { total: 40 } } }, gem: { '1-3': { 1: { total: 120, scroll: 2 } } } });
+    xp: { '1-3': { 1: { total: 40 } } }, gem: { '1-3': { 1: { total: 120, scroll: 2 } } },
+    // 📝 설문 (#61): 응답 = 익명 · 응답 표시 = 번호가 빽빽 → 서버가 배열로 줌
+    surveyA: { '1-2': { a1: { no: 6, r: [[2, 4]], pick: [0], cmp: 0, say: '좋아요' }, a2: { no: 6, r: [[3, 4]], pick: [1], cmp: 1 } }, '1-3': { b1: { no: 6, r: [[1, 5]], pick: [0], cmp: 0 }, b2: { no: 6, r: [[2, 3]], pick: [2], cmp: 0 }, b3: { no: 6, r: [[3, 3]], pick: [0], cmp: 2 } } },
+    surveyDone: { '1-2': { 1: true, 2: true }, '1-3': { 1: true, 2: true, 3: true } } });
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   const t = await (await b.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true })).newPage(); t.on('pageerror', (e) => errs.push(String(e))); t.on('dialog', (d) => d.accept()); t.setDefaultTimeout(15000);
   await t.goto(B); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
@@ -41,5 +44,17 @@ print(json.dumps(out, ensure_ascii=False))`, f], { encoding: 'utf8' });
   ok('② 차시 열 = 두 반 합침 · 「번호 · 이름」 바로 뒤 8차시 → 9차시', o.gridHead[1] === '번호 · 이름' && /8차시/.test(o.gridHead[2]) && /9차시/.test(o.gridHead[3]), o.gridHead.slice(0, 6).join(' | '));
   ok('② 📌 요약 줄 있는 시트', o.sum.length >= 2, o.sum.join(' · '));
   ok('② 읽어보기 = 시트 목록 · 읽는 법', o.names.slice(1).every((n) => o.readme.includes(n)) && o.readme.includes('반 열'));
+  // ── #61 반 칩 1-3 을 고른 채 「전체 · 한 파일」 = 모든 반 설문 · 응답 표시 = 실제 수 ──
+  await t.click('.chips button:text-is("1-3")'); await t.waitForTimeout(600);
+  await t.click('button:has-text("⬇ 엑셀")'); await t.waitForSelector('[data-k="xl-go"]'); await t.click('.xo >> nth=0'); await t.waitForFunction(() => { const e = document.querySelector('[data-k="xl-go"]'); return e && !e.disabled; }, null, { timeout: 15000 });
+  const [dl2] = await Promise.all([t.waitForEvent('download', { timeout: 10000 }), t.click('[data-k="xl-go"]')]);
+  const f2 = `${SHOTS}/xl61.xlsx`; await dl2.saveAs(f2);
+  const sv = JSON.parse(execFileSync('python3', ['-I', '-c', `
+import pandas as pd, json, sys
+d = pd.read_excel(sys.argv[1], sheet_name='설문', header=None)
+rows = d[d[0].isin(['1-2', '1-3', '전체'])]
+print(json.dumps({'cls': sorted(set(str(x) for x in d[0] if str(x) in ('1-2', '1-3'))), 'sum': [' | '.join(str(v) for v in r[:4]) for r in rows.values.tolist() if str(r[1]) == '응답']}, ensure_ascii=False))`, f2], { encoding: 'utf8' }));
+  ok('#61 반 칩 1-3 인 채 전체 받기 = 설문 시트에 1-2 · 1-3 둘 다', sv.cls.join() === '1-2,1-3', sv.cls.join());
+  ok('#61 요약 = 전체 응답 5 · 응답 표시 5 (배열 빈칸 안 셈)', sv.sum.some((x) => /^전체 \| 응답 \| 5 \| 응답 표시 5 \//.test(x)) && sv.sum.some((x) => /^1-2 \| 응답 \| 2 \| 응답 표시 2 \//.test(x)), sv.sum.join(' ; '));
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
