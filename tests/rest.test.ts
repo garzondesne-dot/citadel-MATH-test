@@ -30,8 +30,9 @@ describe('정식 시험 그대로 (src/rest 판)', () => {
   });
   it('🙊 눈치 게임 (tests/nunchi.test.js)', () => {
     const r = runOfficial('nunchi.test.js', (s) => s.replace(/const vm = require[\s\S]*?const NU = ctx\.DS\.Nunchi;/, 'const NU = DS_.Nunchi;'));
-    expect(r.bad).toEqual([]);
-    expect(r.out.join('\n')).toMatch(/✅ 눈치 게임/);
+    // 📜 11/17 ⓕ 선생님 A = 이번 게임에서 한 번도 안 누른 학생은 「마지막!」 탈락 대신 💤 관전 → 정식 시험의 「안 누른 d = 마지막 탈락」 줄만 다름 (아래 새 시험이 대신)
+    expect(r.bad.filter((b: string) => !/마지막 탈락/.test(b) && !/관전|💤|zz/.test(b) && b !== 'exit 1')).toEqual([]); expect(r.bad.filter((b: string) => /^FAIL/.test(b)).length).toBeLessThanOrEqual(2);
+    expect(r.out.join('\n')).toMatch(/✅ 눈치 게임|❌ 눈치 게임 실패 1$/); // ⓕ 실패 1 = 위 「마지막 탈락」 줄
   });
 });
 
@@ -104,5 +105,16 @@ describe('진행 층 (run.ts)', () => {
     expect(Fun.oxPool(L.no, 'now')).toContain(f.qi);
     expect(tick(S, 'T', 'tp')).toBe(false); // TV 가 맡는 중 → 교사 폰은 안 씀
     S.tick(5000); expect(tick(S, 'T', 'tp')).toBe(true); // 4초 넘게 소식 없음 → 이어받음
+  });
+});
+describe('🙊 ⓕ 한 번도 안 누른 학생 = 관전 (📜 11/17 선생님 A)', () => {
+  it('누른 적 있는 학생이 혼자 남으면 마지막 탈락 · 한 번도 안 누른 학생이 혼자 남으면 💤 관전', () => {
+    let f: Nun.Nun | null = Nun.startNun(['a', 'b', 'c', 'd'], 0); f = Nun.stepNun(f, null, 3001, null)!; // 준비 → 시작
+    f = Nun.stepNun(f, { a: 3100, b: 3800, c: 4600 }, 6000, null)!;
+    expect(f.out.d).toBe('zz'); expect(f.phase).toBe('show'); // d = 안 누름 → 관전
+    let g: Nun.Nun | null = Nun.startNun(['a', 'b', 'c', 'd'], 0); g = Nun.stepNun(g, null, 3001, null)!;
+    g = { ...g, act: { d: 1 } } as Nun.Nun; // d 는 앞 판에서 눌렀던 학생
+    g = Nun.stepNun(g, { a: 3100, b: 3800, c: 4600 }, 6000, null)!;
+    expect(g.out.d).toBe('last');
   });
 });

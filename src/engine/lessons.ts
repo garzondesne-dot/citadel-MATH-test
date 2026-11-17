@@ -47,9 +47,9 @@ function fresh(L: LessonPack, m: LessonPack['monsters'][string], mid: string, se
   if (variant <= 0 || !('gen' in m.retry)) return raw;
   const prev = items(L, mid, seed, variant - 1).map(sig);
   if (!raw.some((q, i) => sig(q) === prev[i])) return raw;
-  const gen = getGen(m.retry.gen), out = raw.slice();
+  const rt = m.retry, gen = getGen(rt.gen), out = raw.slice();
   out.forEach((_, i) => {
-    for (let k = 1; k <= 8 && sig(out[i]) === prev[i]; k++) { const alt = relabel(gen(variant, makeRng(`${seed}|${mid}|${variant}|alt${k}`), m.retry.params))[i]; if (alt) out[i] = alt; }
+    for (let k = 1; k <= 8 && sig(out[i]) === prev[i]; k++) { const alt = relabel(gen(variant, makeRng(`${seed}|${mid}|${variant}|alt${k}`), rt.params))[i]; if (alt) out[i] = alt; }
   });
   return out;
 }

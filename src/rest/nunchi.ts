@@ -2,7 +2,7 @@
 //   준비 3초 · 8초 무반응 = ⏳ 긴장감 · 20초 무반응 = 남은 사람 탈락(한 번도 안 누른 사람 = 💤 관전) · 3명 이하 또는 3판 끝 = 남은 사람 모두 우승
 //   누름 = rooms/{코드}/nun/{g}/{판}/{uid} = 시각 · 🙋 다시 참여 · 응원 = nunE/{g}/{uid} = { e, at }
 export const READY = 3000, CLASH = 400, HINT = 8000, TIMEOUT = 20000, SHOW = 3500, ROUNDS = 3, WIN_AT = 3, MIN = 3;
-export interface Nun { kind: 'nun'; g: number; round: number; phase: 'ready' | 'play' | 'show' | 'end'; to: number; alive: Record<string, 1>; n: number; said: Record<string, number>; out: Record<string, string>; done: Record<string, 1>; ev: { k: string; n: number; u: string[]; at: number }[]; lastAt: number; at: number; zz?: Record<string, number>; hist?: { round: number; surv: number; back: number }[]; win?: string[]; endAt?: number; drv?: { u: string; at: number }; frz?: number | null }
+export interface Nun { /** 이번 게임에서 한 번이라도 누른 학생 (ⓕ) */ act?: Record<string, 1>; kind: 'nun'; g: number; round: number; phase: 'ready' | 'play' | 'show' | 'end'; to: number; alive: Record<string, 1>; n: number; said: Record<string, number>; out: Record<string, string>; done: Record<string, 1>; ev: { k: string; n: number; u: string[]; at: number }[]; lastAt: number; at: number; zz?: Record<string, number>; hist?: { round: number; surv: number; back: number }[]; win?: string[]; endAt?: number; drv?: { u: string; at: number }; frz?: number | null }
 const keys = (o: object | null | undefined) => Object.keys(o || {});
 const arr = <T>(x: unknown): T[] => (Array.isArray(x) ? (x as T[]) : x && typeof x === 'object' ? Object.keys(x).sort((a, b) => Number(a) - Number(b)).map((k) => (x as Record<string, T>)[k] as T) : []);
 export const startNun = (alive: string[], now: number): Nun => ({ kind: 'nun', g: now, round: 1, phase: 'ready', to: now + READY, alive: Object.fromEntries(alive.map((u) => [u, 1])) as Record<string, 1>, n: 1, said: {}, out: {}, done: {}, ev: [], lastAt: now + READY, at: now });
@@ -15,7 +15,7 @@ export function stepNun(f: Nun, presses: Record<string, number> | null, now: num
     const surv = keys(x.alive).filter((u) => x.said[u]);
     if (surv.length <= WIN_AT || x.round >= ROUNDS) { x.phase = 'end'; x.win = surv; x.endAt = now; return x; }
     const back = keys(x.zz).filter((u) => { const c = (cheers || {})[u]; return c && c.e === '🙋' && Number(c.at) >= Number(x.zz![u]); }), zz = { ...x.zz }; back.forEach((u) => { delete zz[u]; });
-    return { kind: 'nun', g: x.g, round: x.round + 1, phase: 'ready', to: now + READY, alive: Object.fromEntries([...surv, ...back].map((u) => [u, 1])) as Record<string, 1>, zz, n: 1, said: {}, out: {}, done: {}, ev: [], lastAt: now + READY, hist: [...x.hist, { round: x.round, surv: surv.length, back: back.length }], at: now };
+    return { kind: 'nun', act: x.act || {}, g: x.g, round: x.round + 1, phase: 'ready', to: now + READY, alive: Object.fromEntries([...surv, ...back].map((u) => [u, 1])) as Record<string, 1>, zz, n: 1, said: {}, out: {}, done: {}, ev: [], lastAt: now + READY, hist: [...x.hist, { round: x.round, surv: surv.length, back: back.length }], at: now };
   }
   if (x.phase !== 'play') return null;
   let changed = false;
@@ -24,12 +24,12 @@ export function stepNun(f: Nun, presses: Record<string, number> | null, now: num
   while (todo.length) {
     const t0 = todo[0]![1]; if (now - t0 < CLASH + 150) break;
     const grp = todo.filter(([, t]) => t - t0 <= CLASH); todo.splice(0, grp.length);
-    grp.forEach(([u]) => { x.done[u] = 1; });
+    grp.forEach(([u]) => { x.done[u] = 1; (x.act ||= {})[u] = 1; }); // 🙊 이번 게임에서 한 번이라도 누름 (ⓕ)
     if (grp.length === 1) { x.said[grp[0]![0]] = x.n; ev({ k: 'say', n: x.n, u: [grp[0]![0]] }); x.n += 1; } else { grp.forEach(([u]) => { x.out[u] = 'clash'; }); ev({ k: 'clash', n: x.n, u: grp.map(([u]) => u) }); }
     x.lastAt = Math.max(x.lastAt, grp[grp.length - 1]![1]); changed = true;
   }
   const L = left();
-  if (L.length === 1 && !todo.length) { x.out[L[0]!] = 'last'; ev({ k: 'last', n: x.n, u: L }); changed = true; }
+  if (L.length === 1 && !todo.length) { const u = L[0]!; if ((x.act || {})[u]) { x.out[u] = 'last'; ev({ k: 'last', n: x.n, u: L }); } else x.out[u] = 'time'; changed = true; } // 🐞 11/17 ⓕ (선생님 A) 이번 게임에서 한 번도 안 누른 학생 = 「마지막!」 탈락 대신 💤 관전 (늦게 들어옴 · 문제 풀던 학생)
   else if (L.length > 1 && !todo.length && now - x.lastAt > TIMEOUT) { L.forEach((u) => { x.out[u] = 'time'; }); ev({ k: 'time', n: x.n, u: L }); changed = true; }
   if (!left().length) { keys(x.alive).forEach((u) => { if (!x.done[u] && x.out[u] === 'time') { x.out[u] = 'zz'; x.zz![u] = now; } }); x.phase = 'show'; x.to = now + SHOW; changed = true; }
   return changed ? x : null;
