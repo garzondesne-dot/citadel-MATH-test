@@ -30,6 +30,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await paper('② 정찰'); await shot('2-scout');
   ok('② 정찰 = 두 줄 + 준비 완료', /준비 완료/.test(await s.textContent('body')));
   await s.click('.act .btn').catch(() => {});
+  await s.click('button:has-text("네 · 준비 완료")', { timeout: 2000 }).catch(() => {}); // 📝 「학습지 빈칸을 모두 채웠나요?」 확인 창 (b20x)
   await hall.waitForFunction(() => !document.querySelector('.sc'), null, { timeout: 12000 }).catch(() => {}); await s.waitForTimeout(800);
   await paper('① 문제'); await shot('1-problem');
   // ⑤ 채점: 칸마다 첫 칩(또는 룬 하나)만 골라 공격
@@ -106,7 +107,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   // 교사 폰 · TV 는 언제나 게임 꼴
   // D 모드 바꾼 기록 = 교사 대시보드(이 기기 저장) 한 줄: 학생1 제출 · 게임 · 제출 / 학생2 게임 · 제출 / 캠프 금빛 · 제출 = 7번 · 마지막 제출 3명
   { const t = await open('?role=teacher'); await t.waitForSelector('.tabs', { timeout: 9000 });
-    await t.click('.tabs button:has-text("학생")'); await t.waitForTimeout(200); await t.click('.seg button:has-text("대시보드")'); await t.waitForTimeout(300);
+    await t.click('.tabs button:has-text("반 · 시간표")'); await t.waitForTimeout(200); await t.click('.seg button:has-text("대시보드")'); await t.waitForTimeout(300);
     const all = await t.$('.chips button:has-text("전체")'); if (all) { await all.click(); await t.waitForTimeout(300); }
     const line = (await t.textContent('[data-k="modesum"] summary').catch(() => '')).trim(), logs = await t.evaluate(() => JSON.parse(localStorage.getItem('citadel-v1-modelog') || '[]'));
     const today = logs.length, last = new Map(); logs.forEach((l) => last.set(l.who, l.dir)); const subN = [...last.values()].filter((d) => d === 'g2s').length;
