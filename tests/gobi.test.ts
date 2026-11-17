@@ -64,3 +64,27 @@ describe('📊 우리 반 고비', () => {
     expect((R().state as { demoAt?: number | null }).demoAt ?? null).toBeNull(); // 시계 다시
   });
 });
+
+describe('🐞 #44 ⑧ 보기 고르기 오답 = 보기 글 (번호 아님)', () => {
+  it('셋이 같은 틀린 보기를 고름 → 「많이 쓴 답」 = 그 보기 글', () => {
+    let hit = 0;
+    for (const L2 of SUBJ.lessons) for (const st of L2.steps) {
+      const m = L2.monsters[st.id]; if (st.kind !== 'monster' || !m || m.chain || hit) continue;
+      const S = store(); openRoom(S, L2, 'G2', P); S.set('rooms/G2/state/step', L2.steps.findIndex((s) => s.id === st.id));
+      const R = () => S.get<Room>('rooms/G2')!;
+      let qs; try { qs = itemsFor(L2, R(), st.id, 'a', 0); } catch { continue; }
+      const k = qs.findIndex((q) => q.type === 'choice'); if (k < 0) continue;
+      for (const u of ['a', 'b', 'c']) {
+        S.set(`rooms/G2/players/${u}`, { nick: u, at: S.now(), seen: S.now() });
+        const mine = itemsFor(L2, R(), st.id, u, 0), q = mine[k]!; if (q.type !== 'choice') return;
+        const wrong = q.choices.findIndex((_, j) => j !== q.answerIndex && q.choices[j] === (qs[k] as { choices: string[] }).choices[(qs[k] as { answerIndex: number }).answerIndex === 0 ? 1 : 0]);
+        S.set(`rooms/G2/subs/${st.id}/${u}/0`, mine.map((x, i) => (i === k ? (wrong >= 0 ? wrong : (q.answerIndex + 1) % q.choices.length) : answerOf(x)) as Given));
+      }
+      const cell = gobiMonster(L2, R(), st.id)[k]!;
+      expect(cell.firstWrong).toBe(3);
+      expect(cell.top).not.toBeNull(); if (cell.top) { expect(cell.top.ans).not.toMatch(/^\d+$/); expect(qs[k]!.type === 'choice' && (qs[k] as { choices: string[] }).choices).toContain(cell.top.ans); }
+      hit++;
+    }
+    expect(hit).toBe(1);
+  });
+});

@@ -2,16 +2,24 @@
 //   칸(소문제 · 졸개 · 형성평가 문항)마다 반 합계 숫자만 — 처음에 틀린 친구 n명 · 쓴 재도전 합계 n번 · 💡 도움 n번 · 🙋 손 n번 · 다시 도전해서 해낸 친구 n명
 //   많이 쓴 오답 = 같은 답 3명 이상일 때만 · 살아 있는 몬스터 = 오답 숨김(푸는 친구에게 답 힌트 막기) · 이름 · 학생 단위 숫자 없음 · 서술형(📷) 칸 뺌
 //   고비 점수 = 처음 틀린 비율(동점 = 재도전 → 💡) · 참여 3명 미만 칸 = 뺌 · 머문 시간 = 칸별 시각 기록이 없어 뺌(「없는 숫자는 그 칸만 뺌」)
-import type { Given, LessonPack, Room } from '../model/types';
-import { activeIds, BOSS_ID, bossTries, chainRecord, cleared, isChain, plainRecord, bossHp, stepOf } from '../raid/raid';
+import type { Given, LessonPack, Question, Room } from '../model/types';
+import { activeIds, BOSS_ID, bossTries, chainRecord, cleared, isChain, itemsFor, plainRecord, bossHp, stepOf } from '../raid/raid';
 
 export const GOBI_MIN = 3;
 export interface GobiCell { mid: string; i: number; label: string; n: number; firstWrong: number; retries: number; help: number; hands: number; comeback: number; top: { ans: string; n: number } | null; rate: number }
 export interface GobiCard { kind: 'monster' | 'boss' | 'day'; title: string; cells: GobiCell[]; worst: number; alive: boolean; thinking: number; firstWrong: number; comeback: number }
 
-const ans = (g: Given | undefined): string => (Array.isArray(g) ? `{${[...g].map(String).sort().join(', ')}}` : g == null ? '' : String(g)).trim();
+const ans0 = (g: Given | undefined): string => (Array.isArray(g) ? `{${[...g].map(String).sort().join(', ')}}` : g == null ? '' : String(g)).trim();
 const ck = (s: string) => s.replace(/[.#$/[\]]/g, '_');
 const nameOf = (L: LessonPack, mid: string) => (mid === BOSS_ID ? '👑 형성평가' : L.steps.find((s) => s.id === mid)?.title ?? mid);
+/** 🐞 #44 ⑧ 보기 고르기 = 번호(0부터) 말고 보기 글 (「많이 쓴 답 0」 → 「A ⊂ B」) · 학생마다 보기 순서가 달라도 같은 글끼리 셈 */
+const ans = (g: Given | undefined, q?: Question | null): string => {
+  try {
+    if (q?.type === 'choice' && typeof g === 'number' && q.choices[g] != null) return String(q.choices[g]).trim();
+    if (q?.type === 'multi' && Array.isArray(g) && g.every((x) => typeof x === 'number' && q.options[x] != null)) return `{${(g as number[]).map((x) => String(q.options[x])).sort().join(', ')}}`;
+  } catch { /* 과목 고유 꼴 */ }
+  return ans0(g);
+};
 function topWrong(list: string[]): { ans: string; n: number } | null {
   const m: Record<string, number> = {}; list.filter(Boolean).forEach((a) => (m[a] = (m[a] || 0) + 1));
   const best = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
@@ -36,13 +44,14 @@ export function gobiMonster(L: LessonPack, R: Room, mid: string): GobiCell[] {
     }));
   }
   const recs = ids.map((u) => ({ u, r: plainRecord(L, R, mid, u) })).filter((x) => x.r.tries.length);
+  const qOf = (u: string, a: number, i: number): Question | null => { try { return itemsFor(L, R, mid, u, a)[i] ?? null; } catch { return null; } };
   const total = Math.max(0, ...recs.map((x) => x.r.total));
   return finish(Array.from({ length: total }, (_, i) => {
     let n = 0, firstWrong = 0, retries = 0, comeback = 0; const wrongAns: string[] = [];
-    for (const { r } of recs) {
+    for (const { u, r } of recs) {
       const pre = r.perfectAt >= 0 ? r.tries.slice(0, r.perfectAt + 1) : r.tries; if (!pre.length || pre[0]!.marks[i] == null) continue;
       n++;
-      if (!pre[0]!.marks[i]) { firstWrong++; wrongAns.push(ans(pre[0]!.given[i])); const k = pre.findIndex((t) => t.marks[i]); retries += k < 0 ? pre.length - 1 : k; if (k > 0) comeback++; }
+      if (!pre[0]!.marks[i]) { firstWrong++; wrongAns.push(ans(pre[0]!.given[i], qOf(u, pre[0]!.attempt, i))); const k = pre.findIndex((t) => t.marks[i]); retries += k < 0 ? pre.length - 1 : k; if (k > 0) comeback++; }
     }
     const help = recs.filter((x) => Number(players[x.u]?.hp?.[ck(`${mid}_${i}`)]) > 0).length;
     return { mid, i, label: `${i + 1}번`, n, firstWrong, retries, help, hands: i === 0 ? recs.filter((x) => players[x.u]?.hand?.mid === mid).length : 0, comeback, top: topWrong(wrongAns), rate: 0 };
@@ -56,7 +65,7 @@ export function gobiBoss(L: LessonPack, R: Room): GobiCell[] {
     let cnt = 0, firstWrong = 0, retries = 0, comeback = 0; const wrongAns: string[] = [];
     for (const tr of all) {
       const mine = tr.filter((t) => t.i === i).sort((a, b) => a.a - b.a); if (!mine.length) continue;
-      cnt++; if (!mine[0]!.ok) { firstWrong++; wrongAns.push(ans(mine[0]!.given)); const k = mine.findIndex((t) => t.ok); retries += k < 0 ? mine.length - 1 : k; if (k > 0) comeback++; }
+      cnt++; if (!mine[0]!.ok) { firstWrong++; wrongAns.push(ans(mine[0]!.given, mine[0]!.q)); const k = mine.findIndex((t) => t.ok); retries += k < 0 ? mine.length - 1 : k; if (k > 0) comeback++; }
     }
     return { mid: BOSS_ID, i, label: `${i + 1}번`, n: cnt, firstWrong, retries, help: 0, hands: 0, comeback, top: topWrong(wrongAns), rate: 0 };
   }));
