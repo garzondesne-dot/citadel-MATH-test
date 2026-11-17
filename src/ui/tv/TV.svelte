@@ -35,7 +35,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
-  import { duck, sfx } from '../sound.svelte';
+  import { duck, setMuteAll, sfx } from '../sound.svelte';
   import { setTeacherSink, teacherLook, TLOOK, type TLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
@@ -165,6 +165,7 @@
     if (isEnd(L, R) && bhp?.won) return { k: 'win' };
     return { k: null };
   });
+  $effect(() => { setMuteAll(!sound); try { localStorage.setItem('tv-sound', sound ? '1' : '0'); } catch { /* 사생활 창 */ } return () => setMuteAll(false); }); // 🔇 TV 소리 끔 = 효과음도 전부 (#44 ⑤)
   $effect(() => { const t = tvSong; bgm(sound ? t.k : null, 'tv', t.scale != null ? { scale: t.scale } : {}); });
   $effect(() => { bgmHold('tv', !!(R && !R.state.closed && (R.state.video || R.state.sheet))); });
   $effect(() => { duck('tv-demo', !!(R && !R.state.closed && (step?.kind === 'monster' || step?.kind === 'boss') && (demo || !!R.state.sheet))); });
@@ -229,7 +230,7 @@
   const giftShow = $derived(!!R?.state.gift && now - Number(R.state.gift.at) < 4000);
 
   // ── 조작 막대 (마우스 · 터치로 나타나고 3초 뒤 숨음 · 📌 고정) ──
-  let dockAt = $state(Date.now()), pin = $state(false), mini = $state(false), sound = $state(true);
+  let dockAt = $state(Date.now()), pin = $state(false), mini = $state(false), sound = $state((() => { try { return localStorage.getItem('tv-sound') !== '0'; } catch { return true; } })()); // 🔇 이 TV 기억 (#44 ⑤ 새로 고침해도 끈 채로)
   const dockOn = true; // 🚨 2026-11-16 핫픽스(정식 b210) 선생님 「리모컨 안 나와 · 리모컨은 그냥 계속 표시되게」 = 조작 막대 늘 보임 · 늘 누름 (마우스 없는 터치 교실 PC)
   const poke = () => (dockAt = Date.now());
   let offTip = $state(''); $effect(() => { if (!offTip) return; const t = setTimeout(() => (offTip = ''), 1800); return () => clearTimeout(t); }); // 꺼진 칸 누름 = 「⚙ 기능에서 켜요」

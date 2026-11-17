@@ -25,10 +25,13 @@ if (typeof window !== 'undefined') (window as { __sfxLog?: string[] }).__sfxLog 
 /** 🔊 번갈아 내는 소리 (정식 「번갈아」 방식 · 📜 2026-11-14 선생님 「지금 거랑 B C 사용해 줘」 = 🛡 방패 막는 소리 3개) */
 const ROTATE: Record<string, string[]> = { block: ['block', 'blockB', 'blockC'] };
 const turn: Record<string, number> = {};
+/** 🔇 이 화면 효과음 전부 끔 (📺 TV 「소리 끔」 = 공격 · 필살기 · 수업 사건 소리까지 · 📜 #44 ⑤ 선생님 「소리 없애야 되는데 왜 나오는 거야」) */
+let muteAll = false;
+export function setMuteAll(on: boolean): void { muteAll = on; }
 export function sfx(k: string, vol = 0.7): void {
   const rot = ROTATE[k]; if (rot) { const n = turn[k] ?? 0; turn[k] = n + 1; k = rot[n % rot.length]!; }
   sfxLog.push(k); if (sfxLog.length > 20) sfxLog.shift();
-  if (!soundPref.sfx || paperOn() || typeof Audio === 'undefined' || !SFX[k]) return; // 📝 제출 모드 = 소리 없음
+  if (muteAll || !soundPref.sfx || paperOn() || typeof Audio === 'undefined' || !SFX[k]) return; // 📝 제출 모드 = 소리 없음
   if (playOnce(artUrl(SFX[k]!), vol * duckK())) return; // 🔇 Web Audio = iOS 무음 스위치를 따름 · 없으면 아래 <audio>
   let a = pool.get(k); if (!a) { a = new Audio(artUrl(SFX[k]!)); pool.set(k, a); }
   try { a.currentTime = 0; a.volume = vol * duckK(); void a.play().catch(() => { /* 아직 화면을 누르지 않음 */ }); } catch { /* 무시 */ }

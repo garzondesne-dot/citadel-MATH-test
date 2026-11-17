@@ -50,3 +50,9 @@ describe('#43 소리', () => {
     expect(atkSfx(ATTACKS.fire!)).toBe('fire'); expect(atkSfx(ATTACKS.ice!)).toBe('frost'); expect(atkSfx(ATTACKS.poison!)).toBe('poison'); expect(atkSfx(ATTACKS.wind!)).toBe('wind'); expect(atkSfx(ATTACKS.smash!)).toBe('smash');
   });
 });
+import { setMuteAll, sfx, sfxLog } from '../src/ui/sound.svelte';
+describe('#44 ⑤ TV 소리 끔', () => {
+  it('끄면 효과음 전부 안 남 (기록은 남음 · 재생 없음) · 켜면 다시', () => {
+    setMuteAll(true); expect(() => sfx('hurt')).not.toThrow(); expect(sfxLog.at(-1)).toBe('hurt'); setMuteAll(false);
+  });
+});
