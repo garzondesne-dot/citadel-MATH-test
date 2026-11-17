@@ -66,7 +66,8 @@
   const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; void pv; return scope(S, cls); });
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  function excel() {
+  async function excel() {
+    await svLoad().catch(() => {}); // 🐞 #55 설문 답은 「설문」 보기를 열 때만 받아 와서 엑셀에 0명 · — 로 나갔음 → 엑셀 만들기 전에 늘 받기
     const name = `모두의던전_${xlPick === 'all' ? '전체' : cls}_${ymd()}.xlsx`;
     let sheets;
     if (xlPick === 'all') sheets = [toSheet(view(S, ALL, 'cmp', withX), withX), ...CLASSES.filter((c) => withX || !isBeta(S, c)).map((c) => ({ ...toSheet(view(S, c, 'grid', withX), withX), name: `${c}반` }))];
