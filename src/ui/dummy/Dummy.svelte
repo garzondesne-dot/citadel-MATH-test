@@ -12,6 +12,8 @@
   import { chainPhotoFill, nextStep, openRoom, photoScroll, roomPath, ultKey } from '../../raid/actions';
   import { chainItems as chainOf } from '../../engine/lessons';
   import RewriteSheet from '../q/RewriteSheet.svelte';
+  import KeyPractice from './KeyPractice.svelte';
+  import { keysOf, type EntryKey } from '../../school/keys';
   import { answerOf, BOSS_ID, bossItem, bossState, bossTries, droppedFor, pickBoss, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord } from '../../raid/raid';
   import { TEST_ADDR } from '../../channel';
   import { bonusBase } from '../../school/castle';
@@ -84,6 +86,19 @@
   function phV(L: LessonPack, mid: string): boolean {
     void ver; if (!cls || !L.monsters?.[mid]?.chain) return false; const rl = rubricLesson(RS, L); if (!phReady(RS, rl, mid)) return false;
     return !!RS.get(ultKey(uid, rl, mid)) && !RS.get(ultKey(uid, rl, mid, true));
+  }
+  // 🔑 열쇠 연습 (📜 #59 · 정정 2): 그 차시 수업에서 열쇠를 틀렸거나(x) 못 받은(-) 학생만 · 판 1 · 2 · 기록 bonus/{반}/{번호}/review/keyp_{차시} · 💎 +1 = 스위치(keygem · 기본 끔)
+  const keyNeed = (L: LessonPack): EntryKey[] => { const by = (recOf(L) as { keys?: { by?: Record<string, string> } } | undefined)?.keys?.by; return by ? keysOf(L).filter((k) => by[k.id] && by[k.id] !== 'o' && k.vers.length > 1) : []; };
+  const keypOf = (L: LessonPack): Record<string, number> => (void ver, (base ? RS.get<Record<string, number>>(`${base}/review/keyp_${L.id}`) : null) || {});
+  let kp = $state<{ L: LessonPack; ks: EntryKey[] } | null>(null);
+  function keyEnd(right: Record<string, number>) {
+    const x = kp; kp = null; if (!x) return;
+    const old = keypOf(x.L), at = S.now(), ok = Object.values(right).reduce((a, n) => a + n, 0), total = x.ks.reduce((a, k) => a + k.vers.length - 1, 0);
+    if (base) RS.set(`${base}/review/keyp_${x.L.id}`, { ...old, ...Object.fromEntries(Object.entries(right).map(([k, n]) => [k, (Number(old[k]) || 0) + n])), n: (Number(old.n) || 0) + 1, at });
+    const why = [`🔑 맞힘 ${ok} / ${total}`]; let got = 0;
+    const lk = `keyp_${x.L.id}`;
+    if (feat('keygem') && ok > 0 && gemLogP && !logNow()[lk]) { got = earnDaily(me.wallet, 1, today(), GEM.dayCap); if (got) { RS.set(`${gemLogP}/${lk}`, { g: got, at, why: '🔑 열쇠 연습' }); why.push(`💎 +${got} 열쇠 연습`); save(); } }
+    ver++; res = { L: x.L, title: '🔑 열쇠 연습', clear: ok > 0, got, xp: 0, why, sealed: false };
   }
   /** ✔ 실력 쓰기 통과 (📜 칸 ult_…_v 있음) */
   function phVok(L: LessonPack, mid: string): boolean { void ver; if (!cls) return false; return !!RS.get(ultKey(uid, rubricLesson(RS, L), mid, true)); }
@@ -171,7 +186,9 @@
   let shelfOn = $state('');
 </script>
 
-{#if rw}
+{#if kp}
+  <KeyPractice L={kp.L} ks={kp.ks} onend={keyEnd} onclose={() => (kp = null)} />
+{:else if rw}
   <RewriteSheet S={RS} {cls} {num} lesson={rw.rl} room={rw.mid} title={`${rw.L.no}차시 · ${rw.title}`} items={rw.items} trial={(RS as { kind?: string }).kind !== 'server'} onpass={rwPass} onclose={() => (rw = null)} />
 {:else if run}
   <div class="drun" data-dummy>
@@ -226,6 +243,7 @@
               </li>
             {/each}
           </ul>
+          {#if keyNeed(c.L).length}{@const kn = keyNeed(c.L)}{@const kd = keypOf(c.L)}<div class="krow" data-k="key-row"><span>🔑 열쇠 연습 · {kn.map((k) => k.name).join(' · ')}<small>{kd.n ? ` · ✔ ${kd.n}번 함` : ' · 중학교 내용 · 숫자만 다르게'}</small></span><button type="button" class="go" data-k="key-prac" onclick={() => (kp = { L: c.L, ks: kn })}>연습</button></div>{/if}
         </section>
       {:else}<p class="muted">선생님이 우리 반 수업을 열면 그 차시를 복습할 수 있어요.</p>{/each}
     </div>
@@ -262,6 +280,7 @@
   .mi { width: 28px; text-align: center; font-size: 18px; flex: none; }
   .tx { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; } .tx small { color: var(--text-3); font-size: 12px; } .ex { color: var(--bad); }
   .phgo { display: grid; justify-items: center; gap: 2px; width: 100%; min-height: 56px; margin-top: 12px; border-radius: 12px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 16px var(--font); } .phgo small { font: 500 13px var(--font); color: var(--text-2); } .tag.ph { color: var(--scroll); border-color: var(--scroll); }
+  .krow { display: flex; align-items: center; gap: var(--s2); margin-top: 6px; min-height: 48px; padding: 4px var(--s2); border-radius: 10px; border: 1px dashed var(--accent); background: var(--surface-2); } .krow span { flex: 1; min-width: 0; font: 700 14px var(--font); } .krow small { color: var(--text-3); font-weight: 500; }
   .rwb { flex: 1 0 100%; min-height: 44px; border-radius: 10px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 14px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); } .rwb:active { transform: translateY(2px); box-shadow: none; }
   .go { flex: none; min-height: 40px; min-width: 64px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line, #2f3440); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
   .go.main { background: var(--accent); color: var(--on-accent, #1d1406); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh, #9a6a10); }

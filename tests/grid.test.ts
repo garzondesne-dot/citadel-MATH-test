@@ -17,11 +17,11 @@ describe('📊 한눈에 표', () => {
     S.set('cards/1-3', { 5: { sub: true, emp: true } });
     const v = view(S, '1-3', 'grid'), T = v.table!;
     expect(T.sort).toBe(true);
-    expect(T.head).toEqual(['번호 · 이름', '6차시', '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '✍ 연습 통과', '✍ 실력 통과', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv']);
+    expect(T.head).toEqual(['번호 · 이름', '6차시', '❗ 남은 문제', '참여', '형성평가', '첫 시도', '⭕ OX', '고친 수', '💡 힌트', '💡 힌트 준', '✍ 연습 통과', '✍ 실력 통과', '🔑 열쇠', '🔑 칸 첫 시도', '🪜 사다리', '업적', '던전 도전', '카드', 'Lv']);
     const r5 = T.rows.find((r) => r.pick?.n === 5)!.cells.map((c) => c.t), r6 = T.rows.find((r) => r.pick?.n === 6)!.cells.map((c) => c.t);
     const left = noteOf(fullLesson('set-06')!, rec5, { m2: { clear: true }, boss: { clear: true } }).left;
     expect(left).toBeGreaterThan(0);
-    expect(r5.slice(1)).toEqual(['4/6', `❗ ${left}`, '1/1', '67%', '50%', '75%', '3', '2', '1', '1', '2', '4👣 5✍ 💪✍2', '1', '1', '2', expect.stringMatching(/^Lv\.\d+$/)]);
+    expect(r5.slice(1)).toEqual(['4/6', `❗ ${left}`, '1/1', '67%', '50%', '75%', '3', '2', '1', '1', '2', '', '—', '4👣 5✍ 💪✍2', '1', '1', '2', expect.stringMatching(/^Lv\.\d+$/)]);
     expect(r6[1]).toBe('불참'); expect(r6[2]).toBe('✔');
     const H = v.csv!.rows[0]!; expect(H.slice(0, 4)).toEqual(['번호', '이름', '6차시 형성평가', '남은 문제(오답노트)']); expect(H.slice(-9)).toEqual(['EXP', '전환 시각', '전환 때 업적', '전환 전 깃털', '깃털→💎', '💎 소급 카드', '카드→💎', '전환 전 💎', '전환 뒤 💎']);
     expect(v.csv!.rows.length).toBe(3);

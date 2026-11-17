@@ -1,4 +1,6 @@
 <script lang="ts">
+  import KeyGate from './q/KeyGate.svelte';
+  import KeyChest from './q/KeyChest.svelte';
   import { serverNow } from './clock.svelte';
   import { holdWake } from './wake.svelte';
   import { keepScroll } from './keepScroll';
@@ -267,6 +269,7 @@
     <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
   {:else if isLobby(R)}
     <div class="bcard"><span class="lab acc">{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p></div>
+    <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
     <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />
@@ -285,6 +288,7 @@
   {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
     <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
     {#if step.kind === 'concept' && step.check && ccRan(R, step)}<ConceptCheckCard {S} {R} {code} {uid} {step} {now} />{/if}<!-- ✔ 개념 체크 (📜 2026-11-15 · 리모컨이 열 때만) -->
+    <KeyGate {S} {L} {R} {code} {uid} band /><!-- 🔑 #59 대기실을 놓친 학생 = 첫 몬스터 전까지 -->
     <div class="bcard talk" data-k="talk">
       <span class="lab acc">📣 {step.kind === 'intro' ? '도입 · 수업을 시작해요' : '개념 설명'}</span>
       <b class="ttl">{step.title}</b>
@@ -295,6 +299,7 @@
     </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
   {:else if battle && step}
+    <KeyChest {L} {R} {uid} /><!-- 🔑 #59 🎁 열쇠 보물상자 -->
     {#if isSent(R, step)}<div class="bcard idleband" role="status" data-k="sent-band"><b>🎯 이 문제는 허수아비에서 만나요</b><span>수업이 끝나면 캠프의 🎯 허수아비 「📚 수업에서 넘어온 문제」</span></div>{/if}
     {#if idleMid && idleMid === mid}<div class="bcard idleband" role="status" data-k="idle"><b>🤝 첫 줄만 같이 볼까?</b><button type="button" data-k="idle-go" onclick={() => { poke(); window.dispatchEvent(new CustomEvent('citadel-idlehelp')); }}>💡 같이 보기</button></div>{/if}<!-- 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①) -->
     {#if R.state.review && R.state.review.mid === step.id}<div class="bcard revband" role="status" data-k="review-band">{#if R.state.review.i === -2}<b>📺 TV 를 봐요</b><span>📊 우리 반 고비를 함께 봐요 · 입력은 그대로예요</span>{:else}<b>🔎 TV 를 봐요</b><span>내 학습지와 비교해 고칠 곳을 표시해 봐요</span>{/if}</div>{/if}<!-- 🔎 익명 풀이 (📜 2026-11-15) -->

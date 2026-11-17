@@ -3,6 +3,7 @@
 //   bossM = 형성평가 문항마다 'o · x · - · n' 한 줄 · boss = 맞힌 문항 수(체력 문항까지) · bossN = 체력 문항 수 · won = 보스 처치
 //   더한 칸(정식에 없음 · 정식 앱은 무시): right · total = 맞힌 소문제 / 전체 (📋 게시판 수호자 기준) · loot · firstXp 는 있던 값 그대로
 import { ccRecord } from './cc';
+import { keysOf, keyUses, myKeys } from './keys';
 import { helpCount } from './help';
 import { hgOf } from './hintGive';
 import type { LessonPack, Room } from '../model/types';
@@ -52,6 +53,8 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)
   { const h = helpCount(R, uid); if (h.hints) Object.assign(out, { hints: h.hints, help: h.help }); }
   { const hg = hgOf(R, uid); if (hg) Object.assign(out, { hg }); } // 💡 친구에게 준 힌트 수 (📜 2026-11-17 #23 · 옛 정식 hg · 대시보드 「💡 힌트 준」) // 💡 도움 연 칸 수 · 단계별 (📜 2026-11-17 미래교육상 ① · 옛 정식 hints 칸 · 성적 아님 · 대시보드 「💡 힌트」 · 엑셀 「그림 힌트(소문제)」)
+  { const ks = keysOf(L); if (ks.length) { const rows = keyUses(L, R, uid), mk = myKeys(R, uid), got = ks.filter((k) => mk[k.id]);
+    (out as RecRow & { keys?: unknown }).keys = { n: ks.length, got: got.length, first: got.filter((k) => mk[k.id]!.ok).length, by: Object.fromEntries(ks.map((k) => [k.id, !mk[k.id] ? '-' : mk[k.id]!.ok ? 'o' : 'x'])), chest: rows.filter((r) => r.chest).length, use: rows.filter((r) => r.have && r.state !== 'none').length, cells: Object.fromEntries(rows.map((r) => [`${r.at}_${r.n}`, `${r.have ? 'k' : '-'}${r.state === 'first' ? 'o' : r.state === 'later' ? 'f' : 'x'}`])) }; } } // 🔑 #59 열쇠: 얻음 · 첫 번에 맞힘 · 상자 · 사용 · 걸린 칸(k/- = 열쇠 있음/없음 · o 첫 시도 · f 나중 · x 못 맞힘)
   if (prev?.loot) out.loot = prev.loot;
   if (prev?.firstXp) out.firstXp = prev.firstXp;
   return mergeRow(prev, out);

@@ -24,7 +24,7 @@ export interface Stud {
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
 export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; /** ✍ 연습 통과 = 학습지 숫자 서술형 통과한 문항 수 (옛 기록 = 모두 연습) */ photoOk: number; /** ✍ 실력 통과 = 숫자 바꾼 판 통과 (📜 #57 · 차시 = 📜 칸 ult_…_v · 성채 = ph2) */ photoV: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
-  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📊 한눈에 표 (정식 dash.js COLS · 서버) ⭕ OX [맞힘, 문항] · 💡 그림 힌트 펼친 수 · 💡 힌트 준 수 · 🪜 사다리(몬스터 → 1 대장 · 2 근거 줄 · 4 서술형) · 🧩 근거 줄 n/m · 🟪 업적 · 🃏 카드 */ ox?: [number, number]; hintN?: number; /** 🔁 화폐 전환 기록 (정식 gem/{반}/{번호}/conv · 2026-11-07) */ conv?: { at?: number; seals?: number; feather?: number; featherGem?: number; cardsUnpaid?: number; cardGem?: number; gemBefore?: number; gemAfter?: number } | null; lad?: Record<string, number>; ladW?: Record<string, string>; seals?: number; cardN?: number;
+  /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📊 한눈에 표 (정식 dash.js COLS · 서버) ⭕ OX [맞힘, 문항] · 💡 그림 힌트 펼친 수 · 💡 힌트 준 수 · 🪜 사다리(몬스터 → 1 대장 · 2 근거 줄 · 4 서술형) · 🧩 근거 줄 n/m · 🟪 업적 · 🃏 카드 */ ox?: [number, number]; hintN?: number; /** 🔁 화폐 전환 기록 (정식 gem/{반}/{번호}/conv · 2026-11-07) */ conv?: { at?: number; seals?: number; feather?: number; featherGem?: number; cardsUnpaid?: number; cardGem?: number; gemBefore?: number; gemAfter?: number } | null; lad?: Record<string, number>; ladW?: Record<string, string>; /** 🔑 #59 입장 열쇠: 얻음 / 열쇠 수 · 🔑 걸린 칸 수 · 그 칸 첫 시도 맞힘 · 🎁 상자 */ key?: { got: number; n: number; cells: number; ok: number; chest: number; prac: number }; seals?: number; cardN?: number;
   /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
 /** 성취기준 (정식 DS.Standards.of 자리 · 테스트 판 = 차시 묶음 셋) */
@@ -149,8 +149,10 @@ export function realClass(S: Store, cls: string) {
       for (const [m, v] of Object.entries(isObj(r.lad) ? r.lad : {})) lad[m] = Math.max(lad[m] || 0, Number(v) || 0);
       for (const [m, v] of Object.entries(isObj(r.ladW) ? r.ladW : {})) ladW[m] = String(v);
     }
+    const key = { got: 0, n: 0, cells: 0, ok: 0, chest: 0, prac: Object.entries(isObj((bon as Record<string, unknown>).review) ? ((bon as Record<string, unknown>).review as Record<string, unknown>) : {}).filter(([k]) => k.startsWith('keyp_')).reduce((a, [, v]) => a + (Number((v as { n?: number } | null)?.n) || 0), 0) }; // 🎯 열쇠 연습 판 수
+    for (const [, r] of raw) { const k = r.keys as { n?: number; got?: number; chest?: number; cells?: Record<string, string> } | undefined; if (!isObj(k)) continue; key.n += Number(k.n) || 0; key.got += Number(k.got) || 0; key.chest += Number(k.chest) || 0; for (const v of Object.values(isObj(k.cells) ? k.cells : {})) { key.cells++; if (String(v)[1] === 'o') key.ok++; } }
     const g0 = (gemAll[p.num] || {}) as { conv?: Extra['conv'] };
-    Object.assign(e, { hints: hintN, conv: isObj(g0.conv) ? g0.conv : null, ox, hintN, lad, ladW, hg: raw.reduce((a, [, r]) => a + (Number(r.hg) || 0), 0), seals: sealsOf(bon as never).length, cardN: Object.keys(isObj(cardAll[p.num]) ? cardAll[p.num]! : {}).length });
+    Object.assign(e, { ...(key.n || key.prac ? { key } : {}), hints: hintN, conv: isObj(g0.conv) ? g0.conv : null, ox, hintN, lad, ladW, hg: raw.reduce((a, [, r]) => a + (Number(r.hg) || 0), 0), seals: sealsOf(bon as never).length, cardN: Object.keys(isObj(cardAll[p.num]) ? cardAll[p.num]! : {}).length });
   }
   const out = build(cls, byN, records, xp, extra, (n) => isExcluded(S, cls, n));
   (out as { dropped?: string[] }).dropped = [...dropped];

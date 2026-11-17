@@ -17,6 +17,7 @@
   import { onDestroy } from 'svelte';
   import { heartRelease, submit } from '../../raid/actions';
   import QItem from './QItem.svelte';
+  import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Slots, { markOf } from '../battle/Slots.svelte';
   import EnergyCard from './EnergyCard.svelte';
@@ -202,6 +203,7 @@
   <div class="bcard" class:badline={fixing}>
     <div class="head"><span class="lab acc">{no} · 소문제 {cur + 1} / {items.length}{fixing ? ' · 다시' : ''}</span>{#if numTag}<span class="tag">{numTag}</span>{/if}{#if rec.healed}<span class="healed">💚 {healers}의 힐 · 도전 칸 +{rec.healed}</span>{/if}</div>
     {#if L.monsters[mid]?.noteText}<p class="muted">💡 {L.monsters[mid]?.noteText}</p>{/if}
+    <KeyTag {L} {R} {uid} at={mid} n={cur + 1} /><!-- 🔑 #59 -->
     {#key `${key}|${cur}`}
       <QItem {q} i={cur} value={given[cur] ?? null} disabled={locked || keepAt(cur)} showNo={false} onchange={(v) => (given[cur] = v)} prev={sameQ && last && !last.marks[cur] ? (last.given || [])[cur] : undefined} prevQ={lastItems[cur] ?? null} hintKey={`${code}|${mid}|${cur}`} prevAt={rec.tries.length} />
     {/key}

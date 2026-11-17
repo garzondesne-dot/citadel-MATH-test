@@ -7,6 +7,7 @@
   import { BOSS_ID, bossItem, bossRecord, bossTries } from '../../raid/raid';
   import { bossSubmitAll, petriAward } from '../../raid/actions';
   import QItem from './QItem.svelte';
+  import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import Hearts from '../battle/Hearts.svelte';
   import AnswerRow, { type Cell } from './AnswerRow.svelte';
@@ -84,6 +85,7 @@
   {#if r.roundOpen || bonusMode}<p class="tagl"><span class="tag">🔁 숫자 바뀜</span><button type="button" class="stop" onclick={() => { practice = false; bonusMode = false; }}>그만하기</button></p>{/if}
   <div class="bcard">
     <div class="head">{#if numTag}<span class="tag">{numTag}</span> {/if}<span class="lab acc">형성평가 {cur + 1}번{r.bonus(cur) ? ' · ⭐ 보너스(틀려도 칼 그대로)' : ''} · {todo.indexOf(cur) + 1} / {todo.length}</span></div>
+    <KeyTag {L} {R} {uid} at="boss" n={cur + 1} /><!-- 🔑 #59 -->
     {#key `${key}|${cur}`}<QItem {q} i={cur} value={given[cur] ?? null} disabled={locked} runeLen={4} showNo={false} onchange={(v) => (given[cur] = v)} prev={lastBad(cur)?.given} prevQ={lastBad(cur)?.q ?? null} hintKey={`${code}|boss|${cur}`} prevAt={tries.length} />{/key}
   </div>
   <BottomAction battle disabled={locked || (!allFilled && !(q && filled(q, given[cur] ?? null) && nextUnfilled >= 0))} why={!allFilled ? '모든 문항을 채우면 한 번에 공격' : ''} onmain={go} mainLabel={allFilled || nextUnfilled < 0 ? '공격' : '다음 문항'}>
