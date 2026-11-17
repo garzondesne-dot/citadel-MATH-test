@@ -6,7 +6,7 @@ import { bossTries, chainRecord, chainSubs, healsGiven, isChain, plainRecord, un
 /** 🎞 모션용 (📜 2026-11-14): heal = 받은 힐 + 풀어주기 · gave = 쓴 ⚡ · slump = ❤ 0 잠김 · done = 다 맞힘 */
 export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean; heal?: number; gave?: number; slump?: boolean; done?: boolean }
 /** perfect = 이번 공격으로 그 학생이 다 맞힘(🎆 숫자 크고 노랗게) */
-export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; perfect?: boolean }
+export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; perfect?: boolean; /** ⚡ 필살기 (큐에 넣을 때 판정 · 🐞 11/17 ⓒ) */ ult?: boolean; fx?: string }
 
 export function snapOf(L: LessonPack, R: Room, step: Step, u: string): Snap {
   if (step.kind === 'boss') { const t = bossTries(L, R, u); return { n: t.length, dmg: new Set(t.filter((x) => x.ok).map((x) => x.i)).size, prac: false }; }

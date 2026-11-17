@@ -88,6 +88,15 @@
   const queue: { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; fx?: string; ult?: boolean; perfect?: boolean }[] = [];
   let domFx = $state<{ k: number; text: string; x: number; y: number; cls: string }[]>([]), domBan = $state(''), fk = 0, lunge = $state<Record<string, boolean>>({});
   let lastHitU = ''; // ⚔ 마지막 일격 = 체력을 깎은 마지막 학생 (옛 정식 hall.js lastHit)
+  /** 다음 공격까지 간격: 4개까지 350ms · 그 뒤 하나마다 −30ms · 가장 짧게 140ms */
+  const gapOf = (n: number) => (n <= 4 ? 350 : Math.max(140, 350 - 30 * (n - 4)));
+  /** 🐞 11/17 ⓒ 「필살기가 씹힘」: 필살기는 큐에 넣을 때 판정(그때의 기록) · 줄 맨 앞으로 · 단계가 바뀌어도 버리지 않음 */
+  function enqueue(hs: typeof queue) {
+    for (const h of hs) if (h.kind === 'hit' && !h.ult) { const p = R.players?.[h.u], hero = p?.hero ?? 0, fxk = h.fx || p?.fx || ladder(hero)[0]!; if (ultOf(h.u, fxk, hero)) h.ult = true; }
+    const ults = hs.filter((h) => h.ult), rest = hs.filter((h) => !h.ult), at = queue.findIndex((h) => !h.ult);
+    queue.splice(at < 0 ? queue.length : at, 0, ...ults); queue.push(...rest);
+  }
+  const dropQueue = () => { const keep = queue.filter((h) => h.ult); queue.length = 0; queue.push(...keep); };
   function play() {
     if (qT) return;
     const h = queue.shift(); if (!h) return;
@@ -96,7 +105,7 @@
     else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); if (h.kind !== 'miss') domPop(h.kind === 'hit' ? `-${h.dmg}` : '연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); /* 틀림 = 글자 없음(돌진 · 튕김만) */ }
     if (h.kind === 'hit' && h.perfect && W) { const b = arenaBox(W, H, boss, split); setTimeout(() => domPop('PERFECT!', b.mon.cx, b.mon.top + b.mon.size * 0.5, 'perfect'), 250); } // 📜 2026-11-16 선생님 c3 「퍼펙트 표기 사라짐(옛)」 = 옛 정식 hall.js 「PERFECT!」
     if (h.kind === 'hit' && h.dmg > 0) lastHitU = h.u;
-    qT = setTimeout(() => { qT = undefined; play(); }, 350);
+    qT = setTimeout(() => { qT = undefined; play(); }, gapOf(queue.length)); // 🐞 11/17 ⓒ 많이 몰리면 간격을 줄여 밀리지 않게 (단계가 바뀌기 전에 다 보이게)
   }
   // ⚔ 🔨 용사 fx (정식 hall.js 606~618 · 학생 폰과 같은 attack()): Pixi = 캔버스 위 DOM 층에 그 용사 대역(같은 자리 · 같은 크기)을 두고 Pixi 용사는 잠깐 숨김
   //   몬스터 대역 = 보이는 몸통 상자(data-bb) · 맞는 순간 = Pixi 몬스터 깜빡 · 숫자 / DOM 장면 = 그 용사 칸(.art) 그대로 · ⚡ 필살기 = 첫 시도 퍼펙트 + 내 속성 Ⅲ↑(정식 hall.js 78)
@@ -190,7 +199,8 @@
   if (typeof location !== 'undefined' && /[?&]perf\b/.test(location.search)) setTimeout(() => void bench(), 3000);
   (globalThis as { __slash?: unknown }).__slash = { stats: () => A?.slashStats(), cfg: (c: { fancy?: boolean; level?: number | null }) => A?.slashCfg(c) };
   // 화면 시험 고리: __tvAtk(번째, 'hit' | 'miss' | 'practice', 데미지) = 그 용사가 한 번 공격 (학생 화면엔 없음)
-  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean, perfect?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now, perfect) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult, perfect }); else { queue.push({ u, dmg, kind, fx, ult, perfect }); play(); } };
+  (globalThis as { __tvAtk?: (k: number, kind?: 'hit' | 'miss' | 'practice', dmg?: number, fx?: string, ult?: boolean, now?: boolean, perfect?: boolean) => void }).__tvAtk = (k, kind = 'hit', dmg = 2, fx, ult, now, perfect) => { const u = ids[k]; if (!u) return; if (now) tvAttack({ u, dmg, kind, fx, ult, perfect }); else { enqueue([{ u, dmg, kind, fx, ult, perfect }]); play(); } };
+  (globalThis as { __tvQueue?: () => unknown[] }).__tvQueue = () => queue.map((h) => ({ u: h.u, ult: !!h.ult })); // 화면 시험 고리 (🐞 11/17 ⓒ 필살기 앞줄)
   (globalThis as { __tvKill?: () => void; __tvJuice?: (on?: boolean) => boolean }).__tvKill = () => A?.armKill(); // 화면 시험 고리
   (globalThis as { __tvHeroes?: () => Hero[] }).__tvHeroes = () => heroes.map((h) => ({ ...h })); // 🧪 레이드 줄 (끊김 시험)
   (globalThis as { __tvJuice?: (on?: boolean) => boolean; __tvJuiceStats?: () => unknown }).__tvJuice = (on) => A?.juice(on) ?? false;
@@ -252,16 +262,16 @@
     const sp = split; // 🎮 시연을 닫는 순간에도 다시 돎
     untrack(() => {
       snapNow = cur;
-      if (key !== seenKey) { seenKey = key; seen = cur; wasDown = !!hp?.down; queue.length = 0; if (A) A.banner(null); domBan = ''; return; }
+      if (key !== seenKey) { seenKey = key; seen = cur; wasDown = !!hp?.down; dropQueue(); if (A) A.banner(null); domBan = ''; if (queue.length) play(); return; }
       // 🎮 시연 중 = TV 전투 연출 멈춤 (📜 2026-11-14 선생님 「멈춤」) — 학생 기록은 그대로 쌓이고 seen 을 붙잡아 둠 → 닫으면 그동안의 공격을 이어서 보여 줌
       if (sp) return;
       let hs = hitsOf(seen, cur);
       // 너무 많이 쌓였으면(8번 넘게) 학생마다 한 번으로 묶음 (데미지 합 · 맞힘 하나라도 있으면 맞힘)
-      if (hs.length > 8) { const by = new Map<string, (typeof hs)[number]>(); for (const h of hs) { const o = by.get(h.u); if (!o) by.set(h.u, { ...h }); else { o.dmg += h.dmg; if (h.kind === 'hit') o.kind = 'hit'; o.perfect = o.perfect || h.perfect; } } hs = [...by.values()]; }
+      if (hs.length > 8) { const by = new Map<string, (typeof hs)[number]>(); for (const h of hs) { const o = by.get(h.u); if (!o) by.set(h.u, { ...h }); else { o.dmg += h.dmg; if (h.kind === 'hit') o.kind = 'hit'; o.perfect = o.perfect || h.perfect; o.ult = o.ult || h.ult; } } hs = [...by.values()]; }
       // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
       for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) tvPose(u, 'healed', 1600); if ((a.gave ?? 0) > (b.gave ?? 0)) tvPose(u, 'heal', 1400); if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
       seen = cur;
-      if (hs.length) { queue.push(...hs); play(); }
+      if (hs.length) { enqueue(hs); play(); }
       const d = !!hp?.down;
       if (d && !wasDown) {
         A?.armKill(); // 🎆 마지막 일격 = 느리게 · 충격파 · 조각
