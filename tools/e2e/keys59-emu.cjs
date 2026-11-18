@@ -95,7 +95,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await rest('school/live', 'DELETE');
   await s.goto(`${B}?${E}`); await s.waitForTimeout(3500);
   for (let k = 0; k < 3 && (await s.$('.sheet .x')); k++) { await s.$eval('.sheet .x', (e) => e.click()).catch(() => {}); await s.waitForTimeout(400); }
-  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
+  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="study-review"]', { timeout: 15000 }); await s.click('[data-k="study-review"]'); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
   const kr = (await s.$eval('[data-lesson="ex-11"] [data-k="key-row"]', (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => ''));
   ok('⑥ 허수아비 11차시 = 「🔑 열쇠 연습 · 2( ) + 1 꼴로 묶기」(틀린 열쇠만)', /열쇠 연습/.test(kr) && /2\( \) \+ 1 꼴로 묶기/.test(kr) && !/배수를 식으로/.test(kr), kr);
   await s.$eval('[data-lesson="ex-11"] [data-k="key-row"]', (e) => e.scrollIntoView({ block: 'center' })); await s.screenshot({ path: `${SHOTS}/k59-dummy.png` });

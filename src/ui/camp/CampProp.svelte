@@ -9,7 +9,8 @@
   const pl = $derived(((CAMP_PORTAL.left - p.left) / p.width) * 100), pw = $derived((CAMP_PORTAL.width / p.width) * 100);
 </script>
 
-<i class="img" style="{cellBg(p.src, p.cols, col)};aspect-ratio:{p.aspect}"></i>
+<i class="img" class:bounce={hit && p.k === 'scare'} style="{cellBg(p.src, p.cols, col)};aspect-ratio:{p.aspect}"></i>
+{#if p.k === 'scare'}<span class="book" class:pop={hit} aria-hidden="true">📖</span>{/if}<!-- 📖 #66 배움터 = 허수아비 옆 책(그림 obj-study 전 · 아이콘) · 누르면 책 펄럭 튀어 오름 → 반 박자 뒤 허수아비 통통 -->
 {#if p.k === 'dummy'}
   <span class="portal {phase}" style="left:{pl}%;width:{pw}%" style:--s={CAMP_PORTAL.scale[phase]} aria-hidden="true" data-phase={phase}>
     {#if phase === 'open'}<i class="ring"></i>{/if}
@@ -20,6 +21,12 @@
 {/if}
 
 <style>
+  .book { position: absolute; right: -46%; bottom: 2%; font-size: clamp(12px, 3.4cqw, 22px); line-height: 1; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); transform-origin: 50% 100%; pointer-events: none; }
+  .book.pop { animation: bookPop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+  @keyframes bookPop { 0% { transform: translateY(0) scale(1) rotateY(0deg); } 30% { transform: translateY(-70%) scale(1.35) rotateY(180deg); } 60% { transform: translateY(-40%) scale(1.25) rotateY(360deg); } 100% { transform: translateY(0) scale(1); } }
+  .img.bounce { animation: dumBounce 0.5s 0.15s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+  @keyframes dumBounce { 0% { transform: translateY(0) scaleY(1); } 25% { transform: translateY(0) scale(1.08, 0.88); } 55% { transform: translateY(-22%) scale(0.94, 1.08); } 100% { transform: translateY(0) scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .book.pop, .img.bounce { animation: none; } }
   .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; transition: transform 0.12s ease-out; transform-origin: 50% 100%; }
   .portal { position: absolute; bottom: 0; display: block; pointer-events: none; transform-origin: 50% 100%; }
   .pimg { display: block; width: 100%; background-size: 100% 100%; transform: scale(var(--s)); transform-origin: 50% 92%; transition: transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.4s; filter: drop-shadow(0 0 6px rgba(90, 170, 255, 0.7)); }

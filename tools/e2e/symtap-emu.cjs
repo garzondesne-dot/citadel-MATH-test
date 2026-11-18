@@ -17,7 +17,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await rest('records/1-3/3/set-02', 'PUT', { at: 1, no: 2, mons: { r0: 'o', m1: 'x', s1: 'o', m2: 'x', m3: 'x', m4: 'x', s2: 'o' }, bossM: 'oo' });
   await rest('school/last/1-3', 'PUT', { lesson: 'set-02', no: 2, at: 1, done: true, code: '111111' });
   await s.reload(); await s.waitForTimeout(4000);
-  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
+  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="study-review"]', { timeout: 15000 }); await s.click('[data-k="study-review"]'); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
   let sym = null;
   for (const mid of ['m1', 'm2', 'm3', 'm4']) {
     const go = await s.$(`[data-lesson="set-02"] li[data-mid="${mid}"] .go`); if (!go) continue;

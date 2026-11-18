@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { loadBoard, loadCastle, loadDummy } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
+  import { loadBoard, loadCastle, loadDummy, loadPrep } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
@@ -43,6 +43,7 @@
   import MailBox from './MailBox.svelte';
   import { PACKS } from '../../engine/packs';
   import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
+  import { prepOpenList } from '../../school/prepopen';
   import { visit as usageVisit } from '../../school/usage';
   import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
@@ -187,6 +188,10 @@
     if (rc) t.dummy = `⚔ 모집 중 ${rc.n}/${rc.max} · 참여!`;
     return t;
   });
+  // 📖 #66 배움터 예습: 열린 차시 중 안 열어 본 것 = 「📖 새 차시 열림」 작은 표시(금빛 아님 · 복습 금빛이 먼저)
+  const prepAll = untrack(() => !!trial || !pupil || !!fromMe0); // 로그인한 학생(🧪 1-6 포함) = 실제 규칙 · 이 기기 · 체험 · 교사 「나」 캠프 = 모두
+  const prepNew = $derived.by(() => { void todoVer; void sheet; if (!feat('scarecrow')) return ''; const P = prepOpenList(S, pupil?.cls ?? '', untrack(() => (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}), prepAll).open.filter((L) => !me.seen[`prep-${L.id}`]); return P.length ? `📖 ${P.map((L) => L.no).join(' · ')}차시 열림` : ''; });
+  function prepGo() { const P = prepOpenList(S, pupil?.cls ?? '', (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}, prepAll).open; let ch = false; for (const L of P) if (!me.seen[`prep-${L.id}`]) { me.seen[`prep-${L.id}`] = true; ch = true; } if (ch) M.save(); sheet = 'prep'; }
   const anyTodo = $derived(Object.keys(todo).length > 0);
   const hl = (k: string): 'todo' | 'dim' | '' => (todo[k] ? 'todo' : anyTodo ? 'dim' : '');
   let boardJoin = $state('');
@@ -213,7 +218,7 @@
     if (!me.seen[id]) return 'new';
     return showAll ? 'new' : 'hide';
   }
-  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', scare: '🎯 허수아비', mail: '우편함', hero: '내 용사' };
+  const NAME: Record<string, string> = { gate: '차시 던전', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '📋 게시판', scare: '배움터 · 예습 · 복습', mail: '우편함', hero: '내 용사' };
   const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
@@ -225,7 +230,7 @@
   // 🏰 성채 새 방 (정식 camp.js · 이 기기에 지난 수 기억 · 늘면 한 번 안내) — 📜 2026-11-14 = 올린 성채 팩(보이는 층)에서 이 학생에게 열린 방 수 · 처음 본 수는 소리 없이 기억만
   const castleWho = untrack(() => ({ cls: pupil?.cls ?? '', num: pupil?.num ?? 0, uid: pupil?.uid ?? 'me' }));
   // 🎵 학생 폰 배경음 = 첫 화면 · 개인 캠프(⚒ 모루 창 포함)만 (DECISIONS 2026-11-11 · 📜 2026-11-14 되살림) — 🏰 성채 · 🎯 허수아비 · 📋 게시판 = 없음
-  $effect(() => { bgm(castleGo == null && sheet !== 'scare' && sheet !== 'dummy' ? 'camp' : null, 'phone'); });
+  $effect(() => { bgm(castleGo == null && sheet !== 'review' && sheet !== 'prep' && sheet !== 'dummy' ? 'camp' : null, 'phone'); });
   onDestroy(() => bgm(null, 'phone'));
   const castleOpen = (): number => {
     const b = meBound(), RS = b?.S ?? S, base = b ? bonusBase(b.cls, b.num) : bonusBase(castleWho.cls, castleWho.num || castleWho.uid);
@@ -395,6 +400,7 @@
       <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} onclick={(e) => go(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} />
         {#if todo[k]}<span class="bub" data-k="bub-{k}">{todo[k]}</span><i class="spark" aria-hidden="true"></i>{:else}<span class="label {st}">{NAME[k]}{#if st === 'news'}<b class="dot">{news[k]}</b>{:else if st === 'star'}<b class="star">★{wishN}</b>{/if}</span>{/if}
+        {#if k === 'scare' && prepNew && !todo[k]}<span class="pnew" data-k="prep-new">{prepNew}</span>{/if}
       </button>
     {/each}
 
@@ -501,7 +507,18 @@
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'scare'}
-  <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬) -->
+  <!-- 🎯📖 배움터 (📜 #66): 큰 단추 둘 = 📖 예습하기 · 🎯 복습하기 -->
+  <Sheet onclose={() => (sheet = null)} mainText="닫기">
+    {#snippet title()}🎯📖 배움터{/snippet}
+    <div class="study" data-k="study">
+      <button type="button" class="sbtn" data-k="study-prep" onclick={prepGo}><span class="si" aria-hidden="true">📖</span><b>예습하기</b><small>다음 차시 미리 · 연습용 · 보상 없어요</small>{#if prepNew}<em class="snew">{prepNew}</em>{/if}</button>
+      <button type="button" class="sbtn" class:gold={!!todo.scare} data-k="study-review" onclick={() => (sheet = 'review')}><span class="si" aria-hidden="true">🎯</span><b>복습하기</b><small>배운 차시 · 숫자를 바꿔서 · 💎 보상</small>{#if todo.scare}<em class="snew gold">남은 {todo.scare}</em>{/if}</button>
+    </div>
+  </Sheet>
+{:else if sheet === 'prep'}
+  {#await loadPrep() then K}<K.default {S} {me} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} all={prepAll} onclose={() => (sheet = null)} />{/await}
+{:else if sheet === 'review'}
+  <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬 · #66 배움터 안 「복습하기」) -->
   {#await loadDummy() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />{/await}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
@@ -585,6 +602,13 @@
   .zone { position: absolute; z-index: 5; background: none; border: 0; padding: 0; }
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
   .prop:active :global(.img) { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
+  .pnew { position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, calc(100% + 26px)); white-space: nowrap; padding: 1px 8px; border-radius: 10px; background: color-mix(in srgb, var(--surface-2) 88%, transparent); color: var(--text-2); font: 700 11.5px var(--font); pointer-events: none; }
+  .study { display: flex; flex-direction: column; gap: var(--s3); padding-bottom: var(--s2); }
+  .sbtn { position: relative; display: grid; grid-template-columns: 56px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: var(--s3); text-align: left; min-height: 84px; padding: var(--s3); border-radius: 16px; border: 2px solid var(--line, #2f3440); background: var(--surface); color: var(--text); font-family: var(--font); box-shadow: 0 3px 0 var(--press-sh, rgba(0, 0, 0, 0.45)); }
+  .sbtn:active { transform: translateY(2px); box-shadow: none; }
+  .sbtn .si { grid-row: 1 / span 2; font-size: 38px; text-align: center; } .sbtn b { font-size: 20px; font-weight: 800; } .sbtn small { font-size: 13px; color: var(--text-2); }
+  .sbtn.gold { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent), 0 3px 0 var(--accent-sh, #9a6a10); }
+  .snew { position: absolute; right: 10px; top: 8px; font-style: normal; font: 700 12px var(--font); color: var(--text-2); } .snew.gold { color: var(--accent); }
   .label { position: absolute; left: 50%; bottom: -6px; transform: translate(-50%, 100%); white-space: nowrap; height: 26px; padding: 0 9px; border-radius: 13px; background: var(--surface-2); color: var(--text); font: 700 var(--fs-small) var(--font); display: flex; align-items: center; gap: var(--s1); box-shadow: 0 3px 0 #000; z-index: 5; transition: opacity var(--t); }
   .zone .label { bottom: 4px; transform: translate(-50%, 0); }
   .zone[aria-label='출제 공방'] .label { bottom: auto; top: 0; transform: translate(-50%, -60%); } /* 출제 공방 이름표 = 텐트 위 (아래 빈 땅 = 🎯 허수아비 자리 · 캠프 자리표) */
@@ -703,7 +727,7 @@
   /* 🏕 B 만지면 반응 · D 걷기 · E 친구 (transform · opacity 만) */
   .hot { position: absolute; z-index: 4; background: none; border: 0; padding: 0; min-width: 48px; min-height: 48px; }
   .prop.pk :global(.img) { animation: pkBounce 0.45s ease-out; }
-  .prop[data-prop='scare'].pk :global(.img) { animation: pkWobble 0.55s ease-out; transform-origin: 50% 100%; }
+  /* 🎯📖 #66 배움터 누름 = CampProp 의 책 펄럭 + 허수아비 통통 (옛 흔들림 대신) */
   .prop[data-prop='mail'].pk :global(.img) { animation: pkShake 0.4s linear; }
   @keyframes pkBounce { 30% { transform: translateY(-8%) scale(1.04); } 60% { transform: translateY(0) scale(0.98); } }
   @keyframes pkWobble { 20% { transform: rotate(-14deg); } 45% { transform: rotate(10deg); } 70% { transform: rotate(-5deg); } }
