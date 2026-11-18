@@ -174,13 +174,16 @@ const A = (f: string) => `${import.meta.env.BASE_URL}art/camp/${f}`;
 const at = (x: number, y: number, w: number, h: number) => ({ left: +((x / 1182) * 100).toFixed(2), bottom: +(((1330 - y - h) / 1330) * 100).toFixed(2), width: +((w / 1182) * 100).toFixed(2), aspect: `${w} / ${h}` });
 export const CAMP = {
   size: [1182, 1330] as const,
-  bg: A('camp2-bg-v1.webp'),
+  bg: A('camp2-bg-v2.webp'), // 📜 #71 덧: 성채 뺀 배경 · 성채 = 겹침 그림 2장
   // 🏰 성채 = 배경에 그려짐 · 열림 = 둘레 금빛 빛무리(코드 · 「성채 불 켜짐」 그림 전 임시) / ⛺ 텐트 = 배경 + 같은 자리 반응 그림(누를 때만) / 🚪 던전 문 = 배경 · 열림 = 빛(코드)
-  zones: { castle: [540, 170, 800, 370], tent: [290, 405, 540, 555], gate: [860, 330, 1020, 580] } as Record<string, [number, number, number, number]>,
+  zones: { castle: [507, 154, 902, 380], tent: [290, 405, 540, 555], gate: [860, 330, 1020, 580] } as Record<string, [number, number, number, number]>,
+  /** 🏰 성채 = 평소 dark · 성채 열림 = lit(창 불 · 금빛) · 같은 자리 겹침 */
+  castle: { dark: A('camp2-castle-dark-v1.webp'), lit: A('camp2-castle-lit-v1.webp'), ...at(474, 149, 461, 231) },
+  /** 🚪 던전 문 닫힘(나무 문) = 문 부분만 겹침 · 3상태: 닫힘 / 🔥 탐사 가능(닫힌 문 + 횃불 크게 · 문틈 주황) / ⚔ 수업 열림(배경 파란 문) */
+  gateClosed: { src: A('camp2-gate-closed-v1.webp'), ...at(905, 355, 140, 175), torch: { left: 89.3, top: 30.8 }, crack: { left: 82.5, top: 30.5, height: 7.5 } },
   tentFx: { src: A('camp2-tent-v1.webp'), cols: 5, ...at(298, 402, 248, 156) },
-  /** 🔥 모닥불 = 그루터기 · 돌 고리(시안에서 오린 바닥 · 임시) + 지금 움직이는 불꽃을 위에 */
-  fireBase: { src: A('camp2-fire-base-v1.webp'), ...at(360, 771, 470, 184) },
-  fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45.2, bottom: 32.4, width: 10.6 },
+  /** 🔥 모닥불 + 그루터기 = 4칸 불꽃 루프 (선생님 GPT fire-4 · 📜 #71 덧) */
+  fire: { src: A('camp2-fire-v1.webp'), cols: 4, rows: 1, frames: 4, ms: 150, aspect: 470 / 218, ...(({ left, bottom, width }) => ({ left, bottom, width }))(at(360, 737, 470, 218)) },
   // ⚠ 물건 자리는 아래 CAMP_PROPS 한 곳 (학생 캠프 · 교사 「나」 내 캠프 · 테스트 모드 · 체험판이 모두 이 표를 읽음)
   hero: { left: 34, bottom: 22 },
 };
