@@ -499,6 +499,7 @@
     <div class="setov" role="presentation" onclick={() => (setOpen = false)}>
       <div class="setbox" role="menu" aria-label="TV 설정" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => { if (e.key === 'Escape') setOpen = false; }}>
         <button type="button" role="menuitem" data-k="tvtheme" onclick={() => { themeOpen = true; setOpen = false; }}>🎨<span>테마</span></button>
+        <a role="menuitem" class="sbl" data-k="tvcamp" href="?role=camp&from=me&tv=1" target="_blank" rel="noopener">⛺<span>교사 캠프 (새 창 · 학생 화면과 같게)</span></a><!-- 👩‍🏫 #80 0번: #21 C 에서 빠진 입구 되살림 · TV = 이름 · 선생님 칸 없음 -->
         <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
         <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
       </div>
@@ -545,6 +546,7 @@
   .gear { flex: none; width: 5.2cqh; height: 5.2cqh; margin-left: 1cqw; border-radius: 1.2cqh; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; font-size: var(--tv-title); line-height: 1; cursor: pointer; display: grid; place-items: center; }
   .setov { position: absolute; inset: 0; z-index: 40; }
   .setbox { position: absolute; right: 1.5cqw; top: 9cqh; min-width: 22cqw; display: flex; flex-direction: column; gap: 0.6cqh; padding: 1.2cqh; border-radius: 1.6cqh; background: rgba(14, 16, 22, 0.96); border: 1px solid rgba(255, 255, 255, 0.18); box-shadow: 0 1cqh 3cqh rgba(0, 0, 0, 0.5); }
+  .setbox .sbl { display: flex; align-items: center; gap: 1cqw; padding: 1.1cqh 1.2cqw; border-radius: 1.1cqh; background: rgba(255, 255, 255, 0.06); color: #fff; font: 700 var(--tv-body) var(--font); text-decoration: none; }
   .setbox button { display: flex; align-items: center; gap: 1cqw; padding: 1.1cqh 1.2cqw; border: 0; border-radius: 1.1cqh; background: rgba(255, 255, 255, 0.06); color: #fff; font: 700 var(--tv-body) var(--font); text-align: left; cursor: pointer; }
   .code b { margin-left: 0.5cqw; color: var(--text); font-size: var(--tv-title); letter-spacing: 0.1cqw; }
   .ib { flex: none; width: 3.6cqw; height: 3.6cqw; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: var(--tv-title); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }

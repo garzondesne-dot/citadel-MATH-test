@@ -47,6 +47,12 @@
   import RecordRoom from './RecordRoom.svelte';
   import AchievePop from './AchievePop.svelte';
   import EggFx from './EggFx.svelte';
+  import TeacherPanel from './TeacherPanel.svelte';
+  import { questNeeds } from '../../school/quest';
+  import { photoNeeds } from '../../school/photo';
+  import { inbox as tInbox } from '../../school/inbox';
+  import { POSTS as T_POSTS, type Post as TPost } from '../../board/team';
+  import { CLASSES as T_CLASSES } from '../../school/school';
   import { EGGS, eggHint, eggOf, fibTap, piMinute, stumpStep } from '../../school/eggs';
   import { CHALS, chalReady, chalState, claimOf, reviewPlaysOf, symN, type Chal, type ChalCtx } from '../../school/challenges';
   import { earnedTitles } from '../../model/draft';
@@ -72,7 +78,18 @@
   const TRIAL_GEM = [200, 620] as const, TRIAL_SCROLL = 9; // 👩‍🏫 체험판 지갑 (CLAUDE.md 체험판 규칙 · 💎 · 📜 줄)
   const P = PROFILES.test; // 테스트 버전 = 테스트 모드 다른 점 표 값(💎 9,999 · 📜 30)
   const fromMe0 = typeof location !== 'undefined' && new URLSearchParams(location.search).get('from') === 'me'; // 👩‍🏫 교사 「나」 → 내 캠프 = 교사 기록(B안)
-  if (fromMe0) setTeacherSink(untrack(() => S)); // 🧙 교사 캠프 = 교사 「내 용사」 서버 하나 (게시판 · 허수아비 · 성채도 같은 용사)
+  if (fromMe0) setTeacherSink(untrack(() => S));
+  // 👩‍🏫 #80 교사 캠프 (📜 2026-11-18 DECISIONS 「👩‍🏫 교사 캠프 리뉴얼」): 학생과 같은 캠프 + 물건 창마다 「👩‍🏫 선생님 칸」 · 이름표 숫자 = 선생님 할 일(금빛) · 반 칩 · 🧑‍🎓 학생 화면으로 보기
+  //   📺 TV(?tv=1 · 종합실 ⚙ → ⛺) = 학생 화면과 같게(선생님 칸 · 교사 숫자 · 반 칩 없음)
+  const tvMode = typeof location !== 'undefined' && new URLSearchParams(location.search).get('tv') === '1';
+  let asStu = $state(false), tCls = $state(''), tPanel = $state<'' | 'dummy' | 'tent' | 'review' | 'gate' | 'castle' | 'mail' | 'rec'>('');
+  const teach = $derived(fromMe0 && !tvMode && !asStu);
+  const T_SHEET: Record<string, 'dummy' | 'tent' | 'review' | 'gate' | 'castle' | 'mail' | 'rec'> = { dummy: 'dummy', tent: 'tent', review: 'review', gate: 'gate', prep: 'gate', castle: 'castle', mail: 'mail', rec: 'rec', chal: 'rec' };
+  let tVer = $state(0); { const tt = setInterval(() => tVer++, 10000); onDestroy(() => clearInterval(tt)); }
+  const tTodo = $derived.by<Record<string, number>>(() => { void tVer; void sheet; if (!fromMe0 || tvMode) return {} as Record<string, number>; const inC = (c: string) => !tCls || c === tCls.replace(/[.#$/[\]]/g, '_') || c === tCls;
+    const cIds = new Set(castles.list.map((P) => P.id));
+    return { tent: questNeeds(S, tCls).length, castle: photoNeeds(S, tCls).filter((x) => cIds.has(x.k.slice(0, x.k.indexOf('_')))).length, mail: tInbox(S).filter((x) => x.kind === 'idea' && x.from && !x.read && inC(x.from.cls)).length, dummy: Object.values(S.get<Record<string, TPost>>(T_POSTS) || {}).filter((p) => p && p.phase === 'wait' && (!tCls || Object.values(p.mem || {}).some((m) => m?.cls === tCls))).length };
+  }); // 🧙 교사 캠프 = 교사 「내 용사」 서버 하나 (게시판 · 허수아비 · 성채도 같은 용사)
   // 🧑 실제 학생(서버 계정에 묶임 · 시험 반 · 시험 계정 아님) = 테스트 꼴 아님 (📜 2026-11-15 머리 「정식과 같게」: 테스터 표시 = 시험 반 · 테스트 계정만 · 호칭 = 얻은 것 · 새 계정 시작 💎 0)
   //   교사 캠프 · 🧪 시험 반 · 시험 계정 · 이 기기 체험 = 그대로 테스트 꼴(💎 9,999 · 📜 30 시작 · 호칭 모두)
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
@@ -471,7 +488,7 @@
     {#snippet tag(k: string)}
       {@const gOpen = k === 'gate' && open && !trial}
       {@const td = todoN[k]}
-      {#if tagOn(k) || gOpen}<span class="tag" class:todo={!!td || gOpen} data-k="tag-{k}"><b>{gOpen ? '입장!' : k === 'gate' && trial ? '다른 차시' : NAME[k]}</b>{#if td}<i class="cnt" data-k="cnt-{k}">{td.n}</i>{/if}</span>{#if td?.gem}<span class="gchip" data-k="gem-{k}">💎+{td.gem}</span>{/if}{/if}
+      {#if tagOn(k) || gOpen}<span class="tag" class:todo={!!td || gOpen} data-k="tag-{k}"><b>{gOpen ? '입장!' : k === 'gate' && trial ? '다른 차시' : NAME[k]}</b>{#if teach && tTodo[k === 'tentdeco' ? '' : k]}<i class="cnt tc" data-k="tcnt-{k}" title="선생님 할 일">{tTodo[k]}</i>{:else if td}<i class="cnt" data-k="cnt-{k}">{td.n}</i>{/if}</span>{#if td?.gem}<span class="gchip" data-k="gem-{k}">💎+{td.gem}</span>{/if}{/if}
     {/snippet}
     {#each ['castle', 'gate'].filter((k) => k === 'gate' || feat('citadel')) as k (k)}
       <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
@@ -492,8 +509,10 @@
       <!-- 💎 · 📜 알약 = 누르면 🧙 내 용사 (정식 동작 · 📜 2026-11-15 선생님 「누르면 뭐 나올 것처럼 · 내 용사 연결」) -->
       <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
       <!-- 🏆 #73 위 막대 도전과제 단추 없앰 → ⛺ 기록 텐트 -->
+      {#if fromMe0 && !tvMode}<button type="button" class="asstu" class:on={asStu} data-k="as-stu" aria-pressed={asStu} aria-label="학생 화면으로 보기" title="학생 화면으로 보기" onclick={() => { asStu = !asStu; tPanel = ''; }}>{asStu ? '👩‍🏫 교사' : '🧑‍🎓 학생'}</button>{/if}
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
+    {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svNo}차시 · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -643,7 +662,19 @@
 {/if}
 {#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
+{#if teach && sheet && T_SHEET[sheet] && !tPanel}<button type="button" class="tpbtn" data-k="t-panel" onclick={() => (tPanel = T_SHEET[sheet ?? ''] ?? '')}>👩‍🏫 선생님 칸{#if tTodo[T_SHEET[sheet] ?? '']}<i>{tTodo[T_SHEET[sheet] ?? '']}</i>{/if}</button>{/if}
+{#if teach && tPanel}<TeacherPanel {S} kind={tPanel} cls={tCls} onclose={() => (tPanel = '')} />{/if}
+
 <style>
+  /* 👩‍🏫 #80 교사 캠프 */
+  .cnt.tc { background: var(--accent); color: var(--on-accent, #1d1406); }
+  .asstu { min-height: 36px; padding: 0 10px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.35); background: rgba(8, 9, 12, 0.55); color: #fff; font: 700 12px var(--font); white-space: nowrap; }
+  .asstu.on { background: var(--accent); color: var(--on-accent, #1d1406); border-color: var(--accent); }
+  .tchips { position: absolute; top: var(--bar-top); left: 0; right: 0; z-index: 9; display: flex; gap: 6px; overflow-x: auto; padding: 2px 12px 0; }
+  .tchips button { flex: none; min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(8, 9, 12, 0.55); color: #fff; font: 700 13px var(--font); }
+  .tchips button.on { background: var(--accent); color: var(--on-accent, #1d1406); border-color: var(--accent); }
+  .tpbtn { position: fixed; left: max(12px, calc(50% - 203px)); top: 12px; z-index: 44; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 14px var(--font); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000), 0 6px 16px rgba(0, 0, 0, 0.45); }
+  .tpbtn i { margin-left: 6px; font-style: normal; padding: 0 6px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 12px; }
   /* 📝 제출 모드 v2 ⑦ 오늘 할 일 */
   .camp.paper { background: transparent; }
   .ptop { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 12px; background: #f7f6f1; border-bottom: 1.5px solid #1d1d1f; }
