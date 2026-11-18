@@ -602,7 +602,7 @@
   @media (max-width: 699px), (orientation: landscape) and (max-width: 899px) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); } .camp:not(.paper) .stagebox { min-height: calc(min(100vw, 330px) / var(--ar)); } /* 330 = 위 막대(‹ · 제목 · 💎 📜 · ⚙)가 다 들어가는 폭 */ }
   .stagebox { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
   /* 📜 #62 (2026-11-18 선생님 캡처): 장면 좌우 끝 = 아래 카드 줄과 같은 선(양옆 16) · 비율 · 물건 자리 그대로 · 모자라는 높이는 캠프 세로 스크롤 (가로 PC = 장면 | 카드 두 칸이라 그대로) */
-  @media not ((min-width: 900px) and (orientation: landscape)) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; } .camp:not(.paper) .stagebox { flex: none; min-height: 0; container-type: inline-size; padding: 0 var(--s4); } .camp:not(.paper) .stage { width: 100%; } .camp:not(.paper) > :global(.act) { margin-top: auto; } }
+  @media not ((min-width: 900px) and (orientation: landscape)) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; } .camp:not(.paper) .stagebox { flex: none; min-height: 0; container-type: inline-size; padding: 0 var(--s4); } .camp:not(.paper) .stage { width: 100%; } .camp:not(.paper) > :global(.act) { margin-top: auto; position: sticky; bottom: 0; z-index: 6; } } /* 🐞 짧은 화면(360 × 640): 장면 · 정보판은 스크롤 · 주요 단추는 늘 아래에 보이게 (#151 · #62 뒤 단추가 화면 밖으로 밀렸음) */
   .camp > :global(.act) { flex: none; }
   .info { flex: none; }
   .stage { position: relative; width: min(100cqw, 100cqh * var(--ar)); flex: none; background-size: 100% 100%; overflow: hidden; }
