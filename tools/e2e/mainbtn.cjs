@@ -13,7 +13,7 @@ const MEASURE = () => {
   const xs = [...document.querySelectorAll('.pmain')].filter((x) => { const r = x.getBoundingClientRect(); if (!r.width || !r.height) return false; const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e && (e === x || x.contains(e)); });
   if (!xs.length) return null;
   const x = xs[xs.length - 1], r = x.getBoundingClientRect(), col = Math.min(innerWidth, 430);
-  return { h: Math.round(r.height), bot: Math.round(innerHeight - r.bottom), w: Math.round(r.width), want: col - 32, left: Math.round(r.left - (innerWidth - col) / 2), t: x.textContent.trim().slice(0, 18) };
+  return { h: Math.round(r.height), bot: Math.round(innerHeight - r.bottom), w: Math.round(r.width), want: col - 32, left: Math.round(r.left - (x.closest('.act')?.getBoundingClientRect().left ?? (innerWidth - col) / 2)), t: x.textContent.trim().slice(0, 18) };
 };
 const TMEASURE = () => { const x = document.querySelector('.tp .tact .btn'); if (!x) return null; const r = x.getBoundingClientRect(); return { h: Math.round(r.height), bot: +(innerHeight - r.bottom).toFixed(1), t: x.textContent.trim().slice(0, 14) }; };
 const RECTS = () => {
@@ -28,7 +28,8 @@ const RECTS = () => {
     const chk = async (p, name) => {
       await p.waitForTimeout(350); const m = await p.evaluate(MEASURE);
       if (!m) { errs.push(`${W}×${H} ${name}: 주요 단추 없음`); rows.push(`${W} ${name}: ✗ 없음`); return; }
-      const ok = m.h === 56 && m.bot === 20 && m.w === m.want && m.left === 16;
+      const side = /캠프/.test(name);
+      const ok = side ? (m.h === 56 && m.bot === 20 && m.left === 16) : m.h === 56 && (m.bot === 20 || (name === '첫화면' && m.bot === 37)) && m.left + m.w === m.want + 16 && m.left >= 16; // #62 · 💡 = 옆 단추가 같은 줄(입장 넓게 · 옆 좁게) · 첫 화면 = 만든 이 줄 위
       rows.push(`${W} ${name}: ${m.h}/${m.bot}/${m.w}${ok ? '' : ' ✗'} 「${m.t}」`);
       if (!ok) errs.push(`${W}×${H} ${name}: 높이 ${m.h} · 바닥 ${m.bot} · 폭 ${m.w}(기대 ${m.want}) · 왼쪽 ${m.left}`);
       if (W === 360) await p.screenshot({ path: `${SHOTS}/b38-${name}.png` });
@@ -44,7 +45,7 @@ const RECTS = () => {
     await c.click('button[aria-label="모루"]'); await c.waitForSelector('.fg .stage'); await chk(c, '모루');
     await c.click('.row2 .btn2 >> nth=0'); await c.waitForSelector('.hr'); await chk(c, '모루-목록'); await c.click('.fg .pmain'); await c.waitForTimeout(200);
     await c.click('.row2 .btn2 >> nth=1'); await c.waitForSelector('.book'); await chk(c, '모루-도감'); await c.click('.fg .pmain');
-    await c.reload(); await c.waitForSelector('.stage');
+    await c.evaluate(() => sessionStorage.clear()); await c.reload(); await c.waitForSelector('.stage'); // 새로 고침 = 보던 시트(모루) 되살림 → 지우고 캠프로
     await c.click('button[aria-label="📋 게시판"]'); await c.waitForSelector('.bd'); await chk(c, '게시판');
     await c.click('.bd .pmain'); await c.waitForSelector('.sheet'); await chk(c, '게시판-차시시트');
     await c.close();
