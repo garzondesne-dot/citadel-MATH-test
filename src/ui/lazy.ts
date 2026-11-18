@@ -7,12 +7,13 @@ export const loadHall = once(() => import('./Hall.svelte'));
 export const loadAtk = once(() => import('./AtkGallery.svelte'));
 // 🏕 캠프 · 수업 화면에서 여는 큰 화면 (허수아비 · 게시판 · 성채 · 쉼터 놀이) = 따로 받되 화면이 뜬 뒤 쉬는 틈에 미리 받아 둠 → 누를 때 · 쉼터가 열릴 때 멈칫 없음
 export const loadDummy = once(() => import('./dummy/Dummy.svelte'));
+export const loadPrep = once(() => import('./dummy/Prep.svelte')); // 📖 #66 배움터 · 예습
 export const loadBoard = once(() => import('./board/Board.svelte'));
 export const loadCastle = once(() => import('./castle/Castle.svelte'));
 export const loadFunPhone = once(() => import('./rest/FunPhone.svelte'));
 /** 학생 화면(로그인 · 캠프 · 수업)이 뜬 뒤 한 번: 쉬는 틈에 위 묶음을 미리 받음 */
 export function prefetchStudent(): void {
-  const go = () => { void loadFunPhone().catch(() => null); void loadDummy().catch(() => null); void loadBoard().catch(() => null); void loadCastle().catch(() => null); };
+  const go = () => { void loadFunPhone().catch(() => null); void loadDummy().catch(() => null); void loadPrep().catch(() => null); void loadBoard().catch(() => null); void loadCastle().catch(() => null); };
   const w = globalThis as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void };
   if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 1500);
 }

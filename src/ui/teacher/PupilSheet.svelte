@@ -66,6 +66,7 @@
       <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>✍ 연습 통과 {s.extra.photoOk} · ✍ 실력 통과 {s.extra.photoV || 0} · 다시 {s.extra.photoRe}</em>{#if s.extra.scrollCum != null}<em class="cum" data-k="scroll-cum" title="지금까지 받은 📜 모두 (쓴 것 안 뺌)">💰 누적 {s.extra.scrollCum}</em>{/if}</div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
+    {#if s.extra.prepTxt}<p class="prep" data-k="pupil-prep">{s.extra.prepTxt} <small>(보상 · 반 통계 없음)</small></p>{/if}<!-- 📖 #66 배움터 예습 흔적 -->
     {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}
     {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}
     {#if S.kind !== 'server'}<p class="fake">🧪 이 기기 체험 = 가짜 기록 (반 · 번호로 늘 같은 값)</p>{/if}
@@ -103,6 +104,7 @@
   .four small, .row3 small { font-size: 12px; color: var(--text-2); font-weight: 700; }
   .four b { font-size: 24px; color: var(--accent); } .four b i { font-style: normal; font-size: 13px; color: var(--text-2); }
   .four em, .row3 em { font-style: normal; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prep { margin: 6px 0 0; font: 700 13px var(--font); color: var(--text-2); } .prep small { font-weight: 500; color: var(--text-3); }
   .row3 em.cum { display: block; color: var(--text-2); font-weight: 700; } /* 💰 #65 누적 받은 · 교사만 */
   .lab { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
   .recs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }

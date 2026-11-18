@@ -68,7 +68,7 @@ const PASS = (id) => ({ ok: true, status: 'pass', score: 4, total: 4, pass: 3, i
 
   // ── ① 🎯 허수아비 9차시 문제 5 ──
   await s.reload(); await s.waitForTimeout(3500); await closeSheets();
-  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
+  await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="study-review"]', { timeout: 15000 }); await s.click('[data-k="study-review"]'); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
   const row = '[data-lesson="set-09"] li[data-mid="m5"]';
   const tg = await s.$eval(`${row} [data-k="ph-v"]`, (e) => e.textContent.trim()).catch(() => ''), bt = await s.$eval(`${row} [data-k="rw-go"]`, (e) => e.textContent.trim()).catch(() => '');
   ok('① 🎯 목록 = 「✔ 서술형 · 실력 쓰기 가능」 + 「✍ 실력 쓰기 · 📜 +1」', tg === '✔ 서술형 · 실력 쓰기 가능' && bt === '✍ 실력 쓰기 · 📜 +1', `${tg} | ${bt}`);
