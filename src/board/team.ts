@@ -12,7 +12,7 @@ import { bossFullOf } from '../school/records';
 export const MAX = 4, PAUSE_N = 2, PAUSE_MS = 120000, THINK_MS = 60000;
 export const POSTS = 'school/board/posts';
 export type Role = 'g' | 'c';
-export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** ⏱ #76 이 폰이 보낸 마지막 숨 (20초마다 · 서버 시각) */ seen?: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
+export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** ⏱ #76 이 폰이 보낸 마지막 숨 (20초마다 · 서버 시각) */ seen?: number; /** 🛡 #79 수호자 명성 판 수 (모집 · 합류 때) */ fame?: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
 export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member>; /** ⏱ #76 마지막 움직임(모집 · 합류 · 준비 · 나가기) */ act?: number; /** ⏱ #76 저절로 끝남 (손 놓은 판) */ idle?: boolean; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
 
 /** 🛡 판정 (❓ #143-a B · 숫자는 여기 한 곳): 그 차시 수업 기록 정답률 ≥ 80% 또는 형성평가 만점 → 수호자 · 기록 없으면 도전자 */

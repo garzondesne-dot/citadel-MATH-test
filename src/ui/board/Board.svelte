@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { FAME, fameLv, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -63,7 +64,8 @@
     });
   });
   const lkB = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안 16) — 동료 · 게시글 · 달리기 화면
-  const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: lkB });
+  const meM = $derived({ uid, cls: cls || '이 기기', num, nick: me.nick, hero: lkB, fame: fameNow() });
+  function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   const RK2 = 'school/board/rk2', FEED = 'school/board/feed';
@@ -154,6 +156,15 @@
   const lr2 = untrack(() => liveValue<Record<string, { at: number; lid: string; no: number; n: number; role: 'g' | 'c'; grade: string; right: number; total: number; sec: number; clear: boolean; left?: boolean }>>(S, cls && num ? `bonus/${cls}/${num}/board` : 'bonus/_none'));
   onDestroy(lr2.stop);
   const runs = $derived(Object.entries(lr2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at).sort((a, b) => b.at - a.at));
+  // 🎯 #79 목표 3종: ⭐ 차시 정복 지도 · 📕 남은 오답 · 🛡 수호자 명성 (보상 = 칭호 · 배지 · 도장만)
+  const MAPL = mapLessons(PACKS);
+  const stars = $derived(starsByNo(lr2.v.val as Record<string, BoardRec> | null));
+  const starN = $derived(starTotal(stars, MAPL)), starMax = MAPL.length * 3;
+  const fame = $derived(fameOf(lr2.v.val as Record<string, BoardRec> | null));
+  const notes = $derived.by(() => { void lr2.v.val; return cls && num ? noteLeftByNo(PACKS, (S.get(`records/${cls}/${num}`) || {}) as never, (S.get(`bonus/${cls}/${num}`) || {}) as never) : {}; });
+  const noteN = $derived(Object.values(notes).reduce((a, x) => a + x.left, 0)), note0 = $derived(Object.values(notes).reduce((a, x) => a + (x.had ? 1 : 0), 0));
+  const noteOk = $derived(Object.values(notes).filter((x) => x.had && x.left === 0).length);
+  const nextStar = $derived(starN < STAR_TITLES.explore ? `⭐ ${STAR_TITLES.explore} = 「던전 탐험가」` : starN < STAR_TITLES.conquer ? `⭐ ${STAR_TITLES.conquer} = 「던전 정복자」` : legendOf(stars, MAPL) ? '🏆 게시판의 전설!' : '모든 차시 ⭐⭐⭐ = 「게시판의 전설」');
   const best = $derived.by(() => { const m: Record<string, (typeof runs)[number]> = {}; for (const r of runs) { const w = m[r.lid]; if (!w || (GS[r.grade] ?? 0) > (GS[w.grade] ?? 0) || ((GS[r.grade] ?? 0) === (GS[w.grade] ?? 0) && r.right / (r.total || 1) > w.right / (w.total || 1))) m[r.lid] = r; } return Object.values(m).sort((a, b) => a.no - b.no); });
   // 📣 최근 전투 (익명 · 판마다 한 줄 · 내 판 = 「나」)
   const lf2 = untrack(() => liveValue<Record<string, { at: number; no: number; n: number; grade: string; sec: number; clear: boolean; who?: { c: string; h: number }[] }>>(S, FEED)); onDestroy(lf2.stop);
@@ -186,7 +197,7 @@
   const names = (p: Post) => Object.fromEntries(membersOf(p).map((m) => [m.uid, `${m.cls}반 ${realName(m) || heroOf(m.hero).name}`]));
 </script>
 
-<div class="bd" role="dialog" aria-label="게시판 던전">
+<div class="bd" role="dialog" aria-label="게시판 던전" style="--gbadge:url({import.meta.env.BASE_URL}art/board/guard-badge-v1.webp)">
   <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b class="t">{mine && mine.phase === 'wait' ? `📋 ${mine.no}차시 팀` : '📋 게시판 던전'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
   {#if res}
     <!-- ⑪ ⑫ 결과 -->
@@ -213,7 +224,7 @@
     {@const host = mine.host === uid}
     <div class="mid">
       {#if mine.lk}{@const pn = host ? myPin(mine.pid) : ''}<div class="card pin" class:host><b>🔒 {host ? (pn ? `입장 암호 ${pn}` : '입장 암호 · 이 기기에 없어요') : '암호가 걸린 모집 글'}</b><small>{host ? (pn ? '친구에게 말로 알려 줘요 · 다른 화면엔 안 보여요' : '다른 폰에서 만든 글이에요 · 내리고 다시 모집해요') : '모집한 친구에게 암호를 듣고 들어왔어요'}</small></div>{/if}
-      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
+      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{#if fameLv(Number(m.fame) || 0)}<i class="badge sm" style="background-position:{fameLv(Number(m.fame) || 0)!.cell * 50}% 0" title={fameLv(Number(m.fame) || 0)!.name}></i>{/if}{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
     </div>
@@ -231,6 +242,18 @@
     </div>
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
+      <section class="gmap" data-k="board-map" aria-label="차시 정복 지도">
+        <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
+          {#each MAP_PTS as pt, i (i)}{@const l = i < 14 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}
+            {#if i === 14}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="성채">🏰</span>
+            {:else if l}<button type="button" class="mp" class:on={chip === l.no} class:got={(stars[l.no] ?? 0) > 0} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-label="{l.no}차시 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}><b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
+            {:else}<span class="mp lockd" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원">🔒</span>{/if}
+          {/each}
+        </div>
+        <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
+        {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
+        <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>도전자와 함께 클리어 {fame}판{nextFame(fame) ? ` · ${nextFame(fame)!.n}판 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
+      </section>
       {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
       {#if shown.length}
         <small class="lbl">{chip === 'all' ? '전체' : `${chip}차시`} · 모집 중 {shown.length} · 새 글 위로</small>
@@ -296,6 +319,20 @@
 {/if}
 
 <style>
+  /* 🎯 #79 차시 정복 지도 · 오답 막대 · 명성 */
+  .gmap { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--r); background: var(--surface-2); }
+  .mapw { position: relative; width: 100%; aspect-ratio: 1672 / 941; border-radius: 10px; overflow: hidden; }
+  .mapw > img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .mp { position: absolute; transform: translate(-50%, -62%); min-width: 34px; min-height: 34px; padding: 0 2px; border: 0; border-radius: 50%; background: rgba(20, 16, 10, 0.55); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 800 13px/1 var(--font); }
+  .mp::before { content: ''; position: absolute; inset: -7px; }
+  .mp.on { box-shadow: 0 0 0 2px var(--accent); } .mp.got { background: rgba(60, 40, 5, 0.7); }
+  .mp .st { font-style: normal; font-size: 9px; color: #ffd34d; letter-spacing: -1px; line-height: 1; } .mp .st em { font-style: normal; color: rgba(255, 255, 255, 0.35); }
+  .mp .ok { position: absolute; right: -14px; top: -12px; width: 26px; height: auto; transform: rotate(-12deg); pointer-events: none; }
+  .mp.castle, .mp.lockd { background: rgba(10, 10, 20, 0.5); font-size: 15px; } .mp.lockd { opacity: 0.6; font-size: 12px; }
+  .gl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .gl b { font-size: 14px; } .gl small { font-size: 13px; color: var(--text-2); }
+  .gl .bar { flex: 1; min-width: 80px; height: 8px; border-radius: 4px; background: var(--surface); overflow: hidden; display: block; } .gl .bar > i { display: block; height: 100%; background: var(--ok); }
+  .badge { display: inline-block; width: 36px; height: 36px; flex: none; background: var(--gbadge) 0 0 / 300% 100% no-repeat; vertical-align: middle; image-rendering: auto; }
+  .badge.sm { width: 18px; height: 18px; margin-right: 3px; }
   .bd { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); }
   .back { width: 44px; height: 48px; border: 0; background: none; color: var(--text); font-size: 26px; }
