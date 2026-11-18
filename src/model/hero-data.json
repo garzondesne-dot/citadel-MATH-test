@@ -1376,6 +1376,42 @@
    "cond": "✏ 내 문제가 🏛 명예의 전당에 오름"
   },
   {
+   "id": "board_explore",
+   "name": "던전 탐험가",
+   "tier": "b",
+   "cond": "📋 게시판 던전 ⭐ 10개"
+  },
+  {
+   "id": "board_conquer",
+   "name": "던전 정복자",
+   "tier": "p",
+   "cond": "📋 게시판 던전 ⭐ 25개"
+  },
+  {
+   "id": "board_legend",
+   "name": "게시판의 전설",
+   "tier": "o",
+   "cond": "📋 모든 차시 ⭐⭐⭐"
+  },
+  {
+   "id": "guard1",
+   "name": "수호 견습",
+   "tier": "b",
+   "cond": "🛡 수호자로 도전자와 함께 클리어 3판"
+  },
+  {
+   "id": "guard2",
+   "name": "수호 기사",
+   "tier": "p",
+   "cond": "🛡 수호자로 도전자와 함께 클리어 10판"
+  },
+  {
+   "id": "guard3",
+   "name": "수호 스승",
+   "tier": "o",
+   "cond": "🛡 수호자로 도전자와 함께 클리어 25판"
+  },
+  {
    "id": "egg_root2",
    "name": "끝없는 수의 주인",
    "tier": "p",

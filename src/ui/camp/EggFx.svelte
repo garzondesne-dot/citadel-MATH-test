@@ -20,7 +20,7 @@
     <b class="big">√2 = 1.41421356…</b><em class="cap">끝이 없다 = 무리수!</em>
   {:else if kind === 'e2'}
     <span class="circle" aria-hidden="true"></span>
-    <span class="stamp" aria-hidden="true"><b>💯</b><span>참 잘했어요</span></span>
+    <img class="stamp" aria-hidden="true" alt="" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" /><!-- 🥚 #79 선생님 그림 egg-stamp (참 잘했어요 꽃 도장 + 100) -->
     {#each Array(14) as _, n (n)}<i class="petal" style="--n:{n};left:{8 + ((n * 37) % 84)}%"></i>{/each}
   {:else if kind === 'e3'}
     <span class="pi" aria-hidden="true">π</span>
@@ -53,7 +53,7 @@
   /* e2 빨간 색연필 동그라미 + 도장 쾅 + 꽃잎 */
   .circle { position: absolute; left: 50%; top: 66%; width: 46%; aspect-ratio: 1.6; transform: translate(-50%, -50%) rotate(-8deg); border: 5px solid #e33; border-radius: 50%; clip-path: inset(0 0 0 0); animation: draw 0.8s ease-out both; box-shadow: 0 0 0 1px rgba(255, 80, 80, 0.4); }
   @keyframes draw { from { clip-path: polygon(50% 50%, 50% 0, 50% 0, 50% 0); opacity: 0.6; } to { clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 0); opacity: 1; } }
-  .stamp { position: absolute; left: 50%; top: 66%; transform: translate(-50%, -50%) rotate(-12deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 30%; aspect-ratio: 1; border-radius: 50%; border: 4px double #d22; color: #d22; background: rgba(255, 240, 235, 0.85); font: 900 15px var(--font); animation: slam 0.45s 0.8s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+  .stamp { position: absolute; left: 50%; top: 66%; transform: translate(-50%, -50%) rotate(-12deg); width: 62%; max-width: 360px; height: auto; animation: slam 0.45s 0.8s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
   .stamp b { font-size: 30px; line-height: 1; }
   .petal { position: absolute; top: -6%; width: 12px; height: 9px; border-radius: 60% 0 60% 0; background: #ffb3c8; animation: fall 3.4s ease-in calc(1s + var(--n) * 0.12s) both; }
   @keyframes fall { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(105cqh) rotate(540deg); opacity: 0.2; } }
