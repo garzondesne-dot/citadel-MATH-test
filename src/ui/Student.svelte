@@ -274,7 +274,7 @@
     <div class="bcard"><span class="lab acc">기다리는 중</span><p class="muted">종합실이 아직 열리지 않았어요. 선생님 화면을 먼저 여세요.</p></div>
     <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
   {:else if isLobby(R)}
-    <div class="bcard"><span class="lab acc">{expOf(R, uid) ? '🔥 ' : ''}{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p>{#if expOf(R, uid)}<p class="expok" data-k="lobby-explore">🔥 탐사대! 배움터에서 예습한 용사 · 정찰 때 횃불을 들어요</p>{/if}</div>
+    <div class="bcard"><span class="lab acc">{expOf(R, uid) ? '🔥 ' : ''}{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p>{#if expOf(R, uid)}<p class="expok" data-k="lobby-explore">🔥 탐사대! 예습한 용사 · 정찰 때 횃불을 들어요</p>{/if}</div>
     <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
     {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />

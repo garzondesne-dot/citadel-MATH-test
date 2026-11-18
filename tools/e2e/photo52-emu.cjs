@@ -22,7 +22,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await rest('school/last/1-3', 'PUT', { lesson: 'set-09', no: 9, at: 1, done: true, code: '111111' });
   const openDummy = async () => {
     await s.reload(); await s.waitForTimeout(3500);
-    await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="study-review"]', { timeout: 15000 }); await s.click('[data-k="study-review"]'); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
+    await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 }); await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="dummy-list"]'); await s.waitForTimeout(500);
     await s.$eval('[data-lesson="set-09"] li[data-mid="m5"] .go', (e) => e.click()); await s.waitForSelector('.drun', { timeout: 15000 }); await s.waitForTimeout(2500);
     return s.$('[data-k="wr-btn"]');
   };

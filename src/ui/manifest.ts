@@ -167,35 +167,41 @@ export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BAS
 /** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */
 export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
 
-// 🏕 캠프 (정식 manifest.camp · 원본 픽셀 1182 × 1330 · 자리 = 정식 cs-v2 캠프 그대로)
+// 🏕 캠프 v2 (📜 2026-11-18 선생님 시안 · 머리 #71 · 원본 픽셀 1182 × 1330 · 자리표 = hero-v2 docs/handoff/assets/camp2/README)
+//   배경 = 텐트 · 던전 문(횃불) · 성채가 그려진 빈 배경 · 물건 = 투명 그림 한 줄(① 평소 ② 상태 ③~⑥ 누름 반응 4칸 · 텐트 = 평소 + 반응 4칸)
 const A = (f: string) => `${import.meta.env.BASE_URL}art/camp/${f}`;
+/** 원본 px 상자 → 캠프 그림 % (left · bottom · width) */
+const at = (x: number, y: number, w: number, h: number) => ({ left: +((x / 1182) * 100).toFixed(2), bottom: +(((1330 - y - h) / 1330) * 100).toFixed(2), width: +((w / 1182) * 100).toFixed(2), aspect: `${w} / ${h}` });
 export const CAMP = {
   size: [1182, 1330] as const,
-  bg: A('camp-citadel-v2.webp'),
-  castle: { src: A('camp-castle-dark-v2.webp'), lit: A('camp-castle-lights-v2.webp'), x: 334, y: 166, w: 547 },
-  tent: { src: A('camp-tent-v1.webp'), x: 118, y: 668, w: 330 },
-  gateOn: { src: A('camp-gate-on-v1.webp'), x: 820, y: 520, w: 362 },
-  zones: { castle: [300, 165, 900, 464], tent: [118, 668, 448, 888], gate: [915, 575, 1095, 885] } as Record<string, [number, number, number, number]>,
-  fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45, bottom: 17, width: 15 },
-  // ⚠ 물건 자리는 아래 CAMP_PROPS 한 곳 (학생 캠프 · 교사 「나」 내 캠프 · TV 교사 캠프 · 테스트 모드가 모두 이 표를 읽음)
-  hero: { left: 30, bottom: 15 },
+  bg: A('camp2-bg-v1.webp'),
+  // 🏰 성채 = 배경에 그려짐 · 열림 = 둘레 금빛 빛무리(코드 · 「성채 불 켜짐」 그림 전 임시) / ⛺ 텐트 = 배경 + 같은 자리 반응 그림(누를 때만) / 🚪 던전 문 = 배경 · 열림 = 빛(코드)
+  zones: { castle: [540, 170, 800, 370], tent: [290, 405, 540, 555], gate: [860, 330, 1020, 580] } as Record<string, [number, number, number, number]>,
+  tentFx: { src: A('camp2-tent-v1.webp'), cols: 5, ...at(298, 402, 248, 156) },
+  /** 🔥 모닥불 = 그루터기 · 돌 고리(시안에서 오린 바닥 · 임시) + 지금 움직이는 불꽃을 위에 */
+  fireBase: { src: A('camp2-fire-base-v1.webp'), ...at(360, 771, 470, 184) },
+  fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45.2, bottom: 32.4, width: 10.6 },
+  // ⚠ 물건 자리는 아래 CAMP_PROPS 한 곳 (학생 캠프 · 교사 「나」 내 캠프 · 테스트 모드 · 체험판이 모두 이 표를 읽음)
+  hero: { left: 44, bottom: 22 },
 };
 
-// 🏕 캠프 물건 자리표 = 한 곳 (🔨 2026-11-13 밤 선생님 「캠프라는 캠프는 모두 지침대로 배치해」 · V1-DESIGN 4-1 🏕 캠프 자리표)
-//   자리 = 캠프 그림(1182 × 1330) 안 % (left · bottom · width) → 폰 · TV 크기가 달라도 같은 비율 · ⚙ 스위치로 꺼진 물건 = 그 자리만 비움(다른 물건 안 움직임)
-//   🎯 허수아비 = ⚒ 모루와 ✏ 출제 공방(텐트) 사이 바닥 · 📋 게시판 던전(k = 'dummy' · 옛 허수아비 자리) = 게시판 그림 2칸(① 평소 ② 모집 중) + 오른쪽 옆 바닥 파란 포털
-export type CampPropKey = 'anvil' | 'scare' | 'dummy' | 'mail';
-export interface CampProp { k: CampPropKey; src: string; cols: number; aspect: string; left: number; bottom: number; width: number; feat?: 'forge' | 'scarecrow' | 'board' }
+// 🏕 캠프 물건 자리표 = 한 곳 (🔨 2026-11-13 밤 「캠프라는 캠프는 모두 지침대로」 · 📜 2026-11-18 새 캠프 자리)
+//   📋 게시판(k = 'dummy') 왼쪽 가운데 · 📮 우편함 왼쪽 아래 · 🎯 허수아비 + 무기 걸이 = 던전 문 가는 길 앞 · ✏ 출제 공방 책상(k = 'tent') = 오른쪽 아래 구석(시안의 62%) · ⚒ 모루 = 텐트 앞
+//   칸: ① 평소(0) · ② 상태(1 · 게시판 모집 중 · 우편함 새 소식 · 허수아비 맞음 · 책상 새 소식) · ③~⑥ 누름 반응 4칸(2~5)
+export type CampPropKey = 'anvil' | 'scare' | 'dummy' | 'mail' | 'tent';
+export interface CampProp { k: CampPropKey; src: string; cols: number; aspect: string; left: number; bottom: number; width: number; feat?: 'forge' | 'scarecrow' | 'board' | 'author'; state?: number; react?: number[] }
+const R4 = [2, 3, 4, 5];
 export const CAMP_PROPS: CampProp[] = [
-  { k: 'anvil', src: A('anvil-v1.webp'), cols: 3, aspect: '362 / 362', left: 6, bottom: 8, width: 19, feat: 'forge' },
-  { k: 'scare', src: A('camp-dummy-v2.webp'), cols: 2, aspect: '96 / 96', left: 24, bottom: 29.5, width: 9, feat: 'scarecrow' },
-  { k: 'dummy', src: A('obj-board-v1.webp'), cols: 2, aspect: '192 / 192', left: 66, bottom: 19, width: 13, feat: 'board' },
-  { k: 'mail', src: A('camp-mail-v2.webp'), cols: 2, aspect: '96 / 96', left: 42, bottom: 33, width: 10 },
+  { k: 'dummy', src: A('camp2-board-v1.webp'), cols: 6, ...at(43, 510, 454, 360), feat: 'board', state: 1, react: R4 },
+  { k: 'mail', src: A('camp2-mail-v1.webp'), cols: 6, ...at(58, 876, 332, 324), state: 1, react: R4 },
+  { k: 'scare', src: A('camp2-scare-v1.webp'), cols: 6, ...at(690, 516, 299, 254), feat: 'scarecrow', state: 1, react: R4 },
+  { k: 'tent', src: A('camp2-desk-v1.webp'), cols: 6, ...at(890, 876, 243, 237), feat: 'author', state: 1, react: R4 },
+  { k: 'anvil', src: A('anvil-v1.webp'), cols: 3, ...at(440, 545, 165, 165), feat: 'forge' },
 ];
-/** 🌀 파란 포털 (정식 dportal-bonus · 게시판 오른쪽 옆 바닥 · 게시판보다 조금 작게) · 크기 = 평소 0.15(불씨) · 모집 0.6(숨쉬기 2초) · 출발 1.0(0.4초 · 소용돌이) */
-/** 📋 게시판 옆 「같이 하자」 용사 자리 (캠프 그림 % · 11/17 #9 · 게시판 dummy 왼쪽) */
-export const CAMP_BUDDY = { left: 60, bottom: 18 };
-export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 79.5, bottom: 19, width: 8, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.85, open: 1 } }; // 📜 2026-11-15 캠프 A: 모집 중 = 0.6 → 0.85 (열림 크기 쪽으로 · 소용돌이 · 입자)
+/** 🌀 파란 포털 (정식 dportal-bonus · 게시판 오른쪽 아래 바닥) · 크기 = 평소 0.15(불씨) · 모집 0.85 · 출발 1.0 */
+/** 📋 게시판 옆 「같이 하자」 용사 자리 (캠프 그림 % · 11/17 #9 · 게시판 아래 · 우편함 오른쪽) */
+export const CAMP_BUDDY = { left: 58, bottom: 11 };
+export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 33, bottom: 34.5, width: 7, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.85, open: 1 } }; // 📜 2026-11-15 캠프 A: 모집 중 = 0.85
 export const campProp = (k: CampPropKey) => CAMP_PROPS.find((p) => p.k === k)!;
 export const propPos = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;
 /** 그림 칸 한 장 (cols 칸 중 col 번째) */

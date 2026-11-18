@@ -38,21 +38,21 @@ const floorClears = (c: ChalCtx) => floorRooms(c).filter((x) => clear(c, x.p, [x
 export const CHALS: Chal[] = [
   // 🌱 첫걸음
   { id: 'castle1', tier: 'seed', ic: '🏰', name: '성채의 문', cond: '성채 방 1개 처치', need: 1, got: (c) => castleRooms(c).filter((m) => m.clear).length, reward: { gem: 20 } },
-  { id: 'review1', tier: 'seed', ic: '🎯', name: '다시 한 번', cond: '배움터 복습 문제 1개 처치', need: 1, got: reviewClears, reward: { gem: 10 } },
-  { id: 'prep1', tier: 'seed', ic: '📖', name: '한 발 앞서', cond: '배움터 예습 1개 차시 풀어 보기', need: 1, got: prepTried, reward: { title: 'ahead' } },
+  { id: 'review1', tier: 'seed', ic: '🎯', name: '다시 한 번', cond: '허수아비 복습 문제 1개 처치', need: 1, got: reviewClears, reward: { gem: 10 } },
+  { id: 'prep1', tier: 'seed', ic: '📖', name: '한 발 앞서', cond: '예습(던전 문 탐사) 1개 차시 풀어 보기', need: 1, got: prepTried, reward: { title: 'ahead' } },
   { id: 'card1', tier: 'seed', ic: '⚒', name: '대장장이 견습', cond: '모루에서 카드 1장 만들기', need: 1, got: cardsN, reward: { gem: 10 } },
   { id: 'solo1', tier: 'seed', ic: '📋', name: '혼자서도', cond: '게시판 던전 개인전 1번', need: 1, got: (c) => boardRecs(c).filter((r) => Number(r.n) <= 1).length, reward: { gem: 20 } },
   { id: 'team1', tier: 'seed', ic: '🤝', name: '함께라서', cond: '게시판 던전 팀전 1번', need: 1, got: (c) => boardRecs(c).filter((r) => Number(r.n) >= 2).length, reward: { gem: 20 } },
   { id: 'quest1', tier: 'seed', ic: '✏', name: '출제자', cond: '출제 공방에서 문제 1개 내기(출제됨)', need: 1, got: (c) => keysLike(c, 'quest_').length, reward: { gem: 20 } },
   { id: 'sym10', tier: 'seed', ic: '💬', name: '기호 톡톡', cond: '기호 톡 10번', need: 10, got: symN, reward: { gem: 10 } },
-  { id: 'note1', tier: 'seed', ic: '📕', name: '오답 사냥', cond: '틀리거나 안 푼 문제를 배움터 복습에서 1개 해결', need: 1, got: (c) => dummyRooms(c).filter((m) => m.fixAt).length, reward: { gem: 10 } },
+  { id: 'note1', tier: 'seed', ic: '📕', name: '오답 사냥', cond: '틀리거나 안 푼 문제를 허수아비 복습에서 1개 해결', need: 1, got: (c) => dummyRooms(c).filter((m) => m.fixAt).length, reward: { gem: 10 } },
   { id: 'chest1', tier: 'seed', ic: '🔑', name: '열쇠 줍기', cond: '입장 열쇠 보물상자 1개', need: 1, got: chests, reward: { gem: 10 } },
   // ⚔ 도전
   { id: 'floor1', tier: 'adv', ic: '👑', name: '1층의 왕', cond: '성채 1층 👑 보스 방 처치', need: 1, got: (c) => (clear(c, 'eval-1', ['q12', 'eb']) ? 1 : 0), reward: { scroll: 1 } },
   { id: 'floor2', tier: 'adv', ic: '🕵', name: '2층의 탐정', cond: '성채 2층 👑 보스 방 처치', need: 1, got: (c) => (clear(c, 'eval-2', ['q11']) ? 1 : 0), reward: { scroll: 1 } },
   { id: 'photo1', tier: 'adv', ic: '🧑‍🎓', name: '수식 책사', cond: '성채 ✍ 서술형 사진 첫 통과', need: 1, got: (c) => (keysLike(c, 's_ph_').length ? 1 : 0), reward: { unlock: '🧑‍🎓 수식 책사 남 · 여 용사' }, auto: true },
-  { id: 'review30', tier: 'adv', ic: '🎯', name: '꾸준한 복습', cond: '배움터 복습 30판', need: 30, got: reviewPlays, reward: { gem: 50 } },
-  { id: 'prep3', tier: 'adv', ic: '🔥', name: '예습왕', cond: '배움터 예습 3개 차시 (차시마다 몬스터 2개 이상 처치)', need: 3, got: (c) => veteranN(isObj(bon(c).review) ? (bon(c).review as Obj) : {}), reward: { title: 'explorer' } },
+  { id: 'review30', tier: 'adv', ic: '🎯', name: '꾸준한 복습', cond: '허수아비 복습 30판', need: 30, got: reviewPlays, reward: { gem: 50 } },
+  { id: 'prep3', tier: 'adv', ic: '🔥', name: '예습왕', cond: '예습(던전 문 탐사) 3개 차시 (차시마다 몬스터 2개 이상 처치)', need: 3, got: (c) => veteranN(isObj(bon(c).review) ? (bon(c).review as Obj) : {}), reward: { title: 'explorer' } },
   { id: 'rewrite3', tier: 'adv', ic: '✍', name: '진짜 실력', cond: '✍ 실력 쓰기(숫자 바꾼 판) 통과 3번', need: 3, got: rewriteN, reward: { title: 'realskill' } },
   { id: 'streak10', tier: 'adv', ic: '🔁', name: '개근', cond: '10차시 연속 참여', need: 1, got: (c) => (keysLike(c, 'streak10_').length ? 1 : 0), reward: { gem: 30 } },
   { id: 'card10', tier: 'adv', ic: '🃏', name: '카드 수집가', cond: '모루 카드 10장', need: 10, got: cardsN, reward: { gem: 30 } },
@@ -62,7 +62,7 @@ export const CHALS: Chal[] = [
   { id: 'castleall', tier: 'leg', ic: '🏯', name: '성채의 군주', cond: '성채 1~3층 모든 방 처치', need: 1, got: (c) => { const n = floorRooms(c).length; return n && floorClears(c) >= n ? 1 : 0; }, reward: { scroll: 3, title: 'castlelord' }, hide: (c) => !floorRooms(c).length },
   { id: 'seal3', tier: 'leg', ic: '⚔', name: '만 번째 베기', cond: '🏆 업적(인장) 3개', need: 3, got: (c) => seals(c.d.bonus).length, reward: { title: 'slash10k' } },
   { id: 'scroll20', tier: 'leg', ic: '📜', name: '서술의 달인', cond: '받은 📜 서술 조각 모두 20개', need: 20, got: (c) => cumOf(c.d.gem as never, c.gifts as never, ph2N(c)).scroll, reward: { title: 'scrollmaster' } },
-  { id: 'review100', tier: 'leg', ic: '🪆', name: '허수아비의 친구', cond: '배움터 복습 100판', need: 100, got: reviewPlays, reward: { title: 'dummyfriend' } },
+  { id: 'review100', tier: 'leg', ic: '🪆', name: '허수아비의 친구', cond: '허수아비 복습 100판', need: 100, got: reviewPlays, reward: { title: 'dummyfriend' } },
   // 25 비밀 탐험가 = 비밀 도감(이스터에그)이 생기기 전까지 숨김 · 4 첫 손글씨 = 13 수식 책사와 합침
 ];
 /** 진행 (n · m · 끝남 · 받음) */

@@ -15,21 +15,20 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   const fh = await s.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await s.waitForTimeout(1200); }
   // 수업 전 = 예습 없음
   await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 });
-  ok('캠프 이름표 = 「배움터 · 예습 · 복습」', /배움터 · 예습 · 복습/.test(await s.textContent('[data-prop="scare"]')));
-  ok('수업 전 = 「새 차시 열림」 없음', !(await s.$('[data-k="prep-new"]')));
+  ok('캠프 이름표 = 「허수아비 · 복습」 (#71 배움터 없앰)', /허수아비 · 복습/.test(await s.textContent('[data-prop="scare"]')));
+  await s.$eval('[data-zone="gate"]', (e) => e.click()); await s.waitForTimeout(1200);
+  ok('수업 전 = 던전 문 창에 예습 줄 없음', !(await s.$('[data-k="gate-prep"]')));
+  await s.keyboard.press('Escape'); await s.reload(); await s.waitForTimeout(3000);
   // 9차시 수업 기록 → 10차시 열림
   await rest('records/1-6/1/set-09', 'PUT', { at: 1, no: 9, mons: { m1: 'o' }, conc: { c1: [1, 1] } });
   await rest('school/last/1-6', 'PUT', { lesson: 'set-09', no: 9, at: 1, done: true, code: '111111' });
   await s.reload(); await s.waitForTimeout(4000); await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 });
-  const nw = ((await s.textContent('[data-k="prep-new"]').catch(() => '')) || '').trim(), bub = ((await s.textContent('[data-k="bub-scare"]').catch(() => '')) || '').trim();
-  ok('9차시 수업 뒤 = 「📖 10차시 열림」 작은 표시 (복습 금빛이 있으면 금빛이 먼저)', /10차시 열림/.test(nw) || /복습/.test(bub), nw || `금빛 「${bub}」`);
   await s.screenshot({ path: `${SHOTS}/prep66-camp.png` });
   const gem0 = await rest('gem/1-6/1'), xp0 = Number(await rest('xp/1-6/1/total')) || 0, rec0 = JSON.stringify(await rest('records/1-6/1'));
-  await s.$eval('[data-prop="scare"]', (e) => e.click()); await s.waitForSelector('[data-k="study"]', { timeout: 15000 }); await s.waitForTimeout(500);
-  ok('배움터 창 = 큰 단추 둘(📖 예습하기 · 🎯 복습하기)', !!(await s.$('[data-k="study-prep"]')) && !!(await s.$('[data-k="study-review"]')));
-  ok('창 안 예습 단추 = 「📖 10차시 열림」', /10차시 열림/.test((await s.textContent('[data-k="study-prep"]')) || ''));
+  await s.$eval('[data-zone="gate"]', (e) => e.click()); await s.waitForSelector('[data-k="gate-prep"]', { timeout: 15000 }); await s.waitForTimeout(500);
+  ok('던전 문 창 = 「🔥 10차시 탐사(예습)」 한 줄 (#71 임시 입구)', /10차시 탐사\(예습\)/.test((await s.textContent('[data-k="gate-prep"]')) || ''));
   await s.screenshot({ path: `${SHOTS}/prep66-study.png` });
-  await s.click('[data-k="study-prep"]'); await s.waitForSelector('[data-k="prep-list"]', { timeout: 15000 }); await s.waitForTimeout(500);
+  await s.click('[data-k="gate-prep"]'); await s.waitForSelector('[data-k="prep-list"]', { timeout: 15000 }); await s.waitForTimeout(500);
   const lids = await s.$$eval('[data-k="prep-card"]', (xs) => xs.map((x) => x.dataset.lid));
   ok('예습 목록 = 10차시 하나', JSON.stringify(lids) === '["set-10"]', JSON.stringify(lids));
   ok('「연습용 · 보상 없어요」', /연습용 · 보상 없어요/.test(await s.textContent('[data-k="prep-list"]')));

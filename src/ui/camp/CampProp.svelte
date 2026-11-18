@@ -3,14 +3,23 @@
   // 🏕 캠프 물건 그림 한 개 (학생 캠프 · TV 교사 캠프 같은 부품 · 자리는 바깥 칸이 CAMP_PROPS 로 잡음)
   //   📋 게시판(k = 'dummy') = ① 평소 / ② 모집 중(종이 금빛) 칸 + 오른쪽 옆 파란 포털(바깥 칸 밖 · 게시판 폭 기준으로 놓음)
   //   포털 기믹 = 평소 작은 불씨(0.15 · 흐림) · 모집 중 방 = 불씨에서 열림 크기로 커지며(📜 2026-11-15 캠프 A) 소용돌이 회전 · 파란 빛 맥박 · 반짝 입자 · 바닥 고리 퍼짐 · 출발 = 1.0 확 열림(0.4초 · 바닥 빛 고리) · 동작 줄이기 = 크기 · 빛만
-  const { p, phase = 'idle', hit = false }: { p: CampProp; phase?: 'idle' | 'recruit' | 'open'; /** 🏕 B 만지면 반응 = 맞은 그림 칸(허수아비 · 우편함) */ hit?: boolean } = $props();
-  const col = $derived((p.k === 'dummy' && phase !== 'idle') || (hit && (p.k === 'scare' || p.k === 'mail') && p.cols > 1) ? 1 : 0);
+  const { p, phase = 'idle', hit = false, on = false }: { p: CampProp; phase?: 'idle' | 'recruit' | 'open'; /** 🏕 누름 = 반응 그림 4칸(0.11초씩) */ hit?: boolean; /** 상태 칸(② · 우편함 새 소식 · 책상 새 소식) */ on?: boolean } = $props();
+  // 📜 2026-11-18 새 캠프: ① 평소 · ② 상태(게시판 모집 중 · 우편함 새 소식 · 허수아비 맞음 · 책상 새 소식) · 누르면 ③~⑥ 반응 4칸 → 허수아비는 끝에 ② 맞음 한 번
+  const RM = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let rf = $state<number | null>(null);
+  $effect(() => {
+    if (!hit || !p.react?.length) return;
+    const seq = [...(RM ? [p.react[1]!] : p.react), ...(p.k === 'scare' && p.state != null ? [p.state, p.state] : [])]; let i = 0; rf = seq[0]!;
+    const t = setInterval(() => { i += 1; if (i >= seq.length) { clearInterval(t); rf = null; return; } rf = seq[i]!; }, 110);
+    return () => { clearInterval(t); rf = null; };
+  });
+  const stateOn = $derived(p.state != null && ((p.k === 'dummy' && phase !== 'idle') || on));
+  const col = $derived(rf ?? (stateOn ? p.state! : 0));
   // 포털 = 게시판 칸(폭 p.width%) 기준 상대 자리 → 캠프 그림 %(CAMP_PORTAL) 와 같아지게
   const pl = $derived(((CAMP_PORTAL.left - p.left) / p.width) * 100), pw = $derived((CAMP_PORTAL.width / p.width) * 100);
 </script>
 
-<i class="img" class:bounce={hit && p.k === 'scare'} style="{cellBg(p.src, p.cols, col)};aspect-ratio:{p.aspect}"></i>
-{#if p.k === 'scare'}<span class="book" class:pop={hit} aria-hidden="true">📖</span>{/if}<!-- 📖 #66 배움터 = 허수아비 옆 책(그림 obj-study 전 · 아이콘) · 누르면 책 펄럭 튀어 오름 → 반 박자 뒤 허수아비 통통 -->
+<i class="img" data-col={col} style="{cellBg(p.src, p.cols, col)};aspect-ratio:{p.aspect}"></i>
 {#if p.k === 'dummy'}
   <span class="portal {phase}" style="left:{pl}%;width:{pw}%" style:--s={CAMP_PORTAL.scale[phase]} aria-hidden="true" data-phase={phase}>
     {#if phase === 'open'}<i class="ring"></i>{/if}
@@ -21,12 +30,6 @@
 {/if}
 
 <style>
-  .book { position: absolute; right: -46%; bottom: 2%; font-size: clamp(12px, 3.4cqw, 22px); line-height: 1; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.6)); transform-origin: 50% 100%; pointer-events: none; }
-  .book.pop { animation: bookPop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
-  @keyframes bookPop { 0% { transform: translateY(0) scale(1) rotateY(0deg); } 30% { transform: translateY(-70%) scale(1.35) rotateY(180deg); } 60% { transform: translateY(-40%) scale(1.25) rotateY(360deg); } 100% { transform: translateY(0) scale(1); } }
-  .img.bounce { animation: dumBounce 0.5s 0.15s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
-  @keyframes dumBounce { 0% { transform: translateY(0) scaleY(1); } 25% { transform: translateY(0) scale(1.08, 0.88); } 55% { transform: translateY(-22%) scale(0.94, 1.08); } 100% { transform: translateY(0) scale(1); } }
-  @media (prefers-reduced-motion: reduce) { .book.pop, .img.bounce { animation: none; } }
   .img { display: block; width: 100%; background-repeat: no-repeat; image-rendering: pixelated; transition: transform 0.12s ease-out; transform-origin: 50% 100%; }
   .portal { position: absolute; bottom: 0; display: block; pointer-events: none; transform-origin: 50% 100%; }
   .pimg { display: block; width: 100%; background-size: 100% 100%; transform: scale(var(--s)); transform-origin: 50% 92%; transition: transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.4s; filter: drop-shadow(0 0 6px rgba(90, 170, 255, 0.7)); }
