@@ -10,6 +10,7 @@ import { MIS, seteukDraft, type SeteukIn } from './seteuk';
 import { noteOf, type Bon, type Rec } from './dummy';
 import { addDays, day as usageDay, loadUsage } from './usage';
 import { seals as sealsOf } from '../model/titles';
+import { cumOf, type GemRowC } from './cum';
 
 // 📊 학생 기록 계산 (#124 학생 한 명 시트 · #125 대시보드) — 정식 js/raid/dash.js build() 를 같은 계산으로 옮김
 //   records[번호][차시] = { conc: { 개념: [첫 시도 맞힘, 문항] }, names, boss(형성평가 첫 시도 맞힘), bossN, mis: { 오개념 코드: [틀림, 고침] } }
@@ -23,7 +24,7 @@ export interface Stud {
   xp: number; lv: number; left: number; tries: number; x: boolean;
   /** 시트 · 대시보드 덧붙임 (테스트 판 가짜) */ extra: Extra;
 }
-export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; /** ✍ 연습 통과 = 학습지 숫자 서술형 통과한 문항 수 (옛 기록 = 모두 연습) */ photoOk: number; /** ✍ 실력 통과 = 숫자 바꾼 판 통과 (📜 #57 · 차시 = 📜 칸 ult_…_v · 성채 = ph2) */ photoV: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
+export interface Extra { days: number[]; solves: number; fixes: number; gem: number; gemWeek: number; scroll: number; /** 💰 #65 누적 받은 💎 · 📜 (cum.ts) */ gemCum?: number; scrollCum?: number; /** ✍ 연습 통과 = 학습지 숫자 서술형 통과한 문항 수 (옛 기록 = 모두 연습) */ photoOk: number; /** ✍ 실력 통과 = 숫자 바꾼 판 통과 (📜 #57 · 차시 = 📜 칸 ult_…_v · 성채 = ph2) */ photoV: number; photoRe: number; submit: number; stuck: number; sym: number; weekly: number[];
   /** 세특 기록 (정식 build 칸) */ hg: number; hints: number; tryEval: number; trySet: number; noteDone: number; cards: number; surveyed: boolean; /** 📊 한눈에 표 (정식 dash.js COLS · 서버) ⭕ OX [맞힘, 문항] · 💡 그림 힌트 펼친 수 · 💡 힌트 준 수 · 🪜 사다리(몬스터 → 1 대장 · 2 근거 줄 · 4 서술형) · 🧩 근거 줄 n/m · 🟪 업적 · 🃏 카드 */ ox?: [number, number]; hintN?: number; /** 🔁 화폐 전환 기록 (정식 gem/{반}/{번호}/conv · 2026-11-07) */ conv?: { at?: number; seals?: number; feather?: number; featherGem?: number; cardsUnpaid?: number; cardGem?: number; gemBefore?: number; gemAfter?: number } | null; lad?: Record<string, number>; ladW?: Record<string, string>; /** 🔑 #59 입장 열쇠: 얻음 / 열쇠 수 · 🔑 걸린 칸 수 · 그 칸 첫 시도 맞힘 · 🎁 상자 */ key?: { got: number; n: number; cells: number; ok: number; chest: number; prac: number }; seals?: number; cardN?: number;
   /** 📖 기호 톡 누른 횟수 (정식 xp/{반}/{번호}/st/{차시}/{기호}) */ symt?: Record<string, Record<string, number>>; /** 🎯 허수아비로 한 차시 · 칸 (반 통계엔 안 들어감 · 학생 시트 표시) */ dummy?: { lid: string; no: number; cells: string[] }[] }
 export const pct = (a: number, b: number) => (b ? Math.round((100 * a) / b) : null);
@@ -82,7 +83,7 @@ export function fakeClass(S: Store | null, cls: string) {
     });
     const days = Array.from({ length: 14 }, () => (r() < diligence * 0.75 ? 1 + Math.floor(r() * 4) : 0));
     extra[p.num] = {
-      days, solves: days.reduce((a, b) => a + b, 0) * 3, fixes: Math.floor(r() * 8 * diligence), gem: Math.round(40 + 260 * diligence), gemWeek: Math.round(60 * diligence), scroll: Math.floor(r() * 6),
+      days, solves: days.reduce((a, b) => a + b, 0) * 3, fixes: Math.floor(r() * 8 * diligence), gem: Math.round(40 + 260 * diligence), gemCum: Math.round(120 + 900 * diligence), scrollCum: Math.round(2 + 14 * diligence), gemWeek: Math.round(60 * diligence), scroll: Math.floor(r() * 6),
       photoOk: Math.floor(r() * 3), photoV: Math.floor(r() * 2), photoRe: Math.floor(r() * 2), submit: Math.round(70 + 30 * diligence), stuck: Math.floor((1 - skill) * 6 * r()), sym: Math.floor(r() * 30 * diligence),
       weekly: Array.from({ length: 6 }, (_, w) => Math.round((10 + 40 * diligence) * (0.6 + 0.1 * w) * (0.8 + 0.4 * r()))),
       hg: r() < 0.4 ? 1 + Math.floor(r() * 3) : 0, hints: Math.floor(r() * 4 * (1 - skill)), tryEval: r() < diligence ? Math.floor(r() * 12) : 0, trySet: Math.floor(r() * 6 * diligence), noteDone: Math.floor(r() * 4 * diligence), cards: Math.floor(r() * 10 * diligence), surveyed: r() < 0.8,
@@ -132,7 +133,7 @@ export function realClass(S: Store, cls: string) {
     const photoOk = Object.values(ph).filter((byId) => Object.values(byId || {}).some((x) => x?.status === 'pass' || x?.ok === true)).length, photoRe = Object.values(ph).reduce((a, byId) => a + Object.values(byId || {}).filter((x) => x?.status === 'retry').length, 0);
     const gv = S.get<Record<string, unknown>>(`gifts/${p.uid}`) || {}, photoV = Object.keys(gv).filter((k) => /^ult_.+_v$/.test(k)).length + rows.filter((x) => /^eval-/.test(x.lid) && !!(x.m as { ph2?: string }).ph2).length; // ✍ 실력 통과 (📜 #57 덧)
     const triesOf = (re: RegExp) => rows.filter((x) => re.test(x.lid)).reduce((a, x) => a + (Number(x.m.tries) || 0), 0);
-    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoV, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: S.get(`surveyDone/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`) === true, dummy };
+    extra[p.num] = { days: Array.from({ length: 14 }, () => 0), solves: triesOf(/./), fixes: Object.values(recAll[p.num] || {}).reduce((a, r) => a + (isObj(r) ? Number(r.fixed) || 0 : 0), 0), gem: Number(g.total) || 0, ...((c) => ({ gemCum: c.gem, scrollCum: c.scroll }))(cumOf(g as GemRowC, gv as never, rows.filter((x) => /^eval-/.test(x.lid) && !!(x.m as { ph2?: string }).ph2).length)), gemWeek: Object.entries(day).filter(([d]) => week.has(d)).reduce((a, [, v]) => a + (Number(v) || 0), 0), scroll: Number(g.scroll) || 0, photoOk, photoV, photoRe, submit: 0, stuck: 0, sym: Object.values(isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}).reduce((t, by) => t + Object.values(by || {}).reduce((u, v) => u + (Number(v) || 0), 0), 0), symt: isObj(xpAll[p.num]?.st) ? xpAll[p.num]!.st! : {}, weekly: Array.from({ length: 6 }, () => 0), hg: 0, hints: 0, tryEval: triesOf(/^eval-/), trySet: triesOf(/^set-/), noteDone: 0, cards: Object.keys(cardAll[p.num] || {}).length, surveyed: S.get(`surveyDone/${cls.replace(/[.#$/[\]]/g, '_')}/${p.num}`) === true, dummy };
   }
   // 📈 최근 14일 수업 밖 활동(풀이 수 · 앞 7 = 그 전 7일 · 뒤 7 = 최근 7일) = 활용 추이 기록(act · 기록 전 ≈ 추정) · 반 비교 「수업 밖 7일 활동」 · 학생 시트
   const U = loadUsage(S, cls).days, today = usageDay(now);

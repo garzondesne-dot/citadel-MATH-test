@@ -13,6 +13,7 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import { heroOf } from '../../model/hero';
   import { ECON_VER } from '../../model/wallet';
+  import { meBound } from '../../store/meSync';
 
   // ⚒ 모루 (#148 · 정식 js/raid/forge.js 「C안」 + 시안 44dEkAKGELJTBPUs2gkwnD ①~④) — 정식 그림 · 틀 그대로(forgec 바탕 · 모루 · 재료 흰 틀 · 연산 검은 틀 · 고른 칸 푸른 빛 · 망치)
   //   엄격 연성 · 모두 열림(진도 상관없음) · 처음 만든 카드 = 마력 예제를 맞혀야 완성 · 실패 = 💡 힌트 조각 +1(최대 9 · 처음 2) · 첫 카드 💎 +3(하루 한도 밖) · 카드는 공격에 안 씀
@@ -101,7 +102,7 @@
   }
   function keep() {
     if (!reveal) return;
-    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; me.wallet.gem += 3; save(); perkCheck(reveal.c.id); } // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
+    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; me.wallet.gem += 3; { const b = meBound(); if (b) b.S.set(`gem/${b.cls}/${b.num}/log/card_${reveal.c.id.replace(/[.#$/[\]]/g, '_')}`, { g: 3, at: Date.now(), why: '첫 카드' }); } save(); perkCheck(reveal.c.id); } // 💰 #65 log card_ (정식 키 그대로) // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
     reveal = null; slots = { l: null, op: null, r: null }; pickK = 'l'; msg = '연산을 고르고 재료 · 연산 · 재료를 올려 두드려요';
   }
   // ── ③ 💡 목록 · ④ 도감 ──
