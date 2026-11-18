@@ -9,7 +9,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
     const watch = (p) => { p.on('pageerror', (e) => errs.push(`${bundle} ${e}`)); p.on('console', (m) => { if (m.type() === 'error' && !/favicon|play\(\)|NotAllowed|Failed to load resource/.test(m.text())) errs.push(`${bundle} ${m.text().slice(0, 140)}`); }); return p; };
     const c = watch(await ctx.newPage()); await c.goto(B + `?role=camp&room=F${bundle}`); await c.waitForSelector('.stage');
     await c.evaluate((bd) => window.__featSet({ bundle: bd }), bundle); await c.waitForTimeout(500);
-    const camp = await c.evaluate(() => ({ anvil: !!document.querySelector('.prop[aria-label="모루"]'), castle: !!document.querySelector('.zone[aria-label="성채"]'), hero: !!document.querySelector('.hero-card'), board: !!document.querySelector('.prop[aria-label="📋 게시판"]') }));
+    const camp = await c.evaluate(() => ({ anvil: !!document.querySelector('.prop[aria-label="모루"]'), castle: !!document.querySelector('.zone[aria-label="성채"]'), hero: !!document.querySelector('.hero-card'), board: !!document.querySelector('.prop[aria-label="게시판"]') }));
     await c.screenshot({ path: `${SHOTS}/feat-${bundle}-camp.png` });
     const want = { basic: [false, false, false], standard: [false, false, true], full: [true, true, true] }[bundle];
     if (camp.anvil !== want[0] || camp.castle !== want[1] || camp.hero !== want[2] || !camp.board) errs.push(`${bundle} 캠프 ${JSON.stringify(camp)}`);

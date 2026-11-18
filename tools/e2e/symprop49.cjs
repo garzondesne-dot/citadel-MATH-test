@@ -6,7 +6,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B + '?role=camp&room=SY49'); await p.waitForSelector('.stage');
-  const open = async (lid, mid) => { await p.click('.prop[aria-label="🎯 허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300); await p.$eval(`[data-lesson="${lid}"] li[data-mid="${mid}"] .go`, (e) => e.click()); await p.waitForSelector('.drun', { timeout: 15000 }); await p.waitForTimeout(2500); };
+  const open = async (lid, mid) => { await p.click('.prop[aria-label^="허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300); await p.$eval(`[data-lesson="${lid}"] li[data-mid="${mid}"] .go`, (e) => e.click()); await p.waitForSelector('.drun', { timeout: 15000 }); await p.waitForTimeout(2500); };
   await open('set-09', 'boss');
   const words = [];
   for (let k = 1; k <= 4; k++) { await p.click(`.row .cell:nth-child(${k})`).catch(() => {}); await p.waitForTimeout(400); words.push(...(await p.$$eval('.sy', (es) => es.map((e) => e.textContent.trim())))); }

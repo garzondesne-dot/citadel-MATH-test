@@ -11,7 +11,7 @@ const log = (...a) => console.log(...a);
     const ctx = await b.newContext({ viewport: { width: W, height: 780 } }), p = await ctx.newPage();
     p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(B + `?role=camp&room=SR${W}`); await p.waitForSelector('.stage');
-    await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd');
+    await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');
     await p.click('.bd .chips button:has-text("7")'); await p.click('.bd .pmain'); await p.waitForSelector('.lgrid');
     await p.click('.lg:has-text("7")'); await p.click('.sheet .pmain'); await p.waitForSelector('.minions', { timeout: 15000 }); await p.waitForTimeout(500);
     const m = await p.evaluate(() => {

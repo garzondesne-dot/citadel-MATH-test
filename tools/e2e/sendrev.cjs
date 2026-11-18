@@ -50,7 +50,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   // 학생 캠프 → 허수아비
   const c2 = await ctx.newPage(); c2.on('pageerror', (e) => errs.push('캠프 ' + e));
   await c2.goto(B); await c2.evaluate(() => localStorage.setItem('citadel-v1-login', JSON.stringify({ cls: '1-3', num: 2 }))); await c2.goto(B); await c2.waitForSelector('.stage'); await c2.waitForTimeout(800);
-  await c2.click('.prop[aria-label="🎯 허수아비"]'); await c2.waitForSelector('[data-k="dummy-list"]'); await c2.waitForTimeout(500);
+  await c2.click('.prop[aria-label^="허수아비"]'); await c2.waitForSelector('[data-k="dummy-list"]'); await c2.waitForTimeout(500);
   log('  카드', (await c2.$$eval('[data-k="dummy-list"] .card .h b', (x) => x.map((e) => e.textContent.trim()))).join(' | '), await c2.evaluate(() => JSON.stringify(window.__dbGet('records/1-3/2'))));
   const tags = await c2.$$eval('[data-k="sent-tag"]', (x) => x.length);
   const first = await c2.locator('[data-k="dummy-list"] .card', { hasText: '6차시' }).first().locator('li').first().evaluate( (e) => e.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');

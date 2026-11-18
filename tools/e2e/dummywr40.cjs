@@ -7,7 +7,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B + '?role=camp&room=DW1'); await p.waitForSelector('.stage');
   const open = async () => {
-    await p.click('.prop[aria-label="🎯 허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
+    await p.click('.prop[aria-label^="허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
     await p.$eval('[data-lesson="set-09"] li[data-mid="m5"] .go', (e) => e.click()); await p.waitForSelector('.drun', { timeout: 15000 }); await p.waitForTimeout(2000);
   };
   await open();

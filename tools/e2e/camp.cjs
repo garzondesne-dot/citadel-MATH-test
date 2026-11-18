@@ -9,7 +9,7 @@ const base = 'http://localhost:4173/';
   const errs = [];
   const open = async (u) => { const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); await p.goto(base + u); return p; };
   const over = async (p, w) => { const o = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); if (o > 0) errs.push(`가로 넘침 ${o}px · ${w}`); };
-  const labels = (p) => p.$$eval('.label', (ls) => ls.map((l) => `${l.textContent.trim()}[${[...l.classList].filter((c) => !/svelte|label/.test(c)).join('')}]`).join(' · '));
+  const labels = (p) => p.$$eval('.tag', (ls) => ls.map((l) => `${l.textContent.trim()}[${[...l.classList].filter((c) => !/svelte|tag/.test(c)).join('')}]`).join(' · '));
   // 닫힌 캠프 (종합실 없음)
   const c0 = await open('?role=camp&room=CP'); await c0.waitForSelector('.stage'); await c0.waitForTimeout(400);
   log('닫힘:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim(), '|', (await c0.textContent('.act .why')).trim());

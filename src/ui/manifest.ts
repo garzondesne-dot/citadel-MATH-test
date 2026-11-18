@@ -182,7 +182,7 @@ export const CAMP = {
   fireBase: { src: A('camp2-fire-base-v1.webp'), ...at(360, 771, 470, 184) },
   fire: { src: A('campfire-v2.webp'), cols: 4, rows: 2, frames: 8, ms: 120, aspect: 240 / 230, left: 45.2, bottom: 32.4, width: 10.6 },
   // ⚠ 물건 자리는 아래 CAMP_PROPS 한 곳 (학생 캠프 · 교사 「나」 내 캠프 · 테스트 모드 · 체험판이 모두 이 표를 읽음)
-  hero: { left: 44, bottom: 22 },
+  hero: { left: 34, bottom: 22 },
 };
 
 // 🏕 캠프 물건 자리표 = 한 곳 (🔨 2026-11-13 밤 「캠프라는 캠프는 모두 지침대로」 · 📜 2026-11-18 새 캠프 자리)
@@ -200,7 +200,7 @@ export const CAMP_PROPS: CampProp[] = [
 ];
 /** 🌀 파란 포털 (정식 dportal-bonus · 게시판 오른쪽 아래 바닥) · 크기 = 평소 0.15(불씨) · 모집 0.85 · 출발 1.0 */
 /** 📋 게시판 옆 「같이 하자」 용사 자리 (캠프 그림 % · 11/17 #9 · 게시판 아래 · 우편함 오른쪽) */
-export const CAMP_BUDDY = { left: 58, bottom: 11 };
+export const CAMP_BUDDY = { left: 54, bottom: 1 };
 export const CAMP_PORTAL = { src: A('obj-portal-v1.webp'), left: 33, bottom: 34.5, width: 7, aspect: '200 / 300', scale: { idle: 0.15, recruit: 0.85, open: 1 } }; // 📜 2026-11-15 캠프 A: 모집 중 = 0.85
 export const campProp = (k: CampPropKey) => CAMP_PROPS.find((p) => p.k === k)!;
 export const propPos = (p: { left: number; bottom: number; width: number }) => `left:${p.left}%;bottom:${p.bottom}%;width:${p.width}%`;

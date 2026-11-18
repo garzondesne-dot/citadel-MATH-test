@@ -15,7 +15,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   const fh = await s.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await s.waitForTimeout(1200); }
   // 수업 전 = 예습 없음
   await s.waitForSelector('[data-prop="scare"]', { timeout: 15000 });
-  ok('캠프 이름표 = 「허수아비 · 복습」 (#71 배움터 없앰)', /허수아비 · 복습/.test(await s.textContent('[data-prop="scare"]')));
+  ok('캠프 이름 = 「허수아비」 (#71 배움터 없앰 · #72 부제 없앰)', /허수아비/.test(await s.textContent('[data-prop="scare"]')));
   await s.$eval('[data-zone="gate"]', (e) => e.click()); await s.waitForTimeout(1200);
   ok('수업 전 = 던전 문 창에 예습 줄 없음', !(await s.$('[data-k="gate-prep"]')));
   await s.keyboard.press('Escape'); await s.reload(); await s.waitForTimeout(3000);

@@ -27,7 +27,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const Bp = await open(`?${E}`); await signup(Bp, '1-3', 2);
   const C = await open(`?${E}`); await signup(C, '1-5', 1);
   await A.reload(); await A.waitForTimeout(2500);
-  const board = async (p) => { await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
+  const board = async (p) => { await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   // A ＋ 모집 글
   await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await A.waitForTimeout(1500);
@@ -54,7 +54,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // C 30초 뒤 다시 열기
   await wait(31000);
   const C2 = await open(`?${E}`); await C2.waitForTimeout(3000);
-  await C2.click('button[aria-label="📋 게시판"]').catch(() => {}); await C2.waitForTimeout(4000);
+  await C2.click('button[aria-label="게시판"]').catch(() => {}); await C2.waitForTimeout(4000);
   const inRun = !!(await C2.$('.run')), msg = await C2.$eval('.bd .toast, .bd [role="status"]', (x) => x.textContent).catch(() => ''), gemC1 = (await rest('gem/1-5/1'))?.total ?? 0;
   log('⏱ C 30초 뒤 다시 열기: 판 화면', inRun, '| 안내', msg.trim().slice(0, 60), '| 💎', gemC0, '→', gemC1);
   if (inRun || gemC1 > gemC0) errs.push('30초 뒤 못 들어감 · 💎 없음');

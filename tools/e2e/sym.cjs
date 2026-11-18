@@ -21,7 +21,7 @@ const B = 'http://localhost:4173/';
   await st.waitForTimeout(1600); log('1.5초 뒤 알림:', (await st.$('.toast')) ? '남음' : '사라짐');
   const cp = watch(await ctx.newPage()); await cp.goto(B + '?role=camp&room=SY'); await cp.waitForSelector('.stage');
   await cp.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me')); m.seen = { castle: true, tent: true, anvil: true, dummy: true, mail: true, gate: true, hero: true }; localStorage.setItem('citadel-v1-me', JSON.stringify(m)); }); await cp.reload(); await cp.waitForSelector('.stage');
-  const lab = await cp.$eval('button.prop[aria-label="모루"] .label', (e) => `${e.className.replace(/svelte-\S+/g, '').trim()}:${e.textContent.trim()}`);
+  const lab = await cp.$eval('button.prop[aria-label="모루"] .tag', (e) => `${e.className.replace(/svelte-\S+/g, '').trim()}:${e.textContent.trim()}`);
   log('② 캠프 모루(익숙한 학생):', lab); if (!/star:모루★1/.test(lab)) errs.push(`모루 이름표 ${lab}`);
   // ⑥ 만든 카드 = ✅ 내 카드
   const card = await st.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me')); const sym = Object.keys(m.wishes)[0]; return sym; });
@@ -29,7 +29,7 @@ const B = 'http://localhost:4173/';
   await st.reload(); await st.waitForSelector('.sy'); await st.click('.sy'); await st.waitForSelector('.sheet');
   log('⑥ 만든 카드:', (await st.$('.mine')) ? (await st.textContent('.mine')).replace(/\s+/g, ' ').trim() : '없음', '| 찜 단추', (await st.$('.wish')) ? '있음' : '없음', '| 찜 기호', card);
   await st.screenshot({ path: `${SHOTS}/b12-sym-mine-360.png` });
-  await cp.reload(); await cp.waitForSelector('.stage'); log('만든 뒤 캠프 모루:', await cp.$eval('button.prop[aria-label="모루"] .label', (e) => `${e.className.replace(/svelte-\S+/g, '').trim()}:${e.textContent.trim()}`));
+  await cp.reload(); await cp.waitForSelector('.stage'); log('만든 뒤 캠프 모루:', await cp.$eval('button.prop[aria-label="모루"] .tag', (e) => `${e.className.replace(/svelte-\S+/g, '').trim()}:${e.textContent.trim()}`));
   log('오류', errs);
   await b.close();
 })();

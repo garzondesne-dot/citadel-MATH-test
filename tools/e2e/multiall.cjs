@@ -8,7 +8,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   for (const W of [390, 360]) {
     const p = await (await b.newContext({ viewport: { width: W, height: 800 }, deviceScaleFactor: 2 })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(`${B}?role=camp&mode=test&room=MA${W}`); await p.waitForSelector('.stage', { timeout: 20000 });
-    await p.click('.prop[aria-label="🎯 허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
+    await p.click('.prop[aria-label^="허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
     const card = p.locator('[data-k="dummy-list"] section.card[data-lesson="set-10"]');
     ok(`${W} 10차시 카드`, (await card.count()) > 0); if (!(await card.count())) continue;
     const li = card.locator('li').filter({ hasText: '세 조건' }).first();

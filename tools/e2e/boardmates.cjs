@@ -16,7 +16,7 @@ const BOTS = [['b1', 3, 5, 6, 'frost'], ['b2', 4, 9, 10, 'flame']]; // uid · �
     p.on('pageerror', (e) => errs.push(String(e.stack || e).split('\n').slice(0, 4).join(' ')));
     await p.goto(B + '?role=camp&room=BM1'); await p.waitForSelector('.stage'); await p.waitForTimeout(300);
     const tip0 = await p.$('[data-k="wake-tip"] button'); if (tip0) await tip0.click(); // 📱 화면 꺼짐 안내 띠 (지원 안 되는 브라우저) 닫기
-    await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(300);
+    await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(300);
     await p.click('.bd .chips button:has-text("6")');
     if (!team) { await p.click('.bd .act .btn'); await p.waitForSelector('.lgrid'); await p.click('.sheet .act .btn'); }
     else {

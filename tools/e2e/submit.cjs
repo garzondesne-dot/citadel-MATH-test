@@ -84,7 +84,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   // ③ 소레이드 = 게시판 던전 7차시 첫 단계(u4) · 게임 모드 캠프에서 들어가 위 막대 「제출」
   { const ctx3 = await b.newContext({ viewport: { width: 360, height: 760 }, deviceScaleFactor: 2 }), p = await ctx3.newPage(); p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(B + '?role=camp&room=SUBR'); await p.waitForSelector('.stage');
-    await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd');
+    await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');
     await p.click('.bd .chips button:has-text("7")'); await p.click('.bd .pmain'); await p.waitForSelector('.lgrid');
     await p.click('.lg:has-text("7")'); await p.click('.sheet .pmain'); await p.waitForSelector('.minions', { timeout: 15000 }); await p.waitForTimeout(500);
     await p.click('[data-k="themebtn"]').then(() => p.click('[data-k="theme-sheet"] [data-k="th-submit"]')).then(() => p.click('.sheet .x')); await p.waitForTimeout(500);
