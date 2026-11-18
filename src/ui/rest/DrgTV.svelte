@@ -2,6 +2,8 @@
   import type { Room } from '../../model/types';
   import { dragonAt, FIN, ranks, type Drg, type Prog } from '../../rest/dragon';
   import HeroSprite from '../camp/HeroSprite.svelte';
+  import { artUrl } from '../manifest';
+  import OBJ from '../fx/obj.json';
   // 🐉 용이 잠든 사이 · 종합실 (📜 2026-11-17 #25): 가로 길(왼쪽 출발 → 오른쪽 보물 상자) · 반 전체 용사 걷기 + 이름 · 상자 위 용 · 위 가운데 남은 초 · 들어온 순서
   //   용 그림 = 잠든 2칸 주문 전 → 🐉 + 💤 · 눈 뜸 = 빨간 빛 (그림이 오면 성채 드래곤 칸으로 바꿈)
   const { R, f, now, nameOf }: { R: Room; f: Drg; now: number; nameOf: (u: string) => string } = $props();
@@ -25,7 +27,7 @@
     {#if f.clean?.length}<p class="rule">🐉 한 번도 안 걸린 용사 · {f.clean.map(nameOf).join(' · ')}</p>{/if}
   {:else}
     <div class="road" style:--lanes={lanes}>
-      <div class="dragon {d.st}" aria-label="용 {d.st === 'eye' ? '눈 뜸' : d.st === 'warn' ? '깨려는 중' : '자는 중'}"><span>🐉</span>{#if d.st === 'sleep'}<i>💤</i>{:else if d.st === 'warn'}<i>…!</i>{:else}<i>👁</i>{/if}</div>
+      <div class="dragon {d.st}" aria-label="용 {d.st === 'eye' ? '눈 뜸' : d.st === 'warn' ? '깨려는 중' : '자는 중'}"><span class="dimg" style:background-image="url({artUrl(`art/${OBJ.dragon.src}`)})" style:background-position-x="{d.st === 'sleep' ? 0 : 100}%" style:aspect-ratio="{OBJ.dragon.w} / {OBJ.dragon.h}"></span>{#if d.st === 'sleep'}<i>💤</i>{:else if d.st === 'warn'}<i>…!</i>{/if}</div><!-- 🐉 #70 그림 2칸 = ① 잠듦 · ② 눈 뜨려 함 · 눈 뜸 = ② + 붉은 빛(지금 그대로) -->
       <span class="chest">🎁</span>
       {#each ids as u, i (u)}
         {@const p = Number(prog[u]?.p) || 0}{@const hit = !!prog[u]?.h && d.st === 'eye'}
@@ -49,6 +51,7 @@
   .runner em { font-style: normal; font: 700 1.8cqh var(--font); background: rgba(0, 0, 0, 0.55); border-radius: 0.6cqh; padding: 0 0.6cqw; white-space: nowrap; }
   .chest { position: absolute; right: 2cqw; bottom: 8%; font-size: 9cqh; }
   .dragon { position: absolute; right: 1cqw; top: 22%; font-size: 14cqh; line-height: 1; filter: drop-shadow(0 0 1cqh rgba(0, 0, 0, 0.6)); }
+  .dimg { display: block; height: 30cqh; background-size: 200% 100%; background-repeat: no-repeat; image-rendering: pixelated; } .dragon i { z-index: 1; }
   .dragon i { position: absolute; left: -2cqw; top: 0; font-style: normal; font-size: 5cqh; }
   .dragon.warn span { animation: shiver 0.15s linear infinite; } .dragon.eye span { filter: drop-shadow(0 0 3cqh #ff3b30); }
   @keyframes shiver { 50% { transform: translateX(0.4cqw); } }
