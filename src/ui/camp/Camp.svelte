@@ -189,7 +189,7 @@
     return t;
   });
   // 📖 #66 배움터 예습: 열린 차시 중 안 열어 본 것 = 「📖 새 차시 열림」 작은 표시(금빛 아님 · 복습 금빛이 먼저)
-  const prepAll = untrack(() => !!trial || !pupil || !!fromMe0); // 로그인한 학생(🧪 1-6 포함) = 실제 규칙 · 이 기기 · 체험 · 교사 「나」 캠프 = 모두
+  const prepAll = untrack(() => !!trial || !pupil || !!fromMe0); // 로그인한 학생(🧪 1-6 포함) = 실제 규칙 · 이 기기 · 교사 「나」 캠프 = 모두 · 체험판 = 📖 배움터 예습 모든 차시 열림 (원래 수업은 반이 수업한 다음 차시 하나 · 📜 #66 머리 「체험판 = 보여 주기용 · 진도 없음」)
   const prepNew = $derived.by(() => { void todoVer; void sheet; if (!feat('scarecrow')) return ''; const P = prepOpenList(S, pupil?.cls ?? '', untrack(() => (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}), prepAll).open.filter((L) => !me.seen[`prep-${L.id}`]); return P.length ? `📖 ${P.map((L) => L.no).join(' · ')}차시 열림` : ''; });
   function prepGo() { const P = prepOpenList(S, pupil?.cls ?? '', (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}, prepAll).open; let ch = false; for (const L of P) if (!me.seen[`prep-${L.id}`]) { me.seen[`prep-${L.id}`] = true; ch = true; } if (ch) M.save(); sheet = 'prep'; }
   const anyTodo = $derived(Object.keys(todo).length > 0);
