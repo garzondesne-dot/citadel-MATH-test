@@ -44,7 +44,7 @@ const htmlId = { name: 'html-id', transformIndexHtml(h: string) {
 type Bundle = Record<string, { fileName: string }>;
 const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bundle) {
   const out = o.dir ?? 'dist', has = (f: string) => existsSync(join(out, f));
-  const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav, BADGE, BADGE96, 'fonts/dungeon-icons-v2.woff'].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
+  const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav, BADGE, BADGE96, 'fonts/dungeon-icons-v3.woff'].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
     ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)].filter((u) => u === './' || has(u.slice(2)));
   const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', BUILD).replace('__CORE__', JSON.stringify(core));
   writeFileSync(join(out, 'sw.js'), src);
