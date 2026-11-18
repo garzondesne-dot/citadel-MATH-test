@@ -6,6 +6,7 @@
   import { bgm } from './bgm';
   import { onDestroy } from 'svelte';
   import BottomAction from './battle/BottomAction.svelte';
+  import CreditRoll from './CreditRoll.svelte';
 
   // ⓪ 학생 첫 화면 = 게임 타이틀 (#119 · DECISIONS 「✅ ⓪ 학생 첫 화면 컨펌」 · 시안 v71 「⓪」 · 선생님 「이 정도는 살리자」)
   //   정식 첫 화면 그림 brand-bg(용사 넷이 문을 엶 · 위치 center 30% · 아래 46% 어둡게) + 정식 로고 menu-logo(폭 80% · 최대 320 · 위 3%) · 반 ▾ · 번호 ▾ → 「n번 · 이름 맞나요?」 → 비밀번호 4칸(숫자 키패드 · 시스템 키보드 안 띄움) → 금빛 「⚔ 모험 시작」
@@ -14,6 +15,9 @@
   bgm('camp', 'phone'); onDestroy(() => bgm(null, 'phone')); // 🎵 첫 화면 = 캠프 곡 (정식 screen-splash · home)
   const ART = `${import.meta.env.BASE_URL}art/brand-bg-v1.webp`;
   const LOGO = `${import.meta.env.BASE_URL}art/brand-school-logo-v1.webp`; // 🖼 로고 = 「모두의 던전」(방패 · 월계수 · 띠 없음 · 2026-11-13 밤 선생님 「로고를 전부 모두의 던전으로」) · 과목 이름은 과목 팩 글자
+  // 🥚 #74 이스터에그 8: 「만든 이」 5번(2초 안 간격) → 크레딧 · 찾음 = 이 기기 표시 → 로그인 뒤 캠프가 학생 기록에 옮김
+  let roll = $state(false), ctaps: number[] = [];
+  function creditTap() { const now = Date.now(); ctaps = [...ctaps.filter((t) => now - t < 2000 * 5), now]; let run = 1; for (let i = ctaps.length - 1; i > 0 && ctaps[i]! - ctaps[i - 1]! < 2000; i--) run++; if (run >= 5) { ctaps = []; roll = true; try { localStorage.setItem('citadel-egg-e8', String(now)); } catch { /* 사생활 창 */ } } }
   let cls = $state('');
   let num = $state(0);
   let join = $state(false);
@@ -76,7 +80,8 @@
     </div>
   </form>
   <BottomAction dock={false} disabled={!ready} onmain={() => { if (ready) go(); }} {why} text={join ? '⚔ 가입하고 모험 시작' : '⚔ 모험 시작'} mainLabel="모험 시작" />
-  {#if showCredit}<p class="credit" data-k="credit">만든 이 · {CREDIT_NAME}</p>{/if}
+  {#if showCredit}<button type="button" class="credit" data-k="credit" onclick={creditTap}>만든 이 · {CREDIT_NAME}</button>{/if}
+  {#if roll}<CreditRoll onclose={() => (roll = false)} />{/if}<!-- 🥚 #74 이스터에그 8 -->
 </div>
 
 {#if pad}
@@ -132,5 +137,5 @@
   .keys button:active { transform: translateY(2px); box-shadow: none; }
   .big { display: flex; flex-direction: column; padding: var(--s3) var(--s4); min-height: 64px; justify-content: center; border-radius: var(--r); background: var(--surface-2); color: var(--text); text-decoration: none; font-weight: 700; font-size: 17px; box-shadow: 0 3px 0 var(--press-sh); }
   .big small { font-size: var(--fs-small); color: var(--text-2); font-weight: 500; }
-  .credit { position: relative; z-index: 1; margin: 0; padding: 0 0 calc(4px + env(safe-area-inset-bottom)); text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.6); text-shadow: 0 1px 2px #000; pointer-events: none; }
+  .credit { position: relative; z-index: 1; margin: 0 auto; display: block; border: 0; background: none; font-family: inherit; padding: 0 0 calc(4px + env(safe-area-inset-bottom)); text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.6); text-shadow: 0 1px 2px #000; pointer-events: auto; cursor: default; -webkit-tap-highlight-color: transparent; } /* 🥚 #74 누를 수 있게 (만든 이 5번) */
 </style>

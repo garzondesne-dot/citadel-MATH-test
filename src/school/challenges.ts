@@ -7,6 +7,7 @@ import type { CastlePack } from './castle';
 import { cumOf } from './cum';
 import { KEY_CHEST } from './keys';
 import { veteranN } from './explore';
+import { eggsFound } from './eggs';
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -22,6 +23,7 @@ const keysLike = (c: ChalCtx, p: string) => Object.keys(logOf(c)).filter((k) => 
 /** 🎯 허수아비(복습) 방 = 차시 칸(평가 eval- · review · board 빼기) 안의 몬스터 */
 const dummyRooms = (c: ChalCtx) => Object.entries(bon(c)).filter(([k, v]) => isObj(v) && k !== 'review' && k !== 'board' && !k.startsWith('eval-')).flatMap(([, v]) => Object.values(v as Obj).filter(isObj));
 const reviewClears = (c: ChalCtx) => dummyRooms(c).filter((m) => m.clear).length;
+export const reviewPlaysOf = (c: ChalCtx) => reviewPlays(c);
 const reviewPlays = (c: ChalCtx) => dummyRooms(c).reduce((a, m) => a + (Number(m.tries) || 0), 0);
 const prepTried = (c: ChalCtx) => Object.entries(isObj(bon(c).review) ? (bon(c).review as Obj) : {}).filter(([k, v]) => k.startsWith('prep_') && isObj(v) && Object.values(v).some((m) => isObj(m) && Number(m.tries) > 0)).length;
 const castleRooms = (c: ChalCtx) => Object.entries(bon(c)).filter(([k, v]) => k.startsWith('eval-') && isObj(v)).flatMap(([, v]) => Object.values(v as Obj).filter(isObj));
@@ -63,6 +65,8 @@ export const CHALS: Chal[] = [
   { id: 'seal3', tier: 'leg', ic: '⚔', name: '만 번째 베기', cond: '🏆 업적(인장) 3개', need: 3, got: (c) => seals(c.d.bonus).length, reward: { title: 'slash10k' } },
   { id: 'scroll20', tier: 'leg', ic: '📜', name: '서술의 달인', cond: '받은 📜 서술 조각 모두 20개', need: 20, got: (c) => cumOf(c.d.gem as never, c.gifts as never, ph2N(c)).scroll, reward: { title: 'scrollmaster' } },
   { id: 'review100', tier: 'leg', ic: '🪆', name: '허수아비의 친구', cond: '허수아비 복습 100판', need: 100, got: reviewPlays, reward: { title: 'dummyfriend' } },
+  // 🥚 #74 도전과제 25 「비밀 탐험가」 = 이스터에그 8 / 8 로 열림(그 전엔 숨김)
+  { id: 'eggs', tier: 'leg', ic: '🥚', name: '비밀 탐험가', cond: '이스터에그 8개 모두 찾기', need: 8, got: (c) => eggsFound(c.d.bonus).length, reward: { title: 'secret' }, hide: (c) => eggsFound(c.d.bonus).length < 8 },
   // 25 비밀 탐험가 = 비밀 도감(이스터에그)이 생기기 전까지 숨김 · 4 첫 손글씨 = 13 수식 책사와 합침
 ];
 /** 진행 (n · m · 끝남 · 받음) */

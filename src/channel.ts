@@ -20,7 +20,7 @@ export const showCredit = !(loc && new URLSearchParams(loc.search).has('anon'));
 
 /** 시험 고리 이름 (window.__이름) — 출시에서는 잠금 */
 export const HOOKS = [
-  '__dbSet', '__dbGet', '__perfect', '__uid', '__TD_PICK', '__TD_SPEED', '__featSet', '__strike', '__bgm', '__board', '__BOARD_SEC', '__portalBurst', '__castle',
+  '__dbSet', '__dbGet', '__eggNow', '__perfect', '__uid', '__TD_PICK', '__TD_SPEED', '__featSet', '__strike', '__bgm', '__board', '__BOARD_SEC', '__portalBurst', '__castle',
   '__sfxLog', '__pdfRects', '__fillHow', '__fillCut', '__fillRects', '__tvStrike', '__slash', '__tvAtk', '__tvQueue', '__tvKill', '__tvHeroes', '__tvJuice', '__tvJuiceStats', '__tvTrue',
   '__tvGuard', '__arena', '__tvFreeze', '__tvMon', '__tvMonNow', '__tvMonSeen', '__tvPoses', '__tvPose', '__bake', '__tvFake', '__wake', '__botSpeed', '__dummyPerfect', '__heroAtk', '__atkPlays', '__tvStrikeSet', '__tstrikes', '__noteTick',
 ] as const;
