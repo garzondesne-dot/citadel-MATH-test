@@ -71,7 +71,7 @@
   function fake(g: QuestRec['grade']) {
     if (!base || !qtype) return;
     const id = `t${Date.now().toString(36)}`, n = Number(base.answer) || 5, obj = qtype === 'obj';
-    const rec: QuestRec = { at: Date.now(), test: true, grade: g, status: g === 'green' ? 'done' : g === 'gray' ? 'gray' : 'wait', reason: g === 'gray' ? 'wrong_answer' : '', base: { pack: base.pack, room: base.room }, type: qtype, changed: Object.keys(changed).filter((k) => changed[k]),
+    const rec: QuestRec = { at: Date.now(), test: true, grade: g, status: g === 'green' ? 'done' : g === 'gray' ? 'gray' : 'wait', reason: g === 'gray' ? 'wrong_answer' : '', base: { pack: base.pack, room: base.room, text: base.text, answer: base.answer }, type: qtype, changed: Object.keys(changed).filter((k) => changed[k]),
       problem: `(테스트) ${base.text.slice(0, 120)} — 숫자를 바꾼 문제`, ...(obj ? { choices: [n - 2, n - 1, n, n + 1, n + 2].map(String), answer: '3' } : { answer: String(n) }), steps: ['① 조건을 식으로 써요', '② 계산해요'], hint: '바탕 방 풀이를 떠올려요', monster: '테스트 슬라임',
       solve1: `${n}`, solve2: `${n}`, agree: g !== 'gray', selfCheckNote: g === 'green' && changed.cond ? '숫자만 바뀐 것 같아요 · 조건도 바꿔 보세요' : '', issues: g === 'gray' ? ['적은 정답이 두 풀이와 달라요'] : [] };
     S.set(`${qp}/${id}`, rec); ver++; done();
