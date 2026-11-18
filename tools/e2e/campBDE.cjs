@@ -11,7 +11,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await p.goto(`${B}?role=camp&room=BD1`); await p.waitForSelector('.stage'); await p.clock.runFor(1500);
   const sfx = () => p.evaluate(() => (window.__sfxLog || []).slice(-3));
   // B · 모닥불 · 숨은 곳
-  for (const k of ['fire', 'moon', 'tree', 'shroom', 'fly']) {
+  for (const k of ['fire', 'moon', 'tree', 'shroom0', 'fly']) {
     await p.$eval(`[data-hot="${k}"]`, (e) => { const r = e.getBoundingClientRect(); e.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); });
     await p.clock.runFor(120); const fx = await p.$$eval('.cfx', (x) => x.map((e) => e.className.replace('cfx ', '')));
     ok(`B ${k} = 반응(효과 · 소리) · 창 안 열림`, fx.length > 0 && !(await p.$('.sheet')), `${fx.join(',')} · 소리 ${(await sfx()).join(',')}`);

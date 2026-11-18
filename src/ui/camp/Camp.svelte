@@ -46,7 +46,9 @@
   import { prepOpenList } from '../../school/prepopen';
   import RecordRoom from './RecordRoom.svelte';
   import AchievePop from './AchievePop.svelte';
-  import { CHALS, chalReady, chalState, claimOf, symN, type Chal, type ChalCtx } from '../../school/challenges';
+  import EggFx from './EggFx.svelte';
+  import { EGGS, eggHint, eggOf, fibTap, piMinute, stumpStep } from '../../school/eggs';
+  import { CHALS, chalReady, chalState, claimOf, reviewPlaysOf, symN, type Chal, type ChalCtx } from '../../school/challenges';
   import { earnedTitles } from '../../model/draft';
   import { earnedFrom } from '../../model/titles';
   import { castles } from '../../school/castles.svelte';
@@ -345,6 +347,25 @@
     const tok = ++walkTok;
     void walkTo(SPOT[k]!, 600, tok).then((ok) => { if (ok && !sheet && castleGo == null) { hp = { ...hp, pose: 'idle' }; tap(k); } }); // 🐞 걷는 동안 다른 창을 열었으면(예: 던전 문 → 예습) 늦게 도착한 걸음이 그 창을 덮지 않게
   }
+  // 🥚 #74 이스터에그 (캠프에서만 · 수업 레이드 · TV 안 일어남): 찾음 = 학생마다 bonus/…/egg/{id} · 묶이지 않음 = 이 기기 · 한 번 찾은 것도 연출은 다시 · 칭호는 한 번
+  const STUMPS: [number, number][] = [[39.4, 61.7], [60.6, 61.7], [64.8, 68], [35.5, 68]]; // 그루터기 = 뒤 왼 → 뒤 오른 → 앞 오른 → 앞 왼 (시계 방향)
+  const SHROOMS: [number, number][] = [[2.1, 54.5], [95.2, 54.5], [2.1, 88.3], [95.2, 92.1], [99.4, 92.1]]; // 빛 버섯 (물건에 가리지 않는 것)
+  let fibT: number[] = [], stumpSeq: number[] = [], shroomHit = $state<Record<number, true>>({});
+  let eggFx = $state<{ kind: string; first: boolean; name: string; title: string } | null>(null);
+  const eggNow = () => ((globalThis as { __eggNow?: number }).__eggNow ?? Date.now()); // 시험 고리 (원주율의 달 시각)
+  function eggHave(id: string): boolean { const b = meBound(); return b ? !!b.S.get(`${bonusBase(b.cls, b.num)}/egg/${id}`) : !!me.seen[`egg-${id}`]; }
+  function eggGo(id: string) {
+    if (paperOn() || eggFx) return;
+    const e = eggOf(id); if (!e) return;
+    const first = !eggHave(id), b = meBound();
+    if (first) { if (b) b.S.set(`${bonusBase(b.cls, b.num)}/egg/${id}`, Date.now()); else { me.seen[`egg-${id}`] = true; M.save(); } }
+    eggFx = { kind: id, first, name: e.name, title: titleOf(e.title)?.name ?? '' }; chVer++;
+  }
+  // 🎬 8 = 첫 화면에서 찾은 표시(이 기기) → 캠프에 오면 학생 기록에 옮기고 「비밀 발견」 띠
+  untrack(() => { try { if (localStorage.getItem('citadel-egg-e8')) { localStorage.removeItem('citadel-egg-e8'); if (!eggHave('e8')) setTimeout(() => eggGo('e8'), 1200); } } catch { /* 사생활 창 */ } });
+  // 🎯 7 허수아비의 친구 = 복습 100판 → 캠프에 오면 한 번 털썩 · 그 뒤 반창고 🩹
+  const e7Ready = $derived.by(() => { void chVer; try { return reviewPlaysOf(chalCtx()) >= 100; } catch { return false; } });
+  $effect(() => { if (!e7Ready || sheet || castleGo != null || achQ.length) return; untrack(() => { if (!eggHave('e7')) setTimeout(() => eggGo('e7'), 600); }); });
   /** 모닥불 · 숨은 곳 = 반응만 */
   function poke0(k: string, e: Event) { e.stopPropagation(); poke(k, e); arm(); }
   // E 친구 흔적
@@ -394,6 +415,7 @@
   let codeIn = $state(''), codeErr = $state('');
   async function enterCode() {
     const c = codeIn.trim();
+    if (c === '1414' || c === '100') { codeIn = ''; sheet = null; eggGo(c === '1414' ? 'e1' : 'e2'); return; } // 🥚 #74 (방 코드 = 6자리라 겹치지 않음)
     if (!/^\d{6}$/.test(c)) { codeErr = '수업 코드 6자리를 넣어 주세요'; return; }
     const R0 = (S.fetch ? await S.fetch<Room>(`rooms/${c}`) : S.get<Room>(`rooms/${c}`)); // 🔐 #163-① 방은 필요할 때 받음 → 한 번 기다림
     if (!R0) { codeErr = '그 코드의 수업이 없어요 · 선생님께 다시 물어봐요'; return; }
@@ -435,8 +457,11 @@
     <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
     <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
     <button type="button" class="hot tentz" data-hot="tentdeco" data-k="rec-go" aria-label={chalN ? `기록 텐트 · 받을 것 ${chalN}` : '기록 텐트'} style={zoneStyle('tent')} onclick={(e) => go('tentdeco', e)}>{@render tag('tentdeco')}</button>
-    <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
-    {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:6%;width:10%;height:8%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
+    <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => { poke0('fire', e); const r = fibTap(fibT, Date.now()); fibT = r.taps; if (r.hit) eggGo('e4'); }}></button>
+    {#each STUMPS as st, i (i)}<button type="button" class="hot stump" data-hot="stump{i}" aria-label="그루터기" style="left:{st[0]}%;top:{st[1]}%" onclick={(e) => { poke0('fire', e); const r = stumpStep(stumpSeq, i); stumpSeq = r.seq; if (r.hit) eggGo('e5'); }}></button>{/each}
+    {#each SHROOMS as m, i (i)}<button type="button" class="hot shroom" data-hot="shroom{i}" aria-label="빛 버섯" style="left:{m[0]}%;top:{m[1]}%" onclick={(e) => { poke0('shroom', e); shroomHit = { ...shroomHit, [i]: true }; if (Object.keys(shroomHit).length >= SHROOMS.length) { shroomHit = {}; eggGo('e6'); } }}></button>{/each}
+    {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:6%;width:10%;height:8%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => { poke0(h[0]!, e); if (h[0] === 'moon' && piMinute(eggNow())) eggGo('e3'); }}></button>{/each}
+    {#if eggFx}<EggFx kind={eggFx.kind} first={eggFx.first} name={eggFx.name} title={eggFx.title} ondone={() => (eggFx = null)} />{/if}<!-- 🥚 #74 -->
     {#each fxs as f (f.id)}<span class="cfx {f.k}" style="left:{f.x}%;top:{f.y}%" aria-hidden="true">{#each Array(f.k === 'bell' || f.k === 'glow' ? 1 : 6) as _, n (n)}<i style="--n:{n}"></i>{/each}{#if f.k === 'twinkle'}<b>✦</b>{/if}</span>{/each}
     {#if buddy}<button type="button" class="buddy" style="left:{CAMP_BUDDY.left}%;bottom:{CAMP_BUDDY.bottom}%" aria-label="게시판 던전 같이 하기" data-k="board-buddy" data-real={buddy.real ? '1' : '0'} onclick={(e) => tap('dummy', e)}><span class="bbub" class:real={buddy.real}>{buddy.line}</span><HeroSprite id={buddy.hero} scale={0.8} play /></button>{/if}
     {#each friends.slice(1) as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
@@ -456,6 +481,7 @@
       {@const k = p.k}
       <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} onclick={(e) => go(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} on={(news[k] ?? 0) > 0} />
+        {#if k === 'scare' && e7Ready && (eggFx?.kind === 'e7' || eggHave('e7'))}<span class="bandaid" class:flop={eggFx?.kind === 'e7'} aria-hidden="true" data-k="bandaid">🩹</span>{/if}
         {@render tag(k)}
       </button>
     {/each}
@@ -566,7 +592,18 @@
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'chal' || sheet === 'rec'}
   <!-- ⛺ #73 텐트 = 🏆 나의 기록 방 (도전과제 · 칭호 · 도감) -->
-  <RecordRoom {me} ctx={chalCtx} claim={chalClaim} earned={recEarned()} symSeen={(() => { try { return symN(chalCtx()); } catch { return 0; } })()} onanvil={() => (sheet = 'anvil')} onclose={() => (sheet = null)} />
+  {#snippet eggTab()}
+    {@const hl = pupil ? Number(S.get(`school/eggHint/${pupil.cls}`)) || 0 : 0}
+    {@const got = EGGS.filter((e) => eggHave(e.id)).length}
+    <p class="eggcap" data-k="egg-cnt">🥚 찾은 비밀 <b>{got}</b> / {EGGS.length} · 보상 = 칭호만</p>
+    <div class="eggs" data-k="egg-book">
+      {#each EGGS as e (e.id)}
+        {@const ok = eggHave(e.id)}
+        <div class="egg" class:ok data-egg={e.id}><span class="eic" aria-hidden="true">{ok ? e.ic : '🥚'}</span><span class="etx"><b>{ok ? e.name : '???'}</b><small>{ok ? `칭호 「${titleOf(e.title)?.name ?? ''}」 · ${e.how}` : eggHint(e, hl)}</small></span></div>
+      {/each}
+    </div>
+  {/snippet}
+  <RecordRoom extra={[{ id: 'egg', label: '🥚 비밀', body: eggTab }]} {me} ctx={chalCtx} claim={chalClaim} earned={recEarned()} symSeen={(() => { try { return symN(chalCtx()); } catch { return 0; } })()} onanvil={() => (sheet = 'anvil')} onclose={() => (sheet = null)} />
 {:else if sheet === 'prep'}
   {#await loadPrep() then K}<K.default {S} {me} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} all={prepAll} onclose={() => (sheet = null)} />{/await}
 {:else if sheet === 'review'}
@@ -661,6 +698,16 @@
   .glow.gate.on { opacity: 1; animation: glowB 1.8s ease-in-out infinite; }
   .glow.gate.flash { opacity: 1; animation: pkFlash 0.6s ease-out; }
   @keyframes glowB { 50% { opacity: 0.55; transform: scale(1.06); } }
+  .eggcap { margin: 0; font-size: 13px; color: var(--text-2); }
+  .eggs { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .egg { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; border-radius: 12px; background: var(--surface); border: 1px dashed var(--line, #3a3f4c); }
+  .egg.ok { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+  .eic { font-size: 24px; width: 30px; text-align: center; } .etx { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .etx b { font-size: 15px; } .etx small { font-size: 12px; color: var(--text-2); }
+  .hot.stump { width: 8%; height: 6%; min-width: 0; min-height: 0; transform: translate(-50%, -50%); z-index: 5; }
+  .hot.shroom { width: 7%; height: 5%; min-width: 0; min-height: 0; transform: translate(-50%, -50%); }
+  .bandaid { position: absolute; left: 22%; top: 8%; font-size: clamp(12px, 3.6cqw, 22px); pointer-events: none; transform: rotate(-20deg); }
+  .bandaid.flop { animation: flop 0.6s 0.2s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+  @keyframes flop { from { transform: rotate(-20deg) scale(0); } to { transform: rotate(-20deg) scale(1); } }
   .tentfx { position: absolute; z-index: 1; pointer-events: none; display: block; background-repeat: no-repeat; opacity: 0; }
   .tentfx.on { opacity: 1; }
   .prepln { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-height: 56px; margin-top: var(--s3); border-radius: 12px; border: 1px solid var(--line, #3a3f4c); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }

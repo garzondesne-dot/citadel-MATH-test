@@ -1,6 +1,7 @@
 // 🏅 얻은 호칭 = 기록에서 그때그때 계산 (정식 js/raid/titles.js earned 그대로 · 📜 2026-11-15 머리 「정식과 같게 · 얻은 것만」)
 //   기록 = records · cards · xp · bonus · gem · photo (학생 한 명 칸) · 따로 저장하지 않음 · 고른 호칭만 accounts/{반}/{번호}/title
 //   베타에 아직 없는 것: 📕 오답노트(오답 사냥꾼 = 못 얻음) · 던전 정복 메달(목록에 없음)
+import { EGGS, eggsFound } from '../school/eggs';
 import { SUBJ } from '../engine/subject';
 import { level } from './hero';
 import { veteranN } from '../school/explore';
@@ -56,7 +57,9 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   realskill: (d) => logKeys(d).includes('chal_rewrite3'),
   castlelord: (d) => logKeys(d).includes('chal_castleall'),
   scrollmaster: (d) => logKeys(d).includes('chal_scroll20'),
-  dummyfriend: (d) => logKeys(d).includes('chal_review100'),
+  dummyfriend: (d) => logKeys(d).includes('chal_review100') || eggsFound(d.bonus).includes('e7'), // 🥚 #74 이스터에그 7 과 같은 칭호 하나
+  ...Object.fromEntries(EGGS.filter((e) => e.title.startsWith('egg_')).map((e) => [e.title, (d: TitleData) => eggsFound(d.bonus).includes(e.id)])), // 🥚 #74
+  secret: (d) => logKeys(d).includes('chal_eggs'),
   explorer: (d) => veteranN((d.bonus as Record<string, unknown> | undefined)?.review as Record<string, unknown>) >= 3, // 🔥 #67 노련한 탐험가 = 예습 3개 차시(차시마다 처치 2+)
 };
 /** 얻은 호칭 id (got = 화면이 따로 아는 것 · 예: 💚 구조대 rescuer) */
