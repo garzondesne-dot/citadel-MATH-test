@@ -402,10 +402,12 @@
   <div class="stagebox" style:--ar={W / H}>
   <div class="stage" role="presentation" bind:this={stageEl} bind:clientWidth={stW} bind:clientHeight={stH} onclick={(e) => { ground(); arm(); void e; }} style:aspect-ratio="{W} / {H}" style:background-image="url({CAMP.bg})">
     <!-- 🏕 새 캠프 (📜 2026-11-18 #71): 성채 · 텐트 · 던전 문 = 배경 · 열림 빛 = 코드 · 텐트 = 누를 때만 반응 그림 · 모닥불 = 그루터기 바닥 + 불꽃 -->
-    {#if feat('citadel')}<i class="glow castle {hl('castle')}" class:on={castleLit || sheet === 'castle' || !!poked.castle} style={zoneStyle('castle')} aria-hidden="true" data-k="castle-glow"></i>{/if}
+    <img class="obj castle" alt="" src={CAMP.castle.dark} style={propPos(CAMP.castle)} />
+    {#if feat('citadel')}<img class="obj castle lit" class:on={castleLit || sheet === 'castle' || !!poked.castle} alt="" src={CAMP.castle.lit} style={propPos(CAMP.castle)} data-k="castle-lit" />{/if}
+    <img class="obj gclosed" class:off={open && !trial} alt="" src={CAMP.gateClosed.src} style={propPos(CAMP.gateClosed)} data-k="gate-closed" data-state={open && !trial ? 'open' : prepNos ? 'explore' : 'closed'} />
+    {#if !(open && !trial) && prepNos}<i class="gtorch" style="left:{CAMP.gateClosed.torch.left}%;top:{CAMP.gateClosed.torch.top}%" aria-hidden="true"></i><i class="gcrack" style="left:{CAMP.gateClosed.crack.left}%;top:{CAMP.gateClosed.crack.top}%;height:{CAMP.gateClosed.crack.height}%" aria-hidden="true" data-k="gate-explore"></i>{/if}
     <i class="glow gate" class:on={open} class:flash={!!poked.gate} style={zoneStyle('gate')} aria-hidden="true" data-k="gate-glow"></i>
     <i class="sp tentfx" class:on={!!poked.tentdeco} style="{propPos(CAMP.tentFx)};aspect-ratio:{CAMP.tentFx.aspect};{cellBg(CAMP.tentFx.src, CAMP.tentFx.cols, tentF)}" aria-hidden="true"></i>
-    <img class="obj fbase" alt="" src={CAMP.fireBase.src} style="{propPos(CAMP.fireBase)}" />
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
     <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
@@ -622,8 +624,15 @@
   .obj { position: absolute; z-index: 1; pointer-events: none; }
   /* 🏕 #71 빛: 성채 열림 = 둘레 금빛 빛무리 · 던전 문 열림 = 아치 안 파란 빛 맥박 (그림 전 임시 · transform · opacity 만) */
   .glow { position: absolute; z-index: 1; pointer-events: none; border-radius: 50%; opacity: 0; transition: opacity 0.6s; }
-  .glow.castle { background: radial-gradient(closest-side, rgba(255, 214, 120, 0.5), rgba(255, 180, 60, 0.18) 60%, transparent); }
-  .glow.castle.on { opacity: 1; animation: glowB 2.4s ease-in-out infinite; }
+  .obj.castle { display: block; }
+  .obj.castle.lit { opacity: 0; transition: opacity 0.5s; }
+  .obj.castle.lit.on { opacity: 1; }
+  .obj.gclosed { display: block; transition: opacity 0.8s; }
+  .obj.gclosed.off { opacity: 0; }
+  /* 🔥 탐사 가능 = 닫힌 문 + 횃불 크게 일렁 + 문틈 주황 빛 (#71 덧 · 머리 시안) */
+  .gtorch { position: absolute; z-index: 1; width: 17%; mix-blend-mode: screen; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 200, 90, 0.95), rgba(255, 130, 30, 0.45) 45%, transparent); animation: torchF 0.7s ease-in-out infinite alternate; }
+  .gcrack { position: absolute; z-index: 1; width: 1.1%; mix-blend-mode: screen; transform: translateX(-50%); pointer-events: none; border-radius: 2px; background: linear-gradient(rgba(255, 170, 60, 0), rgba(255, 170, 60, 0.95) 30%, rgba(255, 140, 40, 0.9) 70%, rgba(255, 140, 40, 0)); box-shadow: 0 0 14px 7px rgba(255, 140, 40, 0.7), 0 0 34px 14px rgba(255, 120, 30, 0.35); animation: torchF 1.4s ease-in-out infinite alternate; }
+  @keyframes torchF { 0% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.92); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } }
   .glow.gate { background: radial-gradient(closest-side, rgba(130, 200, 255, 0.55), rgba(90, 150, 255, 0.2) 55%, transparent); }
   .glow.gate.on { opacity: 1; animation: glowB 1.8s ease-in-out infinite; }
   .glow.gate.flash { opacity: 1; animation: pkFlash 0.6s ease-out; }
