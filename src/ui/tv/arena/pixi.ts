@@ -9,6 +9,7 @@ import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
 import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monBody, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
+import OBJ from '../../fx/obj.json';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
 export interface ArenaState { boss: boolean; split: boolean; sprite: string; hp: { left: number; max: number } | null; hpLabel: string; down: boolean; shadow: boolean; heroes: Hero[]; /** 🔥 #67 탐사대 uid (예습 처치 2+) */ ex?: string[] }
@@ -124,7 +125,10 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   const beamG = new Graphics(); torchC.addChild(beamG);
   const dimF = new ColorMatrixFilter(); dimF.brightness(0.42, false); const dimEx = new ColorMatrixFilter(); dimEx.brightness(0.85, false);
   let scoutOn = false, scoutT0 = 0, monBB = { x0: 0, y0: 0, x1: 0, y1: 0 }; // monBB = 몬스터 보이는 몸통(화면 px · 둥실 빼고)
-  type Explo = { u: string; i: number; torch: Container; glow: Sprite; fire: Text; hole: [number, number]; r: number; dir: number };
+  type Explo = { u: string; i: number; torch: Container; glow: Sprite; fire: Text; img: Sprite | null; hole: [number, number]; r: number; dir: number };
+  // 🔥 #70 횃불 그림 (obj-torch 4칸 · 약 0.4초 한 바퀴) · 못 받으면 🔥 글자
+  let torchTex: Texture[] = [];
+  void src(`${import.meta.env.BASE_URL}art/${OBJ.torch.src}`).then((so) => { torchTex = Array.from({ length: OBJ.torch.n }, (_, k) => frame(so, k * OBJ.torch.w, 0, OBJ.torch.w, OBJ.torch.h)); }).catch(() => {});
   let explo: Explo[] = [];
   const HOLE_AT: [number, number][] = [[0.5, 0.24], [0.42, 0.62], [0.78, 0.5]]; // 머리 · 몸통 · 무기 쪽 (몸통 상자 비율)
   function scoutStart(s: ArenaState) {
@@ -135,10 +139,11 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     explo = ex.map((u, i) => {
       const v = heroes.get(u)!, dir = v.x < monCx ? 1 : -1, torch = new Container(), glow = new Sprite(warmTex), fire = txt('🔥', 'title', false, 0xffffff, false);
       glow.anchor.set(0.5); glow.blendMode = 'add'; glow.alpha = 0; fire.anchor.set(0.5, 1); fire.alpha = 0; torch.addChild(glow, fire); torchC.addChild(torch);
+      const img = torchTex.length ? new Sprite(torchTex[0]) : null; if (img) { img.anchor.set(0.5, 0.78); img.alpha = 0; fire.visible = false; torch.addChild(img); }
       setPose(v, 'portal'); v.exDir = dir;
       const vx = monCx - v.x, vy = (monBB.y1 || monTop + monSize) - v.y, vl = Math.hypot(vx, vy) || 1, step = Math.min(W() * 0.07, vl * 0.35);
-      tween(1000, (p) => { v.exDx = (vx / vl) * step * ease(p); v.exDy = (vy / vl) * step * ease(p); v.exS = 0.08 * ease(p); }, () => { tween(500, (p) => { glow.alpha = p * 0.32; fire.alpha = p; }); });
-      return { u, i, torch, glow, fire, hole: HOLE_AT[i]!, r: rMax, dir };
+      tween(1000, (p) => { v.exDx = (vx / vl) * step * ease(p); v.exDy = (vy / vl) * step * ease(p); v.exS = 0.08 * ease(p); }, () => { tween(500, (p) => { glow.alpha = p * 0.32; fire.alpha = p; if (img) img.alpha = p; }); });
+      return { u, i, torch, glow, fire, img, hole: HOLE_AT[i]!, r: rMax, dir };
     });
     holeC.visible = explo.length > 0;
   }
@@ -170,6 +175,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       const v = heroes.get(e.u); if (!v) continue;
       const hw = Math.abs(v.sp.width) * (1 - (v.exS || 0)), hh = v.sp.height * (1 - (v.exS || 0)), hx = v.c.x + e.dir * hw * 0.22, hy = v.c.y - hh * 0.62, fl = 1 + 0.12 * Math.sin(t / 90 + e.i) + 0.08 * Math.sin(t / 37 + e.i * 3);
       e.torch.x = hx; e.torch.y = hy; e.fire.style.fontSize = Math.round(H() * 0.05); e.fire.scale.set(1, fl);
+      if (e.img && torchTex.length) { e.img.texture = torchTex[Math.floor((t + e.i * 97) / 100) % torchTex.length]!; const hh2 = H() * 0.085; e.img.height = hh2; e.img.width = hh2 * (OBJ.torch.w / OBJ.torch.h); }
       e.glow.width = e.glow.height = H() * 0.24 * fl; e.glow.alpha = e.glow.alpha > 0 ? 0.32 + 0.08 * Math.sin(t / 70 + e.i) : 0;
       const h = holes[e.i]; if (h && h.r > 0) { beamG.moveTo(hx, hy).lineTo(h.x, h.y).stroke({ color: 0xffc070, width: H() * 0.018, alpha: 0.13 }); }
     }

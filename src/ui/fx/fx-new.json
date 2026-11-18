@@ -71,7 +71,7 @@
    "pk": 9
   },
   "hammer": {
-   "src": "pfx2/new-hammer-v3.webp",
+   "src": "pfx2/new-hammer-v4.webp",
    "w": 160,
    "h": 100,
    "n": 20,
@@ -81,7 +81,7 @@
    "pk": 6
   },
   "quake": {
-   "src": "pfx2/new-quake-v3.webp",
+   "src": "pfx2/new-quake-v4.webp",
    "w": 160,
    "h": 100,
    "n": 25,
@@ -181,7 +181,7 @@
    "pk": 8
   },
   "bulwark": {
-   "src": "pfx2/new-bulwark-v3.webp",
+   "src": "pfx2/new-bulwark-v4.webp",
    "w": 160,
    "h": 100,
    "n": 20,
@@ -191,7 +191,7 @@
    "pk": 6
   },
   "holysword": {
-   "src": "pfx2/new-holysword-v3.webp",
+   "src": "pfx2/new-holysword-v4.webp",
    "w": 160,
    "h": 100,
    "n": 21,
@@ -201,7 +201,7 @@
    "pk": 6
   },
   "skylance": {
-   "src": "pfx2/new-skylance-v3.webp",
+   "src": "pfx2/new-skylance-v4.webp",
    "w": 160,
    "h": 100,
    "n": 25,
@@ -211,7 +211,7 @@
    "pk": 8
   },
   "wrench": {
-   "src": "pfx2/new-wrench-v3.webp",
+   "src": "pfx2/new-wrench-v4.webp",
    "w": 160,
    "h": 100,
    "n": 16,
@@ -221,7 +221,7 @@
    "pk": 5
   },
   "cog": {
-   "src": "pfx2/new-cog-v3.webp",
+   "src": "pfx2/new-cog-v4.webp",
    "w": 160,
    "h": 100,
    "n": 21,
@@ -231,7 +231,7 @@
    "pk": 6
   },
   "piston": {
-   "src": "pfx2/new-piston-v3.webp",
+   "src": "pfx2/new-piston-v4.webp",
    "w": 160,
    "h": 100,
    "n": 22,
@@ -241,7 +241,7 @@
    "pk": 7
   },
   "drill": {
-   "src": "pfx2/new-drill-v3.webp",
+   "src": "pfx2/new-drill-v4.webp",
    "w": 160,
    "h": 100,
    "n": 25,
@@ -271,7 +271,7 @@
    "pk": 6
   },
   "anchor": {
-   "src": "pfx2/new-anchor-v3.webp",
+   "src": "pfx2/new-anchor-v4.webp",
    "w": 160,
    "h": 100,
    "n": 22,

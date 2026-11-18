@@ -3,7 +3,8 @@
 //   숫자 = 아래 NUM 표 하나 (고치면 모두 바뀜) · 도트 = 낮은 해상도 렌더 텍스처(1/PIXEL) 하나에 모든 이펙트를 그려 nearest 로 키움 → 30개여도 그리기 한 번
 //   TV 에서만(학생 폰 = 구운 띠 · tools/fxbake) · 필터 동시 2개까지 · 「동작 줄이기」 = 흔들림 · 번쩍 끔 · 🎆 화려한 연출 끔 = Ⅰ 궤적만
 //   성능 (머리 📎 기준): 교실 TV 보통 사무용 PC · 30명 동시에도 50fps → 동시 상한 MAX_LIVE · 실제 fps 를 재서 50 아래면 한 단계씩 덜어 냄(입자 → 필터 → 겹) · 회복하면 되돌림 · 줄 서다 늦으면 지금 띠로
-import { Container, Graphics, RenderTexture, Sprite, type Application } from 'pixi.js';
+import { Assets, Container, Graphics, Rectangle, RenderTexture, Sprite, Texture, type Application } from 'pixi.js';
+import OBJ from '../../fx/obj.json';
 import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 
 /** 단계 겹 · 길이 · 크기 표 (머리 요청 길이 Ⅰ 0.35 · Ⅱ 0.45 · Ⅲ 0.6 · Ⅳ 0.9) */
@@ -123,11 +124,25 @@ const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 
 type Spark = { x: number; y: number; vx: number; vy: number; life: number; size: number; col: number };
 /** 이펙트 하나 = t(초)의 순수 함수로 그림 (굽기 도구가 칸마다 부름) */
+// ⚔ #70 사물 공격 그림 (GPT · art/fx/obj · 칸 = 가운데 · 바닥 맞춤) — 받기 전 = 지금 코드 그림 그대로
+type ObjK = keyof typeof OBJ;
+export const objTex: Partial<Record<ObjK, Texture[]>> = {};
+let objLoading: Promise<void> | null = null;
+export function loadObjTex(base = typeof import.meta !== 'undefined' ? import.meta.env.BASE_URL : '/'): Promise<void> {
+  return (objLoading ??= Promise.all((Object.keys(OBJ) as ObjK[]).filter((k) => k !== 'dragon').map(async (k) => {
+    const o = OBJ[k], t = await Assets.load<Texture>(`${base}art/${o.src}`).catch(() => null); if (!t) return;
+    t.source.scaleMode = 'linear'; objTex[k] = Array.from({ length: o.n }, (_, i) => new Texture({ source: t.source, frame: new Rectangle(i * o.w, 0, o.w, o.h) }));
+  })).then(() => undefined));
+}
+/** 스킬 → 그림 (이 스킬은 그림이 있으면 코드 모양 대신) */
+const OBJ_OF: Record<string, ObjK> = { hammer: 'hammer', quake: 'hammer', wrench: 'wrench', cog: 'cog', piston: 'piston', drill: 'drill', anchor: 'anchor', holysword: 'holysword', skylance: 'skylance', bulwark: 'shield' };
 export class SlashFx {
   g = new Graphics(); t = 0; done = false; impacted = false; level = 0;
+  /** #70 사물 그림 층(뒤) + 코드 그림(g · 앞) — 층 · 굽기는 c 를 그림 */
+  c = new Container(); objC = new Container(); objs: Sprite[] = []; obj: ObjK | null = null;
   T: (typeof NUM.tiers)[number] & TwinX; C: (typeof RECIPES)[string]; sparks: Spark[] = []; r: () => number;
   S: SkillR | null = null;
-  constructor(public o: SlashO, level = 0) { const S = o.skill ? SKILLS[o.skill] ?? null : null; this.S = S; const T0 = NUM.tiers[clamp(S ? S.tier : o.tier, 0, 3)]!; this.T = S ? { ...T0, dur: S.dur, sparks: S.sparks ?? T0.sparks, flash: S.flash ?? T0.flash, hitstop: S.hitstop ?? T0.hitstop, shake: S.shake ?? T0.shake, shock: S.shock ?? T0.shock, glow: S.glow ?? T0.glow } : o.tier >= 3 ? { ...T0, ...TWIN[o.v ?? twinOf()] } : T0; this.C = RECIPES[S ? S.fam : o.fam || 'cut'] ?? RECIPES.cut!; this.r = rng(o.seed ?? 7); this.level = level; this.makeSparks(); }
+  constructor(public o: SlashO, level = 0) { const S = o.skill ? SKILLS[o.skill] ?? null : null; this.S = S; const T0 = NUM.tiers[clamp(S ? S.tier : o.tier, 0, 3)]!; this.T = S ? { ...T0, dur: S.dur, sparks: S.sparks ?? T0.sparks, flash: S.flash ?? T0.flash, hitstop: S.hitstop ?? T0.hitstop, shake: S.shake ?? T0.shake, shock: S.shock ?? T0.shock, glow: S.glow ?? T0.glow } : o.tier >= 3 ? { ...T0, ...TWIN[o.v ?? twinOf()] } : T0; this.C = RECIPES[S ? S.fam : o.fam || 'cut'] ?? RECIPES.cut!; this.r = rng(o.seed ?? 7); this.level = level; this.makeSparks();  this.c.addChild(this.objC, this.g); const ok = this.o.skill ? OBJ_OF[this.o.skill] : undefined; if (ok && objTex[ok]?.length && (ok !== 'hammer' || objTex.crack?.length || this.o.skill === 'hammer')) this.obj = ok; }
   get impactT() { return this.T.dur * 0.32; }
   makeSparks() {
     const n = Math.round(this.T.sparks * (this.level >= 1 ? 0.5 : 1)); this.sparks = [];
@@ -193,10 +208,69 @@ export class SlashFx {
   }
 
   /** 👎 다시 만든 스킬: 칼질 여러 개(호 = 용사 쪽 → 몬스터 쪽) + 덧붙임 + 번쩍 · 입자 (draw 와 같은 시간 축) */
+  /** #70 사물 그림 움직임 (낮은 해상도 좌표 · 그림 = objC · 맞는 순간 = impactT) */
+  spr(i: number, k: ObjK, f: number, h: number, ax: number, ay: number) {
+    let s = this.objs[i]; if (!s) { s = new Sprite(); this.objs[i] = s; this.objC.addChild(s); }
+    const tx = objTex[k]!; s.texture = tx[Math.min(f, tx.length - 1)]!; s.anchor.set(ax, ay); s.visible = true; s.alpha = 1; s.rotation = 0;
+    const sc = h / OBJ[k].h; s.scale.set(sc, sc); return s;
+  }
+  drawObj(t: number) {
+    const o = this.o, k = this.obj!, cx = o.x, cy = o.y, dir = o.dir || 1, it = this.impactT, st = t - it, g = this.g, gy = cy + o.h * 0.48;
+    for (const s of this.objs) if (s) s.visible = false;
+    const fall = (p: number) => ease(clamp(p) ** 1.6), fade = (hold: number, out = 0.2) => (st < hold ? 1 : 1 - clamp((st - hold) / out));
+    if (k === 'hammer') { // 🔨 위에서 떨어져 쾅 · 살짝 튐 · 땅 금(그림 3칸)
+      const big = this.o.skill === 'quake', H = o.h * (big ? 1.5 : 1.1), q = st < 0 ? fall(t / it) : 1, bob = st >= 0 && st < 0.1 ? -Math.sin((st / 0.1) * Math.PI) * o.h * 0.08 : 0;
+      const s = this.spr(0, 'hammer', 0, H, 0.5, 1); s.x = cx; s.y = cy + o.h * 0.15 - o.h * 2.6 * (1 - q) + bob; s.rotation = -dir * 0.5 * (1 - q); s.alpha = fade(0.3);
+    }
+    if (k === 'wrench') { // 🔧 손잡이 끝을 축으로 크게 휘둘러 쾅 · 반동
+      const H = o.h * 1.15, q = st < 0 ? ease(clamp(t / it)) : 1, back = st >= 0 ? Math.sin(clamp(st / 0.18) * Math.PI) * 0.25 : 0;
+      const s = this.spr(0, 'wrench', 0, H, 0.5, 0.95); s.x = cx - dir * o.w * 0.75; s.y = cy + o.h * 0.5; s.rotation = dir * (-1.3 + 2.25 * q - back); s.alpha = fade(0.25);
+    }
+    if (k === 'cog') { // ⚙ 돌며 날아와 박혀 갈림 → 위로 튕겨 사라짐
+      const R = o.w * 0.34; let x = cx, y = cy, a = 1;
+      if (st < 0) x = cx - dir * (o.w * 2.4 * (1 - ease(clamp(t / it))) + R * 0.4); else if (st < 0.12) x = cx - dir * R * 0.4; else { const q = (st - 0.12) / 0.35; x = cx - dir * (R * 0.4 + o.w * 0.8 * q); y = cy - o.h * 1.2 * q; a = 1 - clamp(q); }
+      const s = this.spr(0, 'cog', 0, R * 2, 0.5, 0.5); s.x = x; s.y = y; s.rotation = t * 18 * dir; s.alpha = a;
+    }
+    if (k === 'piston') { // 🔩 0칸 = 들린 채 내려옴 → 1칸 = 쾅(증기)
+      const H = o.h * 1.25, q = st < 0 ? fall(t / it) : 1, s = this.spr(0, 'piston', st < 0 ? 0 : 1, H, 0.5, 1); s.x = cx; s.y = cy + o.h * 0.2 - o.h * 1.8 * (1 - q) + (st >= 0 && st < 0.08 ? 2 : 0); s.alpha = fade(0.3);
+    }
+    if (k === 'drill') { // 🌀 두 칸 번갈아(돎) · 옆에서 돌진해 파고듦 · 0.25초 더 갈기
+      const W = o.w * 1.45, q = st < 0 ? ease(clamp(t / it)) : 1, tip = cx + dir * o.w * 0.2 - dir * o.w * 2.2 * (1 - q) + (st >= 0 && st < 0.25 ? dir * Math.sin(st * 90) * 1.5 : 0);
+      const s = this.spr(0, 'drill', Math.floor(t / 0.05) % 2, W * OBJ.drill.h / OBJ.drill.w, 1, 0.5); s.scale.x *= dir; s.x = tip; s.y = cy; s.alpha = fade(0.28);
+    }
+    if (k === 'anchor') { // ⚓ 사슬을 끌며 떨어져 쾅 · 물보라(코드)
+      const H = o.h * 1.15, q = st < 0 ? fall(t / it) : 1, by = cy + o.h * 0.45 - o.h * 2.6 * (1 - q), a = fade(0.3, 0.25);
+      g.moveTo(cx, by - H * 0.95).lineTo(cx, by - H - o.h * 2).stroke({ width: 2, color: 0x4a5562, alpha: a });
+      const s = this.spr(0, 'anchor', 0, H, 0.5, 1); s.x = cx; s.y = by; s.alpha = a;
+    }
+    if (k === 'holysword') { // 🗡 칼끝 아래로 떨어져 꽂힘 · 빛기둥
+      const H = o.h * 1.35, q = st < 0 ? fall(t / it) : 1, a = fade(0.3, 0.25);
+      if (st >= 0 && st < 0.45) { const p = st / 0.45, w = o.w * (0.5 - 0.35 * p); g.rect(cx - w, cy - o.h * 3, w * 2, o.h * 3.5).fill({ color: this.C.colors[2], alpha: 0.45 * (1 - p) }); g.rect(cx - w * 0.4, cy - o.h * 3, w * 0.8, o.h * 3.5).fill({ color: 0xffffff, alpha: 0.6 * (1 - p) }); }
+      const s = this.spr(0, 'holysword', 0, H, 0.5, 1); s.x = cx; s.y = cy + o.h * 0.5 - o.h * 2.8 * (1 - q); s.alpha = a;
+    }
+    if (k === 'skylance') { // ✨ 창 세 자루가 차례로 떨어져 꽂힘 · 자루마다 빛기둥
+      const H = o.h * 1.3, at = [-0.12, 0, 0.09], ox = [-0.42, 0, 0.42];
+      for (let i = 0; i < 3; i++) {
+        const t1 = it + at[i]!, s1 = t - t1, q = s1 < 0 ? fall(t / t1) : 1, x = cx + ox[i]! * o.w * dir, a = s1 < 0.3 ? 1 : 1 - clamp((s1 - 0.3) / 0.2);
+        if (s1 >= 0 && s1 < 0.35) { const p = s1 / 0.35, w = o.w * (0.22 - 0.16 * p); g.rect(x - w, cy - o.h * 3, w * 2, o.h * 3.5).fill({ color: this.C.colors[2], alpha: 0.5 * (1 - p) }); }
+        const s = this.spr(i, 'skylance', 0, H, 0.5, 1); s.x = x; s.y = cy + o.h * (0.45 + (i % 2) * 0.05) - o.h * 2.8 * (1 - q); s.alpha = a;
+      }
+    }
+    if (k === 'shield') { // 🛡 0칸 돌진 → 1칸 쾅(금) → 2칸 부서짐
+      const H = o.h * 0.95, f = st < 0 ? 0 : st < 0.12 ? 1 : 2, q = st < 0 ? ease(clamp(t / it)) : 1, x = cx - dir * (o.w * 2.2 * (1 - q) + o.w * 0.45);
+      const s = this.spr(0, 'shield', f, H * (f === 2 ? 1 + clamp((st - 0.12) / 0.4) * 0.25 : 1), 0.5, 0.5); s.x = x; s.y = cy; s.alpha = f === 2 ? 1 - clamp((st - 0.12) / 0.4) : 1;
+    }
+    if ((k === 'hammer' || k === 'piston') && objTex.crack?.length && st >= 0) { // 🪨 땅 금 = 그림 3칸 (0.07초씩 · 뒤에 흐려짐)
+      const big = this.o.skill === 'quake', s = this.spr(4, 'crack', Math.min(2, Math.floor(st / 0.07)), o.h * (big ? 0.85 : 0.6), 0.5, 0.5); s.x = cx; s.y = gy; s.alpha = 1 - clamp((st - 0.45) / 0.35);
+      this.objC.setChildIndex(s, 0); // 금은 맨 뒤(망치 · 피스톤 아래)
+    }
+  }
   drawSkill(t: number, fancy: boolean, reduce: boolean) {
     const g = this.g, o = this.o, S = this.S!, T = this.T, d = T.dur; g.clear();
     const cx = o.x, cy = o.y, base = Math.max(o.w, o.h) * 0.85, dir = o.dir || 1, span = d * 0.62;
-    const cuts = fancy ? S.cuts : S.cuts.slice(0, 1);
+    const hide = !!this.obj, imgCrack = hide && !!objTex.crack?.length && this.obj !== 'anchor'; // #70 그림이 있으면 코드 모양 대신 그림(입자 · 번쩍 · 흔들림은 그대로)
+    const cuts = hide ? [] : fancy ? S.cuts : S.cuts.slice(0, 1);
+    if (hide) this.drawObj(t);
     // 🌬 날아옴 (fly): 칼날이 용사 쪽 2.4 몸통 밖에서 맞는 점까지 0.35 · span 동안 날아옴 + 속도선
     const flyP = S.extra === 'fly' ? clamp(t / (span * 0.45)) : 1, flyX = (1 - ease(flyP)) * -2.4 * o.w * dir;
     for (const c of cuts) {
@@ -236,7 +310,7 @@ export class SlashFx {
       for (let k = 0; k < 12; k++) { const an = (k / 12) * Math.PI * 2 + q * 0.6, l = R0 * (k % 2 ? 0.35 : 0.6); g.moveTo(cx + Math.cos(an) * (R0 + 2), cy + Math.sin(an) * (R0 + 2)).lineTo(cx + Math.cos(an) * (R0 + 2 + l), cy + Math.sin(an) * (R0 + 2 + l)).stroke({ width: 1, color: 0xffe9a8, alpha: a * 0.9 }); }
     }
     // 🛡 방패 (shield): 용사 쪽 2몸통 밖에서 돌진(맞는 순간까지) → 쾅 · 금 → 조각 8개 튐
-    if (S.extra === 'shield') {
+    if (S.extra === 'shield' && !hide) {
       const sw = o.w * 0.36, sh = o.h * 0.62, shp = (x: number, y: number, k: number) => [x - sw * k, y - sh * 0.5 * k, x + sw * k, y - sh * 0.5 * k, x + sw * k, y + sh * 0.05 * k, x, y + sh * 0.5 * k, x - sw * k, y + sh * 0.05 * k];
       if (t < it) { const q = ease(clamp(t / it)), x = cx - dir * (o.w * 2.2 * (1 - q) + o.w * 0.45); poly(shp(x, cy, 1), k0, 1); poly(shp(x, cy, 0.8), k1, 1); poly(shp(x, cy, 0.45), k2, 1); g.moveTo(x, cy - sh * 0.4).lineTo(x, cy + sh * 0.4).stroke({ width: 1, color: hiC, alpha: 0.9 }); if (fancy) for (let k = 0; k < 3; k++) { const yy = cy + (k - 1) * sh * 0.3; g.moveTo(Math.round(x - dir * sw), Math.round(yy)).lineTo(Math.round(x - dir * (sw + o.w * 0.8 * (1 - q))), Math.round(yy)).stroke({ width: 1, color: k2, alpha: 0.7 }); } }
       else { const st = t - it, x = cx - dir * o.w * 0.45;
@@ -247,13 +321,15 @@ export class SlashFx {
     // 🗡 성검 (sword): 위에서 금빛 큰 검이 떨어져 맞는 점에 꽂힘 → 꽂힌 채 0.3초 빛나다 사라짐 · 빛 십자 · 땅 고리
     if (S.extra === 'sword') {
       const L = o.h * 0.95, W = o.w * 0.17, q = ease(clamp(t / it) ** 1.6), tipY = cy - o.h * 2.4 * (1 - q) + o.h * 0.15, a = t < it ? 1 : 1 - clamp((t - it - 0.25) / 0.25);
+      if (!hide) {
       poly([cx, tipY, cx + W, tipY - L * 0.12, cx + W * 0.8, tipY - L, cx - W * 0.8, tipY - L, cx - W, tipY - L * 0.12], k1, a); poly([cx, tipY, cx + W * 0.4, tipY - L * 0.12, cx + W * 0.3, tipY - L, cx - W * 0.3, tipY - L, cx - W * 0.4, tipY - L * 0.12], k2, a);
       poly([cx - W * 1.9, tipY - L + W * 0.2, cx + W * 1.9, tipY - L + W * 0.2, cx + W * 1.6, tipY - L - W * 1.1, cx - W * 1.6, tipY - L - W * 1.1], k1, a); poly([cx - W * 1.6, tipY - L - W * 0.2, cx + W * 1.6, tipY - L - W * 0.2, cx + W * 1.4, tipY - L - W * 0.7, cx - W * 1.4, tipY - L - W * 0.7], k2, a); poly([cx - W * 0.7, tipY - L - W * 1.2, cx + W * 0.7, tipY - L - W * 1.2, cx + W * 0.7, tipY - L - W * 4, cx - W * 0.7, tipY - L - W * 4], k0, a);
       if (fancy && t < it) g.moveTo(cx, tipY - L - W * 4).lineTo(cx, tipY - L - W * 4 - o.h * 0.8 * (1 - q)).stroke({ width: 2, color: k2, alpha: 0.6 });
+      }
       if (t >= it && t < it + 0.4) { const st = (t - it) / 0.4, gy = cy + o.h * 0.48; g.ellipse(cx, gy, o.w * (0.3 + 1.3 * st), o.h * (0.06 + 0.1 * st)).stroke({ width: 1, color: k2, alpha: 1 - st }); }
     }
     // ✨ 창 (lance): 빛의 창끝이 용사 쪽에서 몬스터를 꿰뚫어 반대쪽까지 → 지나간 자리 빛줄기가 굵어졌다 가늘게 사라짐
-    if (S.extra === 'lance') {
+    if (S.extra === 'lance' && !hide) {
       const x0 = cx - dir * o.w * 2.6, x1 = cx + dir * o.w * 1.6, q = clamp(t / (it * 1.15)), hx = x0 + (x1 - x0) * ease(q), wd = t < it ? 1.5 : Math.max(0.5, 7 * Math.sin(Math.PI * clamp((t - it) / 0.4))), a = t < it + 0.4 ? 1 : 0;
       if (a) { poly([x0, cy - wd, hx, cy - wd * 0.6, hx, cy + wd * 0.6, x0, cy + wd], k1, 0.85); poly([x0, cy - wd * 0.45, hx, cy - wd * 0.25, hx, cy + wd * 0.25, x0, cy + wd * 0.45], 0xffffff, 1); }
       if (q < 1) { const hl = o.w * 0.75, hw = o.h * 0.2; poly([hx + dir * hl, cy, hx, cy - hw, hx - dir * hl * 0.3, cy, hx, cy + hw], k2, 1); poly([hx + dir * hl * 0.8, cy, hx, cy - hw * 0.4, hx, cy + hw * 0.4], 0xffffff, 1); }
@@ -265,22 +341,26 @@ export class SlashFx {
     if (S.extra === 'cog') {
       const R = o.w * 0.3, n = 10, gear: number[] = []; for (let k = 0; k < n * 2; k++) { const an = (k / (n * 2)) * Math.PI * 2, r = k % 2 ? R * 0.78 : R; gear.push(Math.cos(an) * r, Math.sin(an) * r); }
       let x = cx, y = cy, a = 1; if (st < 0) { const q = ease(clamp(t / it)); x = cx - dir * (o.w * 2.4 * (1 - q) + R * 0.4); } else if (st < 0.12) x = cx - dir * R * 0.4; else { const q = (st - 0.12) / 0.35; x = cx - dir * (R * 0.4 + o.w * 0.8 * q); y = cy - o.h * 1.2 * q + 60 * q * q * 0; a = 1 - clamp(q); }
-      const an = t * 18 * dir; if (a > 0.02) { poly(rot(gear, an, x, y), k0, a); poly(rot(gear.map((v) => v * 0.82), an, x, y), k1, a); g.circle(x, y, R * 0.28).fill({ color: k0, alpha: a }); g.circle(x, y, R * 0.12).fill({ color: k2, alpha: a }); }
+      const an = t * 18 * dir; if (a > 0.02 && !hide) { poly(rot(gear, an, x, y), k0, a); poly(rot(gear.map((v) => v * 0.82), an, x, y), k1, a); g.circle(x, y, R * 0.28).fill({ color: k0, alpha: a }); g.circle(x, y, R * 0.12).fill({ color: k2, alpha: a }); }
       if (fancy && st >= 0 && st < 0.3) for (let k = 0; k < 8; k++) { const q = st / 0.3, an2 = -Math.PI * 0.5 - dir * 0.6 + (k - 3.5) * 0.22, r0 = R * 0.6 + base * 0.7 * q; g.moveTo(x + Math.cos(an2) * r0, y + Math.sin(an2) * r0 + 40 * q * q).lineTo(x + Math.cos(an2) * (r0 + 5), y + Math.sin(an2) * (r0 + 5) + 40 * q * q).stroke({ width: 1, color: hiC, alpha: 1 - q }); }
     }
     // 🔩 피스톤 (piston): 위에서 망치 머리(직사각) + 막대가 내려와 쾅 → 0.3초 머묾 · 증기 뭉치가 양옆으로
     if (S.extra === 'piston') {
       const hw = o.w * 0.45, hh = o.h * 0.32, q = st < 0 ? ease(clamp(t / it) ** 1.5) : 1, top = cy + o.h * 0.02 - hh - o.h * 1.8 * (1 - q) + (st >= 0 && st < 0.08 ? 3 : 0), a = st < 0.3 ? 1 : 1 - clamp((st - 0.3) / 0.2);
+      if (!hide) {
       poly([cx - o.w * 0.08, top - o.h * 2, cx + o.w * 0.08, top - o.h * 2, cx + o.w * 0.08, top, cx - o.w * 0.08, top], k0, a);
       poly([cx - hw, top, cx + hw, top, cx + hw, top + hh, cx - hw, top + hh], k0, a); poly([cx - hw * 0.9, top + 2, cx + hw * 0.9, top + 2, cx + hw * 0.9, top + hh - 2, cx - hw * 0.9, top + hh - 2], k1, a); poly([cx - hw * 0.9, top + 2, cx + hw * 0.9, top + 2, cx + hw * 0.9, top + 4, cx - hw * 0.9, top + 4], k2, a);
+      }
       if (fancy && st >= 0 && st < 0.55) for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const p = clamp((st - k * 0.05) / 0.5); if (p <= 0 || p >= 1) continue; g.circle(cx + sd * (hw + o.w * 0.9 * p + k * 4), top + hh * 0.6 - o.h * 0.2 * p, Math.max(1.5, o.w * (0.08 + 0.12 * p))).fill({ color: 0xe8eef2, alpha: 0.7 * (1 - p) }); }
     }
     // 🌀 드릴 (drill): 원뿔 드릴이 용사 쪽에서 파고듦(줄무늬가 흐름) → 맞은 뒤 0.25초 더 갈다 사라짐 · 파편
     if (S.extra === 'drill') {
       const L = o.w * 1.1, W = o.h * 0.28, q = st < 0 ? ease(clamp(t / it)) : 1, tip = cx + dir * o.w * 0.15 - dir * o.w * 2.2 * (1 - q) + (st >= 0 && st < 0.25 ? dir * Math.sin(st * 90) * 1.5 : 0), base0 = tip - dir * L, a = st < 0.28 ? 1 : 1 - clamp((st - 0.28) / 0.2);
+      if (!hide) {
       poly([tip, cy, base0, cy - W, base0, cy + W], k0, a); poly([tip, cy, base0, cy - W * 0.75, base0, cy + W * 0.75], k1, a);
       for (let k = 0; k < 5; k++) { const u = ((k / 5 + t * 6) % 1), x = base0 + (tip - base0) * u, w = W * (1 - u) * 0.85; g.moveTo(x, cy - w).lineTo(x + dir * 3, cy + w).stroke({ width: 1, color: k2, alpha: a * 0.9 }); }
       poly([base0, cy - W * 1.1, base0 - dir * o.w * 0.25, cy - W * 1.1, base0 - dir * o.w * 0.25, cy + W * 1.1, base0, cy + W * 1.1], k0, a);
+      }
       if (fancy && st >= 0 && st < 0.3) for (let k = 0; k < 10; k++) { const p = st / 0.3, an = Math.PI * (dir > 0 ? 1 : 0) + (k - 4.5) * 0.3, r = o.w * 0.2 + base * 0.8 * p; g.rect(Math.round(cx + Math.cos(an) * r), Math.round(cy + Math.sin(an) * r + 50 * p * p), 2, 2).fill({ color: k % 2 ? hiC : 0x8a7a68, alpha: 1 - p }); }
     }
     // 🌊 파도 (wave): 말리는 파도 머리가 용사 쪽 → 몬스터 너머까지 지나감 · 거품 · 맞는 순간 몸 위
@@ -297,11 +377,13 @@ export class SlashFx {
     // ⚓ 닻 (anchor): 사슬 달린 닻이 위에서 떨어져 박힘 → 물 튐 고리 · 물기둥 방울
     if (S.extra === 'anchor') {
       const q = st < 0 ? ease(clamp(t / it) ** 1.6) : 1, by = cy + o.h * 0.25 - o.h * 2.4 * (1 - q), a = st < 0.3 ? 1 : 1 - clamp((st - 0.3) / 0.25), W = o.w * 0.5, Hh = o.h * 0.9, sh2 = 0x4a5562, sh3 = 0xb8c4d0;
+      if (!hide) {
       g.moveTo(cx, by - Hh).lineTo(cx, by - Hh - o.h * 2).stroke({ width: 2, color: sh2, alpha: a });
       poly([cx - W * 0.09, by - Hh, cx + W * 0.09, by - Hh, cx + W * 0.09, by, cx - W * 0.09, by], sh2, a); poly([cx - W * 0.45, by - Hh * 0.75, cx + W * 0.45, by - Hh * 0.75, cx + W * 0.45, by - Hh * 0.66, cx - W * 0.45, by - Hh * 0.66], sh2, a);
       const ay = by - Hh * 0.35; g.moveTo(cx + Math.cos(0.15 * Math.PI) * W, ay + Math.sin(0.15 * Math.PI) * W).arc(cx, ay, W, 0.15 * Math.PI, 0.85 * Math.PI).stroke({ width: 3, color: sh2, alpha: a }); g.moveTo(cx + Math.cos(0.2 * Math.PI) * (W - 1), ay + Math.sin(0.2 * Math.PI) * (W - 1)).arc(cx, ay, W - 1, 0.2 * Math.PI, 0.8 * Math.PI).stroke({ width: 1, color: sh3, alpha: a });
       for (const sd of [-1, 1]) poly([cx + sd * W * 0.98, by - Hh * 0.35 + W * 0.42, cx + sd * W * 1.18, by - Hh * 0.35 + W * 0.12, cx + sd * W * 0.8, by - Hh * 0.35 + W * 0.3], sh2, a);
       g.circle(cx, by - Hh - W * 0.12, W * 0.13).stroke({ width: 2, color: sh2, alpha: a });
+      }
       if (st >= 0 && st < 0.5) { const p = st / 0.5, gy = cy + o.h * 0.48; g.ellipse(cx, gy, o.w * (0.4 + 1.4 * p), o.h * (0.08 + 0.12 * p)).stroke({ width: 2, color: k2, alpha: 1 - p }); if (fancy) for (let k = 0; k < 9; k++) { const an = -Math.PI * (0.15 + 0.7 * (k / 8)), v = o.w * (1.4 + (k % 3) * 0.4); g.circle(cx + Math.cos(an) * v * p, gy + Math.sin(an) * v * p + 120 * p * p, 1.5).fill({ color: k % 2 ? k2 : k1, alpha: 1 - p }); } }
     }
     // 🌀 소용돌이 (vortex): 보라 나선 3줄이 바깥에서 몬스터로 조여 들어감 → 맞는 순간 작은 점으로 꺼졌다(0.06초) 빛살 12 + 고리가 터짐
@@ -347,7 +429,7 @@ export class SlashFx {
     if ((S.extra === 'crack' || S.extra === 'quake' || S.extra === 'piston' || S.extra === 'anchor') && t >= it) {
       const st = t - it, big = S.extra === 'quake', gy = cy + o.h * 0.48, fade = 1 - clamp((st - 0.35) / 0.4), grow = clamp(st / 0.18), r2 = this.r;
       void r2;
-      for (const sd of [-1, 1]) { let x = cx, y = gy; const L = o.w * (big ? 1.5 : 0.8) * grow, n = big ? 7 : 5; g.moveTo(Math.round(x), Math.round(y)); for (let k = 1; k <= n; k++) { x = cx + sd * (L * k) / n; y = gy + ((k * 37) % 5 - 2) * 0.8; g.lineTo(Math.round(x), Math.round(y)); } g.stroke({ width: 2, color: 0x1a0f05, alpha: fade }); g.moveTo(Math.round(cx), Math.round(gy - 1)); for (let k = 1; k <= n; k++) g.lineTo(Math.round(cx + sd * (L * k) / n), Math.round(gy - 1 + ((k * 37) % 5 - 2) * 0.8)); g.stroke({ width: 1, color: this.C.colors[2], alpha: fade * 0.7 }); }
+      if (!imgCrack) for (const sd of [-1, 1]) { let x = cx, y = gy; const L = o.w * (big ? 1.5 : 0.8) * grow, n = big ? 7 : 5; g.moveTo(Math.round(x), Math.round(y)); for (let k = 1; k <= n; k++) { x = cx + sd * (L * k) / n; y = gy + ((k * 37) % 5 - 2) * 0.8; g.lineTo(Math.round(x), Math.round(y)); } g.stroke({ width: 2, color: 0x1a0f05, alpha: fade }); g.moveTo(Math.round(cx), Math.round(gy - 1)); for (let k = 1; k <= n; k++) g.lineTo(Math.round(cx + sd * (L * k) / n), Math.round(gy - 1 + ((k * 37) % 5 - 2) * 0.8)); g.stroke({ width: 1, color: this.C.colors[2], alpha: fade * 0.7 }); }
       if (big && st < 0.45) for (let ring = 0; ring < 2; ring++) { const q = clamp((st - ring * 0.1) / 0.35); if (q <= 0 || q >= 1) continue; g.ellipse(cx, gy, o.w * (0.4 + 1.4 * q), o.h * (0.08 + 0.12 * q)).stroke({ width: 1, color: this.C.colors[2], alpha: 1 - q }); }
       if (big && fancy) for (let k = 0; k < 5; k++) { const x = cx + (k - 2) * o.w * 0.32, hh = o.h * (0.3 + ((k * 13) % 4) * 0.09) * Math.sin(Math.PI * clamp(st / 0.5)); if (hh <= 0.5) continue; const ww = Math.max(3, o.w * 0.09); g.poly([x - ww, gy, x - ww * 0.3, gy - hh, x + ww * 0.4, gy - hh * 0.85, x + ww, gy]).fill({ color: 0x5a4a3a, alpha: fade }); g.poly([x - ww * 0.3, gy - hh, x + ww * 0.4, gy - hh * 0.85, x + ww * 0.1, gy - hh * 0.5]).fill({ color: 0xbca88a, alpha: fade }); }
       if (fancy && st < 0.5) for (let k = 0; k < (big ? 8 : 5); k++) { const q = st / 0.5, x = cx + (k - (big ? 3.5 : 2)) * o.w * 0.22 * (0.6 + q), y = gy - o.h * 0.12 * q; g.circle(Math.round(x), Math.round(y), Math.max(1, o.w * 0.06 * (0.5 + q))).fill({ color: 0x8a7a68, alpha: 0.5 * (1 - q) }); }
@@ -373,7 +455,7 @@ export class SlashLayer {
     this.rt = RenderTexture.create({ width: Math.ceil(W / NUM.PIXEL), height: Math.ceil(H / NUM.PIXEL), scaleMode: 'nearest', antialias: false, resolution: 1 });
     this.out = new Sprite(this.rt); this.out.scale.set(NUM.PIXEL); this.out.visible = false; host.addChild(this.out);
     this.reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    app.ticker.add(this.tick);
+    app.ticker.add(this.tick); void loadObjTex(); // #70 사물 그림 (받기 전 = 코드 그림)
   }
   resize(W: number, H: number) { this.rt.resize(Math.ceil(W / NUM.PIXEL), Math.ceil(H / NUM.PIXEL)); }
   /** 새 이펙트 · false = 받지 못함(호출한 쪽이 지금 띠로) · 화면 좌표 */
@@ -384,7 +466,7 @@ export class SlashLayer {
     this.start(lo); return true;
   }
   private start(o: SlashO) {
-    const tier = this.fancy ? o.tier : 0, f = new SlashFx({ ...o, tier }, this.level); this.live.push(f); this.draw.addChild(f.g);
+    const tier = this.fancy ? o.tier : 0, f = new SlashFx({ ...o, tier }, this.level); this.live.push(f); this.draw.addChild(f.c);
     const T = NUM.tiers[clamp(tier, 0, 3)]!;
     const imp = o.onImpact; f.o.onImpact = () => {
       imp?.();
@@ -416,7 +498,7 @@ export class SlashLayer {
     while (this.queue.length && this.live.length < (this.level >= 2 ? 3 : NUM.MAX_LIVE)) { const q = this.queue.shift()!; if (performance.now() - q.at > NUM.WAIT_MAX) q.fall(); else this.start(q.o); }
     if (!this.live.length) { if (this.out.visible) { this.out.visible = false; this.app.renderer.render({ container: this.draw, target: this.rt, clear: true }); } this.unshake(); return; }
     for (const f of this.live) { f.t += dt; f.draw(Math.max(0, f.t), this.fancy, this.reduce); }
-    for (const f of this.live.filter((x) => x.done)) { this.draw.removeChild(f.g); f.g.destroy(); }
+    for (const f of this.live.filter((x) => x.done)) { this.draw.removeChild(f.c); f.c.destroy({ children: true }); }
     this.live = this.live.filter((x) => !x.done);
     this.out.visible = true;
     this.app.renderer.render({ container: this.draw, target: this.rt, clear: true });

@@ -8,7 +8,7 @@
   const W = 480, H = 300, BODY = { x: 330, y: 170, w: 150, h: 150 }, HERO = { x: 120, y: 236 };
   let host: HTMLDivElement, ready = $state(false);
   onMount(async () => {
-    const PIXI = await import('pixi.js'), { SlashFx, NUM } = await import('./arena/slash');
+    const PIXI = await import('pixi.js'), { SlashFx, NUM, loadObjTex } = await import('./arena/slash'); await loadObjTex();
     const app = new PIXI.Application(); await app.init({ width: W, height: H, backgroundAlpha: 0, antialias: false, preference: 'webgl', preserveDrawingBuffer: true });
     host.appendChild(app.canvas);
     const P = NUM.PIXEL, lowW = Math.ceil(W / P), lowH = Math.ceil(H / P), rt = PIXI.RenderTexture.create({ width: lowW, height: lowH, scaleMode: 'nearest' });
@@ -22,7 +22,7 @@
     bgC.addChild(bg, ms, hs);
     const oldKind = ['cut', 'moon', 'slash', 'twin'];
     const fxAt = (tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd', skill?: string) => { const f = new SlashFx({ x: BODY.x / P, y: BODY.y / P, w: BODY.w / P, h: BODY.h / P, dir: 1, tier, fam: 'cut', seed: 7, v, skill }); let tt = 0; while (tt < t) { tt = Math.min(t, tt + 1 / 60); f.t = tt; f.draw(tt, true, false); } if (t >= f.impactT && f.T.hitstop) { /* 굽기 = 히트 스톱 없음(칸 순서로 표현) */ } return f; };
-    const drawNew = (tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd', skill?: string) => { const f = fxAt(tier, t, v, skill); app.renderer.render({ container: f.g, target: rt, clear: true }); f.g.destroy(); out.visible = true; };
+    const drawNew = (tier: number, t: number, v?: 'a' | 'b' | 'c' | 'd', skill?: string) => { const f = fxAt(tier, t, v, skill); app.renderer.render({ container: f.c, target: rt, clear: true }); f.c.destroy({ children: true }); out.visible = true; };
     const drawOld = (tier: number, t: number) => { const k = oldKind[tier]!, sp = spec(k)!; const n = Math.min(sp.n - 1, Math.floor(t * sp.fps)); if (t > sp.n / sp.fps) { old.visible = false; return; } PIXI.Assets.load(artUrl(`art/${sp.src}`)).then(() => {}); };
     (window as unknown as { __bake: unknown }).__bake = {
       NUM, W, H, BODY,
