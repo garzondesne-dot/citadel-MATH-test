@@ -85,3 +85,20 @@ describe.skipIf(!up)('✏ #75 출제 공방 규칙', () => {
     await expect(set(ref(own.db, `school/qboard/${cls}/b1/solved/${c1.user.uid}`), 2)).rejects.toThrow(); // 한 번만
   }, 30000);
 });
+
+describe.skipIf(!up)('⏱ #76 게시판 정리 규칙', () => {
+  it('🔒 암호 = 글이 있으면 못 지움 · 글이 없으면 누구나 · 방장 = 팀원에게만 넘김', async () => {
+    const { ref, set } = await import('firebase/database');
+    const a = await mk(), b = await mk(); const fa = await import('firebase/auth');
+    await fa.signInAnonymously(a.auth); await fa.signInAnonymously(b.auth);
+    const pid = `p76${Math.floor(Math.random() * 1e6)}`;
+    await set(ref(a.db, `boardLock/${pid}`), { h: 'x', at: 1 });
+    await set(ref(a.db, `school/board/posts/${pid}`), { pid, host: 'u1', phase: 'wait', at: 1, mem: { u1: { uid: 'u1', at: 1 } } });
+    await expect(set(ref(b.db, `boardLock/${pid}`), null)).rejects.toThrow();
+    await expect(set(ref(b.db, `school/board/posts/${pid}/host`), 'nobody')).rejects.toThrow();
+    await expect(set(ref(b.db, `school/board/posts/${pid}/host`), 'u1')).resolves.toBeUndefined();
+    await expect(set(ref(b.db, `school/board/posts/${pid}/act`), 5)).resolves.toBeUndefined();
+    await expect(set(ref(b.db, `school/board/posts/${pid}`), null)).resolves.toBeUndefined();
+    await expect(set(ref(b.db, `boardLock/${pid}`), null)).resolves.toBeUndefined();
+  }, 30000);
+});
