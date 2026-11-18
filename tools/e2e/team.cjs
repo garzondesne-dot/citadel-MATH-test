@@ -29,10 +29,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const board = async (p) => { await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   // A ＋ 모집 글
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await A.waitForTimeout(1500);
+  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); for (const d of '1357') await A.click(`.sheet .rune-keys button:has-text("${d}")`); await A.click('.sheet .act .btn'); await A.waitForTimeout(1500);
   const posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0]; log('＋ 모집 글:', pid, JSON.stringify(Object.values(posts[pid].mem).map((m) => `${m.cls}:${m.role}`)));
   await Bp.waitForSelector('.bd .post', { timeout: 10000 }); log('⑥ B 게시판:', (await Bp.textContent('.bd .post')).replace(/\s+/g, ' ').trim()); await Bp.screenshot({ path: `${SHOTS}/b32-board-post.png` });
-  await Bp.click('.bd .post .go'); await C.waitForSelector('.bd .post'); await C.click('.bd .post .go'); await wait(1200);
+  await Bp.click('.bd .post .go'); await Bp.waitForSelector('.sheet .rune-keys'); for (const d of '1357') await Bp.click(`.sheet .rune-keys button:has-text("${d}")`); await Bp.click('.sheet .act .btn'); await C.waitForSelector('.bd .post'); await C.click('.bd .post .go'); await C.waitForSelector('.sheet .rune-keys'); for (const d of '1357') await C.click(`.sheet .rune-keys button:has-text("${d}")`); await C.click('.sheet .act .btn'); await wait(1200);
   await Bp.click('.bd .act .btn'); await C.click('.bd .act .btn'); await wait(1500);
   await A.screenshot({ path: `${SHOTS}/b32-team-wait-host.png` }); await C.screenshot({ path: `${SHOTS}/b32-team-wait-join.png` });
   const slots = await A.$$eval('.slot:not(.empty)', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim())); log('⑧ 대기실:', slots.join(' | '), '| A 말풍선:', (await A.textContent('.bub')).trim(), '| C 말풍선:', (await C.textContent('.bub')).trim());

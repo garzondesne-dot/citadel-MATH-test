@@ -24,7 +24,7 @@
   type End = { /** 👋 끝까지 남았나 · 끝날 때 인원 */ stay: boolean; nEnd: number; drv: boolean; right: number; total: number; f: ReturnType<typeof firstTry>; tf: ReturnType<typeof firstTry>; grade: string; clear: boolean; sec: number; hints: number; R: Room; L: LessonPack; /** 🤝 구조 (수호자로 · 도전자로 · 완전 구조) */ rescue: { g: number; c: number; full: number } };
   const { L0, uid, num, nick, cls, team = null, onend, onquit, hero = 0 }: {
     L0: LessonPack; uid: string; num: number; nick: string; cls: string; hero?: number;
-    team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
+    team?: { S: Store; code: string; host: boolean; roles: Record<string, Role>; names: Record<string, string>; /** 🛡 #78 첫 수호자 = 지휘실 화면 */ cmd?: boolean; /** 👥 팀 글 용사 (방 소식이 오기 전) */ heroes?: Record<string, number> } | null;
     onend: (r: End) => void; onquit: () => void;
   } = $props();
   const L = untrack(() => boardPack(L0));
@@ -188,6 +188,13 @@
   let shut = $state<Record<string, true>>({});
   const alert = $derived(myRole === 'g' ? open.filter((x) => x.c !== uid && !shut[`${x.c}|${x.a.mid}_${x.a.k}`]).sort((p, q) => q.a.at - p.a.at)[0] ?? null : null);
   function helpHint(c: string) { if (!R) return; if (!canHint) { say('이 문제를 먼저 다 맞히면 힌트를 보낼 수 있어요'); return; } const e = sendHint(S, code, R, L, uid, c); say(e ?? `💡 ${name(c)}에게 보냈어요`); }
+  // 🛡 #78 지휘실 (첫 수호자 폰만 · 📜 2026-11-18): 위 = 전투(약 45%) · 아래 = 도전자마다 지금 문제 · 상태 + ⏸ 설명 · 💡 힌트 · 🎬 시연(직접 풀기 → ↩ 지휘실)
+  //   다른 팀원 화면 = 그대로 · 진행은 지금처럼 모두가 풀어야 넘어감 → 내 문제는 🎬 시연으로 풂
+  let demo = $state(false);
+  const cmdOn = $derived(!solo && !!team?.cmd && myRole === 'g' && !demo && !!R && !isLobby(R) && !isEnd(L, R));
+  const chall = $derived(ids.filter((u) => u !== uid && roles[u] === 'c'));
+  const triesOf = (u: string, it: { mid: string; k: number } | null) => { if (!R || !it) return 0; const v = (R.subs?.[it.mid]?.[u] || {}) as Record<string, unknown>; return Object.keys(v).length; };
+  const qShort = (q: unknown) => String((q as { question?: string })?.question ?? '').replace(/\s+/g, ' ').slice(0, 90);
   function helpPause(c: string, a: SeAlert) { if (!R) return; if (bp || pausesLeft(R, uid) <= 0) { say('⏸ 설명을 더 쓸 수 없어요'); return; } markPauseHelp(S, code, uid, c, a); pauseOn(S, code, R, uid); }
 </script>
 
@@ -207,6 +214,19 @@
     {/if}
   </div>
   <Student {S} {L} {code} {uid} {num} {nick} {cls} board {mates} {mateFeed} />
+  {#if cmdOn && R}
+    <section class="cmd" data-k="cmd-room" aria-label="지휘실">
+      <header><b>🛡 지휘실</b><small>도전자 {chall.length}명 · 내 문제는 🎬 시연으로</small></header>
+      {#each chall as u (u)}{@const it = stuckItem(L, R, u)}{@const al = open.find((x) => x.c === u)}
+        <div class="cc" class:sos2={!!al} class:hand={!!help[u]} data-k="cmd-card">
+          <div class="ch"><b>{help[u] ? '🙋 ' : ''}{name(u)}</b><span>{statusOf(u)} {stepDone(L, R, u) ? '다 풂' : it ? `시도 ${triesOf(u, it)}` : '푸는 중'}{al ? ' · 🚨 강적' : ''}</span></div>
+          <p class="cq">{it ? qShort(it.q) : stepDone(L, R, u) ? '✔ 이 단계 끝' : '…'}</p>
+          <div class="cb"><button type="button" disabled={!!bp || pausesLeft(R, uid) <= 0} onclick={() => (al ? helpPause(u, al.a) : R && pauseOn(S, code, R, uid))}>⏸ 설명 {pausesLeft(R, uid)}</button><button type="button" disabled={!canHint || !it} onclick={() => helpHint(u)}>💡 힌트</button><button type="button" data-k="cmd-demo" onclick={() => (demo = true)}>🎬 시연</button></div>
+        </div>
+      {:else}<p class="cq">도전자가 없어요 · 🎬 시연으로 함께 풀어요</p>{/each}
+    </section>
+  {/if}
+  {#if demo && !solo && team?.cmd}<button type="button" class="back2" data-k="cmd-back" onclick={() => (demo = false)}>↩ 지휘실</button>{/if}
   {#if pulse}<div class="rage" aria-hidden="true" data-k="strong-pulse"></div>{/if}
   {#if alert}<div class="sos" role="alert" data-k="strong-alert"><b>🚨 강적 출현! {eulReul(name(alert.c))} 도와주세요</b><span class="sb"><button type="button" onclick={() => helpHint(alert.c)}>💡 힌트 보내기</button><button type="button" onclick={() => helpPause(alert.c, alert.a)}>⏸ 설명 멈춤</button><button type="button" class="sx" aria-label="알림 닫기" onclick={() => (shut = { ...shut, [`${alert.c}|${alert.a.mid}_${alert.a.k}`]: true })}>✕</button></span></div>{/if}
   {#if (gotHint || autoHint) && hintOpen && !bp}
@@ -281,4 +301,14 @@
   .sos b { font-size: 15px; } .sos .sb { display: flex; gap: 6px; }
   .sos button { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 0; background: rgba(255, 255, 255, 0.14); color: #fff; font: 700 14px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
   .sos button.sx { flex: none; width: 44px; background: transparent; box-shadow: none; }
+  /* 🛡 #78 지휘실 = 아래 55% (위 45% = 전투 장면) */
+  .cmd { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: min(100%, 430px); height: 55vh; z-index: 28; overflow: auto; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); border-radius: 20px 20px 0 0; border-top: 2px solid var(--accent); box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 8px; }
+  .cmd header { display: flex; align-items: baseline; gap: 8px; } .cmd header b { font-size: 16px; } .cmd header small { font-size: 13px; color: var(--text-2); }
+  .cc { padding: 10px; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+  .cc.hand { border-left-color: var(--accent); } .cc.sos2 { border-left-color: var(--bad); }
+  .ch { display: flex; justify-content: space-between; gap: 8px; } .ch b { font-size: 15px; } .ch span { font-size: 13px; color: var(--text-2); }
+  .cq { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+  .cb { display: flex; gap: 6px; } .cb button { flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--line); }
+  .cb button:disabled { opacity: 0.45; box-shadow: none; }
+  .back2 { position: fixed; right: max(12px, calc(50% - 203px)); bottom: 96px; z-index: 31; min-height: 48px; padding: 0 16px; border-radius: 24px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 15px var(--font); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000); }
 </style>
