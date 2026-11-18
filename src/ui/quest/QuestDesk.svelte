@@ -157,11 +157,11 @@
       {#if board.length}<p class="lab">✏ 우리 반 친구 문제 {board.length}</p>
         {#each board as q (q.id)}<button type="button" class="pl" data-k="quest-friend" onclick={() => { playHall = false; play = q; }}><span>{GRADE_IC[q.grade]} {q.monster || '친구 문제'}</span><small>{isMine(q) ? '내 문제' : q.solved?.[uid] ? '✔ 풂' : '풀어 보기 ›'} · 푼 친구 {Object.keys(q.solved || {}).length}</small></button>{/each}{/if}
     {:else}
-      <label class="opt"><input type="checkbox" checked={nameOn} data-k="quest-nameopt" onchange={(e) => setName((e.currentTarget as HTMLInputElement).checked)} /> 내 문제가 전당에 오르면 이름도 보이기 <small>(끄면 용사 · 칭호 · 반만)</small></label>
+      <label class="opt"><input type="checkbox" checked={nameOn} data-k="quest-nameopt" onchange={(e) => setName((e.currentTarget as HTMLInputElement).checked)} /> <span>전당에 오르면 이름도 보이기<small>끄면 용사 · 칭호 · 반만</small></span></label>
       {#each hall as q (q.id)}
         <div class="hl" data-k="quest-hall">
           <span class="hs"><HeroSprite id={q.hero ?? 0} scale={1} /></span>
-          <div class="hx"><b>{q.monster || '전당 문제'}</b><small>{q.by.cls}반{q.name ? ` · ${q.name}` : ''}{ttl(q.title) ? ` · 「${ttl(q.title)}」` : ''}</small>
+          <div class="hx"><b>{q.monster || '전당 문제'}</b><small>{q.by.cls === 'me' ? '🧪' : `${q.by.cls}반`}{q.name ? ` · ${q.name}` : ''}{ttl(q.title) ? ` · 「${ttl(q.title)}」` : ''}</small>
             <div class="hb"><button type="button" class="b2" onclick={() => { playHall = true; play = q; }}>{q.solved?.[uid] ? '✔ 다시 풀기' : '⚔ 1:1 풀기'}</button><button type="button" class="lk" class:on={!!q.like?.[uid]} aria-pressed={!!q.like?.[uid]} onclick={() => like(q)}>👍 {Object.keys(q.like || {}).length}</button></div>
           </div>
         </div>
@@ -200,7 +200,7 @@
   .rs, .sc, .fx { margin: 0; font-size: 14px; line-height: 1.5; } .rs { color: var(--bad); } .sc { color: var(--text-2); } .fx { color: var(--accent); }
   .pl { display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--line); }
   .pl small { font: 600 13px var(--font); color: var(--text-2); }
-  .opt { display: flex; align-items: center; gap: 8px; font: 600 14px var(--font); min-height: 48px; } .opt small { color: var(--text-3); font-size: 13px; } .opt input { width: 22px; height: 22px; }
+  .opt { display: flex; align-items: center; gap: 8px; font: 600 14px var(--font); min-height: 48px; } .opt span { display: flex; flex-direction: column; } .opt small { color: var(--text-3); font-size: 13px; } .opt input { width: 22px; height: 22px; }
   .hl { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 12px; background: var(--surface-2); }
   .hs { width: 64px; height: 64px; display: grid; place-items: center; overflow: hidden; flex: none; }
   .hx { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; } .hx small { color: var(--text-2); font-size: 13px; }
