@@ -27,7 +27,7 @@ const prepTried = (c: ChalCtx) => Object.entries(isObj(bon(c).review) ? (bon(c).
 const castleRooms = (c: ChalCtx) => Object.entries(bon(c)).filter(([k, v]) => k.startsWith('eval-') && isObj(v)).flatMap(([, v]) => Object.values(v as Obj).filter(isObj));
 const boardRecs = (c: ChalCtx) => Object.values(isObj(bon(c).board) ? (bon(c).board as Obj) : {}).filter(isObj).filter((r) => !r.left);
 const cardsN = (c: ChalCtx) => Object.keys(isObj(c.d.cards) ? c.d.cards : {}).length;
-const symN = (c: ChalCtx) => { const st = isObj(c.d.xr?.st) ? (c.d.xr!.st as Record<string, Obj>) : {}; return Object.values(st).reduce((t, by) => t + Object.values(isObj(by) ? by : {}).reduce<number>((u, v) => u + (Number(v) || 0), 0), 0); };
+export const symN = (c: ChalCtx) => { const st = isObj(c.d.xr?.st) ? (c.d.xr!.st as Record<string, Obj>) : {}; return Object.values(st).reduce((t, by) => t + Object.values(isObj(by) ? by : {}).reduce<number>((u, v) => u + (Number(v) || 0), 0), 0); };
 const chests = (c: ChalCtx) => keysLike(c, 'keychest_').reduce((a, k) => a + Math.floor((Number(logOf(c)[k]?.g) || 0) / KEY_CHEST.gem), 0);
 const ph2N = (c: ChalCtx) => castleRooms(c).filter((m) => m.ph2).length;
 const rewriteN = (c: ChalCtx) => Object.keys(c.gifts || {}).filter((k) => /^ult_.+_v$/.test(k)).length + ph2N(c);

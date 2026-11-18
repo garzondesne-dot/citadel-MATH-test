@@ -382,7 +382,7 @@
       {/if}
     </div>
   {:else if view === 'end'}
-    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>{#if R && explorers(R).length}<p class="expl" data-k="tv-explore">🔥 탐사대 {explorers(R).length}명 = 예습한 용사</p>{/if}<!-- 🔥 #67 -->
+    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>{#each Object.entries(R?.players ?? {}).flatMap(([u, p]) => ((p as { ach?: { id: string; name: string; title: string }[] }).ach ?? []).map((a) => ({ u, a }))) as x (x.u + x.a.id)}<p class="legach" data-k="tv-legach">🏆 {nameOf(x.u)} 용사 『{x.a.title || x.a.name}』 달성!</p>{/each}<!-- 🏆 #73 👑 전설 달성만 --> {#if R && explorers(R).length}<p class="expl" data-k="tv-explore">🔥 탐사대 {explorers(R).length}명 = 예습한 용사</p>{/if}<!-- 🔥 #67 -->
       <!-- 💬 마지막 한마디 말풍선 (정식 hall.js 마무리 · 거른 말 · 선생님이 숨긴 말 = 안 보임) -->
       {#if tvWords.length}<div class="wbubs" data-k="tv-words">{#each tvWords as w (w.u)}<span class="wb"><em style="font-family: var(--font-plain)">{w.t}</em><small>{nameOf(w.u)}</small></span>{/each}</div>{:else}<p class="wwait">💬 학생 폰에서 마지막 한마디를 남겨요</p>{/if}</div>
   {:else if step && R}
@@ -609,6 +609,8 @@
   .sc .r { font-size: var(--tv-body); } .sc .r b { font-size: var(--tv-big); color: #9fc8ff; }
   .dpane { position: absolute; right: 1.5cqw; top: 7.5cqh; /* 위 막대(3.8cqw ≈ 6.8cqh) 바로 아래 · 한 화면에 더 들어가게 */ bottom: 10cqh; /* 🎮 아래 조작 막대(0.7배 · 약 6.7cqh + 바닥 2cqh) 위 = 막대가 떠 있어도 주요 단추가 늘 보임 (🐞 2026-11-14) */ width: 32cqw; /* 📜 2026-11-14 「좌우 폭을 조금 줄여서」 40 → 32 */ z-index: 9; /* 전투 띠(몬스터 격파 · 연습 타격)보다 위 */ border-radius: 2cqh; overflow: hidden; border: 1px solid var(--line); }
   .endv { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; }
+  .endv .legach { font-size: var(--tv-title); color: #ffd98a; text-shadow: 0 0 14px rgba(255, 200, 90, 0.7), 0 2px 0 #000; animation: legIn 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+  @keyframes legIn { from { transform: scale(1.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .endv b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; } .endv p { font-size: var(--tv-title); margin: 0; }
   .ccband { position: absolute; top: 9cqh; left: 50%; transform: translateX(-50%); z-index: 7; padding: 1.2cqh 2.4cqw; border-radius: 999px; background: #1b1408e6; color: #fff; border: 0.3cqw solid var(--accent, #f5b84a); font-size: var(--tv-title); font-weight: 800; }
   .ccband b { color: #ffe066; }

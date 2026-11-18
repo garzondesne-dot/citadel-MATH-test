@@ -52,6 +52,9 @@
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
+  import { CHALS, chalState } from '../school/challenges';
+  import { titleData } from '../model/titles';
+  import { titleOf } from '../model/hero';
   import { expFrom, expLine, expOf, prepRecPath, EXP_MIN } from '../school/explore';
   import { bonusBase as bonusBaseX } from '../school/castle';
   import { shouldNudge } from '../school/idle';
@@ -158,6 +161,13 @@
   // 🔥 #67 탐사대: 이 차시를 배움터 예습에서 몬스터 2개 이상 처치 → 수업 방 내 칸에 exp (TV 횃불 · 🔥 · 점수 0) · 한 번만
   let expDone = false;
   $effect(() => { const b = meBound(); if (expDone || board || !R || !b || !R.players?.[uid]) return; expDone = true; untrack(() => { if ((R.players?.[uid] as { exp?: unknown } | undefined)?.exp) return; const e = expFrom(b.S.get(prepRecPath(bonusBaseX(b.cls, b.num), L.id))); if (e.n >= EXP_MIN) S.set(`rooms/${code}/players/${uid}/exp`, e); }); });
+  // 🏆 #73 📺 전설 도전과제: 수업이 끝나면(결과 화면) 아직 캠프에서 못 본 👑 전설 달성 = 방 내 칸 ach 에 한 번 (TV 마무리 화면 한 줄 · 캠프 연출은 그대로)
+  let achDone = false;
+  $effect(() => { const b = meBound(); if (achDone || board || !R || !result || !b || !R.players?.[uid]) return; achDone = true; untrack(() => { try {
+    const c = { d: titleData(b.S, b.cls, b.num) }, seen = (b.S.get<Record<string, unknown>>(`${bonusBaseX(b.cls, b.num)}/ach`) || {}) as Record<string, unknown>;
+    const legs = CHALS.filter((ch) => ch.tier === 'leg' && !ch.hide?.(c) && chalState(ch, c).done && !seen[ch.id] && !(c.d.gem?.log as Record<string, unknown> | undefined)?.[`chal_${ch.id}`]).map((ch) => ({ id: ch.id, name: ch.name, title: ch.reward.title ? titleOf(ch.reward.title)?.name ?? '' : '' }));
+    if (legs.length) S.set(`rooms/${code}/players/${uid}/ach`, legs);
+  } catch { /* 셈 실패 = 줄 없음 */ } }); });
   function idleClear() { if (idleMid) { S.set(`rooms/${code}/players/${uid}/idle`, null); idleMid = null; } }
   function poke() { idleLast = S.now(); idleClear(); }
   $effect(() => { const on = (e: Event) => { if ((e.target as Element | null)?.closest?.('[data-k="idle"]')) return; poke(); }; const o = { capture: true, passive: true }; /* 🤝 띠 안 누름 = 단추가 처리(먼저 지우면 누르기 전에 사라짐) */ for (const e of ['pointerdown', 'keydown', 'input']) window.addEventListener(e, on, o); return () => { for (const e of ['pointerdown', 'keydown', 'input']) window.removeEventListener(e, on, o); }; });
