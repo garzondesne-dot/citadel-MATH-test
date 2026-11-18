@@ -178,7 +178,12 @@
     });
   }); });
   const teamRun = $derived(teamRun0 && !gone.includes(teamRun0.pid) && (teamRun0.phase !== 'play' || okPid.includes(teamRun0.pid)) ? teamRun0 : null);
-  const names = (p: Post) => Object.fromEntries(membersOf(p).map((m) => [m.uid, `${m.cls}반 ${heroOf(m.hero).name}`]));
+  // 👤 #77 방 안(대기실 · 전투)에서만 실명 = 반 명단에서 반 · 번호로 찾음(글에 이름을 적지 않음) · 목록 · 랭킹 · 소식 = 그대로 익명 · 명단을 못 읽으면 용사 이름
+  let rost = $state<Record<string, Record<string, string>>>({});
+  const roomCls = $derived([...new Set([...(mine ? membersOf(mine) : []), ...(teamRun0 ? membersOf(teamRun0) : [])].map((m) => m.cls).filter(Boolean))].join(','));
+  $effect(() => { for (const c of roomCls ? roomCls.split(',') : []) { if (untrack(() => rost[c])) continue; const k = c.replace(/[.#$/[\]]/g, '_'), got = S.get<Record<string, string>>(`roster/${k}`); if (got && Object.keys(got).length) { rost = { ...untrack(() => rost), [c]: got }; continue; } void (S.fetch ? S.fetch<Record<string, string>>(`roster/${k}`) : Promise.resolve(null)).then((v) => { if (v) rost = { ...rost, [c]: v as Record<string, string> }; }).catch(() => {}); } });
+  const realName = (m: { cls: string; num: number }) => { const v = rost[m.cls]?.[String(m.num)]; return typeof v === 'string' && v ? v : ''; };
+  const names = (p: Post) => Object.fromEntries(membersOf(p).map((m) => [m.uid, `${m.cls}반 ${realName(m) || heroOf(m.hero).name}`]));
 </script>
 
 <div class="bd" role="dialog" aria-label="게시판 던전">
@@ -208,7 +213,7 @@
     {@const host = mine.host === uid}
     <div class="mid">
       {#if mine.lk}{@const pn = host ? myPin(mine.pid) : ''}<div class="card pin" class:host><b>🔒 {host ? (pn ? `입장 암호 ${pn}` : '입장 암호 · 이 기기에 없어요') : '암호가 걸린 모집 글'}</b><small>{host ? (pn ? '친구에게 말로 알려 줘요 · 다른 화면엔 안 보여요' : '다른 폰에서 만든 글이에요 · 내리고 다시 모집해요') : '모집한 친구에게 암호를 듣고 들어왔어요'}</small></div>{/if}
-      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b>{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
+      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
     </div>
