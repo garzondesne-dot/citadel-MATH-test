@@ -10,6 +10,7 @@ export const loadDummy = once(() => import('./dummy/Dummy.svelte'));
 export const loadPrep = once(() => import('./dummy/Prep.svelte')); // 📖 #66 배움터 · 예습
 export const loadBoard = once(() => import('./board/Board.svelte'));
 export const loadCastle = once(() => import('./castle/Castle.svelte'));
+export const loadQuest = once(() => import('./quest/QuestDesk.svelte')); // ✏ #75 출제 공방
 export const loadFunPhone = once(() => import('./rest/FunPhone.svelte'));
 /** 학생 화면(로그인 · 캠프 · 수업)이 뜬 뒤 한 번: 쉬는 틈에 위 묶음을 미리 받음 */
 export function prefetchStudent(): void {

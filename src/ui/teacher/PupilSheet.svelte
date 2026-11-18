@@ -9,6 +9,7 @@
   import { giveGift, setAbsent } from '../../raid/actions';
   import { uidOf } from '../../school/school';
   import { photoNeeds } from '../../school/photo';
+  import { questCount, questPath, type QuestRec } from '../../school/quest';
   import { liveValue } from '../room.svelte';
   import PhotoCheck from './PhotoCheck.svelte';
   import { onDestroy } from 'svelte';
@@ -33,6 +34,8 @@
   // 📷 이 학생의 확인할 사진 (📜 2026-11-15 머리 🔨 「학생 시트도」) = 소식 탭 📷 과 같은 부품 · ✔ ✖ 하면 빠짐
   const lvp = untrack(() => (S.kind === 'server' ? liveValue(S, 'photo') : null)); onDestroy(() => lvp?.stop());
   let phVer = $state(0);
+  const lvq = untrack(() => liveValue(S, questPath(s.cls, s.n))); onDestroy(lvq.stop); // ✏ #75
+  const qc = $derived.by(() => { void lvq.v.val; return questCount(S.get<Record<string, QuestRec>>(questPath(s.cls, s.n))); });
   const phs = $derived.by(() => { void lvp?.v.val; void phVer; return S.kind === 'server' ? photoNeeds(S, s.cls, s.n) : []; });
   // 📚 차시별 개념 기록 (정식 detail() 의 DS.Result.history 자리 · 첫 시도 맞힘 / 문항 · 차시 순)
   const hist = $derived.by(() => { const by: Record<string, { no: number; cs: { name: string; ok: number; total: number }[] }> = {}; for (const c of Object.values(s.conc)) { const no = s.rec[c.lesson]?.no ?? 0; (by[c.lesson] ||= { no, cs: [] }).cs.push({ name: c.name, ok: c.ok, total: c.total }); } return Object.values(by).sort((a, b) => a.no - b.no); });
@@ -66,6 +69,7 @@
       <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>✍ 연습 통과 {s.extra.photoOk} · ✍ 실력 통과 {s.extra.photoV || 0} · 다시 {s.extra.photoRe}</em>{#if s.extra.scrollCum != null}<em class="cum" data-k="scroll-cum" title="지금까지 받은 📜 모두 (쓴 것 안 뺌)">💰 누적 {s.extra.scrollCum}</em>{/if}</div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
+    {#if qc.n}<p class="prep" data-k="pupil-quest">✏ 출제 {qc.n} (🟢{qc.g} · 🔵{qc.b} · 🟣{qc.p}) <small>(🔵 🟣 = 선생님 확인한 것 · 종이 = 수행평가는 따로)</small></p>{/if}<!-- ✏ #75 -->
     {#if s.extra.prepTxt}<p class="prep" data-k="pupil-prep">{s.extra.prepTxt} <small>(보상 · 반 통계 없음)</small></p>{/if}<!-- 📖 #66 배움터 예습 흔적 -->
     {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}
     {#if misTop.length}<p class="mis">🔎 {misTop.map(([k, v]) => `${k} ${MIS[k]?.name ?? ''} (${v[0]}번)`).join(' · ')}</p>{/if}

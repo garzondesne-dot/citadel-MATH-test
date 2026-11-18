@@ -1,6 +1,7 @@
 import { SUBJ } from '../engine/subject';
 import type { Store } from '../model/types';
 import { photoNeeds } from './photo';
+import { questNeeds } from './quest';
 
 // 🔔 교사 소식 받은 것 (#124 ⑱) — 의견 · 📷 사진 채점 대기 · ✏ 출제 확인 · 📝 설문 결과 · school/inbox/{id}
 //   테스트 판 = 처음 열 때 가짜 소식 6줄을 한 번 넣음(읽음 · 처리 상태는 이 기기에 남음)
@@ -20,4 +21,4 @@ export function inbox(S: Store): InboxItem[] {
   return Object.values(all).sort((a, b) => b.at - a.at);
 }
 /** 🔔 빨간 점 = 안 본 소식 + 📷 확인할 사진(✔ ✖ 하기 전까지 · 서버) */
-export const unreadN = (S: Store) => inbox(S).filter((x) => !x.read).length + (S.kind === 'server' ? photoNeeds(S).length : 0);
+export const unreadN = (S: Store) => inbox(S).filter((x) => !x.read).length + (S.kind === 'server' ? photoNeeds(S).length : 0) + questNeeds(S).length; // ✏ #75 출제 안건

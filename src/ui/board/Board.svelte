@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { QBOARD } from '../../school/quest';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { meLookId, type Me } from '../../store/me.svelte';
@@ -20,7 +21,8 @@
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
-  const { S, me, save, uid, num, cls, open, onclose, joinPid = '' }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
+  const { S, me, save, uid, num, cls, open, onclose, joinPid = '', onquest }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** ✏ #75 친구 문제 → 출제 공방 「📜」 */ onquest?: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
+  const qN = $derived(Object.keys((cls ? S.get<Record<string, unknown>>(QBOARD(cls)) : null) || {}).length); // ✏ #75
   const KEY = 'citadel-v1-board-chip';
   let chip = $state<number | 'all'>(untrack(() => { try { const v = localStorage.getItem(KEY); return v && v !== 'all' ? Number(v) : 'all'; } catch { return 'all'; } }));
   const setChip = (c: number | 'all') => { chip = c; try { localStorage.setItem(KEY, String(c)); } catch { /* 무시 */ } };
@@ -228,6 +230,7 @@
       {:else}
         <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>팀 없이 도전하거나 · 모집 글을 올려요</small></div>
       {/if}
+      {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
       <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>🏆 랭킹 · 📜 내 기록</span><small>익명 · 이번 학기</small></button>
       {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
         <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{/if}

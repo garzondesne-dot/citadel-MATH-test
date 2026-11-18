@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { loadBoard, loadCastle, loadDummy, loadPrep } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
+  import { loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
@@ -382,6 +382,7 @@
     const ids = Object.keys(HERO_NAMES).map(Number).filter((h) => h !== me.hero), day = Math.floor((Date.now() + 9 * 3600e3) / 86400e3);
     return ids.length ? { hero: ids[day % ids.length]!, line: BUDDY_LINES[buddyI]!, real: false } : null;
   });
+  let questTab = $state<'up' | 'mine' | 'hall'>('up'); // ✏ #75 게시판 「친구 문제」 = 📜 탭으로
   function tap(id: string, e?: Event) {
     e?.stopPropagation();
     M.mark(id);
@@ -611,7 +612,10 @@
   {#await loadDummy() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />{/await}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
-  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
+  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onquest={feat('author') ? () => { questTab = 'mine'; sheet = 'tent'; } : undefined} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
+{:else if sheet === 'tent' && feat('author')}
+  <!-- ✏ #75 출제 공방 (책상) -->
+  {#await loadQuest() then K}<K.default {S} {me} cls={pupil?.cls ?? ''} num={pupil?.num ?? 0} uid={pupil?.uid ?? 'me'} test={me.test || !pupil} tab={questTab} claim={chalClaim} onclose={() => { sheet = null; questTab = 'up'; }} />{/await}
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} teacher={fromMe0} onreset={fromMe0 ? M.reset : undefined} />
 {:else if sheet}
