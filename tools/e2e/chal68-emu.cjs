@@ -15,11 +15,13 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   const fh = await s.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await s.waitForTimeout(1200); }
   // 옛 기록: 성채 방 처치 · 1층 👑 · 예습 1 · 복습 처치
   await rest('bonus/1-6/1', 'PATCH', { 'eval-1': { q01: { clear: true, tries: 1, at: 1 }, q12: { clear: true, tries: 1, at: 1 } }, 'set-02': { m1: { clear: true, tries: 2, at: 1 } }, review: { 'prep_set-10': { m1: { tries: 1, clear: true, at: 1 } } } });
-  await s.reload(); await s.waitForTimeout(4000); await s.waitForSelector('[data-k="chal-go"]', { timeout: 15000 });
-  const n = ((await s.textContent('[data-k="chal-n"]').catch(() => '')) || '').trim();
-  ok('캠프 🏆 빨간 숫자 = 받을 것 (옛 기록)', Number(n) >= 4, n);
+  await s.reload(); await s.waitForTimeout(4000); await s.waitForSelector('[data-k="rec-go"]', { timeout: 15000 });
+  const popGone = async () => { for (let i = 0; i < 60 && (await s.$('[data-k="ach-pop"], [data-k="ach-more"]')); i++) await s.waitForTimeout(500); }; // 🏆 #73 달성 띠 = 그냥 넘김(받기는 텐트에서)
+  await popGone();
+  const n = ((await s.textContent('[data-k="cnt-tentdeco"]').catch(() => '')) || '').trim();
+  ok('⛺ 기록 텐트 이름표 빨간 숫자 = 받을 것 (옛 기록 · #73)', Number(n) >= 4, n);
   const g0 = await rest('gem/1-6/1'), tot0 = Number(g0?.total) || 0, sc0 = Number(g0?.scroll) || 0, day0 = JSON.stringify(g0?.day || {});
-  await s.click('[data-k="chal-go"]'); await s.waitForSelector('[data-k="chal"]', { timeout: 10000 }); await s.waitForTimeout(500);
+  await s.$eval('[data-k="rec-go"]', (e) => e.click()); await s.waitForSelector('[data-k="chal"]', { timeout: 10000 }); await s.waitForTimeout(500);
   await s.screenshot({ path: `${SHOTS}/chal68-board.png` });
   ok('성채의 문 = 「🎁 받기」', !!(await s.$('[data-chal="castle1"] [data-k="chal-take"]')));
   ok('아직 못 한 과제도 보임 (꾸준한 복습 n / 30)', /\d+ \/ 30/.test((await s.textContent('[data-chal="review30"]')) || ''));
@@ -37,7 +39,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await s.click('[data-chal="prep1"] [data-k="chal-take"]'); await s.waitForTimeout(1200);
   ok('한 발 앞서 = 칭호만 (💎 그대로)', (Number((await rest('gem/1-6/1'))?.total) || 0) === (Number(g2?.total) || 0) && !!(await rest('gem/1-6/1/log/chal_prep1')));
   await s.screenshot({ path: `${SHOTS}/chal68-after.png` });
-  await s.reload(); await s.waitForTimeout(3500); await s.$eval('[data-k="chal-go"]', (e) => e.click()); await s.waitForSelector('[data-k="chal"]'); await s.waitForTimeout(400);
+  await s.reload(); await s.waitForTimeout(3500); await popGone(); await s.$eval('[data-k="rec-go"]', (e) => e.click()); await s.waitForSelector('[data-k="chal"]'); await s.waitForTimeout(400);
   ok('다시 열어도 받음 그대로 · 받기 단추 없음', !(await s.$('[data-chal="castle1"] [data-k="chal-take"]')) && !(await s.$('[data-chal="floor1"] [data-k="chal-take"]')));
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close(); process.exit(errs.length ? 1 : 0);
 })();

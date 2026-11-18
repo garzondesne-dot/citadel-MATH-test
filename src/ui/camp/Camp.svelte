@@ -44,8 +44,11 @@
   import { PACKS } from '../../engine/packs';
   import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
   import { prepOpenList } from '../../school/prepopen';
-  import Challenges from './Challenges.svelte';
-  import { chalReady, type ChalCtx } from '../../school/challenges';
+  import RecordRoom from './RecordRoom.svelte';
+  import AchievePop from './AchievePop.svelte';
+  import { CHALS, chalReady, chalState, claimOf, symN, type Chal, type ChalCtx } from '../../school/challenges';
+  import { earnedTitles } from '../../model/draft';
+  import { earnedFrom } from '../../model/titles';
   import { castles } from '../../school/castles.svelte';
   import { titleData } from '../../model/titles';
   import { visit as usageVisit } from '../../school/usage';
@@ -190,6 +193,7 @@
     if (feat('forge') && wishN > 0) t.anvil = `카드 ${wishN}`;
     if (open && !trial) t.gate = '⚔ 수업 열림 · 입장!'; // 👩‍🏫 체험판 = 차원문 = 「다른 차시」 이름표만
     if (rc) t.dummy = `⚔ 모집 중 ${rc.n}/${rc.max} · 참여!`;
+    if (chalN > 0) t.tentdeco = `받을 도전과제 ${chalN}`;
     return t;
   });
   // 🏆 #68 도전과제 판: 기록 = 묶인 학생은 서버(gem log chal_) · 시험 · 체험 · 이 기기 = 이 폰에만(같은 키)
@@ -204,7 +208,23 @@
     me.wallet.gem += row.g; if (row.s) me.wallet.scroll += row.s; M.save(); chVer++; return true;
   }
   const chalN = $derived.by(() => { void chVer; void sheet; void todoVer; try { return chalReady(chalCtx()); } catch { return 0; } });
-  // 📖 #66 배움터 예습: 열린 차시 중 안 열어 본 것 = 「📖 새 차시 열림」 작은 표시(금빛 아님 · 복습 금빛이 먼저)
+
+  // 🏆 #73 달성 연출: 조건이 막 채워진 과제(학생마다 me.seen ach-{id} · 다시 안 띄움) · 캠프에 있고 창이 닫혔을 때 · 3개까지 하나씩 + 「+n 개 더」
+  let achQ = $state<Chal[]>([]), achMore = $state(0);
+  function achCheck() {
+    if (achQ.length || paperOn() || castleGo != null || sheet) return;
+    let c: ChalCtx; try { c = chalCtx(); } catch { return; }
+    const b = meBound(), sv = (b ? b.S.get<Record<string, unknown>>(`${bonusBase(b.cls, b.num)}/ach`) : null) || {}; // 본 것 = 학생마다 서버(bonus/…/ach) · 묶이지 않음 = 이 기기(me.seen)
+    const fresh = CHALS.filter((ch) => !ch.hide?.(c) && !me.seen[`ach-${ch.id}`] && !sv[ch.id] && chalState(ch, c).done);
+    if (!fresh.length) return;
+    for (const ch of fresh) { me.seen[`ach-${ch.id}`] = true; if (b) b.S.set(`${bonusBase(b.cls, b.num)}/ach/${ch.id}`, Date.now()); } M.save();
+    const order = { leg: 0, adv: 1, seed: 2 } as const, list = [...fresh].sort((a, b) => order[a.tier] - order[b.tier]);
+    achQ = list.slice(0, 3); achMore = list.length - achQ.length;
+  }
+  const achClaim = (ch: Chal): boolean => { const c = claimOf(ch, chalCtx(), Date.now()); const ok = !!c && chalClaim(c.key, c.row); if (ok) chVer++; return ok; };
+  $effect(() => { if (sheet || castleGo != null) return; void chVer; const t = setTimeout(() => untrack(achCheck), 900); return () => clearTimeout(t); });
+  /** 🏅 가진 칭호 (🧙 내 용사와 같은 셈) */
+  function recEarned(): string[] { const b = meBound(); return me.test || !b ? earnedTitles(true, []) : earnedFrom(titleData(b.S, b.cls, b.num), []); }  // 📖 #66 배움터 예습: 열린 차시 중 안 열어 본 것 = 「📖 새 차시 열림」 작은 표시(금빛 아님 · 복습 금빛이 먼저)
   const prepAll = untrack(() => !!trial || !pupil || !!fromMe0); // 로그인한 학생(🧪 1-6 포함) = 실제 규칙 · 이 기기 · 교사 「나」 캠프 = 모두 · 체험판 = 📖 배움터 예습 모든 차시 열림 (원래 수업은 반이 수업한 다음 차시 하나 · 📜 #66 머리 「체험판 = 보여 주기용 · 진도 없음」)
   const prepNos = $derived.by(() => { void todoVer; void sheet; if (!feat('scarecrow') || trial) return ''; const P = prepOpenList(S, pupil?.cls ?? '', untrack(() => (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}), prepAll).open; const ns = P.map((L) => L.no); return ns.length > 2 ? `${Math.min(...ns)}~${Math.max(...ns)}` : ns.join(' · '); }); // 🔥 #71 던전 문 창 「n차시 탐사(예습)」
   function prepGo() { const P = prepOpenList(S, pupil?.cls ?? '', (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}, prepAll).open; let ch = false; for (const L of P) if (!me.seen[`prep-${L.id}`]) { me.seen[`prep-${L.id}`] = true; ch = true; } sheet = 'prep'; try { sessionStorage.setItem(SK, JSON.stringify({ s: 'prep', at: Date.now() })); } catch { /* 사생활 창 */ } if (ch) M.save(); } // 🐞 저장 = 캠프 다시 그림(App key bindVer) → 보던 시트(던전 문)로 되돌아가던 것: 새 시트를 먼저 적고 저장
@@ -217,6 +237,7 @@
     if (mailN > 0) t.mail = { n: String(mailN) };
     if (feat('forge') && wishN > 0) t.anvil = { n: String(wishN) };
     if (rc) t.dummy = { n: `${rc.n}/${rc.max}` };
+    if (chalN > 0) t.tentdeco = { n: String(chalN) }; // ⛺ #73 받을 도전과제
     return t;
   });
   // 🏷 #72 이름표 보이기: 할 일 있는 물건만 · 처음 3번 들어올 때 = 모두 · 교사 「나」 = 늘 · 누르면 0.8초 · (체험판 = 학생과 같게)
@@ -243,7 +264,7 @@
   let allTimer: ReturnType<typeof setTimeout> | null = null;
   function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
   const wishN = $derived(wishLeft(me.wishes, me.cards));
-  const NAME: Record<string, string> = { gate: '던전 문', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '게시판', scare: '허수아비', mail: '우편함', hero: '내 용사' }; // 🏷 #72 이름표 = 2~4글자 · 아이콘 없음 (부제 「복습 n~m차시」 = 그 창 맨 위)
+  const NAME: Record<string, string> = { tentdeco: '기록 텐트', gate: '던전 문', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '게시판', scare: '허수아비', mail: '우편함', hero: '내 용사' }; // 🏷 #72 이름표 = 2~4글자 · 아이콘 없음 (부제 「복습 n~m차시」 = 그 창 맨 위)
   const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
@@ -288,7 +309,7 @@
   }
   // D 용사 걷기 (자리 = 캠프 그림 % · 앉은 자리 CAMP.hero)
   const SEAT = { left: CAMP.hero.left, bottom: CAMP.hero.bottom };
-  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 56, bottom: 40 }, fire: { left: 38, bottom: 27 }, mail: { left: 24, bottom: 17 }, anvil: { left: 40, bottom: 43 }, dummy: { left: 30, bottom: 32 }, tent: { left: 70, bottom: 15 }, castle: { left: 48, bottom: 52 }, gate: { left: 70, bottom: 52 } };
+  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 56, bottom: 40 }, fire: { left: 38, bottom: 27 }, mail: { left: 24, bottom: 17 }, anvil: { left: 40, bottom: 43 }, dummy: { left: 30, bottom: 32 }, tent: { left: 70, bottom: 15 }, tentdeco: { left: 30, bottom: 55 }, castle: { left: 48, bottom: 52 }, gate: { left: 70, bottom: 52 } };
   type HP = 'sit' | 'walk' | 'attack' | 'idle';
   let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
   let walkTok = 0, idleT: ReturnType<typeof setTimeout> | null = null;
@@ -345,7 +366,8 @@
     M.mark(id);
     if (id === 'gate' && trial) { trial.ongate(); return; }
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
-    if (id === 'scare') { sheet = 'review'; return; } // 🎯 #71 허수아비 = 복습만 (#66 배움터 두 단추 없앰)
+    if (id === 'scare') { sheet = 'review'; return; }
+    if (id === 'tentdeco') { sheet = 'rec'; return; } // ⛺ #73 기록 텐트 // 🎯 #71 허수아비 = 복습만 (#66 배움터 두 단추 없앰)
     if (id === 'dummy') boardJoin = portal.recruit?.pid ?? ''; // 🌀 모집 중 방 = 그 방에 바로 참여 (캠프 A)
     sheet = id;
   }
@@ -412,7 +434,7 @@
     <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
     <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
     <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
-    <button type="button" class="hot" data-hot="tentdeco" aria-label="텐트" style={zoneStyle('tent')} onclick={(e) => poke0('tentdeco', e)}></button>
+    <button type="button" class="hot tentz" data-hot="tentdeco" data-k="rec-go" aria-label={chalN ? `기록 텐트 · 받을 것 ${chalN}` : '기록 텐트'} style={zoneStyle('tent')} onclick={(e) => go('tentdeco', e)}>{@render tag('tentdeco')}</button>
     <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => poke0('fire', e)}></button>
     {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:6%;width:10%;height:8%'], ['shroom', 'left:88%;bottom:2%;width:11%;height:9%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => poke0(h[0]!, e)}></button>{/each}
     {#each fxs as f (f.id)}<span class="cfx {f.k}" style="left:{f.x}%;top:{f.y}%" aria-hidden="true">{#each Array(f.k === 'bell' || f.k === 'glow' ? 1 : 6) as _, n (n)}<i style="--n:{n}"></i>{/each}{#if f.k === 'twinkle'}<b>✦</b>{/if}</span>{/each}
@@ -442,7 +464,7 @@
       {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
       <!-- 💎 · 📜 알약 = 누르면 🧙 내 용사 (정식 동작 · 📜 2026-11-15 선생님 「누르면 뭐 나올 것처럼 · 내 용사 연결」) -->
       <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
-      <button type="button" class="gear trophy" data-k="chal-go" aria-label="도전과제{chalN ? ` · 받을 것 ${chalN}` : ''}" onclick={() => (sheet = 'chal')}>🏆{#if chalN}<b class="tdot" data-k="chal-n">{chalN}</b>{/if}</button><!-- 🏆 #68 -->
+      <!-- 🏆 #73 위 막대 도전과제 단추 없앰 → ⛺ 기록 텐트 -->
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svNo}차시 · 눌러서 답하기 ›</button>{/if}
@@ -479,6 +501,7 @@
   </BottomAction>
 </div>
 
+{#if achQ.length}<AchievePop list={achQ} more={achMore} claim={achClaim} ondone={() => { achQ = []; achMore = 0; }} />{/if}<!-- 🏆 #73 -->
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
   {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0 || !!trial} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
@@ -541,8 +564,9 @@
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
   <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
-{:else if sheet === 'chal'}
-  <Challenges {me} ctx={chalCtx} claim={chalClaim} onclose={() => (sheet = null)} />
+{:else if sheet === 'chal' || sheet === 'rec'}
+  <!-- ⛺ #73 텐트 = 🏆 나의 기록 방 (도전과제 · 칭호 · 도감) -->
+  <RecordRoom {me} ctx={chalCtx} claim={chalClaim} earned={recEarned()} symSeen={(() => { try { return symN(chalCtx()); } catch { return 0; } })()} onanvil={() => (sheet = 'anvil')} onclose={() => (sheet = null)} />
 {:else if sheet === 'prep'}
   {#await loadPrep() then K}<K.default {S} {me} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} all={prepAll} onclose={() => (sheet = null)} />{/await}
 {:else if sheet === 'review'}

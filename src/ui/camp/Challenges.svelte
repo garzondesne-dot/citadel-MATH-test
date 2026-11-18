@@ -6,7 +6,7 @@
   import { titleOf } from '../../model/hero';
   import { sfx } from '../sound.svelte';
   // 🏆 #68 도전과제 판: 늘 보임 · 진행 막대 n/m · 「🎁 받기」 기한 없음 · 과제마다 한 번 · 보상 = 하루 한도 밖(gem log chal_{id})
-  const { me, ctx, claim, onclose }: { S?: Store; me: Me; ctx: () => ChalCtx; /** 받기 = log 한 줄 쓰고 지갑에 (부모가 저장) */ claim: (key: string, row: { g: number; s?: number; at: number; why: string }) => boolean; onclose: () => void } = $props();
+  const { me, ctx, claim, onclose, embed = false }: { S?: Store; me: Me; /** ⛺ #73 텐트 기록 방 안 = 창 없이 내용만 */ embed?: boolean; ctx: () => ChalCtx; /** 받기 = log 한 줄 쓰고 지갑에 (부모가 저장) */ claim: (key: string, row: { g: number; s?: number; at: number; why: string }) => boolean; onclose: () => void } = $props();
   let ver = $state(0), toast = $state('');
   const C = $derived.by(() => { void ver; return ctx(); });
   const rows = $derived.by(() => { void ver; return CHALS.filter((ch) => !ch.hide?.(C)).map((ch) => ({ ch, st: chalState(ch, C) })); });
@@ -22,9 +22,9 @@
   }
 </script>
 
-<Sheet {onclose} tall mainText="닫기">
-  {#snippet title()}🏆 도전과제 <small class="cnt">{rows.filter((r) => r.st.got).length} / {rows.length}</small>{/snippet}
+{#snippet body()}
   <div class="ch" data-k="chal">
+    {#if embed}<p class="tier top">🏆 도전과제 <small class="cnt">{rows.filter((r) => r.st.got).length} / {rows.length}</small></p>{/if}
     {#if toast}<p class="toast" role="status" data-k="chal-toast">{toast}</p>{/if}
     {#each tiers as t (t)}
       <p class="tier">{TIER_NAME[t]}</p>
@@ -44,11 +44,18 @@
     {/each}
     <p class="note">기한 없음 · 과제마다 한 번 · 💎 는 하루 한도와 따로 · 수업 점수는 안 셈</p>
   </div>
+{/snippet}
+{#if embed}{@render body()}{:else}
+<Sheet {onclose} tall mainText="닫기">
+  {#snippet title()}🏆 도전과제 <small class="cnt">{rows.filter((r) => r.st.got).length} / {rows.length}</small>{/snippet}
+  {@render body()}
 </Sheet>
+{/if}
 
 <style>
   .cnt { font-size: 13px; color: var(--text-2); font-weight: 600; margin-left: 4px; }
   .ch { display: flex; flex-direction: column; gap: var(--s2); padding-bottom: var(--s3); }
+  .tier.top { margin-top: 0; color: var(--text); }
   .tier { margin: var(--s2) 0 0; font: 800 15px var(--font); color: var(--accent); }
   ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   li { display: flex; align-items: center; gap: var(--s2); min-height: 64px; padding: 6px var(--s2); border-radius: 12px; background: var(--surface); border: 1px solid var(--line, #2f3440); }
