@@ -20,7 +20,7 @@ const BOTS = [['b1', 3, 5, 6, 'frost'], ['b2', 4, 9, 10, 'flame']]; // uid Â· ë²
     await p.click('.bd .chips button:has-text("6")');
     if (!team) { await p.click('.bd .act .btn'); await p.waitForSelector('.lgrid'); await p.click('.sheet .act .btn'); }
     else {
-      await p.click('.bd .act .btn2'); await p.waitForSelector('.lgrid'); await p.click('.sheet .act .btn'); await p.waitForTimeout(800);
+      await p.click('.bd .act .btn2'); await p.waitForSelector('.lgrid'); for (const d of '1357') await p.click(`.sheet .rune-keys button:has-text("${d}")`); await p.click('.sheet .act .btn'); await p.waitForTimeout(800);
       const pid = await p.evaluate(() => Object.keys(window.__dbGet('school/board/posts') || {})[0]);
       await p.evaluate(([pid, bots]) => {
         const now = Date.now();

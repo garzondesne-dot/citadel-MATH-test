@@ -46,9 +46,9 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   // 1분 뒤 B (시계를 앞당기는 대신 기다리지 않고 기록만 지움 = 같은 함수 · 시간 판정은 단위 시험)
   // 암호 없는 글
   await A.click('.bd .act .btn2:has-text("내리기")'); await wait(1200); await C.click('.bd .act .btn2:has-text("나가기")').catch(() => {}); await wait(800);
-  await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1500);
-  await Bp.reload(); await Bp.waitForTimeout(2500); await board(Bp); await Bp.waitForSelector('.bd .post'); const row2 = (await Bp.textContent('.bd .post')).replace(/\s+/g, ' ');
-  await Bp.click('.bd .post .go'); await wait(1500); const bIn = await Bp.$$eval('.slot:not(.empty)', (x) => x.length); log('암호 없는 글: 목록 🔒', /🔒 암호/.test(row2) ? '있음 ✗' : '없음 ○', '· B 바로 합류', bIn === 2 ? '○' : `✗ ${bIn}`);
-  if (/🔒 암호/.test(row2) || bIn !== 2) errs.push('암호 없는 글');
+  // 🔒 #78 팀 방 = 암호 꼭: 암호 없이는 올리기 단추가 안 눌림
+  await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.lgrid .lg:not(.lock)');
+  const must = !!(await A.$('[data-k="pin-must"]')), dis = await A.$eval('.sheet .act .btn', (e) => e.disabled).catch(() => null);
+  log('암호 없는 팀 글: 암호 칸 꼭', must ? '○' : '✗', '· 올리기 막힘', dis ? '○' : '✗'); if (!must || !dis) errs.push('암호 꼭');
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close(); process.exit(0);
 })();

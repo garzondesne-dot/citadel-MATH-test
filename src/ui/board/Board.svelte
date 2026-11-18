@@ -7,7 +7,7 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
+  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, lastClass, lastTest, uidOf } from '../../school/school';
@@ -77,7 +77,7 @@
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
     if (!pick) return;
-    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } if (lockOn && !validPin(pin)) { say('암호 숫자 4자리를 넣어요'); return; } { const only = pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined; if (lockOn) void createLockedPost(S, pick, meM, recOf(pick) ?? null, only, pin); else createPost(S, pick, meM, recOf(pick) ?? null, only); } sheet = ''; lockOn = false; pin = ''; return; }
+    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } if (!validPin(pin)) { say('암호 숫자 4자리를 넣어요'); return; } { const only = pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined; void createLockedPost(S, pick, meM, recOf(pick) ?? null, only, pin); /* 🔒 #78 팀 방 = 암호 4자리 꼭 (📜 2026-11-18) */ } sheet = ''; lockOn = false; pin = ''; return; }
     sheet = ''; run = pick; res = null;
   }
   const tag = (p: Post) => [...new Set(membersOf(p).map((m) => m.cls))];
@@ -280,19 +280,19 @@
     {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
   </Sheet>
 {:else if sheet}
-  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && !validPin(pin))} onmain={go}>
+  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && !validPin(pin))} why={sheet === 'post' && pick && !validPin(pin) ? '팀 방 암호 숫자 4자리를 정해요' : ''} onmain={go}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
     {#if sheet === 'post'}
-      <button type="button" class="lkt" class:on={lockOn} role="switch" aria-checked={lockOn} onclick={() => { lockOn = !lockOn; pin = ''; }}><span>🔒 암호 걸기</span><small>{lockOn ? '암호를 아는 친구만 합류' : '끔 · 누구나 합류'}</small><i class="kn" aria-hidden="true"></i></button>
-      {#if lockOn}<RuneKeypad value={pin} len={4} onchange={(v) => (pin = v == null || v === '-' ? '' : String(v))} />{/if}
+      <div class="lkt on" data-k="pin-must"><span>🔒 팀 방 암호 4자리</span><small>꼭 정해요 · 함께할 친구에게만 말로</small></div>
+      <RuneKeypad value={pin} len={4} onchange={(v) => (pin = v == null || v === '-' ? '' : String(v))} />
     {/if}
   </Sheet>
 {/if}
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
-  {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
+  {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}
 
 <style>
