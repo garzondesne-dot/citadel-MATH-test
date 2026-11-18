@@ -266,7 +266,7 @@
     if (sig === auraSig) return;
     untrack(() => {
       auraSig = sig; lay.replaceChildren();
-      for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true, heroHead(hero, true)); }
+      for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true, heroHead(hero, true), undefined, hero); }
     });
   });
   $effect(() => { if (split) untrack(() => { queue.length = 0; if (A) A.banner(null); domBan = ''; }); }); // 시연을 열면 떠 있던 띠도 내림
