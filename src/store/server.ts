@@ -13,7 +13,7 @@ const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'car
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
 const OPEN = ['school', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held', 'gcfg', 'photo_rubric']; // 📷 gcfg/photo · 기준표 = 누구나 읽기 // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
-const BUCKET: Record<string, number> = { teacherPush: 2, loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
+const BUCKET: Record<string, number> = { teacherPush: 2, loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, quest: 3, quest_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
 // 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
 const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2, secrets: 2 }; // 🐞 secrets = 규칙이 맨 윗칸 읽기를 안 줌 → 교사도 방마다(secrets/{방} · secrets/fixed) 받음 (📜 2026-11-17 「종합실 키 저장해도 나갔다 오면 사라짐」)
 const split = (p: string) => p.split('/').filter(Boolean);
