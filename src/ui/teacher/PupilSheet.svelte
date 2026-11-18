@@ -62,8 +62,8 @@
     <p class="lab">방과후 · 최근 2주</p>
     <div class="cal" aria-label="방과후 접속 달력">{#each s.extra.days as d, k (k)}<i class="l{Math.min(4, d)}" title="{d}회"></i>{/each}</div>
     <div class="row3">
-      <div><small>💎 마정석</small><b>{s.extra.gem}</b><em>이번 주 +{s.extra.gemWeek}</em></div>
-      <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>✍ 연습 통과 {s.extra.photoOk} · ✍ 실력 통과 {s.extra.photoV || 0} · 다시 {s.extra.photoRe}</em></div>
+      <div><small>💎 마정석</small><b>{s.extra.gem}</b><em>이번 주 +{s.extra.gemWeek}</em>{#if s.extra.gemCum != null}<em class="cum" data-k="gem-cum" title="지금까지 받은 💎 모두 (쓴 것 안 뺌)">💰 누적 {s.extra.gemCum.toLocaleString()}</em>{/if}</div>
+      <div><small>📜 서술 조각</small><b>{s.extra.scroll}</b><em>✍ 연습 통과 {s.extra.photoOk} · ✍ 실력 통과 {s.extra.photoV || 0} · 다시 {s.extra.photoRe}</em>{#if s.extra.scrollCum != null}<em class="cum" data-k="scroll-cum" title="지금까지 받은 📜 모두 (쓴 것 안 뺌)">💰 누적 {s.extra.scrollCum}</em>{/if}</div>
       <div><small>자주 막힌 개념</small><b class="sm">{weak.map((w) => w.name).join(' · ') || '없음'}</b><em>{misTop.map(([k]) => k).join(' · ') || '오개념 없음'}</em></div>
     </div>
     {#if phs.length}<p class="lab" data-k="pupil-photo">📷 확인할 사진 {phs.length}</p>{#each phs as x (`${x.k}|${x.id}`)}<PhotoCheck {S} {x} who={false} ondone={(ok, saved) => { phVer++; say(saved ? (ok ? '✔ 처치로 인정했어요' : '✖ 그대로 두었어요') : '저장하지 못했어요'); }} />{/each}{/if}
@@ -103,6 +103,7 @@
   .four small, .row3 small { font-size: 12px; color: var(--text-2); font-weight: 700; }
   .four b { font-size: 24px; color: var(--accent); } .four b i { font-style: normal; font-size: 13px; color: var(--text-2); }
   .four em, .row3 em { font-style: normal; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row3 em.cum { display: block; color: var(--text-2); font-weight: 700; } /* 💰 #65 누적 받은 · 교사만 */
   .lab { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--text-2); }
   .recs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
   .rc { position: relative; border-radius: 9px; padding: 4px 6px; background: var(--surface-2); border: 1px solid var(--line); display: flex; flex-direction: column; }

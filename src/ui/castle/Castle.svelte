@@ -32,6 +32,8 @@
   const floors = $derived(preview ? castles.list : visibleCastles());
   // 🧑 기록 자리 = 그 학생으로 로그인한 폰이면 서버 정식 경로 · 아니면 이 기기(테스트 · 체험)
   const RS = untrack(() => meBound()?.S ?? S);
+  // 💰 #65 받은 💎 를 gem log 에 남김 (누적 받은 💎 · 한도 안 = croom_ · cph_ / 업적 = seal_c_)
+  const glog = (k: string, g: number, why: string) => { const b = meBound(); if (b && g > 0) b.S.set(`gem/${b.cls}/${b.num}/log/${k.replace(/[.#$/[\]]/g, '_')}`, { g, at: S.now(), why }); };
   /** 🧑‍🎓 수식 책사가 이미 열렸나 (gem log s_ph_ · 정식 photoPassed) */
   const photoHero = $derived.by(() => { void ver; const b = meBound(); return !!b && Object.keys(b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}).some((k) => k.startsWith('s_ph_')); });
   const base = untrack(() => { const b = meBound(); return b ? bonusBase(b.cls, b.num) : bonusBase(cls, num || uid); });
@@ -75,8 +77,8 @@
     RS.set(path, { ...keep, clear: true, ph: String(out?.id || 'ok'), tries: Number(old.tries) || 1, at: S.now() }); ver++;
     if (me && !old.ph) {
       const day = kstDay(S.now());
-      if (firstClear) { const rw = castleReward({ first: true, boss: !!r.boss, firstCastle: !anyBefore, flawless: false, sealed: !!r.boss }); for (const g of rw.gems) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) got.push(`💎 +${n} ${g.why}`); } me.xp += rw.xp; if (rw.xp) got.unshift(`+${rw.xp} EXP`); }
-      const g = earnDaily(me.wallet, CASTLE_PHOTO_GEM, day, GEM.dayCap); if (g) got.push(`💎 +${g} ${why}`);
+      if (firstClear) { const rw = castleReward({ first: true, boss: !!r.boss, firstCastle: !anyBefore, flawless: false, sealed: !!r.boss }); for (const [i, g] of rw.gems.entries()) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) { got.push(`💎 +${n} ${g.why}`); glog(`${g.free ? 'seal_c' : 'croom'}_${Px.id}_${r.id}_${i}`, n, g.why); } } me.xp += rw.xp; if (rw.xp) got.unshift(`+${rw.xp} EXP`); }
+      const g = earnDaily(me.wallet, CASTLE_PHOTO_GEM, day, GEM.dayCap); if (g) { got.push(`💎 +${g} ${why}`); glog(`cph_${Px.id}_${r.id}`, g, why); }
       const sc = 1; void photoScrolls; me.wallet.scroll += sc; got.push(`📜 +${sc} 서술 조각`); // 📜 #41 통과 = 📜 1 (문제당 한 번 · 수업 · 허수아비와 같게)
       { const b = meBound(); if (b) { const lp = `gem/${b.cls}/${b.num}/log`, had = Object.keys(b.S.get<Record<string, unknown>>(lp) || {}).some((k) => k.startsWith('s_ph_')); b.S.set(`${lp}/s_ph_${Px.id}_${r.id}`, { s: 1, at: S.now(), why: '📷 성채 서술형' }); if (!had) { got.push('🧑‍🎓 수식 책사 남 · 여가 열렸어요!'); setTimeout(() => { toast = '🧑‍🎓 수식 책사 남 · 여가 열렸어요! (내 용사 → 용사 바꾸기)'; setTimeout(() => (toast = ''), 4000); }, 600); } } } // 🧑‍🎓 정식 photoPassed · s_ph_ (성채 서술형 첫 사진 통과)
       me.xp += CASTLE_XP.photo; got.push(`+${CASTLE_XP.photo} EXP 서술형`);
@@ -189,7 +191,7 @@
     const rw = castleReward({ first: s.first, boss: !!x.r.boss, firstCastle: s.firstCastle, flawless: o.flawless && runs0 === 0, sealed: s.first && !!x.r.boss }), got: string[] = [];
     if (me && !preview && (rw.gems.length || rw.xp)) {
       const day = kstDay(S.now());
-      for (const g of rw.gems) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) got.push(`💎 +${n} ${g.why}`); }
+      for (const [i, g] of rw.gems.entries()) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n) { got.push(`💎 +${n} ${g.why}`); glog(`${g.free ? 'seal_c' : 'croom'}_${x.P.id}_${x.r.id}_${i}`, n, g.why); } }
       if (rw.xp) { me.xp += rw.xp; got.unshift(`+${rw.xp} EXP`); }
       persist();
     }

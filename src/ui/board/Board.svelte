@@ -99,6 +99,7 @@
       for (let i = 0; i < nG; i++) { const want = RESCUE.guard + (i < nFull ? RESCUE.guard : 0), g = earnDaily(me.wallet, want, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: i < nFull ? '🤝 완전 구조 (수호자)' : '🤝 구조 (수호자)' }); }
       for (let i = 0; i < r.rescue.c; i++) { const g = earnDaily(me.wallet, RESCUE.chall, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescued_${day}_${usedC + i}`, { g, at: S.now(), why: '🤝 구조 받음' }); }
     }
+    if (got && cls && num && S.kind !== 'memory') S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); // 💰 #65 누적 받은 💎 (한도 안 · board_)
     if (got || rescueGot) save();
     // 📕 「복습 완료」 기록 칸 (오답노트 화면은 ⛺ 텐트 시안 뒤 · bonus/{반}/{번호}/review/{차시}/{문제} = 시각)
     if (cls && num) r.L.steps.forEach((s) => { const m = (r.R.subs?.[s.kind === 'boss' ? 'boss' : s.id]?.[uid]); if (m) S.set(`bonus/${cls}/${num}/review/${L.id}/${s.kind === 'boss' ? 'boss' : s.id}`, S.now()); });
