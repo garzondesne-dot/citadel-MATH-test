@@ -12,8 +12,8 @@ import { bossFullOf } from '../school/records';
 export const MAX = 4, PAUSE_N = 2, PAUSE_MS = 120000, THINK_MS = 60000;
 export const POSTS = 'school/board/posts';
 export type Role = 'g' | 'c';
-export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
-export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member>; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
+export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** ⏱ #76 이 폰이 보낸 마지막 숨 (20초마다 · 서버 시각) */ seen?: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
+export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member>; /** ⏱ #76 마지막 움직임(모집 · 합류 · 준비 · 나가기) */ act?: number; /** ⏱ #76 저절로 끝남 (손 놓은 판) */ idle?: boolean; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
 
 /** 🛡 판정 (❓ #143-a B · 숫자는 여기 한 곳): 그 차시 수업 기록 정답률 ≥ 80% 또는 형성평가 만점 → 수호자 · 기록 없으면 도전자 */
 export const GUARD_RATE = 0.8;
@@ -49,7 +49,7 @@ function pinMiss(uid: string, pid: string, now: number): number { try { const v 
 /** 글 올리기 · 합류 · 나가기 · 준비 · 내리기 */
 export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], lk = false, pid0?: string): string {
   const pid = pid0 ?? newPid(S), r = roleOf(rec, only);
-  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', ...(lk ? { lk: true } : {}), mem: { [me.uid]: { ...me, ...r, at: S.now(), ready: true } } });
+  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', act: S.now(), ...(lk ? { lk: true } : {}), mem: { [me.uid]: { ...me, ...r, at: S.now(), seen: S.now(), ready: true } } });
   return pid;
 }
 /** 🔒 암호 건 글: 해시를 먼저 boardLock 에 → 글 · 모집한 기기에 암호 기억 */
@@ -68,7 +68,7 @@ export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boole
   if (mems(p).length >= MAX) return '자리가 다 찼어요';
   return '';
 }
-export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], k?: string) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), ready: false, ...(k ? { k } : {}) }); }
+export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], k?: string) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), seen: S.now(), ready: false, ...(k ? { k } : {}) }); S.set(`${POSTS}/${p.pid}/act`, S.now()); }
 /** 🔒 암호 글 합류: 맞으면 '' · 틀리면 안내 · 서버 = 규칙이 판정(쓰기 성공 여부) · 이 기기 · 메모리 = 해시를 직접 비교 */
 export async function joinLocked(S: Store & { trySet?: (path: string, v: unknown) => Promise<boolean> }, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only: string[] | undefined, pin: string): Promise<string> {
   const now = S.now(), w = pinWait(me.uid, p.pid, now);
@@ -78,13 +78,13 @@ export async function joinLocked(S: Store & { trySet?: (path: string, v: unknown
   let ok: boolean;
   if (S.trySet) ok = await S.trySet(path, val);
   else { ok = S.get<{ h?: string }>(`${LOCK}/${p.pid}`)?.h === k; if (ok) S.set(path, val); }
-  if (ok) { try { ls()?.removeItem(tryKey(me.uid, p.pid)); } catch { /* 무시 */ } return ''; }
+  if (ok) { S.set(`${POSTS}/${p.pid}/act`, now); try { ls()?.removeItem(tryKey(me.uid, p.pid)); } catch { /* 무시 */ } return ''; }
   const left = pinMiss(me.uid, p.pid, now);
   return left > 0 ? `암호가 달라요 · ${left}번 남았어요` : '암호가 달라요 · 1분 뒤에 다시 해 봐요';
 }
 /** 나가기: 출발 전 글 올린 사람 = 글 내림 · 그 밖(출발 뒤 글 올린 사람도) = 나만 빠짐 (#147 · 팀 진행은 남은 팀원이 이어받음) */
-export const leavePost = (S: Store, p: Post, uid: string) => (p.host === uid && p.phase === 'wait' ? S.set(`${POSTS}/${p.pid}`, null) : S.set(`${POSTS}/${p.pid}/mem/${uid}`, null));
-export const setReady = (S: Store, p: Post, uid: string, v: boolean) => S.set(`${POSTS}/${p.pid}/mem/${uid}/ready`, v);
+export const leavePost = (S: Store, p: Post, uid: string) => { if (p.host === uid && p.phase === 'wait') { dissolve(S, p); return; } S.set(`${POSTS}/${p.pid}/mem/${uid}`, null); S.set(`${POSTS}/${p.pid}/act`, S.now()); };
+export const setReady = (S: Store, p: Post, uid: string, v: boolean) => { S.set(`${POSTS}/${p.pid}/mem/${uid}/ready`, v); S.set(`${POSTS}/${p.pid}/act`, S.now()); };
 export const canStart = (p: Post) => mems(p).every((m) => m.uid === p.host || m.ready);
 
 /** ⚔ 출발 (글 올린 사람): 팀 방을 만들고 글에 방 코드 · 시간 = 팀 소문제 × 90초 */
@@ -214,3 +214,48 @@ export function rescuesOf(L: LessonPack, R: Room, roles: Record<string, Role>): 
   }
   return out;
 }
+
+// ── ⏱ #76 방 저절로 닫기 (📜 2026-11-18 머리 🔨 · 숫자는 여기 한 곳 · 시각 = 서버 시각 S.now) ──
+//   대기: 10분 동안 아무 움직임(모집 · 합류 · 준비 · 나가기) 없음 → 해산 + 🔒 암호 지움
+//   방장: 숨(20초마다)이 1분 끊김 → 살아 있는 팀원 중 먼저 들어온 사람에게 넘김 · 없으면 해산 (숨을 한 번도 안 보낸 옛 판 방장은 넘기지 않음 → 10분 규칙만)
+//   진행: 팀 모두 10분 숨 없음 → 그 판 끝(기록 = 각자 폰이 돌아오면 결과 화면 · 글 = done · idle)
+//   끝난 글: 하루 지나면 지움 · 아무 폰(게시판을 연 폰)이 30초마다 살펴 정리 (규칙 = 글 지우기 · 넘기기 · 암호 지우기 누구나)
+export const LIFE = { beat: 20e3, hostGone: 60e3, waitIdle: 10 * 60e3, playIdle: 10 * 60e3, doneKeep: 24 * 3600e3, sweep: 30e3 } as const;
+const tnum = (v: unknown) => Number(v) || 0;
+/** 마지막 움직임 (모집 · 합류 · 준비 · 나가기) */
+export const lastAct = (p: Post) => Math.max(tnum(p.act), tnum(p.at), ...mems(p).map((m) => tnum(m.at)));
+/** 마지막 숨 (움직임 + 팀원 숨) */
+export const lastBeat = (p: Post) => Math.max(lastAct(p), ...mems(p).map((m) => tnum(m.seen)));
+export type Sweep = { kind: 'dissolve' | 'end' | 'drop'; why: string } | { kind: 'host'; to: string; why: string } | null;
+export function sweepOf(p: Post, now: number): Sweep {
+  if (!p || !p.pid) return null;
+  const ms = mems(p);
+  if (p.phase === 'done') return now - lastBeat(p) > LIFE.doneKeep ? { kind: 'drop', why: '끝난 지 하루' } : null;
+  if (p.phase === 'play') return now - lastBeat(p) > LIFE.playIdle ? { kind: 'end', why: '진행 중 10분 숨 없음' } : null;
+  if (!ms.length) return { kind: 'dissolve', why: '팀원 없음' };
+  if (now - lastAct(p) > LIFE.waitIdle) return { kind: 'dissolve', why: '대기 10분 움직임 없음' };
+  const h = p.mem?.[p.host];
+  if (!h || (h.seen != null && now - tnum(h.seen) > LIFE.hostGone)) {
+    const alive = ms.filter((m) => m.uid !== p.host && now - Math.max(tnum(m.seen), tnum(m.at)) <= LIFE.hostGone).sort((a, b) => tnum(a.at) - tnum(b.at));
+    return alive[0] ? { kind: 'host', to: alive[0].uid, why: '방장 1분 끊김' } : { kind: 'dissolve', why: '방장 끊김 · 남은 팀원 없음' };
+  }
+  return null;
+}
+/** 해산 = 글 지움 → 그다음 🔒 암호 지움 (규칙: 글이 없어야 암호를 지울 수 있음) */
+export function dissolve(S: Store, p: Post) {
+  S.set(`${POSTS}/${p.pid}`, null);
+  if (p.lk) { const t = (S as Store & { trySet?: (path: string, v: unknown) => Promise<boolean> }).trySet; if (t) void t.call(S, `${LOCK}/${p.pid}`, null); else S.set(`${LOCK}/${p.pid}`, null); }
+}
+/** 살펴서 정리 한 번 → 한 일 수 */
+export function sweepAll(S: Store, posts: Record<string, Post> | null, now: number): number {
+  let n = 0;
+  for (const p of Object.values(posts || {})) {
+    const w = sweepOf(p, now); if (!w) continue; n++;
+    if (w.kind === 'dissolve' || w.kind === 'drop') dissolve(S, p);
+    else if (w.kind === 'end') { S.set(`${POSTS}/${p.pid}/phase`, 'done'); S.set(`${POSTS}/${p.pid}/idle`, true); }
+    else if (w.kind === 'host') { S.set(`${POSTS}/${p.pid}/host`, w.to); S.set(`${POSTS}/${p.pid}/mem/${w.to}/ready`, true); S.set(`${POSTS}/${p.pid}/act`, now); }
+  }
+  return n;
+}
+/** 내 숨 (대기 · 진행 중 20초마다) */
+export const beat = (S: Store, p: Post, uid: string) => { if (p.mem?.[uid]) S.set(`${POSTS}/${p.pid}/mem/${uid}/seen`, S.now()); };

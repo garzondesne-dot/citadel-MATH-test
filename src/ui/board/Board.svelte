@@ -7,7 +7,7 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, type Post, type Role } from '../../board/team';
+  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, createPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, lastClass, lastTest, uidOf } from '../../school/school';
@@ -41,9 +41,16 @@
   onDestroy(netOff);
   const pv = untrack(() => liveValue<Record<string, Post>>(S, POSTS));
   onDestroy(pv.stop);
-  const posts = $derived(Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done').sort((a, b) => b.at - a.at));
+  // ⏱ #76 저절로 닫기: 30초마다 이 폰이 살펴 정리(해산 · 방장 넘김 · 손 놓은 판 끝 · 끝난 글 하루 뒤 지움) · 정리될 글은 목록에서 바로 뺌
+  let tick = $state(0);
+  const swT = setInterval(() => { tick++; if (online) sweepAll(S, untrack(() => pv.v.val), S.now()); }, LIFE.sweep); onDestroy(() => clearInterval(swT));
+  queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
+  const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? null);
+  // ⏱ #76 내 숨: 대기 · 진행 중 20초마다 (방장이 1분 끊기면 다른 팀원에게 넘어감)
+  const mineB = $derived(mine && (mine.phase === 'wait' || mine.phase === 'play') ? mine.pid : '');
+  $effect(() => { const pid = mineB; if (!pid) return; const go = () => { const p = untrack(() => pv.v.val?.[pid]); if (p) beat(S, p, uid); }; go(); const t = setInterval(go, LIFE.beat); return () => clearInterval(t); });
   // 🔊 2차 📋 새 모집 글 (베타만): 처음 받은 글은 기억만 · 그 뒤 남의 새 모집 글이 생기면 한 번
   let seenPid: Set<string> | null = untrack(() => (pv.v.val != null ? new Set(Object.keys(pv.v.val)) : null));
   const t0 = Date.now();
