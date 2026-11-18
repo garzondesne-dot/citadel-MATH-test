@@ -11,7 +11,7 @@ export interface Snap { t: number; day: number; at: number }
 export interface GemRow { total?: number; day?: Record<string, number>; log?: Record<string, { g?: number; at?: number } | null> }
 export interface Flag { at: number; from: number; to: number; extra: number; why: string }
 /** 한도 밖 보상 log 키 (정식 · 베타 · 한도 안 키 raid_ · perfect_ · bossperfect_ · petri_ 는 day 로 셈) */
-const FREE = /^(teacher_|streak|lv\d|seal|quest_|punch_|combo_|card_|fg_|gift)/;
+const FREE = /^(teacher_|streak|lv\d|seal|quest_|punch_|combo_|card_|fg_|gift|chal_)/; // 🏆 #68 chal_ = 도전과제 받기(한도 밖)
 const daySum = (r: GemRow) => Object.values(r.day || {}).reduce((a, v) => a + (Number(v) || 0), 0);
 export const snapOf = (r: GemRow, at: number): Snap => ({ t: Number(r.total) || 0, day: daySum(r), at });
 /** 지난 사진 → 지금: 🚩 이면 Flag · 아니면 null

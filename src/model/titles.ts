@@ -51,6 +51,12 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   wall: (d) => (Number((isObj(d.xr?.ttl) ? (d.xr!.ttl as Obj) : {}).wall) || 0) >= 30,
   awake: (d) => (Number(d.gem?.enh) || 0) >= 10,
   slash10k: (d) => seals(d.bonus).length >= 3,
+  // 🏆 #68 도전과제 칭호 = 받기를 누른 것(gem log chal_{과제})
+  ahead: (d) => logKeys(d).includes('chal_prep1'),
+  realskill: (d) => logKeys(d).includes('chal_rewrite3'),
+  castlelord: (d) => logKeys(d).includes('chal_castleall'),
+  scrollmaster: (d) => logKeys(d).includes('chal_scroll20'),
+  dummyfriend: (d) => logKeys(d).includes('chal_review100'),
   explorer: (d) => veteranN((d.bonus as Record<string, unknown> | undefined)?.review as Record<string, unknown>) >= 3, // 🔥 #67 노련한 탐험가 = 예습 3개 차시(차시마다 처치 2+)
 };
 /** 얻은 호칭 id (got = 화면이 따로 아는 것 · 예: 💚 구조대 rescuer) */

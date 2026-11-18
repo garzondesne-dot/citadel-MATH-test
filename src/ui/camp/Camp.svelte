@@ -44,6 +44,10 @@
   import { PACKS } from '../../engine/packs';
   import { reviewTodo, type Bon, type Rec } from '../../school/dummy';
   import { prepOpenList } from '../../school/prepopen';
+  import Challenges from './Challenges.svelte';
+  import { chalReady, type ChalCtx } from '../../school/challenges';
+  import { castles } from '../../school/castles.svelte';
+  import { titleData } from '../../model/titles';
   import { visit as usageVisit } from '../../school/usage';
   import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
@@ -188,6 +192,18 @@
     if (rc) t.dummy = `⚔ 모집 중 ${rc.n}/${rc.max} · 참여!`;
     return t;
   });
+  // 🏆 #68 도전과제 판: 기록 = 묶인 학생은 서버(gem log chal_) · 시험 · 체험 · 이 기기 = 이 폰에만(같은 키)
+  const CHK = 'citadel-v1-chal';
+  const chLocal = (): Record<string, unknown> => { try { return JSON.parse(localStorage.getItem(CHK) || '{}'); } catch { return {}; } };
+  let chVer = $state(0);
+  function chalCtx(): ChalCtx { const b = meBound(); if (b) return { d: titleData(b.S, b.cls, b.num), gifts: b.S.get<Record<string, unknown>>(`gifts/${pupil?.uid ?? ''}`), castles: castles.list }; return { d: { gem: { log: chLocal() } }, gifts: {}, castles: castles.list }; }
+  function chalClaim(key: string, row: { g: number; s?: number; at: number; why: string }): boolean {
+    const b = meBound();
+    if (b) { const p = `gem/${b.cls}/${b.num}/log/${key}`; if (b.S.get(p)) return false; b.S.set(p, row); }
+    else { const L0 = chLocal(); if (L0[key]) return false; L0[key] = row; try { localStorage.setItem(CHK, JSON.stringify(L0)); } catch { /* 무시 */ } }
+    me.wallet.gem += row.g; if (row.s) me.wallet.scroll += row.s; M.save(); chVer++; return true;
+  }
+  const chalN = $derived.by(() => { void chVer; void sheet; void todoVer; try { return chalReady(chalCtx()); } catch { return 0; } });
   // 📖 #66 배움터 예습: 열린 차시 중 안 열어 본 것 = 「📖 새 차시 열림」 작은 표시(금빛 아님 · 복습 금빛이 먼저)
   const prepAll = untrack(() => !!trial || !pupil || !!fromMe0); // 로그인한 학생(🧪 1-6 포함) = 실제 규칙 · 이 기기 · 교사 「나」 캠프 = 모두 · 체험판 = 📖 배움터 예습 모든 차시 열림 (원래 수업은 반이 수업한 다음 차시 하나 · 📜 #66 머리 「체험판 = 보여 주기용 · 진도 없음」)
   const prepNew = $derived.by(() => { void todoVer; void sheet; if (!feat('scarecrow')) return ''; const P = prepOpenList(S, pupil?.cls ?? '', untrack(() => (pupil ? S.get<Record<string, unknown>>(`records/${pupil.cls}/${pupil.num}`) : null) || {}), prepAll).open.filter((L) => !me.seen[`prep-${L.id}`]); return P.length ? `📖 ${P.map((L) => L.no).join(' · ')}차시 열림` : ''; });
@@ -408,6 +424,7 @@
       {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
       <!-- 💎 · 📜 알약 = 누르면 🧙 내 용사 (정식 동작 · 📜 2026-11-15 선생님 「누르면 뭐 나올 것처럼 · 내 용사 연결」) -->
       <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
+      <button type="button" class="gear trophy" data-k="chal-go" aria-label="도전과제{chalN ? ` · 받을 것 ${chalN}` : ''}" onclick={() => (sheet = 'chal')}>🏆{#if chalN}<b class="tdot" data-k="chal-n">{chalN}</b>{/if}</button><!-- 🏆 #68 -->
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svNo}차시 · 눌러서 답하기 ›</button>{/if}
@@ -515,6 +532,8 @@
       <button type="button" class="sbtn" class:gold={!!todo.scare} data-k="study-review" onclick={() => (sheet = 'review')}><span class="si" aria-hidden="true">🎯</span><b>복습하기</b><small>배운 차시 · 숫자를 바꿔서 · 💎 보상</small>{#if todo.scare}<em class="snew gold">남은 {todo.scare}</em>{/if}</button>
     </div>
   </Sheet>
+{:else if sheet === 'chal'}
+  <Challenges {me} ctx={chalCtx} claim={chalClaim} onclose={() => (sheet = null)} />
 {:else if sheet === 'prep'}
   {#await loadPrep() then K}<K.default {S} {me} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} all={prepAll} onclose={() => (sheet = null)} />{/await}
 {:else if sheet === 'review'}
@@ -759,4 +778,5 @@
   .bbub.real { background: #dff3ff; border-color: #5ab0ff; color: #0d2a44; } .bbub.real::after { border-top-color: #5ab0ff; }
   .fbub { position: absolute; z-index: 7; transform: translateX(-50%); white-space: nowrap; font: 800 11px/1 var(--font); color: #e8f7ff; background: rgba(20, 40, 70, 0.85); border: 1.5px solid rgba(120, 200, 255, 0.9); border-radius: 10px; padding: 5px 8px; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .prop.pk :global(.img), img.obj.flap, img.obj.gate-on.flash { animation: none; } .cfx { display: none; } }
+  .trophy { position: relative; } .tdot { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font: 800 11px var(--font); display: grid; place-items: center; } /* 🏆 #68 */
 </style>
