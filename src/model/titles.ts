@@ -3,6 +3,7 @@
 //   베타에 아직 없는 것: 📕 오답노트(오답 사냥꾼 = 못 얻음) · 던전 정복 메달(목록에 없음)
 import { SUBJ } from '../engine/subject';
 import { level } from './hero';
+import { veteranN } from '../school/explore';
 
 type Obj = Record<string, unknown>;
 export interface TitleData { records?: Record<string, Obj>; cards?: Record<string, unknown>; xp?: number; xr?: Obj; bonus?: Record<string, Record<string, { clear?: boolean } | undefined>>; gem?: Obj; photo?: Obj }
@@ -50,6 +51,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   wall: (d) => (Number((isObj(d.xr?.ttl) ? (d.xr!.ttl as Obj) : {}).wall) || 0) >= 30,
   awake: (d) => (Number(d.gem?.enh) || 0) >= 10,
   slash10k: (d) => seals(d.bonus).length >= 3,
+  explorer: (d) => veteranN((d.bonus as Record<string, unknown> | undefined)?.review as Record<string, unknown>) >= 3, // 🔥 #67 노련한 탐험가 = 예습 3개 차시(차시마다 처치 2+)
 };
 /** 얻은 호칭 id (got = 화면이 따로 아는 것 · 예: 💚 구조대 rescuer) */
 export function earnedFrom(d: TitleData, got: string[] = []): string[] {

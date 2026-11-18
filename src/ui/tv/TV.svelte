@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { explorers, expOf } from '../../school/explore';
   import { keyBoard, keysOf } from '../../school/keys';
   import { ccOpen, ccStats, closeCC, openCC } from '../../school/cc';
   import { reviewStep, stepReview } from '../../school/help';
@@ -368,7 +369,7 @@
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
     <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
     <div class="lring" bind:clientWidth={lobbyW}>
-      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{p.num} {p.name}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
+      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{expOf(R, p.uid) ? '🔥 ' : ''}{p.num} {p.name}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span>{nameOf(u)}</span></div>{/each}</div>
       <div class="tchr"><HeroSprite id={meLookId(M.me)} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
   {:else if view === 'concept' && step}
@@ -381,7 +382,7 @@
       {/if}
     </div>
   {:else if view === 'end'}
-    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>
+    <div class="endv"><b>{bhp?.won ? '🏆 승리!' : '🏁 마무리'}</b><p>{ids.length}명이 함께했어요 · 결과는 학생 폰에</p>{#if R && explorers(R).length}<p class="expl" data-k="tv-explore">🔥 탐사대 {explorers(R).length}명 = 배움터에서 예습한 용사</p>{/if}<!-- 🔥 #67 -->
       <!-- 💬 마지막 한마디 말풍선 (정식 hall.js 마무리 · 거른 말 · 선생님이 숨긴 말 = 안 보임) -->
       {#if tvWords.length}<div class="wbubs" data-k="tv-words">{#each tvWords as w (w.u)}<span class="wb"><em style="font-family: var(--font-plain)">{w.t}</em><small>{nameOf(w.u)}</small></span>{/each}</div>{:else}<p class="wwait">💬 학생 폰에서 마지막 한마디를 남겨요</p>{/if}</div>
   {:else if step && R}
@@ -688,4 +689,5 @@
   .heroov { position: absolute; inset: 0; z-index: 12; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
   .hk { position: relative; flex: none; width: 430px; height: 760px; border-radius: 22px; overflow: hidden; color: var(--text); background: var(--bg); }
   .demoban { position: absolute; left: 34%; transform: translateX(-50%); top: 9cqh; z-index: 8; padding: 0.6cqh 1.6cqw; border-radius: 999px; background: rgba(10, 12, 18, 0.82); color: #ffe7a8; font: 800 2.2cqh var(--font); letter-spacing: 0.02em; box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.55); pointer-events: none; white-space: nowrap; }
+  .expl { margin: 0.6cqh 0 0; font: 700 2.6cqh var(--font); color: #ffc070; } /* 🔥 #67 */
 </style>

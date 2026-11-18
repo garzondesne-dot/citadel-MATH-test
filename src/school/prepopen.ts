@@ -28,7 +28,7 @@ export function prepOpenList(S: Store, cls: string, recs: Record<string, unknown
   const open = prepPacks().filter((p) => (ov[p.id] === true) || (ov[p.id] !== false && a.L?.id === p.id));
   return { open, wait: n > 0 && !a.L ? a.want : null, auto: a.L?.id ?? null };
 }
-export interface PrepRec { tries?: number; clear?: boolean; at?: number }
+export interface PrepRec { tries?: number; clear?: boolean; at?: number; /** 🔥 #67 처치 수 */ kills?: number }
 /** 학생 한 명의 예습 기록 = 차시마다 푼 문제 수 (낸 답이 있는 몬스터) */
 export function prepCount(review: Record<string, unknown> | null | undefined): { by: { lid: string; no: number; n: number }[]; total: number } {
   const by = Object.entries(review || {}).filter(([k, v]) => k.startsWith('prep_') && v && typeof v === 'object').map(([k, v]) => {

@@ -52,6 +52,8 @@
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
+  import { expFrom, expLine, expOf, prepRecPath, EXP_MIN } from '../school/explore';
+  import { bonusBase as bonusBaseX } from '../school/castle';
   import { shouldNudge } from '../school/idle';
   import { isSent } from '../school/sendReview';
   import { loadFunPhone } from './lazy'; // 📦 쉼터 놀이 = 따로 받는 묶음 (화면이 뜬 뒤 미리 받아 둠 · 쉼터가 열릴 때 멈칫 없음)
@@ -153,6 +155,9 @@
   const idleAsked = new Set<string>();
   const idleAttack = $derived(!!(R && mid && !scout?.on && !R.state.rest && !R.state.focus && !R.state.holdAt && !R.state.closed && !paperOn()));
   const idleDone = $derived(!R || !mid ? true : chain ? !!chainRecord(L, R, mid, uid).done : !!plainRecord(L, R, mid, uid).perfect);
+  // 🔥 #67 탐사대: 이 차시를 배움터 예습에서 몬스터 2개 이상 처치 → 수업 방 내 칸에 exp (TV 횃불 · 🔥 · 점수 0) · 한 번만
+  let expDone = false;
+  $effect(() => { const b = meBound(); if (expDone || board || !R || !b || !R.players?.[uid]) return; expDone = true; untrack(() => { if ((R.players?.[uid] as { exp?: unknown } | undefined)?.exp) return; const e = expFrom(b.S.get(prepRecPath(bonusBaseX(b.cls, b.num), L.id))); if (e.n >= EXP_MIN) S.set(`rooms/${code}/players/${uid}/exp`, e); }); });
   function idleClear() { if (idleMid) { S.set(`rooms/${code}/players/${uid}/idle`, null); idleMid = null; } }
   function poke() { idleLast = S.now(); idleClear(); }
   $effect(() => { const on = (e: Event) => { if ((e.target as Element | null)?.closest?.('[data-k="idle"]')) return; poke(); }; const o = { capture: true, passive: true }; /* 🤝 띠 안 누름 = 단추가 처리(먼저 지우면 누르기 전에 사라짐) */ for (const e of ['pointerdown', 'keydown', 'input']) window.addEventListener(e, on, o); return () => { for (const e of ['pointerdown', 'keydown', 'input']) window.removeEventListener(e, on, o); }; });
@@ -249,6 +254,7 @@
   <Scene theme={L.theme} sprite={step.kind === 'boss' ? (L.boss?.sprite ?? '') : (L.monsters[mid ?? '']?.sprite ?? '')} gauge={cardOnly || !feat('mon-attack') || scout?.on ? null : gaugeView(L, R, now)}
     hp={sceneHp?.hp ? { left: Math.min(sceneHp.hp.max, sceneHp.hp.left + fx.hold), max: sceneHp.hp.max } : null} pose={fx.poseUntil > now ? fx.pose : 'idle'} hpLabel={sceneHp?.label ?? ''} shadow={!!scout?.on} down={step.kind === 'boss' ? !!bhp?.won : down} {gem} hit={atkOn} hitTag={atk ? `${atk.strong ? '😡 분노 · ' : ''}${atk.def.tag}` : ''} elem={atkOn ? atk?.def.elem ?? '' : ''} atkId={atkOn ? atk?.def.id ?? '' : ''} rage={atkOn && !!atk?.strong} hitKey={atk?.at ?? 0} ice={atkOn && atk?.def.id === 'ice'} {iceEnd} holy={holyState} onholy={toggleHoly} stoneSec={stoneLeft} stoneHoly={!!stoneNow?.holy} {slump} {healN} lift={board} {mates} {mateFeed}
     onconcept={cptId ? () => (cpt = true) : undefined}
+    explore={scout?.on && !board ? expLine(expOf(R, uid), mid) : ''}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {:else if result && R && !board && !paperOn()}
@@ -268,8 +274,9 @@
     <div class="bcard"><span class="lab acc">기다리는 중</span><p class="muted">종합실이 아직 열리지 않았어요. 선생님 화면을 먼저 여세요.</p></div>
     <BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />
   {:else if isLobby(R)}
-    <div class="bcard"><span class="lab acc">{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p></div>
+    <div class="bcard"><span class="lab acc">{expOf(R, uid) ? '🔥 ' : ''}{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p>{#if expOf(R, uid)}<p class="expok" data-k="lobby-explore">🔥 탐사대! 배움터에서 예습한 용사 · 정찰 때 횃불을 들어요</p>{/if}</div>
     <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
+    {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
     <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />
@@ -406,4 +413,6 @@
   .wrow { display: flex; gap: 8px; } .wrow input { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line, #2f3440); background: var(--surface-2); color: var(--text); font: 500 16px var(--font); }
   .wsend, .wedit { flex: none; min-height: 48px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--accent); color: var(--on-accent, #1a1400); font: 700 15px var(--font); } .wedit { background: var(--surface-2); color: var(--text); align-self: flex-start; }
   .wsend:disabled { opacity: 0.45; } .werr { margin: 0; color: var(--bad); font-size: 14px; }
+  .tbtn { display: block; width: 100%; min-height: var(--tap); margin-top: var(--s2); border-radius: var(--r); border: 2px dashed var(--accent); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); } /* 🔥 #67 테스트 단추 (MonsterForm 과 같음) */
+  .expok { margin: 6px 0 0; font: 700 14px var(--font); color: #ffb35a; }
 </style>

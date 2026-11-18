@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { explorers } from '../../school/explore';
   import { keysOf, keyUses } from '../../school/keys';
   import { serverNow } from '../clock.svelte';
   import { NEW_SKILLS } from '../fx/twin';
@@ -43,7 +44,7 @@
   const monName = $derived.by(() => { try { const sp = spriteOf(sprite); return sp.sheet.names[sp.row] || ''; } catch { return ''; } });
   const hpLabel = $derived(`${boss ? '👑 ' : step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${monName || (boss ? L.boss?.title.split(' · ').pop() ?? '보스' : step?.title.split(' · ').pop() ?? '')}${boss && R && bossNote(L, R) ? ` · ${bossNote(L, R)}` : ''}`); // 👑 #27
   const heroes = $derived<Hero[]>(ids.map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, name: nameOf(u), ok: submitted(u), off: lost.has(u) })));
-  const st = $derived<ArenaState>({ boss, split, sprite, hp: hp ? { left: hp.left, max: hp.max } : null, hpLabel, down: !!hp?.down, shadow, heroes });
+  const st = $derived<ArenaState>({ boss, split, sprite, hp: hp ? { left: hp.left, max: hp.max } : null, hpLabel, down: !!hp?.down, shadow, heroes, ex: explorers(R) }); // 🔥 #67 탐사대
 
   onMount(() => {
     const ro = new ResizeObserver(() => { W = host.clientWidth; H = host.clientHeight; }); ro.observe(host); W = host.clientWidth; H = host.clientHeight;
