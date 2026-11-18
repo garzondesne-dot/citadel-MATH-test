@@ -63,3 +63,25 @@ describe.skipIf(!up)('시험 서버 규칙 · 학생 기록 칸은 그 학생만
     await expect(set(ref(anon.db, `records/${cls}/${n1}/x`), { right: 9 })).rejects.toThrow();
   }, 30000);
 });
+
+describe.skipIf(!up)('✏ #75 출제 공방 규칙', () => {
+  it('quest = 학생 쓰기 ✗ (중계소 · 교사만) · 읽기 = 그 학생 · 전당 👍 · 푼 표시 = 자기 uid 만', async () => {
+    const { ref, set, get } = await import('firebase/database');
+    const fa = await import('firebase/auth');
+    const cls = '1-7', n1 = Math.floor(Math.random() * 1e6), n2 = n1 + 1;
+    const own = await mk(), other = await mk();
+    const c1 = await fa.createUserWithEmailAndPassword(own.auth, `q${n1}@t.local`, 'cdm-1234');
+    await set(ref(own.db, `accounts/${cls}/${n1}`), { uid: c1.user.uid, at: 1 });
+    const c2 = await fa.createUserWithEmailAndPassword(other.auth, `q${n2}@t.local`, 'cdm-1234');
+    await set(ref(other.db, `accounts/${cls}/${n2}`), { uid: c2.user.uid, at: 1 });
+    await expect(set(ref(own.db, `quest/${cls}/${n1}/x`), { grade: 'blue', status: 'ok' })).rejects.toThrow(); // 스스로 🔵 승인 ✗
+    await expect(set(ref(own.db, `quest_q/${cls}/${n1}/20261118`), 0)).rejects.toThrow();
+    await expect(get(ref(own.db, `quest/${cls}/${n1}`))).resolves.toBeTruthy();
+    await expect(get(ref(other.db, `quest/${cls}/${n1}`))).rejects.toThrow();
+    await expect(set(ref(own.db, `school/hall/h1/like/${c1.user.uid}`), 1)).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `school/hall/h1/like/${c2.user.uid}`), 1)).rejects.toThrow();
+    await expect(set(ref(own.db, `school/hall/h1/problem`), '가짜')).rejects.toThrow();
+    await expect(set(ref(own.db, `school/qboard/${cls}/b1/solved/${c1.user.uid}`), 1)).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `school/qboard/${cls}/b1/solved/${c1.user.uid}`), 2)).rejects.toThrow(); // 한 번만
+  }, 30000);
+});

@@ -47,6 +47,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   oxsurv: (d) => (Number(medals(d).ox) || 0) >= 3,
   steady: (d) => logKeys(d).some((k) => k.startsWith('streak10_')),
   quester: (d) => logKeys(d).some((k) => k.startsWith('quest_')),
+  hallmaker: (d) => logKeys(d).some((k) => k.startsWith('quest_p_')), // 🏛 #75 명예의 전당
   writer: (d) => photoPass(d) >= 3,
   hunter: () => false, // 📕 오답노트 = 베타에 아직 없음
   wall: (d) => (Number((isObj(d.xr?.ttl) ? (d.xr!.ttl as Obj) : {}).wall) || 0) >= 30,
