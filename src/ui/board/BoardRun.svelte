@@ -5,6 +5,8 @@
   import { PROFILES } from '../../model/profiles';
   import { memoryStore } from '../../store/device';
   import { bossSubmit, chainSubmit, nextStep, openRoom, roomPath, submit } from '../../raid/actions';
+  import { SUBJ } from '../../engine/subject';
+  import { MIS } from '../../school/dash';
   import { activeIds, answerOf, bossItem, bossState, chainRecord, isChain, isEnd, isLobby, itemsFor, plainRecord, resultOf, stepOf } from '../../raid/raid';
   import { boardPack, END_MS, firstTry, freshAll, gradeOf, itemCount, SEC_PER_ITEM, stepDone } from '../../board/board';
   import { bMeta, bPause, helpOn, hintKey, hintOf, itemSolved, markPauseHelp, pauseMax, pauseOff, pauseOn, pausesLeft, raiseStrong, rescuesOf, sendHint, seOf, solvedStep, strongOf, stuckItem, thinkUsed, timeLeft, type Role, type SeAlert } from '../../board/team';
@@ -194,6 +196,14 @@
   const cmdOn = $derived(!solo && !!team?.cmd && myRole === 'g' && !demo && !!R && !isLobby(R) && !isEnd(L, R));
   const chall = $derived(ids.filter((u) => u !== uid && roles[u] === 'c'));
   const triesOf = (u: string, it: { mid: string; k: number } | null) => { if (!R || !it) return 0; const v = (R.subs?.[it.mid]?.[u] || {}) as Record<string, unknown>; return Object.keys(v).length; };
+  /** 남은 기회 · 마지막 오개념 (보통 몬스터만 · 소레이드 · 형성평가 = 시도 수만) */
+  function cmdInfo(u: string, it: { mid: string; k: number; q: unknown } | null): { left: number | null; mis: string } {
+    if (!R || !it || it.mid === 'boss' || !L.monsters[it.mid] || isChain(L, R, it.mid)) return { left: null, mis: '' };
+    const r = plainRecord(L, R, it.mid, u), last = r.tries[r.tries.length - 1], ML = SUBJ.misLogic;
+    let mis = '';
+    if (ML && last && !last.marks[it.k]) { const q = itemsFor(L, R, it.mid, u, last.attempt)[it.k]; if (q) { const c = ML.classify(q, (last.given || [])[it.k])[0]; if (c) mis = `${c} ${MIS[c]?.name ?? ''}`.trim(); } }
+    return { left: r.left, mis };
+  }
   const qShort = (q: unknown) => String((q as { question?: string })?.question ?? '').replace(/\s+/g, ' ').slice(0, 90);
   function helpPause(c: string, a: SeAlert) { if (!R) return; if (bp || pausesLeft(R, uid) <= 0) { say('⏸ 설명을 더 쓸 수 없어요'); return; } markPauseHelp(S, code, uid, c, a); pauseOn(S, code, R, uid); }
 </script>
@@ -217,10 +227,11 @@
   {#if cmdOn && R}
     <section class="cmd" data-k="cmd-room" aria-label="지휘실">
       <header><b>🛡 지휘실</b><small>도전자 {chall.length}명 · 내 문제는 🎬 시연으로</small></header>
-      {#each chall as u (u)}{@const it = stuckItem(L, R, u)}{@const al = open.find((x) => x.c === u)}
+      {#each chall as u (u)}{@const it = stuckItem(L, R, u)}{@const al = open.find((x) => x.c === u)}{@const ci = cmdInfo(u, it)}
         <div class="cc" class:sos2={!!al} class:hand={!!help[u]} data-k="cmd-card">
-          <div class="ch"><b>{help[u] ? '🙋 ' : ''}{name(u)}</b><span>{statusOf(u)} {stepDone(L, R, u) ? '다 풂' : it ? `시도 ${triesOf(u, it)}` : '푸는 중'}{al ? ' · 🚨 강적' : ''}</span></div>
+          <div class="ch"><b>{help[u] ? '🙋 ' : ''}{name(u)}</b><span>{statusOf(u)} {stepDone(L, R, u) ? '다 풂' : it ? (ci.left != null ? `남은 기회 ${ci.left}` : `시도 ${triesOf(u, it)}`) : '푸는 중'}{al ? ' · 🚨 강적' : ''}</span></div>
           <p class="cq">{it ? qShort(it.q) : stepDone(L, R, u) ? '✔ 이 단계 끝' : '…'}</p>
+          {#if ci.mis}<p class="cm" data-k="cmd-mis">🔎 마지막 오개념 · {ci.mis}</p>{/if}
           <div class="cb"><button type="button" disabled={!!bp || pausesLeft(R, uid) <= 0} onclick={() => (al ? helpPause(u, al.a) : R && pauseOn(S, code, R, uid))}>⏸ 설명 {pausesLeft(R, uid)}</button><button type="button" disabled={!canHint || !it} onclick={() => helpHint(u)}>💡 힌트</button><button type="button" data-k="cmd-demo" onclick={() => (demo = true)}>🎬 시연</button></div>
         </div>
       {:else}<p class="cq">도전자가 없어요 · 🎬 시연으로 함께 풀어요</p>{/each}
@@ -307,7 +318,7 @@
   .cc { padding: 10px; border-radius: 12px; background: var(--surface-2); border-left: 4px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
   .cc.hand { border-left-color: var(--accent); } .cc.sos2 { border-left-color: var(--bad); }
   .ch { display: flex; justify-content: space-between; gap: 8px; } .ch b { font-size: 15px; } .ch span { font-size: 13px; color: var(--text-2); }
-  .cq { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+  .cq { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); } .cm { margin: 0; font-size: 13px; color: var(--bad); }
   .cb { display: flex; gap: 6px; } .cb button { flex: 1; min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); box-shadow: 0 3px 0 var(--line); }
   .cb button:disabled { opacity: 0.45; box-shadow: none; }
   .back2 { position: fixed; right: max(12px, calc(50% - 203px)); bottom: 96px; z-index: 31; min-height: 48px; padding: 0 16px; border-radius: 24px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 15px var(--font); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000); }
