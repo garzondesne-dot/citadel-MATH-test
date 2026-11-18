@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS } from '../manifest';
+  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
@@ -46,7 +46,12 @@
   let flash = $state<HPose | ''>(''), flashT: ReturnType<typeof setTimeout> | undefined;
   const after = (p: HPose, ms: number) => { flash = p; clearTimeout(flashT); flashT = setTimeout(() => (flash = ''), ms); }; // 공격 연출 끝 = 틀림 → 맞음 줄 · 다 맞힘 → 기쁨 줄
   const hpose = $derived<HPose>(apose ? apose : hitPh ? hitPh : flash ? flash : pose === 'miss' ? 'hit' : pose !== 'idle' ? pose : healing ? 'healed' : slump ? 'fall' : down ? 'win' : shadow ? 'think' : 'idle');
-  const anim = $derived(ANIM[hpose]);
+  // 🫁 #63 대기 = 세밀화 숨쉬기 8장 띠 (받은 뒤에만 · 못 받으면 v5 시트 4칸)
+  const hd8u = $derived(hpose === 'idle' ? idle8HdOf(savedLook().hero) : null);
+  let hd8ok = $state('');
+  $effect(() => { const u = hd8u; if (!u) return; void idle8HdReady(u).then((ok) => { if (ok && hd8u === u) hd8ok = u; }); });
+  const use8 = $derived(hd8u && hd8ok === hd8u ? hd8u : null);
+  const anim = $derived<[number, number, number, boolean?]>(use8 ? [0, IDLE8_HD.frames, IDLE8_HD.ms / 1000] : ANIM[hpose]);
   // 🐞 2026-11-15 「개념 단계 뒤 다음 몬스터에서 필살기 · 공격이 다시 재생」(학생 폰 · TV 시연 폰 · 교사 시연): 장면이 새로 열리면 그 전 공격(atkQ 에 남은 마지막 값)은 이미 본 것
   //   + 3초 넘은 사건은 틀지 않음 (몬스터 · 단계가 바뀐 뒤 늦게 닿은 것)
   let lastAtk = atkQ.v?.id ?? 0, lastGuard = guardQ.v;
@@ -136,7 +141,7 @@
     <span class="mname" style:left="{sl[0] + (HERO.w * MS) / 2}px" style:top="{sl[1] + HERO.h * MS - 6}px">{m.name}</span>
   {/if}{/each}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
-  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({heroUrl()})" style:background-size="{HERO.cols * hg.w * HS}px {HERO.rows * hg.h * HS}px"
+  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero) }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({use8 ?? heroUrl()})" style:background-size={use8 ? `${IDLE8_HD.frames * hg.w * HS}px ${hg.h * HS}px` : `${HERO.cols * hg.w * HS}px ${HERO.rows * hg.h * HS}px`}
     data-pose={hpose} class:once={!!anim[3]} class:still={anim[1] < 2 || iceMode === 'on'} style:--fw="{hg.w * HS}px" style:--n={anim[1]} style:--dur="{anim[2]}s" style:--end="-{anim[1] * hg.w * HS}px" style:--end1="-{(anim[1] - 1) * hg.w * HS}px" style:--n1={Math.max(1, anim[1] - 1)}
     style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
 </div>

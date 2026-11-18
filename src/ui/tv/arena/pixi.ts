@@ -7,7 +7,7 @@ import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -168,7 +168,9 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         // 새 화풍 세밀 시트(칸 192 × 144 · k=2) · 옛 80 × 64 둘 다: 칸 자르기 = 그림 칸 · 배율 = s ÷ k · 발 = 칸 아래 base
         const i8 = idle8Of(hh.hero); // 🫁 #169 대기 8프레임
         if (i8) void src(i8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * HERO.w, hh.hero * HERO.h, HERO.w, HERO.h)); });
-        void src(url).then((so) => { if (v!.key !== hk) return; if (!i8) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.rows = Array.from({ length: HERO.rows }, (_, r) => Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, r * g.ch, g.cw, g.ch))); v!.atk = v!.rows[HERO.atkRow]!; if (v!.tex) v!.sp.texture = v!.tex[0]!; });
+        const hd8 = !i8 ? idle8HdOf(hh.hero) : null; // 🫁 #63 세밀화 숨쉬기 8장 띠 (칸 = v5 칸과 같은 크기 · 같은 발 자리) · 못 받으면 v5 시트 4칸
+        if (hd8) void src(hd8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * g.cw, 0, g.cw, g.ch)); }).catch(() => {});
+        void src(url).then((so) => { if (v!.key !== hk) return; if (!i8 && !(hd8 && v!.tex?.length === IDLE8.frames)) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.rows = Array.from({ length: HERO.rows }, (_, r) => Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, r * g.ch, g.cw, g.ch))); v!.atk = v!.rows[HERO.atkRow]!; if (v!.tex) v!.sp.texture = v!.tex[0]!; });
         v.sp.anchor.set(0.5, (g.ch - g.base) / g.ch);
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
