@@ -16,7 +16,7 @@
 </script>
 
 <div class="pu" data-k="prep-unlock">
-  <p class="fx">기본 = <b>자동</b> · 반이 n차시 수업을 하면 <b>다음 차시 하나</b>가 배움터 📖 예습에 열려요 · 보상 · 반 통계 없음</p>
+  <p class="fx">기본 = <b>자동</b> · 반이 n차시 수업을 하면 <b>다음 차시 하나</b>가 던전 문 🔥 예습(탐사)에 열려요 · 보상 · 반 통계 없음</p>
   <div class="chips">{#each CLASSES as c (c)}<button type="button" class:on={cls === c} onclick={() => (cls = c)}>{c}</button>{/each}</div>
   <p class="now" data-k="prep-now">{cls}반 · {info.n ? `${info.n}차시까지 수업함` : '아직 수업 기록 없음'} · {info.auto ? `자동 = ${prepPacks().find((p) => p.id === info.auto)?.no}차시` : info.wait ? `${info.wait}차시 팩이 아직 없어요(준비 중)` : '자동으로 열린 차시 없음'}</p>
   <ul class="rows">

@@ -110,7 +110,7 @@
     {#if lt.rooms.length}<div class="row" class:on={on('room')}><span>🏰 새 성채 방</span><b class="txt">{lt.rooms.length}개 <small>{lt.rooms.slice(0, 3).join(' · ')}{lt.rooms.length > 3 ? ` 외 ${lt.rooms.length - 3}개` : ''}</small></b></div>{/if}
     <div class="row goal" class:on={on('goal')}><span>🎯 다음 목표</span><b class="txt">{lt.goal}</b></div>
   </div>
-  {#if explorers(R).length}<details class="expl" data-k="lt-explore"><summary>🔥 탐사대 {explorers(R).length}명 = 배움터에서 예습한 용사{#if expOf(R, uid)} · 나도!{/if}</summary><p>🏕 캠프 → 🎯📖 배움터 → 📖 예습하기 에서 다음 차시 몬스터를 2마리 이상 쓰러뜨리면, 그 차시 수업 정찰 때 🔥 탐사대가 돼요 (점수 · 보상 차이 없음)</p></details>{/if}<!-- 🔥 #67 -->
+  {#if explorers(R).length}<details class="expl" data-k="lt-explore"><summary>🔥 탐사대 {explorers(R).length}명 = 예습한 용사{#if expOf(R, uid)} · 나도!{/if}</summary><p>🏕 캠프 → 🎯📖 배움터 → 📖 예습하기 에서 다음 차시 몬스터를 2마리 이상 쓰러뜨리면, 그 차시 수업 정찰 때 🔥 탐사대가 돼요 (점수 · 보상 차이 없음)</p></details>{/if}<!-- 🔥 #67 -->
   {#if lt.review}<p class="review" data-k="lt-review">📕 다시 볼 문제 <b>{lt.review}</b>개 → 수업이 끝나면 🎯 허수아비에서</p>{/if}
   {#if !done}<p class="skip muted">누르면 바로 보기</p>{/if}
 </div>
