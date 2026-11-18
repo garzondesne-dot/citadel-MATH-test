@@ -19,10 +19,14 @@ const [SHOTS = '.', ...lessons] = process.argv.slice(2), B = 'http://localhost:4
       await p.setInputFiles('[data-k="packfile"]', packFile(id)); await p.waitForSelector('[data-k="packsum"]'); await p.waitForTimeout(800);
       await p.click('.sheet .btn.pmain'); await p.waitForNavigation({ timeout: 10000 }).catch(() => {}); await p.waitForSelector('.tabs'); await p.evaluate((a) => { window.__botSpeed = 12; if (a != null) window.__botAcc = a; }, process.env.BOT_ACC != null ? Number(process.env.BOT_ACC) : null);
     }
-    await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(300); await p.click('.seg3 button:has-text("차시 준비")').catch(() => {}); await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, id); await p.waitForTimeout(300);
-    await p.click('.tact .btn'); await p.waitForSelector('[data-k="bots"]', { timeout: 10000 });
+    // 📜 #21 B 수업 탭: 🧪 테스트 반 → 차시 → 📱 리모컨만 → 열기 (옛 「준비」 탭 길 대신)
+    await p.goto(B + '?role=teacher&tab=class'); await p.waitForSelector('[data-cls="test"]'); await p.evaluate((a) => { window.__botSpeed = 12; if (a != null) window.__botAcc = a; }, process.env.BOT_ACC != null ? Number(process.env.BOT_ACC) : null);
+    await p.click('[data-cls="test"]'); await p.waitForTimeout(150); await p.click(`.pk3 [data-no="${Number(id.replace(/\D/g, ''))}"]`); await p.click('[data-mode="remote"]'); await p.click('[data-k="open-go"]'); await p.click('[data-k="open-yes"]');
+    await p.waitForSelector('[data-k="bots"]', { timeout: 10000 });
     const code = await p.evaluate(() => (window.__dbGet('school/live') || {}).code);
-    await p.click('[data-k="bot-sw"]');
+    // 📜 #21 테스트 수업 = 🤖 기본 켬 · 5명 → 20명 (꺼져 있을 때만 켬)
+    if ((await p.$eval('[data-k="bot-sw"]', (e) => e.getAttribute('aria-pressed'))) !== 'true') await p.click('[data-k="bot-sw"]');
+    for (let i = 0; i < 15; i++) { await p.click('[data-k="bots"] [aria-label="한 명 늘리기"]'); await p.waitForTimeout(80); }
     await p.waitForFunction(() => Number(document.querySelector('.att .cnt')?.firstChild?.textContent) >= 20, null, { timeout: 20000 }).catch(() => {});
     const n20 = await p.evaluate(() => Number(document.querySelector('.att .cnt')?.firstChild?.textContent));
     ok(`${id} 🤖 켬 → 대기실 들어온 학생 20`, n20 === 20, String(n20));
@@ -30,6 +34,7 @@ const [SHOTS = '.', ...lessons] = process.argv.slice(2), B = 'http://localhost:4
     const n21 = await p.evaluate(() => Number(document.querySelector('.att .cnt')?.firstChild?.textContent)); ok(`${id} 실제 학생 1명 섞임 → 21`, n21 === 21, String(n21));
     const botCells = await p.$$eval('.nums .n', (xs) => xs.filter((x) => /🤖/.test(x.textContent)).length); ok(`${id} 리모컨 번호 칸에 🤖 칸`, botCells === 20, String(botCells));
     await p.screenshot({ path: path.join(SHOTS, `bots-${id}-lobby.png`) });
+    const tv = await ctx.newPage(); tv.on('pageerror', (e) => errs.push(`${id} TV ${e} ${String(e.stack || '').split('\n').slice(1, 4).join(' | ')}`)); await tv.setViewportSize({ width: 1280, height: 720 }); await tv.goto(`${B}?role=hall&room=${code}`); await tv.waitForTimeout(2500); // 📺 종합실도 함께
     // 수업 진행: 몬스터 · 형성평가 = 가상 학생이 거의 다 낼 때까지 기다림 (최대 40초) → 다음 ▶
     const seen = []; let guard = 0, helpMax = 0;
     while (guard++ < (process.env.BOT_STEPS ? Number(process.env.BOT_STEPS) : 40)) {
@@ -49,6 +54,7 @@ const [SHOTS = '.', ...lessons] = process.argv.slice(2), B = 'http://localhost:4
         await p.waitForTimeout(1500);
       }
       seen.push(`${st.step}:${got}`);
+      if (got !== '-' && !fs.existsSync(path.join(SHOTS, `bots-${id}-tv.png`))) { await tv.screenshot({ path: path.join(SHOTS, `bots-${id}-tv.png`) }).catch(() => {}); await s.screenshot({ path: path.join(SHOTS, `bots-${id}-phone.png`) }).catch(() => {}); }
     }
     const R = await p.evaluate(() => { const L = window.__dbGet('school/live'); return window.__dbGet(`rooms/${L.code}`); });
     const bots = (o) => Object.keys(o || {}).filter((u) => u.startsWith('bot')).length;
