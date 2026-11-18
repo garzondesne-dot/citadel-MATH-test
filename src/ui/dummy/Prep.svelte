@@ -23,12 +23,14 @@
   //   흐름 = 📚 개념(🎬 · 📄) → 일반 몬스터 = 숫자 바꾼 판(허수아비 변형 생성기 그대로 · 학습지 숫자 안 나옴) · 👑 형성평가 · 📷 서술형 · 🔑 상자 = 없음
   //   보상 0 (💎 · 📜 · EXP · 업적 · 칭호 · 연속 참여 없음) · 기록 = bonus/{반}/{번호}/review/prep_{차시}/{몬스터} (반 통계 · 첫 시도 · 허수아비 목록 밖)
   const { S, me, uid, num, cls, all = false, onclose }: { S: Store; me: Me; uid: string; num: number; cls: string; /** 시험 · 이 기기 · 체험 = 모든 차시 */ all?: boolean; onclose: () => void } = $props();
-  const recs = untrack(() => (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {});
   const LOCK = 'citadel-v1-prep';
   const bnd = untrack(() => meBound()), RS = bnd?.S ?? S, base = bnd ? `${bonusBase(bnd.cls, bnd.num)}/review` : '';
   const readLocal = (): Record<string, Record<string, PrepRec>> => { try { return JSON.parse(localStorage.getItem(LOCK) || '{}'); } catch { return {}; } };
   let ver = $state(0);
   const recOf = (L: LessonPack): Record<string, PrepRec> => (void ver, (base ? RS.get<Record<string, PrepRec>>(`${base}/${prepKey(L.id)}`) : readLocal()[prepKey(L.id)]) || {});
+  // 🐞 #72 막 들어와 계정 확인 · 기록 받기가 끝나기 전에 열면 목록이 비던 것 → 기록을 그때그때 읽고 · 열린 뒤 0.8 · 2 · 4초에 한 번씩 다시 읽음
+  const recs = $derived.by(() => { void ver; return (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {}; });
+  { const ts = [800, 2000, 4000].map((ms) => setTimeout(() => ver++, ms)); onDestroy(() => ts.forEach(clearTimeout)); }
   const list = $derived.by(() => { void ver; return prepOpenList(S, cls, recs, all || !cls); });
   const mons = (L: LessonPack) => L.steps.filter((s) => s.kind === 'monster');
   const concepts = (L: LessonPack) => { const own = L.steps.filter((s) => s.kind === 'concept'); if (own.length || !L.partOf) return { P: L, cs: own }; const P = PACKS.find((p) => p.id === L.partOf) ?? L; return { P, cs: P.steps.filter((s) => s.kind === 'concept') }; };
