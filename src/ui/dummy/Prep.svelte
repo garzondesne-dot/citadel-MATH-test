@@ -67,7 +67,7 @@
   /** 기록만 (보상 없음) */
   function credit(r: Run, RR: Room) {
     const o = outcome(r, RR); if (!o.tried) return null;
-    const old = recOf(r.L0)[r.mid] || {}, rec: PrepRec = { tries: (Number(old.tries) || 0) + 1, at: S.now(), ...(o.clear || old.clear ? { clear: true } : {}) };
+    const old = recOf(r.L0)[r.mid] || {}, rec: PrepRec = { tries: (Number(old.tries) || 0) + 1, at: S.now(), ...(o.clear || old.clear ? { clear: true } : {}), ...(o.clear || old.kills ? { kills: (Number(old.kills) || (old.clear ? 1 : 0)) + (o.clear ? 1 : 0) } : {}) }; // 🔥 #67 kills = 탐사대 「n번 쓰러뜨렸어요」
     if (base) RS.set(`${base}/${prepKey(r.L0.id)}/${r.mid}`, rec);
     else { const a = readLocal(); a[prepKey(r.L0.id)] = { ...(a[prepKey(r.L0.id)] || {}), [r.mid]: rec }; try { localStorage.setItem(LOCK, JSON.stringify(a)); } catch { /* 무시 */ } }
     ver++;

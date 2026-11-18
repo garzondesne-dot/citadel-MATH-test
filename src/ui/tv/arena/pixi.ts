@@ -7,11 +7,11 @@ import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monBody, monNudge, monVis, spriteOf } from '../../manifest';
 import { heroOf } from '../../../model/hero';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
-export interface ArenaState { boss: boolean; split: boolean; sprite: string; hp: { left: number; max: number } | null; hpLabel: string; down: boolean; shadow: boolean; heroes: Hero[] }
+export interface ArenaState { boss: boolean; split: boolean; sprite: string; hp: { left: number; max: number } | null; hpLabel: string; down: boolean; shadow: boolean; heroes: Hero[]; /** 🔥 #67 탐사대 uid (예습 처치 2+) */ ex?: string[] }
 export interface Arena {
   readonly kind: 'pixi';
   update(st: ArenaState): void;
@@ -77,7 +77,9 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
   host.appendChild(cv);
   const W = () => app.screen.width, H = () => app.screen.height;
   const root = new Container(), shadowG = new Graphics(), monC = new Container(), hpC = new Container(), partyC = new Container(), fx = new Container();
-  root.addChild(shadowG, monC, hpC, partyC, fx); app.stage.addChild(root);
+  // 🌑 #67 정찰 = 암막(배경 · 용사단 어둡게 + 가장자리 비네트) · 실루엣 속 붉은 눈 · 🔥 탐사대 횃불 · 빛 구멍(색 몬스터를 구멍 모양으로만)
+  const darkC = new Container(), eyeC = new Container(), holeC = new Container(), torchC = new Container();
+  root.addChild(darkC, shadowG, monC, eyeC, holeC, hpC, partyC, torchC, fx); app.stage.addChild(root);
   // ⚔ 새 스킬 fx 시제품 층 (slash.ts · 낮은 해상도 하나 · 장면 위) — 충격파 · 흔들림은 root 에
   const slashC = new Container(); app.stage.addChild(slashC);
   const SL = new SlashLayer(app, slashC, root, W(), H());
@@ -102,6 +104,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
     if (monSp && monTex.idle && !st?.down) { const p: MonPose = mflash && t < mflashUntil ? mflash : !stoned && !st?.shadow && monTex.idleB !== monTex.idle && Math.floor(t / 700) % 2 ? 'idleB' : 'idle'; if (p !== monCur) { monCur = p; monSp.texture = monTex[p]!; monSeen.add(p); } placeRune(p); }
     const tick = t - heroT > 162; if (tick) { heroT = t; heroF = (heroF + 1) % 8; }
+    if (darkC.visible) scoutTick(t);
+    for (const h of heroes.values()) if (h.exDx || h.exDy || h.exS) { h.c.x = h.x + (h.exDx || 0); h.c.y = h.y + (h.exDy || 0); h.c.scale.set(1 - (h.exS || 0)); } else if (h.c.scale.x !== 1) { h.c.scale.set(1); h.c.y = h.y; }
     for (const h of heroes.values()) {
       if (h.busy) continue;
       const tp = h.tp && t < h.tu ? h.tp : '', p = tp || h.bp;
@@ -110,6 +114,66 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     }
   });
 
+  // ── 🌑 #67 정찰 암막 · 붉은 눈 · 🔥 탐사대 ──
+  const radTex = (stops: [number, string][], size = 256) => { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d')!; const gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2); for (const [o, col] of stops) gr.addColorStop(o, col); g.fillStyle = gr; g.fillRect(0, 0, size, size); return Texture.from(c); };
+  const vigTex = radTex([[0, 'rgba(0,0,0,0)'], [0.55, 'rgba(0,0,0,0.15)'], [1, 'rgba(0,0,0,0.92)']]);
+  const warmTex = radTex([[0, 'rgba(255,200,110,0.8)'], [0.3, 'rgba(255,150,60,0.3)'], [1, 'rgba(255,120,40,0)']]);
+  const darkG = new Graphics(), vig = new Sprite(vigTex); darkC.addChild(darkG, vig); darkC.alpha = 0; darkC.visible = false;
+  const eyeL = new Graphics(), eyeR = new Graphics(); eyeC.addChild(eyeL, eyeR); eyeC.visible = false; eyeC.filters = [new GlowFilter({ color: 0xff2a2a, distance: 10, outerStrength: 2.4, innerStrength: 0.4, quality: 0.2 })];
+  const holeSp = new Sprite(), holeMask = new Graphics(); holeC.addChild(holeSp, holeMask); holeSp.anchor.set(0.5, 1); holeSp.mask = holeMask; holeC.visible = false;
+  const beamG = new Graphics(); torchC.addChild(beamG);
+  const dimF = new ColorMatrixFilter(); dimF.brightness(0.42, false); const dimEx = new ColorMatrixFilter(); dimEx.brightness(0.85, false);
+  let scoutOn = false, scoutT0 = 0, monBB = { x0: 0, y0: 0, x1: 0, y1: 0 }; // monBB = 몬스터 보이는 몸통(화면 px · 둥실 빼고)
+  type Explo = { u: string; i: number; torch: Container; glow: Sprite; fire: Text; hole: [number, number]; r: number; dir: number };
+  let explo: Explo[] = [];
+  const HOLE_AT: [number, number][] = [[0.5, 0.24], [0.42, 0.62], [0.78, 0.5]]; // 머리 · 몸통 · 무기 쪽 (몸통 상자 비율)
+  function scoutStart(s: ArenaState) {
+    scoutOn = true; scoutT0 = performance.now(); darkC.visible = true; eyeC.visible = true;
+    tween(700, (p) => { darkC.alpha = p; });
+    const ex = (s.ex || []).filter((u) => heroes.has(u)).slice(0, 3), bw = monBB.x1 - monBB.x0, bh = monBB.y1 - monBB.y0, rMax = Math.sqrt((0.35 * bw * bh) / (Math.PI * Math.max(1, ex.length)));
+    for (const [u, v] of heroes) v.sp.filters = ex.includes(u) ? [dimEx] : [dimF];
+    explo = ex.map((u, i) => {
+      const v = heroes.get(u)!, dir = v.x < monCx ? 1 : -1, torch = new Container(), glow = new Sprite(warmTex), fire = txt('🔥', 'title', false, 0xffffff, false);
+      glow.anchor.set(0.5); glow.blendMode = 'add'; glow.alpha = 0; fire.anchor.set(0.5, 1); fire.alpha = 0; torch.addChild(glow, fire); torchC.addChild(torch);
+      setPose(v, 'portal'); v.exDir = dir;
+      const vx = monCx - v.x, vy = (monBB.y1 || monTop + monSize) - v.y, vl = Math.hypot(vx, vy) || 1, step = Math.min(W() * 0.07, vl * 0.35);
+      tween(1000, (p) => { v.exDx = (vx / vl) * step * ease(p); v.exDy = (vy / vl) * step * ease(p); v.exS = 0.08 * ease(p); }, () => { tween(500, (p) => { glow.alpha = p * 0.32; fire.alpha = p; }); });
+      return { u, i, torch, glow, fire, hole: HOLE_AT[i]!, r: rMax, dir };
+    });
+    holeC.visible = explo.length > 0;
+  }
+  function scoutEnd() {
+    if (!scoutOn) return; scoutOn = false;
+    for (const e of explo) { const v = heroes.get(e.u); e.torch.destroy({ children: true }); if (v) { const d0 = v.exDx || 0, e0 = v.exDy || 0, s0 = v.exS || 0; setPose(v, 'walk', 800); tween(800, (p) => { v.exDx = d0 * (1 - p); v.exDy = e0 * (1 - p); v.exS = s0 * (1 - p); }, () => { setPose(v, ''); v.exDx = v.exDy = v.exS = 0; }); } }
+    explo = []; beamG.clear(); holeMask.clear(); holeC.visible = false; eyeC.visible = false;
+    for (const v of heroes.values()) v.sp.filters = [];
+    tween(500, (p) => { darkC.alpha = 1 - p; }, () => { darkC.visible = false; });
+  }
+  /** 정찰 한 장면 (틱마다): 눈 깜박 · 횃불 일렁 · 빛 구멍 · 빛줄기 */
+  function scoutTick(t: number) {
+    darkG.clear().rect(0, 0, W(), H()).fill({ color: 0x05030a, alpha: 0.58 }); vig.width = W(); vig.height = H();
+    if (!scoutOn || !monSp) return;
+    const bw = monBB.x1 - monBB.x0, bh = monBB.y1 - monBB.y0, dy = monSp.y - monY;
+    // 👁 붉은 눈 = 몸통 위쪽 28% · 가운데 ± 7.5% (간격 = 몸통 폭 15%) · 천천히 켜졌다 꺼짐 + 가끔 두 번 빠르게
+    const cx = (monBB.x0 + monBB.x1) / 2, ey = monBB.y0 + bh * 0.28 + dy, er = Math.max(3, bw * 0.035), ph = (t - scoutT0) % 5200, blink = (ph > 4600 && ph < 4700) || (ph > 4820 && ph < 4920);
+    const ea = blink ? 0 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin((t - scoutT0) / 650));
+    const rMax = Math.sqrt((0.28 * bw * bh) / (Math.PI * Math.max(1, explo.length))); // 합쳐서 실루엣의 약 35% 까지
+    const holes = explo.map((e) => { const age = Math.min(1, (t - scoutT0 - 1400) / 7000), r = Math.max(0, rMax * age * (1 + 0.06 * Math.sin(t / 230 + e.i * 2))); return { x: monBB.x0 + bw * e.hole[0], y: monBB.y0 + bh * e.hole[1] + dy, r }; });
+    const inHole = (x: number, y: number) => holes.some((h) => h.r > 0 && Math.hypot(x - h.x, y - h.y) < h.r);
+    for (const [g, x] of [[eyeL, cx - bw * 0.075], [eyeR, cx + bw * 0.075]] as [Graphics, number][]) { g.clear(); if (!inHole(x, ey)) g.ellipse(x, ey, er, er * 0.8).fill({ color: 0xff3030, alpha: ea }); }
+    // 🔥 빛 구멍 = 색 몬스터(같은 칸 · 같은 자리)를 구멍 모양으로만 보임
+    holeSp.texture = monSp.texture; holeSp.x = monSp.x; holeSp.y = monSp.y; holeSp.scale.copyFrom(monSp.scale);
+    holeMask.clear(); for (const h of holes) if (h.r > 0) holeMask.circle(h.x, h.y, h.r).fill({ color: 0xffffff });
+    { const ex = new Set(explo.map((e) => e.u)); for (const [u, v] of heroes) { const f = ex.has(u) ? dimEx : dimF; const cur = v.sp.filters as unknown as unknown[] | null; if (!cur || cur[0] !== f) v.sp.filters = [f]; } } // 용사단 어둡게 (탐사대 = 덜)
+    beamG.clear();
+    for (const e of explo) {
+      const v = heroes.get(e.u); if (!v) continue;
+      const hw = Math.abs(v.sp.width) * (1 - (v.exS || 0)), hh = v.sp.height * (1 - (v.exS || 0)), hx = v.c.x + e.dir * hw * 0.22, hy = v.c.y - hh * 0.62, fl = 1 + 0.12 * Math.sin(t / 90 + e.i) + 0.08 * Math.sin(t / 37 + e.i * 3);
+      e.torch.x = hx; e.torch.y = hy; e.fire.style.fontSize = Math.round(H() * 0.05); e.fire.scale.set(1, fl);
+      e.glow.width = e.glow.height = H() * 0.24 * fl; e.glow.alpha = e.glow.alpha > 0 ? 0.32 + 0.08 * Math.sin(t / 70 + e.i) : 0;
+      const h = holes[e.i]; if (h && h.r > 0) { beamG.moveTo(hx, hy).lineTo(h.x, h.y).stroke({ color: 0xffc070, width: H() * 0.018, alpha: 0.13 }); }
+    }
+  }
   const visOf = (s: ArenaState) => { try { const sp = spriteOf(s.sprite); return monVis(sp.sheet.src, sp.row, sp.sheet.poses.idle, sp.sheet.cell); } catch { return 1; } };
   // ── 몬스터 ──
   let st: ArenaState | null = null, monSp: Sprite | null = null, monY = 0, monKey = '', monCx = 0, monTop = 0, monSize = 0;
@@ -128,6 +192,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     monSp.texture = frame(so, col * c, sp.row * c, c, c);
     monTex = Object.fromEntries((['idle', 'idleB', 'attack', 'hit', 'down'] as MonPose[]).map((p) => [p, frame(so, poseCol(sp.sheet, p) * c, sp.row * c, c, c)])); monCur = pose;
     monSp.scale.set(k); monSp.x = b.mon.cx + nd.dx * b.mon.size; monY = b.mon.top + b.mon.size + nd.dy * b.mon.size; monSp.y = monY;
+    { const bb = monBody(sp.sheet.src, sp.row, sp.sheet.poses.idle, c).split(',').map(Number), cs = c * k, l = monSp.x - cs / 2, tp = monY - cs; monBB = bb.length === 4 && bb.every((v) => !isNaN(v)) ? { x0: l + bb[0]! * cs, y0: tp + bb[1]! * cs, x1: l + bb[2]! * cs, y1: tp + bb[3]! * cs } : { x0: l + cs * 0.2, y0: tp + cs * 0.2, x1: l + cs * 0.8, y1: tp + cs * 0.95 }; } // 🌑 #67 눈 · 빛 구멍 자리
     monK = k; monX = monSp.x; monCell = c; monRuneAt = (p) => (sp.rune ? runeAt(sp.sheet, sp.row, poseCol(sp.sheet, p)) : null);
     if (sp.rune) { if (!monRune) { monRune = txt('', 'title', true, 0xffffff); monRune.anchor.set(0.5); monRune.style.stroke = { color: 0x0b3a52, width: 4 }; monC.addChild(monRune); } monRune.text = sp.rune; placeRune(pose); } else if (monRune) monRune.visible = false;
     const f: (ColorMatrixFilter | GlowFilter)[] = [];
@@ -135,6 +200,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     if (sp.elite && !s.shadow) f.push(new GlowFilter({ color: 0xffc94a, distance: 10, outerStrength: 2, innerStrength: 0, quality: 0.2 })); // 🎲 대장 = 금빛 테두리 (왕관 그림 전)
     if (s.shadow) { const m = new ColorMatrixFilter(); m.brightness(0.08, false); f.push(m, new GlowFilter({ color: 0xe5484d, distance: 12, outerStrength: 2.2, innerStrength: 0, quality: 0.2 })); } // 🌫 정찰 = 붉은 테두리 실루엣 (📺 시안 2026-11-14)
     baseF = f; monSp.filters = stoned ? [...f, greyF] : f;
+    holeSp.filters = sp.hue ? [(() => { const m = new ColorMatrixFilter(); m.hue(sp.hue!, false); return m; })()] : []; // 🔥 빛 구멍 = 원래 색
   }
   // ── 체력 막대 (몬스터 바로 위 · 굵게 · 숫자) ──
   function drawHp(s: ArenaState) {
@@ -150,7 +216,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     hpC.addChild(g, n, lab);
   }
   // ── 용사단 ──
-  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; atk: Texture[] | null; rows: Texture[][] | null; tp: HPose | ''; tu: number; t0: number; bp: HPose | ''; b0: number; cur: HPose | ''; busy: boolean; key: string; x: number; y: number; s: number };
+  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; atk: Texture[] | null; rows: Texture[][] | null; tp: HPose | ''; tu: number; t0: number; bp: HPose | ''; b0: number; cur: HPose | ''; busy: boolean; key: string; x: number; y: number; s: number; /** 🔥 #67 탐사대 걸음 */ exDx?: number; exDy?: number; exS?: number; exDir?: number };
   const heroes = new Map<string, HeroV>(); let heroT = 0, heroF = 0, partyKey = '';
   async function drawParty(s: ArenaState) {
     const slots = partyLayout(s.heroes.length, W(), H(), s.split), key = s.heroes.map((h) => `${h.u}:${h.hero}`).join(',') + `|${W()}|${H()}|${s.split}`;
@@ -175,7 +241,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
       }
-      v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
+      v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${hh.name}`; // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = 1; // 📶 끊긴 학생 = 투명하게 하지 않음 · 머리 위 📶✕ 만 (📜 2026-11-17)
     }
     partyC.sortableChildren = true;
@@ -293,7 +359,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     size: () => ({ W: W(), H: H() }),
     update(s) {
       st = s; cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { void drawMon(s); drawHp(s); void drawParty(s); });
+      raf = requestAnimationFrame(async () => { await drawMon(s); drawHp(s); await drawParty(s); if (s.shadow && !scoutOn && st === s) scoutStart(s); else if (!s.shadow && scoutOn) scoutEnd(); }); // 🌑 #67 정찰 들어감 · 나옴
     },
     hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },

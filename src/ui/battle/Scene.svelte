@@ -18,8 +18,8 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { noMon = false, gauge = null, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
-    { /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; /** ⏱ 공격 게이지 (11/17 #3 · battle/gauge.ts = TV 와 같은 함수) */ gauge?: import('./gauge').GaugeView | null; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
+  const { explore = '', noMon = false, gauge = null, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
+    { /** 🔥 #67 탐사대 한 줄 (정찰 · 내가 탐사대일 때만) */ explore?: string; /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; /** ⏱ 공격 게이지 (11/17 #3 · battle/gauge.ts = TV 와 같은 함수) */ gauge?: import('./gauge').GaugeView | null; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
       minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number;
       /** 📋 게시판 = 장면 낮게 · 용사 · 몬스터 위로 (📜 2026-11-14 「너무 아래에 있음」) */ lift?: boolean; /** 👥 게시판 팀 동료 (없으면 수업 그대로) */ mates?: Mate[]; /** 👥 동료 공격 사건 (k 순서 · 늘기만 함) */ mateFeed?: MateHit[] } = $props();
   // 📋 lift (📜 2026-11-14 머리 🔨 게시판 동료): 장면 높이 −56 · 용사 −68 · 몬스터 −44 · 체력 −12 → SE(375 × 667)에서 답 단추가 스크롤 없이 · 동료가 있으면 내 용사 = 앞 오른쪽(+120)
@@ -119,7 +119,15 @@
       {/each}
     </div>
   {/if}
-  {#if !noMon}<i class="mon art monster" class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>{/if}
+  {#if shadow && !noMon}<i class="dk" aria-hidden="true"></i>{/if}<!-- 🌑 #67 정찰 암막 -->
+  {#if !noMon}<i class="mon art monster" class:sc={shadow} class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>{/if}
+  {#if shadow && !noMon}{@const bb = (monBB || '0.2,0.2,0.8,0.95').split(',').map(Number)}{@const S0 = minions ? 104 : MON}{@const bw = (bb[2]! - bb[0]!) * S0}{@const bh = (bb[3]! - bb[1]!) * S0}{@const cx = ((bb[0]! + bb[2]!) / 2) * S0}{@const ey = (bb[1]! + (bb[3]! - bb[1]!) * 0.28) * S0}
+    <span class="mbox" class:minboss={!!minions} style:width="{S0}px" style:height="{S0}px" aria-hidden="true">
+      {#if explore}<i class="hole" style="{monBg(S0, mpose).replace('brightness(0)', '')};--hx:{cx}px;--hy:{(bb[1]! + (bb[3]! - bb[1]!) * 0.3) * S0}px;--hr:{Math.sqrt((0.18 * bw * bh) / Math.PI)}px"></i>{/if}<!-- 🔥 내 횃불 빛 구멍 하나 -->
+      <i class="seye" style:left="{cx - bw * 0.075}px" style:top="{ey}px" style:--er="{Math.max(3, bw * 0.05)}px"></i><i class="seye" style:left="{cx + bw * 0.075}px" style:top="{ey}px" style:--er="{Math.max(3, bw * 0.05)}px"></i>
+    </span>
+  {/if}
+  {#if explore}<p class="explore" data-k="explore-line">{explore}</p>{/if}
   {#if hit}<span class="tag hitTag" role="status">{hitTag || '💥 몬스터 공격!'}</span>{:else if note}<span class="tag" role="status">{note}</span>{/if}
   {#if pose === 'miss'}<span class="miss">헛스윙</span>{/if}
   {#if iceMode !== 'off'}
@@ -143,7 +151,7 @@
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
   <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero), hero: savedLook().hero }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({use8 ?? heroUrl()})" style:background-size={use8 ? `${IDLE8_HD.frames * hg.w * HS}px ${hg.h * HS}px` : `${HERO.cols * hg.w * HS}px ${HERO.rows * hg.h * HS}px`}
     data-pose={hpose} class:once={!!anim[3]} class:still={anim[1] < 2 || iceMode === 'on'} style:--fw="{hg.w * HS}px" style:--n={anim[1]} style:--dur="{anim[2]}s" style:--end="-{anim[1] * hg.w * HS}px" style:--end1="-{(anim[1] - 1) * hg.w * HS}px" style:--n1={Math.max(1, anim[1] - 1)}
-    style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i></span>
+    style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>{#if explore}<span class="torch" aria-hidden="true"><i class="tg"></i><b>🔥</b></span>{/if}</span>
 </div>
 
 <style>
@@ -230,4 +238,19 @@
   @keyframes hrow { from { background-position-x: 0; } to { background-position-x: var(--end); } }
   @keyframes hrow1 { from { background-position-x: 0; } to { background-position-x: var(--end1); } }
   .hero { transition: transform 0.12s ease-out; position: absolute; z-index: 1; left: 0; top: 140px; display: block; image-rendering: pixelated; background-repeat: no-repeat; }
+  /* 🌑 #67 정찰 = 암막 · 실루엣 속 붉은 눈(천천히 + 가끔 두 번 깜박) · 🔥 탐사대 = 내 용사 횃불 + 빛 구멍 하나 */
+  .dk { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 60% 45%, rgba(5, 3, 10, 0.35), rgba(5, 3, 10, 0.82) 75%); animation: dkIn 0.7s ease-out both; }
+  @keyframes dkIn { from { opacity: 0; } }
+  .mon.art.monster.sc { z-index: 2; }
+  .mbox { position: absolute; z-index: 3; right: 24px; top: calc(108px - var(--my, 0px)); pointer-events: none; } .mbox.minboss { right: 8px; top: calc(90px - var(--my, 0px)); }
+  .seye { position: absolute; width: var(--er); height: calc(var(--er) * 0.8); margin: calc(var(--er) * -0.4) 0 0 calc(var(--er) * -0.5); border-radius: 50%; background: #ff3030; box-shadow: 0 0 6px 2px #ff2a2a, 0 0 14px 4px #ff2a2a88; animation: seye 5.2s linear infinite; }
+  @keyframes seye { 0% { opacity: 0.45; } 30% { opacity: 1; } 60% { opacity: 0.5; } 88% { opacity: 1; } 89% { opacity: 0; } 90.5% { opacity: 1; } 92% { opacity: 0; } 93.5%, 100% { opacity: 0.6; } }
+  .hole { position: absolute; inset: 0; z-index: 2; background-repeat: no-repeat; image-rendering: pixelated; clip-path: circle(0 at var(--hx) var(--hy)); animation: hole 7s 1.4s ease-out forwards, holeW 0.9s 8.4s ease-in-out infinite alternate; }
+  @keyframes hole { to { clip-path: circle(var(--hr) at var(--hx) var(--hy)); } }
+  @keyframes holeW { from { clip-path: circle(var(--hr) at var(--hx) var(--hy)); } to { clip-path: circle(calc(var(--hr) * 1.07) at var(--hx) var(--hy)); } }
+  .torch { position: absolute; right: -6px; top: 18%; z-index: 3; pointer-events: none; } .torch b { position: relative; font-size: 22px; display: block; animation: tfl 0.18s steps(2) infinite alternate; }
+  .torch .tg { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 200, 110, 0.55), rgba(255, 140, 50, 0.15) 45%, transparent 70%); mix-blend-mode: screen; animation: tgl 0.9s ease-in-out infinite alternate; }
+  @keyframes tfl { to { transform: scale(1, 1.12) translateY(-1px); } } @keyframes tgl { to { transform: scale(1.12); opacity: 0.8; } }
+  .explore { position: absolute; z-index: 4; left: 50%; bottom: 10px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 24px); padding: 4px 12px; border-radius: 14px; background: rgba(40, 22, 6, 0.85); border: 1px solid #ffb35a; color: #ffe2b0; font: 700 14px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (prefers-reduced-motion: reduce) { .seye, .hole, .torch b, .torch .tg { animation: none; } .hole { clip-path: circle(var(--hr) at var(--hx) var(--hy)); } }
 </style>
