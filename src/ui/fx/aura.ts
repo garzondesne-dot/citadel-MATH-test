@@ -5,6 +5,14 @@
 //   v1.0 다른 점: MutationObserver 대신 Svelte 액션 use:aura={{ lv, tv }}
 import { AURA } from './fx';
 import { artUrl } from '../manifest';
+import { heroOf } from '../../model/hero';
+import A10 from './aura10-map.json';
+// ⭐ #64 10강 오라 = 용사별 그림 (PixelLab · 2026-11-18): 그 용사 시트 이름 → { src · frames · cell · scale } · keep(각성 로안) = 옛 성스러운 후광 + 빛살 · 지도에 없으면 옛 후광
+//   자리 = 옛 후광과 같음(머리 = 상자 가운데 + hx · 발에서 hy) · 크기만 × scale(가운데 기준) · 1초 한 바퀴 · 빛살(halo-burst) = keep 만 · 그림을 받은 뒤에만 바꿈(못 받으면 옛 후광)
+const AURA10 = A10 as Record<string, { src: string; frames: number; cell: number; scale: number; keep?: boolean }>;
+export const aura10Of = (hero?: number) => { if (hero == null) return null; const m = AURA10[heroOf(hero).sprite || '']; return m && !m.keep ? m : null; };
+const a10Seen = new Map<string, Promise<boolean>>();
+const a10Ready = (url: string) => { let p = a10Seen.get(url); if (!p) { p = new Promise<boolean>((ok) => { const im = new Image(); im.onload = () => ok(true); im.onerror = () => ok(false); im.src = url; }); a10Seen.set(url, p); } return p; };
 
 const nOrb = (lv: number, tv: boolean) => Math.min(tv ? 2 : 4, lv >= 10 ? 4 : lv >= 7 ? 3 : lv >= 4 ? 2 : 1);
 let css = false;
@@ -23,18 +31,19 @@ function style() {
 .au-r.f{clip-path:inset(89% 0 0 0);z-index:2}
 .au-o{left:50%;bottom:calc(var(--p)*20);width:0;height:0;animation:auO var(--d) linear infinite;z-index:3}
 .au-o>.au-s{left:calc(var(--p)*-6);top:calc(var(--p)*-6);width:calc(var(--p)*12);height:calc(var(--p)*12);background:${u(a.orbs)} 0 var(--ay)/400% 1000% no-repeat;animation:auF .6s steps(4) infinite;filter:drop-shadow(0 0 2px var(--au))}
-.au-h{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
+.au-h{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41*var(--as,1));bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41*var(--as,1));width:calc(var(--p)*82*var(--as,1));height:calc(var(--p)*82*var(--as,1));background:${u(a.halo)} 0 0/400% 100% no-repeat;animation:auF 1s steps(4) infinite;z-index:0}
 .au-hb{left:calc(50% + var(--hx,0)*1.25cqw - var(--p)*41);bottom:calc(var(--hy,49.6)*1.25cqw - var(--p)*41);width:calc(var(--p)*82);height:calc(var(--p)*82);background:${a.haloBurst ? u(a.haloBurst) : 'none'} 0 0/600% 100% no-repeat;animation:auF6 1.2s steps(6) infinite;z-index:0;opacity:.95}
 /* 🔧 화면 고침 1 (2026-11-13 머리 방 Pixel 7): 용사 그림이 .art 자기 배경이면 오라 뒤 겹(고리 · 후광 · 빛살)이 그 위에 그려져 얼굴을 가림 → 용사 그림을 한 겹 더(au-me · z 1) 올려 오라는 늘 용사 뒤 · 앞 반쪽 고리 · 입자만 앞 */
 .au-me{inset:0;background:inherit;z-index:1}
 @keyframes auF6{to{background-position-x:120%}}
+@keyframes auF8{to{background-position-x:114.2857%}}
 @keyframes auF{to{background-position-x:133.333%}}
 @keyframes auO{${st.join('')}}`;
   document.head.appendChild(s);
 }
 /** 오라 붙이기 (lv 0 = 없음) · 돌려주는 값 = 지우기 */
 /** head = 그 상자 안 머리 자리 [가로 = 상자 가운데에서, 높이 = 상자 아래에서] (옛 칸 80 px 단위 · manifest heroHead 에 그림 칸 밀림을 더한 값) · +10 후광 · 빛살 중심 = 머리 뒤 */
-export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number]): () => void {
+export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number], hero?: number): () => void {
   art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au');
   if (!lv) return () => {};
   const w = art.getBoundingClientRect().width; if (w && w < 40) return () => {};
@@ -45,17 +54,22 @@ export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, n
   art.style.setProperty('--ay', `${((i / 9) * 100).toFixed(3)}%`); art.style.setProperty('--au', col);
   const holy = lv >= 10 && !!AURA.halo;
   // 📜 2026-11-15 선생님 「강화 시 오라가 기존의 에셋 사용한 게 아니더라 · 사용해 줘」 → 모든 단계 = 정식 그림(고리 aura-ring · 입자 aura-orbs) · CSS 타원 · 별(다듬기 ⑥) 안 씀
-  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r"></span>`;
+  const a10 = holy ? aura10Of(hero) : null;
+  const back = holy ? `<span class="au-s au-g"></span>${AURA.haloBurst && !a10 ? '<span class="au-s au-hb"></span>' : ''}<span class="au-s au-h"></span>` : `<span class="au-s au-g"></span><span class="au-s au-r"></span>`;
   const n = nOrb(lv, tv), dur = (3.4 - lv * 0.1).toFixed(2);
   const front = holy ? '' : `<span class="au-s au-r f"></span>${Array.from({ length: n }, (_, j) => `<span class="au-s au-o" style="--d:${dur}s;animation-delay:${((-Number(dur) * j) / n).toFixed(2)}s"><span class="au-s"></span></span>`).join('')}`;
   const me = getComputedStyle(art).backgroundImage !== 'none' ? '<span class="au-s au-me"></span>' : '';
   art.insertAdjacentHTML('afterbegin', back + me); art.insertAdjacentHTML('beforeend', front);
+  if (a10) { // ⭐ #64 용사별 10강 오라 = 받은 뒤 그 그림으로 (못 받으면 옛 후광 + 빛살 그대로 두기 위해 빛살을 그때 붙임)
+    const url = artUrl(`art/${a10.src}`), h = art.querySelector(':scope > .au-h') as HTMLElement | null;
+    if (h) { h.style.visibility = 'hidden'; void a10Ready(url).then((ok) => { if (!h.isConnected) return; if (ok) { h.style.setProperty('--as', String(a10.scale)); h.style.background = `url('${url}') 0 0/${a10.frames * 100}% 100% no-repeat`; h.style.animation = `auF8 1s steps(${a10.frames}) infinite`; h.dataset.a10 = a10.src; } else if (AURA.haloBurst) h.insertAdjacentHTML('beforebegin', '<span class="au-s au-hb"></span>'); h.style.visibility = ''; }); }
+  }
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
 /** Svelte 액션: <i class="art" use:aura={{ lv, tv }}> */
-type AuraP = { lv: number; tv?: boolean; head?: [number, number]; body?: [number, number] };
+type AuraP = { lv: number; tv?: boolean; head?: [number, number]; body?: [number, number]; hero?: number };
 export function aura(node: HTMLElement, p: AuraP) {
-  let off = () => {}; const run = (q: AuraP) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head, q.body); }); };
+  let off = () => {}; const run = (q: AuraP) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head, q.body, q.hero); }); };
   run(p);
   return { update: run, destroy: () => off() };
 }
