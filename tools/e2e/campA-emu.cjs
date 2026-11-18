@@ -1,4 +1,5 @@
 // 🏕 캠프 A (에뮬레이터 · 📜 2026-11-15 선생님 「A안 + 게시판 방이 개설되면 포털 열리고 게시판 빛나고」)
+//   (#72 말풍선 → 이름표 · 숫자 배지 · 💎 칩)
 //   ① 할 일 없음(새 학생 · 기록 없음) = 말풍선 0 · 흐림 0 ② 기록(틀림 · 안 풂) = 🎯 「복습 n · 💎+k」 말풍선 · 할 일 없는 물건 흐림
 //   ③ 모집 중 방 생김 = 📋 「⚔ 모집 중 1/4 · 참여!」 · 포털 recruit ④ 게시판 누름 = 그 방에 바로 참여(멤버 2) ⑤ 방 사라짐 = 말풍선 없음 · 포털 불씨
 const { chromium } = require('playwright');
@@ -17,7 +18,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await s.click('.pw >> nth=0'); for (const k of '12341234') await s.click(`.pad button:text-is("${k}")`);
   await s.click('.title .act .pmain'); await s.waitForTimeout(3500);
   const fh = await s.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await s.waitForTimeout(1200); }
-  const state = async () => s.evaluate(() => ({ bubs: [...document.querySelectorAll('.bub')].map((e) => `${e.dataset.k}:${e.textContent}`), dim: document.querySelectorAll('.prop.dim, img.obj.dim').length, todo: document.querySelectorAll('.prop.todo, .zone.todo').length, portal: document.querySelector('.portal')?.dataset.phase }));
+  const state = async () => s.evaluate(() => ({ bubs: [...document.querySelectorAll('.tag.todo')].map((e) => `${e.dataset.k.replace('tag', 'bub')}:${e.textContent}${e.nextElementSibling?.classList.contains('gchip') ? ` · ${e.nextElementSibling.textContent}` : ''}`), dim: document.querySelectorAll('.prop.dim, img.obj.dim').length, todo: document.querySelectorAll('.prop.todo, .zone.todo').length, portal: document.querySelector('.portal')?.dataset.phase }));
   const castleOn = !!process.env.SEED;
   let st = await state();
   const noCastle = (x) => x.bubs.filter((t) => !/bub-castle/.test(t));
@@ -27,12 +28,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   await rest('school/last/1-3', 'PUT', { lesson: 'set-02', no: 2, at: 1, done: true, code: '111111' });
   await s.reload(); await s.waitForTimeout(4500); st = await state();
   const sc = st.bubs.find((t) => /bub-scare/.test(t)) || '';
-  ok('② 🎯 말풍선 「복습 n · 💎+k」 · 할 일 없는 물건 흐림', /복습 \d+ · 💎\+\d+/.test(sc) && st.dim > 0, JSON.stringify(st));
+  ok('② 🎯 말풍선 「복습 n · 💎+k」 · 할 일 없는 물건 흐림', /허수아비\d+ · 💎\+\d+/.test(sc) && st.dim > 0, JSON.stringify(st));
   await s.screenshot({ path: `${SHOTS}/campA-todo.png` });
   await rest('school/board/posts/pT1', 'PUT', { pid: 'pT1', lesson: 'set-02', no: 2, at: Date.now(), host: 'other', phase: 'wait', mem: { other: { uid: 'other', cls: '1-4', num: 7, nick: '친구', hero: 1, role: 'c', why: '', at: Date.now() } } });
   await s.waitForTimeout(2500); st = await state();
   const bd = st.bubs.find((t) => /bub-dummy/.test(t)) || '';
-  ok('③ 모집 중 방 = 📋 「⚔ 모집 중 1/4 · 참여!」 · 포털 recruit', /모집 중 1\/4/.test(bd) && st.portal === 'recruit', `${bd} · ${st.portal}`);
+  ok('③ 모집 중 방 = 📋 「⚔ 모집 중 1/4 · 참여!」 · 포털 recruit', /게시판1\/4/.test(bd) && st.portal === 'recruit', `${bd} · ${st.portal}`);
   await s.waitForTimeout(700); await s.screenshot({ path: `${SHOTS}/campA-recruit.png` });
   await s.$eval('[data-prop="dummy"]', (e) => e.click()); await s.waitForTimeout(2500);
   const mem = await rest('school/board/posts/pT1/mem'); const n = Object.keys(mem || {}).length;

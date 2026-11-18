@@ -28,7 +28,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const Bp = await open(`?${E}`); await signup(Bp, '1-3', 2);
   const C = await open(`?${E}`); await signup(C, '1-5', 1);
   await A.reload(); await A.waitForTimeout(2500);
-  const board = async (p) => { await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
+  const board = async (p) => { await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   // A ＋ 모집 글
   await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await A.waitForTimeout(1500);
@@ -60,7 +60,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await D.context().setOffline(false); await wait(5000); const d3 = await drv(); log(`   ${d.u} 다시 이어짐 → 진행 그대로 ${d3.u}`); if (d3.u !== d2.u) errs.push('되살아난 폰이 뺏음');
   // ③ A 다시 들어옴 = 그대로 팀원
   const A2 = await actx.newPage(); A2.on('pageerror', (e) => errs.push(`A2: ${e}`)); await A2.goto(`${B}?${E}`); await A2.waitForTimeout(3000);
-  await A2.click('button[aria-label="📋 게시판"]'); await A2.waitForSelector('.run', { timeout: 15000 }); await wait(2500);
+  await A2.click('button[aria-label="게시판"]'); await A2.waitForSelector('.run', { timeout: 15000 }); await wait(2500);
   const tA = await A2.textContent('.run .team'); log('③ A 다시 들어옴 → 팀 줄:', tA.replace(/\s+/g, ' ').trim(), '| 진행', (await drv()).u); if (!/나/.test(tA)) errs.push('다시 들어옴');
   // 끝까지
   for (let k = 0; k < 80; k++) { for (const p of [A2, Bp, C]) await p.evaluate(() => window.__board && window.__board.solve()).catch(() => {}); await wait(700); if (await Bp.$('.bd .grade')) break; }

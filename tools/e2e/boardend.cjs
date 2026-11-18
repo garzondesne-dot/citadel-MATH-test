@@ -9,7 +9,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const start = async () => { await p.click('.bd .chips button:has-text("6")'); await p.click('.bd .act .btn'); await p.waitForSelector('.lgrid'); await p.click('.sheet .act .btn'); await p.waitForSelector('.run'); await p.waitForTimeout(1500); };
   const solveAll = async () => { for (let k = 0; k < 20; k++) { if (await p.$('[data-k="board-endov"]')) return; await p.evaluate(() => window.__board?.solve()); await p.waitForTimeout(700); } };
   await p.goto(B + '?role=camp&room=BE1'); await p.waitForSelector('.stage');
-  await p.click('button[aria-label="📋 게시판"]'); await p.waitForSelector('.bd');
+  await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');
   // ① 끝 = ⚔ 처치! 2초 → 결과
   await start(); await solveAll();
   const t0 = Date.now(); const ov = await p.textContent('[data-k="board-endov"]').catch(() => ''); ok('① 끝 = 「⚔ 처치!」 장면', /처치/.test(ov), ov.trim());

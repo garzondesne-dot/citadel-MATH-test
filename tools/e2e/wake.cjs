@@ -31,7 +31,7 @@ const NONE = () => { Object.defineProperty(navigator, 'wakeLock', { value: undef
   { const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }); await ctx.addInitScript(FAKE); const c = await ctx.newPage();
     await c.goto(B + '?role=camp&room=WK1'); await c.waitForSelector('.stage'); await c.waitForTimeout(500);
     ok('학생 캠프 = 잡힘', (await c.evaluate(() => window.__wake())).held);
-    await c.click('button[aria-label="📋 게시판"]'); await c.waitForSelector('.bd'); await c.waitForTimeout(300);
+    await c.click('button[aria-label="게시판"]'); await c.waitForSelector('.bd'); await c.waitForTimeout(300);
     ok('📋 게시판 = 잡힘', (await c.evaluate(() => window.__wake())).held);
     await c.close(); const c2 = await ctx.newPage(); await c2.goto(B + '?role=camp&room=WK1'); await c2.waitForSelector('.stage'); await c2.click('button[aria-label="성채"]'); await c2.waitForSelector('.sheet'); await c2.waitForTimeout(300);
     ok('🏰 성채 시트 = 잡힘', (await c2.evaluate(() => window.__wake())).held);

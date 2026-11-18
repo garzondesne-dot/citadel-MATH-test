@@ -8,7 +8,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   for (const mid of ['m1', 'm2', 'm3', 'm4']) { // 몬스터마다 새 탭(새로 고침 뒤 보던 장면 복귀 · 섞이지 않게)
     const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(B + '?role=camp&room=SY49B' + mid); await p.waitForSelector('.stage');
-    await p.click('.prop[aria-label="🎯 허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
+    await p.click('.prop[aria-label^="허수아비"]'); await p.waitForSelector('[data-k="dummy-list"]'); await p.waitForTimeout(300);
     const has = await p.$(`[data-lesson="set-10"] li[data-mid="${mid}"] .go`); if (!has) { await ctx.close(); continue; }
     await p.$eval(`[data-lesson="set-10"] li[data-mid="${mid}"] .go`, (e) => e.click()); await p.waitForSelector('.drun', { timeout: 15000 }); await p.waitForTimeout(2500);
     const w = await p.$$eval('.sy', (es) => es.map((e) => e.textContent.trim())); w.forEach((x) => words.add(x));

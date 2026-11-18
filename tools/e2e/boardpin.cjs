@@ -18,7 +18,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     await p.click('.title .pmain'); await p.waitForTimeout(2500); if (await p.$('text=첫 용사 고르기')) { await p.click('button:has-text("시작")'); await p.waitForTimeout(800); }
   };
   const A = await open(); await signup(A, '1-3', 1); const Bp = await open(); await signup(Bp, '1-3', 2); const C = await open(); await signup(C, '1-5', 1);
-  const board = async (p) => { if (!(await p.$('.bd'))) await p.click('button[aria-label="📋 게시판"]'); // 새로 고침 뒤엔 보던 게시판이 저절로 다시 열림(#52)
+  const board = async (p) => { if (!(await p.$('.bd'))) await p.click('button[aria-label="게시판"]'); // 새로 고침 뒤엔 보던 게시판이 저절로 다시 열림(#52)
   await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   const rune = async (p, s) => { for (const d of s) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };

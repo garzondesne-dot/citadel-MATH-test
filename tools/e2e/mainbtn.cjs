@@ -46,7 +46,7 @@ const RECTS = () => {
     await c.click('.row2 .btn2 >> nth=0'); await c.waitForSelector('.hr'); await chk(c, '모루-목록'); await c.click('.fg .pmain'); await c.waitForTimeout(200);
     await c.click('.row2 .btn2 >> nth=1'); await c.waitForSelector('.book'); await chk(c, '모루-도감'); await c.click('.fg .pmain');
     await c.evaluate(() => sessionStorage.clear()); await c.reload(); await c.waitForSelector('.stage'); // 새로 고침 = 보던 시트(모루) 되살림 → 지우고 캠프로
-    await c.click('button[aria-label="📋 게시판"]'); await c.waitForSelector('.bd'); await chk(c, '게시판');
+    await c.click('button[aria-label="게시판"]'); await c.waitForSelector('.bd'); await chk(c, '게시판');
     await c.click('.bd .pmain'); await c.waitForSelector('.sheet'); await chk(c, '게시판-차시시트');
     await c.close();
     // 수업: 종합실 테스트 모드 + 학생 1

@@ -9,7 +9,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   const meas = (pg, stageSel, propSel) => pg.evaluate(([ss, ps]) => {
     const st = document.querySelector(ss).getBoundingClientRect(), o = {};
     for (const e of document.querySelectorAll(ps)) { const r = e.getBoundingClientRect(), k = e.dataset.prop; const cut = k === 'anvil' ? 59 / 362 : 0; o[k] = { l: +((r.left - st.left) / st.width * 100).toFixed(1), b: +((st.bottom - r.bottom) / st.height * 100).toFixed(1), w: +(r.width / st.width * 100).toFixed(1), box: [r.left, r.top + r.height * cut, r.right, r.bottom] }; // 그림 속 빈 여백(모루 위 16%)은 물건 아님
-      const lab = e.querySelector('.label, .ob'); if (lab) o[k].lab = (() => { const q = lab.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; })(); }
+      const lab = e.querySelector('.tag, .ob'); if (lab) o[k].lab = (() => { const q = lab.getBoundingClientRect(); return [q.left, q.top, q.right, q.bottom]; })(); }
     const pt = document.querySelector('.portal'); if (pt) { const r = pt.getBoundingClientRect(); o.portal = { box: [r.left, r.top, r.right, r.bottom], s: getComputedStyle(pt).getPropertyValue('--s').trim() }; }
     return o;
   }, [stageSel, propSel]);
