@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { petriPop } from './petriPop.svelte';
   import { setSymPack } from '../battle/symsheet.svelte';
   import { helpOf } from '../../school/help';
   import { feat } from '../../school/features.svelte';
@@ -15,7 +16,7 @@
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { CHAIN_SLOTS, chainItems, chainRecord, PRAC_MAX, pracUsed, stone, whyStages } from '../../raid/raid';
   import { giveHint, hintLines, hintState } from '../../school/hintGive';
-  import { chainSubmit, heartRelease, petriAward, pracStart } from '../../raid/actions';
+  import { chainSubmit, heartRelease, pracStart } from '../../raid/actions';
   import ChainStage from './ChainStage.svelte';
   import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -76,7 +77,7 @@
     const r2 = chainRecord(L, S.get<Room>(`rooms/${code}`) as Room, mid, uid);
     const okNow = prac ? r2.pass === pass && r2.pStage > before : r2.stage > before;
     heroAtk({ miss: !okNow, noDmg: prac, win: !prac && r2.done, prac: prac && okNow ? 1 : 0 });
-    if (okNow) petriAward(S, code, uid, mid, 1); // 🗿 석화 찬스 (진짜 · 🔥 한 판 더 모두 · 석화 한 번에 3까지) // ⚔ 정식 소레이드 = 단계마다 공격 한 번
+    if (okNow) petriPop(S, code, uid, mid, 1); // 🗿 석화 찬스 (진짜 · 🔥 한 판 더 모두 · 석화 한 번에 3까지) // ⚔ 정식 소레이드 = 단계마다 공격 한 번
     flip = { i: before, ok: okNow, text: sent }; if (flipT) clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); // #116 그 칸만 뒤집힘
     toast = okNow ? (before === pItems.length - 1 ? (prac ? '✔ 연습 사슬 완성!' : r2.perfect ? '🌟 퍼펙트 사슬!' : '👑 대장 처치!') : `✔ 졸개 ${'①②③④⑤⑥'[before]} 처치!`)
       : prac ? (r2.pFail ? '✘ 이번 연습 판은 기회를 다 썼어요' : `✘ 틀렸어요 · 연습 칸 ${before === pItems.length - 1 ? '하나' : '반'} 사용`)

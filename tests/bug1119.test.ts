@@ -76,3 +76,11 @@ describe('④ 조건 해금', () => {
     expect(statsOf({ records: { a: { boss: 3, fixed: 2, perfects: 1, won: true } }, cards: { x: 1 } })).toMatchObject({ str: 3, grit: 2, focus: 1, brave: 1, craft: 1 });
   });
 });
+
+describe('🗿 석화 중 맞힘 토스트 (11/19)', () => {
+  it('돌려준 값 > 0 일 때만 「🗿 💎 +n (캠프에서 받기)」', async () => {
+    const { petriToast, showPetri } = await import('../src/ui/q/petriPop.svelte');
+    showPetri(0); expect(petriToast.msg).toBe('');
+    showPetri(2); expect(petriToast.msg).toBe('🗿 💎 +2 (캠프에서 받기)');
+  });
+});
