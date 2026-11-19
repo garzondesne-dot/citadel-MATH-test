@@ -32,7 +32,7 @@ export interface Arena {
   slashStats(): { fps: number; level: number; live: number; queue: number };
   /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
   stone(on: boolean): void;
-  exp(u: string, text: string): void;
+  exp(u: string, text: string, color?: number): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
   freeze(ms: number): void;
@@ -314,7 +314,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     g.moveTo(cx - r, cy - r * 0.6).lineTo(cx + r, cy + r * 0.6).stroke({ width: Math.max(4, H() * 0.012), color: 0xffffff, alpha: 0.95, cap: 'round' });
     fx.addChild(g); tween(220, (p) => { g.alpha = 1 - p; g.scale.set(1 + p * 0.05); }, () => g.destroy());
   }
-  function exp(u: string, text: string) { const v = heroes.get(u); if (v) float(text, v.x, v.y - HERO.h * v.s * 0.95, 'body', 0xf5b84a, 1400); }
+  function exp(u: string, text: string, color = 0xf5b84a) { const v = heroes.get(u); if (v) float(text, v.x, v.y - HERO.h * v.s * 0.95, 'body', color, 1400); }
   let ban: Container | null = null;
   function banner(text: string | null) {
     if (ban) { ban.destroy({ children: true }); ban = null; }

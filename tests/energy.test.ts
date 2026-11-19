@@ -56,3 +56,16 @@ describe('⚡ 기력 · 💥 공격 표 (#152)', () => {
     expect(attackStrong({ left: 49, max: 100 })).toBe(true); expect(attackStrong({ left: 50, max: 100 })).toBe(false); expect(attackStrong({ left: 0, max: 100 })).toBe(false); expect(attackStrong(null)).toBe(false);
   });
 });
+
+describe('💚 👑 형성평가 힐 = TV 모션 (🐞 11/20)', () => {
+  it('heals/boss 에 쓰면 snapOf 보스 단계도 heal · gave 가 늘어남', () => {
+    const L = packOf('set-08')!, S: Store = { ...memoryStore(), kind: 'memory' };
+    openRoom(S, L, 'HB', PROFILES.test); heartbeat(S, 'HB', 'a', 1, '가'); heartbeat(S, 'HB', 'b', 2, '나');
+    const R = () => S.get<Room>(roomPath('HB')) as Room;
+    while (stepOf(L, R())?.kind !== 'boss') nextStep(S, L, 'HB');
+    const st = stepOf(L, R())!, a0 = snapOf(L, R(), st, 'a'), b0 = snapOf(L, R(), st, 'b');
+    S.set(`rooms/HB/heals/boss/a/0`, 'b');
+    expect(snapOf(L, R(), st, 'a').gave).toBe((a0.gave ?? 0) + 1);
+    expect(snapOf(L, R(), st, 'b').heal).toBe((b0.heal ?? 0) + 1);
+  });
+});

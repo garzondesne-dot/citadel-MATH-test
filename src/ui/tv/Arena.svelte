@@ -271,6 +271,8 @@
     });
   });
   $effect(() => { if (split) untrack(() => { queue.length = 0; if (A) A.banner(null); domBan = ''; }); }); // 시연을 열면 떠 있던 띠도 내림
+  /** 💚 힐 글자 (옛 정식 hall.js heal-tag 「💚 응원!」 · 🐞 11/20 TV 에 모션만 있고 글자 · 빛이 없어 안 보였음) = EXP 와 같은 머리 위 글자 */
+  function healPop(u: string, text: string) { if (A) { A.exp(u, text, 0x4cc38a); return; } const k = ids.indexOf(u), sl = k >= 0 ? partyLayout(ids.length, W, H, split)[k] : null; if (sl) domPop(text, sl.x, sl.y - 64 * sl.s, 'exp heal'); }
   function domPop(text: string, x: number, y: number, cls: string) { const k = ++fk; domFx = [...domFx, { k, text, x, y, cls }]; setTimeout(() => (domFx = domFx.filter((f) => f.k !== k)), 1300); }
   $effect(() => {
     if (!step) return;
@@ -286,7 +288,7 @@
       // 너무 많이 쌓였으면(8번 넘게) 학생마다 한 번으로 묶음 (데미지 합 · 맞힘 하나라도 있으면 맞힘)
       if (hs.length > 8) { const by = new Map<string, (typeof hs)[number]>(); for (const h of hs) { const o = by.get(h.u); if (!o) by.set(h.u, { ...h }); else { o.dmg += h.dmg; if (h.kind === 'hit') o.kind = 'hit'; o.perfect = o.perfect || h.perfect; o.ult = o.ult || h.ult; } } hs = [...by.values()]; }
       // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
-      for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) tvPose(u, 'healed', 1600); if ((a.gave ?? 0) > (b.gave ?? 0)) tvPose(u, 'heal', 1400); if ((a.bound ?? 0) > (b.bound ?? 0)) tvPose(u, 'attack', 900); /* ⛓ 묶기 시전 = 공격 자세 (#44 ⑦ · 전엔 💚 힐 모션) */ if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
+      for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) { tvPose(u, 'healed', 1600); healPop(u, '💚 +1'); } if ((a.gave ?? 0) > (b.gave ?? 0)) { tvPose(u, 'heal', 1400); healPop(u, '💚 응원'); } if ((a.bound ?? 0) > (b.bound ?? 0)) tvPose(u, 'attack', 900); /* ⛓ 묶기 시전 = 공격 자세 (#44 ⑦ · 전엔 💚 힐 모션) */ if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
       seen = cur;
       if (hs.length) { enqueue(hs); play(); }
       const d = !!hp?.down;
@@ -392,7 +394,7 @@
   @keyframes gaugeHot { 50% { filter: brightness(1.6); } }
   .pop.mdown { font-size: var(--tv-title); color: #ffd166; }
   .pop.perfect { transform: translate(-50%, -50%) rotate(-4deg); font-size: calc(var(--tv-big) * 1.6); font-weight: 900; color: #fff; -webkit-text-stroke: 3px #b3006b; text-shadow: 0 0 18px #ff4fd8, 0 0 40px #ffd84a; letter-spacing: 4px; z-index: 30; }
-  .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; }
+  .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; } .pop.exp.heal { color: #4cc38a; }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
 </style>
