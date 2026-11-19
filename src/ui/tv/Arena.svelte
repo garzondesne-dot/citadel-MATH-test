@@ -272,7 +272,15 @@
   });
   $effect(() => { if (split) untrack(() => { queue.length = 0; if (A) A.banner(null); domBan = ''; }); }); // 시연을 열면 떠 있던 띠도 내림
   /** 💚 힐 글자 (옛 정식 hall.js heal-tag 「💚 응원!」 · 🐞 11/20 TV 에 모션만 있고 글자 · 빛이 없어 안 보였음) = EXP 와 같은 머리 위 글자 */
-  function healPop(u: string, text: string) { if (A) { A.exp(u, text, 0x4cc38a); return; } const k = ids.indexOf(u), sl = k >= 0 ? partyLayout(ids.length, W, H, split)[k] : null; if (sl) domPop(text, sl.x, sl.y - 64 * sl.s, 'exp heal'); }
+  function healPop(u: string, text: string, n = 0) {
+    if (A) { A.exp(u, text, 0x4cc38a); if (n) A.sparkle(u, n); return; }
+    const k = ids.indexOf(u), sl = k >= 0 ? partyLayout(ids.length, W, H, split)[k] : null; if (!sl) return;
+    domPop(text, sl.x, sl.y - 64 * sl.s, 'exp heal');
+    // 💚 반짝이 (📜 2026-11-20): 몸 둘레 → 위로 · 0.8초 (DOM = CSS 애니메이션 · 그림 층 아래)
+    const hh = 64 * sl.s, add = Array.from({ length: n }, (_, i) => { const a = (i / n) * Math.PI * 2 + Math.random() * 0.6, d = hh * (0.2 + Math.random() * 0.15); return { k: ++fk, x: sl.x + Math.cos(a) * d, y: sl.y - hh * 0.45 + Math.sin(a) * d * 0.6, dx: (Math.random() - 0.5) * hh * 0.25, dy: -hh * (0.35 + Math.random() * 0.25), dl: Math.round(Math.random() * 120), s: Math.max(6, 9 * sl.s), w: i % 3 ? 0 : 1 }; });
+    sparks = [...sparks, ...add]; setTimeout(() => { const ks = new Set(add.map((x) => x.k)); sparks = sparks.filter((x) => !ks.has(x.k)); }, 1000);
+  }
+  let sparks = $state<{ k: number; x: number; y: number; dx: number; dy: number; dl: number; s: number; w: number }[]>([]);
   function domPop(text: string, x: number, y: number, cls: string) { const k = ++fk; domFx = [...domFx, { k, text, x, y, cls }]; setTimeout(() => (domFx = domFx.filter((f) => f.k !== k)), 1300); }
   $effect(() => {
     if (!step) return;
@@ -288,7 +296,7 @@
       // 너무 많이 쌓였으면(8번 넘게) 학생마다 한 번으로 묶음 (데미지 합 · 맞힘 하나라도 있으면 맞힘)
       if (hs.length > 8) { const by = new Map<string, (typeof hs)[number]>(); for (const h of hs) { const o = by.get(h.u); if (!o) by.set(h.u, { ...h }); else { o.dmg += h.dmg; if (h.kind === 'hit') o.kind = 'hit'; o.perfect = o.perfect || h.perfect; o.ult = o.ult || h.ult; } } hs = [...by.values()]; }
       // 🎞 힐 받음 1.6초 · 힐 시전(⚡ 씀) 1.4초 · 다 맞힘 = 공격 연출 뒤 기쁨 1.4초
-      for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) { tvPose(u, 'healed', 1600); healPop(u, '💚 +1'); } if ((a.gave ?? 0) > (b.gave ?? 0)) { tvPose(u, 'heal', 1400); healPop(u, '💚 응원'); } if ((a.bound ?? 0) > (b.bound ?? 0)) tvPose(u, 'attack', 900); /* ⛓ 묶기 시전 = 공격 자세 (#44 ⑦ · 전엔 💚 힐 모션) */ if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
+      for (const [u, a] of Object.entries(cur)) { const b = seen[u]; if (!b) continue; if ((a.heal ?? 0) > (b.heal ?? 0)) { tvPose(u, 'healed', 1600); healPop(u, '💚 +1', 8); } if ((a.gave ?? 0) > (b.gave ?? 0)) { tvPose(u, 'heal', 1400); healPop(u, '💚 응원', 4); } if ((a.bound ?? 0) > (b.bound ?? 0)) tvPose(u, 'attack', 900); /* ⛓ 묶기 시전 = 공격 자세 (#44 ⑦ · 전엔 💚 힐 모션) */ if (a.done && !b.done) setTimeout(() => tvPose(u, 'win', 1400), 350 * (queue.length + hs.length) + 1200); }
       seen = cur;
       if (hs.length) { enqueue(hs); play(); }
       const d = !!hp?.down;
@@ -340,6 +348,7 @@
   {#if tvh && tvhAt && W}{#key `${tvh.s}|${tvh.uid}|${tvh.more}`}<div class="hhint" class:free={!tvhAt.on} data-k="tv-hint" style:left="{tvhAt.x}px" style:top="{tvhAt.y}px"><b>💡 {tvh.nick}의 힌트</b><span>{tvh.text}</span>{#if tvh.more}<i>👍 +{tvh.more}</i>{/if}</div>{/key}{/if}
   {#if W && step && mins.length}{@const sz = box.mon.size * 0.3}{@const gap = sz * 1.35}<div class="mins" data-k="tv-minions">{#each mins as m (m.k)}<div class="mn" class:down={m.down} style:left="{box.mon.cx + (m.k - (mins.length - 1) / 2) * gap - sz / 2}px" style:top="{box.mon.top + box.mon.size * 1.02 - sz}px" style:width="{sz}px"><span class="mtag"><b>졸개{m.k + 1}</b><span class="mbar"><i style:width="{m.max ? (m.left / m.max) * 100 : 100}%"></i></span></span><Sprite ref={sprite} pose={m.down ? 'down' : 'idle'} size={sz} /></div>{/each}</div>{/if}
   {#if W && gauge}<div class="agauge" class:hot={gauge.hot} class:blue={gauge.blue} data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
+  {#each sparks as z (z.k)}<i class="spk" class:w={z.w} data-k="heal-spark" style:left="{z.x}px" style:top="{z.y}px" style:--dx="{z.dx}px" style:--dy="{z.dy}px" style:--s="{z.s}px" style:animation-delay="{z.dl}ms"></i>{/each}
   {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}
@@ -395,6 +404,8 @@
   .pop.mdown { font-size: var(--tv-title); color: #ffd166; }
   .pop.perfect { transform: translate(-50%, -50%) rotate(-4deg); font-size: calc(var(--tv-big) * 1.6); font-weight: 900; color: #fff; -webkit-text-stroke: 3px #b3006b; text-shadow: 0 0 18px #ff4fd8, 0 0 40px #ffd84a; letter-spacing: 4px; z-index: 30; }
   .pop.miss { font-size: var(--tv-title); color: #cfd3db; } .pop.exp { font-size: var(--tv-body); color: #f5b84a; } .pop.exp.heal { color: #4cc38a; }
+  .spk { position: absolute; z-index: 0; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); background: #6ee7a0; clip-path: polygon(50% 0, 78% 50%, 50% 100%, 22% 50%); pointer-events: none; opacity: 0; animation: spk 0.8s ease-out forwards; } .spk.w { background: #d7ffe6; }
+  @keyframes spk { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(70deg); } }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
 </style>
