@@ -3,27 +3,32 @@
   import Sheet from '../battle/Sheet.svelte';
   import QItem from './QItem.svelte';
   import { emptyOf, filled } from '../../engine/input';
-  import { answerText, keyQ, keyRight, keysOf, keyWindow, myKeys } from '../../school/keys';
+  import { answerText, KEY_SHOW_AFTER, keyQ, keyRight, keysOf, keyWindow, myKeys } from '../../school/keys';
   import { sfx } from '../sound.svelte';
   import { roomPath } from '../../raid/actions';
   // 🔑 입장 열쇠 얻기 (📜 #59 · 정정 2): 대기실 · 첫 몬스터 전까지 학생 스스로 · 열쇠마다 판 0 한 문제씩
-  //   맞힘 = 「🔑 열쇠 획득!」 · 틀림 = 💡 한 줄 + 정답 → 바로 🔑 (다시 풀기 없음 · 칼 · 체력 · 벌 없음)
+  //   🔑 B (📜 2026-11-19 선생님 「맞혀야 지급」 · 정정 2 「틀려도 지급」을 바꿈): 맞힘 = 「🔑 열쇠 획득!」 · 틀림 = 💡 한 줄 → 「다시 풀기」 = 숫자 바꾼 판(판 1 → 2 → 0 …)
+  //   3번 틀리면 💡 + 정답을 보여 주고 한 번 더(그래도 맞혀야 🔑) · 칼 · 체력 · 벌 없음 · 이미 받은 열쇠(옛 ok:false) = 그대로 · 기록 = { ok: 첫 번에 맞힘, n: 몇 번째, at }
   const { S, L, R, code, uid, band = false }: { S: Store; L: LessonPack; R: Room; code: string; uid: string; /** 도입 · 개념 화면 = 띠 꼴 */ band?: boolean } = $props();
   const ks = $derived(keysOf(L));
   const mine = $derived(myKeys(R, uid));
   const got = $derived(ks.filter((k) => mine[k.id]).length);
   const next = $derived(ks.find((k) => !mine[k.id]) ?? null);
   const open = $derived(keyWindow(L, R));
-  let sheet = $state(false), given = $state<Given>(null), res = $state<{ ok: boolean; name: string; help: string; ans: string } | null>(null), curId = $state('');
+  let sheet = $state(false), given = $state<Given>(null), res = $state<{ ok: boolean; name: string; help: string; ans: string } | null>(null), curId = $state(''), miss = $state(0);
   const cur = $derived(ks.find((k) => k.id === curId) ?? null);
-  function start() { const k = next; if (!k) return; curId = k.id; given = emptyOf(keyQ(k)); res = null; sheet = true; }
+  const q = $derived(cur ? keyQ(cur, miss) : null); // 틀릴 때마다 다음 판(숫자 바꾼 판)
+  function start() { const k = next; if (!k) return; curId = k.id; miss = 0; given = emptyOf(keyQ(k)); res = null; sheet = true; }
   function check() {
-    const k = cur; if (!k || !filled(keyQ(k), given)) return;
-    const ok = keyRight(k, given);
-    S.set(`${roomPath(code)}/players/${uid}/keys/${k.id}`, { ok, at: S.now() }); // 맞든 틀리든 🔑 (못 받는 학생 없게 · 첫 번에 맞혔나만 기록)
-    res = { ok, name: k.name, help: k.help, ans: answerText(keyQ(k)) }; sfx(ok ? 'correct' : 'block', 0.6);
+    const k = cur; if (!k || !q || !filled(q, given)) return;
+    const ok = keyRight(k, given, miss);
+    if (ok) S.set(`${roomPath(code)}/players/${uid}/keys/${k.id}`, { ok: miss === 0, n: miss + 1, at: S.now() }); // 🔑 B = 맞혀야 지급
+    res = { ok, name: k.name, help: k.help, ans: !ok && miss + 1 >= KEY_SHOW_AFTER ? answerText(q) : '' }; sfx(ok ? 'correct' : 'block', 0.6);
   }
-  function after() { res = null; const k = ks.find((x) => !myKeys(R, uid)[x.id] && x.id !== curId) ?? null; if (k) { curId = k.id; given = emptyOf(keyQ(k)); } else sheet = false; }
+  function after() {
+    if (res && !res.ok) { const k = cur!; miss += 1; res = null; given = emptyOf(keyQ(k, miss)); return; } // 다시 풀기 = 다음 판
+    res = null; miss = 0; const k = ks.find((x) => !myKeys(R, uid)[x.id] && x.id !== curId) ?? null; if (k) { curId = k.id; given = emptyOf(keyQ(k)); } else sheet = false;
+  }
   const idx = $derived(cur ? ks.indexOf(cur) + 1 : 0);
 </script>
 
@@ -39,14 +44,14 @@
   {/if}
 {/if}
 {#if sheet && cur}
-  <Sheet onclose={() => (sheet = false)} mainText={res ? (!res.ok ? '알겠어요 · 🔑 열쇠 받기' : ks.some((x) => !myKeys(R, uid)[x.id]) ? '다음 열쇠 ▶' : '🔑 다 모았어요') : '확인'} mainDisabled={!res && !filled(keyQ(cur), given)} onmain={res ? after : check}>
+  <Sheet onclose={() => (sheet = false)} mainText={res ? (!res.ok ? '🔁 다시 풀기' : ks.some((x) => !myKeys(R, uid)[x.id]) ? '다음 열쇠 ▶' : '🔑 다 모았어요') : '확인'} mainDisabled={!res && !!q && !filled(q, given)} onmain={res ? after : check}>
     {#snippet title()}🔑 열쇠 {idx} / {ks.length} · {cur.name}{/snippet}
     <div class="ks" data-k="key-sheet">
       {#if res}
         {#if res.ok}<p class="kok" data-k="key-ok">🔑 열쇠 획득! · {res.name}</p>
-        {:else}<div class="kno" data-k="key-no"><b>💡 {res.help}</b><span>답 = {res.ans}</span></div>{/if}
+        {:else}<div class="kno" data-k="key-no"><b>💡 {res.help}</b>{#if res.ans}<span data-k="key-ans">답 = {res.ans}</span><em>이 답을 보고 숫자 바꾼 문제를 한 번 더 풀어요 · 맞히면 🔑</em>{:else}<em>숫자를 바꾼 문제로 다시 풀어요 · 맞히면 🔑 ({miss + 1}번째 · {KEY_SHOW_AFTER}번 틀리면 답을 보여 줘요)</em>{/if}</div>{/if}
       {:else}
-        <QItem q={keyQ(cur)} i={0} value={given} showNo={false} onchange={(v) => (given = v)} />
+        {#if q}{#key miss}<QItem {q} i={0} value={given} showNo={false} onchange={(v) => (given = v)} />{/key}{/if}
       {/if}
     </div>
   </Sheet>
