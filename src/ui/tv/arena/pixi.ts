@@ -33,6 +33,7 @@ export interface Arena {
   /** 🗿 석화 = 몬스터 회색 돌 · 둥실 멈춤 */
   stone(on: boolean): void;
   exp(u: string, text: string, color?: number): void;
+  /** 💚 힐 반짝이 (📜 2026-11-20 · 받는 쪽 8 · 주는 쪽 4) */ sparkle(u: string, n: number): void;
   banner(text: string | null): void;
   /** 🧊 얼음 공격 (2026-11-13): 용사마다 얼음 덩어리가 덮음 → ms 뒤 녹음 */
   freeze(ms: number): void;
@@ -314,6 +315,18 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     g.moveTo(cx - r, cy - r * 0.6).lineTo(cx + r, cy + r * 0.6).stroke({ width: Math.max(4, H() * 0.012), color: 0xffffff, alpha: 0.95, cap: 'round' });
     fx.addChild(g); tween(220, (p) => { g.alpha = 1 - p; g.scale.set(1 + p * 0.05); }, () => g.destroy());
   }
+  /** 💚 힐 반짝이: 용사 몸 둘레에서 위로 흩어지는 초록 마름모 n개 · 0.8초 · 이펙트 층 맨 아래(글자 · 공격 연출을 가리지 않음) */
+  function sparkle(u: string, n: number) {
+    const v = heroes.get(u); if (!v) return;
+    const hh = HERO.h * v.s, cx = v.x, cy = v.y - hh * 0.45, r0 = Math.max(4, H() * 0.008) * Math.min(1.6, Math.max(0.8, v.s));
+    for (let i = 0; i < n; i++) {
+      const g = new Graphics(), r = r0 * (0.7 + Math.random() * 0.6), a0 = (i / n) * Math.PI * 2 + Math.random() * 0.6, d0 = hh * (0.18 + Math.random() * 0.14);
+      g.moveTo(0, -r).lineTo(r * 0.55, 0).lineTo(0, r).lineTo(-r * 0.55, 0).closePath().fill({ color: i % 3 ? 0x6ee7a0 : 0xd7ffe6 });
+      const x0 = cx + Math.cos(a0) * d0, y0 = cy + Math.sin(a0) * d0 * 0.6, rise = hh * (0.35 + Math.random() * 0.25), drift = (Math.random() - 0.5) * hh * 0.25, dl = Math.random() * 120;
+      g.x = x0; g.y = y0; g.alpha = 0; fx.addChildAt(g, 0);
+      setTimeout(() => tween(800, (p) => { g.x = x0 + drift * p; g.y = y0 - rise * ease(p); g.alpha = p < 0.15 ? p / 0.15 : 1 - (p - 0.15) / 0.85; g.scale.set(1 - p * 0.4); g.rotation = p * 1.2; }, () => g.destroy()), dl);
+    }
+  }
   function exp(u: string, text: string, color = 0xf5b84a) { const v = heroes.get(u); if (v) float(text, v.x, v.y - HERO.h * v.s * 0.95, 'body', color, 1400); }
   let ban: Container | null = null;
   function banner(text: string | null) {
@@ -367,7 +380,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(async () => { await drawMon(s); drawHp(s); await drawParty(s); if (s.shadow && !scoutOn && st === s) scoutStart(s); else if (!s.shadow && scoutOn) scoutEnd(); }); // 🌑 #67 정찰 들어감 · 나옴
     },
-    hit, exp, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, sparkle, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

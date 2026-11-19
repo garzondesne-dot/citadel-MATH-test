@@ -17,10 +17,11 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
     const watch = async (us, ms) => { const seen = Object.fromEntries(us.map((u) => [u, new Set()])), end = Date.now() + ms; while (Date.now() < end) { const p = await t.evaluate(() => window.__tvPoses()); for (const u of us) seen[u].add(p[u]); await t.waitForTimeout(60); } return Object.fromEntries(us.map((u) => [u, [...seen[u]]])); };
     const heal = async (label, from, to, k) => {
       await t.evaluate(([r, f, tt, kk]) => { for (const m of ['m1', 'm2', 'm3', 'm4', 'boss']) window.__dbSet(`rooms/${r}/heals/${m}/${f}/${kk}`, tt); }, [R, from, to, k]);
-      const s = await watch(to === '_' ? [from] : [from, to], 1000);
+      await t.waitForTimeout(250); const nsp = dom ? await t.$$eval('[data-k="heal-spark"]', (x) => x.length) : -1;
       const pops = dom ? await t.$$eval('.pop.exp.heal', (x) => x.map((e) => e.textContent.trim())) : [];
-      const giveOk = s[from].includes('heal'), getOk = to === '_' || s[to].includes('healed'), popOk = !dom || (pops.includes('💚 응원') && (to === '_' || pops.includes('💚 +1')));
-      ok(`${tag} ${label}: 주는 쪽 ${s[from].join('/')} · 받는 쪽 ${to === '_' ? '(없음)' : s[to].join('/')}${dom ? ` · 글자 ${pops.join(',')}` : ''}`, giveOk && getOk && popOk);
+      const s = await watch(to === '_' ? [from] : [from, to], 900);
+      const giveOk = s[from].includes('heal'), getOk = to === '_' || s[to].includes('healed'), popOk = !dom || (pops.includes('💚 응원') && (to === '_' || pops.includes('💚 +1')) && nsp === (to === '_' ? 4 : 12));
+      ok(`${tag} ${label}: 주는 쪽 ${s[from].join('/')} · 받는 쪽 ${to === '_' ? '(없음)' : s[to].join('/')}${dom ? ` · 글자 ${pops.join(',')} · 반짝이 ${nsp}` : ''}`, giveOk && getOk && popOk);
       await t.waitForTimeout(1600);
     };
     await heal('몬스터 💚 힐', 'fake0', 'fake1', 0);
@@ -30,6 +31,8 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
     for (let i = 0; i < 20; i++) { const st = await t.evaluate((r) => window.__dbGet(`rooms/${r}/state/step`), R); const n = await t.evaluate(() => document.querySelector('.tflow .fs.now em')?.textContent || ''); if (/형성평가/.test(n)) break; await go(); }
     await t.waitForTimeout(6500);
     await heal('👑 형성평가 💚 힐', 'fake0', 'fake1', 1);
+    // 📸 반짝이 캡처 (따로 한 번 · 캡처가 느려 위 판정과 섞지 않음)
+    await t.evaluate(([r]) => window.__dbSet(`rooms/${r}/heals/boss/fake1/9`, 'fake2'), [R]); await t.waitForTimeout(300); await t.screenshot({ path: `${SHOTS}/healtv-${tag}-spark.png` });
     await t.close();
   }
   console.log(errs.length ? `❌ ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close(); process.exit(errs.length ? 1 : 0);
