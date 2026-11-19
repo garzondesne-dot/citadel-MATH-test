@@ -92,3 +92,14 @@ describe('🚨 ⓪ 반쪽 방 (state · meta 없는 rooms/{코드})', () => {
     expect(r.stepIdx(H)).toBe(-1); expect(r.focusOn(H)).toBe(false); expect(r.restOn(H)).toBe(false); expect(r.deadline(H)).toBe(null);
   });
 });
+
+describe('📮 hold 선물 = 우편함에서만 받음 (11/19 「우편으로 돌려줘」)', () => {
+  it('우편함에 「받기」로 보이고 · 받으면 got', async () => {
+    const { inbox, claim } = await import('../src/school/mailbox');
+    const data: Record<string, unknown> = { 'gifts/s1_1_5': { sorry_cap230: { g: 52, at: 5, fun: '💎 하루 한도 때문에 못 받은 💎 돌려줘요', got: false, hold: true } } };
+    const S = { kind: 'server', get: (p: string) => { const [a, b, c, d] = p.split('/'); const o = data[`${a}/${b}`] as Record<string, Record<string, unknown>> | undefined; return c ? (d ? o?.[c]?.[d] : o?.[c]) ?? null : o ?? null; }, set: (p: string, v: unknown) => { const [a, b, c] = p.split('/'); (data[`${a}/${b}`] as Record<string, Record<string, unknown>>)[c!]!.got = v; }, watch: () => () => {}, now: () => 0 } as never;
+    const [x] = inbox(S, 's1_1_5', '1-1');
+    expect(x).toMatchObject({ k: 'gift', text: '💎 하루 한도 때문에 못 받은 💎 돌려줘요', g: 52, got: false, sub: '선생님이 돌려줘요' });
+    expect(claim(S, 's1_1_5', 'sorry_cap230')).toMatchObject({ g: 52 }); expect(claim(S, 's1_1_5', 'sorry_cap230')).toBeNull();
+  });
+});
