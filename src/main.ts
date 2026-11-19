@@ -28,6 +28,17 @@ if (!target) throw new Error('#app 없음');
 // 🔐 #163-① 방은 필요할 때 받음 → 주소에 방이 있으면(학생 · TV 시험) 그 방을 먼저 받고 화면을 띄움
 // 📦 (📜 2026-11-16 로딩 줄이기) 교사 · TV · 갤러리 화면 묶음 = 서버 연결과 같이 받기 시작
 // 👩‍🏫 체험판 (📜 2026-11-17 #33): trial/ = 서버 · server.json 안 받음 · 차시 = 체험판 두 장만 · 첫 화면 = TrialApp
+/** 🚨 11/19 ⓪ 첫 화면을 그리는 동안 난 오류 → 로딩 화면에 「⚠ 화면을 그리지 못했어요 · 오류 한 줄」 + 🔄 (끝없는 로딩 · 새로 고침 대신) */
+function bootFail(e: unknown) {
+  const msg = String((e as Error)?.message || e).slice(0, 120);
+  const w = window as { bootShow?: (t: string) => void }; w.bootShow?.(`⚠ 화면을 그리지 못했어요 · ${msg}`);
+  document.getElementById('boot')?.classList.add('late', 'fail');
+}
+if (typeof window !== 'undefined') {
+  const early = (e: unknown) => { const b = document.getElementById('boot'); if (b && b.style.display !== 'none' && !b.classList.contains('out')) bootFail(e); };
+  window.addEventListener('error', (ev) => early(ev.error ?? ev.message));
+  window.addEventListener('unhandledrejection', (ev) => early(ev.reason));
+}
 if (TRIAL) {
   void (async () => {
     const [{ trialPacks, trialCastles }, { default: TrialApp }] = await Promise.all([import('./trial/trial'), import('./trial/TrialApp.svelte')]);
@@ -47,7 +58,8 @@ void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void })
   // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
   { const m = /^(\d-\d):(\d+)$/.exec(new URLSearchParams(location.search).get('as') || ''); if (m && where.kind === 'emulator' && TEST_ADDR) { const { emuAsLogin } = await import('./school/school'); const e = await emuAsLogin(S, m[1]!, Number(m[2])); if (e) console.warn('?as 로그인', e); } } // 🧪 에뮬레이터 ?as = 진짜 로그인 (📜 2026-11-14 규칙 학생 칸 주인)
   await rolePre; // 📦 교사 · TV · 갤러리 묶음을 받은 뒤 그림 (빈 화면 없이 로딩 용사 그대로)
-  mount(App, { target, props: { S, where } });
+  // 🚨 11/19 ⓪ 그리다 오류 = 로딩에 갇히지 않게 오류 한 줄을 보이고 🔄 단추(선생님 캡처로 원인을 바로 앎)
+  try { mount(App, { target, props: { S, where } }); } catch (e) { bootFail(e); throw e; }
   { const r = new URLSearchParams(location.search).get('role'); if (!r || r === 'student' || r === 'camp') prefetchStudent(); } // 📦 학생 화면 = 쉬는 틈에 캠프 · 쉼터 묶음 미리
   requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.()); // ⏳ 첫 화면(index.html) 지움 = 앱이 그려진 다음 프레임
 });

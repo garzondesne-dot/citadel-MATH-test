@@ -131,7 +131,8 @@
   const reloadNew = () => { try { sessionStorage.setItem('citadel-upd', '1'); } catch { /* 사생활 창 */ } (window as { bootShow?: (t: string) => void }).bootShow?.('🔄 새 판 받는 중…'); void swUpdate().then(() => location.replace(`${location.pathname}?${[...new URLSearchParams(location.search)].filter(([k]) => k !== 'v').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).concat(`v=${site}`).join('&')}`)); };
   $effect(() => {
     if (!verOld || !(!role || role === 'camp') || busy.n || Date.now() - born > 20e3) return;
-    try { if (sessionStorage.getItem('dgb-auto') === site) return; sessionStorage.setItem('dgb-auto', site); } catch { return; }
+    // 🚨 11/19 ⓪ 되풀이 막기 = 같은 판 한 번 + 판 꼴이 달라도(옛 앱 「b227」 ↔ 새 앱 「b227·커밋」) 한 탭에서 10분에 한 번만
+    try { const at = Number(sessionStorage.getItem('dgb-auto-at')) || 0; if (sessionStorage.getItem('dgb-auto') === site || Date.now() - at < 10 * 60e3) return; sessionStorage.setItem('dgb-auto', site); sessionStorage.setItem('dgb-auto-at', String(Date.now())); } catch { return; }
     untrack(reloadNew);
   });
   // 📱 학생 폰 = 앱이 열려 있는 동안 화면 꺼짐 방지 (📜 2026-11-14 선생님 「학생용 폰도 자동 화면 꺼짐 안 되게」 · DECISIONS 「📱 학생 폰 = 앱이 열려 있는 동안」)
