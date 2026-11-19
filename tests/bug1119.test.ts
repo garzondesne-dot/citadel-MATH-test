@@ -84,3 +84,11 @@ describe('🗿 석화 중 맞힘 토스트 (11/19)', () => {
     showPetri(2); expect(petriToast.msg).toBe('🗿 💎 +2 (캠프에서 받기)');
   });
 });
+
+describe('🚨 ⓪ 반쪽 방 (state · meta 없는 rooms/{코드})', () => {
+  it('stepIdx · focusOn · deadline 이 멈추지 않음', async () => {
+    const r = await import('../src/raid/raid');
+    const H = { players: { s1_1_3: { n: 1 } } } as never;
+    expect(r.stepIdx(H)).toBe(-1); expect(r.focusOn(H)).toBe(false); expect(r.restOn(H)).toBe(false); expect(r.deadline(H)).toBe(null);
+  });
+});

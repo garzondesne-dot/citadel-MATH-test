@@ -43,7 +43,18 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   await within(new Promise<void>((res) => { const off = onAuthStateChanged(auth, (u) => { off(); if (u) res(); else signInAnonymously(auth).then(() => res(), (e) => { anonErr = String((e as { code?: string }).code || ''); console.error('시험 서버 로그인 실패', e); res(); }); }); }), 8000);
   const mirror: Tree = {};
   const subs = new Set<{ path: string; fn: (v: unknown) => void; last: string }>();
-  const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = isLoaded(s.path) ? getIn(mirror, split(s.path)) : null, j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
+  // 🚨 11/19 ⓪ 반쪽 방 = 방이 지워진 뒤 늦게 온 학생 쓰기(players 등)만 남은 rooms/{코드} (state · meta 없음) → 「방 없음」으로 읽음
+  //   (교사 캠프가 그런 방을 읽다 「Cannot read properties of undefined (reading 'step')」로 멈췄음 · 운영에 646434 · TEST 2개)
+  const half = (v: unknown) => !!v && typeof v === 'object' && !((v as { state?: unknown }).state && (v as { meta?: unknown }).meta);
+  const tidy = (path: string, v: unknown): unknown => {
+    const p = split(path);
+    if (p[0] !== 'rooms' || !v) return v;
+    if (p.length === 2) return half(v) ? null : v;
+    if (p.length === 1 && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, r]) => !half(r)));
+    return v;
+  };
+  const read = (path: string) => (isLoaded(path) ? tidy(path, getIn(mirror, split(path))) : null);
+  const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = read(s.path), j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
   let offset = 0;
   const net: NetState = { connected: false, uid: auth.currentUser?.uid ?? null };
   const netSubs = new Set<(s: NetState) => void>();
@@ -85,7 +96,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     kind: 'server', net, auth, db, anonErr,
     onNet(fn) { netSubs.add(fn); fn({ ...net }); return () => netSubs.delete(fn); },
     preload, isAdmin: () => admin, loaded: (path: string) => isLoaded(path),
-    get<T>(path: string) { void ensure(path); return isLoaded(path) ? (clone(getIn(mirror, split(path))) as T | null) : null; },
+    get<T>(path: string) { void ensure(path); return clone(read(path)) as T | null; },
     set(path: string, value: unknown) {
       const v = value == null ? null : clone(value);
       if (!ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) console.warn('시험 서버: 거울 밖 경로', path);
@@ -101,15 +112,15 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     },
     watch<T>(path: string, fn: (v: T | null) => void): Unsub {
       void ensure(path);
-      const v = isLoaded(path) ? getIn(mirror, split(path)) : null, s = { path, fn: fn as (v: unknown) => void, last: JSON.stringify(v ?? null) };
+      const v = read(path), s = { path, fn: fn as (v: unknown) => void, last: JSON.stringify(v ?? null) };
       subs.add(s); fn(clone(v) as T | null);
       return () => subs.delete(s);
     },
     now: () => Date.now() + offset,
     // 📄 거울 밖 칸 한 번 받기 (#158 prep/{차시}/img/{칸} · 그 단계에서만 한 장씩) · 거울 안 칸이면 거울에서
     async fetch<T>(path: string) {
-      if (ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) { await ensure(path); return clone(getIn(mirror, split(path))) as T | null; }
-      try { const s = await within(fbGet(ref(db, split(path).join('/'))), 8000); return (s && 'val' in s ? (s.val() as T) : null) ?? null; } catch (e) { console.warn('시험 서버 받기 실패', path, e); return null; }
+      if (ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) { await ensure(path); return clone(tidy(path, getIn(mirror, split(path)))) as T | null; }
+      try { const s = await within(fbGet(ref(db, split(path).join('/'))), 8000); return (tidy(path, s && 'val' in s ? s.val() : null) as T) ?? null; } catch (e) { console.warn('시험 서버 받기 실패', path, e); return null; }
     },
   };
 }
