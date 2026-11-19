@@ -231,6 +231,13 @@ export function checkUpload(text: string, look: Look): Checked {
     if (!look.sheet(m.sprite)) out.push({ at: `${nm} · 그림(sprite)`, msg: `몬스터 그림 「${m.sprite}」 이 도감에 없어요`, lvl: 'err' });
     if (m.attack && !look.attack(m.attack)) out.push({ at: `${nm} · 공격(attack)`, msg: `공격 「${m.attack}」 이 공격 표에 없어요`, lvl: 'err' });
   }
+  // ✍ 서술 칸 없음 (🐞 11/19 ① · 11차시 입력판 판이 나의 풀이(say) · 근거 줄(why) 없이 올라가 학생 화면에 서술 풀이가 안 보였음): ⚔ 소레이드 몬스터인데 첫 판 · 미리 쓴 판 어디에도 say · why 가 없으면 확인 한 줄 (막지는 않음)
+  for (const [id, m] of Object.entries(pack.monsters)) {
+    if (!m.chain) continue;
+    const pool = 'pool' in m.chain ? m.chain.pool.flat() : [];
+    const its = [...(m.first ?? []), ...pool];
+    if (its.length && !its.some((q) => q && (q.say || q.why))) out.push({ at: `${pack.steps.find((s) => s.id === id)?.title ?? id} · 서술`, msg: '✍ 서술 칸 없음 — 소레이드 몬스터인데 나의 풀이(say) · 근거 줄(why)이 하나도 없어요 · 이대로면 학생 화면에 서술 풀이가 안 보여요', lvl: 'ask' });
+  }
   if (pack.boss) {
     if (!look.sheet(pack.boss.sprite)) out.push({ at: '형성평가 · 그림(sprite)', msg: `보스 그림 「${pack.boss.sprite}」 이 도감에 없어요`, lvl: 'err' });
     (pack.boss.attack ?? []).forEach((a) => { if (!look.attack(a)) out.push({ at: '형성평가 · 공격(attack)', msg: `공격 「${a}」 이 공격 표에 없어요`, lvl: 'err' }); });
