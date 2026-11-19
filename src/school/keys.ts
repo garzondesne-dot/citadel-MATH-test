@@ -25,7 +25,7 @@ export const hasKey = (R: Room | null | undefined, uid: string, kid: string) => 
 export const keyRoom = (R: Room | null | undefined) => !!R && (R.meta as { profile?: string }).profile !== 'board' && feat('keys');
 /** 열쇠를 얻을 수 있는 때 = 대기실 · 첫 몬스터 단계 전 (도입 · 개념) · 수업이 닫히지 않음 */
 export function keyWindow(L: LessonPack, R: Room | null | undefined): boolean {
-  if (!R || !keyRoom(R) || R.state.closed || !keysOf(L).length) return false;
+  if (!R?.state || !keyRoom(R) || R.state.closed || !keysOf(L).length) return false;
   if (isLobby(R)) return true;
   const first = L.steps.findIndex((s) => s.kind === 'monster' || s.kind === 'boss');
   return first >= 0 && Number(R.state.step) < first;
