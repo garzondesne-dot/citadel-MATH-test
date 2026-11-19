@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Given, LessonPack, Question, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import QItem from '../q/QItem.svelte';
@@ -17,6 +18,8 @@
   import { spriteOf } from '../manifest';
   import { CASTLE_PATH, checkCastle, diffRooms, floorName, forgetCastle, spanOf, storeOf, type CastleChecked } from '../../school/castle';
   import { addCastles, castles } from '../../school/castles.svelte';
+  import { diffLine, mergePack, sameNo, tally, toTrash } from '../../school/packMerge';
+  import { deletePack } from '../../school/packOps';
   // 📦 차시 팩 올리기 (L1 · 📜 2026-11-14 · 머리 🔨): 파일(또는 붙여 넣기) → 자동 검사(칸 · 이유 한 줄) → 미리 보기(학생 폰과 같은 QItem · 💡 정답 펼침) → 저장(prep/packs/{id})
   //   오류 0 이어야 저장 · 「선생님 확인」 = 다시 계산 못 한 문항 · 앱에 있는 차시를 대신함 → 보이기만(저장은 됨)
   const { S, onclose }: { S: Store; onclose: () => void } = $props();
@@ -45,9 +48,18 @@
   const issues = $derived(res ? [...res.issues, ...media, ...pdfIss] : []);
   const errs = $derived(issues.filter((x) => x.lvl === 'err')), asks = $derived(issues.filter((x) => x.lvl === 'ask'));
   // 🗑 ② 같은 id 로 다시 올림 = 옛 판과 문제 칸(몬스터 · 형성평가 문항)이 다르고 기록이 있으면 경고 → 「그래도 올리기」를 눌러야 저장 (📜 2026-11-15)
-  const oldP = $derived(P ? PACKS.find((x) => x.id === P!.id) ?? null : null);
-  const recN = $derived(P ? recordedN(S.get<Record<string, unknown>>('records'), P.id) : 0);
-  const sdiff = $derived(oldP && P ? slotDiff(oldP, P) : null);
+  const oldP0 = $derived(P ? PACKS.find((x) => x.id === P!.id) ?? null : null);
+  // 📦 #82 같은 차시(no) 다른 팩 = 「바꾸기(기본) / 따로 추가」 · 바꾸기 = 그 팩 id 그대로 + 병합(새 파일에 없는 칸은 원래 것)
+  const same = $derived(P && !oldP0 ? sameNo(PACKS, P) : []);
+  let mode = $state<'replace' | 'add'>('replace'), tgt = $state('');
+  $effect(() => { const s = same; untrack(() => { mode = 'replace'; tgt = s[0]?.id ?? ''; }); });
+  const oldP = $derived(oldP0 ?? (same.length && mode === 'replace' ? same.find((x) => x.id === tgt) ?? same[0]! : null));
+  /** 저장할 팩 = 원래 팩 자리면 병합본 · 아니면 새 파일 그대로 */
+  const PS = $derived(P && oldP ? mergePack(oldP, P).pack : P);
+  const mline = $derived(oldP && PS ? diffLine(tally(oldP), tally(PS)) : null);
+  $effect(() => { void oldP?.id; untrack(() => { if (res?.pack) void recheckMedia(); }); }); // 바꾸기 ↔ 따로 추가 = 그림 확인 다시
+  const recN = $derived(oldP ? recordedN(S.get<Record<string, unknown>>('records'), oldP.id) : 0);
+  const sdiff = $derived(oldP && PS ? slotDiff(oldP, PS) : null);
   let okReplace = $state(false);
   $effect(() => { void P; okReplace = false; });
   const needOk = $derived(!!sdiff && recN > 0 && !okReplace);
@@ -93,7 +105,7 @@
       const zipNames = new Set(Object.keys(vmap)), want = [...new Set(Object.entries(P1.videos ?? {}).filter(([c, u]) => !zipNames.has(c) && u.startsWith('video/')).map(([, u]) => u))].filter((u) => !(u in vres));
       if (want.length) { const got: typeof vres = {}; for (const u of want) got[u] = await findVideo(u, P1.id, hasFile, async (p) => { try { const x = S.fetch ? await S.fetch(p) : S.get(p); return x != null; } catch { return false; } }); if (k0 !== mseq) return; vres = { ...vres, ...got }; }
     }
-    const Pk = P, k = ++mseq; if (!Pk) { media = []; return; }
+    const Pk = PS ?? P, k = ++mseq; if (!Pk) { media = []; return; } // 📦 #82 바꾸기 = 원래 팩 자리(prep/{원래 id}) 그림을 봄
     const own = (path: string) => Object.entries(imgs).some(([c]) => path === prepPath(Pk, c));
     const ok: Record<string, boolean> = {};
     const xs = await checkMedia(Pk, async (p) => own(p) || hasImg(p), async (u) => (ok[u] = await hasFile(u)));
@@ -195,10 +207,8 @@
   }
   async function del(id: string) {
     if (!deletable(id, (x) => builtIn.has(x))) return;
-    const put = (p: string) => (S.trySet ? S.trySet(p, null) : Promise.resolve((S.set(p, null), true)));
-    if (!(await put(`${PACK_PATH}/${id}`))) { failed = '지우지 못했어요 · 교사 로그인 · 인터넷을 확인해요'; ask = ''; return; }
-    await put(`prep/${id}`); // 그 팩의 칸 그림
-    removePack(id); ask = ''; gone = `「${id}」 팩을 지웠어요 · 차시 목록에서 빠져요`;
+    if (!(await deletePack(S as never, id))) { failed = '빼지 못했어요 · 교사 로그인 · 인터넷을 확인해요'; ask = ''; return; } // 🗑 #82 팩 + 칸 그림 = 휴지통(30일 · ↩) 뒤 뺌
+    ask = ''; gone = `「${id}」 팩을 뺐어요 · 🗑 휴지통에서 30일 안에 ↩ 되돌릴 수 있어요`;
     setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.delete('lesson'); location.href = u.toString(); }, 900);
   }
   // 📋 AI 에 붙일 문구 (📜 2026-11-17 #22 ① · 팩 도우미 지침 v3 [출력] 마지막 줄과 같은 꼴) · ❓ 문의 「오류 문구」 자동 채움용으로 이 기기에 기억
@@ -207,8 +217,12 @@
   $effect(() => { if (errs.length) { const t = errs.map((x) => `${x.at} : ${x.msg}`).join(' / '); try { localStorage.setItem('citadel-pack-lasterr', `${name} · ${t}`.slice(0, 600)); } catch { /* 이 기기만 */ } } });
   async function copyAi() { try { await navigator.clipboard.writeText(aiText()); aiNote = '✔ 복사했어요 · AI 대화창에 붙여 넣어요'; } catch { aiNote = '복사가 막혔어요 · 아래 ✘ 줄을 길게 눌러 복사해요'; } }
   async function save() {
-    if (!P || errs.length || needOk) return;
-    const v = JSON.parse(JSON.stringify(P)) as LessonPack, path = `${PACK_PATH}/${P.id}`;
+    if (!P || !PS || errs.length || needOk) return;
+    // 📦 #82 바꾸기 = 서버의 원래 팩(그대로 꼴)에 병합 · 원래 팩 + 칸 그림은 먼저 🗑 휴지통(30일)
+    const tid = oldP?.id ?? P.id, path = `${PACK_PATH}/${tid}`;
+    const raw = oldP ? (S.fetch ? await S.fetch<LessonPack>(path).catch(() => null) : S.get<LessonPack>(path)) : null;
+    const v = JSON.parse(JSON.stringify(raw && typeof raw === 'object' ? mergePack(raw, P).pack : PS)) as LessonPack;
+    if (raw && !(await toTrash(S as never, tid, 'replace', Date.now()))) { failed = '옛 판을 휴지통에 넣지 못해 바꾸지 않았어요 · 교사 로그인 · 인터넷을 확인해요'; return; }
     if (oldP?.hide) v.hide = true; // 👀 숨김은 새 판에도 그대로
     { const o = oldP as (LessonPack & { rev?: number }) | null; Object.assign(v, { rev: (o?.rev ?? (o ? 1 : 0)) + 1, upAt: Date.now() }); } // 📦 차시 카드 「v2 · 11/20 올림」 (📜 2026-11-17 #22)
     // 🎬 영상 이름은 지금 서고에 없어도 그대로 저장 (🐞 2026-11-14 「13차시 팩에 영상이 포함 안 됨」 = 올릴 때 없던 영상을 빼 버려 나중에 서고에 생겨도 안 붙었음)
@@ -223,13 +237,13 @@
     }
     vidNote = '';
     // ↩ 바로 전 판 하나 보관 (📜 2026-11-17 #22 ② 「↩ 바로 전 판으로 되돌리기」) = prep/packPrev/{id}
-    { const prev = S.fetch ? await S.fetch<LessonPack>(path).catch(() => null) : S.get<LessonPack>(path); if (prev && typeof prev === 'object') await put(`${PREV_PATH}/${P.id}`, prev); }
+    { const prev = S.fetch ? await S.fetch<LessonPack>(path).catch(() => null) : S.get<LessonPack>(path); if (prev && typeof prev === 'object') await put(`${PREV_PATH}/${tid}`, prev); }
     const ok = await put(path, v); // 서버 = 실제로 써졌는지 확인(교사 로그인 · 규칙)
     if (!ok) { failed = '저장하지 못했어요 · 교사로 로그인했는지 · 인터넷을 확인해요'; return; }
     addPacks([revive(v)]); // 새로 고침 전에도 차시 목록에
     fixAuto(S, revive(v), RD); // 🎲 자동 던전 = 올릴 때 한 번 고정 (그림 없는 팩 · 📜 2026-11-17 #22)
-    saved = `${P.no}차시 ${P.title} 저장${Object.keys(imgs).length ? ` · 그림 ${Object.keys(imgs).length}칸` : ''}${Object.keys(upv).length ? ` · 영상 ${Object.keys(upv).length}편` : ''} · 차시 목록에 들어갔어요`;
-    setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.set('lesson', P.id); location.href = u.toString(); }, 900);
+    saved = `${P.no}차시 ${P.title} ${oldP ? `「${tid}」 바꿈` : '저장'}${Object.keys(imgs).length ? ` · 그림 ${Object.keys(imgs).length}칸` : ''}${Object.keys(upv).length ? ` · 영상 ${Object.keys(upv).length}편` : ''} · 차시 목록에 들어갔어요`;
+    setTimeout(() => { const u = new URL(location.href); u.searchParams.set('tab', 'prep'); u.searchParams.set('lesson', tid); location.href = u.toString(); }, 900);
   }
 </script>
 
@@ -252,7 +266,7 @@
   </div>
 </Sheet>
 {:else}
-<Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? `${P.no}차시 저장` : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved || needOk} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : needOk ? '옛 기록과 문제가 맞지 않아요 · 위에서 「그래도 올리기」를 눌러야 저장돼요' : ''} onmain={save}>
+<Sheet {onclose} tall mainText={saved ? '저장했어요' : P ? (oldP ? `🔁 ${P.no}차시 바꾸기` : `${P.no}차시 저장`) : '파일을 골라요'} mainDisabled={!P || errs.length > 0 || !!saved || needOk} why={P && errs.length ? `고칠 칸 ${errs.length}개가 있으면 저장할 수 없어요` : needOk ? '옛 기록과 문제가 맞지 않아요 · 위에서 「그래도 올리기」를 눌러야 저장돼요' : ''} onmain={save}>
   {#snippet title()}📦 팩 올리기{/snippet}
   <div class="up" data-k="packup">
     {#if mine.length && !res}<div class="mine" data-k="packmine"><p class="lab">올린 차시 팩</p>
@@ -267,6 +281,12 @@
     {#if paste}<textarea rows="5" bind:value={text} placeholder={'{ "id": "lesson-11", "no": 11, … }'} data-k="packtext"></textarea><button type="button" class="b2" onclick={() => run(text, '붙여 넣은 글')}>검사하기</button>{/if}
 
     {#if res}
+      {#if P && same.length && !saved}<div class="ask" data-k="pack-same" role="group" aria-label="같은 차시 팩"><b>{P.no}차시 팩이 이미 있어요</b>
+        {#if same.length > 1}<span>바꿀 팩을 골라요</span>{/if}
+        {#each same as x (x.id)}{#if same.length > 1}<label class="srow"><input type="radio" name="sametgt" value={x.id} checked={tgt === x.id} onchange={() => (tgt = x.id)} /> {x.no}차시 {x.title} <small>{x.id}</small></label>{:else}<span>{x.no}차시 {x.title} <small>({x.id})</small></span>{/if}{/each}
+        <span class="seg2"><button type="button" class:on={mode === 'replace'} data-k="same-replace" aria-pressed={mode === 'replace'} onclick={() => (mode = 'replace')}>🔁 바꾸기 (기본)</button><button type="button" class:on={mode === 'add'} data-k="same-add" aria-pressed={mode === 'add'} onclick={() => (mode = 'add')}>➕ 따로 추가</button></span>
+        <small>{mode === 'replace' ? `「${oldP?.id}」 자리를 그대로 씀 = 그 팩으로 연 수업 · 기록이 안 끊겨요 · 새 파일에 없는 칸(열쇠 · 그림 · 서술 등)은 원래 것 유지 · 옛 판은 🗑 휴지통에 30일` : `「${P.id}」 를 새 차시로 따로 둬요 · ${P.no}차시가 두 장이 돼요`}</small></div>{/if}
+      {#if oldP && mline && !saved}<p class="msum" data-k="pack-merge-sum">🔁 「{oldP.id}」 바꾸기 · {mline.text}</p>{#if mline.warn.length}<p class="fail" data-k="pack-merge-warn" role="alert">⚠ 줄어들어요: {mline.warn.join(' · ')}</p>{/if}{/if}
       {#if sdiff && recN > 0 && !saved}<p class="ask" data-k="pack-replace" role="alert"><b>⚠ 옛 기록 {recN}명과 문제가 맞지 않아요</b><span>{sdiff.gone.length ? `빠지는 칸 ${sdiff.gone.join(' · ')}` : ''}{sdiff.gone.length && sdiff.added.length ? ' · ' : ''}{sdiff.added.length ? `새 칸 ${sdiff.added.join(' · ')}` : ''}</span><button type="button" class="b2" data-k="pack-replace-ok" aria-pressed={okReplace} onclick={() => (okReplace = !okReplace)}>{okReplace ? '✔ 알고 올려요' : '그래도 올리기'}</button></p>{/if}
       <p class="sum" data-k="packsum" class:bad={errs.length > 0}>{errs.length ? `✘ 고칠 칸 ${errs.length}개` : '✔ 검사 통과'}{asks.length ? ` · 선생님 확인 ${asks.length}` : ''} · 몬스터 {res.stats.mons} · 문항 {res.stats.items} · 버전 {res.stats.versions} · 다시 계산 맞음 {res.stats.rechecked}{res.stats.ask ? ` · 다시 계산 못 함 ${res.stats.ask}(눈으로 확인)` : ''}{res.pack?.keys?.length ? ` · 🔑 열쇠 ${res.pack.keys.length} (${res.pack.keys.map((k) => k.name).join(' · ')})` : ''}</p>
       {#if res && (Object.keys(imgs).length || unused.length || Object.keys(vidOk).length || vunused.length || missLib.length)}<p class="msum" data-k="packmedia-sum">🖼 그림 {Object.keys(imgs).length}칸 붙음{unused.length ? ` · 쓰이지 않는 그림 ${unused.length}개 (${unused.join(' · ')})` : ''} · 🎬 영상 {Object.values(vidOk).filter(Boolean).length}편 연결{Object.values(vidOk).some((x) => !x) ? ` · 없는 영상 ${Object.values(vidOk).filter((x) => !x).length}편은 이름만 저장(서고에 생기면 저절로 붙음)` : ''}{Object.keys(vblob).length ? ` · zip 영상 ${Object.keys(vblob).length}편 → 칸 ${Object.keys(vmap).join(' · ')}` : ''}{vunused.length ? ` · 칸을 못 찾은 영상 ${vunused.join(' · ')}` : ''}{fromLib ? ` · 서고에서 ${fromLib}편` : ''}</p>{#if missLib.length}<p class="msum" data-k="vidmiss">🎬 영상 없음 — {missLib.join(' · ')} · 「학습지 · 영상 한 번에 넣기」로 mp4 를 넣을 수 있어요</p>{/if}{/if}
@@ -327,5 +347,7 @@
   .pq { padding: 10px; border-radius: var(--r); background: var(--surface-2); }
   .sol { margin: 6px 0 0; font-size: 13px; color: var(--text-2); }
   .ok { margin: 0; color: var(--ok); font-weight: 700; } .fail { margin: 0; color: var(--bad); font-weight: 700; }
+  .seg2 { display: flex; gap: 6px; } .seg2 button { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); } .seg2 button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .srow { display: flex; align-items: center; gap: 6px; min-height: 40px; } .srow small, .ask small { color: var(--text-3); }
   .hid { min-height: 40px; padding: 0 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 13px var(--font); }
 </style>

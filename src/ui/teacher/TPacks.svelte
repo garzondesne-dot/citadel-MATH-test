@@ -13,6 +13,9 @@
   import { artless, fixAuto, rdunOf } from '../rdun';
   import { RDUN, RDUN_IDS, dungeonOf } from '../manifest';
   import { canDelete, deletePack, hidePack, prevOf, recOf, revertPack } from '../../school/packOps';
+  import { restoreTrash, trashList, TRASH_DAYS, type TrashRow } from '../../school/packMerge';
+  import { addPacks } from '../../engine/packs';
+  import { revive } from '../../school/packUpload';
   import Sheet from '../battle/Sheet.svelte';
   import Sprite from '../Sprite.svelte';
   import PackUpload from './PackUpload.svelte';
@@ -102,7 +105,15 @@
   const askText = $derived(`학교 · 판: ${school || '(학교 이름 없음)'} · ${BETA ? '베타' : '정식'} · ${BUILD_ID}\n막힌 곳: 📦 차시 팩 · ${nowStep >= 0 ? `${nowStep + 1}단계 ${STEPS[nowStep]?.t}` : '6단계 끝'}\n오류 문구: ${lastErr() || '(없음)'}`);
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); say('✔ 복사했어요'); } catch { say('복사가 막혔어요 · 길게 눌러 복사해요'); } }
   // ── ⑤ 🧰 도구 ──
-  let tools = $state(false), tool = $state<'' | 'photo' | 'qr' | 'castle' | 'prep' | 'egg'>('');
+  let tools = $state(false), tool = $state<'' | 'photo' | 'qr' | 'castle' | 'prep' | 'egg' | 'trash'>('');
+  // 🗑 #82 휴지통 (바꾸기 · 빼기 전 옛 팩 + 칸 그림 · 30일 · ↩ 되돌리기)
+  let bin = $state<TrashRow[] | null>(null), binBusy = $state('');
+  async function openBin() { tool = 'trash'; bin = null; bin = await trashList(S as never, Date.now()); }
+  async function undo(r: TrashRow) {
+    binBusy = r.key; const p = await restoreTrash(S as never, r.key, Date.now()); binBusy = '';
+    if (!p) { say('되돌리지 못했어요 · 교사 로그인 · 인터넷을 확인해요'); return; }
+    addPacks([revive(p)]); ver++; say(`↩ ${p.no}차시 「${p.id}」 되돌렸어요 · 지금 판은 휴지통으로`); bin = await trashList(S as never, Date.now());
+  }
   let upOpen = $state(false);
   const site = siteUrl();
 </script>
@@ -127,6 +138,7 @@
   {#if list.length > 3 && !more}<button type="button" class="lc more" data-k="pack-more" onclick={() => (more = true)}>{list[list.length - 1]?.no}~{list[3]?.no}차시 · {list.length - 3}개 더 ▾</button>{/if}
   <button type="button" class="lc castle" data-k="castle-go" onclick={() => (tool = 'castle')}><span class="t"><b>🏰 성채 팩</b><em>층 {castles.list.length}개 · 열린 층 {castleOpenN}</em></span><span class="tags"><span class="tag">층 해금 · 보임/숨김 · 내려받기</span></span></button>
   <button type="button" class="lc castle" data-k="prep-go" onclick={() => (tool = 'prep')}><span class="t"><b>🔥 예습(탐사) 열기</b><em>기본 = 수업한 다음 차시 자동</em></span><span class="tags"><span class="tag">반마다 열기 · 닫기</span></span></button>
+  <button type="button" class="lc castle" data-k="trash-go" onclick={openBin}><span class="t"><b>🗑 휴지통</b><em>바꾸기 · 빼기 전 판 · {TRASH_DAYS}일 · ↩ 되돌리기</em></span></button>
   <button type="button" class="lc castle" data-k="egghint-go" onclick={() => (tool = 'egg')}><span class="t"><b>🥚 이스터에그 힌트</b><em>반마다 「한 단계 더」</em></span></button>
   <button type="button" class="fold" data-k="tools-fold" aria-expanded={tools} onclick={() => (tools = !tools)}>🧰 도구 (사진 채점 · 공격 갤러리 · 입장 QR · 백업)<span>{tools ? '▴' : '▾'}</span></button>
   {#if tools}
@@ -191,7 +203,7 @@
         <button type="button" class="d" data-k="pack-del" disabled={busy} onclick={() => (ask = 'del')}>{canDelete(L.id) ? '🗑 이 차시 빼기' : '🙈 이 차시 숨기기'}</button>
       </div>
       {#if expNote}<small class="note">{expNote}</small>{/if}
-      {#if ask === 'del'}<div class="conf" role="alertdialog" data-k="pack-del-ask"><b>{canDelete(L.id) ? '정말 뺄까요?' : '숨길까요?'}</b><small>{recOf(S, L.id) ? `학생 ${recOf(S, L.id)}명의 기록은 남아요 · ` : ''}{canDelete(L.id) ? '팩 · 칸 그림이 서버에서 지워져요' : '앱 기본 차시 = 지우지 않고 학생 목록에서만 숨김 · 다시 올리면 보여요'}</small><span><button type="button" class="no" onclick={() => (ask = '')}>아니요</button><button type="button" class="yes" data-k="pack-del-yes" onclick={() => doDel(L)}>{canDelete(L.id) ? '🗑 빼기' : '🙈 숨기기'}</button></span></div>{/if}
+      {#if ask === 'del'}<div class="conf" role="alertdialog" data-k="pack-del-ask"><b>{canDelete(L.id) ? '정말 뺄까요?' : '숨길까요?'}</b><small>{recOf(S, L.id) ? `학생 ${recOf(S, L.id)}명의 기록은 남아요 · ` : ''}{canDelete(L.id) ? '팩 · 칸 그림은 🗑 휴지통에 30일 (↩ 되돌리기) · 차시 목록에서 빠져요' : '앱 기본 차시 = 지우지 않고 학생 목록에서만 숨김 · 다시 올리면 보여요'}</small><span><button type="button" class="no" onclick={() => (ask = '')}>아니요</button><button type="button" class="yes" data-k="pack-del-yes" onclick={() => doDel(L)}>{canDelete(L.id) ? '🗑 빼기' : '🙈 숨기기'}</button></span></div>{/if}
       {#if ask === 'prev'}<div class="conf" role="alertdialog"><b>바로 전 판으로 돌릴까요?</b><small>지금 판은 「전 판」 자리에 남아요 · 한 번 더 누르면 다시 돌아옴</small><span><button type="button" class="no" onclick={() => (ask = '')}>아니요</button><button type="button" class="yes" data-k="pack-prev-yes" onclick={() => doPrev(L)}>↩ 돌리기</button></span></div>{/if}
       <small class="note">🧪 = ⚔ 수업 탭 「🧪 테스트」로 이 차시가 골라진 채 이동 · 고칠 것이 보이면 ⬇ 팩을 AI 에 주고 고친 팩을 다시 올림</small>
 
@@ -245,6 +257,10 @@
 
 {#if tool === 'photo'}<Sheet onclose={() => (tool = '')} tall mainText="닫기">{#snippet title()}📷 사진 채점 설정{/snippet}<PhotoSettings {S} /></Sheet>{/if}
 {#if tool === 'qr'}<Sheet onclose={() => (tool = '')} mainText="닫기">{#snippet title()}📱 입장 QR{/snippet}<div class="qr"><QR text={site} size={240} /><small>{site}</small></div></Sheet>{/if}
+{#if tool === 'trash'}<Sheet onclose={() => (tool = '')} tall mainText="닫기">{#snippet title()}🗑 휴지통{/snippet}<div class="bin" data-k="trash">
+  {#if !bin}<p class="g">불러오는 중…</p>{:else if !bin.length}<div class="empty"><b>비어 있어요</b><small>팩을 바꾸거나 빼면 옛 판이 여기 {TRASH_DAYS}일 남아요</small></div>
+  {:else}{#each bin as r (r.key)}<div class="brow" data-k="trash-row" data-id={r.id}><span><b>{r.no}차시 {r.title}</b><small>{r.id} · {r.why === 'delete' ? '🗑 뺌' : '🔁 바꾸기 전 판'} · {md(r.at)} · {Math.max(0, TRASH_DAYS - Math.floor((Date.now() - r.at) / 864e5))}일 남음</small></span><button type="button" class="yes" data-k="trash-undo" disabled={!!binBusy || !admin} onclick={() => undo(r)}>{binBusy === r.key ? '…' : '↩ 되돌리기'}</button></div>{/each}{/if}
+  <small class="note">되돌리면 그 팩 · 칸 그림이 제자리로 · 지금 판은 휴지통으로 (다시 되돌릴 수 있음)</small></div></Sheet>{/if}
 {#if tool === 'egg'}<Sheet onclose={() => (tool = '')} tall mainText="닫기">{#snippet title()}🥚 이스터에그 힌트{/snippet}<EggHint {S} /></Sheet>{/if}
 {#if tool === 'prep'}<Sheet onclose={() => (tool = '')} tall mainText="닫기">{#snippet title()}🔥 예습(탐사) 열기 · 닫기{/snippet}<PrepUnlock {S} /></Sheet>{/if}
 {#if tool === 'castle'}<Sheet onclose={() => (tool = '')} tall mainText="닫기">{#snippet title()}🏰 성채 팩{/snippet}<AddonPacks {S} onup={() => { tool = ''; upOpen = true; }} /></Sheet>{/if}
@@ -300,4 +316,5 @@
     .mp span { display: inline; font-weight: 700; } .mp.ask { display: grid; border-style: dashed; background: none; }
     .mk .note { grid-column: 1 / -1; }
   }
+  .bin { display: flex; flex-direction: column; gap: 8px; } .brow { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--surface-2); } .brow > span { flex: 1; min-width: 0; display: flex; flex-direction: column; } .brow small { color: var(--text-3); font-size: 13px; } .brow .yes { min-height: 44px; padding: 0 12px; border-radius: var(--r-sm); border: 0; background: var(--accent); color: var(--on-accent); font: 700 14px var(--font); }
 </style>
