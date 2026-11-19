@@ -42,6 +42,13 @@ export function pasteRoster(S: Store, cls: string, text: string): number {
   if (n) { S.set(`roster/${cls}`, cur); S.set(`rosterMask/${cls}`, Object.fromEntries(Object.entries(cur).map(([k, v]) => [k, maskName(v)]))); } // 정식 칸 (#163)
   return n;
 }
+/** 🐞 11/19 ② 서버(시험 · 운영)에서 이 반 명단이 아직 안 왔으면 false → 첫 화면은 가짜 이름 대신 「명단 불러오는 중…」 (가짜 이름 목록 = 이 기기 체험 모드만) */
+export function rosterReady(cls: string, S?: Store | null): boolean {
+  if (!S || S.kind !== 'server') return true;
+  const ok = (v: unknown) => !!v && typeof v === 'object' && Object.keys(v).length > 0;
+  if (ok(S.get(`roster/${cls}`)) || ok(S.get(`rosterMask/${cls}`)) || ok(S.get(`school/roster/${cls}`))) return true;
+  return !!S.loaded?.(`rosterMask/${cls}`); // 받았는데 비어 있음(명단을 안 올린 반) = 예전처럼 이름표 목록
+}
 export const pupil = (cls: string, num: number, S?: Store | null) => roster(cls, S).find((p) => p.num === num) ?? null;
 export const isBeta = (S: Store | null, cls: string): boolean => { const v = S?.get<boolean>(`school/cls/${cls}/beta`); return v == null ? BETA_DEFAULT.includes(cls) : !!v; };
 /** 🧪 학생 한 명 시험 계정 (#67) — school/test/{반}/{번호} */

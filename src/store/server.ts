@@ -84,7 +84,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   return {
     kind: 'server', net, auth, db, anonErr,
     onNet(fn) { netSubs.add(fn); fn({ ...net }); return () => netSubs.delete(fn); },
-    preload, isAdmin: () => admin,
+    preload, isAdmin: () => admin, loaded: (path: string) => isLoaded(path),
     get<T>(path: string) { void ensure(path); return isLoaded(path) ? (clone(getIn(mirror, split(path))) as T | null) : null; },
     set(path: string, value: unknown) {
       const v = value == null ? null : clone(value);

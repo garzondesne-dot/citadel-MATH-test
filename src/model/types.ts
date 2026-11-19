@@ -180,6 +180,8 @@ export interface Store {
   fetch?<T = unknown>(path: string): Promise<T | null>;
   /** 써 보고 서버가 받았는지 (서버만 · 규칙에 막히면 false) */
   trySet?(path: string, value: unknown): Promise<boolean>;
+  /** 그 칸 덩어리의 첫 값을 서버에서 받았는지 (서버만 · 🐞 11/19 ② 명단 받기 전 구별) */
+  loaded?(path: string): boolean;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──

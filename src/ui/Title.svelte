@@ -1,7 +1,7 @@
 <script lang="ts">
   import { CREDIT_NAME, showCredit } from '../channel';
   import type { Store } from '../model/types';
-  import { CLASSES, enter, hasAccount, NEED_NEW_PIN, pupil, roster, saveLogin, type Pupil } from '../school/school';
+  import { CLASSES, enter, hasAccount, NEED_NEW_PIN, pupil, roster, rosterReady, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
   import { bgm } from './bgm';
   import { onDestroy } from 'svelte';
@@ -27,7 +27,12 @@
   let pad = $state<0 | 1 | 2>(0); // 키패드: 0 닫힘 · 1 비밀번호 · 2 한 번 더
   let err = $state('');
   let more = $state(false);
-  const who = $derived(cls && num ? pupil(cls, num, S) : null);
+  // 🐞 11/19 ② 서버 명단이 늦게 오면(느린 인터넷) 가짜 이름 대신 「명단 불러오는 중…」 · 명단이 오면 저절로 다시 그림
+  let rtick = $state(0);
+  $effect(() => { const c = cls; if (!c) return; return S.watch(`rosterMask/${c}`, () => { rtick++; }); });
+  const rReady = $derived((void rtick, !cls || rosterReady(cls, S)));
+  const list = $derived((void rtick, cls && rReady ? roster(cls, S) : []));
+  const who = $derived((void rtick, cls && num && rReady ? pupil(cls, num, S) : null));
   const ready = $derived(!!who && pw.length === 4 && (!(join || npin) || pw2.length === 4));
   $effect(() => { if (who && !join && !hasAccount(S, who.cls, who.num)) join = true; });
   function key(k: string) {
@@ -58,13 +63,13 @@
         </select>
       </label>
       <label class="sel"><span class="sr">번호</span>
-        <select bind:value={num} disabled={!cls} onchange={() => { pw = ''; pw2 = ''; err = ''; join = false; npin = false; }}>
-          <option value={0} disabled>번호 ▾</option>
-          {#each cls ? roster(cls, S) : [] as p (p.num)}<option value={p.num}>{p.num}번</option>{/each}
+        <select bind:value={num} disabled={!cls || !rReady} data-k="num-sel" onchange={() => { pw = ''; pw2 = ''; err = ''; join = false; npin = false; }}>
+          <option value={0} disabled>{rReady ? '번호 ▾' : '명단 불러오는 중…'}</option>
+          {#each list as p (p.num)}<option value={p.num}>{p.num}번</option>{/each}
         </select>
       </label>
     </div>
-    <p class="name" aria-live="polite">{#if who}<b>{who.num}번 · {who.name}</b> 맞나요?{:else}반과 번호를 고르면 이름이 나와요{/if}</p>
+    <p class="name" aria-live="polite">{#if who}<b>{who.num}번 · {who.name}</b> 맞나요?{:else if !rReady}<span data-k="roster-wait">📋 명단 불러오는 중… (계속 안 뜨면 새로 고침)</span>{:else}반과 번호를 고르면 이름이 나와요{/if}</p>
     <button type="button" class="pw" class:on={pad === 1} disabled={!who} aria-label="비밀번호 4자리 {pw.length}자리 눌렀음" onclick={() => (pad = 1)}>
       {#each [0, 1, 2, 3] as i (i)}<i class:fill={pw.length > i}>{pw.length > i ? '●' : ''}</i>{/each}
     </button>
