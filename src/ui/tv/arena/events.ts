@@ -1,7 +1,7 @@
 // 📺 TV 전투 연출 사건 (#157 · 정식 hall.js attacks · updateFight · xpOf 를 옮김) — 순수 계산
 //   학생마다 (공격 횟수 n · 깎은 데미지 dmg) 를 지난번과 비교 → 늘었으면 공격 사건 하나 · 정답 · 오답 글자는 만들지 않음(연출만)
 import type { LessonPack, Room, Step } from '../../../model/types';
-import { bossTries, chainRecord, chainSubs, healsGiven, isChain, plainRecord, unlocksOf, V4 } from '../../../raid/raid';
+import { BOSS_ID, bossTries, chainRecord, chainSubs, healsGiven, healsReceived, isChain, plainRecord, unlocksOf, V4 } from '../../../raid/raid';
 
 /** 🎞 모션용 (📜 2026-11-14): heal = 받은 힐 + 풀어주기 · gave = 쓴 ⚡ · slump = ❤ 0 잠김 · done = 다 맞힘 */
 export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean; heal?: number; gave?: number; /** ⛓ 묶기 쓴 수 (#44 ⑦ 힐 모션과 나눔) */ bound?: number; slump?: boolean; done?: boolean }
@@ -9,7 +9,10 @@ export interface Snap { n: number; dmg: number; prac: boolean; perf?: boolean; h
 export interface Hit { u: string; dmg: number; kind: 'hit' | 'miss' | 'practice'; perfect?: boolean; /** ⚡ 필살기 (큐에 넣을 때 판정 · 🐞 11/17 ⓒ) */ ult?: boolean; fx?: string }
 
 export function snapOf(L: LessonPack, R: Room, step: Step, u: string): Snap {
-  if (step.kind === 'boss') { const t = bossTries(L, R, u); return { n: t.length, dmg: new Set(t.filter((x) => x.ok).map((x) => x.i)).size, prac: false }; }
+  if (step.kind === 'boss') { // 🐞 11/20 👑 형성평가 힐 = heals/boss/… (v4 · spendEnergy) — 예전엔 heal · gave 를 안 세어 TV 힐 모션이 안 나왔음
+    const t = bossTries(L, R, u), gv = Object.values(R.heals?.[BOSS_ID]?.[u] || {}).map(String), bound = gv.filter((v) => v.startsWith('!bind')).length;
+    return { n: t.length, dmg: new Set(t.filter((x) => x.ok).map((x) => x.i)).size, prac: false, heal: unlocksOf(R, BOSS_ID, u) + healsReceived(R, BOSS_ID, u, L), gave: healsGiven(R, BOSS_ID, u) - bound, bound };
+  }
   if (step.kind !== 'monster' || !L.monsters[step.id]) return { n: 0, dmg: 0, prac: false };
   const mid = step.id, gv = Object.values(R.heals?.[mid]?.[u] || {}).map(String), bound = gv.filter((v) => v.startsWith('!bind')).length, mo = { heal: unlocksOf(R, mid, u), gave: healsGiven(R, mid, u) - bound, bound }; // 🐞 #44 ⑦ ⛓ 묶기 = 힐 모션 아님
   if (isChain(L, R, mid)) { const r = chainRecord(L, R, mid, u); return { n: chainSubs(R, mid, u).length, dmg: r.stage, prac: r.practice, perf: r.practice, ...mo, heal: mo.heal + r.healed, slump: r.locked || r.fail, done: r.done }; }
