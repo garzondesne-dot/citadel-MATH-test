@@ -29,7 +29,7 @@ export const shiftOf = (R: Room, mid: string) => { const f = R.meta.fresh?.[mid]
 export const isCastle = (R: Room) => !!R.meta.castle;
 
 // ── 단계 ─────────────────────────────────────────────────
-export const stepIdx = (R: Room) => R.state.step ?? -1;
+export const stepIdx = (R: Room) => R?.state?.step ?? -1; // 🚨 11/19 ⓪ 반쪽 방 = 대기실처럼
 export const stepOf = (L: LessonPack, R: Room): Step | null => { const i = stepIdx(R); return i >= 0 && i < L.steps.length ? (L.steps[i] as Step) : null; };
 export const isLobby = (R: Room) => stepIdx(R) < 0;
 export const isEnd = (L: LessonPack, R: Room) => stepIdx(R) >= L.steps.length;
@@ -296,7 +296,7 @@ export function activeIds(R: Room, now: number): string[] {
   return keys(P).filter((u) => !P[u]?.teacher && !R.absent?.[u] && classNow(R, now) - (P[u]?.seen || 0) < PRESENCE_MS).sort((a, b) => num(R, a) - num(R, b));
 }
 /** 체력 머릿수 = 접속한 학생 중 🧪(베타 반 · 시험 계정 · players.x)을 뺀 수 · 공격 데미지는 그대로 (정식 #67 tester · #123) */
-export const headcount = (R: Room, now: number) => R.state.headcount || Math.max(1, activeIds(R, now).filter((u) => !R.players?.[u]?.x).length);
+export const headcount = (R: Room, now: number) => R.state?.headcount || Math.max(1, activeIds(R, now).filter((u) => !R.players?.[u]?.x).length);
 export const pctOf = (L: LessonPack, R: Room) => R.meta.pct ?? L.defaultPct ?? 90;
 
 /** 공동 체력 = ⌊인원 × 소문제 × 기준% ⌋ · 데미지 = 접속한 학생마다 best 합 (정식 monsterHp) */
@@ -389,8 +389,8 @@ export function bossHp(L: LessonPack, R: Room, now: number) {
 //   ② 게임 시계 gameNow = (집중 중이면 켠 시각, 아니면 지금) − 이 단계에서 멈춘 합 → 정찰 · 몬스터 공격 · 생각 시간 · 한 판 더 대기 · (앞으로) 박쥐 · 콤보 창 · 놀이 · 연출 반복
 //      집중이면 함께 멈추고 끄면 그 자리에서 이어감 · 단계가 바뀌면 pauseMs 는 0 (stepAt 도 그때 새로)
 export const classNow = (_R: Room | null, wall: number): number => wall;
-export const focusOn = (R: Room) => !!R.state.focus;
-export const restOn = (R: Room) => !!R.state.rest;
+export const focusOn = (R: Room) => !!R.state?.focus;
+export const restOn = (R: Room) => !!R.state?.rest;
 /** 게임 시계를 멈추는 것 = ⏸ 집중 · 🏕 쉼터 (둘이 겹쳐도 멈춘 시간은 한 번만 셈) */
 export const held = (R: Room) => focusOn(R) || restOn(R);
 export function gameNow(R: Room, wall: number): number {
@@ -418,7 +418,7 @@ export function stopOf(L: LessonPack, R: Room, now: number): { step: number; fre
 }
 
 /** ⏱ 남은 수업 시간 (정식 deadline · timeLeft) — ① 수업 시계: 집중 중에도 줄어듦 */
-export const deadline = (R: Room): number | null => { const d = R.state.deadline || R.meta.deadline; return d ? d + (Number(R.state.extend) || 0) * 60e3 : null; };
+export const deadline = (R: Room): number | null => { const d = R.state?.deadline || R.meta?.deadline; return d ? d + (Number(R.state?.extend) || 0) * 60e3 : null; };
 export const timeLeft = (R: Room, wall: number): number | null => { const d = deadline(R); return d == null ? null : Math.max(0, d - classNow(R, wall)); };
 
 // ── 🌫 정찰 (정식 solveLock · v3 = 모든 몬스터 · 보스 앞 meta.solve 초 · 「⚔ 등장!」으로 일찍) ──

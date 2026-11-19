@@ -113,7 +113,7 @@
     {/if}
     <button type="button" class="gear" data-k="tgear" aria-label="설정" onclick={() => (setOpen = 'main')}>⚙</button>
     {#if live && liveL}
-      <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {liveL.no}차시 · <b>{liveR && (liveR.state.step ?? -1) < 0 ? '대기실' : '수업 중'}</b></span><button type="button" onclick={() => (page = 'live')}>돌아가기 ›</button></div>
+      <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {liveL.no}차시 · <b>{liveR && (liveR.state?.step ?? -1) < 0 ? '대기실' : '수업 중'}</b></span><button type="button" onclick={() => (page = 'live')}>돌아가기 ›</button></div>
     {:else}
       <nav class="tabs" aria-label="교사 메뉴">{#each TABS as [k, ic, t] (k)}<button type="button" class:on={tab === k} aria-current={tab === k ? 'page' : undefined} onclick={() => (tab = k)}>{#if k === 'news' && unread}<i class="rdot" aria-label="안 본 소식 {unread}">{unread}</i>{/if}<span class="ico">{ic}</span>{t}</button>{/each}</nav>
     {/if}
