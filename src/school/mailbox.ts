@@ -5,7 +5,7 @@ import type { Store } from '../model/types';
 
 export type MailKind = 'gift' | 'msg' | 'reply' | 'notice';
 export interface MailItem { k: MailKind; id: string; at: number; text: string; g: number; s: number; got: boolean; sub: string }
-type Gift = { g?: number; s?: number; x?: number; at?: number; fun?: string; got?: boolean; mail?: boolean; from?: string; code?: string };
+type Gift = { g?: number; s?: number; x?: number; at?: number; fun?: string; got?: boolean; mail?: boolean; hold?: boolean; from?: string; code?: string }; // hold = 캠프에서 저절로 안 받음 · 우편함 「받기」만
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
 export const seenKey = (cls: string, num: number) => `citadel-mail-seen-${ck(cls)}-${num}`;
 /** 📮 읽음 = 서버 accounts/{반}/{번호}/mseen (📜 2026-11-15 머리 🔨 「읽음 상태는 서버」 · 다른 폰에서도 같은 보관함) · 이 기기 기억과 둘 중 늦은 것 */
@@ -29,7 +29,7 @@ export function inbox(S: Store, uid: string, cls: string): MailItem[] {
   const out: MailItem[] = [];
   for (const [id, x] of Object.entries(S.get<Record<string, Gift>>(`gifts/${uid}`) || {})) {
     if (!x || x.mail) continue; // ✉ 메시지에 붙은 💎 = 메시지 줄에 함께
-    out.push({ k: 'gift', id, at: Number(x.at) || 0, text: giftName(id, x), g: Number(x.g) || 0, s: Number(x.s) || 0, got: !!x.got, sub: x.from === 'release' ? '친구 선물 (정식에서 옮김)' : '선물' });
+    out.push({ k: 'gift', id, at: Number(x.at) || 0, text: giftName(id, x), g: Number(x.g) || 0, s: Number(x.s) || 0, got: !!x.got, sub: x.from === 'release' ? '친구 선물 (정식에서 옮김)' : x.hold ? '선생님이 돌려줘요' : '선물' });
   }
   for (const [id, x] of Object.entries(S.get<Record<string, { text?: string; g?: number; at?: number; kind?: string; got?: boolean; q?: string }>>(`mail/${uid}`) || {})) {
     if (!x || !x.text) continue;

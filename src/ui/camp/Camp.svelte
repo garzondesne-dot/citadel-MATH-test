@@ -111,8 +111,8 @@
   let giftToast = $state('');
   {
     const u = untrack(() => pupil)?.uid;
-    const G = u ? untrack(() => S).get<Record<string, { g: number; x?: number; s?: number; fun?: string; got?: boolean; mail?: boolean }>>(`gifts/${u}`) || {} : {};
-    const fresh = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail); // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
+    const G = u ? untrack(() => S).get<Record<string, { g: number; x?: number; s?: number; fun?: string; got?: boolean; mail?: boolean; hold?: boolean }>>(`gifts/${u}`) || {} : {};
+    const fresh = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail && !x.hold); // 📮 hold = 우편함에서 학생이 「받기」로만 (📜 2026-11-19 선생님 「우편으로 돌려줘」) // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
     if (u && fresh.length) {
       const sum = fresh.reduce((a, [, x]) => a + (Number(x.g) || 0), 0);
       const xp = fresh.reduce((a, [, x]) => a + (Number(x.x) || 0), 0), funOnly = fresh.every(([, x]) => !!x.fun); // 🏕 쉼터 놀이 보상(#142) = 같은 칸 · EXP 도
