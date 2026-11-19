@@ -37,7 +37,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
-  import { duck, setMuteAll, sfx } from '../sound.svelte';
+  import { duck, hush, setMuteAll, sfx } from '../sound.svelte';
   import { setTeacherSink, teacherLook, TLOOK, type TLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
   import Ink from './Ink.svelte';
@@ -171,7 +171,8 @@
   $effect(() => { const t = tvSong; bgm(sound ? t.k : null, 'tv', t.scale != null ? { scale: t.scale } : {}); });
   $effect(() => { bgmHold('tv', !!(R && !R.state.closed && (R.state.video || R.state.sheet))); });
   $effect(() => { duck('tv-demo', !!(R && !R.state.closed && (step?.kind === 'monster' || step?.kind === 'boss') && (demo || !!R.state.sheet))); });
-  onDestroy(() => { bgm(null, 'tv'); bgmHold('tv', false); duck('tv-demo', false); });
+  $effect(() => { hush('tv-video', !!(R && !R.state.closed && R.state.video)); }); // 🐞 11/19 ③ A안: 🎬 영상 동안 효과음 끔
+  onDestroy(() => { bgm(null, 'tv'); bgmHold('tv', false); duck('tv-demo', false); hush('tv-video', false); });
   function playGame(k: Game) {
     if (!R) return;
     if (fun && fun.kind === k && fun.phase !== 'end') { stopFun(S, code); return; }
