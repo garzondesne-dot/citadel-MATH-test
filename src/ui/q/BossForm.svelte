@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { petriPop } from './petriPop.svelte';
   import { setSymPack } from '../battle/symsheet.svelte';
     import { paperOn, pw } from '../submit.svelte';
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { BOSS_ID, bossItem, bossRecord, bossTries } from '../../raid/raid';
-  import { bossSubmitAll, petriAward } from '../../raid/actions';
+  import { bossSubmitAll } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -51,7 +52,7 @@
     const r2 = bossRecord(L, S.get<Room>(`rooms/${code}`) as Room, uid), gain = r2.solved.filter((i) => !before.has(i)).length;
     const ok = todo.filter((i) => (r.roundOpen ? (bossTries(L, S.get<Room>(`rooms/${code}`) as Room, uid).some((t) => t.i === i && t.a === r.next(i) && t.ok)) : r2.solved.includes(i))).length;
     { const tr2 = bossTries(L, S.get<Room>(`rooms/${code}`) as Room, uid); if (todo.some((i) => r.bonus(i) && tr2.filter((t) => t.i === i && t.ok).length > okBefore(i))) setTimeout(() => sfx('star-bonus', 0.8), 450); } // 🔊 2차 ⭐ 보너스 (정식 student.js 같은 순간)
-    if (!r.roundOpen) petriAward(S, code, uid, BOSS_ID, gain); else petriAward(S, code, uid, BOSS_ID, ok);
+    if (!r.roundOpen) petriPop(S, code, uid, BOSS_ID, gain); else petriPop(S, code, uid, BOSS_ID, ok);
     heroAtk({ miss: ok === 0, hits: Math.max(1, gain), noDmg: r.roundOpen, prac: r.roundOpen ? ok : 0, ult: r.subs === 0 && ok === todo.length });
     const bad = todo.length - ok;
     toast = bad ? '' : r.roundOpen ? '🔥 한 번 더 판 완성!' : '✔ 모두 도달!'; // 틀렸을 때 = 배너 · 안내 없이 하트 쪼개짐만 (📜 2026-11-13 밤)

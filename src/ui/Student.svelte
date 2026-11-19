@@ -64,6 +64,7 @@
   import { daySolved, lastWeekOf, noteSolved, proofLine } from '../school/study';
   import { solvedN } from '../raid/raid';
   import { analyze } from '../raid/combo';
+  import { petriToast } from './q/petriPop.svelte';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -358,6 +359,7 @@
   {/if}
 </section>
 {#if gtoast && !paperOn()}<div class="gtoast" role="status">{gtoast}</div>{/if}
+{#if petriToast.msg && !paperOn()}{#key petriToast.at}<div class="gtoast petri" role="status" data-k="petri-toast">{petriToast.msg}</div>{/key}{/if}<!-- 🗿 석화 중 맞힘 (📜 11/19) -->
 <SymSheet />
 {#if readyAsk}
 <Sheet onclose={() => (readyAsk = '')}>

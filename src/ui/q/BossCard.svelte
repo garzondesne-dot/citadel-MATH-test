@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { petriPop } from './petriPop.svelte';
   import { setSymPack } from '../battle/symsheet.svelte';
     import type { Given, LessonPack, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
   import { bossItem, bossState, bossTries, stone } from '../../raid/raid';
-  import { bossSubmit, petriAward } from '../../raid/actions';
+  import { bossSubmit } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import KeyTag from './KeyTag.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -63,7 +64,7 @@
     if (!bossSubmit(S, L, code, uid, i, finalOf(q, given))) return;
     const s2 = bossState(L, S.get<Room>(`rooms/${code}`) as Room, uid);
     const me = s2[i], ok = !!me?.ok;
-    if (ok) petriAward(S, code, uid, 'boss', 1); // 🗿 석화 중 도달 = 💎1
+    if (ok) petriPop(S, code, uid, 'boss', 1); // 🗿 석화 중 도달 = 💎1
     flip = { i, ok, text }; heroAtk({ miss: !ok, ult: ok && s2.length > 0 && s2.every((x) => x.first) }); // ⚔ 정식 student.js 981: 형성평가 모두 첫 시도 정답 = ⚡ 필살기(내 속성 Ⅲ↑)
     if (flipT) clearTimeout(flipT);
     flipT = setTimeout(() => {
