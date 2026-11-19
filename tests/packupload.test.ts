@@ -110,3 +110,15 @@ describe('📦 차시 팩 올리기 검사기', () => {
     expect(spriteName(2)).toBe('base2:0'); expect(spriteName('extra:4')).toBe('extra4:0'); expect(spriteName('2@h250')).toBe('base2:0@h250'); expect(spriteName('d01:2@e')).toBe('d01:2@e'); expect(spriteName('')).toBe('');
   });
 });
+
+describe('✍ 서술 칸 없음 확인 (🐞 11/19 ① · 올린 11차시가 say · why 없이)', () => {
+  const off = fs.readFileSync('tools/pack-upload/official/set-11.json', 'utf8');
+  const has = (t: string) => checkUpload(t, look).issues.filter((x) => /서술 칸 없음/.test(x.msg));
+  it('정식 11차시 = 확인 줄 없음', () => expect(has(off)).toEqual([]));
+  it('say · why 를 뺀 판 = 소레이드 몬스터마다 확인 한 줄(막지 않음 · ask)', () => {
+    const p = JSON.parse(off), strip = (q: Record<string, unknown>) => { delete q.say; delete q.why; };
+    for (const m of Object.values(p.monsters) as { first?: Record<string, unknown>[]; chain?: { pool?: Record<string, unknown>[][] } }[]) { (m.first || []).forEach(strip); (m.chain?.pool || []).flat().forEach(strip); }
+    const h = has(JSON.stringify(p));
+    expect(h.length).toBe(2); expect(h.every((x) => x.lvl === 'ask')).toBe(true);
+  });
+});
