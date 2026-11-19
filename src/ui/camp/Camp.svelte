@@ -59,6 +59,7 @@
   import { earnedFrom } from '../../model/titles';
   import { castles } from '../../school/castles.svelte';
   import { titleData } from '../../model/titles';
+  import { heroUnlock } from '../../model/heroUnlock';
   import { visit as usageVisit } from '../../school/usage';
   import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
   import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
@@ -415,7 +416,8 @@
   const lk = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안이면 16)
   const fam = $derived(famOfHero(me.hero));
   const lv = $derived(level(me.xp));
-  const ladderRows = $derived(rungs(me.hero, ladder(me.hero).filter((id) => ownsSkill(me.wallet, emptyPlan(), me.hero, id)), equipOf({ hero: me.hero, enh: me.enh, socket: me.socket, title: me.title }), me.wallet));
+  const fxGranted = $derived.by(() => { const b = meBound(); try { return me.test || !b ? [] : heroUnlock(titleData(b.S, b.cls, b.num)).fx; } catch { return []; } }); // 🏆 업적 이펙트 (🐞 11/19 ④)
+  const ladderRows = $derived(rungs(me.hero, ladder(me.hero).filter((id) => ownsSkill(me.wallet, emptyPlan(), me.hero, id, fxGranted)), equipOf({ hero: me.hero, enh: me.enh, socket: me.socket, title: me.title }), me.wallet));
   const ttl = $derived(me.title && me.title !== 'none' ? titleOf(me.title) : null);
   const hero = $derived(HERO_NAMES[me.hero] ?? { name: '용사', job: '' });
   const nextLine = $derived.by(() => {
