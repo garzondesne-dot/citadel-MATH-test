@@ -248,13 +248,13 @@
         <div class="portals" role="radiogroup" aria-label="층">
           {#each floors as f (f.id)}{@const s2 = castleState(f, upto, recsOf(f), preview, manOf(f))}{@const nNew = f.rooms.filter((r) => s2.isOpen(r) && !recsOf(f)[r.id]?.clear && !recsOf(f)[r.id]?.tries && !recsOf(f)[r.id]?.runs).length}
             <button type="button" role="radio" class="portal" class:on={fid === f.id} class:sealed={sealedOf(f)} aria-checked={fid === f.id} data-floor={f.id} onclick={() => { fid = f.id; sfx('click', 0.4); }}>
-              <i aria-hidden="true">🌀</i><b>{f.floor}층</b><span>{f.title}</span><em>처치 {s2.cleared} / {f.rooms.length}{sealedOf(f) ? ' · 🏆' : ''}</em>{#if nNew && !preview}<span class="rnew">NEW {nNew}</span>{/if}{#if f.hide}<span class="rnew hid">숨김</span>{/if}
+              <i aria-hidden="true">🌀</i><b>{f.floor}층</b><span>{f.title}</span><em>처치 {s2.cleared} / {s2.plain.length}{s2.boss && recsOf(f)[s2.boss.id]?.clear ? ' · 👑' : ''}{sealedOf(f) ? ' · 🏆' : ''}</em>{#if nNew && !preview}<span class="rnew">NEW {nNew}</span>{/if}{#if f.hide}<span class="rnew hid">숨김</span>{/if}
             </button>
           {/each}
         </div>
         {#if P && st}
           <div class="floor" class:sealed={sealedOf(P)}>
-            <p class="fh" data-k="castle-sum"><b>{P.floor}층 · {P.title}</b><small>처치 <b>{st.cleared}</b> / 열린 방 {st.plain.length} · {st.boss ? (st.bossOpen ? '👑 보스 방 열림' : `👑 ${st.need}방 처치하면 보스`) : ''}{preview ? '' : ` · 진도 ${upto}차시`}</small></p>
+            <p class="fh" data-k="castle-sum"><b>{P.floor}층 · {P.title}</b><small>처치 <b>{st.cleared}</b> / 열린 방 {st.plain.length} · {st.boss ? (st.bossOpen ? '👑 보스 방 열림' : `👑 ${st.need}방 처치하면 보스`) : ''}{preview ? '' : ` · 진도 ${upto}차시`}</small>{#if !preview && st.cleared < st.plain.length && st.cleared > 0}{@const left = st.plain.filter((r) => !recs[r.id]?.clear)}<small class="left" data-k="castle-left">🗝 남은 방 {left.map((r) => `${nn(r)}번`).join(' · ')}{st.boss && recs[st.boss.id]?.clear ? ' (보스는 처치함)' : ''}</small>{/if}</p>
             <div class="rooms" role="radiogroup" aria-label="방">
               {#each P.rooms as r (r.id)}{@const on = st.isOpen(r)}{@const rr = recs[r.id]}
                 <button type="button" role="radio" class="room" class:on={pickR === r.id} class:boss={!!r.boss} class:lock={!on} class:clear={!!rr?.clear} aria-checked={pickR === r.id} data-room={r.id} data-open={on ? '1' : '0'} onclick={() => tile(r)}>
@@ -321,6 +321,7 @@
   .floor { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
   .floor.sealed { border-color: var(--accent); }
   .fh { margin: 0; display: flex; flex-direction: column; gap: 2px; } .fh b { font-size: 17px; } .fh small { font-size: 13px; color: var(--text-2); } .fh small b { font-size: 14px; color: var(--accent); }
+  .fh small.left { font-size: 14px; font-weight: 700; color: var(--accent); }
   .rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
   .room { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 132px; padding: 6px 4px 8px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; box-shadow: 0 3px 0 var(--press, #0a0c10); }
   .room:active:not(.lock) { transform: translateY(2px); box-shadow: none; }

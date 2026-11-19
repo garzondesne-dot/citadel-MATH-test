@@ -43,6 +43,19 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?emu=127.0.0.1'
   const seals = await s.textContent('[data-k="rec-seals"]').catch(() => '');
   ok('④ 🏅 기록 업적 = 2 / 10', /2 \/ 10/.test(seals), seals.replace(/\s+/g, ' '));
   await s.screenshot({ path: `${SHOTS}/u-rec.png` });
+  // 🏰 11/19 성채 1층 「10 / 11」: q11 만 안 깬 학생 = 머리글에 「🗝 남은 방 11번 (보스는 처치함)」 · 층 칸 분모 = 일반 방 11
+  await rest('prep/addons/castle/eval-1', 'PUT', require('../pack-upload/castle/eval-1.json'));
+  await rest('school/castleOpen/eval-1/1-3', 'PUT', Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`q${String(i + 1).padStart(2, '0')}`, true])));
+  await rest('bonus/1-3/3/eval-1/q12', 'PUT', { clear: true, at: 1 });
+  await s.reload(); await s.waitForTimeout(3500);
+  for (let k = 0; k < 3 && (await s.$('.mh')); k++) { await s.$eval('.mh .back', (e) => e.click()).catch(() => {}); await s.waitForTimeout(500); }
+  await s.screenshot({ path: `${SHOTS}/u-precastle.png` }); await s.waitForSelector('[data-zone="castle"]', { timeout: 15000 }).catch(() => {});
+  await s.$eval('[data-zone="castle"]', (e) => e.click()); await s.waitForSelector('.sheet [data-floor="eval-1"]', { timeout: 15000 }); await s.click('.sheet [data-floor="eval-1"]');
+  await s.waitForSelector('[data-k="castle-sum"]', { timeout: 15000 }); await s.waitForTimeout(800);
+  const sum = (await s.textContent('[data-k="castle-sum"]')).replace(/\s+/g, ' '), por = (await s.textContent('[data-floor="eval-1"]')).replace(/\s+/g, ' ');
+  ok('🏰 머리글 = 처치 10 / 열린 방 11 + 🗝 남은 방 11번 (보스는 처치함)', /처치 10 \/ 열린 방 11/.test(sum) && /남은 방 11번/.test(sum) && /보스는 처치함/.test(sum), sum);
+  ok('🏰 층 칸 = 처치 10 / 11 · 👑 (분모 = 일반 방)', /처치 10 \/ 11 · 👑/.test(por), por);
+  await s.screenshot({ path: `${SHOTS}/u-castle.png` });
   ok('콘솔 오류 0', !errs.some((e) => /Error/.test(e)), errs.slice(0, 2).join(' | '));
   await b.close(); log(errs.length ? `실패 ${errs.length}` : '모두 통과'); process.exit(errs.length ? 1 : 0);
 })();
