@@ -4,7 +4,7 @@
   import { CLASSES, enter, hasAccount, NEED_NEW_PIN, pupil, roster, rosterReady, saveLogin, type Pupil } from '../school/school';
   import Sheet from './battle/Sheet.svelte';
   import { bgm } from './bgm';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import BottomAction from './battle/BottomAction.svelte';
   import CreditRoll from './CreditRoll.svelte';
 
@@ -29,7 +29,7 @@
   let more = $state(false);
   // 🐞 11/19 ② 서버 명단이 늦게 오면(느린 인터넷) 가짜 이름 대신 「명단 불러오는 중…」 · 명단이 오면 저절로 다시 그림
   let rtick = $state(0);
-  $effect(() => { const c = cls; if (!c) return; return S.watch(`rosterMask/${c}`, () => { rtick++; }); });
+  $effect(() => { const c = cls; if (!c) return; return untrack(() => S.watch(`rosterMask/${c}`, () => { untrack(() => { rtick++; }); })); });
   const rReady = $derived((void rtick, !cls || rosterReady(cls, S)));
   const list = $derived((void rtick, cls && rReady ? roster(cls, S) : []));
   const who = $derived((void rtick, cls && num && rReady ? pupil(cls, num, S) : null));
