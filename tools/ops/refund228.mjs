@@ -32,11 +32,11 @@ const pidOf = (c, n) => `s${String(c).replace('-', '_')}_${n}`;
 const plan = [];
 for (const [c, byN] of items(gem)) for (const [n, d] of items(byN)) { if (!d) continue; const cc = (Object.fromEntries(items(cards?.[c]))[n]) || {}; const p = planOf(d, cc, gifts?.[pidOf(c, n)] || {}); if (p.length) plan.push({ c, n, d, p }); }
 console.log(`대상 ${plan.length}명 · ${plan.reduce((a, x) => a + x.p.length, 0)}건 · 💎 ${plan.reduce((a, x) => a + x.p.reduce((b, y) => b + y.g, 0), 0)}`);
-for (const x of plan) console.log(`  ${x.c}-${x.n} · ${x.p.map((y) => `${y.key} 💎 ${y.g}`).join(' · ')}`);
+for (const x of plan) console.log(`  ${x.c}-${x.n} · ${x.p.map((y) => `${y.key} 💎 ${y.g}`).join(' · ')}   📮 ${x.p.map((y) => `「${WHY} · 💎 ${y.g}」 [받기]`).join(' ')}`);
 if (!go) { console.log('미리 보기만 했어요. 실제로 쓰려면 --go (정식 b228 배포 때 · 선생님 허락 뒤)'); process.exit(0); }
 for (const x of plan) {
   const body = {};
-  for (const y of x.p) body[`sorry_refund_${y.key}`] = { g: y.g, at: { '.sv': 'timestamp' }, fun: WHY, got: false };
+  for (const y of x.p) body[`sorry_refund_${y.key}`] = { g: y.g, at: { '.sv': 'timestamp' }, fun: WHY, got: false, hold: true }; // 📮 우편함에서 학생이 「받기」
   await patch(`gifts/${pidOf(x.c, x.n)}`, body);
 }
 console.log(`✅ 썼어요: ${plan.length}명`);
