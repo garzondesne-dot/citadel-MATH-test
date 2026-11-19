@@ -17,7 +17,7 @@
   import ChangeList from './ChangeList.svelte';
   import { notePerm, notePref } from '../../school/notify.svelte';
   import { chanOf, upTo } from '../../school/changes';
-  import { BUILD } from '../../build';
+  import { BUILD, BUILD_ID } from '../../build';
 
   // 🔔 소식 탭 (#124 ⑱ · 스크롤 A) — 위 고정 = [받은 것 n · 보내기]
   //   받은 것 = 의견 · 📷 사진 채점 대기 · ✏ 출제 확인 · 📝 설문 결과를 한 목록(새 것 위 · 안 본 것 = 왼쪽 빨간 줄 + 점 · 종류 칩 거르기 · 누르면 그 자리에서 처리)
@@ -159,7 +159,7 @@
   </Sheet>
 {:else if side === 'changes'}
   <Sheet onclose={() => (side = '')} tall mainText="닫기">
-    {#snippet title()}📜 바뀐 것 · 지금 {BUILD}{/snippet}
+    {#snippet title()}📜 바뀐 것 · 지금 {BUILD_ID}{/snippet}
     <ChangeList list={upTo(BUILD)} chan={chanOf()} showStudent={chanOf() === 'beta'} />
   </Sheet>
 {/if}

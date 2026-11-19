@@ -17,7 +17,7 @@
   import type { Store } from './model/types';
   import type { Where } from './store/config';
   import { bindMe } from './store/meSync';
-  import { BUILD } from './build';
+  import { BUILD, BUILD_ID, REV } from './build';
   import { BETA, TEST_ADDR, verName } from './channel';
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
@@ -117,14 +117,14 @@
   const campCode = $derived(role === 'camp' ? code : login && lvApp.v.val?.cls === login.cls && (!lvApp.v.val.test || where.kind !== 'device') ? lvApp.v.val.code : '');
   // 🔄 #134 ① 이 화면이 최신 판인지: 사이트 version.json(캐시 안 씀)과 BUILD 비교 → 같으면 「BETA · b15 ✔」 · 다르면 빨간 「b14 → b15 ↻」(누르면 새로 고침)
   let site = $state('');
-  const checkVer = () => { if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build); }).catch(() => {}); };
+  const checkVer = () => { if (typeof fetch !== 'undefined') fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.build) site = String(j.build) + (j.rev ? `·${j.rev}` : ''); }).catch(() => {}); };
   checkVer(); if (typeof window !== 'undefined') setInterval(checkVer, 5 * 60e3); // 수업 끝난 뒤에도 새 판을 알아채게 5분마다
   // ⏸ #163 ④ 수업 중 새 판 미룸(A): 내 반 수업이 열려 있는 동안(학생 = 내 반 · 교사 폰 · TV = 열린 수업이 있으면) 새 판 알림을 숨김 → 수업이 끝나면(열린 수업 칸이 비면) 보임
   const inClass = $derived(!!lvApp.v.val?.code && (role === 'teacher' || role === 'hall' || (!!login && lvApp.v.val.cls === login.cls) || (role === 'student' && !!code && lvApp.v.val.code === code)));
   // 🫥 #162 ① · #172 학생 화면(첫 화면 · 캠프 · 수업 · 게시판)엔 「BETA · 판」 · 「시험 서버」 글자를 숨김 → 캠프 ⚙ 설정 맨 아래 작은 「판」 줄 · 끊김 붉은 띠 · 새 판 ↻ 는 그대로
   const stuScreen = !role || role === 'student' || role === 'camp';
   submitScreen(stuScreen); // 📝 제출 모드 = 학생 화면만
-  const verOld = $derived(!!site && site !== BUILD && !inClass);
+  const verOld = $derived(!!site && site !== BUILD_ID && !inClass);
   // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
   //   수업 중 = #163 ④ 그대로 숨김(끝나면 보임) · 게시판 던전 · 허수아비 진행 중 · 오래 켜 둔 화면 = 띠만
   const born = Date.now();
@@ -141,7 +141,7 @@
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD)}{site ? ' · 최신' : ''}">{verName(BUILD)}{site === BUILD ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
+{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD_ID})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD, REV)}{site ? ' · 최신' : ''}">{verName(BUILD, REV)}{site === BUILD_ID ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD_ID} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
 {#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
   {#if errs.length}

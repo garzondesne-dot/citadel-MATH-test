@@ -13,7 +13,8 @@ export const BETA = !SCHOOL_BUILD && (TEST_ADDR || (!!loc && /-test\//i.test(loc
 export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';
 export const XCLS = BETA ? '베타 반' : '시험 반';
 /** 🏷 판 이름 (📜 2026-11-15 선생님 정정 · DECISIONS 맨 아래): 정식 = 「✅ 정식 bNNN」(초록) · 베타 = 「🧪 베타 bNNN」(주황) */
-export const verName = (build: string) => (BETA ? `🧪 베타 ${build}` : `✅ 정식 ${build}`);
+/** 🔖 #81 베타 = 「🧪 베타 b227 · 커밋」 (정식 꼴 「✅ 정식 b227」과 한눈에 다르게) */
+export const verName = (build: string, rev = '') => (BETA ? `🧪 베타 ${build}${rev ? ` · ${rev}` : ''}` : `✅ 정식 ${build}`);
 /** ✍ 만든 이 (첫 화면 · 학생 설정 맨 아래 · 교사 「나」) · 주소에 ?anon 이면 숨김 */
 export const CREDIT_NAME = '김찬우';
 export const showCredit = !(loc && new URLSearchParams(loc.search).has('anon'));

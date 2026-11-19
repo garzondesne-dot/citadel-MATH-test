@@ -9,7 +9,7 @@
   import FirstHero from '../ui/camp/FirstHero.svelte';
   import Camp from '../ui/camp/Camp.svelte';
   import { CREDIT_NAME, showCredit } from '../channel';
-  import { BUILD } from '../build';
+  import { BUILD, BUILD_ID } from '../build';
   import { CARDS, REST_AFTER, trialPacks, trialRoom } from './trial';
   import StuTry from '../ui/teacher/StuTry.svelte';
   import TSim from '../ui/teacher/TSim.svelte';
@@ -58,7 +58,7 @@
         </div>
         {#if as === 'stu' && campL}<button type="button" class="back" data-k="trial-camp" onclick={() => { camp = campL; campKey++; }}>🏕 캠프로</button>{:else}<button type="button" class="back" data-k="trial-back" onclick={() => (as = '')}>‹ 처음으로</button>{/if}
       {/if}
-      <p class="foot">👩‍🏫 체험판 · {BUILD}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
+      <p class="foot">👩‍🏫 체험판 · {BUILD_ID}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
     </section>
   </main>
 {/if}

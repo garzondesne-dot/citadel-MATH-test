@@ -4,7 +4,7 @@
   import { castles } from '../../school/castles.svelte';
   import type { LessonPack, Store } from '../../model/types';
   import { BETA, FORMS, KIT_COUNT, KIT_PUBLIC, siteUrl } from '../../channel';
-  import { BUILD } from '../../build';
+  import { BUILD, BUILD_ID } from '../../build';
   import { UPLOADED } from '../../engine/packs';
   import { feat, type FeatId } from '../../school/features.svelte';
   import { estimate, estLine, LIMIT, ltimePath, packTier, timeSig } from '../../school/ltime';
@@ -99,7 +99,7 @@
   let askOpen = $state(false), share = $state<LessonPack | null>(null);
   const lastErr = () => { try { return localStorage.getItem('citadel-pack-lasterr') || ''; } catch { return ''; } };
   const school = untrack(() => (S.get<{ name?: string }>('school/info') || {}).name || '');
-  const askText = $derived(`학교 · 판: ${school || '(학교 이름 없음)'} · ${BETA ? '베타' : '정식'} · ${BUILD}\n막힌 곳: 📦 차시 팩 · ${nowStep >= 0 ? `${nowStep + 1}단계 ${STEPS[nowStep]?.t}` : '6단계 끝'}\n오류 문구: ${lastErr() || '(없음)'}`);
+  const askText = $derived(`학교 · 판: ${school || '(학교 이름 없음)'} · ${BETA ? '베타' : '정식'} · ${BUILD_ID}\n막힌 곳: 📦 차시 팩 · ${nowStep >= 0 ? `${nowStep + 1}단계 ${STEPS[nowStep]?.t}` : '6단계 끝'}\n오류 문구: ${lastErr() || '(없음)'}`);
   async function copy(t: string) { try { await navigator.clipboard.writeText(t); say('✔ 복사했어요'); } catch { say('복사가 막혔어요 · 길게 눌러 복사해요'); } }
   // ── ⑤ 🧰 도구 ──
   let tools = $state(false), tool = $state<'' | 'photo' | 'qr' | 'castle' | 'prep' | 'egg'>('');

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { CREDIT_NAME, showCredit, verName } from '../../channel';
   import type { Store } from '../../model/types';
-  import { BUILD } from '../../build';
+  import { BUILD, REV } from '../../build';
   import { heroOf, famOfHero } from '../../model/hero';
   import { meLookId, useMe } from '../../store/me.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
@@ -22,7 +22,7 @@
   <div class="list">
     <a class="item" href="?role=camp&from=me" onclick={() => { try { history.replaceState(history.state, '', '?role=teacher&tab=me'); } catch { /* 무시 */ } }}><span class="ic">⛺</span><span class="tx"><b>내 캠프</b><small>학생 폰 캠프와 같은 화면 · 교사 캠프는 여기에만</small></span></a>
   </div>
-  <p class="ver" data-k="ver">모두의 던전 v1.0 · {verName(BUILD)}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
+  <p class="ver" data-k="ver">모두의 던전 v1.0 · {verName(BUILD, REV)}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
 </div>
 
 {#if hero}<MyHero me={M.me} persist={M.save} onclose={() => (hero = false)} teacher onreset={M.reset} />{/if}
