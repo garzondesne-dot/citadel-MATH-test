@@ -17,7 +17,7 @@ export const keysOf = (L: LessonPack | null | undefined): EntryKey[] => ((L as {
 /** 그 소문제를 쓰는 열쇠 (at = 몬스터 id | 'boss' · n = 1부터) */
 export const keyFor = (L: LessonPack, at: string, n: number): EntryKey | null => keysOf(L).find((k) => k.uses.some((u) => u.at === at && u.n === n)) ?? null;
 
-type KeyRec = Record<string, { ok?: boolean; at?: number }>;
+type KeyRec = Record<string, { ok?: boolean; at?: number; /** 🔑 B: 몇 번째에 맞혔나 */ n?: number }>;
 export const myKeys = (R: Room | null | undefined, uid: string): KeyRec => (((R?.players?.[uid] as { keys?: KeyRec } | undefined)?.keys) || {});
 export const hasKey = (R: Room | null | undefined, uid: string, kid: string) => !!myKeys(R, uid)[kid];
 
@@ -31,8 +31,11 @@ export function keyWindow(L: LessonPack, R: Room | null | undefined): boolean {
   return first >= 0 && Number(R.state.step) < first;
 }
 /** 대기실 열쇠 문제 = 판 0 · 답 확인 */
-export const keyQ = (k: EntryKey): Question => k.vers[0]!;
-export const keyRight = (k: EntryKey, given: Given) => grade(keyQ(k), given);
+export const keyQ = (k: EntryKey, v = 0): Question => k.vers[v % k.vers.length]!;
+/** 🔑 B (📜 2026-11-19 선생님 「맞혀야 지급」): 틀린 수 → 다음에 풀 판(숫자 바꾼 판 1 → 2 → 0 …) · 3번 틀리면 정답을 보여 줌 */
+export const KEY_SHOW_AFTER = 3;
+export const keyVer = (miss: number) => miss;
+export const keyRight = (k: EntryKey, given: Given, v = 0) => grade(keyQ(k, v), given);
 /** 정답 한 줄 (틀렸을 때 보여 줌) */
 export function answerText(q: Question): string {
   if (q.type === 'choice') return q.choices[q.answerIndex] ?? '';
@@ -68,7 +71,7 @@ export const chestsOf = (L: LessonPack, R: Room, uid: string) => keyUses(L, R, u
 /** 리모컨 · TV 대기실: 열쇠 얻은 학생 수 / 들어온 인원 · 많이 틀린 열쇠 */
 export function keyBoard(L: LessonPack, R: Room, uids: string[]) {
   const ks = keysOf(L);
-  const per = ks.map((k) => { const got = uids.filter((u) => myKeys(R, u)[k.id]); return { id: k.id, name: k.name, got: got.length, first: got.filter((u) => myKeys(R, u)[k.id]!.ok).length, wrong: got.filter((u) => myKeys(R, u)[k.id]!.ok === false).length }; });
+  const per = ks.map((k) => { const got = uids.filter((u) => myKeys(R, u)[k.id]); return { id: k.id, name: k.name, got: got.length, first: got.filter((u) => myKeys(R, u)[k.id]!.ok).length, wrong: got.filter((u) => { const r = myKeys(R, u)[k.id]! as { ok?: boolean; n?: number }; return r.ok === false || (Number(r.n) || 1) >= 2; }).length }; /* 🔑 B: 두 번째 이상에 맞힘(n ≥ 2) · 옛 「틀려도 지급」(ok:false) 도 셈 */ });
   const all = uids.filter((u) => ks.length && ks.every((k) => myKeys(R, u)[k.id])).length;
   const worst = per.filter((x) => x.wrong > 0).sort((a, b) => b.wrong - a.wrong)[0] ?? null;
   return { n: ks.length, all, total: uids.length, per, worst };

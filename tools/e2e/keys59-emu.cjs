@@ -1,5 +1,5 @@
 // 🔑 #59 입장 열쇠 — 에뮬레이터 · 교사 실제 팩 올리기(v4 · keys) → 1-3 수업 열기 → 실제 학생 로그인(1-3 · 3번)
-//   ① 팩 올리기 미리 보기 「🔑 열쇠 3」 · 서버 팩에 keys(엔진 꼴) ② 대기실 「🔑 열쇠 얻기 (0 / 3)」 → 판 0 한 문제씩 · 맞힘 = 획득 · 틀림 = 💡 + 정답 → 바로 🔑 (다시 풀기 없음)
+//   ① 팩 올리기 미리 보기 「🔑 열쇠 3」 · 서버 팩에 keys(엔진 꼴) ② 대기실 「🔑 열쇠 얻기 (0 / 3)」 → 판 0 한 문제씩 · 맞힘 = 획득 · 틀림 = 💡 → 다시 풀기(숫자 바꾼 판) · 3번 틀리면 정답 · 맞혀야 🔑 (11/19 B · 옛: 바로 🔑 · 다시 풀기 없음)
 //   ③ 리모컨 대기실 「🔑 열쇠 1 / 1 · 많이 틀린 열쇠」 ④ 수업 문제 2: (2) 🔑 · 첫 시도 다 맞힘 = 🎁 보물상자 ⑤ 열쇠 없는 학생 = 🔒 회색
 //   ⑥ 🎯 허수아비 「🔑 열쇠 연습」 = 틀린 열쇠만 · 판 1 · 2 · 기록 bonus/…/review/keyp_ex-11 · 💎 = 스위치 끔(기록만)
 const { chromium } = require('playwright');
@@ -42,16 +42,22 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   ok('② 대기실 = 「🔑 열쇠 얻기 (0 / 3)」', /🔑 열쇠 얻기 \(0 \/ 3\)/.test(g0), g0);
   await s.screenshot({ path: `${SHOTS}/k59-lobby.png` });
   await s.click('[data-k="key-go"]'); await s.waitForSelector('[data-k="key-sheet"]');
-  const ans = (id, right) => { const v = K.keys.find((x) => x.id === id).vers[0], i = Number(v.a); return v.ch[right ? i : (i + 1) % v.ch.length]; };
+  const ans = (id, right, n = 0) => { const vs = K.keys.find((x) => x.id === id).vers, v = vs[n % vs.length], i = Number(v.a); return v.ch[right ? i : (i + 1) % v.ch.length]; };
   const pick = async (txt) => { await s.click(`[data-k="key-sheet"] .opt:text-is("${txt}")`); await s.click('.sheet .pmain'); await s.waitForTimeout(400); };
   await pick(ans('k1', true)); ok('② 열쇠 1 맞힘 = 「🔑 열쇠 획득!」', !!(await s.$('[data-k="key-ok"]')));
   await s.click('.sheet .pmain'); await s.waitForTimeout(300);
-  await pick(ans('k2', false)); const no = (await s.textContent('[data-k="key-no"]').catch(() => '')).replace(/\s+/g, ' ');
-  ok('② 열쇠 2 틀림 = 💡 한 줄 + 정답 · 다시 풀기 없음 · 🔑 받음', /💡/.test(no) && /답 = 2k² − 2k/.test(no) && !(await s.$('.sheet .pmain:has-text("다시")')), no.slice(0, 90));
+  // 🔑 B (📜 11/19): 틀림 = 💡 · 「🔁 다시 풀기」(숫자 바꾼 판) · 열쇠 없음 → 3번째 틀림 = 정답도 보임 → 그래도 맞혀야 🔑
+  await pick(ans('k2', false, 0)); const no = (await s.textContent('[data-k="key-no"]').catch(() => '')).replace(/\s+/g, ' ');
+  ok('② 열쇠 2 첫 틀림 = 💡 · 정답 안 보임 · 「🔁 다시 풀기」 · 기록 없음', /💡/.test(no) && !(await s.$('[data-k="key-ans"]')) && !!(await s.$('.sheet .pmain:has-text("다시 풀기")')) && !(await rest(`rooms/${code}/players/s1_3_3/keys/k2`)), no.slice(0, 90));
   await s.screenshot({ path: `${SHOTS}/k59-wrong.png` });
+  await s.click('.sheet .pmain'); await s.waitForTimeout(300); await pick(ans('k2', false, 1)); await s.click('.sheet .pmain'); await s.waitForTimeout(300); await pick(ans('k2', false, 2));
+  const no3 = (await s.textContent('[data-k="key-no"]').catch(() => '')).replace(/\s+/g, ' ');
+  ok('② 3번째 틀림 = 정답도 보임', !!(await s.$('[data-k="key-ans"]')) && /답 = /.test(no3), no3.slice(0, 90));
+  await s.screenshot({ path: `${SHOTS}/k59-wrong3.png` });
+  await s.click('.sheet .pmain'); await s.waitForTimeout(300); await pick(ans('k2', true, 3)); ok('② 정답 본 뒤 맞힘 = 🔑 획득', !!(await s.$('[data-k="key-ok"]')));
   await s.click('.sheet .pmain'); await s.waitForTimeout(300); await pick(ans('k3', true)); await s.click('.sheet .pmain'); await s.waitForTimeout(500);
   const pk = await rest(`rooms/${code}/players/s1_3_3/keys`);
-  ok('② 기록 = k1 ok · k2 틀림(ok false) · k3 ok', pk && pk.k1?.ok === true && pk.k2?.ok === false && pk.k3?.ok === true, JSON.stringify(pk));
+  ok('② 기록 = k1 ok(1번째) · k2 ok:false · 4번째 · k3 ok', pk && pk.k1?.ok === true && pk.k1?.n === 1 && pk.k2?.ok === false && pk.k2?.n === 4 && pk.k3?.ok === true, JSON.stringify(pk));
   ok('② 다 모음 = 「🔑 열쇠 3개 준비 끝!」', /준비 끝/.test(await s.textContent('[data-k="key-gate"]')));
   await s.screenshot({ path: `${SHOTS}/k59-lobby-done.png` });
   // ── 리모컨 대기실 ──

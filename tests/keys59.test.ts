@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import '../src/subjects/common-math2';
 import type { LessonPack, Question, Room } from '../src/model/types';
 import { checkUpload, revive } from '../src/school/packUpload';
-import { answerText, chestsOf, keyBoard, keyFor, keyUses, keysOf, keyWindow, KEY_CHEST } from '../src/school/keys';
+import { answerText, chestsOf, keyBoard, keyFor, keyQ, keyRight, keyUses, keysOf, keyWindow, KEY_CHEST, KEY_SHOW_AFTER } from '../src/school/keys';
 import { items } from '../src/engine/lessons';
 const F = (f: string) => readFileSync(new URL(`../tools/pack-upload/keys/${f}`, import.meta.url), 'utf8');
 const look = { sheet: () => true, theme: () => true, attack: () => true, builtIn: () => false };
@@ -54,5 +54,15 @@ describe('🔑 #59 팩 v4', () => {
     expect(ks.every((k) => k.vers.every((q) => typeof q.question === 'string'))).toBe(true);
     expect(answerText(ks[0]!.vers[0]!)).toBe('2k − 1');
     expect(keysOf({ ...L, keys: [{ id: 'k1', name: 'x', help: 'y', vers: [{ type: 'choice', q: 'a' }], uses: [] }] } as unknown as LessonPack)).toEqual([]);
+  });
+  it('🔑 B (11/19): 틀릴 때마다 다음 판 · 3번 틀리면 정답 · 두 번째 이상에 맞힘(n ≥ 2) = 많이 틀린 열쇠', () => {
+    const { L } = pack(11); const k = keysOf(L)[0]!;
+    expect(KEY_SHOW_AFTER).toBe(3);
+    expect(keyQ(k, 0)).toBe(k.vers[0]); expect(keyQ(k, 1)).toBe(k.vers[1 % k.vers.length]); expect(keyQ(k, k.vers.length)).toBe(k.vers[0]);
+    const q1 = keyQ(k, 1) as { type: string; answerIndex?: number };
+    if (q1.type === 'choice') { expect(keyRight(k, q1.answerIndex!, 1)).toBe(true); }
+    const mk = (keys: Record<string, unknown>): Room => ({ meta: { code: 'T1', lesson: L.id }, state: { step: -1 }, players: { u: { keys } } }) as unknown as Room;
+    const b = keyBoard(L, mk({ [k.id]: { ok: false, n: 4 } }), ['u']); expect(b.per.find((x) => x.id === k.id)!.wrong).toBe(1);
+    const c = keyBoard(L, mk({ [k.id]: { ok: true, n: 1 } }), ['u']); expect(c.per.find((x) => x.id === k.id)!.wrong).toBe(0);
   });
 });
