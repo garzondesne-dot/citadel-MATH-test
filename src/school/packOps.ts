@@ -2,6 +2,7 @@ import type { LessonPack, Store } from '../model/types';
 import { PACKS, removePack, UPLOADED } from '../engine/packs';
 import { deletable, PACK_PATH, PREV_PATH, recordedN, revive } from './packUpload';
 import { SUBJ } from '../engine/subject';
+import { toTrash } from './packMerge';
 
 // 📦 차시 카드 동작 (📜 2026-11-17 #22 ②): 👀 숨기기 · 🗑 빼기 · ↩ 바로 전 판 — 「📦 팩 올리기」 창과 같은 서버 칸 · 같은 규칙(set-NN · 앱 차시 = 지우지 않고 숨김만)
 type TS = Store & { trySet?: (p: string, v: unknown) => Promise<boolean>; fetch?: <T>(p: string) => Promise<T | null> };
@@ -16,6 +17,7 @@ export async function hidePack(S: TS, id: string, on: boolean): Promise<boolean>
 }
 export async function deletePack(S: TS, id: string): Promise<boolean> {
   if (!canDelete(id)) return false;
+  if (!(await toTrash(S, id, 'delete', Date.now()))) return false; // 🗑 #82 빼기 = 휴지통(30일 · ↩ 되돌리기) 먼저 · 못 넣으면 지우지 않음
   if (!(await put(S, `${PACK_PATH}/${id}`, null))) return false;
   await put(S, `prep/${id}`, null); await put(S, `${PREV_PATH}/${id}`, null);
   removePack(id); return true;
