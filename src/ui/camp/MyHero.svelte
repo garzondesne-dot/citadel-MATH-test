@@ -9,6 +9,7 @@
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import { sfx } from '../sound.svelte';
+  import { heroUnlock, medalN, statsOf, type HeroUnlock } from '../../model/heroUnlock';
   import HeroSprite from './HeroSprite.svelte';
   import HeroIntro from './HeroIntro.svelte';
   import SkillPreview from './SkillPreview.svelte';
@@ -46,7 +47,14 @@
   const fam = $derived(famOfHero(look.hero));
   const lad = $derived(ladder(look.hero));
   const eq = $derived(equipOf(look));
-  const nIdx = $derived(nextSkill(W, P, look.hero));
+  // 🔓 조건 해금 · 🏆 업적 이펙트 · 기록 칸 (🐞 11/19 ④ · 옛 정식 looks() 셈 그대로 · 기록에서 그때그때)
+  const tdat = $derived.by(() => { const b = meBound(); return me.test || !b ? null : titleData(b.S, b.cls, b.num); });
+  const UN = $derived<HeroUnlock | null>(tdat ? heroUnlock(tdat) : null);
+  const GR = $derived<readonly string[]>(UN?.fx ?? []);
+  // 🧑‍🎓 수식 책사 남 · 여 (19 · 20) = 성채 서술형 사진 첫 통과(gem log s_ph_ · 정식 photoPassed · 📜 #41) · 🧪 테스트 기록 = 열림
+  const phOpen = $derived.by(() => { const b = meBound(); return me.test || (!!b && Object.keys(b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}).some((k) => k.startsWith('s_ph_'))) ? [19, 20] : []; });
+  const opened = $derived([...phOpen, ...(UN?.open ?? [])]);
+  const nIdx = $derived(nextSkill(W, P, look.hero, GR));
   const xp = $derived(level(me.xp));
   // 🛡 구조 기사 = 게시판 던전 구조 성공 10번 (📜 DECISIONS 2026-11-14 강적 출현 ③) — 서버 gem log 의 rescue_ 칸 수
   const rescueN = $derived.by(() => { const b = meBound(); if (!b) return 0; const lg = b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}; return Object.keys(lg).filter((k) => /^rescue_/.test(k)).length; });
@@ -54,7 +62,7 @@
   const earned = $derived.by(() => { const b = meBound(), got = rescueN >= 10 ? ['rescuer'] : []; return me.test || !b ? earnedTitles(true, got) : earnedFrom(titleData(b.S, b.cls, b.num), got); });
   const ttl = $derived(look.title && look.title !== 'none' ? titleOf(look.title) : null);
   const nx = $derived(ENH[lv + 1] ?? null);
-  const dots = $derived({ enh: canEnh(W, P, L0.enh), sk: canSkill(W, P, look.hero, L0.enh), hero: canHero(W, P, L0.enh) });
+  const dots = $derived({ enh: canEnh(W, P, L0.enh), sk: canSkill(W, P, look.hero, L0.enh, GR), hero: canHero(W, P, L0.enh, opened) });
 
   // ── 🔨 강화 ──
   function enh() {
@@ -69,7 +77,7 @@
   const skState = (id: string, i: number): { st: SkState; sub: string } => {
     const g = SKILL_PRICE[id], s = SKILL_SCROLL[id] ?? 0, price = g != null ? `💎 ${g}${s ? ` · 📜 ${s}` : ''}` : '';
     if (P.sk.includes(id)) return { st: 'pick', sub: `고름 · 저장하면 내 것 · ${price}` };
-    if (ownsSkill(W, P, look.hero, id)) return id === eq ? { st: 'equip', sub: '끼움' } : { st: 'own', sub: '✔ 가짐 · 누르면 끼움' };
+    if (ownsSkill(W, P, look.hero, id, GR)) return id === eq ? { st: 'equip', sub: '끼움' } : { st: 'own', sub: '✔ 가짐 · 누르면 끼움' };
     if (i !== nIdx) return { st: 'lock', sub: `${TN[i - 1]} 먼저` };
     if (g == null) return { st: 'lock', sub: '업적으로 열려요' };
     if (lf.gem < g) return { st: 'lock', sub: `${price} · 💎 ${g - lf.gem} 모자람` };
@@ -78,36 +86,38 @@
   };
   function tapSkill(id: string, i: number) {
     preview(id, i);
-    if (P.sk.includes(id)) { P.sk = P.sk.filter((x) => lad.indexOf(x) < i); if (!ownsSkill(W, P, look.hero, eq)) delete look.socket[String(look.hero)]; return; }
-    if (ownsSkill(W, P, look.hero, id)) { look.socket[String(look.hero)] = id; return; }
+    if (P.sk.includes(id)) { P.sk = P.sk.filter((x) => lad.indexOf(x) < i); if (!ownsSkill(W, P, look.hero, eq, GR)) delete look.socket[String(look.hero)]; return; }
+    if (ownsSkill(W, P, look.hero, id, GR)) { look.socket[String(look.hero)] = id; return; }
     const st = skState(id, i);
     if (st.st === 'lock') { say(`🔒 ${st.sub}`); return; }
     P.sk = [...P.sk, id]; look.socket[String(look.hero)] = id; // 📜 2026-11-14 선생님 「스킬 업글하면 자동 선택되게」 = 새로 연 단계를 바로 끼움 (저장하면 그대로)
   }
   // ── 🧑 용사 바꾸기 ──
   const pick = $derived(heroOf(pickH));
-  // 🧑‍🎓 수식 책사 남 · 여 (19 · 20) = 성채 서술형 사진 첫 통과(gem log s_ph_ · 정식 photoPassed · 📜 #41) · 🧪 테스트 기록 = 열림
-  const phOpen = $derived.by(() => { const b = meBound(); return me.test || (!!b && Object.keys(b.S.get<Record<string, unknown>>(`gem/${b.cls}/${b.num}/log`) || {}).some((k) => k.startsWith('s_ph_'))) ? [19, 20] : []; });
-  const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id, phOpen);
+  /** 잠긴 용사 진행 한 줄 (🏆 도전 n / need · 📚 도감 n / need장 · 다 모으면 무료) */
+  const progOf = (id: number) => { const c = UN?.chal[id]; if (c) return `${c.n} / ${c.need}`; const k = UN?.cards[id]; return k && k.need ? `📚 도감 ${k.n} / ${k.need}장 모으면 무료` : ''; };
+  const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id, opened);
   const ownsPick = $derived(ownH(pickH));
   const mine = $derived(POOL.filter((h) => ownH(h.id)));
   const locked = $derived(POOL.filter((h) => !ownH(h.id)));
   function buyHero() { const h = heroOf(pickH); if (h.price == null || lf.gem < h.price) { say('💎 가 모자라요'); return; } P.heroes = [...P.heroes, pickH]; }
   function useHero() { look.hero = pickH; heroSheet = false; }
   const allHeroes = $derived([...mine, ...locked]);
-  const ownedSk = (id: number) => ladder(id).map((k) => ownsSkill(W, P, id, k));
+  const ownedSk = (id: number) => ladder(id).map((k) => ownsSkill(W, P, id, k, GR));
   const topTier = (id: number) => { const o = ownedSk(id); const n = o.lastIndexOf(true); return n >= 0 ? TN[n] : ''; };
   const famName = (id: number) => famOfHero(id).name;
   /** 「으로 · 로」: 받침이 없거나 ㄹ 받침이면 로 */
   const ro = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; if (c < 0 || c > 11171) return '로'; const j = c % 28; return j === 0 || j === 8 ? '로' : '으로'; };
   // ── 🏅 기록 ──
   const nextAch = $derived.by(() => {
-    const seals = 0, cand: [number, string][] = [];
+    const seals = UN?.seals ?? 0, cand: [number, string][] = [];
+    for (const id of [8, 10, 11] as const) { const k = UN?.cards[id]; if (k && k.need && !ownH(id)) cand.push([k.need - k.n, `카드 ${k.need - k.n}장 더 → 🧑 ${heroOf(id).name}`]); }
     if (seals < 3) cand.push([3 - seals, `업적 ${3 - seals}개 더 모으면 🏅 호칭 「만 번째 베기」`]);
     const ui = DATA.unlock.findIndex((u) => seals < u);
     if (ui >= 0) cand.push([(DATA.unlock[ui] as number) - seals, `업적 ${(DATA.unlock[ui] as number) - seals}개 더 → ✨ ${skillName(DATA.fancy[ui] as string)} 이펙트`]);
-    return cand.sort((a, b) => a[0] - b[0])[0]?.[1] ?? '모든 보상을 모았어요!';
+    return cand.filter((x) => x[0] > 0).sort((a, b) => a[0] - b[0])[0]?.[1] ?? '모든 보상을 모았어요!';
   });
+  const stv = $derived<Record<string, number>>(tdat ? statsOf(tdat) : {});
   const TIER_CLS: Record<string, string> = { w: 't-w', b: 't-b', p: 't-p', o: 't-o' };
   // ── 💾 저장 ──
   const changes = $derived.by(() => {
@@ -190,12 +200,12 @@
       <p class="rule">⚡ 필살기 = 내 속성 Ⅲ · Ⅳ + 첫 시도 퍼펙트 · 🌟 진필살기 = 3연속 퍼펙트 + 내 속성 Ⅳ</p>
     {:else}
       <div class="tiles">
-        <div><small>🏆 업적</small><b>0 / {DATA.unlock[DATA.unlock.length - 1]}</b></div>
-        <div><small>📚 도감</small><b>0 / {CARD_TOTAL}</b></div>
+        <div data-k="rec-seals"><small>🏆 업적</small><b>{UN?.seals ?? 0} / {DATA.unlock[DATA.unlock.length - 1]}</b></div>
+        <div data-k="rec-cards"><small>📚 도감</small><b>{tdat ? Object.keys(tdat.cards || {}).length : 0} / {CARD_TOTAL}</b></div>
         <div><small>🧑 용사</small><b>{mine.length} / {POOL.length}</b></div>
-        <div><small>🎖 메달</small><b>0</b></div>
+        <div data-k="rec-medal"><small>🎖 메달</small><b>{tdat ? medalN(tdat) : 0}</b></div>
       </div>
-      <div class="stats">{#each STATS as st (st.id)}<span>{st.ic} {st.name}<b>0</b></span>{/each}</div>
+      <div class="stats">{#each STATS as st (st.id)}<span>{st.ic} {st.name}<b>{stv[st.id] ?? 0}</b></span>{/each}</div>
       <button type="button" class="row" onclick={() => (ttlSheet = true)}><span>🏅 호칭 고르기</span><em class={ttl ? TIER_CLS[ttl.tier] : ''}>{ttl ? ttl.name : '달지 않음'}</em><span aria-hidden="true">›</span></button>
       <p class="muted">다음 업적 · {nextAch}</p>
     {/if}
@@ -227,7 +237,7 @@
     <div class="grab"><i></i></div>
     <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {POOL.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
     <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
-    <HeroIntro id={pickH} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
+    <HeroIntro id={pickH} prog={progOf(pickH)} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
     <div class="swg">
       {#each allHeroes as h (h.id)}
         {@const own = ownH(h.id)}

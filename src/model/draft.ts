@@ -13,13 +13,14 @@ const has = (w: Wallet, id: string) => w.buys.some((b) => b.id === id);
 /** 가진 용사 = 처음부터 열림 · 산 것 · 고른 것 (도전 · 도감 · 사진 해금은 기록이 생기면 open 으로) */
 export const ownsHero = (w: Wallet, P: Plan, id: number, opened: number[] = []) => !!heroOf(id).open || opened.includes(id) || has(w, `hero_${id}`) || P.heroes.includes(id);
 /** 가진 스킬 = 사다리 Ⅰ · 산 것 · 고른 것 · 윗 칸을 가지면 아래 칸도(정식 #78) */
-export function ownsSkill(w: Wallet, P: Plan, hero: number, id: string): boolean {
-  const lad = ladder(hero), i = lad.indexOf(id);
+/** granted = 🏆 업적으로 받은 Ⅲ 이펙트(heroUnlock fx · 🐞 11/19 ④) — 산 것과 같이 「가짐」(지갑에는 안 씀 · 되팔기 없음) */
+export function ownsSkill(w: Wallet, P: Plan, hero: number, id: string, granted: readonly string[] = []): boolean {
+  const lad = ladder(hero), i = lad.indexOf(id), got = (k: string) => has(w, `fx_${k}`) || P.sk.includes(k) || granted.includes(k);
   if (i === 0) return true;
-  if (has(w, `fx_${id}`) || P.sk.includes(id)) return true;
-  return i > 0 && lad.slice(i + 1).some((k) => has(w, `fx_${k}`) || P.sk.includes(k));
+  if (got(id)) return true;
+  return i > 0 && lad.slice(i + 1).some(got);
 }
-export const nextSkill = (w: Wallet, P: Plan, hero: number) => ladder(hero).findIndex((id) => !ownsSkill(w, P, hero, id));
+export const nextSkill = (w: Wallet, P: Plan, hero: number, granted: readonly string[] = []) => ladder(hero).findIndex((id) => !ownsSkill(w, P, hero, id, granted));
 export const equipOf = (L: Look) => L.socket[String(L.hero)] ?? (ladder(L.hero)[0] as string);
 
 export function cost(P: Plan, enh0: number) {
@@ -38,8 +39,8 @@ export function canEnh(w: Wallet, P: Plan, enh0: number) {
   const l = left(w, P, enh0); return l.gem >= nx.g && l.scroll >= (nx.s ?? 0);
 }
 /** 다음 스킬 칸을 살 수 있나 (다음 칸만 · 값 · 📜) */
-export function canSkill(w: Wallet, P: Plan, hero: number, enh0: number) {
-  const i = nextSkill(w, P, hero); if (i < 0) return false;
+export function canSkill(w: Wallet, P: Plan, hero: number, enh0: number, granted: readonly string[] = []) {
+  const i = nextSkill(w, P, hero, granted); if (i < 0) return false;
   const id = ladder(hero)[i] as string, l = left(w, P, enh0);
   return SKILL_PRICE[id] != null && l.gem >= (SKILL_PRICE[id] ?? 0) && l.scroll >= (SKILL_SCROLL[id] ?? 0);
 }

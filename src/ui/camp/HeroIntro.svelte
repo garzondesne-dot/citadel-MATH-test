@@ -5,9 +5,9 @@
   // 🧙 용사 소개 카드 (🔨 2026-11-13 밤 선생님 「용사 몽타주 하나도 사용 안 되었어 · 용사 소개란」 · 정식 camp.js mh-sheet 꼴)
   //   몽타주(초상) · 이름 · 직업 · 🗡 근접 / 🏹 원거리 · 속성 · 「별명」 · 한 줄 이야기 · 스킬 단계 줄(Ⅰ → Ⅳ) · 잠김 = 몽타주 흐림 + 열림 조건 한 줄
   //   쓰는 곳 = 내 용사 「용사 바꾸기」(학생 · 교사 「나」 · TV 교사 캠프 같은 창) · 몽타주가 없는 용사 = 게임 속 모습
-  const { id, owned = true, lv = 0, stage = 0 }: { id: number; owned?: boolean; lv?: number; stage?: number } = $props();
+  const { id, owned = true, lv = 0, stage = 0, prog = '' }: { id: number; owned?: boolean; lv?: number; stage?: number; /** 🔓 조건 진행 「· 7 / 10」(🐞 11/19 ④) */ prog?: string } = $props();
   const h = $derived(heroOf(id)), pt = $derived(portraitOf(id)), fam = $derived(famOfHero(id));
-  const cond = $derived(owned ? '' : h.price != null ? `💎 ${h.price} 으로 열어요` : h.cond ? `${h.price == null && /성채 서술형/.test(h.cond) ? '🎁 조건 · ' : '🔓 '}${h.cond}` : '🔓 조건으로 열어요');
+  const cond = $derived((owned ? '' : h.price != null ? `💎 ${h.price} 으로 열어요` : h.cond ? `${h.price == null && /성채 서술형/.test(h.cond) ? '🎁 조건 · ' : '🔓 '}${h.cond}` : '🔓 조건으로 열어요') + (owned || !prog ? '' : ` · ${prog}`));
 </script>
 
 <div class="hi" class:lock={!owned} data-hero={id}>
