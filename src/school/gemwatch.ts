@@ -6,7 +6,7 @@ import type { Store } from '../model/types';
 import { roster, uidOf } from './school';
 
 export const TOL = 30;
-export const CAP = 100;
+export const CAP: number = Infinity; // 📜 2026-11-19 하루 한도 없앰 (옛 100)
 export interface Snap { t: number; day: number; at: number }
 export interface GemRow { total?: number; day?: Record<string, number>; log?: Record<string, { g?: number; at?: number } | null> }
 export interface Flag { at: number; from: number; to: number; extra: number; why: string }
@@ -18,7 +18,8 @@ export const snapOf = (r: GemRow, at: number): Snap => ({ t: Number(r.total) || 
  *  gifts = gifts/{pid} (받은 것 got · 만든 시각 at) · 지난 사진 뒤에 생긴 받은 선물만 셈 */
 export function check(prev: Snap, r: GemRow, gifts: Record<string, { g?: number; at?: number; got?: boolean } | null> | null, at: number): Flag | null {
   const now = snapOf(r, at), grew = now.t - prev.t;
-  const overCap = Object.entries(r.day || {}).find(([, v]) => Number(v) > CAP);
+  // 📜 2026-11-19 하루 한도 없앰 → 「한도 넘음」 🚩 끔 (CAP = 무한 · 한도가 다시 생기면 되살아남)
+  const overCap = Number.isFinite(CAP) ? Object.entries(r.day || {}).find(([, v]) => Number(v) > CAP) : undefined;
   if (overCap) return { at, from: prev.t, to: now.t, extra: Number(overCap[1]) - CAP, why: `${overCap[0]} 하루 한도 ${CAP} 넘음` };
   if (grew <= TOL) return null;
   const free = Object.entries(r.log || {}).filter(([k, x]) => x && FREE.test(k) && Number(x.at) > prev.at).reduce((a, [, x]) => a + (Number(x!.g) || 0), 0)

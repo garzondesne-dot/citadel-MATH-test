@@ -42,7 +42,7 @@
         {/each}
       </ul>
     {/each}
-    <p class="note">기한 없음 · 과제마다 한 번 · 💎 는 하루 한도와 따로 · 수업 점수는 안 셈</p>
+    <p class="note">기한 없음 · 과제마다 한 번 · 수업 점수는 안 셈</p>
   </div>
 {/snippet}
 {#if embed}{@render body()}{:else}

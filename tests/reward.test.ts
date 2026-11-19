@@ -25,12 +25,13 @@ describe('💎 · 🌱 수업 보상', () => {
     expect(b.gem).toBe(3); expect(b.writes['gem/log/raid_1']).toMatchObject({ g: 12 }); expect(b.writes['gem/log/perfect_1']).toBeUndefined();
     expect(settle(rw(8, { perfects: 1 }), { ...st1, gemLog: { raid_1: { g: 12 }, perfect_1: { g: 6 } }, xpLog: { raid_1: { xp: 999 } } }, 'd', 3).gem).toBe(0);
   });
-  it('하루 한도 100 · 레벨 5 보너스는 한도 밖', () => {
-    expect(settle(rw(12), { ...st0, day: { d: 95 } }, 'd', 1).gem).toBe(5);
-    expect(settle(rw(12), { ...st0, day: { d: 100 } }, 'd', 1).gem).toBe(0);
+  it('📜 11/19 하루 한도 없음 (day 는 계속 기록) · 레벨 5 보너스', () => {
+    expect(G.dayCap).toBe(Infinity);
+    const a = settle(rw(12), { ...st0, day: { d: 95 } }, 'd', 1); expect(a.gem).toBe(16); expect(a.day.d).toBe(111);
+    expect(settle(rw(12), { ...st0, day: { d: 100 } }, 'd', 1).gem).toBe(16);
     expect(levelOf(0)).toBe(1); expect(levelOf(40)).toBe(2); expect(levelOf(40 + 60 + 80 + 100)).toBe(5);
     const r = settle(rw(12), { ...st0, xp: 279, day: { d: 100 } }, 'd', 1);
-    expect(r.gem).toBe(G.level5); expect(r.writes['gem/log/lv5']).toMatchObject({ g: 6 });
+    expect(r.gem).toBe(16 + G.level5); expect(r.writes['gem/log/lv5']).toMatchObject({ g: 6 });
   });
   it('🔁 연속 참여 = held 차시 끝에서부터 기록이 이어진 수 · 💎 4 · 6 · 12 는 한도 밖', () => {
     const Ls = [1, 2, 3, 4, 5].map((no) => ({ id: `l${no}`, no })).concat([{ id: 'ev', no: 6, eval: true } as never]);
@@ -38,7 +39,7 @@ describe('💎 · 🌱 수업 보상', () => {
     expect(streakOf({ l1: 1, l2: 1, l4: 1 }, { l1: 1, l2: 1, l3: 1, l4: 1 }, Ls)).toBe(1); // l3 결석이면 끊김
     expect(streakOf({ l1: 1, l2: 1 }, { l1: 1, l2: 1, l3: 0 }, Ls)).toBe(2); // 수업 안 한 차시(held 없음)는 건너뜀
     const r = rw(12); r.gems.push({ key: 'streak3_l5', g: G.streak[3]!, why: '3차시 연속', free: true });
-    const s1 = settle(r, { ...st0, day: { d: 100 } }, 'd', 1); expect(s1.gem).toBe(4); expect(s1.day.d).toBe(100);
+    const s1 = settle(r, { ...st0, day: { d: 100 } }, 'd', 1); expect(s1.gem).toBe(16 + 4); expect(s1.day.d).toBe(116); // 연속 4 = 한도 밖(day 에 안 셈)
   });
   it('🎁 첫 출정 EXP = 다음 레벨까지(최소 40) · 한 수업 최대 300', () => {
     expect(levelInfo(0)).toEqual({ lv: 1, into: 0, next: 40 });

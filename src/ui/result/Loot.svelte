@@ -103,7 +103,7 @@
   <div class="list">
     <div class="row" class:on={on('xp')} data-k="lt-xp"><span>⭐ EXP</span><b class="num">+{n('xp')}</b>
       <div class="lv" class:up={lt.up}><small>Lv.{lt.lv.lv} {lt.lv.title}{#if lt.up && on('xp')} <b class="upb">🎉 레벨 업!</b>{/if}</small><div class="bar"><i style:width="{barW}%"></i><span>{lt.lv.into} / {lt.lv.next}</span></div></div></div>
-    <div class="row" class:on={on('gem')} data-k="lt-gem"><span>💎</span><b class="num">+{n('gem')}</b>{#if lt.day != null}<small class="muted">오늘 받은 💎 {lt.day} / {DAY_CAP}</small>{/if}</div>
+    <div class="row" class:on={on('gem')} data-k="lt-gem"><span>💎</span><b class="num">+{n('gem')}</b>{#if lt.day != null}<small class="muted">오늘 받은 💎 {lt.day}{Number.isFinite(DAY_CAP) ? ` / ${DAY_CAP}` : ''}</small>{/if}</div>
     <div class="row" class:on={on('scroll')} data-k="lt-scroll"><span>📜 서술 조각</span>{#if lt.scroll}<b class="num">+{n('scroll')}</b>{:else}<small class="muted">✍ 서술형에 도전하면 📜!</small>{/if}</div>
     {#if campScroll > 0}<div class="row camp" data-k="lt-camp-scroll"><span>📜 캠프에서 받기</span><b class="num">{campScroll}개</b></div>{/if}<!-- 📜 #38 ③ 도장 · 서술형 📜 = 캠프에 가야 지갑에 -->
     {#if lt.titles.length}<div class="row" class:on={on('ttl')}><span>🔓 새 호칭</span><b class="txt">{lt.titles.slice(0, 2).map((t) => `[${t}]`).join(' ')}{lt.titles.length > 2 ? ` 외 ${lt.titles.length - 2}개` : ''}</b></div>{/if}
