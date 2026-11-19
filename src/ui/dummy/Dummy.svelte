@@ -165,7 +165,7 @@
       const log = logNow(), rw = dummyReward(L0, recOf(L0), bonL, [r.mid], log, day), localLog = gemLogP ? null : { ...log };
       for (const g of rw.gems) {
         const n = g.free ? ((me.wallet.gem += g.n), g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap);
-        if (n < g.n && !why.some((w) => w.startsWith('💎 오늘 한도'))) why.push(`💎 오늘 한도 ${GEM.dayCap} 다 받음 · 내일 다시`); // 🐞 11/19 한도로 0 · 일부 = 알림 (「이미 받은 보상」 오안내 막음)
+        if (n < g.n && Number.isFinite(GEM.dayCap) && !why.some((w) => w.startsWith('💎 오늘 한도'))) why.push(`💎 오늘 한도 ${GEM.dayCap} 다 받음 · 내일 다시`); // 🐞 11/19 한도로 0 · 일부 = 알림 (「이미 받은 보상」 오안내 막음)
         if (!n) continue; got += n; why.push(`💎 +${n} ${g.why}`);
         if (gemLogP) RS.set(`${gemLogP}/${g.key}`, { g: n, at, why: g.why }); else localLog![g.key] = { g: n, at, why: g.why };
       }

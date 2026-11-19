@@ -11,7 +11,7 @@ import { hgOf } from './hintGive';
 import { chestsOf, KEY_CHEST } from './keys';
 import { bossHp, bossState, chainRecord, isChain, mastery, plainRecord } from '../raid/raid';
 
-export const G = { join: 4, solvedMax: 12, perfect: 6, bossPerfect: 6, level5: 6, dayCap: 100, streak: { 3: 4, 5: 6, 10: 12 } as Record<number, number> } as const;
+export const G = { join: 4, solvedMax: 12, perfect: 6, bossPerfect: 6, level5: 6, dayCap: Infinity, /* 📜 2026-11-19 선생님 「하루 한도 없앰」 · wallet.day 는 계속 기록 */ streak: { 3: 4, 5: 6, 10: 12 } as Record<number, number> } as const;
 export const XP = { first: 1, join: 10, submit: 2, correct: 2, fixed: 0, bossWin: 10, perfect: 5, hintGive: 1 } as const; // 💡 hintGive = 친구에게 힌트 1번마다 +1 (📜 #23 · 옛 정식 grow.js 그대로)
 export type Parts = { first?: number; join: number; submit: number; correct: number; fixed: number; bossWin: number; perfect: number; hintGive?: number };
 const XP_MAX = 300;

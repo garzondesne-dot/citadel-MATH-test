@@ -441,7 +441,7 @@
       <div class="gquick"><button type="button" data-k="gift-all" onclick={() => quick(giftIds)}>모두 {giftIds.length}</button><button type="button" disabled={!stuck.length} onclick={() => quick(stuck.map((x) => x.u))}>🔒 막힌 학생 {stuck.length}</button><button type="button" disabled={!perfectIds.length} onclick={() => quick(perfectIds)}>✨ 퍼펙트 {perfectIds.length}</button><button type="button" onclick={() => quick(subd.length ? subd : ids)}>미제출 빼고</button></div>
       <div class="ggrid" data-k="gift-grid">{#each giftIds as u (u)}<button type="button" class="gn" class:on={!!picked[u]} class:off={!ids.includes(u)} aria-pressed={!!picked[u]} onclick={() => (picked = { ...picked, [u]: !picked[u] })}><b>{numOf(u)}</b>{nameOf(u).split(' ')[1] ?? ''}</button>{/each}</div>
       <p class="gnote" data-k="gift-who">명단 {giftIds.length}명에게 (결석 {giftAbs}명 빼고) · 접속이 끊긴 학생도 받아요 · 흐린 칸 = 지금 접속 안 함 → 다음 접속 때 「💎 선물」 알림</p>
-      <p class="gnote">하루 한도와 상관없이 바로 들어가요 · {pickN && pickN === giftIds.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
+      <p class="gnote">바로 들어가요 · {pickN && pickN === giftIds.length ? 'TV 에 「🎁 선생님 선물! 모두」' : '받은 학생 폰에만 알림 (TV 없음)'}</p>
     </Sheet>
   {:else if sheet === 'send'}
     <Sheet onclose={() => (sheet = '')}>

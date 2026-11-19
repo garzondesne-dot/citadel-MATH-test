@@ -193,7 +193,7 @@
       const day = kstDay(S.now());
       let capped = false;
       for (const [i, g] of rw.gems.entries()) { const n = g.free ? (me.wallet.gem += g.n, g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap); if (n < g.n) capped = true; if (n) { got.push(`💎 +${n} ${g.why}`); glog(`${g.free ? 'seal_c' : 'croom'}_${x.P.id}_${x.r.id}_${i}`, n, g.why); } }
-      if (capped) got.push(`💎 오늘 한도 ${GEM.dayCap} 다 받음 · 내일 다시`); // 🐞 11/19 한도로 0 · 일부 = 알림
+      if (capped && Number.isFinite(GEM.dayCap)) got.push(`💎 오늘 한도 ${GEM.dayCap} 다 받음 · 내일 다시`); // 🐞 11/19 한도로 0 · 일부 = 알림
       if (rw.xp) { me.xp += rw.xp; got.unshift(`+${rw.xp} EXP`); }
       persist();
     }

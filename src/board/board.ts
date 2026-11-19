@@ -9,7 +9,7 @@ export const END_MS = 2000;
 /** 등급 (첫 시도 기준 · 틀림 + 미제출 비율) */
 export const GRADE: [string, number][] = [['S', 0.1], ['A', 0.25], ['B', 0.5]];
 /** 💎 (❓ #143-b 답 오기 전 = 손발 추천 A: 맞힌 소문제 × 1 (최대 12) + 시간 안 클리어 4 · 정식 레이드 solvedMax · clear) · 하루 한도 = 정식 DAY_CAP */
-export const GEM = { perItem: 1, itemMax: 12, clear: 4, dayCap: 100 };
+export const GEM = { perItem: 1, itemMax: 12, clear: 4, dayCap: Infinity }; // 📜 2026-11-19 하루 한도 없앰(무제한) · wallet.day 기록은 그대로
 /** 팀 배수 · 수호 보너스 · 도전자만 (확정안) */
 export const TEAM_X = [1, 1, 1.1, 1.2, 1.3];
 

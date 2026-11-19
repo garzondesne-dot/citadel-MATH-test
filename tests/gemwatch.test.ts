@@ -17,8 +17,8 @@ describe('🚩 💎 급증', () => {
     const f = check(prev, { total: 600, day: { d1: 40 } }, null, H)!;
     expect(f.extra).toBe(500 - TOL); expect(f.from).toBe(100); expect(f.to).toBe(600);
   });
-  it('하루 한도 100 을 넘은 날 = 🚩', () => {
-    expect(check(prev, { total: 300, day: { d1: 40, d2: 200 } }, null, H)?.why).toMatch(/한도/);
+  it('📜 11/19 하루 한도 없음 = 하루 200 을 벌어도 🚩 없음', () => {
+    expect(check(prev, { total: 300, day: { d1: 40, d2: 200 } }, null, H)).toBeNull();
   });
   it('쓴 것(💎 줄어듦) = 🚩 없음', () => {
     expect(check(prev, { total: 10, day: { d1: 40 } }, null, H)).toBeNull();
