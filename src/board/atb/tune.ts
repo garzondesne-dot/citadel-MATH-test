@@ -30,7 +30,8 @@ export const T = {
   shieldHelpRuns: 2,
   wrongSwap: 4, // 4번째 오답 = 같은 원문항 새 숫자 판
   /** ⚡ 충전 (📜 11/20 Y1 · 결정 14절): 원문항(한 문제)을 통째로 맞혀야 충전 · 최대 3 · 퍼펙트(오답 없이) · 재시도(오답 있었음) = ⏳ 임시값(설계 방 최종값 오면 바꿈) */
-  charge: { max: 3, perfect: 3, retry: 2 }, // 📜 요청 #5 ① 확정 (Y1′ · 모의실험4 「다」)
+  charge: { max: 3, perfect: 3, retry: 2 },
+  chargeStart: 1, // 📜 요청 #6 ③ 판 시작 때 모든 용사 충전 1칸 // 📜 요청 #5 ① 확정 (Y1′ · 모의실험4 「다」)
   /** 💠 스킬 비용 (Y2) */
   cost: { shield: 1, equip: 1, role: 1, revive: 1, tier4: 2, aura: 2, awk: 3 },
   /** 💥 스킬 피해 비 (Y11): 장착 1 · 4레벨 2.3 · 각성 3.8(판당 1번) + 역할 덧효과 그대로 */
@@ -93,7 +94,7 @@ export const roleOfName = (name: string): Role => ROLE_BY_NAME[name] ?? 'dealer'
 
 /** 보스 설정 (차시 번호 → 몬스터) · 📜 설정표 v3 「차시별 한눈에」 · 선생님 확정 11/20 (대표 행동 9) · 숫자 = 어림값(연습방에서 맞춤)
  *  cycle = 공격 차례(되풀이) · tele = 표적 보여 주는 꼴(foot 발밑 · gaze 고개 돌리기 · scale 기우는 저울) · sig = 대표 행동 */
-export type AtkKind = 'basic' | 'smash' | 'poison' | 'sleep' | 'fire' | 'fire13' | 'fog' | 'tongue' | 'ice' | 'confuse' | 'frost' | 'tail' | 'dark' | 'mirror' | 'bind' | 'scale' | 'aoe';
+export type AtkKind = 'basic' | 'smash' | 'poison' | 'sleep' | 'fire' | 'fire13' | 'fog' | 'tongue' | 'ice' | 'confuse' | 'frost' | 'tail' | 'dark' | 'darkHit' | 'mirror' | 'bind' | 'scale' | 'aoe';
 export type Sig = 'footTarget' | 'gaze' | 'iceArmor' | 'fireBreath' | 'breath' | 'mirror' | 'lock' | 'scale' | 'ripple';
 export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
 export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
@@ -106,7 +107,7 @@ export const BOSSES: Record<number, BossCfg> = {
   6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기' },
   7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)' },
   8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'dark', 'mirror'], tele: 'foot', sig: 'mirror', signature: '거울빛' },
-  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'bind', 'dark'], tele: 'foot', sig: 'lock', signature: '자물쇠' },
+  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'bind', 'darkHit'], tele: 'foot', sig: 'lock', signature: '자물쇠' },
   10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['flame', 'arms'], type: '교란형', cycle: ['scale', 'bind', 'scale'], tele: 'scale', sig: 'scale', signature: '기우는 저울' },
   11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', cycle: ['tongue', 'tongue', 'fog'], tele: 'foot', sig: 'ripple', signature: '물결', shieldDmg: 0.2 },
 };
@@ -126,6 +127,7 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   frost: { name: '냉기', mul: 1, aoe: true, status: 'slow' },
   tail: { name: '꼬리치기', mul: 1 },
   dark: { name: '어둠', mul: 0, aoe: true, status: 'slow' },
+  darkHit: { name: '어둠', mul: 1, aoe: true, status: 'slow' }, // 📜 11/20 요청 #6 ① 9차시 = 광역 피해 + 느려짐(T.slow) · 8차시 어둠은 그대로(피해 0)
   mirror: { name: '거울빛', mul: 0, aoe: true, warn: 3, special: 'mirror' },
   bind: { name: '속박', mul: 0, status: 'stun' },
   scale: { name: '저울', mul: 1, status: 'slow', special: 'scale' }, // 기울면 단일(그 쪽 용사) · 수평이면 광역

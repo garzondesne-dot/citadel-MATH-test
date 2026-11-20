@@ -31,7 +31,7 @@ describe('ATB 엔진', () => {
     full(S, 0); attack(S, 0, 'crit'); expect(S.heroes[0]!.atb).toBeCloseTo(0.2);
   });
   it('⚡ 충전 (Y1) = 원문항을 통째로 끝내야 · 퍼펙트 2 · 재시도 1 · 최대 3 · 소문항 정답만으론 0', () => {
-    const S = fresh(), h = S.heroes[0]!;
+    const S = fresh(), h = S.heroes[0]!; expect(h.ch).toBe(T.chargeStart); h.ch = 0; // 📜 요청 #6 ③ 판 시작 = 1칸
     earn(S, 0, right); expect(h.ch).toBe(0);
     earn(S, 0, doneP); expect(h.ch).toBe(T.charge.perfect); earn(S, 0, doneR); expect(h.ch).toBe(3); earn(S, 0, doneP); expect(h.ch).toBe(T.charge.max);
   });
@@ -57,7 +57,7 @@ describe('ATB 엔진', () => {
     expect(S.shieldUp).toBe(true); expect(S.cells.map((c) => c.fam)).toEqual(['arms', 'mystic', 'mystic', 'wisdom']);
     const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok'); expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.3));
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
-    expect(canBreak(S, 0)).toBe(null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
+    S.heroes[0]!.ch = 0; expect(canBreak(S, 0)).toBe(null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
     full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 자기 칸 + 친구 칸
     expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(T.charge.retry - 1); // 보호막 부수기 = 충전 1 (Y2 · 재시도 = 2칸)
   });

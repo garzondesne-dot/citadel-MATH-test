@@ -46,7 +46,7 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
     t: 0, diff: o.diff, boss: o.boss, seed: o.seed ?? 1, rnd: o.seed ?? 1,
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false, nextAtk: null, tilt: '', mirrorUntil: 0, breathWarn: null, breathNext: 0,
     shieldUp: false, shieldAt: 0, cells: [], weakUntil: 0, guard: false, stoneUntil: 0,
-    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, ch: 0, down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, auraUsed: false, atbBonus: 0, stunKind: '', log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
+    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, ch: T.chargeStart, down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, auraUsed: false, atbBonus: 0, stunKind: '', log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
     revives: T.revives, ev: [], evN: 0, end: null, healN: -1,
     rec: { subSec: [], timing: { n: 0, ok: 0, crit: 0 }, skills: {}, charges: 0, downs: 0, revives: 0, lastAns: o.party.map(() => 0) },
   };
