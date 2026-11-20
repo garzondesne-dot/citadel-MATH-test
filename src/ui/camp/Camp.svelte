@@ -328,7 +328,7 @@
   let stageEl = $state<HTMLDivElement | null>(null), stW = $state(0), stH = $state(0);
   type Fx = { id: number; x: number; y: number; k: string };
   let fxs = $state<Fx[]>([]), poked = $state<Record<string, boolean>>({}), fxN = 0;
-  const SND: Record<string, string> = { scare: 'dummy-hit', mail: 'mail', castle: 'castle-open', anvil: 'spark', dummy: 'board', tent: 'page', tentdeco: 'wind', gate: 'magic', fire: 'fire', tree: 'wind', shroom: 'star', moon: 'star', fly: 'star' };
+  const SND: Record<string, string> = { scare: 'dummy-hit', mail: 'mail', castle: 'castle-open', anvil: 'spark', dummy: 'board', tent: 'ink' /* 🔊 11/20 옛 'page' = 없는 이름이라 소리 없었음 */, tentdeco: 'wind', gate: 'magic', fire: 'fire', tree: 'wind', shroom: 'star', moon: 'star', fly: 'star' };
   const FXK: Record<string, string> = { fire: 'spark', anvil: 'spark', castle: 'bell', gate: 'glow', tree: 'leaf', shroom: 'glow', moon: 'twinkle', fly: 'fly' };
   const ptOf = (e?: Event): [number, number] | null => { const r = stageEl?.getBoundingClientRect(), m = e as MouseEvent | undefined; if (!r || !m || m.clientX == null || !r.width) return null; return [((m.clientX - r.left) / r.width) * 100, ((m.clientY - r.top) / r.height) * 100]; };
   function poke(k: string, e?: Event) {
@@ -422,6 +422,8 @@
     sheet = id;
   }
 
+  /** 🔊 📜 2026-11-20 소리 없던 곳: 용사 카드 · 사다리 칸 · 「… 열기」 단추 = 누름 소리 */
+  const heroTap = () => { sfx('click', 0.5); tap('hero'); };
   // 💎 얻는 길 빨간 점 = 지금 받을 수 있는 곳 (이름표 빨간 숫자와 같은 출처)
   const earnDots = $derived<Record<string, boolean>>({ chal: chalN > 0, scare: !!todoN.scare, castle: !!todoN.castle, board: !!todoN.dummy, raid: open && !trial, mail: mailN > 0 });
   const earnOff = $derived([...(feat('citadel') ? [] : ['castle']), ...(feat('scarecrow') && !trial ? [] : ['scare']), ...(feat('board') && !trial ? [] : ['board']), ...(trial ? ['mail', 'chest'] : [])]);
@@ -525,7 +527,7 @@
     <div class="top">
       {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
       <!-- 💎 · 📜 알약 (📜 2026-11-20 선생님 「마정석 누르면 … 마정석 구할 수 있는 루트 알려 주는 창」): 💎 = 💎 얻는 길 · 📜 = 📜 얻는 길 · 그림 = 우리 아이콘 글꼴(Dungeon Icons) · 내 용사 = 아래 카드 -->
-      <span class="pill tap2" data-k="wallet"><button type="button" class="pv" data-k="wallet-gem" aria-label="마정석 {me.wallet.gem}개 · 얻는 길 보기" onclick={() => (sheet = 'earn-gem')}><i class="wic" aria-hidden="true">💎</i>{me.wallet.gem.toLocaleString()}</button><i class="psep" aria-hidden="true"></i><button type="button" class="pv" data-k="wallet-scroll" aria-label="서술 조각 {me.wallet.scroll}개 · 얻는 길 보기" onclick={() => (sheet = 'earn-scroll')}><i class="wic" aria-hidden="true">📜</i>{me.wallet.scroll}</button></span>
+      <span class="pill tap2" data-k="wallet"><button type="button" class="pv" data-k="wallet-gem" aria-label="마정석 {me.wallet.gem}개 · 얻는 길 보기" onclick={() => { sfx('star', 0.6); sheet = 'earn-gem'; }}><i class="wic" aria-hidden="true">💎</i>{me.wallet.gem.toLocaleString()}</button><i class="psep" aria-hidden="true"></i><button type="button" class="pv" data-k="wallet-scroll" aria-label="서술 조각 {me.wallet.scroll}개 · 얻는 길 보기" onclick={() => { sfx('scroll', 0.6); sheet = 'earn-scroll'; }}><i class="wic" aria-hidden="true">📜</i>{me.wallet.scroll}</button></span>
       <!-- 🏆 #73 위 막대 도전과제 단추 없앰 → ⛺ 기록 텐트 -->
       {#if fromMe0 && !tvMode}<button type="button" class="asstu" class:on={asStu} data-k="as-stu" aria-pressed={asStu} aria-label="학생 화면으로 보기" title="학생 화면으로 보기" onclick={() => { asStu = !asStu; tPanel = ''; }}>{asStu ? '👩‍🏫 교사' : '🧑‍🎓 학생'}</button>{/if}
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
@@ -538,7 +540,7 @@
 
   <section class="info">
     {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svNo}차시 · 3분 · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
-    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={() => tap('hero')} aria-label="내 용사 보기">
+    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={heroTap} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b></span>
@@ -548,7 +550,7 @@
     </button>
     <div class="ladder" role="group" aria-label="스킬 사다리">
       {#each ladderRows as r (r.id)}
-        <button type="button" class="rung {r.state}" onclick={() => tap('hero')} aria-label="{TIER_NAMES[r.tier]} {r.name} {r.state === 'equip' ? '장착' : r.state === 'own' ? '가짐' : r.state === 'buy' ? `살 수 있음 💎 ${r.gem}` : `잠김 ${r.why ?? ''}`}">
+        <button type="button" class="rung {r.state}" onclick={heroTap} aria-label="{TIER_NAMES[r.tier]} {r.name} {r.state === 'equip' ? '장착' : r.state === 'own' ? '가짐' : r.state === 'buy' ? `살 수 있음 💎 ${r.gem}` : `잠김 ${r.why ?? ''}`}">
           <b>{(TIER_NAMES[r.tier] ?? '').split(' ')[0]}{#if r.state === 'lock'}<i class="rlk" aria-hidden="true">🔒</i>{/if}</b>
           <span>{r.name.replace(/^\S+ /, '')}</span>
           <small>{r.state === 'equip' ? '장착' : r.state === 'own' ? '✔' : `💎${r.gem}${r.scroll ? ` 📜${r.scroll}` : ''}`}</small>
@@ -556,11 +558,11 @@
         </button>
       {/each}
     </div>
-    {#if nextBuy}<button type="button" class="nextbtn" data-k="next-buy" onclick={() => tap('hero')}><b>{(TIER_NAMES[nextBuy.tier] ?? '').split(' ')[0]}</b> {nextBuy.name.replace(/^\S+ /, '')} 열기 <span class="nv">💎 {nextBuy.gem}{#if nextBuy.scroll} · 📜 {nextBuy.scroll}{/if}</span><i aria-hidden="true">›</i></button>{:else}<p class="next">{nextLine}</p>{/if}{/if}<!-- 📜 2026-11-20 시안: 살 수 있는 다음 칸 = 테두리 단추 (누르면 내 용사) -->
+    {#if nextBuy}<button type="button" class="nextbtn" data-k="next-buy" onclick={heroTap}><b>{(TIER_NAMES[nextBuy.tier] ?? '').split(' ')[0]}</b> {nextBuy.name.replace(/^\S+ /, '')} 열기 <span class="nv">💎 {nextBuy.gem}{#if nextBuy.scroll} · 📜 {nextBuy.scroll}{/if}</span><i aria-hidden="true">›</i></button>{:else}<p class="next">{nextLine}</p>{/if}{/if}<!-- 📜 2026-11-20 시안: 살 수 있는 다음 칸 = 테두리 단추 (누르면 내 용사) -->
   </section>
   {/if}
   <BottomAction dock={false} disabled={!open} why="" onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
-    {#snippet right()}{#if !open}<button type="button" class="side codebtn" data-k="code-btn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}<!-- 📜 #62 코드 = 입장 단추 옆 같은 줄(입장 넓게 · 코드 좁게 오른쪽 · 높이 같게) -->
+    {#snippet right()}{#if !open}<button type="button" class="side codebtn" data-k="code-btn" onclick={() => { sfx('click', 0.5); sheet = 'gate'; }}>🚪 코드</button>{/if}{/snippet}<!-- 📜 #62 코드 = 입장 단추 옆 같은 줄(입장 넓게 · 코드 좁게 오른쪽 · 높이 같게) -->
     {#snippet main()}{#if !trial && !open}<span class="shut" data-k="gate-shut"><b>🔒 차시 던전</b><small>수업 대기</small></span>{:else}<span>{trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}</span>{/if}{/snippet}<!-- 📜 2026-11-20 시안: 닫힘 = 「🔒 차시 던전 / 수업 대기」 두 줄 (옛 안내 줄 = 단추 안으로) -->
   </BottomAction>
 </div>
@@ -654,7 +656,7 @@
   <!-- ✏ #75 출제 공방 (책상) -->
   {#await loadQuest() then K}<K.default {S} {me} cls={pupil?.cls ?? ''} num={pupil?.num ?? 0} uid={pupil?.uid ?? 'me'} test={me.test || !pupil} tab={questTab} claim={chalClaim} onclose={() => { sheet = null; questTab = 'up'; }} />{/await}
 {:else if sheet === 'earn-gem' || sheet === 'earn-scroll'}
-  <EarnSheet kind={sheet === 'earn-gem' ? 'gem' : 'scroll'} have={sheet === 'earn-gem' ? me.wallet.gem : me.wallet.scroll} today={Number(me.wallet.day?.[kstDay(Date.now())]) || 0} dots={earnDots} off={earnOff} onpick={(go) => { sheet = null; tap(go); }} onclose={() => (sheet = null)} />
+  <EarnSheet kind={sheet === 'earn-gem' ? 'gem' : 'scroll'} have={sheet === 'earn-gem' ? me.wallet.gem : me.wallet.scroll} today={Number(me.wallet.day?.[kstDay(Date.now())]) || 0} dots={earnDots} off={earnOff} onpick={(go) => { sfx(SND[go] ?? 'click', 0.6); sheet = null; tap(go); }} onclose={() => { sfx('click', 0.4); sheet = null; }} />
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} teacher={fromMe0} onreset={fromMe0 ? M.reset : undefined} />
 {:else if sheet}
