@@ -10,7 +10,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await p.goto(B + '?role=camp&room=NX'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(2000);
   await p.evaluate(() => { const m = JSON.parse(localStorage.getItem('citadel-v1-me') || '{}'); Object.assign(m, { hero: 18, enh: 0, title: 'none', socket: { 18: 'shade' }, test: true, seen: { ...(m.seen || {}), hero: true }, wallet: { gem: 9999, scroll: 30, ver: 1, buys: [{ id: 'hero_18', ver: 1, at: 1 }] } }); localStorage.setItem('citadel-v1-me', JSON.stringify(m)); });
   await p.reload(); await p.waitForSelector('.stage'); await p.waitForTimeout(2500);
-  ok('캠프 = 녹스 v8 시트 · 숨쉬기 v8 · 빛 띠를 받음', ['hero-dknight-idle8-v8.webp', 'hero-dknight-idle8-glow-v8.webp'].every((f) => req.includes(f)), req.filter((u) => /dknight/.test(u)).join(' '));
+  ok('캠프 = 녹스 v8 시트 · 숨쉬기 v8 · 빛 띠를 받음', ['hero-dknight-idle8-v8b.webp', 'hero-dknight-idle8-glow-v8.webp'].every((f) => req.includes(f)), req.filter((u) => /dknight/.test(u)).join(' '));
   const n = await p.$$eval('.hero-card [data-k="hero-glow"]', (x) => x.length); ok('캠프 카드 = 빛 칸 하나', n === 1, String(n));
   const ops = []; for (let i = 0; i < 8; i++) { ops.push(await p.$eval('.hero-card [data-k="hero-glow"]', (e) => +getComputedStyle(e).opacity).catch(() => -1)); await p.waitForTimeout(150); }
   ok('빛 = 켜졌다 꺼짐 (1.2초 주기)', Math.max(...ops) > 0.7 && Math.min(...ops) < 0.3, ops.map((x) => x.toFixed(2)).join(' '));
