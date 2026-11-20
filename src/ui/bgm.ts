@@ -13,7 +13,7 @@ const ONCE = ['win'];
 type El = (HTMLAudioElement | WebTrack) & { _k?: string; _fade?: number };
 const slot: { phone: string | null; tv: string | null } = { phone: null, tv: null };
 const hold: Record<string, 1> = {};
-let cur: El | null = null, scale = 1, scaleT = 1, tick: ReturnType<typeof setInterval> | 0 = 0, winDone = '';
+let cur: El | null = null, fadeMs = 800, scale = 1, scaleT = 1, tick: ReturnType<typeof setInterval> | 0 = 0, winDone = '';
 
 const hidden = () => typeof document !== 'undefined' && document.hidden;
 function want(): string | null {
@@ -47,13 +47,14 @@ function apply(): void {
   const k = want();
   if (k && ONCE.includes(k) && winDone === k && !cur) return; // 🎉 승리 = 한 번만
   if (cur && cur._k === k) { if (cur.paused) void cur.play().catch(() => {}); fade(cur, vol(), 400); return; }
-  const old = cur; cur = null; if (old) fade(old, 0, 800, () => old.pause());
+  const old = cur; cur = null; if (old) fade(old, 0, fadeMs, () => old.pause());
   if (!k) return;
-  winDone = ''; cur = start(k); if (cur) fade(cur, vol(), 800);
+  winDone = ''; cur = start(k); if (cur) fade(cur, vol(), fadeMs);
 }
 
 /** where = 'phone' | 'tv' · k = 곡 자리(null = 없음) · scale = 🎚 전투 음량(0 ~ 1 · 없으면 1) */
-export function bgm(k: string | null, where: 'phone' | 'tv' = 'phone', opt: { scale?: number } = {}): void {
+export function bgm(k: string | null, where: 'phone' | 'tv' = 'phone', opt: { scale?: number; /** 곡 바꿈 교차 시간(ms · 없으면 0.8초) */ fadeMs?: number } = {}): void {
+  fadeMs = opt.fadeMs ?? 800;
   const w = k || null, sc = opt.scale != null ? Math.max(0, Math.min(1, opt.scale)) : 1;
   if (slot[where] !== w) { slot[where] = w; if (sc !== scaleT) { scaleT = sc; scale = sc; } later(); }
   if (sc !== scaleT) { // 체력이 바뀌면 부드럽게

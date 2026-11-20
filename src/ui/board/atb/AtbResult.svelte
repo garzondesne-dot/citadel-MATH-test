@@ -22,7 +22,7 @@
     <h2 class:win>{win ? '승리!' : '아쉬워요'}<small>{win ? `${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초` : S.end?.why}</small></h2>
     <div class="party">
       {#each S.heroes as h (h.id)}
-        <div class="hp"><HeroSprite id={lookOfStats(h.s)} aura={h.s.enh} scale={S.heroes.length > 2 ? 1.5 : 2} row={win ? 0 : 8} play={win} /><span class="chip"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if h.log.shields}<AtbIcon name="shield-broken" size={16} />{/if} {did(h)}</small></span></div>
+        <div class="hp"><span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={S.heroes.length > 2 ? 1.5 : 2} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={S.heroes.length > 2 ? 1.5 : 2} row={win ? 0 : 8} play={win} /></span></span><span class="chip"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if h.log.shields}<AtbIcon name="shield-broken" size={16} />{/if} {did(h)}</small></span></div>
       {/each}
     </div>
   </div>
@@ -44,9 +44,9 @@
 <style>
   .rs { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 36%); grid-template-rows: 1fr auto; gap: 2% 2%; padding: 2.5% 2%; box-sizing: border-box; background: radial-gradient(ellipse at 30% 30%, #4a2a5a, #140c1c); color: #fff; font-family: var(--font); }
   .left { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4%; min-height: 0; }
-  h2 { margin: 0; padding: 4px 34px; border-radius: 14px; border: 3px solid #e2b04a; background: linear-gradient(#a8261e, #6a1010); font: 900 clamp(24px, 9vh, 46px) var(--font); text-align: center; text-shadow: 0 3px 0 #3a0a0a; }
+  h2 { position: relative; z-index: 3; margin: 0; padding: 4px 34px; border-radius: 14px; border: 3px solid #e2b04a; background: linear-gradient(#a8261e, #6a1010); font: 900 clamp(24px, 9vh, 46px) var(--font); text-align: center; text-shadow: 0 3px 0 #3a0a0a; }
   h2.win { color: #ffe27a; } h2 small { display: block; font: 700 13px var(--font-plain); color: #fff; }
-  .party { display: flex; gap: 2%; justify-content: center; width: 100%; min-width: 0; overflow: hidden; }
+  .party { display: flex; gap: 2%; justify-content: center; width: 100%; min-width: 0; overflow-x: clip; overflow-y: visible; }
   .hp { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; flex: 1; max-width: 160px; }
   .chip { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 4px; border-radius: 8px; border: 2px solid #8a6a3a; background: #1d1220e6; text-align: center; }
   .chip b { font: 800 13px var(--font-plain); } .chip small { font: 600 11px var(--font-plain); color: #ffe6b0; display: flex; align-items: center; gap: 2px; flex-wrap: wrap; justify-content: center; }
@@ -63,4 +63,6 @@
   .btns { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2%; }
   .b { min-height: 52px; border-radius: 12px; border: 3px solid #8a6a3a; background: linear-gradient(#5a3f2a, #3a2618); color: #fff2d6; font: 800 clamp(14px, 5vh, 22px) var(--font); box-shadow: 0 4px 0 #1a100a; }
   .b.gold { border-color: #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; }
+  /* 🌟 전용 오라 = 몸 뒤 (요청 #20 ④) */
+  .hw { position: relative; display: inline-block; } .aul { position: absolute; left: 0; top: 0; z-index: 0; } .aul :global(.hs > i) { visibility: hidden; } .bod { position: relative; z-index: 1; display: inline-block; }
 </style>

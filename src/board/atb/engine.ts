@@ -171,20 +171,18 @@ export function skillList(S: State, who: number): { k: SkillK; cost: number; ok:
   const h = S.heroes[who]; if (!h) return [];
   const r = ready(h, S), C = T.cost, out: { k: SkillK; cost: number; ok: boolean }[] = [];
   const add = (k: SkillK, show: boolean, ok: boolean) => { if (show) out.push({ k, cost: C[k], ok: r && h.ch >= C[k] && ok }); };
-  add('shield', S.shieldUp && S.cells.some((c) => !c.broken), !!canBreak(S, who));
+  // 📜 요청 #19 스킬 줄이기: ⚡ 내 스킬(장착 · 실드가 뜨면 내 실드 칸도 깸) · 역할 · 🌟 비장(각성이면 각성 · 아니고 +10 이면 홀리 방패) · 💖 부활(그때만)
   add('equip', true, true);
-  add('tier4', h.s.tier >= 4, true);
   add('role', true, !(h.s.role === 'healer' && healBlocked(S)));
-  add('aura', h.s.aura && !h.auraUsed, true);
-  add('awk', h.s.awk && !h.awkUsed, true);
+  if (h.s.awk) add('awk', !h.awkUsed, true); else add('aura', h.s.aura && !h.auraUsed, true);
   add('revive', S.heroes.some((x) => x.down && x.id !== who), S.revives > 0);
   return out;
 }
-export const canSkill = (S: State, who: number, k: SkillK) => !!skillList(S, who).find((x) => x.k === k)?.ok;
+export const canSkill = (S: State, who: number, k: SkillK) => (k === 'shield' ? !!canBreak(S, who) && ready(S.heroes[who]!, S) : !!skillList(S, who).find((x) => x.k === k)?.ok);
 /** 💠 스킬 쓰기 (고르면 바로 발동 · Y3) · to = 역할(엄호 · 격려) · 부활 대상 */
 export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean {
   const h = S.heroes[who]; if (!h || !canSkill(S, who, k)) return false;
-  if (k === 'shield') return breakShield(S, who);
+  if (k === 'shield' || (k === 'equip' && canBreak(S, who))) return breakShield(S, who); // ⚡ 내 스킬 = 실드가 떠 있으면 실드 칸 깸
   if (k === 'role') return roleAct(S, who, to);
   if (k === 'revive') { const f = to != null && S.heroes[to]?.down ? to : S.heroes.find((x) => x.down && x.id !== who)?.id; return f != null && revive(S, who, f); }
   S.rec.skills[k] = (S.rec.skills[k] ?? 0) + 1;
