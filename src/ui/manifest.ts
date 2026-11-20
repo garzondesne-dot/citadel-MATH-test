@@ -49,7 +49,7 @@ export const DUNGEONS: Record<string, string> = {
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;
 
 // 용사 (정식 heroesV2 · 칸 80 × 64 · 4열 × 12줄 · 0줄 = idle · 2줄 = 공격 · 8줄 = 앉기) — b7: 31명 (그림 파일 이름 = hero-data.json sprite)
-import { heroOf, PORTRAITS } from '../model/hero';
+import { baseOf, heroOf, PORTRAITS } from '../model/hero';
 import { savedLook } from '../store/me.svelte';
 export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, sitRow: 8 };
 /** 🎞 용사 모션 표 = 정식 assets/manifest.js anims 그대로 (📜 2026-11-14 머리 🔨 「용사 공격할 때 공격 모션으로 안 나가 · 모션 전부 점검」): [줄, 칸 수, 한 바퀴 초, 한 번만] */
@@ -61,6 +61,7 @@ import BBOX from './sprite-bbox.json';
 { // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
   const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
   B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
+  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v5.webp`, o = `hero-${k}-v5.webp`; B.heroes[a] ??= B.heroes[o]; if (B.heads) B.heads[a] ??= B.heads[o]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
 }
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
@@ -73,6 +74,10 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-sword-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-valkyrie-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-blond-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  // ⚡ #83 각성 시트 (hero-v2 docs/handoff/assets/hero-awaken · v5 와 같은 칸 · 그림이 온 용사만 · 모습 id = 100 + 용사)
+  'hero-dknight-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-paladin-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-valkyrie-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-witch-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-elf-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-ninja-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
@@ -165,7 +170,7 @@ export function monVis(src: string, row: number, col: number, cell: number): num
 /** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */
 export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BASE_URL}art/heroes/${heroOf(id).sprite || 'hero-sword-v3c.webp'}`;
 /** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */
-export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
+export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)] ?? PORTRAITS.list[String(baseOf(id))]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
 
 // 🏕 캠프 v2 (📜 2026-11-18 선생님 시안 · 머리 #71 · 원본 픽셀 1182 × 1330 · 자리표 = hero-v2 docs/handoff/assets/camp2/README)
 //   배경 = 텐트 · 던전 문(횃불) · 성채가 그려진 빈 배경 · 물건 = 투명 그림 한 줄(① 평소 ② 상태 ③~⑥ 누름 반응 4칸 · 텐트 = 평소 + 반응 4칸)

@@ -3,6 +3,7 @@
 //   세 층: 🦴 뼈대(여기에 없음 = 늘 켜짐) · 🧩 추가 기능(이 표 · 스위치 하나) · 📚 과목 팩(필요한 것 = SUBJ 에 그 칸이 있나)
 //   묶음(시작값) = 🪶 기본(뼈대만) · ⚔ 표준 · 🏰 전체 → 고른 뒤 낱낱이 더하고 뺌 · 설정이 없는 서버 = 🏰 전체(우리 학교 그대로)
 //   잠김 = 켜 놓았어도 「필요한 것」이 없으면 꺼진 것과 같이(화면에서 통째로 사라짐) + 채우는 길 한 줄
+import { setCraftOn } from '../model/hero';
 import type { Store } from '../model/types';
 import { applyRd, RD_PATH, type RdCfg } from './rdunCfg';
 import { SUBJ } from '../engine/subject';
@@ -103,6 +104,7 @@ export const setFeatCfg = (c: FeatCfg | null) => { cfg = c; };
 export const featCfg = () => cfg ?? DEFAULT_CFG;
 /** 🧩 이 기능이 지금 쓰이나 (켬 + 필요한 것 있음) — 꺼지면 화면에서 통째로 사라짐 */
 export function feat(id: FeatId): boolean { return stateOf(store, cfg, id) === 'on'; }
+setCraftOn(() => feat('forge')); // ⚡ #83 모루가 꺼진 판 = ⚒ 연성 칭호 용사 각성 막음
 /** 교사 화면: 묶음 고르기 (낱낱 스위치는 지움) · 낱낱 켬/끔 */
 export function saveBundle(S: Store, b: BundleId) { S.set(PATH, { bundle: b }); }
 export function saveOne(S: Store, id: FeatId, on: boolean) { const c = S.get<FeatCfg>(PATH) ?? DEFAULT_CFG; S.set(PATH, { bundle: c.bundle, on: { ...(c.on || {}), [id]: on } }); }

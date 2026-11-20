@@ -7,7 +7,7 @@
   import { untrack } from 'svelte';
   import { sfx } from '../sound.svelte';
   import type { Room, Store } from '../../model/types';
-  import { HEROES, heroOf } from '../../model/hero';
+  import { baseOf, HEROES, heroOf } from '../../model/hero';
   import { emptyPlan, ownsHero } from '../../model/draft';
   import { useMe } from '../../store/me.svelte';
   import Sheet from '../battle/Sheet.svelte';
@@ -33,7 +33,7 @@
   const cd = $derived(f?.phase === 'play' ? Math.ceil((f.t0 - now) / 1000) : 0);
   $effect(() => { if (cd >= 2 && f?.g != null) { const g = f.g; untrack(() => { if (cdSnd !== g) { cdSnd = g; sfx('countdown', 0.8); } }); } }); // 🔊 2차 ⏱ 3 · 2 · 1 (베타만 · 디펜스 시작 카운트가 뜰 때 한 번)
   const tdm = $derived((((R as any).tdm || {})[f?.g] || {}) as Record<string, { sw?: string; no?: string; hero?: number; swd?: number }>);
-  const myHero = $derived.by(() => { const v = Number(R.players?.[uid]?.hero) || 0, h = tdm[uid]?.hero != null ? Number(tdm[uid]!.hero) : v; return h === 0 && v === 16 ? 16 : h; }); // 🌟 #29 로안을 골랐고 각성 모습이면 금발
+  const myHero = $derived.by(() => { const v = Number(R.players?.[uid]?.hero) || 0, h = tdm[uid]?.hero != null ? Number(tdm[uid]!.hero) : v; return baseOf(v) === h ? v : h; }); // 🌟 #29 로안을 골랐고 각성 모습이면 금발
   const ranged = $derived(!!heroOf(myHero).ranged);
   // 🔁 자리 교환 (정식 1:1): 내 자리가 있으면 친구 자리를 눌러 신청 · 받은 신청 = 수락 / 거절
   const my = $derived(tdm[uid] || {});

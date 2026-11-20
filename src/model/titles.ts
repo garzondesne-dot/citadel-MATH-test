@@ -3,7 +3,7 @@
 //   베타에 아직 없는 것: 📕 오답노트(오답 사냥꾼 = 못 얻음) · 던전 정복 메달(목록에 없음)
 import { EGGS, eggsFound } from '../school/eggs';
 import { SUBJ } from '../engine/subject';
-import { level } from './hero';
+import { AWAKEN_T, AWK_NEED, level } from './hero';
 import { veteranN } from '../school/explore';
 import { PACKS } from '../engine/packs';
 import { fameOf, legendOf, mapLessons, starTotal, starsByNo, STAR_TITLES, type BoardRec } from '../board/goals';
@@ -32,6 +32,16 @@ export function seals(bonus: TitleData['bonus']): string[] {
   return out;
 }
 function photoPass(d: TitleData) { let n = 0; for (const byId of Object.values(d.photo || {})) for (const x of Object.values(isObj(byId) ? byId : {})) if (isObj(x) && (x.status === 'pass' || x.ok === true)) n++; return n; }
+/** 📊 용사 상태창 누적 (정식 camp.js statsOf · 정답률 · 순위 없음 · 쌓이기만) — ⚡ 각성 전용 칭호도 이 값 */
+export function statsOf(d: TitleData): Record<string, number> {
+  const R = Object.values(d.records || {}).filter(isObj), n = (v: unknown) => Number(v) || 0;
+  const tries = Object.values(d.bonus || {}).reduce((a, l) => a + Object.values(isObj(l) ? l : {}).reduce((b, m) => b + n(isObj(m) ? (m as Obj).tries : 0), 0), 0);
+  return {
+    str: R.reduce((a, r) => a + Object.values(isObj(r.conc) ? r.conc : {}).reduce<number>((b, v) => b + n(Array.isArray(v) ? v[0] : 0), 0) + n(r.boss), 0),
+    grit: R.reduce((a, r) => a + n(r.fixed), 0), focus: R.reduce((a, r) => a + n(r.perfects), 0), brave: R.filter((r) => !!r.won).length,
+    explore: tries, craft: Object.keys(isObj(d.cards) ? d.cards : {}).length,
+  };
+}
 const TESTS: Record<string, (d: TitleData) => boolean> = {
   none: () => true,
   dawn: () => true,
@@ -69,6 +79,8 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   dummyfriend: (d) => logKeys(d).includes('chal_review100') || eggsFound(d.bonus).includes('e7'), // 🥚 #74 이스터에그 7 과 같은 칭호 하나
   ...Object.fromEntries(EGGS.filter((e) => e.title.startsWith('egg_')).map((e) => [e.title, (d: TitleData) => eggsFound(d.bonus).includes(e.id)])), // 🥚 #74
   secret: (d) => logKeys(d).includes('chal_eggs'),
+  // ⚡ #83 용사 전용 칭호 30 (기록 하나 ≥ 기준 · 바르코 = 🏆 업적 3 · 소급)
+  ...Object.fromEntries(Object.entries(AWAKEN_T).map(([h, [, k]]) => [`awk_${h}`, (d: TitleData) => (k === 'seals' ? seals(d.bonus).length >= 3 : (statsOf(d)[k] || 0) >= AWK_NEED[k])])),
   explorer: (d) => veteranN((d.bonus as Record<string, unknown> | undefined)?.review as Record<string, unknown>) >= 3, // 🔥 #67 노련한 탐험가 = 예습 3개 차시(차시마다 처치 2+)
 };
 /** 얻은 호칭 id (got = 화면이 따로 아는 것 · 예: 💚 구조대 rescuer) */

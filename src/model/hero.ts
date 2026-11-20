@@ -9,22 +9,69 @@ export type HeroInfo = (typeof DATA.heroes)[number];
 export const HEROES: HeroInfo[] = DATA.heroes.filter((h) => !(h as { teacher?: boolean }).teacher);
 /** 👩‍🏫 선생님 전용 용사 (현자 7 · 수학자 17 · 📜 2026-11-13 밤 교사 B안 = 교사 로그인에서만 · 모두 열림) */
 export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teacher?: boolean }).teacher);
-/** 🌟 각성한 로안 = 보이는 모습만 (📜 2026-11-17 선생님 「각성한 로안 다시 부활 · 로안장착 +10강 4쌍월참 으로 기준」 · 머리 🔨 #29)
- *   조건 4 = 출전 용사 로안(0) · 🔨 강화 +10 이상 · ⚔ 쌍월 참(twin) 장착 · 🏅 호칭 「만 번째 베기」(slash10k) 장착 → 금발 모습 16 · 하나라도 빠지면 로안
- *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 로안) · 고르는 칸 아님(HEROES 에 없음) · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것 */
-export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin', title: 'slash10k' } as const; // 📜 11/17 선생님 「만번째베기 넣어줘」 = 조건 4
+/** ⚡ 용사별 각성 (📜 2026-11-20 선생님 · 메타인지 8 🔨 #83 · 옛 🌟 각성한 로안 #29 규칙을 30명에게)
+ *   조건 4 = 그 용사 출전 · 🔨 강화 +10 이상 · 그 속성 Ⅳ 스킬(사다리 4번째) 장착 · 그 용사 전용 칭호 장착 → 각성 모습 · 하나라도 빠지면 원래 모습
+ *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 원래 용사) · 고르는 칸 아님 · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것
+ *   모습 id = 로안 16(옛 판 기록 그대로) · 나머지 100 + 용사 번호 · 각성 그림이 없는 용사 = 그림만 원래 것(이름 · 컷인 · 스킬 연출은 각성) */
+export type StatKey = 'str' | 'grit' | 'focus' | 'brave' | 'explore' | 'craft';
+/** 🏅 전용 칭호 기준 (손발 테스트 #1 운영 읽기 · 상위 약 20% · DECISIONS 11/20) — 바꾸면 이 표만 */
+export const AWK_NEED: Record<StatKey, number> = { str: 170, grit: 35, focus: 20, brave: 7, explore: 30, craft: 20 };
+export const STAT_LABEL: Record<StatKey, string> = { str: '⚔ 힘', grit: '🛡 끈기', focus: '🎯 집중', brave: '👑 용기', explore: '🧭 탐험', craft: '⚒ 연성' };
+/** 용사 → [전용 칭호 이름, 기록] (hero-v2 docs/handoff/awaken-titles-draft.md 그대로 · 로안 = 만 번째 베기 · 바르코 = 🏆 업적 3) */
+export const AWAKEN_T: Record<number, [string, StatKey | 'seals']> = {
+  1: ['밤을 읽는 마녀', 'focus'], 2: ['빗나가지 않는 화살', 'focus'], 3: ['그림자 걸음', 'explore'], 4: ['꺼지지 않는 등불', 'grit'],
+  5: ['천 번 찌른 창', 'str'], 6: ['무너지지 않는 산', 'grit'], 8: ['맹세를 지킨 방패', 'brave'], 9: ['주먹 하나의 왕', 'str'],
+  10: ['춤추는 칼날', 'focus'], 11: ['노래가 된 카드', 'craft'], 12: ['실패를 금으로', 'grit'], 13: ['일곱 바다의 선장', 'seals'],
+  14: ['얼어붙은 시간', 'focus'], 15: ['야수와 맺은 약속', 'craft'], 18: ['혈월의 기사', 'brave'], 19: ['증명하는 자', 'grit'],
+  20: ['x 를 찾은 자', 'explore'], 21: ['멈추지 않는 엔진', 'explore'], 22: ['방화벽을 뚫은 자', 'focus'], 23: ['용을 길들인 자', 'brave'],
+  24: ['번개를 벤 검', 'str'], 25: ['쓰러져도 일어서는 자', 'grit'], 26: ['숲의 사냥꾼', 'explore'], 27: ['셈의 달인', 'focus'],
+  28: ['완벽한 원', 'explore'], 29: ['황금 저울', 'craft'], 30: ['하늘의 눈', 'explore'], 31: ['전장의 날개', 'brave'],
+  32: ['정령의 친구', 'str'], 33: ['별이 가리킨 길', 'grit'],
+};
+/** 전용 칭호 id (로안 = slash10k) */
+export const awkTitle = (hero: number) => (hero === 0 ? 'slash10k' : AWAKEN_T[hero] ? `awk_${hero}` : null);
+export const AWK_TITLES = Object.entries(AWAKEN_T).map(([h, [name, k]]) => ({ id: `awk_${h}`, name, tier: 'o' as const, cond: k === 'seals' ? '🏆 업적 3개' : `${STAT_LABEL[k]} ${AWK_NEED[k]}`, hero: Number(h) }));
+/** 🖼 각성 그림이 있는 용사 (그림이 없으면 원래 그림 · 📜 11/20 「선생님 GPT 시트 30명이 끝날 때까지 정식 배포 대기」) */
+export const AWK_ART: Record<number, string> = { 0: 'hero-blond-v5.webp', 18: 'hero-dknight-awk-v5.webp', 8: 'hero-paladin-awk-v5.webp', 31: 'hero-valkyrie-awk-v5.webp' };
+/** 🚫 이 판에서 칭호를 얻을 수 없는 기록 (학교판 모루 끔 = ⚒ 연성 · features 가 알려 줌 · 📜 11/20 「그 용사 각성 막음」) */
+let craftOn: () => boolean = () => true;
+export const setCraftOn = (f: () => boolean) => { craftOn = f; };
+export const awakenBlocked = (hero: number) => AWAKEN_T[hero]?.[1] === 'craft' && !craftOn();
+export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin', title: 'slash10k' } as const; // 📜 11/17 옛 🌟 각성한 로안 (모습 id 16 은 그대로)
+export const AWK_ENH = 10;
 export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null; title?: string | null };
-export const blondChecks = (p: LookIn) => [
-  { k: 'hero', t: '로안 출전', ok: Number(p.hero) === BLOND.base },
-  { k: 'enh', t: `🔨 강화 +${BLOND.enh}`, ok: (Number(p.enh) || 0) >= BLOND.enh },
-  { k: 'fx', t: '⚔ 쌍월 참 장착', ok: p.fx === BLOND.fx },
-  { k: 'title', t: '🏅 호칭 「만 번째 베기」 장착', ok: p.title === BLOND.title },
-];
-export const isBlond = (p: LookIn) => blondChecks(p).every((c) => c.ok);
-/** 보이는 모습 id (조건이 맞으면 16 · 아니면 고른 용사) */
-export const lookId = (p: LookIn) => (isBlond(p) ? BLOND.to : Number(p.hero) || 0);
-const BLOND_INFO = (() => { const r = DATA.heroes.find((h) => h.id === 0) as HeroInfo; return { ...r, id: 16, name: '각성한 로안', nick: '만 번을 넘은 검', sprite: 'hero-blond-v5.webp', price: null } as unknown as HeroInfo; })();
-export const heroOf = (id: number): HeroInfo => (id === BLOND.to ? BLOND_INFO : DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo));
+/** 각성 모습 id (그 용사가 각성했을 때) */
+export const awkId = (hero: number) => (hero === 0 ? BLOND.to : 100 + hero);
+/** 모습 id → 원래 용사 (각성 아니면 그대로) */
+export const baseOf = (id: number) => (id === BLOND.to ? 0 : id >= 100 && AWAKEN_T[id - 100] ? id - 100 : id);
+export const isAwkId = (id: number) => id === BLOND.to || (id >= 100 && !!AWAKEN_T[id - 100]);
+/** 용사 hero 의 각성 조건 4칸 (p = 지금 모습 · hero 를 안 주면 p.hero) */
+export const awakenChecks = (p: LookIn, hero: number = Number(p.hero) || 0) => {
+  const fx = (famOfHero(hero).ids[3]) as string, t = awkTitle(hero);
+  return [
+    { k: 'hero', t: `${heroOf(hero).name} 출전`, ok: Number(p.hero) === hero },
+    { k: 'enh', t: `🔨 강화 +${AWK_ENH}`, ok: (Number(p.enh) || 0) >= AWK_ENH },
+    { k: 'fx', t: `⚔ ${skillName(fx)} 장착`, ok: p.fx === fx },
+    { k: 'title', t: `🏅 호칭 「${(t && titleOf(t)?.name) || '?'}」 장착`, ok: !!t && p.title === t },
+  ];
+};
+export const isAwakened = (p: LookIn) => { const h = Number(p.hero) || 0; return !!awkTitle(h) && !awakenBlocked(h) && awakenChecks(p, h).every((c) => c.ok); };
+/** 옛 이름 (로안 칸) */
+export const blondChecks = (p: LookIn) => awakenChecks(p, 0);
+export const isBlond = (p: LookIn) => Number(p.hero) === 0 && isAwakened(p);
+/** 보이는 모습 id (조건이 맞으면 각성 id · 아니면 고른 용사) */
+export const lookId = (p: LookIn) => { const h = Number(p.hero) || 0; return isAwakened(p) ? awkId(h) : h; };
+const AWK_INFO = new Map<number, HeroInfo>();
+function awkInfo(id: number): HeroInfo {
+  let v = AWK_INFO.get(id);
+  if (!v) {
+    const b = baseOf(id), r = DATA.heroes.find((h) => h.id === b) as HeroInfo;
+    v = { ...r, id, name: `각성한 ${r.name}`, nick: b === 0 ? '만 번을 넘은 검' : AWAKEN_T[b]![0], sprite: AWK_ART[b] || r.sprite, price: null } as unknown as HeroInfo;
+    AWK_INFO.set(id, v);
+  }
+  return v;
+}
+export const heroOf = (id: number): HeroInfo => (isAwkId(id) ? awkInfo(id) : DATA.heroes.find((h) => h.id === id) ?? (HEROES[0] as HeroInfo));
 export const TIER_NAMES = ['Ⅰ 기본', 'Ⅱ 숙련', 'Ⅲ 화려', 'Ⅳ 전설'];
 export const TN = ['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'];
 export const FAMS: { id: string; name: string; ids: string[] }[] = DATA.fams;
@@ -35,7 +82,7 @@ export const SKILL_PRICE: Record<string, number> = Object.fromEntries(Object.ent
 export const SKILL_SCROLL: Record<string, number> = Object.fromEntries(Object.entries(FX).filter(([, v]) => v.scroll).map(([k, v]) => [k, v.scroll]));
 /** 「⚔ 달빛 베기」 → 「달빛 베기」 */
 export const skillName = (id: string) => (SKILL_NAMES[id] ?? id).replace(/^\S+\s/, '');
-export const attrOf = (hero: number) => (DATA.heroes as HeroInfo[]).find((h) => h.id === hero)?.attr ?? 'cut'; // 16 각성한 로안 = 로안과 같은 ⚔
+export const attrOf = (hero: number) => (DATA.heroes as HeroInfo[]).find((h) => h.id === baseOf(hero))?.attr ?? 'cut'; // 16 각성한 로안 = 로안과 같은 ⚔
 export const famOfHero = (hero: number) => FAMS.find((f) => f.id === attrOf(hero)) ?? (FAMS[0] as (typeof FAMS)[number]);
 /** 🪜 #96: 쓸 수 있는 스킬 = 지금 용사 사다리 4칸(내 속성 Ⅰ~Ⅳ) */
 export const ladder = (hero: number) => famOfHero(hero).ids.slice();
@@ -50,7 +97,9 @@ export const HERO_NAMES: Record<number, { name: string; job: string }> = Object.
 type Title = { id: string; name: string; tier: 'w' | 'b' | 'p' | 'o'; cond: string };
 // 칭호 = 엔진 칭호 + 과목 칭호(SUBJ.titles · after 뒤에 끼움 · #136)
 const BASE_T = DATA.titles as Title[], AT = BASE_T.findIndex((t) => t.id === SUBJ.titles.after) + 1;
-export const TITLES: Title[] = [...BASE_T.slice(0, AT), ...SUBJ.titles.list, ...BASE_T.slice(AT)];
+const T0: Title[] = [...BASE_T.slice(0, AT), ...SUBJ.titles.list, ...BASE_T.slice(AT)], AK = T0.findIndex((t) => t.id === 'slash10k') + 1;
+/** ⚡ 용사 전용 칭호 30 = 「만 번째 베기」 바로 뒤 */
+export const TITLES: Title[] = [...T0.slice(0, AK), ...AWK_TITLES, ...T0.slice(AK)];
 export const titleOf = (id: string) => TITLES.find((t) => t.id === id) ?? null;
 export const STATS = DATA.stats;
 export const PORTRAITS = DATA.portraits as unknown as { src: string; cols: number; rows: number; list: Record<string, [number, number]> };
