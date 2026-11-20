@@ -61,7 +61,7 @@ import BBOX from './sprite-bbox.json';
 { // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
   const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
   B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
-  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v6.webp`, o = `hero-${k}-v6.webp`; B.heroes[a] ??= B.heroes[o]; if (B.heads) B.heads[a] ??= B.heads[o]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
+  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v6.webp`, o = `hero-${k}-v6.webp`; B.heroes[a] ??= B.heroes[o] ?? B.heroes[o.replace('-v6.', '-v6b.')]; if (B.heads) B.heads[a] ??= B.heads[o] ?? B.heads[o.replace('-v6.', '-v6b.')]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
 }
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
@@ -94,14 +94,14 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-frost-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-tamer-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-math-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-dknight-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-dknight-v6b.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mathboy-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mathgirl-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mechanic-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-hacker-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-dragoon-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-spellblade-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-bone-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-bone-v6b.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-crossbow-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-abacus-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-geometry-v6.webp': { cw: 256, ch: 144, k: 2, base: 8 },

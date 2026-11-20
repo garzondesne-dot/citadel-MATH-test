@@ -303,7 +303,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-dknight-v6.webp"
+   "sprite": "hero-dknight-v6b.webp"
   },
   {
    "id": 19,
@@ -429,7 +429,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-bone-v6.webp"
+   "sprite": "hero-bone-v6b.webp"
   },
   {
    "id": 26,

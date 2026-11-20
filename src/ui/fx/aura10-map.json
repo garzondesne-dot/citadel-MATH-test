@@ -101,7 +101,7 @@
   "cell": 160,
   "scale": 1.1
  },
- "hero-dknight-v6.webp": {
+ "hero-dknight-v6b.webp": {
   "src": "aura10-dknight-v1.webp",
   "frames": 8,
   "cell": 160,
@@ -143,7 +143,7 @@
   "cell": 160,
   "scale": 0.9
  },
- "hero-bone-v6.webp": {
+ "hero-bone-v6b.webp": {
   "src": "aura10-bone-v1.webp",
   "frames": 8,
   "cell": 160,
