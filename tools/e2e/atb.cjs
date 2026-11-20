@@ -36,7 +36,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
   ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
-  ok('요청 #10 채점 = 「✨ PERFECT ⚡+3」 · 넘치면 「가득(+n 받음)」', /PERFECT ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
+  ok('요청 #10 채점 = 「🏁 퍼펙트! ⚡+3」 · ○ △ · 넘치면 「가득(+n 받음)」', /퍼펙트! ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
   ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 3 그대로)', ch0 + 3 <= 3 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0))));
   await p.dispatchEvent('[data-k="atb-grade"]', 'click', {}, { timeout: 1000 }).catch(() => {}); await p.waitForTimeout(150); // 도장 연출로 움직이는 중에도 누름(움직임 기다리지 않음)
   ok('요청 #13 충전 가득 = 공격 단추 동그라미 · 스킬 빛(full3)', !!(await p.$('.btns.full3')));
@@ -113,6 +113,14 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-shield-break-844.png` }); await p.waitForTimeout(1500);
   const gone = (await p.$$('[data-k="atb-cells"] .cell2.gone')).length;
   ok('요청 #12 보호막 부수기 = 칸 금 감 · 조각 → 사라짐(한 칸씩)', gone >= 1 && /hold|crack|shatter/.test(mid), `${mid} → 사라짐 ${gone}`);
+  // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
+  for (let i = 0; i < 12 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(120); }
+  await p.waitForTimeout(700);
+  const tri = await p.evaluate(() => ({ t: document.querySelector('[data-k="atb-grade-title"]')?.textContent ?? '', m: [...document.querySelectorAll('[data-k="atb-mark"]')].map((e) => e.dataset.m).join(','), log: globalThis.__sfxLog.slice(-8).join(',') }));
+  ok('채점 △ = 고쳐 맞힌 소문항 △(고침) · 「🏁 완주!」 · △ 소리 부드럽게(ink)', /완주/.test(tri.t) && /^tri/.test(tri.m) && /ink/.test(tri.log) && !/,x/.test(tri.m), JSON.stringify(tri));
+  await p.evaluate(() => globalThis.__atb.skip()); await p.waitForTimeout(300);
   // 🎵 요청 #21 전투 배경음 = 레이드 곡 → 실드 = 보스 곡 · 🎵/🔇 단추 = 소리 설정 같은 값
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(500);
   const bg1 = await p.evaluate(() => globalThis.__bgm().phone);

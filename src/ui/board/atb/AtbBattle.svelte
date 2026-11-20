@@ -93,8 +93,9 @@
   let chgPop = $state('');
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
-    const t1 = 300 + marks.length * 260; // ○ × 하나씩 0.26초
-    gT = [setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450)];
+    const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
+    marks.forEach((m, i) => gT.push(setTimeout(() => { if (grading) sfx(m ? 'correct' : 'ink', m ? 0.35 : 0.3); }, 300 + i * 260)));
+    gT.push(setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450));
   }
   function submit(g: Given) {
     if (!run || grading) return;
@@ -183,15 +184,18 @@
     setTimeout(() => shake(stageEl ?? null, 5, 300), 450);
   }
   /** ⚡ 충전 가득 (📜 요청 #13) = 공격 단추 안 동그라미 · 스킬 단추 빛 · 「가득! 스킬을 써요」 한 번 */
+  // 🔊 📜 요청 #23 효과음 더하기 (있던 파일만) · 30명 교실 = 0.15초 안에 겹치면 하나만
+  let lastSnd = 0;
+  const snd = (k: string, v = 0.6) => { const t = Date.now(); if (t - lastSnd < 150) return; lastSnd = t; sfx(k, v); };
   const fullCh = $derived(!!meH && meH.ch >= T.charge.max);
   let wasFull = false;
-  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) big('⚡ 가득! 스킬을 써요', 'note', 1200); wasFull = f; }); });
+  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) { big('⚡ 가득! 스킬을 써요', 'note', 1200); snd('skill-unlock', 0.6); } wasFull = f; }); });
   /** 🆘 위험 체력 (📜 요청 #18): 30% 아래(T.lowHp) = 체력 막대 · 숫자 빨갛게 깜박 + 머리 위 🆘 · 처음 내려갈 때 한 줄(친구) · 진동(나) · 힐러 💚 · 💖 부활 단추 반짝 */
   const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
   const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
   const anyNeed = $derived(lowIds.some((i) => i !== me) || S.heroes.some((h) => h.down && h.id !== me));
   let wasLow = new Set<number>();
-  $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); } wasLow = now; }); });
+  $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); if (me >= 0) snd('heart-break', 0.55); } wasLow = now; }); });
   /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
   const isWeak = (id: number) => { const h = S.heroes[id]; return !!h && S.boss.weak.includes(h.s.fam); };
   let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false), auraOn = $state(false);
@@ -256,8 +260,8 @@
         if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + T.hitLockMs; lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
       }, 230);
     }
-    else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
-    else if (e.k === 'revive') pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role');
+    else if (e.k === 'role') { pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role'); if (e.role === 'healer') snd('heart-up', 0.6); }
+    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); }
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
@@ -270,6 +274,7 @@
       else if (e.what === 'mirrorOn') pop(bx, 26, '🪞 거울빛', 'shield');
     }
     else if (e.k === 'end' && e.win) bossPose = 'down';
+    else if (e.k === 'end' && !e.win) snd('game-no', 0.7); // 이김 = 승리 곡(#21)이 소리
   }
 
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
@@ -305,6 +310,8 @@
   const atkName = $derived(S.nextAtk ? ATK[S.nextAtk].name : S.aoeNext ? '광역' : '공격');
   /** ⚠ 광역 예고 = 용사 줄 바닥이 붉게 깜빡 (📜 요청 #3 ⑤) */
   const aoeWarn = $derived(!!tele && S.aoeNext);
+  let wasAim = false, wasAoe = false;
+  $effect(() => { const a = meAimed, w = aoeWarn; untrack(() => { if (a && !wasAim) snd('focus', 0.6); else if (w && !wasAoe) snd('countdown', 0.5); wasAim = a; wasAoe = w; }); }); // ⚠ 나를 노려요 · 광역 예고 = 처음 뜰 때 한 번
   const tiltTxt = $derived(S.boss.tele === 'scale' && S.target ? (S.aoeNext ? '⚖ 수평 → 모두' : `⚖ ${S.tilt === 'L' ? '왼쪽' : '오른쪽'}으로 기욺 → ${S.heroes[S.target[0]!]?.s.name ?? ''}`) : '');
   const breathLeft = $derived(S.breathWarn != null ? Math.max(0, Math.ceil(S.breathWarn + SIG.breath.warn - S.t)) : 0);
   const mirrorLeft = $derived(S.t < S.mirrorUntil ? Math.ceil(S.mirrorUntil - S.t) : 0);
@@ -322,7 +329,7 @@
   {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
   <!-- 팀 부활 -->
-  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => setSound({ bgm: !soundPref.bgm })}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
+  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
