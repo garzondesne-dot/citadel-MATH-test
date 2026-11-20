@@ -95,7 +95,7 @@ export const BOSSES: Record<number, BossCfg> = {
   6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '예고 회복', draft: true },
   7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '6차시 이어하기', draft: true },
   8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '거울빛 예고', draft: true },
-  9: { no: 9, name: '역과 대우의 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형', atk: ['basic', 'basic'], signature: '자물쇠', draft: true },
+  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형', atk: ['basic', 'basic'], signature: '자물쇠', draft: true },
   10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['wisdom', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '저울', draft: true },
   11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', atk: ['fog', 'tongue'], shieldDmg: 0.2, signature: '물결' },
 };

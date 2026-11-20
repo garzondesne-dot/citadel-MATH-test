@@ -25,7 +25,7 @@ export interface State {
   t: number; diff: Diff; boss: BossCfg; seed: number; rnd: number;
   bossHp: number; bossMax: number; bossT: number; bossN: number; target: number[] | null; aoeNext: boolean;
   shieldUp: boolean; shieldAt: number; cells: Cell[]; weakUntil: number;
-  heroes: Hero[]; revives: number; ev: Ev[]; end: null | { win: boolean; why: string; t: number };
+  heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
 const rand = (S: State) => { let a = (S.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>> 15), a | 1); a ^= a + Math.imul(a ^ (a >>> 7), a | 61); return ((a ^ (a >>> 14)) >>> 0) / 4294967296; };
@@ -39,10 +39,10 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false,
     shieldUp: false, shieldAt: 0, cells: [], weakUntil: 0,
     heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, zaps: [], down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, healRest: false, atbBonus: 0, log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
-    revives: T.revives, ev: [], end: null,
+    revives: T.revives, ev: [], evN: 0, end: null,
   };
 }
-const push = (S: State, e: Ev) => { S.ev.push(e); if (S.ev.length > 200) S.ev.splice(0, S.ev.length - 200); };
+const push = (S: State, e: Ev) => { S.evN++; S.ev.push({ ...e, n: S.evN }); if (S.ev.length > 200) S.ev.splice(0, S.ev.length - 200); };
 /** 보스가 받는 피해 (실드 중 감소 · 약점 시간 2배 · 실드 · 쓰러진 친구가 있으면 HP 1 에서 멈춤) */
 function hitBoss(S: State, raw: number): number {
   const mul = weak(S) ? T.weakDmg : S.shieldUp && S.cells.some((c) => !c.broken) ? (S.boss.shieldDmg ?? T.shieldDmg) : 1;

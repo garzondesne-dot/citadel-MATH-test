@@ -136,6 +136,7 @@
     </button>
   {/each}
   {#if list.length > 3 && !more}<button type="button" class="lc more" data-k="pack-more" onclick={() => (more = true)}>{list[list.length - 1]?.no}~{list[3]?.no}차시 · {list.length - 3}개 더 ▾</button>{/if}
+  <a class="lc castle" data-k="atb-room-go" href="?role=atb"><span class="t"><b>⚔ 게시판 던전 연습방 (새 판 · ATB)</b><em>올드윈 + 봇 · 봇 관전 · 이 폰만</em></span><span class="tags"><span class="tag">선생님이 3판 해 보고 OK → 학생 판</span></span></a>
   <button type="button" class="lc castle" data-k="castle-go" onclick={() => (tool = 'castle')}><span class="t"><b>🏰 성채 팩</b><em>층 {castles.list.length}개 · 열린 층 {castleOpenN}</em></span><span class="tags"><span class="tag">층 해금 · 보임/숨김 · 내려받기</span></span></button>
   <button type="button" class="lc castle" data-k="prep-go" onclick={() => (tool = 'prep')}><span class="t"><b>🔥 예습(탐사) 열기</b><em>기본 = 수업한 다음 차시 자동</em></span><span class="tags"><span class="tag">반마다 열기 · 닫기</span></span></button>
   <button type="button" class="lc castle" data-k="trash-go" onclick={openBin}><span class="t"><b>🗑 휴지통</b><em>바꾸기 · 빼기 전 판 · {TRASH_DAYS}일 · ↩ 되돌리기</em></span></button>

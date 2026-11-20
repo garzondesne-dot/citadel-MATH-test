@@ -5,6 +5,7 @@ const once = <T>(f: () => Promise<T>) => { let p: Promise<T> | null = null; retu
 export const loadTeacher = once(() => import('./teacher/TeacherApp.svelte'));
 export const loadHall = once(() => import('./Hall.svelte'));
 export const loadAtk = once(() => import('./AtkGallery.svelte'));
+export const loadAtbRoom = once(() => import('./board/atb/AtbRoom.svelte')); // ⚔ 게시판 던전 ATB 교사 연습방 (?role=atb)
 // 🏕 캠프 · 수업 화면에서 여는 큰 화면 (허수아비 · 게시판 · 성채 · 쉼터 놀이) = 따로 받되 화면이 뜬 뒤 쉬는 틈에 미리 받아 둠 → 누를 때 · 쉼터가 열릴 때 멈칫 없음
 export const loadDummy = once(() => import('./dummy/Dummy.svelte'));
 export const loadPrep = once(() => import('./dummy/Prep.svelte')); // 📖 #66 배움터 · 예습
