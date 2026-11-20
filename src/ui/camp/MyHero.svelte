@@ -156,8 +156,8 @@
   <header class="bar">
     <button type="button" class="back" aria-label="닫기" onclick={close}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
     <b class="t">내 용사</b>
-    <span class="pill" aria-label="마정석 {lf.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{lf.gem.toLocaleString()}</span>
-    <span class="pill" aria-label="서술 조각 {lf.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{lf.scroll}</span>
+    <span class="pill" aria-label="마정석 {lf.gem}개"><i class="wic" aria-hidden="true">💎</i>{lf.gem.toLocaleString()}</span>
+    <span class="pill" aria-label="서술 조각 {lf.scroll}개"><i class="wic" aria-hidden="true">📜</i>{lf.scroll}</span>
   </header>
 
   <div class="body">
@@ -415,4 +415,5 @@
   .treset small { font-size: 12px; font-weight: 500; color: var(--text-3); }
   .rq { margin: 0; color: var(--text-2); font-size: 15px; line-height: 1.5; text-align: center; }
   .rgo { width: 100%; }
+  .wic { font-style: normal; font-size: 15px; line-height: 1; font-family: var(--font); } /* 💎 · 📜 = 우리 아이콘 글꼴 (📜 2026-11-20) */
 </style>

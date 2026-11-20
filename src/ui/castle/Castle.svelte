@@ -225,8 +225,8 @@
   <header class="bar">
     <button type="button" class="back" aria-label="뒤로" onclick={back}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
     <b class="t" class:long={!res && title.length > 9}>{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>{#if !res}<span class="pill seal" data-k="castle-seal">🏆 업적 {seals}개</span>{/if}
-    {#if me && !preview}<span class="pill" aria-label="마정석 {me.wallet.gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span>
-    {#if res}<span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{/if}{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
+    {#if me && !preview}<span class="pill" aria-label="마정석 {me.wallet.gem}개"><i class="wic" aria-hidden="true">💎</i>{me.wallet.gem.toLocaleString()}</span>
+    {#if res}<span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><i class="wic" aria-hidden="true">📜</i>{me.wallet.scroll}</span>{/if}{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
   </header>
   {#if toast}<p class="toast" role="status">{toast}</p>{/if}
   <div class="body">
@@ -346,4 +346,5 @@
   .pv { position: fixed; z-index: 30; top: 10px; left: 50%; transform: translateX(-50%); margin: 0; padding: 2px 10px; border-radius: 12px; background: rgba(8, 9, 12, 0.6); color: var(--accent); font-size: var(--fs-small); font-weight: 700; }
   .got { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; align-items: center; } .got li { font: 700 15px var(--font); color: var(--gem); } .got li:first-child { color: var(--accent); }
   .wrc { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: grid; justify-items: center; min-height: 48px; padding: 6px 16px; border-radius: 12px; border: 2px solid var(--scroll); background: var(--surface); color: var(--text); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .wrc small { font: 600 12px var(--font); color: var(--text-2); }
+  .wic { font-style: normal; font-size: 15px; line-height: 1; font-family: var(--font); } /* 💎 · 📜 = 우리 아이콘 글꼴 (📜 2026-11-20) */
 </style>
