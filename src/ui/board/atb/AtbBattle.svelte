@@ -46,9 +46,10 @@
   const STEP = 0.1;
   const loop = setInterval(() => {
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
-    if (paused || S.end) return;
-    for (let i = 0; i < speed; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); autoStep(); }
-    if (S.end && !ended) { ended = true; setTimeout(() => onend(S), 1800); }
+    // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
+    if (S.end) { if (!ended) { ended = true; setTimeout(() => onend(S), 1800); } return; }
+    if (paused) return;
+    for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); autoStep(); }
   }, STEP * 1000);
   /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
   let fullAt = -1, autoTag = $state(0);

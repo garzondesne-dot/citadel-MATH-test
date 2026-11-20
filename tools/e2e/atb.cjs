@@ -124,6 +124,20 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await v.waitForTimeout(400); await v.screenshot({ path: `${SHOTS}/atb-rot-${vw}.png` });
     await v.close();
   }
+  // 🐞 처치 → 결과 화면 (11/20 「처치 이후 결과화면으로 안 넘어가」): 내 손으로 끝내는 모든 길 · 멈춤 중 · 돌린 화면
+  const prep = async (q) => q.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.bossHp = 3; S.heroes.forEach((h) => { h.down = false; h.hp = h.s.maxHp; }); S.target = null; });
+  for (const [how, vw, vh] of [['타이밍 공격', 844, 390], ['스킬 단추', 844, 390], ['카드 연 채 자동 공격', 844, 390], ['넘침 자동 스킬', 844, 390], ['스킬 · 돌린 세로', 390, 844]]) {
+    const q = await b.newPage({ viewport: { width: vw, height: vh } }); q.on('pageerror', (e) => errs.push(String(e)));
+    await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(500); await prep(q);
+    if (how === '타이밍 공격') { await q.evaluate(() => globalThis.__atb.full()); await q.click('[data-k="atb-attack"]'); await q.waitForSelector('[data-k="atb-timing"]'); await q.evaluate(() => globalThis.__atbTiming('ok')); }
+    else if (how.startsWith('스킬')) { await q.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 3; a.full(); }); await q.waitForTimeout(150); await q.click('[data-k="atb-sk-equip"]'); }
+    else if (how === '카드 연 채 자동 공격') { await q.click('[data-k="atb-quiz-open"]'); await q.waitForSelector('[data-k="atb-quiz"]'); await q.evaluate(() => { const a = globalThis.__atb; a.full(); a.pause(false); }); await q.waitForTimeout(1300); await q.evaluate(() => globalThis.__atb.pause(true)); }
+    else { await q.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 3; }); await q.click('[data-k="atb-quiz-open"]'); await q.waitForSelector('[data-k="atb-quiz"]'); for (let i = 0; i < 12 && !(await q.evaluate(() => !!globalThis.__atb.S.end)); i++) { await q.evaluate(() => globalThis.__atb.solve()); await q.waitForTimeout(80); } }
+    const shown = await q.waitForSelector('[data-k="atb-result"]', { timeout: 6000 }).then(() => true).catch(() => false);
+    const ended = await q.evaluate(() => !!globalThis.__atb.S.end?.win);
+    ok(`🐞 처치(${how}) → 결과 화면 (멈춤 중이어도)`, ended && shown, `처치 ${ended} · 결과 ${shown}`);
+    await q.close();
+  }
   // ⑤ 관전
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-mode-watch"]'); await p.click('.chips button:has-text("×4")');
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]');
