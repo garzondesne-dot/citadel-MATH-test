@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Question } from '../../model/types';
   import { chipToggle } from '../../engine/input';
+  import { SUBJ } from '../../engine/subject';
   // 🔘 칩 · 여러 개 고르기 (정식 P8 · #41 두 칸 고르기 groups · ∅ 단추 q.empty)
   type Multi = Extract<Question, { type: 'multi' }>;
   const { q, value, disabled = false, onchange, marks = null, box = false }: { q: Multi; value: number[]; disabled?: boolean; onchange: (v: number[]) => void;
@@ -13,6 +14,11 @@
   const wide = $derived(longest > 3), one = $derived(longest > 12);
   // 📜 2026-11-16 선생님 「보기 10개 이상 고르는 문제도 단추가 너무 커서 어색함」: 보기 8개 이상 = 작은 단추 · 여러 열 격자 (글자는 16px 이상)
   const many = $derived(q.options.length >= 8);
+  // 🖼 그림 보기 (SUBJ.rich · fig.grid · 📈 그래프): 모두 격자 그림이면 2열 그림 칸 + 번호 ①②
+  const F = SUBJ.rich?.Figure;
+  const figOf = (o: string) => { const p = SUBJ.rich ? SUBJ.rich.opt(String(o)) : { text: o }; return 'fig' in p ? p.fig : null; };
+  const figs = $derived(!!F && q.options.length > 1 && q.options.every((o) => !!(figOf(o) as { grid?: boolean } | null)?.grid)); // 격자 표시 그림만 (벤 그림 보기는 예전 그대로)
+  const NO = '①②③④⑤⑥⑦⑧⑨⑩';
   const parts = $derived.by(() => {
     if (!q.groups?.length) return [{ label: '', from: 0, n: q.options.length }];
     let b0 = 0;
@@ -23,10 +29,10 @@
 {#each parts as p (p.from)}
   <div class="grp">
     {#if p.label}<b class="grp-h">{p.label}</b>{/if}
-    <div class="chips" class:wide class:one class:many>
+    <div class="chips" class:wide={wide && !figs} class:one={one && !figs} class:many={many && !figs} class:figs>
       {#each q.options.slice(p.from, p.from + p.n) as o, j (p.from + j)}
         {@const k = p.from + j}
-        <button type="button" class="chip" class:on={on.has(k)} aria-pressed={on.has(k)} class:empty={(q.empty || []).includes(k)} class:m-ok={okS.has(k)} class:m-bad={badS.has(k)} class:box {disabled} onclick={() => onchange(chipToggle(q, value, k))}>{#if box}<span class="cb" aria-hidden="true">{on.has(k) ? '☑' : '☐'}</span>{/if}{o}{#if okS.has(k)}<i class="mk ok" aria-label="맞은 보기">✔</i>{:else if badS.has(k)}<i class="mk bad" aria-label="틀린 보기">✘</i>{/if}</button>
+        <button type="button" class="chip" class:on={on.has(k)} aria-pressed={on.has(k)} class:empty={(q.empty || []).includes(k)} class:m-ok={okS.has(k)} class:m-bad={badS.has(k)} class:box {disabled} onclick={() => onchange(chipToggle(q, value, k))}>{#if box}<span class="cb" aria-hidden="true">{on.has(k) ? '☑' : '☐'}</span>{/if}{#if figs && F}<span class="fno">{NO[k] ?? k + 1}</span><F fig={figOf(o)} />{:else}{o}{/if}{#if okS.has(k)}<i class="mk ok" aria-label="맞은 보기">✔</i>{:else if badS.has(k)}<i class="mk bad" aria-label="틀린 보기">✘</i>{/if}</button>
       {/each}
     </div>
   </div>
@@ -50,6 +56,9 @@
   .chips.many.one { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chips.many.one .chip { font-size: 15px; white-space: normal; }
   .chip.empty { border-style: dashed; border-color: var(--line); }
+  .chips.figs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+  .chips.figs .chip { padding: 6px; display: grid; place-items: center; }
+  .fno { position: absolute; top: 4px; left: 6px; font-size: 15px; line-height: 1; }
   .chip { position: relative; overflow: visible; }
   .chip.m-ok { border-color: var(--ok); }
   .chip.m-bad { border-color: var(--bad); }

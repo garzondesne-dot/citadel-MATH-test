@@ -1,6 +1,7 @@
 import type { ChainSub, Given, LessonPack, Question, Room, Step } from '../model/types';
 import { preDmg } from '../school/pre';
 import { grade } from '../engine/grade';
+import { SUBJ } from '../engine/subject';
 import { bindFor } from './combo';
 import { bossItem as packBossItem, chainItems as packChainItems, items } from '../engine/lessons';
 
@@ -216,7 +217,7 @@ export const chainSubs = (R: Room, mid: string, uid: string) => { const a = R.ch
 export const whyStages = (its: Question[]) => (its || []).map((q, i) => (q && q.why ? i : -1)).filter((i) => i >= 0);
 export const pracUsed = (R: Room, mid: string, uid: string, rec?: { pass?: number }) => Math.max(Number(R.players?.[uid]?.pr?.[mid]) || 0, (rec && rec.pass) || 0);
 /** 소레이드 단계 정답 (서술형 통과로 채울 값 · 시연 정답 펼치기) */
-export const answerOf = (q: Question): Given => (q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.type === 'blanks' ? q.items.map((it) => it.answer) : q.type === 'text' ? (q.answers || [])[0] ?? '' : 'answer' in q ? (q.answer as Given) : null); // 과목 고유 꼴(답 = 채점 함수) = null
+export const answerOf = (q: Question): Given => (SUBJ.formats[q.type] ? (SUBJ.formats[q.type]!.answer?.(q) ?? null) : q.type === 'multi' ? q.answer.slice() : q.type === 'choice' ? q.answerIndex : q.type === 'blanks' ? q.items.map((it) => it.answer) : q.type === 'text' ? (q.answers || [])[0] ?? '' : 'answer' in q ? (q.answer as Given) : null); // 과목 고유 꼴(답 = 채점 함수) = null
 
 export interface ChainRec {
   chain: true; items: Question[]; n: number; stage: number; cost: number; left: number; slots: number; wrong: number;

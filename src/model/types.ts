@@ -35,7 +35,9 @@ export type Question =
   | (QBase & { type: 'text'; answers: string[] })
   | (QBase & { type: 'multi'; options: string[]; answer: number[]; /** 두 칸 고르기 (칸 제목 · 보기 수) */ groups?: { label: string; n: number }[]; /** ∅ 단추 자리 (P8) */ empty?: number[] })
   | (QBase & { type: 'blanks'; items: { left?: string; right?: string; answer: string }[]; options: string[] })
-  | (QBase & { type: 'subsets'; base: number[] });
+  | (QBase & { type: 'subsets'; base: number[] })
+  /** 🏹 대응 화살표 잇기 (과목 꼴 · SUBJ.formats.match): xs → ys · 정답 = 화살표 [X번, Y번] 목록(순서 무관) · alts = 정답 여러 벌일 때 나머지 벌 · xn · yn = 타원 이름 */
+  | (QBase & { type: 'match'; xs: string[]; ys: string[]; answer: [number, number][]; alts?: [number, number][][]; xn?: string; yn?: string });
 
 /** 학생 답 (형식별): choice = 번호 · ox = 참거짓 · number = 수 · text = 글 · multi = 번호 배열 · blanks = 기호 배열 · 과목 꼴 = 그 꼴이 정함(SUBJ.formats) */
 export type Given = number | boolean | string | number[] | string[] | number[][] | null;

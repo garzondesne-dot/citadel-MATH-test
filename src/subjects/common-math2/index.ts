@@ -19,7 +19,7 @@ import { TRIAL } from './trial';
 // 📦 공통수학2 풀 팩 (#136) — 이 과목의 모든 내용: 차시 팩 · 생성기 · 기호 톡 · 모루 카드 · 오개념 · 성취기준 · 차시 목록 · 칭호 · 캠프 이름표 · 세특 낱말 · 그림 · 문항 꼴 · 테스트 판 가짜 글
 //   엔진은 engine/subject.ts 의 SUBJ 로만 읽음 (이 폴더 밖에 과목 낱말 · 차시 id 없음 · tests/engine-clean.test.ts)
 const lessons = Object.values(import.meta.glob<LessonPack>('./lessons/*.json', { eager: true, import: 'default' }));
-const toPart = (p: ReturnType<typeof optOf>) => ('venn' in p ? { fig: { venn: p.venn } } : 'shade' in p ? { fig: { shade: p.shade } } : { text: p.text });
+const toPart = (p: ReturnType<typeof optOf>) => ('venn' in p ? { fig: { venn: p.venn } } : 'shade' in p ? { fig: { shade: p.shade } } : 'graph' in p ? { fig: { graph: p.graph, grid: true } } : { text: p.text }); // grid = 보기 격자(📈 그래프)
 
 const SUBJECT: Subject = {
   id: 'common-math2',
@@ -46,7 +46,7 @@ const SUBJECT: Subject = {
   specialAttacks: DATA.specialAttacks as Record<string, string>,
   glitchSyms: DATA.glitchSyms as string,
   seteuk: DATA.seteuk,
-  rich: { parts: (t) => richParts(t).map((p) => ('venn' in p ? { fig: { venn: p.venn } } : { text: p.text })), opt: (o) => toPart(optOf(o)), plain, Figure },
+  rich: { parts: (t) => richParts(t).map((p) => ('venn' in p ? { fig: { venn: p.venn } } : 'graph' in p ? { fig: { graph: p.graph, big: true } } : { text: p.text })), opt: (o) => toPart(optOf(o)), plain, Figure },
   formats: FORMATS,
   recheck,
   themes: THEMES as Subject['themes'],

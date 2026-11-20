@@ -6,6 +6,8 @@
 //   🎯 허수아비 「🔑 열쇠 연습」 = 판 1 · 2 · 기록 bonus/{반}/{번호}/{차시}/keys = { 열쇠: 맞힌 수 } · 보상 = 스위치(기본 = 기록만)
 import type { Given, LessonPack, Question, Room } from '../model/types';
 import { grade } from '../engine/grade';
+import { SUBJ } from '../engine/subject';
+import { optLabel } from '../engine/input';
 import { feat } from './features.svelte';
 import { bossState, chainRecord, isChain, isLobby, plainRecord } from '../raid/raid';
 
@@ -38,9 +40,10 @@ export const keyVer = (miss: number) => miss;
 export const keyRight = (k: EntryKey, given: Given, v = 0) => grade(keyQ(k, v), given);
 /** 정답 한 줄 (틀렸을 때 보여 줌) */
 export function answerText(q: Question): string {
-  if (q.type === 'choice') return q.choices[q.answerIndex] ?? '';
+  const f = SUBJ.formats[q.type]; if (f) return f.answerText?.(q) ?? (f.answer ? f.pen(q, f.answer(q)) ?? '' : ''); // 과목 고유 꼴
+  if (q.type === 'choice') return q.choices[q.answerIndex] != null ? optLabel(q.choices[q.answerIndex]!, q.answerIndex) : '';
   if (q.type === 'ox') return q.answer ? 'O (참)' : 'X (거짓)';
-  if (q.type === 'multi') return q.answer.map((i) => q.options[i]).join(', ');
+  if (q.type === 'multi') return q.answer.map((i) => (q.options[i] != null ? optLabel(q.options[i]!, i) : '')).join(', ');
   if (q.type === 'number') return String(q.answer);
   if (q.type === 'text') return (q.answers || [])[0] ?? '';
   if (q.type === 'blanks') return q.items.map((x) => x.answer).join(', ');

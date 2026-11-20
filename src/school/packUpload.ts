@@ -119,13 +119,15 @@ export function toQ(it: BItem, at: string, out: Issue[]): Question | null {
   const err = (msg: string) => { out.push({ at, msg, lvl: 'err' }); return null; };
   if (!it || typeof it !== 'object') return err('문항 칸이 비었어요');
   const t = String(it.type ?? ''), q = String(it.q ?? '').trim(), sol = it.sol ? String(it.sol) : undefined;
-  if (!TYPES.includes(t)) return err(`형식 「${t || '없음'}」 — ${TYPES.join(' · ')} 중 하나`);
+  const sf = SUBJ.formats[t]?.fromPack, types = [...TYPES, ...Object.keys(SUBJ.formats).filter((k) => SUBJ.formats[k]!.fromPack)];
+  if (!TYPES.includes(t) && !sf) return err(`형식 「${t || '없음'}」 — ${types.join(' · ')} 중 하나`);
   if (!q) return err('문제 글(q)이 비었어요');
   const ch = Array.isArray(it.ch) ? (it.ch as unknown[]).map(String) : null;
   const ex = extras(it, ch, err); if (!ex) return null;
   if (ex.groups && t !== 'multi') return err('두 칸 고르기(groups)는 여러 개 고르기(multi)에만');
   const { groups, ...ex2 } = ex;
   const base = { question: q, ...(sol ? { solution: sol } : {}), ...ex2 };
+  if (sf) return sf(it as Record<string, unknown>, base, err); // 과목 고유 꼴 (보기 · 정답 칸을 그 꼴이 읽음)
   if (t === 'choice' || t === 'multi') {
     if (!ch || ch.length < 2) return err('보기(ch)가 2개 이상 있어야 해요');
     if (!groups && new Set(ch).size !== ch.length) return err('보기에 같은 것이 두 번 있어요 (두 칸 고르기 groups 일 때만 겹쳐도 돼요)');
