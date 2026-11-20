@@ -31,16 +31,16 @@
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" role="status">💡 {hint}</p>{/if}
     {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
-    {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 새 숫자 판</p>
-    {:else if flash === 'swap'}<p class="fb bad" role="status">🔁 새 숫자 판으로 처음부터 (⚡ 는 그대로)</p>
-    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (충전은 그대로)</p>{/if}
+    {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 🔥 재도전(새 숫자 판)</p>
+    {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (⚡ 기력은 그대로)</p>
+    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 기력은 그대로)</p>{/if}
   </div>
   <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
-      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
+      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '✨ PERFECT' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
       <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:x={!m} style:animation-delay="{0.3 + i * 0.26}s">{m ? '○' : '×'}</i>{/each}</span>
-      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">{grading.n >= grading.want ? `⚡ +${grading.n} 충전` : `⚡+${grading.want} → 가득(+${grading.n} 받음)`}{grading.perfect ? ' · ATB 가득' : ''}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">{grading.n >= grading.want ? `⚡ 기력 +${grading.n}` : `⚡+${grading.want} → 가득(+${grading.n} 받음)`}{grading.perfect ? ' · ATB 가득' : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
   {/if}

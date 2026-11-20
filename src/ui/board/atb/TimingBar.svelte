@@ -20,7 +20,7 @@
     <i class="cz" style:left="{z.crit[0] * 100}%" style:width="{(z.crit[1] - z.crit[0]) * 100}%"></i>
     <b class="mk" style:left="{p * 100}%"></b>
   </div>
-  {#if res}<p class="rs {res}">{res === 'crit' ? '치명!' : res === 'ok' ? '명중!' : '빗나감'}</p>{/if}
+  {#if res}<p class="rs {res}">{res === 'crit' ? '💥 치명!' : res === 'ok' ? '명중!' : '빗나감'}</p>{/if}
 </div>
 
 <style>

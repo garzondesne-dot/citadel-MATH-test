@@ -2,14 +2,14 @@
   import { untrack } from 'svelte';
   // 👥 용사 고르기 (시안 atb-6-pick · 결정 W1-b): 왼쪽 초상 격자(실제 용사 초상 · 역할 · 계열 귀퉁이 · 「약점!」 리본 · 잠긴 칸)
   //   오른쪽 = 이름 · 직업 · 역할 · 계열 · 약점 배지 · 용사 수치(이 창에서만 · 방어 0 = 「0%」) · 스킬 3칸(장착 · 역할 · 각성 필살기) · 「이 용사로」
-  import { heroOf, skillName } from '../../../model/hero';
+  import { heroOf, ladder, skillName, SKILL_PRICE, SKILL_SCROLL } from '../../../model/hero';
   import { portraitOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
-  import { famOf, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
+  import { famOf, lookOfStats, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
   import { FAM_NAME, ROLE_NAME, ROLE_SKILL, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
-  const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose }: {
-    ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; awk?: boolean; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void;
+  const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose, onskill }: {
+    ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; awk?: boolean; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void; /** ⚡ 장착 스킬 단계 고르기 (요청 #16) */ onskill?: (id: number, tier: number) => void;
   } = $props();
   const FI: Record<Fam, IconName> = { arms: 'fam-arms', flame: 'fam-flame', nature: 'fam-nature', wisdom: 'fam-wisdom', mystic: 'fam-mystic' };
   const RI: Record<Role, IconName> = { dealer: 'role-dealer', tank: 'role-tank', healer: 'role-healer', support: 'role-support' };
@@ -36,16 +36,24 @@
     <h3>{info.name} · {info.job}</h3>
     <div class="badges"><span><AtbIcon name={RI[st.role]} size={18} /> {ROLE_NAME[st.role]}</span><span><AtbIcon name={FI[st.fam]} size={18} /> {FAM_NAME[st.fam]}</span>{#if isWeak(sel)}<span class="wk2">약점!</span>{/if}</div>
     <div class="mid">
-      <div class="big"><HeroSprite id={sel} scale={2} play /></div>
+      <div class="big"><HeroSprite id={lookOfStats(st)} aura={enh} scale={2} play /></div>
       <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>
     </div>
-    <!-- 💠 이 용사가 쓸 수 있는 스킬 (Y2 · Y3 · 충전 비용) -->
-    <div class="sks">
-      <span class="sk"><small>장착 · ⚡1</small>{skillName(fxOf(sel))} {['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][tierOf(sel) - 1]}</span>
-      <span class="sk"><small>역할 · ⚡1</small>{ROLE_SKILL[st.role]}</span>
-      <span class="sk" class:off={st.tier < 4}><small>4레벨 · ⚡2</small>{st.tier >= 4 ? '열림' : 'Ⅳ 장착이면'}</span>
-      <span class="sk" class:off={!st.aura}><small>오라 방패 · ⚡2</small>{st.aura ? '열림' : '🔨 +10 이면'}</span>
-      <span class="sk" class:off={!st.awk}><small>✨ 각성 · ⚡3</small>{st.awk ? '열림' : '각성하면'}</span>
+    <!-- ⚡ 스킬 (📜 요청 #16): 장착 스킬 고르기 = 그 용사 속성 사다리 Ⅰ ~ Ⅳ · 값 = 캠프 「내 용사」와 같은 💎 · 📜 · 연습방 = 미리 보기(저장 안 됨) -->
+    <div class="sk16" data-k="atb-pick-skills">
+      <b class="sh">⚡ 장착 스킬</b>
+      <div class="lad">
+        {#each ladder(sel) as k, i (k)}
+          {@const on = tierOf(sel) === i + 1}
+          <button type="button" class="lg" class:on data-k="atb-pick-sk" data-tier={i + 1} onclick={() => onskill?.(sel, i + 1)}><small>{['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]}</small>{skillName(k)}<em>{on ? '✔ 장착' : SKILL_PRICE[k] != null ? `💎 ${SKILL_PRICE[k]}${SKILL_SCROLL[k] ? ` · 📜 ${SKILL_SCROLL[k]}` : ''}` : '업적'}</em></button>
+        {/each}
+      </div>
+      <p class="note">🧪 연습방 = 미리 보기 · 저장 안 됨 · 학생 판 = 캠프 「내 용사」와 같은 값으로 업그레이드</p>
+      <div class="cond">
+        <span class:off={st.tier < 4}>✴ 4레벨 스킬 = Ⅳ 장착하면 · ⚡⚡</span>
+        <span class:off={!st.aura}>🛡 홀리 방패 = 🔨 +10 이면 · ⚡⚡</span>
+        <span class:off={!st.awk}>✨ 각성 = 각성하면(+10 · Ⅳ · 호칭) · ⚡⚡⚡</span>
+      </div>
     </div>
     <button type="button" class="go" data-k="atb-pick-go" onclick={() => onpick(sel)}>⚔ 이 용사로</button>
   </section>
@@ -73,7 +81,11 @@
   .big { flex: none; }
   .stats { flex: 1; margin: 0; padding: 4px 8px; list-style: none; border-radius: 10px; background: #f6e7c4; border: 1px solid #c9a36a; }
   .stats li { display: flex; justify-content: space-between; padding: 2px 0; font: 800 14px var(--font-plain); border-bottom: 1px dashed #d8bf8a; } .stats li:last-child { border: none; }
-  .sks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-  .sk { display: flex; flex-direction: column; padding: 4px 6px; border-radius: 8px; background: #3a2618; color: #fff2d6; font: 800 12px var(--font-plain); } .sk small { font-weight: 600; color: #ffd98a; } .sk.off { opacity: 0.6; }
+  .sk16 { display: flex; flex-direction: column; gap: 4px; } .sh { font: 900 14px var(--font); }
+  .lad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .lg { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 52px; padding: 3px; border-radius: 8px; border: 2px solid #8a6a3a; background: #3a2618; color: #fff2d6; font: 800 11px var(--font-plain); line-height: 1.1; }
+  .lg.on { border-color: #ffd34d; background: #6a4210; box-shadow: 0 0 8px #ffd34d; } .lg small { color: #ffd98a; font-weight: 900; } .lg em { font-style: normal; font-weight: 600; font-size: 10px; color: #ffe6b0; }
+  .note { margin: 0; font: 600 10px var(--font-plain); color: #6a4a28; }
+  .cond { display: flex; flex-direction: column; gap: 1px; font: 700 11px var(--font-plain); } .cond .off { opacity: 0.55; }
   .go { min-height: 48px; border-radius: 12px; border: 3px solid #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; font: 900 20px var(--font); box-shadow: 0 4px 0 #6a4210; }
 </style>

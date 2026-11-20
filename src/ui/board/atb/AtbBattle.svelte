@@ -17,6 +17,7 @@
   import TimingBar from './TimingBar.svelte';
   import { attack, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing } from '../../../board/atb/engine';
   import { portraitOf } from '../../manifest';
+  import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
   import { attack as fxAttack, fit, shake, ultBlast, type Pose } from '../../fx/attack';
   import { sfx } from '../../sound.svelte';
@@ -75,7 +76,7 @@
   function finishGrade() {
     if (!grading) return; const n = grading.n; gT.forEach(clearTimeout); gT = []; grading = null; run = null;
     for (let i = 0; i < n; i++) setTimeout(() => flyOrb(), i * 180);
-    if (n) setTimeout(() => { chgPop = `+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
+    if (n) setTimeout(() => { chgPop = `⚡+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
@@ -129,8 +130,8 @@
     over = ''; if (useSkill(S, me, k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
-  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? (fx[me] ? skillName(fx[me]!) : '장착 스킬') : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '오라 방패' : k === 'awk' ? '각성' : '부활';
-  const SK_ICON: Record<SkillK, string> = { shield: '🛡', equip: '⚔', tier4: '✴', role: '', aura: '🔰', awk: '✨', revive: '💖' };
+  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? (fx[me] ? skillName(fx[me]!) : '장착 스킬') : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : '부활';
+  const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚔', tier4: '✴', role: '', aura: '🛡', awk: '✨', revive: '💖' };
   const onTiming = (t: Timing) => { over = ''; attack(S, me, t); };
 
   // ── 연출 (사건 → 떠오르는 숫자 · 공격 자세 · 컷인) ──
@@ -179,7 +180,7 @@
     const fk = fit(h.s.hero, fx[e.who] || 'flame'); let hit = false;
     const onHit = () => {
       if (hit) return; hit = true; const bx = open ? 86 : 72;
-      pop(bx + (Math.random() - 0.5) * 6, 36, miss ? '빗나감' : `−${d}`, miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : 'hit');
+      pop(bx + (Math.random() - 0.5) * 6, 36, miss ? '빗나감' : crit ? `💥 치명! −${d}` : `−${d}`, miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : 'hit');
       if (d) { bossPose = 'hit'; setTimeout(() => (bossPose = S.end?.win ? 'down' : 'idle'), 420); }
       if (ult && stageEl && bossEl) void ultBlast(stageEl, bossEl, fk);
     };
@@ -234,7 +235,7 @@
     else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
     else if (e.k === 'revive') pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role');
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
-    else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🔰 오라 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
+    else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
     else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.n}`, 'role');
     else if (e.k === 'sig') {
@@ -249,8 +250,9 @@
 
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
   const order = $derived(me >= 0 ? [me, ...S.heroes.map((h) => h.id).filter((i) => i !== me)] : S.heroes.map((h) => h.id));
-  const ROW = [{ x: 14, y: 66, s: 1 }, { x: 22.5, y: 59.5, s: 0.9 }, { x: 31, y: 54, s: 0.8 }, { x: 39.5, y: 49.5, s: 0.7 }];
-  const ROWQ = [{ x: 6, y: 66, s: 0.78 }, { x: 11.5, y: 60, s: 0.7 }, { x: 17, y: 54.5, s: 0.62 }, { x: 22.5, y: 50, s: 0.55 }]; // 카드 왼쪽(26%)까지
+  // 📜 요청 #15 = 오라 · 날개 · 이름표가 이웃과 안 겹치게 간격(가로 11% · 이름표 84px) · 그리는 순서 = 뒤 → 앞(z) · 원근 100 → 70%
+  const ROW = [{ x: 10, y: 69, s: 0.95 }, { x: 22.5, y: 62, s: 0.86 }, { x: 35, y: 55, s: 0.77 }, { x: 47.5, y: 48, s: 0.68 }];
+  const ROWQ = [{ x: 6, y: 74, s: 0.72 }, { x: 11.5, y: 62, s: 0.64 }, { x: 17, y: 50, s: 0.56 }, { x: 22.5, y: 38, s: 0.5 }]; // 카드 왼쪽(26%)까지 · 이름표가 안 겹치게 위아래로 벌림
   const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)); return (open ? ROWQ : ROW)[k] ?? ROW[0]!; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
   const bossSize = $derived(Math.round(H * (open ? 0.3 : 0.42))); // 문제 카드 가운데(요청 #14) = 보스는 카드 오른쪽에 작게
@@ -293,7 +295,7 @@
 <div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" bind:this={stageEl}>
   <!-- 🧑 내 초상 = 둘레 동그란 ATB 고리(Y5) · HP 큰 숫자 + 가는 띠(Y6) · ⚡ 충전 칸 3(Y1) -->
   {#if meH}
-    {@const pt = portraitOf(meH.s.hero)}
+    {@const pt = portraitOf(lookOfStats(meH.s))}
     <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
       {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <div class="face">
@@ -313,7 +315,7 @@
   {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
   <!-- 팀 부활 -->
-  <div class="revs" aria-label="팀 부활 {S.revives} / {T.revives}"><b>팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class:used={i >= S.revives}><AtbIcon name="revive" size={22} /></span>{/each}</div>
+  <div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div>
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
@@ -342,7 +344,7 @@
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:z-index={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
-      <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={h.s.hero} scale={sc} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
+      <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.down ? 0 : h.s.enh} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       <div class="tag" class:full={h.atb >= 1 && !h.down}>
         <b>Lv.{h.s.lv} {name(h.id)} <i class="fe">{FAM_EMO[h.s.fam]}</i>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</b>
@@ -363,16 +365,16 @@
   <!-- 단추 -->
   {#if me >= 0 && meH}
     <nav class="btns" class:q={open} class:wk={isWeak(me)} class:full3={fullCh} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
-      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<AtbIcon name="fam-arms" size={Math.round(28 * U)} /> 공격<span class="chg" class:flash={gaugeFlash} aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}></i>{/each}</span>{/if}</button>
+      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격<span class="chg" class:flash={gaugeFlash} aria-label="기력 ⚡ {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}>⚡</i>{/each}</span>{/if}</button>
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
       <!-- 💠 공격 둘레 스킬 (요청 #9) -->
       <div class="ring" data-k="atb-skills" aria-label="스킬">
         {#each slots as sk (sk.k)}
           {@const R = (sk.fix ? 136 : 206) * U}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 충전 {sk.cost}" style:transform="translate(calc(-50% + {Math.round(Math.cos((sk.ang * Math.PI) / 180) * R)}px), calc(-50% + {Math.round(Math.sin((sk.ang * Math.PI) / 180) * R)}px))" onclick={() => fire(sk.k)}>
-            <span class="ic">{#if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}</span>
+            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}</span>
             <span class="nm">{SK_NAME(sk.k)}</span>
-            <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>●</i>{/each}</span>
+            <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span>
             {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small class="hw" data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
           </button>
         {/each}
@@ -389,7 +391,7 @@
   {/if}
   {#if cut}
     <div class="cut" class:short={cut.short} data-k="atb-cutin" aria-live="polite">
-      <div class="band"><HeroSprite id={S.heroes[cut.who]!.s.hero} scale={Math.max(2, Math.round(H / 90))} row={2} play /></div>
+      <div class="band"><HeroSprite id={lookOfStats(S.heroes[cut.who]!.s)} scale={Math.max(2, Math.round(H / 90))} row={2} play /></div>
       <p class="cn"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성 ⚡⚡⚡' : '4레벨 스킬 ⚡⚡'}</small>{cut.name}</p>
     </div>
   {/if}
@@ -460,14 +462,15 @@
   .ring { position: absolute; right: calc(2.5% + 52px * var(--u)); bottom: calc(4% + 52px * var(--u)); width: 0; height: 0; transition: right 0.3s; }
   .sk2 { position: absolute; left: 0; top: 0; width: calc(62px * var(--u)); height: calc(62px * var(--u)); border-radius: 50%; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 3px solid #8fd0ff; background: radial-gradient(circle at 50% 35%, #3a6ac8, #16285a); color: #fff; font: 800 calc(10px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430, 0 0 10px #000a; line-height: 1.05; }
   .sk2 .ic { font-size: calc(20px * var(--u)); line-height: 1; display: inline-flex; } .sk2 .nm { max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
-  .sk2 .co { display: flex; gap: 1px; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; color: #5a6a8a; } .sk2 .co i.on { color: #8fe0ff; text-shadow: 0 0 4px #8fd0ff; }
+  .sk2 .co { display: flex; gap: 0; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; filter: grayscale(1) brightness(0.6); } .sk2 .co i.on { filter: drop-shadow(0 0 3px #ffd34d); }
   .sk2:disabled { filter: grayscale(0.85) brightness(0.6); }
   .sk2.role { border-color: #5fe0c0; background: radial-gradient(circle at 50% 35%, #2a9a84, #0f4a40); } .sk2.tier4 { border-color: #ffb84a; background: radial-gradient(circle at 50% 35%, #c8762a, #5a2a0a); } .sk2.aura { border-color: #fff3a0; background: radial-gradient(circle at 50% 35%, #c8b84a, #5a4a0a); } .sk2.awk { border-color: #ffd34d; background: radial-gradient(circle at 50% 35%, #e8a82a, #6a3a0a); }
   .sk2.situ { width: calc(56px * var(--u)); height: calc(56px * var(--u)); animation: situ 0.9s ease-in-out infinite; } .sk2.shield { border-color: #9fe6ff; background: radial-gradient(circle at 50% 35%, #4ab8e8, #0a3a5a); } .sk2.revive { border-color: #ff8fb0; background: radial-gradient(circle at 50% 35%, #c84a6a, #4a1020); }
   @keyframes situ { 50% { box-shadow: 0 0 18px #fff, 0 3px 0 #0a1430; } }
   .sk2.lit { animation: lit 0.7s ease-out; } @keyframes lit { 0% { filter: brightness(2.6); box-shadow: 0 0 26px #fff; scale: 1.25; } 100% { scale: 1; } }
   .sk2 .hw { position: absolute; bottom: -14px; white-space: nowrap; font: 700 10px var(--font-plain); color: #ffd98a; text-shadow: 0 1px 1px #000; }
-  .chg { display: flex; gap: 2px; margin-top: 2px; padding: 1px 5px; border-radius: 8px; background: #0006; } .chg .cs { width: 10px; height: 10px; } .chg.flash { animation: gflash 0.45s; }
+  .chg { display: flex; gap: 1px; margin-top: 2px; padding: 0 5px; border-radius: 8px; background: #0006; } .chg .cs { width: auto; height: auto; border: none; background: none; box-shadow: none; font-size: calc(13px * var(--u)); font-style: normal; filter: grayscale(1) brightness(0.55); } .chg .cs.on { filter: drop-shadow(0 0 4px #ffd34d); }
+  .ai { font-size: calc(30px * var(--u)); line-height: 1; } .hrt { font-size: 18px; } .chg.flash { animation: gflash 0.45s; }
   .b.quiz { position: absolute; left: 1.5%; bottom: 3%; width: 27%; height: 16%; }
   .b { min-height: 48px; border-radius: 12px; border: 3px solid #8a6a3a; background: linear-gradient(#5a3f2a, #3a2618); color: #fff2d6; font: 800 clamp(13px, 4.6vh, 22px) var(--font); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 0 0 2px #2a1a10, 0 4px 0 #1a100a; padding: 0 4px; text-shadow: 0 2px 0 #0008; }
   .b:disabled { filter: grayscale(0.4) brightness(0.75); }

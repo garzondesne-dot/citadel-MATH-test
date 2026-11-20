@@ -5,6 +5,7 @@
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import type { State } from '../../../board/atb/engine';
   import AtbIcon from './AtbIcon.svelte';
+  import { lookOfStats } from '../../../board/atb/heroes';
   const { S, no, me, guardBonus = 0, mastery, practice = true, onagain, onswap, onexit }: {
     S: State; no: number; me: number; guardBonus?: number; /** 이 차시 클리어 누적 판 */ mastery: number; practice?: boolean; onagain: () => void; onswap: () => void; onexit: () => void;
   } = $props();
@@ -13,7 +14,7 @@
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(win && guardBonus ? [{ t: '수호 보너스', g: guardBonus }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
   const STEPS = [3, 7, 15], nextStep = $derived(STEPS.find((s) => mastery < s) ?? 15);
-  const did = (h: State['heroes'][number]) => [h.log.shields ? `실드 ${h.log.shields}칸` : '', h.log.covers ? `엄호 ${h.log.covers}` : '', h.log.heals ? `회복 ${h.log.heals}` : '', h.log.revives ? `부활 ${h.log.revives}` : '', h.log.boosts ? `격려 ${h.log.boosts}` : '', h.log.ult ? `필살 ${h.log.ult}` : ''].filter(Boolean).join(' · ') || `피해 ${h.log.dmg}`;
+  const did = (h: State['heroes'][number]) => [h.log.shields ? `실드 ${h.log.shields}칸` : '', h.log.covers ? `엄호 ${h.log.covers}` : '', h.log.heals ? `💚 힐 ${h.log.heals}` : '', h.log.revives ? `부활 ${h.log.revives}` : '', h.log.boosts ? `격려 ${h.log.boosts}` : '', h.log.ult ? `필살 ${h.log.ult}` : ''].filter(Boolean).join(' · ') || `피해 ${h.log.dmg}`;
 </script>
 
 <div class="rs" data-k="atb-result">
@@ -21,7 +22,7 @@
     <h2 class:win>{win ? '승리!' : '아쉬워요'}<small>{win ? `${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초` : S.end?.why}</small></h2>
     <div class="party">
       {#each S.heroes as h (h.id)}
-        <div class="hp"><HeroSprite id={h.s.hero} scale={S.heroes.length > 2 ? 1.5 : 2} row={win ? 0 : 8} play={win} /><span class="chip"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if h.log.shields}<AtbIcon name="shield-broken" size={16} />{/if} {did(h)}</small></span></div>
+        <div class="hp"><HeroSprite id={lookOfStats(h.s)} aura={h.s.enh} scale={S.heroes.length > 2 ? 1.5 : 2} row={win ? 0 : 8} play={win} /><span class="chip"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if h.log.shields}<AtbIcon name="shield-broken" size={16} />{/if} {did(h)}</small></span></div>
       {/each}
     </div>
   </div>

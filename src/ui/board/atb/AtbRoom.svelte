@@ -31,7 +31,9 @@
   let mates = $state<number[]>(['발도르', '루멘', '로안', '누아'].map((n) => HEROES.find((h) => h.name === n)?.id ?? 0));
   let botKind = $state<BotKind>('normal'), grow = $state<'new' | 'mid' | 'max' | 'awk'>('new'), start = $state<'start' | 'shield' | 'one' | 'aoe'>('start'), seed = $state(1), speed = $state(1), size = $state(4);
   const GROW = { new: { lv: 1, enh: 1, label: '새내기 Lv.1 · +1 · Ⅰ' }, mid: { lv: 5, enh: 4, label: '보통 Lv.5 · +4 · Ⅱ' }, max: { lv: 10, enh: 10, label: '끝까지 Lv.10 · +10 · Ⅳ' }, awk: { lv: 10, enh: 10, label: '✨ 각성 Lv.10 · +10 · Ⅳ · 각성' } } as const;
-  const tierFor = (id: number) => (grow === 'max' || grow === 'awk' ? 4 : grow === 'mid' ? 2 : 1);
+  /** ⚡ 용사마다 고른 장착 스킬 단계 (📜 요청 #16 · 연습방 = 이 화면에서만 · 저장 안 됨) */
+  let skSel = $state<Record<number, number>>({});
+  const tierFor = (id: number) => skSel[id] ?? (grow === 'max' || grow === 'awk' ? 4 : grow === 'mid' ? 2 : 1);
   const fxFor = (id: number) => (ladder(id)[tierFor(id) - 1] as string) ?? (ladder(id)[0] as string);
   let picking = $state<null | number>(null); // null · -1 = 나 · 0 ~ 2 = 봇 자리
 
@@ -96,7 +98,7 @@
 </div>
 {/if}
 {#if picking != null && L}
-  <HeroPick ids={ALL} owned={() => true} boss={BOSSES[L.no]!} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor}
+  <HeroPick ids={ALL} owned={() => true} boss={BOSSES[L.no]!} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor} onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
     onpick={(id) => { if (picking === -1) meHero = id; else mates[picking!] = id; picking = null; }} onclose={() => (picking = null)} />
 {/if}
 

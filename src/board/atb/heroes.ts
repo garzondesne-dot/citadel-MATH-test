@@ -1,6 +1,6 @@
 // 🧙 게시판 던전 ATB — 용사 → 역할 · 계열 · 전투 수치 (📜 용사수치-초안.md 0절 로그 식 · 결정 V2 · V3 · W1-b)
 //   강화 · 레벨 = 계정 하나(용사를 바꿔도 같음) · 용사마다 다른 것 = 역할 · 계열 · 장착 스킬 등급
-import { heroOf, ladder } from '../../model/hero';
+import { awkId, heroOf, isAwkId, ladder } from '../../model/hero';
 import { FAM_OF_ATTR, G, roleOfName, T, type Fam, type Role } from './tune';
 
 export interface HeroIn { hero: number; lv: number; enh: number; tier: number; grit?: number; focus?: number; name?: string; /** ✨ 각성 상태 (#83) */ awk?: boolean }
@@ -26,6 +26,8 @@ export function statsOf(h: HeroIn): Stats {
     aura: h.enh >= 10,
   };
 }
+/** 👀 보이는 모습 id (📜 요청 #15 · 캠프 · 레이드와 같은 규칙): 각성 상태 + 각성 그림이 있는 용사 = 각성 모습(awkId) · 아니면 그대로(각성 연출 = 오라 · 이름 금빛) */
+export const lookOfStats = (s: Pick<Stats, 'hero' | 'awk'>) => (s.awk && isAwkId(awkId(s.hero)) ? awkId(s.hero) : s.hero);
 /** 고르는 창 숫자 줄 (선생님 W1-b 「여기서만 용사 수치」) · 방어 0 = 「0%」 */
 export const statRows = (s: Stats) => [
   { k: 'hp', label: 'HP', v: String(s.maxHp) },

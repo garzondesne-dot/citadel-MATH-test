@@ -83,7 +83,7 @@ export const G = {
 export const FAM_OF_ATTR: Record<string, Fam> = { cut: 'arms', smash: 'arms', sweep: 'arms', fire: 'flame', spark: 'flame', water: 'nature', frost: 'nature', wind: 'nature', magic: 'wisdom', math: 'wisdom', gear: 'wisdom', sun: 'mystic', dark: 'mystic', star: 'mystic' };
 export const FAM_NAME: Record<Fam, string> = { arms: '무기', flame: '화염', nature: '자연', wisdom: '지혜', mystic: '신비' };
 export const ROLE_NAME: Record<Role, string> = { dealer: '딜러', tank: '탱커', healer: '힐러', support: '서포터' };
-export const ROLE_SKILL: Record<Role, string> = { dealer: '강타', tank: '엄호', healer: '광역 회복', support: '격려' };
+export const ROLE_SKILL: Record<Role, string> = { dealer: '강타', tank: '엄호', healer: '힐', support: '격려' }; // 📜 요청 #17 힐러 = 레이드와 같은 「💚 힐」
 /** 용사 → 역할 (설계안 v1 2절 표 · 33칸 · 각성 로안 = 로안 · 올드윈 = 서포터) */
 const ROLE_BY_NAME: Record<string, Role> = {
   로안: 'dealer', 리아넬: 'dealer', 바루: 'dealer', 바르코: 'dealer', 녹스: 'dealer', 이그니: 'dealer', 케라운: 'dealer', 칼시: 'dealer', 아르발: 'dealer', 호버: 'dealer',
