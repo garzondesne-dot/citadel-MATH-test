@@ -66,7 +66,7 @@
   <main class="setup" data-k="atb-setup">
     <h1>⚔ 게시판 던전 · 교사 연습방 <small>새 판(ATB) · 숫자 = 출발값 · 기록 = 이 폰 최근 5판만</small></h1>
     <section><b>차시</b><div class="chips">{#each lessons as p (p.id)}<button type="button" class:on={L?.id === p.id} data-no={p.no} onclick={() => (L = p)}>{p.no}차시{BOSSES[p.no]?.draft ? ' ·초안' : ''}</button>{/each}</div>
-      {#if L}{@const B = BOSSES[L.no]!}<p class="sub">{B.name} · {B.type} · 약점 {B.weak.map((f) => FAM_NAME[f]).join(' · ')} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
+      {#if L}{@const B = BOSSES[L.no]!}<p class="sub">{B.name} · {B.type} · 대표 행동 「{B.signature}」 · 약점 {B.weak.map((f) => FAM_NAME[f]).join(' · ')} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
     <section><b>난이도</b><div class="chips">{#each [['easy', '연습'], ['normal', '일반'], ['hard', '도전']] as [k, t] (k)}<button type="button" class:on={diff === k} onclick={() => (diff = k as Diff)}>{t}</button>{/each}</div></section>
     <section><b>방식</b><div class="chips"><button type="button" class:on={mode === 'play'} data-k="atb-mode-play" onclick={() => (mode = 'play')}>🙋 나 + 봇</button><button type="button" class:on={mode === 'watch'} data-k="atb-mode-watch" onclick={() => (mode = 'watch')}>👀 봇만 관전</button></div>
       <div class="chips">{#each [1, 2, 3, 4] as n (n)}<button type="button" class:on={size === n} onclick={() => (size = n)}>{n}인</button>{/each}</div>{#if size < 3}<p class="sub">⏳ 1 · 2인 숫자는 설계 방이 아직 맞추는 중(출발값 그대로)</p>{/if}</section>

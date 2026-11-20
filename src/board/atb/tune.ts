@@ -6,17 +6,19 @@ export type Diff = 'easy' | 'normal' | 'hard';
 export type Fam = 'arms' | 'flame' | 'nature' | 'wisdom' | 'mystic';
 export type Role = 'dealer' | 'tank' | 'healer' | 'support';
 
-/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · ⏳ 1인은 어림값 · 2인은 「덜 맞춤」(설계 방 남은 일 #1) */
+/** 일반 난이도 보스 HP 배율 (📜 11/20 선생님 첫 판 「일반 엄청 쉬워」 → 출발값 +30% · 1 · 2인은 설계 방 값 올 때까지 같은 배율) */
+export const NORMAL_HP_UP = 1.3;
+/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · 📜 설정표 v3(모의실험 3) · 일반 = v3 × NORMAL_HP_UP · 연습 · 도전 = 어림값 */
 export const BOSS_HP: Record<Diff, [number, number, number, number]> = {
-  easy: [160, 350, 790, 1240],
-  normal: [200, 420, 960, 1510],
-  hard: [240, 500, 1130, 1780],
+  easy: [190, 410, 780, 1240],
+  normal: ([230, 500, 950, 1500] as const).map((x) => Math.round(x * NORMAL_HP_UP)) as [number, number, number, number],
+  hard: [270, 590, 1120, 1760],
 };
-/** 보스 공격 (단일 / 광역) · 1인 = 따로 · ⏳ 2인 = 「12 / 6 쯤」 설계 방 확인 전이라 여러 명 값 그대로 */
-export const BOSS_HIT: Record<Diff, { one: [number, number]; party: [number, number] }> = {
-  easy: { one: [4, 2], party: [8, 4] },
-  normal: { one: [7, 3.5], party: [14, 7] },
-  hard: { one: [9, 5], party: [18, 9] },
+/** 보스 공격 기본값 (단일 / 광역) · 인원 1 · 2 · 3 · 4 (설정표 v3: 4 · 3인 같음) */
+export const BOSS_HIT: Record<Diff, [number, number][]> = {
+  easy: [[3.5, 2], [6, 3], [8, 4], [8, 4]],
+  normal: [[6, 3], [11, 5.5], [14, 7], [14, 7]],
+  hard: [[8, 4], [14, 7], [18, 9], [18, 9]],
 };
 export const T = {
   bossEvery: 12, // 보스 공격 간격(초)
@@ -40,11 +42,11 @@ export const T = {
   ultMul: 6.0, awkMul: 6.5, // 필살기(⚡5) · 각성 필살기(🔨+10 · 판당 1번)
   skillBase: 55, attackBase: 12, // 스킬 기본 · 일반 공격 기본 (용사수치 초안 30 · 8 → 약 4분 판에 맞춰 올림)
   timing: { miss: 0, ok: 1, crit: 1.5 }, // 일반 공격 타이밍 바
-  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 「모았다 놓기」 빗나감 · 성공 · 딱 맞음
-  holdMs: 1400, // ⏳ 고리가 한 바퀴 차는 시간 (테스트로 정함)
-  holdBest: [0.78, 0.9] as [number, number], holdOk: [0.62, 1.0] as [number, number], // ⏳ 딱 맞음 · 성공 칸(한 바퀴 비율) · 금색 ⚡ 1개마다 딱 맞음 칸 +0.02
-  holdBestPerGold: 0.02,
-  timingMs: 1600, timingOk: [0.35, 0.8] as [number, number], timingCrit: [0.52, 0.64] as [number, number], // ⏳ 타이밍 바
+  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 배율 (옛 「모았다 놓기」 표 · 기록 호환)
+  skillTap: 'ok' as 'miss' | 'ok' | 'best', // 📜 11/20 요청 #3 ⑦ 스킬 = 누르면 바로 → 배율 ×1.25 (옛 고리 봇 평균 ×1.29 와 비슷 · 균형 그대로)
+  /** ⏳ 타이밍 바 (📜 11/20 요청 #3 ⑥): 판마다 성공 칸 폭 · 치명 칸 폭 · 바늘 한 번 지나는 시간(ms) 을 이 범위에서 고르고 칸 자리도 무작위
+   *    치명 = 성공 칸 안의 좁은 칸 · 끝 여백 edge 안쪽에만 놓음 */
+  timingZone: { okW: [0.22, 0.4] as [number, number], critW: [0.06, 0.12] as [number, number], ms: [1000, 1700] as [number, number], edge: 0.06 },
   critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
   perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
   downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%
@@ -84,33 +86,52 @@ const ROLE_BY_NAME: Record<string, Role> = {
 };
 export const roleOfName = (name: string): Role => ROLE_BY_NAME[name] ?? 'dealer';
 
-/** 보스 설정 (차시 번호 → 몬스터) · ⏳ 3 · 4 · 6 · 8 · 9 · 10차시 = 설계 방 설정표 오면 채움(지금 = 그림 · 약점만 · 공격은 기본 묶음) */
-export type AtkKind = 'smash' | 'poison' | 'sleep' | 'fire' | 'fog' | 'tongue' | 'basic';
+/** 보스 설정 (차시 번호 → 몬스터) · 📜 설정표 v3 「차시별 한눈에」 · 선생님 확정 11/20 (대표 행동 9) · 숫자 = 어림값(연습방에서 맞춤)
+ *  cycle = 공격 차례(되풀이) · tele = 표적 보여 주는 꼴(foot 발밑 · gaze 고개 돌리기 · scale 기우는 저울) · sig = 대표 행동 */
+export type AtkKind = 'basic' | 'smash' | 'poison' | 'sleep' | 'fire' | 'fire13' | 'fog' | 'tongue' | 'ice' | 'confuse' | 'frost' | 'tail' | 'dark' | 'mirror' | 'bind' | 'scale' | 'aoe';
+export type Sig = 'footTarget' | 'gaze' | 'iceArmor' | 'fireBreath' | 'breath' | 'mirror' | 'lock' | 'scale' | 'ripple';
 export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
-export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>; weak: [Fam, Fam]; type: '공격형' | '방어형' | '회복형' | '교란형'; atk: [AtkKind, AtkKind]; shieldDmg?: number; signature: string; draft?: boolean }
+export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
+  weak: [Fam, Fam]; type: string; cycle: AtkKind[]; tele: 'foot' | 'gaze' | 'scale'; sig: Sig; signature: string; shieldDmg?: number; draft?: boolean }
 export const BOSSES: Record<number, BossCfg> = {
-  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', flip: { idle: true, hit: true, down: true }, weak: ['arms', 'flame'], type: '공격형', atk: ['smash', 'poison'], signature: '강타 표적' },
-  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', atk: ['basic', 'basic'], signature: '방향 표적', draft: true },
-  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', atk: ['basic', 'basic'], signature: '감속', draft: true },
-  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'arms'], type: '공격형', atk: ['sleep', 'fire'], signature: '화염 숨 모으기' },
-  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '예고 회복', draft: true },
-  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '6차시 이어하기', draft: true },
-  8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '거울빛 예고', draft: true },
-  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형', atk: ['basic', 'basic'], signature: '자물쇠', draft: true },
-  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['wisdom', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '저울', draft: true },
-  11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', atk: ['fog', 'tongue'], shieldDmg: 0.2, signature: '물결' },
+  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', flip: { idle: true, hit: true, down: true }, weak: ['arms', 'flame'], type: '공격형', cycle: ['smash', 'smash', 'poison'], tele: 'foot', sig: 'footTarget', signature: '강타 표적' },
+  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', cycle: ['smash', 'smash', 'fire13'], tele: 'gaze', sig: 'gaze', signature: '고개 돌리기' },
+  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', cycle: ['ice', 'confuse', 'aoe'], tele: 'foot', sig: 'iceArmor', signature: '얼음 갑옷', shieldDmg: 0.2 },
+  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'arms'], type: '공격형(광역)', cycle: ['sleep', 'sleep', 'fire'], tele: 'foot', sig: 'fireBreath', signature: '화염 숨 모으기' },
+  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기' },
+  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)' },
+  8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'dark', 'mirror'], tele: 'foot', sig: 'mirror', signature: '거울빛' },
+  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'bind', 'dark'], tele: 'foot', sig: 'lock', signature: '자물쇠' },
+  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['wisdom', 'mystic'], type: '교란형', cycle: ['scale', 'bind', 'scale'], tele: 'scale', sig: 'scale', signature: '기우는 저울' },
+  11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', cycle: ['tongue', 'tongue', 'fog'], tele: 'foot', sig: 'ripple', signature: '물결', shieldDmg: 0.2 },
 };
-/** 공격 종류 → 효과 (단일 배율 · 광역 여부 · 상태이상) */
-export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; split?: number; warn?: number }> = {
+/** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
+export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' }> = {
   basic: { name: '공격', mul: 1 },
+  aoe: { name: '광역', mul: 1, aoe: true },
   smash: { name: '강타', mul: 1.5 },
   poison: { name: '독', mul: 1, aoe: true, split: 3 },
-  sleep: { name: '수면', mul: 0.5, status: 'stun' },
-  fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 3 },
-  fog: { name: '물결', mul: 0.5, aoe: true, status: 'slow' },
+  sleep: { name: '수면', mul: 0, status: 'stun', wake: true }, // 맞으면 깸
+  fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 3 }, // 5차시 · 예고 중 실드를 다 깨면 취소
+  fire13: { name: '화염', mul: 1.3, aoe: true },
+  fog: { name: '물결', mul: 0, aoe: true, status: 'slow' },
   tongue: { name: '혀 치기', mul: 1 },
+  ice: { name: '얼음', mul: 1, status: 'slow' },
+  confuse: { name: '혼란', mul: 0, status: 'slow' },
+  frost: { name: '냉기', mul: 1, aoe: true, status: 'slow' },
+  tail: { name: '꼬리치기', mul: 1 },
+  dark: { name: '어둠', mul: 0, aoe: true, status: 'slow' },
+  mirror: { name: '거울빛', mul: 0, aoe: true, warn: 3, special: 'mirror' },
+  bind: { name: '속박', mul: 0, status: 'stun' },
+  scale: { name: '저울', mul: 1, status: 'slow', special: 'scale' }, // 기울면 단일(그 쪽 용사) · 수평이면 광역
+};
+/** 대표 행동 숫자 (어림값 · 📜 설정표 v3 「⚠ ×0.2 · 8% · 30% · 30초 = 모의실험에 안 넣은 값」) */
+export const SIG = {
+  breath: { every: 30, warn: 3, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
+  mirror: { sec: 10, back: 0.3 }, // 8 거울빛: 다음 10초 일반 공격 피해 30% 가 공격한 용사에게 (스킬은 안 돌아옴)
+  scaleTilt: 0.5, // 10 기우는 저울: 기울(단일) 확률
 };
 
 /** 🎚 균형 표 한 곳 (📜 11/20 「보스 HP · 공격 · 역할 수치를 코드 한 곳(표 하나)에 · 나중에 균형 도구가 그 표만 바꿈」)
  *  엔진은 쓰는 순간 이 표의 값을 읽음 → 도구가 칸 값을 바꾸면 다음 판부터 그대로 (읽기 전용 표시는 타입만) */
-export const TUNE = { BOSS_HP, BOSS_HIT, T, BOSSES, ATK } as const;
+export const TUNE = { BOSS_HP, BOSS_HIT, T, BOSSES, ATK, SIG } as const;

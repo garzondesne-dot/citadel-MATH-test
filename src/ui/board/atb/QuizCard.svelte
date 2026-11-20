@@ -9,18 +9,19 @@
   import type { Zap } from '../../../board/atb/engine';
   import { T } from '../../../board/atb/tune';
   import AtbIcon from './AtbIcon.svelte';
-  const { L, run, seed, title, zaps, bossLeft, hintOk, onsubmit, onclose, flash = '' }: {
+  const { L, run, seed, title, zaps, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '' }: {
     L: LessonPack; run: Run; seed: string; title: string; zaps: Zap[]; /** 보스 공격까지 남은 비율 0 ~ 1 */ bossLeft: number; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
     onsubmit: (g: Given) => void; onclose: () => void; /** 방금 결과 (ok · gold · wrong · swap · done) */ flash?: string;
+    /** 💥 몬스터 공격에 맞아 잠긴 남은 초 (0 = 안 잠김 · 📜 요청 #3 ① 레이드처럼 카드 흔들 + 잠깐 잠금) */ locked?: number; lockTag?: string;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
   let val = $state<Given>(null), hint = $state(''), key = $state('');
   $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; } });
-  const send = () => { if (q && filled(q, val)) onsubmit(finalOf(q, val)); };
+  const send = () => { if (q && filled(q, val) && !locked) onsubmit(finalOf(q, val)); };
   const left = $derived(Math.max(0, T.wrongSwap - run.wrong));
 </script>
 
-<section class="qc" data-k="atb-quiz" aria-label="문제">
+<section class="qc" class:hitlock={locked > 0} data-k="atb-quiz" aria-label="문제">
   <header>
     <span class="tt">{title} · 단계 {run.k + 1} / {qs.length}</span>
     <span class="zs" aria-label="⚡ {zaps.length}개 · 금색 {zaps.filter((z) => z === 'g').length}">{#each Array(5) as _, i (i)}<i class="z" class:g={zaps[i] === 'g'} class:on={!!zaps[i]}><AtbIcon name={zaps[i] === 'g' ? 'zap-gold' : zaps[i] ? 'zap' : 'zap-empty'} size={22} /></i>{/each}</span>
@@ -31,9 +32,11 @@
     {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✨ 첫 시도 정답 · 금색 ⚡' : '✔ 정답 · ⚡ +1'}</p>
     {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 새 숫자 판</p>
     {:else if flash === 'swap'}<p class="fb bad" role="status">🔁 새 숫자 판으로 처음부터 (⚡ 는 그대로)</p>
+    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 는 그대로)</p>
     {:else if flash === 'done'}<p class="fb ok" role="status">🏁 완주! {run.clean ? '· 퍼펙트 = ATB 가득' : ''}</p>{/if}
   </div>
-  <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val)} onclick={send}>제출</button>
+  <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
+  {#if locked > 0}<div class="lock" role="status" data-k="atb-qlock"><b>{lockTag || '💥 몬스터 공격!'}</b><small>{locked}초 뒤 다시 풀 수 있어요</small><i class="hitpic" data-k="atb-qhitpic" aria-hidden="true"></i></div>{/if}
   <footer>
     <span class="bl">보스 공격까지 <i class="bar"><b style:width="{Math.round(bossLeft * 100)}%"></b></i></span>
     <button type="button" class="sm" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
@@ -63,10 +66,18 @@
   .fb { margin: 6px 0 0; font: 800 14px var(--font-plain); } .fb.ok { color: #1f7a3c; } .fb.bad { color: #b3261e; }
   .go { min-height: 44px; border-radius: 10px; border: 2px solid #8a5a1a; background: linear-gradient(#ffd77a, #e9a93a); color: #3a2205; font: 800 17px var(--font); box-shadow: 0 3px 0 #8a5a1a; }
   .go:disabled { opacity: 0.45; box-shadow: none; }
-  footer { display: flex; align-items: center; gap: 6px; }
+  footer { position: relative; z-index: 6; display: flex; align-items: center; gap: 6px; } /* 잠겨도 ✕ 닫기는 됨 */
   .bl { flex: 1; display: flex; align-items: center; gap: 6px; font: 700 12px var(--font-plain); white-space: nowrap; min-width: 0; }
   .bar { flex: 1; height: 8px; border-radius: 4px; background: #5a3a2a; overflow: hidden; display: block; min-width: 30px; }
   .bar b { display: block; height: 100%; background: linear-gradient(90deg, #ff5a4a, #e8332a); }
   .sm { min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid #b88a4a; background: #f9ecd0; color: #3a2614; font: 700 12px var(--font-plain); white-space: nowrap; }
   .sm:disabled { opacity: 0.45; }
+  /* 💥 몬스터 공격 = 카드 흔들흔들 + 잠깐 잠금 (레이드 3초 · 분노 4초) · .hitpic = 👹 「맞는 그림」 10종 겹칠 자리(아직 빈 칸) */
+  .qc.hitlock { animation: wob 0.5s ease-in-out 2; }
+  @keyframes wob { 20% { transform: translateX(-8px) rotate(-1.5deg); } 40% { transform: translateX(7px) rotate(1.2deg); } 60% { transform: translateX(-5px) rotate(-0.8deg); } 80% { transform: translateX(3px); } }
+  .lock { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #3a0a0a99; color: #fff; text-align: center; pointer-events: auto; }
+  .lock b { padding: 4px 16px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 20px var(--font); }
+  .lock small { font: 700 13px var(--font-plain); text-shadow: 0 1px 2px #000; }
+  .hitpic { position: absolute; inset: 0; pointer-events: none; background: center / contain no-repeat; }
+  @media (prefers-reduced-motion: reduce) { .qc.hitlock { animation: none; } }
 </style>
