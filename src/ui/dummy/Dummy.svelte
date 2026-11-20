@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { addTo } from '../../store/atomic';
   import { feat } from '../../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
@@ -159,7 +160,7 @@
     const sealedBefore = !!bonL[BOSS_ID]?.clear;
     // 기록 (정식 bonus.js: 판마다 tries +1 · 처치 = clear)
     const rec = { ...old, tries: (Number(old.tries) || 0) + 1, at, ...(o.clear || old.clear ? { clear: true } : {}), ...(fixNow ? { fixAt: at } : {}) }; // ⚔ fixAt = 다음 수업 선제 공격 (📜 2026-11-16 · school/pre.ts)
-    if (base) RS.set(`${base}/${L0.id}/${r.mid}`, rec);
+    if (base) { const p0 = `${base}/${L0.id}/${r.mid}`; addTo(RS, `${p0}/tries`, 1); RS.set(`${p0}/at`, at); if (rec.clear) RS.set(`${p0}/clear`, true); if (fixNow) RS.set(`${p0}/fixAt`, at); } // 🐞 11/20 ② 칸마다 · tries = 더하기 (받기 전 · 다른 기기 기록을 통째로 지우지 않음)
     if (bnd && r.drops?.length && bossState(r.L, RR, uid).every((x) => x.ok)) { const rp = `records/${bnd.cls}/${bnd.num}/${L0.id}`, rr = bnd.S.get<{ bossM?: string }>(rp); if (rr?.bossM) { const m = rr.bossM.split(''); r.drops.forEach((i) => { if (m[i] === 'k') m[i] = 'p'; }); bnd.S.set(`${rp}/bossM`, m.join('')); } } // 👑 #27 그 차시 형성평가 문항 = 복습으로 풂
     // 🎯 👑 수업에서 복습으로 보낸 형성평가를 여기서 다 풂 = 그 차시 형성평가 기록 + 「복습에서 풂」 (📜 2026-11-16)
     if (bnd && r.mid === BOSS_ID && o.clear) { const rp = `records/${bnd.cls}/${bnd.num}/${L0.id}`, rr = bnd.S.get<{ bossSent?: boolean; bossReview?: number; bossN?: number }>(rp); if (rr?.bossSent && !rr.bossReview) { const hp = Number(rr.bossN) || Number(L0.boss?.hpItems ?? L0.boss?.items) || 0; bnd.S.set(`${rp}/bossReview`, at); bnd.S.set(`${rp}/boss`, hp); bnd.S.set(`${rp}/bossM`, 'o'.repeat(hp)); } }

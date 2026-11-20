@@ -167,6 +167,7 @@ export async function submit(S: Writer, c: string, n: number, a: Answer, no: num
 /** 보상 칸 (정식 Grow.add(survey) · Gem.add(survey, free)) — 이미 받았으면 0 */
 export function rewardWrites(S: Store, c: string, n: number, at: number): { gem: number; xp: number; writes: [string, unknown][] } {
   const gl = S.get<{ g?: number }>(`gem/${c}/${n}/log/survey`), xl = S.get<{ xp?: number }>(`xp/${c}/${n}/log/survey`);
+  if (S.loaded && !(S.loaded(`gem/${c}/${n}`) && S.loaded(`xp/${c}/${n}`))) return { gem: 0, xp: 0, writes: [] }; // 🐞 11/20 ① 받기 전 = 안 줌 (두 번 받기 막음)
   const gem = gl ? 0 : REWARD.gem, xp = xl ? 0 : REWARD.xp, writes: [string, unknown][] = [];
   if (gem) writes.push([`gem/${c}/${n}/log/survey`, { g: gem, at, why: '수업 설문' }]);
   if (xp) writes.push([`xp/${c}/${n}/log/survey`, { xp, at, why: '수업 설문' }]);
