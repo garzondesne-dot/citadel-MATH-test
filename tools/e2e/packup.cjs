@@ -1,5 +1,6 @@
 // 📦 차시 팩 올리기 + 자동 검사기 (L1 · 머리 🔨 2026-11-14) — 교사 폰 360 × 760 (이 기기 저장)
-//   ① 준비 → 도구 → 「📦 차시 팩 올리기」 → 틀린 팩 5개 = 칸 · 이유 · 저장 못 함 ② 예시 팩 = ✔ 통과 · 미리 보기(학생과 같은 QItem · 버전 0 ~ 2) → 저장
+//   ⑤ 정식 11차시 파일 = 검사 통과 · 같은 번호 = #82 묻기 · ex-11 🗑 빼기(휴지통) → 카드에서 빠짐
+//   ① 📦 차시 팩 탭 → 「📦 차시 팩 올리기」 (📜 탭 이름 바뀜 · 「준비 › 도구」 → 「📦 차시 팩」 · 차시 목록 = 차시 카드) → 틀린 팩 5개 = 칸 · 이유 · 저장 못 함 ② 예시 팩 = ✔ 통과 · 미리 보기(학생과 같은 QItem · 버전 0 ~ 2) → 저장
 //   ③ 새로 고침 뒤 차시 ▾ 에 11차시 · 🧪 테스트 해 보기 = 학생 폰 문제와 같음 ④ 앱 차시(엔진 꼴)도 같은 길 = 통과 + 「이미 있는 차시」 확인 한 줄
 const { chromium } = require('playwright');
 const path = require('path');
@@ -10,7 +11,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   const ctx = await b.newContext({ viewport: { width: 360, height: 760 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B + '?role=teacher'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('.tabs');
-  const openUp = async () => { await p.click('.tabs button:has-text("준비")'); await p.waitForTimeout(200); await p.click('.seg3 button:has-text("도구")'); await p.waitForTimeout(200); await p.click('[data-k="packup-go"]'); await p.waitForSelector('[data-k="packup"]'); };
+  const packTab = async () => { await p.click('.tabs button:has-text("차시 팩")'); await p.waitForTimeout(300); await p.click('[data-k="side-up"]').catch(() => {}); await p.waitForTimeout(150); };
+  const openUp = async () => { await packTab(); await p.click('[data-k="packup-go"]'); await p.waitForSelector('[data-k="packup"]'); };
+  // 📚 올린 차시 카드 id (3개 넘으면 「더 ▾」 펼침)
+  const cards = async () => { await packTab(); await p.click('[data-k="pack-more"]').catch(() => {}); await p.waitForTimeout(150); return p.$$eval('[data-k="pack-card"]', (xs) => xs.map((x) => x.dataset.id)); };
   const upload = async (f) => { await p.setInputFiles('[data-k="packfile"]', path.join(DIR, f)); await p.waitForSelector('[data-k="packsum"]'); await p.waitForTimeout(200); };
   const mainDis = () => p.$eval('.sheet .btn.pmain', (x) => x.disabled).catch(() => null);
   await openUp();
@@ -53,10 +57,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   ok('🖼 저장 → prep/ex-11/img 7칸 (팩과 같은 자리 · webp)', await p.evaluate(() => { const all = Object.keys(localStorage).map((k) => localStorage.getItem(k) || '').join(''); const keys = Object.keys(localStorage); const val = (c) => { const k = keys.find((x) => x.endsWith(`prep/ex-11/img/${c}`)); return k ? JSON.parse(localStorage.getItem(k) || 'null') : null; }; void all; return ['review', 'c1', 'm1', 'c2', 'm2', 'sum', 'boss'].every((c) => /^data:image\/webp/.test(val(c) || '')) && !val('extra'); }));
   await p.waitForNavigation({ timeout: 5000 }).catch(() => {}); await p.waitForSelector('.tabs');
   // ③ 차시 목록 · 테스트
-  await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  const opts = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.textContent));
-  ok('③ 차시 ▾ 에 11차시', opts.some((t) => /11차시 예시/.test(t)), opts.filter((t) => /11/.test(t)).join(' | '));
-  await (async (pg, id) => { await pg.click('[data-k="lpick-go"]'); await pg.click(`[data-k="lpick"] .grid [data-id="${id}"]`); })(p, 'ex-11').catch(() => {}); await p.waitForTimeout(200);
+  { const o = await cards(); ok('③ 📚 올린 차시 카드에 ex-11', o.includes('ex-11'), o.join(' ')); }
   await p.screenshot({ path: `${SHOTS}/packup-3-list.png` });
   // 학생 폰 = 같은 문제 (테스트 방 · 11차시)
   const hall = await ctx.newPage(); await hall.setViewportSize({ width: 1000, height: 800 }); await hall.goto(B + '?role=hall&mode=test&room=PKU&lesson=ex-11'); await hall.waitForSelector('.dock'); // 🧪 시험 TV = ?lesson 차시로 방을 엶
@@ -75,19 +76,21 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', DIR = path.j
   // ⑤ 🗑 삭제 (📜 2026-11-14): 정식 11차시 파일(set-11) 올림 → 올린 팩 목록 = ex-11 은 🗑 · set-11 은 단추 없음 → ex-11 삭제(확인 한 번) → 목록 · 차시 ▾ 에서 사라짐 · 새로 고침 뒤에도
   await p.setInputFiles('[data-k="packfile"]', path.join(DIR, 'official/set-11.json')); await p.waitForSelector('[data-k="packsum"]');
   { const sum11 = (await p.textContent('[data-k="packsum"]')).trim(); ok('⑤ 정식 11차시 파일 = 검사 통과', /검사 통과/.test(sum11), sum11); }
-  await p.click('.sheet .btn.pmain'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs');
-  await openUp();
-  const rows = await p.$$eval('[data-k="packmine"] .mrow', (xs) => xs.map((x) => `${x.dataset.id}:${x.querySelector('[data-k="packdel"]') ? '🗑' : '-'}`));
-  ok('⑤ 올린 팩 목록 = ex-11 🗑 · set-11 단추 없음', rows.includes('ex-11:🗑') && rows.includes('set-11:-'), rows.join(' '));
-  await p.click('.mrow[data-id="ex-11"] [data-k="packdel"]'); await p.waitForTimeout(200);
-  ok('⑤ 확인 한 번 「이 팩을 지울까요? 되돌릴 수 없어요」', /이 팩을 지울까요\? 되돌릴 수 없어요/.test(await p.textContent('.mrow[data-id="ex-11"]')));
+  // #82 같은 차시 번호(ex-11 = 11차시) = 「11차시 팩이 이미 있어요」 묻기 → 여기선 저장하지 않고 닫음 (바꾸기 · 병합은 packmerge82 시험)
+  ok('⑤ 같은 11차시 = 「이미 있어요」 묻기(#82)', !!(await p.$('[data-k="pack-same"]')), (await p.textContent('[data-k="pack-same"]').catch(() => '')).replace(/\s+/g, ' ').slice(0, 60));
+  await p.reload(); await p.waitForSelector('.tabs');
+  const delLab = async (id) => { await cards(); await p.click(`[data-k="pack-card"][data-id="${id}"]`); await p.waitForSelector('[data-k="pack-detail"]'); return (await p.textContent('[data-k="pack-del"]')).trim(); };
+  { const o = await cards(); ok('⑤ 올린 차시 카드 = ex-11', o.includes('ex-11'), o.join(' ')); }
+  const lab = await delLab('ex-11');
+  ok('⑤ 올린 팩 = 「🗑 이 차시 빼기」', /빼기/.test(lab), lab);
+  await p.click('[data-k="pack-del"]'); await p.waitForSelector('[data-k="pack-del-ask"]');
+  ok('⑤ 확인 한 번 「정말 뺄까요?」 · 휴지통 30일', /정말 뺄까요\?/.test(await p.textContent('[data-k="pack-del-ask"]')) && /휴지통/.test(await p.textContent('[data-k="pack-del-ask"]')));
   await p.screenshot({ path: `${SHOTS}/packup-6-delete.png` });
-  await p.click('[data-k="packdel-yes"]'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs');
-  await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  { const o = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.value)); ok('⑤ 삭제 뒤(새로 고침) 차시 ▾ = ex-11 없음 · set-11 있음', !o.includes('ex-11') && o.includes('set-11'), o.slice(-3).join(' ')); }
+  await p.click('[data-k="pack-del-yes"]'); await p.waitForNavigation({ timeout: 6000 }).catch(() => {}); await p.waitForSelector('.tabs'); await p.waitForTimeout(300);
+  { const o = await cards(); ok('⑤ 뺀 뒤 카드 = ex-11 없음 · 앱 차시 그대로', !o.includes('ex-11') && o.includes('set-10'), o.join(' ')); }
   await p.click('.tabs button:has-text("수업")'); await p.waitForTimeout(300); ok('⑤ 수업 열기 칸에도 예시 없음', !/예시 · 집합/.test(await p.textContent('body')));
-  await p.reload(); await p.waitForSelector('.tabs'); await p.click('.tabs button:has-text("준비")').catch(() => {}); await p.waitForTimeout(300);
-  { const o = await (async (pg, fn) => { await pg.click('[data-k="lpick-go"]'); const v = await pg.$$eval('[data-k="lpick"] .grid .c', (xs) => xs.map((x) => ({ textContent: x.getAttribute('aria-label'), value: x.dataset.id }))); await pg.click('.sheet .bar .x'); return fn(v); })(p, (xs) => xs.map((x) => x.value)); ok('⑤ 다시 새로 고침 = 지워진 채', !o.includes('ex-11'), ''); }
+  await p.reload(); await p.waitForSelector('.tabs');
+  { const o = await cards(); ok('⑤ 새로 고침 뒤에도 빠진 채', !o.includes('ex-11'), o.join(' ')); }
   await openUp();
   const over = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); ok('360 가로 넘침 0', over <= 0, String(over));
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
