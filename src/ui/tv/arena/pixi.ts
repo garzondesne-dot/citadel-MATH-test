@@ -8,7 +8,7 @@ import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
 import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monBody, monNudge, monVis, spriteOf } from '../../manifest';
-import { heroOf, isAwkId } from '../../../model/hero';
+import { awkFx, heroOf } from '../../../model/hero';
 import OBJ from '../../fx/obj.json';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -250,7 +250,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
       }
-      const awk = isAwkId(Number(hh.hero)); v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${awk ? '✦ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : awk ? 0xffd25a : 0xffffff; // ⚡ #83 A2 각성 = ✦ + 금빛 이름 (맞힘 ✓ = 초록 먼저) // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
+      const awk = awkFx(Number(hh.hero)); v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${awk ? '✦ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : awk ? 0xffd25a : 0xffffff; // ⚡ #83 A2 각성 = ✦ + 금빛 이름 (맞힘 ✓ = 초록 먼저) // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = 1; // 📶 끊긴 학생 = 투명하게 하지 않음 · 머리 위 📶✕ 만 (📜 2026-11-17)
     }
     partyC.sortableChildren = true;

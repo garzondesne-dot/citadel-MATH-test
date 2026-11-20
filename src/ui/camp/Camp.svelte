@@ -12,7 +12,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
-  import { AURA_NAMES, famOfHero, HERO_NAMES, isAwkId, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
+  import { AURA_NAMES, famOfHero, HERO_NAMES, awkFx, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
   import '../fx/fx.css'; // ⚡ #83 A2 각성 표시(.awk-name · .awk-shine)
   import { emptyPlan, equipOf, ownsSkill } from '../../model/draft';
   import HeroSprite from './HeroSprite.svelte';
@@ -533,10 +533,10 @@
 
   <section class="info">
     {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svNo}차시 · 3분 · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
-    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={isAwkId(lk)} onclick={() => tap('hero')} aria-label="내 용사 보기">
+    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={() => tap('hero')} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={isAwkId(lk)}>{fromMe ? '선생님' : me.nick}</b></span>
+        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b></span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>

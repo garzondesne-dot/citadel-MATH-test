@@ -3,7 +3,7 @@
 //   베타에 아직 없는 것: 📕 오답노트(오답 사냥꾼 = 못 얻음) · 던전 정복 메달(목록에 없음)
 import { EGGS, eggsFound } from '../school/eggs';
 import { SUBJ } from '../engine/subject';
-import { AWAKEN_T, AWK_NEED, level } from './hero';
+import { AWAKEN_T, AWK_ALL, AWK_NEED, level } from './hero';
 import { veteranN } from '../school/explore';
 import { PACKS } from '../engine/packs';
 import { fameOf, legendOf, mapLessons, starTotal, starsByNo, STAR_TITLES, type BoardRec } from '../board/goals';
@@ -80,7 +80,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   ...Object.fromEntries(EGGS.filter((e) => e.title.startsWith('egg_')).map((e) => [e.title, (d: TitleData) => eggsFound(d.bonus).includes(e.id)])), // 🥚 #74
   secret: (d) => logKeys(d).includes('chal_eggs'),
   // ⚡ #83 용사 전용 칭호 30 (기록 하나 ≥ 기준 · 바르코 = 🏆 업적 3 · 소급)
-  ...Object.fromEntries(Object.entries(AWAKEN_T).map(([h, [, k]]) => [`awk_${h}`, (d: TitleData) => (k === 'seals' ? seals(d.bonus).length >= 3 : (statsOf(d)[k] || 0) >= AWK_NEED[k])])),
+  ...Object.fromEntries((AWK_ALL ? Object.entries(AWAKEN_T) : []).map(([h, [, k]]) => [`awk_${h}`, (d: TitleData) => (k === 'seals' ? seals(d.bonus).length >= 3 : (statsOf(d)[k] || 0) >= AWK_NEED[k])])),
   explorer: (d) => veteranN((d.bonus as Record<string, unknown> | undefined)?.review as Record<string, unknown>) >= 3, // 🔥 #67 노련한 탐험가 = 예습 3개 차시(차시마다 처치 2+)
 };
 /** 얻은 호칭 id (got = 화면이 따로 아는 것 · 예: 💚 구조대 rescuer) */

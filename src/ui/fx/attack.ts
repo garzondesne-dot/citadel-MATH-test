@@ -6,7 +6,7 @@
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
 import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
-import { AWK_ART, baseOf, heroOf, isAwkId } from '../../model/hero';
+import { AWK_ART, awkFx, baseOf, heroOf } from '../../model/hero';
 import { setCanUlt } from '../../raid/combo';
 import { artUrl, idle8HdOf, portraitOf } from '../manifest';
 import { awkBlast, awkKey, preloadAwk } from './awkfx';
@@ -141,7 +141,7 @@ const esc = (s: string) => s.replace(/[<>&]/g, '');
 /** ⚡ 필살기 컷인 (1.2초) · gold = 🌟 진필살기(금빛 · 眞 · 조금 길게) · guard = 🛡 홀리 방패(흰 · 하늘빛 · 짧게) */
 export function cutin(hero: number, fx: string, opt: CutOpt = {}): Promise<void> {
   if (reduce() || typeof document === 'undefined') return wait(0);
-  if (!opt.guard && !opt.peek && isAwkId(Number(hero))) { const k = `${opt.who ?? 'me'}|${hero}`; if (!AWK_SEEN.has(k)) { AWK_SEEN.add(k); return awakenCut(hero, fx, opt).then(() => cutin(hero, fx, opt)); } } // ⚡ #83 A1 각성 뒤 첫 필살기 = 각성 컷인 먼저
+  if (!opt.guard && !opt.peek && awkFx(Number(hero))) { const k = `${opt.who ?? 'me'}|${hero}`; if (!AWK_SEEN.has(k)) { AWK_SEEN.add(k); return awakenCut(hero, fx, opt).then(() => cutin(hero, fx, opt)); } } // ⚡ #83 A1 각성 뒤 첫 필살기 = 각성 컷인 먼저
   if (!faceReady() && FACES.eyes[(Number(hero) || 0) >= 100 ? baseOf(Number(hero)) : Number(hero) || 0]) return faceWait().then(() => cutinNow(hero, fx, opt));
   return cutinNow(hero, fx, opt);
 }

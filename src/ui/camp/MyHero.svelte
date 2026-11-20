@@ -3,7 +3,7 @@
   import { meBound } from '../../store/meSync';
   import { untrack } from 'svelte';
   import type { Me } from '../../store/me.svelte';
-  import { AWAKEN_T, AWK_NEED, STAT_LABEL, awakenBlocked, awakenChecks, awkId, isAwakened, isAwkId, lookId } from '../../model/hero';
+  import { AWAKEN_T, AWK_NEED, STAT_LABEL, awakenBlocked, awakenChecks, awkId, awkTitle, isAwakened, awkFx, lookId } from '../../model/hero';
   import AwakenBox from './AwakenBox.svelte';
   import { awakenCut } from '../fx/attack';
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
@@ -161,10 +161,10 @@
   </header>
 
   <div class="body">
-    <button type="button" class="top" class:awk-shine={isAwkId(lkM)} bind:this={topEl} onclick={openHeroes} aria-label="용사 바꾸기">
+    <button type="button" class="top" class:awk-shine={awkFx(lkM)} bind:this={topEl} onclick={openHeroes} aria-label="용사 바꾸기">
       <span class="pic"><HeroSprite id={lkM} play aura={lv} />{#if lv}<b class="enh">+{lv}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b class:awk-name={isAwkId(lkM)}>{me.nick}</b>{#if me.test}<i class="tester">{teacher ? "선생님" : "테스터"}</i>{/if}</span>
+        <span class="nm">{#if ttl}<em class="tt {TIER_CLS[ttl.tier]}">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lkM)}>{me.nick}</b>{#if me.test}<i class="tester">{teacher ? "선생님" : "테스터"}</i>{/if}</span>
         <span class="sub">{info.name} · {info.job} · {fam.name} · Lv.{xp.lv}</span>
         <span class="chg">용사 바꾸기 ›{#if dots.hero}<i class="bdot" aria-label="살 수 있는 용사 있음"></i>{/if}</span>
       </span>
@@ -240,7 +240,7 @@
     <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {POOL.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
     <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
     <HeroIntro id={pickH} prog={progOf(pickH)} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
-    <AwakenBox hero={pickH} checks={aChecks} blocked={awakenBlocked(pickH)} prog={pickH === 0 ? `🏆 업적 ${UN?.seals ?? 0} / 3` : aProg} />
+    {#if awkTitle(pickH)}<AwakenBox hero={pickH} checks={aChecks} blocked={awakenBlocked(pickH)} prog={pickH === 0 ? `🏆 업적 ${UN?.seals ?? 0} / 3` : aProg} />{/if}
     <div class="swg">
       {#each allHeroes as h (h.id)}
         {@const own = ownH(h.id)}

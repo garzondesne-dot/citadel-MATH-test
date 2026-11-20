@@ -3,14 +3,14 @@
 //   몬스터 색 바꾸는 효과(그림엔 없음) = 코드 색조: 글라세 얼음 · 마진 금빛 · 핑 초록 글리치 · 녹스 핏빛
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) 같은 함수 · TV 몬스터 색조 = tint 콜백(Pixi)
 import T from './awk-vfx.json';
-import { baseOf, heroOf, isAwkId } from '../../model/hero';
+import { awkFx, baseOf, heroOf } from '../../model/hero';
 import { artUrl } from '../manifest';
 
 type V = { src: string; w: number; h: number; cols: number; n: number; fps: number; ox: number; oy: number };
 export const AWK_VFX = T as Record<string, V>;
 /** 각성 모습 id → 연출 열쇠 (로안 = blond · 나머지 = 용사 그림 이름) · 없으면 null */
 export function awkKey(hero: number): string | null {
-  if (!isAwkId(hero)) return null;
+  if (!awkFx(hero)) return null;
   const b = baseOf(hero);
   if (b === 0) return 'blond';
   const k = (heroOf(b).sprite || '').replace(/^hero-/, '').replace(/-v\d.*$/, '');

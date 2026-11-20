@@ -13,6 +13,10 @@ export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teac
  *   조건 4 = 그 용사 출전 · 🔨 강화 +10 이상 · 그 속성 Ⅳ 스킬(사다리 4번째) 장착 · 그 용사 전용 칭호 장착 → 각성 모습 · 하나라도 빠지면 원래 모습
  *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 원래 용사) · 고르는 칸 아님 · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것
  *   모습 id = 로안 16(옛 판 기록 그대로) · 나머지 100 + 용사 번호 · 각성 그림이 없는 용사 = 그림만 원래 것(이름 · 컷인 · 스킬 연출은 각성) */
+/** 🚦 30명 각성 = 베타만 · 정식(release 빌드) = 로안만 (📜 11/20 선생님 「각성 외형 = GPT 30명 끝날 때까지 정식 대기」 · 30명 그림이 오면 이 줄만 true) */
+export const AWK_ALL = import.meta.env?.VITE_CHANNEL !== 'release';
+/** 정식에서도 로안 각성에 새 연출(A1 금빛 컷인 · A2 ✦ 금빛 이름 · A3 전용 연출)을 줌 — 선생님 a/b 고르기 (a = true) */
+export const ROAN_NEW = true;
 export type StatKey = 'str' | 'grit' | 'focus' | 'brave' | 'explore' | 'craft';
 /** 🏅 전용 칭호 기준 (손발 테스트 #1 운영 읽기 · 상위 약 20% · DECISIONS 11/20) — 바꾸면 이 표만 */
 export const AWK_NEED: Record<StatKey, number> = { str: 170, grit: 35, focus: 20, brave: 7, explore: 30, craft: 20 };
@@ -29,10 +33,10 @@ export const AWAKEN_T: Record<number, [string, StatKey | 'seals']> = {
   32: ['정령의 친구', 'str'], 33: ['별이 가리킨 길', 'grit'],
 };
 /** 전용 칭호 id (로안 = slash10k) */
-export const awkTitle = (hero: number) => (hero === 0 ? 'slash10k' : AWAKEN_T[hero] ? `awk_${hero}` : null);
-export const AWK_TITLES = Object.entries(AWAKEN_T).map(([h, [name, k]]) => ({ id: `awk_${h}`, name, tier: 'o' as const, cond: k === 'seals' ? '🏆 업적 3개' : `${STAT_LABEL[k]} ${AWK_NEED[k]}`, hero: Number(h) }));
+export const awkTitle = (hero: number) => (hero === 0 ? 'slash10k' : AWK_ALL && AWAKEN_T[hero] ? `awk_${hero}` : null);
+export const AWK_TITLES = (AWK_ALL ? Object.entries(AWAKEN_T) : []).map(([h, [name, k]]) => ({ id: `awk_${h}`, name, tier: 'o' as const, cond: k === 'seals' ? '🏆 업적 3개' : `${STAT_LABEL[k]} ${AWK_NEED[k]}`, hero: Number(h) }));
 /** 🖼 각성 그림이 있는 용사 (그림이 없으면 원래 그림 · 📜 11/20 「선생님 GPT 시트 30명이 끝날 때까지 정식 배포 대기」) */
-export const AWK_ART: Record<number, string> = { 0: 'hero-blond-v5.webp', 18: 'hero-dknight-awk-v5.webp', 8: 'hero-paladin-awk-v5.webp', 31: 'hero-valkyrie-awk-v5.webp' };
+export const AWK_ART: Record<number, string> = AWK_ALL ? { 0: 'hero-blond-v5.webp', 18: 'hero-dknight-awk-v5.webp', 8: 'hero-paladin-awk-v5.webp', 31: 'hero-valkyrie-awk-v5.webp' } : { 0: 'hero-blond-v5.webp' };
 /** 🚫 이 판에서 칭호를 얻을 수 없는 기록 (학교판 모루 끔 = ⚒ 연성 · features 가 알려 줌 · 📜 11/20 「그 용사 각성 막음」) */
 let craftOn: () => boolean = () => true;
 export const setCraftOn = (f: () => boolean) => { craftOn = f; };
@@ -44,7 +48,9 @@ export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | 
 export const awkId = (hero: number) => (hero === 0 ? BLOND.to : 100 + hero);
 /** 모습 id → 원래 용사 (각성 아니면 그대로) */
 export const baseOf = (id: number) => (id === BLOND.to ? 0 : id >= 100 && AWAKEN_T[id - 100] ? id - 100 : id);
-export const isAwkId = (id: number) => id === BLOND.to || (id >= 100 && !!AWAKEN_T[id - 100]);
+export const isAwkId = (id: number) => id === BLOND.to || (AWK_ALL && id >= 100 && !!AWAKEN_T[id - 100]);
+/** ⚡ 새 각성 연출(A1 컷인 · A2 ✦ · A3)을 이 모습에 줄까 */
+export const awkFx = (id: number) => isAwkId(id) && (AWK_ALL || ROAN_NEW);
 /** 용사 hero 의 각성 조건 4칸 (p = 지금 모습 · hero 를 안 주면 p.hero) */
 export const awakenChecks = (p: LookIn, hero: number = Number(p.hero) || 0) => {
   const fx = (famOfHero(hero).ids[3]) as string, t = awkTitle(hero);
