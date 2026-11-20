@@ -122,6 +122,7 @@ export function toQ(it: BItem, at: string, out: Issue[]): Question | null {
   const sf = SUBJ.formats[t]?.fromPack, types = [...TYPES, ...Object.keys(SUBJ.formats).filter((k) => SUBJ.formats[k]!.fromPack)];
   if (!TYPES.includes(t) && !sf) return err(`형식 「${t || '없음'}」 — ${types.join(' · ')} 중 하나`);
   if (!q) return err('문제 글(q)이 비었어요');
+  { const fe = SUBJ.rich?.check?.(q) ?? (Array.isArray(it.ch) ? (it.ch as unknown[]).map((o) => SUBJ.rich?.check?.(String(o)) ?? null).find(Boolean) ?? null : null); if (fe) return err(fe); } // 📈 그림 글 오류
   const ch = Array.isArray(it.ch) ? (it.ch as unknown[]).map(String) : null;
   const ex = extras(it, ch, err); if (!ex) return null;
   if (ex.groups && t !== 'multi') return err('두 칸 고르기(groups)는 여러 개 고르기(multi)에만');
