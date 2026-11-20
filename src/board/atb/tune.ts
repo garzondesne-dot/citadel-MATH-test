@@ -6,20 +6,13 @@ export type Diff = 'easy' | 'normal' | 'hard';
 export type Fam = 'arms' | 'flame' | 'nature' | 'wisdom' | 'mystic';
 export type Role = 'dealer' | 'tank' | 'healer' | 'support';
 
-/** 일반 난이도 보스 HP 배율 (📜 11/20 선생님 첫 판 「일반 엄청 쉬워」 → 출발값 +30% · 1 · 2인은 설계 방 값 올 때까지 같은 배율) */
-export const NORMAL_HP_UP = 1.3;
-/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · 📜 설정표 v3(모의실험 3) · 일반 = v3 × NORMAL_HP_UP · 연습 · 도전 = 어림값 */
-export const BOSS_HP: Record<Diff, [number, number, number, number]> = {
-  easy: [190, 410, 780, 1240],
-  normal: ([230, 500, 950, 1500] as const).map((x) => Math.round(x * NORMAL_HP_UP)) as [number, number, number, number],
-  hard: [270, 590, 1120, 1760],
-};
-/** 보스 공격 기본값 (단일 / 광역) · 인원 1 · 2 · 3 · 4 (설정표 v3: 4 · 3인 같음) */
-export const BOSS_HIT: Record<Diff, [number, number][]> = {
-  easy: [[3.5, 2], [6, 3], [8, 4], [8, 4]],
-  normal: [[6, 3], [11, 5.5], [14, 7], [14, 7]],
-  hard: [[8, 4], [14, 7], [18, 9], [18, 9]],
-};
+/** 🎚 난이도 = 일반에 곱함 (📜 11/20 요청 #5 ④ 출발값): 연습 = HP ×0.8 · 공격 ×0.6 / 도전 = HP ×1.2 · 공격 ×1.3 */
+export const DIFF_MUL: Record<Diff, { hp: number; hit: number }> = { easy: { hp: 0.8, hit: 0.6 }, normal: { hp: 1, hit: 1 }, hard: { hp: 1.2, hit: 1.3 } };
+/** 일반 보스 HP 기본 (인원 1 · 2 · 3 · 4) · 차시별 값(T.bossHpByNo)이 없을 때만 */
+export const BOSS_HP_BASE: [number, number, number, number] = [299, 650, 1235, 1950];
+/** 일반 보스 공격 (단일 / 광역) · 인원 1 · 2 · 3 · 4 = 설정표 v3 × 0.7 (📜 요청 #5 ① 「모의실험4 다」) */
+export const HIT_NORMAL: [number, number][] = ([[6, 3], [11, 5.5], [14, 7], [14, 7]] as [number, number][]).map(([a, b]) => [+(a * 0.7).toFixed(2), +(b * 0.7).toFixed(2)]);
+export const BOSS_HIT: Record<Diff, [number, number][]> = Object.fromEntries((['easy', 'normal', 'hard'] as Diff[]).map((d) => [d, HIT_NORMAL.map(([a, b]) => [+(a * DIFF_MUL[d].hit).toFixed(2), +(b * DIFF_MUL[d].hit).toFixed(2)])])) as Record<Diff, [number, number][]>;
 export const T = {
   bossEvery: 12, // 보스 공격 간격(초)
   telegraph: 2, // 표적 예고(초 전)
@@ -37,7 +30,7 @@ export const T = {
   shieldHelpRuns: 2,
   wrongSwap: 4, // 4번째 오답 = 같은 원문항 새 숫자 판
   /** ⚡ 충전 (📜 11/20 Y1 · 결정 14절): 원문항(한 문제)을 통째로 맞혀야 충전 · 최대 3 · 퍼펙트(오답 없이) · 재시도(오답 있었음) = ⏳ 임시값(설계 방 최종값 오면 바꿈) */
-  charge: { max: 3, perfect: 2, retry: 1 },
+  charge: { max: 3, perfect: 3, retry: 2 }, // 📜 요청 #5 ① 확정 (Y1′ · 모의실험4 「다」)
   /** 💠 스킬 비용 (Y2) */
   cost: { shield: 1, equip: 1, role: 1, revive: 1, tier4: 2, aura: 2, awk: 3 },
   /** 💥 스킬 피해 비 (Y11): 장착 1 · 4레벨 2.3 · 각성 3.8(판당 1번) + 역할 덧효과 그대로 */
@@ -51,8 +44,10 @@ export const T = {
   timingZone: { okW: [0.22, 0.4] as [number, number], critW: [0.06, 0.12] as [number, number], ms: [1000, 1700] as [number, number], edge: 0.06 },
   critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
   perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
-  /** ⏳ 보스 HP 차시별 · 판 길이 · 1 · 2인 = 설계 방 「🌊 완료 #4」 뒤 (빈 칸 = 지금 BOSS_HP 표) */
-  bossHpByNo: {} as Partial<Record<number, Partial<Record<Diff, [number, number, number, number]>>>>,
+  /** ❤ 일반 보스 HP 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ② 봇으로 맞춤) · 연습 · 도전 = × DIFF_MUL.hp */
+  bossHpByNo: {} as Partial<Record<number, [number, number, number, number]>>,
+  /** 👹 보스 공격 배율 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ③ 「HP 만으로 안 맞으면 그 보스 공격 숫자」 · 없으면 1) */
+  bossHitByNo: {} as Partial<Record<number, [number, number, number, number]>>,
   downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%
   role: {
     dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },
@@ -138,4 +133,4 @@ export const SIG = {
 
 /** 🎚 균형 표 한 곳 (📜 11/20 「보스 HP · 공격 · 역할 수치를 코드 한 곳(표 하나)에 · 나중에 균형 도구가 그 표만 바꿈」)
  *  엔진은 쓰는 순간 이 표의 값을 읽음 → 도구가 칸 값을 바꾸면 다음 판부터 그대로 (읽기 전용 표시는 타입만) */
-export const TUNE = { BOSS_HP, BOSS_HIT, T, BOSSES, ATK, SIG } as const;
+export const TUNE = { BOSS_HP_BASE, DIFF_MUL, BOSS_HIT, T, BOSSES, ATK, SIG } as const;

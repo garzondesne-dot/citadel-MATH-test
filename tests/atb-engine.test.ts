@@ -5,7 +5,7 @@ import { HEROES } from '../src/model/hero';
 import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skillList, tick, timingOf, timingZone, useSkill, type State } from '../src/board/atb/engine';
 import { newBot, simulate } from '../src/board/atb/bots';
 import { statsOf } from '../src/board/atb/heroes';
-import { BOSSES, T } from '../src/board/atb/tune';
+import { BOSSES, BOSS_HIT, BOSS_HP_BASE, T } from '../src/board/atb/tune';
 
 const L2 = SUBJ.lessons.find((p) => p.no === 2)!;
 const id = (n: string) => HEROES.find((h) => h.name === n)!.id;
@@ -17,7 +17,9 @@ const doneP = { done: true, perfect: true, right: true }, doneR = { done: true, 
 
 describe('ATB 엔진', () => {
   it('출발: 보스 HP = 인원별 일반 값 · 팀 부활 3', () => {
-    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([1950, 650, 299, 3]); // 설정표 v3 × 일반 +30% (📜 요청 #3 ⑧)
+    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([...[3, 1, 0].map((i) => (T.bossHpByNo[2] ?? BOSS_HP_BASE)[i]), 3]); // 차시별 일반 HP (📜 요청 #5)
+    const E = newBattle({ boss: BOSSES[2]!, diff: 'easy', party: party(['로안']), seed: 1 }), Hd = newBattle({ boss: BOSSES[2]!, diff: 'hard', party: party(['로안']), seed: 1 }), b0 = fresh(['로안']).bossMax;
+    expect([E.bossMax, Hd.bossMax]).toEqual([Math.round(b0 * 0.8), Math.round(b0 * 1.2)]); expect(BOSS_HIT.easy[3]![0]).toBeCloseTo(14 * 0.7 * 0.6); expect(BOSS_HIT.hard[3]![0]).toBeCloseTo(14 * 0.7 * 1.3); // 연습 = HP ×0.8 · 공격 ×0.6 · 도전 = ×1.2 · ×1.3
   });
   it('ATB = 역할 속도로 참 · 가득 차야 행동', () => {
     const S = fresh(); S.heroes[0]!.atb = 0;
@@ -57,7 +59,7 @@ describe('ATB 엔진', () => {
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
     expect(canBreak(S, 0)).toBe(null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
     full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 자기 칸 + 친구 칸
-    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(0); // 보호막 부수기 = 충전 1 (Y2)
+    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(T.charge.retry - 1); // 보호막 부수기 = 충전 1 (Y2 · 재시도 = 2칸)
   });
   it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 + 전원 생존 = 승리', () => {
     const S = fresh(['누아', '루멘']); S.bossHp = 200; full(S, 0); attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
@@ -69,7 +71,7 @@ describe('ATB 엔진', () => {
   it('보스: 12초마다 · 2초 전 표적 · 세 번째 = 광역 · 엄호 −50% · 방어율', () => {
     const S = fresh(); tick(S, 10.05); expect(S.target?.length).toBe(1);
     const tg = S.heroes[S.target![0]!]!; S.heroes[1]!.ch = 1; full(S, 1); roleAct(S, 1, tg.id);
-    const hp0 = tg.hp; tick(S, 2); const hit = Math.round(14 * 1.5 * (1 - tg.s.def) * 0.5); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
+    const hp0 = tg.hp; tick(S, 2); const hit = Math.round(BOSS_HIT.normal[3]![0] * (T.bossHitByNo[2]?.[3] ?? 1) * 1.5 * (1 - tg.s.def) * 0.5); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
     tick(S, 12); tick(S, 12); const ev = S.ev.filter((e) => e.k === 'boss'); expect(ev.map((e) => (e as { aoe: boolean }).aoe)).toEqual([false, false, true]);
   });
   it('쓰러짐: 친구가 충전 1 로 살림 · 팀 부활 3번 · 다 쓰면 한 명만 쓰러져도 실패 · 1인 = 바로 실패', () => {

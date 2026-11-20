@@ -1,7 +1,7 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
 //   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
-import { BOSS_HIT, BOSS_HP, ATK, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
+import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
 import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
@@ -41,7 +41,7 @@ export const alive = (S: State) => S.heroes.filter((h) => !h.down);
 export const weak = (S: State) => S.t < S.weakUntil;
 
 export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?: number }): State {
-  const n = Math.max(1, Math.min(4, o.party.length)), max = (T.bossHpByNo[o.boss.no]?.[o.diff] ?? BOSS_HP[o.diff])[n - 1]!;
+  const n = Math.max(1, Math.min(4, o.party.length)), max = Math.round((T.bossHpByNo[o.boss.no] ?? BOSS_HP_BASE)[n - 1]! * DIFF_MUL[o.diff].hp);
   return {
     t: 0, diff: o.diff, boss: o.boss, seed: o.seed ?? 1, rnd: o.seed ?? 1,
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false, nextAtk: null, tilt: '', mirrorUntil: 0, breathWarn: null, breathNext: 0,
@@ -102,7 +102,7 @@ function bossAttack(S: State) {
   S.bossT = 0; S.bossN++;
   const kind = S.nextAtk ?? (S.boss.cycle[(S.bossN - 1) % S.boss.cycle.length] ?? 'basic'), A = ATK[kind], aoe = S.aoeNext;
   const n = S.heroes.length, [one, all] = BOSS_HIT[S.diff][Math.max(1, Math.min(4, n)) - 1]!;
-  const base = (aoe ? all : one) * A.mul, to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
+  const base = (aoe ? all : one) * A.mul * (T.bossHitByNo[S.boss.no]?.[Math.max(1, Math.min(4, n)) - 1] ?? 1), to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
   if (S.guard) { S.guard = false; push(S, { k: 'guard', t: S.t, atk: A.name }); S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = ''; return; } // 🛡 오라 방패 = 이번 공격 통째로 막음
   if (A.special === 'mirror') { S.mirrorUntil = S.t + SIG.mirror.sec; push(S, { k: 'sig', t: S.t, what: 'mirrorOn' }); }
   for (const id of A.special === 'mirror' ? [] : to) {
