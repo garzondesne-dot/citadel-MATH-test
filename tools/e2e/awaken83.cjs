@@ -63,5 +63,16 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await tv.click('button:has-text("앞으로")').catch(() => {}); await tv.waitForTimeout(3500);
   ok('종합실 = 각성 시트를 받음', tvReq.some((u) => /hero-dknight-awk-v5\.webp/.test(u)), tvReq.filter((u) => /art\/heroes\//.test(u)).map((u) => u.split('/').pop()).join(' '));
   await tv.screenshot({ path: `${SHOTS}/awk-tv.png` });
+  // ⑤ TV 🌟 진필살기(시험 고리) = 첫 필살기 → 각성 컷인 → 일반 금빛 컷인 → ⚡ 각성 연출(녹스 = 핏빛 색조)
+  const tcut = tv.waitForSelector('[data-k="awaken-cut"]', { timeout: 5000 }).then(() => true).catch(() => false);
+  await tv.evaluate(() => window.__tvTrue?.(0));
+  ok('TV 첫 필살기 = 각성 컷인', await tcut);
+  const vfx = await tv.waitForSelector('[data-k="awk-vfx-dknight"]', { timeout: 6000 }).then(() => true).catch(() => false);
+  ok('TV 각성 연출 = 녹스 그림 (광역 대신)', vfx);
+  await tv.waitForTimeout(300); await tv.screenshot({ path: `${SHOTS}/awk-tv-vfx.png` });
+  await tv.waitForTimeout(2500);
+  const tcut2 = await tv.waitForSelector('[data-k="awaken-cut"]', { timeout: 2500 }).then(() => true).catch(() => false);
+  await tv.evaluate(() => window.__tvTrue?.(0)); await tv.waitForTimeout(400);
+  ok('두 번째 필살기 = 각성 컷인 없음', !(await tv.$('[data-k="awaken-cut"]')) && !tcut2);
   console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

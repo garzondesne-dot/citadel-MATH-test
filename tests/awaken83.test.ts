@@ -74,3 +74,13 @@ describe('🏅 전용 칭호 = 기록 하나 ≥ 기준 (소급)', () => {
     expect(earnedFrom({ bonus: { 'ex-1': b['ex-1'] } as never })).not.toContain('awk_13');
   });
 });
+
+describe('⚡ A3 각성 필살기 연출 34', () => {
+  it('학생 용사 31명 모두 연출 열쇠 있음 · 로안 = blond · 각성 아니면 없음', async () => {
+    const { awkKey, AWK_VFX, AWK_TINT } = await import('../src/ui/fx/awkfx');
+    expect(Object.keys(AWK_VFX)).toHaveLength(34);
+    for (const h of HEROES.map((x) => x.id)) expect(awkKey(awkId(h)), `용사 ${h}`).not.toBeNull();
+    expect(awkKey(16)).toBe('blond'); expect(awkKey(118)).toBe('dknight'); expect(awkKey(18)).toBeNull();
+    expect(Object.keys(AWK_TINT).sort()).toEqual(['dknight', 'frost', 'hacker', 'merchant']);
+  });
+});
