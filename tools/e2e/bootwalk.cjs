@@ -24,7 +24,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
     const m = await p.evaluate(() => JSON.parse(localStorage.getItem('citadel-boot') || 'null'));
     ok('앱이 기억을 적음 (용사 시트 · 팁 번호)', !!m && /\.webp$/.test(m.h) && m.t.length >= 3, JSON.stringify(m));
     await p.close(); const q = await ctx.newPage(); await q.route('**/assets/*.js', async (r) => { await new Promise((z) => setTimeout(z, 4000)); r.continue().catch(() => {}); });
-    await q.goto(B, { waitUntil: 'commit' }); await q.evaluate(() => localStorage.setItem('citadel-boot', JSON.stringify({ h: 'hero-witch-v5.webp', t: [3, 11] })));
+    await q.goto(B, { waitUntil: 'commit' }); await q.evaluate(() => localStorage.setItem('citadel-boot', JSON.stringify({ h: 'hero-witch-v6.webp', t: [3, 11] })));
     await q.reload({ waitUntil: 'commit' }); await q.waitForTimeout(800); const p2 = q;
     ok('첫 화면이 보이는 중', await q.isVisible('[data-k=boot-walk]'));
     ok('다음 열기 = 기억한 내 용사', /hero-witch-v5/.test(await p2.$eval('[data-k=boot-walk]', (e) => getComputedStyle(e).backgroundImage)));

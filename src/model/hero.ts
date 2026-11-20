@@ -36,7 +36,7 @@ export const AWAKEN_T: Record<number, [string, StatKey | 'seals']> = {
 export const awkTitle = (hero: number) => (hero === 0 ? 'slash10k' : AWK_ALL && AWAKEN_T[hero] ? `awk_${hero}` : null);
 export const AWK_TITLES = (AWK_ALL ? Object.entries(AWAKEN_T) : []).map(([h, [name, k]]) => ({ id: `awk_${h}`, name, tier: 'o' as const, cond: k === 'seals' ? '🏆 업적 3개' : `${STAT_LABEL[k]} ${AWK_NEED[k]}`, hero: Number(h) }));
 /** 🖼 각성 그림이 있는 용사 (그림이 없으면 원래 그림 · 📜 11/20 「선생님 GPT 시트 30명이 끝날 때까지 정식 배포 대기」) */
-export const AWK_ART: Record<number, string> = AWK_ALL ? { 0: 'hero-blond-v5.webp', 18: 'hero-dknight-awk-v5.webp', 8: 'hero-paladin-awk-v5.webp', 31: 'hero-valkyrie-awk-v5.webp' } : { 0: 'hero-blond-v5.webp' };
+export const AWK_ART: Record<number, string> = AWK_ALL ? { 0: 'hero-blond-v6.webp', 18: 'hero-dknight-awk-v6.webp', 8: 'hero-paladin-awk-v6.webp', 31: 'hero-valkyrie-awk-v6.webp' } : { 0: 'hero-blond-v6.webp' };
 /** 🚫 이 판에서 칭호를 얻을 수 없는 기록 (학교판 모루 끔 = ⚒ 연성 · features 가 알려 줌 · 📜 11/20 「그 용사 각성 막음」) */
 let craftOn: () => boolean = () => true;
 export const setCraftOn = (f: () => boolean) => { craftOn = f; };

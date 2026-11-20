@@ -11,7 +11,7 @@ export const TIP_NEEDS: Record<number, FeatId[]> = { 2: ['sword'], 3: ['help3'],
 export const tipsOn = (on: (id: FeatId) => boolean): number[] => Array.from({ length: 12 }, (_, i) => i + 1).filter((n) => (TIP_NEEDS[n] ?? []).every(on));
 export function rememberBoot(on: (id: FeatId) => boolean): void {
   try {
-    const h = heroOf(savedLook().hero).sprite || 'hero-sword-v5.webp', hd = HERO_HD[h];
+    const h = heroOf(savedLook().hero).sprite || 'hero-sword-v6.webp', hd = HERO_HD[h];
     localStorage.setItem(BOOT_KEY, JSON.stringify({ h, t: tipsOn(on), ...(hd ? { g: [hd.cw, hd.ch, hd.k] } : {}) })); // 🧙 #50 세밀 시트 = 칸 크기도
   } catch { /* 사생활 창 · 저장소 막힘 = 다음에도 기본(로안 · 늘 맞는 팁) */ }
 }

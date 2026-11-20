@@ -33,7 +33,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-sword-v5.webp"
+   "sprite": "hero-sword-v6.webp"
   },
   {
    "id": 1,
@@ -51,7 +51,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-witch-v5.webp"
+   "sprite": "hero-witch-v6.webp"
   },
   {
    "id": 2,
@@ -69,7 +69,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-elf-v5.webp"
+   "sprite": "hero-elf-v6.webp"
   },
   {
    "id": 3,
@@ -87,7 +87,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-ninja-v5.webp"
+   "sprite": "hero-ninja-v6.webp"
   },
   {
    "id": 4,
@@ -105,7 +105,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-priest-v5.webp"
+   "sprite": "hero-priest-v6.webp"
   },
   {
    "id": 5,
@@ -123,7 +123,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-lancer-v5.webp"
+   "sprite": "hero-lancer-v6.webp"
   },
   {
    "id": 6,
@@ -141,7 +141,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-dwarf-v5.webp"
+   "sprite": "hero-dwarf-v6.webp"
   },
   {
    "id": 8,
@@ -159,7 +159,7 @@
    "chal": null,
    "open": false,
    "cond": "1~3차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
-   "sprite": "hero-paladin-v5.webp"
+   "sprite": "hero-paladin-v6.webp"
   },
   {
    "id": 9,
@@ -177,7 +177,7 @@
    "chal": null,
    "open": false,
    "cond": "🎁 첫 레이드를 마치면 열려요",
-   "sprite": "hero-monk-v5.webp"
+   "sprite": "hero-monk-v6.webp"
   },
   {
    "id": 10,
@@ -195,7 +195,7 @@
    "chal": null,
    "open": false,
    "cond": "4~6차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
-   "sprite": "hero-dancer-v5.webp"
+   "sprite": "hero-dancer-v6.webp"
   },
   {
    "id": 11,
@@ -213,7 +213,7 @@
    "chal": null,
    "open": false,
    "cond": "8~11차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
-   "sprite": "hero-bard-v5.webp"
+   "sprite": "hero-bard-v6.webp"
   },
   {
    "id": 12,
@@ -231,7 +231,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-alchemist-v5.webp"
+   "sprite": "hero-alchemist-v6.webp"
   },
   {
    "id": 13,
@@ -249,7 +249,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-pirate-v5.webp"
+   "sprite": "hero-pirate-v6.webp"
   },
   {
    "id": 14,
@@ -267,7 +267,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-frost-v5.webp"
+   "sprite": "hero-frost-v6.webp"
   },
   {
    "id": 15,
@@ -285,7 +285,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-tamer-v5.webp"
+   "sprite": "hero-tamer-v6.webp"
   },
   {
    "id": 18,
@@ -303,7 +303,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-dknight-v5.webp"
+   "sprite": "hero-dknight-v6.webp"
   },
   {
    "id": 19,
@@ -321,7 +321,7 @@
    "chal": null,
    "open": false,
    "cond": "📷 성채 서술형 문제를 풀이 사진까지 통과하면 열려요",
-   "sprite": "hero-mathboy-v5.webp"
+   "sprite": "hero-mathboy-v6.webp"
   },
   {
    "id": 20,
@@ -339,7 +339,7 @@
    "chal": null,
    "open": false,
    "cond": "📷 성채 서술형 문제를 풀이 사진까지 통과하면 열려요",
-   "sprite": "hero-mathgirl-v5.webp"
+   "sprite": "hero-mathgirl-v6.webp"
   },
   {
    "id": 21,
@@ -357,7 +357,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-mechanic-v5.webp"
+   "sprite": "hero-mechanic-v6.webp"
   },
   {
    "id": 22,
@@ -375,7 +375,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-hacker-v5.webp"
+   "sprite": "hero-hacker-v6.webp"
   },
   {
    "id": 23,
@@ -393,7 +393,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-dragoon-v5.webp"
+   "sprite": "hero-dragoon-v6.webp"
   },
   {
    "id": 24,
@@ -411,7 +411,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-spellblade-v5.webp"
+   "sprite": "hero-spellblade-v6.webp"
   },
   {
    "id": 25,
@@ -429,7 +429,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-bone-v5.webp"
+   "sprite": "hero-bone-v6.webp"
   },
   {
    "id": 26,
@@ -447,7 +447,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-crossbow-v5.webp"
+   "sprite": "hero-crossbow-v6.webp"
   },
   {
    "id": 27,
@@ -467,7 +467,7 @@
    },
    "open": false,
    "cond": "👑 형성평가 만점 3번 (서로 다른 차시 · 수업이나 🎯 재대결)",
-   "sprite": "hero-abacus-v5.webp"
+   "sprite": "hero-abacus-v6.webp"
   },
   {
    "id": 28,
@@ -487,7 +487,7 @@
    },
    "open": false,
    "cond": "🏰 성채 방 10개 처치 (보스 방 포함)",
-   "sprite": "hero-geometry-v5.webp"
+   "sprite": "hero-geometry-v6.webp"
   },
   {
    "id": 29,
@@ -505,7 +505,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-merchant-v5.webp"
+   "sprite": "hero-merchant-v6.webp"
   },
   {
    "id": 30,
@@ -523,7 +523,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-drone-v5.webp"
+   "sprite": "hero-drone-v6.webp"
   },
   {
    "id": 31,
@@ -541,7 +541,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-valkyrie-v5.webp"
+   "sprite": "hero-valkyrie-v6.webp"
   },
   {
    "id": 32,
@@ -559,7 +559,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-elemental-v5.webp"
+   "sprite": "hero-elemental-v6.webp"
   },
   {
    "id": 33,
@@ -579,7 +579,7 @@
    },
    "open": false,
    "cond": "🎯 오답노트 빨간 칸 15개 해결",
-   "sprite": "hero-astro-v5.webp"
+   "sprite": "hero-astro-v6.webp"
   },
   {
    "id": 7,
@@ -598,7 +598,7 @@
    "open": false,
    "cond": "👩‍🏫 선생님 전용",
    "teacher": true,
-   "sprite": "hero-sage-v5.webp"
+   "sprite": "hero-sage-v6.webp"
   },
   {
    "id": 17,
@@ -617,7 +617,7 @@
    "open": false,
    "cond": "👩‍🏫 선생님 전용",
    "teacher": true,
-   "sprite": "hero-math-v5.webp"
+   "sprite": "hero-math-v6.webp"
   }
  ],
  "fams": [
