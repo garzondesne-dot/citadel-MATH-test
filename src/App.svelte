@@ -23,7 +23,7 @@
   import Student from './ui/Student.svelte';
   import Camp from './ui/camp/Camp.svelte';
   import Title from './ui/Title.svelte';
-  import { loadAtk, loadHall, loadTeacher } from './ui/lazy'; // 📦 교사 · TV · 갤러리 = 따로 받는 묶음 (main.ts 가 미리 받아 둠)
+  import { loadAtbRoom, loadAtk, loadHall, loadTeacher } from './ui/lazy'; // 📦 교사 · TV · 갤러리 = 따로 받는 묶음 (main.ts 가 미리 받아 둠)
   import { pupil, saveLogin, savedLogin, type Live, type Pupil } from './school/school';
   import { meBound } from './store/meSync';
   import { liveValue } from './ui/room.svelte';
@@ -155,8 +155,8 @@
 </script>
 
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
-{#if role !== 'dev' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
-{#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD_ID})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD, REV)}{site ? ' · 최신' : ''}">{verName(BUILD, REV)}{site === BUILD_ID ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD_ID} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
+{#if role !== 'dev' && role !== 'atb' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
+{#if role !== 'dev' && role !== 'atb'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD_ID})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD, REV)}{site ? ' · 최신' : ''}">{verName(BUILD, REV)}{site === BUILD_ID ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD_ID} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
 {#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
   <!-- 🐞 11/20 ③ 반쪽 데이터(서버 값이 비거나 반만 옴)로 화면 그리기가 터져도 앱 전체가 멈추지 않게 = 이 화면만 「다시 그리기」 -->
@@ -182,6 +182,8 @@
     {#await import('./ui/tv/FxBake.svelte') then M}<M.default />{/await}
   {:else if role === 'atk'}
     {#await loadAtk() then M}<M.default />{/await}
+  {:else if role === 'atb'}
+    {#await loadAtbRoom() then M}<M.default />{/await}
   {:else if role === 'dev' && TEST_ADDR}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
