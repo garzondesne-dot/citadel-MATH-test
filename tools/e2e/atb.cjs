@@ -1,5 +1,6 @@
 // ⚔ 게시판 던전 ATB 교사 연습방 (?role=atb) — 이 기기 · 미리 보기 서버 4173 · 가로 폰 844 × 390 (+ 667 × 375 · 태블릿 1024 × 768 · 세로 = 눕혀요 덮개)
-//   ① 설정 → 출발 = 가로 무대(용사 4 · 보스 · 단추 4 · 팀 부활 3) ② 문제 풀기 = 카드(오른쪽) · 맞힘 = ⚡ · 금색 · 오답 4번 = 새 숫자 판 ③ 공격 = 타이밍 바 ④ 스킬 = 모았다 놓기 · ⚡5 = 필살 컷인
+//   ① 설정 → 출발 = 가로 무대(용사 4 · 보스 · 단추 3 · 팀 부활 3 · 내 초상 ATB 고리 · HP 숫자) ② 문제 풀기 = 카드(오른쪽 47%) · 원문항 끝 = 채점 ○ × → 충전 · 오답 4번 = 새 숫자 판
+//   ③ 공격 = 타이밍 바 ④ 스킬 = 부채꼴(쓸 수 있는 것만) → 고르면 바로 · 각성 = 긴 컷인 (📜 요청 #4 Y1 ~ Y12)
 //   ⑤ 봇 4 관전 ×4 = 끝까지 → 결과(💎 3줄 · 숙련 · 단추 3) · 최근 판 기록 ⑥ 용사 고르기(초상 · 수치 · 방어 「0%」 · 딜러 ATB 8.0초)
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
@@ -9,17 +10,26 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const p = await b.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 }); p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('[data-k="atb-setup"]');
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(800);
-  const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, revs: document.querySelectorAll('.revs [data-icon="revive"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
-  ok('① 가로 무대 = 용사 4 · 단추 4 · 팀 부활 3 · 보스 그림', st.heroes === 4 && st.btn === 4 && st.revs === 3 && st.boss, JSON.stringify(st));
+  const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"] svg .rf') && !!document.querySelector('[data-k="atb-me"] .hpn b'), foot: document.querySelectorAll('.hero .foot').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs [data-icon="revive"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
+  ok('① 가로 무대 = 용사 4 · 단추 3(공격 · 스킬 · 문제) · 팀 부활 3 · 보스 그림', st.heroes === 4 && st.btn === 3 && st.revs === 3 && st.boss, JSON.stringify(st));
+  ok('Y5 · Y6 내 초상 ATB 고리 · 친구 발밑 고리 3 · HP 큰 숫자(용사 · 보스)', st.me && st.foot === 3 && st.bhp);
+  ok('Y9 몬스터 = 랜덤 던전 그림(2차시 = d01)', /^d01:/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
+  await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
   const feet = await p.$$eval('[data-k="atb-hero"]', (xs) => xs.map((x) => { const r = x.getBoundingClientRect(); return Math.round(r.top); }));
   ok('① 발 = 모두 바닥(화면 높이 45% 아래) · 내 용사 = 맨 아래', feet.every((y) => y > 390 * 0.45) && feet[0] === Math.max(...feet), JSON.stringify(feet));
   await p.evaluate(() => globalThis.__atb.pause(true));
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(700); // 보스가 걸어 나오는 0.45초
   const cardL = await p.$eval('.card', (x) => x.getBoundingClientRect().left), bossR = await p.$eval('[data-k="atb-boss"]', (x) => x.getBoundingClientRect().right);
-  ok('② 문제 카드 = 오른쪽 · 보스를 가리지 않음(보스가 앞으로)', cardL >= bossR - 30, `카드 ${Math.round(cardL)} · 보스 오른쪽 ${Math.round(bossR)}`);
+  ok('② 문제 카드 = 오른쪽 약 47% · 보스를 가리지 않음(보스가 앞으로)', cardL >= bossR - 30 && Math.abs(await p.$eval('.card', (x) => x.getBoundingClientRect().width / innerWidth) - 0.47) < 0.02, `카드 ${Math.round(cardL)} · 보스 오른쪽 ${Math.round(bossR)}`);
+  const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
-  ok('② 첫 시도 정답 = 금색 ⚡', (await p.$$eval('.qc .z.g', (x) => x.length)) === 1);
-  ok('② 정답 = 빛 구슬이 내 게이지로 날아감(금색 = 금빛)', !!(await p.$('.atb-orb.g')));
+  ok('Y1 소문항 하나 맞힘 = 충전 안 됨', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0);
+  for (let i = 0; i < 12 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(120); }
+  ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
+  await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
+  ok('Y1 퍼펙트 = 충전 2', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0 + 2);
+  await p.click('[data-k="atb-grade"]'); await p.waitForTimeout(150);
+  ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로 · 다음 문제', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')) && !!(await p.$('[data-k="atb-quiz"]')));
   await p.waitForTimeout(800);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
   ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && (await p.$eval('[data-k="atb-submit"]', (e) => e.disabled)));
@@ -46,10 +56,25 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('③ 공격 = 타이밍 바 · 치명 = 피해', (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp0);
   await p.waitForTimeout(250); ok('③ 용사가 몬스터 쪽으로 달려감(레이드 연출)', await p.evaluate(() => [...document.querySelectorAll('.hero.mine .spr')].some((e) => parseFloat(e.style.translate || '0') > 20)));
   await p.waitForTimeout(1500);
-  await p.evaluate(() => { const a = globalThis.__atb; a.zap(5, true); a.full(); }); await p.click('[data-k="atb-skill"]');
+  await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 3; a.full(); }); await p.click('[data-k="atb-skill"]'); await p.waitForSelector('[data-k="atb-fan"]');
+  const fan = await p.$$eval('[data-k="atb-fan"] button', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
+  ok('Y3 스킬 = 부채꼴 · 쓸 수 있는 것만(새내기 = 장착 · 역할)', JSON.stringify(fan) === '["equip","role"]', JSON.stringify(fan));
+  await p.screenshot({ path: `${SHOTS}/atb-fan-844.png` });
+  await p.click('[data-k="atb-sk-equip"]');
   await p.waitForSelector('[data-k="atb-cutin"]', { timeout: 1500 }).catch(() => {});
-  ok('⑦ ⚡5 스킬 = 누르면 바로 필살기 컷인(고리 없음)', !!(await p.$('[data-k="atb-cutin"]')) && !(await p.$('[data-k="atb-charge"]')));
-  await p.screenshot({ path: `${SHOTS}/atb-cutin-844.png` });
+  ok('Y2 장착 = 충전 1 · 고르면 바로', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 2);
+  ok('⑦ 장착 스킬 = 짧은 컷인', !!(await p.$('[data-k="atb-cutin"]')));
+  // ✨ 각성 용사 = 부채꼴에 4레벨 · 오라 방패 · 각성 · 각성 = 긴 컷인 · 오라 방패 = 다음 공격 막음 + 석화
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('.chips button:has-text("각성")'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(600);
+  await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 3; a.full(); }); await p.click('[data-k="atb-skill"]'); await p.waitForSelector('[data-k="atb-fan"]');
+  const fan2 = await p.$$eval('[data-k="atb-fan"] button', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
+  ok('Y3 각성 · +10 · Ⅳ 용사 부채꼴 = 장착 · 4레벨 · 역할 · 오라 방패 · 각성', JSON.stringify(fan2) === '["equip","tier4","role","aura","awk"]', JSON.stringify(fan2));
+  await p.screenshot({ path: `${SHOTS}/atb-fan-awk-844.png` });
+  await p.click('[data-k="atb-sk-awk"]'); await p.waitForSelector('[data-k="atb-cutin"]', { timeout: 1500 }).catch(() => {});
+  ok('Y2 · Y11 각성 = 충전 3 · 긴 컷인', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 0 && /각성/.test(await p.textContent('[data-k="atb-cutin"]').catch(() => '')));
+  await p.screenshot({ path: `${SHOTS}/atb-cutin-844.png` }); await p.waitForTimeout(2600);
+  await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await p.click('[data-k="atb-skill"]'); await p.click('[data-k="atb-sk-aura"]'); await p.waitForTimeout(200);
+  ok('Y12 오라 방패 = 다음 공격 막음 + 석화 표시', await p.evaluate(() => globalThis.__atb.S.guard && globalThis.__atb.S.stoneUntil > globalThis.__atb.S.t) && !!(await p.$('[data-k="atb-stone"]')));
   // 세로 = 눕혀요
   { const v = await b.newPage({ viewport: { width: 390, height: 844 } }); await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForTimeout(600);
     ok('세로 폰 = 「폰을 눕혀요」 덮개', !!(await v.$('[data-k="atb-rotate"]'))); await v.close(); }

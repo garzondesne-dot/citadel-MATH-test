@@ -4,7 +4,7 @@ import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, questionsOf, startRun, type Origin, type Run } from './quiz';
 import { T } from './tune';
-import { alive, attack, canBreak, canRole, earn, revive, roleAct, skill, tick, weak, type Hold, type State, type Timing } from './engine';
+import { alive, attack, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State, type Timing } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
 export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number }
@@ -37,19 +37,25 @@ export function botStep(L: LessonPack, S: State, b: Bot): void {
   if (act(S, b)) b.due += ACT_SEC; // 행동하는 동안(약 3초)은 문제를 못 풂 (sim2.py atk_sec) · 행동 안 함(거울빛 기다림) = 문제를 계속 풂
 }
 const timingRoll = (b: Bot): Timing => { const x = r01(b); return b.kind === 'ideal' ? (x < 0.6 ? 'crit' : 'ok') : x < 0.15 ? 'miss' : x < 0.4 ? 'crit' : 'ok'; };
-const holdRoll = (_b: Bot): Hold => T.skillTap; // 📜 요청 #3 ⑦ 스킬 = 누르면 바로 (사람과 같은 배율)
 function act(S: State, b: Bot): boolean {
-  const h = S.heroes[b.who]!, R = h.s.role;
+  const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
-  if (down && S.revives > 0 && h.zaps.length >= 1 && revive(S, b.who, down.id)) return true;
-  if (canBreak(S, b.who) && skill(S, b.who, holdRoll(b))) return true;
+  if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return true;
+  if (can('shield') && useSkill(S, b.who, 'shield')) return true;
+  if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return true; // 🛡 오라 방패 = 예고가 뜨면
+  if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return true;
   if (canRole(S, b.who)) {
     if (R === 'healer' && alive(S).some((x) => x.hp < x.s.maxHp * 0.55) && roleAct(S, b.who)) return true;
     if (R === 'tank' && S.target && S.target.length === 1 && !S.heroes[S.target[0]!]!.cover && roleAct(S, b.who, S.target[0])) return true;
-    if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.zaps.length >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return true; }
+    if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return true; }
   }
-  const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 ⚡ 아낌(×0.3) · 약점 시간에 몰아침
-  if (h.zaps.length && (weak(S) || h.zaps.length >= 5 || (!shieldHold && h.zaps.length >= 3)) && skill(S, b.who, holdRoll(b))) return true;
+  const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 충전 아낌(×0.3 · 실드 깨기용) · 약점 시간에 몰아침
+  const keep = shieldHold && h.ch <= 1;
+  if (!keep && (weak(S) || h.ch >= T.charge.max || !shieldHold)) {
+    if (can('tier4') && (weak(S) || h.ch >= T.charge.max) && useSkill(S, b.who, 'tier4')) return true;
+    if (R === 'dealer' && can('role') && roleAct(S, b.who)) return true;
+    if (can('equip') && (weak(S) || h.ch >= 2) && useSkill(S, b.who, 'equip')) return true;
+  }
   if (S.t < S.mirrorUntil && h.hp < h.s.maxHp * 0.6) return false; // 8 거울빛 = 일반 공격이 되돌아옴 → 다친 봇은 문제를 풂(설정표 「그동안은 타이밍 바 대신 문제」)
   attack(S, b.who, timingRoll(b)); return true;
 }

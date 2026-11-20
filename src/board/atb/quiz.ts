@@ -19,26 +19,27 @@ export function originsOf(L: LessonPack): Origin[] {
 /** 가장 쉬운 칸 = 소문항이 가장 적은 원문항(같으면 앞) — 도전자의 실드용 (U3) */
 export const easiestOf = (os: Origin[]) => os.slice().sort((a, b) => a.n - b.n || os.indexOf(a) - os.indexOf(b))[0] ?? null;
 
-export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[] }
-export interface Earn { zap: number; gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean }
+export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[] }
+/** 얻은 것 · 충전은 엔진이 done · perfect 로 정함(Y1 원문항 통째) · gold = 이 소문항 첫 시도 정답(표시만) · marks = 끝났을 때 소문항 ○ × */
+export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; marks?: boolean[] }
 const VERS = 7;
 export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'>, seed: string): Question[] => (L.monsters[r.mid]?.chain ? chainItems(L, r.mid, seed, r.ver) : items(L, r.mid, seed, r.ver));
 /** 새 원문항 시작 (ver0 = 이 학생 시작 판) */
-export const startRun = (mid: string, ver0: number): Run => ({ mid, ver: ((ver0 % VERS) + VERS) % VERS, k: 0, wrong: 0, clean: true, firstTry: true, vers: [((ver0 % VERS) + VERS) % VERS] });
+export const startRun = (mid: string, ver0: number): Run => ({ mid, ver: ((ver0 % VERS) + VERS) % VERS, k: 0, wrong: 0, clean: true, firstTry: true, vers: [((ver0 % VERS) + VERS) % VERS], marks: [] });
 /** 답 하나 내기 → 새 진행 + 얻은 것 */
 export function answer(L: LessonPack, r: Run, seed: string, given: Given): { run: Run; earn: Earn } {
   const qs = questionsOf(L, r, seed), q = qs[r.k];
-  const none: Earn = { zap: 0, gold: false, done: false, perfect: false, swapped: false, right: false };
+  const none: Earn = { gold: false, done: false, perfect: false, swapped: false, right: false };
   if (!q) return { run: r, earn: none };
   if (grade(q, given)) {
-    const last = r.k >= qs.length - 1, boss = !!L.monsters[r.mid]?.chain && last;
-    const earn: Earn = { zap: boss ? 2 : 1, gold: r.firstTry, done: last, perfect: last && r.clean, swapped: false, right: true };
-    return { run: last ? r : { ...r, k: r.k + 1, firstTry: true }, earn };
+    const last = r.k >= qs.length - 1, marks = [...r.marks.slice(0, r.k), r.firstTry];
+    const earn: Earn = { gold: r.firstTry, done: last, perfect: last && r.clean, swapped: false, right: true, ...(last ? { marks } : {}) };
+    return { run: last ? { ...r, marks } : { ...r, k: r.k + 1, firstTry: true, marks }, earn };
   }
   const wrong = r.wrong + 1;
   if (wrong >= T.wrongSwap) { // 4번째 오답 = 같은 원문항 새 숫자 판 · 진행도만 처음부터
     const used = new Set(r.vers), next = Array.from({ length: VERS }, (_, i) => (r.ver + 1 + i) % VERS).find((v) => !used.has(v)) ?? (r.ver + 1) % VERS;
-    return { run: { mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next] }, earn: { ...none, swapped: true } };
+    return { run: { mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [] }, earn: { ...none, swapped: true } };
   }
   return { run: { ...r, wrong, clean: false, firstTry: false }, earn: none };
 }

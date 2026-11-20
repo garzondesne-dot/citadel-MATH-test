@@ -3,8 +3,8 @@
 import { heroOf, ladder } from '../../model/hero';
 import { FAM_OF_ATTR, G, roleOfName, T, type Fam, type Role } from './tune';
 
-export interface HeroIn { hero: number; lv: number; enh: number; tier: number; grit?: number; focus?: number; name?: string }
-export interface Stats { hero: number; name: string; role: Role; fam: Fam; attr: string; lv: number; enh: number; tier: number; maxHp: number; def: number; atbSec: number; atkMul: number; skillMul: number; crit: number; awk: boolean }
+export interface HeroIn { hero: number; lv: number; enh: number; tier: number; grit?: number; focus?: number; name?: string; /** ✨ 각성 상태 (#83) */ awk?: boolean }
+export interface Stats { hero: number; name: string; role: Role; fam: Fam; attr: string; lv: number; enh: number; tier: number; maxHp: number; def: number; atbSec: number; atkMul: number; skillMul: number; crit: number; /** ✨ 각성 상태 = 각성 스킬(Y3) */ awk: boolean; /** 🔨 +10 = 오라 방패(Y12) */ aura: boolean }
 
 export const famOf = (hero: number): Fam => FAM_OF_ATTR[String(heroOf(hero).attr)] ?? 'arms';
 export const roleOf = (hero: number): Role => roleOfName(String(heroOf(hero).name));
@@ -22,7 +22,8 @@ export function statsOf(h: HeroIn): Stats {
     atkMul: 1 + lv + enh,
     skillMul: 1 + lv + enh + tier,
     crit: T.crit + G.focus(h.focus ?? 0),
-    awk: h.enh >= 10,
+    awk: !!h.awk,
+    aura: h.enh >= 10,
   };
 }
 /** 고르는 창 숫자 줄 (선생님 W1-b 「여기서만 용사 수치」) · 방어 0 = 「0%」 */
