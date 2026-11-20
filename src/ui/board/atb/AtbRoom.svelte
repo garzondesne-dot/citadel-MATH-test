@@ -85,11 +85,15 @@
     <button type="button" class="go" data-k="atb-start" disabled={!L} onclick={begin}>⚔ 출발 (폰을 눕혀요)</button>
     {#if recs.length}<section><b>최근 {recs.length}판 (이 폰)</b><ol class="recs">{#each recs as r (r.at)}<li>{md(r.at)} · {r.no}차시 {({ easy: '연습', normal: '일반', hard: '도전' })[r.diff]} · {r.mode} · {r.win ? '✔ 승리' : '✘ 실패'} · {Math.floor(r.sec / 60)}분 {r.sec % 60}초 · {r.who} · 씨앗 {r.seed}{#if r.r}<br /><small data-k="atb-rec">📊 소문항 {r.r.subs}개 · 하나에 {r.r.subSecMed}초 · 타이밍 {r.r.timingOk ?? '−'}% · 충전 {r.r.charges ?? '−'} · 스킬 {Object.values(r.r.skills ?? {}).reduce((a, x) => a + (x ?? 0), 0)} · 쓰러짐 {r.r.downs} · {r.r.roles}</small>{/if}</li>{/each}</ol></section>{/if}
   </main>
-{:else if phase === 'battle' && S && L}
+{:else}
+<!-- 🔄 게시판 던전만 가로 (📜 요청 #8): 세로 폰 = 화면 전체를 CSS 로 시계 방향 90° (폰 회전 잠금 그대로 · 눕혀 들기만) · 가로 잠금이 되는 폰 = 안 돌림 · 나오면 원래대로 -->
+<div class="land" class:rot={portrait} data-rot90={portrait ? '' : undefined} data-k="atb-land">
+{#if phase === 'battle' && S && L}
   {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} {bg} onend={ended} />{/key}
-  {#if portrait}<div class="rot" role="alert" data-k="atb-rotate">📱↻ 폰을 눕혀요 <small>가로 화면 전투</small></div>{/if}
 {:else if phase === 'result' && S && L}
   <AtbResult {S} no={L.no} me={meIdx} {mastery} onagain={begin} onswap={() => { phase = 'setup'; picking = -1; }} onexit={() => (phase = 'setup')} />
+{/if}
+</div>
 {/if}
 {#if picking != null && L}
   <HeroPick ids={ALL} owned={() => true} boss={BOSSES[L.no]!} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor}
@@ -110,6 +114,8 @@
   .hp.me { border-color: var(--accent); } .hp small { font: 700 11px var(--font-plain); color: var(--accent); } .hp em { font: 600 11px var(--font-plain); color: var(--text-2); font-style: normal; }
   .go { min-height: 56px; border-radius: 14px; border: 3px solid #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; font: 900 20px var(--font); box-shadow: 0 4px 0 #6a4210; }
   .recs { margin: 0; padding-left: 18px; font: 600 12px var(--font-plain); color: var(--text-2); display: flex; flex-direction: column; gap: 2px; }
-  .rot { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #120c18f2; color: #ffe08a; font: 900 26px var(--font); }
-  .rot small { font: 600 14px var(--font-plain); color: #fff; }
+  /* 🔄 게시판 던전만 가로 (요청 #8): 안 돌림 = 상자 없음(display: contents) · 돌림 = 화면 오른쪽 위를 축으로 90° · 안의 fixed 화면들은 이 상자 기준
+     안전 영역 = 돌린 뒤 왼쪽 = 폰 위(노치) · 오른쪽 = 폰 아래(홈 바) → --safe-l · --safe-r (전투 무대가 씀) */
+  .land { display: contents; --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px); }
+  .land.rot { display: block; position: fixed; top: 0; left: 0; width: 100vh; height: 100vw; width: 100dvh; height: 100dvw; transform-origin: top left; transform: translateX(100vw) rotate(90deg); overflow: hidden; z-index: 1; --safe-l: env(safe-area-inset-top, 0px); --safe-r: env(safe-area-inset-bottom, 0px); }
 </style>

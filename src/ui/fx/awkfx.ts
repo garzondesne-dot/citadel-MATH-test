@@ -2,6 +2,7 @@
 //   연출만 (데미지 · 판정 같음) · 각성 상태의 ⚡ 필살기 · 🌟 진필살기에서 지금 광역 대신 · 몬스터 발에 맞춰 그 위에 겹침
 //   몬스터 색 바꾸는 효과(그림엔 없음) = 코드 색조: 글라세 얼음 · 마진 금빛 · 핑 초록 글리치 · 녹스 핏빛
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) 같은 함수 · TV 몬스터 색조 = tint 콜백(Pixi)
+import { rectIn } from '../rot';
 import T from './awk-vfx.json';
 import { awkFx, baseOf, heroOf } from '../../model/hero';
 import { artUrl } from '../manifest';
@@ -30,7 +31,7 @@ export type Box = { cx: number; y1: number; w: number; h: number };
 export function awkBlast(scene: HTMLElement, B: Box, key: string, o: { monBox?: HTMLElement | null; tint?: (color: number, ms: number) => void } = {}): Promise<void> {
   const v = AWK_VFX[key]; if (!v || typeof document === 'undefined') return Promise.resolve();
   if (getComputedStyle(scene).position === 'static') scene.style.position = 'relative';
-  const R = scene.getBoundingClientRect(), fitTop = v.oy < 0 ? (B.y1 - 4) / -v.oy : 9, fitW = (R.width || 9e3) / v.w; // 장면 위 · 옆으로 넘치지 않게
+  const R = rectIn(scene), fitTop = v.oy < 0 ? (B.y1 - 4) / -v.oy : 9, fitW = (R.width || 9e3) / v.w; // 장면 위 · 옆으로 넘치지 않게
   const k = Math.max(0.5, Math.min(4, B.w / 140, fitTop, fitW)), rows = Math.ceil(v.n / v.cols), ms = Math.round((v.n / v.fps) * 1000);
   const e = document.createElement('i'); e.className = 'awk-vfx'; e.dataset.k = `awk-vfx-${key}`;
   e.style.cssText = `left:${Math.round(B.cx + v.ox * k)}px;top:${Math.round(B.y1 + v.oy * k)}px;width:${Math.round(v.w * k)}px;height:${Math.round(v.h * k)}px;background-image:url('${artUrl(v.src)}');background-size:${v.cols * 100}% ${rows * 100}%`;

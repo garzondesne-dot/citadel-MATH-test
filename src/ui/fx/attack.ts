@@ -4,6 +4,7 @@
 //   ⚡ 필살기 컷인(1.2초 · 얼굴 · 눈빛 · 이름 · 찢김) → 💥 광역(본 이펙트 + 네 귀퉁이 + 충격파 + 어둠막) · 🌟 진필살기 = 금빛 · 「眞」 · 조금 길게
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) · 갤러리 같은 함수 — 연출만 (데미지 · 체력 · 정답 판정과 무관)
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
+import { rectIn } from '../rot';
 import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
 import { AWK_ART, awkFx, baseOf, heroOf } from '../../model/hero';
@@ -17,7 +18,7 @@ export const projOf = (hero: number) => RANGED[String(Number(hero))] ?? null;
 export const isRanged = (hero: number) => !!projOf(hero);
 const ROUND: Record<string, boolean> = { witch: true, priest: true };
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-const rel = (el: Element, box: Element) => { const a = el.getBoundingClientRect(), b = box.getBoundingClientRect(); return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height }; };
+const rel = (el: Element, box: Element) => { const a = rectIn(el), b = rectIn(box); return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height }; };
 /** 🎯 보이는 몸통: 칸에서 투명 여백을 뺀 상자 (data-bb = 「x0,y0,x1,y1」 칸 비율 · 없으면 정식 기본값) */
 export function body(el: Element | null, scene: Element | null): Body | null {
   if (!el || !scene) return null;
@@ -66,7 +67,7 @@ export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string
   const B = body(monBox, scene); if (!B) return;
   const sp = spec(fx) ?? spec('flame'), shot = modeOf(fx) === 'shot';
   const awk = o.ult && o.awk ? o.awk : null; if (awk) void awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, awk, { monBox, tint: o.tint }); // ⚡ #83 A3
-  const drew = !!awk || (!o.cast && !!o.custom?.(B, o.dir ?? (B.cx > scene.getBoundingClientRect().width / 2 ? 1 : -1), { ult: !!o.ult, finish: !!o.finish }));
+  const drew = !!awk || (!o.cast && !!o.custom?.(B, o.dir ?? (B.cx > rectIn(scene).width / 2 ? 1 : -1), { ult: !!o.ult, finish: !!o.finish }));
   if (drew) { /* 새 그림 */ } else if (o.ult) void ultBlast(scene, monBox, fx); else if (!o.cast) void place(scene, fx, { body: B, from: o.from, mode: shot && !o.from ? 'body' : undefined, mult: o.mult, perfect: o.finish, dir: o.dir });
   const hit = sp?.hit || [0, 0.08, 0.18, 2];
   await wait((shot && o.from ? Math.min(0.9, hit[0] || 0.3) : Math.min(0.3, hit[0] || 0.06)) * 1000);
@@ -186,7 +187,7 @@ function awakenNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
 export function ultBlast(scene: HTMLElement, monBox: HTMLElement | null, fx: string): Promise<void> {
   if (!scene) return wait(0);
   if (getComputedStyle(scene).position === 'static') scene.style.position = 'relative';
-  const R = scene.getBoundingClientRect(), W = R.width, Hh = R.height;
+  const R = rectIn(scene), W = R.width, Hh = R.height;
   const M = monBox && monBox.isConnected ? rel(monBox, scene) : { x: W * 0.35, y: Hh * 0.25, w: W * 0.3, h: Hh * 0.45 };
   const cx = M.x + M.w / 2, cy = M.y + M.h * 0.52, sp = spec(fx) ?? spec('flame');
   const fam = (famOf(fx) ?? { id: 'star' }).id, c1 = (ULT_COLOR[fam] ?? ULT_COLOR.star!)[0];
@@ -279,7 +280,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
     if (!scene.isConnected) return;
     await dash(scene, heroBox, o.miss ? { x: step.x - dir * 22, y: step.y } : step, { x: 0, y: 0 }, 140, false);
   } else {
-    const R = scene.getBoundingClientRect(), edge = dir > 0 ? B.x0 + B.w * 0.12 : B.x1 - B.w * 0.12, hand0 = H.x + H.w * (dir > 0 ? 0.74 : 0.26);
+    const R = rectIn(scene), edge = dir > 0 ? B.x0 + B.w * 0.12 : B.x1 - B.w * 0.12, hand0 = H.x + H.w * (dir > 0 ? 0.74 : 0.26);
     const to = { x: edge - hand0, y: Math.max(-H.y, Math.min(R.height - (H.y + H.h), B.y1 - hc.y)) };
     setPose('walk'); sfx('swing', 0.6 * V);
     const big = !o.miss && tierN(fx) >= 2, hits = big ? Math.max(1, Math.min(5, Math.floor(Number(o.hits) || 1))) : 1;

@@ -3,6 +3,7 @@
 //   바닥 고리(뒤 + 발 앞 반쪽) · 발밑 색빛 · 도는 입자(앞 반 바퀴) · 10단계 = 머리 뒤 홀리 후광(+ 빛살)만 · 교실 TV = 입자 2개까지 · 폭 40px 미만 = 그림 오라 없음
 //   guard(용사 칸, onHit): 날개(감쌈 → 뒤로 쫙) · 방패(빛 모임 → 생김 → 💥 맞음 → 금 → 부서짐) · 맞는 순간 = 1120ms
 //   v1.0 다른 점: MutationObserver 대신 Svelte 액션 use:aura={{ lv, tv }}
+import { rectIn } from '../rot';
 import { AURA } from './fx';
 import { artUrl } from '../manifest';
 import { heroOf } from '../../model/hero';
@@ -46,7 +47,7 @@ function style() {
 export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number], hero?: number): () => void {
   art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au');
   if (!lv) return () => {};
-  const w = art.getBoundingClientRect().width; if (w && w < 40) return () => {};
+  const w = rectIn(art).width; if (w && w < 40) return () => {};
   style(); art.classList.add('au');
   const i = lv >= 10 ? 6 : lv - 1, col = AURA.colors[lv - 1] || '#fff';
   if (head) { art.style.setProperty('--hx', String(head[0])); art.style.setProperty('--hy', String(head[1])); }
@@ -78,7 +79,7 @@ export function aura(node: HTMLElement, p: AuraP) {
 export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0, mon?: Element | null): number {
   const a = AURA; if (!host || !a.guardWings) return 0;
   const art = host.querySelector('.art') as HTMLElement | null; if (!art) return 0;
-  const hr = host.getBoundingClientRect(), ar = art.getBoundingClientRect(); if (!ar.width) return 0;
+  const hr = rectIn(host), ar = rectIn(art); if (!ar.width) return 0;
   const p = fitH ? Math.min(ar.width * 0.0155, (fitH * 1.05) / 170) : ar.width * 0.0155, cx = ar.left - hr.left + ar.width / 2, by = hr.bottom - ar.bottom;
   if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
   host.querySelector('.gd-fx')?.remove();
@@ -105,7 +106,7 @@ export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0, mo
 export const HIT_MS = 1120;
 /** 💥 맞는 순간 몬스터 쪽 흰 · 금빛 섬광 (화면 고정 · 0.4초) */
 function flashAt(mon?: Element | null) {
-  if (!mon || !mon.isConnected || typeof document === 'undefined') return; const r = mon.getBoundingClientRect(); if (!r.width) return;
+  if (!mon || !mon.isConnected || typeof document === 'undefined') return; const r = mon.getBoundingClientRect(); // 화면 고정(fixed · 몸 밖) = 화면 좌표 그대로 if (!r.width) return;
   const e = document.createElement('i'), d = Math.max(r.width, r.height) * 1.3;
   e.style.cssText = `position:fixed;z-index:40;pointer-events:none;left:${r.left + r.width / 2 - d / 2}px;top:${r.top + r.height / 2 - d / 2}px;width:${d}px;height:${d}px;border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#fff3c0aa 38%,transparent 68%);mix-blend-mode:screen`;
   document.body.appendChild(e); e.animate?.([{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)', offset: 0.2 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 420, easing: 'ease-out', fill: 'forwards' }); setTimeout(() => e.remove(), 450);

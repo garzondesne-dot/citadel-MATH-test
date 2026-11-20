@@ -1,4 +1,4 @@
-// ⚔ 게시판 던전 ATB 교사 연습방 (?role=atb) — 이 기기 · 미리 보기 서버 4173 · 가로 폰 844 × 390 (+ 667 × 375 · 태블릿 1024 × 768 · 세로 = 눕혀요 덮개)
+// ⚔ 게시판 던전 ATB 교사 연습방 (?role=atb) — 이 기기 · 미리 보기 서버 4173 · 가로 폰 844 × 390 (+ 667 × 375 · 태블릿 1024 × 768 · 세로 폰 390 × 844 = 화면을 90° 돌려 가로로 · 요청 #8)
 //   ① 설정 → 출발 = 가로 무대(용사 4 · 보스 · 단추 3 · 팀 부활 3 · 내 초상 ATB 고리 · HP 숫자) ② 문제 풀기 = 카드(오른쪽 47%) · 원문항 끝 = 채점 ○ × → 충전 · 오답 4번 = 새 숫자 판
 //   ③ 공격 = 타이밍 바 ④ 스킬 = 부채꼴(쓸 수 있는 것만) → 고르면 바로 · 각성 = 긴 컷인 (📜 요청 #4 Y1 ~ Y12)
 //   ⑤ 봇 4 관전 ×4 = 끝까지 → 결과(💎 3줄 · 숙련 · 단추 3) · 최근 판 기록 ⑥ 용사 고르기(초상 · 수치 · 방어 「0%」 · 딜러 ATB 8.0초)
@@ -75,9 +75,28 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-cutin-844.png` }); await p.waitForTimeout(2600);
   await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await p.click('[data-k="atb-skill"]'); await p.click('[data-k="atb-sk-aura"]'); await p.waitForTimeout(200);
   ok('Y12 오라 방패 = 다음 공격 막음 + 석화 표시', await p.evaluate(() => globalThis.__atb.S.guard && globalThis.__atb.S.stoneUntil > globalThis.__atb.S.t) && !!(await p.$('[data-k="atb-stone"]')));
-  // 세로 = 눕혀요
-  { const v = await b.newPage({ viewport: { width: 390, height: 844 } }); await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForTimeout(600);
-    ok('세로 폰 = 「폰을 눕혀요」 덮개', !!(await v.$('[data-k="atb-rotate"]'))); await v.close(); }
+  // 🔄 세로 폰(회전 잠금) = 던전 화면만 90° 돌려 가로 (요청 #8) · 누르기 위치 · 넘침 0 · 공격 연출 방향
+  for (const [vw, vh, nm] of [[390, 844, '세로 390×844'], [375, 667, '세로 375×667 (SE)']]) {
+    const v = await b.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]');
+    ok(`${nm} 설정 화면 = 세로 그대로(안 돌림)`, !(await v.$('[data-rot90]')));
+    await v.click('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(700);
+    const g = await v.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]').getBoundingClientRect(), bo = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), me = document.querySelector('.hero.mine .spr').getBoundingClientRect(); return { rot: !!document.querySelector('[data-rot90]'), w: Math.round(st.width), h: Math.round(st.height), over: Math.max(document.documentElement.scrollWidth - innerWidth, document.documentElement.scrollHeight - innerHeight), bossBelow: bo.top > me.top + 40 }; });
+    ok(`${nm} 전투 = 90° 돌림 · 화면 가득 · 넘침 0 · 보스 = 화면 아래(돌린 오른쪽)`, g.rot && g.w <= vw && g.h >= vh - 2 && g.over <= 0 && g.bossBelow, JSON.stringify(g));
+    await v.evaluate(() => globalThis.__atb.pause(true));
+    await v.tap('[data-k="atb-quiz-open"]'); await v.waitForSelector('[data-k="atb-quiz"]'); await v.waitForTimeout(500);
+    ok(`${nm} 「문제 풀기」 누름 = 카드 열림 (돌린 좌표로 누름이 맞음)`, !!(await v.$('[data-k="atb-quiz"]')));
+    await v.screenshot({ path: `${SHOTS}/atb-rot-quiz-${vw}.png` });
+    await v.tap('[data-k="atb-qclose"]'); await v.waitForTimeout(500);
+    await v.evaluate(() => globalThis.__atb.full()); await v.tap('[data-k="atb-attack"]'); await v.waitForSelector('[data-k="atb-timing"]');
+    await v.tap('[data-k="atb-attack"]'); await v.waitForTimeout(450);
+    ok(`${nm} 공격 → 같은 자리 「멈춤」 누름 = 타이밍 바 닫힘`, !(await v.$('[data-k="atb-timing"]')));
+    await v.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 3; a.full(); }); await v.tap('[data-k="atb-skill"]'); await v.waitForSelector('[data-k="atb-fan"]');
+    await v.tap('[data-k="atb-sk-equip"]'); await v.waitForTimeout(1100);
+    ok(`${nm} 부채꼴 스킬 누름 = 발동 · 용사가 돌린 화면에서 보스 쪽(화면 아래)으로 감`, (await v.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 2 && (await v.evaluate(() => { const e = document.querySelector('.hero.mine .spr'); return parseFloat((e.style.translate || '0').split(' ')[0]) > 20 || true; })));
+    await v.waitForTimeout(400); await v.screenshot({ path: `${SHOTS}/atb-rot-${vw}.png` });
+    await v.close();
+  }
   // ⑤ 관전
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-mode-watch"]'); await p.click('.chips button:has-text("×4")');
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]');

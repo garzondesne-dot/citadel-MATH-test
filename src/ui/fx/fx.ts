@@ -2,6 +2,7 @@
 //   pixelfx(MIT)로 구운 도트 띠 그림(public/art/pfx)을 CSS steps 로 한 번 재생 · 자리 = 몬스터 「보이는 몸통」에 맞춤
 //   표(fx2 · fxbb · ranged · heroFaces · aura · bodies) = fx-data.json (정식 assets/manifest.js 에서 뽑음 · 손으로 고치지 않음)
 //   계열 · 이름 = model/hero (hero-data.json · 정식 FAMS · NAMES) · 연출만 — 데미지 · 정답 판정과 무관
+import { rectIn } from '../rot';
 import DATA from './fx-data.json';
 import NEWJ from './fx-new.json';
 import { FAMS, SKILL_NAMES } from '../../model/hero';
@@ -90,7 +91,7 @@ export function place(box: HTMLElement, kind: string, o: { body?: Body | null; f
     el = stripXY(box, sp, o.from.x - sp.px * sx, o.from.y - bcy * sy, sx, sy, { z: 21, rot: Math.atan2(dy, dx), ox: sp.px * sx, oy: bcy * sy });
   } else if (isNewFx(kind)) { el = stripXY(box, sp, cx - bcx * s, cy - bcy * s, s, s, { flip: (o.dir || 1) < 0 }); // 새 띠 = 몸통 상자에 그대로 (단계 크기 · 방향은 구울 때)
   } else if (!o.mode && (sp.mm === 'cross' || sp.mm === 'cross-wide')) {
-    const R = box.getBoundingClientRect(), dir = o.dir || 1, sx = Math.min(w * 2.4, R.width * 0.9) / bw, sy = q4(clamp(Math.min(sx, (h * (sp.mm === 'cross' ? 1.2 : 1.9)) / bh) * tier * mult, 0.6, 8));
+    const R = rectIn(box), dir = o.dir || 1, sx = Math.min(w * 2.4, R.width * 0.9) / bw, sy = q4(clamp(Math.min(sx, (h * (sp.mm === 'cross' ? 1.2 : 1.9)) / bh) * tier * mult, 0.6, 8));
     const left = clamp(cx + dir * w * 0.2 - (bw * sx) / 2 - bb[0] * sx, -bb[0] * sx, R.width - bb[2] * sx);
     el = stripXY(box, sp, left, cy - bcy * sy, sx, sy, { flip: dir < 0 });
   } else if (!o.mode && (sp.mm === 'drop' || sp.mm === 'drop-wide')) {
@@ -107,7 +108,7 @@ export function play(box: HTMLElement, kind: string, opt: { x?: number; y?: numb
   if (!box) return Promise.resolve();
   if (!KINDS.includes(kind) && !spec(kind)) kind = 'flame';
   const sp = spec(kind); if (!sp) return Promise.resolve();
-  const r = box.getBoundingClientRect();
+  const r = rectIn(box);
   if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
   const x = opt.x ?? r.width / 2, y = opt.y ?? r.height / 2;
   let s = opt.s || clamp((opt.scale || Math.min(r.width, r.height) / 520) / 0.3, 0.6, 3);
