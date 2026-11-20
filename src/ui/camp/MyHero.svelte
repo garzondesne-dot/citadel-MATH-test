@@ -8,7 +8,7 @@
   import { awakenCut } from '../fx/attack';
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
-  import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
+  import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, switchHero, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import { sfx } from '../sound.svelte';
   import { heroUnlock, medalN, statsOf, type HeroUnlock } from '../../model/heroUnlock';
   import HeroSprite from './HeroSprite.svelte';
@@ -22,7 +22,7 @@
   //   고른 것은 저장 전까지 화면에서만(💎 가 빠져 보임) → 아래 막대 한 줄 「바뀐 것 · 되돌리기 · 💾 저장」 · 💎 를 쓰면 저장 때 가운데 확인 1번
   //   금빛 단추 늘 하나: 바뀐 것이 있으면 💾 저장 · 없으면 강화 탭의 「+n+1 으로 강화」
   const { me, persist, onclose, teacher = false, onreset }: { me: Me; persist: () => void; onclose: () => void; /** 👩‍🏫 교사 B안 (📜 2026-11-13 밤): 용사 모두 열림(선생님 전용 포함) · 스킬은 직접 해금 · ↺ 처음으로 */ teacher?: boolean; onreset?: () => void } = $props();
-  const snap = (): Look => ({ hero: me.hero, enh: me.enh, socket: { ...me.socket }, title: me.title || 'none' });
+  const snap = (): Look => ({ hero: me.hero, enh: me.enh, socket: { ...me.socket }, title: me.title || 'none', titles: { ...(me.titles || {}) } });
   let L0 = $state<Look>(untrack(snap));
   let look = $state<Look>(untrack(snap));
   let P = $state<Plan>(emptyPlan());
@@ -102,7 +102,7 @@
   const mine = $derived(POOL.filter((h) => ownH(h.id)));
   const locked = $derived(POOL.filter((h) => !ownH(h.id)));
   function buyHero() { const h = heroOf(pickH); if (h.price == null || lf.gem < h.price) { say('💎 가 모자라요'); return; } P.heroes = [...P.heroes, pickH]; }
-  function useHero() { look.hero = pickH; heroSheet = false; }
+  function useHero() { look = switchHero(look, pickH, W, P, GR); heroSheet = false; } // 🏅 W2 용사마다 스킬 · 칭호
   const allHeroes = $derived([...mine, ...locked]);
   const ownedSk = (id: number) => ladder(id).map((k) => ownsSkill(W, P, id, k, GR));
   const topTier = (id: number) => { const o = ownedSk(id); const n = o.lastIndexOf(true); return n >= 0 ? TN[n] : ''; };
@@ -132,7 +132,7 @@
     if (look.title !== L0.title) it.push('호칭');
     return it;
   });
-  function undo() { P = emptyPlan(); look = { ...L0, socket: { ...L0.socket } }; say('↺ 모두 되돌렸어요', 1600); }
+  function undo() { P = emptyPlan(); look = { ...L0, socket: { ...L0.socket }, titles: { ...(L0.titles || {}) } }; say('↺ 모두 되돌렸어요', 1600); }
   function trySave() { if (c.g || c.s) confirm = true; else commit(); }
   function commit() {
     confirm = false;
@@ -142,9 +142,9 @@
     if (P.enh) { if (r.great) sfx('enh-great', 0.85); else sfx('enh-ok', 0.85); } else if (P.sk.length) sfx('skill-unlock', 0.85);
     const wasB = isAwakened({ hero: L0.hero, enh: L0.enh, fx: equipOf(L0), title: L0.title }) && L0.hero === r.look.hero, nowB = isAwakened({ hero: r.look.hero, enh: r.look.enh, fx: equipOf(r.look), title: r.look.title });
     if (nowB && !wasB) { const h = r.look.hero, key = h === 0 ? 'citadel-v1-blond-seen' : `citadel-v1-awk-seen-${h}`; let seen = false; try { seen = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1'); } catch { /* 없음 */ } if (!seen) setTimeout(() => void awakenCut(awkId(h), equipOf(r.look)), 300); } // ⚡ #83 (옛 🌟 #29) 용사마다 처음 한 번 변신 컷인
-    me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title;
+    me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title; me.titles = r.look.titles;
     persist();
-    L0 = { ...r.look, socket: { ...r.look.socket } }; look = { ...r.look, socket: { ...r.look.socket } }; P = emptyPlan();
+    L0 = { ...r.look, socket: { ...r.look.socket }, titles: { ...(r.look.titles || {}) } }; look = { ...r.look, socket: { ...r.look.socket }, titles: { ...(r.look.titles || {}) } }; P = emptyPlan();
     if (r.great) say(`🌟 강화 대성공 ${r.great}번! 💎 ${r.back}개 돌려받았어요`, 3600);
     savedFlash = true; setTimeout(() => (savedFlash = false), 1000); // ✔ 저장했어요 1초 뒤 처음 상태
   }
