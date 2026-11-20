@@ -15,6 +15,13 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('요청 #14 이름표 = Lv · 이름 · 계열 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /^Lv\.\d/.test(await p.textContent('.hero .tag > b')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
   ok('Y9 몬스터 = 랜덤 던전 그림(2차시 = d01)', /^d01:/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
   await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
+  // 🆘 요청 #18 위험 체력 = 30% 아래 빨갛게 깜박 + 🆘 + 친구 화면 한 줄 · 나 = 초상 빨강 · 회복하면 꺼짐
+  await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[1].hp = Math.floor(a.S.heroes[1].s.maxHp * 0.2); a.S.heroes[0].hp = Math.floor(a.S.heroes[0].s.maxHp * 0.2); }); await p.waitForTimeout(200);
+  ok('요청 #18 체력 30% 아래 = 이름표 빨강 · 🆘 · 「🆘 ○○ 위험!」 · 내 초상 빨강', (await p.$$('.tag.low')).length === 2 && (await p.$$('[data-k="atb-sos"]')).length === 2 && /위험/.test(await p.textContent('[data-k="atb-bigmsg"]').catch(() => '')) && !!(await p.$('[data-k="atb-me"].low')));
+  await p.screenshot({ path: `${SHOTS}/atb-sos-844.png` });
+  await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes.forEach((h) => (h.hp = h.s.maxHp)); }); await p.waitForTimeout(150);
+  ok('요청 #18 회복하면 꺼짐', (await p.$$('.tag.low')).length === 0 && !(await p.$('[data-k="atb-sos"]')));
+  await p.evaluate(() => globalThis.__atb.pause(false));
   const feet = await p.$$eval('[data-k="atb-hero"]', (xs) => xs.map((x) => { const r = x.getBoundingClientRect(); return Math.round(r.top); }));
   ok('① 발 = 모두 바닥(화면 높이 45% 아래) · 내 용사 = 맨 아래', feet.every((y) => y > 390 * 0.45) && feet[0] === Math.max(...feet), JSON.stringify(feet));
   await p.evaluate(() => globalThis.__atb.pause(true));

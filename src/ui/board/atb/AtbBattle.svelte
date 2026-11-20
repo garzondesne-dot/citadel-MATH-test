@@ -169,6 +169,12 @@
   const fullCh = $derived(!!meH && meH.ch >= T.charge.max);
   let wasFull = false;
   $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) big('⚡ 가득! 스킬을 써요', 'note', 1200); wasFull = f; }); });
+  /** 🆘 위험 체력 (📜 요청 #18): 30% 아래(T.lowHp) = 체력 막대 · 숫자 빨갛게 깜박 + 머리 위 🆘 · 처음 내려갈 때 한 줄(친구) · 진동(나) · 힐러 💚 · 💖 부활 단추 반짝 */
+  const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
+  const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
+  const anyNeed = $derived(lowIds.some((i) => i !== me) || S.heroes.some((h) => h.down && h.id !== me));
+  let wasLow = new Set<number>();
+  $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); } wasLow = now; }); });
   /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
   const isWeak = (id: number) => { const h = S.heroes[id]; return !!h && S.boss.weak.includes(h.s.fam); };
   let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false), auraOn = $state(false);
@@ -297,7 +303,7 @@
   <!-- 🧑 내 초상 = 둘레 동그란 ATB 고리(Y5) · HP 큰 숫자 + 가는 띠(Y6) · ⚡ 충전 칸 3(Y1) -->
   {#if meH}
     {@const pt = portraitOf(lookOfStats(meH.s))}
-    <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
+    <div class="me" class:full={ready} class:down={meH.down} class:low={lowIds.includes(me)} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
       {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <div class="face">
 
@@ -347,7 +353,8 @@
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.down ? 0 : h.s.enh} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
-      <div class="tag" class:full={h.atb >= 1 && !h.down}>
+      {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 44 : 22)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
+      <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)}>
         <b>Lv.{h.s.lv} {name(h.id)} <i class="fe">{FAM_EMO[h.s.fam]}</i>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</b>
         <i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i>
         <span class="hn">{h.hp}/{h.s.maxHp}</span>
@@ -372,7 +379,7 @@
       <div class="ring" data-k="atb-skills" aria-label="스킬">
         {#each slots as sk (sk.k)}
           {@const R = (sk.fix ? 136 : 206) * U}
-          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 충전 {sk.cost}" style:transform="translate(calc(-50% + {Math.round(Math.cos((sk.ang * Math.PI) / 180) * R)}px), calc(-50% + {Math.round(Math.sin((sk.ang * Math.PI) / 180) * R)}px))" onclick={() => fire(sk.k)}>
+          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 충전 {sk.cost}" style:transform="translate(calc(-50% + {Math.round(Math.cos((sk.ang * Math.PI) / 180) * R)}px), calc(-50% + {Math.round(Math.sin((sk.ang * Math.PI) / 180) * R)}px))" onclick={() => fire(sk.k)}>
             <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}</span>
             <span class="nm">{SK_NAME(sk.k)}</span>
             <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span>
@@ -548,4 +555,12 @@
   .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
   .stage.q .tag { transform: scale(0.82); transform-origin: top center; }
   .tag.full { border-color: #ffd34d; box-shadow: 0 0 8px #ffd34d; } .tag .fe { font-style: normal; }
+  /* 🆘 위험 체력 (요청 #18) */
+  .tag.low .thin.hp b { background: #ff2a2a; } .tag.low .hn { color: #ff6a5a; }
+  .tag.low .thin.hp, .tag.low .hn { animation: lowb 1s steps(2) infinite; } @keyframes lowb { 50% { opacity: 0.35; } }
+  .sos { position: absolute; left: 0; transform: translateX(-50%); z-index: 4; padding: 0 6px; border-radius: 10px; background: #fff; font-size: 16px; font-style: normal; box-shadow: 0 0 8px #ff2a2a; animation: blink 1s steps(2) infinite; }
+  .me.low { border-color: #ff2a2a; box-shadow: 0 0 14px #ff2a2a; } .me.low .hpn b { color: #ff6a5a; }
+  .sk2.need { animation: need 0.8s ease-in-out infinite; } @keyframes need { 50% { box-shadow: 0 0 22px #7dffb0, 0 3px 0 #0a1430; filter: brightness(1.3); } }
+  .bigmsg.sosmsg { top: 30%; padding: 4px 18px; border-color: #ff6a5a; background: linear-gradient(#c81e1eee, #6a0a0aee); font-size: clamp(16px, 5.5vh, 24px); }
+  @media (prefers-reduced-motion: reduce) { .tag.low .thin.hp, .tag.low .hn, .sos, .sk2.need { animation: none; } }
 </style>
