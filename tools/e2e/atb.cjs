@@ -34,7 +34,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
   ok('Y1 소문항 하나 맞힘 = 충전 안 됨', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0);
-  for (let i = 0; i < 12 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(120); }
+  for (let i = 0; i < 40 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150); } await p.waitForSelector('[data-k="atb-grade"]', { timeout: 5000 }); // 판마다 원문항 순서가 섞여 소문항이 많은 칸(최대 8)이 나올 수 있음 · 맞음 잠금이면 다음 번에
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
   ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
@@ -132,7 +132,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
-  for (let i = 0; i < 12 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(120); }
+  for (let i = 0; i < 40 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150); } await p.waitForSelector('[data-k="atb-grade"]', { timeout: 5000 }); // 판마다 원문항 순서가 섞여 소문항이 많은 칸(최대 8)이 나올 수 있음 · 맞음 잠금이면 다음 번에
   await p.waitForTimeout(700);
   const tri = await p.evaluate(() => ({ t: document.querySelector('[data-k="atb-grade-title"]')?.textContent ?? '', m: [...document.querySelectorAll('[data-k="atb-mark"]')].map((e) => e.dataset.m).join(','), log: globalThis.__sfxLog.slice(-8).join(',') }));
   ok('채점 △ = 고쳐 맞힌 소문항 △(고침) · 「🏁 완주!」 · △ 소리 부드럽게(ink)', /완주/.test(tri.t) && /^tri/.test(tri.m) && /ink/.test(tri.log) && !/,x/.test(tri.m), JSON.stringify(tri));
