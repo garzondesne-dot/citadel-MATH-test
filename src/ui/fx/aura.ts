@@ -106,7 +106,7 @@ export function guard(host: HTMLElement | null, onHit?: () => void, fitH = 0, mo
 export const HIT_MS = 1120;
 /** 💥 맞는 순간 몬스터 쪽 흰 · 금빛 섬광 (화면 고정 · 0.4초) */
 function flashAt(mon?: Element | null) {
-  if (!mon || !mon.isConnected || typeof document === 'undefined') return; const r = mon.getBoundingClientRect(); // 화면 고정(fixed · 몸 밖) = 화면 좌표 그대로 if (!r.width) return;
+  if (!mon || !mon.isConnected || typeof document === 'undefined') return; const r = mon.getBoundingClientRect(); if (!r.width) return; // 화면 고정(fixed · 몸 밖) = 화면 좌표 그대로
   const e = document.createElement('i'), d = Math.max(r.width, r.height) * 1.3;
   e.style.cssText = `position:fixed;z-index:40;pointer-events:none;left:${r.left + r.width / 2 - d / 2}px;top:${r.top + r.height / 2 - d / 2}px;width:${d}px;height:${d}px;border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#fff3c0aa 38%,transparent 68%);mix-blend-mode:screen`;
   document.body.appendChild(e); e.animate?.([{ opacity: 0, transform: 'scale(.4)' }, { opacity: 1, transform: 'scale(1)', offset: 0.2 }, { opacity: 0, transform: 'scale(1.25)' }], { duration: 420, easing: 'ease-out', fill: 'forwards' }); setTimeout(() => e.remove(), 450);
