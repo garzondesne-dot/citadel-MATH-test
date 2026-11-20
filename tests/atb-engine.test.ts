@@ -64,10 +64,10 @@ describe('ATB 엔진', () => {
   it('쓰러진 학생이 맞힘 = 친구 ATB +50%', () => {
     const S = fresh(['로안', '누아']); S.heroes[0]!.down = true; S.heroes[1]!.atb = 0.1; earn(S, 0, right, 1); expect(S.heroes[1]!.atb).toBeCloseTo(0.6);
   });
-  it('역할: 힐러 광역 +25(연달아 못 씀) · 서포터 격려 = ATB 가득 · 딜러 강타 ×1.5', () => {
-    const S = fresh(); for (const h of S.heroes) h.hp = 50;
-    S.heroes[2]!.zaps = ['n', 'n']; full(S, 2); roleAct(S, 2); expect(S.heroes.map((h) => h.hp)).toEqual([75, 75, 75, 75]);
-    full(S, 2); expect(roleAct(S, 2)).toBe(false);
+  it('역할: 힐러 광역 +12(팀 전체로 보스 공격 한 번 사이 1번) · 서포터 격려 = ATB 가득 · 딜러 강타 ×1.5', () => {
+    const S = fresh(['로안', '발도르', '루멘', '누아', ]); for (const h of S.heroes) h.hp = 50;
+    S.heroes[2]!.zaps = ['n', 'n']; full(S, 2); roleAct(S, 2); expect(S.heroes.map((h) => h.hp)).toEqual([62, 62, 62, 62]);
+    full(S, 2); expect(roleAct(S, 2)).toBe(false); tick(S, 12.1); full(S, 2); expect(roleAct(S, 2)).toBe(true); // 보스 공격 한 번 지나면 다시
     S.heroes[3]!.zaps = ['n']; S.heroes[0]!.atb = 0; full(S, 3); roleAct(S, 3, 0); expect(S.heroes[0]!.atb).toBe(1);
     const hp = S.bossHp; S.heroes[0]!.zaps = ['n']; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(55 * S.heroes[0]!.s.skillMul * 1.5));
   });
@@ -86,4 +86,17 @@ describe('ATB 엔진', () => {
     const all = Array.from({ length: 10 }, (_, i) => run(i + 1)); const wins = all.filter((s) => s.end?.win).length, avg = all.reduce((x, s) => x + s.t, 0) / all.length / 60;
     expect(wins).toBeGreaterThanOrEqual(6); expect(avg).toBeGreaterThan(3); expect(avg).toBeLessThan(6.5);
   });
+});
+it('📊 판 기록: 판 길이 · 소문항당 시간 · 타이밍 · 모았다 놓기 · 쓰러짐 · 역할 조합', async () => {
+  const { runRecord } = await import('../src/board/atb/engine');
+  const S = fresh(); tick(S, 10); earn(S, 0, right); tick(S, 6); earn(S, 0, right);
+  full(S, 0); attack(S, 0, 'crit'); full(S, 1); attack(S, 1, 'miss');
+  const r = runRecord(S, { no: 2, cls: '1-3', practice: true });
+  expect(r).toMatchObject({ no: 2, cls: '1-3', n: 4, roles: 'dealer+healer+support+tank', subs: 2, subSecMed: 10, timingOk: 50, timingCrit: 50, downs: 0 });
+  expect(r.sec).toBe(16);
+});
+it('🔄 몬스터는 늘 왼쪽을 봄 = 오른쪽 보는 자세만 반전 (2차시 흑표범 대기 · 3 · 5차시 공격)', async () => {
+  const { BOSSES } = await import('../src/board/atb/tune');
+  expect(BOSSES[2]!.flip).toMatchObject({ idle: true, down: true }); expect(BOSSES[2]!.flip?.attack).toBeFalsy();
+  expect(BOSSES[3]!.flip?.attack).toBe(true); expect(BOSSES[5]!.flip?.attack).toBe(true); expect(BOSSES[11]!.flip).toBeUndefined();
 });
