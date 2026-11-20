@@ -64,7 +64,7 @@
   import { heroUnlock } from '../../model/heroUnlock';
   import { visit as usageVisit } from '../../school/usage';
   import { chanOf, studentLines, studentNews, studentSeenPath, unseen } from '../../school/changes';
-  import { claim as mailClaim, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
+  import { claim as mailClaim, claimOnce, inbox as mailInbox, seenGet as mailSeenGet, unreadOf as mailUnread } from '../../school/mailbox';
 
   // 🏕 학생 캠프 (#111 · ①′ 물건 누르기 확정 · 스킬 ui-senior 2-1절 캠프 줄)
   //   위 = 장면(정식 캠프 그림 · 자리 그대로) + 「내 캠프 · 💎 · 📜」 / 아래 = 정보판(내 용사 · 사다리 4칸 · 다음 보상) + 주요 단추 「n차시 던전 입장」
@@ -114,19 +114,21 @@
   {
     const u = untrack(() => pupil)?.uid;
     const G = u ? untrack(() => S).get<Record<string, { g: number; x?: number; s?: number; fun?: string; got?: boolean; mail?: boolean; hold?: boolean }>>(`gifts/${u}`) || {} : {};
-    const fresh = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail && !x.hold); // 📮 hold = 우편함에서 학생이 「받기」로만 (📜 2026-11-19 선생님 「우편으로 돌려줘」) // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
-    if (u && fresh.length) {
+    const fresh0 = Object.entries(G).filter(([, x]) => x && !x.got && !x.mail && !x.hold); // 📮 hold = 우편함에서 학생이 「받기」로만 (📜 2026-11-19 선생님 「우편으로 돌려줘」) // ✉ 메시지에 붙은 💎 = 아래 메시지 알림이 받음
+    // 🐞 11/20 ② 서버 = 선물마다 got 을 transaction 으로 먼저 (폰 두 대가 캠프를 같이 열어도 한 번만 받음) → 내가 받은 것만 지갑에
+    const take = (fresh: typeof fresh0) => { if (u && fresh.length) {
       const sum = fresh.reduce((a, [, x]) => a + (Number(x.g) || 0), 0);
       const xp = fresh.reduce((a, [, x]) => a + (Number(x.x) || 0), 0), funOnly = fresh.every(([, x]) => !!x.fun); // 🏕 쉼터 놀이 보상(#142) = 같은 칸 · EXP 도
       // 🗿 석화 찬스 💎 = 하루 한도 안 (📜 2026-11-13 밤 · 정식 DAY_CAP 100 · 넘은 몫은 버림) · 나머지 선물 = 한도 밖 그대로
       const petri = fresh.filter(([k]) => k.startsWith('petri_')).reduce((a, [, x]) => a + (Number(x.g) || 0), 0), petriGot = earnDaily(me.wallet, petri, kstDay(untrack(() => S).now()), GEM.dayCap);
       const sc = fresh.reduce((a, [, x]) => a + (Number(x.s) || 0), 0); // 📜 ✍ 📸 서술형 통과 (정식 ult_{차시}_{몬스터} · 문제당 한 번)
       me.wallet.gem += sum - petri; me.wallet.scroll += sc; me.xp += xp; M.save();
-      fresh.forEach(([k]) => S.set(`gifts/${u}/${k}/got`, true));
+      if (S.kind !== 'server') fresh.forEach(([k]) => S.set(`gifts/${u}/${k}/got`, true)); // 서버 = claimOnce 가 이미 씀
       const oneFun = new Set(fresh.map(([, x]) => x.fun || '')).size === 1 && fresh[0]![1].fun && fresh.every(([k]) => k.startsWith('sorry_')) ? fresh[0]![1].fun : ''; // 🎁 #45 사과 선물 = 그 이름 그대로
       giftToast = `${oneFun ? oneFun : fresh.every(([k]) => k.startsWith('stamp_')) ? '✅ 수업 도장' : funOnly ? (fresh.every(([k]) => k.startsWith('ult_')) ? '🌟 진필살기 서술' : '🏕 쉼터 놀이') : '🎁 선생님 선물'}${sum - petri + petriGot ? ` · 💎 +${sum - petri + petriGot}` : ''}${sc ? ` · 📜 +${sc}` : ''}${xp ? ` · EXP +${xp}` : ''}`;
       setTimeout(() => (giftToast = ''), 2600);
-    }
+    } };
+    if (u && fresh0.length) { const S0 = untrack(() => S); if (S0.kind === 'server') void Promise.all(fresh0.map(async ([k, x]) => ((await claimOnce(S0, u, k)) ? ([k, x] as (typeof fresh0)[number]) : null))).then((r) => take(r.filter((v): v is (typeof fresh0)[number] => !!v))); else take(fresh0); }
   }
   // ✉ 선생님 메시지 · 답장 (#130 · 테스트 판 = 학생 우편함 대신 폰 알림 한 줄) — 안 본 것을 읽음으로 · 붙은 💎 는 지갑에
   let mailToast = $state('');
@@ -184,9 +186,9 @@
   onDestroy(() => { mbG.stop(); mbN.stop(); });
   let mbSeen = $state(untrack(() => (mbWho ? mailSeenGet(mbWho.cls, mbWho.num, S) : 0))), mbVer = $state(0);
   const mailN = $derived.by(() => { void mbG.v.val; void mbN.v.val; void mv.v.val; void mbVer; return mbWho ? mailUnread(mailInbox(S, mbWho.uid, mbWho.cls), mbSeen) : 0; });
-  function mailTake(id: string): string {
+  async function mailTake(id: string): Promise<string> {
     if (!mbWho) return '';
-    const got = mailClaim(S, mbWho.uid, id); if (!got) return '이미 받은 선물이에요';
+    const got = S.kind === 'server' ? await claimOnce(S, mbWho.uid, id) : mailClaim(S, mbWho.uid, id); if (!got) return '이미 받은 선물이에요'; // 🐞 11/20 ② 서버 = transaction (폰 두 대 동시 = 한 번만)
     const n = got.petri ? earnDaily(me.wallet, got.g, kstDay(S.now()), GEM.dayCap) : (me.wallet.gem += got.g, got.g); // 🗿 석화 = 하루 한도 안 (캠프 받기와 같음)
     me.wallet.scroll += got.s; me.xp += got.x; M.save(); mbVer++; sfx('mail', 0.6);
     return `🎁 받았어요${n ? ` · 💎 +${n}` : ''}${got.s ? ` · 📜 +${got.s}` : ''}${got.x ? ` · EXP +${got.x}` : ''}`;

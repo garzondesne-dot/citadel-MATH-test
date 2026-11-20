@@ -52,3 +52,14 @@ describe('🐞 ② 지갑 = 늘어난 만큼만', () => {
     expect(S.get('accounts/1-2/7/hero')).toBe(0); expect(S.get('gem/1-2/7/ver')).toBe(1); expect(S.get('gem/1-2/7/total') ?? 0).toBe(0);
   });
 });
+
+describe('🐞 ② 선물 받기 = 한 번만', () => {
+  it('claimOnce: 처음 = 받음 · 두 번째(다른 폰 · 다시 누름) = null', async () => {
+    const S = memoryStore(); S.set('gifts/s1_2_7/g1', { g: 30, at: 1, got: false, hold: true });
+    const { claimOnce } = await import('../src/school/mailbox');
+    const [a, b] = await Promise.all([claimOnce(S, 's1_2_7', 'g1'), claimOnce(S, 's1_2_7', 'g1')]);
+    expect([a, b].filter(Boolean)).toHaveLength(1); expect((a || b)!.g).toBe(30);
+    expect(S.get('gifts/s1_2_7/g1/got')).toBe(true);
+    expect(await claimOnce(S, 's1_2_7', 'g1')).toBeNull();
+  });
+});

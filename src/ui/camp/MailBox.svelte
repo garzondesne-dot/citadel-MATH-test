@@ -5,7 +5,7 @@
   import type { Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import { inbox, isNew, md, seenGet, seenSet, unreadOf, type MailItem } from '../../school/mailbox';
-  const { S, uid, cls, num, gem, survey = 0, onclaim, onsurvey, onclose }: { S: Store; uid: string; cls: string; num: number; gem: number; survey?: number; onclaim: (id: string) => string; onsurvey?: () => void; onclose: () => void } = $props();
+  const { S, uid, cls, num, gem, survey = 0, onclaim, onsurvey, onclose }: { S: Store; uid: string; cls: string; num: number; gem: number; survey?: number; onclaim: (id: string) => string | Promise<string>; onsurvey?: () => void; onclose: () => void } = $props();
   let ver = $state(0), toast = $state('');
   const seen0 = untrack(() => seenGet(cls, num, S)); // 이번에 열기 전 = 안 읽음 표시 기준 (서버 · 이 기기 중 늦은 것)
   const list = $derived.by(() => { void ver; return inbox(S, uid, cls); });
@@ -17,7 +17,8 @@
   const un = $derived(unreadOf(list, seen0));
   $effect(() => { const t = list[0]?.at ?? 0; untrack(() => seenSet(cls, num, Math.max(Date.now(), t), S)); }); // 열면 = 지금까지 모두 읽음
   const IC: Record<MailItem['k'], string> = { gift: '🎁', msg: '✉', reply: '💌', notice: '📢' };
-  function take(x: MailItem) { toast = onclaim(x.id); ver++; setTimeout(() => (toast = ''), 2000); }
+  let busy = false;
+  async function take(x: MailItem) { if (busy) return; busy = true; try { toast = await onclaim(x.id); } finally { busy = false; } ver++; setTimeout(() => (toast = ''), 2000); } // 🐞 11/20 ② 두 번 누름 · 두 기기 = 한 번만
 </script>
 
 <Sheet {onclose} tall>
