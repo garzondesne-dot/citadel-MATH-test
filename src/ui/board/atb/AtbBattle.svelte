@@ -140,6 +140,9 @@
   let pops = $state<Pop[]>([]), seen = 0, pk = 0, hpose = $state<Record<number, HPose | ''>>({}), hurtOn = $state<Record<number, boolean>>({}), bossPose = $state<'idle' | 'attack' | 'hit' | 'down'>('idle'), cut = $state<{ who: number; awk: boolean; name: string; short: boolean } | null>(null);
   // 🛡 실드 (📜 요청 #12): 칸마다 연출 단계(hold = 아직 멀쩡해 보임 · crack = 금 감 · shatter = 조각나며 사라짐) · 방패막 물결 · 산산조각 · 큰 문구
   const FAM_EMO: Record<Fam, string> = { arms: '🗡', flame: '🔥', nature: '🍃', wisdom: '📖', mystic: '🔮' };
+  // 🎨 실드 그림 (작업대 atb-shield · atb-shield-slots · 11/20): 방패막 4칸 × 3줄(서 있음 · 막음 · 깨짐) · 칸 아이콘 5계열 × 3줄(멀쩡 · 금 감 · 깨짐)
+  const SHIELD_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-v1.webp`, SLOT_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-slots-v1.webp`;
+  const FAM_COL_I: Record<Fam, number> = { arms: 0, flame: 1, nature: 2, wisdom: 3, mystic: 4 };
   const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
   let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
   let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
@@ -336,19 +339,19 @@
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" style:--fc={FAM_COL[c.fam]} data-st={st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><i class="em">{FAM_EMO[c.fam]}</i>{#if st === 'crack' || st === 'shatter'}<i class="ck" aria-hidden="true"></i>{/if}{#if st === 'shatter'}{#each [0, 1, 2, 3, 4, 5] as k (k)}<b class="sh" style:--a="{k * 60}deg"></b>{/each}{/if}{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" style:--fc={FAM_COL[c.fam]} style:--col={FAM_COL_I[c.fam]} data-st={st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><i class="sl" style:background-image="url({SLOT_URL})" aria-hidden="true"></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
   </div>
-  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.15)}px" data-k="atb-barrier" aria-hidden="true"></i>{/if}
+  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
   <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   <!-- 용사 -->
   {#each S.heroes as h (h.id)}
     {@const p = posOf(h.id)}
     {@const sc = +(base * p.s).toFixed(2)}
-    <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:z-index={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
+    <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.down ? 0 : h.s.enh} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
@@ -442,7 +445,8 @@
   .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
   .boss { position: absolute; top: 74%; transform: translate(-50%, -100%); z-index: 11; transition: left 0.45s ease; }
   .hero { position: absolute; transition: left 0.45s ease, top 0.45s ease; }
-  .hero .spr { position: absolute; left: 0; top: 0; }
+  .hero .spr { position: absolute; left: 0; top: 0; z-index: var(--zi); } /* 앞 용사 몸 = 뒤 용사 몸 위 · 이름표 · 배지 = 모든 몸 위 (요청 #15) */
+  .hero .tag, .hero .wbadge, .hero .sos, .hero .aimx { z-index: 20; }
   .hero.down .spr { filter: grayscale(1) brightness(0.6); }
   .tele.sig { background: linear-gradient(#3a5ac8, #1d2f8e); border-color: #9fd0ff; box-shadow: 0 0 10px #5aa9ff88; }
   .bflip.armor { filter: drop-shadow(0 0 4px #9fe6ff) drop-shadow(0 0 10px #5ac8ff) saturate(0.7) brightness(1.15); } /* 4 얼음 갑옷 */
@@ -452,15 +456,15 @@
   .pop.heal { color: #7dffb0; font-size: 20px; }
   .tgt { position: absolute; left: -26px; top: -10px; width: 52px; height: 18px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 10px #ff3a2a; animation: blink 0.4s steps(2) infinite; }
   .cov { position: absolute; left: 14px; top: -54px; }
-  .tag { position: absolute; left: -42px; top: 2px; width: 84px; display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 3px; border-radius: 6px; border: 2px solid #8a6a3a; background: #1d1220d9; }
+  .tag { position: absolute; left: -42px; top: 2px; width: 84px; display: flex; flex-direction: column; gap: 1px; padding: 1px 2px 2px; border-radius: 6px; border: none; background: linear-gradient(#0000, #0006 30%, #0006); text-shadow: 0 1px 0 #000, 0 0 3px #000; } /* 📜 요청 #14 참고 그림 = 상자 없이 글 + 막대 */
   .tag > b { font: 700 9.5px var(--font-plain); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .hero.mine .tag { border-color: #e2b04a; }
+  .hero.mine .tag > b { color: #ffe08a; }
   .hz { font-size: 9px; font-style: normal; line-height: 1; }
   .pop { position: absolute; z-index: 25; transform: translate(-50%, 0); font: 900 22px var(--font); color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; pointer-events: none; animation: up 1.1s ease-out forwards; white-space: nowrap; }
   .pop.crit { color: #ffe066; font-size: 34px; } .pop.sk { color: #8fd0ff; font-size: 34px; } .pop.ult { color: #ffd34d; font-size: 46px; } .pop.hurt { color: #ff6a6a; font-size: 20px; } .pop.hurt.big { font-size: 26px; } .pop.miss { color: #ccc; font-size: 20px; }
   .pop.crit, .pop.sk, .pop.ult { animation: upbig 1.1s ease-out forwards; } @keyframes upbig { 0% { opacity: 1; transform: translate(-50%, 0) scale(1.8); } 15% { transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -56px) scale(1); } } .pop.shield { color: #9fe6ff; font-size: 22px; } .pop.role { color: #9dff9a; font-size: 16px; }
   @keyframes up { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -48px); } }
-  .card { position: absolute; z-index: 26; left: 26.5%; top: 2.5%; bottom: 2.5%; width: 47%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
+  .card { position: absolute; z-index: 26; left: 27%; top: 2.5%; bottom: 2.5%; width: 44%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
   .card.suck { transition: transform 0.42s ease-in, opacity 0.42s ease-in; transform: translate(-80%, -20%) scale(0.05) rotate(-20deg); opacity: 0; }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
@@ -523,23 +527,22 @@
   @media (prefers-reduced-motion: reduce) { .weakb, .tele, .b.atk.hot, .tgt, .barrier, .bigmsg { animation: none; } }
   /* 🛡 실드 칸 = 보스 체력바 아래 크게 한 줄 (요청 #12 ② · 그림 atb-shield-slots 오기 전 = 큰 이모지 + 굵은 계열 색 테두리) */
   .cells { display: flex; justify-content: center; gap: 8px; margin-top: 2px; }
-  .cell2 { position: relative; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; border: 4px solid var(--fc); background: radial-gradient(circle at 50% 35%, #ffffff40, #0009 70%); box-shadow: 0 0 10px var(--fc), inset 0 0 8px var(--fc); }
-  .cell2 .em { font-style: normal; font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 0 #000); }
+  .cell2 { position: relative; width: 48px; height: 48px; display: grid; place-items: center; filter: drop-shadow(0 0 6px var(--fc)); }
+  .cell2 .sl { position: absolute; inset: 0; background-repeat: no-repeat; background-size: 500% 300%; background-position: calc(var(--col) * 25%) 0%; image-rendering: pixelated; }
+  .cell2.crack .sl, .cell2.hold.crk .sl { background-position-y: 50%; } .cell2.shatter .sl { background-position-y: 100%; }
   .cell2.hold { animation: none; }
-  .cell2.crack { animation: cshake 0.38s; } .cell2.crack .em, .cell2.shatter .em { filter: brightness(1.6) drop-shadow(0 2px 0 #000); }
-  .cell2 .ck { position: absolute; inset: 2px; border-radius: 8px; background: linear-gradient(115deg, #0000 44%, #fff 46%, #0000 48%), linear-gradient(60deg, #0000 55%, #fff 57%, #0000 59%), linear-gradient(160deg, #0000 30%, #fffc 32%, #0000 34%); pointer-events: none; }
+  .cell2.crack { animation: cshake 0.38s; }
   @keyframes cshake { 20% { translate: -3px 0; } 40% { translate: 3px 0; } 60% { translate: -2px 0; } 80% { translate: 2px 0; } }
   .cell2.shatter { animation: cgone 0.45s ease-in forwards; }
   @keyframes cgone { to { opacity: 0; scale: 1.3; } }
-  .cell2 .sh { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; background: var(--fc); clip-path: polygon(0 0, 100% 30%, 40% 100%); animation: shard 0.45s ease-out forwards; }
-  @keyframes shard { from { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0); } to { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-34px) rotate(200deg); opacity: 0; } }
-  .cell2.gone { border-style: dashed; border-color: #ffffff40; box-shadow: none; background: #0004; } .cell2.gone .em { opacity: 0.18; filter: grayscale(1); }
+  .cell2.gone { filter: none; } .cell2.gone .sl { background-position-y: 100%; opacity: 0.22; filter: grayscale(1); }
   .cell2 .lk { position: absolute; right: -8px; bottom: -8px; font-size: 15px; font-style: normal; }
   /* 🛡 방패막 (그림 atb-shield 오기 전 = 빛 테두리) · 펼침 · 물결 · 산산조각 */
-  .barrier { position: absolute; top: 74%; z-index: 12; transform: translate(-50%, -96%); border-radius: 50%; pointer-events: none; border: 3px solid #9fe6ffcc; background: radial-gradient(ellipse at 50% 45%, #9fe6ff10 55%, #9fe6ff40 80%, #9fe6ff10); box-shadow: 0 0 18px #5ac8ff99, inset 0 0 24px #9fe6ff66; transition: left 0.45s ease; }
-  .barrier.up { animation: bup 0.6s ease-out; } @keyframes bup { from { scale: 0.3; opacity: 0; } to { scale: 1; opacity: 1; } }
-  .barrier.ripple { animation: brip 0.5s ease-out; } @keyframes brip { 30% { scale: 1.06; border-color: #fff; box-shadow: 0 0 34px #fff, inset 0 0 40px #9fe6ff; } }
-  .barrier.shatter { animation: bshat 0.7s ease-out forwards; } @keyframes bshat { 20% { scale: 1.1; border-color: #fff; filter: brightness(2); } to { scale: 1.4; opacity: 0; border-style: dashed; } }
+  .barrier { position: absolute; top: 75%; z-index: 11; transform: translate(-50%, -100%); pointer-events: none; background-repeat: no-repeat; background-size: 400% 300%; background-position: 0% 0%; mix-blend-mode: screen; mix-blend-mode: plus-lighter; transition: left 0.45s ease; }
+  .barrier.up { animation: bup 0.5s ease-out, bloop 1.2s steps(4) 0.5s infinite; } @keyframes bup { from { scale: 0.3; opacity: 0; } to { scale: 1; opacity: 1; } }
+  @keyframes bloop { from { background-position-x: 0%; } to { background-position-x: 133.33%; } }
+  .barrier.ripple { background-position-y: 50%; animation: bhit 0.5s steps(4) forwards; } @keyframes bhit { from { background-position-x: 0%; } to { background-position-x: 133.33%; } }
+  .barrier.shatter { background-position-y: 100%; animation: bhit 0.7s steps(4) forwards; }
   .boss.roar { animation: roar 0.8s ease-out; } @keyframes roar { 40% { filter: brightness(1.5) drop-shadow(0 0 12px #9fe6ff); } }
   /* 💬 큰 문구 (실드! · 실드 파괴 · 약점 시간) */
   .bigmsg { position: absolute; z-index: 44; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 8px 28px; border-radius: 16px; border: 3px solid #9fe6ff; background: linear-gradient(#1d5ac8ee, #0d2f6aee); color: #fff; font: 900 clamp(26px, 10vh, 44px) var(--font); text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: bigin 0.35s ease-out; }
@@ -554,7 +557,7 @@
   .me.wk { border-color: var(--fc); box-shadow: 0 0 12px var(--fc); }
   .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
   .stage.q .tag { transform: scale(0.82); transform-origin: top center; }
-  .tag.full { border-color: #ffd34d; box-shadow: 0 0 8px #ffd34d; } .tag .fe { font-style: normal; }
+  .tag.full { box-shadow: 0 0 10px #ffd34d88; } .tag.full > b { color: #fff3a0; } .tag .fe { font-style: normal; }
   /* 🆘 위험 체력 (요청 #18) */
   .tag.low .thin.hp b { background: #ff2a2a; } .tag.low .hn { color: #ff6a5a; }
   .tag.low .thin.hp, .tag.low .hn { animation: lowb 1s steps(2) infinite; } @keyframes lowb { 50% { opacity: 0.35; } }
