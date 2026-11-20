@@ -1,0 +1,111 @@
+// ⚙ 게시판 던전 ATB — 숫자 한 곳 (📜 2026-11-20 설계 방 · docs/board-atb/design/정리.md · 전투설정표-초안.md · 용사수치-초안.md 0절)
+//   모든 숫자 = 「출발값」 · 교사 연습방에서 선생님이 3판 해 본 뒤 여기만 고침 · 화면 · 엔진은 이 파일만 읽음
+//   ⏳ 아직 안 정한 값 = null 또는 TODO 줄(설계 방이 보냄): 1 · 2인 판 숫자 · 역할 스킬 넣은 모의실험 · 3 · 4 · 6 · 8 · 9 · 10차시 설정
+
+export type Diff = 'easy' | 'normal' | 'hard';
+export type Fam = 'arms' | 'flame' | 'nature' | 'wisdom' | 'mystic';
+export type Role = 'dealer' | 'tank' | 'healer' | 'support';
+
+/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · ⏳ 1인은 어림값 · 2인은 「덜 맞춤」(설계 방 남은 일 #1) */
+export const BOSS_HP: Record<Diff, [number, number, number, number]> = {
+  easy: [160, 350, 790, 1240],
+  normal: [200, 420, 960, 1510],
+  hard: [240, 500, 1130, 1780],
+};
+/** 보스 공격 (단일 / 광역) · 1인 = 따로 · ⏳ 2인 = 「12 / 6 쯤」 설계 방 확인 전이라 여러 명 값 그대로 */
+export const BOSS_HIT: Record<Diff, { one: [number, number]; party: [number, number] }> = {
+  easy: { one: [4, 2], party: [8, 4] },
+  normal: { one: [7, 3.5], party: [14, 7] },
+  hard: { one: [9, 5], party: [18, 9] },
+};
+export const T = {
+  bossEvery: 12, // 보스 공격 간격(초)
+  telegraph: 2, // 표적 예고(초 전)
+  aoeEvery: 3, // 세 번째마다 광역
+  shieldAt: 0.7, // 보스 HP 70% 에서 실드
+  shieldDmg: 0.3, // 실드가 남은 동안 받는 피해 ×0.3 (11차시 두꺼비 = 0.2 · 보스 설정)
+  weak: { normal: 12, hard: 10, easy: 12 } as Record<Diff, number>, // 약점 시간(초)
+  weakDmg: 2, weakAtb: 2,
+  slow: { normal: 3, hard: 4, easy: 3 } as Record<Diff, number>, stun: { normal: 2, hard: 3, easy: 2 } as Record<Diff, number>,
+  slowX: 0.5, // 감속 = ATB 차는 빠르기 ×0.5
+  revives: 3, // 팀 부활 한 판 3번
+  reviveHp: 0.3, // ⏳ 부활 HP = 최대의 30% (설계안 「테스트로 정함」)
+  reviveCost: 1, // ⚡ 1개로 살림
+  shieldHelpAfter: 90, // 실드가 뜬 뒤 90초 지나도 남은 칸 = 다른 사람이 완주 2번으로 대신
+  shieldHelpRuns: 2,
+  wrongSwap: 4, // 4번째 오답 = 같은 원문항 새 숫자 판
+  zapMax: 5,
+  zapMul: [0, 1.0, 2.1, 3.3, 4.6, 6.0], // ⚡ n개를 한 번에
+  goldZap: 1.5, // 금색 ⚡ = 1.5배 값
+  ultMul: 6.0, awkMul: 6.5, // 필살기(⚡5) · 각성 필살기(🔨+10 · 판당 1번)
+  skillBase: 55, attackBase: 12, // 스킬 기본 · 일반 공격 기본 (용사수치 초안 30 · 8 → 약 4분 판에 맞춰 올림)
+  timing: { miss: 0, ok: 1, crit: 1.5 }, // 일반 공격 타이밍 바
+  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 「모았다 놓기」 빗나감 · 성공 · 딱 맞음
+  holdMs: 1400, // ⏳ 고리가 한 바퀴 차는 시간 (테스트로 정함)
+  holdBest: [0.78, 0.9] as [number, number], holdOk: [0.62, 1.0] as [number, number], // ⏳ 딱 맞음 · 성공 칸(한 바퀴 비율) · 금색 ⚡ 1개마다 딱 맞음 칸 +0.02
+  holdBestPerGold: 0.02,
+  timingMs: 1600, timingOk: [0.35, 0.8] as [number, number], timingCrit: [0.52, 0.64] as [number, number], // ⏳ 타이밍 바
+  critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
+  perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
+  downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%
+  role: {
+    dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },
+    tank: { hp: 1.3, def: 0.2, spd: 0.9, cover: 0.5 },
+    healer: { hp: 0.9, def: 0, spd: 0.95, heal: 25 },
+    support: { hp: 0.95, def: 0, spd: 1.1 },
+  },
+  atbSec: 8, defCap: 0.4, crit: 1.5,
+  awk: { dealerWeak: 3, tankCut: 0.3, healerHeal: 15, supportAtb: 0.3, enhBonus: 0.03 },
+  practiceKeep: 5, // 교사 연습방 = 이 폰 최근 5판
+} as const;
+
+/** 성장 식 = 로그 (용사수치 초안 0절): 몫(x) = 기준 몫 × ln(1 + x) ÷ ln(1 + 기준 x) */
+const logShare = (base: number, x: number, at: number) => (x <= 0 ? 0 : (base * Math.log(1 + x)) / Math.log(1 + at));
+export const G = {
+  lv: (lv: number) => logShare(0.2, Math.max(1, lv) - 1, 9), // Lv.10 → +20%
+  enh: (e: number) => logShare(0.3, Math.max(0, e), 10) + (e >= 10 ? T.awk.enhBonus : 0), // +10 → +30% (+각성 3%)
+  tier: (t: number) => logShare(0.25, Math.max(1, t) - 1, 3), // Ⅳ → +25%
+  spd: (lv: number) => logShare(0.1, Math.max(1, lv) - 1, 9), // Lv.10 → ATB +10%
+  grit: (n: number) => logShare(0.1, Math.max(0, n), 100), // 🛡 끈기 100 → 방어 +10%
+  focus: (n: number) => logShare(0.2, Math.max(0, n), 100), // 🎯 집중 100 → 치명 +0.2
+};
+
+/** 5계열 (속성 → 계열) */
+export const FAM_OF_ATTR: Record<string, Fam> = { cut: 'arms', smash: 'arms', sweep: 'arms', fire: 'flame', spark: 'flame', water: 'nature', frost: 'nature', wind: 'nature', magic: 'wisdom', math: 'wisdom', gear: 'wisdom', sun: 'mystic', dark: 'mystic', star: 'mystic' };
+export const FAM_NAME: Record<Fam, string> = { arms: '무기', flame: '화염', nature: '자연', wisdom: '지혜', mystic: '신비' };
+export const ROLE_NAME: Record<Role, string> = { dealer: '딜러', tank: '탱커', healer: '힐러', support: '서포터' };
+export const ROLE_SKILL: Record<Role, string> = { dealer: '강타', tank: '엄호', healer: '광역 회복', support: '격려' };
+/** 용사 → 역할 (설계안 v1 2절 표 · 33칸 · 각성 로안 = 로안 · 올드윈 = 서포터) */
+const ROLE_BY_NAME: Record<string, Role> = {
+  로안: 'dealer', 리아넬: 'dealer', 바루: 'dealer', 바르코: 'dealer', 녹스: 'dealer', 이그니: 'dealer', 케라운: 'dealer', 칼시: 'dealer', 아르발: 'dealer', 호버: 'dealer',
+  시엔: 'tank', 하스타: 'tank', 보르간: 'tank', 발도르: 'tank', 에이라: 'tank',
+  루멘: 'healer', 파셀: 'healer', 타미: 'healer', 칸델: 'healer',
+  누아: 'support', 셰라: 'support', 리라: 'support', 글라세: 'support', 한수: 'support', 미지: 'support', 볼트: 'support', 핑: 'support', 아바쿠: 'support', 콤파: 'support', 마진: 'support', 폴라: 'support', 올드윈: 'support',
+};
+export const roleOfName = (name: string): Role => ROLE_BY_NAME[name] ?? 'dealer';
+
+/** 보스 설정 (차시 번호 → 몬스터) · ⏳ 3 · 4 · 6 · 8 · 9 · 10차시 = 설계 방 설정표 오면 채움(지금 = 그림 · 약점만 · 공격은 기본 묶음) */
+export type AtkKind = 'smash' | 'poison' | 'sleep' | 'fire' | 'fog' | 'tongue' | 'basic';
+export interface BossCfg { no: number; name: string; sprite: string; weak: [Fam, Fam]; type: '공격형' | '방어형' | '회복형' | '교란형'; atk: [AtkKind, AtkKind]; shieldDmg?: number; signature: string; draft?: boolean }
+export const BOSSES: Record<number, BossCfg> = {
+  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', weak: ['arms', 'flame'], type: '공격형', atk: ['smash', 'poison'], signature: '강타 표적' },
+  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', weak: ['nature', 'mystic'], type: '공격형', atk: ['basic', 'basic'], signature: '방향 표적', draft: true },
+  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', weak: ['flame', 'wisdom'], type: '방어형', atk: ['basic', 'basic'], signature: '감속', draft: true },
+  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', weak: ['nature', 'arms'], type: '공격형', atk: ['sleep', 'fire'], signature: '화염 숨 모으기' },
+  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '예고 회복', draft: true },
+  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '6차시 이어하기', draft: true },
+  8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '거울빛 예고', draft: true },
+  9: { no: 9, name: '역과 대우의 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형', atk: ['basic', 'basic'], signature: '자물쇠', draft: true },
+  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['wisdom', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '저울', draft: true },
+  11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', atk: ['fog', 'tongue'], shieldDmg: 0.2, signature: '물결' },
+};
+/** 공격 종류 → 효과 (단일 배율 · 광역 여부 · 상태이상) */
+export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; split?: number; warn?: number }> = {
+  basic: { name: '공격', mul: 1 },
+  smash: { name: '강타', mul: 1.5 },
+  poison: { name: '독', mul: 1, aoe: true, split: 3 },
+  sleep: { name: '수면', mul: 0.5, status: 'stun' },
+  fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 3 },
+  fog: { name: '물결', mul: 0.5, aoe: true, status: 'slow' },
+  tongue: { name: '혀 치기', mul: 1 },
+};
