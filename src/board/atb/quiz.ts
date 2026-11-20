@@ -10,7 +10,7 @@ import { T } from './tune';
 export interface Origin { mid: string; title: string; chain: boolean; n: number }
 /** 원문항 = 몬스터 칸 중 복습 · 보강 아닌 것 */
 export function originsOf(L: LessonPack): Origin[] {
-  return L.steps.filter((s) => s.kind === 'monster' && L.monsters[s.id] && !/^(복습|보강)/.test(String(s.title || ''))).map((s) => {
+  return L.steps.filter((s) => s.kind === 'monster' && L.monsters[s.id] && !/^[^가-힣\w]*(복습|보강)/.test(String(s.title || ''))).map((s) => {
     const chain = !!L.monsters[s.id]!.chain;
     const n = (chain ? chainItems(L, s.id, 'n', 0) : items(L, s.id, 'n', 0)).length;
     return { mid: s.id, title: String(s.title || s.id), chain, n };
@@ -84,4 +84,18 @@ export function freshRun(L: LessonPack, mid: string, seed: string, seen: Seen, b
   for (let i = 0; i < 56; i++) { ver = (v + (i >> 3)) % VERS; s = i ? `${seed}~${i}` : seed; sig = sigOf(questionsOf(L, { mid, ver }, s)); if (!sigs.includes(sig)) break; } // 판마다 씨앗 8번 → 다음 판
   seen[k] = noteSeen(seen[k] ?? [], ver); seen[k + '#'] = [...sigs.filter((x) => x !== sig), sig].slice(-6);
   return { ...startRun(mid, ver), ...(s !== seed ? { seed: s } : {}) };
+}
+
+// 📄 📜 요청 #24 덧붙임 (선생님 「몇 차시 학습지 몇 번 문제인지 반드시」) = 「n차시 학습지 · 문제 k (소문항) · i/전체」
+//   k = 팩 원문항 제목의 학습지 번호 그대로(「문제 3 · …」 → 3 · 「문제 1 · 2 · …」 → 1·2) · 숫자 바뀐 판도 같은 번호 · 소레이드 = (졸개 i · 대장)
+//   제목에 학습지 번호가 없으면 = 「n차시 · 문제 k」(k = 원래 순서) · noSheet = true (보고용 목록)
+export function sheetNo(L: LessonPack, mid: string): { no: string; sheet: boolean } {
+  const t = String(L.steps.find((s) => s.id === mid)?.title ?? ''), m = /^문제\s*(\d+(?:\s*·\s*\d+)*)/.exec(t);
+  if (m) return { no: m[1]!.replace(/\s*·\s*/g, '·'), sheet: true };
+  const k = originsOf(L).findIndex((o) => o.mid === mid); return { no: String(k + 1), sheet: false };
+}
+export function sheetTitle(L: LessonPack, mid: string, k: number, n: number): string {
+  const { no, sheet } = sheetNo(L, mid), chain = !!L.monsters[mid]?.chain;
+  const sub = chain ? (k >= n - 1 ? '대장' : `졸개 ${k + 1}`) : `${k + 1}`;
+  return `${L.no}차시${sheet ? ' 학습지' : ''} · 문제 ${no} (${sub}) · ${k + 1}/${n}`;
 }
