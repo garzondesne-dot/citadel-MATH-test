@@ -16,7 +16,7 @@ export type FeatId =
   | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox' | 'rest-dragon' | 'guide'
   | 'mon-attack' | 'forge' | 'symtalk' | 'citadel' | 'seteuk' | 'schedule' | 'photo'
   | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board'
-  | 'sword' | 'help3' | 'review' | 'cc' | 'pre' | 'stamp' | 'qpaper' | 'keys' | 'keygem';
+  | 'sword' | 'help3' | 'review' | 'cc' | 'pre' | 'stamp' | 'qpaper' | 'keys' | 'keygem' | 'campfire';
 export type BundleId = 'basic' | 'standard' | 'full';
 export type Prep = 'none' | 'addon' | 'pack' | 'key' | 'info';
 export interface Feat { id: FeatId; ic: string; name: string; sub: string; group: string; /** 🏷 준비할 것 (📜 2026-11-16 · 준비 없음 / 팩 덧칸 / 📚 과목 팩 / AI 키 / 학교 정보) */ prep?: Prep; /** 켜려면 필요한 것 → 없으면 잠김 이유(채우는 길) · null = 됨 */ need?: (S: Store | null) => string | null }
@@ -52,6 +52,7 @@ export const FEATS: Feat[] = [
   { id: 'stamp', ic: '✅', name: '도장 📜', sub: '끄면 리모컨 「✅ 도장」 숨김', group: '🧩 수업 기능' },
   { id: 'guide', ic: '📊', name: '길잡이', sub: '리모컨 「지금」 칸 한 줄 · 이 속도면 +n분 · 약한 개념 · 선생님 폰에만', group: '🧩 수업 기능' }, // 📜 2026-11-17 #30 · 우리 학교(모두) 켬 · 학교판(가볍게) · 게임처럼 = 끔
   { id: 'qpaper', ic: '📜', name: '문제 칸 양피지 기본', sub: '끄면 처음 값만 끔 · 학생 🎨 테마 창 스위치는 그대로', group: '🧩 수업 기능' },
+  { id: 'campfire', ic: '🔥', name: '모닥불 친구', sub: '내 캠프 그루터기에 같은 반 친구 3명 · 이모지 인사(하루 1번 · 글 없음) · 끄면 그루터기 비고 인사 단추 없음', group: '그 밖' }, // 📜 2026-11-20 선생님 「모닥불에 친구들이 놀러 왔으면」
   { id: 'survey', ic: '📝', name: '수업 설문', sub: '', group: '그 밖' },
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },

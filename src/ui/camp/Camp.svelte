@@ -32,6 +32,7 @@
   import { changePw, saveLogin, type Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
   import EarnSheet from './EarnSheet.svelte';
+  import CampFriends from './CampFriends.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
@@ -425,6 +426,7 @@
   }
 
   /** 🔊 📜 2026-11-20 소리 없던 곳: 용사 카드 · 사다리 칸 · 「… 열기」 단추 = 누름 소리 */
+  let cfHi = $state(0); // 🔥 받은 인사 수 (용사 카드 옆 작은 표시)
   const heroTap = () => { sfx('click', 0.5); tap('hero'); };
   // 💎 얻는 길 빨간 점 = 지금 받을 수 있는 곳 (이름표 빨간 숫자와 같은 출처)
   const earnDots = $derived<Record<string, boolean>>({ chal: chalN > 0, scare: !!todoN.scare, castle: !!todoN.castle, board: !!todoN.dummy, raid: open && !trial, mail: mailN > 0 });
@@ -501,6 +503,7 @@
     {#each [['tree', 'left:1%;top:18%;width:17%;height:26%'], ['tree', 'left:82%;top:16%;width:17%;height:26%'], ['moon', 'left:51%;top:6%;width:10%;height:8%'], ['fly', 'left:60%;top:46%;width:14%;height:9%']] as h, i (i)}<button type="button" class="hot hid" data-hot={h[0]} aria-label="숨은 곳" style={h[1]} onclick={(e) => { poke0(h[0]!, e); if (h[0] === 'moon' && piMinute(eggNow())) eggGo('e3'); }}></button>{/each}
     {#if eggFx}<EggFx kind={eggFx.kind} first={eggFx.first} name={eggFx.name} title={eggFx.title} ondone={() => (eggFx = null)} />{/if}<!-- 🥚 #74 -->
     {#each fxs as f (f.id)}<span class="cfx {f.k}" style="left:{f.x}%;top:{f.y}%" aria-hidden="true">{#each Array(f.k === 'bell' || f.k === 'glow' ? 1 : 6) as _, n (n)}<i style="--n:{n}"></i>{/each}{#if f.k === 'twinkle'}<b>✦</b>{/if}</span>{/each}
+    <CampFriends {S} {pupil} enh={me.enh} bind:hiN={cfHi} /><!-- 🔥 모닥불 친구 (📜 2026-11-20) -->
     {#if buddy}<button type="button" class="buddy" style="left:{CAMP_BUDDY.left}%;bottom:{CAMP_BUDDY.bottom}%" aria-label="게시판 던전 같이 하기" data-k="board-buddy" data-real={buddy.real ? '1' : '0'} onclick={(e) => tap('dummy', e)}><span class="bbub" class:real={buddy.real}>{buddy.line}</span><HeroSprite id={buddy.hero} scale={0.8} play /></button>{/if}
     {#each friends.slice(1) as f, i (f.uid)}<span class="friend" style="left:{CAMP_PORTAL.left + 4 - i * 7}%;bottom:{CAMP_PORTAL.bottom - 9}%" in:fly={{ x: 24, duration: RM ? 0 : 400 }} out:fly={{ x: 30, duration: RM ? 0 : 450, opacity: 0 }} data-k="friend"><HeroSprite id={f.hero} scale={0.8} play /></span>{/each}
     {#if friendText && !buddy}<span class="fbub" style="left:{CAMP_PORTAL.left - 3}%;bottom:{CAMP_PORTAL.bottom - 13}%" data-k="friend-bub">{friendText}</span>{/if}
@@ -545,7 +548,7 @@
     {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={heroTap} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b></span>
+        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b>{#if cfHi && feat('campfire')}<i class="cfhi" data-k="cf-hi" title="모닥불에서 받은 인사">👋 {cfHi}</i>{/if}</span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>
@@ -847,6 +850,7 @@
   .rung.buy { border-style: dashed; border-color: var(--gem); }
   .rung.lock { opacity: 0.45; box-shadow: none; }
   .shut { display: flex; flex-direction: column; align-items: center; line-height: 1.15; } .shut b { font-size: 17px; } .shut small { font-size: 14px; font-weight: 600; opacity: 0.85; }
+  .cfhi { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: color-mix(in srgb, var(--accent) 22%, var(--surface-2)); color: var(--text); font: 700 var(--fs-small) var(--font); font-style: normal; }
   .rlk { font-style: normal; margin-left: 4px; font-size: 12px; }
   .nextbtn { min-height: var(--tap); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 var(--s3); border-radius: var(--r); border: 1.5px solid var(--gem); background: color-mix(in srgb, var(--gem) 8%, var(--surface)); color: var(--text); font: 700 var(--fs-body) var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .nextbtn b { color: var(--gem); }
