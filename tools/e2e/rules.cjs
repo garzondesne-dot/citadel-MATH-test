@@ -91,6 +91,23 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('암호 없는 글 합류 그대로', (await as(A.tok, 'school/board/posts/pY', 'PUT', { pid: 'pY', host: A.uid, phase: 'wait', at: 1, mem: { [A.uid]: { uid: A.uid } } }), await as(B.tok, `school/board/posts/pY/mem/${B.uid}`, 'PUT', { uid: B.uid })), true);
   want('출발(phase · code)', (await as(A.tok, `${P0}/code`, 'PUT', 'TpX'), await as(A.tok, `${P0}/phase`, 'PUT', 'play')), true);
   want('교사 암호 해시 읽기', await as(T1.tok, 'boardLock/pX'), true);
+  // 🔥 모닥불 친구 (📜 2026-11-20): campfire = 본인만 씀 · 로그인한 사람 읽음 · campHi = 같은 반 보낸 본인만 · 하루 1번 · 받는 학생 · 교사만 읽음 · 글 없음(이모지 4개만)
+  const D = '2026-11-20', D2 = '2026-11-21';
+  want('🔥 A 내 모닥불 칸 쓰기', await as(A.tok, 'campfire/1-3/1', 'PUT', { day: D, enh: 7, today: '성채 2방' }), true);
+  want('🔥 A 남(2번) 모닥불 칸 쓰기', await as(A.tok, 'campfire/1-3/2', 'PUT', { day: D, enh: 20 }), false);
+  want('🔥 A 모닥불 칸 긴 글 막힘', await as(A.tok, 'campfire/1-3/1', 'PUT', { day: D, today: 'x'.repeat(60) }), false);
+  want('🔥 B 친구(1번) 모닥불 칸 읽기', await as(B.tok, 'campfire/1-3/1'), true);
+  want('🔥 익명 모닥불 칸 읽기(로그인 = 익명도 auth)', await as(anon.tok, 'campfire/1-3'), true);
+  want('🔥 B → A 인사 👋', await as(B.tok, `campHi/1-3/1/2`, 'PUT', { e: '👋', day: D }), true);
+  want('🔥 B → A 같은 날 또 인사 막힘', await as(B.tok, `campHi/1-3/1/2`, 'PUT', { e: '🔥', day: D }), false);
+  want('🔥 B → A 다음 날 인사', await as(B.tok, `campHi/1-3/1/2`, 'PUT', { e: '✨', day: D2 }), true);
+  want('🔥 B → A 글(이모지 밖) 막힘', await as(B.tok, `campHi/1-3/1/2`, 'PUT', { e: '바보', day: '2026-11-22' }), false);
+  want('🔥 B 가 A 이름으로 보내기 막힘', await as(B.tok, `campHi/1-3/2/1`, 'PUT', { e: '👋', day: D }), false);
+  want('🔥 A → 나에게 인사 막힘', await as(A.tok, `campHi/1-3/1/1`, 'PUT', { e: '👋', day: D }), false);
+  want('🔥 A 받은 인사 읽기', await as(A.tok, 'campHi/1-3/1'), true);
+  want('🔥 B 남(A)이 받은 인사 읽기 막힘', await as(B.tok, 'campHi/1-3/1'), false);
+  want('🔥 B 받은 인사 지우기 막힘(A 칸)', await as(B.tok, `campHi/1-3/1/2`, 'DELETE'), false);
+  want('🔥 교사 받은 인사 읽기', await as(T1.tok, 'campHi/1-3/1'), true);
   log('🔐 규칙:'); rows.forEach((r) => log('  ' + r));
   log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0');
 })();

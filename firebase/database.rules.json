@@ -133,6 +133,26 @@
         "$num": { ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)", ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)" }
       }
     },
+    "campfire": {
+      "$cls": {
+        ".read": "auth != null",
+        "$num": {
+          ".write": "auth != null && (root.child('accounts/' + $cls + '/' + $num + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
+          ".validate": "newData.hasChildren(['day']) && newData.child('day').isString() && newData.child('day').val().length === 10 && (!newData.child('enh').exists() || (newData.child('enh').isNumber() && newData.child('enh').val() >= 0 && newData.child('enh').val() <= 20)) && (!newData.child('today').exists() || (newData.child('today').isString() && newData.child('today').val().length <= 40))"
+        }
+      }
+    },
+    "campHi": {
+      "$cls": {
+        "$to": {
+          ".read": "auth != null && (root.child('accounts/' + $cls + '/' + $to + '/uid').val() === auth.uid || root.child('admins/' + auth.uid).val() === true)",
+          "$from": {
+            ".write": "auth != null && $from !== $to && root.child('accounts/' + $cls + '/' + $from + '/uid').val() === auth.uid && newData.exists() && (!data.exists() || data.child('day').val() !== newData.child('day').val())",
+            ".validate": "newData.hasChildren(['e', 'day']) && newData.child('day').isString() && newData.child('day').val().length === 10 && (newData.child('e').val() === '👋' || newData.child('e').val() === '🔥' || newData.child('e').val() === '👍' || newData.child('e').val() === '✨')"
+          }
+        }
+      }
+    },
     "pids": {
       ".read": "auth != null",
       "$pid": { ".write": "auth != null && (root.child('admins/' + auth.uid).val() === true || (newData.child('u').val() === auth.uid && $pid === 's' + newData.child('c').val().replace('-', '_') + '_' + newData.child('n').val() && root.child('accounts/' + newData.child('c').val() + '/' + newData.child('n').val() + '/uid').val() === auth.uid))" }
