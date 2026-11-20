@@ -1,6 +1,6 @@
 import type { LessonPack, Store } from '../model/types';
 import { addMin, BELLS, kst, lessonLen, P7, at } from './bells';
-import { CLASSES, isBeta, lastClass, week, type Live } from './school';
+import { CLASSES, isBeta, week, type Live } from './school';
 
 // ⏰ 오늘 시간표 · 자동 열기 (📜 2026-11-17 #21 E · DECISIONS 「⚔ 교사 수업 탭 정리 3」 · 「📅 시간표 화면 정리」 바뀜)
 //   ⚔ 수업 탭 맨 위 「📅 오늘 시간표」(시간표를 쓸 때만) · 바로 다음 수업 = 「▶ 바로 열기」 · 「⏰ 자동 열기」 스위치(기본 끔)
@@ -11,7 +11,8 @@ export const AUTO = 'school/auto';
 export interface AutoCfg { on?: boolean; skip?: Record<string, Record<string, boolean>>; off?: Record<string, boolean>; pick?: Record<string, Record<string, string>>; done?: Record<string, Record<string, string>> }
 export const dayKey = (now: number) => { const k = kst(now); return `${k.y}-${String(k.m).padStart(2, '0')}-${String(k.d).padStart(2, '0')}`; };
 export const autoCfg = (S: Store): AutoCfg => S.get<AutoCfg>(AUTO) || {};
-export const nextNo = (S: Store, c: string) => Number(S.get<number>(`school/prog/${c}`)) || (lastClass(S, c)?.no ?? 0) + 1;
+export { nextNo } from './progress'; // 📚 #25 진도 하나 (진행한 최대 차시 + 1 · 옛 school/prog 아래로 안 내려감)
+import { nextNo } from './progress';
 /** ⭐ 그 반 다음 차시 팩 (진도 맞추기 · 없으면 지난 차시 + 1 · 팩이 없으면 그다음 있는 차시) */
 export const starPack = (S: Store, c: string, packs: LessonPack[]) => { const n = nextNo(S, c); return [...packs].sort((a, b) => a.no - b.no).find((p) => p.no >= n) ?? null; };
 export interface Slot { p: number; start: number; end: number; hm: string; cls: string; L: LessonPack | null; done: boolean; next: boolean; skip: boolean; auto: boolean; opened: boolean }

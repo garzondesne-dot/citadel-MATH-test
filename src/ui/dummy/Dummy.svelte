@@ -22,6 +22,7 @@
   import { DUMMY_G, dummyReward, fieldIds, noteOf, OPEN, type Bon, type Rec } from '../../school/dummy';
   import { seals } from '../../model/titles';
   import { lastClass, lastTest } from '../../school/school';
+  import { doneNo } from '../../school/progress';
   import { NOTE_ICON } from '../manifest';
   import { liveRoom, liveValue } from '../room.svelte';
   import Student from '../Student.svelte';
@@ -44,7 +45,7 @@
   const lastL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/last/${cls}` : 'school/last/_none')), lastTL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/lastTest/${cls}` : 'school/lastTest/_none'));
   onDestroy(() => { recsL.stop(); lastL.stop(); lastTL.stop(); });
   const recs = $derived<Record<string, Rec>>((cls && num ? recsL.v.val : null) || {});
-  const reach = $derived(Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(cls ? (lastL.v.val ?? lastClass(S, cls))?.no : 0) || 0, Number(cls ? (lastTL.v.val ?? lastTest(S, cls))?.no : 0) || 0));
+  const reach = $derived(Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(cls ? (lastL.v.val ?? lastClass(S, cls))?.no : 0) || 0, cls ? doneNo(S, cls) : 0, /* 📚 #25 */ Number(cls ? (lastTL.v.val ?? lastTest(S, cls))?.no : 0) || 0));
   const LESSONS = PACKS.filter((p) => p.steps.some((s) => s.kind === 'monster') || p.boss);
   const recOf = (p: LessonPack): Rec | undefined => recs[p.id] ?? (p.partOf ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack) => !cls || !!recOf(p) || p.no <= reach;

@@ -16,6 +16,7 @@
   import { estimate, LIMIT, ltimePath, timeSig } from '../../school/ltime';
   import { fixedKey, KEYMODE, keyModeOf, type KeyMode } from '../../school/openLesson';
   import TToday from './TToday.svelte';
+  import { nextNo } from '../../school/progress';
 
   // ⚔ 수업 탭 수동 열기 (📜 2026-11-17 #21 · 시안 Uj7jgeePofh2x9fmKzjqGZ ① · DECISIONS 「⚔ 교사 수업 탭 정리」): 펼침 창 없이 위에서 아래로 한 칸씩
   //   ① 반 단추(실제 반 · 테스트 전용 반 1-6 숨김) + 맨 끝 보라 「🧪 테스트」 · 🟢 = 지금 수업 중 → 「▶ 이어서 진행 · ⏹ 닫기」 · 반을 바꾸면 차시 · 키 다시
@@ -47,8 +48,7 @@
   // 🟢 지금 열린 수업 (이 폰이 열었든 아니든 school/live)
   const openNow = $derived(live && liveRoom && !liveRoom.state.closed ? live : null);
   const isOpen = (c: string) => !!openNow && (c === TEST ? !!openNow.test : !openNow.test && openNow.cls === c);
-  const nextNo = (c: string) => Number(S.get<number>(`school/prog/${c}`)) || (lastClass(S, c)?.no ?? 0) + 1;
-  const star = $derived.by(() => { if (!cls || isTest) return 0; const n = nextNo(cls); return [...packs].sort((a, b) => a.no - b.no).find((p) => p.no >= n)?.no ?? 0; }); // ⭐ = 진도 맞추기(school/prog) · 없으면 지난 차시 + 1 · 팩이 없으면 그다음 있는 차시
+  const star = $derived.by(() => { if (!cls || isTest) return 0; void now; const n = nextNo(S, cls); return [...packs].sort((a, b) => a.no - b.no).find((p) => p.no >= n)?.no ?? 0; }); // ⭐ = 진도 맞추기(school/prog) · 없으면 지난 차시 + 1 · 팩이 없으면 그다음 있는 차시
   function pickCls(c: string) {
     if (c === cls) return;
     const had = !!(lessonId || tmode || keyEdit);

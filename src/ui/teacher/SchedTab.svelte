@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Store } from '../../model/types';
-  import { CLASSES, lastClass, setSlot, week } from '../../school/school';
+  import { CLASSES, setSlot, week } from '../../school/school';
+  import { doneNo, nextNo } from '../../school/progress';
   import { addMin, BELLS, DAYS5, DOW, kst, lessonLen, P7, setBell } from '../../school/bells';
   import { feat, saveOne, schoolInfo } from '../../school/features.svelte';
   import Sheet from '../battle/Sheet.svelte';
@@ -15,7 +16,8 @@
   const shown = $derived.by(() => { void schoolInfo.ver; return CLASSES.filter((c) => !hiddenCls(S, c)); });
   const bell = (p: number) => { void schoolInfo.ver; void ver; return BELLS[p]?.[0] ?? addMin('09:00', (p - 1) * 60); };
   const len = $derived.by(() => { void ver; void schoolInfo.ver; return lessonLen(S); });
-  const prog = (c: string) => { void ver; return Number(S.get<number>(`school/prog/${c}`)) || (lastClass(S, c)?.no ?? 0) + 1; };
+  const prog = (c: string) => { void ver; return nextNo(S, c); }; // 📚 #25 진행한 최대 차시 + 1 아래로 안 내려감
+  const floor = (c: string) => { void ver; return doneNo(S, c) + 1; };
   const nextSlot = (c: string) => { const k = kst(now); for (let d = 0; d < 7; d++) { const dow = ((k.dow - 1 + d) % 7) + 1; for (const p of P7) if (W[String(dow)]?.[String(p)] === c) return `${DOW[dow]} ${p}교시`; } return '시간표 없음'; };
   let cell = $state<{ d: number; p: number } | null>(null);
   let bp = $state(0), bt = $state('');
@@ -47,7 +49,7 @@
   <div class="list">
     {#each shown as c (c)}
       <div class="pg"><b>{c}</b><span>다음 {prog(c)}차시 · <small>{nextSlot(c)}</small></span>
-        <button type="button" aria-label="{c} 진도 당기기" onclick={() => { S.set(`school/prog/${c}`, Math.max(1, prog(c) - 1)); ver++; }}>−</button><button type="button" aria-label="{c} 진도 밀기" onclick={() => { S.set(`school/prog/${c}`, prog(c) + 1); ver++; }}>＋</button></div>
+        <button type="button" aria-label="{c} 진도 당기기" disabled={prog(c) <= floor(c)} title={prog(c) <= floor(c) ? `${floor(c) - 1}차시까지 수업함` : ''} onclick={() => { S.set(`school/prog/${c}`, Math.max(floor(c), prog(c) - 1)); ver++; }}>−</button><button type="button" aria-label="{c} 진도 밀기" onclick={() => { S.set(`school/prog/${c}`, prog(c) + 1); ver++; }}>＋</button></div>
     {/each}
   </div>
 {/if}
