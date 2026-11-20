@@ -23,7 +23,7 @@ const SHOTS = process.argv[2] || '.', PACK = process.argv[3], B = 'http://localh
   if ((await openN()).length) errs.push('처음부터 열림');
   const t = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); t.on('pageerror', (e) => errs.push(String(e)));
   await t.goto(`${B}?role=teacher&${E}`); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
-  await t.click('.tabs button:has-text("준비")'); await t.waitForTimeout(400); await t.click('.seg3 button:has-text("📦 팩")'); await t.waitForTimeout(400);
+  await t.click('.tabs button:has-text("차시 팩")'); await t.waitForTimeout(400); await t.click('[data-k="castle-go"]'); await t.waitForTimeout(400); // 📜 탭 이름 바뀜: 「준비 › 📦 팩」 → 「📦 차시 팩 › 🏰 성채 팩」
   await t.click(`[data-k="addon-card"][data-id="${P.id}"]`); await t.click('.sheet [data-k="addon-unlock"]'); await t.waitForSelector('[data-k="castle-unlock"]');
   await t.click('[data-k="castle-unlock"] .chips [data-cls="1-3"]'); log('   해금 시트 방:', JSON.stringify(await t.$$eval('[data-k="castle-unlock"] [data-room]', (x) => x.map((e) => e.dataset.room)))); await t.screenshot({ path: `${SHOTS}/unlock-sheet.png` }); await t.click('[data-k="castle-unlock"] [data-room="q01"]'); await t.waitForTimeout(1500);
   log('② 교사 1-3 q1 열기 → 서버', JSON.stringify(await rest(`school/castleOpen/${P.id}/1-3`)), '| 학생 열린 방', JSON.stringify(await openN()));
