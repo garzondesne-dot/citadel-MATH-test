@@ -8,7 +8,7 @@ export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive';
 export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind';
-  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number } }
+  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
@@ -133,7 +133,7 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
     if (want - n >= T.cost.equip && !S.end) overflowSkill(S, h); // ⚡ 넘침 → 장착 스킬 자동 (📜 요청 #13 · 4레벨 · 오라 · 각성은 손으로만 · 남은 넘침은 버림)
   }
   if (e.done && S.shieldUp) h.tickets++;
-  if (e.perfect) h.atb = 1;
+  if (e.perfect) { h.atb = 1; h.log.perfect = (h.log.perfect ?? 0) + 1; }
 }
 
 // ── 행동 (ATB 가득) ──

@@ -1,16 +1,18 @@
 <script lang="ts">
   // ❤ 몬스터 체력바 = 레이드 장면(Scene.svelte .mhp)과 같은 모양 · 같은 색(--hp) · 「이름 · 체력 a / b」 글 + 아래 공격 게이지(.ag · hot = 붉게 깜빡)
   //   📜 2026-11-20 요청 #7 「몬스터 체력바 레이드 체력바처럼」 · 게시판 던전이 씀 · 줄어드는 연출 = 깎인 만큼 흰 조각이 0.6초 뒤 따라 줄어듦
-  const { name, left, max, gauge = null, align = 'right' }: {
+  const { name, left, max, gauge = null, align = 'right', inside = false }: {
     name: string; left: number; max: number;
-    /** ⏱ 공격 게이지 (p 0 ~ 1 · txt · hot = 곧 공격 · blue = 멈춤 · 석화 · 약점) */ gauge?: { p: number; txt: string; hot?: boolean; blue?: boolean } | null; align?: 'left' | 'right' | 'center';
+    /** ⏱ 공격 게이지 (p 0 ~ 1 · txt · hot = 곧 공격 · blue = 멈춤 · 석화 · 약점) */ gauge?: { p: number; txt: string; hot?: boolean; blue?: boolean } | null; align?: 'left' | 'right' | 'center'; /** 📜 게시판 던전 UI v2 = 이름만 위 · 「a / b」 는 굵은 붉은 막대 안 */ inside?: boolean;
   } = $props();
   const pct = $derived(max ? Math.max(0, Math.min(100, (left / max) * 100)) : 0);
 </script>
 
 <div class="mhp" style:text-align={align} data-k="raid-hp">
-  <span>{name} · 체력 <b data-k="atb-boss-hp">{left}</b> / {max}</span>
-  <div class="b"><i class="lag" style:width="{pct}%"></i><i class="cur" style:width="{pct}%"></i></div>
+  {#if inside}<span>{name}</span>
+  <div class="b in"><i class="lag" style:width="{pct}%"></i><i class="cur" style:width="{pct}%"></i><em><b data-k="atb-boss-hp">{left}</b> / {max}</em></div>
+  {:else}<span>{name} · 체력 <b data-k="atb-boss-hp">{left}</b> / {max}</span>
+  <div class="b"><i class="lag" style:width="{pct}%"></i><i class="cur" style:width="{pct}%"></i></div>{/if}
   {#if gauge}<div class="ag" class:hot={gauge.hot} class:blue={gauge.blue} data-k="atk-gauge"><i style:width="{Math.round(Math.max(0, Math.min(1, gauge.p)) * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
 </div>
 
@@ -21,6 +23,7 @@
   .b i { position: absolute; left: 0; top: 0; display: block; height: 8px; border-radius: 4px; }
   .b .cur { background: var(--hp, #e5484d); transition: width 0.4s; }
   .b .lag { background: #fff6; transition: width 0.5s ease-in 0.6s; }
+  .b.in { height: 18px; border-radius: 9px; } .b.in i { height: 16px; border-radius: 8px; } .b.in em { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.25em; white-space: nowrap; font: 800 12px var(--font-plain, sans-serif); font-style: normal; line-height: 1; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
   .ag { position: relative; height: 16px; border-radius: 4px; background: rgba(21, 18, 15, 0.85); border: 1px solid #6a4a1c; overflow: hidden; }
   .ag i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
   .ag span { position: relative; display: block; text-align: center; font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
