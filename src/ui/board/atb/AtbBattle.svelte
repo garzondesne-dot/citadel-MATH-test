@@ -13,7 +13,7 @@
   import QuizCard from './QuizCard.svelte';
   import TimingBar from './TimingBar.svelte';
   import ChargeRing from './ChargeRing.svelte';
-  import { attack, canBreak, canRole, earn, revive, roleAct, skill, tick, weak, type Ev, type Hold, type State, type Timing } from '../../../board/atb/engine';
+  import { attack, canBreak, canRole, earn, healBlocked, revive, roleAct, skill, tick, weak, type Ev, type Hold, type State, type Timing } from '../../../board/atb/engine';
   import { botStep, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
@@ -123,7 +123,7 @@
       </div>
     {/if}
   </div>
-  <div class="boss" style:left={open ? '33%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss"><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></div>
+  <div class="boss" style:left={open ? '33%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   <!-- 용사 -->
   {#each S.heroes as h (h.id)}
@@ -158,7 +158,7 @@
         <span>{breakNow ? '실드 깨기' : `스킬 ⚡${meH.zaps.length}`}</span>
         <span class="slots">{#each Array(5) as _, i (i)}<i class="sl" class:g={meH.zaps[i] === 'g'}><AtbIcon name={meH.zaps[i] === 'g' ? 'zap-gold' : meH.zaps[i] ? 'zap' : 'zap-empty'} size={18} /></i>{/each}</span>
       </button>
-      <button type="button" class="b role" class:hot={roleOk} disabled={!roleOk} data-k="atb-role" onclick={doRole}><AtbIcon name={ROLE_ICON[meH.s.role]} size={28} /> {ROLE_SKILL[meH.s.role]}</button>
+      <button type="button" class="b role" class:hot={roleOk} disabled={!roleOk} data-k="atb-role" onclick={doRole}><AtbIcon name={ROLE_ICON[meH.s.role]} size={28} /> <span class="rl">{ROLE_SKILL[meH.s.role]}{#if meH.s.role === 'healer' && healBlocked(S)}<small data-k="atb-heal-wait">보스 공격 뒤</small>{/if}</span></button>
       {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{/if}
     </nav>
   {:else}
@@ -196,6 +196,7 @@
   .cells { display: flex; gap: 6px; }
   .cell { position: relative; display: inline-flex; } .cell .fi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; }
   .cell.broken .fi { opacity: 0.35; } .cell.crack { animation: crack 0.45s 2; } @keyframes crack { 30% { transform: scale(1.25) rotate(-6deg); filter: brightness(2); } }
+  .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
   .boss { position: absolute; top: 74%; transform: translate(-50%, -100%); z-index: 11; transition: left 0.45s ease; }
   .hero { position: absolute; transition: left 0.45s ease, top 0.45s ease; }
   .hero .spr { position: absolute; left: 0; top: 0; }
@@ -223,6 +224,7 @@
   .b:disabled { filter: grayscale(0.4) brightness(0.75); }
   .b.atk.hot { border-color: #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; box-shadow: 0 0 14px #ffd34d, inset 0 0 0 2px #fff3c0, 0 4px 0 #6a4210; text-shadow: none; animation: glow 1s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 22px #ffe27a, inset 0 0 0 2px #fff3c0, 0 4px 0 #6a4210; } }
+  .rl { display: flex; flex-direction: column; align-items: center; line-height: 1.1; } .rl small { font: 700 11px var(--font-plain); color: #ffd98a; }
   .b.sk { flex-direction: column; gap: 0; } .slots { display: flex; gap: 1px; } .sl.g { border-radius: 50%; box-shadow: 0 0 5px 1px #ffd34d; }
   .b.sk.hot, .b.role.hot { border-color: #ffd34d; }
   .b.quiz { border-color: #8fd0ff; background: linear-gradient(#3a8ef0, #1d5ac8); box-shadow: 0 0 12px #5aa9ff88, inset 0 0 0 2px #bfe2ff, 0 4px 0 #0d2f6a; }

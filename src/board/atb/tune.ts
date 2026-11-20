@@ -51,7 +51,7 @@ export const T = {
   role: {
     dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },
     tank: { hp: 1.3, def: 0.2, spd: 0.9, cover: 0.5 },
-    healer: { hp: 0.9, def: 0, spd: 0.95, heal: 25 },
+    healer: { hp: 0.9, def: 0, spd: 0.95, heal: 12 }, // 📜 11/20 선생님 확정 +12 (설정표 +25 대신) · 팀 전체로 보스 공격 한 번 사이에 1번
     support: { hp: 0.95, def: 0, spd: 1.1 },
   },
   atbSec: 8, defCap: 0.4, crit: 1.5,
@@ -86,12 +86,13 @@ export const roleOfName = (name: string): Role => ROLE_BY_NAME[name] ?? 'dealer'
 
 /** 보스 설정 (차시 번호 → 몬스터) · ⏳ 3 · 4 · 6 · 8 · 9 · 10차시 = 설계 방 설정표 오면 채움(지금 = 그림 · 약점만 · 공격은 기본 묶음) */
 export type AtkKind = 'smash' | 'poison' | 'sleep' | 'fire' | 'fog' | 'tongue' | 'basic';
-export interface BossCfg { no: number; name: string; sprite: string; weak: [Fam, Fam]; type: '공격형' | '방어형' | '회복형' | '교란형'; atk: [AtkKind, AtkKind]; shieldDmg?: number; signature: string; draft?: boolean }
+export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
+export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>; weak: [Fam, Fam]; type: '공격형' | '방어형' | '회복형' | '교란형'; atk: [AtkKind, AtkKind]; shieldDmg?: number; signature: string; draft?: boolean }
 export const BOSSES: Record<number, BossCfg> = {
-  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', weak: ['arms', 'flame'], type: '공격형', atk: ['smash', 'poison'], signature: '강타 표적' },
-  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', weak: ['nature', 'mystic'], type: '공격형', atk: ['basic', 'basic'], signature: '방향 표적', draft: true },
-  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', weak: ['flame', 'wisdom'], type: '방어형', atk: ['basic', 'basic'], signature: '감속', draft: true },
-  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', weak: ['nature', 'arms'], type: '공격형', atk: ['sleep', 'fire'], signature: '화염 숨 모으기' },
+  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', flip: { idle: true, hit: true, down: true }, weak: ['arms', 'flame'], type: '공격형', atk: ['smash', 'poison'], signature: '강타 표적' },
+  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', atk: ['basic', 'basic'], signature: '방향 표적', draft: true },
+  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', atk: ['basic', 'basic'], signature: '감속', draft: true },
+  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'arms'], type: '공격형', atk: ['sleep', 'fire'], signature: '화염 숨 모으기' },
   6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '예고 회복', draft: true },
   7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', atk: ['basic', 'basic'], signature: '6차시 이어하기', draft: true },
   8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', atk: ['basic', 'basic'], signature: '거울빛 예고', draft: true },
@@ -109,3 +110,7 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   fog: { name: '물결', mul: 0.5, aoe: true, status: 'slow' },
   tongue: { name: '혀 치기', mul: 1 },
 };
+
+/** 🎚 균형 표 한 곳 (📜 11/20 「보스 HP · 공격 · 역할 수치를 코드 한 곳(표 하나)에 · 나중에 균형 도구가 그 표만 바꿈」)
+ *  엔진은 쓰는 순간 이 표의 값을 읽음 → 도구가 칸 값을 바꾸면 다음 판부터 그대로 (읽기 전용 표시는 타입만) */
+export const TUNE = { BOSS_HP, BOSS_HIT, T, BOSSES, ATK } as const;

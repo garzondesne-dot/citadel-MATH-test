@@ -7,7 +7,7 @@ import type { Stats } from './heroes';
 export type Zap = 'n' | 'g'; // 보통 · 금색(첫 시도 정답)
 export type Timing = 'miss' | 'ok' | 'crit';
 export type Hold = 'miss' | 'ok' | 'best';
-export interface Hero { id: number; s: Stats; hp: number; atb: number; zaps: Zap[]; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; healRest: boolean; atbBonus: number;
+export interface Hero { id: number; s: Stats; hp: number; atb: number; zaps: Zap[]; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; atbBonus: number;
   /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
@@ -25,6 +25,8 @@ export interface State {
   t: number; diff: Diff; boss: BossCfg; seed: number; rnd: number;
   bossHp: number; bossMax: number; bossT: number; bossN: number; target: number[] | null; aoeNext: boolean;
   shieldUp: boolean; shieldAt: number; cells: Cell[]; weakUntil: number;
+  /** 광역 회복을 마지막으로 쓴 보스 공격 차례 (팀 전체 · 보스 공격 한 번 사이 1번) */ healN: number;
+  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; hold: { n: number; ok: number; best: number }; downs: number; revives: number; lastAns: number[] };
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
@@ -38,8 +40,9 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
     t: 0, diff: o.diff, boss: o.boss, seed: o.seed ?? 1, rnd: o.seed ?? 1,
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false,
     shieldUp: false, shieldAt: 0, cells: [], weakUntil: 0,
-    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, zaps: [], down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, healRest: false, atbBonus: 0, log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
-    revives: T.revives, ev: [], evN: 0, end: null,
+    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, zaps: [], down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, atbBonus: 0, log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
+    revives: T.revives, ev: [], evN: 0, end: null, healN: -1,
+    rec: { subSec: [], timing: { n: 0, ok: 0, crit: 0 }, hold: { n: 0, ok: 0, best: 0 }, downs: 0, revives: 0, lastAns: o.party.map(() => 0) },
   };
 }
 const push = (S: State, e: Ev) => { S.evN++; S.ev.push({ ...e, n: S.evN }); if (S.ev.length > 200) S.ev.splice(0, S.ev.length - 200); };
@@ -95,7 +98,7 @@ function bossAttack(S: State) {
     h.hp = Math.max(0, h.hp - d);
     if (pick.a.status === 'slow') h.slowUntil = S.t + T.slow[S.diff];
     if (pick.a.status === 'stun') h.stunUntil = S.t + T.stun[S.diff];
-    if (h.hp <= 0) { h.down = true; h.atb = 0; h.zaps = []; push(S, { k: 'down', t: S.t, who: id }); }
+    if (h.hp <= 0) { h.down = true; h.atb = 0; h.zaps = []; S.rec.downs++; push(S, { k: 'down', t: S.t, who: id }); }
   }
   push(S, { k: 'boss', t: S.t, atk: pick.a.name, aoe, to, dmg });
   S.target = null; S.aoeNext = false;
@@ -106,7 +109,7 @@ function bossAttack(S: State) {
 /** 문제로 얻은 것 (quiz.ts answer 의 earn) · 쓰러진 학생 = 친구 ATB +50% */
 export function earn(S: State, who: number, e: { zap: number; gold: boolean; done: boolean; perfect: boolean; right: boolean }, giftTo?: number): void {
   const h = S.heroes[who]; if (!h || S.end) return;
-  if (e.right) h.log.right++;
+  if (e.right) { h.log.right++; S.rec.subSec.push(+(S.t - (S.rec.lastAns[who] ?? 0)).toFixed(1)); S.rec.lastAns[who] = S.t; } // 소문항 하나 = 앞 정답부터 이 정답까지
   if (h.down) {
     if (!e.right) return;
     const to = giftTo != null && !S.heroes[giftTo]?.down ? giftTo : alive(S).slice().sort((a, b) => a.atb - b.atb)[0]?.id;
@@ -123,9 +126,10 @@ const stateMul = (S: State) => 1; // 실드 · 약점 배율은 hitBoss 가
 export function attack(S: State, who: number, timing: Timing): boolean {
   const h = S.heroes[who]; if (!h || !ready(h, S)) return false;
   const raw = T.attackBase * h.s.atkMul * (timing === 'crit' ? h.s.crit : T.timing[timing]) * stateMul(S);
+  S.rec.timing.n++; if (timing !== 'miss') S.rec.timing.ok++; if (timing === 'crit') S.rec.timing.crit++;
   const dmg = timing === 'miss' ? 0 : hitBoss(S, raw);
   spend(h); if (timing === 'crit') h.atb = T.critAtb; // 치명 = 다음 ATB 20% 채운 채
-  h.log.dmg += dmg; h.healRest = false; push(S, { k: 'atk', t: S.t, who, dmg, timing });
+  h.log.dmg += dmg; push(S, { k: 'atk', t: S.t, who, dmg, timing });
   return true;
 }
 /** 내 실드 칸이 남아 있고 완주 표가 있으면 [스킬] = 실드 깨기 */
@@ -136,7 +140,7 @@ export function breakShield(S: State, who: number): boolean {
   const take = (c: Cell | undefined) => { if (!c) return; c.broken = true; c.by = who; cells.push(S.cells.indexOf(c)); };
   if (how === 'own') { h.tickets--; take(S.cells.find((c) => c.owner === who && !c.broken)); if (weakFam) take(S.cells.find((c) => !c.broken)); } // 약점 계열 = 자기 칸 + 친구 칸 하나
   else { h.tickets -= T.shieldHelpRuns; take(S.cells.find((c) => !c.broken && c.owner !== who)); }
-  h.log.shields += cells.length; spend(h); h.healRest = false;
+  h.log.shields += cells.length; spend(h);
   const last = S.cells.every((c) => c.broken);
   if (last) { S.weakUntil = S.t + T.weak[S.diff] + (0); S.bossT = 0; S.target = null; } // 마지막 실드 = 약점 시간 · 예고 취소
   push(S, { k: 'shield', t: S.t, who, cells, last });
@@ -150,8 +154,9 @@ export function skill(S: State, who: number, hold: Hold): boolean {
   if (canBreak(S, who)) return breakShield(S, who);
   const zs = h.zaps, n = zs.length, gold = zs.filter((z) => z === 'g').length, ult = n >= T.zapMax, awk = ult && h.s.awk && !h.awkUsed;
   let pw = zapPower(zs); if (awk) pw *= T.awkMul / T.ultMul;
+  S.rec.hold.n++; if (hold !== 'miss') S.rec.hold.ok++; if (hold === 'best') S.rec.hold.best++;
   const dmg = hitBoss(S, T.skillBase * h.s.skillMul * pw * T.hold[hold]);
-  h.zaps = []; spend(h); h.healRest = false; h.log.dmg += dmg; if (ult) h.log.ult++;
+  h.zaps = []; spend(h); h.log.dmg += dmg; if (ult) h.log.ult++;
   if (awk) { // 각성 필살기 덧효과 (판당 1번)
     h.awkUsed = true; const R = h.s.role;
     if (R === 'dealer' && weak(S)) S.weakUntil += T.awk.dealerWeak;
@@ -163,14 +168,16 @@ export function skill(S: State, who: number, hold: Hold): boolean {
   return true;
 }
 /** [역할] = ⚡1 · 딜러 강타(스킬 ×1.5 · 실드엔 안 통함) · 탱커 엄호(친구 다음 공격 −50%) · 힐러 광역 회복(+25 · 연달아 못 씀) · 서포터 격려(친구 ATB 가득) */
-export function canRole(S: State, who: number): boolean { const h = S.heroes[who]; return !!h && ready(h, S) && h.zaps.length >= 1 && !(h.s.role === 'healer' && h.healRest); }
+/** 광역 회복 = 팀 전체로 보스 공격 한 번 사이에 1번 (다른 힐러가 썼으면 그 사이엔 못 씀) */
+export const healBlocked = (S: State) => S.healN === S.bossN;
+export function canRole(S: State, who: number): boolean { const h = S.heroes[who]; return !!h && ready(h, S) && h.zaps.length >= 1 && !(h.s.role === 'healer' && healBlocked(S)); }
 export function roleAct(S: State, who: number, to?: number): boolean {
   const h = S.heroes[who]; if (!h || !canRole(S, who)) return false;
   const R = h.s.role; h.zaps.shift();
   if (R === 'dealer') { const dmg = hitBoss(S, T.skillBase * h.s.skillMul * T.zapMul[1]! * T.role.dealer.smash); h.log.dmg += dmg; spend(h); push(S, { k: 'role', t: S.t, who, role: R, dmg }); return true; }
   const f = to != null ? S.heroes[to] : undefined;
   if (R === 'tank') { const tg = f && !f.down ? f : S.heroes[S.target?.[0] ?? who]!; tg.cover = T.role.tank.cover; h.log.covers++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true; }
-  if (R === 'healer') { for (const x of alive(S)) x.hp = Math.min(x.s.maxHp, x.hp + T.role.healer.heal); h.log.heals++; spend(h); h.healRest = true; push(S, { k: 'role', t: S.t, who, role: R }); return true; }
+  if (R === 'healer') { for (const x of alive(S)) x.hp = Math.min(x.s.maxHp, x.hp + T.role.healer.heal); h.log.heals++; spend(h); S.healN = S.bossN; push(S, { k: 'role', t: S.t, who, role: R }); return true; }
   const tg = f && !f.down && f.id !== who ? f : alive(S).filter((x) => x.id !== who).sort((a, b) => a.atb - b.atb)[0];
   if (!tg) { h.zaps.unshift('n'); return false; }
   tg.atb = 1; h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
@@ -178,7 +185,7 @@ export function roleAct(S: State, who: number, to?: number): boolean {
 /** 부활 = ⚡1 · 팀 부활 3번 한도 */
 export function revive(S: State, who: number, to: number): boolean {
   const h = S.heroes[who], f = S.heroes[to]; if (!h || !f || !f.down || !ready(h, S) || h.zaps.length < T.reviveCost || S.revives <= 0) return false;
-  h.zaps.splice(0, T.reviveCost); f.down = false; f.hp = Math.max(1, Math.round(f.s.maxHp * T.reviveHp)); f.atb = 0; S.revives--; h.log.revives++; spend(h);
+  h.zaps.splice(0, T.reviveCost); f.down = false; f.hp = Math.max(1, Math.round(f.s.maxHp * T.reviveHp)); f.atb = 0; S.revives--; S.rec.revives++; h.log.revives++; spend(h);
   push(S, { k: 'revive', t: S.t, who, to }); checkEnd(S); return true;
 }
 
@@ -186,3 +193,16 @@ export function revive(S: State, who: number, to: number): boolean {
 export const timingOf = (p: number): Timing => (p >= T.timingCrit[0] && p <= T.timingCrit[1] ? 'crit' : p >= T.timingOk[0] && p <= T.timingOk[1] ? 'ok' : 'miss');
 export const bestZone = (gold: number): [number, number] => { const w = T.holdBestPerGold * gold; return [Math.max(0, T.holdBest[0] - w / 2), Math.min(1, T.holdBest[1] + w / 2)]; };
 export const holdOf = (p: number, gold: number): Hold => { const [a, b] = bestZone(gold); return p >= a && p <= b ? 'best' : p >= T.holdOk[0] && p <= T.holdOk[1] ? 'ok' : 'miss'; };
+
+/** 📊 판 기록 한 줄 (균형 도구 · 📜 11/20): 판 길이 · 소문항당 시간 · 타이밍 · 모았다 놓기 성공률 · 쓰러짐 + 반 · 차시 · 인원 · 역할 조합 */
+export function runRecord(S: State, ctx: { cls?: string; no: number; practice?: boolean }) {
+  const med = (a: number[]) => { if (!a.length) return 0; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]!; };
+  const r = S.rec, pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : null);
+  return {
+    v: 1, at: Date.now(), cls: ctx.cls ?? '', no: ctx.no, practice: !!ctx.practice, diff: S.diff, n: S.heroes.length,
+    roles: S.heroes.map((h) => h.s.role).sort().join('+'), heroes: S.heroes.map((h) => h.s.hero),
+    win: !!S.end?.win, why: S.end?.why ?? '', sec: Math.round(S.t), bossLeft: S.bossHp,
+    subs: r.subSec.length, subSecMed: med(r.subSec), timingOk: pct(r.timing.ok, r.timing.n), timingCrit: pct(r.timing.crit, r.timing.n), holdOk: pct(r.hold.ok, r.hold.n), holdBest: pct(r.hold.best, r.hold.n),
+    downs: r.downs, revives: r.revives, shields: S.heroes.map((h) => h.log.shields),
+  };
+}

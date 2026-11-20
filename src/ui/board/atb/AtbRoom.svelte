@@ -6,7 +6,7 @@
   import type { LessonPack } from '../../../model/types';
   import { HEROES, TEACHER_HEROES, heroOf, ladder } from '../../../model/hero';
   import { PACKS } from '../../../engine/packs';
-  import { newBattle, tick, type State } from '../../../board/atb/engine';
+  import { newBattle, runRecord, tick, type State } from '../../../board/atb/engine';
   import { BOT_LABEL, newBot, type BotKind } from '../../../board/atb/bots';
   import { originsOf } from '../../../board/atb/quiz';
   import { famOf, roleOf, statsOf } from '../../../board/atb/heroes';
@@ -16,7 +16,7 @@
   import HeroPick from './HeroPick.svelte';
 
   const KEY = 'citadel-atb-practice';
-  type Rec = { at: number; no: number; diff: Diff; win: boolean; sec: number; who: string; seed: number; mode: string };
+  type Rec = { at: number; no: number; diff: Diff; win: boolean; sec: number; who: string; seed: number; mode: string; /** 📊 판 기록 (균형 도구) */ r?: ReturnType<typeof runRecord> };
   const loadRecs = (): Rec[] => { try { return JSON.parse(localStorage.getItem(KEY) || '[]') as Rec[]; } catch { return []; } };
   let recs = $state<Rec[]>(loadRecs());
   const saveRec = (r: Rec) => { recs = [r, ...recs].slice(0, T.practiceKeep); try { localStorage.setItem(KEY, JSON.stringify(recs)); } catch { /* 사생활 창 */ } };
@@ -49,7 +49,7 @@
     tryLand();
   }
   function ended(B: State) {
-    saveRec({ at: Date.now(), no: L!.no, diff, win: !!B.end?.win, sec: Math.round(B.t), who: B.heroes.map((h) => h.s.name).join('·'), seed, mode: mode === 'play' ? '직접' : '관전' });
+    saveRec({ at: Date.now(), no: L!.no, diff, win: !!B.end?.win, sec: Math.round(B.t), who: B.heroes.map((h) => h.s.name).join('·'), seed, mode: mode === 'play' ? '직접' : '관전', r: runRecord(B, { no: L!.no, practice: true }) });
     phase = 'result';
   }
   const mastery = $derived(L ? recs.filter((r) => r.no === L!.no && r.win).length : 0);
@@ -80,7 +80,7 @@
     <section><b>시작 지점</b><div class="chips">{#each [['start', '전투 시작'], ['shield', '실드 등장 직전'], ['one', '실드 한 칸 남음'], ['aoe', '광역기 직후']] as [k, t] (k)}<button type="button" class:on={start === k} onclick={() => (start = k as typeof start)}>{t}</button>{/each}</div></section>
     <section class="row"><label><b>씨앗</b> <input type="number" min="1" max="9999" bind:value={seed} /></label>{#if mode === 'watch'}<span class="chips">{#each [1, 2, 4] as v (v)}<button type="button" class:on={speed === v} onclick={() => (speed = v)}>×{v}</button>{/each}</span>{/if}</section>
     <button type="button" class="go" data-k="atb-start" disabled={!L} onclick={begin}>⚔ 출발 (폰을 눕혀요)</button>
-    {#if recs.length}<section><b>최근 {recs.length}판 (이 폰)</b><ol class="recs">{#each recs as r (r.at)}<li>{md(r.at)} · {r.no}차시 {({ easy: '연습', normal: '일반', hard: '도전' })[r.diff]} · {r.mode} · {r.win ? '✔ 승리' : '✘ 실패'} · {Math.floor(r.sec / 60)}분 {r.sec % 60}초 · {r.who} · 씨앗 {r.seed}</li>{/each}</ol></section>{/if}
+    {#if recs.length}<section><b>최근 {recs.length}판 (이 폰)</b><ol class="recs">{#each recs as r (r.at)}<li>{md(r.at)} · {r.no}차시 {({ easy: '연습', normal: '일반', hard: '도전' })[r.diff]} · {r.mode} · {r.win ? '✔ 승리' : '✘ 실패'} · {Math.floor(r.sec / 60)}분 {r.sec % 60}초 · {r.who} · 씨앗 {r.seed}{#if r.r}<br /><small data-k="atb-rec">📊 소문항 {r.r.subs}개 · 하나에 {r.r.subSecMed}초 · 타이밍 {r.r.timingOk ?? '−'}% · 모았다 놓기 {r.r.holdOk ?? '−'}% · 쓰러짐 {r.r.downs} · {r.r.roles}</small>{/if}</li>{/each}</ol></section>{/if}
   </main>
 {:else if phase === 'battle' && S && L}
   {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} onend={ended} />{/key}
