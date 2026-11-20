@@ -9,7 +9,7 @@ import RUBRICS from './rubrics.json';
 import { bossTag as misBossTag, classify as misClassify } from './mis';
 import { BY, propOn, segments } from './symtalk';
 import { SYM_CARD, wishLeft } from './symcard';
-import { optOf, plain, richParts } from './venn';
+import { figError, optOf, plain, richParts } from './venn';
 import { BOSS_GENS, CHAIN_GENS, GENS } from './gens';
 import { FORMATS } from './formats';
 import { recheck } from './recheck';
@@ -46,7 +46,7 @@ const SUBJECT: Subject = {
   specialAttacks: DATA.specialAttacks as Record<string, string>,
   glitchSyms: DATA.glitchSyms as string,
   seteuk: DATA.seteuk,
-  rich: { parts: (t) => richParts(t).map((p) => ('venn' in p ? { fig: { venn: p.venn } } : 'graph' in p ? { fig: { graph: p.graph, big: true } } : { text: p.text })), opt: (o) => toPart(optOf(o)), plain, Figure },
+  rich: { parts: (t) => richParts(t).map((p) => ('venn' in p ? { fig: { venn: p.venn } } : 'graph' in p ? { fig: { graph: p.graph, big: true } } : { text: p.text })), opt: (o) => toPart(optOf(o)), plain, Figure, check: figError },
   formats: FORMATS,
   recheck,
   themes: THEMES as Subject['themes'],

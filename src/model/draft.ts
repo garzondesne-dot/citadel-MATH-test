@@ -5,7 +5,7 @@
 import { ECON_VER, type Wallet } from './wallet';
 import { ENH, GREAT, HEROES, heroOf, ladder, SKILL_PRICE, SKILL_SCROLL, TITLES } from './hero';
 
-export interface Look { hero: number; enh: number; socket: Record<string, string>; title: string }
+export interface Look { hero: number; enh: number; socket: Record<string, string>; title: string; /** 🏅 W2 용사마다 칭호 { 용사: 칭호 } (📜 11/20 선생님 「용사 바꿔도 같이 저장된 걸로」) */ titles?: Record<string, string> }
 export interface Plan { heroes: number[]; enh: number; sk: string[] }
 export const emptyPlan = (): Plan => ({ heroes: [], enh: 0, sk: [] });
 const has = (w: Wallet, id: string) => w.buys.some((b) => b.id === id);
@@ -21,6 +21,14 @@ export function ownsSkill(w: Wallet, P: Plan, hero: number, id: string, granted:
   return i > 0 && lad.slice(i + 1).some(got);
 }
 export const nextSkill = (w: Wallet, P: Plan, hero: number, granted: readonly string[] = []) => ladder(hero).findIndex((id) => !ownsSkill(w, P, hero, id, granted));
+/** W2 처음 고르는 용사(저장 없음) = 그 속성에서 가진 스킬 중 가장 높은 것 */
+export const bestSkill = (w: Wallet, P: Plan, hero: number, granted: readonly string[] = []): string => { const lad = ladder(hero); for (let i = lad.length - 1; i > 0; i--) if (ownsSkill(w, P, hero, lad[i]!, granted)) return lad[i]!; return lad[0] as string; };
+/** W2 용사 바꾸기 = 지금 칭호를 지금 용사 칸에 적고 → 새 용사의 저장된 스킬 · 칭호로 (없으면 스킬 = 가장 높은 것 · 칭호 = 지금 것 그대로) */
+export function switchHero(L: Look, to: number, w: Wallet, P: Plan, granted: readonly string[] = []): Look {
+  const titles = { ...(L.titles || {}), [String(L.hero)]: L.title }, socket = { ...L.socket };
+  if (!socket[String(to)]) socket[String(to)] = bestSkill(w, P, to, granted);
+  return { ...L, hero: to, socket, titles, title: titles[String(to)] ?? L.title };
+}
 export const equipOf = (L: Look) => L.socket[String(L.hero)] ?? (ladder(L.hero)[0] as string);
 
 export function cost(P: Plan, enh0: number) {
@@ -63,5 +71,5 @@ export function save(w: Wallet, P: Plan, L0: Look, L: Look, now: number, rnd: ()
   for (let k = 1; k <= P.enh; k++) { const e = ENH[L0.enh + k]; if (e && rnd() < GREAT) { back += Math.floor(e.g / 2); great++; } }
   const log = [...(w.log ?? [])];
   if (P.heroes.length || P.sk.length || P.enh) log.push(`상점 💎 −${c.g}${c.s ? ` · 📜 −${c.s}` : ''}${great ? ` · 🌟 대성공 ${great} · 💎 +${back}` : ''}`);
-  return { wallet: { ...w, gem: w.gem - c.g + back, scroll: w.scroll - c.s, buys, ver: ECON_VER, log }, look: { hero: L.hero, enh: L0.enh + P.enh, socket: { ...L.socket }, title: L.title }, great, back };
+  return { wallet: { ...w, gem: w.gem - c.g + back, scroll: w.scroll - c.s, buys, ver: ECON_VER, log }, look: { hero: L.hero, enh: L0.enh + P.enh, socket: { ...L.socket }, title: L.title, titles: { ...(L.titles || {}), [String(L.hero)]: L.title } }, great, back };
 }

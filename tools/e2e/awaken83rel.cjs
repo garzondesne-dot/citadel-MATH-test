@@ -58,7 +58,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e)); const tvReq = []; tv.on('request', (r) => tvReq.push(r.url()));
   await tv.goto(`${B}?role=hall&room=${live.code}`); await tv.waitForTimeout(2500);
   await tv.click('button:has-text("앞으로")').catch(() => {}); await tv.waitForTimeout(3500);
-  ok('종합실 = 금발 시트를 받음 · 녹스 각성 시트 안 받음', tvReq.some((u) => /hero-blond-v5\.webp/.test(u)) && !tvReq.some((u) => /awk-v5/.test(u)), tvReq.filter((u) => /art\/heroes\//.test(u)).map((u) => u.split('/').pop()).join(' '));
+  ok('종합실 = 금발 시트를 받음 · 녹스 각성 시트 안 받음', tvReq.some((u) => /hero-blond-v7\.webp/.test(u)) && !tvReq.some((u) => /awk-v7/.test(u)), tvReq.filter((u) => /art\/heroes\//.test(u)).map((u) => u.split('/').pop()).join(' '));
   await tv.screenshot({ path: `${SHOTS}/awk-tv.png` });
   // ⑤ TV 🌟 진필살기(시험 고리) = 첫 필살기 → 각성 컷인 → 일반 금빛 컷인 → ⚡ 각성 연출(녹스 = 핏빛 색조)
   const tcut = tv.waitForSelector('[data-k="awaken-cut"]', { timeout: 5000 }).then(() => true).catch(() => false);

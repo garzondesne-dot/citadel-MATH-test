@@ -51,7 +51,7 @@ describe('💾 저장 = 한 번에', () => {
     if (typeof r === 'string') throw new Error(r);
     expect(r.wallet.gem).toBe(9999 - 30 - 10 - 20);
     expect(r.wallet.buys).toEqual([{ id: 'hero_12', ver: ECON_VER, at: 5 }, { id: 'fx_moon', ver: ECON_VER, at: 5 }]);
-    expect(r.look).toEqual({ hero: 12, enh: 1, socket: { 12: 'twinkle' }, title: 'dawn' });
+    expect(r.look).toEqual({ hero: 12, enh: 1, socket: { 12: 'twinkle' }, title: 'dawn', titles: { 12: 'dawn' } }); // 🏅 W2 지금 용사 칭호도 titles 에
     expect(r.great).toBe(0);
     expect(r.wallet.log).toEqual(['상점 💎 −60']);
   });
