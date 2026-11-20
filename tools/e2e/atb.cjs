@@ -28,7 +28,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(700); // 보스가 걸어 나오는 0.45초
   const cardL = await p.$eval('.card', (x) => x.getBoundingClientRect().left), bossR = await p.$eval('[data-k="atb-boss"]', (x) => x.getBoundingClientRect().right);
   { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), b = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), h = [...document.querySelectorAll('.hero .tag')].map((e) => e.getBoundingClientRect().left), bh = document.querySelector('[data-k="raid-hp"]').getBoundingClientRect(); return { cx: Math.round(c.left + c.width / 2), w: c.width / innerWidth, bossL: Math.round(b.left), cardR: Math.round(c.right), tagsL: Math.max(...h) < c.left, bhpR: bh.left >= c.right - 4 }; });
-    ok('요청 #14 문제 카드 = 화면 가운데 · 약 44% · 왼쪽 용사 이름표 · 오른쪽 보스(체력) 보임', Math.abs(g.cx - 414) < 14 && Math.abs(g.w - 0.44) < 0.02 && g.bossL >= g.cardR - 30 && g.tagsL && g.bhpR, JSON.stringify(g)); }
+    ok('요청 #14 문제 카드 = 화면 가운데 · 약 47%(요청 #19 덧1) · 왼쪽 용사 이름표 · 오른쪽 보스(체력) 보임', Math.abs(g.cx - 414) < 14 && Math.abs(g.w - 0.47) < 0.02 && g.bossL >= g.cardR - 30 && g.tagsL && g.bhpR, JSON.stringify(g)); }
   const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
   ok('Y1 소문항 하나 맞힘 = 충전 안 됨', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0);
@@ -38,7 +38,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
   ok('요청 #10 채점 = 「✨ PERFECT ⚡+3」 · 넘치면 「가득(+n 받음)」', /PERFECT ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
   ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 3 그대로)', ch0 + 3 <= 3 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0))));
-  await p.click('[data-k="atb-grade"]'); await p.waitForTimeout(150);
+  await p.dispatchEvent('[data-k="atb-grade"]', 'click', {}, { timeout: 1000 }).catch(() => {}); await p.waitForTimeout(150); // 도장 연출로 움직이는 중에도 누름(움직임 기다리지 않음)
   ok('요청 #13 충전 가득 = 공격 단추 동그라미 · 스킬 빛(full3)', !!(await p.$('.btns.full3')));
   ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')));
   await p.waitForTimeout(700);
@@ -113,6 +113,16 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-shield-break-844.png` }); await p.waitForTimeout(1500);
   const gone = (await p.$$('[data-k="atb-cells"] .cell2.gone')).length;
   ok('요청 #12 보호막 부수기 = 칸 금 감 · 조각 → 사라짐(한 칸씩)', gone >= 1 && /hold|crack|shatter/.test(mid), `${mid} → 사라짐 ${gone}`);
+  // 🎵 요청 #21 전투 배경음 = 레이드 곡 → 실드 = 보스 곡 · 🎵/🔇 단추 = 소리 설정 같은 값
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(500);
+  const bg1 = await p.evaluate(() => globalThis.__bgm().phone);
+  await p.evaluate(() => { const S = globalThis.__atb.S; S.shieldUp = true; }); await p.waitForTimeout(200);
+  const bg2 = await p.evaluate(() => globalThis.__bgm().phone);
+  ok('요청 #21 배경음 = 레이드 곡 → 실드 뜨면 보스 곡', /^raid-[123]$/.test(bg1) && /^boss-[12]$/.test(bg2), `${bg1} → ${bg2}`);
+  const pr0 = await p.$eval('[data-k="atb-bgm"]', (e) => e.getAttribute('aria-pressed')); await p.click('[data-k="atb-bgm"]'); await p.waitForTimeout(100);
+  const pr1 = await p.$eval('[data-k="atb-bgm"]', (e) => e.getAttribute('aria-pressed')), sv = await p.evaluate(() => JSON.parse(localStorage.getItem('citadel-sound') || '{}').bgm);
+  ok('요청 #21 🎵/🔇 단추 = 배경음 켬 · 끔 · 이 폰 기억(소리 설정과 같은 값)', pr0 !== pr1 && String(sv) === pr1, `${pr0} → ${pr1} · 저장 ${sv}`);
+  await p.click('[data-k="atb-bgm"]');
   // 🔄 세로 폰(회전 잠금) = 던전 화면만 90° 돌려 가로 (요청 #8) · 누르기 위치 · 넘침 0 · 공격 연출 방향
   for (const [vw, vh, nm] of [[390, 844, '세로 390×844'], [375, 667, '세로 375×667 (SE)']]) {
     const v = await b.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); v.on('pageerror', (e) => errs.push(String(e)));

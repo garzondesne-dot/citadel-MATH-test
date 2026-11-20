@@ -20,7 +20,8 @@
   import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
   import { attack as fxAttack, fit, shake, ultBlast, type Pose } from '../../fx/attack';
-  import { sfx } from '../../sound.svelte';
+  import { sfx, soundPref, setSound } from '../../sound.svelte';
+  import { bgm } from '../../bgm';
   import type { HPose } from '../../manifest';
   import { botStep, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
@@ -60,7 +61,13 @@
   }
   // 💥 몬스터 공격에 맞음 = 문제 카드 잠깐 잠금 (📜 요청 #20 ① = T.hitLockMs 1초)
   let lockUntil = 0, lockLeft = $state(0), lockTag = $state('');
-  onDestroy(() => { clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
+  // 🎵 전투 배경음 (📜 요청 #21): 레이드 곡(후보 2 · 5 · 4 = raid-1 · 2 · 3) 판마다 번갈아 → 실드 · 보스 체력 30% 아래 = 보스 곡(후보 10 · 11) 1초 교차
+  //   이김 = Victory Short(win · 한 번) · 짐 = 조용히 멈춤 · 음량 = 효과음보다 작게(0.7) · 문제 카드 열림 = 더 작게(0.3) · 🎵/🔇 = 소리 설정과 같은 값
+  const bgmN = untrack(() => { try { const n = (+(localStorage.getItem('atb-bgm-n') || 0) || 0) + 1; localStorage.setItem('atb-bgm-n', String(n)); return n; } catch { return Math.floor(Math.random() * 6); } });
+  const RAID = `raid-${(bgmN % 3) + 1}`, BOSS = `boss-${(bgmN % 2) + 1}`;
+  const bgmK = $derived(S.end ? (S.end.win ? 'win' : null) : S.shieldUp || S.bossHp < S.bossMax * 0.3 ? BOSS : RAID);
+  $effect(() => { bgm(bgmK, 'phone', { scale: open ? 0.3 : 0.7, fadeMs: 1000 }); });
+  onDestroy(() => { bgm(S.end?.win ? 'win' : null, 'phone', { scale: 0.25, fadeMs: 1000 }); /* 결과 화면 = 승리 곡 아주 작게 끝까지(한 번) · 짐 = 멈춤 */ clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
 
   // ── 내 문제 ──
   // 🔁 📜 요청 #19 덧2 = 판마다 원문항 순서 섞음 · 판(버전) = 이 기기에서 최근 본 것 피함 · 친구가 지금 쓰는 판 피함
@@ -306,7 +313,7 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
-  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; } };
+  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid) };
 </script>
 
 <div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--u={U} bind:this={stageEl}>
@@ -315,7 +322,7 @@
   {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
   <!-- 팀 부활 -->
-  <div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div>
+  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => setSound({ bgm: !soundPref.bgm })}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
@@ -406,7 +413,9 @@
   .stage { position: fixed; inset: 0 var(--safe-r, 0px) 0 var(--safe-l, 0px); overflow: hidden; background: #1a1424 center / cover no-repeat; color: #fff; font-family: var(--font); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
   .stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#0000 55%, #0006); }
   .stage.weak::after { background: radial-gradient(ellipse at 70% 50%, #ffcf4a33, #0000 60%), linear-gradient(#0000 55%, #0006); }
-  .revs { position: absolute; top: 2%; right: 1.5%; z-index: 20; display: flex; align-items: center; gap: 2px; padding: 4px 10px; border-radius: 10px; border: 2px solid #c9953e; background: #1d1220e6; font: 800 14px var(--font); }
+  .tr { position: absolute; top: 2%; right: 1.5%; z-index: 20; display: flex; align-items: center; gap: 6px; }
+  .bgmb { width: 36px; height: 36px; border-radius: 10px; border: 2px solid #c9953e; background: #1d1220e6; font-size: 18px; line-height: 1; padding: 0; } .bgmb.off { filter: grayscale(0.6); opacity: 0.85; }
+  .revs { display: flex; align-items: center; gap: 2px; padding: 4px 10px; border-radius: 10px; border: 2px solid #c9953e; background: #1d1220e6; font: 800 14px var(--font); }
   .revs b { margin-right: 4px; } .revs .used { filter: grayscale(1) brightness(0.5); }
   .weakb { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 12px; background: linear-gradient(#ffdf7a, #f0a92a); color: #3a1d00; font: 800 16px var(--font); box-shadow: 0 0 16px #ffcf4a; animation: pulse 0.8s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: translateX(-50%) scale(1.06); } }
@@ -447,7 +456,7 @@
   .pop.crit { color: #ffe066; font-size: 34px; } .pop.sk { color: #8fd0ff; font-size: 34px; } .pop.ult { color: #ffd34d; font-size: 46px; } .pop.hurt { color: #ff6a6a; font-size: 20px; } .pop.hurt.big { font-size: 26px; } .pop.miss { color: #ccc; font-size: 20px; }
   .pop.crit, .pop.sk, .pop.ult { animation: upbig 1.1s ease-out forwards; } @keyframes upbig { 0% { opacity: 1; transform: translate(-50%, 0) scale(1.8); } 15% { transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -56px) scale(1); } } .pop.shield { color: #9fe6ff; font-size: 22px; } .pop.role { color: #9dff9a; font-size: 16px; }
   @keyframes up { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -48px); } }
-  .card { position: absolute; z-index: 26; left: 27%; top: 2.5%; bottom: 2.5%; width: 44%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
+  .card { position: absolute; z-index: 26; left: 26.5%; top: 2.5%; bottom: 2.5%; width: 47%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
   .card.suck { transition: transform 0.42s ease-in, opacity 0.42s ease-in; transform: translate(-80%, -20%) scale(0.05) rotate(-20deg); opacity: 0; }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
