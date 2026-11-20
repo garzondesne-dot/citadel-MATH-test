@@ -1,203 +1,203 @@
 {
- "hero-sword-v6.webp": {
+ "hero-sword-v7.webp": {
   "src": "aura10-sword-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-witch-v6.webp": {
+ "hero-witch-v7.webp": {
   "src": "aura10-witch-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.05
  },
- "hero-elf-v6.webp": {
+ "hero-elf-v7.webp": {
   "src": "aura10-elf-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-ninja-v6.webp": {
+ "hero-ninja-v7.webp": {
   "src": "aura10-ninja-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-priest-v6.webp": {
+ "hero-priest-v7.webp": {
   "src": "aura10-priest-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-lancer-v6.webp": {
+ "hero-lancer-v7.webp": {
   "src": "aura10-lancer-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-dwarf-v6.webp": {
+ "hero-dwarf-v7.webp": {
   "src": "aura10-dwarf-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.1
  },
- "hero-sage-v6.webp": {
+ "hero-sage-v7.webp": {
   "src": "aura10-sage-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.0
  },
- "hero-paladin-v6.webp": {
+ "hero-paladin-v7.webp": {
   "src": "aura10-paladin-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.05
  },
- "hero-monk-v6.webp": {
+ "hero-monk-v7.webp": {
   "src": "aura10-monk-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-dancer-v6.webp": {
+ "hero-dancer-v7.webp": {
   "src": "aura10-dancer-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-bard-v6.webp": {
+ "hero-bard-v7.webp": {
   "src": "aura10-bard-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-alchemist-v6.webp": {
+ "hero-alchemist-v7.webp": {
   "src": "aura10-alchemist-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.05
  },
- "hero-pirate-v6.webp": {
+ "hero-pirate-v7.webp": {
   "src": "aura10-pirate-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-frost-v6.webp": {
+ "hero-frost-v7.webp": {
   "src": "aura10-frost-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-tamer-v6.webp": {
+ "hero-tamer-v7.webp": {
   "src": "aura10-tamer-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-math-v6.webp": {
+ "hero-math-v7.webp": {
   "src": "aura10-math-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.1
  },
- "hero-dknight-v6b.webp": {
+ "hero-dknight-v7.webp": {
   "src": "aura10-dknight-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-mathboy-v6.webp": {
+ "hero-mathboy-v7.webp": {
   "src": "aura10-mathboy-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.0
  },
- "hero-mathgirl-v6.webp": {
+ "hero-mathgirl-v7.webp": {
   "src": "aura10-mathgirl-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-mechanic-v6.webp": {
+ "hero-mechanic-v7.webp": {
   "src": "aura10-mechanic-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.15
  },
- "hero-hacker-v6.webp": {
+ "hero-hacker-v7.webp": {
   "src": "aura10-hacker-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-dragoon-v6.webp": {
+ "hero-dragoon-v7.webp": {
   "src": "aura10-dragoon-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.0
  },
- "hero-spellblade-v6.webp": {
-  "src": "aura10-spellblade-v6.webp",
+ "hero-spellblade-v7.webp": {
+  "src": "aura10-spellblade-v7.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-bone-v6b.webp": {
+ "hero-bone-v7.webp": {
   "src": "aura10-bone-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-crossbow-v6.webp": {
+ "hero-crossbow-v7.webp": {
   "src": "aura10-crossbow-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-abacus-v6.webp": {
+ "hero-abacus-v7.webp": {
   "src": "aura10-abacus-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-geometry-v6.webp": {
+ "hero-geometry-v7.webp": {
   "src": "aura10-geometry-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-merchant-v6.webp": {
+ "hero-merchant-v7.webp": {
   "src": "aura10-merchant-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-drone-v6.webp": {
+ "hero-drone-v7.webp": {
   "src": "aura10-drone-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-valkyrie-v6.webp": {
+ "hero-valkyrie-v7.webp": {
   "src": "aura10-valkyrie-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.15
  },
- "hero-elemental-v6.webp": {
+ "hero-elemental-v7.webp": {
   "src": "aura10-elemental-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.1
  },
- "hero-astro-v6.webp": {
+ "hero-astro-v7.webp": {
   "src": "aura10-astro-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.0
  },
- "hero-blond-v6.webp": {
+ "hero-blond-v7.webp": {
   "src": "aura-halo-v1.webp (지금 성스러운 후광 · halo-burst 같이)",
   "frames": 4,
   "cell": 160,

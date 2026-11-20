@@ -32,11 +32,11 @@ describe('⚡ 각성 조건 4', () => {
   it('로안 = 옛 각성한 로안(16) 그대로', () => {
     expect(lookId({ hero: 0, enh: 10, fx: 'twin', title: 'slash10k' })).toBe(16);
     expect(isBlond({ hero: 0, enh: 10, fx: 'twin', title: 'slash10k' })).toBe(true);
-    expect(heroOf(16).sprite).toBe('hero-blond-v6.webp');
+    expect(heroOf(16).sprite).toBe('hero-blond-v7.webp');
   });
   it('모습 id → 속성 · 이름 · 그림 (그림 없는 용사 = 원래 그림)', () => {
     expect(attrOf(118)).toBe('dark'); expect(heroOf(118).name).toBe('각성한 녹스');
-    expect(heroOf(118).sprite).toBe('hero-dknight-awk-v6.webp');
+    expect(heroOf(118).sprite).toBe('hero-dknight-awk-v7.webp');
     expect(heroOf(101).sprite).toBe(heroOf(1).sprite);
     expect(heroOf(101).name).toBe('각성한 누아');
   });
