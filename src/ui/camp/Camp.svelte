@@ -267,7 +267,12 @@
   let tagFlash = $state<Record<string, boolean>>({});
   const tagOn = (k: string) => !!todo[k] || tagAll || !!tagFlash[k] || showAll;
   const anyTodo = $derived(Object.keys(todo).length > 0);
-  const hl = (k: string): 'todo' | 'dim' | '' => (todo[k] ? 'todo' : anyTodo ? 'dim' : '');
+  // 📜 2026-11-20 선생님 「왜 어둡나 · 원래 밝게 하고 누르면 이펙트」: 할 일 없는 물건 흐림(dim) 없앰 · 할 일 = 금빛 숨쉬기만
+  const hl = (k: string): 'todo' | '' => (todo[k] ? 'todo' : '');
+  // 👆 누를 때 이펙트: 0.15초 톡(눌렸다 1.08 로 튐) + 밝기 1.4 번쩍 + 둘레 반짝이 6개(0.5초 · 물건마다 색) · 동작 줄이기 = 번쩍만 · 창은 기다리지 않고 바로 열림
+  const TCOL: Record<string, string> = { dummy: '#ffd25a', tent: '#7cd4ff', scare: '#6ee7a0', mail: '#ff9fc6', gate: '#ff7a5c' };
+  let tapN = $state<Record<string, number>>({}), tapSeq = 0;
+  function tapFx(k: string) { const n = ++tapSeq; tapN = { ...tapN, [k]: n }; setTimeout(() => { if (tapN[k] === n) { const { [k]: _, ...r } = tapN; void _; tapN = r; } }, 550); }
   let boardJoin = $state('');
   // 🆕 🎒 학생 새 소식 (📜 2026-11-15 · school/changes.ts): 정식에서만 · 실제 학생 · 캠프에서만(수업 화면 아님) · 마지막 본 판보다 새 판의 학생 줄 = 작은 창 한 번(최대 5줄) + 📮 「📢 새 소식」
   untrack(() => { if (realStu && pupil) usageVisit(S, pupil.cls, pupil.num); }); // 📈 활용 추이 🚪 접속 (하루 한 번 · 실제 학생만 · 정식 usage.js visit)
@@ -360,7 +365,7 @@
   $effect(() => { if (sheet || castleGo != null) return; untrack(() => { if (hp.pose === 'sit' && hp.left === SEAT.left) { arm(); return; } const tok = ++walkTok; void walkTo(SEAT, 900, tok).then((ok) => { if (ok) { hp = { ...hp, pose: 'sit', flip: false }; arm(); } }); }); });
   /** 물건 누름 = 반응 → 용사가 걸어가서(0.6초) → 들어감 (동작 줄이기 = 바로) */
   function go(k: string, e?: Event) {
-    e?.stopPropagation(); poke(k, e); arm();
+    e?.stopPropagation(); tapFx(k); poke(k, e); arm();
     if (RM || !SPOT[k]) { tap(k); return; }
     const tok = ++walkTok;
     void walkTo(SPOT[k]!, 600, tok).then((ok) => { if (ok && !sheet && castleGo == null) { hp = { ...hp, pose: 'idle' }; tap(k); } }); // 🐞 걷는 동안 다른 창을 열었으면(예: 던전 문 → 예습) 늦게 도착한 걸음이 그 창을 덮지 않게
@@ -493,14 +498,16 @@
       {#if tagOn(k) || gOpen}<span class="tag" class:todo={!!td || gOpen} data-k="tag-{k}"><b>{gOpen ? '입장!' : k === 'gate' && trial ? '다른 차시' : NAME[k]}</b>{#if teach && tTodo[k === 'tentdeco' ? '' : k]}<i class="cnt tc" data-k="tcnt-{k}" title="선생님 할 일">{tTodo[k]}</i>{:else if td}<i class="cnt" data-k="cnt-{k}">{td.n}</i>{/if}</span>{#if td?.gem}<span class="gchip" data-k="gem-{k}">💎+{td.gem}</span>{/if}{/if}
     {/snippet}
     {#each ['castle', 'gate'].filter((k) => k === 'gate' || feat('citadel')) as k (k)}
-      <button type="button" class="zone {hl(k)}" data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
+      <button type="button" class="zone {hl(k)}" class:tp={!!tapN[k]} class:rm={RM} data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
+        {#if tapN[k]}{#key tapN[k]}<span class="tfx" class:rm={RM} style:--tc={TCOL[k] ?? '#ffd25a'} aria-hidden="true" data-k="tap-fx">{#if !RM}{#each [0, 1, 2, 3, 4, 5] as i (i)}<i style:--a="{i * 60 + 15}deg"></i>{/each}{/if}</span>{/key}{/if}
         {@render tag(k)}
       </button>
     {/each}
     {#each CAMP_PROPS.filter((p) => (!p.feat || feat(p.feat)) && !(trial && (p.k === 'dummy' || p.k === 'mail' || p.k === 'tent'))) as p (p.k)}
       {@const k = p.k}
-      <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} onclick={(e) => go(k, e)}>
+      <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} class:tp={!!tapN[k]} class:rm={RM} onclick={(e) => go(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} on={(news[k] ?? 0) > 0} />
+        {#if tapN[k]}{#key tapN[k]}<span class="tfx" class:rm={RM} style:--tc={TCOL[k] ?? '#ffd25a'} aria-hidden="true" data-k="tap-fx">{#if !RM}{#each [0, 1, 2, 3, 4, 5] as i (i)}<i style:--a="{i * 60 + 15}deg"></i>{/each}{/if}</span>{/key}{/if}
         {#if k === 'scare' && e7Ready && (eggFx?.kind === 'e7' || eggHave('e7'))}<span class="bandaid" class:flop={eggFx?.kind === 'e7'} aria-hidden="true" data-k="bandaid">🩹</span>{/if}
         {@render tag(k)}
       </button>
@@ -846,7 +853,13 @@
 
   /* 🏕 캠프 A (📜 2026-11-15): 할 일 = 금빛 숨쉬기(1.8초 · 빛 + 밝기) · 말풍선(통통 · 꼬리) · 별 하나가 둘레를 돎 / 할 일 없는 물건 = 흐림 0.55 / 동작 줄이기 = 빛 · 말풍선만 */
   .prop.todo::after { content: ''; position: absolute; left: 15%; right: 15%; bottom: -2%; height: 14%; border-radius: 50%; pointer-events: none; z-index: -1; background: radial-gradient(closest-side, rgba(255, 214, 120, 0.55), transparent); animation: todoHalo 1.8s ease-in-out infinite; } /* 🏷 #72 발밑 은은한 금빛 */
-  .prop.dim :global(.img) { filter: brightness(0.55) saturate(0.7); }
+  /* 👆 누를 때 (📜 2026-11-20): 버튼 자체 = scale · translate 속성(물건 그림의 transform · 숨쉬기 filter 와 겹치지 않음) */
+  .prop.tp, .zone.tp { animation: tapPop 0.15s ease-out; } .prop.tp.rm, .zone.tp.rm { animation: tapFlash 0.15s ease-out; }
+  @keyframes tapPop { 0% { scale: 1; translate: 0 0; filter: brightness(1); } 35% { scale: 0.97; translate: 0 3px; filter: brightness(1.4); } 70% { scale: 1.08; translate: 0 -2px; filter: brightness(1.2); } 100% { scale: 1; translate: 0 0; filter: brightness(1); } }
+  @keyframes tapFlash { 0%, 100% { filter: brightness(1); } 40% { filter: brightness(1.4); } }
+  .tfx { position: absolute; left: 50%; top: 45%; width: 0; height: 0; pointer-events: none; z-index: 6; }
+  .tfx i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; background: var(--tc); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 3px var(--tc)); animation: tfx 0.5s ease-out forwards; }
+  @keyframes tfx { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-10px) scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scale(1.1); } }
   @keyframes todoGlow { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 214, 120, 0.5)) brightness(1); } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 120, 1)) brightness(1.25); } }
   .zone.todo { box-shadow: none; }
   .zone.todo::after { content: ''; position: absolute; inset: 10%; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 120, 0.35), transparent); animation: todoHalo 1.8s ease-in-out infinite; }
