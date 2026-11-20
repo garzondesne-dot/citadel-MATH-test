@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { SUBJ } from '../src/engine/subject';
 import { HEROES } from '../src/model/hero';
-import { attack, breakShield, canBreak, earn, holdOf, newBattle, revive, roleAct, skill, tick, timingOf, zapPower, type State } from '../src/board/atb/engine';
+import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skill, tick, timingOf, timingZone, zapPower, type State } from '../src/board/atb/engine';
 import { newBot, simulate } from '../src/board/atb/bots';
 import { statsOf } from '../src/board/atb/heroes';
 import { BOSSES, T } from '../src/board/atb/tune';
@@ -16,22 +16,22 @@ const right = { zap: 1, gold: false, done: false, perfect: false, right: true };
 
 describe('ATB 엔진', () => {
   it('출발: 보스 HP = 인원별 일반 값 · 팀 부활 3', () => {
-    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([1500, 500, 230, 3]); // 설정표 v3
+    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([1950, 650, 299, 3]); // 설정표 v3 × 일반 +30% (📜 요청 #3 ⑧)
   });
   it('ATB = 역할 속도로 참 · 가득 차야 행동', () => {
     const S = fresh(); S.heroes[0]!.atb = 0;
     expect(attack(S, 0, 'ok')).toBe(false); tick(S, 8); expect(S.heroes[0]!.atb).toBeCloseTo(1); expect(attack(S, 0, 'ok')).toBe(true);
   });
   it('일반 공격: 실패 0 · 성공 12 · 치명 ×1.5 + 다음 ATB 20%', () => {
-    const S = fresh(); full(S, 0); attack(S, 0, 'miss'); expect(S.bossHp).toBe(1500);
-    full(S, 0); attack(S, 0, 'ok'); const a = 1500 - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
+    const S = fresh(); full(S, 0); attack(S, 0, 'miss'); expect(S.bossHp).toBe(S.bossMax);
+    full(S, 0); attack(S, 0, 'ok'); const a = S.bossMax - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
     full(S, 0); attack(S, 0, 'crit'); expect(S.heroes[0]!.atb).toBeCloseTo(0.2);
   });
   it('⚡ 배율 1 · 2.1 · 3.3 · 4.6 · 6.0 · 금색 = 1.5배 값 · 스킬은 가진 ⚡ 다 씀', () => {
     expect([1, 2, 3, 4, 5].map((n) => zapPower(Array(n).fill('n')))).toEqual([1, 2.1, 3.3, 4.6, 6]);
     expect(zapPower(['g', 'g'])).toBeCloseTo(3.15);
     const S = fresh(); for (let i = 0; i < 3; i++) earn(S, 0, right); full(S, 0); skill(S, 0, 'ok');
-    expect(S.heroes[0]!.zaps.length).toBe(0); expect(1500 - S.bossHp).toBe(Math.round(55 * S.heroes[0]!.s.skillMul * 3.3 * 1.25));
+    expect(S.heroes[0]!.zaps.length).toBe(0); expect(S.bossMax - S.bossHp).toBe(Math.round(55 * S.heroes[0]!.s.skillMul * 3.3 * 1.25));
   });
   it('실드: HP 70% 에서 각자 1칸(계열) · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 완주 표로만 깸 · 약점 계열 = 친구 칸도', () => {
     const S = fresh(); S.bossHp = Math.round(S.bossMax * 0.7) + 5; full(S, 0); attack(S, 0, 'ok');
@@ -76,9 +76,16 @@ describe('ATB 엔진', () => {
     S.heroes[0]!.zaps = Array(5).fill('n'); full(S, 0); skill(S, 0, 'ok'); const a = S.ev.at(-1) as { awk: boolean; dmg: number };
     expect(a.awk).toBe(true); expect(a.dmg).toBe(Math.min(S.bossMax, Math.round(55 * S.heroes[0]!.s.skillMul * 6.5 * 1.25)));
   });
-  it('타이밍 바 · 모았다 놓기 판정 (금색이 많을수록 딱 맞음 칸 넓어짐)', () => {
-    expect([timingOf(0.1), timingOf(0.4), timingOf(0.58)]).toEqual(['miss', 'ok', 'crit']);
-    expect([holdOf(0.3, 0), holdOf(0.7, 0), holdOf(0.8, 0), holdOf(0.765, 0), holdOf(0.765, 5)]).toEqual(['miss', 'ok', 'best', 'ok', 'best']);
+  it('타이밍 바 판정 · 칸 자리 · 폭 · 빠르기 = 판마다 무작위(TUNE 범위)', () => {
+    const z = { ok: [0.35, 0.8] as [number, number], crit: [0.52, 0.64] as [number, number], ms: 1600 };
+    expect([timingOf(0.1, z), timingOf(0.4, z), timingOf(0.58, z)]).toEqual(['miss', 'ok', 'crit']);
+    // 🎲 칸은 판마다 바뀜 · 늘 0 ~ 1 안 · 치명 칸 ⊂ 성공 칸 · 폭 · 빠르기 = TUNE 범위
+    let s = 7; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647); const seen = new Set<number>();
+    for (let i = 0; i < 200; i++) { const q = timingZone(rnd); seen.add(Math.round(q.ok[0] * 20));
+      expect(q.ok[0]).toBeGreaterThanOrEqual(T.timingZone.edge - 1e-9); expect(q.ok[1]).toBeLessThanOrEqual(1 - T.timingZone.edge + 1e-9);
+      expect(q.crit[0]).toBeGreaterThanOrEqual(q.ok[0] - 1e-9); expect(q.crit[1]).toBeLessThanOrEqual(q.ok[1] + 1e-9);
+      expect(q.ms).toBeGreaterThanOrEqual(T.timingZone.ms[0]); expect(q.ms).toBeLessThanOrEqual(T.timingZone.ms[1]); }
+    expect(seen.size).toBeGreaterThan(5);
   });
   it('같은 씨앗 = 같은 판 · 봇 4 (보통 학생 · 일반) = 대략 3 ~ 6분 · 대부분 이김', () => {
     const run = (seed: number) => { const S = fresh(['로안', '발도르', '루멘', '누아'], seed); simulate(L2, S, S.heroes.map((_, i) => newBot(L2, i, 'normal', seed))); return S; };

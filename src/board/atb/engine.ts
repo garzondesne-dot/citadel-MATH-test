@@ -200,9 +200,14 @@ export function revive(S: State, who: number, to: number): boolean {
 }
 
 // ── 판정 도우미 (화면 · 봇 같이) ──
-export const timingOf = (p: number): Timing => (p >= T.timingCrit[0] && p <= T.timingCrit[1] ? 'crit' : p >= T.timingOk[0] && p <= T.timingOk[1] ? 'ok' : 'miss');
-export const bestZone = (gold: number): [number, number] => { const w = T.holdBestPerGold * gold; return [Math.max(0, T.holdBest[0] - w / 2), Math.min(1, T.holdBest[1] + w / 2)]; };
-export const holdOf = (p: number, gold: number): Hold => { const [a, b] = bestZone(gold); return p >= a && p <= b ? 'best' : p >= T.holdOk[0] && p <= T.holdOk[1] ? 'ok' : 'miss'; };
+/** ⏳ 타이밍 칸 한 판 (성공 [a, b] · 치명 [c, d] · 바늘 ms) · rnd = 0 ~ 1 (화면 = Math.random · 시험 = 고정) */
+export interface Zone { ok: [number, number]; crit: [number, number]; ms: number }
+export function timingZone(rnd: () => number): Zone {
+  const Z = T.timingZone, lerp = (r: [number, number], x: number) => r[0] + (r[1] - r[0]) * x;
+  const w = lerp(Z.okW, rnd()), a = Z.edge + (1 - 2 * Z.edge - w) * rnd(), cw = Math.min(w, lerp(Z.critW, rnd())), c = a + (w - cw) * rnd();
+  return { ok: [a, a + w], crit: [c, c + cw], ms: Math.round(lerp(Z.ms, rnd())) };
+}
+export const timingOf = (p: number, z: Zone): Timing => (p >= z.crit[0] && p <= z.crit[1] ? 'crit' : p >= z.ok[0] && p <= z.ok[1] ? 'ok' : 'miss');
 
 /** 📊 판 기록 한 줄 (균형 도구 · 📜 11/20): 판 길이 · 소문항당 시간 · 타이밍 · 모았다 놓기 성공률 · 쓰러짐 + 반 · 차시 · 인원 · 역할 조합 */
 export function runRecord(S: State, ctx: { cls?: string; no: number; practice?: boolean }) {

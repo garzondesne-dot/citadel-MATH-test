@@ -6,10 +6,12 @@ export type Diff = 'easy' | 'normal' | 'hard';
 export type Fam = 'arms' | 'flame' | 'nature' | 'wisdom' | 'mystic';
 export type Role = 'dealer' | 'tank' | 'healer' | 'support';
 
-/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · 📜 설정표 v3(모의실험 3) · 연습 · 도전 = 어림값 */
+/** 일반 난이도 보스 HP 배율 (📜 11/20 선생님 첫 판 「일반 엄청 쉬워」 → 출발값 +30% · 1 · 2인은 설계 방 값 올 때까지 같은 배율) */
+export const NORMAL_HP_UP = 1.3;
+/** 난이도마다 보스 HP (인원 1 · 2 · 3 · 4) · 📜 설정표 v3(모의실험 3) · 일반 = v3 × NORMAL_HP_UP · 연습 · 도전 = 어림값 */
 export const BOSS_HP: Record<Diff, [number, number, number, number]> = {
   easy: [190, 410, 780, 1240],
-  normal: [230, 500, 950, 1500],
+  normal: ([230, 500, 950, 1500] as const).map((x) => Math.round(x * NORMAL_HP_UP)) as [number, number, number, number],
   hard: [270, 590, 1120, 1760],
 };
 /** 보스 공격 기본값 (단일 / 광역) · 인원 1 · 2 · 3 · 4 (설정표 v3: 4 · 3인 같음) */
@@ -40,11 +42,11 @@ export const T = {
   ultMul: 6.0, awkMul: 6.5, // 필살기(⚡5) · 각성 필살기(🔨+10 · 판당 1번)
   skillBase: 55, attackBase: 12, // 스킬 기본 · 일반 공격 기본 (용사수치 초안 30 · 8 → 약 4분 판에 맞춰 올림)
   timing: { miss: 0, ok: 1, crit: 1.5 }, // 일반 공격 타이밍 바
-  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 「모았다 놓기」 빗나감 · 성공 · 딱 맞음
-  holdMs: 1400, // ⏳ 고리가 한 바퀴 차는 시간 (테스트로 정함)
-  holdBest: [0.78, 0.9] as [number, number], holdOk: [0.62, 1.0] as [number, number], // ⏳ 딱 맞음 · 성공 칸(한 바퀴 비율) · 금색 ⚡ 1개마다 딱 맞음 칸 +0.02
-  holdBestPerGold: 0.02,
-  timingMs: 1600, timingOk: [0.35, 0.8] as [number, number], timingCrit: [0.52, 0.64] as [number, number], // ⏳ 타이밍 바
+  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 배율 (옛 「모았다 놓기」 표 · 기록 호환)
+  skillTap: 'ok' as 'miss' | 'ok' | 'best', // 📜 11/20 요청 #3 ⑦ 스킬 = 누르면 바로 → 배율 ×1.25 (옛 고리 봇 평균 ×1.29 와 비슷 · 균형 그대로)
+  /** ⏳ 타이밍 바 (📜 11/20 요청 #3 ⑥): 판마다 성공 칸 폭 · 치명 칸 폭 · 바늘 한 번 지나는 시간(ms) 을 이 범위에서 고르고 칸 자리도 무작위
+   *    치명 = 성공 칸 안의 좁은 칸 · 끝 여백 edge 안쪽에만 놓음 */
+  timingZone: { okW: [0.22, 0.4] as [number, number], critW: [0.06, 0.12] as [number, number], ms: [1000, 1700] as [number, number], edge: 0.06 },
   critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
   perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
   downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%

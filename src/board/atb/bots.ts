@@ -3,6 +3,7 @@
 import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, questionsOf, startRun, type Origin, type Run } from './quiz';
+import { T } from './tune';
 import { alive, attack, canBreak, canRole, earn, revive, roleAct, skill, tick, weak, type Hold, type State, type Timing } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
@@ -36,7 +37,7 @@ export function botStep(L: LessonPack, S: State, b: Bot): void {
   if (act(S, b)) b.due += ACT_SEC; // 행동하는 동안(약 3초)은 문제를 못 풂 (sim2.py atk_sec) · 행동 안 함(거울빛 기다림) = 문제를 계속 풂
 }
 const timingRoll = (b: Bot): Timing => { const x = r01(b); return b.kind === 'ideal' ? (x < 0.6 ? 'crit' : 'ok') : x < 0.15 ? 'miss' : x < 0.4 ? 'crit' : 'ok'; };
-const holdRoll = (b: Bot): Hold => { const x = r01(b); return b.kind === 'ideal' ? 'best' : x < 0.2 ? 'miss' : x < 0.55 ? 'best' : 'ok'; };
+const holdRoll = (_b: Bot): Hold => T.skillTap; // 📜 요청 #3 ⑦ 스킬 = 누르면 바로 (사람과 같은 배율)
 function act(S: State, b: Bot): boolean {
   const h = S.heroes[b.who]!, R = h.s.role;
   const down = S.heroes.find((x) => x.down);
