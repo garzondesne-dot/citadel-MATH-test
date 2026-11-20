@@ -5,7 +5,7 @@ import { HEROES } from '../src/model/hero';
 import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skillList, tick, timingOf, timingZone, useSkill, type State } from '../src/board/atb/engine';
 import { newBot, simulate } from '../src/board/atb/bots';
 import { statsOf } from '../src/board/atb/heroes';
-import { BOSSES, BOSS_HIT, BOSS_HP_BASE, T } from '../src/board/atb/tune';
+import { BOSSES, BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, T } from '../src/board/atb/tune';
 
 const L2 = SUBJ.lessons.find((p) => p.no === 2)!;
 const id = (n: string) => HEROES.find((h) => h.name === n)!.id;
@@ -19,7 +19,7 @@ describe('ATB 엔진', () => {
   it('출발: 보스 HP = 인원별 일반 값 · 팀 부활 3', () => {
     expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([...[3, 1, 0].map((i) => (T.bossHpByNo[2] ?? BOSS_HP_BASE)[i]), 3]); // 차시별 일반 HP (📜 요청 #5)
     const E = newBattle({ boss: BOSSES[2]!, diff: 'easy', party: party(['로안']), seed: 1 }), Hd = newBattle({ boss: BOSSES[2]!, diff: 'hard', party: party(['로안']), seed: 1 }), b0 = fresh(['로안']).bossMax;
-    expect([E.bossMax, Hd.bossMax]).toEqual([Math.round(b0 * 0.8), Math.round(b0 * 1.2)]); expect(BOSS_HIT.easy[3]![0]).toBeCloseTo(14 * 0.7 * 0.6); expect(BOSS_HIT.hard[3]![0]).toBeCloseTo(14 * 0.7 * 1.3); // 연습 = HP ×0.8 · 공격 ×0.6 · 도전 = ×1.2 · ×1.3
+    expect([E.bossMax, Hd.bossMax]).toEqual([Math.round(b0 * DIFF_MUL.easy.hp), Math.round(b0 * DIFF_MUL.hard.hp)]); expect(BOSS_HIT.easy[3]![0]).toBeCloseTo(14 * 0.7 * DIFF_MUL.easy.hit); expect(BOSS_HIT.hard[3]![0]).toBeCloseTo(14 * 0.7 * DIFF_MUL.hard.hit); // 난이도 = 일반 × DIFF_MUL
   });
   it('ATB = 역할 속도로 참 · 가득 차야 행동', () => {
     const S = fresh(); S.heroes[0]!.atb = 0;

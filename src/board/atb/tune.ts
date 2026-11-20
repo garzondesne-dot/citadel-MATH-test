@@ -6,8 +6,8 @@ export type Diff = 'easy' | 'normal' | 'hard';
 export type Fam = 'arms' | 'flame' | 'nature' | 'wisdom' | 'mystic';
 export type Role = 'dealer' | 'tank' | 'healer' | 'support';
 
-/** 🎚 난이도 = 일반에 곱함 (📜 11/20 요청 #5 ④ 출발값): 연습 = HP ×0.8 · 공격 ×0.6 / 도전 = HP ×1.2 · 공격 ×1.3 */
-export const DIFF_MUL: Record<Diff, { hp: number; hit: number }> = { easy: { hp: 0.8, hit: 0.6 }, normal: { hp: 1, hit: 1 }, hard: { hp: 1.2, hit: 1.3 } };
+/** 🎚 난이도 = 일반에 곱함 (📜 11/20 요청 #5 ④ 출발값): 연습 = HP ×0.8 · 공격 ×0.6 / 도전 = HP ×1.1 · 공격 ×1.1 */
+export const DIFF_MUL: Record<Diff, { hp: number; hit: number }> = { easy: { hp: 0.8, hit: 0.6 }, normal: { hp: 1, hit: 1 }, hard: { hp: 1.1, hit: 1.1 } }; // 도전 = 출발 ×1.2 · ×1.3 → 80% 봇 승률이 너무 낮아(평균 60%대 · 0% 칸도) ×1.1 · ×1.1 (봇 평균 85%)
 /** 일반 보스 HP 기본 (인원 1 · 2 · 3 · 4) · 차시별 값(T.bossHpByNo)이 없을 때만 */
 export const BOSS_HP_BASE: [number, number, number, number] = [299, 650, 1235, 1950];
 /** 일반 보스 공격 (단일 / 광역) · 인원 1 · 2 · 3 · 4 = 설정표 v3 × 0.7 (📜 요청 #5 ① 「모의실험4 다」) */
@@ -45,9 +45,15 @@ export const T = {
   critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
   perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
   /** ❤ 일반 보스 HP 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ② 봇으로 맞춤) · 연습 · 도전 = × DIFF_MUL.hp */
-  bossHpByNo: {} as Partial<Record<number, [number, number, number, number]>>,
+  bossHpByNo: {
+    2: [460, 1010, 1640, 3060], 3: [170, 330, 1040, 1760], 4: [520, 1270, 1600, 2700], 5: [640, 1360, 1850, 2380],
+    6: [420, 980, 1600, 2100], 8: [540, 880, 1810, 2180], 9: [390, 1070, 1990, 2910], 10: [520, 1150, 1880, 2210],
+  } as Partial<Record<number, [number, number, number, number]>>, // 9차시 = 판 길이로만(공격이 모두 피해 0 · ❓ 대기)
   /** 👹 보스 공격 배율 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ③ 「HP 만으로 안 맞으면 그 보스 공격 숫자」 · 없으면 1) */
-  bossHitByNo: {} as Partial<Record<number, [number, number, number, number]>>,
+  bossHitByNo: {
+    2: [1.2, 1.1, 1.2, 1.15], 3: [1.2, 0.9, 1, 1.05], 4: [2.75, 2, 2.15, 2.1], 5: [5.9, 2.9, 2.65, 2.4],
+    6: [1.8, 1.25, 1.35, 1.55], 8: [3.95, 3.95, 4.3, 4.65], 10: [2.75, 2.2, 2.15, 2.15],
+  } as Partial<Record<number, [number, number, number, number]>>,
   downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%
   role: {
     dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },

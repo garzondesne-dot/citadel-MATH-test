@@ -27,7 +27,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   for (let i = 0; i < 12 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(120); }
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
-  ok('Y1 퍼펙트 = 충전 2', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0 + 2);
+  ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
   await p.click('[data-k="atb-grade"]'); await p.waitForTimeout(150);
   ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로 · 다음 문제', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')) && !!(await p.$('[data-k="atb-quiz"]')));
   await p.waitForTimeout(800);
