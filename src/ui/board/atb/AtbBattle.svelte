@@ -576,7 +576,8 @@
   /* 🌟 오라 층 (요청 #20): 몸 그림은 숨기고 오라만 · 몸(.spr z 10+)보다 아래 · 공격하러 달려가는 동안은 숨김 */
   .aul { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); pointer-events: none; }
   .aul :global(.hs > i) { visibility: hidden; } .aul.off { opacity: 0; transition: opacity 0.1s; }
-  .card { bottom: calc(2% + 64px * var(--u, 1) + 8px) !important; } /* 문제 카드 = 아래 단추 줄 위까지 (요청 #19) */
+  /* 문제 카드 = 아래 스킬 줄까지 덮음 (📜 ❓#8 선생님 「덮기」 · 열린 동안 스킬 못 누름 · 공격 단추 · 자동 공격 그대로 · 닫으면 스킬) */
+  .btns.q .ring { visibility: hidden; pointer-events: none; }
   .sk2 .pv { display: block; font: 800 calc(9.5px * var(--u)) var(--font-plain); font-style: normal; color: #ffe9b0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sk2 .pv.gold { color: #ffd34d; text-shadow: 0 0 4px #b8860b, 0 1px 0 #000; }
   .sk2 { -webkit-touch-callout: none; user-select: none; }
   .peekc { position: absolute; z-index: 40; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 260px; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 12px; border: 2px solid #e2b04a; background: #1d1220f2; color: #fff; font: 700 13px var(--font-plain); text-align: left; white-space: normal; box-shadow: 0 6px 18px #000a; pointer-events: none; filter: none; }

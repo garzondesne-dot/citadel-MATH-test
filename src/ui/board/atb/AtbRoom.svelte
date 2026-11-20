@@ -5,12 +5,13 @@
   import { onDestroy } from 'svelte';
   import type { LessonPack } from '../../../model/types';
   import { HEROES, TEACHER_HEROES, heroOf, ladder } from '../../../model/hero';
-  import { PACKS } from '../../../engine/packs';
+  import { PACKS, UPLOADED } from '../../../engine/packs';
+  import { atbLessons } from '../../../board/atb/lessons';
   import { newBattle, runRecord, tick, type State } from '../../../board/atb/engine';
   import { BOT_LABEL, newBot, type BotKind } from '../../../board/atb/bots';
   import { originsOf } from '../../../board/atb/quiz';
   import { famOf, roleOf, statsOf } from '../../../board/atb/heroes';
-  import { BOSSES, FAM_NAME, ROLE_NAME, T, type Diff } from '../../../board/atb/tune';
+  import { bossOf, FAM_NAME, ROLE_NAME, T, type Diff } from '../../../board/atb/tune';
   import AtbBattle from './AtbBattle.svelte';
   import AtbResult from './AtbResult.svelte';
   import HeroPick from './HeroPick.svelte';
@@ -22,7 +23,7 @@
   let recs = $state<Rec[]>(loadRecs());
   const saveRec = (r: Rec) => { recs = [r, ...recs].slice(0, T.practiceKeep); try { localStorage.setItem(KEY, JSON.stringify(recs)); } catch { /* 사생활 창 */ } };
 
-  const lessons = PACKS.filter((p) => !p.partOf && BOSSES[p.no] && originsOf(p).length > 0);
+  const lessons = atbLessons(PACKS, UPLOADED); // 📦 서버 팩 먼저 · 설정표 없는 차시 = 기본 보스 표(bossOf)
   const OLD = TEACHER_HEROES.find((h) => h.name === '올드윈')?.id ?? TEACHER_HEROES[0]?.id ?? 0;
   const ALL = [OLD, ...HEROES.map((h) => h.id)];
   const nameOf = (id: number) => String(heroOf(id).name);
@@ -45,7 +46,7 @@
     if (seedNew) seed = 1 + Math.floor(Math.random() * 9999); // 📜 요청 #19 덧2 = 연습방 씨앗 기본 「매번 새로」
     const g = GROW[grow], ids = mode === 'play' ? [meHero, ...mates.slice(0, size - 1)] : mates.slice(0, size);
     const party = ids.map((id) => statsOf({ hero: id, lv: g.lv, enh: g.enh, tier: tierFor(id), name: nameOf(id), awk: grow === 'awk' }));
-    const art = bossArt(BOSSES[L.no]!, diff); bg = art.bg;
+    const art = bossArt(bossOf(L.no), diff); bg = art.bg;
     const B = newBattle({ boss: art, diff, party, seed });
     if (start === 'shield' || start === 'one') { B.bossHp = Math.round(B.bossMax * T.shieldAt) - 1; B.shieldUp = true; B.shieldAt = 0; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); if (start === 'one') B.cells.forEach((c, i) => { if (i > 0) { c.broken = true; c.by = c.owner; } }); }
     if (start === 'aoe') { while (!B.ev.some((e) => e.k === 'boss' && e.aoe) && B.t < 60) tick(B, 0.1); }
@@ -71,8 +72,8 @@
 {#if phase === 'setup'}
   <main class="setup" data-k="atb-setup">
     <h1>⚔ 게시판 던전 · 교사 연습방 <small>새 판(ATB) · 숫자 = 출발값 · 기록 = 이 폰 최근 5판만</small></h1>
-    <section><b>차시</b><div class="chips">{#each lessons as p (p.id)}<button type="button" class:on={L?.id === p.id} data-no={p.no} onclick={() => (L = p)}>{p.no}차시{BOSSES[p.no]?.draft ? ' ·초안' : ''}</button>{/each}</div>
-      {#if L}{@const B = bossArt(BOSSES[L.no]!, diff)}<p class="sub">{B.name} · {B.type} · 대표 행동 「{B.signature}」 · 약점 {B.weak.map((f) => FAM_NAME[f]).join(' · ')} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
+    <section><b>차시</b><div class="chips">{#each lessons as p (p.id)}<button type="button" class:on={L?.id === p.id} data-no={p.no} onclick={() => (L = p)}>{p.no}차시{bossOf(p.no).draft ? ' ·초안' : ''}{#if UPLOADED.has(p.id)}<small class="srv" data-k="atb-srv"> 📦 서버 팩</small>{/if}</button>{/each}</div>
+      {#if L}{@const B = bossArt(bossOf(L.no), diff)}<p class="sub">{B.name} · {B.type} · 대표 행동 「{B.signature}」 · 약점 {B.weak.map((f) => FAM_NAME[f]).join(' · ')} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
     <section><b>난이도</b><div class="chips">{#each [['easy', '연습'], ['normal', '일반'], ['hard', '도전']] as [k, t] (k)}<button type="button" class:on={diff === k} onclick={() => (diff = k as Diff)}>{t}</button>{/each}</div></section>
     <section><b>방식</b><div class="chips"><button type="button" class:on={mode === 'play'} data-k="atb-mode-play" onclick={() => (mode = 'play')}>🙋 나 + 봇</button><button type="button" class:on={mode === 'watch'} data-k="atb-mode-watch" onclick={() => (mode = 'watch')}>👀 봇만 관전</button></div>
       <div class="chips">{#each [1, 2, 3, 4] as n (n)}<button type="button" class:on={size === n} onclick={() => (size = n)}>{n}인</button>{/each}</div>{#if size < 3}<p class="sub">⏳ 1 · 2인 숫자는 설계 방이 아직 맞추는 중(출발값 그대로)</p>{/if}</section>
@@ -99,7 +100,7 @@
 </div>
 {/if}
 {#if picking != null && L}
-  <HeroPick ids={ALL} owned={() => true} boss={BOSSES[L.no]!} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor} onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
+  <HeroPick ids={ALL} owned={() => true} boss={bossOf(L.no)} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor} onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
     onpick={(id) => { if (picking === -1) meHero = id; else mates[picking!] = id; picking = null; }} onclose={() => (picking = null)} />
 {/if}
 

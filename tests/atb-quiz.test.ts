@@ -80,3 +80,23 @@ describe('ATB 문제 반복 없애기 (요청 #19 덧2)', () => {
     const vs = bs.map((b) => b.run!.ver); expect(new Set(vs).size).toBe(3);
   });
 });
+
+// 📦 📜 2026-11-20 선생님 「11차시 = 서버 팩 읽기」 = 같은 차시 번호면 서버 팩 먼저 · 설정표 없는 차시 = 기본 보스 표
+import { atbLessons } from '../src/board/atb/lessons';
+import { bossOf, BOSSES } from '../src/board/atb/tune';
+import { newBattle } from '../src/board/atb/engine';
+import { simulate } from '../src/board/atb/bots';
+import { statsOf } from '../src/board/atb/heroes';
+import { HEROES } from '../src/model/hero';
+describe('ATB 차시 목록 = 서버 팩 (선생님 2026-11-20)', () => {
+  it('서버 팩 = 같은 번호 앱 팩 대신 · 새 번호(11 · 13) 더함 · 나눈 수업 뺌 · 번호 순', () => {
+    const up2 = { ...L2, id: 'ex-2' }, up13 = { ...L11, id: 'ex-13', no: 13 };
+    const ls = atbLessons([L2, up2, L11, up13, { ...L2, id: 'x@3', no: 3, partOf: L2.id }], new Set(['ex-2', 'ex-13']));
+    expect(ls.map((p) => `${p.no}:${p.id}`)).toEqual([`2:ex-2`, `11:${L11.id}`, '13:ex-13']);
+  });
+  it('설정표 없는 차시 = 기본 보스 표(초안) · 있는 차시 = 그대로', () => {
+    const L15 = { ...L11, id: 'ex-15', no: 15 }, party = ['로안', '발도르', '루멘', '누아'].map((n) => statsOf({ hero: HEROES.find((h) => h.name === n)!.id, lv: 1, enh: 1, tier: 1, name: n }));
+    for (let seed = 1; seed <= 3; seed++) { const S = newBattle({ boss: bossOf(15), diff: 'normal', party, seed }); simulate(L15, S, S.heroes.map((_, i) => newBot(L15, i, 'normal', seed))); expect(S.end).not.toBeNull(); }
+    expect(bossOf(2)).toBe(BOSSES[2]); const b = bossOf(15); expect(b.no).toBe(15); expect(b.draft).toBe(true); expect(b.cycle.length).toBe(3); expect(new Set(b.weak).size).toBe(2);
+  });
+});

@@ -15,7 +15,7 @@ export const ROWS: Partial<Record<number, Partial<Record<Diff, string>>>> = {
 const nameOf = (ref: string) => { const [k, r] = ref.split(':'); return (SHEETS[k!] as { names?: string[] } | undefined)?.names?.[Number(r)] ?? ''; };
 /** 그 판 보스 = 차시 설정(대표 행동 · 약점 · 공격 차례) + 랜덤 던전 그림 · 이름 (그림은 늘 왼쪽을 봄 = 반전 없음) */
 export function bossArt(cfg: BossCfg, diff: Diff): BossCfg & { bg: string } {
-  const d = RDUN_OF[cfg.no], D = d ? RDUN[d] : undefined; if (!d || !D) return { ...cfg, bg: '' };
+  const ds = Object.values(RDUN_OF), d = RDUN_OF[cfg.no] ?? ds[cfg.no % ds.length], D = d ? RDUN[d] : undefined; if (!d || !D) return { ...cfg, bg: '' }; // 설정 없는 차시(14 ~ ) = 던전 돌려 씀
   const ref = ROWS[cfg.no]?.[diff] ?? (diff === 'easy' ? `${d}:1` : diff === 'normal' ? `${d}:3` : D.boss != null ? `${d}:${D.boss}` : D.bossRef ?? `${d}:4`);
   return { ...cfg, sprite: ref, name: nameOf(ref) || cfg.name, flip: {}, bg: D.bg };
 }

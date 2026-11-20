@@ -145,3 +145,6 @@ export const SIG = {
 /** 🎚 균형 표 한 곳 (📜 11/20 「보스 HP · 공격 · 역할 수치를 코드 한 곳(표 하나)에 · 나중에 균형 도구가 그 표만 바꿈」)
  *  엔진은 쓰는 순간 이 표의 값을 읽음 → 도구가 칸 값을 바꾸면 다음 판부터 그대로 (읽기 전용 표시는 타입만) */
 export const TUNE = { BOSS_HP_BASE, DIFF_MUL, BOSS_HIT, T, BOSSES, ATK, SIG } as const;
+/** 👹 설정표(보스 · 대표 행동)가 없는 차시 = 기본 보스 표 (📜 2026-11-20 선생님 「서버 팩 = 11 · 12 · 13 ~ 17차시가 앱 고침 없이 게시판 던전에」) · 약점 = 차시 번호로 돌림 · 초안 표시 */
+const FAM_RING: Fam[] = ['arms', 'flame', 'nature', 'mystic', 'wisdom'];
+export const bossOf = (no: number): BossCfg => BOSSES[no] ?? { no, name: `${no}차시 던전 수호자`, sprite: 'new6:0', weak: [FAM_RING[no % 5]!, FAM_RING[(no + 2) % 5]!], type: '공격형', cycle: ['smash', 'smash', 'aoe'], tele: 'foot', sig: 'footTarget', signature: '강타 표적 (기본 보스 표)', draft: true };
