@@ -1,7 +1,7 @@
 <script lang="ts">
   // ⚔ 게시판 던전 ATB 전투 화면 (시안 atb-1-wide · atb-2-quiz · atb-5-cutin · 📜 결정 11 · 정리.md 2)
   //   가로 무대 · 왼쪽 용사 한 줄(원근 앞 100% → 맨 뒤 70% · 내 용사 맨 아래 가장 크게 · 발은 모두 바닥 위) · 오른쪽 보스 · 단추 [공격][스킬 ▸ 부채꼴][문제 풀기]
-  //   📜 11/20 요청 #4 (Y1 ~ Y12): 충전 = 원문항 통째 · 최대 3 · 스킬 = 부채꼴(쓸 수 있는 것만) · ATB = 내 초상 둘레 고리 · 친구 = 발밑 고리 · HP = 큰 숫자 + 가는 띠 · 카드 47% · 채점 → 충전 연출
+  //   📜 11/20 요청 #4 (Y1 ~ Y12): 충전 = 원문항 통째 · 최대 3 · 스킬 = 공격 둘레 고정 단추(요청 #9) · ATB = 내 초상 둘레 고리 · 친구 = 발밑 고리 · HP = 큰 숫자 + 가는 띠 · 카드 47% · 채점 → 충전 연출
   //   문제를 열면 = 보스가 앞으로 걸어 나오고 용사가 왼쪽으로 모임 → 빈 오른쪽에 양피지 문제 카드(보스를 가리지 않음)
   //   이 화면은 그리기 · 누르기만 · 규칙 = src/board/atb/engine.ts · 숫자 = tune.ts
   import { onDestroy, onMount, untrack } from 'svelte';
@@ -91,16 +91,28 @@
   const titleOf = (mid: string) => OS.find((o) => o.mid === mid)?.title ?? mid;
 
   // ── 내 행동 ──
-  let over = $state<'' | 'timing' | 'pick' | 'fan'>(''), tb = $state<{ stop: () => void }>(), pickK = $state<SkillK>('role');
+  let over = $state<'' | 'timing' | 'pick'>(''), tb = $state<{ stop: () => void }>(), pickK = $state<SkillK>('role');
   const ready = $derived(!!meH && !meH.down && meH.atb >= 1 && S.t >= meH.stunUntil && !S.end);
-  /** 💠 부채꼴에 보일 스킬 (Y3 · 쓸 수 있을 때만 보임 · ok = 충전 · ATB 됨) */
+  /** 💠 지금 쓸 수 있는 스킬 (ok = 충전 · ATB 됨) */
   const skills = $derived(me >= 0 ? skillList(S, me) : []);
   const anySkill = $derived(skills.some((x) => x.ok));
   function doAttack() { if (ready && !over) over = 'timing'; }
   /** ⚔ 「공격」 단추 = 타이밍 바가 열리면 그 자리에서 「멈춤」 단추 (손가락 안 옮김 · 누르는 순간 멈춤) */
   function atkDown(e: PointerEvent) { if (over === 'timing') { e.preventDefault(); tb?.stop(); } }
-  /** 💠 스킬 단추 = 부채꼴로 펼침 · 고르면 바로 발동 (Y3 · 진동 = 발동 때) · 엄호 · 격려 · 부활(쓰러진 친구 둘 이상) = 누구에게 */
-  function toggleFan() { if (over === 'fan') over = ''; else if (!over && me >= 0) over = 'fan'; }
+  /** 💠 스킬 = 「⚔ 공격」 둘레 고정 자리 동그란 단추 (📜 요청 #9 · Y3 바뀜) · 한 번 톡 = 바로 발동 · 진동 = 발동 때 · 엄호 · 격려 · 부활(둘 이상) = 누구에게
+   *   고정 칸 = 장착 · 역할 · 4레벨(Ⅳ) · 오라 방패(+10) · 각성(각성) — 모자라거나 다 쓰면 회색 · 쓸 수 있게 되는 순간 반짝 / 상황 칸 = 보호막 부수기 · 부활(그때만 나타남) */
+  type Slot = { k: SkillK; cost: number; ok: boolean; ang: number; fix: boolean };
+  const slots = $derived.by((): Slot[] => {
+    if (!meH) return []; const L0 = skillList(S, me), okOf = (k: SkillK) => !!L0.find((x) => x.k === k)?.ok, C = T.cost;
+    const fixed: SkillK[] = ['equip', 'role', ...(meH.s.tier >= 4 ? ['tier4' as const] : []), ...(meH.s.aura ? ['aura' as const] : []), ...(meH.s.awk ? ['awk' as const] : [])];
+    const out: Slot[] = fixed.map((k, i) => ({ k, cost: C[k], ok: okOf(k), ang: 180 + i * 22.5, fix: true }));
+    L0.filter((x) => x.k === 'shield' || x.k === 'revive').forEach((x, i) => out.push({ k: x.k, cost: x.cost, ok: x.ok, ang: 203 + i * 42, fix: false })); // 상황 칸 = 바깥 줄
+    return out;
+  });
+  /** ✨ 쓸 수 있게 되는 순간 반짝 */
+  let lit = $state<Record<string, number>>({}), wasOk: Record<string, boolean> = {};
+  $effect(() => { const cur = slots.map((x) => [x.k, x.ok] as const); untrack(() => { for (const [k, ok] of cur) { if (ok && !wasOk[k]) { const t = Date.now(); lit = { ...lit, [k]: t }; setTimeout(() => { if (lit[k] === t) lit = { ...lit, [k]: 0 }; }, 700); } wasOk[k] = ok; } }); });
+  const U = $derived(Math.max(0.8, Math.min(1.3, H / 390))); // 단추 크기 = 화면 높이 390 기준
   function fire(k: SkillK, to?: number) {
     if (!meH) return; const R = meH.s.role;
     if (to == null && ((k === 'role' && (R === 'tank' || R === 'support')) || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
@@ -300,26 +312,19 @@
 
   <!-- 단추 -->
   {#if me >= 0 && meH}
-    <nav class="btns" aria-label="행동" style:--n={open ? 2 : 3}>
-      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<AtbIcon name="fam-arms" size={28} /> 공격{/if}</button>
-      <div class="skw">
-        <button type="button" class="b sk" class:hot={anySkill} class:on={over === 'fan'} class:flash={gaugeFlash} disabled={!!over && over !== 'fan'} data-k="atb-skill" aria-expanded={over === 'fan'} onclick={toggleFan}>
-          <span>💠 스킬</span>
-          <span class="slots">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>
-        </button>
-        {#if over === 'fan'}
-          <div class="fan" role="menu" aria-label="스킬 고르기" data-k="atb-fan">
-            {#each skills as sk, i (sk.k)}
-              {@const a = skills.length > 1 ? -62 + (124 * i) / (skills.length - 1) : 0}
-              <button type="button" role="menuitem" class="fi2 {sk.k}" disabled={!sk.ok} data-k="atb-sk-{sk.k}" style:transform="translate(calc(-50% + {Math.round(Math.sin((a * Math.PI) / 180) * 128)}px), {-Math.round(Math.cos((a * Math.PI) / 180) * 104)}px)" onclick={() => fire(sk.k)}>
-                <span class="ic">{#if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={26} />{:else}{SK_ICON[sk.k]}{/if}</span>
-                <span class="nm">{SK_NAME(sk.k)}</span>
-                <span class="co">{#each Array(sk.cost) as _, j (j)}<i class="cs on"></i>{/each}</span>
-                {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
+    <nav class="btns" class:q={open} aria-label="행동" style:--u={U}>
+      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<AtbIcon name="fam-arms" size={Math.round(28 * U)} /> 공격<span class="chg" class:flash={gaugeFlash} aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}></i>{/each}</span>{/if}</button>
+      <!-- 💠 공격 둘레 스킬 (요청 #9) -->
+      <div class="ring" data-k="atb-skills" aria-label="스킬">
+        {#each slots as sk (sk.k)}
+          {@const R = (sk.fix ? 136 : 206) * U}
+          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 충전 {sk.cost}" style:transform="translate(calc(-50% + {Math.round(Math.cos((sk.ang * Math.PI) / 180) * R)}px), calc(-50% + {Math.round(Math.sin((sk.ang * Math.PI) / 180) * R)}px))" onclick={() => fire(sk.k)}>
+            <span class="ic">{#if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}</span>
+            <span class="nm">{SK_NAME(sk.k)}</span>
+            <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>●</i>{/each}</span>
+            {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small class="hw" data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
+          </button>
+        {/each}
       </div>
       {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{/if}
     </nav>
@@ -375,15 +380,6 @@
   .hn { display: flex; align-items: baseline; justify-content: center; gap: 2px; } .hn b { font: 900 15px var(--font); color: #c8ffb8; text-shadow: 0 1px 0 #000; }
   .boss.stone :global(*) { filter: grayscale(1) brightness(0.85) contrast(1.2); }
   .hero.aura .spr { filter: drop-shadow(0 0 6px #fff6a0) drop-shadow(0 0 12px #ffd34d); }
-  /* 💠 스킬 부채꼴 (Y3) */
-  .skw { position: relative; display: grid; }
-  .b.sk.on { border-color: #fff; box-shadow: 0 0 16px #8fd0ff; }
-  .fan { position: absolute; left: 50%; bottom: 100%; width: 1px; height: 1px; z-index: 31; }
-  .fi2 { position: absolute; left: 0; bottom: 0; width: 96px; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px; border-radius: 14px; border: 3px solid #8fd0ff; background: linear-gradient(#2a4a8a, #16285a); color: #fff; font: 800 12px var(--font-plain); box-shadow: 0 4px 0 #0a1430, 0 0 12px #000a; animation: fanin 0.18s ease-out; }
-  @keyframes fanin { from { opacity: 0; scale: 0.6; } }
-  .fi2:disabled { filter: grayscale(0.8) brightness(0.6); }
-  .fi2.shield { border-color: #9fe6ff; } .fi2.tier4 { border-color: #ffb84a; } .fi2.aura { border-color: #fff3a0; } .fi2.awk { border-color: #ffd34d; background: linear-gradient(#8a5a1a, #4a2a0a); } .fi2.role { border-color: #5fe0c0; background: linear-gradient(#1f7a6a, #0f4a40); } .fi2.revive { border-color: #ff8fb0; background: linear-gradient(#8a2a4a, #4a1020); }
-  .fi2 .ic { font-size: 22px; line-height: 1; } .fi2 .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; } .fi2 small { font: 700 10px var(--font-plain); color: #ffd98a; }
   .cells { display: flex; gap: 6px; }
   .cell { position: relative; display: inline-flex; } .cell .fi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; }
   .cell.broken .fi { opacity: 0.35; } .cell.crack { animation: crack 0.45s 2; } @keyframes crack { 30% { transform: scale(1.25) rotate(-6deg); filter: brightness(2); } }
@@ -412,15 +408,29 @@
   .card { position: absolute; z-index: 26; right: 1.5%; top: 2.5%; bottom: 2.5%; width: 47%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
   .card.suck { transition: transform 0.42s ease-in, opacity 0.42s ease-in; transform: translate(-80%, -20%) scale(0.05) rotate(-20deg); opacity: 0; }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
-  .btns { position: absolute; z-index: 24; left: 1.5%; right: 1.5%; bottom: 2.5%; height: 19%; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 1.2%; }
-  .stage.q .btns { right: auto; width: 44%; height: 17%; }
+  /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
+  .btns { position: absolute; inset: 0; z-index: 24; pointer-events: none; }
+  .btns > * { pointer-events: auto; }
+  .b.atk { position: absolute; right: 2.5%; bottom: 4%; width: calc(104px * var(--u)); height: calc(104px * var(--u)); min-height: 0; border-radius: 50%; padding: 0; flex-direction: column; gap: 0; font-size: calc(19px * var(--u)); transition: right 0.3s; }
+  .btns.q .b.atk { right: 51.5%; }
+  .ring { position: absolute; right: calc(2.5% + 52px * var(--u)); bottom: calc(4% + 52px * var(--u)); width: 0; height: 0; transition: right 0.3s; }
+  .btns.q .ring { right: calc(51.5% + 52px * var(--u)); }
+  .sk2 { position: absolute; left: 0; top: 0; width: calc(62px * var(--u)); height: calc(62px * var(--u)); border-radius: 50%; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 3px solid #8fd0ff; background: radial-gradient(circle at 50% 35%, #3a6ac8, #16285a); color: #fff; font: 800 calc(10px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430, 0 0 10px #000a; line-height: 1.05; }
+  .sk2 .ic { font-size: calc(20px * var(--u)); line-height: 1; display: inline-flex; } .sk2 .nm { max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
+  .sk2 .co { display: flex; gap: 1px; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; color: #5a6a8a; } .sk2 .co i.on { color: #8fe0ff; text-shadow: 0 0 4px #8fd0ff; }
+  .sk2:disabled { filter: grayscale(0.85) brightness(0.6); }
+  .sk2.role { border-color: #5fe0c0; background: radial-gradient(circle at 50% 35%, #2a9a84, #0f4a40); } .sk2.tier4 { border-color: #ffb84a; background: radial-gradient(circle at 50% 35%, #c8762a, #5a2a0a); } .sk2.aura { border-color: #fff3a0; background: radial-gradient(circle at 50% 35%, #c8b84a, #5a4a0a); } .sk2.awk { border-color: #ffd34d; background: radial-gradient(circle at 50% 35%, #e8a82a, #6a3a0a); }
+  .sk2.situ { width: calc(56px * var(--u)); height: calc(56px * var(--u)); animation: situ 0.9s ease-in-out infinite; } .sk2.shield { border-color: #9fe6ff; background: radial-gradient(circle at 50% 35%, #4ab8e8, #0a3a5a); } .sk2.revive { border-color: #ff8fb0; background: radial-gradient(circle at 50% 35%, #c84a6a, #4a1020); }
+  @keyframes situ { 50% { box-shadow: 0 0 18px #fff, 0 3px 0 #0a1430; } }
+  .sk2.lit { animation: lit 0.7s ease-out; } @keyframes lit { 0% { filter: brightness(2.6); box-shadow: 0 0 26px #fff; scale: 1.25; } 100% { scale: 1; } }
+  .sk2 .hw { position: absolute; bottom: -14px; white-space: nowrap; font: 700 10px var(--font-plain); color: #ffd98a; text-shadow: 0 1px 1px #000; }
+  .chg { display: flex; gap: 2px; margin-top: 2px; padding: 1px 5px; border-radius: 8px; background: #0006; } .chg .cs { width: 10px; height: 10px; } .chg.flash { animation: gflash 0.45s; }
+  .b.quiz { position: absolute; left: 1.5%; bottom: 3%; width: 27%; height: 16%; }
   .b { min-height: 48px; border-radius: 12px; border: 3px solid #8a6a3a; background: linear-gradient(#5a3f2a, #3a2618); color: #fff2d6; font: 800 clamp(13px, 4.6vh, 22px) var(--font); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 0 0 2px #2a1a10, 0 4px 0 #1a100a; padding: 0 4px; text-shadow: 0 2px 0 #0008; }
   .b:disabled { filter: grayscale(0.4) brightness(0.75); }
   .b.atk.hot { border-color: #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; box-shadow: 0 0 14px #ffd34d, inset 0 0 0 2px #fff3c0, 0 4px 0 #6a4210; text-shadow: none; animation: glow 1s ease-in-out infinite; }
   @keyframes glow { 50% { box-shadow: 0 0 22px #ffe27a, inset 0 0 0 2px #fff3c0, 0 4px 0 #6a4210; } }
-  .b.sk { flex-direction: column; gap: 2px; }
-  .b.sk.hot { border-color: #ffd34d; }
-  .b.sk.flash { animation: gflash 0.45s; } @keyframes gflash { 30% { filter: brightness(2.2); box-shadow: 0 0 22px #ffe27a; } }
+  @keyframes gflash { 30% { filter: brightness(2.2); box-shadow: 0 0 22px #ffe27a; } }
   .b.atk.stopb { border-color: #fff; background: linear-gradient(#ff6a4a, #c8261e); color: #fff; text-shadow: 0 2px 0 #0008; animation: none; font-size: clamp(16px, 6vh, 26px); }
   /* 🧭 역할 스킬 = 따로 보이게 (📜 선생님 「스킬 하나밖에 없다」) · 꺼져 있어도 색은 그대로 */
   .floor { position: absolute; z-index: 9; left: 0; width: 50%; top: 42%; height: 34%; pointer-events: none; opacity: 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 62%, #ff2a1a, #ff2a1a99 40%, #ff2a1a33 62%, #0000 72%); mix-blend-mode: screen; transition: opacity 0.2s, width 0.45s; }
