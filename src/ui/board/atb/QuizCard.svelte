@@ -24,8 +24,8 @@
 <section class="qc" class:hitlock={locked > 0} data-k="atb-quiz" aria-label="문제">
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <header>
-    <span class="tt">{title} · 단계 {run.k + 1} / {qs.length}</span>
-    <span class="zs" aria-label="충전 {ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="z" class:on={i < ch}></i>{/each}</span>
+    <span class="tt" data-k="atb-qtitle">{title} · {run.k + 1}/{qs.length}</span>
+    <button type="button" class="xx" data-k="atb-qclose" aria-label="닫기" onclick={onclose}>✕</button>
   </header>
   <div class="body" class:shake={flash === 'wrong'}>
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
@@ -47,8 +47,7 @@
   {#if locked > 0}<div class="lock" role="status" data-k="atb-qlock"><b>{lockTag || '💥 몬스터 공격!'}</b><small>{locked}초 뒤 다시 풀 수 있어요</small><i class="hitpic" data-k="atb-qhitpic" aria-hidden="true"></i></div>{/if}
   <footer>
     <span class="bl">보스 공격까지 <i class="bar"><b style:width="{Math.round(bossLeft * 100)}%"></b></i></span>
-    <button type="button" class="sm" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
-    <button type="button" class="sm" data-k="atb-qclose" onclick={onclose}>✕ 닫기</button>
+    <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </footer>
 </section>
 
@@ -56,12 +55,10 @@
   .qc { position: relative; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px; color: #3a2614; border-radius: 14px; border: 3px solid #b88a4a; background: radial-gradient(ellipse at 50% 40%, #fbf0d6 0%, #f1dfb6 70%, #e2c995 100%); box-shadow: 0 0 0 2px #5a3a1a, 0 10px 24px #0008; overflow: hidden;
     --text: #2b1a0c; --text-2: #5a4128; --text-3: #8a6e4e; --surface-2: #f3e1b6; --surface: #f8ebcc; --line: #c9a36a; --press-sh: #b08a52; --accent: #c98a1e; --on-accent: #fff8e6; --accent-sh: #7a4e10; } /* 양피지 위 = 글자 · 칸 색을 진하게 (QItem 이 같은 토큰을 씀) */
   .qc::before { content: ''; position: absolute; left: -16px; top: 46%; border: 10px solid transparent; border-right: 14px solid #b88a4a; } /* 말풍선 꼬리 = 몬스터 쪽 */
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .tt { font: 700 13px var(--font-plain); padding: 3px 10px; border-radius: 8px; border: 1px solid #c9a36a; background: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .zs { display: flex; gap: 1px; padding: 2px 6px; border-radius: 8px; background: #2a1a0e; border: 2px solid #c9953e; flex: none; }
-  .zs { gap: 4px; padding: 4px 8px; }
-  .z { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
-  .z.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
+  header { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; }
+  .xx { position: absolute; right: -4px; top: -2px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #b88a4a; background: #f9ecd0; color: #5a3a1a; font: 900 16px var(--font); }
+  .lnk { border: none; background: none; padding: 4px 6px; color: #7a4e10; font: 700 13px var(--font-plain); text-decoration: underline; white-space: nowrap; } .lnk:disabled { opacity: 0.4; text-decoration: none; }
+  .tt { font: 800 14px var(--font-plain); padding: 3px 12px; border-radius: 8px; border: 1px solid #c9a36a; background: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* 📝 채점 → 충전 (Y8) */
   .auto { position: absolute; z-index: 4; left: 50%; top: 4px; transform: translateX(-50%); margin: 0; padding: 1px 12px; border-radius: 10px; background: #3a2618e6; color: #ffe08a; font: 800 13px var(--font); pointer-events: none; animation: autoIn 1.1s ease-out forwards; }
   @keyframes autoIn { 0% { opacity: 0; transform: translate(-50%, 6px); } 15% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
@@ -82,14 +79,12 @@
   @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
   .hint { margin: 6px 0 0; padding: 6px 8px; border-radius: 8px; background: #fff7d6; border: 1px dashed #d1a54a; font: 600 14px var(--font-plain); }
   .fb { margin: 6px 0 0; font: 800 14px var(--font-plain); } .fb.ok { color: #1f7a3c; } .fb.bad { color: #b3261e; }
-  .go { min-height: 44px; border-radius: 10px; border: 2px solid #8a5a1a; background: linear-gradient(#ffd77a, #e9a93a); color: #3a2205; font: 800 17px var(--font); box-shadow: 0 3px 0 #8a5a1a; }
+  .go { min-height: 48px; font-size: 19px !important; border-radius: 10px; border: 2px solid #8a5a1a; background: linear-gradient(#ffd77a, #e9a93a); color: #3a2205; font: 800 17px var(--font); box-shadow: 0 3px 0 #8a5a1a; }
   .go:disabled { opacity: 0.45; box-shadow: none; }
   footer { position: relative; z-index: 6; display: flex; align-items: center; gap: 6px; } /* 잠겨도 ✕ 닫기는 됨 */
   .bl { flex: 1; display: flex; align-items: center; gap: 6px; font: 700 12px var(--font-plain); white-space: nowrap; min-width: 0; }
   .bar { flex: 1; height: 8px; border-radius: 4px; background: #5a3a2a; overflow: hidden; display: block; min-width: 30px; }
   .bar b { display: block; height: 100%; background: linear-gradient(90deg, #ff5a4a, #e8332a); }
-  .sm { min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid #b88a4a; background: #f9ecd0; color: #3a2614; font: 700 12px var(--font-plain); white-space: nowrap; }
-  .sm:disabled { opacity: 0.45; }
   /* 💥 몬스터 공격 = 카드 흔들흔들 + 잠깐 잠금 (레이드 3초 · 분노 4초) · .hitpic = 👹 「맞는 그림」 10종 겹칠 자리(아직 빈 칸) */
   .qc.hitlock { animation: wob 0.5s ease-in-out 2; }
   @keyframes wob { 20% { transform: translateX(-8px) rotate(-1.5deg); } 40% { transform: translateX(7px) rotate(1.2deg); } 60% { transform: translateX(-5px) rotate(-0.8deg); } 80% { transform: translateX(3px); } }

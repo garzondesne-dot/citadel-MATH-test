@@ -178,7 +178,7 @@
     const d = (e as { dmg?: number }).dmg ?? 0, isSk = e.k === 'skill', ult = isSk && e.kind === 'awk', big = isSk && e.kind !== 'equip', miss = e.k === 'atk' && e.timing === 'miss', crit = e.k === 'atk' && e.timing === 'crit';
     const fk = fit(h.s.hero, fx[e.who] || 'flame'); let hit = false;
     const onHit = () => {
-      if (hit) return; hit = true; const bx = open ? 32 : 72;
+      if (hit) return; hit = true; const bx = open ? 86 : 72;
       pop(bx + (Math.random() - 0.5) * 6, 36, miss ? '빗나감' : `−${d}`, miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : 'hit');
       if (d) { bossPose = 'hit'; setTimeout(() => (bossPose = S.end?.win ? 'down' : 'idle'), 420); }
       if (ult && stageEl && bossEl) void ultBlast(stageEl, bossEl, fk);
@@ -198,7 +198,7 @@
   function hurt(id: number) { hurtOn = { ...hurtOn, [id]: true }; if (!busy.has(id)) setPose(id, 'hit'); setTimeout(() => { hurtOn = { ...hurtOn, [id]: false }; if (!busy.has(id) && !S.heroes[id]?.down) setPose(id, 'idle'); }, 450); }
   /** ✨ 채점이 끝나면 = 카드 자리에서 에너지 구슬이 내 충전 칸으로 날아가 차오름 (Y8) */
   function flyOrb(gold = true) {
-    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = st?.querySelector('[data-k="atb-me-ch"]'); if (!st || !a || !b) return;
+    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = st?.querySelector('[data-k="atb-attack"]'); if (!st || !a || !b) return;
     const R = rectIn(st), A = rectIn(a), B = rectIn(b);
     const x0 = A.left + A.width / 2 - R.left, y0 = A.top + A.height / 2 - R.top, dx = B.left + B.width / 2 - R.left - x0, dy = B.top + B.height / 2 - R.top - y0;
     const el = document.createElement('i'); el.className = gold ? 'atb-orb g' : 'atb-orb'; el.style.left = `${x0}px`; el.style.top = `${y0}px`; st.appendChild(el);
@@ -210,7 +210,7 @@
   const pop = (x: number, y: number, t: string, cls: string) => { const id = ++pk; pops = [...pops.slice(-10), { id, x, y, t, cls }]; setTimeout(() => (pops = pops.filter((p) => p.id !== id)), 1100); };
   $effect(() => { const n = S.evN; untrack(() => { if (n < seen) seen = 0; for (const e of S.ev) if ((e.n ?? 0) > seen) handle(e); seen = n; }); });
   function handle(e: Ev) {
-    const bx = open ? 32 : 72;
+    const bx = open ? 86 : 72;
     if (e.k === 'atk' || e.k === 'skill' || (e.k === 'role' && e.dmg)) {
       // ⚡ 스킬 = 컷인(필살기 1.7초 · 내 스킬 0.9초) 뒤 큰 이펙트
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
@@ -250,10 +250,10 @@
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
   const order = $derived(me >= 0 ? [me, ...S.heroes.map((h) => h.id).filter((i) => i !== me)] : S.heroes.map((h) => h.id));
   const ROW = [{ x: 14, y: 66, s: 1 }, { x: 22.5, y: 59.5, s: 0.9 }, { x: 31, y: 54, s: 0.8 }, { x: 39.5, y: 49.5, s: 0.7 }];
-  const ROWQ = [{ x: 7, y: 66, s: 0.82 }, { x: 13.5, y: 60, s: 0.74 }, { x: 20, y: 54.5, s: 0.66 }, { x: 26.5, y: 50, s: 0.58 }];
+  const ROWQ = [{ x: 6, y: 66, s: 0.78 }, { x: 11.5, y: 60, s: 0.7 }, { x: 17, y: 54.5, s: 0.62 }, { x: 22.5, y: 50, s: 0.55 }]; // 카드 왼쪽(26%)까지
   const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)); return (open ? ROWQ : ROW)[k] ?? ROW[0]!; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
-  const bossSize = $derived(Math.round(H * (open ? 0.36 : 0.42)));
+  const bossSize = $derived(Math.round(H * (open ? 0.3 : 0.42))); // 문제 카드 가운데(요청 #14) = 보스는 카드 오른쪽에 작게
   const stone = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
   const C = 2 * Math.PI * 30; // 내 초상 고리 둘레 (r 30)
   const tele = $derived(S.target && !weak(S) ? Math.max(0, Math.ceil(T.bossEvery - S.bossT)) : 0);
@@ -272,7 +272,7 @@
   });
   /** ⊕ 노리는 줄 (📜 요청 #7 ③): 보스 → 표적 용사 붉은 점선 (광역 = 바닥만) */
   const aimLines = $derived(S.target && tele && !S.aoeNext ? S.target.map((id) => { const p = posOf(id); return { id, x: p.x, y: p.y - 14 * p.s }; }) : []);
-  const bossX = $derived(open ? 36 : 73), bossY = $derived(74 - (bossSize / 2 / Math.max(1, H)) * 100);
+  const bossX = $derived(open ? 86 : 73), bossY = $derived(74 - (bossSize / 2 / Math.max(1, H)) * 100);
   const meAimed = $derived(me >= 0 && !!tele && !!S.target?.includes(me));
   let aimedOnce = false;
   $effect(() => { const a = meAimed; untrack(() => { if (a && !aimedOnce) { try { navigator.vibrate?.(40); } catch { /* 무시 */ } } aimedOnce = a; }); });
@@ -297,14 +297,14 @@
     <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
       {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <div class="face">
-        <svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="30" class="rb" /><circle cx="34" cy="34" r="30" class="rf" style:stroke-dasharray="{C * Math.min(1, meH.atb)} {C}" /></svg>
+
         {#if pt}<i class="pt" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{:else}<i class="pt"><HeroSprite id={meH.s.hero} scale={1} /></i>{/if}
       </div>
       <div class="mi">
         <b class="mn">{meH.s.name}</b>
         <span class="hpn" aria-label="HP {meH.hp} / {meH.s.maxHp}"><b>{meH.hp}</b><small>/ {meH.s.maxHp}</small></span>
         <i class="thin hp"><b style:width={pct(meH.hp, meH.s.maxHp)}></b></i>
-        <span class="chs" class:flash={gaugeFlash} data-k="atb-me-ch" aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>{#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
+        <i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, meH.atb) * 100)}%"></b></i>
       </div>
     </div>
   {/if}
@@ -317,12 +317,12 @@
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
-  <div class="bossui" style:left={open ? '21%' : '54%'} style:width={open ? '29%' : '40%'}>
+  <div class="bossui" style:left={open ? '74.5%' : '54%'} style:width={open ? '24%' : '40%'}>
     {#if stone}<div class="tele sig" role="status" data-k="atb-stone">🗿 석화 {stone}초 · 보스 공격 멈춤</div>{/if}
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
     {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 30% 되돌아옴</div>{/if}
-    <div class="rhp" data-k="atb-tele-g"><RaidHp name={S.boss.name} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" /></div>
+    <div class="rhp" data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
@@ -332,23 +332,23 @@
       </div>
     {/if}
   </div>
-  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '36%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.15)}px" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '36%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
+  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.15)}px" data-k="atb-barrier" aria-hidden="true"></i>{/if}
+  <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   <!-- 용사 -->
   {#each S.heroes as h (h.id)}
     {@const p = posOf(h.id)}
     {@const sc = +(base * p.s).toFixed(2)}
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:z-index={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
-      {#if h.id !== me && !h.down}<svg class="foot" viewBox="0 0 60 20" aria-hidden="true"><ellipse cx="30" cy="10" rx="26" ry="7" class="rb" /><ellipse cx="30" cy="10" rx="26" ry="7" class="rf" class:full={h.atb >= 1} pathLength="100" style:stroke-dasharray="{Math.round(Math.min(1, h.atb) * 100)} 100" /></svg>{/if}
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={h.s.hero} scale={sc} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
-      <div class="tag">
-        <b>{name(h.id)}</b>
-        <span class="hn"><b>{h.hp}</b>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</span>
+      <div class="tag" class:full={h.atb >= 1 && !h.down}>
+        <b>Lv.{h.s.lv} {name(h.id)} <i class="fe">{FAM_EMO[h.s.fam]}</i>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</b>
         <i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i>
+        <span class="hn">{h.hp}/{h.s.maxHp}</span>
+        <i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>
       </div>
     </div>
   {/each}
@@ -364,6 +364,7 @@
   {#if me >= 0 && meH}
     <nav class="btns" class:q={open} class:wk={isWeak(me)} class:full3={fullCh} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
       <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<AtbIcon name="fam-arms" size={Math.round(28 * U)} /> 공격<span class="chg" class:flash={gaugeFlash} aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}></i>{/each}</span>{/if}</button>
+      {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
       <!-- 💠 공격 둘레 스킬 (요청 #9) -->
       <div class="ring" data-k="atb-skills" aria-label="스킬">
         {#each slots as sk (sk.k)}
@@ -409,13 +410,11 @@
   @keyframes blink { 50% { filter: brightness(1.3); } }
   /* ❤ HP = 큰 숫자 + 가는 색 띠 (Y6) */
   .thin { display: block; width: 100%; height: 5px; border-radius: 3px; background: #0009; overflow: hidden; box-shadow: 0 0 0 1px #0006; }
-  .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); }
+  .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); } .thin.atb { height: 4px; } .thin.atb b { background: linear-gradient(90deg, #ffe46a, #e6b81e); }
   /* 🧑 내 초상 HUD (Y5) */
   .me { position: absolute; z-index: 21; top: 2%; left: 1.2%; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 40px; background: #1d1220d9; border: 2px solid #8a6a3a; }
   .me .face { position: relative; width: 60px; height: 60px; flex: none; }
-  .me svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-  .me .rb { fill: none; stroke: #0008; stroke-width: 6; } .me .rf { fill: none; stroke: #ffd34d; stroke-width: 6; stroke-linecap: round; transition: stroke-dasharray 0.1s linear; }
-  .me.full .rf { stroke: #fff3a0; filter: drop-shadow(0 0 4px #ffd34d); } .me.full { border-color: #ffd34d; box-shadow: 0 0 14px #ffd34d; animation: glow2 0.9s ease-in-out infinite; }
+  .me.full { border-color: #ffd34d; box-shadow: 0 0 14px #ffd34d; }
   @keyframes glow2 { 50% { box-shadow: 0 0 22px #ffe27a; } }
   .me .pt { position: absolute; inset: 7px; border-radius: 50%; overflow: hidden; background-color: #3a4a7a; image-rendering: pixelated; display: grid; place-items: center; }
   .me.down .pt { filter: grayscale(1) brightness(0.5); }
@@ -426,10 +425,8 @@
   .cs { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
   .cs.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
   .chs.flash { animation: gflash 0.45s; }
-  .chpop { position: absolute; left: 70px; bottom: 2px; font: 900 18px var(--font); color: #8fe0ff; text-shadow: 0 0 6px #3a8ef0, 0 2px 0 #000; animation: up 1.4s ease-out forwards; }
-  .foot { position: absolute; left: -30px; top: -10px; width: 60px; height: 20px; z-index: -1; }
-  .foot .rb { fill: #0005; stroke: #0008; stroke-width: 3; } .foot .rf { fill: none; stroke: #ffd34d; stroke-width: 3; } .foot .rf.full { stroke: #fff3a0; filter: drop-shadow(0 0 3px #ffd34d); }
-  .hn { display: flex; align-items: baseline; justify-content: center; gap: 2px; } .hn b { font: 900 15px var(--font); color: #c8ffb8; text-shadow: 0 1px 0 #000; }
+  .chpop { position: absolute; right: calc(2.5% + 20px); bottom: calc(4% + 110px * var(--u)); font: 900 22px var(--font); color: #8fe0ff; text-shadow: 0 0 6px #3a8ef0, 0 2px 0 #000; animation: up 1.4s ease-out forwards; pointer-events: none; }
+  .hn { font: 800 10px var(--font-plain); color: #e0ffd8; text-align: center; line-height: 1; text-shadow: 0 1px 0 #000; }
   .boss.stone :global(*) { filter: grayscale(1) brightness(0.85) contrast(1.2); }
   .hero.aura .spr { filter: drop-shadow(0 0 6px #fff6a0) drop-shadow(0 0 12px #ffd34d); }
   .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
@@ -445,24 +442,22 @@
   .pop.heal { color: #7dffb0; font-size: 20px; }
   .tgt { position: absolute; left: -26px; top: -10px; width: 52px; height: 18px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 10px #ff3a2a; animation: blink 0.4s steps(2) infinite; }
   .cov { position: absolute; left: 14px; top: -54px; }
-  .tag { position: absolute; left: -34px; top: 2px; width: 68px; display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 3px; border-radius: 6px; border: 2px solid #8a6a3a; background: #1d1220d9; }
-  .tag > b { font: 700 10px var(--font-plain); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { position: absolute; left: -42px; top: 2px; width: 84px; display: flex; flex-direction: column; gap: 2px; padding: 2px 4px 3px; border-radius: 6px; border: 2px solid #8a6a3a; background: #1d1220d9; }
+  .tag > b { font: 700 9.5px var(--font-plain); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hero.mine .tag { border-color: #e2b04a; }
   .hz { font-size: 9px; font-style: normal; line-height: 1; }
   .pop { position: absolute; z-index: 25; transform: translate(-50%, 0); font: 900 22px var(--font); color: #fff; text-shadow: 0 2px 0 #000, 0 0 6px #000; pointer-events: none; animation: up 1.1s ease-out forwards; white-space: nowrap; }
   .pop.crit { color: #ffe066; font-size: 34px; } .pop.sk { color: #8fd0ff; font-size: 34px; } .pop.ult { color: #ffd34d; font-size: 46px; } .pop.hurt { color: #ff6a6a; font-size: 20px; } .pop.hurt.big { font-size: 26px; } .pop.miss { color: #ccc; font-size: 20px; }
   .pop.crit, .pop.sk, .pop.ult { animation: upbig 1.1s ease-out forwards; } @keyframes upbig { 0% { opacity: 1; transform: translate(-50%, 0) scale(1.8); } 15% { transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -56px) scale(1); } } .pop.shield { color: #9fe6ff; font-size: 22px; } .pop.role { color: #9dff9a; font-size: 16px; }
   @keyframes up { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -48px); } }
-  .card { position: absolute; z-index: 26; right: 1.5%; top: 2.5%; bottom: 2.5%; width: 47%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
+  .card { position: absolute; z-index: 26; left: 26.5%; top: 2.5%; bottom: 2.5%; width: 47%; animation: slide 0.35s ease-out; transform-origin: 10% 10%; } /* Y7 약 47% */
   .card.suck { transition: transform 0.42s ease-in, opacity 0.42s ease-in; transform: translate(-80%, -20%) scale(0.05) rotate(-20deg); opacity: 0; }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
   .btns { position: absolute; inset: 0; z-index: 24; pointer-events: none; }
   .btns > * { pointer-events: auto; }
   .b.atk { position: absolute; right: 2.5%; bottom: 4%; width: calc(104px * var(--u)); height: calc(104px * var(--u)); min-height: 0; border-radius: 50%; padding: 0; flex-direction: column; gap: 0; font-size: calc(19px * var(--u)); transition: right 0.3s; }
-  .btns.q .b.atk { right: 51.5%; }
   .ring { position: absolute; right: calc(2.5% + 52px * var(--u)); bottom: calc(4% + 52px * var(--u)); width: 0; height: 0; transition: right 0.3s; }
-  .btns.q .ring { right: calc(51.5% + 52px * var(--u)); }
   .sk2 { position: absolute; left: 0; top: 0; width: calc(62px * var(--u)); height: calc(62px * var(--u)); border-radius: 50%; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 3px solid #8fd0ff; background: radial-gradient(circle at 50% 35%, #3a6ac8, #16285a); color: #fff; font: 800 calc(10px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430, 0 0 10px #000a; line-height: 1.05; }
   .sk2 .ic { font-size: calc(20px * var(--u)); line-height: 1; display: inline-flex; } .sk2 .nm { max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
   .sk2 .co { display: flex; gap: 1px; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; color: #5a6a8a; } .sk2 .co i.on { color: #8fe0ff; text-shadow: 0 0 4px #8fd0ff; }
@@ -547,4 +542,6 @@
   .wglow { position: absolute; left: -34px; top: -12px; width: 68px; height: 24px; border-radius: 50%; background: radial-gradient(ellipse, var(--fc), #0000 70%); opacity: 0.85; z-index: -1; animation: blink 0.9s ease-in-out infinite; }
   .me.wk { border-color: var(--fc); box-shadow: 0 0 12px var(--fc); }
   .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
+  .stage.q .tag { transform: scale(0.82); transform-origin: top center; }
+  .tag.full { border-color: #ffd34d; box-shadow: 0 0 8px #ffd34d; } .tag .fe { font-style: normal; }
 </style>

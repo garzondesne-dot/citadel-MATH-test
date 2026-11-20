@@ -10,9 +10,9 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const p = await b.newPage({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2 }); p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForSelector('[data-k="atb-setup"]');
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(800);
-  const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"] svg .rf') && !!document.querySelector('[data-k="atb-me"] .hpn b'), foot: document.querySelectorAll('.hero .foot').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs [data-icon="revive"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
+  const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"] .hpn b'), foot: document.querySelectorAll('.hero .tag .thin.atb').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs [data-icon="revive"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
   ok('① 가로 무대 = 용사 4 · 단추 2(공격 · 문제) + 공격 둘레 스킬 · 팀 부활 3 · 보스 그림', st.heroes === 4 && st.btn === 2 && st.revs === 3 && st.boss, JSON.stringify(st));
-  ok('Y5 · Y6 내 초상 ATB 고리 · 친구 발밑 고리 3 · HP 큰 숫자(용사 · 보스)', st.me && st.foot === 3 && st.bhp);
+  ok('요청 #14 이름표 = Lv · 이름 · 계열 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /^Lv\.\d/.test(await p.textContent('.hero .tag > b')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
   ok('Y9 몬스터 = 랜덤 던전 그림(2차시 = d01)', /^d01:/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
   await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
   const feet = await p.$$eval('[data-k="atb-hero"]', (xs) => xs.map((x) => { const r = x.getBoundingClientRect(); return Math.round(r.top); }));
@@ -20,7 +20,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => globalThis.__atb.pause(true));
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(700); // 보스가 걸어 나오는 0.45초
   const cardL = await p.$eval('.card', (x) => x.getBoundingClientRect().left), bossR = await p.$eval('[data-k="atb-boss"]', (x) => x.getBoundingClientRect().right);
-  ok('② 문제 카드 = 오른쪽 약 47% · 보스를 가리지 않음(보스가 앞으로)', cardL >= bossR - 30 && Math.abs(await p.$eval('.card', (x) => x.getBoundingClientRect().width / innerWidth) - 0.47) < 0.02, `카드 ${Math.round(cardL)} · 보스 오른쪽 ${Math.round(bossR)}`);
+  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), b = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), h = [...document.querySelectorAll('.hero .tag')].map((e) => e.getBoundingClientRect().left), bh = document.querySelector('[data-k="raid-hp"]').getBoundingClientRect(); return { cx: Math.round(c.left + c.width / 2), w: c.width / innerWidth, bossL: Math.round(b.left), cardR: Math.round(c.right), tagsL: Math.max(...h) < c.left, bhpR: bh.left >= c.right - 4 }; });
+    ok('요청 #14 문제 카드 = 화면 가운데 · 약 47% · 왼쪽 용사 이름표 · 오른쪽 보스(체력) 보임', Math.abs(g.cx - 422) < 12 && Math.abs(g.w - 0.47) < 0.02 && g.bossL >= g.cardR - 30 && g.tagsL && g.bhpR, JSON.stringify(g)); }
   const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
   ok('Y1 소문항 하나 맞힘 = 충전 안 됨', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === ch0);
