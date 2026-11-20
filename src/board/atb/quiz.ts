@@ -19,15 +19,15 @@ export function originsOf(L: LessonPack): Origin[] {
 /** 가장 쉬운 칸 = 소문항이 가장 적은 원문항(같으면 앞) — 도전자의 실드용 (U3) */
 export const easiestOf = (os: Origin[]) => os.slice().sort((a, b) => a.n - b.n || os.indexOf(a) - os.indexOf(b))[0] ?? null;
 
-export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[] }
+export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 이 원문항만의 씨앗 (없으면 판 씨앗 · 📜 요청 #19 덧2) */ seed?: string; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[] }
 /** 얻은 것 · 충전은 엔진이 done · perfect 로 정함(Y1 원문항 통째) · gold = 이 소문항 첫 시도 정답(표시만) · marks = 끝났을 때 소문항 ○ × */
 export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; marks?: boolean[] }
 const VERS = 7;
-export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'>, seed: string): Question[] => (L.monsters[r.mid]?.chain ? chainItems(L, r.mid, seed, r.ver) : items(L, r.mid, seed, r.ver));
+export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'> & { seed?: string }, seed: string): Question[] => { const s = r.seed ?? seed; return L.monsters[r.mid]?.chain ? chainItems(L, r.mid, s, r.ver) : items(L, r.mid, s, r.ver); };
 /** 새 원문항 시작 (ver0 = 이 학생 시작 판) */
 export const startRun = (mid: string, ver0: number): Run => ({ mid, ver: ((ver0 % VERS) + VERS) % VERS, k: 0, wrong: 0, clean: true, firstTry: true, vers: [((ver0 % VERS) + VERS) % VERS], marks: [] });
 /** 답 하나 내기 → 새 진행 + 얻은 것 */
-export function answer(L: LessonPack, r: Run, seed: string, given: Given): { run: Run; earn: Earn } {
+export function answer(L: LessonPack, r: Run, seed: string, given: Given, avoid: number[] = []): { run: Run; earn: Earn } {
   const qs = questionsOf(L, r, seed), q = qs[r.k];
   const none: Earn = { gold: false, done: false, perfect: false, swapped: false, right: false };
   if (!q) return { run: r, earn: none };
@@ -37,9 +37,10 @@ export function answer(L: LessonPack, r: Run, seed: string, given: Given): { run
     return { run: last ? { ...r, marks } : { ...r, k: r.k + 1, firstTry: true, marks }, earn };
   }
   const wrong = r.wrong + 1;
-  if (wrong >= T.wrongSwap) { // 4번째 오답 = 같은 원문항 새 숫자 판 · 진행도만 처음부터
-    const used = new Set(r.vers), next = Array.from({ length: VERS }, (_, i) => (r.ver + 1 + i) % VERS).find((v) => !used.has(v)) ?? (r.ver + 1) % VERS;
-    return { run: { mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [] }, earn: { ...none, swapped: true } };
+  if (wrong >= T.wrongSwap) { // 4번째 오답 = 같은 원문항 새 숫자 판 · 진행도만 처음부터 · 📜 요청 #19 덧2 = 이 기기에서 본 판 · 친구가 지금 쓰는 판(avoid)도 피함
+    const used = new Set(r.vers), cand = Array.from({ length: VERS }, (_, i) => (r.ver + 1 + i) % VERS);
+    const next = cand.find((v) => !used.has(v) && !avoid.includes(v)) ?? cand.find((v) => !used.has(v)) ?? (r.ver + 1) % VERS;
+    return { run: { ...(r.seed ? { seed: r.seed } : {}), mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [] }, earn: { ...none, swapped: true } };
   }
   return { run: { ...r, wrong, clean: false, firstTry: false }, earn: none };
 }
@@ -47,4 +48,40 @@ export function answer(L: LessonPack, r: Run, seed: string, given: Given): { run
 export function nextOrigin(os: Origin[], done: Record<string, number>, prefer?: string | null): Origin | null {
   if (prefer) { const p = os.find((o) => o.mid === prefer); if (p) return p; }
   return os.slice().sort((a, b) => (done[a.mid] || 0) - (done[b.mid] || 0) || os.indexOf(a) - os.indexOf(b))[0] ?? null;
+}
+
+// 🔁 📜 요청 #19 덧2 「같은 문제가 계속 나와요」
+//   원인 = 씨앗 고정(연습방 1) + 원문항 순서 고정 + 첫 판 = 자리 번호로 정해짐 → 판마다 똑같은 문제
+//   고침 = 판마다 원문항 순서 섞음 · 판(버전) = 이 기기에서 최근 본 판을 피해 고름(다 봤으면 가장 오래된 것부터) · 친구가 같은 원문항에서 지금 쓰는 판도 피함
+export const VERS_N = VERS;
+/** 판 고르기 · seen = 이 원문항에서 이 기기가 본 판(오래된 것 → 새 것) · busy = 친구가 지금 쓰는 판 */
+export function pickVer(seen: readonly number[], busy: readonly number[] = [], rnd: () => number = Math.random): number {
+  const all = Array.from({ length: VERS }, (_, i) => i), any = (xs: number[]) => xs[Math.floor(rnd() * xs.length)]!;
+  const a = all.filter((v) => !seen.includes(v) && !busy.includes(v)); if (a.length) return any(a);
+  const b = all.filter((v) => !seen.includes(v)); if (b.length) return any(b);
+  const old = seen.filter((v, i) => seen.indexOf(v) === i); // 다 봄 = 가장 오래된 것부터
+  return old.find((v) => !busy.includes(v)) ?? old[0] ?? 0;
+}
+/** 본 판 적기 (맨 뒤 = 가장 최근) */
+export const noteSeen = (seen: readonly number[], v: number): number[] => [...seen.filter((x) => x !== v), v].slice(-VERS);
+/** 원문항 순서 섞기 (판마다 새 순서) */
+export function shuffled<X>(xs: readonly X[], rnd: () => number): X[] { const a = xs.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j]!, a[i]!]; } return a; }
+/** 글자 씨앗 → 0 ~ 1 난수 (같은 씨앗 = 같은 흐름) */
+export function rngOf(seed: string): () => number { let h = 2166136261; for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return () => { h = (h + 0x6d2b79f5) | 0; let a = Math.imul(h ^ (h >>> 15), h | 1); a ^= a + Math.imul(a ^ (a >>> 7), a | 61); return ((a ^ (a >>> 14)) >>> 0) / 4294967296; }; }
+/** 이 기기에서 본 판 (차시 · 원문항마다) · 저장 못 하면 빈 것 */
+const SEEN_KEY = 'atb-seen-v1';
+export type Seen = Record<string, number[]>;
+export const seenKey = (L: { id: string }, mid: string) => `${L.id}|${mid}`;
+export function loadSeen(): Seen { try { const s = JSON.parse(globalThis.localStorage?.getItem(SEEN_KEY) || '{}'); return s && typeof s === 'object' ? s : {}; } catch { return {}; } }
+export function saveSeen(s: Seen): void { try { globalThis.localStorage?.setItem(SEEN_KEY, JSON.stringify(s)); } catch { /* 무시 */ } }
+/** 문제 묶음 지문 (32비트) */
+export function sigOf(qs: readonly Question[]): number { let h = 2166136261; for (const c of JSON.stringify(qs)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
+/** 새 원문항 판 = 판(버전) 고르고 · 최근 본 문제 묶음과 같으면 씨앗을 바꿔 다시(판마다 8번 · 최대 56번) · seen 을 고쳐 돌려줌
+ *  (생성기 숫자 폭이 좁은 칸 = 같은 묶음이 다시 나올 수 있음 → 묶음 지문으로 한 번 더 거름) */
+export function freshRun(L: LessonPack, mid: string, seed: string, seen: Seen, busy: readonly number[] = [], rnd: () => number = Math.random): Run {
+  const k = seenKey(L, mid), v = pickVer(seen[k] ?? [], busy, rnd), sigs = seen[k + '#'] ?? [];
+  let s = seed, sig = 0, ver = v;
+  for (let i = 0; i < 56; i++) { ver = (v + (i >> 3)) % VERS; s = i ? `${seed}~${i}` : seed; sig = sigOf(questionsOf(L, { mid, ver }, s)); if (!sigs.includes(sig)) break; } // 판마다 씨앗 8번 → 다음 판
+  seen[k] = noteSeen(seen[k] ?? [], ver); seen[k + '#'] = [...sigs.filter((x) => x !== sig), sig].slice(-6);
+  return { ...startRun(mid, ver), ...(s !== seed ? { seed: s } : {}) };
 }

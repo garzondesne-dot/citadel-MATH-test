@@ -23,7 +23,7 @@
   import { sfx } from '../../sound.svelte';
   import type { HPose } from '../../manifest';
   import { botStep, type Bot } from '../../../board/atb/bots';
-  import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, type Run } from '../../../board/atb/quiz';
+  import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
   import { ATK, FAM_NAME, ROLE_SKILL, SIG, T, type Fam, type Role } from '../../../board/atb/tune';
 
@@ -48,7 +48,7 @@
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
     if (S.end) { if (!ended) { ended = true; setTimeout(() => onend(S), 1800); } return; }
     if (paused) return;
-    for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); autoStep(); }
+    for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b, busyOf); autoStep(); }
   }, STEP * 1000);
   /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
   let fullAt = -1, autoTag = $state(0);
@@ -63,12 +63,16 @@
   onDestroy(() => { clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
 
   // ── 내 문제 ──
-  const OS = untrack(() => originsOf(L));
+  // 🔁 📜 요청 #19 덧2 = 판마다 원문항 순서 섞음 · 판(버전) = 이 기기에서 최근 본 것 피함 · 친구가 지금 쓰는 판 피함
+  const qRnd = untrack(() => rngOf(`${seed}|q`)), OS = untrack(() => shuffled(originsOf(L), qRnd)), vSeen = loadSeen();
+  /** 이 원문항에서 다른 사람(봇 · 나)이 지금 쓰는 판 */
+  function busyOf(mid: string, who: number): number[] { const xs = bots.filter((b) => b.who !== who && b.run?.mid === mid).map((b) => b.run!.ver); if (who !== me && run?.mid === mid) xs.push(run.ver); return xs; }
+  function freshRun(mid: string): Run { const r = newRun(L, mid, seed, vSeen, busyOf(mid, me), qRnd); saveSeen(vSeen); return r; }
   let open = $state(false), run = $state<Run | null>(null), flash = $state(''), hintUsed = $state(false), done: Record<string, number> = {};
   let fT: ReturnType<typeof setTimeout> | undefined;
   const meH = $derived(me >= 0 ? S.heroes[me] : null);
   function openQuiz() {
-    if (!run) { const mine = S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken); const o = nextOrigin(OS, done, mine && meH && !meH.ch ? easiestOf(OS)?.mid : null); if (o) run = startRun(o.mid, me * 2 + Object.values(done).reduce((a, x) => a + x, 0)); hintUsed = false; }
+    if (!run) { const mine = S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken); const o = nextOrigin(OS, done, mine && meH && !meH.ch ? easiestOf(OS)?.mid : null); if (o) run = freshRun(o.mid); hintUsed = false; }
     open = true;
   }
   /** 📝 채점 → ⚡ 충전 연출 (Y8 · 약 2초 · 누르면 건너뜀): 소문항 ○ × 차례로 → 카드가 쑥 빨려 들어가 에너지 → 충전 칸 */
@@ -88,7 +92,8 @@
   function submit(g: Given) {
     if (!run || grading) return;
     if (lockLeft > 0) return;
-    const before = meH?.ch ?? 0, o = answer(L, run, seed, g); earn(S, me, o.earn);
+    const before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); earn(S, me, o.earn);
+    if (o.earn.swapped) { const k = seenKey(L, run.mid); vSeen[k] = noteSeen(vSeen[k] ?? [], o.run.ver); saveSeen(vSeen); }
     flash = o.earn.done ? '' : o.earn.right ? (o.earn.gold ? 'gold' : 'ok') : o.earn.swapped ? 'swap' : 'wrong';
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
     if (o.earn.right) sfx('correct', 0.5);
@@ -97,7 +102,7 @@
   /** 🛡 실드가 뜨면 = 내 칸을 깰 표가 없고 지금 문제가 가장 쉬운 칸이 아니면 → 가장 쉬운 칸으로 (U3 막힘 안전망 · 충전은 그대로) */
   function shieldSwap() {
     const ez = easiestOf(OS); if (!meH || !ez || meH.ch > 0 || !run || grading || run.mid === ez.mid) return;
-    run = startRun(ez.mid, me * 2 + 1); hintUsed = false; flash = 'shieldSwap'; clearTimeout(fT); fT = setTimeout(() => (flash = ''), 2200);
+    run = freshRun(ez.mid); hintUsed = false; flash = 'shieldSwap'; clearTimeout(fT); fT = setTimeout(() => (flash = ''), 2200);
   }
   const titleOf = (mid: string) => OS.find((o) => o.mid === mid)?.title ?? mid;
 

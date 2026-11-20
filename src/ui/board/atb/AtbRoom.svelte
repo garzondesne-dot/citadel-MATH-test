@@ -29,7 +29,7 @@
   let L = $state<LessonPack | null>(lessons.find((p) => p.no === 2) ?? lessons[0] ?? null);
   let diff = $state<Diff>('normal'), mode = $state<'play' | 'watch'>('play'), meHero = $state(OLD);
   let mates = $state<number[]>(['발도르', '루멘', '로안', '누아'].map((n) => HEROES.find((h) => h.name === n)?.id ?? 0));
-  let botKind = $state<BotKind>('normal'), grow = $state<'new' | 'mid' | 'max' | 'awk'>('new'), start = $state<'start' | 'shield' | 'one' | 'aoe'>('start'), seed = $state(1), speed = $state(1), size = $state(4);
+  let botKind = $state<BotKind>('normal'), grow = $state<'new' | 'mid' | 'max' | 'awk'>('new'), start = $state<'start' | 'shield' | 'one' | 'aoe'>('start'), seed = $state(1), seedNew = $state(true), speed = $state(1), size = $state(4);
   const GROW = { new: { lv: 1, enh: 1, label: '새내기 Lv.1 · +1 · Ⅰ' }, mid: { lv: 5, enh: 4, label: '보통 Lv.5 · +4 · Ⅱ' }, max: { lv: 10, enh: 10, label: '끝까지 Lv.10 · +10 · Ⅳ' }, awk: { lv: 10, enh: 10, label: '✨ 각성 Lv.10 · +10 · Ⅳ · 각성' } } as const;
   /** ⚡ 용사마다 고른 장착 스킬 단계 (📜 요청 #16 · 연습방 = 이 화면에서만 · 저장 안 됨) */
   let skSel = $state<Record<number, number>>({});
@@ -42,6 +42,7 @@
   let S = $state<State | null>(null), bots = $state<ReturnType<typeof newBot>[]>([]), meIdx = $state(0), phase = $state<'setup' | 'battle' | 'result'>('setup'), runKey = $state(0);
   function begin() {
     if (!L) return;
+    if (seedNew) seed = 1 + Math.floor(Math.random() * 9999); // 📜 요청 #19 덧2 = 연습방 씨앗 기본 「매번 새로」
     const g = GROW[grow], ids = mode === 'play' ? [meHero, ...mates.slice(0, size - 1)] : mates.slice(0, size);
     const party = ids.map((id) => statsOf({ hero: id, lv: g.lv, enh: g.enh, tier: tierFor(id), name: nameOf(id), awk: grow === 'awk' }));
     const art = bossArt(BOSSES[L.no]!, diff); bg = art.bg;
@@ -83,7 +84,7 @@
     <section><b>봇</b><div class="chips">{#each Object.entries(BOT_LABEL) as [k, t] (k)}<button type="button" class:on={botKind === k} onclick={() => (botKind = k as BotKind)}>{t}</button>{/each}</div></section>
     <section><b>키운 정도</b><div class="chips">{#each Object.entries(GROW) as [k, g] (k)}<button type="button" class:on={grow === k} onclick={() => (grow = k as typeof grow)}>{g.label}</button>{/each}</div></section>
     <section><b>시작 지점</b><div class="chips">{#each [['start', '전투 시작'], ['shield', '실드 등장 직전'], ['one', '실드 한 칸 남음'], ['aoe', '광역기 직후']] as [k, t] (k)}<button type="button" class:on={start === k} onclick={() => (start = k as typeof start)}>{t}</button>{/each}</div></section>
-    <section class="row"><label><b>씨앗</b> <input type="number" min="1" max="9999" bind:value={seed} /></label>{#if mode === 'watch'}<span class="chips">{#each [1, 2, 4] as v (v)}<button type="button" class:on={speed === v} onclick={() => (speed = v)}>×{v}</button>{/each}</span>{/if}</section>
+    <section class="row"><b>씨앗</b><span class="chips"><button type="button" class:on={seedNew} data-k="atb-seed-new" onclick={() => (seedNew = true)}>🎲 매번 새로</button><button type="button" class:on={!seedNew} data-k="atb-seed-fix" onclick={() => (seedNew = false)}>고정</button></span>{#if !seedNew}<input type="number" min="1" max="9999" bind:value={seed} aria-label="씨앗" />{:else}<small class="sub">지난 판 씨앗 {seed}</small>{/if}{#if mode === 'watch'}<span class="chips">{#each [1, 2, 4] as v (v)}<button type="button" class:on={speed === v} onclick={() => (speed = v)}>×{v}</button>{/each}</span>{/if}</section>
     <button type="button" class="go" data-k="atb-start" disabled={!L} onclick={begin}>⚔ 출발 (폰을 눕혀요)</button>
     {#if recs.length}<section><b>최근 {recs.length}판 (이 폰)</b><ol class="recs">{#each recs as r (r.at)}<li>{md(r.at)} · {r.no}차시 {({ easy: '연습', normal: '일반', hard: '도전' })[r.diff]} · {r.mode} · {r.win ? '✔ 승리' : '✘ 실패'} · {Math.floor(r.sec / 60)}분 {r.sec % 60}초 · {r.who} · 씨앗 {r.seed}{#if r.r}<br /><small data-k="atb-rec">📊 소문항 {r.r.subs}개 · 하나에 {r.r.subSecMed}초 · 타이밍 {r.r.timingOk ?? '−'}% · 충전 {r.r.charges ?? '−'} · 스킬 {Object.values(r.r.skills ?? {}).reduce((a, x) => a + (x ?? 0), 0)} · 쓰러짐 {r.r.downs} · {r.r.roles}</small>{/if}</li>{/each}</ol></section>{/if}
   </main>

@@ -2,7 +2,7 @@
 //   봇은 진짜 차시 팩 문제를 quiz.ts 로 풂(맞힘 = 정답 · 틀림 = 엉뚱한 답) → 사람과 같은 ⚡ · 금색 · 완주 · 4번째 오답 규칙
 import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
-import { answer, easiestOf, nextOrigin, originsOf, questionsOf, startRun, type Origin, type Run } from './quiz';
+import { answer, easiestOf, nextOrigin, originsOf, pickVer, questionsOf, rngOf, shuffled, startRun, type Origin, type Run } from './quiz';
 import { T } from './tune';
 import { alive, attack, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
 
@@ -14,20 +14,21 @@ const r01 = (b: Bot) => { let a = (b.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>
 export function newBot(L: LessonPack, who: number, kind: BotKind, seed = 1): Bot {
   const acc = kind === 'ideal' ? 1 : kind === 'random' ? 0.3 : kind === 'retry' ? 0.5 : 0.6; // 설계 방 모의실험 = 정답률 60%
   const think: [number, number] = kind === 'ideal' ? [12, 18] : kind === 'random' ? [4, 8] : [12, 24]; // 소문항 하나 평균 18초 (sim2.py sub_sec)
-  return { who, kind, acc, think, run: null, due: 0, fullAt: -1, done: {}, os: originsOf(L), seed: `bot${who}`, rnd: seed * 97 + who * 13 };
+  return { who, kind, acc, think, run: null, due: 0, fullAt: -1, done: {}, os: shuffled(originsOf(L), rngOf(`os${seed}|${who}`)), seed: `bot${who}|${seed}`, rnd: seed * 97 + who * 13 };
 }
 const wrongOf = (q: Question): Given => (q.type === 'number' ? -999 : q.type === 'ox' ? !(q as { answer: boolean }).answer : q.type === 'multi' ? [] : q.type === 'choice' ? ((q as { answerIndex: number }).answerIndex + 1) % Math.max(2, (q as { choices: string[] }).choices.length) : '모름') as Given;
 /** 봇 한 걸음 (dt 초): 문제 풀기 + ATB 가 차면 행동 */
-export function botStep(L: LessonPack, S: State, b: Bot): void {
+/** busy = 이 원문항에서 친구들이 지금 쓰는 판 (📜 요청 #19 덧2 = 같은 숫자 동시에 안 나옴) */
+export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who: number) => number[] = () => []): void {
   const h = S.heroes[b.who]; if (!h || S.end) return;
   // 문제 (쓰러져도 풂 = 친구 ATB)
   // 🛡 실드가 떴는데 내 칸을 깰 표가 없음 + 지금 문제가 가장 쉬운 칸이 아님 → 가장 쉬운 칸으로 바꿈 (U3 막힘 안전망 · 길게 이어진 원문항에 묶이지 않게)
   { const ez = easiestOf(b.os); if (b.run && ez && b.run.mid !== ez.mid && S.shieldUp && h.ch < 1 && S.cells.some((c) => c.owner === b.who && !c.broken)) b.run = null; }
-  if (!b.run) { const prefer = S.shieldUp && S.cells.some((c) => c.owner === b.who && !c.broken) && b.kind !== 'ideal' ? easiestOf(b.os)?.mid : null; const o = nextOrigin(b.os, b.done, prefer); if (o) { b.run = startRun(o.mid, b.who + Math.floor(r01(b) * 7)); b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]); } }
+  if (!b.run) { const prefer = S.shieldUp && S.cells.some((c) => c.owner === b.who && !c.broken) && b.kind !== 'ideal' ? easiestOf(b.os)?.mid : null; const o = nextOrigin(b.os, b.done, prefer); if (o) { b.run = startRun(o.mid, pickVer([], busy(o.mid, b.who), () => r01(b))); b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]); } }
   if (b.run && S.t >= b.due) {
     const q = questionsOf(L, b.run, b.seed)[b.run.k];
     if (q) {
-      const ok = r01(b) < b.acc, o = answer(L, b.run, b.seed, ok ? answerOf(q) : wrongOf(q));
+      const ok = r01(b) < b.acc, o = answer(L, b.run, b.seed, ok ? answerOf(q) : wrongOf(q), busy(b.run.mid, b.who));
       earn(S, b.who, o.earn); b.run = o.run;
       if (o.earn.done) { b.done[b.run.mid] = (b.done[b.run.mid] || 0) + 1; b.run = null; }
       b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]);

@@ -43,3 +43,40 @@ describe('ATB 문제 공급', () => {
     const os = originsOf(L2); expect(nextOrigin(os, { m1: 1 })!.mid).toBe('m2'); expect(nextOrigin(os, {}, 'm4')!.mid).toBe('m4');
   });
 });
+
+// 🔁 📜 요청 #19 덧2 「같은 문제가 계속 나와요」 = 판마다 새 순서 · 새 판(버전) · 이 기기에서 본 판 피함
+import { freshRun, pickVer, rngOf, shuffled, type Seen } from '../src/board/atb/quiz';
+import { newBot, botStep } from '../src/board/atb/bots';
+describe('ATB 문제 반복 없애기 (요청 #19 덧2)', () => {
+  it('5판 내리 = 원문항마다 판(버전) 겹침 0 · 원문항 문제 묶음 겹침 0 (모든 차시)', () => {
+    for (const L of SUBJ.lessons) {
+      const seen: Seen = {}, sets = new Map<string, Set<string>>(), orders: string[] = [];
+      for (let run = 0; run < 5; run++) {
+        const seed = `me${1 + Math.floor(Math.random() * 9999)}`, rnd = rngOf(`${seed}|q`), os = shuffled(originsOf(L), rnd);
+        orders.push(os.map((o) => o.mid).join(''));
+        for (const o of os) {
+          const before = [...(seen[`${L.id}|${o.mid}`] ?? [])], r = freshRun(L, o.mid, seed, seen, [], rnd);
+          if (!r.seed) expect(before).not.toContain(r.ver); // 묶음이 겹쳐 판을 넘긴 때만 예외
+          const t = JSON.stringify(questionsOf(L, r, seed)), set = sets.get(o.mid) ?? new Set();
+          expect(set.has(t), `${L.no}차시 ${o.mid} ${run + 1}판째`).toBe(false); set.add(t); sets.set(o.mid, set);
+        }
+      }
+      if (originsOf(L).length > 2) expect(new Set(orders).size).toBeGreaterThan(1); // 원문항 순서도 판마다 바뀜
+    }
+  });
+  it('7판 다 봤으면 = 가장 오래된 것부터 · 4번째 오답 = 본 판 · 친구 판 피함', () => {
+    expect(pickVer([3, 1, 0, 2, 6, 5, 4], [])).toBe(3);
+    expect(pickVer([3, 1, 0, 2, 6, 5, 4], [3])).toBe(1);
+    expect(pickVer([0, 1, 2, 3, 4], [5])).toBe(6);
+    let r = startRun('m1', 0); const qs = questionsOf(L2, r, 's');
+    for (let i = 0; i < 4; i++) r = answer(L2, r, 's', bad(qs[0]!), [1, 2]).run;
+    expect(r.ver).toBe(3);
+  });
+  it('친구(봇)끼리 같은 원문항 = 같은 판 동시에 안 나옴', () => {
+    const bs = [1, 2, 3].map((w) => newBot(L2, w, 'normal', 7));
+    const busy = (mid: string, who: number) => bs.filter((b) => b.who !== who && b.run?.mid === mid).map((b) => b.run!.ver);
+    const S = { heroes: [0, 1, 2, 3].map(() => ({ atb: 0, ch: 0, down: false })), t: 999, shieldUp: false, cells: [] } as unknown as Parameters<typeof botStep>[1];
+    for (const b of bs) { b.os = b.os.map(() => b.os.find((o) => o.mid === 'm1')!); botStep(L2, S, b, busy); }
+    const vs = bs.map((b) => b.run!.ver); expect(new Set(vs).size).toBe(3);
+  });
+});
