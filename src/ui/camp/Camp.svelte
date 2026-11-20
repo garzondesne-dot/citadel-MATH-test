@@ -339,7 +339,9 @@
   }
   // D 용사 걷기 (자리 = 캠프 그림 % · 앉은 자리 CAMP.hero)
   const SEAT = { left: CAMP.hero.left, bottom: CAMP.hero.bottom };
-  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 56, bottom: 40 }, fire: { left: 38, bottom: 27 }, mail: { left: 24, bottom: 17 }, anvil: { left: 40, bottom: 43 }, dummy: { left: 30, bottom: 32 }, tent: { left: 70, bottom: 15 }, tentdeco: { left: 30, bottom: 55 }, castle: { left: 48, bottom: 52 }, gate: { left: 70, bottom: 52 } };
+  // 🐞 📜 2026-11-20 선생님 「용사가 자꾸 허수아비 뒤쪽으로 이동 · 앞쪽으로」: 서는 자리 = 물건 발밑(바닥 줄)보다 아래(화면 앞) · 용사 그림 = 물건 위 층(.hmove z 6)
+  //   물건 바닥 줄(%) = 게시판 34.6 · 우편함 9.8 · 허수아비 42.1 · 책상 16.3 · 모루 46.6 (manifest CAMP_PROPS) · 성채 · 던전 문 · 텐트 = 배경이라 그 앞 물건(모루 · 허수아비 · 게시판)과 안 겹치는 자리
+  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 50, bottom: 36 }, fire: { left: 38, bottom: 27 }, mail: { left: 28, bottom: 2 }, anvil: { left: 47, bottom: 41 }, dummy: { left: 30, bottom: 29 }, tent: { left: 70, bottom: 12 }, tentdeco: { left: 36, bottom: 32 }, castle: { left: 48, bottom: 42 }, gate: { left: 84, bottom: 38 } };
   type HP = 'sit' | 'walk' | 'attack' | 'idle';
   let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
   let walkTok = 0, idleT: ReturnType<typeof setTimeout> | null = null;
@@ -918,7 +920,7 @@
   @keyframes fxRing { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
   .cfx.twinkle i { display: none; } .cfx.twinkle b { position: absolute; left: -12px; top: -14px; font-size: 24px; color: #fff7c2; text-shadow: 0 0 10px #ffe27a; animation: fxTw 0.9s ease-out forwards; }
   @keyframes fxTw { 0% { transform: scale(0.3) rotate(0); } 40% { transform: scale(1.3) rotate(25deg); } 100% { transform: scale(0.6) rotate(60deg); opacity: 0; } }
-  .hmove { position: absolute; z-index: 2; display: block; pointer-events: none; will-change: transform; }
+  .hmove { position: absolute; z-index: 6; /* 📜 11/20 용사 = 물건 위 */ display: block; pointer-events: none; will-change: transform; }
   .sp.hero { will-change: transform; pointer-events: none; } /* 걷는 용사가 물건 누름을 가리지 않게 */
   .friend { position: absolute; z-index: 5; pointer-events: none; transform: translateX(-50%); }
   .buddy { position: absolute; z-index: 6; transform: translateX(-50%); border: 0; padding: 0; background: none; cursor: pointer; min-width: 48px; min-height: 48px; }
