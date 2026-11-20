@@ -48,9 +48,15 @@ function toServer(b: Bound, me: Me) {
   const had = b.S.get<Record<string, unknown>>(p(b, 'cards')) || {};
   for (const id of Object.keys(me.cards || {})) if (!had[id]) S.set(`${p(b, 'cards')}/${id}`, true); // 카드 = 늘기만 (정식 cards/{카드} = true)
 }
+/** 서버 거울이 내 칸(지갑 · 계정 · EXP)을 아직 다 받지 않음 (이 기기 · 메모리 저장 = 늘 받음) */
+const MY_ROOTS = ['gem', 'xp', 'accounts', 'cards'] as const;
+function pendingOf(b: Bound): boolean { const L = b.S.loaded; return !!L && MY_ROOTS.some((r) => !L(p(b, r))); }
 function load(gem: number, scroll: number, test: boolean, teacher = false, local = false): Me {
   const b = teacher ? null : meBound(), base = { ...fresh(gem, scroll, test), ...(teacher ? { nick: '선생님', hero: 7 } : {}) }, loc = readLocal(teacher ? TKEY : localKey(b));
   if (b) {
+    // 🚨 11/20 학생 기록 「초기화」(1-1-14 · 1-5-16): 서버 거울이 내 지갑 칸을 아직 안 받았을 때 get = 빈 값 → 「처음 온 학생」으로 보고 시작 값(💎 0 · EXP 0 · 용사 0)으로 덮어씀
+    //   → 받기 전(pending)이면 서버에 아무것도 쓰지 않음 · 받은 뒤 다시 읽음(useMe)
+    if (pendingOf(b)) return { ...base, ...Object.fromEntries(LOCAL_ONLY.filter((k) => loc && k in loc).map((k) => [k, loc![k]])), test } as Me;
     const sv = fromServer(b), first = !b.S.get(p(b, 'gem'));
     const local = Object.fromEntries(LOCAL_ONLY.filter((k) => loc && k in loc).map((k) => [k, loc![k]]));
     const m = { ...base, ...(first ? {} : sv), ...local, test } as Me;
@@ -70,10 +76,20 @@ export function useMe(gem: number, scroll: number, test = false, teacher = false
   const me = $state<Me>(load(gem, scroll, test, teacher, local));
   if (teacher) tWatch.add((v) => { if (v && v.hero != null) Object.assign(me, { hero: v.hero, enh: v.enh, socket: v.socket || {}, title: v.title || 'none' }); }); // 다른 기기(TV 교사 캠프 · 폰)에서 바꿔도 바로
   const b = teacher ? null : meBound();
+  // 🚨 11/20 받기 전에 연 화면 = 받으면 그때 서버 값으로 다시 채움 · 그동안 서버 쓰기 막음 (시작 값으로 덮어쓰지 않게)
+  let ready = !(b && !local && pendingOf(b));
+  if (!ready && b) {
+    const stops: (() => void)[] = [];
+    const check = () => { if (ready || pendingOf(b)) return; ready = true; stops.forEach((f) => f()); Object.assign(me, load(gem, scroll, test, false, local)); };
+    for (const r of MY_ROOTS) stops.push(b.S.watch(p(b, r), check));
+    for (const r of MY_ROOTS) void b.S.get(p(b, r)); // 받기 시작
+    const t = setInterval(check, 300); stops.push(() => clearInterval(t)); // 빈 칸(새 학생) = 값이 안 바뀌어 watch 가 안 울림 → 받음 표시를 따로 봄
+    check();
+  }
   const save = () => {
     const snap = JSON.parse(JSON.stringify(me)) as Me;
     if (teacher) { try { localStorage.setItem(TKEY, JSON.stringify(snap)); } catch { /* 무시 */ } tSink?.(tlookOf(snap)); return; }
-    if (b) { if (!local) toServer(b, snap); try { localStorage.setItem(localKey(b), JSON.stringify(Object.fromEntries(LOCAL_ONLY.map((k) => [k, snap[k]])))); } catch { /* 무시 */ } return; }
+    if (b) { if (!local && ready) toServer(b, snap); try { localStorage.setItem(localKey(b), JSON.stringify(Object.fromEntries(LOCAL_ONLY.map((k) => [k, snap[k]])))); } catch { /* 무시 */ } return; }
     try { localStorage.setItem(KEY, JSON.stringify(snap)); } catch { /* 무시 */ }
   };
   /** 👩‍🏫 교사만: ↺ 처음으로 = 스킬(산 것 · 끼운 것) · 용사(강화 · 고른 용사) 처음 상태 + 💎 · 📜 다시 채움 */
