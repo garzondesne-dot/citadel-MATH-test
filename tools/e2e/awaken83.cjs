@@ -20,6 +20,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const a10 = await art('.hero-card .pic'), camp = await p.$eval('[data-k="camp-hero"]', (e) => e.outerHTML).catch(() => '');
   ok('조건 4 = 각성 모습 118 (카드)', /hero=118\b/.test(a10), a10);
   ok('캠프 용사 = 각성 시트', /dknight-awk/.test(camp) || /hero=118/.test(camp), (camp.match(/hero-[a-z0-9-]+\.webp/) || [''])[0]);
+  ok('A2 캠프 카드 반짝임 + ✦ 금빛 이름', !!(await p.$('.hero-card.awk-shine')) && !!(await p.$('.hero-card .awk-name')));
   await p.screenshot({ path: `${SHOTS}/awk-camp.png` });
   await p.click('button[aria-label="내 용사 보기"]'); await p.waitForSelector('.mh');
   ok('내 용사 맨 위 = 118', /hero=118\b/.test(await art('.mh .top .pic')));
