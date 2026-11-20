@@ -22,7 +22,7 @@
   import { seals } from '../../model/titles';
   import { lastClass, lastTest } from '../../school/school';
   import { NOTE_ICON } from '../manifest';
-  import { liveRoom } from '../room.svelte';
+  import { liveRoom, liveValue } from '../room.svelte';
   import Student from '../Student.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import Vid from '../q/Vid.svelte';
@@ -38,8 +38,12 @@
   //   한 판 = 문제 하나(정식 1:1) · 기회 4번(레이드와 같음) · 수업 문제 = 처음부터 숫자 바꿈 · 👑 첫 도전 = 학습지 숫자 · 레이드 학생 화면(Student) 그대로
   //   보상 · 기록 = school/dummy.ts (정식 키 · 서버 bonus · gem log) · ✏ 친구가 낸 문제 = v1.0 출제 공방이 아직 없어 칸 없음(정식도 문제가 없으면 안 보임)
   const { S, me, save, uid, num, cls, onclose, onforge }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; onclose: () => void; /** ⚒ 이 차시 카드 → 모루 */ onforge?: () => void } = $props();
-  const recs = untrack(() => (cls && num ? S.get<Record<string, Rec>>(`records/${cls}/${num}`) : null) || {});
-  const reach = Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(untrack(() => (cls ? lastClass(S, cls)?.no : 0))) || 0, Number(untrack(() => (cls ? lastTest(S, cls)?.no : 0))) || 0);
+  // 🐞 11/20 「12차시 수업 종료하면 곧바로 허수아비에 12차시가 안 생김」: 기록 · 지난 수업을 열 때 한 번만 읽어서(서버 거울이 아직 안 받은 칸 = 빈 값) 그대로 굳었음 → 받으면 다시 그림
+  const recsL = untrack(() => liveValue<Record<string, Rec>>(S, cls && num ? `records/${cls}/${num}` : 'records/_none/0'));
+  const lastL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/last/${cls}` : 'school/last/_none')), lastTL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/lastTest/${cls}` : 'school/lastTest/_none'));
+  onDestroy(() => { recsL.stop(); lastL.stop(); lastTL.stop(); });
+  const recs = $derived<Record<string, Rec>>((cls && num ? recsL.v.val : null) || {});
+  const reach = $derived(Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(cls ? (lastL.v.val ?? lastClass(S, cls))?.no : 0) || 0, Number(cls ? (lastTL.v.val ?? lastTest(S, cls))?.no : 0) || 0));
   const LESSONS = PACKS.filter((p) => p.steps.some((s) => s.kind === 'monster') || p.boss);
   const recOf = (p: LessonPack): Rec | undefined => recs[p.id] ?? (p.partOf ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack) => !cls || !!recOf(p) || p.no <= reach;
