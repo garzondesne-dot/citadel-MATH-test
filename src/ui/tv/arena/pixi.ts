@@ -7,7 +7,7 @@ import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monBody, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, glowOf, GLOW_MS, monBody, monNudge, monVis, spriteOf } from '../../manifest';
 import { awkFx, heroOf } from '../../../model/hero';
 import OBJ from '../../fx/obj.json';
 
@@ -113,8 +113,9 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     for (const h of heroes.values()) {
       if (h.busy) continue;
       const tp = h.tp && t < h.tu ? h.tp : '', p = tp || h.bp;
-      if (p && p !== 'idle' && h.rows) { const [row, n, dur, once] = ANIM[p], e = (t - (tp ? h.t0 : h.b0)) / (dur * 1000 / n), f = once ? Math.min(n - 1, Math.floor(e)) : Math.floor(e) % n; h.sp.texture = h.rows[row]![Math.max(0, f)]!; h.cur = p; continue; }
+      if (p && p !== 'idle' && h.rows) { const [row, n, dur, once] = ANIM[p], e = (t - (tp ? h.t0 : h.b0)) / (dur * 1000 / n), f = once ? Math.min(n - 1, Math.floor(e)) : Math.floor(e) % n; h.sp.texture = h.rows[row]![Math.max(0, f)]!; h.cur = p; if (h.gl) h.gl.visible = false; continue; }
       if ((tick || h.cur) && h.tex) { h.cur = ''; h.sp.texture = h.tex[(h.tex.length === 8 ? heroF : Math.floor(heroF / 2)) % h.tex.length]!; }
+      if (h.gl) { const on = !!h.gtex && h.tex?.length === 8 && !h.cur; h.gl.visible = on; if (on) { h.gl.texture = h.gtex![heroF % 8]!; h.gl.alpha = 0.5 - 0.5 * Math.cos((t / GLOW_MS) * Math.PI * 2); } } // ✨ 1.2초 주기
     }
   });
 
@@ -225,7 +226,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     hpC.addChild(g, n, lab);
   }
   // ── 용사단 ──
-  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; atk: Texture[] | null; rows: Texture[][] | null; tp: HPose | ''; tu: number; t0: number; bp: HPose | ''; b0: number; cur: HPose | ''; busy: boolean; key: string; x: number; y: number; s: number; /** 🔥 #67 탐사대 걸음 */ exDx?: number; exDy?: number; exS?: number; exDir?: number };
+  type HeroV = { c: Container; sp: Sprite; name: Text; tex: Texture[] | null; /** ✨ 숨쉬기 빛 칸 */ gl?: Sprite; gtex?: Texture[] | null; atk: Texture[] | null; rows: Texture[][] | null; tp: HPose | ''; tu: number; t0: number; bp: HPose | ''; b0: number; cur: HPose | ''; busy: boolean; key: string; x: number; y: number; s: number; /** 🔥 #67 탐사대 걸음 */ exDx?: number; exDy?: number; exS?: number; exDir?: number };
   const heroes = new Map<string, HeroV>(); let heroT = 0, heroF = 0, partyKey = '';
   async function drawParty(s: ArenaState) {
     const slots = partyLayout(s.heroes.length, W(), H(), s.split), key = s.heroes.map((h) => `${h.u}:${h.hero}`).join(',') + `|${W()}|${H()}|${s.split}`;
@@ -245,10 +246,13 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         if (i8) void src(i8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * HERO.w, hh.hero * HERO.h, HERO.w, HERO.h)); });
         const hd8 = !i8 ? idle8HdOf(hh.hero) : null; // 🫁 #63 세밀화 숨쉬기 8장 띠 (칸 = v5 칸과 같은 크기 · 같은 발 자리) · 못 받으면 v5 시트 4칸
         if (hd8) void src(hd8).then((so) => { if (v!.key !== hk) return; v!.tex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * g.cw, 0, g.cw, g.ch)); }).catch(() => {});
+        const gw = glowOf(hd8); if (v.gl) { v.gl.destroy(); v.gl = undefined; v.gtex = null; } // ✨ 숨쉬기 빛 칸 (같은 자리 · 같은 배율 · 몸 위)
+        if (gw) { const gl = new Sprite(); v.gl = gl; gl.visible = false; v.c.addChildAt(gl, v.c.getChildIndex(v.sp) + 1); void src(gw).then((so) => { if (v!.key !== hk || v!.gl !== gl) return; v!.gtex = Array.from({ length: IDLE8.frames }, (_, k) => frame(so, k * g.cw, 0, g.cw, g.ch)); }).catch(() => {}); }
         void src(url).then((so) => { if (v!.key !== hk) return; if (!i8 && !(hd8 && v!.tex?.length === IDLE8.frames)) v!.tex = Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, HERO.idleRow * g.ch, g.cw, g.ch)); v!.rows = Array.from({ length: HERO.rows }, (_, r) => Array.from({ length: HERO.cols }, (_, k) => frame(so, k * g.cw, r * g.ch, g.cw, g.ch))); v!.atk = v!.rows[HERO.atkRow]!; if (v!.tex) v!.sp.texture = v!.tex[0]!; });
         v.sp.anchor.set(0.5, (g.ch - g.base) / g.ch);
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
+        if (v.gl) { v.gl.anchor.copyFrom(v.sp.anchor); v.gl.scale.copyFrom(v.sp.scale); v.gl.x = v.sp.x; v.gl.y = v.sp.y; }
       }
       const awk = awkFx(Number(hh.hero)); v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${awk ? '✦ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : awk ? 0xffd25a : 0xffffff; // ⚡ #83 A2 각성 = ✦ + 금빛 이름 (맞힘 ✓ = 초록 먼저) // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = 1; // 📶 끊긴 학생 = 투명하게 하지 않음 · 머리 위 📶✕ 만 (📜 2026-11-17)
