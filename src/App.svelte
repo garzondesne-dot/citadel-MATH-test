@@ -159,6 +159,8 @@
 {#if role !== 'dev'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD_ID})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD, REV)}{site ? ' · 최신' : ''}">{verName(BUILD, REV)}{site === BUILD_ID ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD_ID} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
 {#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
+  <!-- 🐞 11/20 ③ 반쪽 데이터(서버 값이 비거나 반만 옴)로 화면 그리기가 터져도 앱 전체가 멈추지 않게 = 이 화면만 「다시 그리기」 -->
+  <svelte:boundary onerror={(e) => console.error('화면 오류 (반쪽 데이터?)', e)}>
   {#if errs.length}
     <p class="err">차시 팩 오류: {errs.join(' · ')}</p>
   {:else if role === 'hall'}
@@ -196,6 +198,8 @@
       <p class="sub">종합실을 먼저 열고 「▶ 시작」 · 학생 탭을 더 열면 인원 · 체력이 늘어요.</p>
     </section>
   {/if}
+  {#snippet failed(_e, reset)}<div class="crash" role="alert" data-k="crash"><p>⚠ 서버 값이 덜 와서 이 화면을 못 그렸어요</p><button type="button" data-k="crash-retry" onclick={() => setTimeout(reset, 300)}>↻ 다시 그리기</button> <button type="button" onclick={() => location.reload()}>새로 고침</button></div>{/snippet}
+  </svelte:boundary>
 </main>
 
 <style>
@@ -231,4 +235,6 @@
   :global(body:has([data-scene])) .wtip { top: calc(env(safe-area-inset-top, 0px) + 288px); }
   .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .relogin { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 10px 14px; max-width: 92vw; border-radius: 12px; background: #2b1e10; border: 1px solid #f5b84a; color: #ffe3a8; font: 700 14px var(--font); text-align: center; }
+  .crash { margin: 24px 16px; padding: 16px; border-radius: 12px; background: var(--card, #fff); color: var(--ink, #222); text-align: center; }
+  .crash button { min-height: 48px; padding: 0 16px; margin: 6px; border-radius: 10px; }
 </style>

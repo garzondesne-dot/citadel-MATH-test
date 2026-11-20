@@ -3,6 +3,7 @@ import { connectDatabaseEmulator, get as fbGet, getDatabase, increment, onValue,
 import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
 import { setClockOffset } from '../ui/clock.svelte';
+import { tidy as tidyParts } from './tidy';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
 //   읽기 = 맨 윗칸(rooms · school · gifts · mail · accounts)을 실시간으로 받아 둔 거울(mirror)에서 바로 · 쓰기 = 거울에 먼저 + 서버에 보냄
@@ -45,14 +46,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const subs = new Set<{ path: string; fn: (v: unknown) => void; last: string }>();
   // 🚨 11/19 ⓪ 반쪽 방 = 방이 지워진 뒤 늦게 온 학생 쓰기(players 등)만 남은 rooms/{코드} (state · meta 없음) → 「방 없음」으로 읽음
   //   (교사 캠프가 그런 방을 읽다 「Cannot read properties of undefined (reading 'step')」로 멈췄음 · 운영에 646434 · TEST 2개)
-  const half = (v: unknown) => !!v && typeof v === 'object' && !((v as { state?: unknown }).state && (v as { meta?: unknown }).meta);
-  const tidy = (path: string, v: unknown): unknown => {
-    const p = split(path);
-    if (p[0] !== 'rooms' || !v) return v;
-    if (p.length === 2) return half(v) ? null : v;
-    if (p.length === 1 && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, r]) => !half(r)));
-    return v;
-  };
+  const tidy = (path: string, v: unknown): unknown => tidyParts(split(path), v); // store/tidy.ts (반쪽 방 · 반쪽 사람 줄)
   const read = (path: string) => (isLoaded(path) ? tidy(path, getIn(mirror, split(path))) : null);
   const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = read(s.path), j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
   let offset = 0;
