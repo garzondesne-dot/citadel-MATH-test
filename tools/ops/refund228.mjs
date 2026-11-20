@@ -30,7 +30,8 @@ export function planOf(d, cards, gift = {}) {
 const [gem, cards, gifts] = await Promise.all([get('gem'), get('cards'), get('gifts')]);
 const pidOf = (c, n) => `s${String(c).replace('-', '_')}_${n}`;
 const plan = [];
-for (const [c, byN] of items(gem)) for (const [n, d] of items(byN)) { if (!d) continue; const cc = (Object.fromEntries(items(cards?.[c]))[n]) || {}; const p = planOf(d, cc, gifts?.[pidOf(c, n)] || {}); if (p.length) plan.push({ c, n, d, p }); }
+const ONLY = (process.argv.find((x) => x.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean); // 선생님이 미리 보기로 허락한 반-번호만 (그 뒤 새로 해당된 학생은 다음에)
+for (const [c, byN] of items(gem)) for (const [n, d] of items(byN)) { if (!d || (ONLY.length && !ONLY.includes(`${c}-${n}`))) continue; const cc = (Object.fromEntries(items(cards?.[c]))[n]) || {}; const p = planOf(d, cc, gifts?.[pidOf(c, n)] || {}); if (p.length) plan.push({ c, n, d, p }); }
 console.log(`대상 ${plan.length}명 · ${plan.reduce((a, x) => a + x.p.length, 0)}건 · 💎 ${plan.reduce((a, x) => a + x.p.reduce((b, y) => b + y.g, 0), 0)}`);
 for (const x of plan) console.log(`  ${x.c}-${x.n} · ${x.p.map((y) => `${y.key} 💎 ${y.g}`).join(' · ')}   📮 ${x.p.map((y) => `「${WHY} · 💎 ${y.g}」 [받기]`).join(' ')}`);
 if (!go) { console.log('미리 보기만 했어요. 실제로 쓰려면 --go (정식 b228 배포 때 · 선생님 허락 뒤)'); process.exit(0); }
