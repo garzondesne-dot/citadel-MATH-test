@@ -55,6 +55,11 @@
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
     if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; const r = run; setTimeout(() => { if (run === r) { run = null; openQuiz(); } }, 900); } else run = o.run;
   }
+  /** 🛡 실드가 뜨면 = 내 칸을 깰 표가 없고 지금 문제가 가장 쉬운 칸이 아니면 → 가장 쉬운 칸으로 (U3 막힘 안전망 · ⚡ 는 그대로) */
+  function shieldSwap() {
+    const ez = easiestOf(OS); if (!meH || !ez || meH.tickets > 0 || !run || run.mid === ez.mid) return;
+    run = startRun(ez.mid, me * 2 + 1); hintUsed = false; flash = 'shieldSwap'; clearTimeout(fT); fT = setTimeout(() => (flash = ''), 2200);
+  }
   const titleOf = (mid: string) => OS.find((o) => o.mid === mid)?.title ?? mid;
 
   // ── 내 행동 ──
@@ -87,7 +92,7 @@
     else if (e.k === 'boss') { bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 600); e.to.forEach((id, i) => pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, 'hurt')); }
     else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
     else if (e.k === 'revive') pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role');
-    else if (e.k === 'shieldUp') pop(bx, 22, '실드!', 'shield');
+    else if (e.k === 'shieldUp') { pop(bx, 22, '실드!', 'shield'); shieldSwap(); }
     else if (e.k === 'sig') {
       if (e.what === 'breathHeal') pop(bx, 30, `+${e.v} 회복`, 'heal');
       else if (e.what === 'breathCut') pop(bx, 26, '숨 끊음!', 'shield');

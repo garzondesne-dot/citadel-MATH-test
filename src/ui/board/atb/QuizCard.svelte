@@ -31,6 +31,7 @@
     {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✨ 첫 시도 정답 · 금색 ⚡' : '✔ 정답 · ⚡ +1'}</p>
     {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 새 숫자 판</p>
     {:else if flash === 'swap'}<p class="fb bad" role="status">🔁 새 숫자 판으로 처음부터 (⚡ 는 그대로)</p>
+    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 는 그대로)</p>
     {:else if flash === 'done'}<p class="fb ok" role="status">🏁 완주! {run.clean ? '· 퍼펙트 = ATB 가득' : ''}</p>{/if}
   </div>
   <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val)} onclick={send}>제출</button>
