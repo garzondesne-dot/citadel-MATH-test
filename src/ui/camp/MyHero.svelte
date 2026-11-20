@@ -5,7 +5,7 @@
   import type { Me } from '../../store/me.svelte';
   import { AWAKEN_T, AWK_NEED, STAT_LABEL, awakenBlocked, awakenChecks, awkId, isAwakened, lookId } from '../../model/hero';
   import AwakenBox from './AwakenBox.svelte';
-  import { cutin } from '../fx/attack';
+  import { awakenCut } from '../fx/attack';
   import { AURA_NAMES, CARD_TOTAL, ENH, famOfHero, heroOf, HEROES, TEACHER_HEROES, ladder, level, skillName, SKILL_PRICE, SKILL_SCROLL, STATS, titleOf, TITLES, TN, verdict } from '../../model/hero';
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
@@ -141,7 +141,7 @@
     // 🔊 2차 🔨 강화 · 🌟 대성공 · 🔓 스킬 해금 (정식 camp.js 같은 순간 · 강화가 있으면 강화 소리만 · 정식 강화는 실패 없음 · +10 각성 소리는 베타에 없음)
     if (P.enh) { if (r.great) sfx('enh-great', 0.85); else sfx('enh-ok', 0.85); } else if (P.sk.length) sfx('skill-unlock', 0.85);
     const wasB = isAwakened({ hero: L0.hero, enh: L0.enh, fx: equipOf(L0), title: L0.title }) && L0.hero === r.look.hero, nowB = isAwakened({ hero: r.look.hero, enh: r.look.enh, fx: equipOf(r.look), title: r.look.title });
-    if (nowB && !wasB) { const h = r.look.hero, key = h === 0 ? 'citadel-v1-blond-seen' : `citadel-v1-awk-seen-${h}`; let seen = false; try { seen = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1'); } catch { /* 없음 */ } if (!seen) setTimeout(() => void cutin(awkId(h), equipOf(r.look), { peek: true, name: `⚡ ${heroOf(awkId(h)).name}`, sub: `${heroOf(h).name} · +10 · ${skillName(equipOf(r.look))} · ${titleOf(r.look.title)?.name ?? ''}` }), 300); } // ⚡ #83 (옛 🌟 #29) 용사마다 처음 한 번 변신 컷인
+    if (nowB && !wasB) { const h = r.look.hero, key = h === 0 ? 'citadel-v1-blond-seen' : `citadel-v1-awk-seen-${h}`; let seen = false; try { seen = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1'); } catch { /* 없음 */ } if (!seen) setTimeout(() => void awakenCut(awkId(h), equipOf(r.look)), 300); } // ⚡ #83 (옛 🌟 #29) 용사마다 처음 한 번 변신 컷인
     me.wallet = r.wallet; me.hero = r.look.hero; me.enh = r.look.enh; me.socket = r.look.socket; me.title = r.look.title;
     persist();
     L0 = { ...r.look, socket: { ...r.look.socket } }; look = { ...r.look, socket: { ...r.look.socket } }; P = emptyPlan();
