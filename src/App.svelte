@@ -141,7 +141,9 @@
   const verOld = $derived(!!site && site !== BUILD_ID && !inClass);
   // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
   //   수업 중 = #163 ④ 그대로 숨김(끝나면 보임) · 게시판 던전 · 허수아비 진행 중 · 오래 켜 둔 화면 = 띠만
-  const born = Date.now();
+  let born = $state(Date.now());
+  // 🔄 📜 2026-11-20 「새 곡이 안 나와 기존 곡이 나와」: 켜 둔 화면 · 설치 앱을 다시 앞으로 가져오면 = 막 연 것처럼(판 다시 확인 · 옛 판이면 첫 화면 · 캠프에서 한 번 저절로 새로 고침) — 예전엔 처음 연 20초 안에만 저절로 · 그 뒤 = 띠만이라 옛 판(옛 곡)이 계속 돌았음
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { born = Date.now(); checkVer(); } });
   const reloadNew = () => { try { sessionStorage.setItem('citadel-upd', '1'); } catch { /* 사생활 창 */ } (window as { bootShow?: (t: string) => void }).bootShow?.('🔄 새 판 받는 중…'); void swUpdate().then(() => location.replace(`${location.pathname}?${[...new URLSearchParams(location.search)].filter(([k]) => k !== 'v').map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).concat(`v=${site}`).join('&')}`)); };
   $effect(() => {
     if (!verOld || !(!role || role === 'camp') || busy.n || Date.now() - born > 20e3) return;
