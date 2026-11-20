@@ -12,6 +12,7 @@
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import QuizCard from './QuizCard.svelte';
+  import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
   import { attack, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing } from '../../../board/atb/engine';
   import { portraitOf } from '../../manifest';
@@ -196,6 +197,24 @@
   const C = 2 * Math.PI * 30; // 내 초상 고리 둘레 (r 30)
   const tele = $derived(S.target && !weak(S) ? Math.max(0, Math.ceil(T.bossEvery - S.bossT)) : 0);
   const bossLeft = $derived(weak(S) ? 1 : Math.max(0, 1 - S.bossT / T.bossEvery));
+  // 👹 보스 ATB 게이지 (📜 요청 #7 ②): 체력바 바로 아래 · 차오름 · 예고(약 2초 전) = 붉게 깜빡 + 다음 공격 아이콘 · 이름 · 누구
+  const ATK_IC: Record<string, string> = { basic: '💥', aoe: '⚠', smash: '💢', poison: '☠️', sleep: '💤', fire: '🔥', fire13: '🔥', fog: '🌊', tongue: '👅', ice: '🧊', confuse: '🌀', frost: '❄️', tail: '💥', dark: '🌑', darkHit: '🌑', mirror: '🪞', bind: '⛓', scale: '⚖️' };
+  const upcoming = $derived(S.nextAtk ?? S.boss.cycle[S.bossN % S.boss.cycle.length] ?? 'basic');
+  const stoneG = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
+  const bossGauge = $derived.by(() => {
+    if (S.end) return null;
+    if (weak(S)) return { p: 1, txt: `⏸ 약점 시간 ${Math.ceil(S.weakUntil - S.t)}초 · 공격 멈춤`, blue: true };
+    if (stoneG) return { p: Math.min(1, S.bossT / T.bossEvery), txt: `🗿 석화 ${stoneG}초 · 공격 멈춤`, blue: true };
+    const left = Math.max(0, Math.ceil(T.bossEvery - S.bossT)), ic = ATK_IC[upcoming] ?? '💥', nm = ATK[upcoming as keyof typeof ATK]?.name ?? '공격';
+    if (S.target) { const who = S.aoeNext ? '모두' : S.target.map((i) => name(i)).join(' · '); return { p: S.bossT / T.bossEvery, txt: `${S.aoeNext ? '⚠ 광역! ' : ''}${ic} ${nm} → ${who} · ${left}초`, hot: true }; }
+    return { p: S.bossT / T.bossEvery, txt: `다음 ${ic} ${nm} · ${left}초` };
+  });
+  /** ⊕ 노리는 줄 (📜 요청 #7 ③): 보스 → 표적 용사 붉은 점선 (광역 = 바닥만) */
+  const aimLines = $derived(S.target && tele && !S.aoeNext ? S.target.map((id) => { const p = posOf(id); return { id, x: p.x, y: p.y - 14 * p.s }; }) : []);
+  const bossX = $derived(open ? 36 : 73), bossY = $derived(74 - (bossSize / 2 / Math.max(1, H)) * 100);
+  const meAimed = $derived(me >= 0 && !!tele && !!S.target?.includes(me));
+  let aimedOnce = false;
+  $effect(() => { const a = meAimed; untrack(() => { if (a && !aimedOnce) { try { navigator.vibrate?.(40); } catch { /* 무시 */ } } aimedOnce = a; }); });
   const atkName = $derived(S.nextAtk ? ATK[S.nextAtk].name : S.aoeNext ? '광역' : '공격');
   /** ⚠ 광역 예고 = 용사 줄 바닥이 붉게 깜빡 (📜 요청 #3 ⑤) */
   const aoeWarn = $derived(!!tele && S.aoeNext);
@@ -214,7 +233,8 @@
   <!-- 🧑 내 초상 = 둘레 동그란 ATB 고리(Y5) · HP 큰 숫자 + 가는 띠(Y6) · ⚡ 충전 칸 3(Y1) -->
   {#if meH}
     {@const pt = portraitOf(meH.s.hero)}
-    <div class="me" class:full={ready} class:down={meH.down} data-k="atb-me">
+    <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} data-k="atb-me">
+      {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <div class="face">
         <svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="30" class="rb" /><circle cx="34" cy="34" r="30" class="rf" style:stroke-dasharray="{C * Math.min(1, meH.atb)} {C}" /></svg>
         {#if pt}<i class="pt" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{:else}<i class="pt"><HeroSprite id={meH.s.hero} scale={1} /></i>{/if}
@@ -229,6 +249,7 @@
   {/if}
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
+  {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
   <!-- 팀 부활 -->
   <div class="revs" aria-label="팀 부활 {S.revives} / {T.revives}"><b>팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class:used={i >= S.revives}><AtbIcon name="revive" size={22} /></span>{/each}</div>
@@ -237,11 +258,10 @@
   <!-- 보스 -->
   <div class="bossui" style:left={open ? '21%' : '54%'} style:width={open ? '29%' : '40%'}>
     {#if stone}<div class="tele sig" role="status" data-k="atb-stone">🗿 석화 {stone}초 · 보스 공격 멈춤</div>{/if}
-    {#if tele}<div class="tele" class:aoe={S.aoeNext} role="status" data-k="atb-tele">{#if S.aoeNext}⚠ 광역!{atkName !== '광역' ? ` ${atkName}` : ''} {tele}초 뒤 · 모두 맞아요{:else}⚠ {atkName} {tele}초 뒤{/if}{#if tiltTxt} · {tiltTxt}{/if}</div>{/if}
+    {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
     {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 30% 되돌아옴</div>{/if}
-    <div class="bhp" aria-label="보스 HP {S.bossHp} / {S.bossMax}"><span class="bn">{S.boss.name}</span><b class="bv" data-k="atb-boss-hp">{S.bossHp}</b></div>
-    <i class="thin bossbar"><b style:width={pct(S.bossHp, S.bossMax)}></b></i>
+    <div class="rhp" data-k="atb-tele-g"><RaidHp name={S.boss.name} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}<span class="cell" class:broken={c.broken} class:crack={crack.includes(i)} title="{S.heroes[c.owner]?.s.name} · {c.fam}"><AtbIcon name={c.broken ? 'shield-broken' : 'shield'} size={34} /><i class="fi"><AtbIcon name={FAM_ICON[c.fam]} size={18} /></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>{/each}
@@ -256,7 +276,7 @@
     {@const sc = +(base * p.s).toFixed(2)}
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:z-index={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if h.id !== me && !h.down}<svg class="foot" viewBox="0 0 60 20" aria-hidden="true"><ellipse cx="30" cy="10" rx="26" ry="7" class="rb" /><ellipse cx="30" cy="10" rx="26" ry="7" class="rf" class:full={h.atb >= 1} pathLength="100" style:stroke-dasharray="{Math.round(Math.min(1, h.atb) * 100)} 100" /></svg>{/if}
-      {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{/if}
+      {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={h.s.hero} scale={sc} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       <div class="tag">
@@ -328,11 +348,8 @@
   .tele { padding: 3px 12px; border-radius: 10px; border: 2px solid #ffcf6a; background: linear-gradient(#c81e1e, #8e1010); font: 800 14px var(--font); box-shadow: 0 0 10px #ff3a2a88; animation: blink 0.5s steps(2) infinite; }
   @keyframes blink { 50% { filter: brightness(1.3); } }
   /* ❤ HP = 큰 숫자 + 가는 색 띠 (Y6) */
-  .bhp { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; line-height: 1; margin-bottom: -2px; text-shadow: 0 2px 0 #000, 0 0 6px #000; }
-  .bn { font: 800 13px var(--font-plain); color: #ffe6c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  .bv { font: 900 clamp(20px, 7vh, 30px) / 1 var(--font); color: #ff8a7a; }
   .thin { display: block; width: 100%; height: 5px; border-radius: 3px; background: #0009; overflow: hidden; box-shadow: 0 0 0 1px #0006; }
-  .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.bossbar b { background: linear-gradient(90deg, #ff6a5a, #d8261e); } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); }
+  .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); }
   /* 🧑 내 초상 HUD (Y5) */
   .me { position: absolute; z-index: 21; top: 2%; left: 1.2%; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 40px; background: #1d1220d9; border: 2px solid #8a6a3a; }
   .me .face { position: relative; width: 60px; height: 60px; flex: none; }
@@ -409,7 +426,18 @@
   .tele.aoe { font-size: 17px; padding: 4px 16px; background: linear-gradient(#ff3a1a, #a80e0e); box-shadow: 0 0 18px #ff2a1a; }
   .hero.hurt .spr { filter: brightness(1.6) sepia(1) saturate(6) hue-rotate(-30deg); animation: hshake 0.3s; }
   @keyframes hshake { 25% { margin-left: -5px; } 75% { margin-left: 5px; } }
-  .hitpic { position: absolute; inset: 0; pointer-events: none; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
+  .hitpic { position: absolute; inset: 0; pointer-events: none; }
+  /* 👹 맞는 순간 = 붉은 할퀸 자국 (「맞는 그림」 10종이 오면 이 자리에 그림) */
+  .hero.hurt .hitpic { background: linear-gradient(135deg, #0000 38%, #ff3a2acc 40%, #fff 42%, #ff3a2acc 44%, #0000 46%, #0000 52%, #ff3a2acc 54%, #fff 56%, #ff3a2acc 58%, #0000 60%); animation: claw 0.4s ease-out forwards; }
+  @keyframes claw { from { opacity: 0; transform: scale(0.6) translate(20%, -20%); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.1); } }
+  /* ⊕ 노림 (📜 요청 #7 ③) */
+  .aim { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 16; pointer-events: none; opacity: 0.85; }
+  .aim line { stroke: #ff3a2a; stroke-width: 3; stroke-dasharray: 8 6; filter: drop-shadow(0 0 3px #ff3a2a); animation: dash 0.6s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .aimx { position: absolute; left: 0; transform: translate(-50%, -100%); font-style: normal; font-size: 28px; font-weight: 900; color: #ff3a2a; text-shadow: 0 0 6px #ff3a2a, 0 2px 0 #000; animation: blink 0.4s steps(2) infinite; z-index: 3; }
+  .me.aimed { border-color: #ff3a2a; box-shadow: 0 0 16px #ff3a2a; animation: none; }
+  .aimme { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 4px); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
+  .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 22px; height: 22px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 45%, #3a8ef0aa 70%, #0000 72%); box-shadow: 0 0 16px 6px #8fd0ffaa; }
   .stage :global(.atb-orb.g) { width: 28px; height: 28px; background: radial-gradient(circle, #fff 0 25%, #ffe27a 45%, #f0a92aaa 70%, #0000 72%); box-shadow: 0 0 20px 8px #ffd34daa; }
   .cut.short { background: #0007; animation-duration: 0.9s; } .cut.short .band { top: 20%; height: 28%; }
