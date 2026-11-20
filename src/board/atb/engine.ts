@@ -1,13 +1,13 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
 //   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
-import { BOSS_HIT, BOSS_HP, ATK, T, type BossCfg, type Diff, type Fam, type Role } from './tune';
+import { BOSS_HIT, BOSS_HP, ATK, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
 import type { Stats } from './heroes';
 
 export type Zap = 'n' | 'g'; // 보통 · 금색(첫 시도 정답)
 export type Timing = 'miss' | 'ok' | 'crit';
 export type Hold = 'miss' | 'ok' | 'best';
-export interface Hero { id: number; s: Stats; hp: number; atb: number; zaps: Zap[]; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; atbBonus: number;
+export interface Hero { id: number; s: Stats; hp: number; atb: number; zaps: Zap[]; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind';
   /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
@@ -20,10 +20,12 @@ export type Ev =
   | { k: 'boss'; t: number; atk: string; aoe: boolean; to: number[]; dmg: number[] }
   | { k: 'down'; t: number; who: number }
   | { k: 'gift'; t: number; who: number; to: number }
+  | { k: 'sig'; t: number; what: 'breathWarn' | 'breathHeal' | 'breathCut' | 'mirrorOn' | 'reflect' | 'unbind'; who?: number; v?: number }
   | { k: 'end'; t: number; win: boolean; why: string };
 export interface State {
   t: number; diff: Diff; boss: BossCfg; seed: number; rnd: number;
   bossHp: number; bossMax: number; bossT: number; bossN: number; target: number[] | null; aoeNext: boolean;
+  /** 예고된 다음 공격 · 기우는 저울 쪽(L · R · 수평 = '') · 거울빛 반사 끝 · 숨 고르기 예고 시각 · 다음 숨 */ nextAtk: AtkKind | null; tilt: 'L' | 'R' | ''; mirrorUntil: number; breathWarn: number | null; breathNext: number;
   shieldUp: boolean; shieldAt: number; cells: Cell[]; weakUntil: number;
   /** 광역 회복을 마지막으로 쓴 보스 공격 차례 (팀 전체 · 보스 공격 한 번 사이 1번) */ healN: number;
   /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; hold: { n: number; ok: number; best: number }; downs: number; revives: number; lastAns: number[] };
@@ -38,9 +40,9 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
   const n = Math.max(1, Math.min(4, o.party.length)), max = BOSS_HP[o.diff][n - 1]!;
   return {
     t: 0, diff: o.diff, boss: o.boss, seed: o.seed ?? 1, rnd: o.seed ?? 1,
-    bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false,
+    bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false, nextAtk: null, tilt: '', mirrorUntil: 0, breathWarn: null, breathNext: 0,
     shieldUp: false, shieldAt: 0, cells: [], weakUntil: 0,
-    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, zaps: [], down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, atbBonus: 0, log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
+    heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, zaps: [], down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, atbBonus: 0, stunKind: '', log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
     revives: T.revives, ev: [], evN: 0, end: null, healN: -1,
     rec: { subSec: [], timing: { n: 0, ok: 0, crit: 0 }, hold: { n: 0, ok: 0, best: 0 }, downs: 0, revives: 0, lastAns: o.party.map(() => 0) },
   };
@@ -52,7 +54,7 @@ function hitBoss(S: State, raw: number): number {
   const dmg = Math.max(1, Math.round(raw * mul)), floor = S.cells.some((c) => !c.broken) || S.heroes.some((h) => h.down) ? 1 : 0;
   const before = S.bossHp; S.bossHp = Math.max(floor, S.bossHp - dmg);
   if (!S.shieldUp && !S.cells.length && S.bossHp <= S.bossMax * T.shieldAt) { // 실드 펼침 · 각자 1칸 · 그 용사 계열
-    S.shieldUp = true; S.shieldAt = S.t; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); push(S, { k: 'shieldUp', t: S.t });
+    S.shieldUp = true; S.shieldAt = S.t; S.breathNext = S.t + SIG.breath.every; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); push(S, { k: 'shieldUp', t: S.t });
   }
   checkEnd(S);
   return before - S.bossHp;
@@ -78,33 +80,38 @@ export function tick(S: State, dt: number): State {
   }
   if (W) return S; // 약점 시간 = 보스 공격 멈춤
   S.bossT += dt;
-  const live = alive(S);
-  if (!S.target && S.bossT >= T.bossEvery - T.telegraph && live.length) { // 2초 전 표적 예고
-    const aoe = (S.bossN + 1) % T.aoeEvery === 0;
-    S.aoeNext = aoe; S.target = aoe ? live.map((h) => h.id) : [live[Math.floor(rand(S) * live.length)]!.id];
+  const live = alive(S), kind = S.boss.cycle[S.bossN % S.boss.cycle.length] ?? 'basic', A = ATK[kind];
+  if (!S.target && S.bossT >= T.bossEvery - (A.warn ?? T.telegraph) && live.length) { // 표적 예고 (보통 2초 · 화염 숨 · 거울빛 3초)
+    let aoe = !!A.aoe; S.tilt = '';
+    if (A.special === 'scale') { const tiltN = rand(S) < SIG.scaleTilt; aoe = !tiltN; } // 기우는 저울: 기울면 단일 · 수평이면 광역
+    S.nextAtk = kind; S.aoeNext = aoe; S.target = aoe ? live.map((h) => h.id) : [live[Math.floor(rand(S) * live.length)]!.id];
+    if (A.special === 'scale' && !aoe) S.tilt = S.target[0]! % 2 ? 'R' : 'L';
+  }
+  if (S.boss.sig === 'breath' && S.shieldUp && S.cells.some((c) => !c.broken)) { // 6 · 7 숨 고르기
+    if (S.breathWarn == null && S.t >= S.breathNext) { S.breathWarn = S.t; push(S, { k: 'sig', t: S.t, what: 'breathWarn' }); }
+    else if (S.breathWarn != null && S.t >= S.breathWarn + SIG.breath.warn) { const v = Math.round(S.bossMax * SIG.breath.heal); S.bossHp = Math.min(S.bossMax, S.bossHp + v); S.breathWarn = null; S.breathNext = S.t + SIG.breath.every; push(S, { k: 'sig', t: S.t, what: 'breathHeal', v }); }
   }
   if (S.bossT >= T.bossEvery) bossAttack(S);
   return S;
 }
 function bossAttack(S: State) {
   S.bossT = 0; S.bossN++;
-  const aoe = S.aoeNext, pair = S.boss.atk.map((k) => ({ k, a: ATK[k] }));
-  const pick = aoe ? pair.find((p) => p.a.aoe) ?? { k: 'basic' as const, a: { ...ATK.basic, aoe: true } } : pair.find((p) => !p.a.aoe) ?? pair[0]!;
-  const n = S.heroes.length, [one, all] = n === 1 ? BOSS_HIT[S.diff].one : BOSS_HIT[S.diff].party;
-  const base = (aoe ? all : one) * pick.a.mul, to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
-  for (const id of to) {
-    const h = S.heroes[id]!, cut = h.cover ? 1 - h.cover : 1; h.cover = 0;
-    const d = Math.max(1, Math.round(base * (1 - h.s.def) * cut)); dmg.push(d);
-    h.hp = Math.max(0, h.hp - d);
-    if (pick.a.status === 'slow') h.slowUntil = S.t + T.slow[S.diff];
-    if (pick.a.status === 'stun') h.stunUntil = S.t + T.stun[S.diff];
+  const kind = S.nextAtk ?? (S.boss.cycle[(S.bossN - 1) % S.boss.cycle.length] ?? 'basic'), A = ATK[kind], aoe = S.aoeNext;
+  const n = S.heroes.length, [one, all] = BOSS_HIT[S.diff][Math.max(1, Math.min(4, n)) - 1]!;
+  const base = (aoe ? all : one) * A.mul, to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
+  if (A.special === 'mirror') { S.mirrorUntil = S.t + SIG.mirror.sec; push(S, { k: 'sig', t: S.t, what: 'mirrorOn' }); }
+  for (const id of A.special === 'mirror' ? [] : to) {
+    const h = S.heroes[id]!, cut = h.cover ? 1 - h.cover : 1;
+    const d = base > 0 ? Math.max(1, Math.round(base * (1 - h.s.def) * cut)) : 0; dmg.push(d);
+    if (d > 0) { h.cover = 0; h.hp = Math.max(0, h.hp - d); if (h.stunKind === 'sleep') { h.stunUntil = 0; h.stunKind = ''; } } // 수면 = 맞으면 깸
+    if (A.status === 'slow') h.slowUntil = S.t + T.slow[S.diff];
+    if (A.status === 'stun') { h.stunUntil = S.t + T.stun[S.diff]; h.stunKind = kind === 'sleep' ? 'sleep' : 'bind'; }
     if (h.hp <= 0) { h.down = true; h.atb = 0; h.zaps = []; S.rec.downs++; push(S, { k: 'down', t: S.t, who: id }); }
   }
-  push(S, { k: 'boss', t: S.t, atk: pick.a.name, aoe, to, dmg });
-  S.target = null; S.aoeNext = false;
+  push(S, { k: 'boss', t: S.t, atk: A.name, aoe, to: A.special === 'mirror' ? [] : to, dmg });
+  S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = '';
   checkEnd(S);
 }
-
 // ── 문제 ──
 /** 문제로 얻은 것 (quiz.ts answer 의 earn) · 쓰러진 학생 = 친구 ATB +50% */
 export function earn(S: State, who: number, e: { zap: number; gold: boolean; done: boolean; perfect: boolean; right: boolean }, giftTo?: number): void {
@@ -130,6 +137,7 @@ export function attack(S: State, who: number, timing: Timing): boolean {
   const dmg = timing === 'miss' ? 0 : hitBoss(S, raw);
   spend(h); if (timing === 'crit') h.atb = T.critAtb; // 치명 = 다음 ATB 20% 채운 채
   h.log.dmg += dmg; push(S, { k: 'atk', t: S.t, who, dmg, timing });
+  if (dmg > 0 && S.t < S.mirrorUntil && !h.down) { const back = Math.max(1, Math.round(dmg * SIG.mirror.back)); h.hp = Math.max(0, h.hp - back); push(S, { k: 'sig', t: S.t, what: 'reflect', who, v: back }); if (h.hp <= 0) { h.down = true; h.atb = 0; h.zaps = []; S.rec.downs++; push(S, { k: 'down', t: S.t, who }); checkEnd(S); } } // 8 거울빛 = 일반 공격만 돌아옴
   return true;
 }
 /** 내 실드 칸이 남아 있고 완주 표가 있으면 [스킬] = 실드 깨기 */
@@ -141,8 +149,9 @@ export function breakShield(S: State, who: number): boolean {
   if (how === 'own') { h.tickets--; take(S.cells.find((c) => c.owner === who && !c.broken)); if (weakFam) take(S.cells.find((c) => !c.broken)); } // 약점 계열 = 자기 칸 + 친구 칸 하나
   else { h.tickets -= T.shieldHelpRuns; take(S.cells.find((c) => !c.broken && c.owner !== who)); }
   h.log.shields += cells.length; spend(h);
+  if (S.breathWarn != null) { S.breathWarn = null; S.breathNext = S.t + SIG.breath.every; push(S, { k: 'sig', t: S.t, what: 'breathCut', who }); } // 숨 고르기 예고 중 실드 깨면 끊김
   const last = S.cells.every((c) => c.broken);
-  if (last) { S.weakUntil = S.t + T.weak[S.diff] + (0); S.bossT = 0; S.target = null; } // 마지막 실드 = 약점 시간 · 예고 취소
+  if (last) { S.weakUntil = S.t + T.weak[S.diff]; S.bossT = 0; S.target = null; S.nextAtk = null; S.aoeNext = false; S.tilt = ''; } // 예고 중이던 공격(화염 숨 등) 취소 // 마지막 실드 = 약점 시간 · 예고 취소
   push(S, { k: 'shield', t: S.t, who, cells, last });
   checkEnd(S);
   return true;
@@ -180,7 +189,8 @@ export function roleAct(S: State, who: number, to?: number): boolean {
   if (R === 'healer') { for (const x of alive(S)) x.hp = Math.min(x.s.maxHp, x.hp + T.role.healer.heal); h.log.heals++; spend(h); S.healN = S.bossN; push(S, { k: 'role', t: S.t, who, role: R }); return true; }
   const tg = f && !f.down && f.id !== who ? f : alive(S).filter((x) => x.id !== who).sort((a, b) => a.atb - b.atb)[0];
   if (!tg) { h.zaps.unshift('n'); return false; }
-  tg.atb = 1; h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
+  tg.atb = 1; if (tg.stunUntil > S.t) { tg.stunUntil = 0; tg.stunKind = ''; push(S, { k: 'sig', t: S.t, what: 'unbind', who: tg.id }); } // 9 속박된 친구 = 격려로 바로 풀림
+  h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
 }
 /** 부활 = ⚡1 · 팀 부활 3번 한도 */
 export function revive(S: State, who: number, to: number): boolean {

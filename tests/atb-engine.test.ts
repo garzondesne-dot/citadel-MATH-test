@@ -16,22 +16,22 @@ const right = { zap: 1, gold: false, done: false, perfect: false, right: true };
 
 describe('ATB 엔진', () => {
   it('출발: 보스 HP = 인원별 일반 값 · 팀 부활 3', () => {
-    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([1510, 420, 200, 3]);
+    expect([fresh().bossMax, fresh(['로안', '누아']).bossMax, fresh(['로안']).bossMax, fresh().revives]).toEqual([1500, 500, 230, 3]); // 설정표 v3
   });
   it('ATB = 역할 속도로 참 · 가득 차야 행동', () => {
     const S = fresh(); S.heroes[0]!.atb = 0;
     expect(attack(S, 0, 'ok')).toBe(false); tick(S, 8); expect(S.heroes[0]!.atb).toBeCloseTo(1); expect(attack(S, 0, 'ok')).toBe(true);
   });
   it('일반 공격: 실패 0 · 성공 12 · 치명 ×1.5 + 다음 ATB 20%', () => {
-    const S = fresh(); full(S, 0); attack(S, 0, 'miss'); expect(S.bossHp).toBe(1510);
-    full(S, 0); attack(S, 0, 'ok'); const a = 1510 - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
+    const S = fresh(); full(S, 0); attack(S, 0, 'miss'); expect(S.bossHp).toBe(1500);
+    full(S, 0); attack(S, 0, 'ok'); const a = 1500 - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
     full(S, 0); attack(S, 0, 'crit'); expect(S.heroes[0]!.atb).toBeCloseTo(0.2);
   });
   it('⚡ 배율 1 · 2.1 · 3.3 · 4.6 · 6.0 · 금색 = 1.5배 값 · 스킬은 가진 ⚡ 다 씀', () => {
     expect([1, 2, 3, 4, 5].map((n) => zapPower(Array(n).fill('n')))).toEqual([1, 2.1, 3.3, 4.6, 6]);
     expect(zapPower(['g', 'g'])).toBeCloseTo(3.15);
     const S = fresh(); for (let i = 0; i < 3; i++) earn(S, 0, right); full(S, 0); skill(S, 0, 'ok');
-    expect(S.heroes[0]!.zaps.length).toBe(0); expect(1510 - S.bossHp).toBe(Math.round(55 * S.heroes[0]!.s.skillMul * 3.3 * 1.25));
+    expect(S.heroes[0]!.zaps.length).toBe(0); expect(1500 - S.bossHp).toBe(Math.round(55 * S.heroes[0]!.s.skillMul * 3.3 * 1.25));
   });
   it('실드: HP 70% 에서 각자 1칸(계열) · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 완주 표로만 깸 · 약점 계열 = 친구 칸도', () => {
     const S = fresh(); S.bossHp = Math.round(S.bossMax * 0.7) + 5; full(S, 0); attack(S, 0, 'ok');
@@ -99,4 +99,43 @@ it('🔄 몬스터는 늘 왼쪽을 봄 = 오른쪽 보는 자세만 반전 (2�
   const { BOSSES } = await import('../src/board/atb/tune');
   expect(BOSSES[2]!.flip).toMatchObject({ idle: true, down: true }); expect(BOSSES[2]!.flip?.attack).toBeFalsy();
   expect(BOSSES[3]!.flip?.attack).toBe(true); expect(BOSSES[5]!.flip?.attack).toBe(true); expect(BOSSES[11]!.flip).toBeUndefined();
+});
+describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => {
+  const at = (no: number, names = ['로안', '발도르', '루멘', '누아'], seed = 1) => newBattle({ boss: BOSSES[no]!, diff: 'normal', party: party(names), seed });
+  const run = (S: State, sec: number) => { for (let k = 0; k < Math.round(sec * 10); k++) tick(S, 0.1); };
+  const bossEvs = (S: State) => S.ev.filter((e) => e.k === 'boss') as { atk: string; aoe: boolean; dmg: number[] }[];
+  it('공격 차례 = 차시마다 (2 강타 · 강타 · 독 / 3 강타 · 강타 · 화염 / 5 수면 · 수면 · 화염 숨 / 11 혀 · 혀 · 물결)', () => {
+    for (const [no, want] of [[2, ['강타', '강타', '독']], [3, ['강타', '강타', '화염']], [5, ['수면', '수면', '화염 숨']], [11, ['혀 치기', '혀 치기', '물결']]] as [number, string[]][]) {
+      const S = at(no); for (const h of S.heroes) h.hp = 999; run(S, 36.5); expect(bossEvs(S).map((e) => e.atk), String(no)).toEqual(want);
+    }
+  });
+  it('5 화염 숨 = 3초 예고 · 예고 중 실드를 다 깨면 취소', () => {
+    const S = at(5, ['누아']); run(S, 24.2); expect(S.nextAtk).toBeNull(); run(S, 9.2); expect(S.nextAtk).toBe('fire'); expect(S.target).not.toBeNull(); // 12 − 3 = 9초째 예고
+    S.shieldUp = true; S.cells = [{ owner: 0, fam: 'wisdom', broken: false }]; earn(S, 0, { ...right, done: true }); full(S, 0); breakShield(S, 0);
+    expect([S.target, S.nextAtk]).toEqual([null, null]); run(S, 3); expect(bossEvs(S).length).toBe(2);
+  });
+  it('수면 = 행동 불능 · 맞으면 깸 / 9 속박 = 서포터 격려로 바로 풀림', () => {
+    const S = at(5); for (const h of S.heroes) h.hp = 999; run(S, 12.1); const tg = S.heroes.find((h) => h.stunUntil > S.t)!; expect(tg.stunKind).toBe('sleep');
+    const B = at(9); for (const h of B.heroes) h.hp = 999; run(B, 12.1); const b = B.heroes.find((h) => h.stunUntil > B.t)!; expect(b.stunKind).toBe('bind');
+    const sup = B.heroes.find((h) => h.s.role === 'support' && h.id !== b.id)!; sup.zaps = ['n']; full(B, sup.id); roleAct(B, sup.id, b.id); expect(b.stunUntil).toBe(0);
+  });
+  it('4 얼음 갑옷 · 11 물결 = 실드 중 받는 피해 ×0.2', () => {
+    const S = at(4); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok');
+    expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.2));
+  });
+  it('6 · 7 숨 고르기 = 실드 뒤 30초마다 3초 예고 → HP 8% · 예고 중 실드 깨면 끊김', () => {
+    const S = at(6); for (const h of S.heroes) { h.hp = 9999; } S.bossHp = Math.round(S.bossMax * 0.7) + 2; full(S, 0); attack(S, 0, 'ok');
+    const hp = S.bossHp; run(S, 30.05); expect(S.breathWarn).not.toBeNull(); run(S, 3); expect(S.bossHp - hp).toBe(Math.round(S.bossMax * 0.08));
+    run(S, 30); expect(S.breathWarn).not.toBeNull(); earn(S, 0, { ...right, done: true }); full(S, 0); breakShield(S, 0); expect(S.breathWarn).toBeNull();
+  });
+  it('8 거울빛 = 다음 10초 일반 공격 피해 30% 가 그 용사에게 · 스킬은 안 돌아옴', () => {
+    const S = at(8); for (const h of S.heroes) h.hp = 999; run(S, 36.5); expect(S.mirrorUntil).toBeGreaterThan(S.t);
+    const h = S.heroes[0]!, hp = h.hp; full(S, 0); attack(S, 0, 'ok'); const d = (S.ev.filter((e) => e.k === 'atk').at(-1) as { dmg: number }).dmg; expect(hp - h.hp).toBe(Math.max(1, Math.round(d * 0.3)));
+    const hp2 = h.hp; h.zaps = ['n']; full(S, 0); skill(S, 0, 'ok'); expect(h.hp).toBe(hp2);
+  });
+  it('10 기우는 저울 = 기울면 단일(그 쪽 용사) · 수평이면 광역 · 씨앗마다 섞임', () => {
+    const seen = new Set<string>();
+    for (let s = 1; s <= 12; s++) { const S = at(10, undefined, s); run(S, 10.05); seen.add(S.aoeNext ? 'aoe' : `tilt${S.tilt}`); expect(S.aoeNext ? S.tilt : S.tilt.length).toBe(S.aoeNext ? '' : 1); }
+    expect(seen.has('aoe')).toBe(true); expect([...seen].some((x) => x.startsWith('tilt'))).toBe(true);
+  });
 });

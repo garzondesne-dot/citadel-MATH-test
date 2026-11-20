@@ -47,6 +47,7 @@ function act(S: State, b: Bot) {
   }
   const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 ⚡ 아낌(×0.3) · 약점 시간에 몰아침
   if (h.zaps.length && (weak(S) || h.zaps.length >= 5 || (!shieldHold && h.zaps.length >= 3)) && skill(S, b.who, holdRoll(b))) return;
+  if (S.t < S.mirrorUntil && h.hp < h.s.maxHp * 0.6) return; // 8 거울빛 = 일반 공격이 되돌아옴 → 다친 봇은 문제를 풂(설정표 「그동안은 타이밍 바 대신 문제」)
   attack(S, b.who, timingRoll(b));
 }
 /** 머리 없는 한 판 (시험 · 연습방 「봇 4 관전」 빨리 감기) */
