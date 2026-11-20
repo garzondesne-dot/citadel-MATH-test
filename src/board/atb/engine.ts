@@ -12,7 +12,7 @@ export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ �
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
-  | { k: 'skill'; t: number; who: number; dmg: number; kind: 'equip' | 'tier4' | 'awk'; cost: number }
+  | { k: 'skill'; t: number; who: number; dmg: number; kind: 'equip' | 'tier4' | 'awk'; cost: number; /** 넘친 충전으로 자동 (요청 #13) */ auto?: boolean }
   | { k: 'aura'; t: number; who: number; stone: number }
   | { k: 'guard'; t: number; atk: string }
   | { k: 'charge'; t: number; who: number; n: number; perfect: boolean }
@@ -32,7 +32,7 @@ export interface State {
   shieldUp: boolean; shieldAt: number; cells: Cell[]; weakUntil: number;
   /** 🛡 오라 방패 = 다음 보스 공격 1번 팀 전체 막음 · 🗿 석화 끝 시각(보스 공격 시계 멈춤) */ guard: boolean; stoneUntil: number;
   /** 광역 회복을 마지막으로 쓴 보스 공격 차례 (팀 전체 · 보스 공격 한 번 사이 1번) */ healN: number;
-  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK, number>>; charges: number; downs: number; revives: number; lastAns: number[] };
+  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK, number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; downs: number; revives: number; lastAns: number[] };
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
@@ -128,7 +128,10 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
     if (to != null) { const f = S.heroes[to]!; f.atb = Math.min(1, f.atb + T.downedAtbGift); push(S, { k: 'gift', t: S.t, who, to }); }
     return;
   }
-  if (e.done) { const n = Math.min(T.charge.max - h.ch, e.perfect ? T.charge.perfect : T.charge.retry); h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, n, perfect: e.perfect }); }
+  if (e.done) {
+    const want = e.perfect ? T.charge.perfect : T.charge.retry, n = Math.min(T.charge.max - h.ch, want); h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, n, perfect: e.perfect });
+    if (want - n >= T.cost.equip && !S.end) overflowSkill(S, h); // ⚡ 넘침 → 장착 스킬 자동 (📜 요청 #13 · 4레벨 · 오라 · 각성은 손으로만 · 남은 넘침은 버림)
+  }
   if (e.done && S.shieldUp) h.tickets++;
   if (e.perfect) h.atb = 1;
 }
@@ -198,6 +201,12 @@ export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean
   }
   push(S, { k: 'skill', t: S.t, who, dmg, kind: k, cost });
   return true;
+}
+/** ⚡ 넘친 충전으로 장착 스킬 자동 발동 (요청 #13) · ATB · 충전 칸은 그대로 · 피해 = 손으로 쓴 장착 스킬과 같음 */
+function overflowSkill(S: State, h: Hero) {
+  S.rec.skills.equip = (S.rec.skills.equip ?? 0) + 1; S.rec.overflow = (S.rec.overflow ?? 0) + 1;
+  const dmg = hitBoss(S, T.skillBase * h.s.skillMul * T.ratio.equip); h.log.dmg += dmg;
+  push(S, { k: 'skill', t: S.t, who: h.id, dmg, kind: 'equip', cost: 0, auto: true });
 }
 /** [역할] = 충전 1 · 딜러 강타(장착 ×1.5) · 탱커 엄호(친구 다음 공격 −50%) · 힐러 광역 회복(+12) · 서포터 격려(친구 ATB 가득) */
 /** 광역 회복 = 팀 전체로 보스 공격 한 번 사이에 1번 (다른 힐러가 썼으면 그 사이엔 못 씀) */

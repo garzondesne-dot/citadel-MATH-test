@@ -35,6 +35,13 @@ describe('ATB 엔진', () => {
     earn(S, 0, right); expect(h.ch).toBe(0);
     earn(S, 0, doneP); expect(h.ch).toBe(T.charge.perfect); earn(S, 0, doneR); expect(h.ch).toBe(3); earn(S, 0, doneP); expect(h.ch).toBe(T.charge.max);
   });
+  it('⚡ 가득인데 또 끝냄 = 넘친 충전으로 장착 스킬 자동 (요청 #13 · 충전 · ATB 그대로 · 4레벨 · 각성은 자동 안 됨)', () => {
+    const S = fresh(), h = S.heroes[0]!; h.ch = T.charge.max; h.atb = 0.2; const hp = S.bossHp;
+    earn(S, 0, doneR); const e = S.ev.at(-1) as { k: string; kind: string; auto?: boolean; dmg: number };
+    expect([e.k, e.kind, e.auto, h.ch, h.atb]).toEqual(['skill', 'equip', true, T.charge.max, 0.2]); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * h.s.skillMul));
+    h.ch = 2; const n0 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n0).some((x) => x.k === 'skill')).toBe(true); // 2칸 + 재시도 2 = 1칸 넘침 · 장착 비용 1 = 자동
+    h.ch = 1; const n1 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
+  });
   it('💠 스킬 (Y2 · Y3 · Y11): 보이는 것 = 쓸 수 있을 때만 · 비용 장착 1 · 4레벨 2 · 오라 2 · 각성 3 · 피해 비 1 · 2.3 · 3.8', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;
     expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'tier4', 'role', 'aura', 'awk']); // 실드 · 부활 = 그때만
