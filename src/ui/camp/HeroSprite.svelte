@@ -1,7 +1,7 @@
 <script lang="ts">
   import { AURA_CSS } from '../../model/hero';
   import { aura as auraAct } from '../fx/aura';
-  import { ANIM, HERO, type HPose, heroGeo, heroHead, heroNudge, heroUrl, IDLE8, idle8Of, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
+  import { ANIM, GLOW_MS, glowOf, HERO, type HPose, heroGeo, heroHead, heroNudge, heroUrl, IDLE8, idle8Of, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
   // 🧙 용사 도트 한 칸 (정식 heroesV2 · 칸 80 × 64) · 정수 배율 · 강화 오라 1~10(정식 .aura-n 빛 + 발밑 빛 웅덩이)
   //   row = 줄(0 idle · 2 공격 · 8 앉기) · play = 그 줄 4칸을 돌림(움직임 줄이기 설정이면 멈춤) · dim = 잠긴 용사(그림자)
   const { id, row: row0 = 0, play = false, scale = 1, aura = 0, dim = false, label = '', tv = false, pose }:
@@ -16,6 +16,7 @@
   let hd8ok = $state('');
   $effect(() => { const u = hd8; if (!u) return; void idle8HdReady(u).then((ok) => { if (ok && hd8 === u) hd8ok = u; }); });
   const use8 = $derived(hd8 && hd8ok === hd8 ? hd8 : null);
+  const glw = $derived(glowOf(use8)); // ✨ 숨쉬기 빛 칸 (녹스 대검 빨간 줄)
   const i8 = $derived(play && !an && row === 0 ? idle8Of(id) : null); // 🫁 #169 대기 8프레임 (그 용사 줄) // 새 화풍(세밀 시트)은 같은 자리에서 위 · 옆으로 넘쳐 그림 // 🎯 보이는 부분 정중앙 · 발 기준선 (#121)
 </script>
 
@@ -24,6 +25,7 @@
     <i class="i8" class:dim style:left="0" style:top="0" style:width="{HERO.w * scale}px" style:height="{HERO.h * scale}px" style:translate="{(IDLE8.nd[id]?.[0] ?? 0) * scale}px {(IDLE8.nd[id]?.[1] ?? 0) * scale}px" style:background-image="url({i8})" style:background-size="{IDLE8.frames * 100}% {IDLE8.rows * 100}%" style:background-position-y="{(id / (IDLE8.rows - 1)) * 100}%" style:animation-duration="{IDLE8.ms}ms"></i>
   {:else}
     <i class:play={play && !an && !use8} class:hd8={!!use8} style:--hd8dur={use8 ? `${IDLE8_HD.ms / 1000}s` : undefined} class:anim={!!an && an[1] > 1} class:once={!!an?.[3]} data-pose={pose} style:--n={an?.[1]} style:--n1={an ? Math.max(1, an[1] - 1) : undefined} style:--dur={an ? `${an[2]}s` : undefined} style:--end={an ? `${(an[1] / (HERO.cols - 1)) * 100}%` : undefined} style:--end1={an ? `${((an[1] - 1) / (HERO.cols - 1)) * 100}%` : undefined} class:dim style:left="{g.dx * scale}px" style:top="{g.dy * scale}px" style:width="{g.w * scale}px" style:height="{g.h * scale}px" style:translate="{nd.dx * scale}px {nd.dy * scale}px" style:background-image="url({use8 ?? heroUrl(id)})" style:background-size={use8 ? `${IDLE8_HD.frames * 100}% 100%` : `${HERO.cols * 100}% ${HERO.rows * 100}%`} style:background-position-y={use8 ? '0%' : `${(row / (HERO.rows - 1)) * 100}%`}></i>
+    {#if glw}<i class="hd8 glw" data-k="hero-glow" style:--hd8dur="{IDLE8_HD.ms / 1000}s" style:--glow="{GLOW_MS / 1000}s" style:left="{g.dx * scale}px" style:top="{g.dy * scale}px" style:width="{g.w * scale}px" style:height="{g.h * scale}px" style:translate="{nd.dx * scale}px {nd.dy * scale}px" style:background-image="url({glw})" style:background-size="{IDLE8_HD.frames * 100}% 100%" style:background-position-y="0%"></i>{/if}
   {/if}
 </span>
 
@@ -36,6 +38,8 @@
   @keyframes hrow1 { from { background-position-x: 0%; } to { background-position-x: var(--end1); } }
   i.i8 { animation: idle8 1.3s steps(8) infinite; }
   i.hd8 { animation: idle8 var(--hd8dur, 1.3s) steps(8) infinite; } /* 🫁 #63 */
+  i.glw { animation: idle8 var(--hd8dur, 1.3s) steps(8) infinite, glowP var(--glow, 1.2s) ease-in-out infinite; pointer-events: none; } /* ✨ 숨쉬기 빛 칸 */
+  @keyframes glowP { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
   @keyframes idle8 { from { background-position-x: 0%; } to { background-position-x: 114.2857%; } }
   @keyframes idle { from { background-position-x: 0%; } to { background-position-x: 133.333%; } }
   i.dim { filter: brightness(0) opacity(0.55); }
@@ -44,5 +48,5 @@
     background: radial-gradient(ellipse, color-mix(in srgb, var(--a1) 70%, transparent), transparent 70%); animation: pool 3.2s ease-in-out infinite; }
   @keyframes pool { 0%, 100% { opacity: 0.45; transform: translateX(-50%) scale(0.9); } 50% { opacity: 0.9; transform: translateX(-50%) scale(1.08); } }
   .au-on::after { display: none !important; } .au-on i:not(.dim) { filter: none !important; }
-  @media (prefers-reduced-motion: reduce) { i.i8, i.hd8, i.play, i.anim, .aura::after { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { i.i8, i.hd8, i.play, i.anim, .aura::after { animation: none; } i.glw { display: none; } }
 </style>

@@ -61,7 +61,7 @@ import BBOX from './sprite-bbox.json';
 { // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
   const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
   B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
-  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v7.webp`, o = `hero-${k}-v7.webp`; B.heroes[a] ??= B.heroes[o]; if (B.heads) B.heads[a] ??= B.heads[o]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
+  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v7.webp`, o = `hero-${k}-v7.webp`; B.heroes[a] ??= B.heroes[o] ?? B.heroes[o.replace('-v7.', '-v8.')]; if (B.heads) B.heads[a] ??= B.heads[o] ?? B.heads[o.replace('-v7.', '-v8.')]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
 }
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
@@ -94,7 +94,7 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-frost-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-tamer-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-math-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-dknight-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-dknight-v8.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mathboy-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mathgirl-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mechanic-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
@@ -119,6 +119,10 @@ import IDLE8_HD_MAP from './idle8-hd-map.json';
 // 🫁 #63 세밀화(HERO_HD v5) 용사 숨쉬기 8장 (PixelLab · 2026-11-18): 용사마다 띠 하나 `hero-<이름>-idle8-v1.webp` · 칸 256 × 144 × 8 = v5 시트 칸과 같은 크기 · 같은 발 자리(k=2 · base=8)
 //   대기(idle) 줄만 이 띠로 · 1.3초에 8장 · 띠가 없거나 못 받으면 v5 시트 대기 4칸 그대로 · 되돌리기 = on: false 한 줄
 export const IDLE8_HD = { on: true, frames: 8, ms: 1300, map: IDLE8_HD_MAP as Record<string, string> };
+/** ✨ 숨쉬기 빛 칸 (📜 2026-11-20 선생님 「녹스 대검 빨간 줄 · 게임 안 코드로 깜빡」): 같은 8칸 띠 · 빛나는 픽셀만 · 1.2초 주기로 켰다 껐다 (폰 CSS · TV Pixi) */
+export const IDLE8_GLOW: Record<string, string> = { 'hero-dknight-idle8-v8.webp': 'hero-dknight-idle8-glow-v8.webp' };
+export const GLOW_MS = 1200;
+export const glowOf = (idle8Url: string | null): string | null => { const n = idle8Url?.split('/').pop() || '', g = IDLE8_GLOW[n]; return g ? idle8Url!.replace(n, g) : null; };
 export const idle8HdOf = (id: number): string | null => { const f = heroOf(id).sprite || '', n = IDLE8_HD.on && HERO_HD[f] ? IDLE8_HD.map[f] : undefined; return n ? `${import.meta.env.BASE_URL}art/heroes/${n}` : null; };
 const hd8Seen = new Map<string, Promise<boolean>>();
 /** 띠 그림을 받아 둠 (보이는 용사만 · 한 번) → 받았으면 true · 실패 = false (그때는 v5 시트 4칸) */
