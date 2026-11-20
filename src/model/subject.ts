@@ -62,7 +62,7 @@ export interface Subject {
   /** 세특 초안 낱말 */
   seteuk: { unit: string; evalWord: string };
   /** 문제 글 · 보기 그림 (없으면 글 그대로) */
-  rich?: { parts(t: string): RichPart[]; opt(o: string): RichPart; plain(t: string): string; Figure: Component<{ fig: unknown }> };
+  rich?: { parts(t: string): RichPart[]; opt(o: string): RichPart; plain(t: string): string; Figure: Component<{ fig: unknown }>; /** 📦 팩 검사: 그림 글이 안 읽히면 이유 */ check?(t: string): string | null };
   formats: Record<string, Format>;
   /** 🧮 차시 팩 올리기 정답 재계산 (L1) — 문제 글을 다시 풀 수 있으면 맞음 · 틀림 · 못 풀면 ok = null(선생님 확인) */
   recheck?: (q: import('./types').Question) => { ok: boolean | null; want?: string };
