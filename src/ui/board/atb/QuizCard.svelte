@@ -1,41 +1,45 @@
 <script lang="ts">
-  // 📜 문제 카드 (시안 atb-2-quiz): 양피지 · 위 = 원문항 이름 · 단계 k / n + ⚡ 5칸(금색 = 테두리 반짝) · 가운데 = 지금 차시 팩 문항(QItem · 학생과 같은 부품)
-  //   아래 = 보스 공격까지 막대 · 💡 수호자에게 묻기 · ✕ 닫기 · 몬스터를 가리지 않음(무대 오른쪽) · 말풍선 꼬리 = 몬스터 쪽
+  // 📜 문제 카드 v2 (📜 요청 #24 UI v2 · 선생님 「다른 AI 랑 짠 시안」): 가운데 「문제 풀이」 단추 자리에서 위로 올라옴 · 위 모서리만 둥글게 · 아래는 화면 끝에서 잘린 듯
+  //   ✕ · 제출 단추 없음 → 맨 위 손잡이 바를 아래로 끌어 넣으면 닫힘(부모가 끌기를 받음 · ongrab) · 제출 = 아래 가운데 단추(부모가 send() 를 부름 · onfill 로 켜짐 알림)
+  //   소문항 맞음 = 테두리 초록 + 초록 반짝 · 틀림 = 단호한 좌우 흔들림 + 빨간 테두리 (진동 · 소리 = 부모) · 짧은 보기 4개 = 2 × 2 · 긴 문항 = 보기 칸만 스크롤
   import type { Given, LessonPack } from '../../../model/types';
   import QItem from '../../q/QItem.svelte';
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
   import { questionsOf, type Run } from '../../../board/atb/quiz';
-  import { T } from '../../../board/atb/tune';
-  import AtbIcon from './AtbIcon.svelte';
-  const { L, run, seed, title, ch, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '', grading = null, onskip, auto = false }: {
-    L: LessonPack; run: Run; seed: string; title: string; /** ⚡ 충전 칸 (Y1 · 최대 3) */ ch: number; /** 보스 공격까지 남은 비율 0 ~ 1 */ bossLeft: number; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
-    onsubmit: (g: Given) => void; onclose: () => void; /** 방금 결과 (ok · gold · wrong · swap · done) */ flash?: string;
-    /** 💥 몬스터 공격에 맞아 잠긴 남은 초 (0 = 안 잠김 · 📜 요청 #3 ① 레이드처럼 카드 흔들 + 잠깐 잠금) */ locked?: number; lockTag?: string;
-    /** 📝 채점 연출 (Y8) · 소문항 ○ × · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; /** 실제 받은 충전 */ n: number; /** 규칙상 받을 충전(퍼펙트 3 · 재시도 2) */ want: number; suck: boolean } | null; onskip?: () => void; /** ⚔ 방금 자동 일반 공격 (요청 #11 · 한 줄만 · 입력은 그대로) */ auto?: boolean;
+  const { L, run, seed, title, hintOk, onsubmit, ongrab, onfill, flash = '', flashN = 0, locked = 0, lockTag = '', grading = null, onskip, auto = false }: {
+    L: LessonPack; run: Run; seed: string; title: string; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
+    onsubmit: (g: Given) => void; /** 손잡이 바를 누름 → 부모가 끌어 닫기를 받음 */ ongrab?: (ev: PointerEvent) => void; /** 답을 골라 제출할 수 있나 (부모 「✅ 제출」 단추) */ onfill?: (ok: boolean) => void;
+    /** 방금 결과 (ok · gold · wrong · swap · shieldSwap) */ flash?: string; /** 같은 결과가 잇따라도 연출을 다시 (맞음 · 틀림 번호) */ flashN?: number;
+    /** 💥 몬스터 공격에 맞아 잠긴 남은 초 */ locked?: number; lockTag?: string;
+    /** 📝 채점 연출 (Y8) · 소문항 ○ △ · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null; onskip?: () => void; /** ⚔ 방금 자동 일반 공격 (한 줄만) */ auto?: boolean;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
   let val = $state<Given>(null), hint = $state(''), key = $state('');
   $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; } });
-  const send = () => { if (q && filled(q, val) && !locked) onsubmit(finalOf(q, val)); };
-  const left = $derived(Math.max(0, T.wrongSwap - run.wrong));
+  const can = $derived(!!q && filled(q, val) && !locked && !grading);
+  $effect(() => { onfill?.(can); });
+  /** ✅ 제출 (부모 아래 가운데 단추) */
+  export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
+  const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
 </script>
 
-<section class="qc" class:hitlock={locked > 0} data-k="atb-quiz" aria-label="문제">
+<section class="qc" class:hitlock={locked > 0} class:good={fx === 'good'} class:bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
+  {#key flashN}{#if fx}<i class="fxr {fx}" aria-hidden="true"></i>{/if}{/key}
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
+  <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
   <header>
     <span class="tt" data-k="atb-qtitle">{title} · {run.k + 1}/{qs.length}</span>
-    <button type="button" class="xx" data-k="atb-qclose" aria-label="닫기" onclick={onclose}>✕</button>
+    <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </header>
-  <div class="body" class:shake={flash === 'wrong'}>
+  <div class="body">
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" role="status">💡 {hint}</p>{/if}
-    {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
-    {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 🔥 재도전(새 숫자 판)</p>
-    {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (⚡ 기력은 그대로)</p>
-    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 기력은 그대로)</p>{/if}
   </div>
-  <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
+  {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
+  {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
+  {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (⚡ 기력은 그대로)</p>
+  {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 기력은 그대로)</p>{/if}
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
       <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
@@ -45,18 +49,12 @@
     </button>
   {/if}
   {#if locked > 0}<div class="lock" role="status" data-k="atb-qlock"><b>{lockTag || '💥 몬스터 공격!'}</b><small>{locked}초 뒤 다시 풀 수 있어요</small><i class="hitpic" data-k="atb-qhitpic" aria-hidden="true"></i></div>{/if}
-  <footer>
-    <span class="bl">보스 공격까지 <i class="bar"><b style:width="{Math.round(bossLeft * 100)}%"></b></i></span>
-    <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
-  </footer>
 </section>
 
 <style>
-  .qc { position: relative; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px 10px; color: #3a2614; border-radius: 14px; border: 3px solid #b88a4a; background: radial-gradient(ellipse at 50% 40%, #fbf0d6 0%, #f1dfb6 70%, #e2c995 100%); box-shadow: 0 0 0 2px #5a3a1a, 0 10px 24px #0008; overflow: hidden;
+  .qc { position: relative; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 4px 14px calc(64px * var(--u, 1) + 14px); color: #3a2614; border-radius: 14px; border: 3px solid #b88a4a; background: radial-gradient(ellipse at 50% 40%, #fbf0d6 0%, #f1dfb6 70%, #e2c995 100%); box-shadow: 0 0 0 2px #5a3a1a, 0 10px 24px #0008; overflow: hidden;
     --text: #2b1a0c; --text-2: #5a4128; --text-3: #8a6e4e; --surface-2: #f3e1b6; --surface: #f8ebcc; --line: #c9a36a; --press-sh: #b08a52; --accent: #c98a1e; --on-accent: #fff8e6; --accent-sh: #7a4e10; } /* 양피지 위 = 글자 · 칸 색을 진하게 (QItem 이 같은 토큰을 씀) */
-  .qc::before { content: ''; position: absolute; left: -16px; top: 46%; border: 10px solid transparent; border-right: 14px solid #b88a4a; } /* 말풍선 꼬리 = 몬스터 쪽 */
-  header { position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; }
-  .xx { position: absolute; right: -4px; top: -2px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #b88a4a; background: #f9ecd0; color: #5a3a1a; font: 900 16px var(--font); }
+  header { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
   .lnk { border: none; background: none; padding: 4px 6px; color: #7a4e10; font: 700 13px var(--font-plain); text-decoration: underline; white-space: nowrap; } .lnk:disabled { opacity: 0.4; text-decoration: none; }
   .tt { font: 800 14px var(--font-plain); padding: 3px 12px; border-radius: 8px; border: 1px solid #c9a36a; background: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* 📝 채점 → 충전 (Y8) */
@@ -75,16 +73,9 @@
   /* 가로 폰(높이 390) = 룬 키패드를 낮게 (학생 수업 화면 크기는 그대로) */
   .body :global(.runepad) { gap: 4px; } .body :global(.rune-keys) { gap: 4px; } .body :global(.rune) { min-height: 34px; aspect-ratio: auto; font-size: 18px; } .body :global(.rune-slot) { min-height: 40px; } .body :global(.rune-del) { width: 52px; font-size: 20px; }
   .body :global(.item) { gap: 6px; } .body :global(.q2) { font-size: 17px; } .body :global(.ans) { min-height: 34px; height: 34px; }
-  .body.shake { animation: shake 0.3s; }
   @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
   .hint { margin: 6px 0 0; padding: 6px 8px; border-radius: 8px; background: #fff7d6; border: 1px dashed #d1a54a; font: 600 14px var(--font-plain); }
   .fb { margin: 6px 0 0; font: 800 14px var(--font-plain); } .fb.ok { color: #1f7a3c; } .fb.bad { color: #b3261e; }
-  .go { min-height: 48px; font-size: 19px !important; border-radius: 10px; border: 2px solid #8a5a1a; background: linear-gradient(#ffd77a, #e9a93a); color: #3a2205; font: 800 17px var(--font); box-shadow: 0 3px 0 #8a5a1a; }
-  .go:disabled { opacity: 0.45; box-shadow: none; }
-  footer { position: relative; z-index: 6; display: flex; align-items: center; gap: 6px; } /* 잠겨도 ✕ 닫기는 됨 */
-  .bl { flex: 1; display: flex; align-items: center; gap: 6px; font: 700 12px var(--font-plain); white-space: nowrap; min-width: 0; }
-  .bar { flex: 1; height: 8px; border-radius: 4px; background: #5a3a2a; overflow: hidden; display: block; min-width: 30px; }
-  .bar b { display: block; height: 100%; background: linear-gradient(90deg, #ff5a4a, #e8332a); }
   /* 💥 몬스터 공격 = 카드 흔들흔들 + 잠깐 잠금 (레이드 3초 · 분노 4초) · .hitpic = 👹 「맞는 그림」 10종 겹칠 자리(아직 빈 칸) */
   .qc.hitlock { animation: wob 0.5s ease-in-out 2; }
   @keyframes wob { 20% { transform: translateX(-8px) rotate(-1.5deg); } 40% { transform: translateX(7px) rotate(1.2deg); } 60% { transform: translateX(-5px) rotate(-0.8deg); } 80% { transform: translateX(3px); } }
@@ -93,4 +84,24 @@
   .lock small { font: 700 13px var(--font-plain); text-shadow: 0 1px 2px #000; }
   .hitpic { position: absolute; inset: 0; pointer-events: none; background: center / contain no-repeat; }
   @media (prefers-reduced-motion: reduce) { .qc.hitlock { animation: none; } }
+  /* 📜 요청 #24 v2 = 위 모서리만 둥글게 · 아래 = 화면 끝에서 잘린 듯 · 손잡이 바 */
+  .qc { border-radius: 18px 18px 0 0; border-bottom: none; transition: border-color 0.15s, box-shadow 0.15s; }
+  .grab { align-self: center; width: 46%; height: 22px; padding: 0; border: none; background: none; touch-action: none; cursor: grab; display: grid; place-items: center; }
+  .grab i { display: block; width: 64px; height: 6px; border-radius: 3px; background: #b88a4a; box-shadow: 0 1px 0 #fff8; }
+  .body { overflow-x: hidden; }
+  /* 맞음 = 초록 테두리 + 반짝 · 틀림 = 빨간 테두리 + 단호한 좌우 흔들림 (📜 선생님 덧붙임 10 · 11) */
+  .qc.good { border-color: #2faa3a; box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; }
+  .qc.bad { border-color: #d0261e; box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
+  .fxr { position: absolute; inset: 0; z-index: 8; pointer-events: none; border-radius: inherit; }
+  .fxr.good { background: radial-gradient(circle at 50% 40%, #b8ffb066, #0000 60%); animation: sparkle 0.5s ease-out forwards; }
+  @keyframes sparkle { from { opacity: 1; transform: scale(0.9); } to { opacity: 0; transform: scale(1.08); } }
+  .fxr.bad { animation: none; }
+  .qc.bad { animation: no 0.36s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes no { 15% { transform: translateX(-12px); } 30% { transform: translateX(11px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
+  .fb { position: absolute; left: 14px; right: 14px; bottom: calc(64px * var(--u, 1) + 16px); z-index: 4; margin: 0; padding: 3px 10px; border-radius: 8px; background: #fffbeecc; text-align: center; pointer-events: none; }
+  /* 짧은 보기 = 2 × 2 · 고른 보기 = 테두리 + ✓ */
+  .body :global(.opts.col:has(> .opt:nth-child(4):last-child)), .body :global(.opts.col:has(> .opt:nth-child(2):last-child)) { display: grid; grid-template-columns: 1fr 1fr; }
+  .body :global(.opt.on) { position: relative; outline: 3px solid #2f6ad0; outline-offset: -1px; }
+  .body :global(.opt.on)::after { content: '✓'; position: absolute; right: 6px; top: 4px; font: 900 16px var(--font); color: #2f6ad0; }
+  @media (prefers-reduced-motion: reduce) { .qc.bad, .fxr.good { animation: none; } }
 </style>

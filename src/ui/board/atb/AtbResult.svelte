@@ -15,6 +15,8 @@
   const right = $derived(Math.min(12, mine ? mine.log.right : Math.max(0, ...S.heroes.map((h) => h.log.right))));
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(win && guardBonus ? [{ t: '수호 보너스', g: guardBonus }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
+  // 🏅 내 활약 = 💎 보다 먼저 (📜 요청 #24 ⑦) · 0 인 줄은 빼고 · 하나도 없으면 「맞힌 소문항」
+  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`].filter(Boolean) as string[]; });
   // 🔊 📜 요청 #23 결과 💎 줄 = 한 줄씩 star (Loot 와 같은 소리) · 0.35초 간격
   onMount(() => { const ts = rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 500 + i * 350)); return () => ts.forEach(clearTimeout); });
   const STEPS = [3, 7, 15], nextStep = $derived(STEPS.find((s) => mastery < s) ?? 15);
@@ -31,6 +33,8 @@
     </div>
   </div>
   <div class="paper">
+    {#if deeds.length}<section class="deeds" data-k="atb-deeds"><b>🏅 내 활약</b><ul>{#each deeds as d (d)}<li>{d}</li>{/each}</ul></section>{/if}
+    <p class="rw" data-k="atb-reward">{practice ? '💎 예상 보상 (연습방 = 받지 않음)' : '💎 보상'}</p>
     {#each rows as r (r.t)}<p class="row"><span>{r.t}</span><b>💎 +{r.g}</b></p>{/each}
     <p class="sum"><span>합계</span><b>💎 {total}</b></p>
     {#if practice}<p class="note">🧪 교사 연습방 = 💎 를 주지 않고 기록도 서버에 안 남겨요 (이 폰 최근 5판만)</p>{/if}
@@ -69,4 +73,6 @@
   .b.gold { border-color: #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; }
   /* 🌟 전용 오라 = 몸 뒤 (요청 #20 ④) */
   .hw { position: relative; display: inline-block; } .aul { position: absolute; left: 0; top: 0; z-index: 0; } .aul :global(.hs > i) { visibility: hidden; } .bod { position: relative; z-index: 1; display: inline-block; }
+  .deeds { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 10px; background: #fff7dc; border: 2px solid #d9b26a; } .deeds b { font: 900 16px var(--font); color: #7a4a10; } .deeds ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 2px 10px; font: 800 14px var(--font-plain); }
+  .rw { margin: 4px 0 0; font: 900 14px var(--font); color: #7a5a2a; }
 </style>

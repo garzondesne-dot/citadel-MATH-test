@@ -53,9 +53,11 @@
   }, STEP * 1000);
   /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
   let fullAt = -1, autoTag = $state(0);
+  /** ⚔ 풀이 중 자동 공격 켜기 · 끄기 (📜 요청 #24 ④ · 처음 켬 · 이 판 동안 마지막 값 기억) */
+  let autoOn = $state(true);
   function autoStep() {
     const h = me >= 0 ? S.heroes[me] : null;
-    if (!h || !open || !run || grading || over || h.down || h.atb < 1 || S.t < h.stunUntil || S.end) { fullAt = -1; return; }
+    if (!h || !open || !autoOn || !run || grading || over || h.down || h.atb < 1 || S.t < h.stunUntil || S.end) { fullAt = -1; return; }
     if (fullAt < 0) fullAt = S.t;
     if (S.t - fullAt >= T.autoAtkDelay) { fullAt = -1; attack(S, me, 'ok', true); }
   }
@@ -91,6 +93,16 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
+  let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
+  let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
+  /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
+  function grab(ev: PointerEvent) {
+    ev.preventDefault(); const rot = !!stageEl?.closest('[data-rot90]'), x0 = ev.clientX, y0 = ev.clientY, h = cardEl?.offsetHeight ?? 300; dragging = true;
+    const mv = (e: PointerEvent) => { dragY = Math.max(0, rot ? -(e.clientX - x0) : e.clientY - y0); };
+    const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); dragging = false;
+      if (dragY > h * 0.28) { dragY = h; setTimeout(() => { if (grading) finishGrade(); open = false; dragY = 0; }, 200); } else dragY = 0; };
+    addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
     const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
@@ -104,7 +116,9 @@
     if (o.earn.swapped) { const k = seenKey(L, run.mid); vSeen[k] = noteSeen(vSeen[k] ?? [], o.run.ver); saveSeen(vSeen); }
     flash = o.earn.done ? '' : o.earn.right ? (o.earn.gold ? 'gold' : 'ok') : o.earn.swapped ? 'swap' : 'wrong';
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
-    if (o.earn.right) sfx('correct', 0.5);
+    fN++; // 📜 선생님 덧붙임 10 · 11 = 맞음 톡-톡 · 연달아 = 박자 맞춘 소리 · 틀림 = 찌잉(한 번 길게)
+    if (o.earn.right) { combo++; sfx('correct', 0.5); if (combo >= 2) setTimeout(() => sfx('star', Math.min(0.5, 0.2 + combo * 0.06)), 92); try { navigator.vibrate?.([22, 70, 22]); } catch { /* 무시 */ } }
+    else { combo = 0; try { navigator.vibrate?.(320); } catch { /* 무시 */ } }
     if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; run = o.run; startGrade(o.earn.marks ?? [], o.earn.perfect, Math.max(0, (meH?.ch ?? 0) - before)); } else run = o.run;
   }
   /** 🛡 실드가 뜨면 = 내 칸을 깰 표가 없고 지금 문제가 가장 쉬운 칸이 아니면 → 가장 쉬운 칸으로 (U3 막힘 안전망 · 충전은 그대로) */
@@ -148,7 +162,7 @@
   function fire(k: SkillK, to?: number) {
     if (!meH) return; const R = meH.s.role;
     if (to == null && ((k === 'role' && (R === 'tank' || R === 'support')) || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
-    over = ''; if (useSkill(S, me, k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
+    over = ''; skOpen = false; if (useSkill(S, me, k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
   const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '내 스킬' : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : '부활';
@@ -232,7 +246,7 @@
   function hurt(id: number) { hurtOn = { ...hurtOn, [id]: true }; if (!busy.has(id)) setPose(id, 'hit'); setTimeout(() => { hurtOn = { ...hurtOn, [id]: false }; if (!busy.has(id) && !S.heroes[id]?.down) setPose(id, 'idle'); }, 450); }
   /** ✨ 채점이 끝나면 = 카드 자리에서 에너지 구슬이 내 충전 칸으로 날아가 차오름 (Y8) */
   function flyOrb(gold = true) {
-    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = st?.querySelector('[data-k="atb-attack"]'); if (!st || !a || !b) return;
+    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = st?.querySelector('[data-k="atb-orbs"]') ?? st?.querySelector('[data-k="atb-attack"]'); if (!st || !a || !b) return;
     const R = rectIn(st), A = rectIn(a), B = rectIn(b);
     const x0 = A.left + A.width / 2 - R.left, y0 = A.top + A.height / 2 - R.top, dx = B.left + B.width / 2 - R.left - x0, dy = B.top + B.height / 2 - R.top - y0;
     const el = document.createElement('i'); el.className = gold ? 'atb-orb g' : 'atb-orb'; el.style.left = `${x0}px`; el.style.top = `${y0}px`; st.appendChild(el);
@@ -266,7 +280,7 @@
       }, 230);
     }
     else if (e.k === 'role') { pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role'); if (e.role === 'healer') snd('heart-up', 0.6); }
-    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); }
+    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
@@ -285,9 +299,9 @@
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
   const order = $derived(me >= 0 ? [me, ...S.heroes.map((h) => h.id).filter((i) => i !== me)] : S.heroes.map((h) => h.id));
   // 📜 요청 #15 = 오라 · 날개 · 이름표가 이웃과 안 겹치게 간격(가로 11% · 이름표 84px) · 그리는 순서 = 뒤 → 앞(z) · 원근 100 → 70%
-  const ROW = [{ x: 14, y: 66, s: 1 }, { x: 22.5, y: 59.5, s: 0.9 }, { x: 31, y: 54, s: 0.8 }, { x: 39.5, y: 49.5, s: 0.7 }]; // 📜 요청 #20 ③ = #15 앞 배치로 되돌림(오라는 따로 아래 층)
-  const ROWQ = [{ x: 6, y: 74, s: 0.72 }, { x: 11.5, y: 62, s: 0.64 }, { x: 17, y: 50, s: 0.56 }, { x: 22.5, y: 38, s: 0.5 }]; // 카드 왼쪽(26%)까지 · 이름표가 안 겹치게 위아래로 벌림
-  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)); return (open ? ROWQ : ROW)[k] ?? ROW[0]!; };
+  // 📜 요청 #24 ① = 처음부터 문제 카드 자리(26.5 ~ 73.5%)를 비운 자리 · 크기 고정 · 카드가 열려도 용사는 안 움직임(맨 뒤 용사 일부 가려져도 됨) · 몬스터만 움직임
+  const ROWV = [{ x: 7.5, y: 73, s: 0.84 }, { x: 13, y: 61.5, s: 0.76 }, { x: 18.5, y: 51, s: 0.68 }, { x: 24, y: 41.5, s: 0.62 }];
+  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)); return ROWV[k] ?? ROWV[0]!; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
   const bossSize = $derived(Math.round(H * (open ? 0.3 : 0.42))); // 문제 카드 가운데(요청 #14) = 보스는 카드 오른쪽에 작게
   const stone = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
@@ -306,8 +320,6 @@
     if (S.target) { const who = S.aoeNext ? '모두' : S.target.map((i) => name(i)).join(' · '); return { p: S.bossT / T.bossEvery, txt: `${S.aoeNext ? '⚠ 광역! ' : ''}${ic} ${nm} → ${who} · ${left}초`, hot: true }; }
     return { p: S.bossT / T.bossEvery, txt: `다음 ${ic} ${nm} · ${left}초` };
   });
-  /** ⊕ 노리는 줄 (📜 요청 #7 ③): 보스 → 표적 용사 붉은 점선 (광역 = 바닥만) */
-  const aimLines = $derived(S.target && tele && !S.aoeNext ? S.target.map((id) => { const p = posOf(id); return { id, x: p.x, y: p.y - 14 * p.s }; }) : []);
   const bossX = $derived(open ? 86 : 73), bossY = $derived(74 - (bossSize / 2 / Math.max(1, H)) * 100);
   const meAimed = $derived(me >= 0 && !!tele && !!S.target?.includes(me));
   let aimedOnce = false;
@@ -325,16 +337,19 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
-  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid) };
+  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid) };
 </script>
 
 <div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--u={U} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
-  {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
+  <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
-  <!-- 팀 부활 -->
-  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
+  <!-- ⚙ = 오른쪽 맨 위 고정 (📜 요청 #24 ①) · 배경음 · 효과음 · 팀 부활 = 평소 숨김(쓸 때만 💖 깨지며 3 → 2 · ⑤) -->
+  <div class="tr"><button type="button" class="gear" data-k="atb-gear" aria-label="설정" aria-expanded={gearOpen} onclick={() => { gearOpen = !gearOpen; sfx('click', 0.4); }}>⚙</button>
+    {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
+  </div>
+  {#if revFx}<div class="revfx" role="status" data-k="atb-revfx"><span class="hb">💔</span><b>💖 {revFx.from} → {revFx.to}</b></div>{/if}
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
@@ -343,7 +358,7 @@
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
     {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 30% 되돌아옴</div>{/if}
-    <div class="rhp" data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" /></div>
+    <div class="rhp" data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
@@ -361,19 +376,19 @@
     {@const p = posOf(h.id)}
     {@const sc = +(base * p.s).toFixed(2)}
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
-      {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
+      {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 40}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
       {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit')} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} scale={sc} aura={h.s.enh} /></div>{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
-      {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 44 : 22)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
+      {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
       {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
+      <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
+      <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}</span></div>
       <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
-        <b>Lv.{h.s.lv} {name(h.id)} <i class="fe">{FAM_EMO[h.s.fam]}</i>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</b>
-        <i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i>
-        <span class="hn">{h.hp}/{h.s.maxHp}</span>
-        <i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>
+        <b>Lv.{h.s.lv} {name(h.id)} <AtbIcon name={ROLE_ICON[h.s.role]} size={12} /></b>
+        <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
       </div>
     </div>
   {/each}
@@ -382,15 +397,21 @@
 
   <!-- 문제 카드 -->
   {#if open && run}
-    <div class="card" class:suck={grading?.suck}><QuizCard {L} {run} {seed} title={titleOf(run.mid)} ch={meH?.ch ?? 0} {bossLeft} hintOk={!hintUsed} {flash} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} onclose={() => (open = false)} /></div>
+    <div class="card" class:suck={grading?.suck} class:drag={dragging} style:translate="0 {dragY}px" bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run.mid)} hintOk={!hintUsed} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
   {/if}
 
   <!-- 단추 -->
   {#if me >= 0 && meH}
     <!-- 📜 요청 #19 = 아래 가로 한 줄: 문제 풀기 · ⚡ 내 스킬 · 역할 · 🌟 비장 · (💖) · ⚔ 공격 · 보스 · 용사는 모두 이 줄 위 -->
-    <nav class="btns" class:q={open} class:wk={isWeak(me)} class:full3={fullCh} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
-      {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{:else}<span class="qsp"></span>{/if}
-      <div class="ring" data-k="atb-skills" aria-label="스킬">
+    <!-- 📜 요청 #24 ② 아래 단추 고정 3개 (카드를 열고 닫아도 자리 그대로): 왼쪽 ⚔ 공격(풀이 중 = 자동 공격 켜기 · 끄기) · 가운데 📜 문제 풀이(열리면 = ✅ 제출) · 오른쪽 스킬 ⚡(누르면 위로 메뉴) -->
+    <nav class="btns v2" class:q={open} class:wk={isWeak(me)} class:full3={fullCh} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
+      {#if open && over !== 'timing'}<button type="button" class="b atk tg" class:on={autoOn} data-k="atb-autotgl" role="switch" aria-checked={autoOn} onclick={() => { autoOn = !autoOn; sfx('click', 0.4); }}><span class="ai">⚔</span> {autoOn ? '자동 공격' : '수동 공격'}<i class="sw" class:on={autoOn} aria-hidden="true"><b></b></i></button>
+      {:else}<button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격{/if}</button>{/if}
+      {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
+      {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀이</button>{/if}
+      <div class="skw">
+        <button type="button" class="b skb" class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span></button>
+        <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
             <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'equip' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
@@ -400,9 +421,9 @@
           </button>
         {/each}
         {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
+        </div>
       </div>
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
-      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격<span class="chg" class:flash={gaugeFlash} aria-label="기력 ⚡ {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}>⚡</i>{/each}</span>{/if}</button>
     </nav>
   {:else}
     <p class="watch" role="status">👀 봇 {S.heroes.length}명 관전 · {Math.floor(S.t / 60)}:{String(Math.floor(S.t % 60)).padStart(2, '0')} · ×{speed}</p>
@@ -427,9 +448,6 @@
   .stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#0000 55%, #0006); }
   .stage.weak::after { background: radial-gradient(ellipse at 70% 50%, #ffcf4a33, #0000 60%), linear-gradient(#0000 55%, #0006); }
   .tr { position: absolute; top: 2%; right: 1.5%; z-index: 20; display: flex; align-items: center; gap: 6px; }
-  .bgmb { width: 36px; height: 36px; border-radius: 10px; border: 2px solid #c9953e; background: #1d1220e6; font-size: 18px; line-height: 1; padding: 0; } .bgmb.off { filter: grayscale(0.6); opacity: 0.85; }
-  .revs { display: flex; align-items: center; gap: 2px; padding: 4px 10px; border-radius: 10px; border: 2px solid #c9953e; background: #1d1220e6; font: 800 14px var(--font); }
-  .revs b { margin-right: 4px; } .revs .used { filter: grayscale(1) brightness(0.5); }
   .weakb { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 12px; background: linear-gradient(#ffdf7a, #f0a92a); color: #3a1d00; font: 800 16px var(--font); box-shadow: 0 0 16px #ffcf4a; animation: pulse 0.8s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: translateX(-50%) scale(1.06); } }
   .bossui { position: absolute; top: 11%; z-index: 12; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: left 0.45s ease; }
@@ -479,7 +497,6 @@
   @keyframes situ { 50% { box-shadow: 0 0 18px #fff, 0 3px 0 #0a1430; } }
   .sk2.lit { animation: lit 0.7s ease-out; } @keyframes lit { 0% { filter: brightness(2.6); box-shadow: 0 0 26px #fff; scale: 1.25; } 100% { scale: 1; } }
   .sk2 .hw { position: absolute; bottom: -14px; white-space: nowrap; font: 700 10px var(--font-plain); color: #ffd98a; text-shadow: 0 1px 1px #000; }
-  .chg { display: flex; gap: 1px; margin-top: 2px; padding: 0 5px; border-radius: 8px; background: #0006; } .chg .cs { width: auto; height: auto; border: none; background: none; box-shadow: none; font-size: calc(13px * var(--u)); font-style: normal; filter: grayscale(1) brightness(0.55); } .chg .cs.on { filter: drop-shadow(0 0 4px #ffd34d); }
   .ai { font-size: calc(30px * var(--u)); line-height: 1; } .hrt { font-size: 18px; } .chg.flash { animation: gflash 0.45s; }
   .b { min-height: 48px; border-radius: 12px; border: 3px solid #8a6a3a; background: linear-gradient(#5a3f2a, #3a2618); color: #fff2d6; font: 800 clamp(13px, 4.6vh, 22px) var(--font); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 0 0 2px #2a1a10, 0 4px 0 #1a100a; padding: 0 4px; text-shadow: 0 2px 0 #0008; }
   .b:disabled { filter: grayscale(0.4) brightness(0.75); }
@@ -500,10 +517,6 @@
   .hero.hurt .hitpic { background: linear-gradient(135deg, #0000 38%, #ff3a2acc 40%, #fff 42%, #ff3a2acc 44%, #0000 46%, #0000 52%, #ff3a2acc 54%, #fff 56%, #ff3a2acc 58%, #0000 60%); animation: claw 0.4s ease-out forwards; }
   @keyframes claw { from { opacity: 0; transform: scale(0.6) translate(20%, -20%); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.1); } }
   /* ⊕ 노림 (📜 요청 #7 ③) */
-  .aim { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 16; pointer-events: none; opacity: 0.85; }
-  .aim line { stroke: #ff3a2a; stroke-width: 3; stroke-dasharray: 8 6; filter: drop-shadow(0 0 3px #ff3a2a); animation: dash 0.6s linear infinite; }
-  @keyframes dash { to { stroke-dashoffset: -14; } }
-  .aimx { position: absolute; left: 0; transform: translate(-50%, -100%); font-style: normal; font-size: 28px; font-weight: 900; color: #ff3a2a; text-shadow: 0 0 6px #ff3a2a, 0 2px 0 #000; animation: blink 0.4s steps(2) infinite; z-index: 3; }
   .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 22px; height: 22px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 45%, #3a8ef0aa 70%, #0000 72%); box-shadow: 0 0 16px 6px #8fd0ffaa; }
@@ -542,7 +555,6 @@
   /* 💬 큰 문구 (실드! · 실드 파괴 · 약점 시간) */
   .bigmsg { position: absolute; z-index: 44; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 8px 28px; border-radius: 16px; border: 3px solid #9fe6ff; background: linear-gradient(#1d5ac8ee, #0d2f6aee); color: #fff; font: 900 clamp(26px, 10vh, 44px) var(--font); text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: bigin 0.35s ease-out; }
   .bigmsg.note { top: 30%; padding: 4px 18px; border-color: #8fd0ff; font-size: clamp(16px, 5.5vh, 24px); }
-  .btns.full3 .chg .cs.on { animation: pipglow 0.7s ease-in-out infinite; } @keyframes pipglow { 50% { box-shadow: 0 0 10px #fff, 0 0 4px #8fd0ff; } }
   .btns.full3 .sk2:not(.dis) { box-shadow: 0 0 16px #8fe0ff, 0 3px 0 #0a1430; }
   .bigmsg.weak { border-color: #ffe27a; background: linear-gradient(#e8a82aee, #8a4a0aee); font-size: clamp(20px, 7vh, 34px); }
   @keyframes bigin { from { opacity: 0; scale: 1.6; } }
@@ -551,14 +563,12 @@
   .wglow { position: absolute; left: -34px; top: -12px; width: 68px; height: 24px; border-radius: 50%; background: radial-gradient(ellipse, var(--fc), #0000 70%); opacity: 0.85; z-index: -1; animation: blink 0.9s ease-in-out infinite; }
   .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
   .stage.q .tag { transform: scale(0.82); transform-origin: top center; }
-  .tag.full { box-shadow: 0 0 10px #ffd34d88; } .tag.full > b { color: #fff3a0; } .tag .fe { font-style: normal; }
+  .tag.full { box-shadow: 0 0 10px #ffd34d88; } .tag.full > b { color: #fff3a0; }
   /* 🆘 위험 체력 (요청 #18) */
-  .tag.low .thin.hp b { background: #ff2a2a; } .tag.low .hn { color: #ff6a5a; }
-  .tag.low .thin.hp, .tag.low .hn { animation: lowb 1s steps(2) infinite; } @keyframes lowb { 50% { opacity: 0.35; } }
   .sos { position: absolute; left: 0; transform: translateX(-50%); z-index: 4; padding: 0 6px; border-radius: 10px; background: #fff; font-size: 16px; font-style: normal; box-shadow: 0 0 8px #ff2a2a; animation: blink 1s steps(2) infinite; }
   .sk2.need { animation: need 0.8s ease-in-out infinite; } @keyframes need { 50% { box-shadow: 0 0 22px #7dffb0, 0 3px 0 #0a1430; filter: brightness(1.3); } }
   .bigmsg.sosmsg { top: 30%; padding: 4px 18px; border-color: #ff6a5a; background: linear-gradient(#c81e1eee, #6a0a0aee); font-size: clamp(16px, 5.5vh, 24px); }
-  @media (prefers-reduced-motion: reduce) { .tag.low .thin.hp, .tag.low .hn, .sos, .sk2.need { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .hpb.low .thin.hp, .hpb.low .hn, .sos, .sk2.need { animation: none; } }
   /* 📜 요청 #22 = 내 정보는 발밑 이름표 하나 · 노림 · 약점 · 위험 = 내 이름표 테두리 */
   .hero.mine .tag { box-shadow: 0 0 0 2px #e2b04a; } .tag.wk { box-shadow: 0 0 0 2px var(--fc), 0 0 10px var(--fc); } .tag.aimed { box-shadow: 0 0 0 2px #ff3a2a, 0 0 14px #ff3a2a; } .tag.low { box-shadow: 0 0 0 2px #ff2a2a, 0 0 12px #ff2a2a; }
   /* 📜 요청 #19 아래 가로 한 줄 단추 */
@@ -577,9 +587,50 @@
   .aul { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); pointer-events: none; }
   .aul :global(.hs > i) { visibility: hidden; } .aul.off { opacity: 0; transition: opacity 0.1s; }
   /* 문제 카드 = 아래 스킬 줄까지 덮음 (📜 ❓#8 선생님 「덮기」 · 열린 동안 스킬 못 누름 · 공격 단추 · 자동 공격 그대로 · 닫으면 스킬) */
-  .btns.q .ring { visibility: hidden; pointer-events: none; }
   .sk2 .pv { display: block; font: 800 calc(9.5px * var(--u)) var(--font-plain); font-style: normal; color: #ffe9b0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sk2 .pv.gold { color: #ffd34d; text-shadow: 0 0 4px #b8860b, 0 1px 0 #000; }
   .sk2 { -webkit-touch-callout: none; user-select: none; }
   .peekc { position: absolute; z-index: 40; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 260px; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 12px; border: 2px solid #e2b04a; background: #1d1220f2; color: #fff; font: 700 13px var(--font-plain); text-align: left; white-space: normal; box-shadow: 0 6px 18px #000a; pointer-events: none; filter: none; }
   .peekc b { font: 900 15px var(--font); color: #ffd98a; } .peekc .pl { color: #ffe9b0; font-weight: 800; } .peekc small { font: 700 12px var(--font-plain); color: #cfe6ff; } .peekc .why { color: #ff9a8a; }
+  /* ── 📜 요청 #24 UI v2 ── */
+  .gear { width: 40px; height: 40px; border-radius: 12px; border: 2px solid #c9953e; background: #1d1220e6; font-size: 22px; line-height: 1; padding: 0; color: #ffe9b0; }
+  .tr { flex-direction: column; align-items: flex-end; }
+  .gmenu { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 12px; border: 2px solid #c9953e; background: #1d1220f2; }
+  .gmenu button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 2px solid #8a6a3a; background: #3a2618; color: #fff2d6; font: 800 14px var(--font-plain); text-align: left; } .gmenu button.off { filter: grayscale(0.6); }
+  .gmenu .gr { font: 700 12px var(--font-plain); color: #ffd0e0; padding: 0 4px; }
+  .revfx { position: absolute; z-index: 44; left: 50%; top: 30%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-radius: 14px; border: 3px solid #ff8ab0; background: #3a0a20e6; font: 900 clamp(18px, 6vh, 28px) var(--font); color: #ffe0ea; animation: bigin 0.3s ease-out; pointer-events: none; }
+  .revfx .hb { font-size: 1.4em; animation: hbreak 0.6s ease-out; } @keyframes hbreak { 0% { transform: scale(1.6); filter: brightness(2); } 60% { transform: scale(1) rotate(-12deg); } }
+  .hpb { position: absolute; left: -26px; width: 52px; z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none; }
+  .hpb .hn { font: 800 9px var(--font-plain); color: #eaffe4; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+  .hpb.low .thin.hp b { background: #ff2a2a; } .hpb.low .hn { color: #ff6a5a; } .hpb.low .thin.hp, .hpb.low .hn { animation: lowb 1s steps(2) infinite; }
+  .tag { left: -46px; width: 92px; padding: 0; background: none; box-shadow: none !important; gap: 2px; }
+  .tag > b { display: flex; align-items: center; justify-content: center; gap: 2px; font: 800 10px var(--font-plain); text-shadow: 0 1px 0 #000, 0 0 3px #000, 0 0 3px #000; }
+  .tag .ar { position: relative; display: block; width: 70%; margin: 0 auto; }
+  .tag .az { position: absolute; right: -12px; top: -6px; font-size: 10px; font-style: normal; filter: drop-shadow(0 0 3px #ffd34d); }
+  .tag.aimed > b { color: #ff8a7a !important; } .tag.low > b { color: #ff6a5a; } .tag.wk > b { text-shadow: 0 0 6px var(--fc), 0 1px 0 #000; }
+  .stage.q .tag { transform: none; }
+  .card { left: 26.5%; top: 2%; bottom: 0; width: 47%; animation: rise 0.32s cubic-bezier(.2,.9,.3,1.1); transform-origin: 50% 100%; transition: translate 0.2s ease-out; }
+  .card.drag { transition: none; }
+  @keyframes rise { from { transform: translateY(100%); } }
+  .btns.v2 { justify-content: space-between; gap: 0; z-index: 27; } /* 카드 위 = 아래 단추 줄(가운데 = ✅ 제출이 카드 아래 끝에 얹힘) */
+  .orbs.flash { animation: gflash 0.45s; }
+  .btns.v2 .b.atk { flex: 0 0 22%; }
+  .btns.v2 .b.quiz { position: absolute; left: 50%; transform: translateX(-50%); width: calc(47% * 0.94 / 0.97); max-width: 41%; height: 100%; z-index: 30; }
+  .btns.v2 .b.quiz.go { border-color: #2f8a3a; background: linear-gradient(#7ddc6a, #2faa3a); color: #0a2a0a; text-shadow: none; } .btns.v2 .b.quiz.go:disabled { background: linear-gradient(#b8c8a8, #8a9a7a); border-color: #6a7a5a; color: #3a4a3a; }
+  .b.atk.tg { background: linear-gradient(#3a3a4a, #22222e); border-color: #8a8aa0; font-size: calc(14px * var(--u)); } .b.atk.tg.on { border-color: #ffd34d; background: linear-gradient(#6a5a2a, #3a2e10); color: #ffe9b0; } .b.atk.tg small { font: 800 calc(11px * var(--u)) var(--font-plain); }
+  .skw { position: relative; flex: 0 0 22%; height: 100%; }
+  .b.skb { width: 100%; height: 100%; min-height: 0; flex-direction: column; gap: 2px; border-color: #8fd0ff; background: linear-gradient(#3a6ac8, #16285a); font-size: calc(17px * var(--u)); }
+  .b.skb.hot { box-shadow: 0 0 16px #8fe0ff, 0 3px 0 #0a1430; animation: glow 1.1s ease-in-out infinite; } .b.skb.on { filter: brightness(1.2); }
+  .orbs { display: flex; gap: 1px; padding: 0 6px; border-radius: 8px; background: #0006; } .orbs i { font-style: normal; font-size: calc(14px * var(--u)); filter: grayscale(1) brightness(0.55); } .orbs i.on { filter: drop-shadow(0 0 4px #ffd34d); }
+  .ring.skm { position: absolute; right: 0; bottom: calc(100% + 8px); width: max-content; max-width: 76vw; flex-direction: row; gap: 6px; padding: 8px; border-radius: 14px; border: 2px solid #8fd0ff; background: #0d1830f0; visibility: hidden; opacity: 0; transform: translateY(8px); transition: opacity 0.15s, transform 0.15s; z-index: 32; }
+  .ring.skm.open { visibility: visible; opacity: 1; transform: none; }
+  .ring.skm .sk2 { flex: 0 0 calc(124px * var(--u)); height: calc(64px * var(--u)); }
+  .btns.v2.full3 .b.skb .orbs i.on { animation: pipglow 0.7s ease-in-out infinite; }
+  /* 시안 = 아래 세 단추 같은 폭 알약 · 낮게 */
+  .btns.v2 { height: max(48px, calc(54px * var(--u))); }
+  .btns.v2 .b { border-radius: 999px; flex-direction: row; gap: 8px; font-size: calc(18px * var(--u)); }
+  .btns.v2 .b.atk { flex: 0 0 27%; } .btns.v2 .skw { flex: 0 0 27%; } .btns.v2 .b.quiz { width: 27%; max-width: none; }
+  .btns.v2 .b .ai { font-size: calc(22px * var(--u)); }
+  .btns.v2 .b.atk.stopb { font-size: calc(20px * var(--u)); }
+  .b.skb { background: linear-gradient(#2a2a36, #14141c); border-color: #8a8aa0; color: #fff; }
+  .sw { position: relative; display: inline-block; width: 40px; height: 22px; border-radius: 11px; background: #555; border: 2px solid #ddd; font-style: normal; } .sw b { position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left 0.15s; } .sw.on { background: #2faa3a; } .sw.on b { left: 20px; }
 </style>
