@@ -13,6 +13,7 @@
   import { famOf, roleOf, statsOf } from '../../../board/atb/heroes';
   import { bossOf, FAM_NAME, ROLE_NAME, T, type Diff } from '../../../board/atb/tune';
   import AtbBattle from './AtbBattle.svelte';
+  import FamShield from './FamShield.svelte';
   import AtbResult from './AtbResult.svelte';
   import HeroPick from './HeroPick.svelte';
   import { bossArt } from './rdunBoss';
@@ -73,14 +74,14 @@
   <main class="setup" data-k="atb-setup">
     <h1>⚔ 게시판 던전 · 교사 연습방 <small>새 판(ATB) · 숫자 = 출발값 · 기록 = 이 폰 최근 5판만</small></h1>
     <section><b>차시</b><div class="chips">{#each lessons as p (p.id)}<button type="button" class:on={L?.id === p.id} data-no={p.no} onclick={() => (L = p)}>{p.no}차시{bossOf(p.no).draft ? ' ·초안' : ''}{#if UPLOADED.has(p.id)}<small class="srv" data-k="atb-srv"> 📦 서버 팩</small>{/if}</button>{/each}</div>
-      {#if L}{@const B = bossArt(bossOf(L.no), diff)}<p class="sub">{B.name} · {B.type} · 대표 행동 「{B.signature}」 · 약점 {B.weak.map((f) => FAM_NAME[f]).join(' · ')} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
+      {#if L}{@const B = bossArt(bossOf(L.no), diff)}<p class="sub">{B.name} · {B.type} · 대표 행동 「{B.signature}」 · 약점 {#each B.weak as f (f)}<FamShield fam={f} size={18} /> {FAM_NAME[f]} {/each} · 원문항 {originsOf(L).length}개{B.draft ? ' · ⏳ 공격 묶음은 설계 방 설정표 오면 바꿈' : ''}</p>{/if}</section>
     <section><b>난이도</b><div class="chips">{#each [['easy', '연습'], ['normal', '일반'], ['hard', '도전']] as [k, t] (k)}<button type="button" class:on={diff === k} onclick={() => (diff = k as Diff)}>{t}</button>{/each}</div></section>
     <section><b>방식</b><div class="chips"><button type="button" class:on={mode === 'play'} data-k="atb-mode-play" onclick={() => (mode = 'play')}>🙋 나 + 봇</button><button type="button" class:on={mode === 'watch'} data-k="atb-mode-watch" onclick={() => (mode = 'watch')}>👀 봇만 관전</button></div>
       <div class="chips">{#each [1, 2, 3, 4] as n (n)}<button type="button" class:on={size === n} onclick={() => (size = n)}>{n}인</button>{/each}</div>{#if size < 3}<p class="sub">⏳ 1 · 2인 숫자는 설계 방이 아직 맞추는 중(출발값 그대로)</p>{/if}</section>
     <section><b>용사</b>
       <div class="party">
-        {#if mode === 'play'}<button type="button" class="hp me" data-k="atb-me-hero" onclick={() => (picking = -1)}><small>나</small>{nameOf(meHero)}<em>{ROLE_NAME[roleOf(meHero)]} · {FAM_NAME[famOf(meHero)]}</em></button>{/if}
-        {#each mates.slice(0, mode === 'play' ? size - 1 : size) as id, i (i)}<button type="button" class="hp" onclick={() => (picking = i)}><small>봇</small>{nameOf(id)}<em>{ROLE_NAME[roleOf(id)]} · {FAM_NAME[famOf(id)]}</em></button>{/each}
+        {#if mode === 'play'}<button type="button" class="hp me" data-k="atb-me-hero" onclick={() => (picking = -1)}><small>나</small>{nameOf(meHero)}<em>{ROLE_NAME[roleOf(meHero)]} · <FamShield fam={famOf(meHero)} size={14} /> {FAM_NAME[famOf(meHero)]}</em></button>{/if}
+        {#each mates.slice(0, mode === 'play' ? size - 1 : size) as id, i (i)}<button type="button" class="hp" onclick={() => (picking = i)}><small>봇</small>{nameOf(id)}<em>{ROLE_NAME[roleOf(id)]} · <FamShield fam={famOf(id)} size={14} /> {FAM_NAME[famOf(id)]}</em></button>{/each}
       </div></section>
     <section><b>봇</b><div class="chips">{#each Object.entries(BOT_LABEL) as [k, t] (k)}<button type="button" class:on={botKind === k} onclick={() => (botKind = k as BotKind)}>{t}</button>{/each}</div></section>
     <section><b>키운 정도</b><div class="chips">{#each Object.entries(GROW) as [k, g] (k)}<button type="button" class:on={grow === k} onclick={() => (grow = k as typeof grow)}>{g.label}</button>{/each}</div></section>
