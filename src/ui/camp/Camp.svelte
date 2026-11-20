@@ -31,6 +31,7 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import { changePw, saveLogin, type Pupil } from '../../school/school';
   import Sheet from '../battle/Sheet.svelte';
+  import EarnSheet from './EarnSheet.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
@@ -421,6 +422,9 @@
     sheet = id;
   }
 
+  // 💎 얻는 길 빨간 점 = 지금 받을 수 있는 곳 (이름표 빨간 숫자와 같은 출처)
+  const earnDots = $derived<Record<string, boolean>>({ chal: chalN > 0, scare: !!todoN.scare, castle: !!todoN.castle, board: !!todoN.dummy, raid: open && !trial, mail: mailN > 0 });
+  const earnOff = $derived([...(feat('citadel') ? [] : ['castle']), ...(feat('scarecrow') && !trial ? [] : ['scare']), ...(feat('board') && !trial ? [] : ['board']), ...(trial ? ['mail', 'chest'] : [])]);
   // 정보판 (#111 ④)
   const lk = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안이면 16)
   const fam = $derived(famOfHero(me.hero));
@@ -429,6 +433,7 @@
   const ladderRows = $derived(rungs(me.hero, ladder(me.hero).filter((id) => ownsSkill(me.wallet, emptyPlan(), me.hero, id, fxGranted)), equipOf({ hero: me.hero, enh: me.enh, socket: me.socket, title: me.title }), me.wallet));
   const ttl = $derived(me.title && me.title !== 'none' ? titleOf(me.title) : null);
   const hero = $derived(HERO_NAMES[me.hero] ?? { name: '용사', job: '' });
+  const nextBuy = $derived(ladderRows.find((r) => r.state === 'buy') ?? null);
   const nextLine = $derived.by(() => {
     const b = ladderRows.find((r) => r.state === 'buy');
     if (b) return `🪜 ${TIER_NAMES[b.tier]} ${b.name.replace(/^\S+ /, '')}를 열 수 있어요 · 💎 ${b.gem}${b.scroll ? ` + 📜 ${b.scroll}` : ''}`;
@@ -519,8 +524,8 @@
 
     <div class="top">
       {#if pupil}<button type="button" class="back" aria-label="메뉴" onclick={() => (sheet = 'menu')}>‹</button>{:else if fromMe}<a class="back" href="?role=teacher&tab=me" aria-label="나 탭으로">‹</a>{/if}<b class="ttl">내 캠프</b><span class="sp2"></span>
-      <!-- 💎 · 📜 알약 = 누르면 🧙 내 용사 (정식 동작 · 📜 2026-11-15 선생님 「누르면 뭐 나올 것처럼 · 내 용사 연결」) -->
-      <button type="button" class="pill tap" data-k="wallet" disabled={!feat('hero')} aria-label="마정석 {me.wallet.gem}개 · 서술 조각 {me.wallet.scroll}개 · 내 용사 보기" onclick={() => tap('hero')}><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{me.wallet.gem.toLocaleString()}</span><i class="psep" aria-hidden="true"></i><span class="pv"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><rect x="2" y="2" width="10" height="10" rx="2" fill="var(--scroll)" /></svg>{me.wallet.scroll}</span>{#if feat('hero')}<b class="chev" aria-hidden="true">›</b>{/if}</button>
+      <!-- 💎 · 📜 알약 (📜 2026-11-20 선생님 「마정석 누르면 … 마정석 구할 수 있는 루트 알려 주는 창」): 💎 = 💎 얻는 길 · 📜 = 📜 얻는 길 · 그림 = 우리 아이콘 글꼴(Dungeon Icons) · 내 용사 = 아래 카드 -->
+      <span class="pill tap2" data-k="wallet"><button type="button" class="pv" data-k="wallet-gem" aria-label="마정석 {me.wallet.gem}개 · 얻는 길 보기" onclick={() => (sheet = 'earn-gem')}><i class="wic" aria-hidden="true">💎</i>{me.wallet.gem.toLocaleString()}</button><i class="psep" aria-hidden="true"></i><button type="button" class="pv" data-k="wallet-scroll" aria-label="서술 조각 {me.wallet.scroll}개 · 얻는 길 보기" onclick={() => (sheet = 'earn-scroll')}><i class="wic" aria-hidden="true">📜</i>{me.wallet.scroll}</button></span>
       <!-- 🏆 #73 위 막대 도전과제 단추 없앰 → ⛺ 기록 텐트 -->
       {#if fromMe0 && !tvMode}<button type="button" class="asstu" class:on={asStu} data-k="as-stu" aria-pressed={asStu} aria-label="학생 화면으로 보기" title="학생 화면으로 보기" onclick={() => { asStu = !asStu; tPanel = ''; }}>{asStu ? '👩‍🏫 교사' : '🧑‍🎓 학생'}</button>{/if}
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
@@ -544,19 +549,19 @@
     <div class="ladder" role="group" aria-label="스킬 사다리">
       {#each ladderRows as r (r.id)}
         <button type="button" class="rung {r.state}" onclick={() => tap('hero')} aria-label="{TIER_NAMES[r.tier]} {r.name} {r.state === 'equip' ? '장착' : r.state === 'own' ? '가짐' : r.state === 'buy' ? `살 수 있음 💎 ${r.gem}` : `잠김 ${r.why ?? ''}`}">
-          <b>{(TIER_NAMES[r.tier] ?? '').split(' ')[0]}</b>
+          <b>{(TIER_NAMES[r.tier] ?? '').split(' ')[0]}{#if r.state === 'lock'}<i class="rlk" aria-hidden="true">🔒</i>{/if}</b>
           <span>{r.name.replace(/^\S+ /, '')}</span>
           <small>{r.state === 'equip' ? '장착' : r.state === 'own' ? '✔' : `💎${r.gem}${r.scroll ? ` 📜${r.scroll}` : ''}`}</small>
           {#if r.state === 'buy'}<i class="bdot" aria-hidden="true"></i>{/if}
         </button>
       {/each}
     </div>
-    <p class="next">{nextLine}</p>{/if}
+    {#if nextBuy}<button type="button" class="nextbtn" data-k="next-buy" onclick={() => tap('hero')}><b>{(TIER_NAMES[nextBuy.tier] ?? '').split(' ')[0]}</b> {nextBuy.name.replace(/^\S+ /, '')} 열기 <span class="nv">💎 {nextBuy.gem}{#if nextBuy.scroll} · 📜 {nextBuy.scroll}{/if}</span><i aria-hidden="true">›</i></button>{:else}<p class="next">{nextLine}</p>{/if}{/if}<!-- 📜 2026-11-20 시안: 살 수 있는 다음 칸 = 테두리 단추 (누르면 내 용사) -->
   </section>
   {/if}
-  <BottomAction dock={false} disabled={!open} why={open ? '' : '선생님이 수업을 열면 차원문에 빛이 들어와요'} onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
+  <BottomAction dock={false} disabled={!open} why="" onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
     {#snippet right()}{#if !open}<button type="button" class="side codebtn" data-k="code-btn" onclick={() => (sheet = 'gate')}>🚪 코드</button>{/if}{/snippet}<!-- 📜 #62 코드 = 입장 단추 옆 같은 줄(입장 넓게 · 코드 좁게 오른쪽 · 높이 같게) -->
-    {#snippet main()}<span>{trial ? '⚔ 다른 차시로' : open ? `${L.no}차시 던전 입장` : '차시 던전 · 닫힘'}</span>{/snippet}
+    {#snippet main()}{#if !trial && !open}<span class="shut" data-k="gate-shut"><b>🔒 차시 던전</b><small>수업 대기</small></span>{:else}<span>{trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}</span>{/if}{/snippet}<!-- 📜 2026-11-20 시안: 닫힘 = 「🔒 차시 던전 / 수업 대기」 두 줄 (옛 안내 줄 = 단추 안으로) -->
   </BottomAction>
 </div>
 
@@ -648,6 +653,8 @@
 {:else if sheet === 'tent' && feat('author')}
   <!-- ✏ #75 출제 공방 (책상) -->
   {#await loadQuest() then K}<K.default {S} {me} cls={pupil?.cls ?? ''} num={pupil?.num ?? 0} uid={pupil?.uid ?? 'me'} test={me.test || !pupil} tab={questTab} claim={chalClaim} onclose={() => { sheet = null; questTab = 'up'; }} />{/await}
+{:else if sheet === 'earn-gem' || sheet === 'earn-scroll'}
+  <EarnSheet kind={sheet === 'earn-gem' ? 'gem' : 'scroll'} have={sheet === 'earn-gem' ? me.wallet.gem : me.wallet.scroll} today={Number(me.wallet.day?.[kstDay(Date.now())]) || 0} dots={earnDots} off={earnOff} onpick={(go) => { sheet = null; tap(go); }} onclose={() => (sheet = null)} />
 {:else if sheet === 'hero'}
   <MyHero {me} persist={M.save} onclose={() => (sheet = null)} teacher={fromMe0} onreset={fromMe0 ? M.reset : undefined} />
 {:else if sheet}
@@ -712,7 +719,7 @@
   .build { margin: var(--s2) 0 0; text-align: center; font-size: 13px; color: var(--text-3); }
   .out { margin-top: var(--s3); min-height: var(--tap); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); display: flex; align-items: center; justify-content: center; gap: var(--s2); }
   .out small { color: var(--text-3); font-weight: 500; }
-  .codebtn { width: 96px; padding: 0 var(--s2); font-size: 15px !important; flex-direction: row !important; gap: 4px !important; background: var(--surface) !important; }
+  .codebtn { width: 128px; padding: 0 var(--s2); font-size: 18px !important; flex-direction: row !important; gap: 4px !important; background: var(--surface) !important; }
   .cg { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text-2); } .cg b { color: var(--text); }
   .cin { width: 100%; box-sizing: border-box; height: 56px; border-radius: var(--r); border: 2px solid var(--line); background: var(--bg); color: var(--text); font: 700 26px var(--font); letter-spacing: 6px; text-align: center; }
   .cin:focus { border-color: var(--accent); outline: none; }
@@ -725,7 +732,7 @@
   @media (max-width: 699px), (orientation: landscape) and (max-width: 899px) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); } .camp:not(.paper) .stagebox { min-height: calc(min(100vw, 330px) / var(--ar)); } /* 330 = 위 막대(‹ · 제목 · 💎 📜 · ⚙)가 다 들어가는 폭 */ }
   .stagebox { flex: 1 1 auto; min-height: 0; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
   /* 📜 #62 (2026-11-18 선생님 캡처): 장면 좌우 끝 = 아래 카드 줄과 같은 선(양옆 16) · 비율 · 물건 자리 그대로 · 모자라는 높이는 캠프 세로 스크롤 (가로 PC = 장면 | 카드 두 칸이라 그대로) */
-  @media not ((min-width: 900px) and (orientation: landscape)) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; } .camp:not(.paper) .stagebox { flex: none; min-height: 0; container-type: inline-size; padding: 0 var(--s4); } .camp:not(.paper) .stage { width: 100%; } .camp:not(.paper) > :global(.act) { margin-top: auto; position: sticky; bottom: 0; z-index: 6; } } /* 🐞 짧은 화면(360 × 640): 장면 · 정보판은 스크롤 · 주요 단추는 늘 아래에 보이게 (#151 · #62 뒤 단추가 화면 밖으로 밀렸음) */
+  @media not ((min-width: 900px) and (orientation: landscape)) { .camp:not(.paper) { overflow-y: auto; overscroll-behavior: contain; } .camp:not(.paper) .stagebox { flex: none; min-height: 0; container-type: inline-size; padding: 0; } /* 📜 2026-11-20 시안 「꽉 찬 화면」 = 폰 양끝까지 */ .camp:not(.paper) .stage { width: 100%; } .camp:not(.paper) > :global(.act) { margin-top: auto; position: sticky; bottom: 0; z-index: 6; } } /* 🐞 짧은 화면(360 × 640): 장면 · 정보판은 스크롤 · 주요 단추는 늘 아래에 보이게 (#151 · #62 뒤 단추가 화면 밖으로 밀렸음) */
   .camp > :global(.act) { flex: none; }
   .info { flex: none; }
   .stage { position: relative; width: min(100cqw, 100cqh * var(--ar)); flex: none; background-size: 100% 100%; overflow: hidden; }
@@ -791,10 +798,16 @@
   .pill.tap:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
   .pill.tap:disabled { cursor: default; box-shadow: none; }
   .pv { display: flex; align-items: center; gap: var(--s1); }
+  /* 💎 · 📜 = 두 단추 한 알약 (📜 2026-11-20 얻는 길) · 그림 = Dungeon Icons 글꼴 */
+  .pill.tap2 { padding: 0 4px; border: 1px solid rgba(255, 255, 255, 0.35); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.6); }
+  .tap2 .pv { position: relative; height: 100%; padding: 0 8px; border: 0; background: none; color: #fff; font: 700 var(--fs-small) var(--font); font-variant-numeric: tabular-nums; cursor: pointer; }
+  .tap2 .pv::before { content: ''; position: absolute; inset: -8px 0; }
+  .tap2 .pv:active { transform: translateY(2px); }
+  .wic { font-style: normal; font-size: 16px; line-height: 1; font-family: var(--font); }
   .psep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.3); }
   .chev { font-size: 16px; line-height: 1; color: rgba(255, 255, 255, 0.8); margin-left: -1px; }
   /* 이름표가 그림 밖으로 잘리지 않게: 차시 던전(오른쪽 끝) = 오른쪽에 붙임 · 모루(아래 끝) = 오른쪽 옆 */
-  .zone[data-zone='gate'] .tag { left: 50%; right: auto; bottom: auto; top: 6%; transform: translate(-50%, -100%); } /* 🏕 #71 던전 문 이름표 = 아치 위 (아래 = 허수아비) */
+  .zone[data-zone='gate'] .tag { left: 50%; right: auto; bottom: 4px; top: auto; transform: translate(-50%, 0); } /* 📜 2026-11-20 시안 = 던전 문 이름표 문 아래 (옛 #71 = 아치 위) */
   .prop[data-prop='anvil'] .tag { left: 100%; top: 50%; bottom: auto; transform: translate(2px, -50%); }
   /* 📐 태블릿 · PC (📜 2026-11-15 선생님 「태블릿 모드 비율 조정 · 스마트폰은 잘 나와」): 폰은 그대로
      세로 태블릿 = 기둥 640 · 가로(≥ 900) = 왼쪽 장면(화면 높이 가득 · 비율 유지) + 오른쪽 카드 · 단추 400 */
@@ -829,6 +842,13 @@
   .rung.own small { color: var(--ok); }
   .rung.buy { border-style: dashed; border-color: var(--gem); }
   .rung.lock { opacity: 0.45; box-shadow: none; }
+  .shut { display: flex; flex-direction: column; align-items: center; line-height: 1.15; } .shut b { font-size: 17px; } .shut small { font-size: 14px; font-weight: 600; opacity: 0.85; }
+  .rlk { font-style: normal; margin-left: 4px; font-size: 12px; }
+  .nextbtn { min-height: var(--tap); display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 var(--s3); border-radius: var(--r); border: 1.5px solid var(--gem); background: color-mix(in srgb, var(--gem) 8%, var(--surface)); color: var(--text); font: 700 var(--fs-body) var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .nextbtn b { color: var(--gem); }
+  .nextbtn .nv { color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .nextbtn i { font-style: normal; color: var(--text-2); }
+  .nextbtn:active { transform: translateY(2px); box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
   .svband { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
   .pwl { display: flex; flex-direction: column; gap: 4px; font: 600 14px var(--font); color: var(--text-2); margin-bottom: 10px; } .pwi { min-height: 48px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 22px var(--font); letter-spacing: 0.4em; text-align: center; } .pwm { color: var(--bad); font-weight: 700; }

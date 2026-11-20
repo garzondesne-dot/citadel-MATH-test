@@ -23,7 +23,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await rest('gem/1-3/3/total', 'PUT', 37); await rest('xp/1-3/3/total', 'PUT', 120);
   await rest('records/1-3/3/set-02', 'PUT', { at: 1, no: 2, mons: { m1: 'o' } });
   await s.reload(); await s.waitForTimeout(4000);
-  const hero = async (p) => { await p.click('[data-k="wallet"]').catch(() => {}); await p.waitForTimeout(800); };
+  const hero = async (p) => { await p.click('button.hero-card').catch(() => {}); await p.waitForTimeout(800); };
   const titles = async (p) => {
     for (const t of await p.$$('[role="tab"], .tabs button, .seg button')) { const tx = ((await t.textContent()) || '').trim(); if (/기록|호칭/.test(tx)) { await t.click(); break; } }
     await p.waitForTimeout(300); await p.click('button:has-text("호칭 고르기")'); await p.waitForTimeout(500);
