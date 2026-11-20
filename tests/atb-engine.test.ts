@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { SUBJ } from '../src/engine/subject';
 import { HEROES } from '../src/model/hero';
-import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skillList, tick, timingOf, timingZone, useSkill, type State } from '../src/board/atb/engine';
+import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skillList, tick, timingOf, timingZone, useSkill, skillPeek, type State } from '../src/board/atb/engine';
 import { newBot, simulate } from '../src/board/atb/bots';
 import { statsOf } from '../src/board/atb/heroes';
 import { BOSSES, BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, T } from '../src/board/atb/tune';
@@ -171,5 +171,24 @@ describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => 
     const seen = new Set<string>();
     for (let s = 1; s <= 12; s++) { const S = at(10, undefined, s); run(S, 10.05); seen.add(S.aoeNext ? 'aoe' : `tilt${S.tilt}`); expect(S.aoeNext ? S.tilt : S.tilt.length).toBe(S.aoeNext ? '' : 1); }
     expect(seen.has('aoe')).toBe(true); expect([...seen].some((x) => x.startsWith('tilt'))).toBe(true);
+  });
+});
+
+// 🔎 📜 요청 #19 덧3 스킬 미리 보기 = 어림값이 실제 피해와 같음 · 실드 · 약점 · 못 쓰는 까닭
+describe('ATB 스킬 미리 보기 (요청 #19 덧3)', () => {
+  it('⚡ 내 스킬 어림값 = 실제 피해 · 약점 시간 = ×2 금색 · 실드 = 「실드 깸」', () => {
+    const S = fresh(); const h = S.heroes[0]!; h.atb = 1; h.ch = 3;
+    const p = skillPeek(S, 0, 'equip'), hp0 = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true);
+    expect(p.line).toBe(`💥 약 ${hp0 - S.bossHp}`); expect(p.gold).toBe(false);
+    S.weakUntil = S.t + 10; h.atb = 1; const w = skillPeek(S, 0, 'equip'); expect(w.gold).toBe(true); expect(w.line).toMatch(/약점 ×2/);
+    S.weakUntil = 0; S.shieldUp = true; S.cells = S.heroes.map((x) => ({ owner: x.id, fam: x.s.fam, broken: false }));
+    expect(skillPeek(S, 0, 'equip').line).toMatch(/^🛡 실드 깸/);
+  });
+  it('역할 · 부활 · 못 쓰는 까닭', () => {
+    const S = fresh(); const h = S.heroes[2]!; h.ch = 0; h.atb = 1;
+    expect(skillPeek(S, 2, 'role').line).toBe(`💚 팀 +${T.role.healer.heal}`);
+    expect(skillPeek(S, 2, 'role').why).toMatch(/⚡ 1 필요/);
+    expect(skillPeek(S, 0, 'revive').line).toBe('💖 부활 HP 30%');
+    h.ch = 1; h.atb = 0.5; expect(skillPeek(S, 2, 'role').why).toBe('ATB 차는 중');
   });
 });

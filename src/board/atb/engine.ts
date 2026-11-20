@@ -1,7 +1,7 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
 //   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
-import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
+import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
 import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
@@ -250,4 +250,32 @@ export function runRecord(S: State, ctx: { cls?: string; no: number; practice?: 
     subs: r.subSec.length, subSecMed: med(r.subSec), timingOk: pct(r.timing.ok, r.timing.n), timingCrit: pct(r.timing.crit, r.timing.n), charges: r.charges, skills: { ...r.skills },
     downs: r.downs, revives: r.revives, shields: S.heroes.map((h) => h.log.shields),
   };
+}
+
+// ── 🔎 스킬 미리 보기 (📜 요청 #19 덧3 「무슨 효과인지 · 어느 정도 공격인지 미리」) ──
+//   숫자 = 지금 이 용사(강화 · 장착 등급 = skillMul) · 약점 시간 · 실드 피해 줄임을 그대로 넣은 어림값 · 화면은 「약」을 붙임
+export interface Peek { line: string; gold: boolean; name: string; desc: string; cost: number; per: string; why: string }
+const estHit = (S: State, raw: number) => Math.max(1, Math.round(raw * (weak(S) ? T.weakDmg : S.shieldUp && S.cells.some((c) => !c.broken) ? (S.boss.shieldDmg ?? T.shieldDmg) : 1)));
+export function skillPeek(S: State, who: number, k: SkillK): Peek {
+  const h = S.heroes[who]!, R = h.s.role, wk = weak(S), cost = k === 'equip' && canBreak(S, who) ? T.cost.shield : T.cost[k];
+  const base = T.skillBase * h.s.skillMul, wTxt = wk ? ` · 약점 ×${T.weakDmg}` : '';
+  let line = '', name = '', desc = '', per = '제한 없음', gold = false;
+  if (k === 'equip' || k === 'shield') {
+    name = '⚡ 내 스킬';
+    if (canBreak(S, who)) { const two = S.boss.weak.includes(h.s.fam); line = `🛡 실드 깸${two ? ' 2칸' : ''}`; desc = `실드가 떠 있으면 내 칸을 깨요${two ? ' · 약점 계열이라 친구 칸 하나 더' : ''}`; }
+    else { line = `💥 약 ${estHit(S, base * T.ratio.equip)}${wTxt}`; gold = wk; desc = '보스에게 장착 스킬 피해 · 충전이 넘치면 저절로 나감'; }
+  } else if (k === 'role') {
+    name = `${ROLE_SKILL[R]}`;
+    if (R === 'dealer') { line = `💥 강타 약 ${estHit(S, base * T.ratio.equip * T.role.dealer.smash)}${wTxt}`; gold = wk; desc = `장착 스킬 ×${T.role.dealer.smash} 피해`; }
+    else if (R === 'tank') { line = `🛡 엄호 −${Math.round(T.role.tank.cover * 100)}%`; desc = `고른 친구가 다음에 받는 피해 −${Math.round(T.role.tank.cover * 100)}%`; }
+    else if (R === 'healer') { line = `💚 팀 +${T.role.healer.heal}`; desc = `살아 있는 팀 모두 체력 +${T.role.healer.heal}`; per = '보스 공격 사이 팀에서 1번'; }
+    else { line = '✨ 격려 ATB 가득'; desc = '고른 친구 ATB 바로 가득 · 묶인 친구는 풀림'; }
+  } else if (k === 'aura') { name = '🌟 홀리 방패'; line = `🛡 다음 공격 막음 · 🗿 ${T.aura.stone}초`; desc = `팀 전체 다음 보스 공격 막음 + 보스 ${T.aura.stone}초 석화`; per = '판당 1번'; }
+  else if (k === 'awk') {
+    name = '🌟 각성'; line = `💥 약 ${estHit(S, base * T.ratio.awk)} · 1번`; gold = wk;
+    desc = `큰 피해 + ${R === 'dealer' ? `약점 시간 +${T.awk.dealerWeak}초` : R === 'tank' ? `팀 받는 피해 −${Math.round(T.awk.tankCut * 100)}%` : R === 'healer' ? `팀 체력 +${T.awk.healerHeal}` : `팀 ATB +${Math.round(T.awk.supportAtb * 100)}%`}`; per = '판당 1번';
+  } else if (k === 'revive') { name = '💖 부활'; line = `💖 부활 HP ${Math.round(T.reviveHp * 100)}%`; desc = `쓰러진 친구를 체력 ${Math.round(T.reviveHp * 100)}%로 살림`; per = `팀 ${S.revives} / ${T.revives}번 남음`; }
+  else if (k === 'tier4') { name = '4레벨'; line = `💥 약 ${estHit(S, base * T.ratio.tier4)}`; }
+  const why = S.end ? '판 끝' : h.down ? '쓰러짐' : S.t < h.stunUntil ? '묶임 · 기절' : (k === 'aura' && h.auraUsed) || (k === 'awk' && h.awkUsed) ? '이번 판에 이미 씀' : k === 'role' && R === 'healer' && healBlocked(S) ? '보스 공격 뒤에 다시' : k === 'revive' && S.revives <= 0 ? '팀 부활 다 씀' : h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '';
+  return { line, gold, name, desc, cost, per, why };
 }

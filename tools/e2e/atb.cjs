@@ -113,6 +113,20 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-shield-break-844.png` }); await p.waitForTimeout(1500);
   const gone = (await p.$$('[data-k="atb-cells"] .cell2.gone')).length;
   ok('요청 #12 보호막 부수기 = 칸 금 감 · 조각 → 사라짐(한 칸씩)', gone >= 1 && /hold|crack|shatter/.test(mid), `${mid} → 사라짐 ${gone}`);
+  // 🔎 요청 #19 덧3 스킬 미리 보기 = 단추 안 한 줄 · 꾹 0.4초 = 설명 카드(발동 안 함) · 톡 = 발동
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 1; a.full(); }); await p.waitForTimeout(150);
+  const pvs = await p.$$eval('[data-k^="atb-pv-"]', (x) => x.map((e) => e.textContent));
+  ok('요청 #19 덧3 단추마다 한 줄 = ⚡ 「💥 약 n」 · 역할 줄', pvs.length >= 2 && /💥 약 \d+/.test(pvs[0]), JSON.stringify(pvs));
+  { const bx = await p.$eval('[data-k="atb-sk-equip"]', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
+    await p.mouse.move(bx[0], bx[1]); await p.mouse.down(); await p.waitForTimeout(600);
+    const pk = await p.textContent('[data-k="atb-peek"]').catch(() => '');
+    await p.mouse.up(); await p.waitForTimeout(150);
+    ok('요청 #19 덧3 꾹 = 설명 카드(이름 · 효과 · ⚡ 비용) · 손 떼면 닫힘 · 발동 안 함', /내 스킬/.test(pk) && /⚡ 1/.test(pk) && !(await p.$('[data-k="atb-peek"]')) && (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 1, pk);
+    await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; }); await p.waitForTimeout(120);
+    await p.mouse.move(bx[0], bx[1]); await p.mouse.down(); await p.waitForTimeout(600); const pk2 = await p.textContent('[data-k="atb-peek"]').catch(() => ''); await p.mouse.up();
+    ok('요청 #19 덧3 못 쓰는 단추도 꾹 = 「지금 못 씀: ⚡ 1 필요」', /지금 못 씀/.test(pk2), pk2); }
+  await p.screenshot({ path: `${SHOTS}/atb-peek-844.png` });
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
