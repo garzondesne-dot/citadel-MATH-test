@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isReady } from '../../store/atomic';
   import { loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
@@ -224,7 +225,7 @@
   function chalCtx(): ChalCtx { const b = meBound(); if (b) return { d: titleData(b.S, b.cls, b.num), gifts: b.S.get<Record<string, unknown>>(`gifts/${pupil?.uid ?? ''}`), castles: castles.list }; return { d: { gem: { log: chLocal() } }, gifts: {}, castles: castles.list }; }
   function chalClaim(key: string, row: { g: number; s?: number; at: number; why: string }): boolean {
     const b = meBound();
-    if (b) { const p = `gem/${b.cls}/${b.num}/log/${key}`; if (b.S.get(p)) return false; b.S.set(p, row); }
+    if (b) { const p = `gem/${b.cls}/${b.num}/log/${key}`; if (!isReady(b.S, p) || b.S.get(p)) return false; b.S.set(p, row); } // 🐞 ① 받기 전 = 안 줌 (두 번 받기 막음)
     else { const L0 = chLocal(); if (L0[key]) return false; L0[key] = row; try { localStorage.setItem(CHK, JSON.stringify(L0)); } catch { /* 무시 */ } }
     me.wallet.gem += row.g; if (row.s) me.wallet.scroll += row.s; M.save(); chVer++; return true;
   }

@@ -52,6 +52,7 @@
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
+  import { addTo, isReady, whenReady } from '../store/atomic';
   import { CHALS, chalState } from '../school/challenges';
   import { titleData } from '../model/titles';
   import { titleOf } from '../model/hero';
@@ -206,7 +207,8 @@
   const result = $derived(R && isEnd(L, R) ? resultOf(L, R, uid) : null);
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
   const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
-  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; untrack(() => { const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  // 🐞 11/20 ① 받기 전 빈 값: 내 기록 · 지갑 · EXP · held 칸을 받기 전에 쓰면 = 옛 기록을 null 로 · 받은 보상을 다시 · 💎 total 을 「0 + 보상」으로 덮어씀 → 받은 뒤에 씀
+  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
   function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {
@@ -219,8 +221,8 @@
     const r = settle(rw, { gem: Number(gr.total) || 0, xp: Number(xr.total) || 0, day: gr.day, gemLog: gr.log || {}, xpLog: xr.log || {} }, kstDay(t), t);
     if (!r.gem && !r.xp) return;
     for (const [k, v] of Object.entries(r.writes)) b.S.set(`${k.startsWith('gem/') ? gp : xp}/${k.slice(k.indexOf('/') + 1)}`, v);
-    if (r.gem) { b.S.set(`${gp}/total`, (Number(gr.total) || 0) + r.gem); for (const [d, n] of Object.entries(r.day)) if (n !== gr.day?.[d]) b.S.set(`${gp}/day/${d}`, n); }
-    if (r.xp) b.S.set(`${xp}/total`, (Number(xr.total) || 0) + r.xp);
+    if (r.gem) { addTo(b.S, `${gp}/total`, r.gem); for (const [d, n] of Object.entries(r.day)) if (n !== gr.day?.[d]) addTo(b.S, `${gp}/day/${d}`, n - (Number(gr.day?.[d]) || 0)); } // 🐞 ② 더하기 (다른 기기 · 캠프 저장과 안 지움)
+    if (r.xp) addTo(b.S, `${xp}/total`, r.xp);
     rewardLine = r.lines.join(' · ');
   }
   // 💬 마지막 한마디 (📜 2026-11-15 선생님 「A 되살림」 · 정식 그대로: 마무리에 20자 · 처음 + 고치기 1번 · 처음 남길 때 EXP +2(정식 XP.words))
@@ -229,7 +231,7 @@
   function saveWord() {
     const first = !myWord, e = sayWords(S, code, uid, wtext); werr = e; if (e) return;
     wedit = false; wtext = '';
-    const b = meBound(); if (first && b) { const k = `xp/${b.cls}/${b.num}`, key = `words_${code}`; if (!b.S.get(`${k}/log/${key}`)) { b.S.set(`${k}/log/${key}`, { xp: 2, why: '마지막 한마디', at: S.now() }); b.S.set(`${k}/total`, (Number(b.S.get(`${k}/total`)) || 0) + 2); } }
+    const b = meBound(); if (first && b) { const k = `xp/${b.cls}/${b.num}`, key = `words_${code}`; if (isReady(b.S, k) && !b.S.get(`${k}/log/${key}`)) { b.S.set(`${k}/log/${key}`, { xp: 2, why: '마지막 한마디', at: S.now() }); addTo(b.S, `${k}/total`, 2); } } // 🐞 ① 받기 전 = 안 줌(이중 지급 · 0+2 덮어쓰기 막음) · ② 더하기
   }
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');

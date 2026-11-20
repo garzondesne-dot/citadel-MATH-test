@@ -17,6 +17,7 @@
   import type { Store } from './model/types';
   import type { Where } from './store/config';
   import { bindMe } from './store/meSync';
+  import { isReady, whenReady } from './store/atomic';
   import { BUILD, BUILD_ID, REV } from './build';
   import { BETA, TEST_ADDR, verName } from './channel';
   import Student from './ui/Student.svelte';
@@ -104,6 +105,19 @@
       if (au) void import('firebase/auth').then((fa) => { offA = fa.onAuthStateChanged(au as import('firebase/auth').Auth, () => check()); });
     }
   }
+  // 🐞 11/20 ① 받기 전 빈 값: 묶인 학생 = 내 칸(지갑 · EXP · 계정 · 카드 · 기록 · 성채/허수아비) 첫 값을 받은 뒤에 캠프를 엶
+  //   (느린 망에서 캠프 · 허수아비 · 성채가 빈 기록으로 「처음」 판단 → 보상 다시 · 기록 객체 덮어쓰기를 막음 · 20초 넘으면 그냥 엶 = 쓰기는 store/me 가 막음)
+  const MY_ROOTS = ['gem', 'xp', 'accounts', 'cards', 'records', 'bonus'];
+  let myReady = $state(true);
+  $effect(() => {
+    void bindVer; void login;
+    const b = meBound(); if (!b) { myReady = true; return; }
+    const paths = MY_ROOTS.map((r) => `${r}/${b.cls}/${b.num}`);
+    if (paths.every((x) => isReady(b.S, x))) { myReady = true; return; }
+    myReady = false;
+    let on = true; void whenReady(b.S, paths, 20000).then(() => { if (on) myReady = true; });
+    return () => { on = false; };
+  });
   // 🚪 QR 입장 (#138 ③): ?join=코드 → 로그인한 폰은 바로 그 수업 · 아니면 로그인 뒤 그 수업
   const joinCode = (q.get('join') || '').trim();
   if (joinCode && !role && untrack(() => login)) location.replace(`?role=student&room=${encodeURIComponent(joinCode)}`);
@@ -155,6 +169,8 @@
     {#await loadTeacher() then M}<M.default {S} packs={TEST_ADDR && q.get('packs') === '0' ? [] : PACKS} />{/await}
   {:else if role === 'student' && me}
     <Student {S} L={lessonOf(code)} {code} uid={me.uid} num={me.num} nick={me.nick} cls={me.cls} />
+  {:else if !role && login && !myReady}
+    <p class="relogin" role="status" data-k="my-loading">📦 내 기록 불러오는 중…</p>
   {:else if !role && login}
     {#key `${campCode}|${bindVer}`}<Camp {S} L={lessonOf(campCode)} code={campCode} pupil={login} />{/key}
   {:else if !role}

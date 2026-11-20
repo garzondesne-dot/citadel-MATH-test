@@ -19,7 +19,7 @@ describe('🚨 지갑 받기 전 덮어쓰기 막기', () => {
     data['gem/1-1/14'] = { total: 187, scroll: 2 }; data['xp/1-1/14'] = { total: 475 }; data['cards/1-1/14'] = { inter: true }; ok = true;
     vi.advanceTimersByTime(400);
     expect(M.me.wallet.gem).toBe(187); expect(M.me.xp).toBe(475); expect(M.me.hero).toBe(6);
-    M.save(); expect(data['gem/1-1/14/total']).toBe(187);
+    writes.length = 0; M.save(); expect(writes.filter((w) => w.endsWith('/total'))).toEqual([]); // 🐞 ② 안 바뀐 칸은 다시 쓰지 않음 (예전 = total 187 통째로)
     vi.useRealTimers();
   });
 });

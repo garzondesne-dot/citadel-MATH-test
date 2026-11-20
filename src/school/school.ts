@@ -96,7 +96,7 @@ export async function enter(S: Store, cls: string, num: number, pw: string, pw2:
     if (!/^\d{4}$/.test(pw)) return '비밀번호는 숫자 4자리예요';
     if (pw !== pw2) return '두 번 쓴 비밀번호가 달라요';
     if (hasAccount(S, cls, num)) { try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, genOf(S, cls, num)), authPw(pw)); claim(S, cls, num, c.user.uid); return ready(S, cls, num); } catch { return '이미 가입한 번호예요 · 로그인해요'; } } // 옮긴 계정 = 칸은 그대로 두고 잇기
-    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, genOf(S, cls, num)), authPw(pw)); S.set(accPath(cls, num), { uid: c.user.uid, at: S.now() }); return ready(S, cls, num); }
+    try { const c = await fa.createUserWithEmailAndPassword(A, authEmail(cls, num, genOf(S, cls, num)), authPw(pw)); S.set(`${accPath(cls, num)}/uid`, c.user.uid); S.set(`${accPath(cls, num)}/at`, S.now()); return ready(S, cls, num); } // 🐞 11/20 ② 칸마다 (계정 칸을 받기 전 「없음」으로 봐도 용사 · 호칭 · 테마를 지우지 않음)
     catch (e) { const cd = String((e as { code?: string }).code); return /email-already/.test(cd) ? '이미 가입한 번호예요 · 로그인해요' : /operation-not-allowed|admin-restricted/.test(cd) ? '서버에서 로그인이 꺼져 있어요 · 선생님께 알려 주세요' : '가입하지 못했어요 · 잠시 뒤 다시'; }
   }
   if (!hasAccount(S, cls, num)) return '아직 가입하지 않은 번호예요 · 「처음이에요 · 가입」';
