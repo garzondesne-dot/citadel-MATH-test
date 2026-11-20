@@ -12,12 +12,12 @@ const base = 'http://localhost:4173/';
   const labels = (p) => p.$$eval('.tag', (ls) => ls.map((l) => `${l.textContent.trim()}[${[...l.classList].filter((c) => !/svelte|tag/.test(c)).join('')}]`).join(' · '));
   // 닫힌 캠프 (종합실 없음)
   const c0 = await open('?role=camp&room=CP'); await c0.waitForSelector('.stage'); await c0.waitForTimeout(400);
-  log('닫힘:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim(), '|', (await c0.textContent('.act .why')).trim());
+  log('닫힘:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim(), '|', ((await c0.textContent('.act .why', { timeout: 500 }).catch(() => '')) || '').trim());
   // 수업 열기
   const hall = await open('?role=hall&mode=test&room=CP'); await hall.waitForSelector('.dock'); await c0.waitForTimeout(500);
   log('열림:', await labels(c0), '| 단추', (await c0.textContent('.act .btn')).trim());
   await c0.screenshot({ path: `${SHOTS}/b6-camp-first-360.png` }); await over(c0, '처음');
-  log('정보판:', (await c0.textContent('.hero-card')).replace(/\s+/g, ' ').trim(), '| 사다리', await c0.$$eval('.rung', (rs) => rs.map((r) => `${r.textContent.replace(/\s+/g, ' ').trim()}[${[...r.classList].filter((c) => !/svelte|rung/.test(c)).join('')}]`).join(' / ')), '|', (await c0.textContent('.next')).trim());
+  log('정보판:', (await c0.textContent('.hero-card')).replace(/\s+/g, ' ').trim(), '| 사다리', await c0.$$eval('.rung', (rs) => rs.map((r) => `${r.textContent.replace(/\s+/g, ' ').trim()}[${[...r.classList].filter((c) => !/svelte|rung/.test(c)).join('')}]`).join(' / ')), '|', ((await c0.textContent('[data-k="next-buy"], .next', { timeout: 2000 }).catch(() => '')) || '').trim());
   // 성채 시트
   await c0.click('button[aria-label="성채"]'); await c0.waitForSelector('.sheet'); await c0.waitForTimeout(250);
   await c0.screenshot({ path: `${SHOTS}/b6-castle-sheet-360.png` }); await over(c0, '성채 시트');

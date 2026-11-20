@@ -104,7 +104,7 @@
     <span class="sp"></span>
     <ModeSwitch /><!-- 📝 게임 | 제출 (2026-11-14) -->
     {#if timeLeftMs != null && timeLeftMs <= 5 * 60000}<span class="pill time" aria-label="남은 시간">⏱ {mm(Math.max(0, timeLeftMs))}</span>{/if}
-    <span class="pill" aria-label="마정석 {gem}개"><svg width="13" height="13" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1 13 6 7 13 1 6Z" fill="var(--gem)" /></svg>{gem}</span>
+    <span class="pill" aria-label="마정석 {gem}개"><i class="wic" aria-hidden="true">💎</i>{gem}</span>
   </div>
   {#if holy && onholy}<button type="button" class="holy-btn" class:on={holy === 'on'} onclick={onholy} aria-pressed={holy === 'on'}>🛡 <b>{holy === 'on' ? '방패 준비됨' : '홀리 방패'}</b><small>{holy === 'on' ? '끄기' : '켜기'}</small></button>{/if}
   {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
@@ -253,4 +253,5 @@
   @keyframes tfl { to { transform: scale(1, 1.12) translateY(-1px); } } @keyframes tgl { to { transform: scale(1.12); opacity: 0.8; } }
   .explore { position: absolute; z-index: 4; left: 50%; bottom: 10px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 24px); padding: 4px 12px; border-radius: 14px; background: rgba(40, 22, 6, 0.85); border: 1px solid #ffb35a; color: #ffe2b0; font: 700 14px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (prefers-reduced-motion: reduce) { .seye, .hole, .torch b, .torch .tg { animation: none; } .hole { clip-path: circle(var(--hr) at var(--hx) var(--hy)); } }
+  .wic { font-style: normal; font-size: 15px; line-height: 1; font-family: var(--font); } /* 💎 · 📜 = 우리 아이콘 글꼴 (📜 2026-11-20) */
 </style>

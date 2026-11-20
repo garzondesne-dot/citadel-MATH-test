@@ -44,7 +44,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   await t.goto(`${B}?role=camp&from=me&${E}`); await t.waitForTimeout(3500);
   for (let i = 0; i < 3 && (await t.$('.sheet')); i++) { const x = await t.$('.sheet button[aria-label="닫기"], .sheet .x, .sheet button:has-text("✕")'); if (x) await x.click().catch(() => {}); else await t.mouse.click(195, 40); await t.waitForTimeout(500); } // 새로 고침 뒤 보던 시트 복귀(설계) 닫기
   await rest('school/tlook', 'PATCH', { hero: 7, enh: 10 }); await t.waitForTimeout(800); // 🧙 서버 교사 용사 = +10 으로 둠 (교사 탭은 이 값을 씀 · 없으면 현자 +0)
-  await t.click('[data-k="wallet"]', { timeout: 5000 }); await t.waitForTimeout(800);
+  await t.click('button.hero-card', { timeout: 5000 }); await t.waitForTimeout(800);
   const hv = ((await t.evaluate(() => document.body.innerText)) || '').replace(/\s+/g, ' ');
   await t.screenshot({ path: `${SHOTS}/tcamp-hero.png` });
   ok('③ 🧙 내 용사 = 선생님 · 강화 +10 (서버 교사 용사)', !!(await t.$('.sheet, [role="dialog"]')) && /선생님/.test(hv) && /\+10/.test(hv), hv.slice(0, 120));
