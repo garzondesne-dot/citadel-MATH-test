@@ -11,7 +11,7 @@ export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ �
   /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
-  | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing }
+  | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
   | { k: 'skill'; t: number; who: number; dmg: number; kind: 'equip' | 'tier4' | 'awk'; cost: number }
   | { k: 'aura'; t: number; who: number; stone: number }
   | { k: 'guard'; t: number; atk: string }
@@ -135,13 +135,14 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
 
 // ── 행동 (ATB 가득) ──
 const stateMul = (S: State) => 1; // 실드 · 약점 배율은 hitBoss 가
-export function attack(S: State, who: number, timing: Timing): boolean {
+/** ⚔ 일반 공격 · auto = 문제 푸는 동안 자동(치명 없음 · 보통 ×1 · 📜 요청 #11) */
+export function attack(S: State, who: number, timing: Timing, auto = false): boolean {
   const h = S.heroes[who]; if (!h || !ready(h, S)) return false;
   const raw = T.attackBase * h.s.atkMul * (timing === 'crit' ? h.s.crit : T.timing[timing]) * stateMul(S);
   S.rec.timing.n++; if (timing !== 'miss') S.rec.timing.ok++; if (timing === 'crit') S.rec.timing.crit++;
   const dmg = timing === 'miss' ? 0 : hitBoss(S, raw);
   spend(h); if (timing === 'crit') h.atb = T.critAtb; // 치명 = 다음 ATB 20% 채운 채
-  h.log.dmg += dmg; push(S, { k: 'atk', t: S.t, who, dmg, timing });
+  h.log.dmg += dmg; push(S, { k: 'atk', t: S.t, who, dmg, timing, ...(auto ? { auto: true } : {}) });
   if (dmg > 0 && S.t < S.mirrorUntil && !h.down) { const back = Math.max(1, Math.round(dmg * SIG.mirror.back)); h.hp = Math.max(0, h.hp - back); push(S, { k: 'sig', t: S.t, what: 'reflect', who, v: back }); if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who }); checkEnd(S); } } // 8 거울빛 = 일반 공격만 돌아옴
   return true;
 }

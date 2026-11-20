@@ -28,9 +28,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
   ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
+  ok('요청 #10 채점 = 「🏁 퍼펙트! ⚡+3」 · 넘치면 「가득(+n 받음)」', /퍼펙트! ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
   await p.click('[data-k="atb-grade"]'); await p.waitForTimeout(150);
-  ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로 · 다음 문제', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')) && !!(await p.$('[data-k="atb-quiz"]')));
-  await p.waitForTimeout(800);
+  ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')));
+  await p.waitForTimeout(700);
+  ok('요청 #10 충전 뒤 = 문제 카드 닫힘(다음 문제 자동 안 열림) · 충전 칸 옆 「+n」', !(await p.$('[data-k="atb-quiz"]')) && !!(await p.$('[data-k="atb-chg-pop"]')));
+  await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(600);
+  // ⚔ 요청 #11 문제 카드를 연 채 ATB 가득 = 자동 일반 공격(타이밍 바 없음)
+  { const hp1 = await p.evaluate(() => { const a = globalThis.__atb; a.full(); a.pause(false); return a.S.bossHp; }); await p.waitForTimeout(1500); await p.evaluate(() => globalThis.__atb.pause(true));
+    const r = await p.evaluate(() => { const a = globalThis.__atb, e = a.S.ev.filter((x) => x.k === 'atk' && x.who === 0).at(-1); return { auto: !!e?.auto, timing: e?.timing }; });
+    ok('요청 #11 카드 연 채 = 자동 일반 공격(치명 없음) · 타이밍 바 안 뜸 · 「⚔ 자동 공격!」 한 줄', r.auto && r.timing === 'ok' && !(await p.$('[data-k="atb-timing"]')) && (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp1, JSON.stringify(r)); }
+  await p.waitForTimeout(300);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
   ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && (await p.$eval('[data-k="atb-submit"]', (e) => e.disabled)));
   await p.screenshot({ path: `${SHOTS}/atb-lock-844.png` });
@@ -80,6 +88,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-cutin-844.png` }); await p.waitForTimeout(2600);
   await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(100); await p.click('[data-k="atb-sk-aura"]'); await p.waitForTimeout(200);
   ok('Y12 오라 방패 = 다음 공격 막음 + 석화 표시', await p.evaluate(() => globalThis.__atb.S.guard && globalThis.__atb.S.stoneUntil > globalThis.__atb.S.t) && !!(await p.$('[data-k="atb-stone"]')));
+  // 🛡 요청 #12 실드 = 큰 문구 · 방패막 · 계열 칸(이모지 · 색) · 약점 배지 · 깰 때 금 감 → 조각나며 사라짐
+  await p.waitForTimeout(800); await p.evaluate(() => { const S = globalThis.__atb.S; S.guard = false; S.stoneUntil = 0; S.bossHp = Math.round(S.bossMax * 0.7) + 3; globalThis.__atb.full(); });
+  await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(450);
+  ok('요청 #12 실드 생김 = 큰 「🛡 실드!」 · 방패막 · 칸 = 인원수 · 계열 이모지', /실드/.test(await p.textContent('[data-k="atb-bigmsg"]').catch(() => '')) && !!(await p.$('[data-k="atb-barrier"]')) && (await p.$$('[data-k="atb-cells"] .cell2.ok')).length === 4);
+  ok('요청 #12 약점 계열 용사 = 머리 위 「약점!」', (await p.$$('[data-k="atb-weak"]')).length >= 1);
+  await p.screenshot({ path: `${SHOTS}/atb-shield-up-844.png` }); await p.waitForTimeout(1600);
+  await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[0].ch = 3; S.heroes[0].stunUntil = 0; globalThis.__atb.full(); }); await p.waitForTimeout(150); await p.click('[data-k="atb-sk-shield"]');
+  await p.waitForTimeout(700); const mid = await p.$$eval('[data-k="atb-cells"] .cell2', (x) => x.map((e) => e.dataset.st).join(','));
+  await p.screenshot({ path: `${SHOTS}/atb-shield-break-844.png` }); await p.waitForTimeout(1500);
+  const gone = (await p.$$('[data-k="atb-cells"] .cell2.gone')).length;
+  ok('요청 #12 보호막 부수기 = 칸 금 감 · 조각 → 사라짐(한 칸씩)', gone >= 1 && /hold|crack|shatter/.test(mid), `${mid} → 사라짐 ${gone}`);
   // 🔄 세로 폰(회전 잠금) = 던전 화면만 90° 돌려 가로 (요청 #8) · 누르기 위치 · 넘침 0 · 공격 연출 방향
   for (const [vw, vh, nm] of [[390, 844, '세로 390×844'], [375, 667, '세로 375×667 (SE)']]) {
     const v = await b.newPage({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); v.on('pageerror', (e) => errs.push(String(e)));

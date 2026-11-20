@@ -25,7 +25,7 @@
   import { botStep, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
-  import { ATK, ROLE_SKILL, SIG, T, type Fam, type Role } from '../../../board/atb/tune';
+  import { ATK, FAM_NAME, ROLE_SKILL, SIG, T, type Fam, type Role } from '../../../board/atb/tune';
 
   const { L, S, me, bots, seed = 'me', speed = 1, onend, fx = {}, bg = '' }: {
     L: LessonPack; S: State; /** 내 용사 번호 · -1 = 관전 */ me: number; bots: Bot[]; seed?: string; speed?: number; onend: (S: State) => void; /** 🎲 랜덤 던전 배경 열쇠 (Y9 · 없으면 차시 배경) */ bg?: string;
@@ -46,9 +46,17 @@
   const loop = setInterval(() => {
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     if (paused || S.end) return;
-    for (let i = 0; i < speed; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); }
+    for (let i = 0; i < speed; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); autoStep(); }
     if (S.end && !ended) { ended = true; setTimeout(() => onend(S), 1800); }
   }, STEP * 1000);
+  /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
+  let fullAt = -1, autoTag = $state(0);
+  function autoStep() {
+    const h = me >= 0 ? S.heroes[me] : null;
+    if (!h || !open || !run || grading || over || h.down || h.atb < 1 || S.t < h.stunUntil || S.end) { fullAt = -1; return; }
+    if (fullAt < 0) fullAt = S.t;
+    if (S.t - fullAt >= T.autoAtkDelay) { fullAt = -1; attack(S, me, 'ok', true); }
+  }
   // 💥 몬스터 공격에 맞음 = 문제 카드 잠깐 잠금 (레이드 attackMs = 3초 · 보스 HP 절반 아래 = 분노 4초)
   let lockUntil = 0, lockLeft = $state(0), lockTag = $state('');
   onDestroy(() => { clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
@@ -63,14 +71,16 @@
     open = true;
   }
   /** 📝 채점 → ⚡ 충전 연출 (Y8 · 약 2초 · 누르면 건너뜀): 소문항 ○ × 차례로 → 카드가 쑥 빨려 들어가 에너지 → 충전 칸 */
-  let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
+  let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
   function finishGrade() {
     if (!grading) return; const n = grading.n; gT.forEach(clearTimeout); gT = []; grading = null; run = null;
     for (let i = 0; i < n; i++) setTimeout(() => flyOrb(), i * 180);
-    openQuiz();
+    if (n) setTimeout(() => { chgPop = `+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
+    setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
+  let chgPop = $state('');
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
-    grading = { marks, perfect, n, suck: false };
+    grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
     const t1 = 300 + marks.length * 260; // ○ × 하나씩 0.26초
     gT = [setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450)];
   }
@@ -125,7 +135,36 @@
 
   // ── 연출 (사건 → 떠오르는 숫자 · 공격 자세 · 컷인) ──
   type Pop = { id: number; x: number; y: number; t: string; cls: string };
-  let pops = $state<Pop[]>([]), seen = 0, pk = 0, hpose = $state<Record<number, HPose | ''>>({}), hurtOn = $state<Record<number, boolean>>({}), bossPose = $state<'idle' | 'attack' | 'hit' | 'down'>('idle'), cut = $state<{ who: number; awk: boolean; name: string; short: boolean } | null>(null), crack = $state<number[]>([]);
+  let pops = $state<Pop[]>([]), seen = 0, pk = 0, hpose = $state<Record<number, HPose | ''>>({}), hurtOn = $state<Record<number, boolean>>({}), bossPose = $state<'idle' | 'attack' | 'hit' | 'down'>('idle'), cut = $state<{ who: number; awk: boolean; name: string; short: boolean } | null>(null);
+  // 🛡 실드 (📜 요청 #12): 칸마다 연출 단계(hold = 아직 멀쩡해 보임 · crack = 금 감 · shatter = 조각나며 사라짐) · 방패막 물결 · 산산조각 · 큰 문구
+  const FAM_EMO: Record<Fam, string> = { arms: '🗡', flame: '🔥', nature: '🍃', wisdom: '📖', mystic: '🔮' };
+  const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
+  let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
+  let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
+  const big = (t: string, cls: string, ms = 1500) => { const n = ++msgN; bigMsg = { t, cls }; setTimeout(() => { if (msgN === n) bigMsg = null; }, ms); };
+  const setCell = (i: number, v: 'hold' | 'crack' | 'shatter' | null) => { const n = { ...cellAnim }; if (v) n[i] = v; else delete n[i]; cellAnim = n; };
+  /** 🛡 보호막 부수기 = 그 용사 공격이 방패막에 부딪혀 물결 → 칸 금 감 → 조각나며 사라짐(한 칸씩 · 쨍) · 마지막 = 방패막 산산조각 + 약점 시간 */
+  function shieldHit(e: Extract<Ev, { k: 'shield' }>) {
+    e.cells.forEach((i) => setCell(i, 'hold'));
+    const go = () => {
+      barrier = 'ripple'; setTimeout(() => { if (barrier === 'ripple') barrier = 'up'; }, 500);
+      e.cells.forEach((i, j) => setTimeout(() => { setCell(i, 'crack'); sfx('ice-crack', 0.7); setTimeout(() => { setCell(i, 'shatter'); sfx('ice-shatter', 0.8); setTimeout(() => setCell(i, null), 450); }, 380); }, j * 420));
+      if (e.last) setTimeout(() => { barrier = 'shatter'; shake(stageEl ?? null, 8, 400); sfx('chain-break', 0.9); big('💥 실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
+    };
+    const h = S.heroes[e.who], box = heroEls[e.who];
+    if (!h || !stageEl || !bossEl || !box || busy.has(e.who)) { go(); return; }
+    busy.add(e.who);
+    void fxAttack(stageEl, { heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fit(h.s.hero, fx[e.who] || 'flame'), finish: true, hits: 1, mult: 1.2, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit: go }).catch(() => {}).finally(() => { busy.delete(e.who); setPose(e.who, 'idle'); });
+  }
+  /** 🛡 실드 생김 = 화면 가운데 큰 문구 · 진동 · 보스 웅크렸다 일어나며 포효 · 방패막 펼침 */
+  function shieldUpFx() {
+    big('🛡 실드!', 'shield'); try { navigator.vibrate?.(80); } catch { /* 무시 */ } sfx('holy-on', 0.8);
+    bossShield = true; setTimeout(() => (bossShield = false), 900); barrier = 'up';
+    bossEl?.animate?.([{ scale: '1 1' }, { scale: '1.08 0.82', offset: 0.3 }, { scale: '0.94 1.12', offset: 0.6 }, { scale: '1 1' }], { duration: 800, easing: 'ease-out' });
+    setTimeout(() => shake(stageEl ?? null, 5, 300), 450);
+  }
+  /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
+  const isWeak = (id: number) => { const h = S.heroes[id]; return !!h && S.boss.weak.includes(h.s.fam); };
   let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false), auraOn = $state(false);
   const heroEls: Record<number, HTMLElement> = {}, busy = new Set<number>();
   const setPose = (who: number, p: Pose | HPose) => { hpose = { ...hpose, [who]: p === 'idle' ? '' : (p as HPose) }; };
@@ -172,9 +211,10 @@
       // ⚡ 스킬 = 컷인(필살기 1.7초 · 내 스킬 0.9초) 뒤 큰 이펙트
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
       const big = e.k === 'skill' && (e.kind !== 'equip' || e.who === me), ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
-      if (e.k === 'skill' && big) { const c = { who: e.who, awk: e.kind === 'awk', name: e.kind === 'awk' ? '각성' : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', short: e.kind === 'equip' }; cut = c; setTimeout(() => { if (cut === c) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
+      if (e.k === 'skill' && big) { const c = { who: e.who, awk: e.kind === 'awk', name: e.kind === 'awk' ? '각성' : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', short: e.kind === 'equip' }; const cn = ++cutN; cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
+      if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
       if (big) setTimeout(() => playAtk(e as Extract<Ev, { k: 'skill' }>), ms - 200); else playAtk(e as Extract<Ev, { k: 'atk' | 'skill' | 'role' }>);
-    } else if (e.k === 'shield') { crack = e.cells; setTimeout(() => (crack = []), 900); pop(bx, 22, e.last ? '실드 파괴! 약점 시간' : `실드 ${e.cells.length}칸`, 'shield'); }
+    } else if (e.k === 'shield') shieldHit(e);
     else if (e.k === 'boss') {
       // 👹 몬스터 공격 = 앞으로 덮침 → 맞음(용사 붉게 · 맞음 자세) · 광역 = 화면 크게 흔들림 + 붉은 번쩍 · 내가 맞음 = 문제 카드 흔들 + 잠금
       bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 600);
@@ -188,7 +228,7 @@
     }
     else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
     else if (e.k === 'revive') pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role');
-    else if (e.k === 'shieldUp') { pop(bx, 22, '실드!', 'shield'); shieldSwap(); }
+    else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🔰 오라 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
     else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.n}`, 'role');
@@ -249,7 +289,7 @@
   <!-- 🧑 내 초상 = 둘레 동그란 ATB 고리(Y5) · HP 큰 숫자 + 가는 띠(Y6) · ⚡ 충전 칸 3(Y1) -->
   {#if meH}
     {@const pt = portraitOf(meH.s.hero)}
-    <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} data-k="atb-me">
+    <div class="me" class:full={ready} class:down={meH.down} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
       {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <div class="face">
         <svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="30" class="rb" /><circle cx="34" cy="34" r="30" class="rf" style:stroke-dasharray="{C * Math.min(1, meH.atb)} {C}" /></svg>
@@ -259,7 +299,7 @@
         <b class="mn">{meH.s.name}</b>
         <span class="hpn" aria-label="HP {meH.hp} / {meH.s.maxHp}"><b>{meH.hp}</b><small>/ {meH.s.maxHp}</small></span>
         <i class="thin hp"><b style:width={pct(meH.hp, meH.s.maxHp)}></b></i>
-        <span class="chs" class:flash={gaugeFlash} data-k="atb-me-ch" aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>
+        <span class="chs" class:flash={gaugeFlash} data-k="atb-me-ch" aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>{#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
       </div>
     </div>
   {/if}
@@ -280,11 +320,15 @@
     <div class="rhp" data-k="atb-tele-g"><RaidHp name={S.boss.name} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
-        {#each S.cells as c, i (i)}<span class="cell" class:broken={c.broken} class:crack={crack.includes(i)} title="{S.heroes[c.owner]?.s.name} · {c.fam}"><AtbIcon name={c.broken ? 'shield-broken' : 'shield'} size={34} /><i class="fi"><AtbIcon name={FAM_ICON[c.fam]} size={18} /></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>{/each}
+        {#each S.cells as c, i (i)}
+          {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
+          <span class="cell2 {st}" style:--fc={FAM_COL[c.fam]} data-st={st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><i class="em">{FAM_EMO[c.fam]}</i>{#if st === 'crack' || st === 'shatter'}<i class="ck" aria-hidden="true"></i>{/if}{#if st === 'shatter'}{#each [0, 1, 2, 3, 4, 5] as k (k)}<b class="sh" style:--a="{k * 60}deg"></b>{/each}{/if}{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+        {/each}
       </div>
     {/if}
   </div>
-  <div class="boss" class:stone={stone > 0} style:left={open ? '36%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
+  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '36%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.15)}px" data-k="atb-barrier" aria-hidden="true"></i>{/if}
+  <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '36%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   <!-- 용사 -->
   {#each S.heroes as h (h.id)}
@@ -292,6 +336,7 @@
     {@const sc = +(base * p.s).toFixed(2)}
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:z-index={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if h.id !== me && !h.down}<svg class="foot" viewBox="0 0 60 20" aria-hidden="true"><ellipse cx="30" cy="10" rx="26" ry="7" class="rb" /><ellipse cx="30" cy="10" rx="26" ry="7" class="rf" class:full={h.atb >= 1} pathLength="100" style:stroke-dasharray="{Math.round(Math.min(1, h.atb) * 100)} 100" /></svg>{/if}
+      {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={h.s.hero} scale={sc} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
@@ -307,12 +352,12 @@
 
   <!-- 문제 카드 -->
   {#if open && run}
-    <div class="card" class:suck={grading?.suck}><QuizCard {L} {run} {seed} title={titleOf(run.mid)} ch={meH?.ch ?? 0} {bossLeft} hintOk={!hintUsed} {flash} locked={lockLeft} {lockTag} {grading} onskip={finishGrade} onsubmit={submit} onclose={() => (open = false)} /></div>
+    <div class="card" class:suck={grading?.suck}><QuizCard {L} {run} {seed} title={titleOf(run.mid)} ch={meH?.ch ?? 0} {bossLeft} hintOk={!hintUsed} {flash} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} onclose={() => (open = false)} /></div>
   {/if}
 
   <!-- 단추 -->
   {#if me >= 0 && meH}
-    <nav class="btns" class:q={open} aria-label="행동" style:--u={U}>
+    <nav class="btns" class:q={open} class:wk={isWeak(me)} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
       <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<AtbIcon name="fam-arms" size={Math.round(28 * U)} /> 공격<span class="chg" class:flash={gaugeFlash} aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}></i>{/each}</span>{/if}</button>
       <!-- 💠 공격 둘레 스킬 (요청 #9) -->
       <div class="ring" data-k="atb-skills" aria-label="스킬">
@@ -342,6 +387,7 @@
       <p class="cn"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성 ⚡⚡⚡' : '4레벨 스킬 ⚡⚡'}</small>{cut.name}</p>
     </div>
   {/if}
+  {#if bigMsg}<div class="bigmsg {bigMsg.cls}" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
   {#if S.end}<div class="endb" class:win={S.end.win} role="status">{S.end.win ? '⚔ 처치!' : `💀 ${S.end.why}`}</div>{/if}
 </div>
 
@@ -375,21 +421,18 @@
   .cs { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
   .cs.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
   .chs.flash { animation: gflash 0.45s; }
+  .chpop { position: absolute; left: 70px; bottom: 2px; font: 900 18px var(--font); color: #8fe0ff; text-shadow: 0 0 6px #3a8ef0, 0 2px 0 #000; animation: up 1.4s ease-out forwards; }
   .foot { position: absolute; left: -30px; top: -10px; width: 60px; height: 20px; z-index: -1; }
   .foot .rb { fill: #0005; stroke: #0008; stroke-width: 3; } .foot .rf { fill: none; stroke: #ffd34d; stroke-width: 3; } .foot .rf.full { stroke: #fff3a0; filter: drop-shadow(0 0 3px #ffd34d); }
   .hn { display: flex; align-items: baseline; justify-content: center; gap: 2px; } .hn b { font: 900 15px var(--font); color: #c8ffb8; text-shadow: 0 1px 0 #000; }
   .boss.stone :global(*) { filter: grayscale(1) brightness(0.85) contrast(1.2); }
   .hero.aura .spr { filter: drop-shadow(0 0 6px #fff6a0) drop-shadow(0 0 12px #ffd34d); }
-  .cells { display: flex; gap: 6px; }
-  .cell { position: relative; display: inline-flex; } .cell .fi { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: inline-flex; }
-  .cell.broken .fi { opacity: 0.35; } .cell.crack { animation: crack 0.45s 2; } @keyframes crack { 30% { transform: scale(1.25) rotate(-6deg); filter: brightness(2); } }
   .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
   .boss { position: absolute; top: 74%; transform: translate(-50%, -100%); z-index: 11; transition: left 0.45s ease; }
   .hero { position: absolute; transition: left 0.45s ease, top 0.45s ease; }
   .hero .spr { position: absolute; left: 0; top: 0; }
   .hero.down .spr { filter: grayscale(1) brightness(0.6); }
   .tele.sig { background: linear-gradient(#3a5ac8, #1d2f8e); border-color: #9fd0ff; box-shadow: 0 0 10px #5aa9ff88; }
-  .cell .lk { position: absolute; right: -6px; bottom: -6px; font-size: 14px; font-style: normal; }
   .bflip.armor { filter: drop-shadow(0 0 4px #9fe6ff) drop-shadow(0 0 10px #5ac8ff) saturate(0.7) brightness(1.15); } /* 4 얼음 갑옷 */
   .bflip.shine { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #c9a8ff); animation: blink 0.6s steps(2) infinite; } /* 8 거울빛 */
   .bflip.breath { filter: drop-shadow(0 0 10px #7dffb0); } /* 6 숨 고르기 */
@@ -466,5 +509,34 @@
   .cn { position: absolute; left: 5%; bottom: 10%; margin: 0; font: 900 clamp(26px, 10vh, 54px) var(--font); color: #fff; text-shadow: 0 3px 0 #a8460a, 0 0 18px #ffb84a; } .cn small { display: block; font-size: 0.42em; color: #ffe27a; }
   @keyframes cutin { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
   .endb { position: absolute; z-index: 45; left: 50%; top: 38%; transform: translate(-50%, -50%); padding: 10px 30px; border-radius: 14px; border: 3px solid #c9953e; background: #2a1020e6; font: 900 34px var(--font); } .endb.win { color: #ffe27a; }
-  @media (prefers-reduced-motion: reduce) { .weakb, .tele, .b.atk.hot, .tgt, .cell.crack { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .weakb, .tele, .b.atk.hot, .tgt, .barrier, .bigmsg { animation: none; } }
+  /* 🛡 실드 칸 = 보스 체력바 아래 크게 한 줄 (요청 #12 ② · 그림 atb-shield-slots 오기 전 = 큰 이모지 + 굵은 계열 색 테두리) */
+  .cells { display: flex; justify-content: center; gap: 8px; margin-top: 2px; }
+  .cell2 { position: relative; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; border: 4px solid var(--fc); background: radial-gradient(circle at 50% 35%, #ffffff40, #0009 70%); box-shadow: 0 0 10px var(--fc), inset 0 0 8px var(--fc); }
+  .cell2 .em { font-style: normal; font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 0 #000); }
+  .cell2.hold { animation: none; }
+  .cell2.crack { animation: cshake 0.38s; } .cell2.crack .em, .cell2.shatter .em { filter: brightness(1.6) drop-shadow(0 2px 0 #000); }
+  .cell2 .ck { position: absolute; inset: 2px; border-radius: 8px; background: linear-gradient(115deg, #0000 44%, #fff 46%, #0000 48%), linear-gradient(60deg, #0000 55%, #fff 57%, #0000 59%), linear-gradient(160deg, #0000 30%, #fffc 32%, #0000 34%); pointer-events: none; }
+  @keyframes cshake { 20% { translate: -3px 0; } 40% { translate: 3px 0; } 60% { translate: -2px 0; } 80% { translate: 2px 0; } }
+  .cell2.shatter { animation: cgone 0.45s ease-in forwards; }
+  @keyframes cgone { to { opacity: 0; scale: 1.3; } }
+  .cell2 .sh { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; background: var(--fc); clip-path: polygon(0 0, 100% 30%, 40% 100%); animation: shard 0.45s ease-out forwards; }
+  @keyframes shard { from { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0); } to { transform: translate(-50%, -50%) rotate(var(--a)) translateY(-34px) rotate(200deg); opacity: 0; } }
+  .cell2.gone { border-style: dashed; border-color: #ffffff40; box-shadow: none; background: #0004; } .cell2.gone .em { opacity: 0.18; filter: grayscale(1); }
+  .cell2 .lk { position: absolute; right: -8px; bottom: -8px; font-size: 15px; font-style: normal; }
+  /* 🛡 방패막 (그림 atb-shield 오기 전 = 빛 테두리) · 펼침 · 물결 · 산산조각 */
+  .barrier { position: absolute; top: 74%; z-index: 12; transform: translate(-50%, -96%); border-radius: 50%; pointer-events: none; border: 3px solid #9fe6ffcc; background: radial-gradient(ellipse at 50% 45%, #9fe6ff10 55%, #9fe6ff40 80%, #9fe6ff10); box-shadow: 0 0 18px #5ac8ff99, inset 0 0 24px #9fe6ff66; transition: left 0.45s ease; }
+  .barrier.up { animation: bup 0.6s ease-out; } @keyframes bup { from { scale: 0.3; opacity: 0; } to { scale: 1; opacity: 1; } }
+  .barrier.ripple { animation: brip 0.5s ease-out; } @keyframes brip { 30% { scale: 1.06; border-color: #fff; box-shadow: 0 0 34px #fff, inset 0 0 40px #9fe6ff; } }
+  .barrier.shatter { animation: bshat 0.7s ease-out forwards; } @keyframes bshat { 20% { scale: 1.1; border-color: #fff; filter: brightness(2); } to { scale: 1.4; opacity: 0; border-style: dashed; } }
+  .boss.roar { animation: roar 0.8s ease-out; } @keyframes roar { 40% { filter: brightness(1.5) drop-shadow(0 0 12px #9fe6ff); } }
+  /* 💬 큰 문구 (실드! · 실드 파괴 · 약점 시간) */
+  .bigmsg { position: absolute; z-index: 44; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 8px 28px; border-radius: 16px; border: 3px solid #9fe6ff; background: linear-gradient(#1d5ac8ee, #0d2f6aee); color: #fff; font: 900 clamp(26px, 10vh, 44px) var(--font); text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: bigin 0.35s ease-out; }
+  .bigmsg.weak { border-color: #ffe27a; background: linear-gradient(#e8a82aee, #8a4a0aee); font-size: clamp(20px, 7vh, 34px); }
+  @keyframes bigin { from { opacity: 0; scale: 1.6; } }
+  /* ⚔ 약점 상성 (요청 #12 ④) = 머리 위 「약점!」 + 발밑 계열 색 빛 · 내가 약점이면 초상 · 공격 · 보호막 단추 테두리도 */
+  .wbadge { position: absolute; left: 0; transform: translateX(-50%); z-index: 3; padding: 1px 8px; border-radius: 8px; border: 2px solid var(--fc); background: #1d1220e6; color: #fff; font: 900 11px var(--font); font-style: normal; white-space: nowrap; box-shadow: 0 0 8px var(--fc); }
+  .wglow { position: absolute; left: -34px; top: -12px; width: 68px; height: 24px; border-radius: 50%; background: radial-gradient(ellipse, var(--fc), #0000 70%); opacity: 0.85; z-index: -1; animation: blink 0.9s ease-in-out infinite; }
+  .me.wk { border-color: var(--fc); box-shadow: 0 0 12px var(--fc); }
+  .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
 </style>

@@ -8,11 +8,11 @@
   import { questionsOf, type Run } from '../../../board/atb/quiz';
   import { T } from '../../../board/atb/tune';
   import AtbIcon from './AtbIcon.svelte';
-  const { L, run, seed, title, ch, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '', grading = null, onskip }: {
+  const { L, run, seed, title, ch, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '', grading = null, onskip, auto = false }: {
     L: LessonPack; run: Run; seed: string; title: string; /** ⚡ 충전 칸 (Y1 · 최대 3) */ ch: number; /** 보스 공격까지 남은 비율 0 ~ 1 */ bossLeft: number; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
     onsubmit: (g: Given) => void; onclose: () => void; /** 방금 결과 (ok · gold · wrong · swap · done) */ flash?: string;
     /** 💥 몬스터 공격에 맞아 잠긴 남은 초 (0 = 안 잠김 · 📜 요청 #3 ① 레이드처럼 카드 흔들 + 잠깐 잠금) */ locked?: number; lockTag?: string;
-    /** 📝 채점 연출 (Y8) · 소문항 ○ × · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; n: number; suck: boolean } | null; onskip?: () => void;
+    /** 📝 채점 연출 (Y8) · 소문항 ○ × · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; /** 실제 받은 충전 */ n: number; /** 규칙상 받을 충전(퍼펙트 3 · 재시도 2) */ want: number; suck: boolean } | null; onskip?: () => void; /** ⚔ 방금 자동 일반 공격 (요청 #11 · 한 줄만 · 입력은 그대로) */ auto?: boolean;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
   let val = $state<Given>(null), hint = $state(''), key = $state('');
@@ -22,6 +22,7 @@
 </script>
 
 <section class="qc" class:hitlock={locked > 0} data-k="atb-quiz" aria-label="문제">
+  {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <header>
     <span class="tt">{title} · 단계 {run.k + 1} / {qs.length}</span>
     <span class="zs" aria-label="충전 {ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="z" class:on={i < ch}></i>{/each}</span>
@@ -37,9 +38,9 @@
   <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
-      <b class="gt">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'}</b>
+      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
       <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:x={!m} style:animation-delay="{0.3 + i * 0.26}s">{m ? '○' : '×'}</i>{/each}</span>
-      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ +{grading.n} 충전{grading.perfect ? ' · ATB 가득' : ''}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">{grading.n >= grading.want ? `⚡ +${grading.n} 충전` : `⚡+${grading.want} → 가득(+${grading.n} 받음)`}{grading.perfect ? ' · ATB 가득' : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
   {/if}
@@ -62,8 +63,10 @@
   .z { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
   .z.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
   /* 📝 채점 → 충전 (Y8) */
+  .auto { position: absolute; z-index: 4; left: 50%; top: 4px; transform: translateX(-50%); margin: 0; padding: 1px 12px; border-radius: 10px; background: #3a2618e6; color: #ffe08a; font: 800 13px var(--font); pointer-events: none; animation: autoIn 1.1s ease-out forwards; }
+  @keyframes autoIn { 0% { opacity: 0; transform: translate(-50%, 6px); } 15% { opacity: 1; transform: translate(-50%, 0); } 80% { opacity: 1; } 100% { opacity: 0; } }
   .grade { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: none; background: #fbf0d6f2; color: #3a2614; font-family: var(--font); }
-  .gt { font: 900 24px var(--font); color: #8a4a0a; }
+  .gt { font: 900 24px var(--font); color: #8a4a0a; } .gt em { font-style: normal; color: #1d5ac8; font-size: 1.15em; }
   .marks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
   .mk { font: 900 40px var(--font); font-style: normal; color: #1f7a3c; opacity: 0; animation: stamp 0.25s ease-out forwards; } .mk.x { color: #b3261e; }
   @keyframes stamp { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
