@@ -8,13 +8,13 @@
   import { famOf, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
   import { FAM_NAME, ROLE_NAME, ROLE_SKILL, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
-  const { ids, owned, boss, cur, lv, enh, tierOf, fxOf, onpick, onclose }: {
-    ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void;
+  const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose }: {
+    ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; awk?: boolean; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void;
   } = $props();
   const FI: Record<Fam, IconName> = { arms: 'fam-arms', flame: 'fam-flame', nature: 'fam-nature', wisdom: 'fam-wisdom', mystic: 'fam-mystic' };
   const RI: Record<Role, IconName> = { dealer: 'role-dealer', tank: 'role-tank', healer: 'role-healer', support: 'role-support' };
   let sel = $state(untrack(() => cur)); // 연 때 용사부터
-  const st = $derived(statsOf({ hero: sel, lv, enh, tier: tierOf(sel) })), info = $derived(heroOf(sel));
+  const st = $derived(statsOf({ hero: sel, lv, enh, tier: tierOf(sel), awk })), info = $derived(heroOf(sel));
   const isWeak = (id: number) => boss.weak.includes(famOf(id));
   const pt = (id: number) => portraitOf(id);
 </script>
@@ -39,10 +39,13 @@
       <div class="big"><HeroSprite id={sel} scale={2} play /></div>
       <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>
     </div>
+    <!-- 💠 이 용사가 쓸 수 있는 스킬 (Y2 · Y3 · 충전 비용) -->
     <div class="sks">
-      <span class="sk"><small>장착 스킬</small>{skillName(fxOf(sel))} {['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][tierOf(sel) - 1]}</span>
-      <span class="sk"><small>역할</small>{ROLE_SKILL[st.role]}</span>
-      <span class="sk" class:off={!st.awk}><small>⚡ 각성 필살기</small>{st.awk ? '열림' : '🔨 +10 이면 열림'}</span>
+      <span class="sk"><small>장착 · ⚡1</small>{skillName(fxOf(sel))} {['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][tierOf(sel) - 1]}</span>
+      <span class="sk"><small>역할 · ⚡1</small>{ROLE_SKILL[st.role]}</span>
+      <span class="sk" class:off={st.tier < 4}><small>4레벨 · ⚡2</small>{st.tier >= 4 ? '열림' : 'Ⅳ 장착이면'}</span>
+      <span class="sk" class:off={!st.aura}><small>오라 방패 · ⚡2</small>{st.aura ? '열림' : '🔨 +10 이면'}</span>
+      <span class="sk" class:off={!st.awk}><small>✨ 각성 · ⚡3</small>{st.awk ? '열림' : '각성하면'}</span>
     </div>
     <button type="button" class="go" data-k="atb-pick-go" onclick={() => onpick(sel)}>⚔ 이 용사로</button>
   </section>
@@ -70,7 +73,7 @@
   .big { flex: none; }
   .stats { flex: 1; margin: 0; padding: 4px 8px; list-style: none; border-radius: 10px; background: #f6e7c4; border: 1px solid #c9a36a; }
   .stats li { display: flex; justify-content: space-between; padding: 2px 0; font: 800 14px var(--font-plain); border-bottom: 1px dashed #d8bf8a; } .stats li:last-child { border: none; }
-  .sks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .sks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
   .sk { display: flex; flex-direction: column; padding: 4px 6px; border-radius: 8px; background: #3a2618; color: #fff2d6; font: 800 12px var(--font-plain); } .sk small { font-weight: 600; color: #ffd98a; } .sk.off { opacity: 0.6; }
   .go { min-height: 48px; border-radius: 12px; border: 3px solid #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; font: 900 20px var(--font); box-shadow: 0 4px 0 #6a4210; }
 </style>

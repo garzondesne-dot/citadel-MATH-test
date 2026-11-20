@@ -6,13 +6,13 @@
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
   import { questionsOf, type Run } from '../../../board/atb/quiz';
-  import type { Zap } from '../../../board/atb/engine';
   import { T } from '../../../board/atb/tune';
   import AtbIcon from './AtbIcon.svelte';
-  const { L, run, seed, title, zaps, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '' }: {
-    L: LessonPack; run: Run; seed: string; title: string; zaps: Zap[]; /** 보스 공격까지 남은 비율 0 ~ 1 */ bossLeft: number; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
+  const { L, run, seed, title, ch, bossLeft, hintOk, onsubmit, onclose, flash = '', locked = 0, lockTag = '', grading = null, onskip }: {
+    L: LessonPack; run: Run; seed: string; title: string; /** ⚡ 충전 칸 (Y1 · 최대 3) */ ch: number; /** 보스 공격까지 남은 비율 0 ~ 1 */ bossLeft: number; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
     onsubmit: (g: Given) => void; onclose: () => void; /** 방금 결과 (ok · gold · wrong · swap · done) */ flash?: string;
     /** 💥 몬스터 공격에 맞아 잠긴 남은 초 (0 = 안 잠김 · 📜 요청 #3 ① 레이드처럼 카드 흔들 + 잠깐 잠금) */ locked?: number; lockTag?: string;
+    /** 📝 채점 연출 (Y8) · 소문항 ○ × · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; n: number; suck: boolean } | null; onskip?: () => void;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
   let val = $state<Given>(null), hint = $state(''), key = $state('');
@@ -24,18 +24,25 @@
 <section class="qc" class:hitlock={locked > 0} data-k="atb-quiz" aria-label="문제">
   <header>
     <span class="tt">{title} · 단계 {run.k + 1} / {qs.length}</span>
-    <span class="zs" aria-label="⚡ {zaps.length}개 · 금색 {zaps.filter((z) => z === 'g').length}">{#each Array(5) as _, i (i)}<i class="z" class:g={zaps[i] === 'g'} class:on={!!zaps[i]}><AtbIcon name={zaps[i] === 'g' ? 'zap-gold' : zaps[i] ? 'zap' : 'zap-empty'} size={22} /></i>{/each}</span>
+    <span class="zs" aria-label="충전 {ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="z" class:on={i < ch}></i>{/each}</span>
   </header>
   <div class="body" class:shake={flash === 'wrong'}>
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" role="status">💡 {hint}</p>{/if}
-    {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✨ 첫 시도 정답 · 금색 ⚡' : '✔ 정답 · ⚡ +1'}</p>
+    {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
     {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · {left}번 더 틀리면 새 숫자 판</p>
     {:else if flash === 'swap'}<p class="fb bad" role="status">🔁 새 숫자 판으로 처음부터 (⚡ 는 그대로)</p>
-    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 는 그대로)</p>
-    {:else if flash === 'done'}<p class="fb ok" role="status">🏁 완주! {run.clean ? '· 퍼펙트 = ATB 가득' : ''}</p>{/if}
+    {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (충전은 그대로)</p>{/if}
   </div>
   <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
+  {#if grading}
+    <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
+      <b class="gt">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'}</b>
+      <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:x={!m} style:animation-delay="{0.3 + i * 0.26}s">{m ? '○' : '×'}</i>{/each}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ +{grading.n} 충전{grading.perfect ? ' · ATB 가득' : ''}</span>
+      <small>누르면 건너뛰기</small>
+    </button>
+  {/if}
   {#if locked > 0}<div class="lock" role="status" data-k="atb-qlock"><b>{lockTag || '💥 몬스터 공격!'}</b><small>{locked}초 뒤 다시 풀 수 있어요</small><i class="hitpic" data-k="atb-qhitpic" aria-hidden="true"></i></div>{/if}
   <footer>
     <span class="bl">보스 공격까지 <i class="bar"><b style:width="{Math.round(bossLeft * 100)}%"></b></i></span>
@@ -51,9 +58,17 @@
   header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .tt { font: 700 13px var(--font-plain); padding: 3px 10px; border-radius: 8px; border: 1px solid #c9a36a; background: #f6e7c4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   .zs { display: flex; gap: 1px; padding: 2px 6px; border-radius: 8px; background: #2a1a0e; border: 2px solid #c9953e; flex: none; }
-  .z { display: inline-flex; border-radius: 50%; }
-  .z.g { box-shadow: 0 0 0 1.5px #fff6c0, 0 0 6px 2px #ffd34d; animation: glint 1.2s ease-in-out infinite; } /* 🛠 시안 고침 ② 금색 ⚡ = 테두리 반짝 */
-  @keyframes glint { 50% { box-shadow: 0 0 0 1.5px #fff, 0 0 10px 3px #ffe27a; } }
+  .zs { gap: 4px; padding: 4px 8px; }
+  .z { display: inline-block; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
+  .z.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
+  /* 📝 채점 → 충전 (Y8) */
+  .grade { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: none; background: #fbf0d6f2; color: #3a2614; font-family: var(--font); }
+  .gt { font: 900 24px var(--font); color: #8a4a0a; }
+  .marks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .mk { font: 900 40px var(--font); font-style: normal; color: #1f7a3c; opacity: 0; animation: stamp 0.25s ease-out forwards; } .mk.x { color: #b3261e; }
+  @keyframes stamp { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
+  .gain { font: 900 20px var(--font); color: #1d5ac8; opacity: 0; animation: stamp 0.3s ease-out forwards; }
+  .grade small { font: 600 11px var(--font-plain); color: #8a6e4e; }
   .body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
   .body :global(.q2) { color: #2b1a0c; }
   .body :global(.q1) { color: #4a3420; }

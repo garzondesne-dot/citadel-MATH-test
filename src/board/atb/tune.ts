@@ -36,19 +36,23 @@ export const T = {
   shieldHelpAfter: 90, // 실드가 뜬 뒤 90초 지나도 남은 칸 = 다른 사람이 완주 2번으로 대신
   shieldHelpRuns: 2,
   wrongSwap: 4, // 4번째 오답 = 같은 원문항 새 숫자 판
-  zapMax: 5,
-  zapMul: [0, 1.0, 2.1, 3.3, 4.6, 6.0], // ⚡ n개를 한 번에
-  goldZap: 1.5, // 금색 ⚡ = 1.5배 값
-  ultMul: 6.0, awkMul: 6.5, // 필살기(⚡5) · 각성 필살기(🔨+10 · 판당 1번)
-  skillBase: 55, attackBase: 12, // 스킬 기본 · 일반 공격 기본 (용사수치 초안 30 · 8 → 약 4분 판에 맞춰 올림)
+  /** ⚡ 충전 (📜 11/20 Y1 · 결정 14절): 원문항(한 문제)을 통째로 맞혀야 충전 · 최대 3 · 퍼펙트(오답 없이) · 재시도(오답 있었음) = ⏳ 임시값(설계 방 최종값 오면 바꿈) */
+  charge: { max: 3, perfect: 2, retry: 1 },
+  /** 💠 스킬 비용 (Y2) */
+  cost: { shield: 1, equip: 1, role: 1, revive: 1, tier4: 2, aura: 2, awk: 3 },
+  /** 💥 스킬 피해 비 (Y11): 장착 1 · 4레벨 2.3 · 각성 3.8(판당 1번) + 역할 덧효과 그대로 */
+  ratio: { equip: 1, tier4: 2.3, awk: 3.8 },
+  /** 🛡 오라 방패 (Y12 · +10 · 판당 1번): 다음 보스 공격 1번 팀 전체 막음 + 보스 석화 ⏳ 임시 6초(선생님 확인 전) */
+  aura: { stone: 6 },
+  skillBase: 140, attackBase: 12, // 스킬 기본(장착 = 140 · 📜 모의실험4 「55 → 140」) · 일반 공격 기본
   timing: { miss: 0, ok: 1, crit: 1.5 }, // 일반 공격 타이밍 바
-  hold: { miss: 1.0, ok: 1.25, best: 1.5 }, // 스킬 배율 (옛 「모았다 놓기」 표 · 기록 호환)
-  skillTap: 'ok' as 'miss' | 'ok' | 'best', // 📜 11/20 요청 #3 ⑦ 스킬 = 누르면 바로 → 배율 ×1.25 (옛 고리 봇 평균 ×1.29 와 비슷 · 균형 그대로)
   /** ⏳ 타이밍 바 (📜 11/20 요청 #3 ⑥): 판마다 성공 칸 폭 · 치명 칸 폭 · 바늘 한 번 지나는 시간(ms) 을 이 범위에서 고르고 칸 자리도 무작위
    *    치명 = 성공 칸 안의 좁은 칸 · 끝 여백 edge 안쪽에만 놓음 */
   timingZone: { okW: [0.22, 0.4] as [number, number], critW: [0.06, 0.12] as [number, number], ms: [1000, 1700] as [number, number], edge: 0.06 },
   critAtb: 0.2, // 타이밍 치명 = 다음 ATB +20% 채운 채
   perfectAtb: 1, // 원문항을 오답 없이 끝냄 = 내 ATB 즉시 가득
+  /** ⏳ 보스 HP 차시별 · 판 길이 · 1 · 2인 = 설계 방 「🌊 완료 #4」 뒤 (빈 칸 = 지금 BOSS_HP 표) */
+  bossHpByNo: {} as Partial<Record<number, Partial<Record<Diff, [number, number, number, number]>>>>,
   downedAtbGift: 0.5, // 쓰러진 학생이 문제를 맞힘 = 고른 친구 ATB +50%
   role: {
     dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },
@@ -98,11 +102,11 @@ export const BOSSES: Record<number, BossCfg> = {
   3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', cycle: ['smash', 'smash', 'fire13'], tele: 'gaze', sig: 'gaze', signature: '고개 돌리기' },
   4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', cycle: ['ice', 'confuse', 'aoe'], tele: 'foot', sig: 'iceArmor', signature: '얼음 갑옷', shieldDmg: 0.2 },
   5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'arms'], type: '공격형(광역)', cycle: ['sleep', 'sleep', 'fire'], tele: 'foot', sig: 'fireBreath', signature: '화염 숨 모으기' },
-  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기' },
-  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'mystic'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)' },
+  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기' },
+  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)' },
   8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'dark', 'mirror'], tele: 'foot', sig: 'mirror', signature: '거울빛' },
   9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'bind', 'dark'], tele: 'foot', sig: 'lock', signature: '자물쇠' },
-  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['wisdom', 'mystic'], type: '교란형', cycle: ['scale', 'bind', 'scale'], tele: 'scale', sig: 'scale', signature: '기우는 저울' },
+  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['flame', 'arms'], type: '교란형', cycle: ['scale', 'bind', 'scale'], tele: 'scale', sig: 'scale', signature: '기우는 저울' },
   11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', cycle: ['tongue', 'tongue', 'fog'], tele: 'foot', sig: 'ripple', signature: '물결', shieldDmg: 0.2 },
 };
 /** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
