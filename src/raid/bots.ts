@@ -7,6 +7,7 @@
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
+import { SUBJ } from '../engine/subject';
 import { dragonAt, FIN, type Drg } from '../rest/dragon';
 
 export const BOT_MAX = 30, BOT_DEF = 5; // 📜 2026-11-17 #21 🧪 테스트 봇 0~30 · 기본 5
@@ -17,6 +18,7 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 /** 문제 → 정답(또는 일부러 틀린 답) — 정식 DS.Bots.given 그대로 */
 export function given(q: Question, right: boolean): Given {
+  const f = SUBJ.formats[q.type]; if (f?.bot) return f.bot(q, right); // 과목 고유 꼴
   switch (q.type) {
     case 'blanks': { const g = q.items.map((i) => i.answer); if (!right) g[0] = q.options.find((o) => o !== g[0]) ?? '?'; return g; }
     case 'ox': return right ? q.answer : !q.answer;
@@ -24,6 +26,7 @@ export function given(q: Question, right: boolean): Given {
     case 'text': return right ? q.answers[0] ?? '' : '모름';
     case 'multi': return right ? q.answer.slice() : q.answer.slice(1).concat(q.options.findIndex((_, i) => !q.answer.includes(i)));
     case 'subsets': { const n = q.base.length, all: number[][] = []; for (let m = 0; m < 1 << n; m++) all.push(q.base.filter((_, k) => m & (1 << k))); return (right ? all : all.slice(1)) as unknown as Given; }
+    case 'match': return []; // 과목 꼴 = 위 f.bot
     default: return right ? q.answerIndex : (q.answerIndex + 1) % q.choices.length;
   }
 }

@@ -8,7 +8,7 @@
   import { chainRecord, isChain, plainRecord } from '../../raid/raid';
   import { healAuto, spendEnergy, trueUlt } from '../../raid/actions';
   import { perfStreak, petrify, ultUsed } from '../../raid/raid';
-  import { canTrue, cutin, ultBlast } from '../fx/attack';
+  import { canTrue, cutin, ultFor } from '../fx/attack';
   import { savedLook } from '../../store/me.svelte';
   import { HERO, heroUrl } from '../manifest';
   // ⚡ 기력 (#152 · DECISIONS 「⚡ v1.0 도전 칸 → 기력」): 다 맞히면 안 쓴 도전 칸이 ⚡ 로 바뀌며 충전(칸당 0.2초 · 누르면 건너뜀)
@@ -27,7 +27,7 @@
     const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
     msg = '🌟 진필살기! 🗿 석화 20초 · 못 맞힌 친구 모두 도전 칸 +1';
     await cutin(look.hero, look.fx, { gold: true, heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>` });
-    const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultBlast(sc, sc.querySelector('.mon'), look.fx);
+    const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultFor(sc, sc.querySelector('.mon'), look.fx, look.hero);
   }
   function go(to: string | 'bind') { if (spendEnergy(S, L, code, mid, uid, to)) { msg = '⛓ 몬스터를 묶었어요! (공격 3초 늦춤)'; setTimeout(() => (msg = ''), 2500); } }
   // 💚 힐 = 받을 친구 자동 (정식 healTarget · 📜 2026-11-15 머리 규칙 점검)

@@ -2,7 +2,7 @@
   /* eslint-disable @typescript-eslint/no-explicit-any */
   import { onDestroy, untrack } from 'svelte';
   import type { Room, Store } from '../../model/types';
-  import { heroOf } from '../../model/hero';
+  import { baseOf, heroOf } from '../../model/hero';
   import { activeIds } from '../../raid/raid';
   import { roomPath } from '../../raid/actions';
   import { stopFun } from '../../rest/run';
@@ -22,7 +22,7 @@
   const picks = $derived((((R as any).tdp || {})[f?.g] || {}) as Record<string, string>);
   const studs = $derived(activeIds(R, now));
   const tdm = $derived((((R as any).tdm || {})[f?.g] || {}) as Record<string, { sw?: string; no?: string; hero?: number; swd?: number }>);
-  const heroOf2 = (u: string) => { const v = Number(R.players?.[u]?.hero) || 0, h = tdm[u]?.hero != null ? Number(tdm[u]!.hero) : v; return h === 0 && v === 16 ? 16 : h; }; // 🌟 #29 각성한 로안 = 금발
+  const heroOf2 = (u: string) => { const v = Number(R.players?.[u]?.hero) || 0, h = tdm[u]?.hero != null ? Number(tdm[u]!.hero) : v; return baseOf(v) === h ? v : h; }; // 🌟 #29 각성한 로안 = 금발
   // 🔁 자리 교환 (정식 pickHall): 둘이 서로 신청 = TV 가 두 자리를 맞바꿈
   const swDone: Record<string, 1> = {};
   $effect(() => {

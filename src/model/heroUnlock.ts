@@ -64,15 +64,7 @@ export function condLine(id: number, u: HeroUnlock | null, base: string): string
   return base;
 }
 
-/** 📊 용사 상태창 누적 (정식 camp.js statsOf · 정답률 · 순위 없음 · 쌓이기만) */
-export function statsOf(d: TitleData): Record<string, number> {
-  const R = Object.values(d.records || {}).filter(isObj), n = (v: unknown) => Number(v) || 0;
-  const tries = Object.values(d.bonus || {}).reduce((a, l) => a + Object.values(isObj(l) ? l : {}).reduce((b, m) => b + n(isObj(m) ? (m as Obj).tries : 0), 0), 0);
-  return {
-    str: R.reduce((a, r) => a + Object.values(isObj(r.conc) ? r.conc : {}).reduce<number>((b, v) => b + n(Array.isArray(v) ? v[0] : 0), 0) + n(r.boss), 0),
-    grit: R.reduce((a, r) => a + n(r.fixed), 0), focus: R.reduce((a, r) => a + n(r.perfects), 0), brave: R.filter((r) => !!r.won).length,
-    explore: tries, craft: Object.keys(isObj(d.cards) ? d.cards : {}).length,
-  };
-}
+/** 📊 용사 상태창 누적 = titles.ts statsOf (⚡ #83 전용 칭호도 같은 셈) */
+export { statsOf } from './titles';
 /** 🎖 메달 수 (쉼터 놀이 메달 합) */
 export const medalN = (d: TitleData) => Object.values(isObj(d.gem?.medal) ? (d.gem!.medal as Obj) : {}).reduce<number>((a, b) => a + (Number(b) || 0), 0);

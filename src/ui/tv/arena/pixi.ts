@@ -8,7 +8,7 @@ import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
 import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, monBody, monNudge, monVis, spriteOf } from '../../manifest';
-import { heroOf } from '../../../model/hero';
+import { awkFx, heroOf } from '../../../model/hero';
 import OBJ from '../../fx/obj.json';
 
 export interface Hero { u: string; hero: number; name: string; ok: boolean; off: boolean }
@@ -20,6 +20,8 @@ export interface Arena {
   /** ⚔ 정식 attack.js 를 DOM 층이 그릴 때: 그 용사 그림 숨김 · 몬스터만 반응(깜빡 · 흔들 · 숫자 · 베기 선 없음) */
   heroVisible(u: string, on: boolean): void;
   monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o?: HitO): void;
+  /** ⚡ #83 A3 각성 연출 몬스터 색조 (얼음 · 금빛 · 초록 글리치 · 핏빛) · ms 뒤 원래 색 */
+  monTint(color: number, ms: number): void;
   /** 🎆 격파 예약: 다음 맞힘(1.5초 안 · 없으면 그때) = 마지막 일격 → 느리게 0.5초 · 충격파 · 조각 */
   armKill(): void;
   /** 🎆 화려한 연출 켬 · 끔 (🧩 스위치 · 동작 줄이기면 끔) */
@@ -248,7 +250,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
         const ix = i8 ? (IDLE8.nd[hh.hero]?.[0] ?? 0) : null, iy = i8 ? (IDLE8.nd[hh.hero]?.[1] ?? 0) : 0; // 대기 8프레임 = 그 칸의 정중앙 값
         v.sp.scale.set((sl.flip ? -sl.s : sl.s) / g.k, sl.s / g.k); v.sp.x = (sl.flip ? -(ix ?? nd.dx) : (ix ?? nd.dx)) * sl.s; v.sp.y = (ix != null ? iy : nd.dy) * sl.s;
       }
-      v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${hh.name}`; // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
+      const awk = awkFx(Number(hh.hero)); v.name.text = `${hh.ok ? '✓ ' : hh.off ? '📶✕ ' : ''}${(s.ex || []).includes(hh.u) ? '🔥 ' : ''}${awk ? '✦ ' : ''}${hh.name}`; v.name.style.fill = hh.ok ? 0x4cc38a : awk ? 0xffd25a : 0xffffff; // ⚡ #83 A2 각성 = ✦ + 금빛 이름 (맞힘 ✓ = 초록 먼저) // 🔥 #67 탐사대 표식 v.name.style.fill = hh.ok ? 0x4cc38a : hh.off ? 0xff8a80 : 0xffffff; v.name.y = H() * 0.004;
       v.c.alpha = 1; // 📶 끊긴 학생 = 투명하게 하지 않음 · 머리 위 📶✕ 만 (📜 2026-11-17)
     }
     partyC.sortableChildren = true;
@@ -298,11 +300,13 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     // 🧩 조각으로 쪼개져 사라지는 기믹 = 없앰 (📜 2026-11-14 선생님 문제점 2 · 사라졌다 몸통이 돌아오던 버그 포함) → 쓰러진 자세(down) 그대로 · 충격파 · 느리게 · 흔들림만
     JS.shards = 0; JS.far = 0; void m;
   }
+  let tintC = 0xffffff, tintUntil = 0;
+  function monTint(color: number, ms: number) { tintC = color; tintUntil = performance.now() + ms; const m = monSp; if (m) m.tint = color; const back = () => { if (performance.now() >= tintUntil) { tintC = 0xffffff; if (monSp) monSp.tint = 0xffffff; } else setTimeout(back, 120); }; setTimeout(back, ms); }
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
     const m = monSp; if (!m) return; const mx = m.x;
     if (kind !== 'hit') { if (kind === 'practice') float('연습', monCx, monTop + monSize * 0.45, 'title', 0xcfd3db, 900); return; } // 📜 2026-11-15 틀림 = 「MISS」 글자 없음 · 튕김 모션만
     mflash = 'hit'; mflashUntil = performance.now() + 320; // 🎲 맞음 칸(움찔)
-    const wob = () => { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = 0xffffff; m.x = mx; }); };
+    const wob = () => { m.tint = 0xff6b6b; tween(260, (p) => { m.x = mx + Math.sin(p * Math.PI * 6) * W() * 0.006 * (1 - p); }, () => { m.tint = performance.now() < tintUntil ? tintC : 0xffffff; m.x = mx; }); };
     if (!fancy) { wob(); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); return; }
     const perfect = !!o.perfect, last = dmg > 0 && killArm > 0;
     stopUntil = performance.now() + (perfect ? JUICE.STOP_PERFECT_MS : JUICE.STOP_MS); JS.stops++; flash(m); wob();
@@ -380,7 +384,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(async () => { await drawMon(s); drawHp(s); await drawParty(s); if (s.shadow && !scoutOn && st === s) scoutStart(s); else if (!s.shadow && scoutOn) scoutEnd(); }); // 🌑 #67 정찰 들어감 · 나옴
     },
-    hit, exp, sparkle, banner, freeze, pose, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, sparkle, banner, freeze, pose, monTint, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

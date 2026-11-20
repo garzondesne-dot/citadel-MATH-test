@@ -7,7 +7,7 @@
   import type { LessonPack, Room, Store } from '../../model/types';
   import { bossRecord, chainRecord, isChain, plainRecord, petrify, ultUsed } from '../../raid/raid';
   import { healAuto, spendEnergy, trueUlt } from '../../raid/actions';
-  import { canTrue, cutin, ultBlast } from '../fx/attack';
+  import { canTrue, cutin, ultFor } from '../fx/attack';
   import { savedLook } from '../../store/me.svelte';
   import { HERO, heroUrl } from '../manifest';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -43,7 +43,7 @@
   async function useTrue() {
     const err = trueUlt(S, L, code, mid, uid, canTrue(look.fx, look.hero)); if (err) { msg = err; return; }
     await cutin(look.hero, look.fx, { gold: true, heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>` });
-    const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultBlast(sc, sc.querySelector('.mon'), look.fx);
+    const sc = document.querySelector('.edge') as HTMLElement | null; if (sc) void ultFor(sc, sc.querySelector('.mon'), look.fx, look.hero);
     afterCast('🌟', '🌟 진필살기 시전!');
   }
   const retrySnd = () => setTimeout(() => sfx('retry-start', 0.75), 700); // 🔊 2차 🔥 재도전 판 (정식 student.js 같은 순간 · 기술을 쓴 뒤 0.7초)

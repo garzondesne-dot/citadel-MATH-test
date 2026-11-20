@@ -17,7 +17,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   const fh = await s.$('button:has-text("과 시작"), button:has-text("와 시작")'); if (fh) { await fh.click(); await s.waitForTimeout(1200); }
   const pid = await s.evaluate(() => (window.__uid ? null : null)); void pid;
   // 📮 안 읽은 수 = 이름표 빨간 숫자 · 🏕 캠프 A(b207) 뒤로는 말풍선 「소식 n」
-  const dot = async () => (await s.$eval('[data-prop="mail"] .dot, [data-prop="mail"] .bub', (x) => (x.textContent.match(/\d+/) || ['0'])[0]).catch(() => '0'));
+  //   📜 #72 뒤 = 이름표 빨간 배지 [data-k="cnt-mail"] (없으면 0)
+  const dot = async () => (await s.$eval('[data-k="cnt-mail"], [data-prop="mail"] .dot, [data-prop="mail"] .bub', (x) => (x.textContent.match(/\d+/) || ['0'])[0]).catch(() => '0'));
   log('① 캠프 처음 📮 숫자:', await dot(), '(옛 답장 = 처음 연 적 없으니 안 읽음 1)');
   // 캠프에 들어온 뒤 온 소식 (캠프 받기 = 들어올 때 한 번 → 이건 「받기」 단추로)
   const now = Date.now();

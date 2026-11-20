@@ -6,9 +6,10 @@
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
 import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
-import { heroOf } from '../../model/hero';
+import { AWK_ART, awkFx, baseOf, heroOf } from '../../model/hero';
 import { setCanUlt } from '../../raid/combo';
-import { artUrl } from '../manifest';
+import { artUrl, idle8HdOf, portraitOf } from '../manifest';
+import { awkBlast, awkKey, preloadAwk } from './awkfx';
 import { sfx } from '../sound.svelte';
 
 export type Pose = 'idle' | 'walk' | 'attack' | 'think' | 'win';
@@ -57,14 +58,15 @@ function wave(box: HTMLElement, x: number, y: number) { const e = document.creat
 const FAM_SFX: Record<string, string> = { cut: 'cut', smash: 'smash', sweep: 'sweep', wind: 'wind', fire: 'fire', spark: 'spark', frost: 'frost', star: 'star', magic: 'magic', math: 'magic', sun: 'star', dark: 'cut', gear: 'smash', water: 'wind' };
 export const fxHit = (k: string, m = 1) => sfx(FAM_SFX[famOf(k)?.id ?? ''] ?? 'special', 0.85 * m);
 
-type HitO = { /** 🔉 소리 배율 (👥 게시판 동료 = 작게) */ vol?: number; prac?: number; mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
+type HitO = { /** ⚡ #83 A3 각성 필살기 연출 열쇠 (있으면 광역 · 새 그림 대신) */ awk?: string | null; /** TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 = 작게) */ vol?: number; prac?: number; mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
 /** ⚔ 새 스킬 fx (TV 시제품 · slash.ts): 맞는 자리에 그림을 대신 그림 · true = 그렸음(띠 안 씀) · false = 지금 띠 */
 export type CustomFx = (B: Body, dir: number, o: { ult: boolean; finish: boolean }) => boolean;
 /** 맞는 순간: 이펙트 · 멈칫 · 흔들림 · 밀림 · −1 (처치면 충격파 + 크게) */
 export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string, o: HitO = {}) {
   const B = body(monBox, scene); if (!B) return;
   const sp = spec(fx) ?? spec('flame'), shot = modeOf(fx) === 'shot';
-  const drew = !o.cast && !!o.custom?.(B, o.dir ?? (B.cx > scene.getBoundingClientRect().width / 2 ? 1 : -1), { ult: !!o.ult, finish: !!o.finish });
+  const awk = o.ult && o.awk ? o.awk : null; if (awk) void awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, awk, { monBox, tint: o.tint }); // ⚡ #83 A3
+  const drew = !!awk || (!o.cast && !!o.custom?.(B, o.dir ?? (B.cx > scene.getBoundingClientRect().width / 2 ? 1 : -1), { ult: !!o.ult, finish: !!o.finish }));
   if (drew) { /* 새 그림 */ } else if (o.ult) void ultBlast(scene, monBox, fx); else if (!o.cast) void place(scene, fx, { body: B, from: o.from, mode: shot && !o.from ? 'body' : undefined, mult: o.mult, perfect: o.finish, dir: o.dir });
   const hit = sp?.hit || [0, 0.08, 0.18, 2];
   await wait((shot && o.from ? Math.min(0.9, hit[0] || 0.3) : Math.min(0.3, hit[0] || 0.06)) * 1000);
@@ -129,7 +131,7 @@ function faceWait(ms = 600): Promise<void> { preloadFaces(); if (faceReady() || 
 const eyesOf = (n: number) => { const e = FACES.eyes[n]; return e ? `<i class="u-glint" style="left:${e[0]! * 100}%;top:${e[1]! * 100}%"></i><i class="u-glint" style="left:${e[2]! * 100}%;top:${e[3]! * 100}%;animation-delay:.38s"></i>` : ''; };
 /** 얼굴 그림이 없으면 = 용사 도트 확대 (heroArt 콜백 · 없으면 빈 띠) */
 function faceHtml(hero: number, heroArt?: (hero: number) => string) {
-  const F = FACES, n = Number(hero) || 0;
+  const F = FACES, n0 = Number(hero) || 0, n = n0 >= 100 ? baseOf(n0) : n0; // ⚡ #83 각성 모습 = 원래 얼굴
   preloadFaces();
   if (n < F.cols * F.rows && F.eyes[n] !== null && faceReady()) { const c = n % F.cols, r = Math.floor(n / F.cols); return `<i class="u-facepic" style="background-image:url('${artUrl(`art/${F.src}`)}');background-size:${F.cols * 100}% ${F.rows * 100}%;background-position:${F.cols > 1 ? (c / (F.cols - 1)) * 100 : 0}% ${F.rows > 1 ? (r / (F.rows - 1)) * 100 : 0}%">${eyesOf(n)}</i>`; }
   return `<div class="u-face">${heroArt ? heroArt(hero) : ''}</div>`;
@@ -139,7 +141,8 @@ const esc = (s: string) => s.replace(/[<>&]/g, '');
 /** ⚡ 필살기 컷인 (1.2초) · gold = 🌟 진필살기(금빛 · 眞 · 조금 길게) · guard = 🛡 홀리 방패(흰 · 하늘빛 · 짧게) */
 export function cutin(hero: number, fx: string, opt: CutOpt = {}): Promise<void> {
   if (reduce() || typeof document === 'undefined') return wait(0);
-  if (!faceReady() && FACES.eyes[Number(hero) || 0]) return faceWait().then(() => cutinNow(hero, fx, opt));
+  if (!opt.guard && !opt.peek && awkFx(Number(hero))) { const k = `${opt.who ?? 'me'}|${hero}`; if (!AWK_SEEN.has(k)) { AWK_SEEN.add(k); return awakenCut(hero, fx, opt).then(() => cutin(hero, fx, opt)); } } // ⚡ #83 A1 각성 뒤 첫 필살기 = 각성 컷인 먼저
+  if (!faceReady() && FACES.eyes[(Number(hero) || 0) >= 100 ? baseOf(Number(hero)) : Number(hero) || 0]) return faceWait().then(() => cutinNow(hero, fx, opt));
   return cutinNow(hero, fx, opt);
 }
 function cutinNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
@@ -154,6 +157,30 @@ function cutinNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
   if (!opt.mute) { sfx(opt.gold ? 'true-ult' : 'special', 0.9); setTimeout(() => sfx('finish2', 0.95), 1000); } // 眞 진필살기 = 금빛 컷인 소리 (🔊 2차)
   setTimeout(() => d.remove(), opt.gold ? 2000 : 1500);
   return wait(opt.gold ? 1450 : 1050);
+}
+/** ⚡ #83 A1 각성 컷인 (📜 2026-11-20 · 메타인지 8): 각성 상태의 첫 필살기(⚡ · 🌟) 앞에 한 번 · 1.2초
+ *   초상 확대 + 흰 번쩍 + 금빛 이름 띠 「⚡ 각성 ○○」 + 스킬 이름 · 소리 = B1 「금빛 합창」 · TV = 줄 세움(기다림 3개까지 · 넘치면 건너뜀) */
+const AWK_SEEN = new Set<string>();
+let awkChain: Promise<void> = Promise.resolve(), awkWait = 0;
+export const AWK_MAX_WAIT = 3;
+export function awakenCut(hero: number, fx: string, opt: CutOpt = {}): Promise<void> {
+  if (reduce() || typeof document === 'undefined') return wait(0);
+  if (awkWait >= AWK_MAX_WAIT) return wait(0);
+  awkWait++;
+  const run = awkChain.then(() => awakenNow(hero, fx, opt)).finally(() => { awkWait--; });
+  awkChain = run.catch(() => undefined);
+  return run;
+}
+function awakenNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
+  const b = baseOf(Number(hero)), pt = portraitOf(b), skill = String(NAMES[fx] || '').replace(/^\S+\s/, ''), who = opt.who ? `${esc(opt.who)} · ` : '';
+  const spr = AWK_ART[b] ? idle8HdOf(Number(hero)) : null; // 각성 그림이 있으면 각성 모습(숨쉬기 첫 칸) · 없으면 초상
+  const face = spr ? `<i class="ak-pic spr" style="background-image:url('${spr}');background-size:800% 100%;background-position:0 0"></i>` : pt ? `<i class="ak-pic" style="background-image:url('${pt.url}');background-size:${pt.cols * 100}% ${pt.rows * 100}%;background-position:${(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% ${(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>` : `<div class="ak-pic">${opt.heroArt ? opt.heroArt(hero) : ''}</div>`;
+  const d = document.createElement('div'); d.className = 'awk-cut'; d.dataset.k = 'awaken-cut'; d.dataset.hero = String(hero);
+  d.innerHTML = `<i class="ak-dim"></i>${face}<i class="ak-flash"></i><div class="ak-band"><b>⚡ 각성 ${esc(heroOf(b).name)}</b><small>${who}${esc(skill)}</small></div>`;
+  (opt.host || document.body).appendChild(d);
+  if (!opt.mute) sfx('awaken-cutin', 0.9);
+  setTimeout(() => d.remove(), 1300);
+  return wait(1200);
 }
 /** 💥 필살기 광역: 본 이펙트(몸통 × 1.6) + 네 귀퉁이 4개 + 충격파 + 계열 섬광 + 어둠막 · 흔들림 6px */
 export function ultBlast(scene: HTMLElement, monBox: HTMLElement | null, fx: string): Promise<void> {
@@ -206,9 +233,14 @@ const tierN = (fx: string) => { const t = tierOf(fx); return typeof t === 'numbe
 export const canUlt = (fx: string, hero: number) => tierN(fx) >= 2 && resonates(hero, fx);
 setCanUlt(canUlt); // ⛓ 형성평가 퍼펙트 필살기 묶기 15초 (정식 combo.js · DS.Attack.canUlt)
 export const canTrue = (fx: string, hero: number) => tierN(fx) === 3 && resonates(hero, fx);
-export const preload = (hero: number, fx: string) => { fxPreload(fx); const p = projOf(hero); if (p) fxPreload(p); if (canUlt(fx, hero)) preloadFaces(); };
+export const preload = (hero: number, fx: string) => { fxPreload(fx); const p = projOf(hero); if (p) fxPreload(p); if (canUlt(fx, hero)) { preloadFaces(); preloadAwk(hero); } };
+/** 💥 광역 한 번 = 각성이면 ⚡ 각성 연출(#83 A3) · 아니면 지금 광역 (🌟 진필살기 · 갤러리가 직접 부름) */
+export function ultFor(scene: HTMLElement, monBox: HTMLElement | null, fx: string, hero: number, tint?: (color: number, ms: number) => void): Promise<void> {
+  const k = awkKey(Number(hero)), B = k && monBox?.isConnected ? body(monBox, scene) : null;
+  return k && B ? awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, k, { monBox, tint }) : ultBlast(scene, monBox, fx);
+}
 
-export type PlayO = { /** 컷인 「누구의 기술」 (TV) */ who?: string; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
@@ -219,7 +251,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
   const H = rel(heroBox, scene), B = body(monBox, scene)!, rest = o.rest || 'think';
   const hc = { x: H.x + H.w / 2, y: H.y + H.h }, dir = hc.x <= B.cx ? 1 : -1;
   const shot = modeOf(fx) === 'shot', ranged = isRanged(hero), inPlace = shot || ranged;
-  const V = o.vol ?? 1, hitO: HitO = { vol: V, prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
+  const V = o.vol ?? 1, hitO: HitO = { awk: o.ultimate ? awkKey(hero) : null, tint: o.tint, vol: V, prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
   if (reso) { heroBox.classList.add('atk-reso'); setTimeout(() => heroBox.classList.remove('atk-reso'), 1400); }
   if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt, who: o.who });
   if (inPlace) {

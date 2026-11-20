@@ -1,8 +1,9 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
-import { connectDatabaseEmulator, get as fbGet, getDatabase, onValue, ref, set as fbSet, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, get as fbGet, getDatabase, increment, onValue, ref, runTransaction, set as fbSet, type Database } from 'firebase/database';
 import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
 import { setClockOffset } from '../ui/clock.svelte';
+import { tidy as tidyParts } from './tidy';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
 //   읽기 = 맨 윗칸(rooms · school · gifts · mail · accounts)을 실시간으로 받아 둔 거울(mirror)에서 바로 · 쓰기 = 거울에 먼저 + 서버에 보냄
@@ -45,14 +46,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   const subs = new Set<{ path: string; fn: (v: unknown) => void; last: string }>();
   // 🚨 11/19 ⓪ 반쪽 방 = 방이 지워진 뒤 늦게 온 학생 쓰기(players 등)만 남은 rooms/{코드} (state · meta 없음) → 「방 없음」으로 읽음
   //   (교사 캠프가 그런 방을 읽다 「Cannot read properties of undefined (reading 'step')」로 멈췄음 · 운영에 646434 · TEST 2개)
-  const half = (v: unknown) => !!v && typeof v === 'object' && !((v as { state?: unknown }).state && (v as { meta?: unknown }).meta);
-  const tidy = (path: string, v: unknown): unknown => {
-    const p = split(path);
-    if (p[0] !== 'rooms' || !v) return v;
-    if (p.length === 2) return half(v) ? null : v;
-    if (p.length === 1 && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, r]) => !half(r)));
-    return v;
-  };
+  const tidy = (path: string, v: unknown): unknown => tidyParts(split(path), v); // store/tidy.ts (반쪽 방 · 반쪽 사람 줄)
   const read = (path: string) => (isLoaded(path) ? tidy(path, getIn(mirror, split(path))) : null);
   const fire = (path: string) => { for (const s of subs) if (related(s.path, path)) { const v = read(s.path), j = JSON.stringify(v ?? null); if (j !== s.last) { s.last = j; s.fn(clone(v)); } } };
   let offset = 0;
@@ -103,6 +97,23 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       if (admin || split(path)[0] !== 'loginFail') void ensure(path); // 🔑 학생 = 로그인 실패 칸은 쓰기만(읽기 규칙 없음 · 받지 않음)
       setIn(mirror, split(path), v); fire(path); // 거울 먼저 (화면이 바로 바뀜)
       fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\/|^\/?hostKeys\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
+    },
+    // 🐞 11/20 ② 통째로 덮어쓰기 막기: 수 칸 = 서버에서 더함 (두 기기 · 늦게 온 거울이 서로 지우지 않음)
+    add(path: string, n: number) {
+      if (!Number.isFinite(n) || !n) return;
+      void ensure(path);
+      const parts = split(path), cur = Number(getIn(mirror, parts)) || 0;
+      setIn(mirror, [...parts], cur + n); fire(path); // setIn 은 parts 를 줄이므로 사본
+      fbSet(ref(db, parts.join('/')), increment(n)).catch((e) => console.error('시험 서버 더하기 실패', path, e));
+    },
+    async tx<T>(path: string, fn: (cur: T | null) => T | null | undefined) {
+      await ensure(path);
+      const parts = split(path);
+      try {
+        const r = await within(runTransaction(ref(db, parts.join('/')), (cur) => { const v = fn(clone(cur ?? null) as T | null); return v === undefined ? undefined : v; }), 8000);
+        if (!r || !r.committed) return false;
+        setIn(mirror, [...parts], clone(r.snapshot.val() ?? null)); fire(path); return true;
+      } catch (e) { console.error('시험 서버 고쳐 쓰기 실패', path, e); return false; }
     },
     async trySet(path: string, value: unknown) {
       void ensure(path);

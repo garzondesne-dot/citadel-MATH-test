@@ -85,6 +85,7 @@ export function rewriteVer(uid: string, mid: string, n: number): number {
 const qText = (q: Question) => String((q as { question?: string }).question ?? '');
 const ansText = (q: Question | undefined): string => {
   if (!q) return '';
+  const f = SUBJ.formats[q.type]; if (f) return f.answerText?.(q) ?? (f.answer ? f.pen(q, f.answer(q)) ?? '' : ''); // 과목 고유 꼴
   if (q.type === 'choice') return q.choices[q.answerIndex] ?? '';
   if (q.type === 'multi') { const ch = (q as { choices?: string[] }).choices || []; return (q.answer as number[]).map((i) => ch[i] ?? i).join(', '); }
   const a = (q as { answer?: unknown; answers?: string[] }).answer ?? (q as { answers?: string[] }).answers?.[0];

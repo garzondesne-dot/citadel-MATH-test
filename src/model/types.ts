@@ -35,7 +35,9 @@ export type Question =
   | (QBase & { type: 'text'; answers: string[] })
   | (QBase & { type: 'multi'; options: string[]; answer: number[]; /** 두 칸 고르기 (칸 제목 · 보기 수) */ groups?: { label: string; n: number }[]; /** ∅ 단추 자리 (P8) */ empty?: number[] })
   | (QBase & { type: 'blanks'; items: { left?: string; right?: string; answer: string }[]; options: string[] })
-  | (QBase & { type: 'subsets'; base: number[] });
+  | (QBase & { type: 'subsets'; base: number[] })
+  /** 🏹 대응 화살표 잇기 (과목 꼴 · SUBJ.formats.match): xs → ys · 정답 = 화살표 [X번, Y번] 목록(순서 무관) · alts = 정답 여러 벌일 때 나머지 벌 · xn · yn = 타원 이름 */
+  | (QBase & { type: 'match'; xs: string[]; ys: string[]; answer: [number, number][]; alts?: [number, number][][]; xn?: string; yn?: string });
 
 /** 학생 답 (형식별): choice = 번호 · ox = 참거짓 · number = 수 · text = 글 · multi = 번호 배열 · blanks = 기호 배열 · 과목 꼴 = 그 꼴이 정함(SUBJ.formats) */
 export type Given = number | boolean | string | number[] | string[] | number[][] | null;
@@ -182,6 +184,10 @@ export interface Store {
   trySet?(path: string, value: unknown): Promise<boolean>;
   /** 그 칸 덩어리의 첫 값을 서버에서 받았는지 (서버만 · 🐞 11/19 ② 명단 받기 전 구별) */
   loaded?(path: string): boolean;
+  /** 🐞 11/20 ② 수 칸에 더하기 (서버 = increment · 두 기기가 같이 써도 서로 지우지 않음) */
+  add?(path: string, n: number): void;
+  /** 🐞 11/20 ② 그 칸을 서버 최신 값에서 고쳐 씀 (서버 = transaction) · fn 이 undefined 를 돌려주면 그만둠 */
+  tx?<T = unknown>(path: string, fn: (cur: T | null) => T | null | undefined): Promise<boolean>;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──

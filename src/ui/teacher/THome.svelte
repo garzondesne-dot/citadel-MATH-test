@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
+  import { liveValue } from '../room.svelte';
   import { upTag } from '../../engine/packs';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { CLASSES, HALLKEY, lastClass, lastTest, type Live } from '../../school/school';
@@ -40,7 +41,9 @@
   let openAsk = $state(false), stopAsk = $state(false); // 📜 2026-11-16 b3 「차시를 잘못 열어 모두 다시 들어옴」 = 열기 전 반 · 차시 크게 확인
   const isTest = $derived(cls === TEST);
   const realCls = $derived(isTest ? testCls(S) : cls);
-  const fk = $derived.by(() => { void ver; return fixedKey(S); });
+  // 🐞 2026-11-20 (hallkey-emu): 고정 키 칸은 처음 읽을 때 서버에서 받아 옴 → 새로 고침 직후엔 비어 있다가 늦게 옴 = 받으면 다시 그림 (전 = 「📌 고정」인데 번호 빈칸)
+  const hk = untrack(() => liveValue<string>(S, HALLKEY)); onDestroy(() => hk.stop());
+  const fk = $derived.by(() => { void ver; void hk.v.val; return fixedKey(S); });
   // 🟢 지금 열린 수업 (이 폰이 열었든 아니든 school/live)
   const openNow = $derived(live && liveRoom && !liveRoom.state.closed ? live : null);
   const isOpen = (c: string) => !!openNow && (c === TEST ? !!openNow.test : !openNow.test && openNow.cls === c);

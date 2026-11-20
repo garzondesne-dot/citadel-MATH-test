@@ -1,3 +1,4 @@
+import { txOn } from '../store/atomic';
 // 📮 학생 우편함 (정식 js/raid/mail.js 옮김 · 📜 2026-11-15 선생님 「우편 기능 활성화」 · 새 규칙 없음)
 //   받은 소식 = 🎁 선물(gifts/{학생} · 선생님 선물 · 정식에서 옮긴 친구 선물 · 석화 · 쉼터 · 서술 조각) · ✉ 선생님 메시지 · 💌 답장(mail/{학생}) · 📢 공지(school/notice/{반})
 //   받기 = 아직 안 받은 선물만 (got 표시로 두 번 안 받음 · 캠프에 들어올 때 저절로 받는 것과 같은 칸) · 읽음 = 이 기기 「마지막으로 연 시각」(정식 citadel-mail-seen 그대로)
@@ -49,6 +50,15 @@ export function claim(S: Store, uid: string, id: string): { g: number; s: number
   const p = `gifts/${uid}/${id}`, x = S.get<Gift>(p);
   if (!x || x.got) return null;
   S.set(`${p}/got`, true);
+  return { g: Number(x.g) || 0, s: Number(x.s) || 0, x: Number(x.x) || 0, petri: id.startsWith('petri_') };
+}
+/** 🐞 11/20 ② 받기 = 서버에서 got 을 transaction 으로 (폰 두 대가 같은 순간 눌러도 한 번만) → 받은 { g, s, x } · 이미 받았으면 null */
+export async function claimOnce(S: Store, uid: string, id: string): Promise<{ g: number; s: number; x: number; petri: boolean } | null> {
+  const p = `gifts/${uid}/${id}`, x = S.get<Gift>(p);
+  if (!x || x.got) return null;
+  let mine = false;
+  const ok = await txOn<boolean>(S, `${p}/got`, (cur) => { if (cur) { mine = false; return undefined; } mine = true; return true; });
+  if (!ok || !mine) return null;
   return { g: Number(x.g) || 0, s: Number(x.s) || 0, x: Number(x.x) || 0, petri: id.startsWith('petri_') };
 }
 export const md = (t: number) => { const d = new Date(Number(t) + 9 * 3600e3); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };

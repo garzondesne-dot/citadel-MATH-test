@@ -13,7 +13,11 @@ export interface SymCard { id: string; name: string; fm: string; hint: string }
 /** 문제 글 · 보기 안 그림 (과목이 정함) — 글 조각 또는 그림 자료 */
 export type RichPart = { text: string } | { fig: unknown };
 /** 과목 고유 문항 꼴 (엔진의 기본 꼴 = choice · ox · number · multi · blanks · text 밖) */
-export interface Format { grade(q: Question, g: Given): boolean; pen(q: Question, g: Given): string | null; empty(): Given; norm(g: Given): Given; filled(g: Given): boolean; Widget: Component<{ q: Question; value: Given; disabled?: boolean; onchange: (v: Given) => void }> }
+export interface Format { grade(q: Question, g: Given): boolean; pen(q: Question, g: Given): string | null; empty(): Given; norm(g: Given): Given; filled(g: Given): boolean; Widget: Component<{ q: Question; value: Given; disabled?: boolean; onchange: (v: Given) => void }>;
+  /** 정답 그대로의 답 (시연 · 미리 보기 · 시험 · 없으면 null) */ answer?(q: Question): Given;
+  /** 가상 학생 답 (맞힘 / 일부러 틀림 · 없으면 정답 또는 빈 답) */ bot?(q: Question, right: boolean): Given;
+  /** 정답 한 줄 (교사 · 틀린 뒤 보여 줌 · 없으면 pen(answer)) */ answerText?(q: Question): string;
+  /** 📦 차시 팩 올리기: 팩 문항 칸 → 문항 (base = 문제 글 · 풀이 · 덧칸 · err = 검사 문구 · 이 꼴이 없으면 올릴 수 없음) */ fromPack?(it: Record<string, unknown>, base: Record<string, unknown>, err: (msg: string) => null): Question | null }
 export interface Subject {
   id: string;
   /** 첫 화면 · 앱 이름에 붙는 과목 이름 */

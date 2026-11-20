@@ -32,5 +32,8 @@
  "hero-valkyrie-v5.webp": "hero-valkyrie-idle8-v1.webp",
  "hero-elemental-v5.webp": "hero-elemental-idle8-v1.webp",
  "hero-astro-v5.webp": "hero-astro-idle8-v1.webp",
- "hero-blond-v5.webp": "hero-blond-idle8-v1.webp"
+ "hero-blond-v5.webp": "hero-blond-idle8-v1.webp",
+ "hero-dknight-awk-v5.webp": "hero-dknight-awk-idle8-v1.webp",
+ "hero-paladin-awk-v5.webp": "hero-paladin-awk-idle8-v1.webp",
+ "hero-valkyrie-awk-v5.webp": "hero-valkyrie-awk-idle8-v1.webp"
 }

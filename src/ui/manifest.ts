@@ -49,7 +49,7 @@ export const DUNGEONS: Record<string, string> = {
 export const dungeonOf = (theme?: string) => `${import.meta.env.BASE_URL}${DUNGEONS[theme || ''] ?? DUNGEONS['01-burrow']}`;
 
 // 용사 (정식 heroesV2 · 칸 80 × 64 · 4열 × 12줄 · 0줄 = idle · 2줄 = 공격 · 8줄 = 앉기) — b7: 31명 (그림 파일 이름 = hero-data.json sprite)
-import { heroOf, PORTRAITS } from '../model/hero';
+import { baseOf, heroOf, PORTRAITS } from '../model/hero';
 import { savedLook } from '../store/me.svelte';
 export const HERO = { w: 80, h: 64, cols: 4, rows: 12, idleRow: 0, atkRow: 2, sitRow: 8 };
 /** 🎞 용사 모션 표 = 정식 assets/manifest.js anims 그대로 (📜 2026-11-14 머리 🔨 「용사 공격할 때 공격 모션으로 안 나가 · 모션 전부 점검」): [줄, 칸 수, 한 바퀴 초, 한 번만] */
@@ -61,6 +61,7 @@ import BBOX from './sprite-bbox.json';
 { // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
   const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
   B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
+  for (const k of ['dknight', 'paladin', 'valkyrie']) { const a = `hero-${k}-awk-v5.webp`, o = `hero-${k}-v5.webp`; B.heroes[a] ??= B.heroes[o]; if (B.heads) B.heads[a] ??= B.heads[o]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
 }
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
@@ -73,6 +74,10 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-sword-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-valkyrie-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-blond-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  // ⚡ #83 각성 시트 (hero-v2 docs/handoff/assets/hero-awaken · v5 와 같은 칸 · 그림이 온 용사만 · 모습 id = 100 + 용사)
+  'hero-dknight-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-paladin-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-valkyrie-awk-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-witch-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-elf-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-ninja-v5.webp': { cw: 256, ch: 144, k: 2, base: 8 },
@@ -165,7 +170,7 @@ export function monVis(src: string, row: number, col: number, cell: number): num
 /** 용사 그림 주소 · id 를 안 주면 이 기기에 저장된 출전 용사 */
 export const heroUrl = (id: number = savedLook().hero) => `${import.meta.env.BASE_URL}art/heroes/${heroOf(id).sprite || 'hero-sword-v3c.webp'}`;
 /** 용사 얼굴(소개 카드) = 정식 hero-portraits-v2 6 × 6 */
-export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
+export const portraitOf = (id: number) => { const c = PORTRAITS.list[String(id)] ?? PORTRAITS.list[String(baseOf(id))]; return c ? { url: `${import.meta.env.BASE_URL}art/heroes/${PORTRAITS.src}`, cols: PORTRAITS.cols, rows: PORTRAITS.rows, c } : null; };
 
 // 🏕 캠프 v2 (📜 2026-11-18 선생님 시안 · 머리 #71 · 원본 픽셀 1182 × 1330 · 자리표 = hero-v2 docs/handoff/assets/camp2/README)
 //   배경 = 텐트 · 던전 문(횃불) · 성채가 그려진 빈 배경 · 물건 = 투명 그림 한 줄(① 평소 ② 상태 ③~⑥ 누름 반응 4칸 · 텐트 = 평소 + 반응 4칸)
@@ -248,7 +253,7 @@ export const ELEM_FX: Record<string, { src: string; w: number; h: number; n: num
   confuse: { src: 'art/pfx/fx-vortex-v1.webp', w: 150, h: 114, n: 22, fps: 15, sfx: 'wind' },
   sleep: { src: 'art/pfx/fx-twinkle-v1.webp', w: 110, h: 110, n: 16, fps: 15, sfx: 'magic' },
 };
-export const SFX: Record<string, string> = { swing: 'sfx/swing-v2.mp3', launch: 'sfx/launch-v2.mp3', cut: 'sfx/cut-v2.mp3', sweep: 'sfx/sweep-v2.mp3', star: 'sfx/star-v2.mp3', special: 'sfx/special-v2.mp3', finish: 'sfx/finish-v2.mp3', finish2: 'sfx/finish-v2b.mp3', holy: 'sfx/holy-v2.mp3', correct: 'sfx/correct-v2.mp3', smash: 'sfx/smash-v2.mp3', frost: 'sfx/frost-v2.mp3', block: 'sfx/block-v2.mp3', blockB: 'sfx/block-wood-b-v1.mp3', blockC: 'sfx/block-wood-c-v1.mp3', fire: 'sfx/fire-v2.mp3', magic: 'sfx/magic-v2.mp3', spark: 'sfx/spark-v2.mp3', wind: 'sfx/wind-v2.mp3', hurt: 'sfx/hurt-v2.mp3', click: 'sfx/click-v2.mp3' , /* 🔊 효과음 2차 (📜 2026-11-14 선생님 「효과음 평가 끝」 · 42종 1위 · 정식 hero-v2 docs/handoff/sfx/round2) */ 'board': 'sfx/r2/board-v1.mp3', 'castle-open': 'sfx/r2/castle-open-v1.mp3', 'chain-break': 'sfx/r2/chain-break-v1.mp3', 'chain-lock': 'sfx/r2/chain-lock-v1.mp3', 'class-start': 'sfx/r2/class-start-v1.mp3', 'combo': 'sfx/r2/combo-v1.mp3', 'countdown': 'sfx/r2/countdown-v1.mp3', 'dizzy': 'sfx/r2/dizzy-v1.mp3', 'door-close': 'sfx/r2/door-close-v1.mp3', 'dummy-hit': 'sfx/r2/dummy-hit-v1.mp3', 'energy-card': 'sfx/r2/energy-card-v1.mp3', 'enh-fail': 'sfx/r2/enh-fail-v1.mp3', 'enh-great': 'sfx/r2/enh-great-v1.mp3', 'enh-ok': 'sfx/r2/enh-ok-v1.mp3', 'fire-out': 'sfx/r2/fire-out-v1.mp3', 'focus': 'sfx/r2/focus-v1.mp3', 'fog-clear': 'sfx/r2/fog-clear-v1.mp3', 'game-no': 'sfx/r2/game-no-v1.mp3', 'game-ok': 'sfx/r2/game-ok-v1.mp3', 'glitch': 'sfx/r2/glitch-v1.mp3', 'heart-break': 'sfx/r2/heart-break-v1.mp3', 'heart-up': 'sfx/r2/heart-up-v1.mp3', 'hero-pick': 'sfx/r2/hero-pick-v1.mp3', 'holy-on': 'sfx/r2/holy-on-v1.mp3', 'ice-crack': 'sfx/r2/ice-crack-v1.mp3', 'ice-shatter': 'sfx/r2/ice-shatter-v1.mp3', 'ink': 'sfx/r2/ink-v1.mp3', 'lock': 'sfx/r2/lock-v1.mp3', 'mail': 'sfx/r2/mail-v1.mp3', ach1: 'sfx/r2/ach-1-v1.mp3', ach2: 'sfx/r2/ach-2-v1.mp3', ach3: 'sfx/r2/ach-3-v1.mp3', 'mon-appear': 'sfx/r2/mon-appear-v1.mp3', 'mon-appear-boss': 'sfx/r2/mon-appear-boss-v1.mp3', 'plus5': 'sfx/r2/plus5-v1.mp3', 'poison': 'sfx/r2/poison-v1.mp3', 'portal': 'sfx/r2/portal-v1.mp3', 'raise-hand': 'sfx/r2/raise-hand-v1.mp3', 'retry-start': 'sfx/r2/retry-start-v1.mp3', 'scout-start': 'sfx/r2/scout-start-v1.mp3', 'scroll': 'sfx/r2/scroll-v1.mp3', 'skill-unlock': 'sfx/r2/skill-unlock-v1.mp3', 'star-bonus': 'sfx/r2/star-bonus-v1.mp3', 'true-ult': 'sfx/r2/true-ult-v1.mp3', 'wake': 'sfx/r2/wake-v1.mp3', 'yawn': 'sfx/r2/yawn-v1.mp3' };
+export const SFX: Record<string, string> = { swing: 'sfx/swing-v2.mp3', launch: 'sfx/launch-v2.mp3', cut: 'sfx/cut-v2.mp3', sweep: 'sfx/sweep-v2.mp3', star: 'sfx/star-v2.mp3', special: 'sfx/special-v2.mp3', finish: 'sfx/finish-v2.mp3', finish2: 'sfx/finish-v2b.mp3', holy: 'sfx/holy-v2.mp3', correct: 'sfx/correct-v2.mp3', smash: 'sfx/smash-v2.mp3', frost: 'sfx/frost-v2.mp3', block: 'sfx/block-v2.mp3', blockB: 'sfx/block-wood-b-v1.mp3', blockC: 'sfx/block-wood-c-v1.mp3', fire: 'sfx/fire-v2.mp3', magic: 'sfx/magic-v2.mp3', spark: 'sfx/spark-v2.mp3', wind: 'sfx/wind-v2.mp3', hurt: 'sfx/hurt-v2.mp3', click: 'sfx/click-v2.mp3' , /* 🔊 효과음 2차 (📜 2026-11-14 선생님 「효과음 평가 끝」 · 42종 1위 · 정식 hero-v2 docs/handoff/sfx/round2) */ 'board': 'sfx/r2/board-v1.mp3', 'castle-open': 'sfx/r2/castle-open-v1.mp3', 'chain-break': 'sfx/r2/chain-break-v1.mp3', 'chain-lock': 'sfx/r2/chain-lock-v1.mp3', 'class-start': 'sfx/r2/class-start-v1.mp3', 'combo': 'sfx/r2/combo-v1.mp3', 'countdown': 'sfx/r2/countdown-v1.mp3', 'dizzy': 'sfx/r2/dizzy-v1.mp3', 'door-close': 'sfx/r2/door-close-v1.mp3', 'dummy-hit': 'sfx/r2/dummy-hit-v1.mp3', 'energy-card': 'sfx/r2/energy-card-v1.mp3', 'enh-fail': 'sfx/r2/enh-fail-v1.mp3', 'enh-great': 'sfx/r2/enh-great-v1.mp3', 'enh-ok': 'sfx/r2/enh-ok-v1.mp3', 'fire-out': 'sfx/r2/fire-out-v1.mp3', 'focus': 'sfx/r2/focus-v1.mp3', 'fog-clear': 'sfx/r2/fog-clear-v1.mp3', 'game-no': 'sfx/r2/game-no-v1.mp3', 'game-ok': 'sfx/r2/game-ok-v1.mp3', 'glitch': 'sfx/r2/glitch-v1.mp3', 'heart-break': 'sfx/r2/heart-break-v1.mp3', 'heart-up': 'sfx/r2/heart-up-v1.mp3', 'hero-pick': 'sfx/r2/hero-pick-v1.mp3', 'holy-on': 'sfx/r2/holy-on-v1.mp3', 'ice-crack': 'sfx/r2/ice-crack-v1.mp3', 'ice-shatter': 'sfx/r2/ice-shatter-v1.mp3', 'ink': 'sfx/r2/ink-v1.mp3', 'lock': 'sfx/r2/lock-v1.mp3', 'mail': 'sfx/r2/mail-v1.mp3', ach1: 'sfx/r2/ach-1-v1.mp3', ach2: 'sfx/r2/ach-2-v1.mp3', ach3: 'sfx/r2/ach-3-v1.mp3', 'mon-appear': 'sfx/r2/mon-appear-v1.mp3', 'mon-appear-boss': 'sfx/r2/mon-appear-boss-v1.mp3', 'plus5': 'sfx/r2/plus5-v1.mp3', 'poison': 'sfx/r2/poison-v1.mp3', 'portal': 'sfx/r2/portal-v1.mp3', 'raise-hand': 'sfx/r2/raise-hand-v1.mp3', 'retry-start': 'sfx/r2/retry-start-v1.mp3', 'scout-start': 'sfx/r2/scout-start-v1.mp3', 'scroll': 'sfx/r2/scroll-v1.mp3', 'skill-unlock': 'sfx/r2/skill-unlock-v1.mp3', 'star-bonus': 'sfx/r2/star-bonus-v1.mp3', 'true-ult': 'sfx/r2/true-ult-v1.mp3', /* ⚡ #83 B1 각성 컷인 = 「금빛 합창」 a (📜 11/20) */ 'awaken-cutin': 'sfx/awk/awaken-cutin-a-v1.mp3', 'wake': 'sfx/r2/wake-v1.mp3', 'yawn': 'sfx/r2/yawn-v1.mp3' };
 // 📕 오답노트 아이콘 (정식 manifest note · note-icons-v1 · 칸 128 · 8칸 = 틀림 · 안 풂 · 맞힘 · 보충 · 도전 별 · 알림 배지 · 노트 완성 · 책) · 🎯 허수아비 칸마다
 export const NOTE_ICON = { src: artUrl('art/note-icons-v1.webp'), n: 8, idx: { x: 0, '-': 1, n: 1, a: 1, o: 2, f: 2, p: 3, star: 4, c: 4, badge: 5, done: 6, book: 7 } as Record<string, number> };
 /** 🎒 오늘의 전리품 상자 (📜 2026-11-17 #7 = 옛 정식 assets/art/thrill-chest-v1.webp · 3칸 128×128: ① 닫힘 ② 흔들림(반짝 선) ③ 열림 + 금빛) */

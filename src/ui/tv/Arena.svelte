@@ -21,7 +21,7 @@
   import { deco } from '../fx/aura';
   import { ladder } from '../../model/hero';
   import { bossState, plainRecord, holyArmed, stone, BOSS_ID, pracHitsAll, chainDown } from '../../raid/raid';
-  import { cutin, ultBlast } from '../fx/attack';
+  import { cutin, ultFor } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
   import { HERO, heroHead, heroUrl, monBody, type HPose } from '../manifest';
@@ -153,7 +153,7 @@
     const pose = (q: Pose) => rowAnim(rowEl, q);
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); if (h.kind === 'practice') domPop('연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => !!A?.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
-    void attack(lay, { who: whoOf(h.u), custom, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
+    void attack(lay, { who: whoOf(h.u), custom, tint: (c, ms) => A?.monTint(c, ms), heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (last && !quiet) tvHurt(); /* 🔊 #43 맞는 순간 */ if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
       .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
@@ -255,7 +255,7 @@
     await cutin(hero, fxk, { gold: true, who: whoOf(u) });
     const lay = fxLayer; if (!lay) return;
     const mb = document.createElement('div'); mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; lay.appendChild(mb);
-    await ultBlast(lay, mb, fxk); mb.remove();
+    await ultFor(lay, mb, fxk, hero, (c, ms) => A?.monTint(c, ms)); mb.remove();
   }
   (globalThis as { __tvTrue?: (k: number) => void }).__tvTrue = (k) => { const u = ids[k]; if (u) void tvTrue(u); };
   (globalThis as { __tvGuard?: (k: number) => void }).__tvGuard = (k) => { const u = ids[k]; if (u) void tvGuard([u]); }; // 시험 고리
