@@ -46,9 +46,17 @@
   const loop = setInterval(() => {
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     if (paused || S.end) return;
-    for (let i = 0; i < speed; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); }
+    for (let i = 0; i < speed; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b); autoStep(); }
     if (S.end && !ended) { ended = true; setTimeout(() => onend(S), 1800); }
   }, STEP * 1000);
+  /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
+  let fullAt = -1, autoTag = $state(0);
+  function autoStep() {
+    const h = me >= 0 ? S.heroes[me] : null;
+    if (!h || !open || !run || grading || over || h.down || h.atb < 1 || S.t < h.stunUntil || S.end) { fullAt = -1; return; }
+    if (fullAt < 0) fullAt = S.t;
+    if (S.t - fullAt >= T.autoAtkDelay) { fullAt = -1; attack(S, me, 'ok', true); }
+  }
   // 💥 몬스터 공격에 맞음 = 문제 카드 잠깐 잠금 (레이드 attackMs = 3초 · 보스 HP 절반 아래 = 분노 4초)
   let lockUntil = 0, lockLeft = $state(0), lockTag = $state('');
   onDestroy(() => { clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
@@ -63,14 +71,16 @@
     open = true;
   }
   /** 📝 채점 → ⚡ 충전 연출 (Y8 · 약 2초 · 누르면 건너뜀): 소문항 ○ × 차례로 → 카드가 쑥 빨려 들어가 에너지 → 충전 칸 */
-  let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
+  let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
   function finishGrade() {
     if (!grading) return; const n = grading.n; gT.forEach(clearTimeout); gT = []; grading = null; run = null;
     for (let i = 0; i < n; i++) setTimeout(() => flyOrb(), i * 180);
-    openQuiz();
+    if (n) setTimeout(() => { chgPop = `+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
+    setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
+  let chgPop = $state('');
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
-    grading = { marks, perfect, n, suck: false };
+    grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
     const t1 = 300 + marks.length * 260; // ○ × 하나씩 0.26초
     gT = [setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450)];
   }
@@ -173,6 +183,7 @@
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
       const big = e.k === 'skill' && (e.kind !== 'equip' || e.who === me), ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
       if (e.k === 'skill' && big) { const c = { who: e.who, awk: e.kind === 'awk', name: e.kind === 'awk' ? '각성' : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', short: e.kind === 'equip' }; cut = c; setTimeout(() => { if (cut === c) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
+      if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
       if (big) setTimeout(() => playAtk(e as Extract<Ev, { k: 'skill' }>), ms - 200); else playAtk(e as Extract<Ev, { k: 'atk' | 'skill' | 'role' }>);
     } else if (e.k === 'shield') { crack = e.cells; setTimeout(() => (crack = []), 900); pop(bx, 22, e.last ? '실드 파괴! 약점 시간' : `실드 ${e.cells.length}칸`, 'shield'); }
     else if (e.k === 'boss') {
@@ -259,7 +270,7 @@
         <b class="mn">{meH.s.name}</b>
         <span class="hpn" aria-label="HP {meH.hp} / {meH.s.maxHp}"><b>{meH.hp}</b><small>/ {meH.s.maxHp}</small></span>
         <i class="thin hp"><b style:width={pct(meH.hp, meH.s.maxHp)}></b></i>
-        <span class="chs" class:flash={gaugeFlash} data-k="atb-me-ch" aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>
+        <span class="chs" class:flash={gaugeFlash} data-k="atb-me-ch" aria-label="충전 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, i (i)}<i class="cs" class:on={i < meH.ch}></i>{/each}</span>{#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
       </div>
     </div>
   {/if}
@@ -307,7 +318,7 @@
 
   <!-- 문제 카드 -->
   {#if open && run}
-    <div class="card" class:suck={grading?.suck}><QuizCard {L} {run} {seed} title={titleOf(run.mid)} ch={meH?.ch ?? 0} {bossLeft} hintOk={!hintUsed} {flash} locked={lockLeft} {lockTag} {grading} onskip={finishGrade} onsubmit={submit} onclose={() => (open = false)} /></div>
+    <div class="card" class:suck={grading?.suck}><QuizCard {L} {run} {seed} title={titleOf(run.mid)} ch={meH?.ch ?? 0} {bossLeft} hintOk={!hintUsed} {flash} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} onclose={() => (open = false)} /></div>
   {/if}
 
   <!-- 단추 -->
@@ -375,6 +386,7 @@
   .cs { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
   .cs.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
   .chs.flash { animation: gflash 0.45s; }
+  .chpop { position: absolute; left: 70px; bottom: 2px; font: 900 18px var(--font); color: #8fe0ff; text-shadow: 0 0 6px #3a8ef0, 0 2px 0 #000; animation: up 1.4s ease-out forwards; }
   .foot { position: absolute; left: -30px; top: -10px; width: 60px; height: 20px; z-index: -1; }
   .foot .rb { fill: #0005; stroke: #0008; stroke-width: 3; } .foot .rf { fill: none; stroke: #ffd34d; stroke-width: 3; } .foot .rf.full { stroke: #fff3a0; filter: drop-shadow(0 0 3px #ffd34d); }
   .hn { display: flex; align-items: baseline; justify-content: center; gap: 2px; } .hn b { font: 900 15px var(--font); color: #c8ffb8; text-shadow: 0 1px 0 #000; }

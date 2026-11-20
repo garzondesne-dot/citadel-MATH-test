@@ -28,9 +28,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
   ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
+  ok('요청 #10 채점 = 「🏁 퍼펙트! ⚡+3」 · 넘치면 「가득(+n 받음)」', /퍼펙트! ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
   await p.click('[data-k="atb-grade"]'); await p.waitForTimeout(150);
-  ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로 · 다음 문제', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')) && !!(await p.$('[data-k="atb-quiz"]')));
-  await p.waitForTimeout(800);
+  ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')));
+  await p.waitForTimeout(700);
+  ok('요청 #10 충전 뒤 = 문제 카드 닫힘(다음 문제 자동 안 열림) · 충전 칸 옆 「+n」', !(await p.$('[data-k="atb-quiz"]')) && !!(await p.$('[data-k="atb-chg-pop"]')));
+  await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(600);
+  // ⚔ 요청 #11 문제 카드를 연 채 ATB 가득 = 자동 일반 공격(타이밍 바 없음)
+  { const hp1 = await p.evaluate(() => { const a = globalThis.__atb; a.full(); a.pause(false); return a.S.bossHp; }); await p.waitForTimeout(1500); await p.evaluate(() => globalThis.__atb.pause(true));
+    const r = await p.evaluate(() => { const a = globalThis.__atb, e = a.S.ev.filter((x) => x.k === 'atk' && x.who === 0).at(-1); return { auto: !!e?.auto, timing: e?.timing }; });
+    ok('요청 #11 카드 연 채 = 자동 일반 공격(치명 없음) · 타이밍 바 안 뜸 · 「⚔ 자동 공격!」 한 줄', r.auto && r.timing === 'ok' && !(await p.$('[data-k="atb-timing"]')) && (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp1, JSON.stringify(r)); }
+  await p.waitForTimeout(300);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
   ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && (await p.$eval('[data-k="atb-submit"]', (e) => e.disabled)));
   await p.screenshot({ path: `${SHOTS}/atb-lock-844.png` });

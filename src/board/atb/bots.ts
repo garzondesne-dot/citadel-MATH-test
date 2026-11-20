@@ -4,17 +4,17 @@ import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, questionsOf, startRun, type Origin, type Run } from './quiz';
 import { T } from './tune';
-import { alive, attack, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State, type Timing } from './engine';
+import { alive, attack, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
-export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number }
+export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; /** ATB 가 가득 찬 시각 (-1 = 아님) */ fullAt: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number }
 const ACT_SEC = 3;
 export const BOT_LABEL: Record<BotKind, string> = { normal: '보통 학생', ideal: '도전 기준(완벽)', random: '무작위 제출', retry: '오답 후 힌트 · 재도전' };
 const r01 = (b: Bot) => { let a = (b.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>> 15), a | 1); a ^= a + Math.imul(a ^ (a >>> 7), a | 61); return ((a ^ (a >>> 14)) >>> 0) / 4294967296; };
 export function newBot(L: LessonPack, who: number, kind: BotKind, seed = 1): Bot {
   const acc = kind === 'ideal' ? 1 : kind === 'random' ? 0.3 : kind === 'retry' ? 0.5 : 0.6; // 설계 방 모의실험 = 정답률 60%
   const think: [number, number] = kind === 'ideal' ? [12, 18] : kind === 'random' ? [4, 8] : [12, 24]; // 소문항 하나 평균 18초 (sim2.py sub_sec)
-  return { who, kind, acc, think, run: null, due: 0, done: {}, os: originsOf(L), seed: `bot${who}`, rnd: seed * 97 + who * 13 };
+  return { who, kind, acc, think, run: null, due: 0, fullAt: -1, done: {}, os: originsOf(L), seed: `bot${who}`, rnd: seed * 97 + who * 13 };
 }
 const wrongOf = (q: Question): Given => (q.type === 'number' ? -999 : q.type === 'ox' ? !(q as { answer: boolean }).answer : q.type === 'multi' ? [] : q.type === 'choice' ? ((q as { answerIndex: number }).answerIndex + 1) % Math.max(2, (q as { choices: string[] }).choices.length) : '모름') as Given;
 /** 봇 한 걸음 (dt 초): 문제 풀기 + ATB 가 차면 행동 */
@@ -33,31 +33,33 @@ export function botStep(L: LessonPack, S: State, b: Bot): void {
       b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]);
     } else b.run = null;
   }
-  if (h.down || h.atb < 1 || S.t < h.stunUntil) return;
-  if (act(S, b)) b.due += ACT_SEC; // 행동하는 동안(약 3초)은 문제를 못 풂 (sim2.py atk_sec) · 행동 안 함(거울빛 기다림) = 문제를 계속 풂
+  if (h.down || h.atb < 1 || S.t < h.stunUntil) { b.fullAt = -1; return; }
+  if (b.fullAt < 0) b.fullAt = S.t;
+  const r = act(S, b, S.t - b.fullAt >= T.autoAtkDelay);
+  if (r) b.fullAt = -1;
+  if (r === 'skill') b.due += ACT_SEC; // 스킬 = 누르는 동안(약 3초) 문제를 못 풂 · 자동 일반 공격 = 풀이를 안 멈춤(요청 #11)
 }
-const timingRoll = (b: Bot): Timing => { const x = r01(b); return b.kind === 'ideal' ? (x < 0.6 ? 'crit' : 'ok') : x < 0.15 ? 'miss' : x < 0.4 ? 'crit' : 'ok'; };
-function act(S: State, b: Bot): boolean {
+function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
-  if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return true;
-  if (can('shield') && useSkill(S, b.who, 'shield')) return true;
-  if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return true; // 🛡 오라 방패 = 예고가 뜨면
-  if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return true;
+  if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return 'skill';
+  if (can('shield') && useSkill(S, b.who, 'shield')) return 'skill';
+  if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return 'skill'; // 🛡 오라 방패 = 예고가 뜨면
+  if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
   if (canRole(S, b.who)) {
-    if (R === 'healer' && alive(S).some((x) => x.hp < x.s.maxHp * 0.55) && roleAct(S, b.who)) return true;
-    if (R === 'tank' && S.target && S.target.length === 1 && !S.heroes[S.target[0]!]!.cover && roleAct(S, b.who, S.target[0])) return true;
-    if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return true; }
+    if (R === 'healer' && alive(S).some((x) => x.hp < x.s.maxHp * 0.55) && roleAct(S, b.who)) return 'skill';
+    if (R === 'tank' && S.target && S.target.length === 1 && !S.heroes[S.target[0]!]!.cover && roleAct(S, b.who, S.target[0])) return 'skill';
+    if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return 'skill'; }
   }
   const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 충전 아낌(×0.3 · 실드 깨기용) · 약점 시간에 몰아침
   const keep = shieldHold && h.ch <= 1;
   if (!keep && (weak(S) || h.ch >= T.charge.max || !shieldHold)) {
-    if (can('tier4') && (weak(S) || h.ch >= T.charge.max) && useSkill(S, b.who, 'tier4')) return true;
-    if (R === 'dealer' && can('role') && roleAct(S, b.who)) return true;
-    if (can('equip') && (weak(S) || h.ch >= 2) && useSkill(S, b.who, 'equip')) return true;
+    if (can('tier4') && (weak(S) || h.ch >= T.charge.max) && useSkill(S, b.who, 'tier4')) return 'skill';
+    if (R === 'dealer' && can('role') && roleAct(S, b.who)) return 'skill';
+    if (can('equip') && (weak(S) || h.ch >= 2) && useSkill(S, b.who, 'equip')) return 'skill';
   }
-  if (S.t < S.mirrorUntil && h.hp < h.s.maxHp * 0.6) return false; // 8 거울빛 = 일반 공격이 되돌아옴 → 다친 봇은 문제를 풂(설정표 「그동안은 타이밍 바 대신 문제」)
-  attack(S, b.who, timingRoll(b)); return true;
+  if (!canAtk || (S.t < S.mirrorUntil && h.hp < h.s.maxHp * 0.6)) return false; // 8 거울빛 = 일반 공격이 되돌아옴 → 다친 봇은 문제를 풂(설정표 「그동안은 타이밍 바 대신 문제」)
+  attack(S, b.who, 'ok', true); return 'auto'; // 📜 요청 #11 봇 = 늘 문제 푸는 중 → 자동 일반 공격(치명 없음)
 }
 /** 머리 없는 한 판 (시험 · 연습방 「봇 4 관전」 빨리 감기) */
 export function simulate(L: LessonPack, S: State, bots: Bot[], o: { dt?: number; maxT?: number } = {}): State {
