@@ -25,7 +25,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   ok('② 학생 로그인 기억 있는 교사 폰 → 내 캠프', /role=camp/.test(t.url()) && /선생님/.test(body2), `${t.url().replace(B, '')} · ${body2}`);
   // ③ 한 판씩: 🏰 성채 (모든 방 열림) · 🎯 허수아비 · 🧙 내 용사
   const shut = async () => { await t.keyboard.press('Escape').catch(() => {}); for (const sel of ['.sheet button:has-text("닫기")', '[data-k="castle"] .back', '.back']) { const x = await t.$(sel); if (x) { await x.click().catch(() => {}); break; } } await t.waitForTimeout(500); };
-  await t.click('button[aria-label="성채"]'); await t.waitForTimeout(1300); // 🏕 D 용사가 걸어간 뒤 열림
+  await t.$eval('[data-zone="castle"]', (x) => x.click()); await t.waitForTimeout(1300); // 🏕 D 용사가 걸어간 뒤 열림 · 📜 성채 자리 = 늘 반짝(움직임) → Playwright 「멈춘 뒤 누름」이 끝나지 않아 바로 누름
   const go = await t.$('.sheet button:has-text("성채 들어가기")'); if (go) { await go.click(); await t.waitForTimeout(600); }
   const fl = await t.$('[data-floor="eval-1"]'); if (fl) { await fl.click(); await t.waitForTimeout(300); const in1 = await t.$('button:has-text("1층 들어가기")'); if (in1) await in1.click(); }
   await t.waitForSelector('[data-k="castle"] [data-room]', { timeout: 8000 }).catch(() => {});
