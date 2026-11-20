@@ -15,7 +15,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek } from '../../../board/atb/engine';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
@@ -93,8 +93,9 @@
   let chgPop = $state('');
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
-    const t1 = 300 + marks.length * 260; // ○ × 하나씩 0.26초
-    gT = [setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450)];
+    const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
+    marks.forEach((m, i) => gT.push(setTimeout(() => { if (grading) sfx(m ? 'correct' : 'ink', m ? 0.35 : 0.3); }, 300 + i * 260)));
+    gT.push(setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450));
   }
   function submit(g: Given) {
     if (!run || grading) return;
@@ -139,6 +140,11 @@
   let lit = $state<Record<string, number>>({}), wasOk: Record<string, boolean> = {};
   $effect(() => { const cur = slots.map((x) => [x.k, x.ok] as const); untrack(() => { for (const [k, ok] of cur) { if (ok && !wasOk[k]) { const t = Date.now(); lit = { ...lit, [k]: t }; setTimeout(() => { if (lit[k] === t) lit = { ...lit, [k]: 0 }; }, 700); } wasOk[k] = ok; } }); });
   const U = $derived(Math.max(0.8, Math.min(1.3, H / 390))); // 단추 크기 = 화면 높이 390 기준
+  // 🔎 📜 요청 #19 덧3 스킬 미리 보기 = 단추 안 한 줄(어림값) · 꾹 0.4초 = 설명 카드(손 떼면 닫힘 · 발동 안 함) · 톡 = 바로 발동
+  const pv = $derived.by(() => { void S.t; void S.evN; const o: Partial<Record<SkillK, ReturnType<typeof skillPeek>>> = {}; if (meH) for (const x of slots) o[x.k] = skillPeek(S, me, x.k); return o; });
+  let peek = $state<SkillK | ''>(''), peekX = $state(0), peekUsed = false, pressT: ReturnType<typeof setTimeout> | undefined;
+  function pressStart(k: SkillK, ev: PointerEvent) { const b = ev.currentTarget as HTMLElement; peekX = b.offsetLeft + b.offsetWidth / 2; clearTimeout(pressT); peekUsed = false; pressT = setTimeout(() => { peek = k; peekUsed = true; try { navigator.vibrate?.(15); } catch { /* 무시 */ } }, 400); }
+  function pressEnd() { clearTimeout(pressT); peek = ''; }
   function fire(k: SkillK, to?: number) {
     if (!meH) return; const R = meH.s.role;
     if (to == null && ((k === 'role' && (R === 'tank' || R === 'support')) || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
@@ -183,15 +189,18 @@
     setTimeout(() => shake(stageEl ?? null, 5, 300), 450);
   }
   /** ⚡ 충전 가득 (📜 요청 #13) = 공격 단추 안 동그라미 · 스킬 단추 빛 · 「가득! 스킬을 써요」 한 번 */
+  // 🔊 📜 요청 #23 효과음 더하기 (있던 파일만) · 30명 교실 = 0.15초 안에 겹치면 하나만
+  let lastSnd = 0;
+  const snd = (k: string, v = 0.6) => { const t = Date.now(); if (t - lastSnd < 150) return; lastSnd = t; sfx(k, v); };
   const fullCh = $derived(!!meH && meH.ch >= T.charge.max);
   let wasFull = false;
-  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) big('⚡ 가득! 스킬을 써요', 'note', 1200); wasFull = f; }); });
+  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) { big('⚡ 가득! 스킬을 써요', 'note', 1200); snd('skill-unlock', 0.6); } wasFull = f; }); });
   /** 🆘 위험 체력 (📜 요청 #18): 30% 아래(T.lowHp) = 체력 막대 · 숫자 빨갛게 깜박 + 머리 위 🆘 · 처음 내려갈 때 한 줄(친구) · 진동(나) · 힐러 💚 · 💖 부활 단추 반짝 */
   const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
   const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
   const anyNeed = $derived(lowIds.some((i) => i !== me) || S.heroes.some((h) => h.down && h.id !== me));
   let wasLow = new Set<number>();
-  $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); } wasLow = now; }); });
+  $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); if (me >= 0) snd('heart-break', 0.55); } wasLow = now; }); });
   /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
   const isWeak = (id: number) => { const h = S.heroes[id]; return !!h && S.boss.weak.includes(h.s.fam); };
   let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false), auraOn = $state(false);
@@ -256,8 +265,8 @@
         if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + T.hitLockMs; lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
       }, 230);
     }
-    else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
-    else if (e.k === 'revive') pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role');
+    else if (e.k === 'role') { pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role'); if (e.role === 'healer') snd('heart-up', 0.6); }
+    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); }
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
@@ -270,6 +279,7 @@
       else if (e.what === 'mirrorOn') pop(bx, 26, '🪞 거울빛', 'shield');
     }
     else if (e.k === 'end' && e.win) bossPose = 'down';
+    else if (e.k === 'end' && !e.win) snd('game-no', 0.7); // 이김 = 승리 곡(#21)이 소리
   }
 
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
@@ -305,6 +315,8 @@
   const atkName = $derived(S.nextAtk ? ATK[S.nextAtk].name : S.aoeNext ? '광역' : '공격');
   /** ⚠ 광역 예고 = 용사 줄 바닥이 붉게 깜빡 (📜 요청 #3 ⑤) */
   const aoeWarn = $derived(!!tele && S.aoeNext);
+  let wasAim = false, wasAoe = false;
+  $effect(() => { const a = meAimed, w = aoeWarn; untrack(() => { if (a && !wasAim) snd('focus', 0.6); else if (w && !wasAoe) snd('countdown', 0.5); wasAim = a; wasAoe = w; }); }); // ⚠ 나를 노려요 · 광역 예고 = 처음 뜰 때 한 번
   const tiltTxt = $derived(S.boss.tele === 'scale' && S.target ? (S.aoeNext ? '⚖ 수평 → 모두' : `⚖ ${S.tilt === 'L' ? '왼쪽' : '오른쪽'}으로 기욺 → ${S.heroes[S.target[0]!]?.s.name ?? ''}`) : '');
   const breathLeft = $derived(S.breathWarn != null ? Math.max(0, Math.ceil(S.breathWarn + SIG.breath.warn - S.t)) : 0);
   const mirrorLeft = $derived(S.t < S.mirrorUntil ? Math.ceil(S.mirrorUntil - S.t) : 0);
@@ -322,7 +334,7 @@
   {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
   <!-- 팀 부활 -->
-  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => setSound({ bgm: !soundPref.bgm })}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
+  <div class="tr"><button type="button" class="bgmb" class:off={!soundPref.bgm} data-k="atb-bgm" aria-label="배경음 {soundPref.bgm ? '켜짐' : '꺼짐'}" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵' : '🔇'}</button><div class="revs" aria-label="팀 부활 💖 {S.revives} / {T.revives}"><b>💖 팀 부활</b>{#each Array(T.revives) as _, i (i)}<span class="hrt" class:used={i >= S.revives}>💖</span>{/each}</div></div>
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
@@ -380,13 +392,14 @@
       {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{:else}<span class="qsp"></span>{/if}
       <div class="ring" data-k="atb-skills" aria-label="스킬">
         {#each slots as sk (sk.k)}
-          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost}" onclick={() => fire(sk.k)}>
+          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
             <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'equip' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
-            <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}</span>
+            <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
             <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span>
             {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small class="hw" data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
           </button>
         {/each}
+        {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
       </div>
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
       <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격<span class="chg" class:flash={gaugeFlash} aria-label="기력 ⚡ {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}>⚡</i>{/each}</span>{/if}</button>
@@ -461,7 +474,7 @@
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
   .sk2 .co { display: flex; gap: 0; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; filter: grayscale(1) brightness(0.6); } .sk2 .co i.on { filter: drop-shadow(0 0 3px #ffd34d); }
-  .sk2:disabled { filter: grayscale(0.85) brightness(0.6); }
+  .sk2:disabled, .sk2.dis { filter: grayscale(0.85) brightness(0.6); }
   .sk2.role { border-color: #5fe0c0; background: radial-gradient(circle at 50% 35%, #2a9a84, #0f4a40); } .sk2.tier4 { border-color: #ffb84a; background: radial-gradient(circle at 50% 35%, #c8762a, #5a2a0a); } .sk2.aura { border-color: #fff3a0; background: radial-gradient(circle at 50% 35%, #c8b84a, #5a4a0a); } .sk2.awk { border-color: #ffd34d; background: radial-gradient(circle at 50% 35%, #e8a82a, #6a3a0a); }
   @keyframes situ { 50% { box-shadow: 0 0 18px #fff, 0 3px 0 #0a1430; } }
   .sk2.lit { animation: lit 0.7s ease-out; } @keyframes lit { 0% { filter: brightness(2.6); box-shadow: 0 0 26px #fff; scale: 1.25; } 100% { scale: 1; } }
@@ -530,7 +543,7 @@
   .bigmsg { position: absolute; z-index: 44; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 8px 28px; border-radius: 16px; border: 3px solid #9fe6ff; background: linear-gradient(#1d5ac8ee, #0d2f6aee); color: #fff; font: 900 clamp(26px, 10vh, 44px) var(--font); text-shadow: 0 3px 0 #000; white-space: nowrap; pointer-events: none; animation: bigin 0.35s ease-out; }
   .bigmsg.note { top: 30%; padding: 4px 18px; border-color: #8fd0ff; font-size: clamp(16px, 5.5vh, 24px); }
   .btns.full3 .chg .cs.on { animation: pipglow 0.7s ease-in-out infinite; } @keyframes pipglow { 50% { box-shadow: 0 0 10px #fff, 0 0 4px #8fd0ff; } }
-  .btns.full3 .sk2:not(:disabled) { box-shadow: 0 0 16px #8fe0ff, 0 3px 0 #0a1430; }
+  .btns.full3 .sk2:not(.dis) { box-shadow: 0 0 16px #8fe0ff, 0 3px 0 #0a1430; }
   .bigmsg.weak { border-color: #ffe27a; background: linear-gradient(#e8a82aee, #8a4a0aee); font-size: clamp(20px, 7vh, 34px); }
   @keyframes bigin { from { opacity: 0; scale: 1.6; } }
   /* ⚔ 약점 상성 (요청 #12 ④) = 머리 위 「약점!」 + 발밑 계열 색 빛 · 내가 약점이면 초상 · 공격 · 보호막 단추 테두리도 */
@@ -552,7 +565,7 @@
   .btns { position: absolute; z-index: 24; left: 1.5%; right: 1.5%; bottom: 2%; height: calc(64px * var(--u)); display: flex; align-items: stretch; gap: 1.2%; }
   .b.quiz { flex: 0 0 22%; height: 100%; min-height: 0; }
   .qsp { flex: 0 0 22%; }
-  .ring { flex: 1; display: flex; gap: 1.2%; justify-content: center; }
+  .ring { position: relative; flex: 1; display: flex; gap: 1.2%; justify-content: center; }
   .sk2 { position: relative; flex: 0 1 calc(118px * var(--u)); height: 100%; border-radius: 14px; padding: 0 6px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; column-gap: 4px; align-items: center; border: 3px solid #8fd0ff; background: linear-gradient(#3a6ac8, #16285a); color: #fff; font: 800 calc(12px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430; line-height: 1.05; text-align: left; }
   .sk2 .ic { grid-row: 1 / span 2; position: relative; font-size: calc(24px * var(--u)); line-height: 1; display: inline-flex; }
   .sk2 .nm { display: flex; flex-direction: column; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; } .sk2 .nm small { font-size: calc(9.5px * var(--u)); color: #cfe6ff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
@@ -564,4 +577,8 @@
   .aul { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); pointer-events: none; }
   .aul :global(.hs > i) { visibility: hidden; } .aul.off { opacity: 0; transition: opacity 0.1s; }
   .card { bottom: calc(2% + 64px * var(--u, 1) + 8px) !important; } /* 문제 카드 = 아래 단추 줄 위까지 (요청 #19) */
+  .sk2 .pv { display: block; font: 800 calc(9.5px * var(--u)) var(--font-plain); font-style: normal; color: #ffe9b0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .sk2 .pv.gold { color: #ffd34d; text-shadow: 0 0 4px #b8860b, 0 1px 0 #000; }
+  .sk2 { -webkit-touch-callout: none; user-select: none; }
+  .peekc { position: absolute; z-index: 40; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 260px; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 12px; border: 2px solid #e2b04a; background: #1d1220f2; color: #fff; font: 700 13px var(--font-plain); text-align: left; white-space: normal; box-shadow: 0 6px 18px #000a; pointer-events: none; filter: none; }
+  .peekc b { font: 900 15px var(--font); color: #ffd98a; } .peekc .pl { color: #ffe9b0; font-weight: 800; } .peekc small { font: 700 12px var(--font-plain); color: #cfe6ff; } .peekc .why { color: #ff9a8a; }
 </style>

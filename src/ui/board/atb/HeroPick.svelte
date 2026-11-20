@@ -6,7 +6,7 @@
   import { portraitOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import { famOf, lookOfStats, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
-  import { FAM_NAME, ROLE_NAME, ROLE_SKILL, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
+  import { FAM_NAME, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose, onskill }: {
     ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; awk?: boolean; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void; /** ⚡ 장착 스킬 단계 고르기 (요청 #16) */ onskill?: (id: number, tier: number) => void;
@@ -45,7 +45,7 @@
       <div class="lad">
         {#each ladder(sel) as k, i (k)}
           {@const on = tierOf(sel) === i + 1}
-          <button type="button" class="lg" class:on data-k="atb-pick-sk" data-tier={i + 1} onclick={() => onskill?.(sel, i + 1)}><small>{['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]}</small>{skillName(k)}<em>{on ? '✔ 장착' : SKILL_PRICE[k] != null ? `💎 ${SKILL_PRICE[k]}${SKILL_SCROLL[k] ? ` · 📜 ${SKILL_SCROLL[k]}` : ''}` : '업적'}</em></button>
+          <button type="button" class="lg" class:on data-k="atb-pick-sk" data-tier={i + 1} onclick={() => onskill?.(sel, i + 1)}><small>{['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]}</small>{skillName(k)}<em>{on ? '✔ 장착' : SKILL_PRICE[k] != null ? `💎 ${SKILL_PRICE[k]}${SKILL_SCROLL[k] ? ` · 📜 ${SKILL_SCROLL[k]}` : ''}` : '업적'}</em><i class="pv" data-k="atb-pick-pv">💥 약 {Math.round(T.skillBase * T.ratio.equip * statsOf({ hero: sel, lv, enh, tier: i + 1, awk }).skillMul)}</i></button>
         {/each}
       </div>
       <p class="note">🧪 연습방 = 미리 보기 · 저장 안 됨 · 학생 판 = 캠프 「내 용사」와 같은 값으로 업그레이드</p>
@@ -88,4 +88,5 @@
   .note { margin: 0; font: 600 10px var(--font-plain); color: #6a4a28; }
   .cond { display: flex; flex-direction: column; gap: 1px; font: 700 11px var(--font-plain); } .cond .off { opacity: 0.55; }
   .go { min-height: 48px; border-radius: 12px; border: 3px solid #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; font: 900 20px var(--font); box-shadow: 0 4px 0 #6a4210; }
+  .lg .pv { display: block; font: 800 12px var(--font-plain); font-style: normal; color: #b0400a; } /* 📜 요청 #19 덧3 스킬 칸 어림 피해 */
 </style>

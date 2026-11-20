@@ -5,6 +5,8 @@
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import type { State } from '../../../board/atb/engine';
   import AtbIcon from './AtbIcon.svelte';
+  import { onMount } from 'svelte';
+  import { sfx } from '../../sound.svelte';
   import { lookOfStats } from '../../../board/atb/heroes';
   const { S, no, me, guardBonus = 0, mastery, practice = true, onagain, onswap, onexit }: {
     S: State; no: number; me: number; guardBonus?: number; /** 이 차시 클리어 누적 판 */ mastery: number; practice?: boolean; onagain: () => void; onswap: () => void; onexit: () => void;
@@ -13,6 +15,8 @@
   const right = $derived(Math.min(12, mine ? mine.log.right : Math.max(0, ...S.heroes.map((h) => h.log.right))));
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(win && guardBonus ? [{ t: '수호 보너스', g: guardBonus }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
+  // 🔊 📜 요청 #23 결과 💎 줄 = 한 줄씩 star (Loot 와 같은 소리) · 0.35초 간격
+  onMount(() => { const ts = rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 500 + i * 350)); return () => ts.forEach(clearTimeout); });
   const STEPS = [3, 7, 15], nextStep = $derived(STEPS.find((s) => mastery < s) ?? 15);
   const did = (h: State['heroes'][number]) => [h.log.shields ? `실드 ${h.log.shields}칸` : '', h.log.covers ? `엄호 ${h.log.covers}` : '', h.log.heals ? `💚 힐 ${h.log.heals}` : '', h.log.revives ? `부활 ${h.log.revives}` : '', h.log.boosts ? `격려 ${h.log.boosts}` : '', h.log.ult ? `필살 ${h.log.ult}` : ''].filter(Boolean).join(' · ') || `피해 ${h.log.dmg}`;
 </script>

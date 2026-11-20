@@ -38,8 +38,8 @@
   <button type="button" class="go" data-k="atb-submit" disabled={!q || !filled(q, val) || locked > 0} onclick={send}>{locked > 0 ? `⏳ 막는 중… ${locked}` : '제출'}</button>
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
-      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '✨ PERFECT' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
-      <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:x={!m} style:animation-delay="{0.3 + i * 0.26}s">{m ? '○' : '×'}</i>{/each}</span>
+      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
+      <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:tri={!m} style:animation-delay="{0.3 + i * 0.26}s" data-k="atb-mark" data-m={m ? 'o' : 'tri'}>{#if m}○{:else}△<small>고침</small>{/if}</i>{/each}</span>
       <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">{grading.n >= grading.want ? `⚡ 기력 +${grading.n}` : `⚡+${grading.want} → 가득(+${grading.n} 받음)`}{grading.perfect ? ' · ATB 가득' : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
@@ -65,7 +65,7 @@
   .grade { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: none; background: #fbf0d6f2; color: #3a2614; font-family: var(--font); }
   .gt { font: 900 24px var(--font); color: #8a4a0a; } .gt em { font-style: normal; color: #1d5ac8; font-size: 1.15em; }
   .marks { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-  .mk { font: 900 40px var(--font); font-style: normal; color: #1f7a3c; opacity: 0; animation: stamp 0.25s ease-out forwards; } .mk.x { color: #b3261e; }
+  .mk { font: 900 40px var(--font); font-style: normal; color: #1f7a3c; opacity: 0; animation: stamp 0.25s ease-out forwards; } .mk.tri { color: #d99a00; display: inline-flex; flex-direction: column; align-items: center; line-height: 1; } .mk.tri small { font: 800 11px var(--font-plain); color: #a87400; }
   @keyframes stamp { from { opacity: 0; transform: scale(2.2); } to { opacity: 1; transform: scale(1); } }
   .gain { font: 900 20px var(--font); color: #1d5ac8; opacity: 0; animation: stamp 0.3s ease-out forwards; }
   .grade small { font: 600 11px var(--font-plain); color: #8a6e4e; }
