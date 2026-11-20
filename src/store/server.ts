@@ -103,7 +103,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       if (!Number.isFinite(n) || !n) return;
       void ensure(path);
       const parts = split(path), cur = Number(getIn(mirror, parts)) || 0;
-      setIn(mirror, parts, cur + n); fire(path);
+      setIn(mirror, [...parts], cur + n); fire(path); // setIn 은 parts 를 줄이므로 사본
       fbSet(ref(db, parts.join('/')), increment(n)).catch((e) => console.error('시험 서버 더하기 실패', path, e));
     },
     async tx<T>(path: string, fn: (cur: T | null) => T | null | undefined) {
@@ -112,7 +112,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       try {
         const r = await within(runTransaction(ref(db, parts.join('/')), (cur) => { const v = fn(clone(cur ?? null) as T | null); return v === undefined ? undefined : v; }), 8000);
         if (!r || !r.committed) return false;
-        setIn(mirror, parts, clone(r.snapshot.val() ?? null)); fire(path); return true;
+        setIn(mirror, [...parts], clone(r.snapshot.val() ?? null)); fire(path); return true;
       } catch (e) { console.error('시험 서버 고쳐 쓰기 실패', path, e); return false; }
     },
     async trySet(path: string, value: unknown) {
