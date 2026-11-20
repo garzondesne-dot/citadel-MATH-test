@@ -38,7 +38,7 @@ describe('ATB 엔진', () => {
     expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'tier4', 'role', 'aura', 'awk']); // 실드 · 부활 = 그때만
     expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role']); S.bossMax = S.bossHp = 99999; // 실드 안 뜨게
     h.ch = 1; full(S, 0); expect(skillList(S, 0).filter((x) => x.ok).map((x) => x.k)).toEqual(['equip', 'role']);
-    const base = 120 * h.s.skillMul; let hp = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1)]);
+    const base = T.skillBase * h.s.skillMul; let hp = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1)]);
     h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'tier4'); expect([h.ch, hp - S.bossHp]).toEqual([1, Math.round(base * 2.3)]);
     S.bossHp = S.bossMax; h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'awk'); expect([h.ch, Math.min(hp, Math.round(base * 3.8))]).toEqual([0, hp - S.bossHp]);
     expect(skillList(S, 0).some((x) => x.k === 'awk')).toBe(false); // 판당 1번
@@ -86,7 +86,7 @@ describe('ATB 엔진', () => {
     S.heroes[2]!.ch = 2; full(S, 2); roleAct(S, 2); expect(S.heroes.map((h) => h.hp)).toEqual([62, 62, 62, 62]);
     full(S, 2); expect(roleAct(S, 2)).toBe(false); tick(S, 12.1); full(S, 2); expect(roleAct(S, 2)).toBe(true); // 보스 공격 한 번 지나면 다시
     S.heroes[3]!.ch = 1; S.heroes[0]!.atb = 0; full(S, 3); roleAct(S, 3, 0); expect(S.heroes[0]!.atb).toBe(1);
-    const hp = S.bossHp; S.heroes[0]!.ch = 1; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(120 * S.heroes[0]!.s.skillMul * 1.5));
+    const hp = S.bossHp; S.heroes[0]!.ch = 1; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * S.heroes[0]!.s.skillMul * 1.5));
   });
   it('각성 = 각성 상태만 보임(🔨 +10 만으론 오라 방패) · 역할 덧효과 그대로', () => {
     const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안'], 10), seed: 1 });

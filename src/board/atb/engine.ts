@@ -145,14 +145,14 @@ export function attack(S: State, who: number, timing: Timing): boolean {
   if (dmg > 0 && S.t < S.mirrorUntil && !h.down) { const back = Math.max(1, Math.round(dmg * SIG.mirror.back)); h.hp = Math.max(0, h.hp - back); push(S, { k: 'sig', t: S.t, what: 'reflect', who, v: back }); if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who }); checkEnd(S); } } // 8 거울빛 = 일반 공격만 돌아옴
   return true;
 }
-/** 내 실드 칸이 남아 있고 완주 표가 있으면 [스킬] = 실드 깨기 */
-export const canBreak = (S: State, who: number) => { const h = S.heroes[who]; if (!h || !S.shieldUp) return null; const mine = S.cells.find((c) => c.owner === who && !c.broken); if (mine && h.tickets >= 1) return 'own' as const; const others = S.cells.some((c) => !c.broken && c.owner !== who); return others && h.tickets >= T.shieldHelpRuns && S.t - S.shieldAt >= T.shieldHelpAfter ? ('help' as const) : null; };
+/** 🛡 보호막 부수기 (Y2 · 모의실험4 「충전 1개로 자기 칸」): 내 칸이 남았으면 충전 1 · 친구 칸 = 90초 뒤 · 실드 뒤 원문항 2번 끝낸 사람 */
+export const canBreak = (S: State, who: number) => { const h = S.heroes[who]; if (!h || !S.shieldUp) return null; const mine = S.cells.find((c) => c.owner === who && !c.broken); if (mine && h.ch >= T.cost.shield) return 'own' as const; const others = S.cells.some((c) => !c.broken && c.owner !== who); return others && h.tickets >= T.shieldHelpRuns && S.t - S.shieldAt >= T.shieldHelpAfter ? ('help' as const) : null; };
 export function breakShield(S: State, who: number): boolean {
   const h = S.heroes[who], how = canBreak(S, who); if (!h || !how || !ready(h, S) || h.ch < T.cost.shield) return false;
   h.ch -= T.cost.shield; S.rec.skills.shield = (S.rec.skills.shield ?? 0) + 1;
   const cells: number[] = [], weakFam = S.boss.weak.includes(h.s.fam);
   const take = (c: Cell | undefined) => { if (!c) return; c.broken = true; c.by = who; cells.push(S.cells.indexOf(c)); };
-  if (how === 'own') { h.tickets--; take(S.cells.find((c) => c.owner === who && !c.broken)); if (weakFam) take(S.cells.find((c) => !c.broken)); } // 약점 계열 = 자기 칸 + 친구 칸 하나
+  if (how === 'own') { take(S.cells.find((c) => c.owner === who && !c.broken)); if (weakFam) take(S.cells.find((c) => !c.broken)); } // 약점 계열 = 자기 칸 + 친구 칸 하나
   else { h.tickets -= T.shieldHelpRuns; take(S.cells.find((c) => !c.broken && c.owner !== who)); }
   h.log.shields += cells.length; spend(h);
   if (S.breathWarn != null) { S.breathWarn = null; S.breathNext = S.t + SIG.breath.every; push(S, { k: 'sig', t: S.t, what: 'breathCut', who }); } // 숨 고르기 예고 중 실드 깨면 끊김
