@@ -43,7 +43,7 @@ function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
   if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return 'skill';
-  if (can('shield') && useSkill(S, b.who, 'shield')) return 'skill';
+  if (can('shield') && useSkill(S, b.who, 'equip')) return 'skill'; // ⚡ 내 스킬 = 실드 칸 깸
   if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return 'skill'; // 🛡 오라 방패 = 예고가 뜨면
   if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
   if (canRole(S, b.who)) {
@@ -54,7 +54,6 @@ function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 충전 아낌(×0.3 · 실드 깨기용) · 약점 시간에 몰아침
   const keep = shieldHold && h.ch <= 1;
   if (!keep && (weak(S) || h.ch >= T.charge.max || !shieldHold)) {
-    if (can('tier4') && (weak(S) || h.ch >= T.charge.max) && useSkill(S, b.who, 'tier4')) return 'skill';
     if (R === 'dealer' && can('role') && roleAct(S, b.who)) return 'skill';
     if (can('equip') && (weak(S) || h.ch >= 2) && useSkill(S, b.who, 'equip')) return 'skill';
   }

@@ -15,13 +15,12 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing } from '../../../board/atb/engine';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
   import { attack as fxAttack, fit, shake, ultBlast, type Pose } from '../../fx/attack';
   import { sfx } from '../../sound.svelte';
-  import { attackMs, attackStrong } from '../../../raid/attacks';
   import type { HPose } from '../../manifest';
   import { botStep, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, type Run } from '../../../board/atb/quiz';
@@ -59,7 +58,7 @@
     if (fullAt < 0) fullAt = S.t;
     if (S.t - fullAt >= T.autoAtkDelay) { fullAt = -1; attack(S, me, 'ok', true); }
   }
-  // 💥 몬스터 공격에 맞음 = 문제 카드 잠깐 잠금 (레이드 attackMs = 3초 · 보스 HP 절반 아래 = 분노 4초)
+  // 💥 몬스터 공격에 맞음 = 문제 카드 잠깐 잠금 (📜 요청 #20 ① = T.hitLockMs 1초)
   let lockUntil = 0, lockLeft = $state(0), lockTag = $state('');
   onDestroy(() => { clearInterval(loop); if (typeof window !== 'undefined') removeEventListener('resize', onResize); });
 
@@ -113,14 +112,17 @@
   function atkDown(e: PointerEvent) { if (over === 'timing') { e.preventDefault(); tb?.stop(); } }
   /** 💠 스킬 = 「⚔ 공격」 둘레 고정 자리 동그란 단추 (📜 요청 #9 · Y3 바뀜) · 한 번 톡 = 바로 발동 · 진동 = 발동 때 · 엄호 · 격려 · 부활(둘 이상) = 누구에게
    *   고정 칸 = 장착 · 역할 · 4레벨(Ⅳ) · 오라 방패(+10) · 각성(각성) — 모자라거나 다 쓰면 회색 · 쓸 수 있게 되는 순간 반짝 / 상황 칸 = 보호막 부수기 · 부활(그때만 나타남) */
-  type Slot = { k: SkillK; cost: number; ok: boolean; ang: number; fix: boolean };
+  type Slot = { k: SkillK; cost: number; ok: boolean; fix: boolean };
+  /** 📜 요청 #19 = ⚡ 내 스킬 · 역할 · 🌟 비장(각성 · 홀리 방패 · 없으면 칸 없음) + 💖 부활(그때만) · 실드가 뜨면 ⚡ 내 스킬 = 실드 칸 깸 */
   const slots = $derived.by((): Slot[] => {
-    if (!meH) return []; const L0 = skillList(S, me), okOf = (k: SkillK) => !!L0.find((x) => x.k === k)?.ok, C = T.cost;
-    const fixed: SkillK[] = ['equip', 'role', ...(meH.s.tier >= 4 ? ['tier4' as const] : []), ...(meH.s.aura ? ['aura' as const] : []), ...(meH.s.awk ? ['awk' as const] : [])];
-    const out: Slot[] = fixed.map((k, i) => ({ k, cost: C[k], ok: okOf(k), ang: 180 + i * 22.5, fix: true }));
-    L0.filter((x) => x.k === 'shield' || x.k === 'revive').forEach((x, i) => out.push({ k: x.k, cost: x.cost, ok: x.ok, ang: 203 + i * 42, fix: false })); // 상황 칸 = 바깥 줄
+    if (!meH) return []; const L0 = skillList(S, me);
+    const out: Slot[] = L0.filter((x) => x.k !== 'revive').map((x) => ({ k: x.k, cost: x.cost, ok: x.ok || (x.k === 'equip' && canSkill(S, me, 'shield')), fix: true }));
+    if (meH.s.awk && !out.some((x) => x.k === 'awk')) out.push({ k: 'awk', cost: T.cost.awk, ok: false, fix: true }); // 판당 1번 다 씀 = 회색으로 남김
+    else if (!meH.s.awk && meH.s.aura && !out.some((x) => x.k === 'aura')) out.push({ k: 'aura', cost: T.cost.aura, ok: false, fix: true });
+    for (const x of L0.filter((y) => y.k === 'revive')) out.push({ k: x.k, cost: x.cost, ok: x.ok, fix: false });
     return out;
   });
+  const breaksShield = $derived(me >= 0 && S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken));
   /** ✨ 쓸 수 있게 되는 순간 반짝 */
   let lit = $state<Record<string, number>>({}), wasOk: Record<string, boolean> = {};
   $effect(() => { const cur = slots.map((x) => [x.k, x.ok] as const); untrack(() => { for (const [k, ok] of cur) { if (ok && !wasOk[k]) { const t = Date.now(); lit = { ...lit, [k]: t }; setTimeout(() => { if (lit[k] === t) lit = { ...lit, [k]: 0 }; }, 700); } wasOk[k] = ok; } }); });
@@ -131,8 +133,8 @@
     over = ''; if (useSkill(S, me, k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
-  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? (fx[me] ? skillName(fx[me]!) : '장착 스킬') : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : '부활';
-  const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚔', tier4: '✴', role: '', aura: '🛡', awk: '✨', revive: '💖' };
+  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '내 스킬' : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : '부활';
+  const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚡', tier4: '✴', role: '', aura: '🛡', awk: '✨', revive: '💖' };
   const onTiming = (t: Timing) => { over = ''; attack(S, me, t); };
 
   // ── 연출 (사건 → 떠오르는 숫자 · 공격 자세 · 컷인) ──
@@ -239,7 +241,7 @@
         e.to.forEach((id, i) => { pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, e.aoe ? 'hurt big' : 'hurt'); hurt(id); });
         if (e.aoe) { shake(stageEl ?? null, 10, 520); boom = true; ring(); setTimeout(() => (boom = false), 620); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
         else { shake(stageEl ?? null, 4, 220); sfx('hurt', 0.6); }
-        if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + attackMs(undefined, undefined, attackStrong({ left: S.bossHp, max: S.bossMax })); lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
+        if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + T.hitLockMs; lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
       }, 230);
     }
     else if (e.k === 'role') pop(e.to != null ? posOf(e.to).x : 20, 30, ROLE_SKILL[e.role], 'role');
@@ -261,7 +263,7 @@
   // ── 자리 (원근 한 줄 · 내 용사 = 맨 앞 · 맨 아래 · 가장 크게) ──
   const order = $derived(me >= 0 ? [me, ...S.heroes.map((h) => h.id).filter((i) => i !== me)] : S.heroes.map((h) => h.id));
   // 📜 요청 #15 = 오라 · 날개 · 이름표가 이웃과 안 겹치게 간격(가로 11% · 이름표 84px) · 그리는 순서 = 뒤 → 앞(z) · 원근 100 → 70%
-  const ROW = [{ x: 10, y: 69, s: 0.95 }, { x: 22.5, y: 62, s: 0.86 }, { x: 35, y: 55, s: 0.77 }, { x: 47.5, y: 48, s: 0.68 }];
+  const ROW = [{ x: 14, y: 66, s: 1 }, { x: 22.5, y: 59.5, s: 0.9 }, { x: 31, y: 54, s: 0.8 }, { x: 39.5, y: 49.5, s: 0.7 }]; // 📜 요청 #20 ③ = #15 앞 배치로 되돌림(오라는 따로 아래 층)
   const ROWQ = [{ x: 6, y: 74, s: 0.72 }, { x: 11.5, y: 62, s: 0.64 }, { x: 17, y: 50, s: 0.56 }, { x: 22.5, y: 38, s: 0.5 }]; // 카드 왼쪽(26%)까지 · 이름표가 안 겹치게 위아래로 벌림
   const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)); return (open ? ROWQ : ROW)[k] ?? ROW[0]!; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
@@ -299,27 +301,10 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
-  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, lock: () => { lockUntil = Date.now() + attackMs(); lockLeft = 3; lockTag = '💥 시험!'; } };
+  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); submit(-999 as never); }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; } };
 </script>
 
-<div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" bind:this={stageEl}>
-  <!-- 🧑 내 초상 = 둘레 동그란 ATB 고리(Y5) · HP 큰 숫자 + 가는 띠(Y6) · ⚡ 충전 칸 3(Y1) -->
-  {#if meH}
-    {@const pt = portraitOf(lookOfStats(meH.s))}
-    <div class="me" class:full={ready} class:down={meH.down} class:low={lowIds.includes(me)} class:aimed={meAimed} class:wk={isWeak(me)} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-me">
-      {#if meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
-      <div class="face">
-
-        {#if pt}<i class="pt" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{:else}<i class="pt"><HeroSprite id={meH.s.hero} scale={1} /></i>{/if}
-      </div>
-      <div class="mi">
-        <b class="mn">{meH.s.name}</b>
-        <span class="hpn" aria-label="HP {meH.hp} / {meH.s.maxHp}"><b>{meH.hp}</b><small>/ {meH.s.maxHp}</small></span>
-        <i class="thin hp"><b style:width={pct(meH.hp, meH.s.maxHp)}></b></i>
-        <i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, meH.atb) * 100)}%"></b></i>
-      </div>
-    </div>
-  {/if}
+<div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--u={U} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   {#if aimLines.length}<svg class="aim" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">{#each aimLines as a (a.id)}<line x1={bossX} y1={bossY} x2={a.x} y2={a.y} vector-effect="non-scaling-stroke" />{/each}</svg>{/if}
@@ -354,10 +339,13 @@
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-weak">{FAM_EMO[h.s.fam]} 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
-      <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.down ? 0 : h.s.enh} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
+      <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
+      {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit')} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} scale={sc} aura={h.s.enh} /></div>{/if}
+      <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 44 : 22)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
-      <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)}>
+      {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
+      <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
         <b>Lv.{h.s.lv} {name(h.id)} <i class="fe">{FAM_EMO[h.s.fam]}</i>{#if h.ch}<i class="hz">{'⚡'.repeat(h.ch)}</i>{/if}</b>
         <i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i>
         <span class="hn">{h.hp}/{h.s.maxHp}</span>
@@ -375,22 +363,21 @@
 
   <!-- 단추 -->
   {#if me >= 0 && meH}
+    <!-- 📜 요청 #19 = 아래 가로 한 줄: 문제 풀기 · ⚡ 내 스킬 · 역할 · 🌟 비장 · (💖) · ⚔ 공격 · 보스 · 용사는 모두 이 줄 위 -->
     <nav class="btns" class:q={open} class:wk={isWeak(me)} class:full3={fullCh} aria-label="행동" style:--u={U} style:--fc={FAM_COL[meH.s.fam]}>
-      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격<span class="chg" class:flash={gaugeFlash} aria-label="기력 ⚡ {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}>⚡</i>{/each}</span>{/if}</button>
-      {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
-      <!-- 💠 공격 둘레 스킬 (요청 #9) -->
+      {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{:else}<span class="qsp"></span>{/if}
       <div class="ring" data-k="atb-skills" aria-label="스킬">
         {#each slots as sk (sk.k)}
-          {@const R = (sk.fix ? 136 : 206) * U}
-          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 충전 {sk.cost}" style:transform="translate(calc(-50% + {Math.round(Math.cos((sk.ang * Math.PI) / 180) * R)}px), calc(-50% + {Math.round(Math.sin((sk.ang * Math.PI) / 180) * R)}px))" onclick={() => fire(sk.k)}>
-            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}</span>
-            <span class="nm">{SK_NAME(sk.k)}</span>
+          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost}" onclick={() => fire(sk.k)}>
+            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'equip' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
+            <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}</span>
             <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span>
             {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small class="hw" data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
           </button>
         {/each}
       </div>
-      {#if !open}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀기</button>{/if}
+      {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
+      <button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai">⚔</span> 공격<span class="chg" class:flash={gaugeFlash} aria-label="기력 ⚡ {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, k (k)}<i class="cs" class:on={k < meH.ch}>⚡</i>{/each}</span>{/if}</button>
     </nav>
   {:else}
     <p class="watch" role="status">👀 봇 {S.heroes.length}명 관전 · {Math.floor(S.t / 60)}:{String(Math.floor(S.t % 60)).padStart(2, '0')} · ×{speed}</p>
@@ -425,20 +412,11 @@
   .thin { display: block; width: 100%; height: 5px; border-radius: 3px; background: #0009; overflow: hidden; box-shadow: 0 0 0 1px #0006; }
   .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); } .thin.atb { height: 4px; } .thin.atb b { background: linear-gradient(90deg, #ffe46a, #e6b81e); }
   /* 🧑 내 초상 HUD (Y5) */
-  .me { position: absolute; z-index: 21; top: 2%; left: 1.2%; display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 40px; background: #1d1220d9; border: 2px solid #8a6a3a; }
-  .me .face { position: relative; width: 60px; height: 60px; flex: none; }
-  .me.full { border-color: #ffd34d; box-shadow: 0 0 14px #ffd34d; }
   @keyframes glow2 { 50% { box-shadow: 0 0 22px #ffe27a; } }
-  .me .pt { position: absolute; inset: 7px; border-radius: 50%; overflow: hidden; background-color: #3a4a7a; image-rendering: pixelated; display: grid; place-items: center; }
-  .me.down .pt { filter: grayscale(1) brightness(0.5); }
-  .mi { display: flex; flex-direction: column; gap: 1px; min-width: 86px; }
-  .mn { font: 800 11px var(--font-plain); color: #ffe6c0; }
-  .hpn b { font: 900 22px var(--font); color: #9dff8a; text-shadow: 0 2px 0 #000; } .hpn small { font: 700 10px var(--font-plain); color: #ccc; margin-left: 2px; }
   .chs, .slots, .co { display: flex; gap: 3px; }
   .cs { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #8fd0ff88; background: #0a1a3a; }
   .cs.on { border-color: #fff; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 50%, #3a8ef0); box-shadow: 0 0 6px #8fd0ff; }
   .chs.flash { animation: gflash 0.45s; }
-  .chpop { position: absolute; right: calc(2.5% + 20px); bottom: calc(4% + 110px * var(--u)); font: 900 22px var(--font); color: #8fe0ff; text-shadow: 0 0 6px #3a8ef0, 0 2px 0 #000; animation: up 1.4s ease-out forwards; pointer-events: none; }
   .hn { font: 800 10px var(--font-plain); color: #e0ffd8; text-align: center; line-height: 1; text-shadow: 0 1px 0 #000; }
   .boss.stone :global(*) { filter: grayscale(1) brightness(0.85) contrast(1.2); }
   .hero.aura .spr { filter: drop-shadow(0 0 6px #fff6a0) drop-shadow(0 0 12px #ffd34d); }
@@ -468,22 +446,14 @@
   .card.suck { transition: transform 0.42s ease-in, opacity 0.42s ease-in; transform: translate(-80%, -20%) scale(0.05) rotate(-20deg); opacity: 0; }
   @keyframes slide { from { transform: translateX(30px); opacity: 0; } }
   /* ⚔ 오른쪽 아래 큰 공격 단추 + 둘레 스킬 고리 (요청 #9) · 📜 문제 풀기 = 왼쪽 아래 · 문제를 열면 = 카드 왼쪽 */
-  .btns { position: absolute; inset: 0; z-index: 24; pointer-events: none; }
-  .btns > * { pointer-events: auto; }
-  .b.atk { position: absolute; right: 2.5%; bottom: 4%; width: calc(104px * var(--u)); height: calc(104px * var(--u)); min-height: 0; border-radius: 50%; padding: 0; flex-direction: column; gap: 0; font-size: calc(19px * var(--u)); transition: right 0.3s; }
-  .ring { position: absolute; right: calc(2.5% + 52px * var(--u)); bottom: calc(4% + 52px * var(--u)); width: 0; height: 0; transition: right 0.3s; }
-  .sk2 { position: absolute; left: 0; top: 0; width: calc(62px * var(--u)); height: calc(62px * var(--u)); border-radius: 50%; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; border: 3px solid #8fd0ff; background: radial-gradient(circle at 50% 35%, #3a6ac8, #16285a); color: #fff; font: 800 calc(10px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430, 0 0 10px #000a; line-height: 1.05; }
-  .sk2 .ic { font-size: calc(20px * var(--u)); line-height: 1; display: inline-flex; } .sk2 .nm { max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; }
   .sk2 .co { display: flex; gap: 0; font-size: calc(9px * var(--u)); } .sk2 .co i { font-style: normal; filter: grayscale(1) brightness(0.6); } .sk2 .co i.on { filter: drop-shadow(0 0 3px #ffd34d); }
   .sk2:disabled { filter: grayscale(0.85) brightness(0.6); }
   .sk2.role { border-color: #5fe0c0; background: radial-gradient(circle at 50% 35%, #2a9a84, #0f4a40); } .sk2.tier4 { border-color: #ffb84a; background: radial-gradient(circle at 50% 35%, #c8762a, #5a2a0a); } .sk2.aura { border-color: #fff3a0; background: radial-gradient(circle at 50% 35%, #c8b84a, #5a4a0a); } .sk2.awk { border-color: #ffd34d; background: radial-gradient(circle at 50% 35%, #e8a82a, #6a3a0a); }
-  .sk2.situ { width: calc(56px * var(--u)); height: calc(56px * var(--u)); animation: situ 0.9s ease-in-out infinite; } .sk2.shield { border-color: #9fe6ff; background: radial-gradient(circle at 50% 35%, #4ab8e8, #0a3a5a); } .sk2.revive { border-color: #ff8fb0; background: radial-gradient(circle at 50% 35%, #c84a6a, #4a1020); }
   @keyframes situ { 50% { box-shadow: 0 0 18px #fff, 0 3px 0 #0a1430; } }
   .sk2.lit { animation: lit 0.7s ease-out; } @keyframes lit { 0% { filter: brightness(2.6); box-shadow: 0 0 26px #fff; scale: 1.25; } 100% { scale: 1; } }
   .sk2 .hw { position: absolute; bottom: -14px; white-space: nowrap; font: 700 10px var(--font-plain); color: #ffd98a; text-shadow: 0 1px 1px #000; }
   .chg { display: flex; gap: 1px; margin-top: 2px; padding: 0 5px; border-radius: 8px; background: #0006; } .chg .cs { width: auto; height: auto; border: none; background: none; box-shadow: none; font-size: calc(13px * var(--u)); font-style: normal; filter: grayscale(1) brightness(0.55); } .chg .cs.on { filter: drop-shadow(0 0 4px #ffd34d); }
   .ai { font-size: calc(30px * var(--u)); line-height: 1; } .hrt { font-size: 18px; } .chg.flash { animation: gflash 0.45s; }
-  .b.quiz { position: absolute; left: 1.5%; bottom: 3%; width: 27%; height: 16%; }
   .b { min-height: 48px; border-radius: 12px; border: 3px solid #8a6a3a; background: linear-gradient(#5a3f2a, #3a2618); color: #fff2d6; font: 800 clamp(13px, 4.6vh, 22px) var(--font); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: inset 0 0 0 2px #2a1a10, 0 4px 0 #1a100a; padding: 0 4px; text-shadow: 0 2px 0 #0008; }
   .b:disabled { filter: grayscale(0.4) brightness(0.75); }
   .b.atk.hot { border-color: #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; box-shadow: 0 0 14px #ffd34d, inset 0 0 0 2px #fff3c0, 0 4px 0 #6a4210; text-shadow: none; animation: glow 1s ease-in-out infinite; }
@@ -507,13 +477,11 @@
   .aim line { stroke: #ff3a2a; stroke-width: 3; stroke-dasharray: 8 6; filter: drop-shadow(0 0 3px #ff3a2a); animation: dash 0.6s linear infinite; }
   @keyframes dash { to { stroke-dashoffset: -14; } }
   .aimx { position: absolute; left: 0; transform: translate(-50%, -100%); font-style: normal; font-size: 28px; font-weight: 900; color: #ff3a2a; text-shadow: 0 0 6px #ff3a2a, 0 2px 0 #000; animation: blink 0.4s steps(2) infinite; z-index: 3; }
-  .me.aimed { border-color: #ff3a2a; box-shadow: 0 0 16px #ff3a2a; animation: none; }
-  .aimme { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 4px); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
+  .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 22px; height: 22px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0 25%, #8fe0ff 45%, #3a8ef0aa 70%, #0000 72%); box-shadow: 0 0 16px 6px #8fd0ffaa; }
   .stage :global(.atb-orb.g) { width: 28px; height: 28px; background: radial-gradient(circle, #fff 0 25%, #ffe27a 45%, #f0a92aaa 70%, #0000 72%); box-shadow: 0 0 20px 8px #ffd34daa; }
   .cut.short { background: #0007; animation-duration: 0.9s; } .cut.short .band { top: 20%; height: 28%; }
-  .b.quiz { border-color: #8fd0ff; background: linear-gradient(#3a8ef0, #1d5ac8); box-shadow: 0 0 12px #5aa9ff88, inset 0 0 0 2px #bfe2ff, 0 4px 0 #0d2f6a; }
   .watch { position: absolute; z-index: 24; left: 50%; bottom: 3%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 10px; background: #000a; font: 700 14px var(--font-plain); }
   .pick { position: absolute; z-index: 30; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; border: 3px solid #c9953e; background: #2a1a10f0; min-width: 200px; }
   .pick button { min-height: 44px; border-radius: 10px; border: 2px solid #8a6a3a; background: #4a3020; color: #fff; font: 700 15px var(--font-plain); }
@@ -554,7 +522,6 @@
   /* ⚔ 약점 상성 (요청 #12 ④) = 머리 위 「약점!」 + 발밑 계열 색 빛 · 내가 약점이면 초상 · 공격 · 보호막 단추 테두리도 */
   .wbadge { position: absolute; left: 0; transform: translateX(-50%); z-index: 3; padding: 1px 8px; border-radius: 8px; border: 2px solid var(--fc); background: #1d1220e6; color: #fff; font: 900 11px var(--font); font-style: normal; white-space: nowrap; box-shadow: 0 0 8px var(--fc); }
   .wglow { position: absolute; left: -34px; top: -12px; width: 68px; height: 24px; border-radius: 50%; background: radial-gradient(ellipse, var(--fc), #0000 70%); opacity: 0.85; z-index: -1; animation: blink 0.9s ease-in-out infinite; }
-  .me.wk { border-color: var(--fc); box-shadow: 0 0 12px var(--fc); }
   .btns.wk .b.atk, .btns.wk .sk2.shield { border-color: var(--fc); box-shadow: 0 0 14px var(--fc), 0 4px 0 #1a100a; }
   .stage.q .tag { transform: scale(0.82); transform-origin: top center; }
   .tag.full { box-shadow: 0 0 10px #ffd34d88; } .tag.full > b { color: #fff3a0; } .tag .fe { font-style: normal; }
@@ -562,8 +529,25 @@
   .tag.low .thin.hp b { background: #ff2a2a; } .tag.low .hn { color: #ff6a5a; }
   .tag.low .thin.hp, .tag.low .hn { animation: lowb 1s steps(2) infinite; } @keyframes lowb { 50% { opacity: 0.35; } }
   .sos { position: absolute; left: 0; transform: translateX(-50%); z-index: 4; padding: 0 6px; border-radius: 10px; background: #fff; font-size: 16px; font-style: normal; box-shadow: 0 0 8px #ff2a2a; animation: blink 1s steps(2) infinite; }
-  .me.low { border-color: #ff2a2a; box-shadow: 0 0 14px #ff2a2a; } .me.low .hpn b { color: #ff6a5a; }
   .sk2.need { animation: need 0.8s ease-in-out infinite; } @keyframes need { 50% { box-shadow: 0 0 22px #7dffb0, 0 3px 0 #0a1430; filter: brightness(1.3); } }
   .bigmsg.sosmsg { top: 30%; padding: 4px 18px; border-color: #ff6a5a; background: linear-gradient(#c81e1eee, #6a0a0aee); font-size: clamp(16px, 5.5vh, 24px); }
   @media (prefers-reduced-motion: reduce) { .tag.low .thin.hp, .tag.low .hn, .sos, .sk2.need { animation: none; } }
+  /* 📜 요청 #22 = 내 정보는 발밑 이름표 하나 · 노림 · 약점 · 위험 = 내 이름표 테두리 */
+  .hero.mine .tag { box-shadow: 0 0 0 2px #e2b04a; } .tag.wk { box-shadow: 0 0 0 2px var(--fc), 0 0 10px var(--fc); } .tag.aimed { box-shadow: 0 0 0 2px #ff3a2a, 0 0 14px #ff3a2a; } .tag.low { box-shadow: 0 0 0 2px #ff2a2a, 0 0 12px #ff2a2a; }
+  /* 📜 요청 #19 아래 가로 한 줄 단추 */
+  .btns { position: absolute; z-index: 24; left: 1.5%; right: 1.5%; bottom: 2%; height: calc(64px * var(--u)); display: flex; align-items: stretch; gap: 1.2%; }
+  .b.quiz { flex: 0 0 22%; height: 100%; min-height: 0; }
+  .qsp { flex: 0 0 22%; }
+  .ring { flex: 1; display: flex; gap: 1.2%; justify-content: center; }
+  .sk2 { position: relative; flex: 0 1 calc(118px * var(--u)); height: 100%; border-radius: 14px; padding: 0 6px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; column-gap: 4px; align-items: center; border: 3px solid #8fd0ff; background: linear-gradient(#3a6ac8, #16285a); color: #fff; font: 800 calc(12px * var(--u)) var(--font-plain); box-shadow: 0 3px 0 #0a1430; line-height: 1.05; text-align: left; }
+  .sk2 .ic { grid-row: 1 / span 2; position: relative; font-size: calc(24px * var(--u)); line-height: 1; display: inline-flex; }
+  .sk2 .nm { display: flex; flex-direction: column; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 #000; } .sk2 .nm small { font-size: calc(9.5px * var(--u)); color: #cfe6ff; font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+  .sk2 .shb { position: absolute; right: -8px; bottom: -6px; font-style: normal; font-size: calc(14px * var(--u)); filter: drop-shadow(0 0 3px #9fe6ff); }
+  .sk2.situ { animation: situ 0.9s ease-in-out infinite; }
+  .b.atk { flex: 0 0 calc(130px * var(--u)); height: 100%; min-height: 0; border-radius: 16px; flex-direction: column; gap: 0; font-size: calc(18px * var(--u)); padding: 0; }
+  .chpop { position: absolute; right: calc(40px * var(--u)); bottom: calc(70px * var(--u)); font: 900 22px var(--font); color: #ffe46a; text-shadow: 0 0 6px #e6b81e, 0 2px 0 #000; animation: up 1.4s ease-out forwards; pointer-events: none; }
+  /* 🌟 오라 층 (요청 #20): 몸 그림은 숨기고 오라만 · 몸(.spr z 10+)보다 아래 · 공격하러 달려가는 동안은 숨김 */
+  .aul { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); pointer-events: none; }
+  .aul :global(.hs > i) { visibility: hidden; } .aul.off { opacity: 0; transition: opacity 0.1s; }
+  .card { bottom: calc(2% + 64px * var(--u, 1) + 8px) !important; } /* 문제 카드 = 아래 단추 줄 위까지 (요청 #19) */
 </style>

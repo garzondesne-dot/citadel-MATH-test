@@ -42,13 +42,12 @@ describe('ATB 엔진', () => {
     h.ch = 2; const n0 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n0).some((x) => x.k === 'skill')).toBe(true); // 2칸 + 재시도 2 = 1칸 넘침 · 장착 비용 1 = 자동
     h.ch = 1; const n1 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
   });
-  it('💠 스킬 (Y2 · Y3 · Y11): 보이는 것 = 쓸 수 있을 때만 · 비용 장착 1 · 4레벨 2 · 오라 2 · 각성 3 · 피해 비 1 · 2.3 · 3.8', () => {
+  it('⚡ 스킬 (요청 #19): ⚡ 내 스킬 · 역할 · 🌟 비장(각성이면 각성 · 아니면 +10 홀리 방패) · 비용 1 · 1 · 3(2) · 피해 비 1 · 3.8', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;
-    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'tier4', 'role', 'aura', 'awk']); // 실드 · 부활 = 그때만
+    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'awk']); // 비장 = 각성(홀리 방패 칸 없음) · 부활 = 그때만
     expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role']); S.bossMax = S.bossHp = 99999; // 실드 안 뜨게
     h.ch = 1; full(S, 0); expect(skillList(S, 0).filter((x) => x.ok).map((x) => x.k)).toEqual(['equip', 'role']);
     const base = T.skillBase * h.s.skillMul; let hp = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1)]);
-    h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'tier4'); expect([h.ch, hp - S.bossHp]).toEqual([1, Math.round(base * 2.3)]);
     S.bossHp = S.bossMax; h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'awk'); expect([h.ch, Math.min(hp, Math.round(base * 3.8))]).toEqual([0, hp - S.bossHp]);
     expect(skillList(S, 0).some((x) => x.k === 'awk')).toBe(false); // 판당 1번
   });
@@ -97,9 +96,11 @@ describe('ATB 엔진', () => {
     S.heroes[3]!.ch = 1; S.heroes[0]!.atb = 0; full(S, 3); roleAct(S, 3, 0); expect(S.heroes[0]!.atb).toBe(1);
     const hp = S.bossHp; S.heroes[0]!.ch = 1; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * S.heroes[0]!.s.skillMul * 1.5));
   });
-  it('각성 = 각성 상태만 보임(🔨 +10 만으론 오라 방패) · 역할 덧효과 그대로', () => {
+  it('🌟 비장 = +10 만이면 홀리 방패 · 실드가 뜨면 ⚡ 내 스킬이 실드 칸 깸 (요청 #19)', () => {
     const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안'], 10), seed: 1 });
     expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'aura']);
+    const B = fresh(); B.shieldUp = true; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); B.heroes[0]!.ch = 1; full(B, 0); const hp = B.bossHp;
+    expect(useSkill(B, 0, 'equip')).toBe(true); expect(B.cells.filter((c) => c.broken).length).toBeGreaterThanOrEqual(1); expect(B.bossHp).toBe(hp); // 피해 대신 실드 칸
   });
   it('타이밍 바 판정 · 칸 자리 · 폭 · 빠르기 = 판마다 무작위(TUNE 범위)', () => {
     const z = { ok: [0.35, 0.8] as [number, number], crit: [0.52, 0.64] as [number, number], ms: 1600 };
