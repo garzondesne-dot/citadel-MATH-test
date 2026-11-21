@@ -140,8 +140,8 @@ describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => 
   const at = (no: number, names = ['로안', '발도르', '루멘', '누아'], seed = 1) => newBattle({ boss: BOSSES[no]!, diff: 'normal', party: party(names), seed });
   const run = (S: State, sec: number) => { for (let k = 0; k < Math.round(sec * 10); k++) tick(S, 0.1); };
   const bossEvs = (S: State) => S.ev.filter((e) => e.k === 'boss') as { atk: string; aoe: boolean; dmg: number[] }[];
-  it('공격 차례 = 차시마다 (2 강타 · 강타 · 독 / 3 강타 · 강타 · 화염 / 5 수면 · 수면 · 화염 숨 / 11 혀 · 혀 · 물결)', () => {
-    for (const [no, want] of [[2, ['강타', '강타', '독']], [3, ['강타', '강타', '화염']], [5, ['수면', '수면', '화염 숨']], [11, ['혀 치기', '혀 치기', '물결']]] as [number, string[]][]) {
+  it('공격 차례 = 차시마다 (📜 #57 v4 차례 고침: 2 강타 · 포효 도약 · 독 / 3 강타 · 화염 · 화염 숨 / 5 수면 · 강타 · 화염 숨 / 11 혀 · 물결 · 삼키기)', () => {
+    for (const [no, want] of [[2, ['강타', '포효 도약', '독']], [3, ['강타', '화염', '화염 숨 모으기']], [5, ['수면', '강타', '화염 숨']], [11, ['혀 치기', '물결', '삼키기']]] as [number, string[]][]) {
       const S = at(no); for (const h of S.heroes) h.hp = 999; run(S, 36.5); expect(bossEvs(S).map((e) => e.atk), String(no)).toEqual(want);
     }
   });
@@ -242,14 +242,14 @@ describe('ATB 속성 덧효과 (요청 #36′)', () => {
 });
 
 // 👹 📜 요청 #37 보스 분노
-import { rage as RAGE } from '../src/board/atb/tune';
+import { rage as RAGE, ATK_SPECIAL } from '../src/board/atb/tune';
 import { bossEveryOf, calmed, upcomingOf } from '../src/board/atb/engine';
 describe('ATB 보스 분노 (요청 #37)', () => {
   it('HP 30% 아래 = 분노 한 번 · 간격 9초(일반) · 들어갈 때 특수 바로(예고 4초) · 피해 ×1.2', () => {
     const S = fresh(); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true }));
     S.bossHp = Math.floor(S.bossMax * 0.3) + 2; const h = S.heroes[0]!; h.atb = 1; attack(S, 0, 'crit');
     expect(S.rage).toBe(true); expect(bossEveryOf(S)).toBe(RAGE.every.normal);
-    const sp = upcomingOf(S); expect(['poison', 'aoe', 'fire', 'sleep', 'bind', 'mirror', 'confuse'].includes(sp)).toBe(true);
+    const sp = upcomingOf(S); expect(ATK_SPECIAL.has(sp) || sp === 'aoe').toBe(true);
     for (let i = 0; i < 2; i++) tick(S, 0.1); expect(S.target).not.toBeNull();
   });
   it('분노 중 팀 퍼펙트 2번 = 8초 진정(공격 안 함) → 다시 분노', () => {

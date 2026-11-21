@@ -103,25 +103,42 @@ export const roleOfName = (name: string): Role => ROLE_BY_NAME[name] ?? 'dealer'
 
 /** 보스 설정 (차시 번호 → 몬스터) · 📜 설정표 v3 「차시별 한눈에」 · 선생님 확정 11/20 (대표 행동 9) · 숫자 = 어림값(연습방에서 맞춤)
  *  cycle = 공격 차례(되풀이) · tele = 표적 보여 주는 꼴(foot 발밑 · gaze 고개 돌리기 · scale 기우는 저울) · sig = 대표 행동 */
-export type AtkKind = 'basic' | 'smash' | 'poison' | 'sleep' | 'fire' | 'fire13' | 'fog' | 'tongue' | 'ice' | 'confuse' | 'frost' | 'tail' | 'dark' | 'darkHit' | 'mirror' | 'bind' | 'scale' | 'aoe';
-export type Sig = 'footTarget' | 'gaze' | 'iceArmor' | 'fireBreath' | 'breath' | 'mirror' | 'lock' | 'scale' | 'ripple';
+export type AtkKind = 'basic' | 'smash' | 'poison' | 'sleep' | 'fire' | 'fire13' | 'fog' | 'tongue' | 'ice' | 'confuse' | 'frost' | 'tail' | 'dark' | 'darkHit' | 'mirror' | 'bind' | 'scale' | 'aoe'
+  /* 📜 요청 #57 설정표 v4 */ | 'pounce' | 'mace' | 'scaleAoe' | 'swallow' | 'falseHyp' | 'steam' | 'hammer' | 'reverse' | 'whip' | 'meteor' | 'breathAtk';
+/** 대표 행동 · v4 새로: contra 12 거짓 가정 · eqMoment 13 등호의 순간 · chain 14 x 를 넣으면 y · order 15 하나씩 차례로 · compose 16 두 번 이어 치기 · inverse 17 되돌리기 */
+export type Sig = 'footTarget' | 'gaze' | 'iceArmor' | 'fireBreath' | 'breath' | 'mirror' | 'lock' | 'scale' | 'ripple' | 'contra' | 'eqMoment' | 'chain' | 'order' | 'compose' | 'inverse';
+/** 👹 차시별 분노 (📜 요청 #57 · 설정표 v4 2절) = 공통 분노 위에 한 가지 · 일반 · 도전만 (연습 = 공통 분노만)
+ *  two = 그 공격이 두 명(둘째 ×mul) · late = 마지막 n초에 표적(저울 = 기울기) 다시 정함 · refreeze = 분노 들 때 마지막으로 깬 실드 칸 다시 얼음
+ *  swap = 분노 차례에서 공격 바꿈 · cycle = 분노 차례 통째로(뒤에 특수 하나 붙음) · breathEvery = 숨 고르기 간격 · mirrorBack = 거울 되돌림 몫
+ *  after = 그 공격 바로 뒤 이어 씀(low = 느려진 용사 중 HP 가장 낮은 한 명) · cutPct = 거짓 가정 끊기 몫 · eqSec = 등호의 순간 초
+ *  orderRev = 차례 거꾸로 · markMax = 표식 겹 · revPct = 되돌리기 몫 */
+export interface RageMod { two?: { kinds: AtkKind[]; mul: number }; late?: number; refreeze?: boolean; swap?: Partial<Record<AtkKind, AtkKind>>; cycle?: AtkKind[]; breathEvery?: number; mirrorBack?: number;
+  after?: { on: AtkKind; then: AtkKind; low?: boolean }; cutPct?: number; eqSec?: number; orderRev?: boolean; markMax?: number; revPct?: number }
 export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
 export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
-  weak: [Fam, Fam]; type: string; cycle: AtkKind[]; tele: 'foot' | 'gaze' | 'scale'; sig: Sig; signature: string; shieldDmg?: number; draft?: boolean }
+  weak: [Fam, Fam]; type: string; cycle: AtkKind[]; tele: 'foot' | 'gaze' | 'scale'; sig: Sig; signature: string; shieldDmg?: number; draft?: boolean;
+  /** 이 보스의 공격 이름 (같은 종류 · 다른 이름 · v4) */ names?: Partial<Record<AtkKind, string>>; /** 분노 들어갈 때 · 분노 차례에 붙는 특수 */ rageSpecial?: AtkKind; /** 차시별 분노 */ rageMod?: RageMod }
 export const BOSSES: Record<number, BossCfg> = {
-  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', flip: { idle: true, hit: true, down: true }, weak: ['arms', 'flame'], type: '공격형', cycle: ['smash', 'smash', 'poison'], tele: 'foot', sig: 'footTarget', signature: '강타 표적' },
-  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', cycle: ['smash', 'smash', 'fire13'], tele: 'gaze', sig: 'gaze', signature: '고개 돌리기' },
-  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', cycle: ['ice', 'confuse', 'aoe'], tele: 'foot', sig: 'iceArmor', signature: '얼음 갑옷', shieldDmg: 0.2 },
-  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'arms'], type: '공격형(광역)', cycle: ['sleep', 'sleep', 'fire'], tele: 'foot', sig: 'fireBreath', signature: '화염 숨 모으기' },
-  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기' },
-  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'tail', 'frost'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)' },
-  8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'darkHit', 'mirror'] /* 📜 요청 #46 선생님 2026-11-21 어둠 = 광역 피해 + 느려짐 (전 dark) */, tele: 'foot', sig: 'mirror', signature: '거울빛' },
-  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'bind', 'darkHit'], tele: 'foot', sig: 'lock', signature: '자물쇠' },
-  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['flame', 'arms'], type: '교란형', cycle: ['scale', 'bind', 'scale'], tele: 'scale', sig: 'scale', signature: '기우는 저울' },
-  11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', cycle: ['tongue', 'tongue', 'fog'], tele: 'foot', sig: 'ripple', signature: '물결', shieldDmg: 0.2 },
+  // 📜 요청 #57 설정표 v4: 차례 고침(모든 보스가 🎯 단일 · 💥 광역 · 🌀 특수를 다 씀) · 약점 = 5계열 6 ~ 7번씩 고르게 · 차시별 분노(rageMod)
+  2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'new6:0', flip: { idle: true, hit: true, down: true }, weak: ['arms', 'flame'], type: '공격형', cycle: ['smash', 'pounce', 'poison'], tele: 'foot', sig: 'footTarget', signature: '강타 표적', rageSpecial: 'pounce', rageMod: { two: { kinds: ['smash'], mul: 0.7 } } },
+  3: { no: 3, name: '포함의 성주 보라 드래곤', sprite: 'base2:0', flip: { attack: true }, weak: ['nature', 'mystic'], type: '공격형', cycle: ['smash', 'fire13', 'fire'], tele: 'gaze', sig: 'gaze', signature: '고개 돌리기', names: { fire: '화염 숨 모으기' }, rageSpecial: 'fire', rageMod: { late: 2 } },
+  4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', cycle: ['ice', 'confuse', 'aoe'], tele: 'foot', sig: 'iceArmor', signature: '얼음 갑옷', shieldDmg: 0.2, rageSpecial: 'confuse', rageMod: { refreeze: true } },
+  5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'wisdom'], type: '공격형(광역)', cycle: ['sleep', 'smash', 'fire'], tele: 'foot', sig: 'fireBreath', signature: '화염 숨 모으기', rageSpecial: 'fire', rageMod: { swap: { sleep: 'fire' } } },
+  6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'frost', 'breathAtk'], tele: 'foot', sig: 'breath', signature: '숨 고르기', rageSpecial: 'breathAtk', rageMod: { breathEvery: 20 } },
+  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'wisdom'], type: '회복형', cycle: ['tail', 'frost', 'breathAtk'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)', rageSpecial: 'breathAtk', rageMod: { breathEvery: 20 } },
+  8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'darkHit', 'mirror'] /* 📜 요청 #46 선생님 2026-11-21 어둠 = 광역 피해 + 느려짐 (전 dark) */, tele: 'foot', sig: 'mirror', signature: '거울빛', rageSpecial: 'mirror', rageMod: { mirrorBack: 0.4, after: { on: 'mirror', then: 'darkHit' } } },
+  9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'mace', 'darkHit'], tele: 'foot', sig: 'lock', signature: '자물쇠', rageSpecial: 'bind', rageMod: { two: { kinds: ['bind'], mul: 1 } } },
+  10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['mystic', 'arms'], type: '교란형', cycle: ['scale', 'bind', 'scaleAoe'], tele: 'scale', sig: 'scale', signature: '기우는 저울', rageSpecial: 'bind', rageMod: { late: 2 } },
+  11: { no: 11, name: '거울 웅덩이 두꺼비', sprite: 'garden4:0', weak: ['flame', 'nature'], type: '방어형', cycle: ['tongue', 'fog', 'swallow'], tele: 'foot', sig: 'ripple', signature: '물결', shieldDmg: 0.2, rageSpecial: 'swallow', rageMod: { after: { on: 'fog', then: 'tongue', low: true } } },
+  12: { no: 12, name: '모순의 촛대 유령', sprite: 'd08:2', weak: ['nature', 'mystic'], type: '교란형', cycle: ['basic', 'darkHit', 'falseHyp'], tele: 'foot', sig: 'contra', signature: '거짓 가정', names: { basic: '촛농 튀기기' }, rageSpecial: 'falseHyp', rageMod: { cutPct: 0.06 } },
+  13: { no: 13, name: '언제나 참인 별자리 사슴', sprite: 'd09:3', weak: ['wisdom', 'nature'], type: '방어형', cycle: ['mace', 'frost', 'sleep'], tele: 'foot', sig: 'eqMoment', signature: '등호의 순간', shieldDmg: 0.2, names: { mace: '뿔 받기', frost: '별가루', sleep: '별빛 잠' }, rageSpecial: 'sleep', rageMod: { eqSec: 2, swap: { frost: 'meteor' } } },
+  14: { no: 14, name: '대응의 사슬 문지기', sprite: 'd12:2', weak: ['wisdom', 'flame'], type: '속박형', cycle: ['whip', 'aoe', 'bind'], tele: 'foot', sig: 'chain', signature: 'x 를 넣으면 y', names: { aoe: '사슬 휩쓸기', bind: '한 줄 대응' }, rageSpecial: 'bind', rageMod: { two: { kinds: ['bind'], mul: 1 } } },
+  15: { no: 15, name: '그래프 능선의 용', sprite: 'd02:4', weak: ['nature', 'mystic'], type: '공격형(차례 읽기)', cycle: ['smash', 'fire13', 'smash', 'fire'], tele: 'foot', sig: 'order', signature: '하나씩 차례로', names: { fire: '능선 불길' }, rageSpecial: 'fire', rageMod: { orderRev: true, cycle: ['smash', 'smash', 'fire13', 'smash', 'smash'] } },
+  16: { no: 16, name: '합성의 대기관', sprite: 'd07:3', weak: ['wisdom', 'arms'], type: '연계형', cycle: ['steam', 'hammer', 'aoe', 'bind'], tele: 'foot', sig: 'compose', signature: '두 번 이어 치기 (g∘f)', names: { aoe: '톱니 폭풍', bind: '톱니 물림' }, rageSpecial: 'bind', rageMod: { markMax: 2, cycle: ['steam', 'hammer', 'hammer', 'aoe'] } },
+  17: { no: 17, name: '역함수의 거울 군주', sprite: 'd10:3', weak: ['mystic', 'arms'], type: '반사형', cycle: ['whip', 'darkHit', 'reverse'], tele: 'foot', sig: 'inverse', signature: '되돌리기 (f⁻¹)', names: { whip: '거울 조각' }, rageSpecial: 'reverse', rageMod: { revPct: 0.5 } },
 };
 /** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
-export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' }> = {
+export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' | 'breath' | 'contra' | 'reverse' | 'hammer'; /** 행동 불능 초 (없으면 T.stun) */ stunSec?: number; /** 🔩 맞은 용사에게 표식 (16) */ mark?: boolean }> = {
   basic: { name: '공격', mul: 1 },
   aoe: { name: '광역', mul: 1, aoe: true },
   smash: { name: '강타', mul: 1.5 },
@@ -129,7 +146,7 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   sleep: { name: '수면', mul: 0, status: 'stun', wake: true }, // 맞으면 깸
   fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 4 }, // 5차시 · 예고 중 실드를 다 깨면 취소
   fire13: { name: '화염', mul: 1.3, aoe: true },
-  fog: { name: '물결', mul: 0, aoe: true, status: 'slow' },
+  fog: { name: '물결', mul: 0.5, aoe: true, status: 'slow' }, // 📜 #57 차례 고침 = 피해 ×0.5
   tongue: { name: '혀 치기', mul: 1 },
   ice: { name: '얼음', mul: 1, status: 'slow' },
   confuse: { name: '혼란', mul: 0, status: 'slow' },
@@ -140,16 +157,30 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   mirror: { name: '거울빛', mul: 0, aoe: true, warn: 4, special: 'mirror' },
   bind: { name: '속박', mul: 0, status: 'stun' },
   scale: { name: '저울', mul: 1, status: 'slow', special: 'scale' }, // 기울면 단일(그 쪽 용사) · 수평이면 광역
+  // 📜 요청 #57 설정표 v4 (🌀 특수 = warn 4 · 딜러가 끊음)
+  pounce: { name: '포효 도약', mul: 2, warn: 4 }, // 2 · 단일 ×2
+  mace: { name: '철퇴', mul: 1.3 }, // 9 · 13 뿔 받기
+  scaleAoe: { name: '수평 저울', mul: 1, aoe: true, status: 'slow' }, // 10 · 광역 고정
+  swallow: { name: '삼키기', mul: 1, warn: 4, status: 'stun', stunSec: 3 }, // 11 · 한 명 행동 불능 3초 + 단일 ×1
+  falseHyp: { name: '거짓 가정', mul: 0, aoe: true, warn: 4, status: 'slow', special: 'contra' }, // 12 · 전원 혼란(느려짐) · 끊으면 보스 최대 HP 3%
+  steam: { name: '증기 뿜기', mul: 0.8, mark: true }, // 16 f · 맞으면 표식
+  hammer: { name: '망치', mul: 1, special: 'hammer' }, // 16 g · 표식 있는 용사를 노림 ×1.6
+  reverse: { name: '되돌리기', mul: 0, warn: 4, special: 'reverse' }, // 17 · 방금 가장 큰 스킬 피해 30% 를 그 용사에게 · 끊으면 보스가 맞음
+  whip: { name: '사슬 채찍', mul: 1.2 }, // 14 · 17 거울 조각
+  meteor: { name: '유성', mul: 1.3, aoe: true }, // 13 분노 · 별가루 대신
+  breathAtk: { name: '숨 고르기', mul: 0, warn: 4, special: 'breath' }, // 6 · 7 차례 안 숨 고르기 · 다 모으면 보스 HP 8% 회복 · 끊으면 없음
 };
 /** 😵 용사 상태 그림 자리 (📜 요청 #40 ②) = 공격 종류 → 상태 6가지 · 풀릴 때까지 머리 위에서 돎 · 그림(atb-status-hero 6줄 = 이 순서)이 오기 전엔 이모지 */
 export type StatusLook = 'sleep' | 'bind' | 'confuse' | 'fog' | 'dark' | 'frost';
 export const STATUS_ROWS: StatusLook[] = ['sleep', 'bind', 'confuse', 'fog', 'dark', 'frost'];
 export const STATUS_LOOK: Record<StatusLook, { ic: string; txt: string }> = { sleep: { ic: '💤', txt: '수면' }, bind: { ic: '⛓', txt: '속박' }, confuse: { ic: '🌀', txt: '혼란' }, fog: { ic: '🌊', txt: '느려짐' }, dark: { ic: '🌑', txt: '느려짐' }, frost: { ic: '❄️', txt: '느려짐' } };
-export const ATK_STATUS: Partial<Record<AtkKind, StatusLook>> = { sleep: 'sleep', bind: 'bind', confuse: 'confuse', fog: 'fog', dark: 'dark', darkHit: 'dark', frost: 'frost', ice: 'frost' };
+export const ATK_STATUS: Partial<Record<AtkKind, StatusLook>> = { sleep: 'sleep', bind: 'bind', confuse: 'confuse', fog: 'fog', dark: 'dark', darkHit: 'dark', frost: 'frost', ice: 'frost', swallow: 'bind', falseHyp: 'confuse', scaleAoe: 'fog' };
 /** 👹 보스 공격 3종 (📜 요청 #35 선생님 확정 2026-11-21) = 🎯 단일 → 🛡 탱커 엄호 · 💥 광역 → 🎵 서포터 격려(+ 💚 힐러 뒤 힐) · 🌀 특수(모으기) → ⚔ 딜러 강타로 끊음
  *  저울 = 기울면 단일 · 수평이면 광역 · 숨 고르기(SIG.breath) = 특수 */
 export type AtkClass = 'single' | 'aoe' | 'special';
-export const ATK_SPECIAL: ReadonlySet<AtkKind> = new Set<AtkKind>(['fire', 'sleep', 'bind', 'mirror', 'confuse']);
+export const ATK_SPECIAL: ReadonlySet<AtkKind> = new Set<AtkKind>(['fire', 'sleep', 'bind', 'mirror', 'confuse', 'pounce', 'swallow', 'falseHyp', 'reverse', 'breathAtk']);
+/** 이 보스가 부르는 공격 이름 (v4 = 같은 종류 · 보스마다 이름) */
+export const atkName = (b: BossCfg, k: AtkKind): string => b.names?.[k] ?? ATK[k].name;
 export const atkClass = (k: AtkKind, aoe: boolean): AtkClass => (ATK_SPECIAL.has(k) ? 'special' : aoe ? 'aoe' : 'single');
 /** 반응 막기 = 예고 중 그 역할 스킬을 ATB 없이 ⚡1 로 · 단일 = 탱커 대신 맞음(cover) · 광역 = 서포터 결계(피해 ×0.7 · 느려짐 없음) · 특수 = 딜러 강타로 끊음 */
 export const REACT: Record<AtkClass, Role> = { single: 'tank', aoe: 'support', special: 'dealer' };
@@ -180,6 +211,12 @@ export const SIG = {
   breath: { every: 30, warn: 4, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
   mirror: { sec: 10, back: 0.3 }, // 8 거울빛: 다음 10초 일반 공격 피해 30% 가 공격한 용사에게 (스킬은 안 돌아옴)
   scaleTilt: 0.5, // 10 기우는 저울: 기울(단일) 확률
+  // 📜 요청 #57 설정표 v4 대표 행동
+  contra: 0.03, // 12 거짓 가정을 끊으면 보스 최대 HP 3% (분노 6% = rageMod.cutPct)
+  eq: { sec: 3, mul: 1.3 }, // 13 등호의 순간: 보스 공격 뒤 3초 받는 피해 +30% (실드 중 ×0.2 = shieldDmg)
+  chain: 0.2, // 14 속박 중 소문항 정답 = 장착 스킬 피해의 20% 가 사슬로
+  mark: [1, 1.6, 2] as number[], // 16 표식 겹 → 망치 배율
+  reverse: 0.3, // 17 되돌리기 몫 (분노 50% = rageMod.revPct)
 };
 
 /** 🎚 균형 표 한 곳 (📜 11/20 「보스 HP · 공격 · 역할 수치를 코드 한 곳(표 하나)에 · 나중에 균형 도구가 그 표만 바꿈」)
