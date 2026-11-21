@@ -26,6 +26,14 @@
   /** ✅ 제출 (부모 아래 가운데 단추) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
+  /** 📜 #89 제목 = 「문제 2 (1) · 1/2」 만 (차시 · 학습지 글은 뺌) */
+  const shortTitle = $derived(title.replace(/^\s*\d+차시\s*학습지\s*·\s*/, ''));
+  // 📜 #89 돌린 상자(세로 폰 90°) 안 = 브라우저가 카드 안 스크롤을 못 함(손가락 끌기 0) → 손가락 움직임을 카드 기준으로 바꿔 직접 스크롤
+  //   rotate(90deg) = 화면 (dx, dy) → 카드 (dy, −dx) · 카드 위로 끌기 = 화면 오른쪽으로 끌기
+  let tch: { x: number; y: number; top: number } | null = null;
+  function tStart(e: TouchEvent) { if (!bodyEl?.closest('[data-rot90]') || e.touches.length !== 1) { tch = null; return; } const t = e.touches[0]!; tch = { x: t.clientX, y: t.clientY, top: bodyEl.scrollTop }; }
+  function tMove(e: TouchEvent) { if (!tch || !bodyEl) return; const t = e.touches[0]!; const dx = t.clientX - tch.x; bodyEl.scrollTop = tch.top + dx; if (Math.abs(dx) > 4) e.preventDefault(); measure(); }
+  $effect(() => { const b = bodyEl; if (!b) return; b.addEventListener('touchstart', tStart, { passive: true }); b.addEventListener('touchmove', tMove, { passive: false }); const end = () => (tch = null); b.addEventListener('touchend', end); return () => { b.removeEventListener('touchstart', tStart); b.removeEventListener('touchmove', tMove); b.removeEventListener('touchend', end); }; });
   // 📜 요청 #61 보기 · 숫자판이 넘치면 카드 아래 그림자 + 「▼ 더 있음」 (작은 가로 화면 = 아래 media 로 먼저 줄여 한 화면에)
   let bodyEl = $state<HTMLDivElement | null>(null), more = $state(false);
   const measure = () => { const b = bodyEl; more = !!b && b.scrollHeight - b.scrollTop - b.clientHeight > 4; };
@@ -37,7 +45,7 @@
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
   <header>
-    <span class="tt" data-k="atb-qtitle">{title}</span>
+    <span class="tt" data-k="atb-qtitle">{shortTitle}</span>
     <!-- ⚡ 충전 미리 보기 (📜 요청 #31 · 푸는 게 곧 충전): 소문항 수만큼 기력 조각 · 맞히면 켜짐(첫 시도 = 꽉 · 고쳐 맞힘 = 반) · 퍼펙트 +3 / 고치면 +2 -->
     <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}>⚡</i>{/each}</span>
     {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
@@ -157,4 +165,18 @@
     .body :global(.opts.col .opt) { font-size: 13.5px; line-height: 1.2; padding: 2px 6px; word-break: keep-all; }
   }
   .cpv { font: 900 13px var(--font); padding: 1px 8px; border-radius: 8px; background: #e6eef8; color: #1d5ac8; } .cpv.gold { background: linear-gradient(#fff3b0, #f5c542); color: #6a3a00; box-shadow: 0 0 6px #ffd34d; }
+  /* 📜 #89 제목 띠(두루마리 리본) 없앰 = 카드 틀을 보통 테두리로 · 머리 한 줄 작게 · 그림 보기 칸 = 흰 바탕 · 진한 테두리 · 그림 칸 가득 · 고른 칸 금색 굵게 */
+  .qc { border: 3px solid #b88a4a; border-bottom: none; border-image: none; border-radius: 14px 14px 0 0; background: radial-gradient(ellipse at 50% 40%, #fbf0d6 0%, #f1dfb6 70%, #e2c995 100%); padding-top: 2px; }
+  .grab { height: 12px; }
+  header { min-height: 20px; flex-wrap: nowrap; gap: 6px; }
+  .tt { font-size: 12px; padding: 1px 8px; background: none; border: none; color: #6a4a20; }
+  .lnk { font-size: 12px; padding: 2px 4px; margin-left: auto; } .cpv { font-size: 11px; padding: 0 6px; }
+  .body { touch-action: pan-y; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  .body :global(.opts.grid .opt), .body :global(.chips.figs .chip) { border: 2px solid #6a4a20; border-image: none; border-radius: 10px; background: #fffdf6; box-shadow: 0 2px 0 #b08a52; padding: 4px; }
+  .body :global(.opts.grid .opt.on), .body :global(.chips.figs .chip.on) { border: 4px solid #e0a020; box-shadow: 0 0 0 2px #ffd34d, 0 2px 0 #b08a52; outline: none; background: #fffbe6; }
+  .body :global(.opts.grid .opt svg), .body :global(.chips.figs .chip svg) { width: 100%; height: auto; max-height: none; display: block; }
+  .body :global(.opts.grid .opt svg :is(ellipse, circle, rect, path, line, polyline, polygon)[stroke]:not([stroke='none'])), .body :global(.chips.figs .chip svg :is(ellipse, circle, rect, path, line, polyline, polygon)[stroke]:not([stroke='none'])) { stroke-width: 2.4; }
+  .body :global(.opts.grid .opt svg text), .body :global(.chips.figs .chip svg text) { font-weight: 800; }
+  .body :global(.opts.grid), .body :global(.chips.figs) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  @media (max-height: 430px) { .body :global(.opts.grid .opt), .body :global(.chips.figs .chip) { padding: 2px; } }
 </style>
