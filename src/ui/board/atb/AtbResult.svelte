@@ -142,5 +142,16 @@
   @media (prefers-reduced-motion: reduce) { .star.on { animation: none; } }
   .slot { position: relative; } .mdone { position: absolute; right: 2px; top: 2px; z-index: 3; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #2faa5a; color: #fff; font: 900 12px var(--font); font-style: normal; box-shadow: 0 0 6px #7dff9a; } /* 🎯 임무 완수 (요청 #50) */
   .merit { margin: 0 0 4px; font: 800 14px var(--font); } .merit summary { cursor: pointer; color: #8a2a10; } .merit p { margin: 2px 0 0; font: 600 11px var(--font-plain); }
-  .hn2 { margin-left: 3px; font: 600 10px var(--font-plain); opacity: 0.7; }
+  .hn2, .slot b small.hn2 { display: inline; margin-left: 3px; font: 600 9px var(--font-plain); opacity: 0.75; color: #ffe9b0; }
+  /* 📱 세로 폰(결과 화면은 안 돌림 · 손발 #1 🐞 390 × 844) = 위 승리 띠 · 용사 / 아래 결과 패널 넓게 · 단추 하나면 한 줄 꽉 */
+  .b { white-space: nowrap; }
+  .btns:has(> .b:only-child) { grid-template-columns: minmax(0, 1fr); justify-items: center; } .btns > .b:only-child { width: min(100%, 440px); }
+  @media (max-aspect-ratio: 1/1) {
+    .rs { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+    .left { justify-content: flex-start; gap: 10px; }
+    .banner { width: min(100%, 420px); }
+    .paper { padding: 8% 9% 8% 10%; }
+    .row, .merit summary { font-size: 15px; }
+    .sum { font-size: 20px; }
+  }
 </style>
