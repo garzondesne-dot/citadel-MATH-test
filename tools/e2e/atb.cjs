@@ -265,7 +265,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => { const S = globalThis.__atb.S, h = S.heroes[0]; h.s.role = 'healer'; h.ch = 2; h.atb = 1; S.heroes[2].hp = 5; });
   await p.click('[data-k="atb-skill-btn"]').catch(() => {}); await p.waitForTimeout(200); if (!(await p.$('[data-k="atb-skills"].open'))) { await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); }
   await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(250);
-  { const r = await p.evaluate(() => { const S = globalThis.__atb.S, f = S.heroes[2]; return { hp: f.hp, max: f.s.maxHp, msg: document.querySelector('.bigmsg')?.textContent ?? '', resc: S.heroes[0].log.rescues ?? 0 }; });
+  { const r = await p.evaluate(() => { const S = globalThis.__atb.S, f = S.heroes[2]; return { hp: f.hp, max: f.s.maxHp, msg: (document.querySelector('.bigmsg')?.textContent ?? '') + (document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? ''), resc: S.heroes[0].log.rescues ?? 0 }; });
     await p.screenshot({ path: `${SHOTS}/atb-r46-heal-844.png` });
     ok('요청 #46 💚 큰 힐 = 가장 다친 친구 90% · 30% 아래 = 「💚 구조!」', r.hp === Math.min(r.max, 5 + Math.round(r.max * 0.9)) && /구조/.test(r.msg) && r.resc === 1, JSON.stringify(r)); }
   { await p.evaluate(() => { const S = globalThis.__atb.S; for (const h of S.heroes) h.hp = 20; S.heroes[0].atb = 1; }); await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(900);
@@ -291,7 +291,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.screenshot({ path: `${SHOTS}/atb-r50-counter-844.png` });
     await p.click('[data-k="atb-counter"]', { force: true }); await p.waitForTimeout(200);
     const r = await p.evaluate(() => ({ b: globalThis.__atb.S.blocked?.how, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', gone: !document.querySelector('[data-k="atb-counter"]') }));
-    ok('요청 #50 카운터 = ⚡0 작은 띠 → ⚡1 = 카드 위 가운데 단추 · 누르면 막음 · 눈빛 「GUARD!」 · 임무 표시', noch && top === 'top' && r.b === 'cover' && /GUARD/.test(r.eye) && r.gone && /임무/.test(mis), JSON.stringify({ noch, top, mis, ...r }));
+    ok('요청 #50 카운터 = ⚡0 작은 띠 → ⚡1 = 카드 위 가운데 단추 · 누르면 막음 · 눈빛 「GUARD!」 · 임무 표시', noch && top === 'top' && r.b === 'cover' && /의 🛡 막기!/.test(r.eye) /* 📜 #80 누구의 무슨 기술 */ && r.gone && /임무/.test(mis), JSON.stringify({ noch, top, mis, ...r }));
     await p.evaluate(() => globalThis.__atb.close()); }
   // 💥 요청 #50 B 속성 브레이크 = 2초 카드 위 → 카드 뒤 · 누르면 내 칸 깸 · 「SHIELD BREAK!」 + 슬로 모션
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
@@ -304,7 +304,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.click('[data-k="atb-break"]'); await p.waitForTimeout(250);
     const r = await p.evaluate(() => ({ cell: globalThis.__atb.S.cells.find((c) => c.owner === 0)?.broken, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', slow: document.querySelector('[data-k="atb-stage"]').classList.contains('slowmo') }));
     await p.screenshot({ path: `${SHOTS}/atb-r50-shieldbreak-844.png` });
-    ok('요청 #50 속성 브레이크 = 처음 2초 카드 위 → 뒤(카드에 가려짐) · 누르면 내 칸 깸 · 「SHIELD BREAK!」 · 슬로 모션', f0 === '1' && f1 === '0' && cov && r.cell === true && /SHIELD BREAK/.test(r.eye) && r.slow, JSON.stringify({ f0, f1, cov, ...r })); }
+    ok('요청 #50 속성 브레이크 = 처음 2초 카드 위 → 뒤(카드에 가려짐) · 누르면 내 칸 깸 · 「SHIELD BREAK!」 · 슬로 모션', f0 === '1' && f1 === '0' && cov && r.cell === true && /의 💥 속성 브레이크!/.test(r.eye) /* 📜 #80 */ && r.slow, JSON.stringify({ f0, f1, cov, ...r })); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
