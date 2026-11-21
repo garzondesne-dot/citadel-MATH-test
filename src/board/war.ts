@@ -77,11 +77,12 @@ export async function closeWeek(S: Store, now = S.now()): Promise<{ week: string
   const ok = await txOn<{ at: number; rank: string[]; paid: boolean }>(S, path, (cur) => { if (cur) return undefined; mine = true; return { at: now, rank, paid: pay }; });
   if (!ok || !mine) return null;
   let paid = 0;
-  if (pay) for (const s of st) {
-    const g = PRIZE[s.rank - 1]; if (!g) continue;
+  // ✉ 📜 #72 (선생님 2026-11-21) 4위 아래 반(공적 0 반 포함) = 우편함 편지만 · 💎 없음(받기 = 읽음)
+  if (pay) for (const s of standings(S, pw)) {
+    const g = s.pts > 0 ? PRIZE[s.rank - 1] ?? 0 : 0;
     if (S.fetch) await S.fetch(`accounts/${ck(s.cls)}`).catch(() => null);
     const nums = Object.keys((S.get<Record<string, unknown>>(`accounts/${ck(s.cls)}`)) || {}).map(Number).filter((n) => n > 0);
-    for (const n of nums) { S.set(`gifts/${uidOf(s.cls, n)}/war_${pw}`, { g, at: now, fun: warLetter(s.rank, s.name, g), got: false, hold: true }); paid++; }
+    for (const n of nums) { S.set(`gifts/${uidOf(s.cls, n)}/war_${pw}`, { g, at: now, fun: warLetter(g ? s.rank : 99, s.name, g), got: false, hold: true }); if (g) paid++; }
   }
   return { week: pw, rank, paid };
 }

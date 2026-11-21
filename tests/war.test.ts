@@ -62,4 +62,12 @@ describe('🏁 주간 마감', () => {
     expect(S.get('gifts/s1_3_5/war_2026-11-16')).toMatchObject({ g: 150 });
     expect(S.get('gifts/s1_1_9/war_2026-11-16')).toMatchObject({ g: 100 });
   });
+  it('📜 #72 4위 아래 반(공적 0 포함) = 💎 없는 편지만 · 1위 편지 = 왕의 기사단 문구', async () => {
+    const t = KST('2026-11-23T08:00:00'), S = store(t); seed(S, '2026-11-16'); S.set('accounts/1-4', { 3: { uid: 'w' } }); S.set('school/war', { pay: true });
+    const r = await closeWeek(S);
+    expect(r?.paid).toBe(4);
+    const g4 = S.get<{ g: number; fun: string; hold: boolean }>('gifts/s1_4_3/war_2026-11-16')!;
+    expect(g4).toMatchObject({ g: 0, hold: true }); expect(g4.fun).toMatch(/이번 주도 수고했다/);
+    expect(S.get<{ fun: string }>('gifts/s1_2_1/war_2026-11-16')!.fun).toMatch(/가장 많은 균열을 닫았다/);
+  });
 });
