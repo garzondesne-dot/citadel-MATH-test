@@ -39,7 +39,7 @@
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
-  import { ATK, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
+  import { ATK, ATK_SPECIAL, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
   const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false }: {
     /** 🗺 조우 · 정찰 (요청 #69) 여럿이 판 = 부모(AtbNet)가 시각 · 준비를 맞춤 · 없으면 이 폰 혼자 · noIntro = 바로 전투(시험) */
@@ -281,21 +281,28 @@
   const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
   let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
   let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
+  // 🎛 📜 요청 #76 연출 정리: 화면 전체를 덮는 연출은 한 번에 하나(컷인 4 > 브레이크 3 > 분노 진입 2 > 쿵 · 광역 번쩍 1) · 화면 흔들림 = 큰 일만(보스 특수 · 분노 진입 · 쓰러짐)
+  //   번쩍 = 1초에 3번 이하(광과민 안전) · 문제 카드가 열려 있으면 화면 흔들림 대신 보스만 · 번쩍은 카드 아래 층
+  let ovUntil = 0, ovPri = 0; const flashTs: number[] = [];
+  const FXLOG: { k: string; t: number; ok: boolean }[] = []; /* 🧪 #76 훑기 표 (__atb.fxlog) */
+  function claim(pri: number, ms: number, k = ''): boolean { const now = Date.now(), ok = !(now < ovUntil && pri < ovPri); if (ok) { ovUntil = now + ms; ovPri = pri; } FXLOG.push({ k: k || `p${pri}`, t: now, ok }); return ok; }
+  function canFlash(k = 'flash'): boolean { const now = Date.now(); while (flashTs.length && now - flashTs[0]! > 1000) flashTs.shift(); const ok = flashTs.length < 3; if (ok) flashTs.push(now); FXLOG.push({ k, t: now, ok }); return ok; }
+  function bigShake(px: number, ms: number, k = 'shake'): void { FXLOG.push({ k, t: Date.now(), ok: true }); shake((open ? bossEl : stageEl) ?? null, open ? Math.round(px * 0.6) : px, ms); }
   const big = (t: string, cls: string, ms = 1500) => { const n = ++msgN; bigMsg = { t, cls }; setTimeout(() => { if (msgN === n) bigMsg = null; }, ms); };
   const setCell = (i: number, v: 'hold' | 'crack' | 'shatter' | null) => { const n = { ...cellAnim }; if (v) n[i] = v; else delete n[i]; cellAnim = n; };
   /** 🛡 보호막 부수기 = 그 용사 공격이 방패막에 부딪혀 물결 → 칸 금 감 → 조각나며 사라짐(한 칸씩 · 쨍) · 마지막 = 방패막 산산조각 + 약점 시간 */
   function shieldHit(e: Extract<Ev, { k: 'shield' }>) {
-    if (e.who === me && meH && S.boss.weak.includes(meH.s.fam)) { const col = FAM_COL[meH.s.fam]; eyeCut(me, col, 'SHIELD BREAK!', '속성 브레이크', 700); slowmo(600); sfx('chain-break', 1); shake(stageEl ?? null, 10, 500); } // 💥 요청 #50 B4 브레이크 성공
+    if (e.who === me && meH && S.boss.weak.includes(meH.s.fam)) { const col = FAM_COL[meH.s.fam]; if (claim(3, 900, 'break')) { eyeCut(me, col, 'SHIELD BREAK!', '속성 브레이크', 700); slowmo(600); } sfx('chain-break', 1); } /* 📜 #76 흔들림 없음 (브레이크 = 눈빛 · 슬로) */ // 💥 요청 #50 B4 브레이크 성공
     e.cells.forEach((i) => setCell(i, 'hold'));
     const go = () => {
       barrier = 'ripple'; setTimeout(() => { if (barrier === 'ripple') barrier = 'up'; }, 500);
       e.cells.forEach((i, j) => setTimeout(() => { setCell(i, 'crack'); sfx('ice-crack', 0.7); setTimeout(() => { setCell(i, 'shatter'); sfx('ice-shatter', 0.8); setTimeout(() => setCell(i, null), 450); }, 380); }, j * 420));
-      if (e.last) setTimeout(() => { barrier = 'shatter'; shake(stageEl ?? null, 8, 400); sfx('chain-break', 0.9); big('💥 실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
+      if (e.last) setTimeout(() => { barrier = 'shatter'; sfx('chain-break', 0.9); big('💥 실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
     };
     const h = S.heroes[e.who], box = heroEls[e.who];
     if (!h || !stageEl || !bossEl || !box || busy.has(e.who)) { go(); return; }
     busy.add(e.who);
-    void fxAttack(stageEl, { heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fit(h.s.hero, fx[e.who] || 'flame'), finish: true, hits: 1, mult: 1.2, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit: go }).catch(() => {}).finally(() => { busy.delete(e.who); setPose(e.who, 'idle'); });
+    void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fit(h.s.hero, fx[e.who] || 'flame'), finish: true, hits: 1, mult: 1.2, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit: go }).catch(() => {}).finally(() => { busy.delete(e.who); setPose(e.who, 'idle'); });
   }
   /** 🛡 실드 생김 = 화면 가운데 큰 문구 · 진동 · 보스 웅크렸다 일어나며 포효 · 방패막 펼침 */
   // 🛡 📜 요청 #32 실드 생김 = 방패막 + 빈 방패 칸 먼저(0.3초) → 칸마다 차례로 그 속성 방패가 가운데 크게(3배) → 작아지며 제 칸으로 쏙 + 「팅」(한 음씩 올라감) + 계열 색 반짝
@@ -319,7 +326,6 @@
     shT.push(setTimeout(shieldDone, 300 + n * 220 + 460));
     bossShield = true; setTimeout(() => (bossShield = false), 900); barrier = 'up';
     bossEl?.animate?.([{ scale: '1 1' }, { scale: '1.08 0.82', offset: 0.3 }, { scale: '0.94 1.12', offset: 0.6 }, { scale: '1 1' }], { duration: 800, easing: 'ease-out' });
-    setTimeout(() => shake(stageEl ?? null, 5, 300), 450);
   }
   /** ⚡ 충전 가득 (📜 요청 #13) = 공격 단추 안 동그라미 · 스킬 단추 빛 · 「가득! 스킬을 써요」 한 번 */
   // 🔊 📜 요청 #23 효과음 더하기 (있던 파일만) · 30명 교실 = 0.15초 안에 겹치면 하나만
@@ -338,7 +344,7 @@
   $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); if (me >= 0) snd('heart-break', 0.55); } wasLow = now; }); });
   /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
   const isWeak = (id: number) => { const h = S.heroes[id]; return !!h && S.boss.weak.includes(h.s.fam); };
-  let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false), auraOn = $state(false);
+  let stageEl = $state<HTMLElement>(), bossEl = $state<HTMLElement>(), boom = $state(false), gaugeFlash = $state(false);
   const heroEls: Record<number, HTMLElement> = {}, busy = new Set<number>();
   const setPose = (who: number, p: Pose | HPose) => { hpose = { ...hpose, [who]: p === 'idle' ? '' : (p as HPose) }; };
   /** ⚔ 용사가 몬스터 앞까지 달려가 치고 제자리로 (레이드 attack · 원거리 = 제자리 탄) · 맞는 순간 = 숫자 · 몬스터 아픔 */
@@ -363,7 +369,7 @@
     const box = heroEls[e.who];
     if (!stageEl || !bossEl || !box || busy.has(e.who)) { onHit(); return; }
     busy.add(e.who);
-    void fxAttack(stageEl, { heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
+    void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
       .catch(() => {}).finally(() => { busy.delete(e.who); onHit(); setPose(e.who, 'idle'); });
   }
   /** 💥 몬스터 파편 (📜 요청 #38 ⑥) = 그 몬스터 맞는 그림 종류(mhitOf) 짝 색 · 모양 · 4 ~ 6개 0.4초 · 큰 공격 2배 · 저사양(코어 4 이하) · 움직임 줄이기 = 3개 */
@@ -374,7 +380,7 @@
   const bossReel = (strong = false) => hitReel(bossEl ?? null, strong, Wd * 0.03); // 공용 (#54)
   // 🪨 체력 75 · 50 · 25% 를 넘는 순간 = 크게 휘청 + 「쿵」 + 몸에 금 한 단계 (📜 요청 #38 ⑤ · 금 = 보스 몸 모양 안에서만 · 분노보다 먼저)
   let crackLv = $state(0), lastRatio = 1;
-  $effect(() => { const hp = S.bossHp, mx = S.bossMax, r = mx ? hp / mx : 1; untrack(() => { const lv = crackStep(crackLv, hp, mx); if (lv != null && r < lastRatio) { crackLv = lv; crackShake(bossEl ?? null, Math.round(Wd * 0.02)); sfx('dummy-hit', 0.8); shake(stageEl ?? null, 6, 300); } lastRatio = r; }); }); // 공용 crackStep · crackShake (#54)
+  $effect(() => { const hp = S.bossHp, mx = S.bossMax, r = mx ? hp / mx : 1; untrack(() => { const lv = crackStep(crackLv, hp, mx); if (lv != null && r < lastRatio) { crackLv = lv; if (claim(1, 400, 'crack')) crackShake(bossEl ?? null, Math.round(Wd * 0.02)); sfx('dummy-hit', 0.8); } /* 📜 #76 쿵 = 보스만 흔들 (화면 흔들림 없음) */ lastRatio = r; }); }); // 공용 crackStep · crackShake (#54)
   /** 💥 광역이 터짐 = 용사 줄 가운데서 붉은 충격파 (레이드 필살기 충격파 .ult-ring 을 붉게) */
   function ring() {
     const st = stageEl; if (!st) return; const R = rectIn(st), x = R.width * (open ? 0.17 : 0.25), y = R.height * 0.6, d = R.width * 0.9;
@@ -406,16 +412,18 @@
   $effect(() => { const n = S.evN; untrack(() => { if (n < seen) seen = 0; for (const e of S.ev) if ((e.n ?? 0) > seen) handle(e); seen = n; }); });
   function handle(e: Ev) {
     const bx = open ? 86 : 72;
+    if (e.k === 'down') bigShake(8, 400, 'shake-down'); // 📜 #76 쓰러짐 = 큰 일
     if (e.k === 'atk' || e.k === 'skill' || (e.k === 'role' && e.dmg)) {
       // ⚡ 스킬 = 컷인(필살기 1.7초 · 내 스킬 0.9초) 뒤 큰 이펙트
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
       const bigSk = e.k === 'skill' && (e.kind !== 'equip' || e.who === me), ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
-      if (e.k === 'skill' && bigSk) { const c = { who: e.who, awk: e.kind === 'awk', name: e.kind === 'awk' ? '각성' : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', short: e.kind === 'equip' }; const cn = ++cutN; cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
+      if (e.k === 'skill' && bigSk) { const c = { who: e.who, awk: e.kind === 'awk', name: e.kind === 'awk' ? '각성' : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', short: e.kind === 'equip' }; const cn = ++cutN; claim(4, ms, 'cutin'); cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
       if (e.k === 'skill' && e.auto && e.who === me) big('⚡ 넘침 → 자동 스킬!', 'note', 1300); // 📜 요청 #13
       if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
       if (bigSk) setTimeout(() => playAtk(e as Extract<Ev, { k: 'skill' }>), ms - 200); else playAtk(e as Extract<Ev, { k: 'atk' | 'skill' | 'role' }>);
     } else if (e.k === 'shield') shieldHit(e);
     else if (e.k === 'boss') {
+      if (barrierArmed) { barrierArmed = false; setTimeout(() => domeBlock('barrier'), 230); } // 🎵 서포터 결계로 막은 광역 = 돔 파문
       // 👹 몬스터 공격 = 앞으로 덮침 → 맞음(용사 붉게 · 맞음 자세) · 광역 = 화면 크게 흔들림 + 붉은 번쩍 · 내가 맞음 = 문제 카드 흔들 + 잠금
       bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 600);
       bossEl?.animate?.([{ translate: '0 0' }, { translate: `${-Math.round(Wd * 0.06)}px 6px`, offset: 0.4 }, { translate: '0 0' }], { duration: 520, easing: 'ease-out' });
@@ -423,9 +431,11 @@
         // 👹 몬스터 맞는 그림 (📜 요청 #27 · 레이드 #26 과 같은 함수 mhitOf · MonHit) = 보스 몸짓 → 맞는 용사 위 6칸 0.42초 · 광역 = 모두 동시에 · 게시판 보스 = 1.5배
         const kind = atkHitOf(e.kind, S.boss.sprite), mk = ++mhN; /* 📜 요청 #40 ① 공격 종류 먼저 (ATK_HIT) · 없으면 보스 짝 */ mhit = { k: mk, kind, to: [...e.to] }; setTimeout(() => { if (mhit?.k === mk) mhit = null; }, MHIT.ms + 40);
         e.to.forEach((id, i) => { pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, e.aoe ? 'hurt big' : 'hurt'); hurt(id); });
-        if (e.aoe) { shake(stageEl ?? null, 10, 520); boom = true; ring(); setTimeout(() => (boom = false), 620); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
-        else { shake(stageEl ?? null, 4, 220); sfx('hurt', 0.6); }
-        { const i = e.to.indexOf(me); if (me >= 0 && i >= 0) hflash = { n: Date.now(), a: flashA(e.dmg[i] ?? 0, S.heroes[me]!.s.maxHp) }; } // 🛡 요청 #39 ① 내가 맞음 = 가장자리 붉게 번쩍(피해 비율만큼)
+        const spc = !!e.kind && ATK_SPECIAL.has(e.kind); /* 📜 #76 흔들림 = 보스 특수만 · 광역 번쩍 = 한 번에 하나 · 1초 3번 이하 */
+        if (spc && e.to.length) bigShake(e.aoe ? 10 : 6, 480, 'shake-special');
+        if (e.aoe) { if (claim(1, 620, 'aoe-boom') && canFlash('aoe-boom')) { boom = true; setTimeout(() => (boom = false), 620); } ring(); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
+        else sfx('hurt', 0.6);
+        { const i = e.to.indexOf(me); if (me >= 0 && i >= 0 && canFlash('hit-flash')) hflash = { n: Date.now(), a: flashA(e.dmg[i] ?? 0, S.heroes[me]!.s.maxHp) }; } // 🛡 요청 #39 ① 내가 맞음 = 가장자리 붉게 번쩍(피해 비율만큼)
         if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + T.hitLockMs; lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
       }, 230);
     }
@@ -441,7 +451,7 @@
     }
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
-    else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
+    else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); /* 📜 #76 = 파티 전체 돔 (domeKind) */ sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; if (e.who === me) { eyeCut(e.who, col, EN, KO); slowmo(400); sfx('block', 1); } else pop(posOf(e.who).x, posOf(e.who).y - 40, `${name(e.who)} ${EN}`, 'role'); } /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
@@ -456,13 +466,13 @@
       else if (e.fx === 'curse') { pop(B0.x, B0.y, '🌑 저주!', 'fam'); bossCurse = Date.now(); setTimeout(() => (bossCurse = 0), 3000); }
     }
     else if (e.k === 'rage') { // 👹 분노 (요청 #37)
-      if (e.on === 'rage') { say('rage', 2800, 900); setTimeout(() => { big('👹 분노!', 'rage', 1600); sfx('mon-appear-boss', 0.9); shake(stageEl ?? null, 12, 700); }, 450); /* 금 연출(#38)이 먼저 · 분노가 뒤 */ try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ } bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 700); }
+      if (e.on === 'rage') { say('rage', 2800, 900); setTimeout(() => { const wait = Math.max(0, ovUntil - Date.now()); setTimeout(() => { claim(2, 1600, 'rage-in'); big('👹 분노!', 'rage', 1600); sfx('mon-appear-boss', 0.9); bigShake(12, 700, 'shake-rage'); if (canFlash('rage-burst')) { rageBurst = Date.now(); setTimeout(() => (rageBurst = 0), 900); } }, wait); }, 450); /* 📜 #76 분노 = 들어갈 때 한 번 세게(붉은 화면) · 그다음 가장자리만 옅게 · 컷인 중이면 끝난 뒤 */ /* 금 연출(#38)이 먼저 · 분노가 뒤 */ try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ } bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 700); }
       else if (e.on === 'calm') { big('😮‍💨 진정!', 'note', 1400); sfx('heart-up', 0.6); bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 800); }
       else if (e.on === 'calmEnd') { big('👹 다시 분노!', 'rage', 1100); sfx('mon-appear-boss', 0.6); }
       else if (e.on === 'perf') pop(bx, 52, `😮‍💨 진정 ${e.n}/${RAGE.calmPerfect}`, 'fam');
     }
     else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
-    else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
+    else if (e.k === 'guard') { domeBlock('aura'); barrierArmed = false; sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
     else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${halfTxt(e.add)}`, 'role');
     else if (e.k === 'sig') {
       if (e.what === 'breathHeal') pop(bx, 30, `+${e.v} 회복`, 'heal');
@@ -491,6 +501,16 @@
   const XOPEN = [6.5, 11, 15.5, 20];
   const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!; return open ? { ...r, x: XOPEN[k] ?? r.x } : r; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
+  // 🛡 📜 요청 #76 ③ 결계 돔 = 오라 방패(S.guard) · 서포터 결계(반응 막기) 가 걸린 동안 파티 전체를 덮는 반투명 돔 하나 · 막는 순간 파문 + 「🛡 결계로 막음!」 → 조각
+  const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
+  let domeFx = $state<{ k: 'aura' | 'barrier'; n: number } | null>(null), barrierArmed = false;
+  $effect(() => { if (domeKind === 'barrier') barrierArmed = true; });
+  function domeBlock(k: 'aura' | 'barrier') { const n = Date.now(); domeFx = { k, n }; big('🛡 결계로 막음!', 'note', 1300); setTimeout(() => { if (domeFx?.n === n) domeFx = null; }, 1000); }
+  const domeBox = $derived.by(() => {
+    const ps = S.heroes.filter((h) => !h.down).map((h) => posOf(h.id)); if (!ps.length) return null;
+    const hh = ((base * 0.84 * 64) / Math.max(1, H)) * 100, x0 = Math.min(...ps.map((p) => p.x)) - 8, x1 = Math.max(...ps.map((p) => p.x)) + 8, y1 = Math.max(...ps.map((p) => p.y)) + 3, y0 = Math.min(...ps.map((p) => p.y)) - hh - 8;
+    return { x0: Math.max(0, x0), w: Math.min(100, x1) - Math.max(0, x0), y0: Math.max(0, y0), h: y1 - Math.max(0, y0) };
+  });
   const bossSize = $derived(Math.round(H * (open ? 0.3 : 0.42))); // 문제 카드 가운데(요청 #14) = 보스는 카드 오른쪽에 작게
   const stone = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
   const C = 2 * Math.PI * 30; // 내 초상 고리 둘레 (r 30)
@@ -521,7 +541,7 @@
   // 🛡 📜 요청 #39 용사 피격 긴장감 — A 내 화면 가장자리 (내 폰만) · B 맞기 직전 조준 원 3 · 2 · 1 · 쉭 · 막으면 챙
   const meRatio = $derived(meH && !meH.down && !S.end ? meH.hp / meH.s.maxHp : 1);
   const edge = $derived(me >= 0 ? edgeLv(meRatio) : 0);
-  let hflash = $state<{ n: number; a: number } | null>(null), beatN = $state(0);
+  let hflash = $state<{ n: number; a: number } | null>(null), beatN = $state(0), rageBurst = $state(0);
   $effect(() => { const on = edge >= 3; if (!on) return; const go = () => { beatN++; heartbeat(0.35); vib(BEAT.buzz); }; untrack(go); const iv = setInterval(go, BEAT.every * 1000); return () => clearInterval(iv); }); // 💓 30% 아래 = 3초마다 쿵-쿵 + 진동 2번 · 회복 · 쓰러짐 · 끝 = 멈춤
   /** 예고 남은 시간 · 전체(4초) → 원 조임 · 3 · 2 · 1 */
   const aimT = $derived.by(() => {
@@ -550,7 +570,7 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => labels?.[id] ?? `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
-  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
+  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), fxlog: () => FXLOG.slice(), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
 
 <div class="stage" class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
@@ -577,6 +597,7 @@
   {#if eye}{#key eye.n}<div class="eye" style:--ec={eye.col} data-k="atb-eye" aria-live="polite">{#if portraitOf(S.heroes[eye.who]!.s.hero)}{@const pt = portraitOf(S.heroes[eye.who]!.s.hero)!}<i class="face" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}<i class="glint l"></i><i class="glint r"></i><b class="eyet" data-k="atb-eye-text">{eye.big}</b><small>{eye.small}</small></div>{/key}{/if}
   {#if weakFx}{#key weakFx.n}<i class="wkfx" aria-hidden="true" style:left="{open ? 86 : 73}%"><FamShield fam={weakFx.fam} size={Math.round(64 * U)} /></i>{/key}{/if}
   {#if S.rage && !calmLeft && !S.end}<i class="ragedge" aria-hidden="true" data-k="atb-ragedge"></i>{/if}
+  {#if rageBurst}{#key rageBurst}<i class="rageburst" aria-hidden="true" data-k="atb-rageburst"></i>{/key}{/if}
   {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"><AtbFx name="rage-barrier" x="50%" y="50%" w={Math.round(Wd * 0.48)} h={Math.round(H * 0.58)} ms={900} z={1} /></i>{/if}
   {#each fxs as f (f.id)}<AtbFx name={f.name} x="{f.x}%" y="{f.y}%" w={f.w} loop={false} ms={f.ms} z={36} />{/each}
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
@@ -608,10 +629,11 @@
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
   <!-- 용사 -->
+  {#if (domeKind || domeFx) && domeBox}<i class="dome {domeKind || domeFx?.k}" class:hit={!!domeFx} style:left="{domeBox.x0}%" style:top="{domeBox.y0}%" style:width="{domeBox.w}%" style:height="{domeBox.h}%" data-k="atb-dome" data-kind={domeKind || domeFx?.k} aria-hidden="true">{#if domeFx}{#key domeFx.n}<i class="rip"></i>{#each [0, 1, 2, 3, 4, 5, 6, 7] as j (j)}<i class="shd" style:--r="{j * 45 + 10}deg"></i>{/each}{/key}{/if}</i>{/if}
   {#each S.heroes as h (h.id)}
     {@const p = posOf(h.id)}
     {@const sc = +(base * p.s).toFixed(2)}
-    <div class="hero" class:lowp={lowIds.includes(h.id)} style:--lb="{T.lowBeat}s" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:healed={!!healOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
+    <div class="hero" class:lowp={lowIds.includes(h.id)} style:--lb="{T.lowBeat}s" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:healed={!!healOn[h.id]}  style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 40}px" data-k="atb-weak"><FamShield fam={h.s.fam} size={14} /> 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if aimT}<i class="aimring {tg?.cls ?? ''}" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" style:--k={ringK.toFixed(3)} data-k="atb-aimring" aria-hidden="true">{#if cntN}<b data-k="atb-aimcnt">{cntN}</b>{/if}</i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
@@ -695,8 +717,8 @@
   .weakb { position: absolute; top: 2%; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; align-items: center; gap: 6px; padding: 4px 14px; border-radius: 12px; background: linear-gradient(#ffdf7a, #f0a92a); color: #3a1d00; font: 800 16px var(--font); box-shadow: 0 0 16px #ffcf4a; animation: pulse 0.8s ease-in-out infinite; }
   @keyframes pulse { 50% { transform: translateX(-50%) scale(1.06); } }
   .bossui { position: absolute; top: 11%; z-index: 12; display: flex; flex-direction: column; align-items: center; gap: 6px; transition: left 0.45s ease; }
-  .tele { padding: 3px 12px; border-radius: 10px; border: 2px solid #ffcf6a; background: linear-gradient(#c81e1e, #8e1010); font: 800 14px var(--font); box-shadow: 0 0 10px #ff3a2a88; animation: blink 0.5s steps(2) infinite; }
-  @keyframes blink { 50% { filter: brightness(1.3); } }
+  .tele { padding: 3px 12px; border-radius: 10px; border: 2px solid #ffcf6a; background: linear-gradient(#c81e1e, #8e1010); font: 800 14px var(--font); box-shadow: 0 0 10px #ff3a2a88; animation: blink 0.8s ease-in-out infinite; }
+  @keyframes blink { 50% { filter: brightness(1.3); } } /* 📜 #76 광과민 안전 = 깜박 0.8초 주기 이상(1초 3번 넘지 않게 · 전: 0.35 ~ 0.6초 계단 깜박) */
   /* ❤ HP = 큰 숫자 + 가는 색 띠 (Y6) */
   .thin { display: block; width: 100%; height: 5px; border-radius: 3px; background: #0009; overflow: hidden; box-shadow: 0 0 0 1px #0006; }
   .thin b { display: block; height: 100%; transition: width 0.25s; } .thin.hp b { background: linear-gradient(90deg, #7de06a, #2faa3a); } .thin.atb { height: 4px; } .thin.atb b { background: linear-gradient(90deg, #ffe46a, #e6b81e); }
@@ -708,7 +730,18 @@
   .chs.flash { animation: gflash 0.45s; }
   .hn { font: 800 10px var(--font-plain); color: #e0ffd8; text-align: center; line-height: 1; text-shadow: 0 1px 0 #000; }
   .boss.stone :global(*) { filter: grayscale(1) brightness(0.85) contrast(1.2); }
-  .hero.aura .spr { filter: drop-shadow(0 0 6px #fff6a0) drop-shadow(0 0 12px #ffd34d); }
+  /* 🛡 📜 #76 결계 돔 (오라 = 금빛 · 서포터 결계 = 주황 · 반투명 · 막음 = 파문 + 조각) */
+  .dome { position: absolute; z-index: 24; pointer-events: none; --dc: #ffe27a; border-radius: 50% 50% 14% 14% / 62% 62% 22% 22%; border: 2px solid color-mix(in srgb, var(--dc) 75%, transparent); background: radial-gradient(ellipse at 50% 85%, color-mix(in srgb, var(--dc) 10%, transparent) 30%, color-mix(in srgb, var(--dc) 26%, transparent) 75%, color-mix(in srgb, var(--dc) 40%, transparent) 100%); box-shadow: 0 0 18px color-mix(in srgb, var(--dc) 60%, transparent), inset 0 0 28px color-mix(in srgb, var(--dc) 45%, transparent); animation: domein 0.45s ease-out, domeidle 2.4s ease-in-out 0.45s infinite; }
+  .dome.barrier { --dc: #ffb85a; }
+  @keyframes domein { from { transform: scale(0.6); opacity: 0; } }
+  @keyframes domeidle { 50% { opacity: 0.75; } }
+  .dome.hit { animation: domebrk 0.9s ease-out forwards; }
+  @keyframes domebrk { 0% { opacity: 1; filter: brightness(1.8); } 35% { opacity: 1; filter: brightness(1.2); } 100% { opacity: 0; transform: scale(1.06); } }
+  .dome .rip { position: absolute; inset: 10%; border-radius: inherit; border: 3px solid #fff; animation: rip 0.5s ease-out forwards; }
+  @keyframes rip { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+  .dome .shd { position: absolute; left: 50%; top: 40%; width: 14px; height: 10px; background: var(--dc); clip-path: polygon(0 0, 100% 30%, 40% 100%); opacity: 0; animation: shd 0.6s ease-out 0.3s forwards; transform: rotate(var(--r)); }
+  @keyframes shd { 0% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: calc(cos(var(--r)) * 90px) calc(sin(var(--r)) * 60px); } }
+  @media (prefers-reduced-motion: reduce) { .dome, .dome .rip, .dome .shd { animation-duration: 0.01s; } }
   .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
   .boss { position: absolute; top: 74%; transform: translate(-50%, -100%); z-index: 11; transition: left 0.45s ease; }
   .hero { position: absolute; transition: left 0.45s ease, top 0.45s ease; }
@@ -717,11 +750,11 @@
   .hero.down .spr { filter: grayscale(1) brightness(0.6); }
   .tele.sig { background: linear-gradient(#3a5ac8, #1d2f8e); border-color: #9fd0ff; box-shadow: 0 0 10px #5aa9ff88; }
   .bflip.armor { filter: drop-shadow(0 0 4px #9fe6ff) drop-shadow(0 0 10px #5ac8ff) saturate(0.7) brightness(1.15); } /* 4 얼음 갑옷 */
-  .bflip.shine { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #c9a8ff); animation: blink 0.6s steps(2) infinite; } /* 8 거울빛 */
+  .bflip.shine { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #c9a8ff); animation: blink 0.8s ease-in-out infinite; } /* 8 거울빛 */
   .bflip.breath { filter: drop-shadow(0 0 10px #7dffb0); } /* 6 숨 고르기 */
-  .gaze { position: absolute; left: -10px; top: -96px; font-size: 22px; font-style: normal; animation: blink 0.4s steps(2) infinite; }
+  .gaze { position: absolute; left: -10px; top: -96px; font-size: 22px; font-style: normal; animation: blink 0.8s ease-in-out infinite; }
   .pop.heal { color: #7dffb0; font-size: 20px; }
-  .tgt { position: absolute; left: -26px; top: -10px; width: 52px; height: 18px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 10px #ff3a2a; animation: blink 0.4s steps(2) infinite; }
+  .tgt { position: absolute; left: -26px; top: -10px; width: 52px; height: 18px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 10px #ff3a2a; animation: blink 0.8s ease-in-out infinite; }
   .cov { position: absolute; left: 14px; top: -54px; }
   .ordn { position: absolute; left: 0; transform: translateX(-50%); font: 800 11px var(--font); color: #ffe9b0; background: #3a2040e0; border: 1px solid #ffcf6a; border-radius: 8px; padding: 1px 6px; white-space: nowrap; z-index: 30; pointer-events: none; }
   .mark { position: absolute; left: -20px; top: -46px; font: 800 13px var(--font); color: #ffcf6a; text-shadow: 0 0 4px #000; z-index: 30; pointer-events: none; animation: mark-spin 1.6s linear infinite; }
@@ -753,8 +786,8 @@
   .b.atk.stopb { border-color: #fff; background: linear-gradient(#ff6a4a, #c8261e); color: #fff; text-shadow: 0 2px 0 #0008; animation: none; font-size: clamp(16px, 6vh, 26px); }
   /* 🧭 역할 스킬 = 따로 보이게 (📜 선생님 「스킬 하나밖에 없다」) · 꺼져 있어도 색은 그대로 */
   .floor { position: absolute; z-index: 9; left: 0; width: 50%; top: 42%; height: 34%; pointer-events: none; opacity: 0; border-radius: 50%; background: radial-gradient(ellipse at 50% 62%, #ff2a1a, #ff2a1a99 40%, #ff2a1a33 62%, #0000 72%); mix-blend-mode: screen; transition: opacity 0.2s, width 0.45s; }
-  .floor.q { width: 34%; } .floor.on { opacity: 1; animation: blink 0.35s steps(2) infinite; }
-  .boom { position: absolute; inset: 0; z-index: 35; pointer-events: none; background: radial-gradient(ellipse at 25% 60%, #ffffffcc, #ff3a1a99 30%, #7a000066 70%); animation: boom 0.6s ease-out forwards; }
+  .floor.q { width: 34%; } .floor.on { opacity: 1; animation: blink 0.8s ease-in-out infinite; }
+  .boom { position: absolute; inset: 0; z-index: 20; /* 📜 #76 카드(26) 아래 = 문제 카드 위로 번쩍 없음 */ pointer-events: none; background: radial-gradient(ellipse at 25% 60%, #ffffffcc, #ff3a1a99 30%, #7a000066 70%); animation: boom 0.6s ease-out forwards; }
   @keyframes boom { from { opacity: 1; } to { opacity: 0; } }
   .tele.aoe { font-size: 17px; padding: 4px 16px; background: linear-gradient(#ff3a1a, #a80e0e); box-shadow: 0 0 18px #ff2a1a; }
   .hero.hurt .spr { filter: brightness(1.6) sepia(1) saturate(6) hue-rotate(-30deg); animation: hshake 0.3s; }
@@ -764,7 +797,7 @@
   .hero.hurt .hitpic { background: linear-gradient(135deg, #0000 38%, #ff3a2acc 40%, #fff 42%, #ff3a2acc 44%, #0000 46%, #0000 52%, #ff3a2acc 54%, #fff 56%, #ff3a2acc 58%, #0000 60%); animation: claw 0.4s ease-out forwards; }
   @keyframes claw { from { opacity: 0; transform: scale(0.6) translate(20%, -20%); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.1); } }
   /* ⊕ 노림 (📜 요청 #7 ③) */
-  .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
+  .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.8s ease-in-out infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 44px; height: 44px; margin: -11px 0 0 -11px; pointer-events: none; background: var(--fx-orb) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.36s steps(6, jump-none) infinite; } @keyframes -global-afx-orb { from { background-position-x: 0%; } to { background-position-x: 100%; } } /* 🎨 charge-orb */
   .stage :global(.atb-orb.half) { width: 30px; height: 30px; opacity: 0.6; } /* ½ 칸 = 작은 반투명 구슬 (요청 #49) */
@@ -910,7 +943,7 @@
   .cell2.fl { animation: cflash 0.26s ease-out; } @keyframes cflash { 0% { filter: drop-shadow(0 0 2px var(--fc)) brightness(2.2); scale: 1.3; } 100% { scale: 1; } }
   @media (prefers-reduced-motion: reduce) { .shfly { animation-duration: 0.01s; } }
   /* 🛡 반응 막기 (요청 #35) */
-  .reactb { position: absolute; z-index: 34; left: 50%; top: 2%; transform: translateX(-50%); padding: 6px 18px; border-radius: 14px; border: 3px solid #fff; background: var(--rc, #3a6ac8); color: #fff; font: 900 clamp(14px, 4.6vh, 20px) var(--font); text-shadow: 0 2px 0 #0008; box-shadow: 0 0 18px var(--rc, #8fd0ff); white-space: nowrap; animation: blink 0.5s steps(2) infinite; pointer-events: none; }
+  .reactb { position: absolute; z-index: 34; left: 50%; top: 2%; transform: translateX(-50%); padding: 6px 18px; border-radius: 14px; border: 3px solid #fff; background: var(--rc, #3a6ac8); color: #fff; font: 900 clamp(14px, 4.6vh, 20px) var(--font); text-shadow: 0 2px 0 #0008; box-shadow: 0 0 18px var(--rc, #8fd0ff); white-space: nowrap; animation: blink 0.8s ease-in-out infinite; pointer-events: none; }
   .reactb.heal { --rc: #2faa5a; }
   .tgline { position: absolute; z-index: 21; left: 50%; top: 2%; transform: translateX(-50%); padding: 3px 12px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff5a4a; color: #ffe0d8; font: 800 13px var(--font-plain); white-space: nowrap; pointer-events: none; }
   .tgline.special { border-color: #b07aff; background: #1d0a2ae6; color: #eadcff; }
@@ -920,13 +953,13 @@
   .uic { width: 1.35em; height: 1.35em; object-fit: contain; image-rendering: pixelated; vertical-align: middle; filter: drop-shadow(0 1px 1px #0008); }
   .orbs { background: none; gap: 2px; } .orbs i { width: calc(17px * var(--u)); height: calc(17px * var(--u)); color: transparent; font-size: 0; background: var(--ui-orb0) center / contain no-repeat; filter: none; image-rendering: pixelated; } .orbs i.on { background-image: var(--ui-orb1); filter: drop-shadow(0 0 4px #8fe0ff); }
   .b.skb { border: 12px solid transparent; border-image: var(--ui-sk) 40 fill / 12px stretch; background: none; } .b.skb.hot { border-image-source: var(--ui-sk-rd); } .b.skb.on { border-image-source: var(--ui-sk-on); filter: none; }
-  .b.skb.react { animation: rflash 0.45s steps(2) infinite; border-color: var(--rc); box-shadow: 0 0 20px var(--rc); } @keyframes rflash { 50% { background: var(--rc); } }
+  .b.skb.react { animation: rflash 0.8s ease-in-out infinite; border-color: var(--rc); box-shadow: 0 0 20px var(--rc); } @keyframes rflash { 50% { background: var(--rc); } }
   .tbarrier { position: absolute; z-index: 12; left: 0; width: 48%; top: 26%; height: 58%; pointer-events: none; animation: bup 0.4s ease-out; } /* 🎨 rage-barrier 돔 그림 */
   @media (prefers-reduced-motion: reduce) { .reactb, .b.skb.react { animation: none; } }
   /* 🌈 계열 덧효과 (요청 #36) */
   .pop.fam { font-size: 15px; color: #fff3c0; animation-duration: 0.8s; }
   .boss.burning :global(.sprite), .boss.burning .bflip { filter: drop-shadow(0 0 6px #ff7a2a) drop-shadow(0 -4px 8px #ffb84a); }
-  .boss.burning::after { display: none; content: '🔥'; position: absolute; left: 50%; top: 10%; font-size: 22px; transform: translateX(-50%); animation: blink 0.35s steps(2) infinite; pointer-events: none; }
+  .boss.burning::after { display: none; content: '🔥'; position: absolute; left: 50%; top: 10%; font-size: 22px; transform: translateX(-50%); animation: blink 0.8s ease-in-out infinite; pointer-events: none; }
   .boss.frost :global(.sprite), .boss.frost .bflip { filter: drop-shadow(0 0 8px #8fe0ff) saturate(0.6) brightness(1.15) hue-rotate(160deg); }
   /* 👹 분노 (요청 #37) */
   /* 😵 요청 #40 상태 = 머리 위에서 도는 이모지 2개 (그림 자리 atb-status-hero) */
@@ -1001,7 +1034,8 @@
   .ringx i { position: absolute; left: -14px; top: -3px; width: 28px; height: 6px; border-radius: 3px; background: #ffd0c8; box-shadow: 0 0 8px #ff3a2a; rotate: var(--r); animation: rx 0.5s ease-out forwards; }
   @keyframes rx { 0% { translate: 0 0; opacity: 1; } 100% { translate: calc(cos(var(--r)) * 48px) calc(sin(var(--r)) * 48px); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .hedge.lv3, .hedge.lv4 { animation: none; } .hedge .bt, .hflash, .ringx i { animation: none; } .aimring { transition: none; } }
-  .ragedge { position: absolute; inset: 0; z-index: 15; pointer-events: none; box-shadow: inset 0 0 60px 12px #ff1a1a88; animation: rpulse 1.1s ease-in-out infinite; }
+  .ragedge { position: absolute; inset: 0; z-index: 15; pointer-events: none; box-shadow: inset 0 0 36px 4px #ff1a1a55; } /* 📜 #76 분노 중 = 가장자리만 옅게 (맥박 없음) · 들어갈 때 = .rageburst 한 번 */
+  .rageburst { position: absolute; inset: 0; z-index: 20; pointer-events: none; background: radial-gradient(ellipse at 70% 50%, #ff1a1a00 30%, #ff1a1aaa 100%); box-shadow: inset 0 0 120px 30px #ff1a1a; animation: rburst 0.9s ease-out forwards; } @keyframes rburst { from { opacity: 1; } to { opacity: 0; } }
   @keyframes rpulse { 50% { box-shadow: inset 0 0 90px 22px #ff1a1acc; } }
   .boss.raging :global(.sprite), .boss.raging .bflip { filter: drop-shadow(0 0 8px #ff2a1a) drop-shadow(0 0 16px #ff2a1a88) saturate(1.3); }
   .boss.raging::before { display: none; content: '💨'; position: absolute; left: 30%; top: 4%; font-size: 20px; opacity: 0.85; animation: steam 1.2s ease-out infinite; pointer-events: none; } @keyframes steam { from { transform: translate(0, 0); opacity: 0.9; } to { transform: translate(-8px, -26px); opacity: 0; } }
