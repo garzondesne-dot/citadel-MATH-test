@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeOutbox, merge3, queued, trim, OUT_LIMIT, type OutItem, type OutStorage } from '../src/store/outbox';
+import { incMark, makeOutbox, merge3, queued, trim, OUT_LIMIT, type OutItem, type OutStorage } from '../src/store/outbox';
 const mem = (): OutStorage & { raw: OutItem[] } => { const o = { raw: [] as OutItem[], load: () => o.raw.map((x) => ({ ...x })), save: (l: OutItem[]) => { o.raw = l.map((x) => ({ ...x })); } }; return o; };
 describe('📮 #81 B 폰 보관함', () => {
   it('넣기 → 저장 칸에 남음(앱 닫아도) · 확인 = 지움', () => {
@@ -43,5 +43,13 @@ describe('📮 #81 B 폰 보관함', () => {
     expect(trim([mk(1, 'bonus/a', now - 8 * 86400e3), mk(2, 'bonus/b')], now).map((x) => x.id)).toEqual(['i2']);
     const many = [mk(0, 'gem/1-3/5/log/x'), ...Array.from({ length: OUT_LIMIT.items }, (_, i) => mk(i + 1, `bonus/1-3/5/k${i}`))];
     const t = trim(many, now); expect(t.length).toBe(OUT_LIMIT.items); expect(t[0]!.id).toBe('i0');
+  });
+  it('🐞 #83-10 더하기 줄 = 줄마다 따로(합치지 않음) · 위 경로 쓰기에 안 삼켜짐 · 표시 칸 = gem · xp 의 반/번호 아래', () => {
+    const b = makeOutbox(mem());
+    const a = b.putInc('gem/1-3/5/total', 16, 'u1', 1), c = b.putInc('gem/1-3/5/total', 4, 'u1', 2);
+    b.put('gem/1-3/5', { log: { x: 1 } }, null, 'u1', 3);
+    expect(b.list('u1').filter((x) => x.inc).map((x) => x.inc)).toEqual([16, 4]);
+    b.done(a); expect(b.list('u1').filter((x) => x.inc)).toHaveLength(1); b.done(c);
+    expect(incMark('gem/1-3/5/total', 'i1')).toBe('gem/1-3/5/applied/i1'); expect(incMark('xp/1-3/5/total', 'i2')).toBe('xp/1-3/5/applied/i2'); expect(incMark('bonus/1-3/5/x', 'i3')).toBeNull();
   });
 });

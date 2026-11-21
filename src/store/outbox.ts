@@ -5,7 +5,7 @@
 //   다시 보내기 = 그 경로 서버 값을 받은 뒤에만 (11/20 지갑 덮어쓰기 꼴 막음): 서버 = v → 지움 · 서버 = base(그 뒤 안 바뀜) → v 보냄 ·
 //   서버가 그새 바뀜 → merge3(서버 · base · v): 수 = 서버 + (v − base) · 객체 = 칸마다 · 서버에 없는 칸 = v · 그 밖 글 = 서버 그대로
 //   한도 = 7일 · 500줄 · 약 1MB (넘으면 오래된 것부터 · gem/ · xp/ 는 맨 나중에 버림) · 체험판 · 이 기기 모드 = 안 씀
-export interface OutItem { id: string; path: string; v: unknown; base: unknown; at: number; who: string }
+export interface OutItem { id: string; path: string; v: unknown; base: unknown; at: number; who: string; /** 🐞 #83-10 더하기 줄 (💎 · EXP total = increment) · 서버에 applied/{id} 표시와 한 번에 → 다시 보낼 때 표시가 있으면 지움 */ inc?: number }
 export interface OutStorage { load(): OutItem[]; save(list: OutItem[]): void }
 export const OUT_ROOTS = ['gem', 'xp', 'cards', 'records', 'bonus', 'gifts', 'mail', 'surveyDone', 'quest'] as const;
 export const OUT_LIMIT = { days: 7, items: 500, bytes: 1_000_000 };
@@ -22,6 +22,8 @@ function norm(x: unknown): unknown {
   for (const k of Object.keys(x).sort()) { const v = norm(x[k]); if (v !== null && !(isObj(v) && !Object.keys(v).length)) out[k] = v; }
   return Object.keys(out).length ? out : null;
 }
+/** 🐞 #83-10 더하기 줄을 넣는 칸 (gem · xp 의 {반}/{번호} 아래) → 표시 칸 = {root}/{반}/{번호}/applied/{id} */
+export const incMark = (path: string, id: string): string | null => { const p = split(path); return (p[0] === 'gem' || p[0] === 'xp') && p.length >= 4 ? `${p[0]}/${p[1]}/${p[2]}/applied/${id}` : null; };
 /** 보관함에 넣을 경로인가 (학생 자기 칸 · 실시간 방 · 게시판 · 학교 칸은 뺌) */
 export const queued = (path: string) => (OUT_ROOTS as readonly string[]).includes(split(path)[0] ?? '');
 /** 세 갈래 합치기 — 서버가 그새 바뀌었을 때 (s = 지금 서버 · base = 폰이 쓰기 전에 알던 값 · v = 폰이 쓴 값) */
@@ -58,6 +60,8 @@ let seq = 0;
 export interface Outbox {
   /** 쓰기 하나 넣기 → 그 줄 id (같은 경로 · 같은 사람 = 한 줄로 합침 · 위 경로를 쓰면 아래 줄은 그 안으로) */
   put(path: string, v: unknown, base: unknown, who: string, now: number): string;
+  /** 🐞 #83-10 더하기 줄 (줄마다 따로 · 합치지 않음) */
+  putInc(path: string, n: number, who: string, now: number): string;
   /** 서버 확인 → 지움 (그 사이 같은 경로를 또 썼으면 그 줄은 남김) */
   done(id: string): void;
   list(who?: string): OutItem[];
@@ -69,11 +73,15 @@ export function makeOutbox(st: OutStorage): Outbox {
   const subs = new Set<() => void>();
   const save = () => { st.save(items); subs.forEach((f) => f()); };
   return {
+    putInc(path, n, who, now) {
+      const id = `i${now.toString(36)}${(seq++).toString(36)}`;
+      items.push({ id, path: split(path).join('/'), v: null, base: null, at: now, who, inc: n }); items = trim(items, now); save(); return id;
+    },
     put(path, v, base, who, now) {
       const p = split(path).join('/');
       const under = (a: string, b: string) => a === b || a.startsWith(b + '/');
       // 이 경로를 감싸는 줄이 있으면 = 그 줄 값 안에 넣음
-      const parent = items.find((x) => x.who === who && under(p, x.path) && x.path !== p);
+      const parent = items.find((x) => x.who === who && !x.inc && under(p, x.path) && x.path !== p);
       if (parent) {
         const rest = split(p.slice(parent.path.length));
         const nv = isObj(parent.v) ? structuredClone(parent.v) : {};
@@ -83,9 +91,9 @@ export function makeOutbox(st: OutStorage): Outbox {
         parent.v = nv; parent.at = now; parent.id = `o${now.toString(36)}${(seq++).toString(36)}`; items = trim(items, now); save(); return parent.id;
       }
       // 이 경로 아래 줄들 = 이번 값이 덮음 → base 는 가장 먼저 알던 값을 살림
-      const kids = items.filter((x) => x.who === who && under(x.path, p));
+      const kids = items.filter((x) => x.who === who && !x.inc && under(x.path, p));
       const same = kids.find((x) => x.path === p);
-      items = items.filter((x) => !(x.who === who && under(x.path, p)));
+      items = items.filter((x) => !(x.who === who && !x.inc && under(x.path, p)));
       const id = `o${now.toString(36)}${(seq++).toString(36)}`;
       // 거울 값(base)에는 아직 안 올라간 아래 줄 값이 섞여 있음 → 그 칸은 아래 줄이 알던 처음 값으로 되돌림
       let b0: unknown = same ? same.base : base ?? null;
