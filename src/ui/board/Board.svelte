@@ -343,7 +343,7 @@
         </section>
         {@const openN = LESSONS.filter((p) => isOpen(p) && !(stars[p.no] ?? 0)).length}{#if openN}<p class="rift" data-k="board-rifts">🌀 아직 열려 있는 균열 {openN}곳</p>{/if}
         {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}
-          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}<div class="qhero" data-k="board-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(sel.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="board-hero" onclick={() => (pickHero = true)}>🧙 용사 바꾸기</button></div></div>
+          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><button type="button" class="hchip" class:weak={bossOf(sel.no).weak.includes(famOf(me.hero))} data-k="board-hero" aria-label="용사 바꾸기 · 지금 {heroOf(me.hero).name}" onclick={() => (pickHero = true)}>🧙 {heroOf(me.hero).name}{bossOf(sel.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''} ›</button><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}</div>
         {/if}
         {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
         {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
@@ -429,6 +429,7 @@
 
 {#if pickHero && (pickNo ?? 0)}<HeroPick ids={heroIds} owned={ownH} boss={bossOf(pickNo ?? 0)} cur={me.hero} lv={growM.lv} enh={growM.enh} awk={!!growM.awk} tierOf={(id) => tierOf(id, me.socket?.[id] || (ladder(id)[0] as string | undefined))} fxOf={(id) => me.socket?.[id] || (ladder(id)[0] as string)} onpick={choseHero} onclose={() => (pickHero = false)} />{/if}
 <style>
+  .hchip { margin-left: auto; min-height: 36px; padding: 0 10px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px var(--font); white-space: nowrap; } .hchip.weak { border-color: var(--accent); }
   .qhero { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .qhero span { flex: 1; font: 600 14px var(--font); color: var(--text); } .qhero .btn2.sm { min-height: 44px; }
   /* 🎯 #79 차시 정복 지도 · 오답 막대 · 명성 */
   .gmap { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--r); background: var(--surface-2); }

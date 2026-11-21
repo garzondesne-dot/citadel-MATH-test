@@ -24,7 +24,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const A = await open(); await signup(A, CLS, 1); await board(A);
   await A.click('[data-map="6"]'); await wait(300);
   const h0 = await rest(`accounts/${CLS}/1/hero`);
-  ok('고른 차시 카드에 「🧙 용사 바꾸기」 · 지금 용사 줄', !!(await A.$('[data-k="board-hero"]')) && !!(await A.$('[data-k="board-hero-row"]')));
+  ok("고른 차시 카드 위 「🧙 지금 용사 ›」 칩", !!(await A.$("[data-k=\"board-hero\"]")));
   await A.click('[data-k="board-hero"]'); await A.waitForSelector('[data-k="atb-pick"]', { timeout: 5000 }).catch(() => {});
   const cells = await A.$$eval('[data-k="atb-pick"] .cell', (x) => x.map((e) => ({ id: Number(e.getAttribute('data-id')), lock: e.classList.contains('lock'), weak: !!e.querySelector('.wk') })));
   ok('창 = 용사 격자 · 못 가진 칸 잠김 · 약점 리본', cells.length > 5 && cells.some((c) => c.lock) && cells.some((c) => !c.lock), `칸 ${cells.length} · 잠김 ${cells.filter((c) => c.lock).length} · 약점 ${cells.filter((c) => c.weak).length}`);
