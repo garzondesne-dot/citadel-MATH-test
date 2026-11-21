@@ -272,7 +272,7 @@
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {:else if result && R && !board && !paperOn()}
   <!-- 🎒 수업 결과 위 = 던전 배경 + 내 용사 승리 자세(오라) + 띠 (📜 2026-11-15 ⑦) -->
-  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />
+  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) && (!result.boss || (result.boss.items > 0 && result.boss.ok >= result.boss.items)) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />
 {:else if talk && R && !board}
   <!-- 📣 도입 · 개념 (📜 2026-11-15 선생님 「빈 화면 · 고장 난 것 같아」): 위 = 그 차시 던전 배경 + 내 용사(오라 · 숨쉬기) + 설명 중 띠 · 몬스터 단계와 같은 장면 부품 -->
   <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} note="👩‍🏫 선생님 설명 중 · TV 를 봐요" />
