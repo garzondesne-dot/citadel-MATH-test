@@ -12,8 +12,8 @@ const log = (...a) => console.log(...a);
     p.on('pageerror', (e) => errs.push(String(e)));
     await p.goto(B + `?role=camp&room=SR${W}`); await p.waitForSelector('.stage');
     await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');
-    await p.click('.bd .chips button:has-text("7")'); await p.click('.bd .pmain'); await p.waitForSelector('.lgrid');
-    await p.click('.lg:has-text("7")'); await p.click('.sheet .pmain'); await p.waitForSelector('.minions', { timeout: 15000 }); await p.waitForTimeout(500);
+    await p.click('[data-map=\"7\"]'); await p.click('.bd .pmain');
+    await p.waitForSelector('.minions', { timeout: 15000 }); await p.waitForTimeout(500);
     const m = await p.evaluate(() => {
       const r = (x) => x.getBoundingClientRect(), hero = r(document.querySelector('.edge .hero')), mins = [...document.querySelectorAll('.edge .mini')].map(r), boss = r(document.querySelector('.edge .mon'));
       const over = (a, c) => Math.max(0, Math.min(a.right, c.right) - Math.max(a.left, c.left)) * Math.max(0, Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top));

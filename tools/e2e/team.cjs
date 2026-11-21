@@ -29,7 +29,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const board = async (p) => { await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(500); };
   for (const p of [A, Bp, C]) await board(p);
   // A ＋ 모집 글
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); for (const d of '1357') await A.click(`.sheet .rune-keys button:has-text("${d}")`); await A.click('.sheet .act .btn'); await A.waitForTimeout(1500);
+  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await A.waitForTimeout(1500);
   const posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0]; log('＋ 모집 글:', pid, JSON.stringify(Object.values(posts[pid].mem).map((m) => `${m.cls}:${m.role}`)));
   await Bp.waitForSelector('.bd .post', { timeout: 10000 }); log('⑥ B 게시판:', (await Bp.textContent('.bd .post')).replace(/\s+/g, ' ').trim()); await Bp.screenshot({ path: `${SHOTS}/b32-board-post.png` });
   await Bp.click('.bd .post .go'); await Bp.waitForSelector('.sheet .rune-keys'); for (const d of '1357') await Bp.click(`.sheet .rune-keys button:has-text("${d}")`); await Bp.click('.sheet .act .btn'); await C.waitForSelector('.bd .post'); await C.click('.bd .post .go'); await C.waitForSelector('.sheet .rune-keys'); for (const d of '1357') await C.click(`.sheet .rune-keys button:has-text("${d}")`); await C.click('.sheet .act .btn'); await wait(1200);
@@ -77,7 +77,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await A.click('[data-k="board-back"]'); await wait(1200);
   const fd = await A.$$eval('[data-k="board-feed"] .fl', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim())).catch(() => []);
   log('📣 최근 전투:', fd.join(' | ')); if (!fd.length || !/6차시 · 3인 · S/.test(fd[0]) || !/나 ·/.test(fd[0]) || /로안/.test(fd[0])) errs.push('최근 전투 한 줄(익명)');
-  const chipT = await A.$eval('.bd .chips button:nth-child(2)', (x) => x.textContent.trim()); log('   차시 칩:', chipT); if (!/차시$/.test(chipT)) errs.push('차시 칩 「n차시」');
+  const tabT = await A.$$eval('.bd .btabs button', (x) => x.map((e) => e.textContent.trim()).join('|')).catch(() => ''); log('   탭:', tabT); if (!/출정/.test(tabT)) errs.push('게시판 탭 「🗺 출정」');
   await A.click('[data-k="board-rank-open"]'); await wait(800);
   const pos = await A.$eval('[data-k="board-mypos"]', (x) => x.textContent.trim()); await A.screenshot({ path: `${SHOTS}/b32-board-rank.png` });
   await A.click('.tabs3 button:has-text("내 기록")'); await wait(400); const myr = await A.$$eval('[data-k="board-myruns"] .rr', (xs) => xs.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));

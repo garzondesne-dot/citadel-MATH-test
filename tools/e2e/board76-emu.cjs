@@ -22,7 +22,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   const rune = async (p, s) => { for (const d of s) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
   const A = await open(); await signup(A, '1-3', 1); const Bp = await open(); await signup(Bp, '1-3', 2);
   await board(A); await board(Bp);
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0], hostA = posts[pid].host;
   ok('모집 글 = act · 방장 숨(seen)', !!posts[pid].act && !!posts[pid].mem[hostA].seen);
   await Bp.waitForTimeout(800); await Bp.click('.post .go'); await wait(1500);

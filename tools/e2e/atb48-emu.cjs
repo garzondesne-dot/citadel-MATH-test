@@ -22,7 +22,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const ps = []; for (let i = 1; i <= N; i++) { const p = await open(); await signup(p, CLS, i); await board(p); ps.push(p); }
   const [A, ...others] = ps;
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
   for (const p of others) { await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await p.click('.post .go'); await wait(1200); }
   for (const p of others) { const r = await p.$('button:has-text("준비")'); if (r) await r.click().catch(() => {}); await wait(600); }
@@ -54,8 +54,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const war = await rest(`classWar/${wk(Date.now())}/sum/${CLS}`);
   if (BETA) ok('🧪 테스트 반 = 반 공적 없음', !war, String(war)); else ok('반 공적 = 모두의 공적 합', war === msum && msum > 0, `${war} / ${msum}`);
   const ph = await rest(`school/board/posts/${pid}/phase`); ok('글 done', ph === 'done', ph);
-  const back = await Promise.all(ps.map((p) => p.$('[data-k="war-bar"]').then(Boolean)));
-  ok('모든 폰 게시판으로 돌아옴 (기사단 막대)', back.every(Boolean), back.join(','));
+  const back = await Promise.all(ps.map((p) => p.$('[data-k="board-map"]').then(Boolean)));
+  ok('모든 폰 게시판으로 돌아옴 (출정 지도)', back.every(Boolean), back.join(','));
   await A.screenshot({ path: `${SHOTS}/atb48-back-A.png` });
   await b.close(); console.log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();

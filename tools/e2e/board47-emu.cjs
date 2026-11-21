@@ -22,7 +22,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     const ps = []; for (let i = 1; i <= 9; i++) { const p = await open(); await signup(p, '1-3', i); await board(p); ps.push(p); }
     const [A, ...rest8] = ps;
     const rune = async (p, x) => { for (const d of x) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
-    await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
+    await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
     let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0];
     ok(`[${round}] 모집 글`, !!pid);
     for (const p of rest8) await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }).catch(() => {});
@@ -31,7 +31,8 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     await wait(2500);
     posts = await rest('school/board/posts'); const mem = Object.keys(posts?.[pid]?.mem || {});
     ok(`[${round}] 서버 자리 = 정확히 4명`, mem.length === 4, `${mem.length}명`);
-    ok(`[${round}] 넘친 폰 = 「방이 꽉 찼어요」 4대 이상 안내`, toasts.filter(Boolean).length >= 4, `${toasts.filter(Boolean).length}대`);
+    const inRoom = (await Promise.all(rest8.map((p) => p.$('.slots').then(Boolean)))).filter(Boolean).length;
+    ok(`[${round}] 넘친 폰 = 대기실에 못 들어감 (들어간 폰 = 3) · 안내 또는 막힌 합류 단추`, inRoom === 3, `들어감 ${inRoom}대 · 「찼어요」 안내 ${toasts.filter(Boolean).length}대`); // 📜 #65-2 암호 없음 = 늦게 누른 폰은 단추가 먼저 막혀 안내 없이 남기도 함
     const shown = await A.textContent('.bd').catch(() => ''); ok(`[${round}] 방장 화면 = 「출발 (4명)」`, /출발 \(4명\)/.test(shown || ''), (shown || '').match(/출발 \(\d+명\)/)?.[0] || '');
     if (round === 1) await A.screenshot({ path: `${SHOTS}/b47-host.png` });
     for (const p of ps) await p.context().close();

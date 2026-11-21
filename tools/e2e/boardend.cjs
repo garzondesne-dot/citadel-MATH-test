@@ -6,7 +6,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const b = await chromium.launch(), errs = [], out = [];
   const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
   const p = await (await b.newContext({ viewport: { width: 360, height: 640 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
-  const start = async () => { await p.click('.bd .chips button:has-text("6")'); await p.click('.bd .act .btn'); await p.waitForSelector('.lgrid'); await p.click('.sheet .act .btn'); await p.waitForSelector('.run'); await p.waitForTimeout(1500); };
+  const start = async () => { await p.click('[data-map=\"6\"]'); await p.click('.bd .act .btn'); await p.waitForSelector('.run'); await p.waitForTimeout(1500); };
   const solveAll = async () => { for (let k = 0; k < 20; k++) { if (await p.$('[data-k="board-endov"]')) return; await p.evaluate(() => window.__board?.solve()); await p.waitForTimeout(700); } };
   await p.goto(B + '?role=camp&room=BE1'); await p.waitForSelector('.stage');
   await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');

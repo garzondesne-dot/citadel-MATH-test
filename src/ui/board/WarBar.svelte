@@ -20,7 +20,7 @@
 {#if line}
   <div class="wl" data-k="war-line">
     {#if king}<span class="k">👑 {king.crest} {king.name}</span>{/if}
-    <span>⚔ 토벌 주간{#if mine} · 우리 {mine.crest} {mine.rank}위{/if} · 남은 {left}일</span>
+    <span>⚔ 남은 {left}일{#if mine} · 우리 반 {mine.crest} {mine.rank}위 · 공적 {mine.pts.toLocaleString()}{/if}</span><!-- #66-2 「⚔ 남은 n일 · 우리 반 n위 · 공적 n」 -->
   </div>
 {:else if rows.length}
   <section class="wb" data-k="war-bar" aria-label="기사단 토벌 주간">
