@@ -139,7 +139,7 @@
       giftToast = `${oneFun ? oneFun : fresh.every(([k]) => k.startsWith('stamp_')) ? '✅ 수업 도장' : funOnly ? (fresh.every(([k]) => k.startsWith('ult_')) ? '🌟 진필살기 서술' : '🏕 쉼터 놀이') : '🎁 선생님 선물'}${sum - petri + petriGot ? ` · 💎 +${sum - petri + petriGot}` : ''}${sc ? ` · 📜 +${sc}` : ''}${xp ? ` · EXP +${xp}` : ''}`;
       setTimeout(() => (giftToast = ''), 2600);
     } };
-    if (u && fresh0.length) { const S0 = untrack(() => S); if (S0.kind === 'server') void Promise.all(fresh0.map(async ([k, x]) => ((await claimOnce(S0, u, k)) ? ([k, x] as (typeof fresh0)[number]) : null))).then((r) => take(r.filter((v): v is (typeof fresh0)[number] => !!v))); else take(fresh0); }
+    if (u && fresh0.length) { const S0 = untrack(() => S); if (S0.kind === 'server') void Promise.all(fresh0.map(async ([k, x]) => { const c = await claimOnce(S0, u, k, () => take([[k, x]] as typeof fresh0)); return c && c !== 'later' ? ([k, x] as (typeof fresh0)[number]) : null; })).then((r) => take(r.filter((v): v is (typeof fresh0)[number] => !!v))); /* 🐞 #83-11 끊겨 늦게 받힌 선물 = 그때 지갑에 */ else take(fresh0); }
   }
   // ✉ 선생님 메시지 · 답장 (#130 · 테스트 판 = 학생 우편함 대신 폰 알림 한 줄) — 안 본 것을 읽음으로 · 붙은 💎 는 지갑에
   let mailToast = $state('');
@@ -199,10 +199,14 @@
   const mailN = $derived.by(() => { void mbG.v.val; void mbN.v.val; void mv.v.val; void mbVer; return mbWho ? mailUnread(mailInbox(S, mbWho.uid, mbWho.cls), mbSeen) : 0; });
   async function mailTake(id: string): Promise<string> {
     if (!mbWho) return '';
-    const got = S.kind === 'server' ? await claimOnce(S, mbWho.uid, id) : mailClaim(S, mbWho.uid, id); if (!got) return '이미 받은 선물이에요'; // 🐞 11/20 ② 서버 = transaction (폰 두 대 동시 = 한 번만)
-    const n = got.petri ? earnDaily(me.wallet, got.g, kstDay(S.now()), GEM.dayCap) : (me.wallet.gem += got.g, got.g); // 🗿 석화 = 하루 한도 안 (캠프 받기와 같음)
-    me.wallet.scroll += got.s; me.xp += got.x; M.save(); mbVer++; sfx('mail', 0.6);
-    return `🎁 받았어요${n ? ` · 💎 +${n}` : ''}${got.s ? ` · 📜 +${got.s}` : ''}${got.x ? ` · EXP +${got.x}` : ''}`;
+    const put = (got: { g: number; s: number; x: number; petri: boolean }) => {
+      const n = got.petri ? earnDaily(me.wallet, got.g, kstDay(S.now()), GEM.dayCap) : (me.wallet.gem += got.g, got.g); // 🗿 석화 = 하루 한도 안 (캠프 받기와 같음)
+      me.wallet.scroll += got.s; me.xp += got.x; M.save(); mbVer++; sfx('mail', 0.6);
+      return `🎁 받았어요${n ? ` · 💎 +${n}` : ''}${got.s ? ` · 📜 +${got.s}` : ''}${got.x ? ` · EXP +${got.x}` : ''}`;
+    };
+    const got = S.kind === 'server' ? await claimOnce(S, mbWho.uid, id, (c) => { mailToast = put(c); setTimeout(() => (mailToast = ''), 2600); }) : mailClaim(S, mbWho.uid, id); if (!got) return '이미 받은 선물이에요'; // 🐞 11/20 ② 서버 = transaction (폰 두 대 동시 = 한 번만)
+    if (got === 'later') return '⏳ 인터넷이 이어지면 받아요 · 받으면 지갑에 저절로 들어가요'; // 🐞 #83-11
+    return put(got);
   }
   // 🏕 캠프 A (📜 2026-11-15 선생님 「A안으로 하되 게시판 던전에서 방이 개설되면 포털 열려서 참여해 보도록 포털에 이펙트도 넣고 게시판 빛나고」 · DECISIONS 맨 아래)
   //   할 일 있는 물건만 금빛 숨쉬기 + 말풍선 + 별 하나 · 할 일 없는 물건 = 흐림(0.55) · 아무 할 일도 없으면 빛 · 말풍선 · 흐림 없음

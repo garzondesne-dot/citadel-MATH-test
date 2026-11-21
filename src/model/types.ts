@@ -187,7 +187,7 @@ export interface Store {
   /** 🐞 11/20 ② 수 칸에 더하기 (서버 = increment · 두 기기가 같이 써도 서로 지우지 않음) */
   add?(path: string, n: number): void;
   /** 🐞 11/20 ② 그 칸을 서버 최신 값에서 고쳐 씀 (서버 = transaction) · fn 이 undefined 를 돌려주면 그만둠 */
-  tx?<T = unknown>(path: string, fn: (cur: T | null) => T | null | undefined): Promise<boolean>;
+  tx?<T = unknown>(path: string, fn: (cur: T | null) => T | null | undefined, /** 기다릴 ms (기본 8000 · 0 = 서버 답이 올 때까지 · 🐞 #83-11 선물 받기) */ ms?: number): Promise<boolean>;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──

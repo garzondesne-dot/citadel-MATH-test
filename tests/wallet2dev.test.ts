@@ -58,8 +58,23 @@ describe('🐞 ② 선물 받기 = 한 번만', () => {
     const S = memoryStore(); S.set('gifts/s1_2_7/g1', { g: 30, at: 1, got: false, hold: true });
     const { claimOnce } = await import('../src/school/mailbox');
     const [a, b] = await Promise.all([claimOnce(S, 's1_2_7', 'g1'), claimOnce(S, 's1_2_7', 'g1')]);
-    expect([a, b].filter(Boolean)).toHaveLength(1); expect((a || b)!.g).toBe(30);
+    expect([a, b].filter(Boolean)).toHaveLength(1); expect(((a || b) as { g: number }).g).toBe(30);
     expect(S.get('gifts/s1_2_7/g1/got')).toBe(true);
     expect(await claimOnce(S, 's1_2_7', 'g1')).toBeNull();
+  });
+  it('🐞 #83-11 서버 답이 8초 넘게 늦음 = 「later」 · 나중에 이 폰이 받으면 그때 onLate (선물을 잃지 않음)', async () => {
+    vi.useFakeTimers();
+    const tree: Record<string, unknown> = { 'gifts/u/g2': { g: 50, at: 1 } };
+    let finish: (() => void) | null = null;
+    const S = { kind: 'server', get: (p: string) => (tree[p] ?? null), set: () => {}, watch: () => () => {}, now: () => 0,
+      tx: (p: string, fn: (c: unknown) => unknown, ms?: number) => { expect(ms).toBe(0); return new Promise<boolean>((res) => { finish = () => { tree[p] = fn(null); res(true); }; }); } } as never;
+    const { claimOnce } = await import('../src/school/mailbox');
+    const got: number[] = [];
+    const pr = claimOnce(S, 'u', 'g2', (c) => got.push(c.g));
+    await vi.advanceTimersByTimeAsync(8100);
+    expect(await pr).toBe('later'); expect(got).toEqual([]);
+    finish!(); await vi.advanceTimersByTimeAsync(1);
+    expect(got).toEqual([50]);
+    vi.useRealTimers();
   });
 });

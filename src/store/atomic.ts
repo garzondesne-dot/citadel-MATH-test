@@ -18,7 +18,7 @@ export function addTo(S: Store, path: string, n: number): void {
   S.set(path, (Number(S.get(path)) || 0) + n);
 }
 /** 최신 값에서 고쳐 쓰기 (fn = undefined 면 안 씀) */
-export async function txOn<T>(S: Store, path: string, fn: (cur: T | null) => T | null | undefined): Promise<boolean> {
-  if (S.tx) return S.tx<T>(path, fn);
+export async function txOn<T>(S: Store, path: string, fn: (cur: T | null) => T | null | undefined, ms?: number): Promise<boolean> {
+  if (S.tx) return S.tx<T>(path, fn, ms);
   const v = fn(S.get<T>(path)); if (v === undefined) return false; S.set(path, v); return true;
 }

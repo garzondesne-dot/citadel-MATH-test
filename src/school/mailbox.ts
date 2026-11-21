@@ -53,12 +53,19 @@ export function claim(S: Store, uid: string, id: string): { g: number; s: number
   return { g: Number(x.g) || 0, s: Number(x.s) || 0, x: Number(x.x) || 0, petri: id.startsWith('petri_') };
 }
 /** 🐞 11/20 ② 받기 = 서버에서 got 을 transaction 으로 (폰 두 대가 같은 순간 눌러도 한 번만) → 받은 { g, s, x } · 이미 받았으면 null */
-export async function claimOnce(S: Store, uid: string, id: string): Promise<{ g: number; s: number; x: number; petri: boolean } | null> {
+export type Claimed = { g: number; s: number; x: number; petri: boolean };
+/** 🎁 선물 한 번만 받기 (서버 transaction · 폰 두 대 동시 = 한 번) — 🐞 #83-11: 서버 답을 끝까지 기다림.
+ *  8초 안에 답이 없으면(끊김) 'later' 를 돌려주고, 나중에 서버가 「이 폰이 받음」으로 끝내면 그때 onLate(받은 것) → 지갑에 넣음 (예전 = 「못 받음」 뒤 서버가 got 만 써서 선물을 잃음) */
+export async function claimOnce(S: Store, uid: string, id: string, onLate?: (c: Claimed) => void): Promise<Claimed | null | 'later'> {
   const p = `gifts/${uid}/${id}`, x = S.get<Gift>(p);
   if (!x || x.got) return null;
   let mine = false;
-  const ok = await txOn<boolean>(S, `${p}/got`, (cur) => { if (cur) { mine = false; return undefined; } mine = true; return true; });
+  const out: Claimed = { g: Number(x.g) || 0, s: Number(x.s) || 0, x: Number(x.x) || 0, petri: id.startsWith('petri_') };
+  const run = txOn<boolean>(S, `${p}/got`, (cur) => { if (cur) { mine = false; return undefined; } mine = true; return true; }, 0);
+  const late = Symbol('late');
+  const ok = await Promise.race([run, new Promise<typeof late>((r) => setTimeout(() => r(late), 8000))]);
+  if (ok === late) { void run.then((done) => { if (done && mine) onLate?.(out); }); return 'later'; }
   if (!ok || !mine) return null;
-  return { g: Number(x.g) || 0, s: Number(x.s) || 0, x: Number(x.x) || 0, petri: id.startsWith('petri_') };
+  return out;
 }
 export const md = (t: number) => { const d = new Date(Number(t) + 9 * 3600e3); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
