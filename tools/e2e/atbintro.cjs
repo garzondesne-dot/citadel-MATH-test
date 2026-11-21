@@ -21,6 +21,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.waitForTimeout(500); ok('① 조우 = 어둡게 · 보스 이름 띠 · 보스 쿵', (await phase(p)) === 'meet' && !!(await p.$('[data-k="atb-intro-name"]')) && !!(await p.$('.boss.drop')), await p.textContent('[data-k="atb-intro-name"]'));
   await p.screenshot({ path: `${SHOTS}/atb-r69-meet-844.png` });
   await p.waitForTimeout(2400); ok('① 정찰 카드', (await phase(p)) === 'scout' && !!(await p.$('[data-k="atb-scout"]')));
+  ok('#64 조우 = 등장 대사', /뒤집어도/.test(await p.textContent('[data-k="atb-intro-line"]')), await p.textContent('[data-k="atb-intro-line"]'));
   const card = await p.textContent('[data-k="atb-scout"]');
   ok('① 카드 = 약점 · 공격 3종 → 탱커 · 서포터 · 딜러 · 내 임무 · 분노 30%', /약점/.test(card) && /탱커/.test(card) && /서포터/.test(card) && /딜러/.test(card) && /내 임무/.test(card) && /30%/.test(card), card.replace(/\s+/g, ' ').slice(0, 160));
   ok('① 정찰 = 10초 남음 표시', /⏳ (9|10)초/.test(await p.textContent('[data-k="atb-scout-left"]')));
@@ -29,8 +30,15 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-scout-go"]'); await p.waitForTimeout(300); ok('① 준비 완료 = 바로 3 · 2 · 1', (await phase(p)) === 'count', await p.textContent('[data-k="atb-intro-count"]'));
   await p.screenshot({ path: `${SHOTS}/atb-r69-count-844.png` });
   await p.waitForTimeout(3300); ok('① 셈 끝 = 전투 (시간 흐름)', (await phase(p)) === 'fight' && (await t(p)) > 0);
+  // 💬 #64 보스 대사: 분노 · 쓰러질 때
+  await p.evaluate(() => { const S = globalThis.__atb.S; S.evN++; S.ev.push({ k: 'rage', t: S.t, on: 'rage', n: S.evN }); }); await p.waitForTimeout(1300);
+  const rs = await p.textContent('[data-k="atb-boss-say"][data-say="rage"]').catch(() => ''); ok('#64 분노 = 보스 말풍선', /숨만 고르면/.test(rs), rs);
+  await p.screenshot({ path: `${SHOTS}/atb-r64-rage-844.png` });
   // 판 끝 = 이 차시 만남 기록
-  await p.evaluate(() => { const S = globalThis.__atb.S; S.end = { win: true, why: '', t: S.t }; }); await p.waitForTimeout(600);
+  await p.waitForTimeout(2000); await p.evaluate(() => { const S = globalThis.__atb.S; S.end = { win: true, why: '', t: S.t }; }); await p.waitForTimeout(600);
+  const ds = await p.textContent('[data-k="atb-boss-say"][data-say="down"]').catch(() => ''); ok('#64 이김 = 「쓰러질 때」 말풍선 (결과 직전)', /숨이 닿지/.test(ds), ds);
+  await p.screenshot({ path: `${SHOTS}/atb-r64-down-844.png` }); await p.waitForTimeout(2600);
+  ok('#64 말풍선 뒤 결과 화면 · 연습방 = 공적 없음 문구', !!(await p.$('[data-k="atb-nomerit"]')), await p.textContent('[data-k="atb-nomerit"]').catch(() => ''));
   ok('① 판 끝 = 만남 기록 (atb-met:6)', (await p.evaluate(() => localStorage.getItem('atb-met:6'))) === '1');
 
   // ② 같은 차시 다시 = 짧게

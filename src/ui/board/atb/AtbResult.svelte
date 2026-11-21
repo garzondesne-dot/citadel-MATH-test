@@ -74,9 +74,10 @@
     <div class="pin">
       {#if end}
         <!-- 📡 📜 요청 #51 게시판 판 = 🚩 우리 기사단 공적 · 💎 예상(베타 = 지급 안 함) · ⭐ 새 별 · ⭐3 차시 = 절반 -->
+        {#if trial}<p class="note" data-k="atb-nomerit">연습 판이에요 · 공적은 쌓이지 않아요</p>{/if}
         {#if !trial}<details class="merit" data-k="atb-merit"><summary>🚩 우리 기사단 +{end.meritSum} 공적</summary><p>클리어 +{end.merit.clear} · 새 별 +{end.merit.star} · 한 번에 맞힘 +{end.merit.first} · 막기 · 구조 · 브레이크 +{end.merit.act} · 임무 +{end.merit.role}</p></details>{/if}
-        {#if end.newStars}<p class="row" data-k="atb-newstar"><span>⭐ 새 별 +{end.newStars}</span><b>💎 +{end.gem.star}</b></p>{/if}
-        {#if end.full}<p class="note" data-k="atb-full">⭐3 다 모았어요 · 보상 절반 → 다른 차시로!</p>{/if}
+        {#if end.newStars}<p class="row" data-k="atb-newstar"><span>⭐ 새 별 +{end.newStars}{#if !trial} · 공적 +{end.merit.star}{/if}</span><b>💎 +{end.gem.star}</b></p>{/if}
+        {#if end.full}<p class="note" data-k="atb-full">이 균열은 다 닫았어요 · 보상이 절반이에요</p>{/if}
         <p class="rw" data-k="atb-reward">{trial ? '💎 체험판 · 받지 않음' : '💎 예상 보상 (베타 · 아직 받지 않음)'}</p>
         <p class="row"><span>맞힌 소문항 ×3 (최대 30)</span><b>💎 +{end.gem.items}</b></p>{#if end.gem.clear}<p class="row"><span>클리어</span><b>💎 +{end.gem.clear}</b></p>{/if}{#if end.gem.guard}<p class="row"><span>수호</span><b>💎 +{end.gem.guard}</b></p>{/if}
         <p class="sum" style:background-image="url({R('res-total-bar')})"><span>합계</span><b>💎 {end.gemSum}</b></p>
@@ -88,7 +89,7 @@
       <p class="ms" style:background-image="url({R('res-title-plate')})">{no}차시 숙련</p>
       <div class="medals" data-k="atb-medals">{#each STEPS as s, i (s)}<span class="md" class:on={mastery >= s}><img src={R(mastery >= s ? `res-medal-${MEDAL[i]}` : 'res-medal-empty')} alt="" /><b>{s}판</b></span>{/each}</div>
       <i class="mbar"><b style:width="{Math.min(100, (mastery / nextStep) * 100)}%"></b><span>{mastery} / {nextStep}</span></i>
-      {#if practice}<p class="note">🧪 교사 연습방 = 💎 · 숙련에 안 셈 · 기록도 서버에 안 남김 (이 폰 연습 승리 {practiceWins}판)</p>{/if}
+      {#if practice}<p class="note" data-k="atb-nomerit">연습 판이에요 · 공적은 쌓이지 않아요</p><p class="note">🧪 교사 연습방 = 💎 · 숙련에 안 셈 · 기록도 서버에 안 남김 (이 폰 연습 승리 {practiceWins}판)</p>{/if}
       {#if deeds.length}<section class="deeds" data-k="atb-deeds"><b>🏅 내 활약</b><ul>{#each deeds as dd (dd)}<li>{dd}</li>{/each}</ul></section>{/if}
     </div>
   </div>
