@@ -32,7 +32,8 @@ export const T = {
   /** ⚡ 충전 (📜 11/20 Y1 · 결정 14절): 원문항(한 문제)을 통째로 맞혀야 충전 · 최대 3 · 퍼펙트(오답 없이) · 재시도(오답 있었음) = ⏳ 임시값(설계 방 최종값 오면 바꿈) */
   charge: { max: 4, perSub: 1, perfect: 1, autoGap: 0.6, perfectOld: 3, retry: 2, /** 📜 요청 #49 찍기 막기 = 소문항 틀린 횟수 → 충전 (0번 1 · 1번 ½ · 2번 이상 0) */ byMiss: [1, 0.5, 0] as readonly number[] }, // 📜 요청 #41 선생님 「소문항 한 개에 충전 칸 한 개」 = 소문항 맞힘마다 +1 · 오답 없이 원문항 끝 = +1 더 · 최대 4 · 넘침 자동 스킬 사이 0.6초 (perfectOld · retry = 옛 값 · 화면 표시 안 씀)
   hitLockMs: 1000, // 📜 요청 #20 ① 몬스터 공격에 맞으면 문제 카드 잠금 1초(보스 HP 절반 아래도 같음)
-  lowHp: 0.3, // 📜 요청 #18 체력 30% 아래 = 위험(빨갛게 깜박 · 🆘)
+  lowHp: 0.3, // 📜 요청 #18 체력 30% 아래 = 위험(빨갛게 깜박 · 🆘) · #75 = 빨강 맥박 1.2초 · 헐떡임 · 내 화면 가장자리
+  lowHp2: 0.15, lowBeat: 1.2, // 📜 요청 #75 15% 아래 = 가장자리 조금 진하게 · 맥박 주기(초)
   chargeStart: 1, // 📜 요청 #6 ③ 판 시작 때 모든 용사 충전 1칸
   autoAtkDelay: 1.0, // 📜 요청 #11 문제 카드를 연 채 ATB 가 차면 이만큼(초) 뒤 자동 일반 공격 · 그 사이 스킬을 톡 할 틈 // 📜 요청 #5 ① 확정 (Y1′ · 모의실험4 「다」)
   /** 💠 스킬 비용 (Y2) */
@@ -51,18 +52,25 @@ export const T = {
   /** ❤ 일반 보스 HP 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ② 봇으로 맞춤) · 연습 · 도전 = × DIFF_MUL.hp */
   bossHpByNo: {
     2: [1030, 1560, 3970, 3690], 3: [930, 1560, 2680, 4270], 4: [1170, 1760, 2210, 4860], 5: [980, 2320, 2780, 5220],
-    6: [810, 1030, 1600, 2350], 7: [750, 1110, 1410, 2450], 8: [930, 1650, 3240, 4360], 9: [850, 1320, 2850, 3970],
+    6: [770, 1220, 2040, 3540], 7: [760, 1320, 1930, 3450], 8: [930, 1650, 3240, 4360], 9: [850, 1320, 2850, 3970],
     10: [1190, 1630, 2120, 3540], 11: [930, 1610, 3080, 4290], 12: [1150, 1590, 3000, 4490], 13: [950, 1600, 2340, 3970],
     14: [880, 1500, 2190, 4560], 15: [930, 1780, 3100, 4240], 16: [770, 1300, 2850, 4070], 17: [870, 1480, 2570, 4470],
   } as Partial<Record<number, [number, number, number, number]>>, // 📜 요청 #57 설정표 v4 = 2 ~ 17 다시 맞춤(차례 고침 · 새 보스 · 12 ~ 17 문제 = 10차시 팩 대신) · 📜 요청 #49 찍기 막기 뒤 5분으로 되돌림(기본 피해 · 배율 · 체력 다시) · 요청 #46 황금 밸런스 2차 (차시 기본 피해 + 인원 배율 1 ~ 2 · 한 방 상한 60% · 봇 응급 힐 35% · 일반 3 · 4인 승률 70% / 1 · 2인 65% · 판 1인 3 · 2인 3.5 · 3인 4.5 · 4인 5분)
+  /** 🔥 도전 HP 배율 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #71 선생님 「도전 4인 승률 30 ~ 40%」 · 1 ~ 3인도 같은 쪽 · 봇으로 맞춤 · 없으면 1) */
+  hardHpByNo: {
+    2: [1.12, 0.93, 0.66, 0.98], 3: [1.06, 0.91, 0.89, 0.76], 4: [1.06, 1.14, 1.14, 0.87], 5: [1.19, 0.91, 0.9, 0.83],
+    6: [1.2, 1.07, 0.85, 0.73], 7: [1.18, 0.94, 0.84, 0.73], 8: [1.23, 0.98, 0.82, 0.82], 9: [1.04, 1.05, 0.78, 0.75],
+    10: [1.04, 1.06, 0.88, 0.78], 11: [1.09, 0.92, 0.8, 0.88], 12: [1.01, 0.99, 0.73, 0.75], 13: [1.07, 0.87, 0.78, 0.71],
+    14: [1.15, 0.93, 0.82, 0.68], 15: [1.14, 0.87, 0.81, 0.87], 16: [1.04, 0.94, 0.87, 0.85], 17: [1.11, 0.86, 0.91, 0.84],
+  } as Partial<Record<number, [number, number, number, number]>>, // 봇 200판: 4인 31 ~ 43% · 1 ~ 3인 28 ~ 45% (× DIFF_MUL.hard.hp 1.1 위에)
   /** 👹 보스 기본 피해 차시별 (📜 요청 #46 선생님 고름 2026-11-21 ②) = 피해 있는 공격 모두에 곱함 · 피해 0 공격(수면 · 물결 · 어둠 · 거울빛)이 많은 차시는 크게 → 아래 인원 배율은 1 ~ 2배 안 */
-  bossAtkByNo: { 2: 1.17, 3: 1.25, 4: 3.42, 5: 1.37, 6: 2.94, 7: 2.83, 8: 2.04, 9: 3.3, 10: 3.15, 11: 1.94, 12: 3.06, 13: 2.73, 14: 3, 15: 1.25, 16: 2.3, 17: 2.26 } as Partial<Record<number, number>>,
+  bossAtkByNo: { 2: 1.17, 3: 1.25, 4: 3.42, 5: 1.37, 6: 3.11, 7: 3.11, 8: 2.04, 9: 3.3, 10: 3.15, 11: 1.94, 12: 3.06, 13: 2.73, 14: 3, 15: 1.25, 16: 2.3, 17: 2.26 } as Partial<Record<number, number>>,
   /** 🛡 보스 한 번 공격 피해 상한 = 그 용사 최대 체력의 60% (요청 #46 ① · 광역 · 분노 포함 · 반응 막기 · 결계 · 엄호 계산 뒤) = 한 방 쓰러짐 없음 */
   oneHitCap: 0.6,
   /** 👹 보스 공격 배율 차시별 (인원 1 · 2 · 3 · 4 · 📜 요청 #5 ③ 「HP 만으로 안 맞으면 그 보스 공격 숫자」 · 없으면 1) */
   bossHitByNo: {
     2: [1, 1, 1.62, 1.99], 3: [1.33, 1, 1.73, 1.76], 4: [1, 1, 1.93, 2], 5: [1.31, 1, 1.64, 1.55],
-    6: [1.01, 1, 1.96, 2], 7: [1.09, 1, 2, 2], 8: [1.35, 1, 1.7, 1.64], 9: [1, 1, 1.65, 2],
+    6: [1, 1, 1.82, 2], 7: [1, 1.01, 1.89, 2], 8: [1.35, 1, 1.7, 1.64], 9: [1, 1, 1.65, 2],
     10: [1.1, 1, 1.8, 1.73], 11: [1, 1, 1.78, 2], 12: [1, 1, 1.89, 2], 13: [1, 1, 1.92, 2],
     14: [1, 1, 1.92, 2], 15: [1, 1, 1.82, 1.94], 16: [1, 1, 1.66, 2], 17: [1, 1, 2, 2],
   } as Partial<Record<number, [number, number, number, number]>>,
@@ -129,7 +137,7 @@ export const BOSSES: Record<number, BossCfg> = {
   4: { no: 4, name: '서리 늑대', sprite: 'crown7:0', flip: { down: true }, weak: ['flame', 'wisdom'], type: '방어형', cycle: ['ice', 'confuse', 'aoe'], tele: 'foot', sig: 'iceArmor', signature: '얼음 갑옷', shieldDmg: 0.2, rageSpecial: 'confuse', rageMod: { refreeze: true } },
   5: { no: 5, name: '흑요석 미노타우로스', sprite: 'extra9:0', flip: { attack: true, down: true }, weak: ['nature', 'wisdom'], type: '공격형(광역)', cycle: ['sleep', 'smash', 'fire'], tele: 'foot', sig: 'fireBreath', signature: '화염 숨 모으기', rageSpecial: 'fire', rageMod: { swap: { sleep: 'fire' } } },
   6: { no: 6, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'frost', 'breathAtk'], tele: 'foot', sig: 'breath', signature: '숨 고르기', rageSpecial: 'breathAtk', rageMod: { breathEvery: 20 } },
-  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'wisdom'], type: '회복형', cycle: ['tail', 'frost', 'breathAtk'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)', rageSpecial: 'breathAtk', rageMod: { breathEvery: 20 } },
+  7: { no: 7, name: '청록 드래곤', sprite: 'crown9:0', weak: ['arms', 'flame'], type: '회복형', cycle: ['tail', 'frost', 'breathAtk'], tele: 'foot', sig: 'breath', signature: '숨 고르기 (6차시 이어하기)', rageSpecial: 'breathAtk', rageMod: { breathEvery: 20 } },
   8: { no: 8, name: '부정의 수정 여왕', sprite: 'mirrorboss80:0', weak: ['arms', 'mystic'], type: '교란형', cycle: ['ice', 'darkHit', 'mirror'] /* 📜 요청 #46 선생님 2026-11-21 어둠 = 광역 피해 + 느려짐 (전 dark) */, tele: 'foot', sig: 'mirror', signature: '거울빛', rageSpecial: 'mirror', rageMod: { mirrorBack: 0.4, after: { on: 'mirror', then: 'darkHit' } } },
   9: { no: 9, name: '열쇠 금고 문지기', sprite: 'keyvaultboss0:0', weak: ['wisdom', 'flame'], type: '방어형(속박)', cycle: ['bind', 'mace', 'darkHit'], tele: 'foot', sig: 'lock', signature: '자물쇠', rageSpecial: 'bind', rageMod: { two: { kinds: ['bind'], mul: 1 } } },
   10: { no: 10, name: '필요충분의 천칭 수호자', sprite: 'gardenboss0:0', weak: ['mystic', 'arms'], type: '교란형', cycle: ['scale', 'bind', 'scaleAoe'], tele: 'scale', sig: 'scale', signature: '기우는 저울', rageSpecial: 'bind', rageMod: { late: 2 } },

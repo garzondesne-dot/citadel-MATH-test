@@ -47,9 +47,13 @@
   // 🔊 💎 줄 = 한 줄씩 star · 별 = 하나씩 (요청 #23)
   onMount(() => { const ts = [...rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 700 + i * 350)), ...Array.from({ length: stars }, (_, i) => setTimeout(() => sfx('star-bonus', 0.45), 250 + i * 220))]; return () => ts.forEach(clearTimeout); });
   const n = $derived(S.heroes.length);
+  // 📱 안 돌린 세로 화면일 때만 세로 배치 (Land 가 돌리면 = 가로 그대로 · 📜 #74 ①)
+  const portNow = () => typeof innerHeight === 'number' && innerHeight > innerWidth && !document.querySelector('[data-rot90]');
+  let port = $state(false);
+  $effect(() => { port = portNow(); const f = () => (port = portNow()); addEventListener('resize', f); return () => removeEventListener('resize', f); });
 </script>
 
-<div class="rs" class:lose={!win} data-k="atb-result">
+<div class="rs" class:lose={!win} class:port data-k="atb-result">
   <div class="left">
     <div class="banner" data-k="atb-res-banner" style:background-image="url({R('res-banner')})">
       <h2 class:win>{win ? '승리!' : '아쉬워요'}</h2>
@@ -89,7 +93,7 @@
       <p class="ms" style:background-image="url({R('res-title-plate')})">{no}차시 숙련</p>
       <div class="medals" data-k="atb-medals">{#each STEPS as s, i (s)}<span class="md" class:on={mastery >= s}><img src={R(mastery >= s ? `res-medal-${MEDAL[i]}` : 'res-medal-empty')} alt="" /><b>{s}판</b></span>{/each}</div>
       <i class="mbar"><b style:width="{Math.min(100, (mastery / nextStep) * 100)}%"></b><span>{mastery} / {nextStep}</span></i>
-      {#if practice}<p class="note" data-k="atb-nomerit">연습 판이에요 · 공적은 쌓이지 않아요</p><p class="note">🧪 교사 연습방 = 💎 · 숙련에 안 셈 · 기록도 서버에 안 남김 (이 폰 연습 승리 {practiceWins}판)</p>{/if}
+      {#if practice}<p class="note" data-k="atb-nomerit">연습 판이에요 · 공적은 쌓이지 않아요 <small>(💎 · 숙련 · 서버 기록 없음 · 이 폰 연습 승리 {practiceWins}판)</small></p>{/if}
       {#if deeds.length}<section class="deeds" data-k="atb-deeds"><b>🏅 내 활약</b><ul>{#each deeds as dd (dd)}<li>{dd}</li>{/each}</ul></section>{/if}
     </div>
   </div>
@@ -125,6 +129,7 @@
   .slot small { display: flex; align-items: center; gap: 2px; font: 800 clamp(9px, 2.7cqh, 13px) var(--font-plain); color: #fff; white-space: nowrap; overflow: hidden; }
   .slot small img { height: 1.6em; }
   .paper { position: relative; background: center / 100% 100% no-repeat; min-height: 0; padding: 9% 10% 9% 11%; box-sizing: border-box; color: #3a2614; display: flex; }
+  .pin { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), #0000); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), #0000); padding-bottom: 12px; } /* 🐞 #74 ③ 넘친 줄 = 아래 흐리게(스크롤 있음 표시) */
   .pin { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; overscroll-behavior: contain; }
   .rw { margin: 0; font: 900 12px var(--font); color: #7a5a2a; }
   .row { display: flex; justify-content: space-between; margin: 0; padding: 3px 10px; border-radius: 6px; background: #fbf0d6cc; border: 1px solid #c9a36a; font: 800 clamp(12px, 3.8cqh, 15px) var(--font-plain); }
@@ -147,12 +152,11 @@
   /* 📱 세로 폰(결과 화면은 안 돌림 · 손발 #1 🐞 390 × 844) = 위 승리 띠 · 용사 / 아래 결과 패널 넓게 · 단추 하나면 한 줄 꽉 */
   .b { white-space: nowrap; }
   .btns:has(> .b:only-child) { grid-template-columns: minmax(0, 1fr); justify-items: center; } .btns > .b:only-child { width: min(100%, 440px); }
-  @media (max-aspect-ratio: 1/1) {
-    .rs { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
-    .left { justify-content: flex-start; gap: 10px; }
-    .banner { width: min(100%, 420px); }
-    .paper { padding: 8% 9% 8% 10%; }
-    .row, .merit summary { font-size: 15px; }
-    .sum { font-size: 20px; }
-  }
+  /* 🐞 #74 ① 세로 폰이라도 가로 상자(Land · 90° 돌림) 안이면 가로 배치 그대로 → 안 돌린 세로일 때만 (.port) */
+  .rs.port { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .rs.port .left { justify-content: flex-start; gap: 10px; }
+  .rs.port .banner { width: min(100%, 420px); }
+  .rs.port .paper { padding: 8% 9% 8% 10%; }
+  .rs.port .row, .rs.port .merit summary { font-size: 15px; }
+  .rs.port .sum { font-size: 20px; }
 </style>

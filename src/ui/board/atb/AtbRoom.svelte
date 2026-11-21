@@ -13,6 +13,7 @@
   import { famOf, roleOf, statsOf } from '../../../board/atb/heroes';
   import { bossOf, FAM_NAME, ROLE_NAME, T, type Diff } from '../../../board/atb/tune';
   import AtbBattle from './AtbBattle.svelte';
+  import Land from './Land.svelte';
   import FamShield from './FamShield.svelte';
   import AtbResult from './AtbResult.svelte';
   import HeroPick from './HeroPick.svelte';
@@ -65,10 +66,6 @@
   }
   const mastery = $derived(L ? recs.filter((r) => r.no === L!.no && r.win).length : 0);
   // ── 가로 화면 ──
-  let portrait = $state(typeof innerHeight === 'number' && innerHeight > innerWidth);
-  const onRot = () => (portrait = innerHeight > innerWidth);
-  if (typeof window !== 'undefined') addEventListener('resize', onRot);
-  onDestroy(() => { if (typeof window !== 'undefined') removeEventListener('resize', onRot); });
   async function tryLand() { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.(); await (screen.orientation as unknown as { lock?: (o: string) => Promise<void> }).lock?.('landscape'); } catch { /* iOS · 데스크톱 = 덮개로 안내 */ } }
   const md = (t: number) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
 </script>
@@ -97,13 +94,13 @@
   </main>
 {:else}
 <!-- 🔄 게시판 던전만 가로 (📜 요청 #8): 세로 폰 = 화면 전체를 CSS 로 시계 방향 90° (폰 회전 잠금 그대로 · 눕혀 들기만) · 가로 잠금이 되는 폰 = 안 돌림 · 나오면 원래대로 -->
-<div class="land" class:rot={portrait} data-rot90={portrait ? '' : undefined} data-k="atb-land">
+<Land z={1}>
 {#if phase === 'battle' && S && L}
   {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} {bg} onend={ended} />{/key}
 {:else if phase === 'result' && S && L}
   <AtbResult {S} no={L.no} me={meIdx} mastery={0} practiceWins={mastery} onagain={begin} onswap={() => { phase = 'setup'; picking = -1; }} onexit={() => (phase = 'setup')} />
 {/if}
-</div>
+</Land>
 {/if}
 {#if picking != null && L}
   <HeroPick ids={ALL} owned={() => true} boss={bossOf(L.no)} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor} onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
@@ -126,6 +123,4 @@
   .recs { margin: 0; padding-left: 18px; font: 600 12px var(--font-plain); color: var(--text-2); display: flex; flex-direction: column; gap: 2px; }
   /* 🔄 게시판 던전만 가로 (요청 #8): 안 돌림 = 상자 없음(display: contents) · 돌림 = 화면 오른쪽 위를 축으로 90° · 안의 fixed 화면들은 이 상자 기준
      안전 영역 = 돌린 뒤 왼쪽 = 폰 위(노치) · 오른쪽 = 폰 아래(홈 바) → --safe-l · --safe-r (전투 무대가 씀) */
-  .land { display: contents; --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px); }
-  .land.rot { display: block; position: fixed; top: 0; left: 0; width: 100vh; height: 100vw; width: 100dvh; height: 100dvw; transform-origin: top left; transform: translateX(100vw) rotate(90deg); overflow: hidden; z-index: 1; --safe-l: env(safe-area-inset-top, 0px); --safe-r: env(safe-area-inset-bottom, 0px); }
 </style>

@@ -12,6 +12,7 @@
   import { atbResultFor, type AtbEnd } from '../../../board/atb/net';
   import { levelOf } from '../../../school/reward';
   import AtbBattle from './AtbBattle.svelte';
+  import Land from './Land.svelte';
   import AtbResult from './AtbResult.svelte';
   import { bossArt } from './rdunBoss';
 
@@ -40,10 +41,11 @@
   const out = () => { S = null; end = null; if (start) onclose(); };
 </script>
 
-{#if S && L && !end}
+{#if S && L}<Land>{#if !end}
   {#key runKey}<AtbBattle {L} {S} me={0} {bots} seed={`trial${runKey}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxOf(h.s.hero)]))} {bg} {labels} onend={ended} />{/key}
-{:else if S && L && end}
+{:else}
   <AtbResult {S} no={L.no} me={0} mastery={0} practice={false} trial {labels} {end} onagain={() => begin(L!)} onswap={out} onexit={out} />
+{/if}</Land>
 {:else}
   <div class="tb" role="dialog" aria-label="게시판 던전 체험" data-k="atb-trial">
     <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b>📋 게시판 던전 · 체험</b><span></span></div>

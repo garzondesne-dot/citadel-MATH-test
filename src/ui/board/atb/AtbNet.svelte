@@ -15,6 +15,7 @@
   import { applyAct, atbResultFor, battleOf, decodeSnap, encodeSnap, introDone, isBot, lostSlots, NET, overwrite, pickHost, slotOf, type Act, type AtbEnd, type Meta, type Snap } from '../../../board/atb/net';
   import { bossArt } from './rdunBoss';
   import AtbBattle from './AtbBattle.svelte';
+  import Land from './Land.svelte';
   import AtbResult from './AtbResult.svelte';
 
   const { S: store, pid, uid, names = {}, prevStars = 0, mastery = 0, onend }: {
@@ -102,6 +103,7 @@
   }
 </script>
 
+<Land>
 {#if phase === 'wait' || !G || !L || !meta}
   <div class="netwait" role="status" data-k="atb-net-wait">⏳ 판을 준비하는 중… (방장 폰을 기다려요)</div>
 {:else if phase === 'battle' && started}
@@ -109,6 +111,7 @@
 {:else if phase === 'result'}
   <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} end={res} onagain={() => onend(res, true)} onswap={() => onend(res)} onexit={() => onend(res)} />
 {/if}
+</Land>
 
 <style>
   .netwait { position: fixed; inset: 0; display: grid; place-items: center; background: #1a1424; color: #ffe9b0; font: 800 18px var(--font); }

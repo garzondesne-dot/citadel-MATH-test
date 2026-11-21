@@ -11,9 +11,9 @@
   style:z-index={z} style:background-image="url({mhitUrl(kind)})" style:--ms="{MHIT.ms}ms"></i>
 
 <style>
-  .mhit { position: absolute; transform: translate(-50%, -50%); pointer-events: none; background-repeat: no-repeat; background-size: 600% 100%; background-position: 0 0; image-rendering: auto; animation: mhit-run var(--ms) steps(5, jump-none) forwards, mhit-shake var(--ms) linear; }
+  .mhit { position: absolute; transform: translate(-50%, -50%); pointer-events: none; background-repeat: no-repeat; background-size: 600% 100%; background-position: 0 0; image-rendering: auto; animation: mhit-run var(--ms) steps(6, jump-none) forwards, mhit-shake var(--ms) linear; }
   .mhit.light { mix-blend-mode: screen; }
   @keyframes mhit-run { from { background-position-x: 0%; } to { background-position-x: 100%; } }
   @keyframes mhit-shake { 0%, 100% { translate: 0 0; } 25% { translate: 3px -2px; } 50% { translate: -3px 2px; } 75% { translate: 2px 1px; } }
-  @media (prefers-reduced-motion: reduce) { .mhit { animation: mhit-run var(--ms) steps(5, jump-none) forwards; } }
+  @media (prefers-reduced-motion: reduce) { .mhit { animation: mhit-run var(--ms) steps(6, jump-none) forwards; } }
 </style>
