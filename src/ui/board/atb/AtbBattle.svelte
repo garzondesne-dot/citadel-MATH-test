@@ -12,6 +12,8 @@
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
+  import AtbIntro from './AtbIntro.svelte';
+  import { INTRO, markMet, metBefore } from '../../../board/atb/story';
   import AtbFx, { fxUrl, fxCss } from './AtbFx.svelte';
   import MonCrack from '../../fx/MonCrack.svelte';
   import { crackShake, crackStep, hitBits, hitReel } from '../../fx/hitfx';
@@ -21,7 +23,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf } from '../../../board/atb/engine';
   import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -37,9 +39,11 @@
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
-  import { ATK, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
+  import { ATK, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
-  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false }: {
+  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false }: {
+    /** 🗺 조우 · 정찰 (요청 #69) 여럿이 판 = 부모(AtbNet)가 시각 · 준비를 맞춤 · 없으면 이 폰 혼자 · noIntro = 바로 전투(시험) */
+    intro?: { t0: number; goAt: number | null; ready: number[]; short?: boolean; now: () => number; onready: () => void }; noIntro?: boolean;
     /** 📡 게시판 연결 (요청 #48): remote = 방장 아님(엔진 안 돌림 · 내 행동만 보냄) */ net?: { remote: boolean; send: (a: Act) => void }; /** 👥 자리마다 보이는 이름 (파티원 실명 · 나 = 「나」 · 봇 = 「🤖 모험가 A」) */ labels?: Record<number, string>; /** 받은 상태로 시작 = 지난 사건 다시 안 그림 */ skipOld?: boolean;
     L: LessonPack; S: State; /** 내 용사 번호 · -1 = 관전 */ me: number; bots: Bot[]; seed?: string; speed?: number; onend: (S: State) => void; /** 📕 #67 내가 소문항을 맞힌 몬스터 칸 (복습 완료 기록 · 손발 #1) */ onright?: (mid: string) => void; /** 🎲 랜덤 던전 배경 열쇠 (Y9 · 없으면 차시 배경) */ bg?: string;
     /** 용사마다 장착 스킬 id (컷인 이름) */ fx?: Record<number, string>;
@@ -57,11 +61,26 @@
   let paused = $state(false), ended = false, slowUntil = 0, slowSkip = 0, slowOn = $state(0);
   function slowmo(ms: number) { slowUntil = Date.now() + ms; const t = Date.now(); slowOn = t; setTimeout(() => { if (slowOn === t) slowOn = 0; }, ms); try { navigator.vibrate?.([30, 40, 30, 40, 60]); } catch { /* 무시 */ } }
   const STEP = 0.1;
+  // 🗺 조우 → 정찰 → 3 · 2 · 1 → 전투 (📜 요청 #69) · 그동안 엔진 멈춤(보스 공격 · ATB · 시간) · 판 중간에 들어옴 = 바로 전투
+  /** 🧪 옛 e2e 시험 = 조우 · 정찰 없이 바로 (localStorage atb-e2e-nointro · 학생 폰엔 없음) */
+  const e2eNoIntro = () => { try { return localStorage.getItem('atb-e2e-nointro') === '1'; } catch { return false; } };
+  const introNow = () => intro?.now() ?? Date.now();
+  const iShort = untrack(() => intro?.short ?? metBefore(S.boss.no)), MEET = iShort ? INTRO.meetShort : INTRO.meet, SCOUT_END = untrack(() => (intro?.t0 ?? Date.now()) + INTRO.meet + INTRO.scout);
+  const iT0 = untrack(() => intro?.t0 ?? Date.now()), skipIntro = untrack(() => noIntro || S.t > 0 || e2eNoIntro());
+  let goLocal = $state<number | null>(null), nowMs = $state(Date.now());
+  const goAt = $derived(intro ? intro.goAt : goLocal);
+  const phase = $derived<'meet' | 'scout' | 'count' | 'fight'>(skipIntro ? 'fight' : nowMs < iT0 + MEET ? 'meet' : goAt == null ? (!intro && nowMs >= (iShort ? iT0 + MEET + INTRO.scoutShort : SCOUT_END) ? 'count' : 'scout') : nowMs < goAt + INTRO.count ? 'count' : 'fight');
+  const introLeft = $derived(phase === 'scout' ? Math.max(0, Math.ceil(((iShort && !intro ? iT0 + MEET + INTRO.scoutShort : SCOUT_END) - nowMs) / 1000)) : phase === 'count' ? Math.max(0, Math.ceil(((goAt ?? nowMs) + INTRO.count - nowMs) / 1000)) : 0);
+  const introReady = $derived(intro ? intro.ready : [...bots.map((b) => b.who), ...(goLocal != null && me >= 0 ? [me] : [])]);
+  function introGo() { if (intro) intro.onready(); else if (goLocal == null) goLocal = Date.now(); }
+  $effect(() => { if (!intro && phase === 'count' && goLocal == null) goLocal = nowMs; }); // 혼자 = 정찰 시간이 다 되면 바로 셈
+  if (!skipIntro) setTimeout(() => sfx('block', 0.9), 350); // 쿵
   const loop = setInterval(() => {
+    nowMs = introNow();
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
-    if (S.end) { if (!ended) { ended = true; setTimeout(() => onend(S), 1800); } return; }
-    if (paused) return;
+    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); setTimeout(() => onend(S), 1800); } return; }
+    if (paused || phase !== 'fight') return;
     if (net?.remote) { autoStep(); return; } // 📡 방장 아님 = 엔진은 방장 폰 · 화면은 받은 상태로
     if (Date.now() < slowUntil && ++slowSkip % 3) return; // 🎬 슬로 모션 (요청 #50 · 연출 · 0.4 ~ 0.6초 동안 1/3 속도)
     for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b, busyOf); autoStep(); }
@@ -448,6 +467,12 @@
       else if (e.what === 'reflect' && e.who != null) pop(posOf(e.who).x, posOf(e.who).y - 22, `−${e.v} 반사`, 'hurt');
       else if (e.what === 'unbind' && e.who != null) pop(posOf(e.who).x, posOf(e.who).y - 24, '풀림!', 'role');
       else if (e.what === 'mirrorOn') pop(bx, 26, '🪞 거울빛', 'shield');
+      // 📜 요청 #57 v4 대표 행동
+      else if (e.what === 'contra') pop(bx, 24, `💥 모순! −${e.v}`, 'crit', 1500);
+      else if (e.what === 'reverseBack') pop(bx, 24, `↩ 거꾸로! −${e.v}`, 'crit', 1500);
+      else if (e.what === 'chain' && e.who != null) pop(posOf(e.who).x, posOf(e.who).y - 26, `⛓ 사슬 −${e.v}`, 'role');
+      else if (e.what === 'refreeze') pop(bx, 26, '🧊 얼음 갑옷 다시!', 'shield', 1500);
+      else if (e.what === 'retarget' && e.who != null) pop(posOf(e.who).x, posOf(e.who).y - 30, '👀 표적 바뀜!', 'hurt');
     }
     else if (e.k === 'end' && e.win) bossPose = 'down';
     else if (e.k === 'end' && !e.win) snd('game-no', 0.7); // 이김 = 승리 곡(#21)이 소리
@@ -469,14 +494,15 @@
   const tele = $derived(S.target && !weak(S) ? Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)) : 0);
   const bossLeft = $derived(weak(S) ? 1 : Math.max(0, 1 - S.bossT / bossEveryOf(S)));
   // 👹 보스 ATB 게이지 (📜 요청 #7 ②): 체력바 바로 아래 · 차오름 · 예고(약 2초 전) = 붉게 깜빡 + 다음 공격 아이콘 · 이름 · 누구
-  const ATK_IC: Record<string, string> = { basic: '💥', aoe: '⚠', smash: '💢', poison: '☠️', sleep: '💤', fire: '🔥', fire13: '🔥', fog: '🌊', tongue: '👅', ice: '🧊', confuse: '🌀', frost: '❄️', tail: '💥', dark: '🌑', darkHit: '🌑', mirror: '🪞', bind: '⛓', scale: '⚖️' };
+  const ATK_IC: Record<string, string> = { basic: '💥', aoe: '⚠', smash: '💢', poison: '☠️', sleep: '💤', fire: '🔥', fire13: '🔥', fog: '🌊', tongue: '👅', ice: '🧊', confuse: '🌀', frost: '❄️', tail: '💥', dark: '🌑', darkHit: '🌑', mirror: '🪞', bind: '⛓', scale: '⚖️',
+    pounce: '🐆', mace: '🔨', scaleAoe: '⚖️', swallow: '🐸', falseHyp: '🕯', steam: '♨️', hammer: '🔨', reverse: '↩', whip: '⛓', meteor: '☄️', breathAtk: '🫁' }; // 📜 #57 v4
   const upcoming = $derived(upcomingOf(S));
   const stoneG = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
   const bossGauge = $derived.by(() => {
     if (S.end) return null;
     if (weak(S)) return { p: 1, txt: `⏸ 약점 시간 ${Math.ceil(S.weakUntil - S.t)}초 · 공격 멈춤`, blue: true };
     if (stoneG) return { p: Math.min(1, S.bossT / bossEveryOf(S)), txt: `🗿 석화 ${stoneG}초 · 공격 멈춤`, blue: true };
-    const left = Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)), ic = ATK_IC[upcoming] ?? '💥', nm = ATK[upcoming as keyof typeof ATK]?.name ?? '공격';
+    const left = Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)), ic = ATK_IC[upcoming] ?? '💥', nm = ATK[upcoming as keyof typeof ATK] ? bossAtkName(S.boss, upcoming) : '공격';
     if (S.target) { const who = S.aoeNext ? '모두' : S.target.map((i) => name(i)).join(' · '); return { p: S.bossT / bossEveryOf(S), txt: `${S.aoeNext ? '⚠ 광역! ' : ''}${ic} ${nm} → ${who} · ${left}초`, hot: true }; }
     return { p: S.bossT / bossEveryOf(S), txt: `다음 ${ic} ${nm} · ${left}초` };
   });
@@ -484,7 +510,7 @@
   const meAimed = $derived(me >= 0 && !!tele && !!S.target?.includes(me));
   let aimedOnce = false;
   $effect(() => { const a = meAimed; untrack(() => { if (a && !aimedOnce) { try { navigator.vibrate?.(40); } catch { /* 무시 */ } } aimedOnce = a; }); });
-  const atkName = $derived(S.nextAtk ? ATK[S.nextAtk].name : S.aoeNext ? '광역' : '공격');
+  const atkName = $derived(S.nextAtk ? bossAtkName(S.boss, S.nextAtk) : S.aoeNext ? '광역' : '공격');
   /** ⚠ 광역 예고 = 용사 줄 바닥이 붉게 깜빡 (📜 요청 #3 ⑤) */
   const aoeWarn = $derived(!!tele && S.aoeNext);
   let wasAim = false, wasAoe = false;
@@ -511,6 +537,11 @@
   const tiltTxt = $derived(S.boss.tele === 'scale' && S.target ? (S.aoeNext ? '⚖ 수평 → 모두' : `⚖ ${S.tilt === 'L' ? '왼쪽' : '오른쪽'}으로 기욺 → ${S.heroes[S.target[0]!]?.s.name ?? ''}`) : '');
   const breathLeft = $derived(S.breathWarn != null ? Math.max(0, Math.ceil(S.breathWarn + SIG.breath.warn - S.t)) : 0);
   const mirrorLeft = $derived(S.t < S.mirrorUntil ? Math.ceil(S.mirrorUntil - S.t) : 0);
+  // 📜 요청 #57 v4: 13 등호의 순간 남은 초 · 15 다음 차례 · 17 되돌릴 값 · 14 묶인 나 = 사슬 안내
+  const eqLeft = $derived(S.boss.sig === 'eqMoment' && S.t < (S.eqUntil ?? 0) ? Math.ceil((S.eqUntil ?? 0) - S.t) : 0);
+  const ordNext = $derived(S.target && !S.aoeNext ? null : orderNext(S));
+  const revTxt = $derived(S.nextAtk === 'reverse' && S.target ? (S.revV ? `↩ 되돌리기 ${S.revV} → ${labels?.[S.target[0]!] ?? S.heroes[S.target[0]!]?.s.name ?? ''} · 딜러가 끊으면 보스가 맞아요` : '↩ 되돌릴 스킬 피해 없음') : '');
+  const chainMe = $derived(S.boss.sig === 'chain' && me >= 0 && !!meH && meH.stunKind === 'bind' && S.t < meH.stunUntil);
   const armor = $derived(S.boss.sig === 'iceArmor' && S.cells.some((c) => !c.broken));
   const weakLeft = $derived(weak(S) ? Math.ceil(S.weakUntil - S.t) : 0);
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
@@ -552,7 +583,10 @@
     {#if stone}<div class="tele sig" role="status" data-k="atb-stone">🗿 석화 {stone}초 · 보스 공격 멈춤</div>{/if}
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
-    {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 30% 되돌아옴</div>{/if}
+    {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 {Math.round((modOf(S)?.mirrorBack ?? SIG.mirror.back) * 100)}% 되돌아옴</div>{/if}
+    {#if eqLeft}<div class="tele sig" role="status" data-k="atb-eq">＝ 등호의 순간 {eqLeft}초 · 받는 피해 +{Math.round((SIG.eq.mul - 1) * 100)}%</div>{/if}
+    {#if revTxt}<div class="tele sig" role="status" data-k="atb-rev">{revTxt}</div>{/if}
+    {#if chainMe}<div class="tele sig" role="status" data-k="atb-chain">⛓ 묶여도 문제를 맞히면 사슬로 보스 피해!</div>{/if}
     {#if tg?.cls === 'special'}<div class="chbar" data-k="atb-charge-bar"><i style:width="{Math.round(chargeP * 100)}%"></i><span>🌀 {tg.atk} 모으는 중</span></div>{/if}
     {#if S.rage}<div class="calmb" class:on={calmLeft > 0} data-k="atb-calm">{#if calmLeft > 0}😮‍💨 진정 {calmLeft}초 · 공격 안 함{:else}👹 분노 · 퍼펙트 {S.ragePerf ?? 0}/{RAGE.calmPerfect} 모이면 진정{/if}</div>{/if}
     <div class="rhp" class:rage={S.rage && !calmLeft} data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}${S.rage ? ' · 👹 분노' : ''}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside /></div>
@@ -566,7 +600,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
+  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -582,6 +616,7 @@
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64 * 0.9)} boss z={19} />{/key}{/if}
       {#if shatter?.ids.includes(h.id)}<i class="ringx" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" data-k="atb-ringx" aria-hidden="true">{#each [0, 1, 2, 3, 4, 5] as j}<i style:--r="{j * 60}deg"></i>{/each}</i>{/if}
+      {#if ordNext === h.id && !h.down}<i class="ordn" style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-order" aria-label="다음 차례">🎯 다음</i>{/if}{#if (h.mark ?? 0) > 0 && !h.down}<i class="mark" data-k="atb-mark" aria-label="톱니 표식">⚙{h.mark! > 1 ? `×${h.mark}` : ''}</i>{/if}
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
       {#if statusOf(h)}{@const st = statusOf(h)!}<i class="stx {st}" style:top="{-Math.round(base * p.s * 64 * 1.02) - (lowIds.includes(h.id) || isWeak(h.id) ? 62 : 36)}px" data-k="atb-status" data-st={st} data-slot="atb-status-hero:{st}" aria-label={STATUS_LOOK[st].txt}><AtbFx name="hst-{st === 'fog' ? 'water' : st}" x="50%" y="50%" w={46} ms={900} z={1} /></i>{/if}
@@ -596,6 +631,7 @@
   {/each}
 
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
+  {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
 
   <!-- 문제 카드 -->
   {#if open && run}
@@ -682,6 +718,9 @@
   .pop.heal { color: #7dffb0; font-size: 20px; }
   .tgt { position: absolute; left: -26px; top: -10px; width: 52px; height: 18px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 10px #ff3a2a; animation: blink 0.4s steps(2) infinite; }
   .cov { position: absolute; left: 14px; top: -54px; }
+  .ordn { position: absolute; left: 0; transform: translateX(-50%); font: 800 11px var(--font); color: #ffe9b0; background: #3a2040e0; border: 1px solid #ffcf6a; border-radius: 8px; padding: 1px 6px; white-space: nowrap; z-index: 30; pointer-events: none; }
+  .mark { position: absolute; left: -20px; top: -46px; font: 800 13px var(--font); color: #ffcf6a; text-shadow: 0 0 4px #000; z-index: 30; pointer-events: none; animation: mark-spin 1.6s linear infinite; }
+  @keyframes mark-spin { to { transform: rotate(360deg); } }
   .tag { position: absolute; left: -42px; top: 2px; width: 84px; display: flex; flex-direction: column; gap: 1px; padding: 1px 2px 2px; border-radius: 6px; border: none; background: linear-gradient(#0000, #0006 30%, #0006); text-shadow: 0 1px 0 #000, 0 0 3px #000; } /* 📜 요청 #14 참고 그림 = 상자 없이 글 + 막대 */
   .tag > b { font: 700 9.5px var(--font-plain); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .hero.mine .tag > b { color: #ffe08a; }
@@ -930,6 +969,13 @@
   .aimring { position: absolute; left: 0; z-index: 22; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 12px #ff3a2a, inset 0 0 8px #ff3a2a88; transform: scale(calc(0.7 + var(--k) * 1.8)); pointer-events: none; transition: transform 0.12s linear; }
   .aimring.aoe { border-color: #ff8a2a; box-shadow: 0 0 12px #ff8a2a; }
   .aimring.special { border-color: #b07aff; box-shadow: 0 0 12px #b07aff; }
+  /* 🗺 조우 = 보스가 위에서 쿵 (흔들 · 먼지 · 요청 #69) */
+  .boss.drop { animation: bdrop 0.55s cubic-bezier(.5,0,.8,.4) both, bthud 0.35s ease-out 0.55s; z-index: 61; }
+  .boss.drop::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -4%; height: 18%; border-radius: 50%; background: radial-gradient(#d8c8a0cc, #0000 70%); animation: dust 0.7s ease-out 0.5s both; pointer-events: none; }
+  @keyframes bdrop { from { transform: translate(-50%, -240%); } to { transform: translate(-50%, -100%); } }
+  @keyframes bthud { 30% { transform: translate(calc(-50% - 4px), calc(-100% + 3px)); } 60% { transform: translate(calc(-50% + 4px), calc(-100% - 2px)); } }
+  @keyframes dust { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .boss.drop, .boss.drop::after { animation: none; } }
   .aimring b { position: absolute; left: 50%; top: 0; font: 900 30px/1 var(--font); color: #fff; text-shadow: 0 0 6px #ff1a1a, 0 0 2px #000, 0 2px 0 #000; transform: translate(-50%, -50%) scale(calc(1 / (0.7 + var(--k) * 1.8))); }
   .ringx { position: absolute; left: 0; z-index: 19; pointer-events: none; }
   .ringx i { position: absolute; left: -14px; top: -3px; width: 28px; height: 6px; border-radius: 3px; background: #ffd0c8; box-shadow: 0 0 8px #ff3a2a; rotate: var(--r); animation: rx 0.5s ease-out forwards; }
