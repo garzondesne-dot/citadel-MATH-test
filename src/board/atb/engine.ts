@@ -7,7 +7,7 @@ import type { Stats } from './heroes';
 export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive' | 'heal';
-export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind;
+export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 넘친 충전 모음 (½ 칸 · 요청 #49) */ ovf?: number; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind;
   /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
@@ -146,7 +146,7 @@ function bossAttack(S: State) {
 }
 // ── 문제 ──
 /** 문제로 얻은 것 (quiz.ts answer 의 earn) · ⚡ 충전 = 원문항을 통째로 끝냈을 때만(Y1 · 퍼펙트 2 · 재시도 1 · 최대 3) · 쓰러진 학생 = 친구 ATB +50% */
-export function earn(S: State, who: number, e: { done: boolean; perfect: boolean; right: boolean }, giftTo?: number): void {
+export function earn(S: State, who: number, e: { done: boolean; perfect: boolean; right: boolean; miss?: number }, giftTo?: number): void {
   const h = S.heroes[who]; if (!h || S.end) return;
   if (e.right) { h.log.right++; S.rec.subSec.push(+(S.t - (S.rec.lastAns[who] ?? 0)).toFixed(1)); S.rec.lastAns[who] = S.t; } // 소문항 하나 = 앞 정답부터 이 정답까지
   if (h.down) {
@@ -156,8 +156,9 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
     return;
   }
   // ⚡ 📜 요청 #41 = 소문항 맞힘마다 +1(첫 시도 · 고쳐 맞힘 같음) · 원문항을 오답 없이 끝냄 = +1 더 · 넘치면 장착 스킬 자동(넘칠 때마다 · 연달아면 0.6초 간격)
-  const gain = (want: number, perfect: boolean) => { const n = Math.min(T.charge.max - h.ch, want); h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, add: n, perfect, over: want - n }); for (let i = 0; i < want - n; i++) queueAuto(S, h); };
-  if (e.right) gain(T.charge.perSub, false);
+  // 📜 요청 #49 = 0.5 칸 단위 · 넘친 몫은 모아 두었다가 1 칸이 되면 자동 스킬
+  const gain = (want: number, perfect: boolean) => { const n = Math.min(T.charge.max - h.ch, want), ov = want - n; h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, add: n, perfect, over: ov }); h.ovf = (h.ovf ?? 0) + ov; while (h.ovf >= 1 - 1e-9) { h.ovf -= 1; queueAuto(S, h); } };
+  if (e.right) gain(T.charge.byMiss[Math.min(e.miss ?? 0, T.charge.byMiss.length - 1)] ?? 0, false);
   if (e.done && e.perfect) gain(T.charge.perfect, true);
   runAuto(S); // 첫 넘침 = 바로 · 연달아 = 0.6초 뒤 (tick)
   if (e.done && S.shieldUp) h.tickets++;

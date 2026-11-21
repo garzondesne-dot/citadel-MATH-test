@@ -322,3 +322,21 @@ describe('ATB 보스 피해 상한 · 차시 기본 피해 (요청 #46)', () => 
     if (old == null) delete (T.bossAtkByNo as Record<number, number>)[no]; else (T.bossAtkByNo as Record<number, number>)[no] = old;
   });
 });
+
+// ⚡ 📜 요청 #49 찍기 막기 = 소문항 틀린 횟수 → 충전 (0번 1 · 1번 ½ · 2번+ 0) · 퍼펙트 +1 · 넘친 ½ 은 모아 1 칸이면 자동
+import { subGain } from '../src/board/atb/quiz';
+describe('ATB 찍기 막기 (요청 #49)', () => {
+  it('한 번에 = +1 · 한 번 틀림 = +½ · 두 번 이상 = 0 · 이미 가진 충전은 안 깎임', () => {
+    expect([subGain(0), subGain(1), subGain(2), subGain(5)]).toEqual([1, 0.5, 0, 0]);
+    const S = fresh(); const h = S.heroes[0]!; h.ch = 1;
+    earn(S, 0, { done: false, perfect: false, right: true, miss: 0 }); expect(h.ch).toBe(2);
+    earn(S, 0, { done: false, perfect: false, right: true, miss: 1 }); expect(h.ch).toBe(2.5);
+    earn(S, 0, { done: false, perfect: false, right: true, miss: 3 }); expect(h.ch).toBe(2.5);
+    earn(S, 0, { done: false, perfect: false, right: false }); expect(h.ch).toBe(2.5);
+  });
+  it('넘침 = 4 넘을 때 · ½ 두 번 = 자동 스킬 한 번', () => {
+    const S = fresh(); const h = S.heroes[0]!; h.ch = 4;
+    earn(S, 0, { done: false, perfect: false, right: true, miss: 1 }); expect(h.ch).toBe(4); expect(S.ev.some((e) => e.k === 'skill' && e.auto)).toBe(false);
+    earn(S, 0, { done: false, perfect: false, right: true, miss: 1 }); expect(S.ev.filter((e) => e.k === 'skill' && e.auto).length).toBe(1);
+  });
+});

@@ -126,3 +126,18 @@ describe('ATB 결과 별 = 지도 별 규칙 그대로 (요청 #29)', () => {
     expect([st(2, 0), st(3, 2), st(5, 5), st(6, 6)]).toEqual([3, 2, 1, 0]);
   });
 });
+
+// ⚡ 📜 요청 #49 소문항 틀린 횟수 = 답에 실림 · 소문항마다 얻은 충전(gains)
+import { answer as ans49, startRun as start49, questionsOf as qs49 } from '../src/board/atb/quiz';
+import { answerOf as ao49 } from '../src/raid/raid';
+import { wrongOf as wo49 } from '../src/board/atb/bots';
+describe('ATB 찍기 막기 · 문제 쪽 (요청 #49)', () => {
+  it('틀린 횟수 = 소문항마다 · 맞히면 0 으로 · gains = 1 · ½ · 0', () => {
+    const L = SUBJ.lessons.find((p) => p.no === 2)!, mid = Object.keys(L.monsters).find((m) => (qs49(L, start49(m, 0), 's').length ?? 0) >= 3)!;
+    let r = start49(mid, 0); const q = () => qs49(L, r, 's')[r.k]!;
+    let o = ans49(L, r, 's', ao49(q())); expect(o.earn.miss).toBe(0); r = o.run;
+    o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', ao49(q())); expect(o.earn.miss).toBe(1); r = o.run;
+    o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', ao49(q())); expect(o.earn.miss).toBe(2); r = o.run;
+    expect(r.gains?.slice(0, 3)).toEqual([1, 0.5, 0]);
+  });
+});

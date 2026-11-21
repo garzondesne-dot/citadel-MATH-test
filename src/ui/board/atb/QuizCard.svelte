@@ -20,7 +20,7 @@
   $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; } });
   /** 조각 상태: 끝낸 소문항 = 첫 시도 맞음 full · 고쳐 맞힘 half · 아직 = empty (채점 중 = 모두 끝낸 것) */
   const done = $derived(grading ? qs.length : run.k);
-  const shardOf = (i: number) => (i < done ? (run.marks[i] === false ? 'half' : 'full') : 'empty');
+  const shardOf = (i: number) => { if (i >= done) return 'empty'; const g = run.gains?.[i] ?? (run.marks[i] === false ? 0.5 : 1); return g >= 1 ? 'full' : g > 0 ? 'half' : 'zero'; }; // 📜 요청 #49 꽉(1) · 반(½) · 빈(0)
   const can = $derived(!!q && filled(q, val) && !locked && !grading);
   $effect(() => { onfill?.(can); });
   /** ✅ 제출 (부모 아래 가운데 단추) */
@@ -51,7 +51,7 @@
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
       <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'}{#if grading.perfect} <em>✨+1</em>{/if}</b>
       <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:tri={!m} style:animation-delay="{0.3 + i * 0.26}s" data-k="atb-mark" data-m={m ? 'o' : 'tri'}>{#if m}○{:else}△<small>고침</small>{/if}</i>{/each}</span>
-      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ 소문항마다 +1 (풀면서 받음){grading.perfect ? (grading.n ? ' · ✨ 퍼펙트 +1 · ATB 가득' : ' · ✨ 퍼펙트 +1 → 가득이라 자동 스킬 · ATB 가득') : ''}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ 한 번에 +1 · 한 번 틀림 +½ · 두 번+ 0 (풀면서 받음){grading.perfect ? (grading.n ? ' · ✨ 퍼펙트 +1 · ATB 가득' : ' · ✨ 퍼펙트 +1 → 가득이라 자동 스킬 · ATB 가득') : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
   {/if}
@@ -121,6 +121,7 @@
   .shards { display: inline-flex; gap: 2px; padding: 1px 6px; border-radius: 8px; background: #3a2618; transition: transform 0.4s ease-in, opacity 0.4s; }
   .sh { font-style: normal; font-size: 13px; line-height: 1; filter: grayscale(1) brightness(0.45); }
   .sh.full { filter: drop-shadow(0 0 4px #5ff0ff) hue-rotate(150deg) saturate(2); animation: shon 0.36s ease-out; }
+  .sh.zero { filter: grayscale(1) brightness(0.3); opacity: 0.5; }
   .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
   @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
   .shards.gather { transform: translate(0, 34vh) scale(1.8); opacity: 0; }

@@ -19,9 +19,11 @@ export function originsOf(L: LessonPack): Origin[] {
 /** 가장 쉬운 칸 = 소문항이 가장 적은 원문항(같으면 앞) — 도전자의 실드용 (U3) */
 export const easiestOf = (os: Origin[]) => os.slice().sort((a, b) => a.n - b.n || os.indexOf(a) - os.indexOf(b))[0] ?? null;
 
-export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 이 원문항만의 씨앗 (없으면 판 씨앗 · 📜 요청 #19 덧2) */ seed?: string; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[] }
+export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 이 원문항만의 씨앗 (없으면 판 씨앗 · 📜 요청 #19 덧2) */ seed?: string; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[]; /** 이 소문항에서 틀린 횟수 · 소문항마다 얻은 충전 (요청 #49) */ subMiss?: number; gains?: number[]; }
 /** 얻은 것 · 충전은 엔진이 done · perfect 로 정함(Y1 원문항 통째) · gold = 이 소문항 첫 시도 정답(표시만) · marks = 끝났을 때 소문항 ○ × */
-export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; marks?: boolean[] }
+export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; marks?: boolean[]; /** 이 소문항에서 틀린 횟수 (요청 #49 충전 = 0번 1 · 1번 ½ · 2번+ 0) */ miss?: number }
+/** 📜 요청 #49 소문항 충전 = 틀린 횟수에 따라 (엔진 · 화면 같은 값) */
+export const subGain = (miss: number): number => T.charge.byMiss[Math.min(miss, T.charge.byMiss.length - 1)] ?? 0;
 const VERS = 7;
 export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'> & { seed?: string }, seed: string): Question[] => { const s = r.seed ?? seed; return L.monsters[r.mid]?.chain ? chainItems(L, r.mid, s, r.ver) : items(L, r.mid, s, r.ver); };
 /** 새 원문항 시작 (ver0 = 이 학생 시작 판) */
@@ -33,16 +35,17 @@ export function answer(L: LessonPack, r: Run, seed: string, given: Given, avoid:
   if (!q) return { run: r, earn: none };
   if (grade(q, given)) {
     const last = r.k >= qs.length - 1, marks = [...r.marks.slice(0, r.k), r.firstTry];
-    const earn: Earn = { gold: r.firstTry, done: last, perfect: last && r.clean, swapped: false, right: true, ...(last ? { marks } : {}) };
-    return { run: last ? { ...r, marks } : { ...r, k: r.k + 1, firstTry: true, marks }, earn };
+    const miss = r.subMiss ?? (r.firstTry ? 0 : 1), gains = [...(r.gains ?? []).slice(0, r.k), subGain(miss)];
+    const earn: Earn = { gold: r.firstTry, done: last, perfect: last && r.clean, swapped: false, right: true, miss, ...(last ? { marks } : {}) };
+    return { run: last ? { ...r, marks, gains, subMiss: 0 } : { ...r, k: r.k + 1, firstTry: true, marks, gains, subMiss: 0 }, earn };
   }
   const wrong = r.wrong + 1;
   if (wrong >= T.wrongSwap) { // 4번째 오답 = 같은 원문항 새 숫자 판 · 진행도만 처음부터 · 📜 요청 #19 덧2 = 이 기기에서 본 판 · 친구가 지금 쓰는 판(avoid)도 피함
     const used = new Set(r.vers), cand = Array.from({ length: VERS }, (_, i) => (r.ver + 1 + i) % VERS);
     const next = cand.find((v) => !used.has(v) && !avoid.includes(v)) ?? cand.find((v) => !used.has(v)) ?? (r.ver + 1) % VERS;
-    return { run: { ...(r.seed ? { seed: r.seed } : {}), mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [] }, earn: { ...none, swapped: true } };
+    return { run: { ...(r.seed ? { seed: r.seed } : {}), mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [], gains: [], subMiss: 0 }, earn: { ...none, swapped: true } };
   }
-  return { run: { ...r, wrong, clean: false, firstTry: false }, earn: none };
+  return { run: { ...r, wrong, clean: false, firstTry: false, subMiss: (r.subMiss ?? 0) + 1 }, earn: none };
 }
 /** 다음 원문항 (차례대로 · 안 푼 것 먼저) */
 export function nextOrigin(os: Origin[], done: Record<string, number>, prefer?: string | null): Origin | null {

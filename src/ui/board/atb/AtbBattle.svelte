@@ -109,6 +109,8 @@
   onDestroy(() => bgmRate(1));
   /** 아직 날아가는 구슬 수 = 단추 구슬은 닿을 때 한 칸씩 켜짐 (엔진 충전은 이미 들어감) */
   let pendOrb = $state(0);
+  /** ½ 칸 글자 (요청 #49): 2.5 → 「2½」 · 0.5 → 「½」 */
+  const halfTxt = (x: number) => (x % 1 ? `${Math.floor(x) || ''}½` : String(x));
   const shownCh = $derived(Math.max(0, (meH?.ch ?? 0) - pendOrb));
   /** 카드 머리 조각 자리 (요청 #41 구슬 출발) */
   const shardCenter = (k: number) => { const st = stageEl, c = st?.querySelectorAll('[data-k="atb-shards"] .sh')[k]; if (!st || !c) return cardCenter(); const R = rectIn(st), A = rectIn(c); return { x: A.left + A.width / 2 - R.left, y: A.top + A.height / 2 - R.top }; };
@@ -141,7 +143,7 @@
     let pfN = 0;
     { const ce = S.ev.filter((x) => (x.n ?? 0) > ev0 && x.k === 'charge' && x.who === me) as Extract<Ev, { k: 'charge' }>[];
       const sub = ce.find((x) => !x.perfect), pf = ce.find((x) => x.perfect), from = shardCenter(k0);
-      if (sub) { pendOrb += sub.add; if (sub.add) flyOrb(false, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - 1); tone(Math.min(3, combo)); }); if (sub.over) flyOrb(true, from, 'me', () => tone(4)); }
+      if (sub) { const a = sub.add; pendOrb += a; if (a) flyOrb(false, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - a); tone(Math.min(3, combo)); }, a < 1); if (sub.over) flyOrb(true, from, 'me', () => tone(4), sub.over < 1); if (!a && !sub.over) big('💤 다음 문제는 천천히!', 'slow', 800); } // 📜 요청 #49 반 칸 = 작은 구슬 · 0 칸 = 회색 한 줄
       if (pf) { pendOrb += pf.add; pfN = pf.add; } void before; }
     if (o.earn.swapped) { const k = seenKey(L, run.mid); vSeen[k] = noteSeen(vSeen[k] ?? [], o.run.ver); saveSeen(vSeen); }
     flash = o.earn.done ? '' : o.earn.right ? (o.earn.gold ? 'gold' : 'ok') : o.earn.swapped ? 'swap' : 'wrong';
@@ -338,11 +340,11 @@
   function heal1(id: number) { const t = Date.now(); healOn = { ...healOn, [id]: t }; setTimeout(() => { if (healOn[id] === t) healOn = { ...healOn, [id]: 0 }; }, 600); } /* 💚 초록 반짝 */
   function hurt(id: number) { hurtOn = { ...hurtOn, [id]: true }; if (!busy.has(id)) setPose(id, 'hit'); setTimeout(() => { hurtOn = { ...hurtOn, [id]: false }; if (!busy.has(id) && !S.heroes[id]?.down) setPose(id, 'idle'); }, 450); }
   /** ✨ 채점이 끝나면 = 카드 자리에서 에너지 구슬이 내 충전 칸으로 날아가 차오름 (Y8) */
-  function flyOrb(gold = true, from: { x: number; y: number } | null = null, to: 'orbs' | 'me' = 'orbs', cb?: () => void) {
+  function flyOrb(gold = true, from: { x: number; y: number } | null = null, to: 'orbs' | 'me' = 'orbs', cb?: () => void, half = false) {
     const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = to === 'me' ? (heroEls[me] ?? null) : st?.querySelector('[data-k="atb-orbs"]') ?? st?.querySelector('[data-k="atb-attack"]'); if (!st || (!a && !from) || !b) { cb?.(); return; }
     const R = rectIn(st), B = rectIn(b), A = a ? rectIn(a) : null;
     const x0 = from ? from.x : A!.left + A!.width / 2 - R.left, y0 = from ? from.y : A!.top + A!.height / 2 - R.top, dx = B.left + B.width / 2 - R.left - x0, dy = B.top + B.height * (to === 'me' ? 0.4 : 0.5) - R.top - y0;
-    const el = document.createElement('i'); el.className = gold ? 'atb-orb g' : 'atb-orb'; el.style.left = `${x0}px`; el.style.top = `${y0}px`; st.appendChild(el);
+    const el = document.createElement('i'); el.className = (gold ? 'atb-orb g' : 'atb-orb') + (half ? ' half' : ''); el.style.left = `${x0}px`; el.style.top = `${y0}px`; st.appendChild(el);
     const fin = () => { el.remove(); burst(x0 + dx, y0 + dy, to === 'me'); if (!cb) sfx(gold ? 'star-bonus' : 'energy-card', 0.55); cb?.(); gaugeFlash = true; setTimeout(() => (gaugeFlash = false), 450); };
     if (!el.animate) { fin(); return; }
     const an = el.animate([{ transform: 'translate(-50%, -50%) scale(0.5)', opacity: 0.6 }, { transform: `translate(calc(-50% + ${dx * 0.45}px), calc(-50% + ${dy * 0.45 - 90}px)) scale(1.3)`, opacity: 1, offset: 0.45 }, { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.6)`, opacity: 1 }], { duration: 620, easing: 'ease-in' });
@@ -411,7 +413,7 @@
     }
     else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
-    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.add}`, 'role');
+    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${halfTxt(e.add)}`, 'role');
     else if (e.k === 'sig') {
       if (e.what === 'breathHeal') pop(bx, 30, `+${e.v} 회복`, 'heal');
       else if (e.what === 'breathCut') pop(bx, 26, '숨 끊음!', 'shield');
@@ -575,14 +577,14 @@
       {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
       {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       <div class="skw">
-        <button type="button" class="b skb" class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
+        <button type="button" class="b skb" class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
         {#if fullMsg}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
             <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'equip' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
             <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
-            <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}{#if meH.ch < sk.cost}<small class="need1">⚡ {sk.cost - meH.ch}개 더 풀면</small>{/if}</span>
+            <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<i class:on={j + 1 <= meH.ch} class:half={j + 1 > meH.ch && j < meH.ch}>⚡</i>{/each}{#if meH.ch < sk.cost}<small class="need1">⚡ {halfTxt(sk.cost - meH.ch)}개 더 풀면</small>{/if}</span>
           </button>
         {/each}
         {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
@@ -685,6 +687,10 @@
   .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 44px; height: 44px; margin: -11px 0 0 -11px; pointer-events: none; background: var(--fx-orb) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.36s steps(5, jump-none) infinite; } @keyframes -global-afx-orb { from { background-position-x: 0%; } to { background-position-x: 100%; } } /* 🎨 charge-orb */
+  .stage :global(.atb-orb.half) { width: 30px; height: 30px; opacity: 0.6; } /* ½ 칸 = 작은 반투명 구슬 (요청 #49) */
+  .co i.half { filter: none !important; opacity: 0.55; clip-path: inset(0 50% 0 0); }
+  .bigmsg.slow { background: #3a3a44e6; border-color: #8a8a96; color: #d8d8e0; font-size: clamp(14px, 4.6vh, 20px); } /* 💤 0 칸 */
+  .orbs i { position: relative; } .orbs i.half::after { content: ''; position: absolute; inset: 0; background: var(--ui-orb1) center / contain no-repeat; clip-path: inset(0 50% 0 0); } /* ½ 칸 = 구슬 반쪽 */
   .stage :global(.atb-orb.g) { width: 54px; height: 54px; filter: hue-rotate(-150deg) saturate(1.6) brightness(1.1); } /* 금 구슬 = 같은 그림 금빛 */
   .cut.short { background: #0007; animation-duration: 0.9s; } .cut.short .band { top: 20%; height: 28%; }
   .watch { position: absolute; z-index: 24; left: 50%; bottom: 3%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 10px; background: #000a; font: 700 14px var(--font-plain); }

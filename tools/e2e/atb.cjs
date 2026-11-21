@@ -271,6 +271,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   { await p.evaluate(() => { const S = globalThis.__atb.S; for (const h of S.heroes) h.hp = 20; S.heroes[0].atb = 1; }); await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(900);
     const r = await p.evaluate(() => globalThis.__atb.S.heroes.map((h) => h.hp - 20 - Math.round(h.s.maxHp * 0.05)));
     ok('요청 #46 힐러 일반 공격 맞힘 = 팀 모두 +5%', r.every((x) => x === 0), JSON.stringify(r)); }
+  // ⚡ 요청 #49 찍기 막기 = 한 번 틀리고 맞힘 = ½ 칸(구슬 반쪽) · 두 번 이상 = 0 칸 + 「💤 다음 문제는 천천히!」
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 1; a.miss(); }); await p.waitForTimeout(1300);
+  await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(1200);
+  { const r = await p.evaluate(() => ({ ch: globalThis.__atb.S.heroes[0].ch, half: document.querySelectorAll('[data-k="atb-orbs"] i.half').length, sh: [...document.querySelectorAll('[data-k="atb-shards"] .sh')].map((e) => e.dataset.st).join(',') }));
+    ok('요청 #49 한 번 틀리고 맞힘 = ⚡ +½ · 구슬 반쪽 · 조각 반', r.ch === 1.5 && r.half === 1 && /half/.test(r.sh), JSON.stringify(r)); }
+  { let seen = ''; await p.evaluate(() => { globalThis.__slow = ''; new MutationObserver(() => { const m = document.querySelector('.bigmsg.slow'); if (m) globalThis.__slow = m.textContent; }).observe(document.body, { childList: true, subtree: true }); });
+    for (let i = 0; i < 2; i++) { await p.evaluate(() => globalThis.__atb.miss()); await p.waitForTimeout(1300); }
+    const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch); await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(500);
+    seen = await p.evaluate(() => globalThis.__slow); const ch1 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
+    ok('요청 #49 두 번 틀리고 맞힘 = ⚡ 0 · 「💤 다음 문제는 천천히!」', ch1 === ch0 && /천천히/.test(seen), JSON.stringify({ ch0, ch1, seen })); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
