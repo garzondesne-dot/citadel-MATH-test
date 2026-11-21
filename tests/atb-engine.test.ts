@@ -236,3 +236,23 @@ describe('ATB 계열 덧효과 (요청 #36)', () => {
     expect(da).toBeGreaterThan(pure);
   });
 });
+
+// 👹 📜 요청 #37 보스 분노
+import { rage as RAGE } from '../src/board/atb/tune';
+import { bossEveryOf, calmed, upcomingOf } from '../src/board/atb/engine';
+describe('ATB 보스 분노 (요청 #37)', () => {
+  it('HP 30% 아래 = 분노 한 번 · 간격 9초(일반) · 들어갈 때 특수 바로(예고 4초) · 피해 ×1.2', () => {
+    const S = fresh(); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true }));
+    S.bossHp = Math.floor(S.bossMax * 0.3) + 2; const h = S.heroes[0]!; h.atb = 1; attack(S, 0, 'crit');
+    expect(S.rage).toBe(true); expect(bossEveryOf(S)).toBe(RAGE.every.normal);
+    const sp = upcomingOf(S); expect(['poison', 'aoe', 'fire', 'sleep', 'bind', 'mirror', 'confuse'].includes(sp)).toBe(true);
+    for (let i = 0; i < 2; i++) tick(S, 0.1); expect(S.target).not.toBeNull();
+  });
+  it('분노 중 팀 퍼펙트 2번 = 8초 진정(공격 안 함) → 다시 분노', () => {
+    const S = fresh(); S.rage = true; S.bossT = 5;
+    earn(S, 0, { done: true, perfect: true, right: true }); expect(calmed(S)).toBe(false);
+    earn(S, 1, { done: true, perfect: true, right: true }); expect(calmed(S)).toBe(true);
+    const n0 = S.bossN; for (let i = 0; i < 70; i++) tick(S, 0.1); expect(S.bossN).toBe(n0); expect(calmed(S)).toBe(true);
+    for (let i = 0; i < 20; i++) tick(S, 0.1); expect(calmed(S)).toBe(false); expect(S.rage).toBe(true);
+  });
+});

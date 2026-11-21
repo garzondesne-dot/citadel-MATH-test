@@ -13,7 +13,7 @@ const ONCE = ['win'];
 type El = (HTMLAudioElement | WebTrack) & { _k?: string; _fade?: number };
 const slot: { phone: string | null; tv: string | null } = { phone: null, tv: null };
 const hold: Record<string, 1> = {};
-let cur: El | null = null, fadeMs = 800, scale = 1, scaleT = 1, tick: ReturnType<typeof setInterval> | 0 = 0, winDone = '';
+let cur: El | null = null, rate = 1, fadeMs = 800, scale = 1, scaleT = 1, tick: ReturnType<typeof setInterval> | 0 = 0, winDone = '';
 
 const hidden = () => typeof document !== 'undefined' && document.hidden;
 function want(): string | null {
@@ -49,7 +49,7 @@ function apply(): void {
   if (cur && cur._k === k) { if (cur.paused) void cur.play().catch(() => {}); fade(cur, vol(), 400); return; }
   const old = cur; cur = null; if (old) fade(old, 0, fadeMs, () => old.pause());
   if (!k) return;
-  winDone = ''; cur = start(k); if (cur) fade(cur, vol(), fadeMs);
+  winDone = ''; cur = start(k); if (cur) { try { cur.playbackRate = rate; } catch { /* 무시 */ } fade(cur, vol(), fadeMs); }
 }
 
 /** where = 'phone' | 'tv' · k = 곡 자리(null = 없음) · scale = 🎚 전투 음량(0 ~ 1 · 없으면 1) */
@@ -62,6 +62,8 @@ export function bgm(k: string | null, where: 'phone' | 'tv' = 'phone', opt: { sc
     tick = setInterval(() => { scale += (scaleT - scale) * 0.15; if (Math.abs(scaleT - scale) < 0.01) { scale = scaleT; clearInterval(tick); tick = 0; } if (cur && !cur._fade) try { cur.volume = vol(); } catch { /* 무시 */ } }, 80);
   }
 }
+/** ⏩ 배경음 빠르기 (📜 게시판 던전 분노 = 1.15 · 기본 1) · 지금 곡 · 다음 곡 모두 */
+export function bgmRate(r: number): void { rate = r; if (cur) try { cur.playbackRate = r; } catch { /* 무시 */ } }
 /** ⏸ 이유가 하나라도 있으면 멈춤 (🎬 영상 · 📄 학습지 창) */
 export function bgmHold(why: string, on: boolean): void { if (on) hold[why] = 1; else delete hold[why]; later(); }
 /** 지금 상태 (시험용) */

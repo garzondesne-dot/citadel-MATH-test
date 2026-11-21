@@ -196,6 +196,15 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => { const S = globalThis.__atb.S; S.blocked = null; S.nextAtk = 'fire'; S.aoeNext = true; S.target = S.heroes.map((h) => h.id); S.bossT = 10; }); await p.waitForTimeout(200);
   ok('요청 #35 특수 예고 = 보스 위 보라 「🌀 … 모으는 중」 막대 · 다른 역할 = 작은 띠', !!(await p.$('[data-k="atb-charge-bar"]')) && /모으는 중/.test(await p.textContent('[data-k="atb-tg-line"]').catch(() => '')));
   await p.screenshot({ path: `${SHOTS}/atb-r35-special-844.png` });
+  // 👹 요청 #37 보스 분노 = HP 30% 아래 · 「👹 분노!」 · 가장자리 붉게 · 진정 막대 · 특수 예고 바로
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.bossHp = Math.floor(S.bossMax * 0.3) + 2; a.full(); });
+  await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('crit')); await p.waitForTimeout(500);
+  { const r = await p.evaluate(() => ({ rage: globalThis.__atb.S.rage, msg: document.querySelector('[data-k="atb-bigmsg"]')?.textContent ?? '', edge: !!document.querySelector('[data-k="atb-ragedge"]'), calm: document.querySelector('[data-k="atb-calm"]')?.textContent ?? '' }));
+    await p.screenshot({ path: `${SHOTS}/atb-r37-rage-844.png` });
+    ok('요청 #37 HP 30% 아래 = 분노 · 「👹 분노!」 · 가장자리 붉게 · 「퍼펙트 0/2 모이면 진정」', r.rage && /분노/.test(r.msg) && r.edge && /0\/2/.test(r.calm), JSON.stringify(r)); }
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.calmUntil = S.t + 8; }); await p.waitForTimeout(200);
+  ok('요청 #37 진정 = 붉은 가장자리 꺼짐 · 「😮‍💨 진정 n초」', !(await p.$('[data-k="atb-ragedge"]')) && /진정 \d초/.test(await p.textContent('[data-k="atb-calm"]').catch(() => '')));
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);

@@ -35,6 +35,10 @@ export class WebTrack {
   _k?: string; _fade?: number; loop = false; paused = true;
   private g: GainNode; private src: AudioBufferSourceNode | null = null; private buf: AudioBuffer | null = null; private at = 0; private off = 0; private onEnd: (() => void) | null = null;
   constructor(private c: AC, private url: string) { this.g = c.createGain(); this.g.gain.value = 0; this.g.connect(c.destination); }
+  private rate = 1;
+  /** 재생 빠르기 (게시판 던전 분노 1.15 · <audio> 의 playbackRate 와 같은 손잡이) */
+  get playbackRate(): number { return this.rate; }
+  set playbackRate(r: number) { this.rate = r; if (this.src) this.src.playbackRate.value = r; }
   get volume(): number { return this.g.gain.value; }
   set volume(v: number) { this.g.gain.value = Math.max(0, Math.min(1, v)); }
   addEventListener(_e: 'ended', f: () => void): void { this.onEnd = f; }
@@ -42,7 +46,7 @@ export class WebTrack {
     this.paused = false; if (this.c.state === 'suspended') await this.c.resume().catch(() => {});
     if (!this.buf) this.buf = await buffer(this.url);
     if (!this.buf || this.paused || this.src) return;
-    const s = this.c.createBufferSource(); s.buffer = this.buf; s.loop = this.loop; s.connect(this.g);
+    const s = this.c.createBufferSource(); s.buffer = this.buf; s.loop = this.loop; s.playbackRate.value = this.rate; s.connect(this.g);
     const off = this.loop ? this.off % this.buf.duration : Math.min(this.off, this.buf.duration);
     s.onended = () => { if (this.src !== s) return; this.src = null; if (!this.loop) { this.paused = true; this.off = 0; this.onEnd?.(); } };
     this.at = this.c.currentTime - off; s.start(0, off); this.src = s;
