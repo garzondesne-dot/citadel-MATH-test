@@ -13,7 +13,7 @@
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
   import AtbIntro from './AtbIntro.svelte';
-  import { INTRO, markMet, metBefore } from '../../../board/atb/story';
+  import { INTRO, bossLine, markMet, metBefore, type LineK } from '../../../board/atb/story';
   import AtbFx, { fxUrl, fxCss } from './AtbFx.svelte';
   import MonCrack from '../../fx/MonCrack.svelte';
   import { crackShake, crackStep, hitBits, hitReel } from '../../fx/hitfx';
@@ -75,11 +75,14 @@
   function introGo() { if (intro) intro.onready(); else if (goLocal == null) goLocal = Date.now(); }
   $effect(() => { if (!intro && phase === 'count' && goLocal == null) goLocal = nowMs; }); // 혼자 = 정찰 시간이 다 되면 바로 셈
   if (!skipIntro) setTimeout(() => sfx('block', 0.9), 350); // 쿵
+  /** 💬 보스 말풍선 (요청 #64 · 분노 · 쓰러질 때 · 등장은 조우 화면) */
+  let bossSay = $state<{ t: string; k: LineK; n: number } | null>(null);
+  function say(k: LineK, ms: number, delay = 0) { const t = bossLine(S.boss.no, k); if (!t) return; setTimeout(() => { const n = Date.now(); bossSay = { t, k, n }; setTimeout(() => { if (bossSay?.n === n) bossSay = null; }, ms); }, delay); }
   const loop = setInterval(() => {
     nowMs = introNow();
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
-    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); setTimeout(() => onend(S), 1800); } return; }
+    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); const down = S.end.win && !!bossLine(S.boss.no, 'down'); if (down) say('down', 2400); setTimeout(() => onend(S), down ? 2600 : 1800); } return; } /* 💬 이김 = 보스 「쓰러질 때」 대사 뒤 결과 (요청 #64) */
     if (paused || phase !== 'fight') return;
     if (net?.remote) { autoStep(); return; } // 📡 방장 아님 = 엔진은 방장 폰 · 화면은 받은 상태로
     if (Date.now() < slowUntil && ++slowSkip % 3) return; // 🎬 슬로 모션 (요청 #50 · 연출 · 0.4 ~ 0.6초 동안 1/3 속도)
@@ -453,7 +456,7 @@
       else if (e.fx === 'curse') { pop(B0.x, B0.y, '🌑 저주!', 'fam'); bossCurse = Date.now(); setTimeout(() => (bossCurse = 0), 3000); }
     }
     else if (e.k === 'rage') { // 👹 분노 (요청 #37)
-      if (e.on === 'rage') { setTimeout(() => { big('👹 분노!', 'rage', 1600); sfx('mon-appear-boss', 0.9); shake(stageEl ?? null, 12, 700); }, 450); /* 금 연출(#38)이 먼저 · 분노가 뒤 */ try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ } bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 700); }
+      if (e.on === 'rage') { say('rage', 2800, 900); setTimeout(() => { big('👹 분노!', 'rage', 1600); sfx('mon-appear-boss', 0.9); shake(stageEl ?? null, 12, 700); }, 450); /* 금 연출(#38)이 먼저 · 분노가 뒤 */ try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ } bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 700); }
       else if (e.on === 'calm') { big('😮‍💨 진정!', 'note', 1400); sfx('heart-up', 0.6); bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 800); }
       else if (e.on === 'calmEnd') { big('👹 다시 분노!', 'rage', 1100); sfx('mon-appear-boss', 0.6); }
       else if (e.on === 'perf') pop(bx, 52, `😮‍💨 진정 ${e.n}/${RAGE.calmPerfect}`, 'fam');
@@ -631,6 +634,7 @@
   {/each}
 
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
+  {#if bossSay}{#key bossSay.n}<p class="bsay {bossSay.k}" style:left={open ? '86%' : '73%'} role="status" data-k="atb-boss-say" data-say={bossSay.k}>「{bossSay.t}」</p>{/key}{/if}
   {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
 
   <!-- 문제 카드 -->
@@ -969,6 +973,9 @@
   .aimring { position: absolute; left: 0; z-index: 22; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 12px #ff3a2a, inset 0 0 8px #ff3a2a88; transform: scale(calc(0.7 + var(--k) * 1.8)); pointer-events: none; transition: transform 0.12s linear; }
   .aimring.aoe { border-color: #ff8a2a; box-shadow: 0 0 12px #ff8a2a; }
   .aimring.special { border-color: #b07aff; box-shadow: 0 0 12px #b07aff; }
+  .bsay { position: absolute; top: 18%; z-index: 40; transform: translateX(-50%); max-width: 46%; margin: 0; padding: 5px 12px; border-radius: 12px; background: #fff8e6; color: #3a2614; border: 2px solid #b88a4a; font: 800 14px var(--font-plain); text-align: center; box-shadow: 0 4px 10px #0007; pointer-events: none; animation: bsay 0.3s ease-out; }
+  .bsay.rage { background: #ffe2dc; border-color: #c0392b; color: #6a0f08; } .bsay.down { background: #f0f6ff; border-color: #6a8ad0; }
+  @keyframes bsay { from { transform: translate(-50%, 8px) scale(0.85); opacity: 0; } }
   /* 🗺 조우 = 보스가 위에서 쿵 (흔들 · 먼지 · 요청 #69) */
   .boss.drop { animation: bdrop 0.55s cubic-bezier(.5,0,.8,.4) both, bthud 0.35s ease-out 0.55s; z-index: 61; }
   .boss.drop::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -4%; height: 18%; border-radius: 50%; background: radial-gradient(#d8c8a0cc, #0000 70%); animation: dust 0.7s ease-out 0.5s both; pointer-events: none; }

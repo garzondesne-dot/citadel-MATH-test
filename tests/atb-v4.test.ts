@@ -131,3 +131,15 @@ describe('v4 차시별 분노 (일반 · 도전만)', () => {
     for (let no = 12; no <= 17; no++) for (const diff of ['easy', 'normal', 'hard'] as Diff[]) { const S = at(no, diff, FOUR, no); simulate({ ...L, no }, S, S.heroes.map((_, i) => newBot(L, i, 'normal', no))); expect(S.end, `${no} ${diff}`).not.toBeNull(); }
   });
 });
+
+describe('v4 스토리 문구 (📜 #64 · STORY-LINES-v1)', () => {
+  it('2 ~ 17 = 의뢰문 · 보스 대사 3줄(10 ~ 25자) · 보스 이름 = 설정표 이름', async () => {
+    const { SUBJ } = await import('../src/engine/subject');
+    const { bossLine } = await import('../src/board/atb/story');
+    for (let no = 2; no <= 17; no++) {
+      const q = SUBJ.quests?.[no]; expect(q, String(no)).toBeTruthy(); expect(q!.boss, String(no)).toBe(BOSSES[no]!.name); expect(q!.line.length).toBeGreaterThan(20);
+      for (const k of ['enter', 'rage', 'down'] as const) { const t = bossLine(no, k)!; expect(t, `${no} ${k}`).toBeTruthy(); expect(t.length >= 10 && t.length <= 25, `${no} ${k} ${t}`).toBe(true); }
+    }
+    expect(bossLine(7, 'enter')).toContain('다시'); expect(bossLine(18, 'enter')).toBeNull();
+  });
+});
