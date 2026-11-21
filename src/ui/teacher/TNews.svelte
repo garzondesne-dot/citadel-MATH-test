@@ -184,7 +184,7 @@
   .nw.new { border-left-color: var(--bad); }
   .nb { width: 100%; min-height: 56px; display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); border: 0; background: none; color: var(--text); font: inherit; text-align: left; }
   .nb .ic { font-size: 20px; } .nb .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .nb b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .nb small { font-size: 12.5px; color: var(--text-2); }
+  .nb b { font-size: 14.5px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-clamp: 2; word-break: keep-all; overflow-wrap: anywhere; } /* 🐞 #62-2 두 줄까지 */ .nb small { font-size: 12.5px; color: var(--text-2); }
   .dot { width: 9px; height: 9px; border-radius: 5px; background: var(--bad); flex: none; }
   .do { display: flex; flex-wrap: wrap; gap: var(--s2); padding: 0 var(--s3) var(--s3); }
   .do p { flex-basis: 100%; margin: 0; font-size: 13.5px; color: var(--text-2); white-space: pre-line; }
