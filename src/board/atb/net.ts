@@ -84,7 +84,7 @@ export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }):
   const k = (x: number) => (full ? Math.floor(x / 2) : x), M = missionOf(S, idx);
   const merit = { clear: k(win ? MERIT.clear : 0), star: newStars * MERIT.star, first: k(f.ok * MERIT.first), act: k(((g.blocks ?? 0) + (g.rescues ?? 0) + (g.brk ?? 0)) * MERIT.act), role: k(M.done ? MERIT.role : 0) };
   const guardN = g.covers + g.heals + g.revives + g.shields + (g.blocks ?? 0) + (g.rescues ?? 0);
-  const gem = { items: k(Math.min(GEM.itemMax, g.right * GEM.perItem)), clear: k(win ? GEM.clear : 0), guard: k(Math.min(GEM.guardMax, guardN * GEM.perGuard)), star: newStars * GEM.star };
+  const gem = { items: k(Math.min(GEM.itemMax, g.right * GEM.perItem)), clear: k(win ? GEM.clear : 0), guard: S.end?.why === '후퇴' ? 0 : k(Math.min(GEM.guardMax, guardN * GEM.perGuard)), /* 📜 #92 후퇴 = 맞힌 문제 몫 💎 만 (클리어 · 수호 💎 없음 · 벌 없음) */ star: newStars * GEM.star };
   const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
   return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0 } };
 }

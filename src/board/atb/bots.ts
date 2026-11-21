@@ -4,7 +4,7 @@ import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, pickVer, questionsOf, rngOf, shuffled, startRun, type Origin, type Run } from './quiz';
 import { REACT_CFG, T } from './tune';
-import { alive, attack, canReact, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
+import { alive, attack, canReact, canRole, canSkill, earn, orphanCell, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
 export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; /** ATB 가 가득 찬 시각 (-1 = 아님) */ fullAt: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number; /** 반응 막기를 정한 예고 (요청 #35) */ reactKey?: string }
@@ -23,8 +23,8 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
   const h = S.heroes[b.who]; if (!h || S.end) return;
   // 문제 (쓰러져도 풂 = 친구 ATB)
   // 🛡 실드가 떴는데 내 칸을 깰 표가 없음 + 지금 문제가 가장 쉬운 칸이 아님 → 가장 쉬운 칸으로 바꿈 (U3 막힘 안전망 · 길게 이어진 원문항에 묶이지 않게)
-  { const ez = easiestOf(b.os); if (b.run && ez && b.run.mid !== ez.mid && S.shieldUp && h.ch < 1 && S.cells.some((c) => c.owner === b.who && !c.broken)) b.run = null; }
-  if (!b.run) { const prefer = S.shieldUp && S.cells.some((c) => c.owner === b.who && !c.broken) && b.kind !== 'ideal' ? easiestOf(b.os)?.mid : null; const o = nextOrigin(b.os, b.done, prefer); if (o) { b.run = startRun(o.mid, pickVer([], busy(o.mid, b.who), () => r01(b))); b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]); } }
+  { const ez = easiestOf(b.os); if (b.run && ez && b.run.mid !== ez.mid && S.shieldUp && h.ch < 1 && S.cells.some((c) => !c.broken && (c.fam === h.s.fam || orphanCell(S, c)))) b.run = null; }
+  if (!b.run) { const prefer = S.shieldUp && S.cells.some((c) => !c.broken && (c.fam === h.s.fam || orphanCell(S, c))) && b.kind !== 'ideal' ? easiestOf(b.os)?.mid : null; const o = nextOrigin(b.os, b.done, prefer); if (o) { b.run = startRun(o.mid, pickVer([], busy(o.mid, b.who), () => r01(b))); b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]); } }
   if (b.run && S.t >= b.due) {
     const q = questionsOf(L, b.run, b.seed)[b.run.k];
     if (q) {

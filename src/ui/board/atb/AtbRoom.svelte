@@ -11,7 +11,7 @@
   import { BOT_LABEL, newBot, type BotKind } from '../../../board/atb/bots';
   import { originsOf } from '../../../board/atb/quiz';
   import { famOf, roleOf, statsOf } from '../../../board/atb/heroes';
-  import { bossOf, FAM_NAME, ROLE_NAME, T, type Diff } from '../../../board/atb/tune';
+  import { bossOf, FAM_NAME, ROLE_NAME, shieldOf, T, type Diff } from '../../../board/atb/tune';
   import AtbBattle from './AtbBattle.svelte';
   import Land from './Land.svelte';
   import FamShield from './FamShield.svelte';
@@ -53,7 +53,7 @@
     const party = ids.map((id) => statsOf({ hero: id, lv: g.lv, enh: g.enh, tier: tierFor(id), name: nameOf(id), awk: grow === 'awk' }));
     const art = bossArt(bossOf(L.no), diff, L.theme); bg = art.bg;
     const B = newBattle({ boss: art, diff, party, seed });
-    if (start === 'shield' || start === 'one') { B.bossHp = Math.round(B.bossMax * T.shieldAt) - 1; B.shieldUp = true; B.shieldAt = 0; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); if (start === 'one') B.cells.forEach((c, i) => { if (i > 0) { c.broken = true; c.by = c.owner; } }); }
+    if (start === 'shield' || start === 'one') { B.bossHp = Math.round(B.bossMax * T.shieldAt) - 1; B.shieldUp = true; B.shieldAt = 0; B.cells = shieldOf(B.boss).map((fam) => ({ fam, broken: false })); /* 📜 #95 */ if (start === 'one') B.cells.forEach((c, i) => { if (i > 0) { c.broken = true; c.by = 0; } }); }
     if (start === 'aoe') { while (!B.ev.some((e) => e.k === 'boss' && e.aoe) && B.t < 60) tick(B, 0.1); }
     S = B; meIdx = mode === 'play' ? 0 : -1;
     bots = B.heroes.map((h) => newBot(L!, h.id, botKind, seed)).filter((b) => mode === 'watch' || b.who !== 0);
