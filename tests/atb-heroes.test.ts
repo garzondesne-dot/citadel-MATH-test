@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { HEROES } from '../src/model/hero';
 import { famOf, roleOf, statsOf, statRows } from '../src/board/atb/heroes';
+import { T } from '../src/board/atb/tune';
 import { G } from '../src/board/atb/tune';
 
 describe('ATB 용사 수치', () => {
@@ -24,5 +25,13 @@ describe('ATB 용사 수치', () => {
   it('고르는 창: 방어 0 = 「0%」 · 딜러 ATB 8.0초', () => {
     const r = statRows(statsOf({ hero: 0, lv: 1, enh: 0, tier: 1 }));
     expect(r.find((x) => x.k === 'def')!.v).toBe('0%'); expect(r.find((x) => x.k === 'atb')!.v).toBe('8.0초');
+  });
+  it('고르는 창 = 실제 숫자 (요청 #43): 공격 = 기본 한 방 · 스킬 = 장착 한 방 · 배율은 옆에 작게 · 힐 줄', () => {
+    const st = statsOf({ hero: 0, lv: 1, enh: 0, tier: 1 }), r = statRows(st);
+    expect(r.find((x) => x.k === 'atk')).toMatchObject({ v: String(Math.round(T.attackBase * st.atkMul)), sub: `×${st.atkMul.toFixed(2)}` });
+    expect(r.find((x) => x.k === 'skill')!.v).toBe(String(Math.round(T.skillBase * st.skillMul)));
+    expect(r.find((x) => x.k === 'heal')!.v).toBe(`🩹 응급 힐 ${Math.round(st.maxHp / 3)}`);
+    const hl = HEROES.find((h) => roleOf(h.id) === 'healer')!, sh = statsOf({ hero: hl.id, lv: 1, enh: 0, tier: 1 }), rh = statRows(sh);
+    expect(rh.find((x) => x.k === 'skill')!.v).toBe(String(Math.round(T.skillBase * sh.skillMul * 1.6))); expect(rh.find((x) => x.k === 'heal')!.v).toBe('💚 큰 힐 90%');
   });
 });

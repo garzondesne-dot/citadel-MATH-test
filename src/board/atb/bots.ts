@@ -49,8 +49,11 @@ function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   if (can('shield') && useSkill(S, b.who, 'equip')) return 'skill'; // ⚡ 내 스킬 = 실드 칸 깸
   if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return 'skill'; // 🛡 오라 방패 = 예고가 뜨면
   if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
+  // 💚 요청 #46: 힐러 = 한 명이라도 40% 아래면 큰 힐 · 힐러 아닌 봇 = 50% 아래 친구(나 포함)가 있으면 🩹 응급 힐
+  const low = (k: number) => alive(S).filter((x) => x.hp < x.s.maxHp * k).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0];
+  if (R !== 'healer' && can('heal')) { const f = low(0.5); if (f && useSkill(S, b.who, 'heal', f.id)) return 'skill'; }
   if (canRole(S, b.who)) {
-    if (R === 'healer' && alive(S).some((x) => x.hp < x.s.maxHp * 0.55) && roleAct(S, b.who)) return 'skill';
+    if (R === 'healer') { const f = low(0.4); if (f && roleAct(S, b.who, f.id)) return 'skill'; }
     if (R === 'tank' && S.target && S.target.length === 1 && !S.heroes[S.target[0]!]!.cover && roleAct(S, b.who, S.target[0])) return 'skill';
     if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return 'skill'; }
   }

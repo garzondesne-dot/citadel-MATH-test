@@ -83,7 +83,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.waitForTimeout(1500);
   await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 3; a.full(); }); await p.waitForTimeout(150);
   const fan = await p.$$eval('[data-k="atb-skills"] .sk2', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
-  ok('요청 #9 스킬 = 공격 둘레 고정 단추 · 새내기 = 장착 · 역할 (늘 보임)', JSON.stringify(fan) === '["equip","role"]', JSON.stringify(fan));
+  ok('요청 #9 스킬 = 공격 둘레 고정 단추 · 새내기 = 장착 · 역할 · 🩹 응급 힐 (늘 보임 · #46)', JSON.stringify(fan) === '["equip","role","heal"]', JSON.stringify(fan));
   ok('요청 #24 ② 아래 단추 3개 = 왼쪽 공격 · 가운데 문제 풀이 · 오른쪽 스킬 · 한 줄 · 엄지 48px↑', await p.evaluate(() => { const r = ['atb-attack', 'atb-quiz-open', 'atb-skill-btn'].map((k) => document.querySelector(`[data-k="${k}"]`).getBoundingClientRect()), mid = (x) => x.top + x.height / 2; return r[0].right <= r[1].left && r[1].right <= r[2].left && r.every((x) => x.height >= 46 && Math.abs(mid(x) - mid(r[0])) < 4); }));
   await p.screenshot({ path: `${SHOTS}/atb-fan-844.png` });
   await skc(p, 'equip');
@@ -94,7 +94,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('.chips button:has-text("각성")'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(600);
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 3; a.full(); }); await p.waitForTimeout(150);
   const fan2 = await p.$$eval('[data-k="atb-skills"] .sk2', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
-  ok('요청 #19 각성 용사 = ⚡ 내 스킬 · 역할 · 🌟 비장(각성) 3개', JSON.stringify(fan2) === '["equip","role","awk"]', JSON.stringify(fan2));
+  ok('요청 #19 각성 용사 = ⚡ 내 스킬 · 역할 · 🌟 비장(각성) 3개', JSON.stringify(fan2) === '["equip","role","heal","awk"]', JSON.stringify(fan2));
   await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[1].down = true; S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); }); await p.waitForTimeout(150);
   ok('요청 #19 실드 = 내 스킬에 🛡 배지(단추 따로 없음) · 부활 = 친구 쓰러졌을 때만', !(await p.$('[data-k="atb-sk-shield"]')) && !!(await p.$('[data-k="atb-sk-shield-badge"]')) && !!(await p.$('[data-k="atb-sk-revive"].situ')));
   await p.screenshot({ path: `${SHOTS}/atb-ring-awk-844.png` });
@@ -106,7 +106,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('.chips button:has-text("끝까지")'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(600);
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(150);
   const fan3 = await p.$$eval('[data-k="atb-skills"] .sk2', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
-  ok('요청 #19 +10 용사(각성 전) = 🌟 비장 = 홀리 방패', JSON.stringify(fan3) === '["equip","role","aura"]', JSON.stringify(fan3));
+  ok('요청 #19 +10 용사(각성 전) = 🌟 비장 = 홀리 방패', JSON.stringify(fan3) === '["equip","role","heal","aura"]', JSON.stringify(fan3));
   await skc(p, 'aura'); await p.waitForTimeout(200);
   ok('Y12 오라 방패 = 다음 공격 막음 + 석화 표시', await p.evaluate(() => globalThis.__atb.S.guard && globalThis.__atb.S.stoneUntil > globalThis.__atb.S.t) && !!(await p.$('[data-k="atb-stone"]')));
   // 🛡 요청 #12 실드 = 큰 문구 · 방패막 · 계열 칸(이모지 · 색) · 약점 배지 · 깰 때 금 감 → 조각나며 사라짐
@@ -255,6 +255,22 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[1].stunUntil = 0; S.heroes[1].stunKind = ''; }); await p.waitForTimeout(200);
     const n2 = await p.$$eval('[data-k="atb-status"]', (x) => x.length);
     ok('요청 #40 ② 상태 = 수면 💤 · 어둠 🌑 · 냉기 ❄️ · 속박 ⛓ 머리 위 · 그림 자리 이름 · 풀리면 사라짐', st.some((x) => x.startsWith('sleep:atb-status-hero:sleep')) && st.some((x) => x.startsWith('dark:')) && st.some((x) => x.startsWith('frost:')) && n2 === st.length - 1, JSON.stringify({ st, n2 })); }
+  // 💚 요청 #46 힐 개편 = 🩹 응급 힐(고르기 · 1/3) · 힐러 💚 큰 힐(가장 다친 친구 · 구조!) · 힐러 일반 공격 = 팀 +5%
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'dealer'; h.ch = 2; h.atb = 1; S.heroes[1].hp = 10; });
+  await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); await p.click('[data-k="atb-sk-heal"]'); await p.waitForTimeout(150);
+  { const dlg = !!(await p.$('[data-k="atb-pick-1"]')); await p.click('[data-k="atb-pick-1"]').catch(() => {}); await p.waitForTimeout(150);
+    const r = await p.evaluate(() => { const S = globalThis.__atb.S, f = S.heroes[1]; return { hp: f.hp, want: 10 + Math.round(f.s.maxHp / 3), pop: [...document.querySelectorAll('.pop.heal')].map((e) => e.textContent).join(',') }; });
+    ok('요청 #46 🩹 응급 힐 = 누구에게 고르기 → 최대 체력 1/3 · 초록 숫자', dlg && r.hp === r.want && /🩹/.test(r.pop), JSON.stringify({ dlg, ...r })); }
+  await p.evaluate(() => { const S = globalThis.__atb.S, h = S.heroes[0]; h.s.role = 'healer'; h.ch = 2; h.atb = 1; S.heroes[2].hp = 5; });
+  await p.click('[data-k="atb-skill-btn"]').catch(() => {}); await p.waitForTimeout(200); if (!(await p.$('[data-k="atb-skills"].open'))) { await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); }
+  await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(250);
+  { const r = await p.evaluate(() => { const S = globalThis.__atb.S, f = S.heroes[2]; return { hp: f.hp, max: f.s.maxHp, msg: document.querySelector('.bigmsg')?.textContent ?? '', resc: S.heroes[0].log.rescues ?? 0 }; });
+    await p.screenshot({ path: `${SHOTS}/atb-r46-heal-844.png` });
+    ok('요청 #46 💚 큰 힐 = 가장 다친 친구 90% · 30% 아래 = 「💚 구조!」', r.hp === Math.min(r.max, 5 + Math.round(r.max * 0.9)) && /구조/.test(r.msg) && r.resc === 1, JSON.stringify(r)); }
+  { await p.evaluate(() => { const S = globalThis.__atb.S; for (const h of S.heroes) h.hp = 20; S.heroes[0].atb = 1; }); await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(900);
+    const r = await p.evaluate(() => globalThis.__atb.S.heroes.map((h) => h.hp - 20 - Math.round(h.s.maxHp * 0.05)));
+    ok('요청 #46 힐러 일반 공격 맞힘 = 팀 모두 +5%', r.every((x) => x === 0), JSON.stringify(r)); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);

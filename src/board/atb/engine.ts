@@ -6,9 +6,9 @@ import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
-export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive';
+export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive' | 'heal';
 export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind;
-  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
+  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
@@ -21,7 +21,8 @@ export type Ev =
   | { k: 'charge'; t: number; who: number; /** 들어간 칸 (사건 번호 n 과 겹치지 않게 · 요청 #41) */ add: number; perfect: boolean; /** 넘친 칸 (자동 스킬로 감) */ over?: number }
   | { k: 'shield'; t: number; who: number; cells: number[]; last: boolean }
   | { k: 'shieldUp'; t: number }
-  | { k: 'role'; t: number; who: number; role: Role; to?: number; dmg?: number }
+  | { k: 'role'; t: number; who: number; role: Role; to?: number; dmg?: number; /** 💚 큰 힐 회복량 · 구조 (요청 #46) */ v?: number; rescue?: boolean }
+  | { k: 'heal'; t: number; who: number; /** 🩹 응급 힐 = 한 명 · 힐러 일반 공격 = 모두 (to 없음) */ to?: number; v: number; kind: 'aid' | 'atk' }
   | { k: 'revive'; t: number; who: number; to: number }
   | { k: 'boss'; t: number; atk: string; kind?: AtkKind; aoe: boolean; to: number[]; dmg: number[] }
   | { k: 'down'; t: number; who: number }
@@ -173,6 +174,7 @@ export function attack(S: State, who: number, timing: Timing, auto = false): boo
   const dmg = timing === 'miss' ? 0 : hitBoss(S, raw);
   spend(h); if (timing === 'crit') h.atb = T.critAtb; // 치명 = 다음 ATB 20% 채운 채
   h.log.dmg += dmg; push(S, { k: 'atk', t: S.t, who, dmg, timing, ...(auto ? { auto: true } : {}) });
+  if (h.s.role === 'healer' && timing !== 'miss' && !S.end) { let v = 0; for (const f of alive(S)) { const a = Math.min(f.s.maxHp - f.hp, Math.round(f.s.maxHp * T.role.healer.atkHeal)); f.hp += a; v = Math.max(v, a); } if (v > 0) push(S, { k: 'heal', t: S.t, who, v, kind: 'atk' }); } // 💚 힐러 일반 공격 맞힘 = 팀 모두 5% (요청 #46 · 힐 횟수에 안 셈)
   if (dmg > 0 && S.t < S.mirrorUntil && !h.down) { const back = Math.max(1, Math.round(dmg * SIG.mirror.back)); h.hp = Math.max(0, h.hp - back); push(S, { k: 'sig', t: S.t, what: 'reflect', who, v: back }); if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who }); checkEnd(S); } } // 8 거울빛 = 일반 공격만 돌아옴
   return true;
 }
@@ -197,10 +199,12 @@ export function breakShield(S: State, who: number): boolean {
 export function skillList(S: State, who: number): { k: SkillK; cost: number; ok: boolean }[] {
   const h = S.heroes[who]; if (!h) return [];
   const r = ready(h, S), C = T.cost, out: { k: SkillK; cost: number; ok: boolean }[] = [];
-  const add = (k: SkillK, show: boolean, ok: boolean) => { if (show) out.push({ k, cost: C[k], ok: r && h.ch >= C[k] && ok }); };
+  const add = (k: SkillK, show: boolean, ok: boolean) => { const c = costOf(h, k); if (show) out.push({ k, cost: c, ok: r && h.ch >= c && ok }); };
   // 📜 요청 #19 스킬 줄이기: ⚡ 내 스킬(장착 · 실드가 뜨면 내 실드 칸도 깸) · 역할 · 🌟 비장(각성이면 각성 · 아니고 +10 이면 홀리 방패) · 💖 부활(그때만)
   add('equip', true, true);
-  add('role', true, !(h.s.role === 'healer' && healBlocked(S)));
+  const hurt = alive(S).some((x) => x.hp < x.s.maxHp);
+  add('role', true, h.s.role !== 'healer' || hurt);
+  add('heal', h.s.role !== 'healer', hurt); // 🩹 응급 힐 (요청 #46)
   if (h.s.awk) add('awk', !h.awkUsed, true); else add('aura', h.s.aura && !h.auraUsed, true);
   add('revive', S.heroes.some((x) => x.down && x.id !== who), S.revives > 0);
   const rl = out.find((x) => x.k === 'role'); if (rl && !rl.ok && canReact(S, who)) rl.ok = true; // 🛡 예고 중 반응 막기 = ATB 없이 (요청 #35)
@@ -230,16 +234,16 @@ export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean
   if (k === 'shield' || (k === 'equip' && canBreak(S, who))) return breakShield(S, who); // ⚡ 내 스킬 = 실드가 떠 있으면 실드 칸 깸
   if (k === 'role') return canReact(S, who) ? react(S, who, to) : roleAct(S, who, to);
   if (k === 'revive') { const f = to != null && S.heroes[to]?.down ? to : S.heroes.find((x) => x.down && x.id !== who)?.id; return f != null && revive(S, who, f); }
+  if (k === 'heal') { const tg = healTarget(S, to); if (!tg) return false; const v = Math.min(tg.s.maxHp - tg.hp, Math.round(tg.s.maxHp * T.firstAid)); tg.hp += v; h.ch -= T.cost.heal; h.log.heals++; S.rec.skills.heal = (S.rec.skills.heal ?? 0) + 1; spend(h); push(S, { k: 'heal', t: S.t, who, to: tg.id, v, kind: 'aid' }); return true; }
   S.rec.skills[k] = (S.rec.skills[k] ?? 0) + 1;
   if (k === 'aura') { h.ch -= T.cost.aura; h.auraUsed = true; S.guard = true; S.stoneUntil = Math.max(S.stoneUntil, S.t + T.aura.stone); spend(h); push(S, { k: 'aura', t: S.t, who, stone: T.aura.stone }); return true; }
-  const ratio = T.ratio[k], cost = T.cost[k];
+  const ratio = T.ratio[k] * (k === 'equip' ? healMul(h) : 1), cost = costOf(h, k);
   const dmg = famHit(S, h, T.skillBase * h.s.skillMul * ratio);
   h.ch -= cost; spend(h); gustAfter(h); h.log.dmg += dmg; if (k === 'awk') h.log.ult++;
   if (k === 'awk') { // 각성 덧효과 (판당 1번 · 역할마다)
     h.awkUsed = true; const R = h.s.role;
     if (R === 'dealer' && weak(S)) S.weakUntil += T.awk.dealerWeak;
     if (R === 'tank') for (const f of alive(S)) f.cover = Math.max(f.cover, T.awk.tankCut);
-    if (R === 'healer') for (const f of alive(S)) f.hp = Math.min(f.s.maxHp, f.hp + T.awk.healerHeal);
     if (R === 'support') for (const f of alive(S)) f.atb = Math.min(1, f.atb + T.awk.supportAtb);
   }
   push(S, { k: 'skill', t: S.t, who, dmg, kind: k, cost });
@@ -252,20 +256,23 @@ function queueAuto(S: State, h: Hero) { if (!S.autoQ) S.autoQ = []; const q = S.
 function runAuto(S: State) { const q = S.autoQ; if (!q?.length) return; while (q.length && q[0]!.at <= S.t + 1e-6 && !S.end) { const x = q.shift()!, h = S.heroes[x.who]; S.autoLast = S.t; if (h && !h.down) overflowSkill(S, h); } }
 function overflowSkill(S: State, h: Hero) {
   S.rec.skills.equip = (S.rec.skills.equip ?? 0) + 1; S.rec.overflow = (S.rec.overflow ?? 0) + 1;
-  const dmg = famHit(S, h, T.skillBase * h.s.skillMul * T.ratio.equip); h.log.dmg += dmg; gustAfter(h);
+  const dmg = famHit(S, h, T.skillBase * h.s.skillMul * T.ratio.equip * healMul(h)); h.log.dmg += dmg; gustAfter(h);
   push(S, { k: 'skill', t: S.t, who: h.id, dmg, kind: 'equip', cost: 0, auto: true });
 }
 /** [역할] = 충전 1 · 딜러 강타(장착 ×1.5) · 탱커 엄호(친구 다음 공격 −50%) · 힐러 광역 회복(+12) · 서포터 격려(친구 ATB 가득) */
-/** 광역 회복 = 팀 전체로 보스 공격 한 번 사이에 1번 (다른 힐러가 썼으면 그 사이엔 못 씀) */
-export const healBlocked = (S: State) => S.healN === S.bossN;
-export function canRole(S: State, who: number): boolean { const h = S.heroes[who]; return !!h && ready(h, S) && h.ch >= T.cost.role && !(h.s.role === 'healer' && healBlocked(S)); }
+/** 💚 힐러 = 공격 스킬 ⚡2 · ×1.6 (요청 #46) */
+export const costOf = (h: Hero, k: SkillK): number => (k === 'equip' && h.s.role === 'healer' ? T.role.healer.skillCost : T.cost[k]);
+const healMul = (h: Hero) => (h.s.role === 'healer' ? T.role.healer.skillMul : 1);
+/** 힐 대상 = 고른 사람(살아 있으면 · 나 포함) · 아니면 체력 비율이 가장 낮은 사람 */
+export function healTarget(S: State, to?: number): Hero | undefined { const f = to != null ? S.heroes[to] : undefined; if (f && !f.down) return f; return alive(S).slice().sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0]; }
+export function canRole(S: State, who: number): boolean { const h = S.heroes[who]; return !!h && ready(h, S) && h.ch >= T.cost.role && (h.s.role !== 'healer' || alive(S).some((x) => x.hp < x.s.maxHp)); }
 export function roleAct(S: State, who: number, to?: number): boolean {
   const h = S.heroes[who]; if (!h || !canRole(S, who)) return false;
   const R = h.s.role; h.ch -= T.cost.role; S.rec.skills.role = (S.rec.skills.role ?? 0) + 1;
   if (R === 'dealer') { const dmg = hitBoss(S, T.skillBase * h.s.skillMul * T.ratio.equip * T.role.dealer.smash); h.log.dmg += dmg; spend(h); push(S, { k: 'role', t: S.t, who, role: R, dmg }); return true; }
   const f = to != null ? S.heroes[to] : undefined;
   if (R === 'tank') { const tg = f && !f.down ? f : S.heroes[S.target?.[0] ?? who]!; tg.cover = T.role.tank.cover; h.log.covers++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true; }
-  if (R === 'healer') { for (const x of alive(S)) x.hp = Math.min(x.s.maxHp, x.hp + T.role.healer.heal); h.log.heals++; spend(h); S.healN = S.bossN; push(S, { k: 'role', t: S.t, who, role: R }); return true; }
+  if (R === 'healer') { const tg = healTarget(S, to)!, before = tg.hp / tg.s.maxHp, v = Math.min(tg.s.maxHp - tg.hp, Math.round(tg.s.maxHp * (T.role.healer.big + (h.s.awk ? T.awk.healerBig : 0)))); tg.hp += v; h.log.heals++; const rescue = tg.id !== who && before < T.role.healer.rescueAt; if (rescue) h.log.rescues = (h.log.rescues ?? 0) + 1; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id, v, ...(rescue ? { rescue } : {}) }); return true; } // 💚 큰 힐 (요청 #46)
   const tg = f && !f.down && f.id !== who ? f : alive(S).filter((x) => x.id !== who).sort((a, b) => a.atb - b.atb)[0];
   if (!tg) { h.ch += T.cost.role; return false; }
   tg.atb = 1; if (tg.stunUntil > S.t) { tg.stunUntil = 0; tg.stunKind = ''; push(S, { k: 'sig', t: S.t, what: 'unbind', who: tg.id }); } // 9 속박된 친구 = 격려로 바로 풀림
@@ -335,26 +342,27 @@ export function runRecord(S: State, ctx: { cls?: string; no: number; practice?: 
 export interface Peek { line: string; gold: boolean; name: string; desc: string; cost: number; per: string; why: string }
 const estHit = (S: State, raw: number) => Math.max(1, Math.round(raw * (weak(S) ? T.weakDmg : S.shieldUp && S.cells.some((c) => !c.broken) ? (S.boss.shieldDmg ?? T.shieldDmg) : 1)));
 export function skillPeek(S: State, who: number, k: SkillK): Peek {
-  const h = S.heroes[who]!, R = h.s.role, wk = weak(S), cost = k === 'equip' && canBreak(S, who) ? T.cost.shield : T.cost[k];
+  const h = S.heroes[who]!, R = h.s.role, wk = weak(S), cost = k === 'equip' && canBreak(S, who) ? T.cost.shield : costOf(h, k);
   const base = T.skillBase * h.s.skillMul, wTxt = wk ? ` · 약점 ×${T.weakDmg}` : '';
   let line = '', name = '', desc = '', per = '제한 없음', gold = false;
   if (k === 'equip' || k === 'shield') {
     name = '⚡ 내 스킬';
     if (canBreak(S, who)) { const two = S.boss.weak.includes(h.s.fam); line = `🛡 실드 깸${two ? ' 2칸' : ''}`; desc = `실드가 떠 있으면 내 칸을 깨요${two ? ' · 약점 계열이라 친구 칸 하나 더' : ''}`; }
-    else { line = `💥 약 ${estHit(S, base * T.ratio.equip)}${wTxt}`; gold = wk; desc = '보스에게 장착 스킬 피해 · 충전이 넘치면 저절로 나감'; }
+    else { line = `💥 약 ${estHit(S, base * T.ratio.equip * healMul(h))}${wTxt}`; gold = wk; desc = '보스에게 장착 스킬 피해 · 충전이 넘치면 저절로 나감'; }
   } else if (k === 'role') {
     name = `${ROLE_SKILL[R]}`;
     if (R === 'dealer') { line = `💥 강타 약 ${estHit(S, base * T.ratio.equip * T.role.dealer.smash)}${wTxt}`; gold = wk; desc = `장착 스킬 ×${T.role.dealer.smash} 피해`; }
     else if (R === 'tank') { line = `🛡 엄호 −${Math.round(T.role.tank.cover * 100)}%`; desc = `고른 친구가 다음에 받는 피해 −${Math.round(T.role.tank.cover * 100)}%`; }
-    else if (R === 'healer') { line = `💚 팀 +${T.role.healer.heal}`; desc = `살아 있는 팀 모두 체력 +${T.role.healer.heal}`; per = '보스 공격 사이 팀에서 1번'; }
+    else if (R === 'healer') { const big = Math.round((T.role.healer.big + (h.s.awk ? T.awk.healerBig : 0)) * 100); line = `💚 큰 힐 ${big}%`; desc = `가장 다친 친구(꾹 = 고르기) 최대 체력 ${big}% 회복 · 30% 아래 친구 = 💚 구조!`; }
     else { line = '✨ 격려 ATB 가득'; desc = '고른 친구 ATB 바로 가득 · 묶인 친구는 풀림'; }
-  } else if (k === 'aura') { name = '🌟 홀리 방패'; line = `🛡 다음 공격 막음 · 🗿 ${T.aura.stone}초`; desc = `팀 전체 다음 보스 공격 막음 + 보스 ${T.aura.stone}초 석화`; per = '판당 1번'; }
+  } else if (k === 'heal') { name = '🩹 응급 힐'; line = `🩹 1/3 회복`; desc = '고른 한 명(나 포함) 최대 체력 1/3 회복 · 쓰러진 친구는 안 됨'; }
+  else if (k === 'aura') { name = '🌟 홀리 방패'; line = `🛡 다음 공격 막음 · 🗿 ${T.aura.stone}초`; desc = `팀 전체 다음 보스 공격 막음 + 보스 ${T.aura.stone}초 석화`; per = '판당 1번'; }
   else if (k === 'awk') {
     name = '🌟 각성'; line = `💥 약 ${estHit(S, base * T.ratio.awk)} · 1번`; gold = wk;
-    desc = `큰 피해 + ${R === 'dealer' ? `약점 시간 +${T.awk.dealerWeak}초` : R === 'tank' ? `팀 받는 피해 −${Math.round(T.awk.tankCut * 100)}%` : R === 'healer' ? `팀 체력 +${T.awk.healerHeal}` : `팀 ATB +${Math.round(T.awk.supportAtb * 100)}%`}`; per = '판당 1번';
+    desc = `큰 피해 + ${R === 'dealer' ? `약점 시간 +${T.awk.dealerWeak}초` : R === 'tank' ? `팀 받는 피해 −${Math.round(T.awk.tankCut * 100)}%` : R === 'healer' ? `큰 힐 +${Math.round(T.awk.healerBig * 100)}%p` : `팀 ATB +${Math.round(T.awk.supportAtb * 100)}%`}`; per = '판당 1번';
   } else if (k === 'revive') { name = '💖 부활'; line = `💖 부활 HP ${Math.round(T.reviveHp * 100)}%`; desc = `쓰러진 친구를 체력 ${Math.round(T.reviveHp * 100)}%로 살림`; per = `팀 ${S.revives} / ${T.revives}번 남음`; }
   else if (k === 'tier4') { name = '4레벨'; line = `💥 약 ${estHit(S, base * T.ratio.tier4)}`; }
   if ((k === 'equip' && !canBreak(S, who)) || k === 'awk') { const X = ATTR_FX_TXT[fxOfAttr(h.s.attr)]; desc += ` · ${X.emo} ${X.name}: ${X.desc}`; } // 📜 요청 #36′
-  const why = S.end ? '판 끝' : h.down ? '쓰러짐' : S.t < h.stunUntil ? '묶임 · 기절' : (k === 'aura' && h.auraUsed) || (k === 'awk' && h.awkUsed) ? '이번 판에 이미 씀' : k === 'role' && R === 'healer' && healBlocked(S) ? '보스 공격 뒤에 다시' : k === 'revive' && S.revives <= 0 ? '팀 부활 다 씀' : h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '';
+  const why = S.end ? '판 끝' : h.down ? '쓰러짐' : S.t < h.stunUntil ? '묶임 · 기절' : (k === 'aura' && h.auraUsed) || (k === 'awk' && h.awkUsed) ? '이번 판에 이미 씀' : (k === 'role' && R === 'healer') || k === 'heal' ? (alive(S).some((x) => x.hp < x.s.maxHp) ? '' : '다친 친구 없음') || (h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '') : k === 'revive' && S.revives <= 0 ? '팀 부활 다 씀' : h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '';
   return { line, gold, name, desc, cost, per, why };
 }

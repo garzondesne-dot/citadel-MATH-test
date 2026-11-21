@@ -19,20 +19,21 @@
   const R = (f: string) => `${import.meta.env.BASE_URL}art/board-atb/result/${f}-v1.webp`;
   const win = $derived(!!S.end?.win), mine = $derived(me >= 0 ? S.heroes[me] : null);
   const right = $derived(Math.min(12, mine ? mine.log.right : Math.max(0, ...S.heroes.map((h) => h.log.right))));
-  const guard = $derived(mine ? Math.min(3, mine.log.covers + mine.log.heals + mine.log.revives + mine.log.shields + (mine.log.blocks ?? 0)) : 0);
+  const guard = $derived(mine ? Math.min(3, mine.log.covers + mine.log.heals + mine.log.revives + mine.log.shields + (mine.log.blocks ?? 0) + (mine.log.rescues ?? 0)) : 0); // 💚 구조 = 수호 보너스 1번 (요청 #46)
   const stars = $derived(win && mine ? (STAR[gradeOf(mine.log.first ?? { bad: 0, none: 1, total: 1 })] ?? 0) : 0);
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(guard ? [{ t: '수호 보너스', g: guard }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
   const STEPS = [1, 3, 5] as const, MEDAL = ['red', 'silver', 'gold'] as const;
   const nextStep = $derived(STEPS.find((s) => mastery < s) ?? 5);
   // 🏅 내 활약 자세히 (요청 #24 ⑦ 내용 그대로 · 줄이지 않음)
-  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.blocks && `🛡 막기 ${g.blocks}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
+  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.blocks && `🛡 막기 ${g.blocks}번`, g.rescues && `💚 구조 ${g.rescues}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
   /** 용사 칸 = 대표 활약 한 줄 (실드 → 퍼펙트 → 힐 → 엄호 → 부활 → 격려 → 각성 → 피해) */
   const top = (h: State['heroes'][number]): { ic: 'shield' | 'sparkle' | ''; t: string } => {
     const g = h.log;
     if (g.shields) return { ic: 'shield', t: `실드 ${g.shields}칸` };
     if (g.blocks) return { ic: 'shield', t: `막기 ${g.blocks}번` };
     if (g.perfect) return { ic: 'sparkle', t: `퍼펙트 ${g.perfect}` };
+    if (g.rescues) return { ic: '', t: `💚 구조 ${g.rescues}번` };
     if (g.heals) return { ic: '', t: `💚 힐 ${g.heals}번` };
     if (g.covers) return { ic: '', t: `🛡 엄호 ${g.covers}번` };
     if (g.revives) return { ic: '', t: `💖 부활 ${g.revives}번` };
