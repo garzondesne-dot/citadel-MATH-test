@@ -7,6 +7,7 @@ import { execSync } from 'node:child_process';
 
 // 🔄 #134 ① 사이트의 판 번호 = version.json (src/build.ts BUILD 그대로) → 화면이 옛 판인지 BETA 알약이 확인
 const BUILD = /BUILD = '([^']+)'/.exec(readFileSync(new URL('./src/build.ts', import.meta.url), 'utf8'))?.[1] ?? '';
+const APP_VER = /APP_VER = '([^']+)'/.exec(readFileSync(new URL('./src/build.ts', import.meta.url), 'utf8'))?.[1] ?? '1.0'; // 📜 v1.1
 // 📲 출시 막는 것 7 (📜 2026-11-14): 판 하나 = 이름 둘 — VITE_CHANNEL=release 로 빌드하면 정식 이름 · 아이콘 · manifest id(./ = 정식 앱과 같은 앱으로 이어짐) · 그 밖(베타 Pages · 시험) = 베타 그대로
 const CH = process.env.VITE_CHANNEL === 'release' ? 'release' : 'beta';
 // 🏫 학교판 (📜 머리 🔨): VITE_SCHOOL=<코드> → tools/school/schools.json 의 그 학교 = 빈 과목 팩(school) + 과목 이름 + 표준 묶음 + 그 학교 server.json · 앱 이름 「모두의 던전 : <과목>」
@@ -30,7 +31,7 @@ const manifest = { name: ID.name, short_name: ID.short, description: ID.desc, id
   icons: [{ src: ID.icons[0], sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: ID.icons[1], sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: ID.icons[2], sizes: '512x512', type: 'image/png', purpose: 'maskable' }, { src: BADGE, sizes: '192x192', type: 'image/png', purpose: 'monochrome' }] };
 // version.json = build(베타 화면이 읽음) + v(정식 fresh.js 가 읽음 → 옛 정식 폰이 판이 바뀐 걸 알고 한 번 새로 고침)
 const versionJson = { name: 'version-json', generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }) {
-  this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD, ...(REV ? { rev: REV } : {}), v: `citadel-1.0-${BUILD}` }) });
+  this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD, ...(REV ? { rev: REV } : {}), v: `citadel-${APP_VER}-${BUILD}` }) });
   this.emitFile({ type: 'asset', fileName: 'manifest.webmanifest', source: JSON.stringify(manifest, null, 2) });
 } };
 const htmlId = { name: 'html-id', transformIndexHtml(h: string) {
@@ -49,7 +50,7 @@ const swPlugin = { name: 'beta-sw', writeBundle(o: { dir?: string }, bundle: Bun
   const out = o.dir ?? 'dist', has = (f: string) => existsSync(join(out, f));
   const core = ['./', './index.html', './manifest.webmanifest', ...[...ID.icons, ID.apple, ID.fav, BADGE, BADGE96, 'fonts/dungeon-icons-v3.woff'].filter((x, i, a) => a.indexOf(x) === i).map((x) => `./${x}`), './art/brand-bg-v1.webp', './art/brand-school-logo-v1.webp',
     ...Object.values(bundle).map((b) => b.fileName).filter((f) => /^assets\/.+\.(js|css)$/.test(f)).map((f) => `./${f}`)].filter((u) => u === './' || has(u.slice(2)));
-  const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', REV ? `${BUILD}-${REV}` : BUILD).replace('__CORE__', JSON.stringify(core));
+  const src = readFileSync(new URL('./src/sw/sw.template.js', import.meta.url), 'utf8').replace('__BUILD__', REV ? `${BUILD}-${REV}` : BUILD).replace('__VER__', APP_VER).replace('__CORE__', JSON.stringify(core));
   writeFileSync(join(out, 'sw.js'), src);
   if (SCHOOL) writeFileSync(join(out, 'server.json'), JSON.stringify({ mode: 'server', firebase: SCHOOL.fb, school: { code: SCHOOL_CODE, name: SCHOOL.name, subject: SCHOOL.subject } }, null, 2)); // 🏫 그 학교 서버(공개 설정값)
 } };

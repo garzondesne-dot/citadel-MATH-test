@@ -1,3 +1,4 @@
+import { APP_VER } from './build';
 // 🧪 시험 주소 · 🅱 베타 구분 (📜 2026-11-14 출시 막는 것 9 「시험 고리 · ?as · BETA 띠 = 시험 주소에서만」)
 //   TEST_ADDR = 내 컴퓨터(localhost · 127.0.0.1) = e2e · 개발 → 시험 고리(window.__*) · ?as · ?role=dev · fxbake · ?packs=0 · ?emu 가 됨
 //   BETA = 시험 주소이거나 베타 사이트(/citadel-MATH-test/) → 「BETA · 판」 알약 · 「시험 서버」 글자
@@ -14,7 +15,7 @@ export const APP_NAME = BETA ? '던전 베타' : '모두의 던전';
 export const XCLS = BETA ? '베타 반' : '시험 반';
 /** 🏷 판 이름 (📜 2026-11-15 선생님 정정 · DECISIONS 맨 아래): 정식 = 「✅ 정식 bNNN」(초록) · 베타 = 「🧪 베타 bNNN」(주황) */
 /** 🔖 #81 베타 = 「🧪 베타 b227 · 커밋」 (정식 꼴 「✅ 정식 b227」과 한눈에 다르게) */
-export const verName = (build: string, rev = '') => (BETA ? `🧪 베타 ${build}${rev ? ` · ${rev}` : ''}` : `✅ 정식 ${build}`);
+export const verName = (build: string, rev = '') => (BETA ? `🧪 v${APP_VER} 베타 ${build}${rev ? ` · ${rev}` : ''}` : `✅ v${APP_VER} 정식 ${build}`);
 /** ✍ 만든 이 (첫 화면 · 학생 설정 맨 아래 · 교사 「나」) · 주소에 ?anon 이면 숨김 */
 export const CREDIT_NAME = '김찬우';
 export const showCredit = !(loc && new URLSearchParams(loc.search).has('anon'));

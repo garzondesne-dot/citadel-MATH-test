@@ -5,7 +5,7 @@
  *  ④ 다른 곳(Firebase · 구글) · GET 아닌 것 = 손대지 않음 */
 const BUILD = '__BUILD__';
 const CORE = __CORE__;
-const CORE_CACHE = `dgb-core-${BUILD}`, MEDIA = 'dgb-media-v1';
+const CORE_CACHE = `dgb-core-__VER__-${BUILD}` /* 📜 v1.1 = 캐시 이름에 판(1.1) */, MEDIA = 'dgb-media-v1';
 const scopeUrl = new URL(self.registration.scope);
 const rel = (u) => { const p = new URL(u).pathname; return p.startsWith(scopeUrl.pathname) ? p.slice(scopeUrl.pathname.length) : p; };
 
