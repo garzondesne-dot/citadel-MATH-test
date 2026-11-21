@@ -482,6 +482,7 @@
   .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .slot { background: var(--surface); border-radius: var(--r); padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 120px; justify-content: center; text-align: center; }
   .slot b { font-size: 14px; } .slot small { font-size: 12.5px; color: var(--text-2); }
+  @media (orientation: landscape) and (max-height: 520px) { .slots { grid-template-columns: repeat(4, 1fr); gap: 8px; } .slot { min-height: 96px; padding: 6px; } } /* 🐞 bughunt 01 가로 844 × 390 = 4칸 한 줄 (2 × 2 면 아래 2칸이 글 뒤로 잘림) */
   .slot.me { box-shadow: 0 0 0 2px var(--accent); }
   .slot.empty { border: 2px dashed var(--line); background: transparent; color: var(--text-3); font-weight: 700; }
   .bub { margin: 0; background: var(--surface-2); border-radius: var(--r); padding: 10px 12px; font-size: 14px; color: var(--text-2); }
