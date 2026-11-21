@@ -143,3 +143,16 @@ describe('v4 스토리 문구 (📜 #64 · STORY-LINES-v1)', () => {
     expect(bossLine(7, 'enter')).toContain('다시'); expect(bossLine(18, 'enter')).toBeNull();
   });
 });
+
+describe('🚨 #84 보스 HP 1 에서 버티다 패배 (선생님 베타 판)', () => {
+  it('쓰러진 친구가 있어도 보스 HP 0 = 바로 승리 · 그 뒤 패배 없음', () => {
+    const S = at(8); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true }));
+    S.heroes[1]!.down = true; S.heroes[1]!.hp = 0; S.bossHp = 3; const h = S.heroes[0]!; h.atb = 1;
+    attack(S, 0, 'crit'); expect(S.bossHp).toBe(0); expect(S.end?.win).toBe(true); expect(S.end?.why).toBe('보스 쓰러뜨림');
+    for (const x of S.heroes) { x.down = true; x.hp = 0; } run(S, 30); expect(S.end?.win).toBe(true);
+  });
+  it('실드 칸이 남아 있으면 HP 1 에서 멈춤 (그대로)', () => {
+    const S = at(8); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); S.bossHp = 3; S.heroes[0]!.atb = 1;
+    attack(S, 0, 'crit'); expect(S.bossHp).toBe(1); expect(S.end).toBeNull();
+  });
+});

@@ -62,12 +62,12 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
   };
 }
 const push = (S: State, e: Ev) => { S.evN++; S.ev.push({ ...e, n: S.evN }); if (S.ev.length > 200) S.ev.splice(0, S.ev.length - 200); };
-/** 보스가 받는 피해 (실드 중 감소 · 약점 시간 2배 · 실드 · 쓰러진 친구가 있으면 HP 1 에서 멈춤) */
+/** 보스가 받는 피해 (실드 중 감소 · 약점 시간 2배 · 실드 칸이 남으면 HP 1 에서 멈춤 · 📜 #84 쓰러진 친구는 상관없음) */
 function hitBoss(S: State, raw: number, pierce = 1, flat = false): number {
   if (!flat && S.curseUntil && S.t < S.curseUntil) raw *= 1 + attrFx.curse.pct; // 🌑 저주
   if (!flat && S.boss.sig === 'eqMoment' && S.t < (S.eqUntil ?? 0)) raw *= SIG.eq.mul; // 13 등호의 순간 (보스 공격 뒤 3초)
   const mul = flat ? 1 : weak(S) ? T.weakDmg : S.shieldUp && S.cells.some((c) => !c.broken) ? Math.min(1, (S.boss.shieldDmg ?? T.shieldDmg) * pierce) : 1;
-  const dmg = Math.max(1, Math.round(raw * mul)), floor = S.cells.some((c) => !c.broken) || S.heroes.some((h) => h.down) ? 1 : 0;
+  const dmg = Math.max(1, Math.round(raw * mul)), floor = S.cells.some((c) => !c.broken) ? 1 : 0; /* 📜 #84 쓰러진 친구가 있어도 HP 1 에서 안 멈춤 (전: 1 에서 버티다 전멸 = 패배) · 실드 칸이 남았을 때만 1 */
   const before = S.bossHp; S.bossHp = Math.max(floor, S.bossHp - dmg);
   if (!S.rage && S.bossHp > 0 && S.bossHp <= S.bossMax * RAGE.at) { S.rage = true; S.ragePerf = 0; S.rageN = 0; S.forceAtk = rageSpecial(S); S.target = null; S.nextAtk = null; S.aoeNext = false; S.bossT = Math.max(S.bossT, RAGE.every[S.diff] - (ATK[S.forceAtk].warn ?? T.telegraph)); push(S, { k: 'rage', t: S.t, on: 'rage' }); const M = modOf(S); if (M?.refreeze && S.lastBrk != null && S.cells[S.lastBrk]?.broken) { const c = S.cells[S.lastBrk]!; c.broken = false; S.refrozen = S.lastBrk; S.weakUntil = Math.min(S.weakUntil, S.t); push(S, { k: 'sig', t: S.t, what: 'refreeze', who: c.owner }); } } // 👹 분노 = 특수 한 번 바로(예고 4초) · 4 얼음 갑옷 다시
   if (!S.shieldUp && !S.cells.length && S.bossHp <= S.bossMax * T.shieldAt) { // 실드 펼침 · 각자 1칸 · 그 용사 계열
@@ -78,7 +78,7 @@ function hitBoss(S: State, raw: number, pierce = 1, flat = false): number {
 }
 function checkEnd(S: State) {
   if (S.end) return;
-  if (S.bossHp <= 0 && S.cells.every((c) => c.broken) && S.heroes.every((h) => !h.down)) { S.end = { win: true, why: '보스 쓰러뜨림', t: S.t }; push(S, { k: 'end', t: S.t, win: true, why: S.end.why }); return; }
+  if (S.bossHp <= 0 && S.cells.every((c) => c.broken)) { /* 📜 #84 보스 HP 0 = 바로 승리 (쓰러진 친구가 있어도 · 그 뒤 패배 판정 없음) */ S.end = { win: true, why: '보스 쓰러뜨림', t: S.t }; push(S, { k: 'end', t: S.t, win: true, why: S.end.why }); return; }
   const downs = S.heroes.filter((h) => h.down).length;
   if (downs && (S.heroes.length === 1 || downs === S.heroes.length || S.revives <= 0)) { S.end = { win: false, why: S.heroes.length === 1 ? '쓰러짐' : downs === S.heroes.length ? '전멸' : '팀 부활을 다 씀', t: S.t }; push(S, { k: 'end', t: S.t, win: false, why: S.end.why }); }
 }
