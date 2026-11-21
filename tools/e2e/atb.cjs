@@ -109,7 +109,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('Y12 오라 방패 = 다음 공격 막음 + 석화 표시', await p.evaluate(() => globalThis.__atb.S.guard && globalThis.__atb.S.stoneUntil > globalThis.__atb.S.t) && !!(await p.$('[data-k="atb-stone"]')));
   // 🛡 요청 #12 실드 = 큰 문구 · 방패막 · 계열 칸(이모지 · 색) · 약점 배지 · 깰 때 금 감 → 조각나며 사라짐
   await p.waitForTimeout(800); await p.evaluate(() => { const S = globalThis.__atb.S; S.guard = false; S.stoneUntil = 0; S.bossHp = Math.round(S.bossMax * 0.7) + 3; globalThis.__atb.full(); });
-  await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(450);
+  await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('ok')); await p.waitForTimeout(330);
+  { const e0 = await p.$$eval('[data-k="atb-cells"] .cell2', (x) => x.map((e) => e.dataset.st).join(','));
+    const fly = await p.waitForSelector('[data-k="atb-shfly"]', { timeout: 1500 }).then(() => true).catch(() => false); await p.waitForTimeout(120); await p.screenshot({ path: `${SHOTS}/atb-r32-fly-844.png` });
+    await p.waitForTimeout(1500); const msg = await p.textContent('[data-k="atb-bigmsg"]').catch(() => '');
+    ok('요청 #32 실드 생김 = 빈 방패 칸 먼저 → 속성 방패가 크게 나와 제 칸으로 차례로 · 끝 = 「🛡 실드! 약점 = …」', /empty/.test(e0) && fly && /약점 =/.test(msg) && !(await p.$('[data-k="atb-shfly"]')), `${e0} · ${msg}`);
+    await p.screenshot({ path: `${SHOTS}/atb-r32-done-844.png` }); }
   ok('요청 #12 실드 생김 = 큰 「🛡 실드!」 · 방패막 · 칸 = 인원수 · 계열 이모지', /실드/.test(await p.textContent('[data-k="atb-bigmsg"]').catch(() => '')) && !!(await p.$('[data-k="atb-barrier"]')) && (await p.$$('[data-k="atb-cells"] .cell2.ok')).length === 4);
   ok('요청 #12 약점 계열 용사 = 머리 위 「약점!」', (await p.$$('[data-k="atb-weak"]')).length >= 1);
   await p.screenshot({ path: `${SHOTS}/atb-shield-up-844.png` }); await p.waitForTimeout(1600);

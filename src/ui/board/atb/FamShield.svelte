@@ -14,17 +14,17 @@
 </script>
 
 <script lang="ts">
-  const { fam, size = 28, state = 'ok', title = '' }: { fam: Fam; size?: number; state?: 'ok' | 'crack' | 'gone'; title?: string } = $props();
+  const { fam, size = 28, state = 'ok', title = '' }: { fam: Fam; size?: number; state?: 'ok' | 'crack' | 'gone' | 'empty'; title?: string } = $props();
   const c = $derived(FAM_SHIELD[fam]);
 </script>
 
-<span class="fs {state}" style:width="{size}px" style:height="{Math.round(size * 1.08)}px" data-k="fam-shield" data-fam={fam} title={title || c.name} role="img" aria-label="{c.name}{state === 'gone' ? ' (깨짐)' : ''}">
+<span class="fs {state}" style:width="{size}px" style:height="{Math.round(size * 1.08)}px" data-k="fam-shield" data-fam={fam} title={title || c.name} role="img" aria-label="{state === 'empty' ? '빈 칸' : c.name}{state === 'gone' ? ' (깨짐)' : ''}">
   <svg viewBox="0 0 48 52" aria-hidden="true">
-    <path d="M3 4 Q24 -1 45 4 V22 C45 36 35 45 24 50 C13 45 3 36 3 22 Z" fill={c.fill} stroke={c.edge} stroke-width="3" stroke-linejoin="round" />
+    <path d="M3 4 Q24 -1 45 4 V22 C45 36 35 45 24 50 C13 45 3 36 3 22 Z" fill={state === 'empty' ? '#1d1828cc' : c.fill} stroke={state === 'empty' ? '#c9b8e8' : c.edge} stroke-width="3" stroke-linejoin="round" stroke-dasharray={state === 'empty' ? '5 3' : undefined} />
     <path d="M7 8 Q24 4 41 8 V14 Q24 10 7 14 Z" fill="#fff" opacity="0.22" />
-    {#if state !== 'ok'}<polyline points="22,4 27,16 20,24 28,33 23,48" fill="none" stroke="#111" stroke-width="2.6" stroke-linejoin="round" /><polyline points="27,16 36,19" fill="none" stroke="#111" stroke-width="2" /><polyline points="20,24 11,27" fill="none" stroke="#111" stroke-width="2" />{/if}
+    {#if state === 'crack' || state === 'gone'}<polyline points="22,4 27,16 20,24 28,33 23,48" fill="none" stroke="#111" stroke-width="2.6" stroke-linejoin="round" /><polyline points="27,16 36,19" fill="none" stroke="#111" stroke-width="2" /><polyline points="20,24 11,27" fill="none" stroke="#111" stroke-width="2" />{/if}
   </svg>
-  <i style:font-size="{Math.round(size * 0.56)}px">{c.emo}</i>
+  {#if state !== 'empty'}<i style:font-size="{Math.round(size * 0.56)}px">{c.emo}</i>{/if}
 </span>
 
 <style>

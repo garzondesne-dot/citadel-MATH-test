@@ -213,8 +213,25 @@
     void fxAttack(stageEl, { heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fit(h.s.hero, fx[e.who] || 'flame'), finish: true, hits: 1, mult: 1.2, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit: go }).catch(() => {}).finally(() => { busy.delete(e.who); setPose(e.who, 'idle'); });
   }
   /** 🛡 실드 생김 = 화면 가운데 큰 문구 · 진동 · 보스 웅크렸다 일어나며 포효 · 방패막 펼침 */
+  // 🛡 📜 요청 #32 실드 생김 = 방패막 + 빈 방패 칸 먼저(0.3초) → 칸마다 차례로 그 속성 방패가 가운데 크게(3배) → 작아지며 제 칸으로 쏙 + 「팅」(한 음씩 올라감) + 계열 색 반짝
+  //   → 다 합쳐지면 「🛡 실드! 약점 = …」 · 약 1.5초 · 전투 · 문제 풀이 안 멈춤 · 화면 아무 데나 누르면 바로 끝 모양
+  let pendCells = $state<Set<number>>(new Set()), flies = $state<{ id: number; i: number; fam: Fam; x0: number; y0: number; dx: number; dy: number }[]>([]), flyN = 0, shT: ReturnType<typeof setTimeout>[] = [], flashCell = $state(-1);
+  function ting(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = 1046.5 * Math.pow(1.122, i); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.36); }
+  function shieldDone() {
+    shT.forEach(clearTimeout); shT = []; flies = []; pendCells = new Set(); removeEventListener('pointerdown', shieldDone, true);
+    const wk = S.boss.weak.map((f) => `${FAM_EMO[f]} ${FAM_NAME[f]}`).join(' · '); big(`🛡 실드! 약점 = ${wk}`, 'shield');
+  }
   function shieldUpFx() {
-    big('🛡 실드!', 'shield'); try { navigator.vibrate?.(80); } catch { /* 무시 */ } sfx('holy-on', 0.8);
+    try { navigator.vibrate?.(80); } catch { /* 무시 */ } sfx('holy-on', 0.8);
+    const n = S.cells.length; pendCells = new Set(S.cells.map((_, i) => i)); flies = [];
+    addEventListener('pointerdown', shieldDone, true);
+    S.cells.forEach((c, i) => shT.push(setTimeout(() => {
+      const st = stageEl, el = st?.querySelectorAll('[data-k="atb-cells"] .cell2')[i]; if (!st || !el) return;
+      const R = rectIn(st), A = rectIn(el), x0 = R.width * 0.5, y0 = R.height * 0.42, dx = A.left + A.width / 2 - R.left - x0, dy = A.top + A.height / 2 - R.top - y0, id = ++flyN;
+      flies = [...flies, { id, i, fam: c.fam, x0, y0, dx, dy }];
+      shT.push(setTimeout(() => { flies = flies.filter((f) => f.id !== id); const p = new Set(pendCells); p.delete(i); pendCells = p; ting(i); flashCell = i; setTimeout(() => { if (flashCell === i) flashCell = -1; }, 260); }, 420));
+    }, 300 + i * 220)));
+    shT.push(setTimeout(shieldDone, 300 + n * 220 + 460));
     bossShield = true; setTimeout(() => (bossShield = false), 900); barrier = 'up';
     bossEl?.animate?.([{ scale: '1 1' }, { scale: '1.08 0.82', offset: 0.3 }, { scale: '0.94 1.12', offset: 0.6 }, { scale: '1 1' }], { duration: 800, easing: 'ease-out' });
     setTimeout(() => shake(stageEl ?? null, 5, 300), 450);
@@ -384,13 +401,15 @@
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" style:--fc={FAM_COL[c.fam]} data-st={st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><FamShield fam={c.fam} size={44} state={st === 'gone' ? 'gone' : st === 'crack' || st === 'shatter' || (st === 'hold' && cellAnim[i] != null) ? 'crack' : 'ok'} />{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" class:fl={flashCell === i} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><FamShield fam={c.fam} size={44} state={pendCells.has(i) ? 'empty' : st === 'gone' ? 'gone' : st === 'crack' || st === 'shatter' || (st === 'hold' && cellAnim[i] != null) ? 'crack' : 'ok'} />{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
   <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
+
+  {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
   <!-- 용사 -->
   {#each S.heroes as h (h.id)}
@@ -666,4 +685,9 @@
   .need1 { margin-left: 4px; font: 800 calc(9px * var(--u)) var(--font-plain); color: #ffd98a; white-space: nowrap; }
   .card.suck { transition: transform 0.45s cubic-bezier(.6,0,.9,.4), opacity 0.45s ease-in; transform: scale(0.04) rotate(540deg); transform-origin: 50% 45%; opacity: 0; }
   @media (prefers-reduced-motion: reduce) { .ringfx { animation: none; } }
+  /* 🛡 실드 속성 강조 (요청 #32) */
+  .shfly { position: absolute; z-index: 43; pointer-events: none; transform: translate(-50%, -50%); animation: shfly 0.42s cubic-bezier(.5,0,.8,.4) forwards; filter: drop-shadow(0 0 14px #fff8); }
+  @keyframes shfly { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 22% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 45% { transform: translate(-50%, -50%) scale(1); } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.33); opacity: 1; } }
+  .cell2.fl { animation: cflash 0.26s ease-out; } @keyframes cflash { 0% { filter: drop-shadow(0 0 2px var(--fc)) brightness(2.2); scale: 1.3; } 100% { scale: 1; } }
+  @media (prefers-reduced-motion: reduce) { .shfly { animation-duration: 0.01s; } }
 </style>
