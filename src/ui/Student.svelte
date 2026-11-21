@@ -108,7 +108,7 @@
   const down = $derived(!!hp && hp.max > 0 && hp.left <= 0);
   const pracAll = $derived(down && R && step?.kind === 'monster' ? pracHitsAll(L, R, step.id) : 0); // 🔥 처치 결과 한 줄
   const scout = $derived(R ? solveLock(L, R, now) : null);
-  const gem = $derived(R ? (() => { const g = PROFILES[R.meta.profile]?.reward.gem; return typeof g === 'number' ? g : 0; })() : 0);
+  const gem = $derived(R ? (() => { const w = (R.meta as { wallet?: unknown }).wallet; if (typeof w === 'number') return w; const g = PROFILES[R.meta.profile]?.reward.gem; return typeof g === 'number' ? g : 0; })() : 0); // 👩‍🏫 체험판 = meta.wallet (#60-1)
   const crec = $derived(R && mid && chain ? chainRecord(L, R, mid, uid) : null);
   const downs = $derived(R && mid && chain ? chainDown(L, R, mid, now) : []);
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨): ❤ 0 잠김 = 쓰러짐 줄 · 받은 힐 + 풀어주기가 늘면 힐 받음 줄 · 내가 ⚡ 쓰면(힐 · 묶기 · 🌟) 힐 시전 줄
@@ -272,7 +272,7 @@
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
 {:else if result && R && !board && !paperOn()}
   <!-- 🎒 수업 결과 위 = 던전 배경 + 내 용사 승리 자세(오라) + 띠 (📜 2026-11-15 ⑦) -->
-  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />
+  <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) && (!result.boss || (result.boss.items > 0 && result.boss.ok >= result.boss.items)) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />
 {:else if talk && R && !board}
   <!-- 📣 도입 · 개념 (📜 2026-11-15 선생님 「빈 화면 · 고장 난 것 같아」): 위 = 그 차시 던전 배경 + 내 용사(오라 · 숨쉬기) + 설명 중 띠 · 몬스터 단계와 같은 장면 부품 -->
   <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} note="👩‍🏫 선생님 설명 중 · TV 를 봐요" />
@@ -289,7 +289,7 @@
   {:else if isLobby(R)}
     <div class="bcard"><span class="lab acc">{expOf(R, uid) ? '🔥 ' : ''}{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p>{#if expOf(R, uid)}<p class="expok" data-k="lobby-explore">🔥 탐사대! 예습한 용사 · 정찰 때 횃불을 들어요</p>{/if}</div>
     <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
-    {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
+    {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{(R.meta as { trial?: boolean }).trial ? (expOf(R, uid) ? '🔥 탐사대예요' : '✔ 탐사대로 보기') : expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
     <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />

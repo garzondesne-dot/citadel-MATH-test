@@ -14,7 +14,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = '&emu=12
   log('① 수업 없음:', JSON.stringify(g1)); if (!g1.gate || g1.camp || !/열린 수업이 없어요/.test(g1.msg)) errs.push('① 입구');
   await tv.screenshot({ path: `${SHOTS}/tvgate-none.png` });
   const t = await page(`?role=teacher${E}`, 390, 844); await t.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(t, '.tabs');
-  await t.click('[data-cls="1-3"]'); await t.click('.pk3 .pk:has-text("6차시")'); await t.click('.tact .btn'); await t.waitForTimeout(1500);
+  await t.click('[data-cls="1-3"]'); await t.click('.pk3 [data-no="6"]'); await t.click('[data-k="open-go"]'); await t.click('[data-k="open-yes"]').catch(() => {}); await t.waitForSelector('.tact .btn', { timeout: 15000 }); await t.waitForTimeout(1500);
   const live = await rest('school/live'), key = String(await rest(`secrets/${live.code}/hallKey`)); log('   교사 수업 열기:', live.code, '· 비밀번호', key);
   await tv.waitForTimeout(1200); await tv.fill('[data-k="tv-key"]', key === '1111' ? '2222' : '1111'); await tv.click('.kgo'); await tv.waitForTimeout(1500);
   const bad = (await tv.textContent('.kerr').catch(() => '')).trim(); log('② 틀린 비밀번호:', bad); if (!/달라요/.test(bad)) errs.push('② 틀림');

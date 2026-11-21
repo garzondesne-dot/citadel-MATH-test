@@ -22,6 +22,8 @@ export interface Arena {
   monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o?: HitO): void;
   /** ⚡ #83 A3 각성 연출 몬스터 색조 (얼음 · 금빛 · 초록 글리치 · 핏빛) · ms 뒤 원래 색 */
   monTint(color: number, ms: number): void;
+  /** 🪨 #54 금 단계 넘음 = 쿵 */
+  crack(): void;
   /** 🎆 격파 예약: 다음 맞힘(1.5초 안 · 없으면 그때) = 마지막 일격 → 느리게 0.5초 · 충격파 · 조각 */
   armKill(): void;
   /** 🎆 화려한 연출 켬 · 끔 (🧩 스위치 · 동작 줄이기면 끔) */
@@ -213,12 +215,17 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     holeSp.filters = sp.hue ? [(() => { const m = new ColorMatrixFilter(); m.hue(sp.hue!, false); return m; })()] : []; // 🔥 빛 구멍 = 원래 색
   }
   // ── 체력 막대 (몬스터 바로 위 · 굵게 · 숫자) ──
+  // 🎯 #54 흰 잔상 (게시판 던전 공용 조각과 같은 꼴): 줄어든 만큼 흰 막대가 0.4초 머문 뒤 0.3초에 따라 줄어듦
+  let lagP = 1, lagMax = 0, lagT: ReturnType<typeof setTimeout> | undefined, lagS: ArenaState | null = null;
   function drawHp(s: ArenaState) {
     hpC.removeChildren().forEach((c) => c.destroy());
     if (!s.hp || s.shadow) return;
     const b = arenaBox(W(), H(), s.boss, s.split, visOf(s)).hp, g = new Graphics(), r = b.h / 2, p = s.hp.max ? Math.max(0, s.hp.left) / s.hp.max : 0;
+    lagS = s; if (s.hp.max !== lagMax || p >= lagP) { lagMax = s.hp.max; lagP = p; clearTimeout(lagT); lagT = undefined; }
+    else if (!lagT) lagT = setTimeout(() => { const from = lagP, to = lagS?.hp?.max ? Math.max(0, lagS.hp.left) / lagS.hp.max : 0; tween(300, (q) => { lagP = from + (to - from) * q; if (lagS) drawHp(lagS); }, () => { lagT = undefined; }); }, 400);
     g.roundRect(b.x - 3, b.y - 3, b.w + 6, b.h + 6, r + 3).fill({ color: 0x000000, alpha: 0.7 });
     g.roundRect(b.x, b.y, b.w, b.h, r).fill({ color: 0x2a0d10 });
+    if (lagP > p) g.roundRect(b.x, b.y, Math.max(b.h, b.w * lagP), b.h, r).fill({ color: 0xffffff, alpha: 0.6 });
     if (p > 0) g.roundRect(b.x, b.y, Math.max(b.h, b.w * p), b.h, r).fill({ color: 0xe5484d });
     g.roundRect(b.x, b.y, b.w, b.h * 0.45, r).fill({ color: 0xffffff, alpha: 0.12 });
     const n = txt(`${s.hp.left} / ${s.hp.max}`, 'body', true, 0xffffff); n.anchor.set(0.5); n.x = b.x + b.w / 2; n.y = b.y + b.h / 2;
@@ -290,8 +297,8 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     app.ticker.add(f);
   }
   function flash(m: Sprite) { const f0 = m.filters ? [...(m.filters as ColorMatrixFilter[])] : []; m.filters = [...f0.slice(-1), whiteF]; setTimeout(() => { if (!m.destroyed) m.filters = stoned ? [...baseF, greyF] : baseF; }, JUICE.FLASH_MS); } // 필터 동시 2개까지
-  function pop(text: string, perfect: boolean) {
-    const x = monCx + (Math.random() - 0.5) * monSize * 0.3, y = monTop + monSize * 0.35, t = txt(text, 'big', true, perfect ? 0xffd25a : 0xffffff); t.anchor.set(0.5, 1); t.x = x; t.y = y; fx.addChild(t);
+  function pop(text: string, perfect: boolean, ult = false) { // 🎯 #54 TV = 크기 그대로 · 단계 색 (필살 = 금빛 주황 · 퍼펙트 = 노랑 · 보통 = 흰)
+    const x = monCx + (Math.random() - 0.5) * monSize * 0.3, y = monTop + monSize * 0.35, t = txt(text, 'big', true, ult ? 0xffb84a : perfect ? 0xffd25a : 0xffffff); t.anchor.set(0.5, 1); t.x = x; t.y = y; fx.addChild(t);
     if (!perfect) t.style.stroke = { color: 0xb3261e, width: Math.max(3, H() * 0.006) }; const k0 = perfect ? JUICE.NUM_PERFECT : 1;
     tween(1100, (p) => { const q = p < 0.18 ? p / 0.18 : 1; t.scale.set(k0 * (JUICE.NUM_POP - (JUICE.NUM_POP - 1) * ease(q))); t.y = y - H() * 0.09 * ease(p); t.alpha = p < 0.72 ? 1 : 1 - (p - 0.72) / 0.28; }, () => t.destroy());
   }
@@ -314,9 +321,11 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     if (!fancy) { wob(); if (dmg > 0) float(`-${dmg}`, monCx + (Math.random() - 0.5) * monSize * 0.3, monTop + monSize * 0.35, 'big', 0xffd166); return; }
     const perfect = !!o.perfect, last = dmg > 0 && killArm > 0;
     stopUntil = performance.now() + (perfect ? JUICE.STOP_PERFECT_MS : JUICE.STOP_MS); JS.stops++; flash(m); wob();
-    if (dmg > 0) pop(`-${dmg}`, perfect);
+    if (dmg > 0) pop(`-${dmg}`, perfect || !!o.ult, !!o.ult);
     if (last) kill(); else shake(o.ult ? 2 : perfect || dmg >= 3 ? 1 : 0);
   }
+  /** 🪨 #54 체력 75 · 50 · 25% 넘음 = 쿵 흔들 + 흰 번쩍 (게시판 던전 금 단계와 같은 때) */
+  function crack() { const m = monSp; if (!m || !fancy) return; flash(m); shake(1); }
   function armKill() { if (!fancy) return; killArm = performance.now(); clearTimeout(killT); killT = setTimeout(() => { if (killArm) kill(); }, 1500); }
   function slash() {
     const g = new Graphics(), cx = monCx, cy = monTop + monSize * 0.5, r = monSize * 0.32;
@@ -388,7 +397,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(async () => { await drawMon(s); drawHp(s); await drawParty(s); if (s.shadow && !scoutOn && st === s) scoutStart(s); else if (!s.shadow && scoutOn) scoutEnd(); }); // 🌑 #67 정찰 들어감 · 나옴
     },
-    hit, exp, sparkle, banner, freeze, pose, monTint, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, sparkle, banner, freeze, pose, monTint, crack, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),

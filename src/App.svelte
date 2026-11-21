@@ -238,7 +238,7 @@
   .modes small { color: var(--text-2); }
   .err { color: var(--bad); }
   /* 📜 2026-11-17 #17: 전투 화면(장면 띠 280) = 띠를 장면 아래로 (몬스터 · 용사를 가리지 않게) */
-  :global(body:has([data-scene])) .wtip { top: calc(env(safe-area-inset-top, 0px) + 288px); }
+  :global(body:has([data-scene])) .wtip { top: calc(env(safe-area-inset-top, 0px) + 56px); } /* 🐞 #60-4 전투 화면 = 장면 띠 위(그림 위)에 · 아래 정찰 · 문제 카드(남은 초 · 제목)를 덮지 않게 */
   .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .relogin { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 10px 14px; max-width: 92vw; border-radius: 12px; background: #2b1e10; border: 1px solid #f5b84a; color: #ffe3a8; font: 700 14px var(--font); text-align: center; }
   .crash { margin: 24px 16px; padding: 16px; border-radius: 12px; background: var(--card, #fff); color: var(--ink, #222); text-align: center; }

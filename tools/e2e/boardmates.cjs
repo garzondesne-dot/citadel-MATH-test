@@ -54,7 +54,7 @@ const BOTS = [['b1', 3, 5, 6, 'frost'], ['b2', 4, 9, 10, 'flame']]; // uid Â· ë²
       const on = [...document.querySelectorAll('.edge .mate.on')];
       if (on.length > 1) seen.both++;
       for (const e of on) { const u = e.dataset.u; if (seen.on.at(-1) !== u) seen.on.push(u); const t = e.style.translate; if (t && t !== '0px 0px' && t !== '0px') seen.move[u] = true; }
-      if (document.querySelector('.edge .atk-dmg')) seen.dmg++;
+      if (document.querySelector('.edge .atk-dmg, .edge .hitfx-num')) seen.dmg++;
       if (document.querySelector('.edge .atk-ting')) seen.ting++;
       if (Date.now() - t0 > ms) { clearInterval(id); res(seen); }
     }, 50);

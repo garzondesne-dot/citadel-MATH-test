@@ -9,9 +9,8 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
   const t = await (await b.newContext({ viewport: { width: 400, height: 860 } })).newPage(); t.on('pageerror', (e) => errs.push(String(e)));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tabs');
-  await t.click('.tabs button:has-text("준비")'); await t.click('[data-k="lpick-go"]'); await t.click('[data-k="lpick"] .grid [data-id="set-10"]');
-  const prepSolve = (await t.textContent('.four')).replace(/\s+/g, ' '); ok('차시 준비 「정찰 60초」', /정찰\s*60초/.test(prepSolve), prepSolve);
-  await t.click('.tact .btn'); await t.waitForSelector('[data-k="bots"]'); await t.click('[data-k="bot-sw"]');
+  // 📦 #21 수업 탭 = 🧪 → 10차시 → 📱 리모컨만(🤖 봇 5) → 🧪 테스트 열기 (옛 「준비」 → 차시 고르기 · 4판 보기 대신)
+  await t.click('[data-k="cls-test"]'); await t.click('.pk3 [data-no="10"]'); await t.click('[data-mode="remote"]'); await t.click('[data-k="open-go"]'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.tact .btn', { timeout: 15000 });
   await t.waitForFunction(() => !document.querySelector('.tact .btn')?.disabled, null, { timeout: 15000 });
   const R = () => t.evaluate(() => { const L = window.__dbGet('school/live'); return window.__dbGet(`rooms/${L.code}`); });
   ok('테스트 수업 방 정찰 = 60초', (await R()).meta.solve === 60, String((await R()).meta.solve));

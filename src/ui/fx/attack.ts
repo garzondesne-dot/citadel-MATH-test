@@ -4,6 +4,7 @@
 //   ⚡ 필살기 컷인(1.2초 · 얼굴 · 눈빛 · 이름 · 찢김) → 💥 광역(본 이펙트 + 네 귀퉁이 + 충격파 + 어둠막) · 🌟 진필살기 = 금빛 · 「眞」 · 조금 길게
 //   폰(장면 띠) · TV(Pixi 위 DOM 층) · 갤러리 같은 함수 — 연출만 (데미지 · 체력 · 정답 판정과 무관)
 //   v1.0 다른 점: 용사 그림 바꾸기(정식 DS.Art.hero) = o.pose 콜백 · 몬스터 보이는 몸통 = 요소의 data-bb(칸 비율) · 소리 = sound.svelte.ts
+import { hitBits, hitNumber, hitReel, hitText, hitTier } from './hitfx';
 import { rectIn } from '../rot';
 import { overlay, layerOn } from './layer';
 import { isNewFx, FACES, famOf, modeOf, place, play as fxPlay, preload as fxPreload, q4, RANGED, spec, strip, tierOf, COMBO, NAMES, FX2, type Body, type Spec } from './fx';
@@ -59,7 +60,7 @@ function wave(box: HTMLElement, x: number, y: number) { const e = document.creat
 const FAM_SFX: Record<string, string> = { cut: 'cut', smash: 'smash', sweep: 'sweep', wind: 'wind', fire: 'fire', spark: 'spark', frost: 'frost', star: 'star', magic: 'magic', math: 'magic', sun: 'star', dark: 'cut', gear: 'smash', water: 'wind' };
 export const fxHit = (k: string, m = 1) => sfx(FAM_SFX[famOf(k)?.id ?? ''] ?? 'special', 0.85 * m);
 
-type HitO = { /** ⚡ #83 A3 각성 필살기 연출 열쇠 (있으면 광역 · 새 그림 대신) */ awk?: string | null; /** TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 = 작게) */ vol?: number; prac?: number; mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
+type HitO = { /** 🎯 #54 손맛 공용 조각: 폰 = 내 숫자 크게 · 친구 작게 / TV = 단계 색 */ mine?: boolean; view?: 'phone' | 'tv'; /** 파편 종류 (mhitOf(몬스터)) */ bits?: string; /** ⚡ #83 A3 각성 필살기 연출 열쇠 (있으면 광역 · 새 그림 대신) */ awk?: string | null; /** TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 = 작게) */ vol?: number; prac?: number; mult?: number; finish?: boolean; noDmg?: boolean; ult?: boolean; onHit?: () => void; from?: { x: number; y: number }; dir?: number; cast?: boolean; custom?: CustomFx };
 /** ⚔ 새 스킬 fx (TV 시제품 · slash.ts): 맞는 자리에 그림을 대신 그림 · true = 그렸음(띠 안 씀) · false = 지금 띠 */
 export type CustomFx = (B: Body, dir: number, o: { ult: boolean; finish: boolean }) => boolean;
 /** 맞는 순간: 이펙트 · 멈칫 · 흔들림 · 밀림 · −1 (처치면 충격파 + 크게) */
@@ -75,7 +76,12 @@ export async function impact(scene: HTMLElement, monBox: HTMLElement, fx: string
   o.onHit?.();
   const lay = layerOn(fx) && !o.ult && !o.cast, t0 = tierOf(fx), tN = t0 === 's' ? 3 : Math.max(0, Number(t0) || 0); if (lay) overlay(scene, B, famOf(fx)?.id ?? 'cut', tN, !!scene.closest('.tv, .tvfx')); // ✨ 맞는 순간 겹 (👍 30)
   knock(monBox, o.finish ? 24 : 12); shake(scene, Math.max(2, hit[3] || 2) * (o.finish ? 2 : 1.2) * (lay && scene.closest('.tv, .tvfx') ? 1 + tN * 0.2 : 1), Math.max(0.14, hit[2] || 0.18) * (o.finish ? 2000 : 1000));
-  if (!o.noDmg) dmg(scene, B.cx, B.y0 + 6);
+  if (!o.noDmg) { // 🎯 #54 손맛 공용 조각 (게시판 던전과 같은 숫자 · 파편 · 휘청): 폰 = 내 공격 크게 · 친구 작게 / TV = 크기 하나 + 단계 색
+    const view = o.view ?? (scene.closest('.tv, .tvfx') ? 'tv' : 'phone'), tier = hitTier({ ult: o.ult, crit: o.finish && !o.ult }), mine = o.mine ?? (o.vol ?? 1) >= 1;
+    if (!hitNumber(scene, B.cx, B.y0 + 6, hitText(1, tier), { tier, mine, view })) dmg(scene, B.cx, B.y0 + 6);
+    if (mine || view === 'tv') hitBits(scene, B.cx, (B.y0 + B.y1) / 2, o.bits || 'smash', o.ult || o.finish ? 2 : 1);
+    if (o.ult || o.finish) hitReel(monBox, !!o.ult);
+  }
   else if (o.prac) for (let k = 0; k < o.prac; k++) setTimeout(() => { if (scene.isConnected) dmg(scene, B.cx, B.y0 + 6, '🔥 +1', true); }, k * 90); // 🔥 한 판 더 맞힘 = 데미지 0 · 회색 흔적 (📜 2026-11-13 밤)
   if (o.finish) wave(scene, B.cx, B.y1);
   const V = o.vol ?? 1;
@@ -241,7 +247,7 @@ export function ultFor(scene: HTMLElement, monBox: HTMLElement | null, fx: strin
   return k && B ? awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, k, { monBox, tint }) : ultBlast(scene, monBox, fx);
 }
 
-export type PlayO = { /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { /** 🎯 #54 내 공격(폰 크게) · 화면(폰 · TV) · 파편 종류 */ mine?: boolean; view?: 'phone' | 'tv'; bits?: string; /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
@@ -252,7 +258,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
   const H = rel(heroBox, scene), B = body(monBox, scene)!, rest = o.rest || 'think';
   const hc = { x: H.x + H.w / 2, y: H.y + H.h }, dir = hc.x <= B.cx ? 1 : -1;
   const shot = modeOf(fx) === 'shot', ranged = isRanged(hero), inPlace = shot || ranged;
-  const V = o.vol ?? 1, hitO: HitO = { awk: o.ultimate ? awkKey(hero) : null, tint: o.tint, vol: V, prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom };
+  const V = o.vol ?? 1, hitO: HitO = { awk: o.ultimate ? awkKey(hero) : null, tint: o.tint, vol: V, prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom, mine: o.mine, view: o.view, bits: o.bits };
   if (reso) { heroBox.classList.add('atk-reso'); setTimeout(() => heroBox.classList.remove('atk-reso'), 1400); }
   if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt, who: o.who });
   if (inPlace) {

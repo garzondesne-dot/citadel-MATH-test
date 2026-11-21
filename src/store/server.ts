@@ -16,7 +16,7 @@ const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'car
 const OPEN = ['school', 'classWar', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held', 'gcfg', 'photo_rubric']; // 📷 gcfg/photo · 기준표 = 누구나 읽기 // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
 const BUCKET: Record<string, number> = { atb: 2, teacherPush: 2, loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, quest: 3, quest_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
 // 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
-const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2, secrets: 2 }; // 🐞 secrets = 규칙이 맨 윗칸 읽기를 안 줌 → 교사도 방마다(secrets/{방} · secrets/fixed) 받음 (📜 2026-11-17 「종합실 키 저장해도 나갔다 오면 사라짐」)
+const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2, secrets: 2, atb: 2 }; // 📡 atb = 규칙이 판마다만 읽기 → 교사 계정도 판마다 받음 (#65-1 교사 팀 합류 = 새 전투) // 🐞 secrets = 규칙이 맨 윗칸 읽기를 안 줌 → 교사도 방마다(secrets/{방} · secrets/fixed) 받음 (📜 2026-11-17 「종합실 키 저장해도 나갔다 오면 사라짐」)
 const split = (p: string) => p.split('/').filter(Boolean);
 function getIn(t: unknown, parts: string[]): unknown { let cur = t; for (const k of parts) { if (cur == null || typeof cur !== 'object') return null; cur = (cur as Tree)[k]; } return cur === undefined ? null : cur; }
 function setIn(t: Tree, parts: string[], v: unknown): void {

@@ -14,6 +14,7 @@ const CLEAN = `*{background-color:transparent!important;box-shadow:none!importan
   const errs = [], rows = [];
   // 그 칸(span.hs) 하나: 4 프레임 합친 보이는 상자 → 칸 기준 가운데 · 아래 어긋남
   async function measure(el, name, extra = "") {
+    if (!el) { rows.push(`${name} = 칸 없음(화면 바뀜)`); return; } // 🧪 #60 낡은 시험 갱신: 없어진 칸에서 멈추지 않음
     const box = await el.boundingBox(); if (!box) return;
     const handle = await p.addStyleTag({ content: CLEAN + extra });
     let u = null;

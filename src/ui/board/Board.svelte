@@ -8,7 +8,7 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
+  import { bonusOf, RESCUE, canJoin, canStart, createPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, uidOf } from '../../school/school';
@@ -55,7 +55,7 @@
   const swT = setInterval(() => { tick++; if (online) sweepAll(S, untrack(() => pv.v.val), S.now()); }, LIFE.sweep); onDestroy(() => clearInterval(swT));
   queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
-  const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
+  const shown = $derived(posts.filter((p) => p.phase === 'wait' && !p.solo && (chip === 'all' || p.no === chip)));
   // 📡 #48 판이 끝나 글이 done 이 되어도 내 결과를 아직 못 봤으면 그 글 그대로 (한 폰이 먼저 「게시판으로」 눌러도 다른 폰 결과 화면이 사라지지 않게)
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
   // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
@@ -67,7 +67,7 @@
   let seenPid: Set<string> | null = untrack(() => (pv.v.val != null ? new Set(Object.keys(pv.v.val)) : null));
   const t0 = Date.now();
   $effect(() => {
-    const val = pv.v.val, wait = posts.filter((p) => p.phase === 'wait' && !p.mem?.[uid]).map((p) => p.pid);
+    const val = pv.v.val, wait = posts.filter((p) => p.phase === 'wait' && !p.solo && !p.mem?.[uid]).map((p) => p.pid);
     untrack(() => {
       if (!seenPid) { if (val != null || Date.now() - t0 > 2000) seenPid = new Set(Object.keys(val || {})); return; } // 서버 첫 값 = 기억만
       const nw = wait.filter((id) => !seenPid!.has(id)); Object.keys(val || {}).forEach((id) => seenPid!.add(id));
@@ -92,7 +92,10 @@
   const shortOf = (p: LessonPack) => (p.title.split(' · ')[0] ?? p.title).replace(/^\d+차시\s*/, '').slice(0, 7);
   function go() {
     if (!pick) return;
-    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } if (!validPin(pin)) { say('암호 숫자 4자리를 넣어요'); return; } { const only = pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined; void createLockedPost(S, pick, meM, recOf(pick) ?? null, only, pin); /* 🔒 #78 팀 방 = 암호 4자리 꼭 (📜 2026-11-18) */ } sheet = ''; lockOn = false; pin = ''; return; }
+    const only = pick.partOf && !recs[pick.id] ? pick.steps.map((x) => x.id) : undefined;
+    if (sheet === 'post') { if (!online) { say('서버와 끊겼어요'); return; } if (open) { say('수업 중엔 모집 글을 못 올려요'); return; } createPost(S, pick, meM, recOf(pick) ?? null, only); /* 📜 #65-2 (2026-11-21) 팀 방 암호 없앰 · 차시 고르면 바로 */ sheet = ''; lockOn = false; pin = ''; return; }
+    // ⚔ 📜 #65-1 혼자 도전 = 새 전투(나 + 봇 3) · 서버 판(기록 · ⭐ · 공적 · 💎 규칙 그대로 · 🧪 테스트 반 = 기록 없음) · 이 기기 연습방만 옛 길
+    if (S.kind !== 'memory') { if (!online) { say('서버와 끊겼어요'); return; } const L0 = pick, pid = createPost(S, L0, meM, recOf(L0) ?? null, only, false, undefined, true); const p0 = S.get<Post>(`${POSTS}/${pid}`); if (p0) startAtb(S, L0, p0); sheet = ''; res = null; return; }
     sheet = ''; run = pick; res = null;
   }
   const tag = (p: Post) => [...new Set(membersOf(p).map((m) => m.cls))];
@@ -153,10 +156,11 @@
   // 📡 #48 ATB 판 끝 (결과 화면 「게시판으로」): 기록 · ⭐ · 반 공적 · 💎(지급 스위치 켜짐만 · 베타 = 끔 = 예상만) → 게시판
   function atbEnded(p: Post, r: AtbEnd | null) {
     const L = lessonOf(p.lesson);
-    if (r && L && cls && num) {
+    if (r && L && cls && num && !isBeta(S, cls)) { // 🧪 테스트 반 = 새 전투만 · 기록 · 💎 · 공적 없음 (#65-1)
       const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
       if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } }
       if (sv.merit) say(`🚩 우리 기사단 공적 +${sv.merit}`);
+      for (const mid of r.mids ?? []) if (L.monsters[mid]) S.set(`bonus/${cls}/${num}/review/${L.id}/${mid}`, S.now()); // 📕 #67 새 전투도 「복습 완료」 (옛 길과 같은 칸 · 맞힌 소문항이 있는 몬스터)
     }
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
     markSeen(p.pid);
@@ -330,19 +334,15 @@
     {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
   </Sheet>
 {:else if sheet}
-  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && !validPin(pin))} why={sheet === 'post' && pick && !validPin(pin) ? '팀 방 암호 숫자 4자리를 정해요' : ''} onmain={go}>
+  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick} onmain={go}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
-    {#if sheet === 'post'}
-      <div class="lkt on" data-k="pin-must"><span>🔒 팀 방 암호 4자리</span><small>꼭 정해요 · 함께할 친구에게만 말로</small></div>
-      <RuneKeypad value={pin} len={4} onchange={(v) => (pin = v == null || v === '-' ? '' : String(v))} />
-    {/if}
   </Sheet>
 {/if}
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun && isAtb(teamRun)}
   {@const L = lessonOf(teamRun.lesson)}
-  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r) => atbEnded(teamRun!, r)} />
+  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again) => { const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
 {:else if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}

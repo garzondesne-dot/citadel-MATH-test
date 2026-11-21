@@ -1,4 +1,6 @@
 <script lang="ts">
+  import MonCrack from '../fx/MonCrack.svelte';
+  import { crackLevel, crackShake, crackStep } from '../fx/hitfx';
   import { explorers } from '../../school/explore';
   import { keysOf, keyUses } from '../../school/keys';
   import { serverNow } from '../clock.svelte';
@@ -38,6 +40,9 @@
   // 수업이 끝나는 순간 step 이 먼저 비워질 수 있음(장면이 사라지기 직전) → 빈 단계 = 아무것도 그리지 않음
   const boss = $derived(step?.kind === 'boss');
   const hp = $derived.by(() => { void now; const x = boss ? (L.boss ? bossHpOf() : null) : monHpOf(); return x; });
+  // 🪨 #54 손맛 (게시판 던전 공용 조각): 체력 75 · 50 · 25% 를 넘으면 쿵 · 금 (Pixi = 흔들 + 번쩍 · DOM = 몸 금 + 흔들) · 새 몬스터 = 처음부터
+  let crackLv = $state(0), monDom: HTMLElement | null = $state(null);
+  $effect(() => { const h = hp; untrack(() => { if (!h || !h.max) { crackLv = 0; return; } const cur = crackLevel(h.left, h.max); if (cur < crackLv) { crackLv = cur; return; } const lv = crackStep(crackLv, h.left, h.max); if (lv != null) { crackLv = lv; if (A) A.crack(); else crackShake(monDom, 16); sfx('dummy-hit', 0.5); } }); });
   function bossHpOf() { const b = bossHp(L, R, now); return { left: b.left, max: b.max, down: b.won }; }
   function monHpOf() { if (!step || step.kind !== 'monster' || !L.monsters[step.id]) return null; const h = monsterHp(L, R, step.id, now); return { left: h.left, max: h.max, down: h.left <= 0 }; }
   const sprite = $derived(boss ? (L.boss?.sprite ?? '') : (L.monsters[step?.id ?? '']?.sprite ?? ''));
@@ -335,9 +340,9 @@
   {#if mode === 'dom' && W && step && sprite}
     <!-- DOM 장면 = 캔버스와 같은 배치 (WebGL 없는 기기) -->
     <i class="sh" style:left="{box.shadow.cx - box.shadow.w / 2}px" style:top="{box.shadow.y - H * 0.018}px" style:width="{box.shadow.w}px" style:height="{H * 0.036}px"></i>
-    <div class="mon" class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : domMon || 'idle'} size={box.mon.size} /></div>
+    <div class="mon" bind:this={monDom} class:shadow class:stoned={stoneLeft > 0} class:float={!hp?.down && !stoneLeft} style:left="{box.mon.cx - box.mon.size / 2}px" style:top="{box.mon.top}px"><Sprite ref={sprite} pose={hp?.down ? 'down' : domMon || 'idle'} size={box.mon.size} /><MonCrack lv={crackLv} /></div>
     {#if hp && !shadow}
-      <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>{hp.left} / {hp.max}</b></div></div>
+      <div class="hp" style:left="{box.hp.x}px" style:top="{box.hp.y}px" style:width="{box.hp.w}px" style:--h="{box.hp.h}px"><span class="lab">{hpLabel}</span><div class="b"><i class="hitfx-lag" style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><i class="cur" style:width="{hp.max ? (Math.max(0, hp.left) / hp.max) * 100 : 0}%"></i><b>{hp.left} / {hp.max}</b></div></div>
     {/if}
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
@@ -376,7 +381,9 @@
   .hp { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0.6cqh; font-size: var(--tv-body); font-weight: 700; text-shadow: 0 1px 2px #000; }
   .hp .lab { white-space: nowrap; }
   .hp .b { position: relative; width: 100%; height: var(--h); border-radius: 99px; background: #2a0d10; box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.7); overflow: hidden; display: grid; place-items: center; }
-  .hp .b i { position: absolute; left: 0; top: 0; bottom: 0; background: #e5484d; transition: width 0.5s ease-out; }
+  .hp .b i.cur { position: absolute; left: 0; top: 0; bottom: 0; background: #e5484d; transition: width 0.5s ease-out; z-index: 1; }
+  .hp .b i.hitfx-lag { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255, 255, 255, 0.6); transition: width 0.3s ease-in 0.4s; } /* 🎯 #54 흰 잔상 */
+  .hp .b b { z-index: 2; }
   .hp .b b { position: relative; }
   .art { position: relative; display: block; }
   .art.iced :global(.hs) { filter: saturate(0.6) brightness(1.15) hue-rotate(160deg) sepia(0.15); }
@@ -401,7 +408,7 @@
   /* ⏱ 옛 정식 TV 게이지 (.raid-atk): 막대 + 가운데 「⏱ 남은 초 · ⛓ n초 · ⏸ 집중모드」 · 80% 넘으면 빨강 깜빡 · 묶임 · 멈춤 = 파랑 */
   .agauge { position: absolute; height: 2.6cqh; border-radius: 0.6cqh; background: rgba(21, 18, 15, 0.9); border: 2px solid #6a4a1c; overflow: hidden; z-index: 6; pointer-events: none; }
   .agauge i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
-  .agauge span { position: relative; display: block; text-align: center; font: 800 1.9cqh/2.3cqh var(--font); color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; font-variant-numeric: tabular-nums; }
+  .agauge span { position: relative; display: block; text-align: center; font: 700 var(--tv-small)/2.3cqh var(--font); color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; font-variant-numeric: tabular-nums; }
   .agauge.hot i { background: linear-gradient(90deg, #ff8a2a, #ff2a3a); animation: gaugeHot 0.3s steps(2) infinite; }
   .agauge.blue { border-color: #5ab0ff; box-shadow: 0 0 6px #5ab0ff88; } .agauge.blue i { background: linear-gradient(90deg, #5ab0ff, #8fd0ff); animation: none; }
   @keyframes gaugeHot { 50% { filter: brightness(1.6); } }

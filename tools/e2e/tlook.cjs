@@ -11,11 +11,11 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tabs');
   ok('처음 = 서버 값 없음', !(await t.evaluate(() => window.__dbGet('school/tlook'))));
   // ① 교사 폰 「나」 → 내 용사 → 「공식」
-  await t.click('.tabs button:has-text("나")'); await t.waitForTimeout(300); await t.click('.item:has-text("내 용사")'); await t.waitForSelector('button.top[aria-label="용사 바꾸기"]');
+  await t.click('.tabs button:has-text("나")'); await t.waitForTimeout(300); await t.click('.hc'); await t.waitForSelector('button.top[aria-label="용사 바꾸기"]');
   await t.click('button.top[aria-label="용사 바꾸기"]'); await t.waitForSelector('.hsw .swc'); await t.click('.hsw .swc:has-text("공식")'); await t.waitForTimeout(200); await t.click('.hsw .pmain'); await t.waitForTimeout(300); await t.click('button:has-text("💾 저장")'); await t.waitForTimeout(600);
   const srv = await t.evaluate(() => window.__dbGet('school/tlook')); ok('교사 폰 저장 → 서버 school/tlook', !!srv && srv.hero !== 7, JSON.stringify(srv && { hero: srv.hero, fx: srv.fx }));
   // 수업 열기 + 학생 1 + 몬스터 단계
-  await t.goto(B + '?role=teacher'); await t.waitForSelector('.tabs'); await t.click('.tabs button:has-text("준비")'); await t.click('[data-k="lpick-go"]'); await t.click('[data-k="lpick"] .grid [data-id="set-02"]'); await t.click('.tact .btn'); await t.waitForSelector('.att');
+  await t.goto(B + '?role=teacher'); await t.waitForSelector('.tabs'); await t.click('[data-cls="1-3"]'); await t.click('.pk3 [data-no="2"]'); await t.click('[data-k="open-go"]'); await t.click('[data-k="open-yes"]'); await t.waitForSelector('.tact .btn', { timeout: 15000 }); // 📦 #21 수업 탭 = 반 → 차시 → 열기 (옛 「준비」 → 차시 고르기 대신)
   const code = await t.evaluate(() => window.__dbGet('school/live').code);
   const s = await ctx.newPage(); await s.setViewportSize({ width: 390, height: 844 }); await s.goto(`${B}?role=student&room=${code}&as=1-1:3`); await s.waitForTimeout(2500);
   await t.waitForFunction(() => !document.querySelector('.tact .btn')?.disabled, null, { timeout: 15000 });
@@ -23,7 +23,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   if (/지금 등장/.test(await t.textContent('.tact .btn'))) await t.click('.tact .btn');
   // ② 다른 기기 TV (TV 기기 자기 칸에 다른 용사를 넣어 둠 = 이 값을 쓰면 안 됨)
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1920, height: 1080 });
-  await tv.goto(`${B}?role=hall&room=${code}`); await tv.waitForSelector('nav.dock', { timeout: 20000 }); await tv.waitForTimeout(1000);
+  const hk = await t.evaluate((c) => window.__dbGet(`secrets/${c}/hallKey`), code); await tv.goto(`${B}?role=hall&code=${code}&key=${hk}`); // 🔑 #59 종합실 입장 열쇠 await tv.waitForSelector('nav.dock', { timeout: 20000 }); await tv.waitForTimeout(1000);
   await tv.mouse.move(960, 540); await tv.click('nav.dock .t:has-text("시연")'); await tv.waitForSelector('.dpane .dp', { timeout: 15000 });
   const d1 = await tv.$eval('.dpane .dp', (e) => ({ hero: e.dataset.thero, fx: e.dataset.tfx, ult: e.dataset.tult }));
   ok('TV 시연 = 교사 폰 「내 용사」 같은 용사 · 같은 스킬', d1.hero === String(srv.hero) && d1.fx === srv.fx, JSON.stringify(d1));

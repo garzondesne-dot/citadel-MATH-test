@@ -9,6 +9,9 @@
   import { guard } from '../fx/aura';
   import { attack, canUlt, preload as atkPreload, type Pose } from '../fx/attack';
   import { monBody, MHIT, mhitOf, type MhitKind } from '../manifest';
+  import MonCrack from '../fx/MonCrack.svelte';
+  import { crackLevel, crackShake, crackStep, hitCss } from '../fx/hitfx';
+  hitCss(); // 🎯 #54 흰 잔상 · 숫자 CSS 처음부터
   import MonHit from './MonHit.svelte';
   import { aura as auraAct } from '../fx/aura';
   import { untrack } from 'svelte';
@@ -60,7 +63,7 @@
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id; if (a.at && Date.now() - a.at > 3000) return; const gp = globalThis as { __atkPlays?: number }; gp.__atkPlays = (gp.__atkPlays || 0) + 1;
-    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { mine: true, view: 'phone', bits: mhitOf(sprite), heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
   });
   // 👥 동료 공격 (📜 2026-11-14): 정식 attack(동료 칸 · 동료 스킬 · TV 와 같은 사건) · 줄 세워 하나씩 · 소리 작게(0.45)
   //   맞음 = 돌진 · 이펙트 · −1 / 틀림 = 튕겨냄 「팅!」 · 정답 · 오답 글자는 없음
@@ -72,7 +75,7 @@
   async function mplay(h: MateHit) {
     const m = mates.find((x) => x.uid === h.u), el = mbox[h.u]; if (!m || !el || !edge || !monEl || !el.isConnected) return;
     const f = m.fx || 'flame', miss = h.kind === 'miss'; atkPreload(m.hero, f); mact = m.uid;
-    try { await attack(edge, { heroBox: el, monBox: monEl, hero: m.hero, fx: f, miss, noDmg: h.kind === 'practice', hits: Math.max(1, h.dmg), rest: 'idle', vol: 0.45, pose: (p) => mset(m.uid, p), onHit: miss ? undefined : () => monFlash('hit', 360) }); } catch { /* 장면이 닫힘 */ }
+    try { await attack(edge, { mine: false, view: 'phone', bits: mhitOf(sprite), heroBox: el, monBox: monEl, hero: m.hero, fx: f, miss, noDmg: h.kind === 'practice', hits: Math.max(1, h.dmg), rest: 'idle', vol: 0.45, pose: (p) => mset(m.uid, p), onHit: miss ? undefined : () => monFlash('hit', 360) }); } catch { /* 장면이 닫힘 */ }
     mact = '';
     if (miss) { mset(m.uid, 'hit'); await new Promise((r) => setTimeout(r, 400)); mset(m.uid, 'idle'); }
     else if (h.perfect) { mset(m.uid, 'win'); setTimeout(() => mset(m.uid, 'idle'), 1200); }
@@ -81,6 +84,9 @@
   // 🎲 몬스터 자세 (5칸 시트): 몬스터 공격 = 공격 칸 0.6초 · 용사에게 맞음 = 맞음 칸(움찔) · 대기 = A ↔ B 숨쉬기 · 쓰러짐
   let mflash = $state<'' | 'hit' | 'attack'>(''), mT: ReturnType<typeof setTimeout> | undefined;
   const monFlash = (p: 'hit' | 'attack', ms: number) => { mflash = p; clearTimeout(mT); mT = setTimeout(() => (mflash = ''), ms); };
+  // 🪨 #54 손맛 (게시판 던전과 같은 조각): 체력 75 · 50 · 25% 를 넘으면 몸에 금 + 쿵 흔들 · 새 몬스터 · 체력 되찾음 = 금 다시
+  let crackLv = $state(0);
+  $effect(() => { const h = hp; untrack(() => { if (!h || !h.max) { crackLv = 0; return; } const cur = crackLevel(h.left, h.max); if (cur < crackLv) { crackLv = cur; return; } const lv = crackStep(crackLv, h.left, h.max); if (lv != null) { crackLv = lv; crackShake(monEl, 12); } }); });
   let lastHitKey = 0;
   // 👹 #26 몬스터 맞는 그림 = 몬스터 몸짓 시작과 함께 내 용사 위 6칸 0.42초 (그 뒤 공격 효과 그대로)
   let mhit = $state<{ k: number; kind: MhitKind } | null>(null), mhT: ReturnType<typeof setTimeout> | undefined;
@@ -113,7 +119,7 @@
   {#if stoneSec > 0}<span class="stone-chip" role="status">🗿 {stoneHoly ? '홀리 방패' : '진필살기'} 석화 {stoneSec}초 · 지금 맞히면 💎</span>{/if}
   {#if chips.length}<div class="buffs">{#each chips as c, k (k)}<span class="buff" class:on={c.on}>{c.text}</span>{/each}</div>{/if}
   {#if hp && !shadow && !noMon}
-    <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div>{#if gauge}<div class="ag" class:hot={gauge.hot} class:blue={gauge.blue} data-k="atk-gauge"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}</div>
+    <div class="mhp"><span>{hpLabel} · 체력 {hp.left} / {hp.max}</span><div class="b"><i class="hitfx-lag" style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i><i class="cur" style:width="{hp.max ? (hp.left / hp.max) * 100 : 0}%"></i></div>{#if gauge}<div class="ag" class:hot={gauge.hot} class:blue={gauge.blue} data-k="atk-gauge"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}</div>
   {/if}
   {#if minions && !noMon}
     <div class="minions">
@@ -123,7 +129,7 @@
     </div>
   {/if}
   {#if shadow && !noMon}<i class="dk" aria-hidden="true"></i>{/if}<!-- 🌑 #67 정찰 암막 -->
-  {#if !noMon}<i class="mon art monster" class:sc={shadow} class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}>{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>{/if}
+  {#if !noMon}<i class="mon art monster" class:sc={shadow} class:stoned={stoneSec > 0} class:breath class:elite={sp.elite} bind:this={monEl} data-bb={monBB} data-pose={mpose} class:minboss={!!minions} style={monBg(minions ? 104 : MON, mpose)} aria-label={sp.sheet.names[sp.row]}><MonCrack lv={crackLv} mask={false} />{#if mrune}<b class="rune" style:left="{mrune[0] * 100}%" style:top="{mrune[1] * 100}%" style:font-size="{mrune[2] * (minions ? 104 : MON) * 1.35}px">{sp.rune}</b>{/if}</i>{/if}
   {#if shadow && !noMon}{@const bb = (monBB || '0.2,0.2,0.8,0.95').split(',').map(Number)}{@const S0 = minions ? 104 : MON}{@const bw = (bb[2]! - bb[0]!) * S0}{@const bh = (bb[3]! - bb[1]!) * S0}{@const cx = ((bb[0]! + bb[2]!) / 2) * S0}{@const ey = (bb[1]! + (bb[3]! - bb[1]!) * 0.28) * S0}
     <span class="mbox" class:minboss={!!minions} style:width="{S0}px" style:height="{S0}px" aria-hidden="true">
       {#if explore}<i class="hole" style="{monBg(S0, mpose).replace('brightness(0)', '')};--hx:{cx}px;--hy:{(bb[1]! + (bb[3]! - bb[1]!) * 0.3) * S0}px;--hr:{Math.sqrt((0.18 * bw * bh) / Math.PI)}px"></i>{/if}<!-- 🔥 내 횃불 빛 구멍 하나 -->
@@ -170,8 +176,9 @@
   .buff { height: 28px; padding: 0 10px; border-radius: 14px; background: rgba(8, 9, 12, 0.72); border: 1px solid rgba(255, 255, 255, 0.18); color: #fff; font-size: var(--fs-small); font-weight: 700; display: flex; align-items: center; }
   .buff.on { border-color: var(--accent); color: var(--accent); }
   .mhp { position: absolute; z-index: 2; top: calc(62px - var(--mh, 0px)); right: var(--s3); width: 170px; display: flex; flex-direction: column; gap: var(--s1); color: #fff; font-size: var(--fs-small); font-weight: 700; text-shadow: 0 1px 0 #000; text-align: right; }
-  .mhp .b { height: 10px; border-radius: 5px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); }
-  .mhp .b i { display: block; height: 8px; border-radius: 4px; background: var(--hp); transition: width 0.4s; }
+  .mhp .b { position: relative; height: 10px; border-radius: 5px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.25); }
+  .mhp .b :global(.hitfx-lag) { height: 8px; border-radius: 4px; } /* 🎯 #54 흰 잔상 = 0.4초 머문 뒤 줄어듦 */
+  .mhp .b i.cur { position: relative; z-index: 1; display: block; height: 8px; border-radius: 4px; background: var(--hp); transition: width 0.4s; }
   /* ⏱ 공격 게이지 (옛 정식 .atk-gauge + 남은 초) · 80% 빨강 깜빡 · 묶임 · 멈춤 파랑 */
   .mhp .ag { position: relative; height: 16px; border-radius: 4px; background: rgba(21, 18, 15, 0.85); border: 1px solid #6a4a1c; overflow: hidden; }
   .mhp .ag i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }

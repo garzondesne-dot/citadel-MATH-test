@@ -68,6 +68,7 @@ export interface AtbEnd {
   gem: { items: number; clear: number; guard: number; star: number }; gemSum: number;
   role: string; mission: boolean; why: string;
   /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; rescue: number; cut: number; brk: number };
+  /** 📕 #67 내가 소문항을 하나라도 맞힌 몬스터 칸 (복습 완료 · 손발 #1 화면이 채움 · 없으면 없음) */ mids?: string[];
 }
 /** 내 판 결과 · prevStars = 그 차시 지금까지 최고 별(0 ~ 3) */
 export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }): AtbEnd {

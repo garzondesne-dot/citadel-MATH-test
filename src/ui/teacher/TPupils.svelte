@@ -53,7 +53,7 @@
   <div class="mid scroll"><SchedTab {S} {now} /></div>
 {:else}
 <div class="fixed">
-  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow.filter((c) => !hiddenCls(S, c))] : clsNow as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
+  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow.filter((c) => !hiddenCls(S, c))] : clsNow.filter((c) => !hiddenCls(S, c)) as c (c)}<!-- 🐞 #60-6 🧪 1-6 = 반 칩에서도 숨김 (명단 붙이기 반 고르기 · 학생 로그인 반 목록 = 그대로) --><button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
   <div class="segrow"><div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>{#if seg === 'dash'}<button type="button" class="xlb" onclick={() => (xl = true)}>⬇ 엑셀</button>{/if}</div>
 </div>
 {#if seg === 'list'}
@@ -100,7 +100,7 @@
   .segrow { display: flex; gap: 6px; align-items: stretch; } .segrow .seg { flex: 1; min-width: 0; }
   .xlb { flex: none; padding: 0 12px; border-radius: 12px; border: 1px solid var(--gem); background: var(--bg); color: var(--gem); font: 700 13.5px var(--font); white-space: nowrap; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
-  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; } /* 🐞 #62-1 360 폭 = 두 줄로 감김 (1-7 · 1-8 이 잘려 안 보이던 것) */
   .chips button { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 13.5px var(--font); white-space: nowrap; }
   .chips button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); }

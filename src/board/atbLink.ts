@@ -12,8 +12,8 @@ export type { AtbEnd, AtbMeta, AtbSlot };
 /** 🧙 판에 들고 가는 내 용사 (모집 · 합류 때 글 mem/{uid}/g 에 같이 씀 · 손발 #2 net.ts HumanSlot) */
 export interface Grow { h: number; lv: number; enh: number; tier: number; fx?: string; awk?: boolean }
 const sum = (o: object | undefined) => Object.values((o || {}) as Record<string, number>).reduce((a, x) => a + (Number(x) || 0), 0);
-/** 🧪 테스트 반 · 연습방 = 로컬 그대로(atb 안 씀) */
-export const atbOnline = (S: Store, p: Post) => S.kind !== 'memory' && !membersOf(p).some((m) => isBeta(S, m.cls));
+/** 서버 판 = 모두 새 전투(ATB) · 🧪 테스트 반(1-6) · 교사 계정도 새 전투 — 기록 · ⭐ · 공적 · 💎 은 saveAtbResult · 화면 쪽에서 막음 (📜 2026-11-21 #65-1) · 이 기기 연습방(memory)만 옛 길 */
+export const atbOnline = (S: Store, _p?: Post) => S.kind !== 'memory';
 /** 출발 (방장 1번): meta → 글 play · code 'A'+pid · 빈자리 = 봇 (4칸 고정 · 봇 용사 = 아직 안 고른 용사 차례로) */
 export function startAtb(S: Store, L: LessonPack, p: Post, seed = Math.floor(Math.random() * 2 ** 31)): AtbMeta {
   const ms = membersOf(p), used = new Set(ms.map((m) => m.hero));

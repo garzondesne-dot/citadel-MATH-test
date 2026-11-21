@@ -36,7 +36,7 @@
 {#if atbT}
   {#await loadAtbTrial() then K}<K.default {packs} hero={M.me.hero} xp={M.me.xp} enh={M.me.enh} fx0={M.me.socket?.[M.me.hero] ?? ''} {nick} onclose={() => (atbT = false)} />{/await}
 {:else if run && as === 'stu'}
-  {#key runKey}<StuTry L={run} bots={4} trial nick={nick} restAfter={REST_AFTER[run.id] ?? ''} prep={(S, code) => trialRoom(S, run!, code)} onclose={close} />{/key}
+  {#key runKey}<StuTry L={run} bots={4} trial nick={nick} restAfter={REST_AFTER[run.id] ?? ''} prep={(S, code) => trialRoom(S, run!, code, M.me.wallet.gem)} onclose={close} />{/key}
 {:else if camp && as === 'stu'}
   {#key campKey}<Camp {S} L={camp} code="" trial={{ nick, grant: done1, ongate: () => (camp = null), packs }} />{/key}
 {:else if heroPick}
