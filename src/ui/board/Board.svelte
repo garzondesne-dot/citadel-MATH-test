@@ -25,6 +25,8 @@
   import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow } from '../../board/atbLink';
   import { knightOf, payOn, standings, weekOf } from '../../board/war';
   import { josa } from '../../board/josa';
+  import { resvDays, resvLabel } from '../../board/resv';
+  import { RESV, resvWaiting } from '../../board/team';
   import { isAwakened, ladder } from '../../model/hero';
   import { levelOf } from '../../school/reward';
   import { tierOf } from '../../board/atb/heroes';
@@ -65,7 +67,7 @@
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && !p.solo && (!sel || p.no === sel.no)));
   // 📡 #48 판이 끝나 글이 done 이 되어도 내 결과를 아직 못 봤으면 그 글 그대로 (한 폰이 먼저 「게시판으로」 눌러도 다른 폰 결과 화면이 사라지지 않게)
-  const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
+  const mine = $derived(posts.find((p) => !!p.mem?.[uid] && !resvWaiting(p, S.now())) /* 📅 #73 예약 판 = 시각 전엔 목록에만 */ ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
   // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
   $effect(() => { const p = mine; if (!p || !overCap(p, uid)) return; untrack(() => { S.set(`${POSTS}/${p.pid}/mem/${uid}`, null); say('방이 꽉 찼어요 · 다른 방을 골라요'); }); });
   // ⏱ #76 내 숨: 대기 · 진행 중 20초마다 (방장이 1분 끊기면 다른 팀원에게 넘어감)
@@ -87,8 +89,22 @@
   const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(isAwakened(me as never) ? { awk: true } : {}) }; });
   const meM = $derived({ uid, cls: cls || (S.kind === 'server' ? '선생님' : '이 기기'), num, nick: me.nick, hero: lkB, fame: fameNow(), g: growM });
   function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
-  let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
+  let sheet = $state<'' | 'solo' | 'post' | 'pin' | 'resv'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
+  // 📅 📜 #73 예약 모집 (선생님 2026-11-21): 차시 · 날짜 · 시각 → 글 when · 「🙋 참여 예약」 · 한 학생 예약 동시 1개 · 시각 = 방 열림 · +5분 출발(안 온 자리 = 봇) · +30분 해산
+  let rDay = $state(''), rAt = $state(0);
+  const rFree = $derived(!cls || isBeta(S, cls)); // 📜 #78 🧪 테스트 반 · 교사 = 예약 시간 제한 없음
+  const rDays = $derived(sheet === 'resv' ? resvDays(S.now(), undefined, rFree) : []);
+  const rDay0 = $derived(rDays.find((d) => d.times.length)?.key ?? ''); // 처음 고른 날 = 시각이 있는 첫 날
+  const myResv = $derived(posts.filter((p) => p.when && p.phase === 'wait' && !!p.mem?.[uid]));
+  function openResv() { if (!sel) return; if (myResv.length) { say(`📅 예약은 한 번에 하나 · ${resvLabel(myResv[0]!.when!)} 예약이 있어요`); return; } rDay = ''; rAt = 0; sheet = 'resv'; }
+  function postResv() { if (!sel || !rAt || !online) return; const only = sel.partOf && !recs[sel.id] ? sel.steps.map((x) => x.id) : undefined; createPost(S, sel, meM, recOf(sel) ?? null, only, false, undefined, false, rAt); sheet = ''; say(`📅 ${resvLabel(rAt)} · ${sel.no}차시 예약 모집을 올렸어요`); }
+  function joinResv(p: Post) { if (myResv.length) { say(`📅 예약은 한 번에 하나 · ${resvLabel(myResv[0]!.when!)} 예약이 있어요`); return; } join(p); }
+  // 시각이 되면: 방장 폰이 +5분(또는 4명이 다 들어오면 바로) 출발 · 안 온 자리 = 봇 이어받기
+  $effect(() => { void tick; const p = mine; if (!p || !p.when || p.phase !== 'wait' || p.host !== uid) return; untrack(() => {
+    const now = S.now(), here = membersOf(p).filter((m) => Number(m.seen) >= p.when! - 60e3).length;
+    if (now >= p.when! + RESV.startAfter || here >= MAX) { const L = lessonOf(p.lesson); if (L && atbOnline(S, p)) { say('📅 예약 판 출발! 안 온 자리는 봇이 함께해요'); startAtb(S, L, p); } }
+  }); });
   // 📜 #70 공통 문구 (STORY-LINES-v1 3절) — 처음 열 때 이야기 두 줄(이 기기 한 번) · 새 토벌 주간(주마다 한 번) · 우리 기사단 순위 오름 · 내림 · 선두(지난번 본 순위와 견줌)
   const STORY_K = 'citadel-v1-board-story', WK_K = 'citadel-v1-board-week';
   let story = $state(untrack(() => { try { return !localStorage.getItem(STORY_K); } catch { return false; } }));
@@ -310,7 +326,7 @@
           {#each shown as p (p.pid)}
             {@const L = lessonOf(p.lesson)}
             {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
-            <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#if tag(p).length > 1}<i class="ally" data-k="ally">🤝 연합 원정대</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
+            <div class="post" class:resv={!!p.when} data-resv={p.when ? '1' : undefined}><span class="ic">{p.when ? '📅' : isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.when ? `${resvLabel(p.when)} · ` : ''}{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#if tag(p).length > 1}<i class="ally" data-k="ally">🤝 연합 원정대</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span>{#if p.when && p.mem?.[uid]}<button type="button" class="go on" data-k="resv-cancel" onclick={() => leavePost(S, p, uid)}>✔ 예약함 · 취소</button>{:else if p.when}<button type="button" class="go" data-k="resv-join" disabled={!!why} title={why} onclick={() => joinResv(p)}>🙋 참여 예약</button>{:else}<button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button>{/if}</div>
           {/each}
         {:else}
           <div class="empty"><span>📭</span><b>{sel ? `${sel.no}차시 모집 글이 아직 없어요` : '모집 글이 아직 없어요'}</b><small>혼자 도전하거나 · 팀을 모집해요</small></div>
@@ -331,7 +347,7 @@
     </div>
     {#if btab === 'go'}
       <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 혼자 도전` : '⚔ 혼자 도전'} disabled={!sel || !isOpen(sel)} onmain={() => { if (!sel) return; if (trial) { trial.onsolo(sel); return; } pick = sel; sheet = 'solo'; go(); }}
-        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
+        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{#if S.kind !== 'memory'}<button type="button" class="btn2 wide" data-k="board-resv" disabled={open || !online || !sel || !isOpen(sel)} onclick={openResv}>📅 예약 모집</button>{/if}{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
     {/if}
   {/if}
   {#if rkOpen}
@@ -362,6 +378,13 @@
     <p class="pinq">모집한 친구에게 들은 숫자 4자리</p>
     <RuneKeypad value={pin} len={4} onchange={(v) => { pin = v == null || v === '-' ? '' : String(v); pinErr = ''; }} />
     {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
+  </Sheet>
+{:else if sheet === 'resv' && sel}
+  <Sheet onclose={() => (sheet = '')} mainText={rAt ? `📅 ${resvLabel(rAt)} · ${sel.no}차시 예약 올리기` : '날짜와 시각을 골라요'} mainDisabled={!rAt || !online} onmain={postResv}>
+    {#snippet title()}📅 {sel.no}차시 예약 모집{/snippet}
+    <p class="pinq">7일 안 · 평일 오후 4시 ~ 9시 반 · 주말 오전 9시 ~ 9시 반 · 시각이 되면 방이 열리고 5분 뒤 출발해요</p>
+    <div class="rdays" role="group" aria-label="날짜">{#each rDays as d (d.key)}<button type="button" class:on={(rDay || rDay0) === d.key} class:off={!d.times.length} data-day={d.key} aria-disabled={!d.times.length} onclick={() => { if (!d.times.length) { say('오늘은 마감 (21:30까지)'); return; } rDay = d.key; rAt = 0; }}>{d.label}</button>{/each}</div>
+    <div class="rtimes" role="group" aria-label="시각">{#each rDays.find((d) => d.key === (rDay || rDay0))?.times ?? [] as t (t.at)}<button type="button" class:on={rAt === t.at} data-at={t.at} onclick={() => (rAt = t.at)}>{t.label}</button>{/each}</div>
   </Sheet>
 {:else if sheet}
   <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick} onmain={go}>
@@ -492,4 +515,11 @@
   .post .ally { color: var(--accent); }
   .story { position: absolute; inset: auto 16px 96px; z-index: 6; display: grid; gap: 6px; padding: 16px; border-radius: var(--r-lg, 20px); border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); background: rgba(10, 8, 6, 0.94); color: var(--text); font: 500 15px/1.5 var(--font); text-align: left; box-shadow: 0 6px 24px #000a; }
   .story small { color: var(--text-3); font-size: 13px; }
+  /* 📅 #73 예약 */
+  .post.resv { border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  .post .go.on { background: var(--surface-2); color: var(--accent); }
+  .rdays, .rtimes { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .rdays button, .rtimes button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
+  .rdays button.off { opacity: 0.45; }
+  .rdays button.on, .rtimes button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 </style>
