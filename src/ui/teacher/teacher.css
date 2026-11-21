@@ -17,6 +17,7 @@
 .tp .codek b { font-size: 15px; letter-spacing: 1px; }
 .tp .codek small { font-size: 12px; color: var(--text-2); }
 .tp .mid { flex: 1; min-height: 0; overflow: hidden; padding: 0 var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+.tp .mid, .tp .mid.scroll { overscroll-behavior: contain; } /* 🐞 #60-7 화면 규칙 ① 안쪽 스크롤 칸 = contain (교사 폰 가로 844×390) */
 .tp .card { border-radius: var(--r); background: var(--surface); padding: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
 .tp .lab { font-size: var(--fs-small); font-weight: 700; color: var(--text-2); }
 .tp .hd { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); }
