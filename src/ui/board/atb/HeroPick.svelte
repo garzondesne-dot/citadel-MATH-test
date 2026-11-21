@@ -8,10 +8,10 @@
   import { famOf, lookOfStats, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
   import { FAM_NAME, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
+  import FamShield from './FamShield.svelte';
   const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose, onskill }: {
     ids: number[]; owned: (id: number) => boolean; boss: BossCfg; cur: number; lv: number; enh: number; awk?: boolean; tierOf: (id: number) => number; fxOf: (id: number) => string; onpick: (id: number) => void; onclose: () => void; /** ⚡ 장착 스킬 단계 고르기 (요청 #16) */ onskill?: (id: number, tier: number) => void;
   } = $props();
-  const FI: Record<Fam, IconName> = { arms: 'fam-arms', flame: 'fam-flame', nature: 'fam-nature', wisdom: 'fam-wisdom', mystic: 'fam-mystic' };
   const RI: Record<Role, IconName> = { dealer: 'role-dealer', tank: 'role-tank', healer: 'role-healer', support: 'role-support' };
   let sel = $state(untrack(() => cur)); // 연 때 용사부터
   const st = $derived(statsOf({ hero: sel, lv, enh, tier: tierOf(sel), awk })), info = $derived(heroOf(sel));
@@ -20,21 +20,21 @@
 </script>
 
 <div class="pk" role="dialog" aria-label="용사 고르기" data-k="atb-pick">
-  <header><h2>용사 고르기</h2><span class="bw">이번 보스 약점 {#each boss.weak as f (f)}<AtbIcon name={FI[f]} size={20} /> {FAM_NAME[f]} {/each}</span><button type="button" class="x" aria-label="닫기" onclick={onclose}>✕</button></header>
+  <header><h2>용사 고르기</h2><span class="bw">이번 보스 약점 {#each boss.weak as f (f)}<FamShield fam={f} size={20} /> {FAM_NAME[f]} {/each}</span><button type="button" class="x" aria-label="닫기" onclick={onclose}>✕</button></header>
   <div class="grid" role="listbox" aria-label="용사">
     {#each ids as id (id)}
       {@const p = pt(id)}
       {@const own = owned(id)}
       <button type="button" class="cell" class:on={sel === id} class:lock={!own} disabled={!own} aria-selected={sel === id} role="option" aria-label="{heroOf(id).name}{own ? '' : ' · 잠김'}" data-id={id} onclick={() => (sel = id)}>
         {#if p}<i class="face" class:dim={!own} style="background-image:url({p.url});background-size:{p.cols * 100}% {p.rows * 100}%;background-position:{(p.c[0] / Math.max(1, p.cols - 1)) * 100}% {(p.c[1] / Math.max(1, p.rows - 1)) * 100}%"></i>{:else}<HeroSprite id={id} scale={1} dim={!own} />{/if}
-        <i class="cr l"><AtbIcon name={RI[roleOf(id)]} size={20} /></i><i class="cr r"><AtbIcon name={FI[famOf(id)]} size={20} /></i>
+        <i class="cr l"><AtbIcon name={RI[roleOf(id)]} size={20} /></i><i class="cr r"><FamShield fam={famOf(id)} size={20} /></i>
         {#if !own}<i class="lk">🔒</i>{:else if isWeak(id)}<i class="wk">약점!</i>{/if}
       </button>
     {/each}
   </div>
   <section class="info">
     <h3>{info.name} · {info.job}</h3>
-    <div class="badges"><span><AtbIcon name={RI[st.role]} size={18} /> {ROLE_NAME[st.role]}</span><span><AtbIcon name={FI[st.fam]} size={18} /> {FAM_NAME[st.fam]}</span>{#if isWeak(sel)}<span class="wk2">약점!</span>{/if}</div>
+    <div class="badges"><span><AtbIcon name={RI[st.role]} size={18} /> {ROLE_NAME[st.role]}</span><span><FamShield fam={st.fam} size={18} /> {FAM_NAME[st.fam]}</span>{#if isWeak(sel)}<span class="wk2">약점!</span>{/if}</div>
     <div class="mid">
       <div class="big"><HeroSprite id={lookOfStats(st)} aura={enh} scale={2} play /></div>
       <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>

@@ -16,7 +16,7 @@
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(win && guardBonus ? [{ t: '수호 보너스', g: guardBonus }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
   // 🏅 내 활약 = 💎 보다 먼저 (📜 요청 #24 ⑦) · 0 인 줄은 빼고 · 하나도 없으면 「맞힌 소문항」
-  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`].filter(Boolean) as string[]; });
+  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
   // 🔊 📜 요청 #23 결과 💎 줄 = 한 줄씩 star (Loot 와 같은 소리) · 0.35초 간격
   onMount(() => { const ts = rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 500 + i * 350)); return () => ts.forEach(clearTimeout); });
   const STEPS = [3, 7, 15], nextStep = $derived(STEPS.find((s) => mastery < s) ?? 15);

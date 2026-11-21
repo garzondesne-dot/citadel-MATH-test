@@ -100,3 +100,19 @@ describe('ATB 차시 목록 = 서버 팩 (선생님 2026-11-20)', () => {
     expect(bossOf(2)).toBe(BOSSES[2]); const b = bossOf(15); expect(b.no).toBe(15); expect(b.draft).toBe(true); expect(b.cycle.length).toBe(3); expect(new Set(b.weak).size).toBe(2);
   });
 });
+
+// 📄 📜 요청 #24 덧붙임 = 학습지 번호 표기
+import { sheetNo, sheetTitle } from '../src/board/atb/quiz';
+describe('ATB 학습지 번호 (요청 #24 덧붙임)', () => {
+  it('제목 = 「n차시 학습지 · 문제 k (소문항) · i/전체」 · 숫자 바뀐 판도 같은 번호 · 소레이드 = 졸개 · 대장', () => {
+    expect(sheetTitle(L2, 'm3', 1, 3)).toBe('2차시 학습지 · 문제 3 (2) · 2/3');
+    const L8 = SUBJ.lessons.find((p) => p.no === 8)!; expect(sheetNo(L8, 'm1').no).toBe('1·2');
+    const L6 = SUBJ.lessons.find((p) => p.no === 6)!; expect(sheetTitle(L6, 'u4', 3, 4)).toBe('6차시 학습지 · 문제 4 (대장) · 4/4'); expect(sheetTitle(L6, 'u4', 0, 4)).toMatch(/졸개 1/);
+  });
+  it('학습지 번호 없는 칸 = 「n차시 · 문제 k」 (목록: 앱 팩 2 ~ 10)', () => {
+    const miss = SUBJ.lessons.flatMap((L) => originsOf(L).filter((o) => !sheetNo(L, o.mid).sheet).map((o) => `${L.no}:${o.mid}`));
+    expect(miss).toEqual([]); // 4차시 「📖 복습」 칸 = 원문항에서 빠짐(이모지 앞머리도 복습 · 보강으로 봄)
+    const L4 = SUBJ.lessons.find((p) => p.no === 4)!; expect(originsOf(L4).map((o) => o.mid)).toEqual(['m1', 'm2', 'm3']);
+    const fake = { ...L4, steps: L4.steps.map((st) => (st.id === 'm2' ? { ...st, title: '집합 놀이' } : st)) }; expect(sheetTitle(fake, 'm2', 0, 2)).toBe('4차시 · 문제 2 (1) · 1/2');
+  });
+});

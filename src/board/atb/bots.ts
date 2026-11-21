@@ -16,7 +16,7 @@ export function newBot(L: LessonPack, who: number, kind: BotKind, seed = 1): Bot
   const think: [number, number] = kind === 'ideal' ? [12, 18] : kind === 'random' ? [4, 8] : [12, 24]; // 소문항 하나 평균 18초 (sim2.py sub_sec)
   return { who, kind, acc, think, run: null, due: 0, fullAt: -1, done: {}, os: shuffled(originsOf(L), rngOf(`os${seed}|${who}`)), seed: `bot${who}|${seed}`, rnd: seed * 97 + who * 13 };
 }
-const wrongOf = (q: Question): Given => (q.type === 'number' ? -999 : q.type === 'ox' ? !(q as { answer: boolean }).answer : q.type === 'multi' ? [] : q.type === 'choice' ? ((q as { answerIndex: number }).answerIndex + 1) % Math.max(2, (q as { choices: string[] }).choices.length) : '모름') as Given;
+export const wrongOf = (q: Question): Given => (q.type === 'number' ? -999 : q.type === 'ox' ? !(q as { answer: boolean }).answer : q.type === 'multi' ? [] : q.type === 'choice' ? ((q as { answerIndex: number }).answerIndex + 1) % Math.max(2, (q as { choices: string[] }).choices.length) : '모름') as Given;
 /** 봇 한 걸음 (dt 초): 문제 풀기 + ATB 가 차면 행동 */
 /** busy = 이 원문항에서 친구들이 지금 쓰는 판 (📜 요청 #19 덧2 = 같은 숫자 동시에 안 나옴) */
 export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who: number) => number[] = () => []): void {

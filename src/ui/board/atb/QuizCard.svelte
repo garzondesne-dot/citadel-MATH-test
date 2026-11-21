@@ -29,7 +29,7 @@
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
   <header>
-    <span class="tt" data-k="atb-qtitle">{title} · {run.k + 1}/{qs.length}</span>
+    <span class="tt" data-k="atb-qtitle">{title}</span>
     <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </header>
   <div class="body">
