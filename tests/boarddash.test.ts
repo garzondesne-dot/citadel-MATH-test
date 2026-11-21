@@ -23,3 +23,21 @@ describe('📋 학생 게시판 기록', () => {
   });
   it('기록 없음 = 0', () => { expect(boardStu(null, null, noOf)).toMatchObject({ runs: 0, wins: 0, starSum: 0, firstTotal: 0 }); });
 });
+
+import { memoryStore } from '../src/store/device';
+import { view } from '../src/school/views';
+import { addCastles } from '../src/school/castles.svelte';
+import type { CastlePack } from '../src/school/castle';
+describe('🏰 대시보드 성채 던전 (#56 덧)', () => {
+  it('층마다 깬 방 / 열린 방 · 👑 · ✅ · 반 평균', () => {
+    const P = { kind: 'castle', id: 'eval-9', floor: 9, title: '시험 층', unit: 'u', bossPct: 60, rooms: [{ id: 'a', no: 1, title: 'A', sprite: 'x:0', vers: [] }, { id: 'b', no: 1, title: 'B', sprite: 'x:0', vers: [] }, { id: 'k', no: 1, title: 'K', sprite: 'x:0', boss: true, vers: [] }] } as unknown as CastlePack;
+    addCastles([P]);
+    const S = memoryStore(); S.set('held/1-1', { 'set-02': true });
+    const v0 = view(S, '1-1', 'castle'), st = v0.table!.rows[1]!.pick!;
+    S.set(`bonus/1-1/${st.n}/eval-9`, { a: { clear: true }, b: { clear: true }, k: { clear: true } });
+    const v = view(S, '1-1', 'castle'), row = v.table!.rows.find((r) => r.pick?.n === st.n)!;
+    expect(v.table!.head).toContain('9층 시험 층');
+    expect(row.cells[1]!.t).toBe('2/2 👑 ✅');
+    expect(v.kpis![0]!.sub).toMatch(/👑 1명 · ✅ 1명/);
+  });
+});

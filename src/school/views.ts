@@ -11,6 +11,8 @@ import { rank as symRank } from './symtap';
 import { boardStu, weakNos, type BoardRec } from './boardDash';
 import { feat } from './features.svelte';
 import { standings, weekOf } from '../board/war';
+import { castleState, manualOf, progressOf, withLegacy, bonusBase, type CastleRec } from './castle';
+import { visibleCastles } from './castles.svelte';
 
 // 📊 대시보드 보기 11+1 (#125 · 시안 ⑳) — 화면과 엑셀이 같은 계산(보기 하나 = 시트 하나)
 //   색 + 글자 함께(도달 · 근접 · 미달 · ✔ △ ✘ · ⭐ · ■) · 「전체」 = 모든 반 합산(🧪 베타 반 · 시험 계정 빠짐)
@@ -32,7 +34,7 @@ export interface View {
   memos?: { s: Stud; text: string; more: string[] }[];
 }
 export const GROUPS: { name: string; views: [string, string][] }[] = [
-  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전']] },
+  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전'], ['castle', '성채 던전']] },
   { name: '누가 도움이 필요해?', views: [['grid', '한눈에 표'], ['watch', '주의 학생'], ['std', '성취기준'], ['rank', '랭킹']] },
   { name: '기록 남기기', views: [['memo', '세특 메모'], ['photo', '서술형'], ['survey', '설문']] },
 ];
@@ -186,7 +188,7 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
       return { id, title: '기호 톡', info: '학생이 기호를 톡 눌러 뜻을 본 횟수 · 많이 누른 기호 = 헷갈리는 기호', list: SYMS.map(([k, d], i) => ({ rk: k, nm: `${Math.round(tot * (w[i] ?? 0))}번 · ${Math.max(1, Math.round(studs.length * (w[i] ?? 0) * 1.8))}명`, sub: d, pc: '', bar: (w[i] ?? 0) / (w[0] ?? 1) })) };
     }
     case 'board': { // 📋 #56 게시판 던전 (📜 2026-11-21 선생님 고름 · 성적 아님): 판 수 · 이긴 판 · 차시별 최고 ⭐ · 첫 시도 정답률 · 활약 · 반 공적
-      if (!feat('board')) return { id, title: '게시판 던전', info: '게시판 던전이 꺼져 있어요 (⚙ 기능)' };
+      if (!feat('board')) return { id, title: '게시판 던전', info: '게시판 던전이 꺼져 있어요 (⚙ 기능)', kpis: [{ lab: '게시판 던전', big: '—', sub: '꺼져 있어요 (⚙ 기능)' }] };
       const noOf = (lid: string) => PACKS.find((p) => p.id === lid)?.no ?? (Number(/(\d+)(?:@\d+)?$/.exec(lid)?.[1]) || 0);
       const rows = studs.map((s) => ({ s, b: boardStu(S.get<Record<string, BoardRec>>(`bonus/${s.cls}/${s.n}/board`), S.get<Record<string, number>>(`bonus/${s.cls}/${s.n}/boardStar`), noOf) }));
       const nos = [...new Set(rows.flatMap((r) => Object.keys(r.b.stars).map(Number)))].sort((a, b) => a - b);
@@ -205,6 +207,19 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
             { t: p(fp), tone: b.firstTotal ? tone(fp) : 'na', v: pv(fp) }, { t: String(b.acts.block), v: b.acts.block }, { t: String(b.acts.rescue), v: b.acts.rescue }, { t: String(b.acts.cut), v: b.acts.cut }, { t: String(b.acts.brk), v: b.acts.brk },
             { t: String(b.merit), v: b.merit }, ...nos.map((n) => ({ t: st(b.stars[n] ?? 0), v: b.stars[n] ?? 0 } as TCell)),
           ] }; }) } };
+    }
+    case 'castle': { // 🏰 #56 덧 성채 던전 진행 (📜 2026-11-21 선생님 「대시보드에 성채 던전 진행 정도도 표시해 줘」): 층마다 깬 방 / 열린 방 · 👑 보스 처치 · 층 완료 · 반 평균
+      const Ps = visibleCastles();
+      if (!feat('citadel') || !Ps.length) { const why = !feat('citadel') ? '성채가 꺼져 있어요 (⚙ 기능)' : '올린 성채 층이 없어요'; return { id, title: '성채 던전', info: why, kpis: [{ lab: '성채 던전', big: '—', sub: why }] }; }
+      const rows = studs.map((s) => ({ s, f: Ps.map((P) => { const recs = withLegacy(P.id, S.get<Record<string, CastleRec>>(`${bonusBase(s.cls, s.n)}/${P.id}`) || {}), st = castleState(P, progressOf(S, s.cls), recs, false, manualOf(S, P.id, s.cls));
+        const open = st.plain.length, done = st.cleared, boss = !!(st.boss && recs[st.boss.id]?.clear); return { open, done, boss, full: open > 0 && done >= open && (!st.boss || boss) }; }) }));
+      const avg = Ps.map((_, i) => { const xs = rows.map((r) => r.f[i]!).filter((x) => x.open > 0); return xs.length ? Math.round((100 * xs.reduce((a, x) => a + x.done / x.open, 0)) / xs.length) : null; });
+      const cell = (x: { open: number; done: number; boss: boolean; full: boolean }): TCell => { const v = x.open ? pct(x.done, x.open) : null; return { t: x.open ? `${x.done}/${x.open}${x.boss ? ' 👑' : ''}${x.full ? ' ✅' : ''}` : '—', tone: x.open ? tone(v) : 'na', v: x.open ? x.done : null }; };
+      return { id, title: '성채 던전', info: '수업 밖 스스로 도전 · 깬 방 / 열린 방 (반 진도만큼 열림) · 👑 = 보스 방 처치 · ✅ = 층 완료 · 성적이 아니라 참고',
+        kpis: Ps.map((P, i) => ({ lab: `${P.floor}층 반 평균`, big: p(avg[i] ?? null), sub: `👑 ${rows.filter((r) => r.f[i]!.boss).length}명 · ✅ ${rows.filter((r) => r.f[i]!.full).length}명` })),
+        table: { sort: true, head: ['번호 · 이름', ...Ps.map((P) => `${P.floor}층 ${P.title}`), '👑 합'], legend: [['ok', '열린 방 80%↑'], ['md', '60~79%'], ['ng', '60%↓'], ['na', '아직 안 열림']],
+          rows: [{ sum: true, cells: [{ t: '반 평균', v: '반 평균' }, ...avg.map((v) => ({ t: p(v), tone: tone(v), v: pv(v) } as TCell)), { t: String(rows.reduce((a, r) => a + r.f.filter((x) => x.boss).length, 0)), v: rows.reduce((a, r) => a + r.f.filter((x) => x.boss).length, 0) }] },
+            ...rows.map(({ s, f }) => ({ pick: s, cells: [{ t: nm(s), v: nm(s) }, ...f.map(cell), { t: String(f.filter((x) => x.boss).length), v: f.filter((x) => x.boss).length }] }))] } };
     }
     case 'memo': return { id, title: '세특 메모', info: '기록에 있는 사실만으로 만든 초안 · 그대로 쓰지 말고 관찰을 더해 다듬기', memos: studs.filter((s) => !s.x || withX).map((s) => { const m = memoParts(s); return { s, text: m.main, more: m.more }; }) };
     case 'photo': return { id, title: '서술형', info: '📷 손글씨 사진 채점 결과 · ✍ 연습 통과 = 학습지 숫자(풀이를 보고 써도 인정) · ✍ 실력 통과 = 숫자 바꾼 판(혼자 씀)', list: studs.filter((s) => s.extra.photoOk + (s.extra.photoV || 0) + s.extra.photoRe > 0).slice(0, 15).map((s) => ({ rk: '📷', nm: `${cls === ALL ? `${s.cls} ` : ''}${s.name}${S?.kind === 'server' ? '' : ` · ${SUBJ.demo.photoWhere}`}`, sub: `✍ 연습 통과 ${s.extra.photoOk} · ✍ 실력 통과 ${s.extra.photoV || 0} · 다시 ${s.extra.photoRe}`, pc: s.extra.photoV ? '💪 실력' : s.extra.photoOk ? '연습' : '다시', pick: s })) };
