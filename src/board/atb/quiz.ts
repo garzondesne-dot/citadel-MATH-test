@@ -8,11 +8,30 @@ import { grade } from '../../engine/grade';
 import { T } from './tune';
 
 export interface Origin { mid: string; title: string; chain: boolean; n: number }
-/** 원문항 = 몬스터 칸 중 복습 · 보강 아닌 것 */
-export function originsOf(L: LessonPack): Origin[] {
-  return L.steps.filter((s) => s.kind === 'monster' && L.monsters[s.id] && !/^[^가-힣\w]*(복습|보강)/.test(String(s.title || ''))).map((s) => {
+// 🚫 📜 요청 #53 (선생님 2026-11-21 「세트0 은 학교 수업에서 한 내용」) = 게시판 문제는 세트0(판 0 = 팩 first · first 가 없으면 pool[0]) 절대 안 냄
+//   ATB 판 = 1 ~ 6 만 · pool 팩 = pool 안 세트0 아닌 것만 돎 · 세트0 만 있는 원문항 = 판에서 뺌
+const VERS_OK = [1, 2, 3, 4, 5, 6];
+/** 아무 정수 → 1 ~ 6 */
+export const normVer = (v: number): number => ((((v - 1) % VERS_OK.length) + VERS_OK.length) % VERS_OK.length) + 1;
+/** 세트0 만 있는 원문항 (바뀐 판 없음) */
+export function set0Only(L: LessonPack, mid: string): boolean {
+  const m = L.monsters[mid]; if (!m) return true;
+  if (m.chain) return 'pool' in m.chain ? m.chain.pool.length <= 1 : false;
+  if ('gen' in m.retry) return false;
+  const n = m.retry.pool.length; return m.first ? n === 0 : n <= 1;
+}
+/** ATB 판(1 ~ 6) → 팩 판 번호 (세트0 을 건너뛰게) */
+export function variantOf(L: LessonPack, mid: string, ver: number): number {
+  const m = L.monsters[mid], v = normVer(ver); if (!m) return v;
+  const pool = m.chain ? ('pool' in m.chain ? m.chain.pool : null) : 'gen' in m.retry ? null : m.retry.pool;
+  if (!pool || (!m.chain && m.first)) return v; // 생성기 = 1 ~ 6 · first 있는 pool = pool[(v − 1) % n]
+  return pool.length > 1 ? 1 + ((v - 1) % (pool.length - 1)) : v; // first 없는 pool · 소레이드 pool = pool[1 ~ n − 1]
+}
+/** 원문항 = 몬스터 칸 중 복습 · 보강 아닌 것 · 세트0 만 있는 것 뺌 (요청 #53) */
+export function originsOf(L: LessonPack, withSet0Only = false): Origin[] {
+  return L.steps.filter((s) => s.kind === 'monster' && L.monsters[s.id] && !/^[^가-힣\w]*(복습|보강)/.test(String(s.title || '')) && (withSet0Only || !set0Only(L, s.id))).map((s) => {
     const chain = !!L.monsters[s.id]!.chain;
-    const n = (chain ? chainItems(L, s.id, 'n', 0) : items(L, s.id, 'n', 0)).length;
+    const n = (chain ? chainItems(L, s.id, 'n', variantOf(L, s.id, 1)) : items(L, s.id, 'n', variantOf(L, s.id, 1))).length;
     return { mid: s.id, title: String(s.title || s.id), chain, n };
   });
 }
@@ -25,9 +44,9 @@ export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped:
 /** 📜 요청 #49 소문항 충전 = 틀린 횟수에 따라 (엔진 · 화면 같은 값) */
 export const subGain = (miss: number): number => T.charge.byMiss[Math.min(miss, T.charge.byMiss.length - 1)] ?? 0;
 const VERS = 7;
-export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'> & { seed?: string }, seed: string): Question[] => { const s = r.seed ?? seed; return L.monsters[r.mid]?.chain ? chainItems(L, r.mid, s, r.ver) : items(L, r.mid, s, r.ver); };
+export const questionsOf = (L: LessonPack, r: Pick<Run, 'mid' | 'ver'> & { seed?: string }, seed: string): Question[] => { const s = r.seed ?? seed, v = variantOf(L, r.mid, r.ver); return L.monsters[r.mid]?.chain ? chainItems(L, r.mid, s, v) : items(L, r.mid, s, v); };
 /** 새 원문항 시작 (ver0 = 이 학생 시작 판) */
-export const startRun = (mid: string, ver0: number): Run => ({ mid, ver: ((ver0 % VERS) + VERS) % VERS, k: 0, wrong: 0, clean: true, firstTry: true, vers: [((ver0 % VERS) + VERS) % VERS], marks: [] });
+export const startRun = (mid: string, ver0: number): Run => ({ mid, ver: normVer(ver0), k: 0, wrong: 0, clean: true, firstTry: true, vers: [normVer(ver0)], marks: [] });
 /** 답 하나 내기 → 새 진행 + 얻은 것 */
 export function answer(L: LessonPack, r: Run, seed: string, given: Given, avoid: number[] = []): { run: Run; earn: Earn } {
   const qs = questionsOf(L, r, seed), q = qs[r.k];
@@ -41,8 +60,8 @@ export function answer(L: LessonPack, r: Run, seed: string, given: Given, avoid:
   }
   const wrong = r.wrong + 1;
   if (wrong >= T.wrongSwap) { // 4번째 오답 = 같은 원문항 새 숫자 판 · 진행도만 처음부터 · 📜 요청 #19 덧2 = 이 기기에서 본 판 · 친구가 지금 쓰는 판(avoid)도 피함
-    const used = new Set(r.vers), cand = Array.from({ length: VERS }, (_, i) => (r.ver + 1 + i) % VERS);
-    const next = cand.find((v) => !used.has(v) && !avoid.includes(v)) ?? cand.find((v) => !used.has(v)) ?? (r.ver + 1) % VERS;
+    const used = new Set(r.vers), cand = VERS_OK.map((_, i) => normVer(r.ver + 1 + i));
+    const next = cand.find((v) => !used.has(v) && !avoid.includes(v)) ?? cand.find((v) => !used.has(v)) ?? normVer(r.ver + 1);
     return { run: { ...(r.seed ? { seed: r.seed } : {}), mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [], gains: [], subMiss: 0 }, earn: { ...none, swapped: true } };
   }
   return { run: { ...r, wrong, clean: false, firstTry: false, subMiss: (r.subMiss ?? 0) + 1 }, earn: none };
@@ -59,11 +78,11 @@ export function nextOrigin(os: Origin[], done: Record<string, number>, prefer?: 
 export const VERS_N = VERS;
 /** 판 고르기 · seen = 이 원문항에서 이 기기가 본 판(오래된 것 → 새 것) · busy = 친구가 지금 쓰는 판 */
 export function pickVer(seen: readonly number[], busy: readonly number[] = [], rnd: () => number = Math.random): number {
-  const all = Array.from({ length: VERS }, (_, i) => i), any = (xs: number[]) => xs[Math.floor(rnd() * xs.length)]!;
+  const all = VERS_OK.slice(), any = (xs: number[]) => xs[Math.floor(rnd() * xs.length)]!;
   const a = all.filter((v) => !seen.includes(v) && !busy.includes(v)); if (a.length) return any(a);
   const b = all.filter((v) => !seen.includes(v)); if (b.length) return any(b);
-  const old = seen.filter((v, i) => seen.indexOf(v) === i); // 다 봄 = 가장 오래된 것부터
-  return old.find((v) => !busy.includes(v)) ?? old[0] ?? 0;
+  const old = seen.filter((v, i) => seen.indexOf(v) === i && v > 0); // 다 봄 = 가장 오래된 것부터
+  return normVer(old.find((v) => !busy.includes(v) && v > 0) ?? old.find((v) => v > 0) ?? 1);
 }
 /** 본 판 적기 (맨 뒤 = 가장 최근) */
 export const noteSeen = (seen: readonly number[], v: number): number[] => [...seen.filter((x) => x !== v), v].slice(-VERS);
@@ -84,7 +103,7 @@ export function sigOf(qs: readonly Question[]): number { let h = 2166136261; for
 export function freshRun(L: LessonPack, mid: string, seed: string, seen: Seen, busy: readonly number[] = [], rnd: () => number = Math.random): Run {
   const k = seenKey(L, mid), v = pickVer(seen[k] ?? [], busy, rnd), sigs = seen[k + '#'] ?? [];
   let s = seed, sig = 0, ver = v;
-  for (let i = 0; i < 56; i++) { ver = (v + (i >> 3)) % VERS; s = i ? `${seed}~${i}` : seed; sig = sigOf(questionsOf(L, { mid, ver }, s)); if (!sigs.includes(sig)) break; } // 판마다 씨앗 8번 → 다음 판
+  for (let i = 0; i < 56; i++) { ver = normVer(v + (i >> 3)); s = i ? `${seed}~${i}` : seed; sig = sigOf(questionsOf(L, { mid, ver }, s)); if (!sigs.includes(sig)) break; } // 판마다 씨앗 8번 → 다음 판
   seen[k] = noteSeen(seen[k] ?? [], ver); seen[k + '#'] = [...sigs.filter((x) => x !== sig), sig].slice(-6);
   return { ...startRun(mid, ver), ...(s !== seed ? { seed: s } : {}) };
 }
