@@ -1,5 +1,6 @@
 // 🔊 효과음 · 🎵 배경음 켜기 · 끄기 (#161 속성 소리 · B5 소리 탭 = 둘 따로 · 이 기기 기억 localStorage 'citadel-sound')
 import { artUrl, ELEM_FX, SFX } from './manifest';
+import { actx } from './webaudio';
 import { paperOn } from './submit.svelte';
 import { playOnce } from './webaudio';
 export type SoundPref = { sfx: boolean; bgm: boolean };
@@ -39,6 +40,16 @@ export function sfx(k: string, vol = 0.7): void {
   if (playOnce(artUrl(SFX[k]!), vol * duckK())) return; // 🔇 Web Audio = iOS 무음 스위치를 따름 · 없으면 아래 <audio>
   let a = pool.get(k); if (!a) { a = new Audio(artUrl(SFX[k]!)); pool.set(k, a); }
   try { a.currentTime = 0; a.volume = vol * duckK(); void a.play().catch(() => { /* 아직 화면을 누르지 않음 */ }); } catch { /* 무시 */ }
+}
+
+/** 🎛 만든 소리 (파일 없음 · Web Audio 로 합성 · 효과음 설정 · 끔 · 제출 모드 따름) → 멈추는 함수 (📜 게시판 던전 #39 심장 · 쉭 · 챙) */
+export function synth(k: string, make: (c: AudioContext, out: GainNode) => (() => void) | void, vol = 0.5): () => void {
+  sfxLog.push(k); if (sfxLog.length > 20) sfxLog.shift();
+  if (muteAll || hushed() || !soundPref.sfx || paperOn()) return () => {};
+  const c = actx(); if (!c) return () => {};
+  const g = c.createGain(); g.gain.value = vol * duckK(); g.connect(c.destination);
+  let stop: (() => void) | void; try { stop = make(c, g); } catch { /* 무시 */ }
+  return () => { try { stop?.(); g.disconnect(); } catch { /* 무시 */ } };
 }
 
 /** 💥 몬스터 공격 종류 소리 (폰 · TV 같은 표 · 📜 #43) — 혼란 = 어질 · 어둠 = 먹물 · 독 = 거품 · 수면 = 하품 · 파지직 = 지지직 · 나머지 = 속성 소리 */
