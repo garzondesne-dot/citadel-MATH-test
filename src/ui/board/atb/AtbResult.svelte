@@ -51,6 +51,8 @@
   const portNow = () => typeof innerHeight === 'number' && innerHeight > innerWidth && !document.querySelector('[data-rot90]');
   let port = $state(false);
   $effect(() => { port = portNow(); const f = () => (port = portNow()); addEventListener('resize', f); return () => removeEventListener('resize', f); });
+  /** 💀 📜 요청 #88 패배 이유 = 큰 줄 (엔진 why → 학생 말) */
+  const WHY: Record<string, string> = { '팀 부활을 다 씀': '💖 팀 부활을 다 써서 쓰러진 친구를 살릴 수 없었어요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급 힐로 버텨 봐요' };
 </script>
 
 <div class="rs" class:lose={!win} class:port data-k="atb-result">
@@ -60,6 +62,7 @@
       <div class="stars" data-k="atb-stars" data-n={stars} aria-label="별 {stars}개">{#each [0, 1, 2] as i (i)}<img class="star" class:on={i < stars} style:animation-delay="{0.25 + i * 0.22}s" src={R(i < stars ? 'res-star-gold' : 'res-star-gray')} alt="" />{/each}</div>
     </div>
     <p class="time">{win ? `${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초` : S.end?.why}</p>
+    {#if !win && S.end}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{/if}
     <div class="party" style:--n={n}>
       {#each S.heroes as h (h.id)}
         {@const pt = portraitOf(h.s.hero)}
@@ -159,4 +162,5 @@
   .rs.port .paper { padding: 8% 9% 8% 10%; }
   .rs.port .row, .rs.port .merit summary { font-size: 15px; }
   .rs.port .sum { font-size: 20px; }
+  .whyb { position: absolute; left: 50%; top: 2%; transform: translateX(-50%); z-index: 3; margin: 0; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, 4vh, 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
 </style>
