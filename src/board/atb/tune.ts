@@ -212,7 +212,7 @@ export const ATTR_FX_TXT: Record<AttrFx, { emo: string; name: string; desc: stri
 };
 /** 대표 행동 숫자 (어림값 · 📜 설정표 v3 「⚠ ×0.2 · 8% · 30% · 30초 = 모의실험에 안 넣은 값」) */
 export const SIG = {
-  breath: { every: 30, warn: 4, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
+  breath: { every: 30, warn: 4, heal: 0.08, healMax: 0.32 }, // healMax = 판 전체 회복 합 상한 32% (📜 #57 뒤 엔진 훑기: 끊을 수 없는 1인 · 찍기 봇 판이 900초에도 안 끝남) // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
   mirror: { sec: 10, back: 0.3 }, // 8 거울빛: 다음 10초 일반 공격 피해 30% 가 공격한 용사에게 (스킬은 안 돌아옴)
   scaleTilt: 0.5, // 10 기우는 저울: 기울(단일) 확률
   // 📜 요청 #57 설정표 v4 대표 행동
