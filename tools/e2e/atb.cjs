@@ -215,12 +215,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   // 👹 요청 #38 · #42 몬스터 피격 손맛 = 숫자 단계(내 것 크게) · 체력바 흰 잔상 · 금 단계 · 파편
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.bossHp = Math.floor(S.bossMax * 0.5) + 5; a.full(); });
-  await p.evaluate(() => { globalThis.__bits = 0; new MutationObserver(() => { globalThis.__bits = Math.max(globalThis.__bits, document.querySelectorAll('.atb-bit').length); }).observe(document.body, { childList: true, subtree: true }); });
+  await p.evaluate(() => { globalThis.__bits = 0; new MutationObserver(() => { globalThis.__bits = Math.max(globalThis.__bits, document.querySelectorAll('.hitfx-bit').length); }).observe(document.body, { childList: true, subtree: true }); });
   await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]'); await p.evaluate(() => globalThis.__atbTiming('crit'));
   { const num = await p.waitForSelector('.pop.dmg.me', { timeout: 3000 }).then((e) => e.evaluate((x) => ({ t: x.textContent, fs: parseFloat(getComputedStyle(x).fontSize), c: x.className }))).catch(() => null);
     const bits = await p.evaluate(() => globalThis.__bits); await p.waitForTimeout(80); await p.screenshot({ path: `${SHOTS}/atb-r38-hit-844.png` });
     const lag = await p.evaluate(() => { const l = document.querySelector('[data-k="raid-hp"] .b.in .lag'); return l ? parseFloat(getComputedStyle(l).transitionDelay) : -1; });
-    await p.waitForTimeout(900); const crack = await p.$eval('[data-k="atb-crack"]', (e) => e.dataset.lv).catch(() => '');
+    await p.waitForTimeout(900); const crack = await p.$eval('[data-k="mon-crack"]', (e) => e.dataset.lv).catch(() => '');
     ok('요청 #38 · #42 치명 = 내 숫자 크게(노랑 · 「💥 치명!」) · 파편 · 체력바 흰 잔상 · 50% 넘김 = 금 2단계', !!num && num.fs >= 40 && /crit/.test(num.c) && /치명/.test(num.t) && bits >= 3 && lag === 0.4 && crack === '2', JSON.stringify({ num, bits, lag, crack }));
     await p.screenshot({ path: `${SHOTS}/atb-r38-crack-844.png` }); }
   // 🛡 요청 #39 용사 피격 긴장감 = 가장자리 단계(70 · 50 · 30%) · 30% 아래 쿵쿵(소리 + 진동 2번) · 조준 원 조임 + 3 · 2 · 1 · 쉭 · 막으면 원 깨짐 + 챙 + 진동 멈춤

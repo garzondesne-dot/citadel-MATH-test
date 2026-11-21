@@ -13,6 +13,8 @@
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
   import AtbFx, { fxUrl, fxCss } from './AtbFx.svelte';
+  import MonCrack from '../../fx/MonCrack.svelte';
+  import { crackShake, crackStep, hitBits, hitReel } from '../../fx/hitfx';
   import MonHit from '../../battle/MonHit.svelte';
   import { MHIT, mhitOf, atkHitOf, type MhitKind } from '../../manifest';
   import { rectIn, ROT_ATTR } from '../../rot';
@@ -343,21 +345,14 @@
       .catch(() => {}).finally(() => { busy.delete(e.who); onHit(); setPose(e.who, 'idle'); });
   }
   /** 💥 몬스터 파편 (📜 요청 #38 ⑥) = 그 몬스터 맞는 그림 종류(mhitOf) 짝 색 · 모양 · 4 ~ 6개 0.4초 · 큰 공격 2배 · 저사양(코어 4 이하) · 움직임 줄이기 = 3개 */
-  const BITS: Record<string, { c: string; r: string }> = { smash: { c: '#b8a898', r: '30%' }, ram: { c: '#b8a898', r: '30%' }, claw: { c: '#7ad86a', r: '2px' }, bite: { c: '#7ad86a', r: '2px' }, fire: { c: '#ff8a2a', r: '50%' }, ice: { c: '#bff0ff', r: '1px' }, poison: { c: '#6aff6a', r: '50% 50% 50% 0' }, beam: { c: '#fff7b0', r: '1px' }, bolt: { c: '#fff7b0', r: '1px' }, lash: { c: '#5ac85a', r: '0 70% 0 70%' } };
-  const lowEnd = typeof navigator !== 'undefined' && ((navigator.hardwareConcurrency ?? 8) <= 4 || (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches));
-  function burstBits(mul = 1) {
-    const st = stageEl, b = bossEl; if (!st || !b) return; const R = rectIn(st), B = rectIn(b), k = mhitOf(S.boss.sprite), P = BITS[k] ?? BITS.smash!;
-    const n = lowEnd ? 3 : (4 + Math.floor(Math.random() * 3)) * mul, cx = B.left + B.width * 0.42 - R.left, cy = B.top + B.height * 0.45 - R.top;
-    for (let i = 0; i < n; i++) { const el = document.createElement('i'); el.className = 'atb-bit'; const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 50; el.style.cssText = `left:${cx}px;top:${cy}px;background:${P.c};border-radius:${P.r};--dx:${Math.cos(a) * v}px;--dy:${Math.sin(a) * v - 20}px;--rot:${Math.round(Math.random() * 360)}deg`; st.appendChild(el); setTimeout(() => el.remove(), 420); }
-  }
+  /** 💥 파편 = 공용 hitBits (📜 #38 ⑥ · #54 레이드와 같은 조각) */
+  function burstBits(mul = 1) { const st = stageEl, b = bossEl; if (!st || !b) return; const R = rectIn(st), B = rectIn(b); hitBits(st, B.left + B.width * 0.42 - R.left, B.top + B.height * 0.45 - R.top, mhitOf(S.boss.sprite), mul); }
   /** 👹 큰 공격 = 보스가 뒤로 더 밀리며 비틀 (기울기 −6° → 0 · 📜 요청 #38 ④) */
   let weakFx = $state<{ fam: Fam; n: number } | null>(null);
-  function bossReel(strong = false) { const k = strong ? 2 : 1; bossEl?.animate?.([{ translate: '0 0', rotate: '0deg' }, { translate: `${Math.round(Wd * 0.03 * k)}px 0`, rotate: `${-6 * k}deg`, offset: 0.3 }, { translate: '0 0', rotate: '0deg' }], { duration: 480 + 120 * (k - 1), easing: 'ease-out' }); }
+  const bossReel = (strong = false) => hitReel(bossEl ?? null, strong, Wd * 0.03); // 공용 (#54)
   // 🪨 체력 75 · 50 · 25% 를 넘는 순간 = 크게 휘청 + 「쿵」 + 몸에 금 한 단계 (📜 요청 #38 ⑤ · 금 = 보스 몸 모양 안에서만 · 분노보다 먼저)
   let crackLv = $state(0), lastRatio = 1;
-  $effect(() => { const r = S.bossMax ? S.bossHp / S.bossMax : 1; untrack(() => { const lv = r <= 0.25 ? 3 : r <= 0.5 ? 2 : r <= 0.75 ? 1 : 0; if (lv > crackLv && r < lastRatio) { crackLv = lv; bossEl?.animate?.([{ translate: '0 0', rotate: '0deg' }, { translate: `${Math.round(Wd * 0.02)}px 4px`, rotate: '-4deg', offset: 0.25 }, { translate: `-${Math.round(Wd * 0.01)}px 0`, rotate: '3deg', offset: 0.6 }, { translate: '0 0', rotate: '0deg' }], { duration: 500, easing: 'ease-out' }); sfx('dummy-hit', 0.8); shake(stageEl ?? null, 6, 300); } lastRatio = r; }); });
-  /** 금 그림 = 보스 그림과 같은 칸을 마스크로 (몸 밖엔 안 보임) · 매 프레임 칸 자리 따라감 */
-  function crackMask(node: HTMLElement) { let raf = 0; const f = () => { const sp = node.parentElement?.querySelector('.sprite, i[style*="background-image"]') as HTMLElement | null; if (sp) { const cs = sp.style; node.style.maskImage = node.style.webkitMaskImage = cs.backgroundImage; node.style.maskSize = node.style.webkitMaskSize = cs.backgroundSize; node.style.maskPosition = node.style.webkitMaskPosition = cs.backgroundPosition; node.style.width = cs.width; node.style.height = cs.height; } raf = requestAnimationFrame(f); }; f(); return { destroy: () => cancelAnimationFrame(raf) }; }
+  $effect(() => { const hp = S.bossHp, mx = S.bossMax, r = mx ? hp / mx : 1; untrack(() => { const lv = crackStep(crackLv, hp, mx); if (lv != null && r < lastRatio) { crackLv = lv; crackShake(bossEl ?? null, Math.round(Wd * 0.02)); sfx('dummy-hit', 0.8); shake(stageEl ?? null, 6, 300); } lastRatio = r; }); }); // 공용 crackStep · crackShake (#54)
   /** 💥 광역이 터짐 = 용사 줄 가운데서 붉은 충격파 (레이드 필살기 충격파 .ult-ring 을 붉게) */
   function ring() {
     const st = stageEl; if (!st) return; const R = rectIn(st), x = R.width * (open ? 0.17 : 0.25), y = R.height * 0.6, d = R.width * 0.9;
@@ -571,7 +566,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<i class="crack" data-k="atb-crack" data-lv={crackLv} use:crackMask aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none">{#if crackLv >= 1}<polyline points="40,22 46,34 41,44 49,55" />{/if}{#if crackLv >= 2}<polyline points="60,40 54,52 61,62 55,74" /><polyline points="46,34 56,36" />{/if}{#if crackLv >= 3}<polyline points="30,52 38,60 33,70 42,82" /><polyline points="61,62 70,66" /><polyline points="38,60 47,62" />{/if}</svg></i>{/if}</i></div>
+  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -959,8 +954,4 @@
   .pop.dmg.miss { color: #ccc; }
   .pop.dmg.sum { font-size: 30px; } .pop.dmg.sum.me { font-size: 58px; } .pop.dmg.sum.fr { font-size: 20px; }
   @keyframes dmgup { 0% { opacity: 1; transform: translate(-50%, 10px) scale(0.6); } 18% { transform: translate(-50%, -26px) scale(1.25); } 35% { transform: translate(-50%, -20px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(1); } }
-  .stage :global(.atb-bit) { position: absolute; z-index: 24; width: 7px; height: 7px; margin: -3px 0 0 -3px; pointer-events: none; animation: bit 0.42s ease-out forwards; box-shadow: 0 0 4px #0006; }
-  @keyframes bit { from { transform: translate(0, 0) rotate(0); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
-  .crack { position: absolute; left: 0; top: 0; pointer-events: none; mask-repeat: no-repeat; -webkit-mask-repeat: no-repeat; }
-  .crack svg { width: 100%; height: 100%; } .crack polyline { fill: none; stroke: #1a0a0a; stroke-width: 2.4; stroke-linejoin: round; filter: drop-shadow(0 0 1px #fff8); vector-effect: non-scaling-stroke; }
 </style>
