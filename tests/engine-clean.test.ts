@@ -10,7 +10,7 @@ const ALLOW: string[] = []; // 예외 없음 (#140: 스킬 이름도 과목 팩�
 const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const files = walk('src').filter((f) => !f.startsWith(path.join('src', 'subjects')) && /\.(ts|svelte|json|css)$/.test(f));
 
-describe('엔진 폴더 = 과목 낱말 · 차시 id 없음 (#136)', () => {
+describe('엔진 폴더 = 과목 낱말 · 차시 id 없음 (#136)', { timeout: 30000 }, () => { // src 파일 전부 읽음 = 1 ~ 1.6초 · 전체 시험 중 기계가 바쁘면 기본 5초에 걸림 → 30초
   it(`검사한 파일 ${files.length}개`, () => expect(files.length).toBeGreaterThan(40));
   it('과목 낱말 0', () => {
     const hits = files.flatMap((f) => fs.readFileSync(f, 'utf8').split('\n').flatMap((l, i) => BAN.filter((w) => l.includes(w) && !ALLOW.some((a) => l.includes(a))).map((w) => `${f}:${i + 1} 「${w}」`)));
