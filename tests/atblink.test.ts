@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { LessonPack, Store } from '../src/model/types';
 import { memoryStore } from '../src/store/device';
-import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb } from '../src/board/atbLink';
+import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd } from '../src/board/atbLink';
 import { POSTS, type Post } from '../src/board/team';
 import { weekOf } from '../src/board/war';
 
@@ -18,8 +18,9 @@ describe('📡 출발', () => {
     S.set(`${POSTS}/p1`, p);
     const meta = startAtb(S, L, p, 42);
     expect(meta.slots).toHaveLength(4);
-    expect(meta.slots.slice(0, 2).map((s) => s.uid)).toEqual(['s1_3_1', 's1_3_2']);
-    expect(meta.slots.slice(2).every((s) => s.bot === 'normal')).toBe(true);
+    expect(meta.slots.slice(0, 2).map((s) => ('uid' in s ? s.uid : ''))).toEqual(['s1_3_1', 's1_3_2']);
+    expect(meta.slots.slice(2).every((s) => 'bot' in s && s.bot === 'normal')).toBe(true);
+    expect(meta.slots[0]).toMatchObject({ lv: 1, enh: 0, tier: 1 });
     expect(new Set(meta.slots.map((s) => s.hero)).size).toBe(4);
     expect(S.get(`atb/p1/meta/seed`)).toBe(42);
     expect(S.get(`atb/p1/host`)).toBe('s1_3_1');
@@ -33,7 +34,7 @@ describe('📡 출발', () => {
 });
 
 describe('🏁 결과 저장', () => {
-  const end = (stars: number) => ({ win: true, sec: 300, right: 8, total: 10, stars, merit: { clear: 20, star: 5, act: 10 }, gem: { items: 30, clear: 20 }, role: 'c' as const });
+  const end = (stars: number) => ({ win: true, sec: 300, right: 8, total: 10, stars, merit: { clear: 20, star: 5, act: 10 }, gem: { items: 30, clear: 20 }, role: 'tank' }) as unknown as AtbEnd;
   it('기록 한 줄 · ⭐ 최고 별만 올라감 · 반 공적 = 합 · 💎 = 합 돌려줌', () => {
     const S = mk(), ctx = { cls: '1-3', num: 7, L, pid: 'p1', n: 3 };
     expect(saveAtbResult(S, ctx, end(2))).toEqual({ gem: 50, merit: 35, newStars: 2 });
