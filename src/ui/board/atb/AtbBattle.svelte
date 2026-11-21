@@ -6,7 +6,7 @@
   //   이 화면은 그리기 · 누르기만 · 규칙 = src/board/atb/engine.ts · 숫자 = tune.ts
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { Given, LessonPack } from '../../../model/types';
-  import { heroOf, skillName, SKILL_NAMES } from '../../../model/hero';
+  import { heroOf, ladder, skillName, SKILL_NAMES } from '../../../model/hero';
   import { dungeonOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import Sprite from '../../Sprite.svelte';
@@ -28,7 +28,7 @@
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
-  import { attack as fxAttack, fit, shake, ultBlast, type Pose } from '../../fx/attack';
+  import { attack as fxAttack, fit, shake, type Pose } from '../../fx/attack';
   import { sfx, soundPref, setSound } from '../../sound.svelte';
   import { bgm, bgmRate } from '../../bgm';
   import { actx } from '../../webaudio';
@@ -249,7 +249,9 @@
   let eye = $state<{ who: number; col: string; n: number; big: string; small: string } | null>(null);
   /** 📜 #80 「한수의 ⚡ 번개 베기!」 = 누구 + 기술 (조사 「의」 · 이름 길면 글자만 줄임) */
   const whoOf = (id: number) => whoNames?.[id] || S.heroes[id]?.s.name || '';
-  const skIc = (id: number) => (fx[id] ? (SKILL_NAMES[fx[id]!] ?? '').split(' ')[0] || '⚡' : '⚡');
+  /** 📜 #82 스킬마다 그 스킬 그림 · 이름: 장착 · 넘침 자동 · 강타 = 장착 스킬 · 4레벨 = 그 계열 사다리 Ⅳ 칸 · 각성 = 각성 필살기(awkfx) */
+  const skIdOf = (who: number, kind?: string) => (kind === 'tier4' ? (ladder(S.heroes[who]!.s.hero)[3] as string | undefined) ?? fx[who] : fx[who]);
+  const skIc = (id: number, kind?: string) => { const k = skIdOf(id, kind); return k ? (SKILL_NAMES[k] ?? '').split(' ')[0] || '⚡' : '⚡'; };
   const fitPx = (t: string, w: number, max: number) => Math.max(14, Math.min(max, Math.floor(w / Math.max(1, [...t].length * 0.98))));
   function eyeCut(who: number, col: string, bigT: string, smallT: string, ms = 700) { const n = Date.now(); eye = { who, col, n, big: bigT, small: smallT }; setTimeout(() => { if (eye?.n === n) eye = null; }, ms + 500); }
   /** 🌀 특수 모으기 막대 (보스 머리 위 · 4초) */
@@ -356,7 +358,7 @@
   function playAtk(e: Extract<Ev, { k: 'atk' | 'skill' | 'role' }>) {
     const h = S.heroes[e.who]; if (!h) return;
     const d = (e as { dmg?: number }).dmg ?? 0, isSk = e.k === 'skill', ult = isSk && e.kind === 'awk', big = isSk && e.kind !== 'equip', miss = e.k === 'atk' && e.timing === 'miss', crit = e.k === 'atk' && e.timing === 'crit';
-    const fk = fit(h.s.hero, fx[e.who] || 'flame'); let hit = false, shown = 0;
+    const fk = fit(h.s.hero, skIdOf(e.who, e.k === 'skill' ? e.kind : undefined) || 'flame'); let hit = false, shown = 0; // 📜 #82 그 스킬 그림
     // 👹 📜 요청 #38 · #42 = 피해 숫자 단계(보통 흰 · 치명 노랑 · 약점 빨강 · 스킬 크게 · 각성 금) · 여러 타 = 하나씩 + 마지막 「합계」 · 내 것 2배 · 친구 0.7배 옅게
     const mine = e.who === me, wk = weak(S), tier = miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : wk ? 'weak' : 'norm', wkFam = wk && S.boss.weak.includes(h.s.fam); // 📜 요청 #50 B5 약점 계열로 약점 시간에
     const onHit = (info?: { k: number; n: number }) => {
@@ -369,12 +371,11 @@
       else if (n > 1 && d) setTimeout(() => pop(bx, 26, `합계 −${d}`, `dmg sum ${tier} ${mine ? 'me' : 'fr'}`, mine ? 1100 : 700), 120);
       if (d) { bossPose = 'hit'; setTimeout(() => (bossPose = S.end?.win ? 'down' : 'idle'), 420); burstBits(isSk || crit ? 2 : 1); if (isSk || crit || wkFam) bossReel(wkFam); }
       if (d && wkFam) { pop(bx, 18, '약점!', `weakbig ${mine ? 'me' : 'fr'}`, mine ? 1000 : 700); const t = Date.now(); weakFx = { fam: h.s.fam, n: t }; setTimeout(() => { if (weakFx?.n === t) weakFx = null; }, 650); }
-      if (ult && stageEl && bossEl) void ultBlast(stageEl, bossEl, fk);
     };
     const box = heroEls[e.who];
     if (!stageEl || !bossEl || !box || busy.has(e.who)) { onHit(); return; }
     busy.add(e.who);
-    void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
+    void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: ult ? lookOfStats(h.s) : h.s.hero, ultimate: ult /* 📜 #82 각성 = 각성 필살기 그림(awkfx · 없으면 큰 폭발) */, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
       .catch(() => {}).finally(() => { busy.delete(e.who); onHit(); setPose(e.who, 'idle'); });
   }
   /** 💥 몬스터 파편 (📜 요청 #38 ⑥) = 그 몬스터 맞는 그림 종류(mhitOf) 짝 색 · 모양 · 4 ~ 6개 0.4초 · 큰 공격 2배 · 저사양(코어 4 이하) · 움직임 줄이기 = 3개 */
@@ -422,7 +423,7 @@
       // ⚡ 스킬 = 컷인(필살기 1.7초 · 내 스킬 0.9초) 뒤 큰 이펙트
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
       const bigSk = e.k === 'skill' && !e.auto && (e.kind !== 'equip' || e.who === me), /* 📜 #79 ③ 넘침 자동 스킬 = 컷인 없음 */ ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
-      if (e.k === 'skill' && bigSk) { const nm = e.kind === 'awk' ? (fx[e.who] ? `각성 ${skillName(fx[e.who]!)}` : '각성') : fx[e.who] ? `${skillName(fx[e.who]!)}${e.kind === 'tier4' ? ' Ⅳ' : ''}` : '스킬', c = { who: e.who, awk: e.kind === 'awk', name: nm, short: e.kind === 'equip', line: `${whoOf(e.who)}의 ${e.kind === 'awk' ? '✨' : skIc(e.who)} ${nm}!` }; const cn = ++cutN; claim(4, ms, 'cutin'); cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
+      if (e.k === 'skill' && bigSk) { const sid = skIdOf(e.who, e.kind), nm = e.kind === 'awk' ? (sid ? `각성 ${skillName(sid)}` : '각성') : sid ? skillName(sid) : '스킬', c = { who: e.who, awk: e.kind === 'awk', name: nm, short: e.kind === 'equip', line: `${whoOf(e.who)}의 ${e.kind === 'awk' ? '✨' : skIc(e.who, e.kind)} ${nm}!` }; const cn = ++cutN; claim(4, ms, 'cutin'); cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
       if (e.k === 'skill' && e.auto && e.who === me) pop(posOf(me).x, posOf(me).y - 30, `${whoOf(me)} ⚡ 자동 스킬!`, 'role', 1000); // 📜 요청 #13 · #79 ③ 작은 글만
       if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
       if (bigSk) setTimeout(() => playAtk(e as Extract<Ev, { k: 'skill' }>), ms - 200); else playAtk(e as Extract<Ev, { k: 'atk' | 'skill' | 'role' }>);
