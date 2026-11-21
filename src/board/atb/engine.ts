@@ -100,12 +100,14 @@ export function orderNext(S: State): number | null {
   for (let k = 0; k < n; k++) { const j = rev ? (((n - 1 - i0 - k) % n) + n) % n : (i0 + k) % n; if (!S.heroes[j]!.down) return j; }
   return null;
 }
+/** 그 판 보스 기본 단일 피해 (방어 · 엄호 전) */
+const singleBase = (S: State) => { const n = Math.max(1, Math.min(4, S.heroes.length)); return BOSS_HIT[S.diff][n - 1]![0] * (T.bossAtkByNo[S.boss.no] ?? 1) * (T.bossHitByNo[S.boss.no]?.[n - 1] ?? 1) * (S.rage ? RAGE.mul[S.diff] : 1); };
 /** 🎯 단일 표적 고르기 (v4: 표식 · 차례 · 되돌리기 · 이어 쓰기 · 둘) */
 function pickSingle(S: State, kind: AK, live: Hero[]): number[] {
   const A = ATK[kind], M = modOf(S);
   let id: number | undefined;
   const marked = live.filter((h) => (h.mark ?? 0) > 0).sort((a, b) => (b.mark ?? 0) - (a.mark ?? 0))[0];
-  if (A.special === 'reverse') { const b = S.big && !S.heroes[S.big.who]?.down ? S.big : null; id = b?.who; S.revV = b ? Math.round(b.v * (M?.revPct ?? SIG.reverse)) : 0; }
+  if (A.special === 'reverse') { const b = S.big && !S.heroes[S.big.who]?.down ? S.big : null; id = b?.who; S.revV = b ? Math.min(Math.round(b.v * (M?.revPct ?? SIG.reverse)), Math.round(singleBase(S) * SIG.revCap)) : 0; } // 상한 = 그 판 보스 기본 단일 ×2 (인원 · 난이도 비례 · 1인 판이 한 방에 끝나지 않게)
   else if (marked && S.boss.sig === 'compose') id = marked.id;
   else if (S.pickLow) { const sl = live.filter((h) => S.t < h.slowUntil), pool = sl.length ? sl : live; id = pool.slice().sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0]!.id; }
   else if (S.boss.sig === 'order') { const j = orderNext(S); if (j != null) { id = j; const n = S.heroes.length, rev = !!M?.orderRev; S.ordI = rev ? (n - 1 - j + 1) % n : (j + 1) % n; } }

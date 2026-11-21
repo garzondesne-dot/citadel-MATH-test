@@ -144,7 +144,7 @@
     .body :global(.opt) { min-height: 38px; padding: 2px 8px; font-size: 15px; }
     .body :global(.runepad) { gap: 4px; } .body :global(.rune-keys) { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
     .body :global(.rune) { min-height: 32px; height: 32px; font-size: 16px; padding: 0; } .body :global(.rune-slot) { min-height: 34px; font-size: 22px; } .body :global(.rune-del) { width: 44px; font-size: 18px; }
-    /* 여럿 고르기 칩 = 낮고 촘촘하게 · 그림(벤 다이어그램 등) = 낮게 */
+    /* 여럿 고르기 칩 = 낮고 촘촘하게 · 그림 = 낮게 */
     .body :global(.chips) { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px; }
     .body :global(.chips .chip) { min-height: 32px; font-size: 15px; padding: 0 4px; }
     .body :global(.chips.wide) { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }

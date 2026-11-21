@@ -74,9 +74,9 @@ describe('v4 새 공격 · 대표 행동', () => {
   });
   it('17 되돌리기 = 가장 큰 스킬 피해 30% 를 그 용사에게 · 끊으면 보스가 맞음 (분노 50%)', () => {
     const S = at(17); tough(S); const h = S.heroes[0]!; h.ch = 3; h.atb = 1; useSkill(S, 0, 'equip'); const big = S.big!.v; expect(S.big!.who).toBe(0);
-    until(S, 2); toTele(S); expect(S.nextAtk).toBe('reverse'); expect(S.target).toEqual([0]); expect(S.revV).toBe(Math.round(big * SIG.reverse));
-    const hp0 = h.hp; run(S, 4.2); expect(hp0 - h.hp).toBe(Math.round(big * SIG.reverse));
-    const C = at(17); tough(C); C.heroes[0]!.ch = 3; C.heroes[0]!.atb = 1; useSkill(C, 0, 'equip'); enrage(C); C.forceAtk = 'reverse'; toTele(C); expect(C.revV).toBe(Math.round(C.big!.v * 0.5));
+    until(S, 2); toTele(S); expect(S.nextAtk).toBe('reverse'); expect(S.target).toEqual([0]); expect(S.revV).toBeGreaterThan(0); expect(S.revV).toBeLessThanOrEqual(Math.round(big * SIG.reverse)); // 상한 = 보스 기본 단일 ×2
+    const hp0 = h.hp; run(S, 4.2); const last = bossEvs(S).at(-1)!; expect(last.kind).toBe('reverse'); expect(last.dmg[0]).toBeGreaterThan(0); expect(hp0 - h.hp).toBe(last.dmg[0]);
+    const C = at(17); tough(C); C.heroes[0]!.ch = 3; C.heroes[0]!.atb = 1; useSkill(C, 0, 'equip'); enrage(C); C.forceAtk = 'reverse'; toTele(C); expect(C.revV).toBeLessThanOrEqual(Math.round(C.big!.v * 0.5));
     const d = dealerOf(C); d.ch = 3; const want = C.revV!; react(C, d.id); expect((C.ev.find((e) => e.k === 'sig' && e.what === 'reverseBack') as { v: number }).v).toBe(want);
   });
   it('6 · 7 차례 안 숨 고르기 = 다 모으면 보스 HP 8% 회복 · 끊으면 없음', () => {
