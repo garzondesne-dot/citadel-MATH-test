@@ -10,6 +10,7 @@ export const loadAtbRoom = once(() => import('./board/atb/AtbRoom.svelte')); // 
 export const loadDummy = once(() => import('./dummy/Dummy.svelte'));
 export const loadPrep = once(() => import('./dummy/Prep.svelte')); // 📖 #66 배움터 · 예습
 export const loadBoard = once(() => import('./board/Board.svelte'));
+export const loadAtbTrial = once(() => import('./board/atb/AtbTrial.svelte')); // 👩‍🏫 #55 체험판 게시판
 export const loadCastle = once(() => import('./castle/Castle.svelte'));
 export const loadQuest = once(() => import('./quest/QuestDesk.svelte')); // ✏ #75 출제 공방
 export const loadFunPhone = once(() => import('./rest/FunPhone.svelte'));
