@@ -51,7 +51,7 @@ export const alive = (S: State) => S.heroes.filter((h) => !h.down);
 export const weak = (S: State) => S.t < S.weakUntil;
 
 export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?: number }): State {
-  const n = Math.max(1, Math.min(4, o.party.length)), max = Math.round((T.bossHpByNo[o.boss.no] ?? BOSS_HP_BASE)[n - 1]! * DIFF_MUL[o.diff].hp);
+  const n = Math.max(1, Math.min(4, o.party.length)), max = Math.round((T.bossHpByNo[o.boss.no] ?? BOSS_HP_BASE)[n - 1]! * DIFF_MUL[o.diff].hp * (o.diff === 'hard' ? (T.hardHpByNo[o.boss.no]?.[n - 1] ?? 1) : 1));
   return {
     t: 0, diff: o.diff, boss: o.boss, seed: o.seed ?? 1, rnd: o.seed ?? 1,
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false, nextAtk: null, tilt: '', mirrorUntil: 0, breathWarn: null, breathNext: 0,

@@ -14,10 +14,11 @@ export const ROWS: Partial<Record<number, Partial<Record<Diff, string>>>> = {
   // 📜 요청 #57 = 2 ~ 13 이 안 쓴 칸만 (겹치지 않게) · 14 사슬 문지기 = 장난감 공방 · 15 능선의 용 = 용암 · 16 대기관 = 태엽 · 17 거울 군주 = 어둠 저택
   14: { easy: 'd12:1', normal: 'd12:2', hard: 'd12:3' }, 15: R('d02', 3, 4, 2), 16: { easy: 'd07:0', normal: 'd07:3', hard: 'd12:0' }, 17: { easy: 'd10:0', normal: 'd10:3', hard: 'd12:4' },
 };
-const nameOf = (ref: string) => { const [k, r] = ref.split(':'); return (SHEETS[k!] as { names?: string[] } | undefined)?.names?.[Number(r)] ?? ''; };
+/** 그림 시트 이름 (개발 · 기록용 · 화면엔 안 씀) */
+export const sheetName = (ref: string) => { const [k, r] = ref.split(':'); return (SHEETS[k!] as { names?: string[] } | undefined)?.names?.[Number(r)] ?? ''; };
 /** 그 판 보스 = 차시 설정(대표 행동 · 약점 · 공격 차례) + 랜덤 던전 그림 · 이름 (그림은 늘 왼쪽을 봄 = 반전 없음) */
 export function bossArt(cfg: BossCfg, diff: Diff): BossCfg & { bg: string } {
   const ds = Object.values(RDUN_OF), d = RDUN_OF[cfg.no] ?? ds[cfg.no % ds.length], D = d ? RDUN[d] : undefined; if (!d || !D) return { ...cfg, bg: '' }; // 설정 없는 차시(14 ~ ) = 던전 돌려 씀
   const ref = ROWS[cfg.no]?.[diff] ?? (diff === 'easy' ? `${d}:1` : diff === 'normal' ? `${d}:3` : D.boss != null ? `${d}:${D.boss}` : D.bossRef ?? `${d}:4`);
-  return { ...cfg, sprite: ref, name: nameOf(ref) || cfg.name, flip: {}, bg: D.bg };
+  return { ...cfg, sprite: ref, name: cfg.name, flip: {}, bg: D.bg }; // 📜 요청 #71 ① 화면 이름 = 설정표 이름 (그림 시트 이름은 안 씀 · sheetName 으로만)
 }
