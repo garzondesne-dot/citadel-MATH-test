@@ -108,7 +108,7 @@
   const down = $derived(!!hp && hp.max > 0 && hp.left <= 0);
   const pracAll = $derived(down && R && step?.kind === 'monster' ? pracHitsAll(L, R, step.id) : 0); // 🔥 처치 결과 한 줄
   const scout = $derived(R ? solveLock(L, R, now) : null);
-  const gem = $derived(R ? (() => { const g = PROFILES[R.meta.profile]?.reward.gem; return typeof g === 'number' ? g : 0; })() : 0);
+  const gem = $derived(R ? (() => { const w = (R.meta as { wallet?: unknown }).wallet; if (typeof w === 'number') return w; const g = PROFILES[R.meta.profile]?.reward.gem; return typeof g === 'number' ? g : 0; })() : 0); // 👩‍🏫 체험판 = meta.wallet (#60-1)
   const crec = $derived(R && mid && chain ? chainRecord(L, R, mid, uid) : null);
   const downs = $derived(R && mid && chain ? chainDown(L, R, mid, now) : []);
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨): ❤ 0 잠김 = 쓰러짐 줄 · 받은 힐 + 풀어주기가 늘면 힐 받음 줄 · 내가 ⚡ 쓰면(힐 · 묶기 · 🌟) 힐 시전 줄

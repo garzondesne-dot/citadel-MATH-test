@@ -42,8 +42,9 @@ let cache: LessonPack[] | null = null;
 /** 체험판 차시 (카드 순서 · 팩 · 흐름 · 영상 · 형성평가 문항) */
 export function trialPacks(): LessonPack[] { return (cache ??= CFG.cards.map((c) => load(c.id))); }
 /** 체험판 방 = 🧪 테스트 방 + 정찰 5초 · 성취 기준 100 · (과목 팩이 정하면) 첫 판 = 한 번 더 판 1 · 🎯 복습으로 넘긴 몬스터 */
-export function trialRoom(S: Store, L: LessonPack, code: string): void {
+export function trialRoom(S: Store, L: LessonPack, code: string, gem?: number): void {
   const P = roomPath(code), r = CFG.room[L.id] ?? {};
+  if (typeof gem === 'number') S.set(`${P}/meta/wallet`, gem); // 🐞 #60-1 수업 화면 지갑 = 체험판 지갑(시작 💎 200 · 3차시 끝 620 · 원래 수업은 내 지갑) — 테스트 판 💎 9,999 를 보이지 않게
   S.set(`${P}/meta/solve`, 5); // 몬스터 앞 정찰 5초 (원래 수업은 60초)
   S.set(`${P}/meta/pct`, 100); // 성취 기준 100 (원래 수업은 90 · 친구들이 먼저 쓰러뜨리지 않게)
   if (r.fresh1) S.set(`${P}/meta/fresh`, Object.fromEntries(L.steps.filter((s) => s.kind === 'monster').map((s) => [s.id, 1])));
