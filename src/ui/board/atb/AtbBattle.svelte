@@ -518,8 +518,9 @@
   /** 🦶 용사 자리 = 발밑(그림 아래 끝 실제 픽셀 · #121 nd) 기준 · 📜 요청 #45 처음엔 모두 땅 위: 배경 12종 땅이 시작되는 줄(약 52 ~ 55%) 아래로만 · 안쪽 = 조금 작게 · 이름표 안 겹치게 가로 간격 · 맨 앞(아래) = 나 */
   const ROWV = [{ x: 8, y: 73, s: 0.84 }, { x: 18, y: 67, s: 0.79 }, { x: 28, y: 61.5, s: 0.74 }, { x: 38, y: 56.5, s: 0.69 }];
   /** 문제 카드가 열리면 = 발 높이는 그대로 · 가로만 왼쪽으로 모음 (카드 왼쪽 밖에 이름표 · 보스가 오른쪽으로 비키는 것과 짝) */
-  const XOPEN = [6.5, 11, 15.5, 20];
-  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!; return open ? { ...r, x: XOPEN[k] ?? r.x } : r; };
+  /** 📜 #91 ② 카드가 열리면 = 왼쪽 칸(카드 밖 26%)에 2 × 2 로 · 조금 작게(0.8) → 4명이 안 겹침 · 이름표 · 약점 배지 다 보임 (앞줄 = 나 · 다음 · 뒷줄 = 나머지) */
+  const OPEN2 = [{ x: 7, y: 76 }, { x: 19.5, y: 76 }, { x: 7, y: 47 }, { x: 19.5, y: 47 }];
+  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!, o = OPEN2[k]; return open && o ? { x: o.x, y: o.y, s: (k < 2 ? ROWV[0]!.s : ROWV[1]!.s) * 0.8 } : r; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
   // 🛡 📜 요청 #76 ③ 결계 돔 = 오라 방패(S.guard) · 서포터 결계(반응 막기) 가 걸린 동안 파티 전체를 덮는 반투명 돔 하나 · 막는 순간 파문 + 「🛡 결계로 막음!」 → 조각
   const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
@@ -589,12 +590,14 @@
   const weakLeft = $derived(weak(S) ? Math.ceil(S.weakUntil - S.t) : 0);
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => labels?.[id] ?? `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
+  /** 📜 #91 이름표 A = [속성 방패][역할] 이름 · 이름 4자 넘으면 줄임 · 용사 이름 글자 · 이모지 뺌 · 봇 = 「봇A」 (레벨 = 체력바 끝) */
+  const tagName = (id: number) => { const l = labels?.[id]; const t = (l ? l.replace(/^🤖\s*모험가\s*/, '봇').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim() : id === me ? '나' : S.heroes[id]!.s.name) || S.heroes[id]!.s.name; return [...t].length > 4 ? [...t].slice(0, 4).join('') + '…' : t; };
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
   (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, win: () => debugWin(S), /* 🧪 손발 #1 e2e (trial55 · atb65 · cap200 · atb48) */ lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), fxlog: () => FXLOG.slice(), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="stage" onclick={tapEmpty} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<div class="stage" onclick={tapEmpty} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -626,7 +629,7 @@
 
   <!-- 보스 -->
   <div class="bossui" style:left={open ? '74.5%' : '54%'} style:width={open ? '24%' : '40%'}>
-    {#if stone}<div class="tele sig" role="status" data-k="atb-stone">🗿 석화 {stone}초 · 보스 공격 멈춤</div>{/if}
+    {#if stone}<i class="stonek" data-k="atb-stone" aria-hidden="true"></i>{/if}<!-- 📜 #91 ⑩ 석화 글 = 체력바 아래 한 줄만 (알약 뺌) -->
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
     {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 {Math.round((modOf(S)?.mirrorBack ?? SIG.mirror.back) * 100)}% 되돌아옴</div>{/if}
@@ -668,11 +671,10 @@
       {#if lowIds.includes(h.id)}<i class="sweat" style:top="{-Math.round(base * p.s * 64 * 0.86)}px" aria-hidden="true" data-k="atb-sweat">💧</i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
       {#if statusOf(h)}{@const st = statusOf(h)!}<i class="stx {st}" style:top="{-Math.round(base * p.s * 64 * 1.02) - (lowIds.includes(h.id) || isWeak(h.id) ? 62 : 36)}px" data-k="atb-status" data-st={st} data-slot="atb-status-hero:{st}" aria-label={STATUS_LOOK[st].txt}><AtbFx name="hst-{st === 'fog' ? 'water' : st}" x="50%" y="50%" w={46} ms={900} z={1} /></i>{/if}
-      {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
-      <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}</span></div>
+      <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}<small class="lv">Lv{h.s.lv}</small></span></div>
       <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:famflash={h.id === me && !!famFlash} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
-        <b><FamShield fam={h.s.fam} size={14} /> Lv.{h.s.lv} {name(h.id)}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if} <AtbIcon name={ROLE_ICON[h.s.role]} size={12} /></b>
+        <b><FamShield fam={h.s.fam} size={14} /><AtbIcon name={ROLE_ICON[h.s.role]} size={12} /><span class="nm">{tagName(h.id)}</span></b>
         <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
       </div>
     </div>
@@ -824,7 +826,6 @@
   .hero.hurt .hitpic { background: linear-gradient(135deg, #0000 38%, #ff3a2acc 40%, #fff 42%, #ff3a2acc 44%, #0000 46%, #0000 52%, #ff3a2acc 54%, #fff 56%, #ff3a2acc 58%, #0000 60%); animation: claw 0.4s ease-out forwards; }
   @keyframes claw { from { opacity: 0; transform: scale(0.6) translate(20%, -20%); } 30% { opacity: 1; } to { opacity: 0; transform: scale(1.1); } }
   /* ⊕ 노림 (📜 요청 #7 ③) */
-  .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.8s ease-in-out infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
   .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 44px; height: 44px; margin: -11px 0 0 -11px; pointer-events: none; background: var(--fx-orb) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.36s steps(6, jump-none) infinite; } @keyframes -global-afx-orb { from { background-position-x: 0%; } to { background-position-x: 100%; } } /* 🎨 charge-orb */
   .stage :global(.atb-orb.half) { width: 30px; height: 30px; opacity: 0.6; } /* ½ 칸 = 작은 반투명 구슬 (요청 #49) */
@@ -1097,4 +1098,17 @@
   .rev0 { position: absolute; z-index: 30; left: 50%; top: 2%; transform: translateX(-50%); padding: 2px 12px; border-radius: 10px; background: #8e1010e6; border: 2px solid #ff6a5a; color: #fff; font: 800 13px var(--font-plain); white-space: nowrap; pointer-events: none; animation: rev0 0.8s ease-in-out infinite; }
   @keyframes rev0 { 50% { background: #e8332ae6; box-shadow: 0 0 12px #ff3a2a; } }
   @media (prefers-reduced-motion: reduce) { .rev0 { animation: none; } }
+  /* ── 📜 #91 겹침 정리 (bughunt-1121) ── */
+  .tag > b .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62px; }
+  .hpb .hn .lv { margin-left: 3px; font: 700 8px var(--font-plain); color: #cfe; opacity: 0.85; }
+  .hero.mine .tag > b { padding: 0 4px; border-radius: 6px; box-shadow: 0 0 0 1.5px #e2b04a; background: #0008; }
+  .stonek { display: none; }
+  .aimring { z-index: 15; transform: scale(calc(0.7 + var(--k) * 0.8)) !important; } /* ④ 조준 원 = 몸 크기 안 · 이름표(20) 아래 */
+  .ctr { left: 53%; } .stage.q .ctr { left: 50%; } /* ⑥ 끊기 = 파티 오른쪽 빈자리 (카드 열면 카드 위 가운데 그대로) */
+  .brk { left: 53%; } .stage.q .brk { left: 50%; } /* ⑧ */
+  .stage .bigmsg, .stage .bigmsg.note, .stage .bigmsg.sosmsg, .stage .bigmsg.rage, .stage .bigmsg.weak, .stage .bigmsg.slow { top: 1%; transform: translate(-50%, 0); max-width: 62%; padding: 2px 18px; border-radius: 12px; border-width: 2px; font-size: clamp(15px, 5.4vh, 22px); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* ⑨ ⑫ 큰 알림 = 위 가운데 띠 한 줄 (보스 이름 · 체력 · 이름표 안 가림) */
+  .stage .revfx { top: 1%; transform: translate(-50%, 0); padding: 2px 16px; font-size: clamp(14px, 5vh, 20px); } /* ⑪ */
+  .bsay { top: 53%; max-width: 26%; transform: translateX(calc(-100% - 6px)); } /* ⑨ 보스 대사 = 보스 왼쪽 빈자리 (이름 · 체력 · 분노 줄 · 실드 칸 안 가림 · 파티 오른쪽 끝 앞까지) */
+  .stage.meet .bossui { z-index: 62; } /* 덤 · 조우 때 떨어지는 보스(61)가 이름 · 체력 막대 뒤로 */
+  .stage:has(.bigmsg) :is(.tgline, .reactb.mini, .rev0, .weakb), .stage:has(.revfx) :is(.tgline, .reactb.mini, .rev0) { visibility: hidden; } /* 한 번에 하나 = 큰 알림이 떠 있는 1 ~ 2초는 위 띠를 잠깐 숨김 */
 </style>

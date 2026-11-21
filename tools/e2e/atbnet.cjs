@@ -14,7 +14,7 @@ const out = [], errs = []; const ok = (n, c, d = '') => out.push(`${c ? '✅' : 
   const host = () => p.evaluate(() => globalThis.__atbStore.get('atb/dev/host'));
   // 1 같은 판 · 이름 = 나 / 친구 실명 / 봇
   { const h = await host(), la = await A.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim())), lc = await C.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim()));
-    ok('#48 두 폰 = 같은 판 · 방장 = 첫 자리 · 이름표 = 「나」 · 친구 실명 · 🤖 모험가', h === 's1_3_1' && la.some((t) => /나/.test(t)) && la.some((t) => /테스트 나/.test(t)) && lc.some((t) => /테스트 가/.test(t)) && la.some((t) => /🤖 모험가/.test(t)), JSON.stringify({ h, la, lc })); }
+    ok('#48 두 폰 = 같은 판 · 방장 = 첫 자리 · 이름표 = 「나」 · 친구 실명(4자 줄임) · 봇A (#91)', h === 's1_3_1' && la.some((t) => /나/.test(t)) && la.some((t) => /테스트/.test(t)) && lc.some((t) => /테스트/.test(t)) && la.some((t) => /봇A/.test(t)), JSON.stringify({ h, la, lc })); }
   // 2 친구 폰 행동 → 방장 엔진 → 친구 폰 화면
   { const hp0 = await A.evaluate(() => globalThis.__atb.S.bossHp);
     await A.evaluate(() => { const S = globalThis.__atb.S; S.heroes[1].atb = 1; S.heroes[1].ch = 1; S.target = null; }); await p.waitForTimeout(600);

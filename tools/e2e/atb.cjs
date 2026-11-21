@@ -15,7 +15,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(800);
   const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"]') && !document.querySelector('.me'), foot: document.querySelectorAll('.hero .tag .thin.atb').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs .hrt').length, gear: !!document.querySelector('[data-k="atb-gear"]'), hpb: document.querySelectorAll('[data-k="atb-hpb"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
   ok('① 가로 무대 = 용사 4 · 아래 단추 3(공격 · 문제 풀이 · 스킬) · 팀 부활 숨김 · ⚙ · 머리 위 HP 4 · 보스 그림(요청 #24)', st.heroes === 4 && st.btn === 3 && st.revs === 0 && st.gear && st.hpb === 4 && st.boss, JSON.stringify(st));
-  ok('요청 #14 이름표 = Lv · 이름 · 계열 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /Lv\.\d/.test(await p.textContent('.hero .tag > b')) && !!(await p.$('.hero .tag [data-k="fam-shield"]')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
+  ok('요청 #14 · #91 이름표 = [속성][역할] 이름 · 레벨 = 체력바 끝 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /Lv\d/.test(await p.textContent('.hero .hpb')) && !!(await p.$('.hero .tag [data-k="fam-shield"]')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
   ok('Y9 · #98-b 몬스터 = 컨셉 몬스터(2차시 = 흑표범 new6)', /^(new6:0|cm5-a:0)/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
   await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
   // 🆘 요청 #18 위험 체력 = 30% 아래 빨갛게 깜박 + 🆘 + 친구 화면 한 줄 · 나 = 초상 빨강 · 회복하면 꺼짐
@@ -244,7 +244,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.evaluate(() => { const a = globalThis.__atb; a.S.bossT = a.every() - 1.3; }); await p.waitForTimeout(250);
     const r = await p.evaluate(() => ({ wh: globalThis.__sfxLog.includes('whoosh-single'), tok: globalThis.__vib.filter((x) => x === 25).length }));
     ok('요청 #39 조준 원 = 바깥에서 조여 듦 · 마지막 3초 = 3 · 2 · 1 · 나를 노리면 톡 진동 · 마지막 1.5초 쉭(단일)', k0 > 0.85 && k1 < k0 && !c0 && c1 === '3' && r.wh && r.tok >= 2, JSON.stringify({ k0, k1, c1, ...r }));
-    ok('요청 #39 「⚠ 나를 노려요」 · 「지금 엄호!」 띠 = 겹치지 않음 (위아래 나눔)', ov === false, String(ov));
+    ok('요청 #39 · #91 ④ 「⚠ 나를 노려요」 칩 없앰 = 위 띠 한 줄만 (내 이름표 · 약점 배지 안 덮음)', ov === null && !(await p.$('[data-k="atb-aim-me"]')), String(ov));
     await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(120);
     const x = await p.evaluate(() => ({ shard: document.querySelectorAll('[data-k="atb-ringx"] i').length, ring: !!document.querySelector('[data-k="atb-aimring"]'), clang: globalThis.__sfxLog.includes('clang'), stop: globalThis.__vib.includes(0) }));
     ok('요청 #39 반응 막기 = 원이 챙 깨짐(조각 6) · 소리 · 진동 멈춤', x.shard === 6 && !x.ring && x.clang && x.stop, JSON.stringify(x)); }

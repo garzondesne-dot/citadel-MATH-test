@@ -61,8 +61,8 @@
       <h2 class:win>{win ? '승리!' : '아쉬워요'}</h2>
       <div class="stars" data-k="atb-stars" data-n={stars} aria-label="별 {stars}개">{#each [0, 1, 2] as i (i)}<img class="star" class:on={i < stars} style:animation-delay="{0.25 + i * 0.22}s" src={R(i < stars ? 'res-star-gold' : 'res-star-gray')} alt="" />{/each}</div>
     </div>
-    <p class="time">{win ? `${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초` : S.end?.why}</p>
-    {#if !win && S.end}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{/if}
+    {#if win || !S.end}<p class="time">{`${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초`}</p>
+    {:else}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{/if}<!-- 📜 #91 ⑬ 패배 이유 = 별 띠 아래 제자리 줄 (위에 겹치지 않음 · 낱말 안 끊김) -->
     <div class="party" style:--n={n}>
       {#each S.heroes as h (h.id)}
         {@const pt = portraitOf(h.s.hero)}
@@ -162,5 +162,5 @@
   .rs.port .paper { padding: 8% 9% 8% 10%; }
   .rs.port .row, .rs.port .merit summary { font-size: 15px; }
   .rs.port .sum { font-size: 20px; }
-  .whyb { position: absolute; left: 50%; top: 2%; transform: translateX(-50%); z-index: 3; margin: 0; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, 4vh, 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
+  .whyb { position: relative; z-index: 3; margin: 2px auto 0; word-break: keep-all; overflow-wrap: break-word; text-wrap: balance; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, 4vh, 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
 </style>
