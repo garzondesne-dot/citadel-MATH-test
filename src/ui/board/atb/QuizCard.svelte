@@ -26,6 +26,10 @@
   /** ✅ 제출 (부모 아래 가운데 단추) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
+  // 📜 요청 #61 보기 · 숫자판이 넘치면 카드 아래 그림자 + 「▼ 더 있음」 (작은 가로 화면 = 아래 media 로 먼저 줄여 한 화면에)
+  let bodyEl = $state<HTMLDivElement | null>(null), more = $state(false);
+  const measure = () => { const b = bodyEl; more = !!b && b.scrollHeight - b.scrollTop - b.clientHeight > 4; };
+  $effect(() => { const b = bodyEl; if (!b) return; void key; void hint; measure(); const ro = new ResizeObserver(measure); ro.observe(b); for (const c of b.children) ro.observe(c); const mo = new MutationObserver(measure); mo.observe(b, { childList: true, subtree: true }); return () => { ro.disconnect(); mo.disconnect(); }; });
 </script>
 
 <section class="qc" style:--ui-card={fxCss('ui-card')} style:--ui-ch={fxCss('ui-choice')} style:--ui-ch-on={fxCss('ui-choice-on')} class:hitlock={locked > 0} class:good={fx === 'good'} class:bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
@@ -39,10 +43,11 @@
     {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
     <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </header>
-  <div class="body">
+  <div class="body" bind:this={bodyEl} onscroll={measure}>
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" role="status">💡 {hint}</p>{/if}
   </div>
+  {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
   {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
   {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (⚡ 기력은 그대로)</p>
@@ -125,5 +130,31 @@
   .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
   @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
   .shards.gather { transform: translate(0, 34vh) scale(1.8); opacity: 0; }
+  /* 📜 요청 #61 더 있음 = 카드 아래 그림자 + 알림 (누르면 아래로) */
+  .more { position: absolute; left: 0; right: 0; bottom: calc(64px * var(--u, 1) + 10px); z-index: 3; height: 34px; border: none; padding: 0 0 4px; display: flex; align-items: flex-end; justify-content: center; background: linear-gradient(#f1dfb600, #e2c995 70%); color: #7a4e10; font: 800 13px var(--font-plain); animation: morebob 1.2s ease-in-out infinite; }
+  @keyframes morebob { 50% { padding-bottom: 0; } }
+  /* 📜 요청 #61 낮은 가로 화면(높이 ≤ 430 · 667 × 375 · 740 × 360 · 844 × 390) = 카드 머리 · 글자 · 보기 · 숫자판을 줄여 보기 전부 + 「✅ 제출」이 한 화면에 */
+  @media (max-height: 430px) {
+    .qc { gap: 3px; }
+    .grab { height: 12px; }
+    header { min-height: 22px; gap: 6px; }
+    .tt { font-size: 12px; padding: 2px 8px; } .lnk { font-size: 12px; padding: 2px 4px; } .cpv { font-size: 12px; padding: 0 6px; } .sh { font-size: 12px; }
+    .body :global(.item) { gap: 4px; } .body :global(.q2) { font-size: 15px; line-height: 1.3; } .body :global(.q1) { font-size: 13px; }
+    .body :global(.opts.col) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+    .body :global(.opt) { min-height: 38px; padding: 2px 8px; font-size: 15px; }
+    .body :global(.runepad) { gap: 4px; } .body :global(.rune-keys) { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+    .body :global(.rune) { min-height: 32px; height: 32px; font-size: 16px; padding: 0; } .body :global(.rune-slot) { min-height: 34px; font-size: 22px; } .body :global(.rune-del) { width: 44px; font-size: 18px; }
+    /* 여럿 고르기 칩 = 낮고 촘촘하게 · 그림(벤 다이어그램 등) = 낮게 */
+    .body :global(.chips) { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px; }
+    .body :global(.chips .chip) { min-height: 32px; font-size: 15px; padding: 0 4px; }
+    .body :global(.chips.wide) { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+    .body :global(.chips.wide .chip), .body :global(.chips.many.wide .chip) { min-height: 32px; font-size: 14px; white-space: normal; word-break: keep-all; line-height: 1.15; }
+    .body :global(.chips.many.wide) { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+    .body :global(.chips.one), .body :global(.chips.many.one) { grid-template-columns: repeat(2, minmax(0, 1fr)); } .body :global(.chips.one .chip) { font-size: 14px; min-height: 34px; }
+    .body :global(svg:not(.chip svg):not(.opt svg)) { max-height: 56px; }
+    .body :global(.ans) { min-height: 26px; height: 26px; } .body :global(.item:has(.chips) > .ans) { display: none; } /* 칩 = 고른 칩이 곧 답 (답 줄 생략) */
+    .body :global(.chips .chip) { min-height: 30px; }
+    .body :global(.opts.col .opt) { font-size: 13.5px; line-height: 1.2; padding: 2px 6px; word-break: keep-all; }
+  }
   .cpv { font: 900 13px var(--font); padding: 1px 8px; border-radius: 8px; background: #e6eef8; color: #1d5ac8; } .cpv.gold { background: linear-gradient(#fff3b0, #f5c542); color: #6a3a00; box-shadow: 0 0 6px #ffd34d; }
 </style>
