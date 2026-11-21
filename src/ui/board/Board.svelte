@@ -17,6 +17,7 @@
   import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
+  import WarBar from './WarBar.svelte';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import { sfx } from '../sound.svelte';
   import { clock } from '../clock.svelte';
@@ -245,6 +246,7 @@
     </div>
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
+      {#if S.kind !== 'memory'}<WarBar {S} {cls} />{/if}
       <section class="gmap" data-k="board-map" aria-label="차시 정복 지도">
         <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
           {#each MAP_PTS as pt, i (i)}{@const l = i < 14 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}
@@ -269,7 +271,7 @@
         <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>팀 없이 도전하거나 · 모집 글을 올려요</small></div>
       {/if}
       {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
-      <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>🏆 랭킹 · 📜 내 기록</span><small>익명 · 이번 학기</small></button>
+      <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>📜 내 기록 · 지난 랭킹</span><small>익명 · 이번 학기</small></button>
       {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
         <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{/if}
       {#if Number.isFinite(GEM.dayCap)}<p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>{/if}

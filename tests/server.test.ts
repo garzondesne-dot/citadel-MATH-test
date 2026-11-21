@@ -102,3 +102,30 @@ describe.skipIf(!up)('⏱ #76 게시판 정리 규칙', () => {
     await expect(set(ref(b.db, `boardLock/${pid}`), null)).resolves.toBeUndefined();
   }, 30000);
 });
+
+describe.skipIf(!up)('⚔ #48 · #51 atb · classWar 규칙', () => {
+  it('공적 = 0 이상 · 한 번 +200 까지 · 줄이기 ✗ · 내 칸 = 그 학생만 · 마감 = 교사만 · atb meta = 글 있을 때 한 번', async () => {
+    const { ref, set, increment } = await import('firebase/database');
+    const fa = await import('firebase/auth');
+    const cls = '1-7', n1 = Math.floor(Math.random() * 1e6), w = `w${n1}`;
+    const own = await mk(), anon = await mk();
+    const c1 = await fa.createUserWithEmailAndPassword(own.auth, `w${n1}@t.local`, 'cdm-1234');
+    await set(ref(own.db, `accounts/${cls}/${n1}`), { uid: c1.user.uid, at: 1 });
+    await fa.signInAnonymously(anon.auth);
+    await expect(set(ref(own.db, `classWar/${w}/sum/${cls}`), increment(150))).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `classWar/${w}/sum/${cls}`), increment(200))).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `classWar/${w}/sum/${cls}`), increment(201))).rejects.toThrow();
+    await expect(set(ref(own.db, `classWar/${w}/sum/${cls}`), 10)).rejects.toThrow();
+    await expect(set(ref(own.db, `classWar/${w}/by/${cls}/${n1}`), increment(30))).resolves.toBeUndefined();
+    await expect(set(ref(anon.db, `classWar/${w}/by/${cls}/${n1}`), increment(30))).rejects.toThrow();
+    await expect(set(ref(own.db, `classWar/${w}/done`), { at: 1, rank: [cls], paid: false })).rejects.toThrow();
+    const pid = `pa${n1}`;
+    await expect(set(ref(anon.db, `atb/${pid}/meta`), { v: 1 })).rejects.toThrow(); // 글 없음
+    await set(ref(anon.db, `school/board/posts/${pid}`), { pid, host: 'u1', phase: 'wait', at: 1, mem: { u1: { uid: 'u1', at: 1 } } });
+    await expect(set(ref(anon.db, `atb/${pid}/meta`), { v: 1 })).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `atb/${pid}/meta`), { v: 2 })).rejects.toThrow(); // 한 번만
+    await expect(set(ref(own.db, `atb/${pid}/snap`), { n: 1 })).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `atb/${pid}/hb/s9_9_9`), 5)).rejects.toThrow(); // 남의 칸
+    await expect(set(ref(own.db, `atb/${pid}`), null)).resolves.toBeUndefined(); // 청소
+  }, 30000);
+});

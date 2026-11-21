@@ -33,6 +33,7 @@
   import Sheet from '../battle/Sheet.svelte';
   import EarnSheet from './EarnSheet.svelte';
   import CampFriends from './CampFriends.svelte';
+  import WarBar from '../board/WarBar.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
@@ -566,6 +567,7 @@
     {#if nextBuy}<button type="button" class="nextbtn" data-k="next-buy" onclick={heroTap}><b>{(TIER_NAMES[nextBuy.tier] ?? '').split(' ')[0]}</b> {nextBuy.name.replace(/^\S+ /, '')} 열기 <span class="nv">💎 {nextBuy.gem}{#if nextBuy.scroll} · 📜 {nextBuy.scroll}{/if}</span><i aria-hidden="true">›</i></button>{:else}<p class="next">{nextLine}</p>{/if}{/if}<!-- 📜 2026-11-20 시안: 살 수 있는 다음 칸 = 테두리 단추 (누르면 내 용사) -->
   </section>
   {/if}
+  {#if S.kind !== 'memory' && !trial && pupil}<div class="warl"><WarBar {S} cls={pupil.cls} line /></div>{/if}<!-- ⚔ #51 토벌 주간 한 줄 -->
   <BottomAction dock={false} disabled={!open} why="" onmain={() => tap('gate')} mainLabel={trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}>
     {#snippet right()}{#if !open}<button type="button" class="side codebtn" data-k="code-btn" onclick={() => { sfx('click', 0.5); sheet = 'gate'; }}>🚪 코드</button>{/if}{/snippet}<!-- 📜 #62 코드 = 입장 단추 옆 같은 줄(입장 넓게 · 코드 좁게 오른쪽 · 높이 같게) -->
     {#snippet main()}{#if !trial && !open}<span class="shut" data-k="gate-shut"><b>🔒 차시 던전</b><small>수업 대기</small></span>{:else}<span>{trial ? '⚔ 다른 차시로' : `${L.no}차시 던전 입장`}</span>{/if}{/snippet}<!-- 📜 2026-11-20 시안: 닫힘 = 「🔒 차시 던전 / 수업 대기」 두 줄 (옛 안내 줄 = 단추 안으로) -->
@@ -935,4 +937,5 @@
   .fbub { position: absolute; z-index: 7; transform: translateX(-50%); white-space: nowrap; font: 800 11px/1 var(--font); color: #e8f7ff; background: rgba(20, 40, 70, 0.85); border: 1.5px solid rgba(120, 200, 255, 0.9); border-radius: 10px; padding: 5px 8px; pointer-events: none; }
   @media (prefers-reduced-motion: reduce) { .prop.pk :global(.img), .glow { animation: none !important; } .cfx { display: none; } }
   .trophy { position: relative; } .tdot { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font: 800 11px var(--font); display: grid; place-items: center; } /* 🏆 #68 */
+  .warl { padding: 4px 16px 0; }
 </style>

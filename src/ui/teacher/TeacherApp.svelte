@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { closeWeek } from '../../board/war';
   import { BETA } from '../../channel';
   import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
   import { onDestroy, untrack } from 'svelte';
@@ -58,6 +59,8 @@
   //   → 열기 전에 막고 「🔐 교사 로그인」으로 안내 (로그인 뒤 같은 반 · 차시로 다시 누름)
   type AS = Store & { auth?: unknown; isAdmin?: () => boolean };
   const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
+  // ⚔ #51 주간 마감 (서버 함수 없음): 교사 로그인한 폰이 켜질 때 · 그 뒤 1시간마다 지난주 done 이 없으면 확정 (두 기기 = transaction 한 번)
+  $effect(() => { if (!(S as AS).auth || S.kind === 'memory') return; const go = () => { if ((S as AS).isAdmin?.()) void closeWeek(S).catch(() => null); }; const t0 = setTimeout(go, 5000), t1 = setInterval(go, 3600e3); return () => { clearTimeout(t0); clearInterval(t1); }; });
   let loginAsk = $state(false), setOpen = $state<'' | 'main' | 'login'>(''); // ⚙ 상시 설정 (📜 2026-11-17 #21 A)
   const gate = needAdmin(); // 🔐 입구 (📜 2026-11-13 밤 선생님 「진행」): 서버인데 교사 로그인 안 한 폰 = 교사 화면 대신 로그인 화면만 (로그인하면 새로 고침)
   // 🆕 바뀐 것 (📜 2026-11-15 · school/changes.ts): 교사 로그인한 폰 · 정식 = 못 본 판을 아래 창으로(확인했어요 = 본 판) + 소식 탭 한 통씩 / 베타 = 창 없이 소식 탭 한 통씩(그 자리에서 본 판)
