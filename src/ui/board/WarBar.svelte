@@ -15,6 +15,9 @@
   const top = $derived(Math.max(1, ...rows.map((r) => r.pts)));
   const left = $derived(daysLeft(clock.now || S.now()));
   const mine = $derived(rows.find((r) => r.cls === cls) ?? null);
+  // 🏆 📜 #77 순위표 꼴: 1 ~ 3위 = 🥇🥈🥉 · 4위부터 숫자 · 모두 0점(공동) = 「–」(반 번호 순) · 이름 옆 반 · 우리 반 = 「우리 반」
+  const allZero = $derived(rows.every((r) => r.pts <= 0));
+  const rankT = (n: number) => (allZero ? '–' : (['🥇', '🥈', '🥉'][n - 1] ?? String(n)));
   // 📜 #70 공통 문구 (STORY-LINES-v1 3절): 남은 날 · 마지막 날 · 1시간 안 · 바로 위 기사단까지 · 선두 · 왕의 깃발
   const mins = $derived(minsLeft(clock.now || S.now()));
   const leftT = $derived(mins <= 60 ? `⚔ 마감까지 ${Math.max(1, mins)}분 · 마지막 한 판!` : left <= 1 ? '⚔ 토벌 주간 · 오늘이 마지막 날!' : `⚔ 토벌 주간 · 남은 ${left}일`);
@@ -26,7 +29,7 @@
 {#if line}
   <div class="wl" data-k="war-line">
     {#if king}<span class="k">👑 {king.crest} {king.name}</span>{/if}
-    <span>{leftT}{#if mine} · 우리 반 {mine.crest} {mine.rank}위 · 공적 {mine.pts.toLocaleString()}{/if}</span><!-- #66-2 · #70 -->
+    <span>{leftT}{#if mine}{#if allZero} · 공적 0{:else} · 우리 반 {mine.crest} {mine.rank}위 · 공적 {mine.pts.toLocaleString()}{/if}{/if}</span><!-- #66-2 · #70 -->
   </div>
 {:else if rows.length}
   <section class="wb" data-k="war-bar" aria-label="기사단 토벌 주간">
@@ -35,8 +38,8 @@
     {#if gapT}<p class="ln" data-k="war-gap">{gapT}</p>{/if}
     {#each rows as r (r.cls)}
       <div class="row" class:me={r.cls === cls} data-war={r.cls}>
-        <span class="no">{r.rank}</span><span class="cr" aria-hidden="true">{r.crest}</span>
-        <span class="nm">{r.name}{#if king?.cls === r.cls}<i class="kg" title="지난주 왕의 기사단">👑</i>{/if}</span>
+        <span class="no" aria-label={allZero ? '순위 없음' : `${r.rank}위`}>{rankT(r.rank)}</span><span class="cr" aria-hidden="true">{r.crest}</span>
+        <span class="nm">{r.name} <small>· {r.cls}반</small>{#if king?.cls === r.cls}<i class="kg" title="지난주 왕의 기사단">👑</i>{/if}{#if r.cls === cls}<em class="us">우리 반</em>{/if}</span>
         <i class="bar"><i style:width="{Math.round((r.pts / top) * 100)}%"></i></i>
         <b class="pt">{r.pts.toLocaleString()}</b>
       </div>
@@ -48,11 +51,13 @@
   .wb { display: grid; gap: 6px; padding: 12px; border-radius: var(--r, 12px); background: var(--surface, #181b22); }
   .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .hd b { font-size: 16px; } .hd small { font-size: 13px; color: var(--text-2, #b4b8c2); }
-  .row { display: grid; grid-template-columns: 18px 22px minmax(0, 1fr) 72px 44px; align-items: center; gap: 6px; min-height: 28px; padding: 0 4px; border-radius: 8px; font-size: 14px; }
+  .row { display: grid; grid-template-columns: 24px 22px minmax(0, 1fr) 64px 44px; align-items: center; gap: 6px; min-height: 28px; padding: 0 4px; border-radius: 8px; font-size: 14px; }
   .row.me { background: color-mix(in srgb, var(--accent, #f5b84a) 16%, transparent); outline: 1px solid var(--accent, #f5b84a); }
   .no { color: var(--text-3, #7c8190); font-variant-numeric: tabular-nums; text-align: center; }
   .nm { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .kg { font-style: normal; margin-left: 4px; }
+  .nm small { font-size: 13px; color: var(--text-3, #7c8190); } .us { margin-left: 6px; padding: 0 6px; border-radius: 6px; background: var(--accent, #f5b84a); color: var(--on-accent, #1d1406); font: 700 12px var(--font); font-style: normal; }
+  .row.me { outline-width: 2px; }
   .bar { display: block; height: 8px; border-radius: 4px; background: var(--surface-2, #222632); overflow: hidden; }
   .bar > i { display: block; height: 100%; background: var(--accent, #f5b84a); transition: width 160ms ease-out; }
   .pt { text-align: right; font-variant-numeric: tabular-nums; }

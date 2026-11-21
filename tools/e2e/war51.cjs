@@ -20,7 +20,9 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const line = (await p.textContent('[data-k="war-line"]').catch(() => '')) || '';
   ok('캠프 한 줄 = 왕의 깃발 + 우리 반 순위', /황금 곰단/.test(line) && /2위/.test(line), line.trim());
   await p.screenshot({ path: `${SHOTS}/war51-camp.png` });
-  await p.click('button[aria-label="게시판"]'); await p.waitForSelector('[data-k="war-bar"]', { timeout: 10000 }).catch(() => {});
+  await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd .btabs', { timeout: 10000 }).catch(() => {}); if (await p.$('[data-k="board-story"]')) await p.click('[data-k="board-story"]'); await p.click('[data-btab="war"]'); await p.waitForSelector('[data-k="war-bar"]', { timeout: 10000 }).catch(() => {}); // 📜 #66 기사단 탭
+  const badge = await p.$$eval('[data-k="war-bar"] .row', (rs) => rs.map((r) => r.querySelector('.no')?.textContent + (r.querySelector('.us') ? '우리' : '') + '|' + (r.querySelector('.nm small')?.textContent || '')));
+  ok('📜 #77 순위 칸 = 🥇🥈🥉 · 4위부터 숫자 · 이름 옆 반 · 우리 반 표시', badge[0]?.startsWith('🥇') && badge[1]?.startsWith('🥈우리') && badge[2]?.startsWith('🥉') && badge[3]?.startsWith('4') && /1-2반/.test(badge[0] || ''), badge.join(' / '));
   const rows = await p.$$eval('[data-k="war-bar"] .row', (rs) => rs.map((r) => `${r.getAttribute('data-war')}:${r.classList.contains('me') ? '*' : ''}${r.querySelector('.pt')?.textContent}`));
   ok('게시판 막대 = 5 기사단 · 순서 · 우리 반 강조', rows.join(',') === '1-2:340,1-3:*260,1-1:120,1-4:40,1-5:0', rows.join(','));
   await p.screenshot({ path: `${SHOTS}/war51-board.png` });
