@@ -26,6 +26,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 혼자 도전")');
   await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {});
   ok('혼자 도전 → 새 전투 화면', !!(await A.$('[data-k="atb-stage"]')));
+  const onTop = await Promise.all([A].map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));
+  ok('🐞 #68 전투 화면이 맨 위 (화면 가운데 · 양옆 = 전투 · 게시판 시트에 안 덮임)', onTop.every(Boolean), onTop.join(','));
   const posts0 = (await rest('school/board/posts')) || {}, solo = Object.values(posts0)[0];
   const meta = solo ? await rest(`atb/${solo.pid}/meta`) : null;
   ok('혼자 판 = 나 + 봇 3 · solo 글', !!meta && meta.slots.filter((x) => x.bot).length === 3 && solo.solo === true, meta ? meta.slots.map((x) => x.bot ? 'bot' : x.uid).join(',') : '없음');

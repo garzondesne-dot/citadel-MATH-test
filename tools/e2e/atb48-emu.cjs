@@ -34,6 +34,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   ok('출발 = atb meta 4칸(사람 N · 봇 4-N) · 글 play · code A', meta && meta.slots.length === 4 && meta.slots.filter((s) => s.bot).length === 4 - N && post.phase === 'play' && post.code === `A${pid}`, meta ? meta.slots.map((s) => s.bot ? 'bot' : s.uid).join(',') : 'meta 없음');
   const stages = await Promise.all(ps.map((p) => p.$('[data-k="atb-stage"]').then(Boolean)));
   ok('모든 폰 ATB 전투 화면', stages.every(Boolean), stages.join(','));
+  const onTop = await Promise.all(ps.map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));
+  ok('🐞 #68 전투 화면이 맨 위 (화면 가운데 · 양옆 = 전투 · 게시판 시트에 안 덮임)', onTop.every(Boolean), onTop.join(','));
   await wait(3000); await A.screenshot({ path: `${SHOTS}/atb48-battle-A.png` });
   const host = await rest(`atb/${pid}/host`); ok('방장 엔진 = 글 올린 사람', host === `s${CK}_1`, String(host));
   const snap = await rest(`atb/${pid}/snap`); ok('상태 요약 snap 서버에 씀 (20KB 안)', snap && typeof snap.j === 'string' && snap.j.length < 20000, snap ? `${snap.j.length}자` : '없음');
