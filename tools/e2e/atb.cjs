@@ -251,10 +251,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   // 😵 요청 #40 ② 상태 그림 자리 = 머리 위에서 돎 · 풀리면 사라짐 · data-slot = atb-status-hero:<상태>
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const [h0, h1, h2, h3] = S.heroes; h1.stunKind = 'sleep'; h1.stunUntil = S.t + 9; h2.slowKind = 'darkHit'; h2.slowUntil = S.t + 9; if (h3) { h3.stunKind = 'bind'; h3.stunUntil = S.t + 9; } h0.slowKind = 'ice'; h0.slowUntil = S.t + 9; }); await p.waitForTimeout(250);
-  { const st = await p.$$eval('[data-k="atb-status"]', (x) => x.map((e) => `${e.dataset.st}:${e.dataset.slot}:${e.textContent.slice(0, 2)}`)); await p.screenshot({ path: `${SHOTS}/atb-r40-status-844.png` });
+  { const st = await p.$$eval('[data-k="atb-status"]', (x) => x.map((e) => `${e.dataset.st}:${e.dataset.slot}:${e.querySelector('[data-k="atb-fx"]')?.dataset.fx ?? ''}`)); await p.screenshot({ path: `${SHOTS}/atb-r40-status-844.png` });
     await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[1].stunUntil = 0; S.heroes[1].stunKind = ''; }); await p.waitForTimeout(200);
     const n2 = await p.$$eval('[data-k="atb-status"]', (x) => x.length);
-    ok('요청 #40 ② 상태 = 수면 💤 · 어둠 🌑 · 냉기 ❄️ · 속박 ⛓ 머리 위 · 그림 자리 이름 · 풀리면 사라짐', st.some((x) => x.startsWith('sleep:atb-status-hero:sleep')) && st.some((x) => x.startsWith('dark:')) && st.some((x) => x.startsWith('frost:')) && n2 === st.length - 1, JSON.stringify({ st, n2 })); }
+    ok('요청 #40 ② 상태 = 수면 · 어둠 · 냉기 · 속박 그림(hst-*) 머리 위 · 풀리면 사라짐', st.some((x) => x === 'sleep:atb-status-hero:sleep:hst-sleep') && st.some((x) => x.endsWith(':hst-dark')) && st.some((x) => x.startsWith('dark:')) && st.some((x) => x.startsWith('frost:')) && n2 === st.length - 1, JSON.stringify({ st, n2 })); }
   // 💚 요청 #46 힐 개편 = 🩹 응급 힐(고르기 · 1/3) · 힐러 💚 큰 힐(가장 다친 친구 · 구조!) · 힐러 일반 공격 = 팀 +5%
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'dealer'; h.ch = 2; h.atb = 1; S.heroes[1].hp = 10; });
