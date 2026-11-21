@@ -11,7 +11,8 @@
   import { CREDIT_NAME, showCredit } from '../channel';
   import { BUILD, BUILD_ID } from '../build';
   import { CARDS, REST_AFTER, trialPacks, trialRoom } from './trial';
-  import { loadAtbTrial } from '../ui/lazy';
+  import { loadAtbTrial, loadBoard } from '../ui/lazy';
+  import { atbLessons } from '../board/atb/lessons';
   import StuTry from '../ui/teacher/StuTry.svelte';
   import TSim from '../ui/teacher/TSim.svelte';
   import '../ui/teacher/teacher.css';
@@ -28,13 +29,17 @@
   let heroPick = $state(false), camp = $state<LessonPack | null>(null), campL = $state<LessonPack | null>(null), campKey = $state(0), done1 = $state(false);
   const nick = $derived(name.trim().slice(0, 8) || '체험 용사');
   function pick(r: 'stu' | 'tch') { as = r; try { sessionStorage.setItem(SK, name.trim().slice(0, 8)); } catch { /* 무시 */ } if (r === 'stu' && !M.me.seen['hero0']) { M.me.nick = nick; M.save(); heroPick = true; } }
+  let atbRun = $state<LessonPack | null>(null);
+  const atbIds = atbLessons(packs, new Set()).map((p) => p.id);
   let atbT = $state(false); // 👩‍🏫 #55 체험판 게시판 던전 (학생 · 선생님 판 모두 · 봇 3 · 기록 없음)
   function start(id: string) { camp = null; run = byId(id); runKey++; }
   function close(ended?: boolean) { const L0 = run; run = null; if (as === 'stu' && L0) { if (ended) done1 = true; camp = L0; campL = L0; campKey++; } }
 </script>
 
 {#if atbT}
-  {#await loadAtbTrial() then K}<K.default {packs} hero={M.me.hero} xp={M.me.xp} enh={M.me.enh} fx0={M.me.socket?.[M.me.hero] ?? ''} {nick} onclose={() => (atbT = false)} />{/await}
+  <!-- 📜 #66-8 체험판 게시판 = 실제와 같은 화면(탭 · 지도 · 차시 카드) · 혼자 도전 = 봇 3 · 기록 없음 -->
+  {#await loadBoard() then K}<K.default {S} me={M.me} save={M.save} uid="me" num={0} cls="" open={false} trial={{ ids: atbIds, onsolo: (L) => (atbRun = L) }} onclose={() => (atbT = false)} />{/await}
+  {#if atbRun}{#await loadAtbTrial() then K}<K.default {packs} hero={M.me.hero} xp={M.me.xp} enh={M.me.enh} fx0={M.me.socket?.[M.me.hero] ?? ''} {nick} start={atbRun} onclose={() => (atbRun = null)} />{/await}{/if}
 {:else if run && as === 'stu'}
   {#key runKey}<StuTry L={run} bots={4} trial nick={nick} restAfter={REST_AFTER[run.id] ?? ''} prep={(S, code) => trialRoom(S, run!, code, M.me.wallet.gem)} onclose={close} />{/key}
 {:else if camp && as === 'stu'}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { atbLessons } from '../../board/atb/lessons';
   import { doneNo } from '../../school/progress';
   import { isReady } from '../../store/atomic';
   import { loadAtbTrial, loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
@@ -113,6 +114,8 @@
   // ⓪ 로그인한 학생 = 이름표 이름 (명단에서 · 학생이 쓰지 않음)
   if (untrack(() => pupil) && me.nick !== untrack(() => pupil)?.name) { me.nick = untrack(() => pupil)?.name ?? me.nick; M.save(); }
   // 🎁 선생님 선물 받기 (gifts/{uid} · 하루 한도 밖) — 캠프에 들어오면 아직 안 받은 것을 지갑에 넣고 한 줄 알림 (지급 = 기록 · 알림 = 보여 주기)
+  let trialRun = $state<import('../../model/types').LessonPack | null>(null); // 👩‍🏫 #66-8 체험판 게시판에서 고른 차시
+  const atbTrialIds = (packs: import('../../model/types').LessonPack[]) => atbLessons(packs, new Set()).map((p) => p.id);
   let feedTick = $state(0);
   let giftToast = $state('');
   {
@@ -659,7 +662,9 @@
   {#await loadDummy() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />{/await}
 {:else if sheet === 'dummy' && trial}
   <!-- 👩‍🏫 #55 체험판 게시판 던전 = 봇 3 · 서버 안 닿음 · 기록 없음 -->
-  {#await loadAtbTrial() then K}<K.default packs={trial.packs ?? []} hero={me.hero} xp={me.xp} enh={me.enh} fx0={me.socket?.[me.hero] ?? ''} nick={trial.nick} onclose={() => (sheet = null)} />{/await}
+  <!-- 📜 #66-8 체험판도 같은 게시판 화면(탭 · 지도 · 차시 카드) · 「⚔ n차시 혼자 도전」 = 봇 3 · 기록 없음 · 팀 모집 · 기사단 없음 -->
+  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid="me" num={0} cls="" open={false} trial={{ ids: atbTrialIds(trial.packs ?? []), onsolo: (L) => (trialRun = L) }} onclose={() => (sheet = null)} />{/await}
+  {#if trialRun}{#await loadAtbTrial() then K}<K.default packs={trial.packs ?? []} hero={me.hero} xp={me.xp} enh={me.enh} fx0={me.socket?.[me.hero] ?? ''} nick={trial.nick} start={trialRun} onclose={() => (trialRun = null)} />{/await}{/if}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
   {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onquest={feat('author') ? () => { questTab = 'mine'; sheet = 'tent'; } : undefined} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
