@@ -37,7 +37,8 @@ const SHOTS = process.argv[2] || '.', B = (process.argv[3] || 'http://localhost:
   ok('끝내면 🏕 캠프', !!(await p.$('.camp')));
   const wal = await p.evaluate(() => { try { return JSON.parse(sessionStorage.getItem('citadel-v1-me') || '{}').wallet; } catch { return null; } });
   ok('첫 차시 끝 = 💎 620 · 📜 9', wal && wal.gem === 620 && wal.scroll === 9, JSON.stringify(wal));
-  ok('캠프 = 📋 게시판 · ✉ 우편함 없음', !(await p.$('[data-k="board-buddy"]')) && !(await p.$('.camp [data-prop="dummy"]')));
+  ok('캠프 = 📋 게시판 있음(#55 봇 3 체험) · 모집 친구 · ✉ 우편함 없음', !(await p.$('[data-k="board-buddy"]')) && !!(await p.$('.camp [data-prop="dummy"]')) && !(await p.$('.camp [data-prop="mail"]')));
+  { await p.click('.camp [data-prop="dummy"]').catch(() => {}); await p.waitForSelector('[data-k="atb-trial"]', { timeout: 10000 }).catch(() => {}); ok('캠프 📋 → 체험판 게시판 (봇 3)', !!(await p.$('[data-k="atb-trial"]'))); await p.click('[data-k="atb-trial"] .back').catch(() => {}); await p.waitForTimeout(500); }
   const main = (await p.textContent('.camp .ba-main, .camp [data-k="ba-main"]').catch(() => '')) || (await p.textContent('.camp'));
   ok('아래 단추 = 「⚔ 다른 차시로」', /다른 차시로/.test(main));
   await p.screenshot({ path: `${SHOTS}/trial-camp.png` });

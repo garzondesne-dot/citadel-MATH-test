@@ -1,6 +1,6 @@
 <script lang="ts">
   import { isReady } from '../../store/atomic';
-  import { loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
+  import { loadAtbTrial, loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
   import { earnDaily } from '../../model/wallet';
   import { GEM, kstDay } from '../../board/board';
@@ -74,7 +74,7 @@
   //   이름표 = 상황에 따라: 차시 던전 = 늘(열림 금빛 반짝 · 닫힘 흐림) · 새 소식 = 이름 + 빨간 숫자 · 모루 = ★n · 처음 = 흰 이름표 · 써 봤고 소식 없음 = 숨김 · 빈 땅 = 2초 모두
   const { S, L, code, pupil = null, trial = null }: { S: Store; L: LessonPack; code: string; pupil?: Pupil | null;
     /** 👩‍🏫 체험판 (📜 2026-11-17 #33 · CLAUDE.md 「👩‍🏫 체험판 규칙」): 이름 · 시작 💎 200 → 첫 차시를 끝내면 한 번 💎 620 · 📜 9 · 아래 단추 = 「⚔ 다른 차시로」 · 📋 게시판 · ✉ 우편함 · 출제 공방 숨김 · 성채 = 실은 층 방 모두 열림 */
-    trial?: { nick: string; grant: boolean; ongate: () => void } | null } = $props();
+    trial?: { nick: string; grant: boolean; ongate: () => void; /** 👩‍🏫 #55 체험판 게시판 = 체험판 차시 팩 */ packs?: LessonPack[] } | null } = $props();
   async function logout() {
     saveLogin(null); unbindMe();
     const A = (S as Store & { auth?: import('firebase/auth').Auth }).auth;
@@ -520,7 +520,7 @@
         {@render tag(k)}
       </button>
     {/each}
-    {#each CAMP_PROPS.filter((p) => (!p.feat || feat(p.feat)) && !(trial && (p.k === 'dummy' || p.k === 'mail' || p.k === 'tent'))) as p (p.k)}
+    {#each CAMP_PROPS.filter((p) => (trial ? p.k === 'dummy' || !p.feat || feat(p.feat) : !p.feat || feat(p.feat)) && !(trial && (p.k === 'mail' || p.k === 'tent'))) as p (p.k)}<!-- 👩‍🏫 #55 체험판 = 📋 게시판(봇 3 · 기록 없음) 보임 -->
       {@const k = p.k}
       <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} class:tp={!!tapN[k]} class:rm={RM} onclick={(e) => go(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} on={(news[k] ?? 0) > 0} />
@@ -656,6 +656,9 @@
 {:else if sheet === 'review'}
   <!-- 🎯 허수아비 = 혼자 복습 (📜 2026-11-13 밤 쪼갬 · #66 배움터 안 「복습하기」) -->
   {#await loadDummy() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} onclose={() => (sheet = null)} onforge={() => (sheet = 'anvil')} />{/await}
+{:else if sheet === 'dummy' && trial}
+  <!-- 👩‍🏫 #55 체험판 게시판 던전 = 봇 3 · 서버 안 닿음 · 기록 없음 -->
+  {#await loadAtbTrial() then K}<K.default packs={trial.packs ?? []} hero={me.hero} xp={me.xp} enh={me.enh} fx0={me.socket?.[me.hero] ?? ''} nick={trial.nick} onclose={() => (sheet = null)} />{/await}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
   {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onquest={feat('author') ? () => { questTab = 'mine'; sheet = 'tent'; } : undefined} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}

@@ -24,7 +24,7 @@ describe('대시보드 (#125)', () => {
     const b = fakeClass(memoryStore(), '1-2').studs.map((s) => [s.boss, s.lv]);
     expect(a).toEqual(b);
   });
-  it('보기 12개가 모두 내용을 냄 (반 · 전체)', () => {
+  it('보기 13개(📋 · 🏰 더함)가 모두 내용을 냄 (반 · 전체)', () => {
     const S = memoryStore();
     for (const id of ALL_VIEWS) {
       const v = view(S, id === 'cmp' ? ALL : '1-3', id);
@@ -66,10 +66,10 @@ print('ok')`], { encoding: 'utf8' });
     const after = view(S, '1-1', 'grid').csv!.rows.find((r) => r[0] === n)!;
     for (const i of cols) expect(String(after[i]), String(before[i])).toMatch(String(before[i]) === '불참' ? /^보충$/ : / \(보충\)$/);
   });
-  it('엑셀 전체 한 파일: 읽어보기 · 반 비교 · 보기 11개 · 반 열 · 요약 줄 · 반마다 차시 열 합침', () => {
+  it('엑셀 전체 한 파일: 읽어보기 · 반 비교 · 보기 12개(📋 게시판 던전 더함) · 반 열 · 요약 줄 · 반마다 차시 열 합침', () => {
     const S = memoryStore(), B = bookAll(S, false, '2026-11-18');
     expect(B.map((x) => x.name)).toEqual(['읽어보기', '반 비교', ...ALL_VIEWS.filter((v) => v !== 'cmp').map((id) => view(S, ALL, id).title.replace(/ · /g, ' '))]);
-    expect(B).toHaveLength(13);
+    expect(B).toHaveLength(15) // 📋 #56 게시판 던전 · 🏰 성채 던전 시트 더함;
     const rd = B[0]!.rows.map((r) => String(r[0] ?? ''));
     for (const n of B.slice(1).map((x) => x.name)) expect(rd, n).toContain(n);
     const grid = B.find((x) => x.name === '한눈에 표')!;

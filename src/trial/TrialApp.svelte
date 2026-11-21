@@ -11,6 +11,7 @@
   import { CREDIT_NAME, showCredit } from '../channel';
   import { BUILD, BUILD_ID } from '../build';
   import { CARDS, REST_AFTER, trialPacks, trialRoom } from './trial';
+  import { loadAtbTrial } from '../ui/lazy';
   import StuTry from '../ui/teacher/StuTry.svelte';
   import TSim from '../ui/teacher/TSim.svelte';
   import '../ui/teacher/teacher.css';
@@ -27,14 +28,17 @@
   let heroPick = $state(false), camp = $state<LessonPack | null>(null), campL = $state<LessonPack | null>(null), campKey = $state(0), done1 = $state(false);
   const nick = $derived(name.trim().slice(0, 8) || '체험 용사');
   function pick(r: 'stu' | 'tch') { as = r; try { sessionStorage.setItem(SK, name.trim().slice(0, 8)); } catch { /* 무시 */ } if (r === 'stu' && !M.me.seen['hero0']) { M.me.nick = nick; M.save(); heroPick = true; } }
+  let atbT = $state(false); // 👩‍🏫 #55 체험판 게시판 던전 (학생 · 선생님 판 모두 · 봇 3 · 기록 없음)
   function start(id: string) { camp = null; run = byId(id); runKey++; }
   function close(ended?: boolean) { const L0 = run; run = null; if (as === 'stu' && L0) { if (ended) done1 = true; camp = L0; campL = L0; campKey++; } }
 </script>
 
-{#if run && as === 'stu'}
+{#if atbT}
+  {#await loadAtbTrial() then K}<K.default {packs} hero={M.me.hero} xp={M.me.xp} enh={M.me.enh} fx0={M.me.socket?.[M.me.hero] ?? ''} {nick} onclose={() => (atbT = false)} />{/await}
+{:else if run && as === 'stu'}
   {#key runKey}<StuTry L={run} bots={4} trial nick={nick} restAfter={REST_AFTER[run.id] ?? ''} prep={(S, code) => trialRoom(S, run!, code)} onclose={close} />{/key}
 {:else if camp && as === 'stu'}
-  {#key campKey}<Camp {S} L={camp} code="" trial={{ nick, grant: done1, ongate: () => (camp = null) }} />{/key}
+  {#key campKey}<Camp {S} L={camp} code="" trial={{ nick, grant: done1, ongate: () => (camp = null), packs }} />{/key}
 {:else if heroPick}
   <FirstHero me={M.me} persist={M.save} ondone={() => (heroPick = false)} />
 {:else if run && as === 'tch'}
@@ -56,6 +60,7 @@
         <div class="cards" data-k="trial-cards">
           {#each CARDS as c (c.id)}<button type="button" class="lc" data-k="trial-card" data-id={c.id} onclick={() => start(c.id)}><b>{c.ic} {c.name}</b><em>{c.tag}</em><small>{c.sub}</small></button>{/each}
         </div>
+        <button type="button" class="lc atb" data-k="trial-atb" onclick={() => (atbT = true)}><b>📋 게시판 던전</b><em>🤖 봇 3명</em><small>수업 밖 팀 전투 · 기록은 남지 않아요</small></button>
         {#if as === 'stu' && campL}<button type="button" class="back" data-k="trial-camp" onclick={() => { camp = campL; campKey++; }}>🏕 캠프로</button>{:else}<button type="button" class="back" data-k="trial-back" onclick={() => (as = '')}>‹ 처음으로</button>{/if}
       {/if}
       <p class="foot">👩‍🏫 체험판 · {BUILD_ID}{showCredit ? ` · 만든 이 ${CREDIT_NAME}` : ''}</p>
