@@ -9,7 +9,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
     await p.route('**/assets/*.js', async (r) => { await new Promise((z) => setTimeout(z, 9500)); r.continue(); });
     await p.goto(B, { waitUntil: 'commit' }); await p.waitForTimeout(900);
     const bg = await p.$eval('[data-k=boot-walk]', (e) => getComputedStyle(e).backgroundImage);
-    ok('처음 연 폰 = 로안 걷기', /hero-sword-v5\.webp/.test(bg), bg.slice(-40));
+    ok('처음 연 폰 = 로안 걷기', /hero-sword-v7\.webp/.test(bg), bg.slice(-40));
     const wz = await p.$eval('[data-k=boot-walk]', (e) => { const c = getComputedStyle(e); return `${c.width} ${c.height} ${c.backgroundSize}`; }); ok('세밀 시트 칸 = 256 × 144 (#50)', /^256px 144px 1024px 1728px/.test(wz), wz);
     const t1 = await p.textContent('[data-k=boot-tip]'); ok('팁 = 늘 맞는 팁(1 · 6 · 12)', /학습지에 먼저|빈칸을 다 채웠는지|몬스터는 문제/.test(t1), t1);
     await p.screenshot({ path: `${SHOTS}/boot-roan.png` });
@@ -27,7 +27,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
     await q.goto(B, { waitUntil: 'commit' }); await q.evaluate(() => localStorage.setItem('citadel-boot', JSON.stringify({ h: 'hero-witch-v7.webp', t: [3, 11] })));
     await q.reload({ waitUntil: 'commit' }); await q.waitForTimeout(800); const p2 = q;
     ok('첫 화면이 보이는 중', await q.isVisible('[data-k=boot-walk]'));
-    ok('다음 열기 = 기억한 내 용사', /hero-witch-v5/.test(await p2.$eval('[data-k=boot-walk]', (e) => getComputedStyle(e).backgroundImage)));
+    ok('다음 열기 = 기억한 내 용사', /hero-witch-v7/.test(await p2.$eval('[data-k=boot-walk]', (e) => getComputedStyle(e).backgroundImage)));
     ok('켜진 기능 팁만', /도움|모루/.test(await p2.textContent('[data-k=boot-tip]')));
     await p2.screenshot({ path: `${SHOTS}/boot-witch.png` }); await ctx.close(); }
   // ③ ⏱ 재기: 앱이 그려질 때까지(첫 화면이 사라지는 때)

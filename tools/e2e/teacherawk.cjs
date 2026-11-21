@@ -1,8 +1,8 @@
 // 👩‍🏫 교사 계정 = 전용 칭호 30개 모두 열림 (📜 2026-11-20 머리 · 선생님 A) — 교사 내 캠프(from=me) 호칭 고르기에 잠긴 칸 0 · 각성 칭호(혈월의 기사) 고를 수 있음
-//   NODE_PATH=$(npm root -g) node tools/e2e/teacherawk.cjs [주소]
+//   NODE_PATH=$(npm root -g) node tools/e2e/teacherawk.cjs [그림 폴더] [주소]  (다른 e2e 와 같은 인자 순서 · 폴더 = 안 씀)
 const { chromium } = require('playwright');
 (async () => {
-  const B = process.argv[2] || 'http://localhost:4173/', b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  const B = (process.argv.slice(2).find((a) => /^https?:/.test(a))) || 'http://localhost:4173/', b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p.goto(B + '?role=camp&from=me'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(3000);
   if (!(await p.$('.mh'))) await p.click('button[aria-label="내 용사 보기"]').catch((e) => console.log('nobtn', String(e).slice(0, 80)));
   await p.waitForSelector('.mh', { timeout: 8000 });
