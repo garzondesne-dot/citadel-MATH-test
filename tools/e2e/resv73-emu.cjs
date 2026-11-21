@@ -23,7 +23,13 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
   await A.click('[data-map="6"]'); await A.click('[data-k="board-resv"]'); await A.waitForSelector('.rtimes button');
-  const days = await A.$$eval('.rdays button', (x) => x.map((e) => e.textContent.trim())); ok('시트 = 날짜 칩 (7일 안)', days.length >= 6 && days.length <= 7, days.join(' '));
+  const days = await A.$$eval('.rdays button', (x) => x.map((e) => e.textContent.trim())); ok('시트 = 날짜 칩 (7일 · 「오늘」 늘 맨 앞 · 📜 #78)', days.length === 7 && days[0] === '오늘', days.join(' '));
+  { const kh = new Date(Date.now() + 9 * 3600e3), mins = kh.getUTCHours() * 60 + kh.getUTCMinutes(), wk = [0, 6].includes(kh.getUTCDay()), normalLeft = mins + 5 <= 21 * 60 + 30 && (wk || mins + 5 <= 16 * 60 || true);
+    const off = await A.$eval('.rdays button >> nth=0', (e) => e.classList.contains('off')).catch(async () => (await A.$$eval('.rdays button', (x) => x[0].classList.contains('off'))));
+    const t0 = await A.$eval('.rtimes button', (e) => e.textContent.trim());
+    if (BETA) ok('📜 #78 🧪 테스트 반 = 시간 제한 없음 (오늘 칩 켜짐 · 첫 시각 = 지금 + 5분 뒤 30분 칸)', !off || mins >= 23 * 60 + 25, `첫 시각 ${t0}`);
+    else if (!normalLeft) { ok('📜 #78 오늘 마감 = 「오늘」 흐림', off); await A.click('.rdays button >> nth=0', { force: true }); await wait(300); ok('📜 #78 흐린 「오늘」 누름 = 「오늘은 마감 (21:30까지)」', /오늘은 마감 \(21:30까지\)/.test((await A.textContent('body')) || '')); }
+  }
   await A.click('.rtimes button >> nth=0'); const main = (await A.textContent('.sheet .act .btn')).trim(); ok('주요 단추 = 「📅 … · 6차시 예약 올리기」', /📅 .* · 6차시 예약 올리기/.test(main), main);
   await A.screenshot({ path: `${SHOTS}/r73-sheet.png` });
   await A.click('.sheet .act .btn'); await wait(1500);

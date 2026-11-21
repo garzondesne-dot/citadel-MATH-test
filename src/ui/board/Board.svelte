@@ -93,7 +93,9 @@
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   // 📅 📜 #73 예약 모집 (선생님 2026-11-21): 차시 · 날짜 · 시각 → 글 when · 「🙋 참여 예약」 · 한 학생 예약 동시 1개 · 시각 = 방 열림 · +5분 출발(안 온 자리 = 봇) · +30분 해산
   let rDay = $state(''), rAt = $state(0);
-  const rDays = $derived(sheet === 'resv' ? resvDays(S.now()) : []);
+  const rFree = $derived(!cls || isBeta(S, cls)); // 📜 #78 🧪 테스트 반 · 교사 = 예약 시간 제한 없음
+  const rDays = $derived(sheet === 'resv' ? resvDays(S.now(), undefined, rFree) : []);
+  const rDay0 = $derived(rDays.find((d) => d.times.length)?.key ?? ''); // 처음 고른 날 = 시각이 있는 첫 날
   const myResv = $derived(posts.filter((p) => p.when && p.phase === 'wait' && !!p.mem?.[uid]));
   function openResv() { if (!sel) return; if (myResv.length) { say(`📅 예약은 한 번에 하나 · ${resvLabel(myResv[0]!.when!)} 예약이 있어요`); return; } rDay = ''; rAt = 0; sheet = 'resv'; }
   function postResv() { if (!sel || !rAt || !online) return; const only = sel.partOf && !recs[sel.id] ? sel.steps.map((x) => x.id) : undefined; createPost(S, sel, meM, recOf(sel) ?? null, only, false, undefined, false, rAt); sheet = ''; say(`📅 ${resvLabel(rAt)} · ${sel.no}차시 예약 모집을 올렸어요`); }
@@ -381,8 +383,8 @@
   <Sheet onclose={() => (sheet = '')} mainText={rAt ? `📅 ${resvLabel(rAt)} · ${sel.no}차시 예약 올리기` : '날짜와 시각을 골라요'} mainDisabled={!rAt || !online} onmain={postResv}>
     {#snippet title()}📅 {sel.no}차시 예약 모집{/snippet}
     <p class="pinq">7일 안 · 평일 오후 4시 ~ 9시 반 · 주말 오전 9시 ~ 9시 반 · 시각이 되면 방이 열리고 5분 뒤 출발해요</p>
-    <div class="rdays" role="group" aria-label="날짜">{#each rDays as d (d.key)}<button type="button" class:on={(rDay || rDays[0]?.key) === d.key} onclick={() => { rDay = d.key; rAt = 0; }}>{d.label}</button>{/each}</div>
-    <div class="rtimes" role="group" aria-label="시각">{#each rDays.find((d) => d.key === (rDay || rDays[0]?.key))?.times ?? [] as t (t.at)}<button type="button" class:on={rAt === t.at} data-at={t.at} onclick={() => (rAt = t.at)}>{t.label}</button>{/each}</div>
+    <div class="rdays" role="group" aria-label="날짜">{#each rDays as d (d.key)}<button type="button" class:on={(rDay || rDay0) === d.key} class:off={!d.times.length} data-day={d.key} aria-disabled={!d.times.length} onclick={() => { if (!d.times.length) { say('오늘은 마감 (21:30까지)'); return; } rDay = d.key; rAt = 0; }}>{d.label}</button>{/each}</div>
+    <div class="rtimes" role="group" aria-label="시각">{#each rDays.find((d) => d.key === (rDay || rDay0))?.times ?? [] as t (t.at)}<button type="button" class:on={rAt === t.at} data-at={t.at} onclick={() => (rAt = t.at)}>{t.label}</button>{/each}</div>
   </Sheet>
 {:else if sheet}
   <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick} onmain={go}>
@@ -518,5 +520,6 @@
   .post .go.on { background: var(--surface-2); color: var(--accent); }
   .rdays, .rtimes { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
   .rdays button, .rtimes button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
+  .rdays button.off { opacity: 0.45; }
   .rdays button.on, .rtimes button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 </style>
