@@ -120,7 +120,7 @@ import IDLE8_HD_MAP from './idle8-hd-map.json';
 //   대기(idle) 줄만 이 띠로 · 1.3초에 8장 · 띠가 없거나 못 받으면 v5 시트 대기 4칸 그대로 · 되돌리기 = on: false 한 줄
 export const IDLE8_HD = { on: true, frames: 8, ms: 1300, map: IDLE8_HD_MAP as Record<string, string> };
 /** ✨ 숨쉬기 빛 칸 (📜 2026-11-20 선생님 「녹스 대검 빨간 줄 · 게임 안 코드로 깜빡」): 같은 8칸 띠 · 빛나는 픽셀만 · 1.2초 주기로 켰다 껐다 (폰 CSS · TV Pixi) */
-export const IDLE8_GLOW: Record<string, string> = { 'hero-dknight-idle8-v8b.webp': 'hero-dknight-idle8-glow-v8.webp' };
+export const IDLE8_GLOW: Record<string, string> = { 'hero-dknight-idle8-v8c.webp': 'hero-dknight-idle8-glow-v8c.webp' };
 export const GLOW_MS = 1200;
 export const glowOf = (idle8Url: string | null): string | null => { const n = idle8Url?.split('/').pop() || '', g = IDLE8_GLOW[n]; return g ? idle8Url!.replace(n, g) : null; };
 export const idle8HdOf = (id: number): string | null => { const f = heroOf(id).sprite || '', n = IDLE8_HD.on && HERO_HD[f] ? IDLE8_HD.map[f] : undefined; return n ? `${import.meta.env.BASE_URL}art/heroes/${n}` : null; };
