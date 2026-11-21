@@ -17,32 +17,33 @@ const norm = (t) => String(t).replace(/\s+/g, '').replace(/^\d+[⑴⑵⑶⑷⑸�
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push(String(e)));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tabs');
-  await t.click('.tabs button:has-text("준비")'); await t.click('.seg3 button:has-text("📦 팩")'); await t.waitForSelector('[data-k="addons"]');
-  const openRow = async (id) => { await t.click(`[data-k="addon-card"][data-id="${id}"]`); await t.waitForSelector('.sheet [data-k="addon-vis"]'); }; // 📦 팩 탭: 층 줄 → 시트
+  await t.click('.tabs button:has-text("차시 팩")'); await t.waitForTimeout(400); await t.click('[data-k="castle-go"]'); /* 📜 탭 이름 바뀜: 「준비 › 📦 팩」 → 「📦 차시 팩 › 🏰 성채 팩」 */ await t.waitForSelector('[data-k="addons"]');
+  const castleGo = async () => { if (!(await t.$('[data-k="addons"]'))) { await t.click('[data-k="castle-go"]'); await t.waitForSelector('[data-k="addons"]'); } }; // 🏰 성채 팩 = 시트 (올리기를 누르면 닫힘)
+  const openRow = async (id) => { await castleGo(); await t.click(`[data-k="addon-card"][data-id="${id}"]`); await t.waitForSelector('.sheet [data-k="addon-vis"]'); }; // 📦 팩 탭: 층 줄 → 시트
   const over = async (p, w) => { const o = await p.evaluate(() => document.documentElement.scrollWidth - innerWidth); if (o > 0) errs.push(`가로 넘침 ${o}px · ${w}`); };
   // ① 올리기
-  const up = async (f) => { await t.click('[data-k="addon-up"]'); await t.waitForSelector('[data-k="packup"]'); await t.setInputFiles('[data-k="packfile"]', path.join(DIR, f)); await t.waitForSelector('[data-k="packup"][data-kind="castle"] [data-k="packsum"]'); await t.waitForTimeout(200); };
+  const up = async (f) => { await castleGo(); await t.click('[data-k="addon-up"]'); await t.waitForSelector('[data-k="packup"]'); await t.setInputFiles('[data-k="packfile"]', path.join(DIR, f)); await t.waitForSelector('[data-k="packup"][data-kind="castle"] [data-k="packsum"]'); await t.waitForTimeout(200); };
   for (const f of ['eval-1.json', 'eval-2.json']) {
     await up(f);
     const sum = (await t.textContent('[data-k="packsum"]')).trim(), errN = await t.$$eval('[data-k="packiss"] li.err', (x) => x.length).catch(() => 0);
     ok(`① ${f} 검사 = 오류 0`, /✔ 검사 통과/.test(sum) && errN === 0, sum);
     if (f === 'eval-1.json') { await t.screenshot({ path: `${SHOTS}/castle-1-upload.png` }); await over(t, '올리기'); }
     await t.click('.sheet .btn.pmain'); await t.waitForSelector('.sheet .ok'); ok(`① ${f} 저장`, true, (await t.textContent('.sheet .ok')).trim());
-    await t.click('.sheet .x'); await t.waitForTimeout(200);
+    await t.locator('.sheet .x').last().click() /* 시트가 겹치면 맨 위 */; await t.waitForTimeout(200);
   }
-  const cards = await t.$$eval('[data-k="addon-card"]', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+  await castleGo(); const cards = await t.$$eval('[data-k="addon-card"]', (x) => x.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
   ok('① 📦 팩 탭 층 줄 2개 (층 순서 · 12방 · 11방 · 처치 n)', cards.length === 2 && /1층.*12방 · 처치 0/.test(cards[0]) && /2층.*11방/.test(cards[1]), cards.join(' | '));
-  await openRow('eval-1'); ok('① eval-1~3 = 🗑 지우기 없음(숨김만) · 시트 = 해금 · 미리 보기 · 보임 · 내려받기', (await t.$$('[data-k="addon-del"]')).length === 0 && !!(await t.$('.sheet [data-k="addon-unlock"]')) && !!(await t.$('.sheet [data-k="addon-dl"]'))); await t.screenshot({ path: `${SHOTS}/castle-2b-sheet.png` }); await t.click('.sheet .x'); await t.waitForTimeout(150);
+  await openRow('eval-1'); ok('① eval-1~3 = 🗑 지우기 없음(숨김만) · 시트 = 해금 · 미리 보기 · 보임 · 내려받기', (await t.$$('[data-k="addon-del"]')).length === 0 && !!(await t.$('.sheet [data-k="addon-unlock"]')) && !!(await t.$('.sheet [data-k="addon-dl"]'))); await t.screenshot({ path: `${SHOTS}/castle-2b-sheet.png` }); await t.locator('.sheet .x').last().click() /* 시트가 겹치면 맨 위 */; await t.waitForTimeout(150);
   await t.$eval('[data-k="addons"]', (e) => e.scrollIntoView()); await t.waitForTimeout(150);
   await t.screenshot({ path: `${SHOTS}/castle-2-cards.png` }); await over(t, '카드');
   await up('eval-1.json');
   ok('① 같은 id 다시 = 「새 판으로 바꿀까요?」 · 방 기록 그대로 12', /새 판으로 바꿀까요/.test(await t.textContent('[data-k="castle-replace"]').catch(() => '')) && /12개/.test(await t.textContent('[data-k="castle-replace"]').catch(() => '')) && /새 판으로 바꾸기/.test(await t.textContent('.sheet .btn.pmain')));
   await t.screenshot({ path: `${SHOTS}/castle-3-replace.png` });
-  await t.click('.sheet .btn.pmain'); await t.waitForSelector('.sheet .ok'); await t.click('.sheet .x');
+  await t.click('.sheet .btn.pmain'); await t.waitForSelector('.sheet .ok'); await t.locator('.sheet .x').last().click() /* 시트가 겹치면 맨 위 */;
   // 👀 숨김 → 다시 보임
   await openRow('eval-2'); await t.click('.sheet [data-k="addon-vis"]'); await t.waitForTimeout(200);
   const hid = await t.evaluate(() => window.__dbGet('prep/addons/castle/eval-2/hide'));
-  await t.click('.sheet [data-k="addon-vis"]'); await t.waitForTimeout(200); await t.click('.sheet .x'); await t.waitForTimeout(150);
+  await t.click('.sheet [data-k="addon-vis"]'); await t.waitForTimeout(200); await t.locator('.sheet .x').last().click() /* 시트가 겹치면 맨 위 */; await t.waitForTimeout(150);
   ok('① 👀 보임/숨김 스위치 = 서버 hide 칸', hid === true && (await t.evaluate(() => window.__dbGet('prep/addons/castle/eval-2/hide'))) == null);
   // ② 진도 6
   await t.evaluate(() => window.__dbSet('school/last/1-1', { lesson: 'x', no: 6, at: Date.now(), done: true, code: '1' }));
@@ -89,7 +90,7 @@ const norm = (t) => String(t).replace(/\s+/g, '').replace(/^\d+[⑴⑵⑶⑷⑸�
   await s.screenshot({ path: `${SHOTS}/castle-10-boss.png` });
   // ⑤ 교사 미리 보기 = 같은 방 화면 · 기록 없음
   const before = stab(await t.evaluate(() => window.__dbGet('bonus')));
-  await t.reload(); await t.click('.tabs button:has-text("준비")'); await t.click('.seg3 button:has-text("📦 팩")'); await t.waitForSelector('[data-k="addon-card"]');
+  await t.reload(); await t.click('.tabs button:has-text("차시 팩")'); await t.waitForTimeout(400); await t.click('[data-k="castle-go"]'); /* 📜 탭 이름 바뀜: 「준비 › 📦 팩」 → 「📦 차시 팩 › 🏰 성채 팩」 */ await t.waitForSelector('[data-k="addon-card"]');
   ok('⑤ 층 줄 처치 n = 1', /처치 1/.test(await t.textContent('[data-k="addon-card"][data-id="eval-1"]')));
   await openRow('eval-1'); await t.click('.sheet [data-k="addon-look"]'); await t.waitForSelector('[data-k="castle"] [data-room]');
   const pv = await t.$$eval('[data-k="castle"] [data-room]', (x) => x.filter((e) => e.getAttribute('data-open') === '1').length);
