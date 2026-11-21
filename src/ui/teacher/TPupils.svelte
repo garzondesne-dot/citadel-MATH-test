@@ -100,7 +100,7 @@
   .segrow { display: flex; gap: 6px; align-items: stretch; } .segrow .seg { flex: 1; min-width: 0; }
   .xlb { flex: none; padding: 0 12px; border-radius: 12px; border: 1px solid var(--gem); background: var(--bg); color: var(--gem); font: 700 13.5px var(--font); white-space: nowrap; }
   .fixed { flex: none; padding: 0 var(--s4) var(--s2); display: flex; flex-direction: column; gap: var(--s2); }
-  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; } /* 🐞 #62-1 360 폭 = 두 줄로 감김 (1-7 · 1-8 이 잘려 안 보이던 것) */
   .chips button { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 13.5px var(--font); white-space: nowrap; }
   .chips button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 12px; background: var(--surface); }
