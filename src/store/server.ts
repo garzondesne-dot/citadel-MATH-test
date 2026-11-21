@@ -1,9 +1,10 @@
 import { initializeApp, type FirebaseOptions } from 'firebase/app';
-import { connectDatabaseEmulator, get as fbGet, getDatabase, increment, onValue, ref, runTransaction, set as fbSet, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, get as fbGet, getDatabase, goOffline, goOnline, increment, onValue, ref, runTransaction, set as fbSet, type Database } from 'firebase/database';
 import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAuthStateChanged, signInAnonymously, type Auth } from 'firebase/auth';
 import type { Store, Unsub } from '../model/types';
 import { setClockOffset } from '../ui/clock.svelte';
 import { tidy as tidyParts } from './tidy';
+import { deepEq, localStorageOut, makeOutbox, merge3, queued, type Outbox } from './outbox';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
 //   읽기 = 맨 윗칸(rooms · school · gifts · mail · accounts)을 실시간으로 받아 둔 거울(mirror)에서 바로 · 쓰기 = 거울에 먼저 + 서버에 보냄
@@ -28,7 +29,9 @@ const related = (a: string, b: string) => { const A = split(a).join('/'), B = sp
 const clone = <T>(v: T): T => (v == null ? v : (JSON.parse(JSON.stringify(v)) as T));
 
 export interface NetState { connected: boolean; uid: string | null }
-export interface ServerStore extends Store { /** 익명 로그인 실패 코드 ('' = 됨) */ anonErr?: string; /** 쓰기 결과를 기다림(거울 먼저 바꾸지 않음 · 규칙이 막으면 false) — 🔒 게시판 암호 */ trySet(path: string, value: unknown): Promise<boolean>; net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean }
+export interface ServerStore extends Store { /** 익명 로그인 실패 코드 ('' = 됨) */ anonErr?: string; /** 쓰기 결과를 기다림(거울 먼저 바꾸지 않음 · 규칙이 막으면 false) — 🔒 게시판 암호 */ trySet(path: string, value: unknown): Promise<boolean>; net: NetState; auth: Auth; db: Database; onNet(fn: (s: NetState) => void): Unsub; preload(cls: string, num: number): Promise<void>; isAdmin(): boolean; /** 📮 #81 B 폰 보관함 (못 보낸 학생 쓰기) */ outbox: OutboxApi }
+/** 📮 #81 B 화면용: 내 보관함 줄 수 · 바뀌면 부름 · 지금 보내 보기(ms 안에 다 올라가면 0) */
+export interface OutboxApi { count(): number; on(fn: () => void): Unsub; flush(ms?: number): Promise<number> }
 export interface ServerOpts { firebase: FirebaseOptions; emulator?: { host: string; db: number; auth: number } | null; /** 앱 이름 (같은 이름 = 새로 고침해도 로그인 그대로 · 시험에서 여러 명을 한 곳에 띄울 때만 다르게) */ name?: string }
 
 /** 기다리되 ms 넘으면 그냥 넘어감 (서버가 안 닿거나 규칙 게시 전이어도 화면이 멈추지 않게) */
@@ -78,6 +81,35 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   let admin = false;
   await within(Promise.all(OPEN.map((k) => sub(k))), 10000);
   const meUid = () => auth.currentUser?.uid ?? null;
+  // 📮 #81 B 폰 보관함 — 학생 자기 칸 쓰기를 서버 확인 받을 때까지 이 폰에 (앱을 닫아도 남음) · 교사 · TV = 안 씀
+  const box: Outbox = makeOutbox(typeof localStorage !== 'undefined' && !tabAuth ? localStorageOut() : { load: () => [], save: () => {} });
+  const flying = new Set<string>(); // 이번 세션에 보낸 뒤 확인을 기다리는 줄 (SDK 가 스스로 다시 보냄 → 다시 보내기에서 뺌)
+  const permDenied = (e: unknown) => /permission|PERMISSION_DENIED/i.test(String((e as { code?: string })?.code || e));
+  const sendQ = (id: string, path: string, v: unknown) => {
+    flying.add(id);
+    return fbSet(ref(db, split(path).join('/')), v).then(() => { flying.delete(id); box.done(id); return true; }, (e) => { flying.delete(id); if (permDenied(e)) { console.warn('보관함: 규칙이 막아 버림', path); box.done(id); } return false; });
+  };
+  let replaying = false;
+  /** 남은 줄 다시 보내기 — 그 경로 서버 값을 먼저 받고(못 받으면 다음에) 세 갈래로 합쳐서 (📜 「서버 값 받기 전에 쓰지 않음」) */
+  async function replay() {
+    const who = meUid(); if (replaying || !who || admin || !net.connected) return;
+    replaying = true;
+    try {
+      for (const it of box.list(who)) {
+        if (flying.has(it.id)) continue;
+        let s: unknown;
+        try { const snap = await Promise.race([fbGet(ref(db, it.path)), new Promise<null>((r) => setTimeout(() => r(null), 8000))]); if (!snap) break; s = snap.val(); } catch (e) { if (permDenied(e)) { box.done(it.id); continue; } break; }
+        if (deepEq(s, it.v)) { box.done(it.id); continue; } // 이미 올라가 있음 (앱을 닫기 직전에 닿았던 것)
+        let out = merge3(s, it.base, it.v);
+        if (/^records\/[^/]+\/[^/]+\/[^/]+$/.test(it.path) && s && it.v) { const { mergeRow } = await import('../school/records'); out = mergeRow(s as never, it.v as never); } // 수업 기록 = 더 좋은 쪽 (#39 와 같은 합치기)
+        if (deepEq(out, s)) { box.done(it.id); continue; }
+        if (!(await sendQ(it.id, it.path, out))) break;
+      }
+    } finally { replaying = false; }
+  }
+  onValue(ref(db, '.info/connected'), (s) => { if (s.val()) setTimeout(() => void replay(), 1500); });
+  onAuthStateChanged(auth, (u) => { if (u) setTimeout(() => void replay(), 2500); });
+  if (typeof setInterval !== 'undefined') setInterval(() => void replay(), 60000);
   admin = !!meUid() && getIn(mirror, ['admins', meUid() as string]) === true;
   if (admin) await within(Promise.all(Object.keys(BUCKET).filter((k) => !(k in ADMIN_BUCKET)).map((k) => sub(k))), 10000);
   /** 로그인한 학생의 자기 칸을 먼저 받아 둠 (지갑을 「처음」으로 잘못 알고 덮어쓰지 않게) */
@@ -86,16 +118,24 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     const u = meUid(), acc = (mirror.accounts || {}) as Record<string, Record<string, { uid?: string }>>;
     if (u && !admin) for (const [c, ns] of Object.entries(acc)) for (const [n, a] of Object.entries(ns || {})) if (a?.uid === u) await preload(c, Number(n));
   }
-  return {
+  const store: ServerStore = {
     kind: 'server', net, auth, db, anonErr,
     onNet(fn) { netSubs.add(fn); fn({ ...net }); return () => netSubs.delete(fn); },
     preload, isAdmin: () => admin, loaded: (path: string) => isLoaded(path),
+    outbox: {
+      count: () => { const w = meUid(); return w ? box.count(w) : 0; },
+      on: (fn: () => void) => box.on(fn),
+      async flush(ms = 8000) { const end = Date.now() + ms; await replay(); while (Date.now() < end) { const w = meUid(); if (!w || !box.count(w)) return 0; await new Promise((r) => setTimeout(r, 300)); if (!flying.size) await replay(); } const w = meUid(); return w ? box.count(w) : 0; },
+    },
     get<T>(path: string) { void ensure(path); return clone(read(path)) as T | null; },
     set(path: string, value: unknown) {
       const v = value == null ? null : clone(value);
       if (!ROOTS.includes(split(path)[0] as (typeof ROOTS)[number])) console.warn('시험 서버: 거울 밖 경로', path);
       if (admin || split(path)[0] !== 'loginFail') void ensure(path); // 🔑 학생 = 로그인 실패 칸은 쓰기만(읽기 규칙 없음 · 받지 않음)
+      const who = meUid(), q = !admin && !!who && queued(path);
+      const base = q ? clone(getIn(mirror, split(path)) ?? null) : null;
       setIn(mirror, split(path), v); fire(path); // 거울 먼저 (화면이 바로 바뀜)
+      if (q) { void sendQ(box.put(path, v, base, who!, Date.now()), path, v); return; } // 📮 #81 B 보관함에 먼저 → 서버 확인 = 지움
       fbSet(ref(db, split(path).join('/')), v).catch((e) => { if (/\/hosts\/|^\/?hostKeys\//.test(path)) console.warn('종합실 키가 달라요', path); else console.error('시험 서버 쓰기 실패', path, e); }); // TV 가 기억한 키가 새 수업 키와 다르면 규칙이 막음 = 키 입력 화면
     },
     // 🐞 11/20 ② 통째로 덮어쓰기 막기: 수 칸 = 서버에서 더함 (두 기기 · 늦게 온 거울이 서로 지우지 않음)
@@ -135,4 +175,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       try { const s = await within(fbGet(ref(db, split(path).join('/'))), 8000); return (tidy(path, s && 'val' in s ? s.val() : null) as T) ?? null; } catch (e) { console.warn('시험 서버 받기 실패', path, e); return null; }
     },
   };
+  // 🧪 에뮬레이터 시험만: 끊김 흉내 · 보관함 시험 (#81 B e2e outbox81) — 운영 · 베타 서버에는 없음
+  if (o.emulator && typeof window !== 'undefined') (window as unknown as { __ds?: unknown }).__ds = { S: store, off: () => goOffline(db), on: () => goOnline(db) };
+  return store;
 }
