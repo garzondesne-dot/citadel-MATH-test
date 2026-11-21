@@ -52,13 +52,13 @@
   let port = $state(false);
   $effect(() => { port = portNow(); const f = () => (port = portNow()); addEventListener('resize', f); return () => removeEventListener('resize', f); });
   /** 💀 📜 요청 #88 패배 이유 = 큰 줄 (엔진 why → 학생 말) */
-  const WHY: Record<string, string> = { '팀 부활을 다 씀': '💖 팀 부활을 다 써서 쓰러진 친구를 살릴 수 없었어요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급 힐로 버텨 봐요' };
+  const WHY: Record<string, string> = { 후퇴: '🌀 현자가 포털로 불러들였어요 · 벌 없음 · 맞힌 문제는 기록돼요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급 힐로 버텨 봐요' };
 </script>
 
 <div class="rs" class:lose={!win} class:port data-k="atb-result">
   <div class="left">
     <div class="banner" data-k="atb-res-banner" style:background-image="url({R('res-banner')})">
-      <h2 class:win>{win ? '승리!' : '아쉬워요'}</h2>
+      <h2 class:win>{win ? '승리!' : S.end?.why === '후퇴' ? '후퇴' : '아쉬워요'}</h2>
       <div class="stars" data-k="atb-stars" data-n={stars} aria-label="별 {stars}개">{#each [0, 1, 2] as i (i)}<img class="star" class:on={i < stars} style:animation-delay="{0.25 + i * 0.22}s" src={R(i < stars ? 'res-star-gold' : 'res-star-gray')} alt="" />{/each}</div>
     </div>
     {#if win || !S.end}<p class="time">{`${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초`}</p>

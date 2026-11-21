@@ -6,7 +6,7 @@
   //   이 화면은 그리기 · 누르기만 · 규칙 = src/board/atb/engine.ts · 숫자 = tune.ts
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { Given, LessonPack } from '../../../model/types';
-  import { heroOf, ladder, skillName, SKILL_NAMES } from '../../../model/hero';
+  import { HEROES, TEACHER_HEROES, heroOf, ladder, skillName, SKILL_NAMES } from '../../../model/hero';
   import { dungeonOf, spriteOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import Sprite from '../../Sprite.svelte';
@@ -164,11 +164,14 @@
   function tone(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5, 1318.5][Math.min(4, i)]!, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.24); }
   const firstTry: Record<string, boolean[]> = {};
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
-  // 💖 📜 요청 #88 팀 부활 0 = 「한 명만 쓰러져도 패배」 알림 (그 순간 큰 글 한 번 · 그 뒤 작은 빨간 칸 · 0.8초 맥박 = 번쩍 규칙 안)
-  const revZero = $derived(!S.end && S.heroes.length > 1 && S.revives <= 0);
-  let revZeroWas = untrack(() => S.revives <= 0);
-  $effect(() => { const z = revZero; untrack(() => { if (z && !revZeroWas) setTimeout(() => big('💖 팀 부활 0 · 이제 한 명만 쓰러져도 패배!', 'rage', 2400), 900); revZeroWas = z || S.revives <= 0; }); });
-  let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
+  /** 🌀 📜 #92 10분 상한 = 7:00 현자 말풍선 + 가장자리 짙게 · 9:00 「1분 뒤 포털」 + 위 셈 · 10:00 후퇴 (방장 시각 = S.t 그대로 · 모든 폰 같은 때) */
+  let sage = $state<{ t: string; n: number } | null>(null);
+  const SAGE_ID = HEROES.find((x) => x.name === '올드윈')?.id ?? TEACHER_HEROES.find((x) => x.name === '올드윈')?.id;
+  const sagePt = SAGE_ID != null ? portraitOf(SAGE_ID) : null;
+  function sageSay(t: string, ms = 4200) { const n = Date.now(); sage = { t, n }; setTimeout(() => { if (sage?.n === n) sage = null; }, ms); }
+  const capLeft = $derived(!S.end && S.t >= T.cap.call ? Math.max(0, Math.ceil(T.cap.end - S.t)) : null);
+  const capOn = $derived(!S.end && S.t >= T.cap.warn);
+  let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false);
   let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
   /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
   function grab(ev: PointerEvent) {
@@ -469,7 +472,8 @@
       if (e.kind === 'aid' && e.to != null) { pop(posOf(e.to).x, posOf(e.to).y - 24, `🩹 +${e.v}`, 'heal'); heal1(e.to); snd('heart-up', 0.5); }
       else for (const h of S.heroes) if (!h.down) { pop(posOf(h.id).x, posOf(h.id).y - 18, `+${Math.round(h.s.maxHp * T.role.healer.atkHeal)}`, 'heal sm'); heal1(h.id); }
     }
-    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
+    else if (e.k === 'cap') { if (e.at === 'warn') { sageSay('균열이 불안정해지고 있다…'); sfx('mon-appear', 0.5); } else { sageSay('1분 뒤 포털로 불러들이겠다!', 5000); big('🌀 1분 뒤 포털로 불러들이겠다!', 'note', 2200); sfx('mon-appear', 0.7); } }
+    else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); } // 📜 #92 팀 부활 횟수 없음 → 💖 n → m 판 없앰
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); /* 📜 #76 = 파티 전체 돔 (domeKind) */ sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; if (e.who === me) { eyeCut(e.who, col, `${whoOf(e.who)}의 ${KN}!`, EN, 700); slowmo(400); sfx('block', 1); } else pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); } /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
@@ -597,7 +601,7 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="stage" onclick={tapEmpty} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<div class="stage" onclick={tapEmpty} class:capon={capOn} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -606,8 +610,8 @@
   <div class="tr"><button type="button" class="gear" data-k="atb-gear" aria-label="설정" aria-expanded={gearOpen} onclick={() => { gearOpen = !gearOpen; sfx('click', 0.4); }}>⚙</button>
     {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
   </div>
-  {#if revZero}<b class="rev0" role="status" data-k="atb-rev0">💖 0 · 한 명만 쓰러져도 패배</b>{/if}
-  {#if revFx}<div class="revfx" role="status" data-k="atb-revfx"><span class="hb">💔</span><b>💖 {revFx.from} → {revFx.to}</b></div>{/if}
+  {#if sage}{#key sage.n}<div class="sage" role="status" data-k="atb-sage">{#if sagePt}<i class="face" style="background-image:url({sagePt.url});background-size:{sagePt.cols * 100}% {sagePt.rows * 100}%;background-position:{(sagePt.c[0] / Math.max(1, sagePt.cols - 1)) * 100}% {(sagePt.c[1] / Math.max(1, sagePt.rows - 1)) * 100}%"></i>{/if}<p><b>현자 올드윈</b>「{sage.t}」</p></div>{/key}{/if}
+  {#if capLeft != null}<div class="capt" role="timer" data-k="atb-cap-left" aria-label="포털까지 {capLeft}초">🌀 {Math.floor(capLeft / 60)}:{String(capLeft % 60).padStart(2, '0')}</div>{/if}
   {#if reactNow && meH}<div class="reactb mini" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
   {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 큰 힐로 가장 다친 친구</div>
   {:else if tg && tgLine}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}{#if !hasRole(REACT[tg.cls])} · (팀에 {ROLE_KO[REACT[tg.cls]]} 없음){/if}</div>{/if}
@@ -908,8 +912,6 @@
   .gmenu { display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 12px; border: 2px solid #c9953e; background: #1d1220f2; }
   .gmenu button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 2px solid #8a6a3a; background: #3a2618; color: #fff2d6; font: 800 14px var(--font-plain); text-align: left; } .gmenu button.off { filter: grayscale(0.6); }
   .gmenu .gr { font: 700 12px var(--font-plain); color: #ffd0e0; padding: 0 4px; }
-  .revfx { position: absolute; z-index: 44; left: 50%; top: 30%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 10px; padding: 6px 20px; border-radius: 14px; border: 3px solid #ff8ab0; background: #3a0a20e6; font: 900 clamp(18px, 6vh, 28px) var(--font); color: #ffe0ea; animation: bigin 0.3s ease-out; pointer-events: none; }
-  .revfx .hb { font-size: 1.4em; animation: hbreak 0.6s ease-out; } @keyframes hbreak { 0% { transform: scale(1.6); filter: brightness(2); } 60% { transform: scale(1) rotate(-12deg); } }
   .hpb { position: absolute; left: -26px; width: 52px; z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 1px; pointer-events: none; }
   .hpb .hn { font: 800 9px var(--font-plain); color: #eaffe4; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
   .hpb.low .thin.hp b { background: #ff2a2a; } .hpb.low .hn { color: #ff6a5a; } .hpb.low .thin.hp, .hpb.low .hn { animation: lowpulse var(--lb, 1.2s) ease-in-out infinite; }
@@ -1094,10 +1096,6 @@
   .ring.skm .sk2 .nm { text-shadow: none; } .ring.skm .sk2 .nm small { color: #6a4a20; } .ring.skm .sk2 .pv { color: #7a4e10; } .ring.skm .sk2 .pv.gold { color: #9a6a00; text-shadow: none; }
   .ring.skm .sk2.dis, .ring.skm .sk2:disabled { filter: grayscale(0.9); opacity: 0.55; }
   .ring.skm .sk2 .need1 { color: #8a4a0a; }
-  /* 💖 #88 팀 부활 0 = 위 가운데 작은 빨간 칸 · 0.8초 맥박(1초 3번 안) */
-  .rev0 { position: absolute; z-index: 30; left: 50%; top: 2%; transform: translateX(-50%); padding: 2px 12px; border-radius: 10px; background: #8e1010e6; border: 2px solid #ff6a5a; color: #fff; font: 800 13px var(--font-plain); white-space: nowrap; pointer-events: none; animation: rev0 0.8s ease-in-out infinite; }
-  @keyframes rev0 { 50% { background: #e8332ae6; box-shadow: 0 0 12px #ff3a2a; } }
-  @media (prefers-reduced-motion: reduce) { .rev0 { animation: none; } }
   /* ── 📜 #91 겹침 정리 (bughunt-1121) ── */
   .tag > b .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62px; }
   .hpb .hn .lv { margin-left: 3px; font: 700 8px var(--font-plain); color: #cfe; opacity: 0.85; }
@@ -1107,8 +1105,15 @@
   .ctr { left: 53%; } .stage.q .ctr { left: 50%; } /* ⑥ 끊기 = 파티 오른쪽 빈자리 (카드 열면 카드 위 가운데 그대로) */
   .brk { left: 53%; } .stage.q .brk { left: 50%; } /* ⑧ */
   .stage .bigmsg, .stage .bigmsg.note, .stage .bigmsg.sosmsg, .stage .bigmsg.rage, .stage .bigmsg.weak, .stage .bigmsg.slow { top: 1%; transform: translate(-50%, 0); max-width: 62%; padding: 2px 18px; border-radius: 12px; border-width: 2px; font-size: clamp(15px, 5.4vh, 22px); line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* ⑨ ⑫ 큰 알림 = 위 가운데 띠 한 줄 (보스 이름 · 체력 · 이름표 안 가림) */
-  .stage .revfx { top: 1%; transform: translate(-50%, 0); padding: 2px 16px; font-size: clamp(14px, 5vh, 20px); } /* ⑪ */
   .bsay { top: 53%; max-width: 26%; transform: translateX(calc(-100% - 6px)); } /* ⑨ 보스 대사 = 보스 왼쪽 빈자리 (이름 · 체력 · 분노 줄 · 실드 칸 안 가림 · 파티 오른쪽 끝 앞까지) */
   .stage.meet .bossui { z-index: 62; } /* 덤 · 조우 때 떨어지는 보스(61)가 이름 · 체력 막대 뒤로 */
-  .stage:has(.bigmsg) :is(.tgline, .reactb.mini, .rev0, .weakb), .stage:has(.revfx) :is(.tgline, .reactb.mini, .rev0) { visibility: hidden; } /* 한 번에 하나 = 큰 알림이 떠 있는 1 ~ 2초는 위 띠를 잠깐 숨김 */
+  .stage:has(.bigmsg) :is(.tgline, .reactb.mini, .weakb) { visibility: hidden; } /* 한 번에 하나 = 큰 알림이 떠 있는 1 ~ 2초는 위 띠를 잠깐 숨김 */
+  /* 🌀 📜 #92 10분 상한 */
+  .sage { position: absolute; z-index: 45; left: 1.5%; top: 9%; display: flex; align-items: center; gap: 6px; max-width: 40%; padding: 4px 10px 4px 4px; border-radius: 12px; background: #fff8e6f0; border: 2px solid #6a4ab8; color: #2a1a40; font: 800 13px var(--font-plain); box-shadow: 0 3px 10px #0008; animation: sagein 0.3s ease-out; pointer-events: none; }
+  .sage .face { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; border: 2px solid #6a4ab8; background-repeat: no-repeat; image-rendering: pixelated; }
+  .sage p { margin: 0; line-height: 1.3; } .sage b { display: block; font-size: 10px; color: #6a4ab8; }
+  @keyframes sagein { from { opacity: 0; translate: -10px 0; } }
+  .capt { position: absolute; z-index: 30; left: 50%; top: 9%; translate: -50% 0; padding: 1px 12px; border-radius: 10px; background: #2a1a50e6; border: 2px solid #b89aff; color: #fff; font: 900 15px var(--font); letter-spacing: 1px; pointer-events: none; }
+  .stage.capon::before { content: ''; position: absolute; inset: 0; z-index: 8; pointer-events: none; box-shadow: inset 0 0 60px 18px #2a0a4acc; animation: capedge 2.4s ease-in-out infinite; } @keyframes capedge { 50% { box-shadow: inset 0 0 80px 26px #3a0a5add; } }
+  @media (prefers-reduced-motion: reduce) { .stage.capon::before { animation: none; } }
 </style>

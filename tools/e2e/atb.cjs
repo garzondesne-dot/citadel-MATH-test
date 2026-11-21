@@ -169,9 +169,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     ok('요청 #27 보스가 칠 때 = 맞는 용사 위 몬스터 맞는 그림(레이드와 같은 mhitOf · MonHit) · 0.4초 뒤 사라짐', !!mh && !(await p.$('[data-k="mhit"]')), mh);
     const ak = await p.evaluate(() => globalThis.__atb.S.ev.filter((e) => e.k === 'boss').pop()?.kind), AH = { smash: 'smash', poison: 'poison', fire: 'fire', fire13: 'fire', ice: 'ice', frost: 'ice', tail: 'lash', tongue: 'lash', bind: 'lash', dark: 'beam', darkHit: 'beam', mirror: 'beam' };
     ok('요청 #40 ① 맞는 그림 = 공격 종류 먼저 (ATK_HIT) · 없으면 보스 짝', !!ak && (!AH[ak] || AH[ak] === mh), `${ak} → ${mh}`); }
-  await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.heroes[1].down = true; S.heroes[1].hp = 0; S.heroes[0].ch = 1; a.full(); }); await p.waitForTimeout(150);
-  await skc(p, 'revive'); await p.waitForTimeout(250);
-  ok('요청 #24 ⑤ 팀 부활 = 평소 숨김 · 쓸 때만 「💖 3 → 2」', /3 → 2/.test(await p.textContent('[data-k="atb-revfx"]').catch(() => '')));
+  await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.heroes[1].down = true; S.heroes[1].hp = 0; S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(150);
+  { const c0 = await p.textContent('[data-k="atb-cost-revive"]').catch(() => ''); await skc(p, 'revive'); await p.waitForTimeout(250);
+    const r = await p.evaluate(() => ({ up: !globalThis.__atb.S.heroes[1].down, ch: globalThis.__atb.S.heroes[0].ch, n: globalThis.__atb.S.rec.revives }));
+    ok('📜 #92 부활 = ⚡2(서포터) · 팀 횟수 판 없음 · 다음 부활은 ⚡3', r.up && r.ch === 0 && r.n === 1 && !(await p.$('[data-k="atb-revfx"]')) && !(await p.$('[data-k="atb-rev0"]')), JSON.stringify({ c0, ...r })); }
   // ⚡ 요청 #31 충전 기믹 = 카드 머리 조각 · 퍼펙트 +3 → 고치면 +2 · 구슬이 단추에 닿을 때 한 칸씩 · 가득 = 빛 고리 + 한 줄 · 메뉴 「⚡ n개 더 풀면」
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 0; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(400);
@@ -390,6 +391,21 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await v.tap('[data-k="atb-exit"]'); await v.waitForSelector('[data-k="atb-setup"]'); await v.waitForTimeout(300);
     const r = await v.evaluate(() => ({ ...globalThis.__lk, fsEl: !!document.fullscreenElement, rot: !!document.querySelector('[data-rot90]') }));
     ok('요청 #85 세로 390 연습방 → 판(돌림 상자) → 나가기 = 방향 잠금 0 · 전체 화면 0 · 설정 화면 세로', rot && r.lock === 0 && r.fs === 0 && !r.fsEl && !r.rot, JSON.stringify({ inBattleRot: rot, ...r }));
+    await v.close(); }
+  // 📜 요청 #92 10분 상한 = 7:00 현자 말풍선 + 가장자리 · 9:00 「1분 뒤 포털」 + 셈 · 10:00 후퇴 결과
+  { const v = await b.newPage({ viewport: { width: 844, height: 390 } }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(500);
+    const keep = () => v.evaluate(() => { const S = globalThis.__atb.S; S.heroes.forEach((h) => { h.hp = h.s.maxHp; h.down = false; }); S.bossHp = S.bossMax; });
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 419.8; }); await v.waitForTimeout(700);
+    const w = await v.evaluate(() => ({ sage: document.querySelector('[data-k="atb-sage"]')?.textContent ?? '', edge: document.querySelector('[data-k="atb-stage"]').classList.contains('capon') }));
+    await v.screenshot({ path: `${SHOTS}/atb-r92-sage-844.png` });
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 539.8; }); await v.waitForTimeout(700);
+    const c = await v.evaluate(() => ({ left: document.querySelector('[data-k="atb-cap-left"]')?.textContent ?? '', sage: document.querySelector('[data-k="atb-sage"]')?.textContent ?? '' }));
+    await v.screenshot({ path: `${SHOTS}/atb-r92-call-844.png` });
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 599.8; }); await v.waitForSelector('[data-k="atb-result"]', { timeout: 8000 }).catch(() => {}); await v.waitForTimeout(1500);
+    const r = await v.evaluate(() => ({ h: document.querySelector('[data-k="atb-result"] h2')?.textContent ?? '', why: document.querySelector('[data-k="atb-lose-why"]')?.textContent ?? '' }));
+    await v.screenshot({ path: `${SHOTS}/atb-r92-retreat-844.png` });
+    ok('📜 #92 7:00 현자 「균열이 불안정해지고 있다…」 + 가장자리 짙게 · 9:00 「1분 뒤 포털」 + 1:00 셈 · 10:00 = 「후퇴」 결과 · 현자가 불러들임', /균열이 불안정/.test(w.sage) && w.edge && /^🌀 (1:00|0:59)$/.test(c.left) && /1분 뒤 포털/.test(c.sage) && r.h === '후퇴' && /포털로 불러들였어요/.test(r.why), JSON.stringify({ w, c, r }));
     await v.close(); }
   // 📜 요청 #90 문제 카드 접기 · 펴기 = 빈 곳 누름 접힘(진행 그대로) · 띠 누름 올림 · ⚡ 가득 = 저절로 접힘(한 번) · ⚡ 0 = 저절로 올림
   for (const [w, h, nm] of [[844, 390, '가로 844'], [390, 844, '세로 390 돌림']]) {
