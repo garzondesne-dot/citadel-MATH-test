@@ -123,7 +123,7 @@ function bossAttack(S: State) {
   const kind = S.nextAtk ?? kindOf(S), A = ATK[kind], aoe = S.aoeNext;
   S.bossT = 0; S.bossN++; S.frozen = 0; if (S.forceAtk) S.forceAtk = null; else if (S.rage) S.rageN = (S.rageN ?? 0) + 1;
   const n = S.heroes.length, [one, all] = BOSS_HIT[S.diff][Math.max(1, Math.min(4, n)) - 1]!;
-  const base = (aoe ? all : one) * A.mul * (T.bossHitByNo[S.boss.no]?.[Math.max(1, Math.min(4, n)) - 1] ?? 1) * (S.rage ? RAGE.mul[S.diff] : 1), to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
+  const base = (aoe ? all : one) * A.mul * (T.bossAtkByNo[S.boss.no] ?? 1) * (T.bossHitByNo[S.boss.no]?.[Math.max(1, Math.min(4, n)) - 1] ?? 1) * (S.rage ? RAGE.mul[S.diff] : 1), to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
   if (S.guard) { S.guard = false; push(S, { k: 'guard', t: S.t, atk: A.name }); S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = ''; return; } // 🛡 오라 방패 = 이번 공격 통째로 막음
   const B = S.blocked; S.blocked = null;
   // 🛡 반응 막기 (📜 요청 #35): 특수 = 딜러가 끊음(안 나감) · 단일 = 탱커가 대신 맞음(절반 · 상태이상 없음) · 광역 = 서포터 결계(×0.7 · 상태이상 없음)
@@ -132,7 +132,7 @@ function bossAttack(S: State) {
   const tank = B?.how === 'cover' ? S.heroes[B.by] : null, hits = tank && !tank.down ? [tank.id] : to;
   for (const id of A.special === 'mirror' ? [] : hits) {
     const h = S.heroes[id]!, cut = (tank && id === tank.id ? 1 - T.role.tank.cover : h.cover ? 1 - h.cover : 1) * (B?.how === 'barrier' ? 1 - REACT_CFG.barrier : 1);
-    const d = base > 0 ? Math.max(1, Math.round(base * (1 - h.s.def) * cut)) : 0; dmg.push(d);
+    const d = base > 0 ? Math.min(Math.round(h.s.maxHp * T.oneHitCap), Math.max(1, Math.round(base * (1 - h.s.def) * cut))) : 0; dmg.push(d); // 🛡 한 방 상한 60% (요청 #46)
     if (d > 0) { if (!tank) h.cover = 0; h.hp = Math.max(0, h.hp - d); if (h.stunKind === 'sleep') { h.stunUntil = 0; h.stunKind = ''; } } // 수면 = 맞으면 깸
     const noStatus = !!B; // 막으면 얼음 · 느려짐 · 묶임 없음
     if (A.status === 'slow' && !noStatus) { h.slowUntil = S.t + T.slow[S.diff]; h.slowKind = kind; }

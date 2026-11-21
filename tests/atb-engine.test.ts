@@ -80,7 +80,7 @@ describe('ATB 엔진', () => {
   it('보스: 12초마다 · 2초 전 표적 · 세 번째 = 광역 · 엄호 −50% · 방어율', () => {
     const S = fresh(); tick(S, 10.05); expect(S.target?.length).toBe(1);
     const tg = S.heroes[S.target![0]!]!; S.heroes[1]!.ch = 1; full(S, 1); roleAct(S, 1, tg.id);
-    const hp0 = tg.hp; tick(S, 2); const hit = Math.round(BOSS_HIT.normal[3]![0] * (T.bossHitByNo[2]?.[3] ?? 1) * 1.5 * (1 - tg.s.def) * 0.5); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
+    const hp0 = tg.hp; tick(S, 2); const hit = Math.min(Math.round(tg.s.maxHp * T.oneHitCap), Math.round(BOSS_HIT.normal[3]![0] * (T.bossAtkByNo[2] ?? 1) * (T.bossHitByNo[2]?.[3] ?? 1) * 1.5 * (1 - tg.s.def) * 0.5)); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
     tick(S, 12); tick(S, 12); const ev = S.ev.filter((e) => e.k === 'boss'); expect(ev.map((e) => (e as { aoe: boolean }).aoe)).toEqual([false, false, true]);
   });
   it('쓰러짐: 친구가 충전 1 로 살림 · 팀 부활 3번 · 다 쓰면 한 명만 쓰러져도 실패 · 1인 = 바로 실패', () => {
@@ -306,5 +306,19 @@ describe('ATB 힐 개편 (요청 #46)', () => {
     const hp1 = S.heroes.map((h) => h.hp); hl.atb = 1; attack(S, hl.id, 'miss'); expect(S.heroes.map((h) => h.hp)).toEqual(hp1);
     expect(costOf(hl, 'equip')).toBe(2); expect(costOf(other(S), 'equip')).toBe(1);
     const p = skillPeek(S, hl.id, 'equip'), q = skillPeek(S, other(S).id, 'equip'); expect(p.cost).toBe(2); expect(q.cost).toBe(1);
+  });
+});
+
+// 🛡 📜 요청 #46 ①② 한 방 상한 60% · 차시 기본 피해
+describe('ATB 보스 피해 상한 · 차시 기본 피해 (요청 #46)', () => {
+  it('보스 한 번 피해 = 그 용사 최대 체력의 60% 넘지 않음 (광역 · 분노 포함)', () => {
+    const S = fresh(); const no = S.boss.no, old = T.bossAtkByNo[no];
+    (T.bossAtkByNo as Record<number, number>)[no] = 50; S.rage = true;
+    S.nextAtk = 'smash' as never; S.aoeNext = true; S.target = S.heroes.map((h) => h.id); S.bossT = T.bossEvery - 0.05; S.weakUntil = 0;
+    for (let i = 0; i < 40 && !S.ev.some((e) => e.k === 'boss'); i++) tick(S, 0.1);
+    const e = S.ev.find((x) => x.k === 'boss') as Extract<State['ev'][number], { k: 'boss' }>;
+    e.to.forEach((id, i) => expect(e.dmg[i]).toBeLessThanOrEqual(Math.round(S.heroes[id]!.s.maxHp * 0.6)));
+    expect(S.heroes.every((h) => !h.down)).toBe(true);
+    if (old == null) delete (T.bossAtkByNo as Record<number, number>)[no]; else (T.bossAtkByNo as Record<number, number>)[no] = old;
   });
 });
