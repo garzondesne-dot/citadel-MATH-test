@@ -15,6 +15,9 @@
   import HeroSprite from './HeroSprite.svelte';
   import HeroIntro from './HeroIntro.svelte';
   import SkillPreview from './SkillPreview.svelte';
+  import ArtVote from './ArtVote.svelte';
+  import { artKey } from '../../school/feedback';
+  import type { Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
 
@@ -22,7 +25,7 @@
   //   맨 위 카드(도트 · 오라 · +n · [호칭] 이름 · 테스터 배지 · 용사 · 속성 · Lv · 「용사 바꾸기 >」) → 탭 3 = 🔨 강화(처음) · ⚔ 스킬 · 🏅 기록
   //   고른 것은 저장 전까지 화면에서만(💎 가 빠져 보임) → 아래 막대 한 줄 「바뀐 것 · 되돌리기 · 💾 저장」 · 💎 를 쓰면 저장 때 가운데 확인 1번
   //   금빛 단추 늘 하나: 바뀐 것이 있으면 💾 저장 · 없으면 강화 탭의 「+n+1 으로 강화」
-  const { me, persist, onclose, teacher = false, onreset }: { me: Me; persist: () => void; onclose: () => void; /** 👩‍🏫 교사 B안 (📜 2026-11-13 밤): 용사 모두 열림(선생님 전용 포함) · 스킬은 직접 해금 · ↺ 처음으로 */ teacher?: boolean; onreset?: () => void } = $props();
+  const { me, persist, onclose, teacher = false, onreset, vS = null, vPid = 'me', vTrial = false }: { me: Me; persist: () => void; onclose: () => void; /** 🎨 #98 그림 👍 · 🔁 바꿈 (없으면 안 보임) */ vS?: Store | null; vPid?: string; vTrial?: boolean; /** 👩‍🏫 교사 B안 (📜 2026-11-13 밤): 용사 모두 열림(선생님 전용 포함) · 스킬은 직접 해금 · ↺ 처음으로 */ teacher?: boolean; onreset?: () => void } = $props();
   const snap = (): Look => ({ hero: me.hero, enh: me.enh, socket: { ...me.socket }, title: me.title || 'none', titles: { ...(me.titles || {}) } });
   let L0 = $state<Look>(untrack(snap));
   let look = $state<Look>(untrack(snap));
@@ -171,6 +174,7 @@
         <span class="chg">용사 바꾸기 ›{#if dots.hero}<i class="bdot" aria-label="살 수 있는 용사 있음"></i>{/if}</span>
       </span>
     </button>
+    {#if vS}<ArtVote S={vS} pid={vPid} k={artKey('hero', lkM)} trial={vTrial} />{/if}
     {#if teacher && onreset}<button type="button" class="treset" data-k="treset" onclick={() => (resetAsk = true)}>↺ 처음으로 되돌리기 <small>스킬 · 용사 · 💎 9,999 · 📜 30</small></button>{/if}
 
     <div class="htabs" role="tablist">
@@ -191,6 +195,7 @@
     {:else if tab === 'sk'}
       {#if tip96}<p class="tip">이제 용사마다 자기 속성 스킬만 · 다른 속성은 그 용사로</p>{/if}
       <SkillPreview hero={look.hero} enh={lv} fx={prev?.id ?? eq} n={prev?.n ?? 0} name={prev ? skillName(prev.id) : ''} sub={prev ? verdict(prev.tier) : ''} />
+      {#if vS && (prev?.id ?? eq)}<ArtVote S={vS} pid={vPid} k={artKey('skill', prev?.id ?? eq)} trial={vTrial} />{/if}
       <p class="lab">{fam.name} · 위 Ⅰ → 아래 Ⅳ</p>
       <div class="lad">
         {#each lad as id, i (id)}

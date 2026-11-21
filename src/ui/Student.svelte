@@ -1,4 +1,6 @@
 <script lang="ts">
+  import DiffAsk from './battle/DiffAsk.svelte';
+  import { TRIAL } from '../channel';
   import KeyGate from './q/KeyGate.svelte';
   import KeyChest from './q/KeyChest.svelte';
   import { serverNow } from './clock.svelte';
@@ -270,6 +272,7 @@
     explore={scout?.on && !board ? expLine(expOf(R, uid), mid) : ''}
     note={scout?.on ? '' : step.kind === 'boss' && bhp?.won ? '🏆 승리! 남은 문항도 풀 수 있어요' : down ? `💥 쓰러짐! 그래도 공격할 수 있어요${pracAll ? ` · 🔥 연습 타격 ${pracAll}번` : ''}` : ''}
     minions={crec && !scout?.on ? { n: crec.n - 1, stage: crec.done ? crec.n : crec.stage, downs: downs.filter((d) => d.down).map((d) => d.k) } : null} />
+  {#if down && step.kind === 'monster' && mid && !cardOnly && !board && !scout?.on}<DiffAsk {S} lid={L.id} mon={mid} pid={uid} trial={TRIAL} />{/if}<!-- 📊 #98 쓰러뜨린 뒤 난이도 한 번 -->
 {:else if result && R && !board && !paperOn()}
   <!-- 🎒 수업 결과 위 = 던전 배경 + 내 용사 승리 자세(오라) + 띠 (📜 2026-11-15 ⑦) -->
   <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} down note={bhp?.won ? '👑 보스 격파!' : result.mons.length && result.mons.every((m) => m.perfect) && (!result.boss || (result.boss.items > 0 && result.boss.ok >= result.boss.items)) ? '⚡ 퍼펙트!' : R.state.closed ? '🏁 수업이 끝났어요' : '🏁 수업 끝'} />

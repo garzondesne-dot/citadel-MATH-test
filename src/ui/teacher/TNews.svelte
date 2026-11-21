@@ -15,6 +15,7 @@
   import Sheet from '../battle/Sheet.svelte';
   import NoteSet from './NoteSet.svelte';
   import ChangeList from './ChangeList.svelte';
+  import TFeedback from './TFeedback.svelte';
   import { notePerm, notePref } from '../../school/notify.svelte';
   import { chanOf, upTo } from '../../school/changes';
   import { BUILD, BUILD_ID } from '../../build';
@@ -25,7 +26,7 @@
 //   보내기 = 📮 메시지(받는 사람 [반 전체 | 학생 고르기] · 💎 같이 · #130) · 🎁 친구 선물 켜기(반마다) · 📝 설문(차시 ▾ · 모든 반 열기 · 닫기)
   const { S, packs, onread }: { S: Store; packs: LessonPack[]; onread: () => void } = $props();
   let seg = $state<'in' | 'box' | 'out'>('in');
-  let side = $state<'' | 'note' | 'changes'>(''); // 🔔 알림 · 📜 바뀐 것 = 소식 탭 위 작은 단추 둘 (📜 2026-11-17 #21 A · 옛 「나」 탭)
+  let side = $state<'' | 'note' | 'changes' | 'fbk'>(''); // 🔔 알림 · 📜 바뀐 것 = 소식 탭 위 작은 단추 둘 (📜 2026-11-17 #21 A · 옛 「나」 탭)
   let kind = $state<'' | InboxItem['kind']>('');
   let ver = $state(0), open = $state(''), toast = $state('');
   // 📷 사진 승인 (📜 2026-11-15 머리 🔨): ⏳ 확인 필요 · 🙋 이의 신청 = 「📷 사진」 칩 한 줄씩 · 빨간 점(✔ ✖ 하기 전까지) · 누르면 그 자리에서 ✔ 처치 인정 / ✖ 그대로 → 목록에서 빠짐
@@ -88,7 +89,7 @@
   function svSet(list: string[], on: boolean) { const no = keepNo(svNo); svNo = no; for (const c of list) setOpen(S, c, on, no); ver++; say(on ? `📝 ${no}차시 설문을 열었어요` : '📝 설문을 닫았어요'); }
 </script>
 
-<div class="tbar"><div class="t">소식</div><button type="button" class="tchip" data-k="news-note" onclick={() => (side = 'note')}>{notePref.on && notePerm() === 'granted' ? '🔔' : '🔕'} 알림</button><button type="button" class="tchip" data-k="changes" onclick={() => (side = 'changes')}>📜 바뀐 것</button></div>
+<div class="tbar"><div class="t">소식</div><button type="button" class="tchip" data-k="news-fbk" onclick={() => (side = 'fbk')}>🛠 의견</button><button type="button" class="tchip" data-k="news-note" onclick={() => (side = 'note')}>{notePref.on && notePerm() === 'granted' ? '🔔' : '🔕'} 알림</button><button type="button" class="tchip" data-k="changes" onclick={() => (side = 'changes')}>📜 바뀐 것</button></div>
 <div class="fixed">
   <div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'in'} aria-selected={seg === 'in'} onclick={() => (seg = 'in')}>받은 것 {unread}</button><button type="button" role="tab" class:on={seg === 'box'} aria-selected={seg === 'box'} data-k="news-box" onclick={() => (seg = 'box')}>🗂 보관함 {boxList.length}</button><button type="button" role="tab" class:on={seg === 'out'} aria-selected={seg === 'out'} onclick={() => (seg = 'out')}>보내기</button></div>
   {#if seg !== 'out'}<div class="chips">{#each [['', '전체'], ['idea', '💬 의견'], ['photo', '📷 사진'], ['quiz', '✏ 출제'], ['survey', '📝 설문']] as const as [k, t] (k)}<button type="button" class:on={kind === k} data-chip={k} onclick={() => (kind = k)}>{t}{k === 'photo' && phItems.length ? ` ${phItems.length}` : k === 'quiz' && qItems.length ? ` ${qItems.length}` : ''}</button>{/each}</div>{/if}
@@ -157,6 +158,8 @@
     {#snippet title()}🔔 알림 · 이 교사 폰{/snippet}
     <NoteSet {S} />
   </Sheet>
+{:else if side === 'fbk'}
+  <TFeedback {S} onclose={() => (side = '')} /><!-- 🛠 #98 학생 의견 · 그림 · 난이도 -->
 {:else if side === 'changes'}
   <Sheet onclose={() => (side = '')} tall mainText="닫기">
     {#snippet title()}📜 바뀐 것 · 지금 {BUILD_ID}{/snippet}

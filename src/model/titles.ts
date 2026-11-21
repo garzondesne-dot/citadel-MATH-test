@@ -66,6 +66,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   board_legend: (d) => legendOf(starsByNo(bRecs(d)), mapLessons(PACKS)),
   guard1: (d) => fameOf(bRecs(d)) >= 3, guard2: (d) => fameOf(bRecs(d)) >= 10, guard3: (d) => fameOf(bRecs(d)) >= 25,
   hallmaker: (d) => logKeys(d).some((k) => k.startsWith('quest_p_')), // 🏛 #75 명예의 전당
+  improver: (d) => logKeys(d).some((k) => k.startsWith('fbk_')), // 🛠 #98 개선단 = 의견 채택(받을 때 💎 로그 fbk_{id})
   writer: (d) => photoPass(d) >= 3,
   hunter: () => false, // 📕 오답노트 = 베타에 아직 없음
   wall: (d) => (Number((isObj(d.xr?.ttl) ? (d.xr!.ttl as Obj) : {}).wall) || 0) >= 30,

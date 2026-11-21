@@ -1376,6 +1376,12 @@
    "cond": "✏ 내 문제가 🏛 명예의 전당에 오름"
   },
   {
+   "id": "improver",
+   "name": "🛠 개선단",
+   "tier": "o",
+   "cond": "💬 내 의견이 처음 채택됨"
+  },
+  {
    "id": "board_explore",
    "name": "던전 탐험가",
    "tier": "b",

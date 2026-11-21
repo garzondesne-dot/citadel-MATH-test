@@ -2,6 +2,8 @@ import './trial/shim'; // 👩‍🏫 체험판 = 이 탭 저장 (맨 먼저 · 
 import { TEST_ADDR, TRIAL } from './channel'; // 🧪 맨 먼저 = 출시 주소면 시험 고리 잠금 (출시 막는 것 9)
 import './oldUrl'; // 🔗 옛 정식 주소(?code= · &key=)를 지금 꼴로 · 키는 주소에서 곧바로 지움 (출시 막는 것 8)
 import { mount } from 'svelte';
+import { startTrace } from './ui/trace';
+startTrace(); // 🐞 #98 버그 의견 자동 글(마지막 단추 20 · 오류) = 이 기기 메모리에만
 // 🔍 iOS 사파리는 user-scalable=no 를 무시 → 두 손가락 확대 · 두 번 톡 확대를 직접 막음 (📜 2026-11-16 선생님 「줌이 당겨짐 · 안 당겨지게」)
 if (typeof document !== 'undefined') {
   const stop = (e: Event) => e.preventDefault();
