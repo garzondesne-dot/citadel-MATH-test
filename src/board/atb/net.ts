@@ -67,6 +67,7 @@ export interface AtbEnd {
   merit: { clear: number; star: number; first: number; act: number; role: number }; meritSum: number;
   gem: { items: number; clear: number; guard: number; star: number }; gemSum: number;
   role: string; mission: boolean; why: string;
+  /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; rescue: number; cut: number; brk: number };
 }
 /** 내 판 결과 · prevStars = 그 차시 지금까지 최고 별(0 ~ 3) */
 export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }): AtbEnd {
@@ -77,5 +78,5 @@ export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }):
   const guardN = g.covers + g.heals + g.revives + g.shields + (g.blocks ?? 0) + (g.rescues ?? 0);
   const gem = { items: k(Math.min(GEM.itemMax, g.right * GEM.perItem)), clear: k(win ? GEM.clear : 0), guard: k(Math.min(GEM.guardMax, guardN * GEM.perGuard)), star: newStars * GEM.star };
   const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
-  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '' };
+  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0 } };
 }

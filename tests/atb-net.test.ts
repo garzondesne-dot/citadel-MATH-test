@@ -35,7 +35,7 @@ describe('ATB 판 결과 = 공적 · 💎 · ⭐ 골고루 (요청 #51)', () => 
     const r = atbResultFor(won(), 0, { prevStars: 1 });
     expect(r.stars).toBe(3); expect(r.newStars).toBe(2);
     expect(r.merit).toEqual({ clear: 10, star: 10, first: 10, act: 4, role: 5 }); expect(r.meritSum).toBe(39); expect(r.mission).toBe(true);
-    expect(r.gem).toEqual({ items: 30, clear: 10, guard: 8, star: 40 }); expect(r.gemSum).toBe(88);
+    expect(r.gem).toEqual({ items: 30, clear: 10, guard: 8, star: 40 }); expect(r.gemSum).toBe(88); expect(r.acts).toEqual({ block: 2, rescue: 0, cut: 0, brk: 0 });
   });
   it('⭐3 다 모은 차시 = 공적 · 💎 절반 · 새 별 0 · 진 판 = 별 0', () => {
     const r = atbResultFor(won(), 0, { prevStars: 3 }); expect(r.full).toBe(true); expect(r.newStars).toBe(0);
