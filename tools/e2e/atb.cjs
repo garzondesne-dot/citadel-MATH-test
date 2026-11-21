@@ -16,7 +16,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"]') && !document.querySelector('.me'), foot: document.querySelectorAll('.hero .tag .thin.atb').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs .hrt').length, gear: !!document.querySelector('[data-k="atb-gear"]'), hpb: document.querySelectorAll('[data-k="atb-hpb"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
   ok('① 가로 무대 = 용사 4 · 아래 단추 3(공격 · 문제 풀이 · 스킬) · 팀 부활 숨김 · ⚙ · 머리 위 HP 4 · 보스 그림(요청 #24)', st.heroes === 4 && st.btn === 3 && st.revs === 0 && st.gear && st.hpb === 4 && st.boss, JSON.stringify(st));
   ok('요청 #14 이름표 = Lv · 이름 · 계열 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /Lv\.\d/.test(await p.textContent('.hero .tag > b')) && !!(await p.$('.hero .tag [data-k="fam-shield"]')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
-  ok('Y9 몬스터 = 랜덤 던전 그림(2차시 = d01)', /^d01:/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
+  ok('Y9 · #98-b 몬스터 = 컨셉 몬스터(2차시 = 흑표범 new6)', /^(new6:0|cm5-a:0)/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
   await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
   // 🆘 요청 #18 위험 체력 = 30% 아래 빨갛게 깜박 + 🆘 + 친구 화면 한 줄 · 나 = 초상 빨강 · 회복하면 꺼짐
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[1].hp = Math.floor(a.S.heroes[1].s.maxHp * 0.2); a.S.heroes[0].hp = Math.floor(a.S.heroes[0].s.maxHp * 0.2); }); await p.waitForTimeout(200);

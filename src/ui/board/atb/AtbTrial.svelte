@@ -30,7 +30,7 @@
     const mates = MATES.map((n) => HEROES.find((h) => h.name === n)?.id ?? 0).filter((id) => id !== hero).slice(0, 3);
     const lv = levelOf(xp), ids = [hero, ...mates];
     const party = ids.map((id, i) => statsOf({ hero: id, lv: i ? 1 : lv, enh: i ? 0 : enh, tier: i ? 1 : tierOf(id, fxOf(id)), name: String(heroOf(id).name) }));
-    const art = bossArt(bossOf(p.no), 'normal'); bg = art.bg;
+    const art = bossArt(bossOf(p.no), 'normal', p.theme); bg = art.bg;
     const seed = 1 + Math.floor(Math.random() * 9999);
     S = newBattle({ boss: art, diff: 'normal', party, seed });
     bots = S.heroes.map((h) => newBot(p, h.id, 'normal', seed)).filter((b) => b.who !== 0);

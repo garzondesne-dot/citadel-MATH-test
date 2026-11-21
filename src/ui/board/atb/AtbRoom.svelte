@@ -51,7 +51,7 @@
     if (seedNew) seed = 1 + Math.floor(Math.random() * 9999); // 📜 요청 #19 덧2 = 연습방 씨앗 기본 「매번 새로」
     const g = GROW[grow], ids = mode === 'play' ? [meHero, ...mates.slice(0, size - 1)] : mates.slice(0, size);
     const party = ids.map((id) => statsOf({ hero: id, lv: g.lv, enh: g.enh, tier: tierFor(id), name: nameOf(id), awk: grow === 'awk' }));
-    const art = bossArt(bossOf(L.no), diff); bg = art.bg;
+    const art = bossArt(bossOf(L.no), diff, L.theme); bg = art.bg;
     const B = newBattle({ boss: art, diff, party, seed });
     if (start === 'shield' || start === 'one') { B.bossHp = Math.round(B.bossMax * T.shieldAt) - 1; B.shieldUp = true; B.shieldAt = 0; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); if (start === 'one') B.cells.forEach((c, i) => { if (i > 0) { c.broken = true; c.by = c.owner; } }); }
     if (start === 'aoe') { while (!B.ev.some((e) => e.k === 'boss' && e.aoe) && B.t < 60) tick(B, 0.1); }

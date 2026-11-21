@@ -32,7 +32,7 @@
   const isHost = $derived(!!meta && host === uid);
   const me = $derived(meta ? slotOf(meta, uid) : -1);
   const L = $derived(meta ? (PACKS.find((p) => p.id === meta!.lid) ?? PACKS.find((p) => p.no === meta!.no && !p.partOf) ?? null) : null);
-  const art = $derived(meta ? bossArt(bossOf(meta.no), meta.diff) : null);
+  const art = $derived(meta ? bossArt(bossOf(meta.no), meta.diff, L?.no === meta.no ? L.theme : undefined) : null);
   /** 👥 자리 이름: 나 = 「나」 · 친구 = 실명 · 봇 = 「🤖 모험가 A」 */
   const labels = $derived.by(() => { const o: Record<number, string> = {}; let b = 0; meta?.slots.forEach((s, i) => { o[i] = isBot(s) ? `🤖 모험가 ${'ABCD'[b++]}` : s.uid === uid ? '나' : (names[s.uid] ?? s.nick ?? heroOf(s.hero).name); }); return o; });
   /** 📜 #80 컷인 이름 = 나도 실명(명단 이름 · 없으면 별명 · 용사 이름) · 봇 = 용사 이름 (모든 폰 같은 meta → 같은 글) */

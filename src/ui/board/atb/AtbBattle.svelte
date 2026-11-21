@@ -7,7 +7,7 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { Given, LessonPack } from '../../../model/types';
   import { heroOf, ladder, skillName, SKILL_NAMES } from '../../../model/hero';
-  import { dungeonOf } from '../../manifest';
+  import { dungeonOf, spriteOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
@@ -130,6 +130,8 @@
   let open = $state(false), run = $state<Run | null>(null), flash = $state(''), hintUsed = $state(false), done: Record<string, number> = {};
   let fT: ReturnType<typeof setTimeout> | undefined;
   const meH = $derived(me >= 0 ? S.heroes[me] : null);
+  /** 📜 #98-b 3칸 시트(대기 · 공격 · 쓰러짐) = 대기 B · 맞음 칸이 없음 → 코드로(숨쉬기 · 움찔) · 5칸 시트면 그림 칸 그대로 */
+  const bSheet3 = $derived.by(() => { const p = spriteOf(S.boss.sprite).sheet.poses; return { idleB: p.idleB != null, hit: p.hit != null }; });
   function openQuiz() {
     if (!run) { const mine = S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken); const o = nextOrigin(OS, done, mine && meH && !meH.ch ? easiestOf(OS)?.mid : null); if (o) run = freshRun(o.mid); hintUsed = false; }
     open = true;
@@ -644,7 +646,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
+  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:soft-idle={bossPose === 'idle' && !bSheet3.idleB} class:soft-hit={bossPose === 'hit' && !bSheet3.hit} class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -764,7 +766,10 @@
   .dome .shd { position: absolute; left: 50%; top: 40%; width: 14px; height: 10px; background: var(--dc); clip-path: polygon(0 0, 100% 30%, 40% 100%); opacity: 0; animation: shd 0.6s ease-out 0.3s forwards; transform: rotate(var(--r)); }
   @keyframes shd { 0% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: calc(cos(var(--r)) * 90px) calc(sin(var(--r)) * 60px); } }
   @media (prefers-reduced-motion: reduce) { .dome, .dome .rip, .dome .shd { animation-duration: 0.01s; } }
-  .bflip { display: block; } .bflip.flip { transform: scaleX(-1); } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
+  .bflip { display: block; } .bflip.flip { transform: scaleX(-1); }
+  .bflip.soft-idle { animation: bsoft-idle 1.6s ease-in-out infinite; } @keyframes bsoft-idle { 50% { translate: 0 -2px; } } /* 📜 #98-b 3칸 시트 대기 = 위아래 2px 숨쉬기 */
+  .bflip.soft-hit { animation: bsoft-hit 0.38s ease-out; } @keyframes bsoft-hit { 0% { translate: 0 0; filter: brightness(3) saturate(0); } 30% { translate: 7px 0; filter: brightness(2.2) saturate(0.3); } 100% { translate: 0 0; filter: none; } } /* 맞음 = 뒤(오른쪽)로 움찔 + 흰 번쩍 */
+  @media (prefers-reduced-motion: reduce) { .bflip.soft-idle { animation: none; } } /* 몬스터는 늘 왼쪽(용사 쪽)을 봄 · 시트마다 · 자세마다 다름 = tune.ts BOSSES.flip */
   .boss { position: absolute; top: 74%; transform: translate(-50%, -100%); z-index: 11; transition: left 0.45s ease; }
   .hero { position: absolute; transition: left 0.45s ease, top 0.45s ease; }
   .hero .spr { position: absolute; left: 0; top: 0; z-index: var(--zi); } /* 앞 용사 몸 = 뒤 용사 몸 위 · 이름표 · 배지 = 모든 몸 위 (요청 #15) */
