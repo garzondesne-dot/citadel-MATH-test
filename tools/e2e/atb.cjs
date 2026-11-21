@@ -152,7 +152,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(450);
   { const k0 = await p.textContent('[data-k="atb-qtitle"]'); await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(120);
     await skc(p, 'equip'); await p.waitForTimeout(400);
-    ok('요청 #24 덧붙임 문제 카드 제목 = 「n차시 학습지 · 문제 k (소문항) · i/전체」', /^2차시 학습지 · 문제 \d+(·\d+)? \((\d+|졸개 \d+|대장)\) · \d+\/\d+$/.test(k0), k0);
+    ok('요청 #24 · #89 문제 카드 제목 = 「문제 k (소문항) · i/전체」(차시 꼬리 뗌)', /^문제 \d+(·\d+)? \((\d+|졸개 \d+|대장)\) · \d+\/\d+$/.test(k0), k0);
     ok('요청 #24 ③ 풀이 중에도 스킬 · 쓴 뒤 문제 그대로', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 1 && !!(await p.$('[data-k="atb-quiz"]')) && (await p.textContent('[data-k="atb-qtitle"]')) === k0, k0); }
   await p.waitForTimeout(1200);
   await p.click('[data-k="atb-autotgl"]'); await p.waitForTimeout(100);
