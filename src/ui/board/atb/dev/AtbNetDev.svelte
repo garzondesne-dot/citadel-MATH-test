@@ -15,7 +15,7 @@
   const meta: Meta = { v: 1, pid: 'dev', lid: L.id, no: 2, diff: 'normal', seed: 11, t0: Date.now(), slots: [
     { uid: 's1_3_1', cls: '1-3', num: 1, hero: id('로안'), lv: 1, enh: 1, tier: 1, nick: 'A' }, { uid: 's1_3_2', cls: '1-3', num: 2, hero: id('발도르'), lv: 1, enh: 1, tier: 1, nick: 'B' },
     { bot: 'normal', hero: id('루멘') }, { bot: 'normal', hero: id('누아') }] };
-  if (two && !store.get('atb/dev/meta')) store.set('atb/dev/meta', meta);
+  if (!store.get('atb/dev/meta')) store.set('atb/dev/meta', meta); // 한 대만 열어도 됨 (빈 친구 자리 = 봇이 이어받음)
   const names = { s1_3_1: '테스트 가', s1_3_2: '테스트 나' };
 </script>
 
