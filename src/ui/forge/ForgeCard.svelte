@@ -10,6 +10,7 @@
   const GN: Record<number, string> = { 1: '일반', 2: '매직', 3: '레어' };
   const s = $derived(w / K.w);
   const i = $derived(A.map[card.id] ?? card.art ?? 0);
+  const noArt = $derived(i >= A.cols * A.rows); // 📈 #58 함수 카드 그림(16 ~ 25 · 새 시트)이 오기 전 = 빈 그림 칸 + 📈
   const box = (b: [number, number, number, number]) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px`;
   const fmLen = $derived(String(card.fm).length), nm = $derived(card.short || card.name);
   const showName = $derived(!unknown || wish);
@@ -20,7 +21,7 @@
     <img class="fr" src={artUrl(K.frame)} alt="" width={K.w} height={K.h} />
     <img class="fr" src={artUrl(K.frame)} alt="" width={K.w} height={K.h} style:clip-path="inset({B.gem[1]}px {K.w - B.gem[0] - B.gem[2]}px {K.h - B.gem[1] - B.gem[3]}px {B.gem[0]}px)" style:filter={GEM[card.grade] || 'none'} />
     <div class="top" style={box(B.top)}>{#if !unknown}<span class="tag">{GN[card.grade]}</span><span class="pg">{card.page}</span>{/if}</div>
-    <div class="art" style={box(B.art)} style:background-image="url({artUrl(A.src)})" style:background-size="{A.cols * 100}% {A.rows * 100}%" style:background-position="{((i % A.cols) / (A.cols - 1)) * 100}% {A.rows > 1 ? (Math.floor(i / A.cols) / (A.rows - 1)) * 100 : 0}%"></div>
+    <div class="art" class:none={noArt} style={box(B.art)} style:background-image={noArt ? undefined : `url(${artUrl(A.src)})`} style:background-size="{A.cols * 100}% {A.rows * 100}%" style:background-position="{((i % A.cols) / (A.cols - 1)) * 100}% {A.rows > 1 ? (Math.floor(i / A.cols) / (A.rows - 1)) * 100 : 0}%"></div>
     <div class="desc" style={box(B.desc)}>{#if unknown}<span class="hint">💡 {card.hint}</span>{:else}<span>{card.desc}</span>{/if}</div>
     <div class="fm" style={box(B.fm)}>{#if unknown && !wish}<b class="q">? ? ?</b>{:else}<b class="f" class:mid={fmLen > 9} class:long={fmLen > 16}>{card.fm}</b>{/if}</div>
     <div class="plate" style={box(B.plate)}><b class:long={nm.length > 7}>{showName ? nm : '? ? ?'}</b></div>
@@ -48,4 +49,6 @@
   .q { font-size: 40px; color: #6b7a99; }
   .plate { display: flex; align-items: center; justify-content: center; }
   .plate b { color: #4a2c0a; text-shadow: 0 1px 0 #fff5d6; font-size: 26px; white-space: nowrap; } .plate b.long { font-size: 19px; }
+  .art.none { display: grid; place-items: center; background: radial-gradient(circle, rgba(255, 220, 140, 0.25), rgba(0, 0, 0, 0.35)); }
+  .art.none::after { content: '📈'; font-size: 64px; opacity: 0.8; }
 </style>

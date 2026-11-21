@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { SUBJ } from '../../engine/subject';
   const BY = SUBJ.symtalk?.BY ?? {}, SYM_CARD = SUBJ.cards?.bySym ?? {}; // 과목 팩 (#136)
   import { useMe } from '../../store/me.svelte';
@@ -14,6 +15,9 @@
   const made = $derived(!!card && !!M.me.cards?.[card.id]);
   const wished = $derived(!!symState.open && !!M.me.wishes?.[symState.open]);
   let toast = $state(''), t: ReturnType<typeof setTimeout> | null = null;
+  // ⭐ 📜 #58 기호를 누르면 그 카드를 저절로 찜 (아직 안 만든 카드 · 한 번만 · 단추로 끌 수 있음) — 찜은 폰 칸(체험판 = 이 탭)
+  let autoDone = '';
+  $effect(() => { const id = symState.open; if (!id || !card || made || autoDone === id) return; autoDone = id; if (M.me.wishes?.[id]) return; untrack(() => { M.me.wishes = { ...(M.me.wishes || {}), [id]: true }; M.save(); toast = `⭐ ${card.name} 카드를 모루에 찜했어요`; if (t) clearTimeout(t); t = setTimeout(() => (toast = ''), 1500); }); });
   function wish() {
     const id = symState.open; if (!id || !card) return;
     M.me.wishes = { ...(M.me.wishes || {}) };

@@ -18,9 +18,28 @@
   // ⚒ 모루 (#148 · 정식 js/raid/forge.js 「C안」 + 시안 44dEkAKGELJTBPUs2gkwnD ①~④) — 정식 그림 · 틀 그대로(forgec 바탕 · 모루 · 재료 흰 틀 · 연산 검은 틀 · 고른 칸 푸른 빛 · 망치)
   //   엄격 연성 · 모두 열림(진도 상관없음) · 처음 만든 카드 = 마력 예제를 맞혀야 완성 · 실패 = 💡 힌트 조각 +1(최대 9 · 처음 2) · 첫 카드 💎 +3(하루 한도 밖) · 카드는 공격에 안 씀
   //   테마가 바뀌어도 모루 그림은 그대로 · 위 막대 · 아래 단추만 테마 · ⭐ 찜(기호 톡) = 위 칩 줄 · 💡 목록 맨 위 · 도감 금빛 테두리
-  const { me, save, who, onclose }: { me: Me; save: () => void; who: string; onclose: () => void } = $props();
+  const { me, save, who, reach = 0, onclose }: { me: Me; save: () => void; who: string; /** 반 진도 (첫 단원 탭 · 14 이상 = 📈 함수) */ reach?: number; onclose: () => void } = $props();
   const U = SUBJ.forge!.unit, NO = 99; // 2026-11-05 결정: 연성 도감은 진도와 상관없이 모두 열림
   const BYSYM = SUBJ.cards?.bySym ?? {};
+  // 📦 📜 #58 단원 탭 (과목 팩 UNITS · 📦 · 📈) = 처음 = 이 기기에 기억한 탭 · 없으면 반 진도(14 이상 → 함수) · 찜 배너는 두 단원 모두
+  const UNITS = U.UNITS ?? [{ id: 'set', name: '전체', icon: '📦', from: 0 }];
+  const UTK = 'citadel-v1-anvil-unit';
+  let utab = $state<string>(untrack(() => { try { const v = localStorage.getItem(UTK); if (v && UNITS.some((u) => u.id === v)) return v; } catch { /* 무시 */ } return [...UNITS].reverse().find((u) => reach >= u.from)?.id ?? UNITS[0]!.id; }));
+  const setU = (id: string) => { utab = id; try { localStorage.setItem(UTK, id); } catch { /* 무시 */ } };
+  const unitOf = (c: Card) => c.unit ?? UNITS[0]!.id;
+  const UC = $derived(UNITS.length > 1 ? U.CARDS.filter((c) => unitOf(c) === utab) : U.CARDS);
+  const usedOps = $derived(new Set(UC.flatMap((c) => U.recipes(c).map((r) => r.op))));
+  const usedMats = $derived(new Set(UC.flatMap((c) => U.recipes(c).flatMap((r) => r.in)).filter((x) => !x.startsWith('card:'))));
+  const first = UNITS[0]!.id, ofU = (x: { unit?: string }) => x.unit ?? first;
+  const OPS_U = $derived(UNITS.length > 1 ? U.OPS.filter((o) => ofU(o) === utab || (utab !== first && usedOps.has(o.id))) : U.OPS); // 첫 단원 = 원래 연산 모두 · 다른 단원 = 제 연산 + 레시피에 쓰는 원래 연산
+  const MATS_U = $derived(UNITS.length > 1 ? U.MATS.filter((m) => ofU(m) === utab || (utab !== first && usedMats.has(m.id))) : U.MATS);
+  /** 🧭 먼저 만들 카드 = 레시피 재료 카드 중 아직 안 가진 것 (그 재료의 재료까지 거슬러 올라가 맨 처음 것) */
+  function firstNeed(c: Card, seen = new Set<string>()): Card | null {
+    if (seen.has(c.id)) return null; seen.add(c.id);
+    for (const x of U.recipes(c)[0]?.in ?? []) { if (!x.startsWith('card:')) continue; const k = U.card(x.slice(5)); if (k && !owned[k.id]) return firstNeed(k, seen) ?? k; }
+    return null;
+  }
+  function goCard(c: Card) { if (unitOf(c) !== utab) setU(unitOf(c)); focusId = c.id; view = 'list'; }
   // CSS 변수(url) 로 넘기므로 절대 주소
   const IMG = { bg: absArt('art/forge/forgec-background-v2.webp'), anvil: absArt('art/forge/forgec-anvil-v2.webp'), mat: absArt('art/forge/forgec-material-v2.webp'), op: absArt('art/forge/forgec-operator-v2.webp'), pick: absArt('art/forge/forgec-button-v2.webp'), hammer: absArt('art/forge/forgec-hammer-v2.webp') };
   const owned = $derived(me.cards || {});
@@ -102,25 +121,26 @@
   }
   function keep() {
     if (!reveal) return;
-    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; me.wallet.gem += 3; { const b = meBound(); if (b) b.S.set(`gem/${b.cls}/${b.num}/log/card_${reveal.c.id.replace(/[.#$/[\]]/g, '_')}`, { g: 3, at: Date.now(), why: '첫 카드' }); } save(); perkCheck(reveal.c.id); } // 💰 #65 log card_ (정식 키 그대로) // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
+    if (reveal.first) { me.cards = { ...(me.cards || {}), [reveal.c.id]: true }; { const cid = reveal.c.id; if (me.wishes && Object.keys(me.wishes).some((r) => BYSYM[r]?.id === cid)) me.wishes = Object.fromEntries(Object.entries(me.wishes).filter(([r]) => BYSYM[r]?.id !== cid)) as typeof me.wishes; } /* ⭐ #58 만들면 그 카드 찜 지움 */ me.wallet.gem += 3; { const b = meBound(); if (b) b.S.set(`gem/${b.cls}/${b.num}/log/card_${reveal.c.id.replace(/[.#$/[\]]/g, '_')}`, { g: 3, at: Date.now(), why: '첫 카드' }); } save(); perkCheck(reveal.c.id); } // 💰 #65 log card_ (정식 키 그대로) // 첫 카드 💎 +3 (하루 한도 밖 · 정식 G.card)
     reveal = null; slots = { l: null, op: null, r: null }; pickK = 'l'; msg = '연산을 고르고 재료 · 연산 · 재료를 올려 두드려요';
   }
   // ── ③ 💡 목록 · ④ 도감 ──
   let view = $state<'forge' | 'list' | 'book'>('forge'), focusId = $state('');
-  const haveN = $derived(U.CARDS.filter((c) => owned[c.id]).length);
-  const nos = [...new Set(U.CARDS.map((c) => c.no))].sort((a, b) => a - b);
+  const haveN = $derived(UC.filter((c) => owned[c.id]).length);
+  const nos = $derived([...new Set(UC.map((c) => c.no))].sort((a, b) => a - b));
   const secOf = (n: number) => [...new Set(U.CARDS.filter((c) => c.no === n).map((c) => c.sec))].join(' · ');
   function reveal1(id: string) { if (!hint.pts) return; hintSet({ pts: hint.pts - 1, lv: { ...hint.lv, [id]: (hint.lv[id] || 0) + 1 } }); }
   let chip = $state<'all' | 'wish' | number>('all'), zoom = $state<Card | null>(null);
-  const bookCards = (n: number) => U.CARDS.filter((c) => c.no === n && (chip === 'all' || (chip === 'wish' ? wishIds.has(c.id) : chip === n)));
-  const putCards = $derived(U.CARDS.filter((c) => owned[c.id]));
+  const bookCards = (n: number) => UC.filter((c) => c.no === n && (chip === 'all' || (chip === 'wish' ? wishIds.has(c.id) : chip === n)));
+  const putCards = $derived(UC.filter((c) => owned[c.id]));
 </script>
 
 <div class="fg" role="dialog" aria-label="모루" style:--bg="url({IMG.bg})" style:--mat="url({IMG.mat})" style:--op="url({IMG.op})" style:--pick="url({IMG.pick})">
   <div class="bar"><button type="button" class="back" aria-label={view !== 'forge' ? '모루로' : '캠프로'} onclick={() => (view !== 'forge' ? (view = 'forge') : onclose())}>‹</button><b class="t">{view === 'book' ? '📖 도감' : view === 'list' ? '💡 만들 수 있는 카드' : '⚒ 모루'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
+  {#if UNITS.length > 1}<div class="utabs" role="tablist" aria-label="단원">{#each UNITS as u (u.id)}{@const left = U.CARDS.filter((c) => unitOf(c) === u.id && wishIds.has(c.id) && !owned[c.id]).length}<button type="button" role="tab" class:on={utab === u.id} aria-selected={utab === u.id} data-unit={u.id} onclick={() => setU(u.id)}>{u.icon} {u.name}{#if left}<i class="wn">★{left}</i>{/if}</button>{/each}</div>{/if}
   {#if view === 'forge'}
-    {#if wishCards.length}<div class="wishes" role="group" aria-label="찜한 카드">{#each wishCards as c (c.id)}<button type="button" onclick={() => { focusId = c.id; view = 'list'; }}>⭐ {c.short || c.name}</button>{/each}</div>{/if}
-    <div class="shelf ops" role="group" aria-label="연산">{#each U.OPS as o (o.id)}<button type="button" class="tile op mini" class:on={slots.op === o.id} class:long={o.sym.length > 3} onclick={() => putOp(o.id)}>{o.sym}</button>{/each}</div>
+    {#if wishCards.length}<div class="wishes" role="group" aria-label="찜한 카드">{#each wishCards as c (c.id)}<button type="button" onclick={() => goCard(c)}>⭐ {c.short || c.name}{#if UNITS.length > 1 && unitOf(c) !== utab}<small> · {UNITS.find((u) => u.id === unitOf(c))?.icon}</small>{/if}</button>{/each}</div>{/if}
+    <div class="shelf ops" role="group" aria-label="연산">{#each OPS_U as o (o.id)}<button type="button" class="tile op mini" class:on={slots.op === o.id} class:long={o.sym.length > 3} onclick={() => putOp(o.id)}>{o.sym}</button>{/each}</div>
     <div class="stage" class:impact bind:this={stage}>
       <img class="anvil" src={IMG.anvil} alt="" />
       <div class="slots" class:shake>
@@ -132,29 +152,29 @@
       {#each sparks as s, k (k)}<i class="spark" style:left="{s.x}%" style:--dx="{s.dx}px" style:--dy="{s.dy}px"></i>{/each}
     </div>
     <p class="msg" class:bad>{msg}</p>
-    <div class="shelf mats" role="group" aria-label="재료">{#each U.MATS as m (m.id)}<button type="button" class="tile mat mini" class:long={m.sym.length > 3} title={m.tip} onclick={() => put(m.id)}>{m.sym}</button>{/each}{#each putCards as c (c.id)}<button type="button" class="tile mat mini card long" title={c.name} onclick={() => put(`card:${c.id}`)}>{cardFm(c)}</button>{/each}</div>
+    <div class="shelf mats" role="group" aria-label="재료">{#each MATS_U as m (m.id)}<button type="button" class="tile mat mini" class:long={m.sym.length > 3} title={m.tip} onclick={() => put(m.id)}>{m.sym}</button>{/each}{#each putCards as c (c.id)}<button type="button" class="tile mat mini card long" title={c.name} onclick={() => put(`card:${c.id}`)}>{cardFm(c)}</button>{/each}</div>
     <BottomAction dock={false} disabled={!full || busy} onmain={hit} text="🔨 두드리기">
-      {#snippet aux()}<div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; view = 'list'; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {U.CARDS.length}</button></div>{/snippet}
+      {#snippet aux()}<div class="row2"><button type="button" class="btn2" onclick={() => { focusId = ''; view = 'list'; }}>💡 만들 수 있는 카드 <b>{hint.pts}</b></button><button type="button" class="btn2" onclick={() => (view = 'book')}>📖 도감 {haveN} / {UC.length}</button></div>{/snippet}
     </BottomAction>
   {:else if view === 'list'}
     <!-- ③ 💡 만들 수 있는 카드 -->
     <div class="book">
       <p class="why lt">🧩 힌트 조각 <b>{hint.pts}</b> · 두드리기에 실패하면 +1 (벌이 아니라 단서) · 조각으로 재료 → 연산 순서로 열어요</p>
       {#each [...wishCards.filter((c) => !focusId || c.id === focusId), ...wishCards.filter((c) => focusId && c.id !== focusId)] as c (c.id)}{@render row(c, true)}{/each}
-      {#each nos as n (n)}{@const todo = U.CARDS.filter((c) => c.no === n && !owned[c.id] && !wishIds.has(c.id))}
-        <details class="grp" open={!focusId && n === nos.find((x) => U.CARDS.some((c) => c.no === x && !owned[c.id]))}><summary><b>{n}차시</b> <small>{secOf(n)}</small><span class:done={!todo.length}>해금 {U.CARDS.filter((c) => c.no === n && owned[c.id]).length} / {U.CARDS.filter((c) => c.no === n).length}</span></summary>
+      {#each nos as n (n)}{@const todo = UC.filter((c) => c.no === n && !owned[c.id] && !wishIds.has(c.id))}
+        <details class="grp" open={!focusId && n === nos.find((x) => UC.some((c) => c.no === x && !owned[c.id]))}><summary><b>{n}차시</b> <small>{secOf(n)}</small><span class:done={!todo.length}>해금 {UC.filter((c) => c.no === n && owned[c.id]).length} / {UC.filter((c) => c.no === n).length}</span></summary>
           {#each todo as c (c.id)}{@render row(c, false)}{:else}<p class="why lt">🎉 이 차시 카드를 모두 만들었어요!</p>{/each}</details>
       {/each}
     </div>
     <BottomAction dock={false} onmain={() => (view = 'forge')} text="⚒ 모루로" />
   {:else}
     <!-- ④ 도감 -->
-    <div class="bk-h"><b>모은 카드 {haveN} / {U.CARDS.length}</b><i class="bar2"><i style:width="{(haveN / U.CARDS.length) * 100}%"></i></i></div>
+    <div class="bk-h"><b>모은 카드 {haveN} / {UC.length}</b><i class="bar2"><i style:width="{(haveN / UC.length) * 100}%"></i></i></div>
     <div class="chips" role="group" aria-label="거르기"><button type="button" class:on={chip === 'all'} onclick={() => (chip = 'all')}>전체</button><button type="button" class:on={chip === 'wish'} onclick={() => (chip = 'wish')}>⭐ 찜</button>{#each nos as n (n)}<button type="button" class:on={chip === n} onclick={() => (chip = n)}>{n}</button>{/each}</div>
     <div class="book">
       {#if chip === 'all'}{@render perks()}{/if}
       {#each nos as n (n)}{@const cs = bookCards(n)}{#if cs.length}
-        <h3>{n}차시 · {secOf(n)} · <em>{U.CARDS.filter((c) => c.no === n && owned[c.id]).length} / {U.CARDS.filter((c) => c.no === n).length}</em></h3>
+        <h3>{n}차시 · {secOf(n)} · <em>{UC.filter((c) => c.no === n && owned[c.id]).length} / {UC.filter((c) => c.no === n).length}</em></h3>
         <div class="grid">{#each cs as c (c.id)}<button type="button" class="cw" aria-label={owned[c.id] || wishIds.has(c.id) ? c.name : '아직 못 만든 카드'} onclick={() => (zoom = c)}><ForgeCard card={c} w={100} unknown={!owned[c.id]} wish={!owned[c.id] && wishIds.has(c.id)} /></button>{/each}</div>
       {/if}{/each}
     </div>
@@ -174,6 +194,7 @@
   {@const op = U.opOf(c.op)}
   <div class="hr" class:wished class:focus={focusId === c.id}>
     <div class="tx"><b>{wished ? `⭐ ${c.name} · ${c.fm}` : '???'}</b><small>{c.hint}</small></div>
+    {#if firstNeed(c)}{@const nd = firstNeed(c)!}<button type="button" class="need" data-k="need-first" onclick={() => goCard(nd)}>🧭 먼저 만들 카드: {owned[nd.id] || wishIds.has(nd.id) ? nd.name : nd.hint}</button>{/if}
     <div class="shape">{#if op?.unary}<i class="chip op">{lv >= 2 ? op.sym : '?'}</i><i class="chip">{lv >= 1 ? symOf(c.in[0] ?? '') : '?'}</i>{:else}<i class="chip">{lv >= 1 ? symOf(c.in[0] ?? '') : '?'}</i><i class="chip op">{lv >= 2 ? op?.sym : '?'}</i><i class="chip">{lv >= 1 ? symOf(c.in[1] ?? '') : '?'}</i>{/if}</div>
     {#if lv < 2}<button type="button" disabled={!hint.pts} onclick={() => reveal1(c.id)}>🧩 {lv ? '연산 보기' : '재료 보기'}</button>{:else}<small class="all">모두 공개</small>{/if}
   </div>
@@ -225,7 +246,7 @@
   .wishes { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 0 12px 4px; scrollbar-width: none; }
   .wishes button { flex: none; height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid #f5b84a; background: rgba(40, 30, 10, 0.85); color: #ffd98a; font: 700 13px var(--font); position: relative; }
   .wishes button::before { content: ''; position: absolute; inset: -6px 0; }
-  .stage { position: relative; flex: none; height: 150px; margin: 0 12px; isolation: isolate; }
+  .stage { position: relative; flex: 0 1 150px; min-height: 96px; /* #58 단원 탭 줄만큼 줄어듦 */ margin: 0 12px; isolation: isolate; }
   .stage.impact { animation: shk 0.22s linear; }
   .anvil { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 72%; object-fit: fill; image-rendering: pixelated; filter: drop-shadow(0 10px 12px #000c); }
   .slots { position: absolute; left: 22%; right: 22%; top: 30%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6%; z-index: 3; }
@@ -295,4 +316,10 @@
   .perk button { flex: none; height: 40px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--gem); background: none; color: var(--gem); font: 700 12.5px var(--font); }
   .ptoast { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface); font-weight: 700; white-space: nowrap; }
   .zm { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; } .zm p { margin: 0; }
+  /* 📦 #58 단원 탭 · 먼저 만들 카드 */
+  .utabs { position: relative; z-index: 2; display: flex; gap: 6px; padding: 0 12px 8px; }
+  .utabs button { flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(20, 16, 10, 0.72); color: #e8dcc0; font: 700 15px var(--font); }
+  .utabs button.on { background: var(--accent, #f5b84a); color: var(--on-accent, #1d1406); border-color: transparent; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5); }
+  .utabs .wn { margin-left: 6px; font-style: normal; font-size: 13px; color: #ffd25a; } .utabs button.on .wn { color: inherit; }
+  .need { grid-column: 1 / -1; justify-self: start; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px dashed var(--accent, #f5b84a); background: none; color: var(--accent, #f5b84a); font: 700 14px var(--font); text-align: left; }
 </style>

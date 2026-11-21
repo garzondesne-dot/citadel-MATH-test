@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { doneNo } from '../../school/progress';
   import { isReady } from '../../store/atomic';
   import { loadAtbTrial, loadBoard, loadCastle, loadDummy, loadPrep, loadQuest } from '../lazy'; // 📦 허수아비 · 게시판 · 성채 = 따로 받는 묶음 (캠프가 뜬 뒤 미리 받아 둠)
   import { feat } from '../../school/features.svelte';
@@ -636,7 +637,7 @@
   </Sheet>
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
-  <Anvil {me} save={M.save} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
+  <Anvil {me} save={M.save} reach={pupil ? doneNo(S, pupil.cls) : 0} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
 {:else if sheet === 'chal' || sheet === 'rec'}
   <!-- ⛺ #73 텐트 = 🏆 나의 기록 방 (도전과제 · 칭호 · 도감) -->
   {#snippet eggTab()}
