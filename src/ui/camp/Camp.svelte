@@ -79,9 +79,6 @@
     /** 👩‍🏫 체험판 (📜 2026-11-17 #33 · CLAUDE.md 「👩‍🏫 체험판 규칙」): 이름 · 시작 💎 200 → 첫 차시를 끝내면 한 번 💎 620 · 📜 9 · 아래 단추 = 「⚔ 다른 차시로」 · 📋 게시판 · ✉ 우편함 · 출제 공방 숨김 · 성채 = 실은 층 방 모두 열림 */
     trial?: { nick: string; grant: boolean; ongate: () => void; /** 👩‍🏫 #55 체험판 게시판 = 체험판 차시 팩 */ packs?: LessonPack[] } | null } = $props();
   async function logout() {
-    // 📮 #81 B 나가기 전에 못 보낸 기록부터 (📜 선생님 2026-11-21 「폰을 바꿔서 기록이 아예 날아가는 참사는 막아야지」)
-    const ob = (S as Store & { outbox?: { count(): number; flush(ms?: number): Promise<number> } }).outbox;
-    if (ob && ob.count()) { const left = await ob.flush(8000); if (left && !confirm(`⚠ 아직 안 올라간 기록 ${left}개\n지금 나가면 기록이 사라질 수 있어요 · 인터넷 연결 뒤 다시 해 주세요\n\n그래도 나갈까요?`)) return; }
     saveLogin(null); unbindMe();
     const A = (S as Store & { auth?: import('firebase/auth').Auth }).auth;
     if (A) { try { const fa = await import('firebase/auth'); await fa.signOut(A); } catch { /* 무시 */ } }

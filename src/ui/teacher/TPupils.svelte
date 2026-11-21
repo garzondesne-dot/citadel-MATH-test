@@ -44,10 +44,6 @@
   function makeCls() { const c = nc.trim(); if (!ncOk) return; S.set('school/info/classes', [...clsNow, c]); pcls = c; mk = false; nc = ''; }
   function delCls(c: string) { const rest = clsNow.filter((x) => x !== c); if (!rest.length) return; S.set('school/info/classes', rest); if (pcls === c) pcls = rest[0]!; if (cls === c) cls = rest[0]!; delAsk = ''; }
   $effect(() => { if (seg === 'list' && cls === ALL) cls = '1-3'; });
-  /** 📮 #81 B 학생 폰 보관함에 남은 기록 수 (accounts/{반}/{번호}/pend · 7일 지난 표시는 안 셈) */
-  let pv = $state(0); $effect(() => S.watch('accounts', () => { pv++; }));
-  const pendOf = (c: string, n: number): number => { void pv; const x = S.get<{ n?: number; at?: number }>(`accounts/${c}/${n}/pend`); return x && x.n && S.now() - (x.at || 0) < 7 * 86400e3 ? x.n : 0; };
-  const pendN = () => data.studs.filter((s) => pendOf(cls, s.n)).length;
 </script>
 
 <svelte:window bind:innerWidth={iw} />
@@ -62,12 +58,10 @@
 </div>
 {#if seg === 'list'}
   <div class="mid scroll">
-    {#if pendN()}<p class="pendl" data-k="pend-line">⏳ 안 올라온 기록이 있는 학생 {pendN()}명 · 그 학생에게 「인터넷 켜고 앱을 한 번 열어 주세요」</p>{/if}
     <div class="grid">
       {#each data.studs as s (s.n)}
         {@const ab = absentToday(`s${cls.replace('-', '_')}_${s.n}`)}
-        {@const pd = pendOf(cls, s.n)}
-        <button type="button" class="pc" class:ab class:stuck={s.extra.stuck >= 3} onclick={() => (who = s)} aria-label="{s.n}번 {s.name} Lv.{s.lv}{ab ? ' 결석' : ''}{flagged(s.cls, s.n) ? ' 💎 급증' : ''}"><b>{s.n}</b><span>{s.name}{#if flagged(s.cls, s.n)} 🚩{/if}</span><small>Lv.{s.lv}{ab ? ' · 결석' : ''}{#if pd}<em class="pend" data-k="pend-n"> · ⏳ {pd}</em>{/if}</small></button>
+        <button type="button" class="pc" class:ab class:stuck={s.extra.stuck >= 3} onclick={() => (who = s)} aria-label="{s.n}번 {s.name} Lv.{s.lv}{ab ? ' 결석' : ''}{flagged(s.cls, s.n) ? ' 💎 급증' : ''}"><b>{s.n}</b><span>{s.name}{#if flagged(s.cls, s.n)} 🚩{/if}</span><small>Lv.{s.lv}{ab ? ' · 결석' : ''}</small></button>
       {/each}
     </div>
     <p class="hint">번호를 누르면 그 학생 · 금빛 테 = 막힘 많음 · 흐림 = 오늘 결석{isBeta(S, cls) ? ` · 🧪 ${XCLS} = 통계에서 빠짐` : ''}</p>
@@ -97,8 +91,6 @@
 {#if toast}<p class="toast" role="status">{toast}</p>{/if}
 
 <style>
-  .pendl { margin: 0 0 8px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--text); font: 600 14px var(--font); }
-  .pc small em.pend { font-style: normal; color: var(--accent); font-weight: 700; }
   .toptab { display: flex; gap: 6px; margin: 0 0 8px; padding: 4px; border-radius: var(--r); background: var(--surface); } .toptab button { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 2px solid transparent; background: none; color: var(--text-2); font: 700 15px var(--font); } .toptab button.on { border-color: var(--accent); color: var(--text); }
   .pcl { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; } .pcl button { min-height: 44px; min-width: 56px; padding: 0 10px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); } .pcl button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); } .pcl .mk { color: var(--accent); border-style: dashed; }
   .mkrow { display: flex; gap: 8px; margin-bottom: 8px; } .mkrow .in { flex: 1; min-width: 0; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 600 15px var(--font); padding: 0 10px; } .btn.sm { min-height: 44px; padding: 0 16px; }
