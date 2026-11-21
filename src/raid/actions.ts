@@ -37,7 +37,7 @@ export function resetRoom(S: Store, L: LessonPack, code: string, P: DungeonProfi
 function goTo(S: Store, L: LessonPack, code: string, R: Room, i: number): void {
   const t = S.now(), st = R.state;
   const dl = isLobby(R) && i >= 0 && R.meta.limit && !st.deadline ? ((feat('schedule') ? classPeriodEnd(S.get<Record<string, Record<string, string>>>('school/sched') || {}, String(R.meta.cls || ''), t) : null) ?? t + 50 * 60e3) : st.deadline ?? null;
-  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, recall: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t) }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
+  S.set(`${roomPath(code)}/state`, { ...st, step: i, stepAt: t, pauseMs: 0, demoMs: 0, demoAt: null, /* 🎮 단계가 바뀌면 TV 가 시연 창을 닫음 → 멈춤도 풂 (TV 가 꺼져 있어도 걸려 있지 않게) */ holdAt: held(R) ? t : null, sheet: null, video: null, recall: null, deadline: dl, ...cpPatch(st as never, { video: null } as never, t), /* ⏱ #81 B 단계 처음 연 시각 (첫 입력까지 걸린 시간 셈용 · 다시 열면 처음 값 그대로) */ stepLog: { ...((st as { stepLog?: Record<string, number> }).stepLog || {}), ...(i >= 0 && !(st as { stepLog?: Record<string, number> }).stepLog?.[String(i)] ? { [String(i)]: t } : {}) } }); // 🔥 영상이 켜진 채 넘기면 콤보 시계도 다시 감
 }
 export function nextStep(S: Store, L: LessonPack, code: string): void {
   const R = getRoom(S, code);
