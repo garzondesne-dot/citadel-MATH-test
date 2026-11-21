@@ -163,9 +163,6 @@ export const SHIELD: Record<number, Fam[]> = {
 };
 for (const [n, f] of Object.entries(SHIELD)) { const b = BOSSES[Number(n)]; if (b) b.shield = f; }
 /** 실드 칸 속성 (설정 없으면 약점 둘 + 나머지 앞 둘) */
-/** 📜 #95 A (선생님 11/21 밤) = 칸 수는 인원대로 · 혼자 2칸 · 2명 3칸 · 3 ~ 4명 4칸 · 보스 표 앞에서부터(약점 계열 둘 먼저) */
-export const SHIELD_N = [2, 2, 3, 4, 4] as const;
-export const shieldFor = (b: BossCfg, n: number): Fam[] => shieldOf(b).slice(0, SHIELD_N[Math.max(0, Math.min(4, n))]);
 export const shieldOf = (b: BossCfg): Fam[] => b.shield ?? [...b.weak, ...(['arms', 'flame', 'nature', 'wisdom', 'mystic'] as Fam[]).filter((f) => !b.weak.includes(f))].slice(0, 4);
 /** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
 export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' | 'breath' | 'contra' | 'reverse' | 'hammer'; /** 행동 불능 초 (없으면 T.stun) */ stunSec?: number; /** 🔩 맞은 용사에게 표식 (16) */ mark?: boolean }> = {

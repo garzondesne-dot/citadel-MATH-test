@@ -3,7 +3,7 @@
   //   meet = 어둡게 + 보스 이름 띠 + 등장 대사 · scout = 보스 카드(약점 · 공격 3종 → 막는 역할 · 내 임무 · 분노) + 남은 초 + 「⚔ 준비 완료」 · count = 3 · 2 · 1 · 전투 시작!
   import type { State } from '../../../board/atb/engine';
   import { missionOf } from '../../../board/atb/engine';
-  import { ATK, ATK_SPECIAL, FAM_NAME, atkClass, atkName, bossOf, rage as RAGE, shieldFor, type AtkClass, type AtkKind } from '../../../board/atb/tune';
+  import { ATK, ATK_SPECIAL, FAM_NAME, atkClass, atkName, bossOf, rage as RAGE, shieldOf, type AtkClass, type AtkKind } from '../../../board/atb/tune';
   import { bossLine } from '../../../board/atb/story';
   import FamShield from './FamShield.svelte';
   const { S, me, phase, left, short = false, ready = [], labels, onready }: {
@@ -32,7 +32,7 @@
   {#if phase === 'scout'}
     <section class="card" data-k="atb-scout" aria-label="정찰">
       <div class="row weak"><span class="lb">약점</span>{#each S.boss.weak as f (f)}<span class="fam"><FamShield fam={f} size={16} /> {FAM_NAME[f]}</span>{/each}</div>
-      <div class="row shl" data-k="atb-scout-shield"><span class="lb">실드</span>{#each shieldFor(S.boss, S.heroes.length) as f, i (i)}{@const own = !!meHero && meHero.s.fam === f}{@const none = !S.heroes.some((h) => h.s.fam === f)}<span class="fam" class:own class:none data-fam={f}><FamShield fam={f} size={16} /> {FAM_NAME[f]}{#if none}<small>📜 도움표로</small>{/if}</span>{/each}</div>
+      <div class="row shl" data-k="atb-scout-shield"><span class="lb">실드</span>{#each shieldOf(S.boss) as f, i (i)}{@const own = !!meHero && meHero.s.fam === f}{@const none = !S.heroes.some((h) => h.s.fam === f)}<span class="fam" class:own class:none data-fam={f}><FamShield fam={f} size={16} /> {FAM_NAME[f]}{#if none}<small>📜 도움표로</small>{/if}</span>{/each}</div>
       <ul class="atks">{#each atks as a (a.c)}{#if a.names.length}<li data-cls={a.c}><b>{a.ic} {a.names.join(' · ')}</b><span>→ {a.who} {a.how}</span></li>{/if}{/each}</ul>
       {#if mis && role}<div class="row mine" data-k="atb-scout-mission">내 임무: {ROLE_NM[role]} = {mis.ic} {mis.txt} {mis.need}</div>{/if}
       <div class="row rage">😡 분노 = 체력 {Math.round(RAGE.at * 100)}% 아래</div>

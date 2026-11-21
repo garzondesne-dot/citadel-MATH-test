@@ -1,7 +1,7 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
 //   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
-import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, REACT, REACT_CFG, atkClass, attrFx, ATTR_FX_TXT, fxOfAttr, type AttrFx, rage as RAGE, ATK_SPECIAL, atkName, type RageMod, type AtkClass, type AtkKind as AK, type AtkKind, type BossCfg, type Diff, type Fam, type Role, shieldFor } from './tune';
+import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, REACT, REACT_CFG, atkClass, attrFx, ATTR_FX_TXT, fxOfAttr, type AttrFx, rage as RAGE, ATK_SPECIAL, atkName, type RageMod, type AtkClass, type AtkKind as AK, type AtkKind, type BossCfg, type Diff, type Fam, type Role, shieldOf } from './tune';
 import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
@@ -73,7 +73,7 @@ function hitBoss(S: State, raw: number, pierce = 1, flat = false): number {
   const before = S.bossHp; S.bossHp = Math.max(floor, S.bossHp - dmg);
   if (!S.rage && S.bossHp > 0 && S.bossHp <= S.bossMax * RAGE.at) { S.rage = true; S.ragePerf = 0; S.rageN = 0; S.forceAtk = rageSpecial(S); S.target = null; S.nextAtk = null; S.aoeNext = false; S.bossT = Math.max(S.bossT, RAGE.every[S.diff] - (ATK[S.forceAtk].warn ?? T.telegraph)); push(S, { k: 'rage', t: S.t, on: 'rage' }); const M = modOf(S); if (M?.refreeze && S.lastBrk != null && S.cells[S.lastBrk]?.broken) { const c = S.cells[S.lastBrk]!; c.broken = false; S.refrozen = S.lastBrk; S.weakUntil = Math.min(S.weakUntil, S.t); push(S, { k: 'sig', t: S.t, what: 'refreeze', who: c.owner }); } } // 👹 분노 = 특수 한 번 바로(예고 4초) · 4 얼음 갑옷 다시
   if (!S.shieldUp && !S.cells.length && S.bossHp <= S.bossMax * T.shieldAt) { // 실드 펼침 · 각자 1칸 · 그 용사 계열
-    S.shieldUp = true; S.shieldAt = S.t; S.breathNext = S.t + breathEvery(S); S.cells = shieldFor(S.boss, S.heroes.length).map((fam) => ({ fam, broken: false })); push(S, { k: 'shieldUp', t: S.t }); /* 📜 #95 보스가 정한 속성 4칸 */
+    S.shieldUp = true; S.shieldAt = S.t; S.breathNext = S.t + breathEvery(S); S.cells = shieldOf(S.boss).map((fam) => ({ fam, broken: false })); push(S, { k: 'shieldUp', t: S.t }); /* 📜 #95 보스가 정한 속성 4칸 */
     if (S.bossHp <= 0) S.bossHp = 1; /* 한 방에 70% 위 → 0 = 실드가 펼쳐진 채 HP 0 이던 틈 · 실드 칸이 남으면 HP 1 (#84 규칙과 같게) */
   }
   checkEnd(S);
