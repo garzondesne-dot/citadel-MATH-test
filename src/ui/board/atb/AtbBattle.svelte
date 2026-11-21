@@ -96,6 +96,7 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
+  const firstTry: Record<string, boolean[]> = {};
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
   let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
@@ -116,10 +117,13 @@
   function submit(g: Given) {
     if (!run || grading) return;
     if (lockLeft > 0) return;
-    const before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); earn(S, me, o.earn);
+    const k0 = run.k, mid0 = run.mid, before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); earn(S, me, o.earn);
     if (o.earn.swapped) { const k = seenKey(L, run.mid); vSeen[k] = noteSeen(vSeen[k] ?? [], o.run.ver); saveSeen(vSeen); }
     flash = o.earn.done ? '' : o.earn.right ? (o.earn.gold ? 'gold' : 'ok') : o.earn.swapped ? 'swap' : 'wrong';
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
+    // ⭐ 첫 시도 기록 = 소문항마다 처음 낸 답만 (📜 요청 #29 = 차시 정복 지도 별 규칙 gradeOf 그대로 · 틀림 · 안 푼 것 비율)
+    { const a = (firstTry[mid0] ??= []); if (a[k0] === undefined && !o.earn.swapped) a[k0] = o.earn.right; else if (a[k0] === undefined && o.earn.swapped) a[k0] = false;
+      if (meH) { const all = Object.values(firstTry).flat(), ok = all.filter((x) => x === true).length, bad = all.filter((x) => x === false).length, total = OS.reduce((s, x) => s + x.n, 0); meH.log.first = { ok, bad, none: Math.max(0, total - ok - bad), total }; } }
     fN++; // 📜 선생님 덧붙임 10 · 11 = 맞음 톡-톡 · 연달아 = 박자 맞춘 소리 · 틀림 = 찌잉(한 번 길게)
     if (o.earn.right) { combo++; sfx('correct', 0.5); if (combo >= 2) setTimeout(() => sfx('star', Math.min(0.5, 0.2 + combo * 0.06)), 92); try { navigator.vibrate?.([22, 70, 22]); } catch { /* 무시 */ } }
     else { combo = 0; try { navigator.vibrate?.(320); } catch { /* 무시 */ } }
