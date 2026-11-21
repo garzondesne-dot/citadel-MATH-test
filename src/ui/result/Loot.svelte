@@ -59,8 +59,10 @@
   let timers: ReturnType<typeof setTimeout>[] = [];
   const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function finish() { if (done) return; done = true; cf = 2; timers.forEach(clearTimeout); shown = keys.length; nums = Object.fromEntries(keys.map((k) => [k, to(k)])); }
+  // 🐞 #60-2 줄 목록이 새 배열로만 바뀌어도(시계가 lt 를 다시 셈) 연출이 처음부터 다시 돌아 💎 줄이 안 나오던 것 → 이름 줄이 바뀔 때만 다시
+  const keyStr = $derived(keys.join(','));
   $effect(() => {
-    const ks = keys; untrack(() => {
+    const ks = keyStr.split(','); untrack(() => {
       timers.forEach(clearTimeout); timers = []; open = true; cf = 0;
       if (reduce) { finish(); return; }
       [[120, 1], [240, 0], [360, 1], [480, 0], [600, 2]].forEach(([ms, f]) => timers.push(setTimeout(() => { if (!done) cf = f!; }, ms))); // 흔들림 2번 → 열림
