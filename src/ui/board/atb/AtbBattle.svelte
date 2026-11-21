@@ -28,6 +28,7 @@
   import { bgm, bgmRate } from '../../bgm';
   import { actx } from '../../webaudio';
   import type { HPose } from '../../manifest';
+  import { edgeLv, flashA, BEAT, WHOOSH_SEC, COUNT_SEC, vib, heartbeat, whoosh, clang } from './tension';
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
@@ -362,6 +363,7 @@
         e.to.forEach((id, i) => { pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, e.aoe ? 'hurt big' : 'hurt'); hurt(id); });
         if (e.aoe) { shake(stageEl ?? null, 10, 520); boom = true; ring(); setTimeout(() => (boom = false), 620); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
         else { shake(stageEl ?? null, 4, 220); sfx('hurt', 0.6); }
+        { const i = e.to.indexOf(me); if (me >= 0 && i >= 0) hflash = { n: Date.now(), a: flashA(e.dmg[i] ?? 0, S.heroes[me]!.s.maxHp) }; } // 🛡 요청 #39 ① 내가 맞음 = 가장자리 붉게 번쩍(피해 비율만큼)
         if (me >= 0 && e.to.includes(me) && !S.heroes[me]?.down) { lockUntil = Date.now() + T.hitLockMs; lockLeft = Math.ceil((lockUntil - Date.now()) / 1000); lockTag = `💥 ${e.atk || (e.aoe ? '광역' : '공격')}!`; }
       }, 230);
     }
@@ -369,7 +371,7 @@
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
-    else if (e.k === 'react') { const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who === me) big(t, 'note', 1100); sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'react') { blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who === me) big(t, 'note', 1100); sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
       if (e.fx === 'pierce') pop(B0.x, B0.y, '🗡 관통!', 'fam');
@@ -434,6 +436,25 @@
   const aoeWarn = $derived(!!tele && S.aoeNext);
   let wasAim = false, wasAoe = false;
   $effect(() => { const a = meAimed, w = aoeWarn; untrack(() => { if (a && !wasAim) snd('focus', 0.6); else if (w && !wasAoe) snd('countdown', 0.5); wasAim = a; wasAoe = w; }); }); // ⚠ 나를 노려요 · 광역 예고 = 처음 뜰 때 한 번
+  // 🛡 📜 요청 #39 용사 피격 긴장감 — A 내 화면 가장자리 (내 폰만) · B 맞기 직전 조준 원 3 · 2 · 1 · 쉭 · 막으면 챙
+  const meRatio = $derived(meH && !meH.down && !S.end ? meH.hp / meH.s.maxHp : 1);
+  const edge = $derived(me >= 0 ? edgeLv(meRatio) : 0);
+  let hflash = $state<{ n: number; a: number } | null>(null), beatN = $state(0);
+  $effect(() => { const on = edge === 3; if (!on) return; const go = () => { beatN++; heartbeat(0.35); vib(BEAT.buzz); }; untrack(go); const iv = setInterval(go, BEAT.every * 1000); return () => clearInterval(iv); }); // 💓 30% 아래 = 3초마다 쿵-쿵 + 진동 2번 · 회복 · 쓰러짐 · 끝 = 멈춤
+  /** 예고 남은 시간 · 전체(4초) → 원 조임 · 3 · 2 · 1 */
+  const aimT = $derived.by(() => {
+    if (!tg || S.blocked || weak(S)) return null;
+    if (S.target && S.nextAtk) { const warn = ATK[S.nextAtk]?.warn ?? T.telegraph; return { left: Math.max(0, bossEveryOf(S) - S.bossT), warn }; }
+    if (S.breathWarn != null) return { left: Math.max(0, S.breathWarn + SIG.breath.warn - S.t), warn: SIG.breath.warn };
+    return null;
+  });
+  const ringK = $derived(aimT ? Math.max(0, Math.min(1, aimT.left / aimT.warn)) : 0);
+  const cntN = $derived(aimT && aimT.left > 0 && aimT.left <= COUNT_SEC ? Math.ceil(aimT.left) : 0);
+  let lastCnt = 0, whooshKey = '', stopWhoosh: (() => void) | null = null, shatter = $state<{ n: number; ids: number[] } | null>(null);
+  $effect(() => { const n = cntN, a = meAimed; untrack(() => { if (n && n !== lastCnt && a) vib(25); lastCnt = n; }); }); // 👆 나를 노리면 3 · 2 · 1 = 톡 · 톡 · 톡
+  $effect(() => { const t = aimT, c = tg?.cls, k = `${S.bossN}|${S.breathWarn ?? ''}`; untrack(() => { if (t && c && t.left > 0 && t.left <= WHOOSH_SEC && whooshKey !== k) { whooshKey = k; stopWhoosh?.(); stopWhoosh = whoosh(c, t.left); } if (!t && stopWhoosh && S.blocked) { stopWhoosh(); stopWhoosh = null; } }); }); // 💨 마지막 1.5초 쉭 (광역 낮고 큼 · 단일 높고 날카로움 · 특수 웅웅)
+  function blockFx(ids: number[]) { stopWhoosh?.(); stopWhoosh = null; vib(0); clang(0.5); if (!ids.length) return; const n = Date.now(); shatter = { n, ids }; setTimeout(() => { if (shatter?.n === n) shatter = null; }, 560); } // 🛡 막힘 = 원이 챙 깨짐 · 소리 · 진동 멈춤
+  onDestroy(() => stopWhoosh?.());
   const tiltTxt = $derived(S.boss.tele === 'scale' && S.target ? (S.aoeNext ? '⚖ 수평 → 모두' : `⚖ ${S.tilt === 'L' ? '왼쪽' : '오른쪽'}으로 기욺 → ${S.heroes[S.target[0]!]?.s.name ?? ''}`) : '');
   const breathLeft = $derived(S.breathWarn != null ? Math.max(0, Math.ceil(S.breathWarn + SIG.breath.warn - S.t)) : 0);
   const mirrorLeft = $derived(S.t < S.mirrorUntil ? Math.ceil(S.mirrorUntil - S.t) : 0);
@@ -442,7 +463,7 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
-  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid) };
+  (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
 
 <div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--u={U} bind:this={stageEl}>
@@ -458,6 +479,8 @@
   {#if reactNow && meH}<div class="reactb" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
   {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 광역 뒤 팀 체력 회복</div>
   {:else if tg && tgLine}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}{#if !hasRole(REACT[tg.cls])} · (팀에 {ROLE_KO[REACT[tg.cls]]} 없음){/if}</div>{/if}
+  {#if edge}<i class="hedge lv{edge}" class:beat={edge === 3} aria-hidden="true" data-k="atb-hedge" data-lv={edge}>{#key beatN}<i class="bt"></i>{/key}</i>{/if}
+  {#if hflash}{#key hflash.n}<i class="hflash" style:--a={hflash.a} aria-hidden="true" data-k="atb-hflash"></i>{/key}{/if}
   {#if S.rage && !calmLeft && !S.end}<i class="ragedge" aria-hidden="true" data-k="atb-ragedge"></i>{/if}
   {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"></i>{/if}
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
@@ -491,11 +514,12 @@
     {@const sc = +(base * p.s).toFixed(2)}
     <div class="hero" class:down={h.down} class:mine={h.id === me} class:hurt={hurtOn[h.id]} class:aura={auraOn && !h.down} style:left="{p.x}%" style:top="{p.y}%" style:--zi={10 + (4 - order.indexOf(h.id))} data-k="atb-hero" data-id={h.id}>
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 40}px" data-k="atb-weak"><FamShield fam={h.s.fam} size={14} /> 약점!</i>{/if}
-      {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
+      {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if aimT}<i class="aimring {tg?.cls ?? ''}" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" style:--k={ringK.toFixed(3)} data-k="atb-aimring" aria-hidden="true">{#if cntN}<b data-k="atb-aimcnt">{cntN}</b>{/if}</i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
       {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit')} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} scale={sc} aura={h.s.enh} /></div>{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64 * 0.9)} boss z={19} />{/key}{/if}
+      {#if shatter?.ids.includes(h.id)}<i class="ringx" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" data-k="atb-ringx" aria-hidden="true">{#each [0, 1, 2, 3, 4, 5] as j}<i style:--r="{j * 60}deg"></i>{/each}</i>{/if}
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
       {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
@@ -780,6 +804,25 @@
   .boss.burning::after { content: '🔥'; position: absolute; left: 50%; top: 10%; font-size: 22px; transform: translateX(-50%); animation: blink 0.35s steps(2) infinite; pointer-events: none; }
   .boss.frost :global(.sprite), .boss.frost :global(i) { filter: drop-shadow(0 0 8px #8fe0ff) saturate(0.6) brightness(1.15) hue-rotate(160deg); }
   /* 👹 분노 (요청 #37) */
+  /* 🛡 요청 #39 가장자리 = 남은 체력 단계(70 · 50 · 30%) · 맞음 번쩍(피해 비율) · 30% 아래 쿵쿵 */
+  .hedge { position: absolute; inset: 0; z-index: 16; pointer-events: none; transition: box-shadow 0.6s, opacity 0.6s; }
+  .hedge.lv1 { box-shadow: inset 0 0 40px 4px #ff1a1a40; }
+  .hedge.lv2 { box-shadow: inset 0 0 54px 8px #ff1a1a70; }
+  .hedge.lv3 { box-shadow: inset 0 0 70px 14px #ff1a1aa8; }
+  .hedge .bt { position: absolute; inset: 0; box-shadow: inset 0 0 90px 24px #ff0000; opacity: 0; }
+  .hedge.beat .bt { animation: hbeat 0.6s ease-out; }
+  @keyframes hbeat { 0% { opacity: 0; } 12% { opacity: 0.85; } 30% { opacity: 0.15; } 45% { opacity: 0.6; } 100% { opacity: 0; } }
+  .hflash { position: absolute; inset: 0; z-index: 17; pointer-events: none; border: 6px solid #ff2a1a; box-shadow: inset 0 0 80px 20px #ff1a0a; opacity: 0; animation: hfl 0.35s ease-out; }
+  @keyframes hfl { 0% { opacity: var(--a, 0.6); } 100% { opacity: 0; } }
+  /* 🎯 조준 원 = 4초 동안 바깥 → 안 (--k 1 → 0) · 마지막 3초 숫자 · 광역 = 주황 · 특수 = 보라 */
+  .aimring { position: absolute; left: 0; z-index: 22; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 12px #ff3a2a, inset 0 0 8px #ff3a2a88; transform: scale(calc(0.7 + var(--k) * 1.8)); pointer-events: none; transition: transform 0.12s linear; }
+  .aimring.aoe { border-color: #ff8a2a; box-shadow: 0 0 12px #ff8a2a; }
+  .aimring.special { border-color: #b07aff; box-shadow: 0 0 12px #b07aff; }
+  .aimring b { position: absolute; left: 50%; top: 0; font: 900 30px/1 var(--font); color: #fff; text-shadow: 0 0 6px #ff1a1a, 0 0 2px #000, 0 2px 0 #000; transform: translate(-50%, -50%) scale(calc(1 / (0.7 + var(--k) * 1.8))); }
+  .ringx { position: absolute; left: 0; z-index: 19; pointer-events: none; }
+  .ringx i { position: absolute; left: -14px; top: -3px; width: 28px; height: 6px; border-radius: 3px; background: #ffd0c8; box-shadow: 0 0 8px #ff3a2a; rotate: var(--r); animation: rx 0.5s ease-out forwards; }
+  @keyframes rx { 0% { translate: 0 0; opacity: 1; } 100% { translate: calc(cos(var(--r)) * 48px) calc(sin(var(--r)) * 48px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .hedge .bt, .hflash, .ringx i { animation: none; } .aimring { transition: none; } }
   .ragedge { position: absolute; inset: 0; z-index: 15; pointer-events: none; box-shadow: inset 0 0 60px 12px #ff1a1a88; animation: rpulse 1.1s ease-in-out infinite; }
   @keyframes rpulse { 50% { box-shadow: inset 0 0 90px 22px #ff1a1acc; } }
   .boss.raging :global(.sprite), .boss.raging .bflip { filter: drop-shadow(0 0 8px #ff2a1a) drop-shadow(0 0 16px #ff2a1a88) saturate(1.3); }

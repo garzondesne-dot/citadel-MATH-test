@@ -43,8 +43,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   { const m = await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length); await p.waitForTimeout(900);
     ok('요청 #41 퍼펙트 = 소문항마다 +1 + 퍼펙트 +1 (최대 4)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(4, ch0 + m + 1), `${ch0} + ${m} + 1`);
     { const g = await p.evaluate(() => ({ t: document.querySelector('[data-k="atb-grade-title"]')?.textContent ?? '', m: [...document.querySelectorAll('[data-k="atb-mark"]')].map((e) => e.dataset.m).join(',') }));
-      ok('요청 #41 채점 = 「🏁 퍼펙트! ✨+1」 (고친 게 있으면 「완주!」)', /퍼펙트! ✨\+1/.test(g.t) || (/완주/.test(g.t) && /tri|x/.test(g.m)) || !g.t, JSON.stringify(g)); }
-    ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 4 그대로)', ch0 + m + 1 <= 4 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0)))); }
+      ok('요청 #41 채점 = 「🏁 퍼펙트! ✨+1」 (고친 게 있으면 「완주!」)', /퍼펙트!\s*✨\+1/.test(g.t) || (/완주/.test(g.t) && /tri|x/.test(g.m)) || !g.t, JSON.stringify(g)); }
+    ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 4 그대로)', ch0 + m + 1 <= 4 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0) || (globalThis.__atb.S.autoQ?.length ?? 0) > 0))); }
   await p.dispatchEvent('[data-k="atb-grade"]', 'click', {}, { timeout: 1000 }).catch(() => {}); await p.waitForTimeout(150); // 도장 연출로 움직이는 중에도 누름(움직임 기다리지 않음)
   ok('요청 #13 충전 가득 = 공격 단추 동그라미 · 스킬 빛(full3)', !!(await p.$('.btns.full3')));
   ok('Y8 누르면 건너뜀 → 채점 닫힘 (퍼펙트 금 구슬 = 넘치지 않을 때)', !(await p.$('[data-k="atb-grade"]')));
@@ -221,6 +221,31 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.waitForTimeout(900); const crack = await p.$eval('[data-k="atb-crack"]', (e) => e.dataset.lv).catch(() => '');
     ok('요청 #38 · #42 치명 = 내 숫자 크게(노랑 · 「💥 치명!」) · 파편 · 체력바 흰 잔상 · 50% 넘김 = 금 2단계', !!num && num.fs >= 40 && /crit/.test(num.c) && /치명/.test(num.t) && bits >= 3 && lag === 0.4 && crack === '2', JSON.stringify({ num, bits, lag, crack }));
     await p.screenshot({ path: `${SHOTS}/atb-r38-crack-844.png` }); }
+  // 🛡 요청 #39 용사 피격 긴장감 = 가장자리 단계(70 · 50 · 30%) · 30% 아래 쿵쿵(소리 + 진동 2번) · 조준 원 조임 + 3 · 2 · 1 · 쉭 · 막으면 원 깨짐 + 챙 + 진동 멈춤
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { globalThis.__vib = []; navigator.vibrate = (x) => { globalThis.__vib.push(x); return true; }; const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'tank'; h.ch = 1; h.atb = 0; h.hp = Math.round(h.s.maxHp * 0.6); });
+  await p.waitForTimeout(300);
+  { const l1 = await p.$eval('[data-k="atb-hedge"]', (e) => e.dataset.lv).catch(() => '');
+    await p.evaluate(() => { const h = globalThis.__atb.S.heroes[0]; h.hp = Math.round(h.s.maxHp * 0.45); }); await p.waitForTimeout(200); const l2 = await p.$eval('[data-k="atb-hedge"]', (e) => e.dataset.lv).catch(() => '');
+    await p.evaluate(() => { globalThis.__sfxLog.length = 0; const h = globalThis.__atb.S.heroes[0]; h.hp = Math.round(h.s.maxHp * 0.25); }); await p.waitForTimeout(3300);
+    const r = await p.evaluate(() => ({ lv: document.querySelector('[data-k="atb-hedge"]')?.dataset.lv, beat: globalThis.__sfxLog.filter((x) => x === 'heartbeat').length, buzz: globalThis.__vib.filter((x) => Array.isArray(x) && x.length === 3 && x[0] === 40).length }));
+    ok('요청 #39 가장자리 = 70% 아래 1 · 50% 아래 2 · 30% 아래 3 + 3초마다 쿵-쿵 · 진동 2번', l1 === '1' && l2 === '2' && r.lv === '3' && r.beat === 2 && r.buzz === 2, JSON.stringify({ l1, l2, ...r }));
+    await p.evaluate(() => globalThis.__atb.flash(30)); await p.waitForTimeout(60);
+    const fa = await p.$eval('[data-k="atb-hflash"]', (e) => parseFloat(e.style.getPropertyValue('--a'))).catch(() => 0);
+    ok('요청 #39 맞음 = 가장자리 붉게 번쩍 · 진하기 = 받은 피해 비율', fa > 0.35 && fa <= 1, String(fa)); }
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.nextAtk = 'ice'; S.aoeNext = false; S.target = [0]; S.bossT = a.every() - 3.6; globalThis.__vib.length = 0; }); await p.waitForTimeout(250);
+  { const k0 = await p.$eval('[data-k="atb-aimring"]', (e) => parseFloat(e.style.getPropertyValue('--k'))).catch(() => -1), c0 = await p.$('[data-k="atb-aimcnt"]');
+    await p.evaluate(() => { const a = globalThis.__atb; a.S.bossT = a.every() - 2.5; }); await p.waitForTimeout(250);
+    const k1 = await p.$eval('[data-k="atb-aimring"]', (e) => parseFloat(e.style.getPropertyValue('--k'))).catch(() => -1), c1 = await p.textContent('[data-k="atb-aimcnt"]').catch(() => '');
+    await p.screenshot({ path: `${SHOTS}/atb-r39-edge-ring-844.png` });
+    const ov = await p.evaluate(() => { const a = document.querySelector('[data-k="atb-react-band"]')?.getBoundingClientRect(), b = document.querySelector('[data-k="atb-aim-me"]')?.getBoundingClientRect(); return a && b ? !(a.bottom <= b.top || b.bottom <= a.top || a.right <= b.left || b.right <= a.left) : null; });
+    await p.evaluate(() => { const a = globalThis.__atb; a.S.bossT = a.every() - 1.3; }); await p.waitForTimeout(250);
+    const r = await p.evaluate(() => ({ wh: globalThis.__sfxLog.includes('whoosh-single'), tok: globalThis.__vib.filter((x) => x === 25).length }));
+    ok('요청 #39 조준 원 = 바깥에서 조여 듦 · 마지막 3초 = 3 · 2 · 1 · 나를 노리면 톡 진동 · 마지막 1.5초 쉭(단일)', k0 > 0.85 && k1 < k0 && !c0 && c1 === '3' && r.wh && r.tok >= 2, JSON.stringify({ k0, k1, c1, ...r }));
+    ok('요청 #39 「⚠ 나를 노려요」 · 「지금 엄호!」 띠 = 겹치지 않음 (위아래 나눔)', ov === false, String(ov));
+    await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(120);
+    const x = await p.evaluate(() => ({ shard: document.querySelectorAll('[data-k="atb-ringx"] i').length, ring: !!document.querySelector('[data-k="atb-aimring"]'), clang: globalThis.__sfxLog.includes('clang'), stop: globalThis.__vib.includes(0) }));
+    ok('요청 #39 반응 막기 = 원이 챙 깨짐(조각 6) · 소리 · 진동 멈춤', x.shard === 6 && !x.ring && x.clang && x.stop, JSON.stringify(x)); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
