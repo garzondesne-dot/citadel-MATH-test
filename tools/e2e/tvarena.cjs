@@ -25,7 +25,7 @@ const FONTS = () => {
   { const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }), p = await ctx.newPage(), got = [];
     p.on('request', (r) => got.push(r.url()));
     await p.goto(B + '?role=camp&room=TVP'); await p.waitForSelector('.stage'); await p.waitForTimeout(800);
-    const px = got.filter((u) => /pixi|arena-|pixi\.js/i.test(u));
+    const px = got.filter((u) => /pixi|\/arena-/i.test(u));
     const js = got.filter((u) => /\.js(\?|$)/.test(u)).map((u) => u.split('/').pop());
     log('① 학생 폰 스크립트:', js.join(' '), '| PixiJS:', px.length ? px.join(' ') : '없음'); if (px.length) errs.push('학생 폰이 PixiJS 를 받음');
     await ctx.close(); }

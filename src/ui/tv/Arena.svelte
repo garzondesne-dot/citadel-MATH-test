@@ -408,7 +408,7 @@
   /* ⏱ 옛 정식 TV 게이지 (.raid-atk): 막대 + 가운데 「⏱ 남은 초 · ⛓ n초 · ⏸ 집중모드」 · 80% 넘으면 빨강 깜빡 · 묶임 · 멈춤 = 파랑 */
   .agauge { position: absolute; height: 2.6cqh; border-radius: 0.6cqh; background: rgba(21, 18, 15, 0.9); border: 2px solid #6a4a1c; overflow: hidden; z-index: 6; pointer-events: none; }
   .agauge i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
-  .agauge span { position: relative; display: block; text-align: center; font: 800 1.9cqh/2.3cqh var(--font); color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; font-variant-numeric: tabular-nums; }
+  .agauge span { position: relative; display: block; text-align: center; font: 700 var(--tv-small)/2.3cqh var(--font); color: #fff; text-shadow: 1px 1px 0 #000, -1px 0 0 #000; font-variant-numeric: tabular-nums; }
   .agauge.hot i { background: linear-gradient(90deg, #ff8a2a, #ff2a3a); animation: gaugeHot 0.3s steps(2) infinite; }
   .agauge.blue { border-color: #5ab0ff; box-shadow: 0 0 6px #5ab0ff88; } .agauge.blue i { background: linear-gradient(90deg, #5ab0ff, #8fd0ff); animation: none; }
   @keyframes gaugeHot { 50% { filter: brightness(1.6); } }
