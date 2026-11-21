@@ -47,8 +47,8 @@ describe('ATB 엔진', () => {
   });
   it('⚡ 스킬 (요청 #19): ⚡ 내 스킬 · 역할 · 🌟 비장(각성이면 각성 · 아니면 +10 홀리 방패) · 비용 1 · 1 · 3(2) · 피해 비 1 · 3.8', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;
-    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'awk']); // 비장 = 각성(홀리 방패 칸 없음) · 부활 = 그때만
-    expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role']); S.bossMax = S.bossHp = 99999; // 실드 안 뜨게
+    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'awk']); // 🩹 응급 힐(요청 #46) · 비장 = 각성(홀리 방패 칸 없음) · 부활 = 그때만
+    expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role', 'heal']); S.bossMax = S.bossHp = 99999; // 실드 안 뜨게
     h.ch = 1; full(S, 0); expect(skillList(S, 0).filter((x) => x.ok).map((x) => x.k)).toEqual(['equip', 'role']);
     const base = T.skillBase * h.s.skillMul; let hp = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1)]);
     S.bossHp = S.bossMax; h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'awk'); expect([h.ch, Math.min(hp, Math.round(base * 3.8))]).toEqual([0, hp - S.bossHp]);
@@ -92,16 +92,15 @@ describe('ATB 엔진', () => {
   it('쓰러진 학생이 맞힘 = 친구 ATB +50%', () => {
     const S = fresh(['로안', '누아']); S.heroes[0]!.down = true; S.heroes[1]!.atb = 0.1; earn(S, 0, right, 1); expect(S.heroes[1]!.atb).toBeCloseTo(0.6);
   });
-  it('역할: 힐러 광역 +12(팀 전체로 보스 공격 한 번 사이 1번) · 서포터 격려 = ATB 가득 · 딜러 강타 ×1.5', () => {
-    const S = fresh(['로안', '발도르', '루멘', '누아', ]); for (const h of S.heroes) h.hp = 50;
-    S.heroes[2]!.ch = 2; full(S, 2); roleAct(S, 2); expect(S.heroes.map((h) => h.hp)).toEqual([62, 62, 62, 62]);
-    full(S, 2); expect(roleAct(S, 2)).toBe(false); tick(S, 12.1); full(S, 2); expect(roleAct(S, 2)).toBe(true); // 보스 공격 한 번 지나면 다시
+  it('역할: 힐러 큰 힐(가장 다친 친구 · 요청 #46) · 서포터 격려 = ATB 가득 · 딜러 강타 ×1.5', () => {
+    const S = fresh(['로안', '발도르', '루멘', '누아', ]); for (const h of S.heroes) h.hp = 50; S.heroes[1]!.hp = 30;
+    S.heroes[2]!.ch = 2; full(S, 2); roleAct(S, 2); expect(S.heroes[1]!.hp).toBe(Math.min(S.heroes[1]!.s.maxHp, 30 + Math.round(S.heroes[1]!.s.maxHp * 0.9)));
     S.heroes[3]!.ch = 1; S.heroes[0]!.atb = 0; full(S, 3); roleAct(S, 3, 0); expect(S.heroes[0]!.atb).toBe(1);
     const hp = S.bossHp; S.heroes[0]!.ch = 1; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * S.heroes[0]!.s.skillMul * 1.5));
   });
   it('🌟 비장 = +10 만이면 홀리 방패 · 실드가 뜨면 ⚡ 내 스킬이 실드 칸 깸 (요청 #19)', () => {
     const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안'], 10), seed: 1 });
-    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'aura']);
+    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'aura']);
     const B = fresh(); B.shieldUp = true; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); B.heroes[0]!.ch = 1; full(B, 0); const hp = B.bossHp;
     expect(useSkill(B, 0, 'equip')).toBe(true); expect(B.cells.filter((c) => c.broken).length).toBeGreaterThanOrEqual(1); expect(B.bossHp).toBe(hp); // 피해 대신 실드 칸
   });
@@ -188,8 +187,8 @@ describe('ATB 스킬 미리 보기 (요청 #19 덧3)', () => {
     expect(skillPeek(S, 0, 'equip').line).toMatch(/^🛡 실드 깸/);
   });
   it('역할 · 부활 · 못 쓰는 까닭', () => {
-    const S = fresh(); const h = S.heroes[2]!; h.ch = 0; h.atb = 1;
-    expect(skillPeek(S, 2, 'role').line).toBe(`💚 팀 +${T.role.healer.heal}`);
+    const S = fresh(); const h = S.heroes[2]!; h.ch = 0; h.atb = 1; S.heroes[0]!.hp -= 10;
+    expect(skillPeek(S, 2, 'role').line).toBe('💚 큰 힐 90%');
     expect(skillPeek(S, 2, 'role').why).toMatch(/⚡ 1 필요/);
     expect(skillPeek(S, 0, 'revive').line).toBe('💖 부활 HP 30%');
     h.ch = 1; h.atb = 0.5; expect(skillPeek(S, 2, 'role').why).toBe('ATB 차는 중');
@@ -279,5 +278,33 @@ describe('ATB 공격 종류 그림 · 상태 (요청 #40)', () => {
   it('상태 6가지 = 수면 · 속박 · 혼란 · 물결 · 어둠 · 냉기 (그림 6줄 순서)', () => {
     expect(STATUS_ROWS).toEqual(['sleep', 'bind', 'confuse', 'fog', 'dark', 'frost']);
     expect(new Set(Object.values(ATK_STATUS))).toEqual(new Set(STATUS_ROWS));
+  });
+});
+
+// 💚 📜 요청 #46 힐 개편
+import { healTarget, costOf } from '../src/board/atb/engine';
+describe('ATB 힐 개편 (요청 #46)', () => {
+  const healer = (S: State) => S.heroes.find((h) => h.s.role === 'healer')!;
+  const other = (S: State) => S.heroes.find((h) => h.s.role !== 'healer')!;
+  it('🩹 응급 힐 = 힐러 아닌 용사만 · ⚡1 · ATB · 1/3 · 나도 됨 · 다친 사람 없으면 못 씀', () => {
+    const S = fresh(); const o = other(S), hl = healer(S); o.atb = 1; o.ch = 1; hl.atb = 1; hl.ch = 1;
+    expect(skillList(S, hl.id).some((x) => x.k === 'heal')).toBe(false);
+    expect(skillList(S, o.id).find((x) => x.k === 'heal')?.ok).toBe(false); // 다친 사람 없음
+    o.hp = 10; expect(useSkill(S, o.id, 'heal', o.id)).toBe(true);
+    expect(o.hp).toBe(10 + Math.round(o.s.maxHp / 3)); expect(o.ch).toBe(0); expect(o.atb).toBe(0); expect(o.log.heals).toBe(1);
+  });
+  it('💚 큰 힐 = 가장 다친 친구 90% · 30% 아래 = 구조 · 보스 공격 사이 제한 없음', () => {
+    const S = fresh(); const hl = healer(S), o = other(S); o.hp = Math.floor(o.s.maxHp * 0.2); hl.atb = 1; hl.ch = 2;
+    expect(healTarget(S)?.id).toBe(o.id);
+    expect(roleAct(S, hl.id)).toBe(true); expect(o.hp).toBe(Math.min(o.s.maxHp, Math.floor(o.s.maxHp * 0.2) + Math.round(o.s.maxHp * 0.9)));
+    expect(hl.log.rescues).toBe(1); expect(S.ev.some((e) => e.k === 'role' && e.rescue)).toBe(true);
+    o.hp = 5; hl.atb = 1; expect(roleAct(S, hl.id)).toBe(true); // 같은 보스 차례에 또
+  });
+  it('힐러 일반 공격 맞힘 = 팀 모두 5% · 빗나감 = 없음 · 공격 스킬 ⚡2 ×1.6', () => {
+    const S = fresh(); const hl = healer(S); for (const h of S.heroes) h.hp = 20; hl.atb = 1;
+    attack(S, hl.id, 'ok'); expect(S.heroes.every((h) => h.hp === 20 + Math.round(h.s.maxHp * 0.05))).toBe(true);
+    const hp1 = S.heroes.map((h) => h.hp); hl.atb = 1; attack(S, hl.id, 'miss'); expect(S.heroes.map((h) => h.hp)).toEqual(hp1);
+    expect(costOf(hl, 'equip')).toBe(2); expect(costOf(other(S), 'equip')).toBe(1);
+    const p = skillPeek(S, hl.id, 'equip'), q = skillPeek(S, other(S).id, 'equip'); expect(p.cost).toBe(2); expect(q.cost).toBe(1);
   });
 });

@@ -38,7 +38,7 @@
     <p class="famfx" data-k="atb-pick-famfx">{ATTR_FX_TXT[fxOfAttr(st.attr)].emo} {ATTR_FX_TXT[fxOfAttr(st.attr)].name} · {ATTR_FX_TXT[fxOfAttr(st.attr)].desc} <small>(장착 · 각성 스킬이 맞을 때)</small></p>
     <div class="mid">
       <div class="big"><HeroSprite id={lookOfStats(st)} aura={enh} scale={2} play /></div>
-      <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>
+      <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}{#if r.sub}<small class="sub">{r.sub}</small>{/if}</b></li>{/each}</ul>
     </div>
     <!-- ⚡ 스킬 (📜 요청 #16): 장착 스킬 고르기 = 그 용사 속성 사다리 Ⅰ ~ Ⅳ · 값 = 캠프 「내 용사」와 같은 💎 · 📜 · 연습방 = 미리 보기(저장 안 됨) -->
     <div class="sk16" data-k="atb-pick-skills">
@@ -81,6 +81,7 @@
   .mid { display: flex; align-items: center; gap: 8px; }
   .big { flex: none; }
   .stats { flex: 1; margin: 0; padding: 4px 8px; list-style: none; border-radius: 10px; background: #f6e7c4; border: 1px solid #c9a36a; }
+  .stats li .sub { margin-left: 4px; font: 600 10px var(--font-plain); color: #8a7a60; }
   .stats li { display: flex; justify-content: space-between; padding: 2px 0; font: 800 14px var(--font-plain); border-bottom: 1px dashed #d8bf8a; } .stats li:last-child { border: none; }
   .sk16 { display: flex; flex-direction: column; gap: 4px; } .sh { font: 900 14px var(--font); }
   .lad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }

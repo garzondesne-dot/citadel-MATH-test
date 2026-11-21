@@ -29,10 +29,18 @@ export function statsOf(h: HeroIn): Stats {
 /** 👀 보이는 모습 id (📜 요청 #15 · 캠프 · 레이드와 같은 규칙): 각성 상태 + 각성 그림이 있는 용사 = 각성 모습(awkId) · 아니면 그대로(각성 연출 = 오라 · 이름 금빛) */
 export const lookOfStats = (s: Pick<Stats, 'hero' | 'awk'>) => (s.awk && isAwkId(awkId(s.hero)) ? awkId(s.hero) : s.hero);
 /** 고르는 창 숫자 줄 (선생님 W1-b 「여기서만 용사 수치」) · 방어 0 = 「0%」 */
-export const statRows = (s: Stats) => [
-  { k: 'hp', label: 'HP', v: String(s.maxHp) },
-  { k: 'atk', label: '공격력', v: `×${s.skillMul.toFixed(2)}` },
-  { k: 'def', label: '방어', v: s.def ? `−${Math.round(s.def * 100)}%` : '0%' },
-  { k: 'atb', label: 'ATB', v: `${s.atbSec.toFixed(1)}초` },
-  { k: 'crit', label: '치명', v: `×${s.crit.toFixed(1)}` },
-];
+/** 📊 고르는 창 수치 (📜 요청 #43 · #46): 배율 대신 실제 숫자 = 전투 피해 숫자와 같은 단위(치명 · 약점 · 덧효과 빼고 기본 한 방) · 배율은 옆에 작게(sub) */
+export const statRows = (s: Stats): { k: string; label: string; v: string; sub?: string }[] => {
+  const healer = s.role === 'healer', H = T.role.healer, sk = s.skillMul * (healer ? H.skillMul : 1);
+  return [
+    { k: 'hp', label: 'HP', v: String(s.maxHp) },
+    { k: 'atk', label: '공격', v: String(Math.round(T.attackBase * s.atkMul)), sub: `×${s.atkMul.toFixed(2)}` },
+    { k: 'skill', label: '스킬', v: String(Math.round(T.skillBase * sk)), sub: `×${sk.toFixed(2)}${healer ? ` · ⚡${H.skillCost}` : ''}` },
+    { k: 'def', label: '방어', v: s.def ? `−${Math.round(s.def * 100)}%` : '0%' },
+    { k: 'atb', label: 'ATB', v: `${s.atbSec.toFixed(1)}초` },
+    { k: 'crit', label: '치명', v: `×${s.crit.toFixed(1)}` },
+    healer
+      ? { k: 'heal', label: '힐', v: `💚 큰 힐 ${Math.round((H.big + (s.awk ? T.awk.healerBig : 0)) * 100)}%`, sub: `공격 맞힘 = 팀 +${Math.round(H.atkHeal * 100)}%` }
+      : { k: 'heal', label: '힐', v: `🩹 응급 힐 ${Math.round(s.maxHp * T.firstAid)}`, sub: '최대 체력 1/3 · ⚡1' },
+  ];
+};
