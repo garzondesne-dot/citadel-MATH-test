@@ -381,6 +381,16 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-pick-844.png` });
   ok('⑥ 고르는 창 가로 넘침 0', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   ok('요청 #36′ 고르는 창 = 속성 덧효과 한 줄(이모지 + 이름 + 설명)', /(관통|화상|감전|얼림|순풍|약점 노출|축복|저주) · /.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
+  // 📜 요청 #85 교사 연습방 = Land(CSS 돌림)만 · 전체 화면 · 방향 잠금 호출 0 · 나오면 세로
+  { const v = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.addInitScript(() => { globalThis.__lk = { lock: 0, fs: 0 }; try { const o = screen.orientation; if (o) o.lock = async () => { globalThis.__lk.lock++; }; } catch { /* 무시 */ } const rf = Element.prototype.requestFullscreen; Element.prototype.requestFullscreen = function (...a) { globalThis.__lk.fs++; return rf ? rf.apply(this, a).catch(() => {}) : Promise.resolve(); }; });
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.tap('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(700);
+    const rot = !!(await v.$('[data-rot90]'));
+    await v.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.bossHp = 3; S.target = null; S.heroes[0].ch = 3; a.full(); }); await v.waitForTimeout(150); await skc(v, 'equip', true); await v.waitForSelector('[data-k="atb-exit"]', { timeout: 8000 }); await v.waitForTimeout(500);
+    await v.tap('[data-k="atb-exit"]'); await v.waitForSelector('[data-k="atb-setup"]'); await v.waitForTimeout(300);
+    const r = await v.evaluate(() => ({ ...globalThis.__lk, fsEl: !!document.fullscreenElement, rot: !!document.querySelector('[data-rot90]') }));
+    ok('요청 #85 세로 390 연습방 → 판(돌림 상자) → 나가기 = 방향 잠금 0 · 전체 화면 0 · 설정 화면 세로', rot && r.lock === 0 && r.fs === 0 && !r.fsEl && !r.rot, JSON.stringify({ inBattleRot: rot, ...r }));
+    await v.close(); }
   // 📜 요청 #90 문제 카드 접기 · 펴기 = 빈 곳 누름 접힘(진행 그대로) · 띠 누름 올림 · ⚡ 가득 = 저절로 접힘(한 번) · ⚡ 0 = 저절로 올림
   for (const [w, h, nm] of [[844, 390, '가로 844'], [390, 844, '세로 390 돌림']]) {
     const v = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true }); v.on('pageerror', (e) => errs.push(String(e)));
