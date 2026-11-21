@@ -23,7 +23,7 @@
   .b i { position: absolute; left: 0; top: 0; display: block; height: 8px; border-radius: 4px; }
   .b .cur { background: var(--hp, #e5484d); transition: width 0.4s; }
   .b .lag { background: #fff6; transition: width 0.5s ease-in 0.6s; }
-  .b.in { height: 18px; border-radius: 9px; } .b.in i { height: 16px; border-radius: 8px; } .b.in em { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.25em; white-space: nowrap; font: 800 12px var(--font-plain, sans-serif); font-style: normal; line-height: 1; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+  .b.in { height: 18px; border-radius: 9px; } .b.in .lag { transition: width 0.3s ease-in 0.4s; } /* 📜 게시판 던전 요청 #38 = 흰 조각 0.4초 머묾 → 0.3초에 따라 줄어듦 */ .b.in i { height: 16px; border-radius: 8px; } .b.in em { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 0.25em; white-space: nowrap; font: 800 12px var(--font-plain, sans-serif); font-style: normal; line-height: 1; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
   .ag { position: relative; height: 16px; border-radius: 4px; background: rgba(21, 18, 15, 0.85); border: 1px solid #6a4a1c; overflow: hidden; }
   .ag i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #ffd34a, #ff8a2a); }
   .ag span { position: relative; display: block; text-align: center; font-size: 12px; line-height: 14px; font-variant-numeric: tabular-nums; }
