@@ -5,6 +5,7 @@ import { meBound, p, type Bound } from './meSync';
 import type { Store } from '../model/types';
 import { onDestroy } from 'svelte';
 import { addTo, txOn } from './atomic';
+import { registerTx } from './outbox';
 // 🧑 학생 한 명의 기록 — 이 기기(서버 없음 · 시험 · 교사 · TV) 또는 시험 서버(#141 · 그 학생으로 로그인한 폰 = store/meSync.ts 정식 경로)
 //   seen = 캠프에서 한 번이라도 눌러 본 물건 (#111 ② 이름표 규칙)
 //   socket = 용사마다 끼운 스킬 · title = 고른 호칭 id(hero-data titles · 'none' = 안 닮) · 산 용사 · 스킬 = wallet.buys { id, ver } · test = 🧪 테스트 기록(「테스터」 배지)
@@ -58,6 +59,7 @@ export function mergeBuys(server: GemRow['buy'] | null | undefined, mine: Wallet
   const sv = buysOf({ buy: server || undefined }).buys, ids = new Set(mine.map((x) => x.id));
   return [...mine.map((x) => ({ ...x })), ...sv.filter((x) => !ids.has(x.id))];
 }
+registerTx('buys', (cur, v) => mergeBuys(cur as GemRow['buy'], v as Wallet['buys'])); // 🐞 #83-12 보관함이 다시 보낼 때 쓰는 합치기
 /** 서버가 바뀜(다른 기기 · 보상 · 선물) → 이 폰 값을 그만큼 옮김 · base = 서버 값 */
 function rebase(me: Me, base: Base, sv: Base) {
   me.wallet.gem += sv.gem - base.gem; me.wallet.scroll += sv.scroll - base.scroll; me.enh += sv.enh - base.enh; me.xp += sv.xp - base.xp;
@@ -83,7 +85,10 @@ function toServer(b: Bound, me: Me, base: Base) {
   put('hero'); put('socket'); put('title'); put('titles'); put('theme');
   if (!eq(me.wallet.ver, base.ver)) { base.ver = me.wallet.ver; S.set(`${g}/ver`, me.wallet.ver); }
   if (me.wallet.log?.length && !eq(me.wallet.log, base.log)) { base.log = [...me.wallet.log]; S.set(`${g}/mlog`, me.wallet.log); }
-  if (buyKey(me.wallet.buys) !== buyKey(base.buys)) { const mine = cl(me.wallet.buys); base.buys = cl(mine); void txOn<GemRow['buy']>(S, `${g}/buy`, (cur) => mergeBuys(cur, mine)); }
+  if (buyKey(me.wallet.buys) !== buyKey(base.buys)) { // 🐞 #83-12 산 것 = 보관함 합치기 줄(끊긴 채 닫아도 💎 빠짐과 같이 다시 올라감) · 서버 아님 = 예전 그대로
+    const mine = cl(me.wallet.buys); base.buys = cl(mine);
+    if (S.merge) S.merge(`${g}/buy`, mine, 'buys'); else void txOn<GemRow['buy']>(S, `${g}/buy`, (cur) => mergeBuys(cur, mine));
+  }
   const had = b.S.get<Record<string, unknown>>(p(b, 'cards')) || {};
   for (const id of Object.keys(me.cards || {})) if (!had[id]) S.set(`${p(b, 'cards')}/${id}`, true); // 카드 = 늘기만 (정식 cards/{카드} = true)
 }

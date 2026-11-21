@@ -4,7 +4,7 @@ import { connectAuthEmulator, getAuth, inMemoryPersistence, initializeAuth, onAu
 import type { Store, Unsub } from '../model/types';
 import { setClockOffset } from '../ui/clock.svelte';
 import { tidy as tidyParts } from './tidy';
-import { deepEq, incMark, localStorageOut, makeOutbox, merge3, queued, type Outbox } from './outbox';
+import { deepEq, incMark, localStorageOut, makeOutbox, merge3, queued, txFn, type Outbox } from './outbox';
 
 // 🔌 시험 서버 꽂개 (#137 · Firebase Realtime Database) — 같은 Store 꼴(get 은 바로 · set · watch · now)
 //   읽기 = 맨 윗칸(rooms · school · gifts · mail · accounts)을 실시간으로 받아 둔 거울(mirror)에서 바로 · 쓰기 = 거울에 먼저 + 서버에 보냄
@@ -94,6 +94,12 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     flying.add(id);
     return fbUpdate(ref(db), { [split(path).join('/')]: increment(n), [mark]: true }).then(() => { flying.delete(id); box.done(id); return true; }, (e) => { flying.delete(id); if (permDenied(e)) { console.warn('보관함: 규칙이 막아 버림', path); box.done(id); } return false; });
   };
+  /** 🐞 #83-12 합치기 줄 보내기 = transaction 으로 서버 값과 합침 (몇 번 보내도 같음) */
+  const sendTx = (id: string, path: string, v: unknown, kind: string) => {
+    const fn = txFn(kind); if (!fn) { box.done(id); return Promise.resolve(true); }
+    flying.add(id);
+    return runTransaction(ref(db, split(path).join('/')), (cur) => fn(cur ?? null, v) as never).then((r) => { flying.delete(id); if (r.committed) box.done(id); return r.committed; }, (e) => { flying.delete(id); if (permDenied(e)) { console.warn('보관함: 규칙이 막아 버림', path); box.done(id); } return false; });
+  };
   let replaying = false;
   /** 남은 줄 다시 보내기 — 그 경로 서버 값을 먼저 받고(못 받으면 다음에) 세 갈래로 합쳐서 (📜 「서버 값 받기 전에 쓰지 않음」) */
   async function replay() {
@@ -102,6 +108,7 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
     try {
       for (const it of box.list(who)) {
         if (flying.has(it.id)) continue;
+        if (it.tx) { if (!(await sendTx(it.id, it.path, it.v, it.tx))) break; continue; } // 🐞 #83-12 합치기 줄
         if (it.inc) { // 🐞 #83-10 더하기 줄 = 표시가 있으면 이미 더해짐
           const mark = incMark(it.path, it.id); if (!mark) { box.done(it.id); continue; }
           let m: unknown; try { const snap = await Promise.race([fbGet(ref(db, mark)), new Promise<null>((r) => setTimeout(() => r(null), 8000))]); if (!snap) break; m = snap.val(); } catch (e) { if (permDenied(e)) { box.done(it.id); continue; } break; }
@@ -159,6 +166,14 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
       const who = meUid();
       if (!admin && who && queued(path)) { const id = box.putInc(path, n, who, Date.now()), mark = incMark(path, id); if (mark) { void sendInc(id, path, n, mark); return; } box.done(id); } // 🐞 #83-10 보관함 더하기 줄
       fbSet(ref(db, parts.join('/')), increment(n)).catch((e) => console.error('시험 서버 더하기 실패', path, e));
+    },
+    merge(path: string, v: unknown, kind: string) {
+      const fn = txFn(kind); if (!fn) return;
+      void ensure(path);
+      const parts = split(path); setIn(mirror, [...parts], clone(fn(clone(getIn(mirror, parts) ?? null), v) ?? null)); fire(path); // 거울 먼저
+      const who = meUid();
+      if (!admin && who && queued(path)) { void sendTx(box.putTx(path, v, kind, who, Date.now()), path, v, kind); return; }
+      void runTransaction(ref(db, parts.join('/')), (cur) => fn(cur ?? null, v) as never).catch((e) => console.error('시험 서버 합치기 실패', path, e));
     },
     async tx<T>(path: string, fn: (cur: T | null) => T | null | undefined, ms = 8000) {
       await ensure(path);

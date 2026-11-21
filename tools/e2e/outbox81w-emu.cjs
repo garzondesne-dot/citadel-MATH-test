@@ -60,5 +60,13 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   log('   W6 화면 알림:', toast6.trim(), '· 서버 got', g6, '· 💎', t6);
   ok('W6 끊긴 채 받기 = 선물 got 이면 💎 도 +30 (got 인데 💎 300 = 선물 사라짐)', g6 === true ? t6 === 330 : true, `got ${g6} · 💎 ${t6} · 「${toast6.trim()}」`);
   ok('W6 끊긴 채 받기 알림 ≠ 「이미 받은 선물」 (아직 못 받았는데 이미 받았다고 함)', !/이미 받은/.test(toast6), toast6.trim());
+  // W7 (🐞 #83-12) 끊김 → 상점에서 사기(💎 −20 = 더하기 · 산 것 = 합치기) → 끊긴 채 닫기 → 다시 열기 = 산 것 · 💎 같이 · 다른 폰이 그새 산 것도 남음
+  const t7 = await rest('gem/1-3/1/total');
+  await ds(() => { const d = window.__ds; d.off(); d.S.add('gem/1-3/1/total', -20); d.S.merge('gem/1-3/1/buy', [{ id: 'hero-w7', ver: 1, at: Date.now() }], 'buys'); });
+  await wait(1200); await p.close();
+  await rest('gem/1-3/1/buy', 'PUT', [{ id: 'other-w7', ver: 1, at: 1 }]); // 다른 폰이 그새 산 것
+  p = await open(); await wait(8000);
+  const b7 = (await rest('gem/1-3/1/buy')) || [], ids7 = Object.values(b7).map((x) => x.id), t7b = await rest('gem/1-3/1/total');
+  ok('W7 끊긴 채 사고 닫았다 열기 = 산 것 + 💎 −20 같이 · 다른 폰 산 것도 그대로', ids7.includes('hero-w7') && ids7.includes('other-w7') && t7b === t7 - 20, `산 것 ${ids7.join(',')} · 💎 ${t7} → ${t7b}`);
   await b.close(); log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();

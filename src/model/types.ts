@@ -188,6 +188,8 @@ export interface Store {
   add?(path: string, n: number): void;
   /** 🐞 11/20 ② 그 칸을 서버 최신 값에서 고쳐 씀 (서버 = transaction) · fn 이 undefined 를 돌려주면 그만둠 */
   tx?<T = unknown>(path: string, fn: (cur: T | null) => T | null | undefined, /** 기다릴 ms (기본 8000 · 0 = 서버 답이 올 때까지 · 🐞 #83-11 선물 받기) */ ms?: number): Promise<boolean>;
+  /** 🐞 #83-12 서버 값과 합쳐 쓰기 (registerTx 로 등록한 kind · 보관함에 남아 끊겨도 다시 · 서버만) */
+  merge?(path: string, v: unknown, kind: string): void;
 }
 
 // ── 방 상태 (정식 rooms/{code} 의 첫 한 바퀴에 필요한 부분) ──
