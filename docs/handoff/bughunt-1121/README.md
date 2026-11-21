@@ -41,3 +41,15 @@
 ## 새 도구
 - `tools/e2e/atbsweep.cjs` 봇 관전 끝까지 훑기 · `tools/e2e/atblint.cjs` 전투 화면 가려진 단추 · 화면 밖 · 잘린 글자 · `tools/e2e/atbcardfit.cjs` 문제 카드 보기 들어오나 · `tools/e2e/screenlint.cjs` 캠프 · 교사 폰 · 종합실 · 체험판 같은 검사(시트 뒤 단추도 잡아 가짜 경보 많음 · 사람이 거름)
 - ⚠ 에뮬레이터 시험은 한 번에 하나만 (서로 DB 를 지움 · 함께 돌리면 mailhold 「💎 0 → 0」 같은 가짜 실패)
+
+## #81 B 📮 폰 보관함 × 지갑 (베타 main 2a20d60 · 에뮬레이터 · `tools/e2e/outbox81w-emu.cjs`)
+
+| 번호 | 화면 | 버그 한 줄 | 다시 내는 법 | 캡처 | 심각도 |
+|---|---|---|---|---|---|
+| 10 | 수업 보상 · 허수아비 · 성채 · 캠프 지갑 저장 (💎 · 📜 · EXP · 강화 · 하루 💎) | 끊긴 채 보상을 받고 **앱을 닫으면 log 줄만 올라가고 💎 · EXP total 은 사라짐** → log 가 있어 다시 안 줌 = 영영 잃음. total 은 11/20 고침의 `add`(increment) 로 쓰는데 보관함은 `set` 만 담음 (보관함 띠 숫자에도 안 셈) | W1: 💎 100 · EXP 300 → 끊김 → log raid_W1 set + total add 16 · xp add 40 → 앱 닫기 → 다시 열기 = log 있음 · 💎 100 · EXP 300 | — | 상 |
+| 11 | 우편함 「받기」 · 캠프 선물 자동 받기 | 끊긴 채 「받기」 = `claimOnce` transaction 이 8초 뒤 「못 받음」으로 끝나 지갑에 안 넣음 → 다시 이으면 SDK 가 transaction 을 마저 해 **got = true · 💎 그대로 = 선물 잃음** | W6: 선물 30 hold → 우편함 → 끊김 → 받기 → 10초 → 이음 = got true · 💎 300 | — | 상 |
+| 12 | 상점 · 강화 (산 것 buy = transaction · 💎 = add) | 10 과 같은 꼴: 끊긴 채 사고 앱을 닫으면 산 것 · 💎 빠짐 둘 다 사라짐(서로 맞아 손해는 없으나 산 것이 없어짐) · 이어진 채 transaction 이 8초 넘으면 base 를 먼저 바꿔 다음 저장 때 다시 안 보냄 | 코드 읽음 (store/me.svelte.ts toServer · atomic txOn) | — | 중 |
+
+고치는 길(손발 · 제안): ① `add` 도 보관함에 「더하기 줄」로 넣고, 서버에 `update({ total: increment(n), ['applied/' + id]: true })` 처럼 표시와 같이 한 번에 씀 → 다시 보낼 때 표시가 있으면 지움(두 번 안 더함) ② `claimOnce` = 시간 초과로 끝내지 말고 transaction 결과를 끝까지 기다려 이긴 경우 그때 지갑에 넣기(또는 보관함 줄) · 끊김이면 「인터넷이 끊겼어요 · 이어지면 다시」 ③ me.svelte toServer 의 buy = 보낸 뒤 확인 받았을 때 base 를 바꾸기.
+
+통과: outbox81-emu 8 (띠 · 서버엔 아직 없음 · 다시 열면 올라감 · 💎 log 합집합 · 띠 사라짐 · 처음으로 확인 창 · 다시 이음 · 교사 ⏳) · outbox · wallet2dev · mepending 단위 13 · W2 끊김 → 같은 세션 다시 이음 = 한 번만(116) · W3 두 폰(끊긴 A +16 · 온라인 B +10 = 126) · W4 끊긴 채 닫은 수업 기록 = 다시 열면 올라감(mergeRow) · W5 캠프 열린 채 끊김 +5 · 그동안 서버 +50 = 255 (줄지 않음).
