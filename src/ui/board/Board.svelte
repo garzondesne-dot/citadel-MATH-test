@@ -11,7 +11,8 @@
   import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
-  import { isBeta, lastClass, lastTest, uidOf } from '../../school/school';
+  import { isBeta, lastTest, uidOf } from '../../school/school';
+  import { doneNo } from '../../school/progress';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
@@ -30,7 +31,7 @@
   // 진도: 그 차시 수업 기록이 있거나 · 기록이 있는 가장 뒤 차시까지 (반이 없는 기기 = 모두)
   const recs = untrack(() => (cls && num ? S.get<Record<string, { right?: number; total?: number; boss?: number | { ok?: number; items?: number }; bossN?: number; mons?: Record<string, unknown> }>>(`records/${cls}/${num}`) : null)) || {};
   // 반 진도 = 그 반이 마지막으로 연 차시(school/last · 🧪 테스트 school/lastTest) · 내 수업 기록 중 큰 것
-  const reach = Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(untrack(() => (cls ? lastClass(S, cls)?.no : 0))) || 0, Number(untrack(() => (cls ? lastTest(S, cls)?.no : 0))) || 0);
+  const reach = Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), untrack(() => doneNo(S, cls)), /* 📚 #25 진행한 최대 차시 */ Number(untrack(() => (cls ? lastTest(S, cls)?.no : 0))) || 0);
   const LESSONS = PACKS.filter((p) => (p.steps.some((s) => s.kind === 'monster') || p.boss));
   // 나눈 차시(7차시)는 정식 기록이 원래 차시 칸에 있음(정식 6차시 기록의 u4 ~ u7 = v1.0 7차시 · 출시 전 메모 10)
   const recOf = (p: LessonPack) => recs[p.id] ?? (p.partOf && Object.keys(recs[p.partOf]?.mons || {}).some((k) => p.steps.some((s) => s.id === k)) ? recs[p.partOf] : undefined);

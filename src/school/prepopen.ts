@@ -3,7 +3,7 @@
 //   보상 0 · 기록 = bonus/{반}/{번호}/review/prep_{차시 id}/{몬스터} = { tries, clear, at } (review 아래 = 반 통계 · 허수아비 목록 · 업적에 안 섞임 · 🔑 keyp_ 과 같은 자리)
 import type { LessonPack, Store } from '../model/types';
 import { PACKS } from '../engine/packs';
-import { lastClass } from './school';
+import { doneNo } from './progress';
 
 export const PREP_PATH = 'school/prepOpen';
 export const prepKey = (lid: string) => `prep_${lid.replace(/[.#$/[\]]/g, '_')}`;
@@ -12,7 +12,7 @@ export const prepPacks = (): LessonPack[] => PACKS.filter((p) => !/^eval-/.test(
 /** 그 반이 수업한 마지막 차시 번호 (교사가 연 수업 · 내 수업 기록 중 큰 것) */
 export function heldNo(S: Store, cls: string, recs: Record<string, unknown> = {}): number {
   const own = Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0);
-  return Math.max(0, Number(lastClass(S, cls)?.no) || 0, ...own);
+  return Math.max(0, doneNo(S, cls), ...own); // 📚 #25 지난 차시를 다시 열어도 안 내려감
 }
 export type PrepOver = Record<string, boolean>;
 export const prepOver = (S: Store, cls: string): PrepOver => (cls ? S.get<PrepOver>(`${PREP_PATH}/${cls}`) : null) || {};

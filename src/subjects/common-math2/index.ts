@@ -3,6 +3,7 @@ import type { LessonPack, Question } from '../../model/types';
 import type { Subject } from '../../model/subject';
 import DATA from './subject.json';
 import THEMES from './themes.json';
+import MHIT from './mhit-map.json'; // 👹 #26 몬스터 맞는 그림 짝 (머리 hv2 monster-hit-map.json 그대로)
 import MIS from './mis-codes.json';
 import LEGACY_OPENED from './legacy-opened.json';
 import RUBRICS from './rubrics.json';
@@ -50,6 +51,7 @@ const SUBJECT: Subject = {
   formats: FORMATS,
   recheck,
   themes: THEMES as Subject['themes'],
+  monsterHit: MHIT as Record<string, string>,
   demo: DATA.demo as Subject['demo'],
   trial: TRIAL,
 };

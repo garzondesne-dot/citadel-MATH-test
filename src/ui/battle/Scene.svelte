@@ -8,7 +8,8 @@
   import { atkQ, guardQ } from './fx.svelte';
   import { guard } from '../fx/aura';
   import { attack, canUlt, preload as atkPreload, type Pose } from '../fx/attack';
-  import { monBody } from '../manifest';
+  import { monBody, MHIT, mhitOf, type MhitKind } from '../manifest';
+  import MonHit from './MonHit.svelte';
   import { aura as auraAct } from '../fx/aura';
   import { untrack } from 'svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
@@ -18,9 +19,9 @@
   //   몬스터 체력 = 오른쪽 위 · 상태 칩 = 왼쪽 위(이 몬스터에서만 켜지는 효과) · 용사 = 왼쪽 바닥 · 몬스터 = 오른쪽
   //   정찰 = 몬스터 그림자 · 소레이드 = 졸개 줄(지금 칠 졸개 테두리) + 대장
   type Chip = { text: string; on?: boolean };
-  const { explore = '', noMon = false, gauge = null, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [] }:
+  const { explore = '', noMon = false, gauge = null, theme, sprite, hp = null, hpLabel: hpL = '', shadow = false, down = false, chips = [], minions = null, gem = 0, timeLeftMs = null, backHref = '?', pose = 'idle', hit = false, hitTag = '', note = '', onconcept, elem = '', atkId = '', rage = false, hitKey = 0, ice = false, iceEnd = 'melt', holy = '', onholy, stoneSec = 0, stoneHoly = false, slump = false, healN = 0, lift = false, mates = [], mateFeed = [], boss = false }:
     { /** 🔥 #67 탐사대 한 줄 (정찰 · 내가 탐사대일 때만) */ explore?: string; /** 📣 도입 · 개념 = 몬스터 없이 배경 + 내 용사만 (📜 2026-11-15) */ noMon?: boolean; /** ⏱ 공격 게이지 (11/17 #3 · battle/gauge.ts = TV 와 같은 함수) */ gauge?: import('./gauge').GaugeView | null; theme?: string; sprite: string; hp?: { left: number; max: number } | null; hpLabel?: string; shadow?: boolean; down?: boolean; chips?: Chip[];
-      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number;
+      minions?: { n: number; stage: number; downs: number[] } | null; gem?: number; timeLeftMs?: number | null; backHref?: string; pose?: 'idle' | 'attack' | 'miss' | 'heal' | 'healed' | 'win'; hit?: boolean; hitTag?: string; note?: string; onconcept?: () => void; elem?: string; /** 💥 몬스터 공격 id (🌀 혼란 = 소용돌이 그림 대신 머리 위 도는 별) */ atkId?: string; rage?: boolean; hitKey?: number; ice?: boolean; iceEnd?: 'shatter' | 'melt'; holy?: '' | 'can' | 'on'; onholy?: () => void; stoneSec?: number; stoneHoly?: boolean; /** 😞 ❤ 0 잠김 = 쓰러짐 줄 */ slump?: boolean; /** 💚 받은 힐 + 풀어주기 수 (늘면 1.6초 힐 받음 줄) */ healN?: number; /** 👹 #26 보스 = 맞는 그림 1.5배 */ boss?: boolean;
       /** 📋 게시판 = 장면 낮게 · 용사 · 몬스터 위로 (📜 2026-11-14 「너무 아래에 있음」) */ lift?: boolean; /** 👥 게시판 팀 동료 (없으면 수업 그대로) */ mates?: Mate[]; /** 👥 동료 공격 사건 (k 순서 · 늘기만 함) */ mateFeed?: MateHit[] } = $props();
   // 📋 lift (📜 2026-11-14 머리 🔨 게시판 동료): 장면 높이 −56 · 용사 −68 · 몬스터 −44 · 체력 −12 → SE(375 × 667)에서 답 단추가 스크롤 없이 · 동료가 있으면 내 용사 = 앞 오른쪽(+120)
   const LH = $derived(lift ? 56 : 0), HY = $derived(lift ? 68 : 0), MY = $derived(lift ? 44 : 0), MH = $derived(lift ? 12 : 0), HX = $derived(lift && mates.length ? 120 : 0);
@@ -81,7 +82,9 @@
   let mflash = $state<'' | 'hit' | 'attack'>(''), mT: ReturnType<typeof setTimeout> | undefined;
   const monFlash = (p: 'hit' | 'attack', ms: number) => { mflash = p; clearTimeout(mT); mT = setTimeout(() => (mflash = ''), ms); };
   let lastHitKey = 0;
-  $effect(() => { const on = hit, k = hitKey; untrack(() => { if (on && k !== lastHitKey) { lastHitKey = k; monFlash('attack', 600); } }); });
+  // 👹 #26 몬스터 맞는 그림 = 몬스터 몸짓 시작과 함께 내 용사 위 6칸 0.42초 (그 뒤 공격 효과 그대로)
+  let mhit = $state<{ k: number; kind: MhitKind } | null>(null), mhT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const on = hit, k = hitKey; untrack(() => { if (on && k !== lastHitKey) { lastHitKey = k; monFlash('attack', 600); mhit = { k, kind: mhitOf(sprite) }; clearTimeout(mhT); mhT = setTimeout(() => (mhit = null), MHIT.ms + 40); } }); });
   const mpose = $derived<MonPose>(down ? 'down' : mflash || 'idle');
   const mrune = $derived(sp.rune && !shadow ? runeAt(sp.sheet, sp.row, poseCol(sp.sheet, mpose)) : null);
   const monBB = $derived(monBody(sp.sheet.src, sp.row, sp.sheet.poses[down ? 'down' : 'idle'], sp.sheet.cell));
@@ -151,7 +154,7 @@
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
   <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero), hero: savedLook().hero }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({use8 ?? heroUrl()})" style:background-size={use8 ? `${IDLE8_HD.frames * hg.w * HS}px ${hg.h * HS}px` : `${HERO.cols * hg.w * HS}px ${HERO.rows * hg.h * HS}px`}
     data-pose={hpose} class:once={!!anim[3]} class:still={anim[1] < 2 || iceMode === 'on'} style:--fw="{hg.w * HS}px" style:--n={anim[1]} style:--dur="{anim[2]}s" style:--end="-{anim[1] * hg.w * HS}px" style:--end1="-{(anim[1] - 1) * hg.w * HS}px" style:--n1={Math.max(1, anim[1] - 1)}
-    style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>{#if explore}<span class="torch" aria-hidden="true"><i class="tg"></i><b>🔥</b></span>{/if}</span>
+    style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>{#if mhit}{#key mhit.k}<MonHit kind={mhit.kind} x="50%" y="48%" size={hg.h * HS * 1.25} {boss} />{/key}{/if}{#if explore}<span class="torch" aria-hidden="true"><i class="tg"></i><b>🔥</b></span>{/if}</span>
 </div>
 
 <style>
