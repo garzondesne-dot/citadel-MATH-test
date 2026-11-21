@@ -37,7 +37,17 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   ok('결과 화면', !!(await A.$('[data-k="atb-to-board"]')));
   await A.click('[data-k="atb-to-board"]').catch(() => {}); await wait(2500);
   const bd = Object.values((await rest(`bonus/${CLS}/1/board`)) || {}).filter((r) => r.atb), rv = (await rest(`bonus/${CLS}/1/review/set-06`)) || {};
-  if (BETA) { ok('🧪 테스트 반 = 기록 · 복습 기록 없음', bd.length === 0 && !Object.keys(rv).length); }
+  if (BETA) {
+    ok('🧪 테스트 반 = 서버 기록 · 복습 기록 없음', bd.length === 0 && !Object.keys(rv).length);
+    const tb = await A.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } }, `citadel-v1-test-board:${CLS}_1`);
+    const rs = Object.values(tb?.recs || {}), best = Math.max(0, ...rs.map((x) => x.stars || 0));
+    ok('🧪 #86 테스트 반 = 이 기기에 판 기록 · 최고 별 (학생처럼 · 공적 0)', rs.length >= 1 && (tb.star?.['set-06'] ?? 0) === best && rs.every((x) => x.merit === 0), `판 ${rs.length} · ⭐ ${best}`);
+    await A.click('[data-btab="rec"]').catch(() => {}); await wait(400);
+    const st = ((await A.textContent('[data-k="board-rec"]').catch(() => '')) || '').match(/⭐ (\d+) \//)?.[1];
+    ok('🧪 #86 기록 탭 ⭐ = 이 기기 최고 별', Number(st) === best, `⭐ ${st} · 저장 ${best}`);
+    await A.click('[data-btab="war"]').catch(() => {}); await wait(300);
+    ok('🧪 #86 기사단 막대 = 「테스트 · 공적 안 쌓임」', !!(await A.$('[data-k="war-test"]')));
+  }
   else { ok('혼자 판 학생 기록 1줄', bd.length === 1, `${bd.length}`); ok('📕 복습 완료 = 맞힌 몬스터 칸', Object.keys(rv).length >= 1, Object.keys(rv).join(',')); }
   ok('게시판으로 돌아옴', !!(await A.$('[data-k="board-map"]')));
   // ② 모집 글 = 암호 없이 바로 · 다른 폰 합류 = 암호 입력 없음

@@ -30,12 +30,16 @@ export const isAtb = (p: Post | null) => !!p?.code?.startsWith('A');
 export const atbMeta = (S: Store, pid: string) => S.get<AtbMeta>(`${ATB}/${pid}/meta`);
 /** 지금까지 그 차시 최고 별 (⭐ 골고루 돌기 · 손발 #2 계산의 prevStars) */
 export const prevStars = (S: Store, cls: string, num: number, lid: string) => Math.max(0, Math.min(3, Number(S.get(`bonus/${cls}/${num}/boardStar/${lid}`)) || 0));
+/** 판 기록 한 줄 (서버 · 🧪 테스트 저장소 같은 꼴) */
+export function atbRec(ctx: { L: LessonPack; n: number; role?: 'g' | 'c' }, e: AtbEnd, t: number, stars: number, merit: number) {
+  return { at: t, lid: ctx.L.id, no: ctx.L.no, n: ctx.n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true };
+}
 /** 끝 (각 폰 = 자기 것만): 학생 기록 · ⭐ 최고 별 · 반 공적 — 돌려주는 값 = 이번 판 💎 (지갑에 더하는 건 화면 쪽) · 공적 */
 export function saveAtbResult(S: Store, ctx: { cls: string; num: number; L: LessonPack; pid: string; n: number; role?: 'g' | 'c' }, e: AtbEnd): { gem: number; merit: number; newStars: number } {
   const { cls, num, L, pid, n } = ctx, t = S.now();
   if (S.kind === 'memory' || !cls || !num || isBeta(S, cls)) return { gem: sum(e.gem), merit: 0, newStars: 0 };
   const merit = sum(e.merit), was = prevStars(S, cls, num, L.id), stars = Math.max(0, Math.min(3, e.stars | 0));
-  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, { at: t, lid: L.id, no: L.no, n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true }); // 📊 #56 대시보드 = 첫 시도 · 활약(막기 · 구조 · 끊기 · 브레이크)
+  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, atbRec(ctx, e, t, stars, merit)); // 📊 #56 대시보드 = 첫 시도 · 활약(막기 · 구조 · 끊기 · 브레이크)
   if (stars > was) S.set(`bonus/${cls}/${num}/boardStar/${L.id}`, stars);
   return { gem: sum(e.gem), merit: addMerit(S, cls, num, merit, t), newStars: Math.max(0, stars - was) };
 }

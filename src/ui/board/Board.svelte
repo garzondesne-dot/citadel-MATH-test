@@ -15,6 +15,7 @@
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, uidOf } from '../../school/school';
+  import { testLoad, testSaveRun, testStar, testWho } from '../../board/testRecs';
   import { doneNo } from '../../school/progress';
   import Sheet from '../battle/Sheet.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -22,7 +23,7 @@
   import BoardRun from './BoardRun.svelte';
   import WarBar from './WarBar.svelte';
   import AtbNet from './atb/AtbNet.svelte';
-  import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow } from '../../board/atbLink';
+  import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow, atbRec } from '../../board/atbLink';
   import { knightOf, payOn, standings, weekOf } from '../../board/war';
   import { josa } from '../../board/josa';
   import { resvDays, resvLabel } from '../../board/resv';
@@ -191,6 +192,9 @@
   // 📡 #48 ATB 판 끝 (결과 화면 「게시판으로」): 기록 · ⭐ · 반 공적 · 💎(지급 스위치 켜짐만 · 베타 = 끔 = 예상만) → 게시판
   function atbEnded(p: Post, r: AtbEnd | null) {
     const L = lessonOf(p.lesson);
+    if (r && L && testAcc) { // 🧪 #86 테스트 반 · 교사 = 판 기록 · ⭐ 만 이 기기에 (공적 · 💎 · 서버 기록 없음)
+      testSaveRun(testWho(cls, num), `${p.pid}_${S.now().toString(36)}`, atbRec({ L, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r, S.now(), Math.max(0, Math.min(3, r.stars | 0)), 0)); tv++;
+    }
     if (r && L && cls && num && !isBeta(S, cls)) { // 🧪 테스트 반 = 새 전투만 · 기록 · 💎 · 공적 없음 (#65-1)
       const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
       let full = false;
@@ -221,12 +225,17 @@
   const mineAgg = $derived(pidMine ? rkv.v.val?.[sem]?.[pidMine] ?? null : null);
   const lr2 = untrack(() => liveValue<Record<string, { at: number; lid: string; no: number; n: number; role: 'g' | 'c'; grade: string; right: number; total: number; sec: number; clear: boolean; left?: boolean }>>(S, cls && num ? `bonus/${cls}/${num}/board` : 'bonus/_none'));
   onDestroy(lr2.stop);
-  const runs = $derived(Object.entries(lr2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at).sort((a, b) => b.at - a.at));
+  // 🧪 #86 테스트 반 · 교사 = 이 기기 테스트 저장소의 판 기록 · ⭐ 를 같이 (서버엔 안 씀)
+  const testAcc = $derived(S.kind !== 'memory' && !trial && (!cls || !num || isBeta(S, cls)));
+  let tv = $state(0);
+  const recSrc = $derived.by(() => { void tv; const sv = (lr2.v.val || {}) as Record<string, unknown>; return testAcc ? { ...sv, ...testLoad(testWho(cls, num)).recs } : sv; });
+  const myPrev = (lid: string) => (testAcc ? testStar(testWho(cls, num), lid) : cls && num ? prevStars(S, cls, num, lid) : 0);
+  const runs = $derived(Object.entries(recSrc as Record<string, { at: number; lid: string; no: number; n: number; role: 'g' | 'c'; grade: string; right: number; total: number; sec: number; clear: boolean; left?: boolean }>).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at).sort((a, b) => b.at - a.at));
   // 🎯 #79 목표 3종: ⭐ 차시 정복 지도 · 📕 남은 오답 · 🛡 수호자 명성 (보상 = 칭호 · 배지 · 도장만)
   const MAPL = mapLessons(PACKS);
-  const stars = $derived(starsByNo(lr2.v.val as Record<string, BoardRec> | null));
+  const stars = $derived(starsByNo(recSrc as Record<string, BoardRec> | null));
   const starN = $derived(starTotal(stars, MAPL)), starMax = MAPL.length * 3;
-  const fame = $derived(fameOf(lr2.v.val as Record<string, BoardRec> | null));
+  const fame = $derived(fameOf(recSrc as Record<string, BoardRec> | null));
   const notes = $derived.by(() => { void lr2.v.val; return cls && num ? noteLeftByNo(PACKS, (S.get(`records/${cls}/${num}`) || {}) as never, (S.get(`bonus/${cls}/${num}`) || {}) as never) : {}; });
   const noteN = $derived(Object.values(notes).reduce((a, x) => a + x.left, 0)), note0 = $derived(Object.values(notes).reduce((a, x) => a + (x.had ? 1 : 0), 0));
   const noteOk = $derived(Object.values(notes).filter((x) => x.had && x.left === 0).length);
@@ -333,7 +342,7 @@
           <div class="empty"><span>📭</span><b>{sel ? `${sel.no}차시 모집 글이 아직 없어요` : '모집 글이 아직 없어요'}</b><small>혼자 도전하거나 · 팀을 모집해요</small></div>
         {/if}
       {:else if btab === 'war'}
-        <WarBar {S} {cls} />
+        <WarBar {S} {cls} test={testAcc} />
       {:else}
         <section class="gmap rec" data-k="board-rec">
           <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
@@ -396,7 +405,7 @@
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun && isAtb(teamRun)}
   {@const L = lessonOf(teamRun.lesson)}
-  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again) => { const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
+  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L ? myPrev(L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again) => { const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
 {:else if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}

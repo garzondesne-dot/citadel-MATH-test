@@ -6,7 +6,7 @@
   import { liveValue } from '../room.svelte';
   import { clock } from '../clock.svelte';
 
-  let { S, cls = '', line = false }: { S: Store; cls?: string; line?: boolean } = $props();
+  let { S, cls = '', line = false, test = false }: { S: Store; cls?: string; line?: boolean; /** 🧪 #86 테스트 계정 = 「테스트 · 공적 안 쌓임」 */ test?: boolean } = $props();
   const w0 = untrack(() => weekOf(S.now()));
   const cur = untrack(() => liveValue<{ sum?: Record<string, number> }>(S, `${WAR}/${w0}`)), prev = untrack(() => liveValue<{ done?: { rank?: string[] }; sum?: Record<string, number> }>(S, `${WAR}/${prevWeek(w0)}`)), kn = untrack(() => liveValue<unknown>(S, KNIGHTS));
   onDestroy(() => { cur.stop(); prev.stop(); kn.stop(); });
@@ -34,6 +34,7 @@
 {:else if rows.length}
   <section class="wb" data-k="war-bar" aria-label="기사단 토벌 주간">
     <div class="hd"><b>⚔ 기사단 토벌 주간</b><small>{leftT.replace('⚔ 토벌 주간 · ', '')}</small></div>
+    {#if test}<p class="tst" data-k="war-test">🧪 테스트 · 공적 안 쌓임</p>{/if}
     {#if kingT}<p class="ln k" data-k="war-king">{kingT}</p>{/if}
     {#if gapT}<p class="ln" data-k="war-gap">{gapT}</p>{/if}
     {#each rows as r (r.cls)}
@@ -48,6 +49,7 @@
 {/if}
 
 <style>
+  .tst { margin: 4px 0 0; color: var(--text-2); font: 600 14px var(--font); }
   .wb { display: grid; gap: 6px; padding: 12px; border-radius: var(--r, 12px); background: var(--surface, #181b22); }
   .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .hd b { font-size: 16px; } .hd small { font-size: 13px; color: var(--text-2, #b4b8c2); }
