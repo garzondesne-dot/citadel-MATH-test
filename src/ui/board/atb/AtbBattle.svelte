@@ -100,7 +100,7 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
-  let barrierFx = $state(0), bossFrost = $state(0);
+  let barrierFx = $state(0), bossFrost = $state(0), bossCurse = $state(0);
   // 👹 분노 (요청 #37) = 진정 남은 초 · 배경음 빠르게 1.15
   const calmLeft = $derived(calmed(S) ? Math.ceil((S.calmUntil ?? 0) - S.t) : 0);
   $effect(() => { const r = !!S.rage && !calmLeft && !S.end; untrack(() => bgmRate(r ? 1.15 : 1)); });
@@ -347,7 +347,10 @@
       else if (e.fx === 'burn') pop(B0.x + 3, B0.y + 6, e.tick ? `🔥 −${e.v}` : '🔥 화상!', 'fam');
       else if (e.fx === 'freeze') { pop(B0.x, B0.y, '🧊 얼림!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 1600); }
       else if (e.fx === 'expose') pop(B0.x, B0.y, '📖 약점 노출!', 'fam');
-      else if (e.fx === 'bless' && e.to != null) pop(posOf(e.to).x, posOf(e.to).y - 24, '🔮 축복! +5', 'fam');
+      else if (e.fx === 'bless' && e.to != null) pop(posOf(e.to).x, posOf(e.to).y - 24, '✨ 축복! +5', 'fam');
+      else if (e.fx === 'shock') { pop(B0.x, B0.y, '⚡ 감전!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 900); }
+      else if (e.fx === 'gust') pop(posOf(e.who).x, posOf(e.who).y - 26, '🌪 순풍! ATB +30%', 'fam');
+      else if (e.fx === 'curse') { pop(B0.x, B0.y, '🌑 저주!', 'fam'); bossCurse = Date.now(); setTimeout(() => (bossCurse = 0), 3000); }
     }
     else if (e.k === 'rage') { // 👹 분노 (요청 #37)
       if (e.on === 'rage') { big('👹 분노!', 'rage', 1600); sfx('mon-appear-boss', 0.9); shake(stageEl ?? null, 12, 700); try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ } bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 700); }
@@ -449,7 +452,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
+  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -756,4 +759,5 @@
   .calmb { padding: 1px 10px; border-radius: 8px; background: #3a0606e6; border: 1px solid #ff5a4a; font: 800 11px var(--font-plain); color: #ffd8d0; } .calmb.on { background: #06283ae6; border-color: #8fe0ff; color: #dff6ff; }
   .bigmsg.rage { border-color: #ff5a4a; background: linear-gradient(#a8100aee, #4a0606ee); font-size: clamp(30px, 12vh, 56px); }
   @media (prefers-reduced-motion: reduce) { .ragedge, .boss.raging::before { animation: none; } }
+  .boss.cursed :global(.sprite), .boss.cursed .bflip { filter: drop-shadow(0 0 8px #6a2aa8) brightness(0.8) saturate(0.7); } /* 🌑 저주 · 그림 자리 atb-status-fx */
 </style>

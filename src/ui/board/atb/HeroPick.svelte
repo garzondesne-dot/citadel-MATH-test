@@ -6,7 +6,7 @@
   import { portraitOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import { famOf, lookOfStats, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
-  import { FAM_NAME, FAM_FX_TXT, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
+  import { FAM_NAME, ATTR_FX_TXT, fxOfAttr, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
   const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose, onskill }: {
@@ -35,7 +35,7 @@
   <section class="info">
     <h3>{info.name} · {info.job}</h3>
     <div class="badges"><span><AtbIcon name={RI[st.role]} size={18} /> {ROLE_NAME[st.role]}</span><span><FamShield fam={st.fam} size={18} /> {FAM_NAME[st.fam]}</span>{#if isWeak(sel)}<span class="wk2">약점!</span>{/if}</div>
-    <p class="famfx" data-k="atb-pick-famfx"><FamShield fam={st.fam} size={16} /> 🌈 {FAM_FX_TXT[st.fam].name} · {FAM_FX_TXT[st.fam].desc} <small>(장착 · 각성 스킬이 맞을 때)</small></p>
+    <p class="famfx" data-k="atb-pick-famfx">{ATTR_FX_TXT[fxOfAttr(st.attr)].emo} {ATTR_FX_TXT[fxOfAttr(st.attr)].name} · {ATTR_FX_TXT[fxOfAttr(st.attr)].desc} <small>(장착 · 각성 스킬이 맞을 때)</small></p>
     <div class="mid">
       <div class="big"><HeroSprite id={lookOfStats(st)} aura={enh} scale={2} play /></div>
       <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>

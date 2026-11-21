@@ -115,7 +115,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.waitForTimeout(1500); const msg = await p.textContent('[data-k="atb-bigmsg"]').catch(() => '');
     ok('요청 #32 실드 생김 = 빈 방패 칸 먼저 → 속성 방패가 크게 나와 제 칸으로 차례로 · 끝 = 「🛡 실드! 약점 = …」', /empty/.test(e0) && fly && /약점 =/.test(msg) && !(await p.$('[data-k="atb-shfly"]')), `${e0} · ${msg}`);
     await p.screenshot({ path: `${SHOTS}/atb-r32-done-844.png` }); }
-  ok('요청 #12 실드 생김 = 큰 「🛡 실드!」 · 방패막 · 칸 = 인원수 · 계열 이모지', /실드/.test(await p.textContent('[data-k="atb-bigmsg"]').catch(() => '')) && !!(await p.$('[data-k="atb-barrier"]')) && (await p.$$('[data-k="atb-cells"] .cell2.ok')).length === 4);
+  await p.waitForFunction(() => document.querySelectorAll('[data-k="atb-cells"] .cell2.ok').length === 4 && !document.querySelector('[data-k="atb-shfly"]'), null, { timeout: 4000 }).catch(() => {}); // #32 연출이 끝날 때까지
+  ok('요청 #12 실드 생김 = 방패막 · 칸 = 인원수 · 계열 방패 (큰 문구 = #32 시험)', !!(await p.$('[data-k="atb-barrier"]')) && (await p.$$('[data-k="atb-cells"] .cell2.ok')).length === 4);
   ok('요청 #12 약점 계열 용사 = 머리 위 「약점!」', (await p.$$('[data-k="atb-weak"]')).length >= 1);
   await p.screenshot({ path: `${SHOTS}/atb-shield-up-844.png` }); await p.waitForTimeout(1600);
   await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[0].ch = 3; S.heroes[0].stunUntil = 0; globalThis.__atb.full(); }); await p.waitForTimeout(150); await skc(p, 'equip');
@@ -280,7 +281,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('⑥ 고르는 창 = 실제 초상 · 로안 방어 「0%」 · ATB 「8.0초」 · 약점! 배지', stats.def === '0%' && stats.atb === '8.0초' && !!(await p.$('[data-k="atb-pick"] .face')) && !!(await p.$('[data-k="atb-pick"] .wk2')), JSON.stringify(stats));
   await p.screenshot({ path: `${SHOTS}/atb-pick-844.png` });
   ok('⑥ 고르는 창 가로 넘침 0', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-  ok('요청 #36 고르는 창 = 계열 덧효과 한 줄(방패 + 이름 + 설명)', /🌈 (관통|화상|얼림|약점 노출|축복)/.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
+  ok('요청 #36′ 고르는 창 = 속성 덧효과 한 줄(이모지 + 이름 + 설명)', /(관통|화상|감전|얼림|순풍|약점 노출|축복|저주) · /.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
   // 다른 크기
   for (const [w, h] of [[667, 375], [1024, 768]]) {
     const q = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(600);
