@@ -18,7 +18,8 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, healBlocked, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf } from '../../../board/atb/engine';
+  import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
   // 📜 11/20 요청 #3 손맛: 레이드 공격 연출(용사별 · 속성별)을 그대로 · 몬스터 공격 잠금 = 레이드 값
@@ -99,6 +100,7 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
+  let barrierFx = $state(0);
   /** 아직 날아가는 구슬 수 = 단추 구슬은 닿을 때 한 칸씩 켜짐 (엔진 충전은 이미 들어감) */
   let pendOrb = $state(0);
   const shownCh = $derived(Math.max(0, (meH?.ch ?? 0) - pendOrb));
@@ -165,8 +167,21 @@
     if (meH.s.awk && !out.some((x) => x.k === 'awk')) out.push({ k: 'awk', cost: T.cost.awk, ok: false, fix: true }); // 판당 1번 다 씀 = 회색으로 남김
     else if (!meH.s.awk && meH.s.aura && !out.some((x) => x.k === 'aura')) out.push({ k: 'aura', cost: T.cost.aura, ok: false, fix: true });
     for (const x of L0.filter((y) => y.k === 'revive')) out.push({ k: x.k, cost: x.cost, ok: x.ok, fix: false });
+    if (reactNow) { const i = out.findIndex((x) => x.k === 'role'); if (i > 0) out.unshift(...out.splice(i, 1)); } // 🛡 반응 막기 = 역할 스킬 맨 앞 (요청 #35)
     return out;
   });
+  // 🛡 📜 요청 #35 예고 · 반응 막기 안내
+  const tg = $derived(S.end ? null : telegraphOf(S));
+  const reactNow = $derived(me >= 0 && canReact(S, me));
+  const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호! 대신 맞아 줘요 (바로 쓸 수 있어요)', support: '🎵 지금 격려! 결계로 광역을 줄여요 (바로 쓸 수 있어요)', dealer: '⚔ 지금 강타! 모으기를 끊어요 (바로 쓸 수 있어요)' };
+  const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#c8862a', dealer: '#d8402a', healer: '#2faa5a' };
+  const ROLE_KO: Record<string, string> = { tank: '탱커', support: '서포터', dealer: '딜러' };
+  const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => S.heroes[i]?.s.name).join(' · ') ?? ''} 노림 · 🛡 탱커가 막을 수 있어요` : tg.cls === 'aoe' ? `💥 광역! · 🎵 서포터 결계로 줄여요` : `🌀 ${tg.atk} 모으는 중 · ⚔ 딜러 강타로 끊어요`) : '');
+  const hasRole = (r: string) => S.heroes.some((h) => h.s.role === r && !h.down);
+  /** 🌀 특수 모으기 막대 (보스 머리 위 · 4초) */
+  const chargeP = $derived(tg?.cls === 'special' ? (S.breathWarn != null && !S.target ? Math.min(1, (S.t - S.breathWarn) / SIG.breath.warn) : Math.min(1, Math.max(0, (S.bossT - (T.bossEvery - (ATK[S.nextAtk!]?.warn ?? T.telegraph))) / (ATK[S.nextAtk!]?.warn ?? T.telegraph)))) : 0);
+  let reactKey = '', healNowT = $state(0);
+  $effect(() => { const r = reactNow, k = `${S.bossN}|${S.breathWarn ?? ''}`; untrack(() => { if (r && reactKey !== k) { reactKey = k; try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } snd('focus', 0.6); } }); });
   const breaksShield = $derived(me >= 0 && S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken));
   /** ✨ 쓸 수 있게 되는 순간 반짝 */
   let lit = $state<Record<string, number>>({}), wasOk: Record<string, boolean> = {};
@@ -179,7 +194,7 @@
   function pressEnd() { clearTimeout(pressT); peek = ''; }
   function fire(k: SkillK, to?: number) {
     if (!meH) return; const R = meH.s.role;
-    if (to == null && ((k === 'role' && (R === 'tank' || R === 'support')) || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
+    if (to == null && !(k === 'role' && canReact(S, me)) && ((k === 'role' && (R === 'tank' || R === 'support')) || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
     over = ''; skOpen = false; if (useSkill(S, me, k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
@@ -321,6 +336,8 @@
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
+    else if (e.k === 'react') { const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who === me) big(t, 'note', 1100); sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
     else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.n}`, 'role');
     else if (e.k === 'sig') {
@@ -388,6 +405,10 @@
     {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
   </div>
   {#if revFx}<div class="revfx" role="status" data-k="atb-revfx"><span class="hb">💔</span><b>💖 {revFx.from} → {revFx.to}</b></div>{/if}
+  {#if reactNow && meH}<div class="reactb" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
+  {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 광역 뒤 팀 체력 회복</div>
+  {:else if tg && tgLine}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}{#if !hasRole(REACT[tg.cls])} · (팀에 {ROLE_KO[REACT[tg.cls]]} 없음){/if}</div>{/if}
+  {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"></i>{/if}
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
@@ -396,6 +417,7 @@
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
     {#if mirrorLeft}<div class="tele sig" role="status" data-k="atb-mirror">🪞 거울빛 {mirrorLeft}초 · 일반 공격 30% 되돌아옴</div>{/if}
+    {#if tg?.cls === 'special'}<div class="chbar" data-k="atb-charge-bar"><i style:width="{Math.round(chargeP * 100)}%"></i><span>🌀 {tg.atk} 모으는 중</span></div>{/if}
     <div class="rhp" data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
@@ -451,7 +473,7 @@
       {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
       {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀이</button>{/if}
       <div class="skw">
-        <button type="button" class="b skb" class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
+        <button type="button" class="b skb" class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
         {#if fullMsg}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
@@ -690,4 +712,14 @@
   @keyframes shfly { 0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } 22% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; } 45% { transform: translate(-50%, -50%) scale(1); } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.33); opacity: 1; } }
   .cell2.fl { animation: cflash 0.26s ease-out; } @keyframes cflash { 0% { filter: drop-shadow(0 0 2px var(--fc)) brightness(2.2); scale: 1.3; } 100% { scale: 1; } }
   @media (prefers-reduced-motion: reduce) { .shfly { animation-duration: 0.01s; } }
+  /* 🛡 반응 막기 (요청 #35) */
+  .reactb { position: absolute; z-index: 34; left: 50%; top: 2%; transform: translateX(-50%); padding: 6px 18px; border-radius: 14px; border: 3px solid #fff; background: var(--rc, #3a6ac8); color: #fff; font: 900 clamp(14px, 4.6vh, 20px) var(--font); text-shadow: 0 2px 0 #0008; box-shadow: 0 0 18px var(--rc, #8fd0ff); white-space: nowrap; animation: blink 0.5s steps(2) infinite; pointer-events: none; }
+  .reactb.heal { --rc: #2faa5a; }
+  .tgline { position: absolute; z-index: 21; left: 50%; top: 2%; transform: translateX(-50%); padding: 3px 12px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff5a4a; color: #ffe0d8; font: 800 13px var(--font-plain); white-space: nowrap; pointer-events: none; }
+  .tgline.special { border-color: #b07aff; background: #1d0a2ae6; color: #eadcff; }
+  .chbar { position: relative; width: 70%; height: 14px; border-radius: 7px; background: #1d0a2acc; border: 2px solid #b07aff; overflow: hidden; }
+  .chbar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #7a3aff, #d08aff); transition: width 0.1s linear; } .chbar span { position: relative; display: block; text-align: center; font: 800 10px var(--font-plain); line-height: 10px; color: #fff; text-shadow: 0 1px 0 #000; }
+  .b.skb.react { animation: rflash 0.45s steps(2) infinite; border-color: var(--rc); box-shadow: 0 0 20px var(--rc); } @keyframes rflash { 50% { background: var(--rc); } }
+  .tbarrier { position: absolute; z-index: 12; left: 2%; width: 30%; top: 30%; height: 52%; border-radius: 50%; pointer-events: none; border: 3px solid #b8f0ff; background: radial-gradient(ellipse, #8fe0ff22, #8fe0ff55 70%, #0000 72%); box-shadow: 0 0 22px #8fe0ff; animation: bup 0.4s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .reactb, .b.skb.react { animation: none; } }
 </style>

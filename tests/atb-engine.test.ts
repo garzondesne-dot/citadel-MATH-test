@@ -157,9 +157,9 @@ describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => 
     const S = at(4); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok');
     expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.2));
   });
-  it('6 · 7 숨 고르기 = 실드 뒤 30초마다 3초 예고 → HP 8% · 예고 중 실드 깨면 끊김', () => {
+  it('6 · 7 숨 고르기 = 실드 뒤 30초마다 4초 예고(요청 #35) → HP 8% · 예고 중 실드 깨면 끊김', () => {
     const S = at(6); for (const h of S.heroes) { h.hp = 9999; } S.bossHp = Math.round(S.bossMax * 0.7) + 2; full(S, 0); attack(S, 0, 'ok');
-    const hp = S.bossHp; run(S, 30.05); expect(S.breathWarn).not.toBeNull(); run(S, 3); expect(S.bossHp - hp).toBe(Math.round(S.bossMax * 0.08));
+    const hp = S.bossHp; run(S, 30.05); expect(S.breathWarn).not.toBeNull(); run(S, 4); expect(S.bossHp - hp).toBe(Math.round(S.bossMax * 0.08));
     run(S, 30); expect(S.breathWarn).not.toBeNull(); earn(S, 0, doneR); full(S, 0); breakShield(S, 0); expect(S.breathWarn).toBeNull();
   });
   it('8 거울빛 = 다음 10초 일반 공격 피해 30% 가 그 용사에게 · 스킬은 안 돌아옴', () => {
@@ -190,5 +190,27 @@ describe('ATB 스킬 미리 보기 (요청 #19 덧3)', () => {
     expect(skillPeek(S, 2, 'role').why).toMatch(/⚡ 1 필요/);
     expect(skillPeek(S, 0, 'revive').line).toBe('💖 부활 HP 30%');
     h.ch = 1; h.atb = 0.5; expect(skillPeek(S, 2, 'role').why).toBe('ATB 차는 중');
+  });
+});
+
+// 🛡 📜 요청 #35 보스 공격 3종 + 반응 막기
+import { canReact, react, telegraphOf } from '../src/board/atb/engine';
+describe('ATB 반응 막기 (요청 #35)', () => {
+  const tele = (S: State, kind: string, aoe: boolean, to: number[]) => { S.nextAtk = kind as never; S.aoeNext = aoe; S.target = to; S.bossT = T.bossEvery - 3; };
+  it('단일 = 탱커가 ATB 없이 ⚡1 로 대신 맞음(절반 · 느려짐 없음) · 같은 공격 둘째는 못 막음', () => {
+    const S = fresh(); const tank = S.heroes.find((h) => h.s.role === 'tank')!, tgt = S.heroes.find((h) => h.s.role !== 'tank')!;
+    tank.atb = 0; tank.ch = 2; tele(S, 'ice', false, [tgt.id]); expect(telegraphOf(S)?.cls).toBe('single');
+    expect(canReact(S, tgt.id)).toBe(false); expect(canReact(S, tank.id)).toBe(true);
+    const thp = tgt.hp, khp = tank.hp; expect(useSkill(S, tank.id, 'role')).toBe(true); expect(tank.ch).toBe(1); expect(tank.atb).toBe(0);
+    expect(canReact(S, tank.id)).toBe(false);
+    for (let i = 0; i < 40; i++) tick(S, 0.1);
+    expect(tgt.hp).toBe(thp); expect(tank.hp).toBeLessThan(khp); expect(tank.slowUntil).toBeLessThanOrEqual(S.t - 1);
+  });
+  it('광역 = 서포터 결계(피해 ×0.7 · 느려짐 없음) + 격려 · 특수 = 딜러 강타로 끊음(안 나감)', () => {
+    const S = fresh(); const sup = S.heroes.find((h) => h.s.role === 'support'), dl = S.heroes.find((h) => h.s.role === 'dealer')!;
+    if (sup) { sup.ch = 1; tele(S, 'frost', true, S.heroes.map((h) => h.id)); expect(react(S, sup.id)).toBe(true); expect(S.blocked?.how).toBe('barrier'); for (let i = 0; i < 40; i++) tick(S, 0.1); expect(S.heroes.every((h) => h.slowUntil <= S.t)).toBe(true); }
+    const S2 = fresh(); const d2 = S2.heroes.find((h) => h.s.role === 'dealer')!; d2.ch = 1; tele(S2, 'fire', true, S2.heroes.map((h) => h.id)); expect(telegraphOf(S2)?.cls).toBe('special');
+    const hp0 = S2.heroes.map((h) => h.hp), b0 = S2.bossHp; expect(react(S2, d2.id)).toBe(true); expect(S2.bossHp).toBeLessThan(b0);
+    for (let i = 0; i < 40; i++) tick(S2, 0.1); expect(S2.heroes.map((h) => h.hp)).toEqual(hp0); void dl;
   });
 });

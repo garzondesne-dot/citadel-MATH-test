@@ -3,11 +3,11 @@
 import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, pickVer, questionsOf, rngOf, shuffled, startRun, type Origin, type Run } from './quiz';
-import { T } from './tune';
-import { alive, attack, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
+import { REACT_CFG, T } from './tune';
+import { alive, attack, canReact, canRole, canSkill, earn, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
-export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; /** ATB 가 가득 찬 시각 (-1 = 아님) */ fullAt: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number }
+export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; /** ATB 가 가득 찬 시각 (-1 = 아님) */ fullAt: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number; /** 반응 막기를 정한 예고 (요청 #35) */ reactKey?: string }
 const ACT_SEC = 3;
 export const BOT_LABEL: Record<BotKind, string> = { normal: '보통 학생', ideal: '도전 기준(완벽)', random: '무작위 제출', retry: '오답 후 힌트 · 재도전' };
 const r01 = (b: Bot) => { let a = (b.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>> 15), a | 1); a ^= a + Math.imul(a ^ (a >>> 7), a | 61); return ((a ^ (a >>> 14)) >>> 0) / 4294967296; };
@@ -34,6 +34,8 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
       b.due = S.t + b.think[0] + r01(b) * (b.think[1] - b.think[0]);
     } else b.run = null;
   }
+  // 🛡 반응 막기 (📜 요청 #35): 예고 중 그 역할 봇 = 70% 로 바로 막음 (예고 하나에 한 번만 정함)
+  { const key = `${S.bossN}|${S.breathWarn ?? ''}`; if (canReact(S, b.who) && b.reactKey !== key) { b.reactKey = key; if (r01(b) < REACT_CFG.botChance) useSkill(S, b.who, 'role'); } }
   if (h.down || h.atb < 1 || S.t < h.stunUntil) { b.fullAt = -1; return; }
   if (b.fullAt < 0) b.fullAt = S.t;
   const r = act(S, b, S.t - b.fullAt >= T.autoAtkDelay);

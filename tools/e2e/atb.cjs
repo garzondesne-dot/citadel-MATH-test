@@ -185,6 +185,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; globalThis.__atb.full(); }); await p.waitForTimeout(150); await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(250);
   ok('요청 #31 ⑤ 스킬 메뉴 = 필요한 ⚡ 홈 + 「⚡ n개 더 풀면」', /⚡ 1개 더 풀면/.test(await p.textContent('[data-k="atb-cost-equip"]').catch(() => '')));
   await p.click('[data-k="atb-skill-btn"]');
+  // 🛡 요청 #35 보스 공격 3종 + 반응 막기 = 예고 4초 · 그 역할 = 큰 띠 + 스킬 단추 깜박 + 메뉴 맨 앞 역할 · ATB 없이 ⚡1 · 특수 = 보라 모으기 막대
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.heroes[0].s.role = 'tank'; S.heroes[0].ch = 1; S.heroes[0].atb = 0; S.nextAtk = 'ice'; S.aoeNext = false; S.target = [1]; S.bossT = 9; }); await p.waitForTimeout(250);
+  { const band = await p.textContent('[data-k="atb-react-band"]').catch(() => ''); await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(220);
+    const first = await p.$eval('[data-k="atb-skills"] .sk2', (e) => e.dataset.k); await p.screenshot({ path: `${SHOTS}/atb-r35-react-844.png` });
+    await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(250);
+    const r = await p.evaluate(() => { const S = globalThis.__atb.S; return { b: S.blocked?.how, ch: S.heroes[0].ch, atb: S.heroes[0].atb }; });
+    ok('요청 #35 단일 예고 = 탱커 띠 「지금 엄호!」 · 메뉴 맨 앞 역할 · ATB 없이 ⚡1 로 막음', /지금 엄호/.test(band) && first === 'atb-sk-role' && r.b === 'cover' && r.ch === 0 && r.atb === 0, `${band} · ${first} · ${JSON.stringify(r)}`); }
+  await p.evaluate(() => { const S = globalThis.__atb.S; S.blocked = null; S.nextAtk = 'fire'; S.aoeNext = true; S.target = S.heroes.map((h) => h.id); S.bossT = 10; }); await p.waitForTimeout(200);
+  ok('요청 #35 특수 예고 = 보스 위 보라 「🌀 … 모으는 중」 막대 · 다른 역할 = 작은 띠', !!(await p.$('[data-k="atb-charge-bar"]')) && /모으는 중/.test(await p.textContent('[data-k="atb-tg-line"]').catch(() => '')));
+  await p.screenshot({ path: `${SHOTS}/atb-r35-special-844.png` });
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);

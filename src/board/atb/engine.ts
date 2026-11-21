@@ -1,20 +1,21 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
 //   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
-import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
+import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, REACT, REACT_CFG, atkClass, type AtkClass, type AtkKind, type BossCfg, type Diff, type Fam, type Role } from './tune';
 import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive';
 export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind';
-  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
+  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
   | { k: 'skill'; t: number; who: number; dmg: number; kind: 'equip' | 'tier4' | 'awk'; cost: number; /** 넘친 충전으로 자동 (요청 #13) */ auto?: boolean }
   | { k: 'aura'; t: number; who: number; stone: number }
   | { k: 'guard'; t: number; atk: string }
+  | { k: 'react'; t: number; who: number; how: 'cover' | 'barrier' | 'cut'; cls: AtkClass; atk: string; to?: number; dmg?: number }
   | { k: 'charge'; t: number; who: number; n: number; perfect: boolean }
   | { k: 'shield'; t: number; who: number; cells: number[]; last: boolean }
   | { k: 'shieldUp'; t: number }
@@ -23,7 +24,7 @@ export type Ev =
   | { k: 'boss'; t: number; atk: string; aoe: boolean; to: number[]; dmg: number[] }
   | { k: 'down'; t: number; who: number }
   | { k: 'gift'; t: number; who: number; to: number }
-  | { k: 'sig'; t: number; what: 'breathWarn' | 'breathHeal' | 'breathCut' | 'mirrorOn' | 'reflect' | 'unbind'; who?: number; v?: number }
+  | { k: 'sig'; t: number; what: 'breathWarn' | 'breathHeal' | 'breathCut' | 'mirrorOn' | 'reflect' | 'unbind' | 'healNow'; who?: number; v?: number }
   | { k: 'end'; t: number; win: boolean; why: string };
 export interface State {
   t: number; diff: Diff; boss: BossCfg; seed: number; rnd: number;
@@ -32,7 +33,8 @@ export interface State {
   shieldUp: boolean; shieldAt: number; cells: Cell[]; weakUntil: number;
   /** 🛡 오라 방패 = 다음 보스 공격 1번 팀 전체 막음 · 🗿 석화 끝 시각(보스 공격 시계 멈춤) */ guard: boolean; stoneUntil: number;
   /** 광역 회복을 마지막으로 쓴 보스 공격 차례 (팀 전체 · 보스 공격 한 번 사이 1번) */ healN: number;
-  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK, number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; downs: number; revives: number; lastAns: number[] };
+  /** 🛡 이번 예고된 공격을 반응 막기 한 용사 (📜 요청 #35 · 먼저 쓴 사람만) */ blocked?: { by: number; how: 'cover' | 'barrier' | 'cut' } | null;
+  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; downs: number; revives: number; lastAns: number[] };
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
@@ -47,7 +49,7 @@ export function newBattle(o: { boss: BossCfg; diff: Diff; party: Stats[]; seed?:
     bossHp: max, bossMax: max, bossT: 0, bossN: 0, target: null, aoeNext: false, nextAtk: null, tilt: '', mirrorUntil: 0, breathWarn: null, breathNext: 0,
     shieldUp: false, shieldAt: 0, cells: [], weakUntil: 0, guard: false, stoneUntil: 0,
     heroes: o.party.map((s, id) => ({ id, s, hp: s.maxHp, atb: 0.35 + 0.1 * id, ch: T.chargeStart, down: false, slowUntil: 0, stunUntil: 0, cover: 0, tickets: 0, awkUsed: false, auraUsed: false, atbBonus: 0, stunKind: '', log: { shields: 0, dmg: 0, covers: 0, heals: 0, revives: 0, boosts: 0, right: 0, ult: 0 } })),
-    revives: T.revives, ev: [], evN: 0, end: null, healN: -1,
+    revives: T.revives, ev: [], evN: 0, end: null, healN: -1, blocked: null,
     rec: { subSec: [], timing: { n: 0, ok: 0, crit: 0 }, skills: {}, charges: 0, downs: 0, revives: 0, lastAns: o.party.map(() => 0) },
   };
 }
@@ -104,16 +106,22 @@ function bossAttack(S: State) {
   const n = S.heroes.length, [one, all] = BOSS_HIT[S.diff][Math.max(1, Math.min(4, n)) - 1]!;
   const base = (aoe ? all : one) * A.mul * (T.bossHitByNo[S.boss.no]?.[Math.max(1, Math.min(4, n)) - 1] ?? 1), to = (S.target || []).filter((id) => !S.heroes[id]!.down), dmg: number[] = [];
   if (S.guard) { S.guard = false; push(S, { k: 'guard', t: S.t, atk: A.name }); S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = ''; return; } // 🛡 오라 방패 = 이번 공격 통째로 막음
+  const B = S.blocked; S.blocked = null;
+  // 🛡 반응 막기 (📜 요청 #35): 특수 = 딜러가 끊음(안 나감) · 단일 = 탱커가 대신 맞음(절반 · 상태이상 없음) · 광역 = 서포터 결계(×0.7 · 상태이상 없음)
+  if (B?.how === 'cut') { S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = ''; return; }
   if (A.special === 'mirror') { S.mirrorUntil = S.t + SIG.mirror.sec; push(S, { k: 'sig', t: S.t, what: 'mirrorOn' }); }
-  for (const id of A.special === 'mirror' ? [] : to) {
-    const h = S.heroes[id]!, cut = h.cover ? 1 - h.cover : 1;
+  const tank = B?.how === 'cover' ? S.heroes[B.by] : null, hits = tank && !tank.down ? [tank.id] : to;
+  for (const id of A.special === 'mirror' ? [] : hits) {
+    const h = S.heroes[id]!, cut = (tank && id === tank.id ? 1 - T.role.tank.cover : h.cover ? 1 - h.cover : 1) * (B?.how === 'barrier' ? 1 - REACT_CFG.barrier : 1);
     const d = base > 0 ? Math.max(1, Math.round(base * (1 - h.s.def) * cut)) : 0; dmg.push(d);
-    if (d > 0) { h.cover = 0; h.hp = Math.max(0, h.hp - d); if (h.stunKind === 'sleep') { h.stunUntil = 0; h.stunKind = ''; } } // 수면 = 맞으면 깸
-    if (A.status === 'slow') h.slowUntil = S.t + T.slow[S.diff];
-    if (A.status === 'stun') { h.stunUntil = S.t + T.stun[S.diff]; h.stunKind = kind === 'sleep' ? 'sleep' : 'bind'; }
+    if (d > 0) { if (!tank) h.cover = 0; h.hp = Math.max(0, h.hp - d); if (h.stunKind === 'sleep') { h.stunUntil = 0; h.stunKind = ''; } } // 수면 = 맞으면 깸
+    const noStatus = !!B; // 막으면 얼음 · 느려짐 · 묶임 없음
+    if (A.status === 'slow' && !noStatus) h.slowUntil = S.t + T.slow[S.diff];
+    if (A.status === 'stun' && !noStatus) { h.stunUntil = S.t + T.stun[S.diff]; h.stunKind = kind === 'sleep' ? 'sleep' : 'bind'; }
     if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who: id }); }
   }
-  push(S, { k: 'boss', t: S.t, atk: A.name, aoe, to: A.special === 'mirror' ? [] : to, dmg });
+  push(S, { k: 'boss', t: S.t, atk: A.name, aoe, to: A.special === 'mirror' ? [] : hits, dmg });
+  if (aoe && base > 0) push(S, { k: 'sig', t: S.t, what: 'healNow' }); // 💚 광역 직후 = 힐러에게 「지금 힐!」
   S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = '';
   checkEnd(S);
 }
@@ -176,6 +184,7 @@ export function skillList(S: State, who: number): { k: SkillK; cost: number; ok:
   add('role', true, !(h.s.role === 'healer' && healBlocked(S)));
   if (h.s.awk) add('awk', !h.awkUsed, true); else add('aura', h.s.aura && !h.auraUsed, true);
   add('revive', S.heroes.some((x) => x.down && x.id !== who), S.revives > 0);
+  const rl = out.find((x) => x.k === 'role'); if (rl && !rl.ok && canReact(S, who)) rl.ok = true; // 🛡 예고 중 반응 막기 = ATB 없이 (요청 #35)
   return out;
 }
 export const canSkill = (S: State, who: number, k: SkillK) => (k === 'shield' ? !!canBreak(S, who) && ready(S.heroes[who]!, S) : !!skillList(S, who).find((x) => x.k === k)?.ok);
@@ -183,7 +192,7 @@ export const canSkill = (S: State, who: number, k: SkillK) => (k === 'shield' ? 
 export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean {
   const h = S.heroes[who]; if (!h || !canSkill(S, who, k)) return false;
   if (k === 'shield' || (k === 'equip' && canBreak(S, who))) return breakShield(S, who); // ⚡ 내 스킬 = 실드가 떠 있으면 실드 칸 깸
-  if (k === 'role') return roleAct(S, who, to);
+  if (k === 'role') return canReact(S, who) ? react(S, who, to) : roleAct(S, who, to);
   if (k === 'revive') { const f = to != null && S.heroes[to]?.down ? to : S.heroes.find((x) => x.down && x.id !== who)?.id; return f != null && revive(S, who, f); }
   S.rec.skills[k] = (S.rec.skills[k] ?? 0) + 1;
   if (k === 'aura') { h.ch -= T.cost.aura; h.auraUsed = true; S.guard = true; S.stoneUntil = Math.max(S.stoneUntil, S.t + T.aura.stone); spend(h); push(S, { k: 'aura', t: S.t, who, stone: T.aura.stone }); return true; }
@@ -221,6 +230,35 @@ export function roleAct(S: State, who: number, to?: number): boolean {
   if (!tg) { h.ch += T.cost.role; return false; }
   tg.atb = 1; if (tg.stunUntil > S.t) { tg.stunUntil = 0; tg.stunKind = ''; push(S, { k: 'sig', t: S.t, what: 'unbind', who: tg.id }); } // 9 속박된 친구 = 격려로 바로 풀림
   h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
+}
+// ── 🛡 반응 막기 (📜 요청 #35) ──
+/** 지금 예고된 공격의 종류 (예고 없으면 null) · 숨 고르기 예고 = 특수 */
+export function telegraphOf(S: State): { cls: AtkClass; atk: string } | null {
+  if (S.target && S.nextAtk) return { cls: atkClass(S.nextAtk, S.aoeNext), atk: ATK[S.nextAtk].name };
+  if (S.breathWarn != null) return { cls: 'special', atk: '숨 고르기' };
+  return null;
+}
+/** 예고 중 그 역할이면 ATB 없이 ⚡1 로 바로 · 쓰러짐 · 묶임 · 이미 누가 막았으면 못 씀 */
+export function canReact(S: State, who: number): boolean {
+  const h = S.heroes[who], tg = telegraphOf(S); if (!h || !tg || S.end || h.down || S.t < h.stunUntil || h.ch < T.cost.role) return false;
+  if (S.blocked) return false;
+  return REACT[tg.cls] === h.s.role;
+}
+export function react(S: State, who: number, to?: number): boolean {
+  if (!canReact(S, who)) return false;
+  const h = S.heroes[who]!, tg = telegraphOf(S)!; h.ch -= T.cost.role; h.log.blocks = (h.log.blocks ?? 0) + 1; S.rec.skills.react = (S.rec.skills.react ?? 0) + 1;
+  if (tg.cls === 'single') { S.blocked = { by: who, how: 'cover' }; h.log.covers++; push(S, { k: 'react', t: S.t, who, how: 'cover', cls: tg.cls, atk: tg.atk, to: S.target?.[0] }); return true; }
+  if (tg.cls === 'aoe') {
+    S.blocked = { by: who, how: 'barrier' };
+    const f = to != null ? S.heroes[to] : undefined, tg2 = f && !f.down && f.id !== who ? f : alive(S).filter((x) => x.id !== who).sort((a, b) => a.atb - b.atb)[0];
+    if (tg2) { tg2.atb = 1; if (tg2.stunUntil > S.t) { tg2.stunUntil = 0; tg2.stunKind = ''; } h.log.boosts++; }
+    push(S, { k: 'react', t: S.t, who, how: 'barrier', cls: tg.cls, atk: tg.atk, to: tg2?.id }); return true;
+  }
+  // 특수 = 딜러 강타로 끊음 (강타 피해 그대로) · 숨 고르기 = 그 회복 끊김
+  const dmg = hitBoss(S, T.skillBase * h.s.skillMul * T.ratio.equip * T.role.dealer.smash); h.log.dmg += dmg;
+  if (S.breathWarn != null && !S.target) { S.breathWarn = null; S.breathNext = S.t + SIG.breath.every; push(S, { k: 'sig', t: S.t, what: 'breathCut' }); }
+  else S.blocked = { by: who, how: 'cut' };
+  push(S, { k: 'react', t: S.t, who, how: 'cut', cls: tg.cls, atk: tg.atk, dmg }); checkEnd(S); return true;
 }
 /** 부활 = 충전 1 · 팀 부활 3번 · HP 30% (Y4 그대로) */
 export function revive(S: State, who: number, to: number): boolean {

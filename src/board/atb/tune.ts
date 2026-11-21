@@ -15,7 +15,7 @@ export const HIT_NORMAL: [number, number][] = ([[6, 3], [11, 5.5], [14, 7], [14,
 export const BOSS_HIT: Record<Diff, [number, number][]> = Object.fromEntries((['easy', 'normal', 'hard'] as Diff[]).map((d) => [d, HIT_NORMAL.map(([a, b]) => [+(a * DIFF_MUL[d].hit).toFixed(2), +(b * DIFF_MUL[d].hit).toFixed(2)])])) as Record<Diff, [number, number][]>;
 export const T = {
   bossEvery: 12, // 보스 공격 간격(초)
-  telegraph: 2, // 표적 예고(초 전)
+  telegraph: 4, // 표적 예고(초 전) · 📜 요청 #35 2 → 4 (예고 중 반응 막기)
   aoeEvery: 3, // 세 번째마다 광역
   shieldAt: 0.7, // 보스 HP 70% 에서 실드
   shieldDmg: 0.3, // 실드가 남은 동안 받는 피해 ×0.3 (11차시 두꺼비 = 0.2 · 보스 설정)
@@ -121,7 +121,7 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   smash: { name: '강타', mul: 1.5 },
   poison: { name: '독', mul: 1, aoe: true, split: 3 },
   sleep: { name: '수면', mul: 0, status: 'stun', wake: true }, // 맞으면 깸
-  fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 3 }, // 5차시 · 예고 중 실드를 다 깨면 취소
+  fire: { name: '화염 숨', mul: 1.5, aoe: true, warn: 4 }, // 5차시 · 예고 중 실드를 다 깨면 취소
   fire13: { name: '화염', mul: 1.3, aoe: true },
   fog: { name: '물결', mul: 0, aoe: true, status: 'slow' },
   tongue: { name: '혀 치기', mul: 1 },
@@ -131,13 +131,21 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   tail: { name: '꼬리치기', mul: 1 },
   dark: { name: '어둠', mul: 0, aoe: true, status: 'slow' },
   darkHit: { name: '어둠', mul: 1, aoe: true, status: 'slow' }, // 📜 11/20 요청 #6 ① 9차시 = 광역 피해 + 느려짐(T.slow) · 8차시 어둠은 그대로(피해 0)
-  mirror: { name: '거울빛', mul: 0, aoe: true, warn: 3, special: 'mirror' },
+  mirror: { name: '거울빛', mul: 0, aoe: true, warn: 4, special: 'mirror' },
   bind: { name: '속박', mul: 0, status: 'stun' },
   scale: { name: '저울', mul: 1, status: 'slow', special: 'scale' }, // 기울면 단일(그 쪽 용사) · 수평이면 광역
 };
+/** 👹 보스 공격 3종 (📜 요청 #35 선생님 확정 2026-11-21) = 🎯 단일 → 🛡 탱커 엄호 · 💥 광역 → 🎵 서포터 격려(+ 💚 힐러 뒤 힐) · 🌀 특수(모으기) → ⚔ 딜러 강타로 끊음
+ *  저울 = 기울면 단일 · 수평이면 광역 · 숨 고르기(SIG.breath) = 특수 */
+export type AtkClass = 'single' | 'aoe' | 'special';
+export const ATK_SPECIAL: ReadonlySet<AtkKind> = new Set<AtkKind>(['fire', 'sleep', 'bind', 'mirror', 'confuse']);
+export const atkClass = (k: AtkKind, aoe: boolean): AtkClass => (ATK_SPECIAL.has(k) ? 'special' : aoe ? 'aoe' : 'single');
+/** 반응 막기 = 예고 중 그 역할 스킬을 ATB 없이 ⚡1 로 · 단일 = 탱커 대신 맞음(cover) · 광역 = 서포터 결계(피해 ×0.7 · 느려짐 없음) · 특수 = 딜러 강타로 끊음 */
+export const REACT: Record<AtkClass, Role> = { single: 'tank', aoe: 'support', special: 'dealer' };
+export const REACT_CFG = { barrier: 0.3, botChance: 0.7 };
 /** 대표 행동 숫자 (어림값 · 📜 설정표 v3 「⚠ ×0.2 · 8% · 30% · 30초 = 모의실험에 안 넣은 값」) */
 export const SIG = {
-  breath: { every: 30, warn: 3, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
+  breath: { every: 30, warn: 4, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
   mirror: { sec: 10, back: 0.3 }, // 8 거울빛: 다음 10초 일반 공격 피해 30% 가 공격한 용사에게 (스킬은 안 돌아옴)
   scaleTilt: 0.5, // 10 기우는 저울: 기울(단일) 확률
 };

@@ -38,6 +38,9 @@
   const tierFor = (id: number) => skSel[id] ?? (grow === 'max' || grow === 'awk' ? 4 : grow === 'mid' ? 2 : 1);
   const fxFor = (id: number) => (ladder(id)[tierFor(id) - 1] as string) ?? (ladder(id)[0] as string);
   let picking = $state<null | number>(null); // null · -1 = 나 · 0 ~ 2 = 봇 자리
+  // 🛡 📜 요청 #35 = 막는 역할이 팀에 없으면 알림
+  const teamIds = $derived(mode === 'play' ? [meHero, ...mates.slice(0, size - 1)] : mates.slice(0, size));
+  const missRoles = $derived((['tank', 'support', 'dealer'] as const).filter((r) => !teamIds.some((id) => roleOf(id) === r)).map((r) => ROLE_NAME[r]));
 
   // ── 판 ──
   let bg = $state('');
@@ -82,7 +85,8 @@
       <div class="party">
         {#if mode === 'play'}<button type="button" class="hp me" data-k="atb-me-hero" onclick={() => (picking = -1)}><small>나</small>{nameOf(meHero)}<em>{ROLE_NAME[roleOf(meHero)]} · <FamShield fam={famOf(meHero)} size={14} /> {FAM_NAME[famOf(meHero)]}</em></button>{/if}
         {#each mates.slice(0, mode === 'play' ? size - 1 : size) as id, i (i)}<button type="button" class="hp" onclick={() => (picking = i)}><small>봇</small>{nameOf(id)}<em>{ROLE_NAME[roleOf(id)]} · <FamShield fam={famOf(id)} size={14} /> {FAM_NAME[famOf(id)]}</em></button>{/each}
-      </div></section>
+      </div>
+      {#if missRoles.length}<p class="sub" data-k="atb-miss-role">⚠ 이 팀엔 {missRoles.join(' · ')}가 없어요 · 그 공격은 막을 수 없어요 (🎯 단일 = 탱커 · 💥 광역 = 서포터 · 🌀 특수 = 딜러)</p>{/if}</section>
     <section><b>봇</b><div class="chips">{#each Object.entries(BOT_LABEL) as [k, t] (k)}<button type="button" class:on={botKind === k} onclick={() => (botKind = k as BotKind)}>{t}</button>{/each}</div></section>
     <section><b>키운 정도</b><div class="chips">{#each Object.entries(GROW) as [k, g] (k)}<button type="button" class:on={grow === k} onclick={() => (grow = k as typeof grow)}>{g.label}</button>{/each}</div></section>
     <section><b>시작 지점</b><div class="chips">{#each [['start', '전투 시작'], ['shield', '실드 등장 직전'], ['one', '실드 한 칸 남음'], ['aoe', '광역기 직후']] as [k, t] (k)}<button type="button" class:on={start === k} onclick={() => (start = k as typeof start)}>{t}</button>{/each}</div></section>
