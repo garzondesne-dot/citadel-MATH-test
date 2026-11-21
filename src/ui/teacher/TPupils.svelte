@@ -53,7 +53,7 @@
   <div class="mid scroll"><SchedTab {S} {now} /></div>
 {:else}
 <div class="fixed">
-  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow.filter((c) => !hiddenCls(S, c))] : clsNow as c (c)}<button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
+  <div class="chips" role="tablist" aria-label="반">{#each seg === 'dash' ? [ALL, ...clsNow.filter((c) => !hiddenCls(S, c))] : clsNow.filter((c) => !hiddenCls(S, c)) as c (c)}<!-- 🐞 #60-6 🧪 1-6 = 반 칩에서도 숨김 (명단 붙이기 반 고르기 · 학생 로그인 반 목록 = 그대로) --><button type="button" role="tab" class:on={cls === c} aria-selected={cls === c} onclick={() => (cls = c)}>{c}{isBeta(S, c) ? ' 🧪' : ''}</button>{/each}</div>
   <div class="segrow"><div class="seg" role="tablist"><button type="button" role="tab" class:on={seg === 'list'} aria-selected={seg === 'list'} onclick={() => (seg = 'list')}>명단 {data.studs.length}</button><button type="button" role="tab" class:on={seg === 'dash'} aria-selected={seg === 'dash'} onclick={() => (seg = 'dash')}>대시보드</button></div>{#if seg === 'dash'}<button type="button" class="xlb" onclick={() => (xl = true)}>⬇ 엑셀</button>{/if}</div>
 </div>
 {#if seg === 'list'}
