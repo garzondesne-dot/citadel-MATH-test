@@ -135,6 +135,11 @@ export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; st
   bind: { name: '속박', mul: 0, status: 'stun' },
   scale: { name: '저울', mul: 1, status: 'slow', special: 'scale' }, // 기울면 단일(그 쪽 용사) · 수평이면 광역
 };
+/** 😵 용사 상태 그림 자리 (📜 요청 #40 ②) = 공격 종류 → 상태 6가지 · 풀릴 때까지 머리 위에서 돎 · 그림(atb-status-hero 6줄 = 이 순서)이 오기 전엔 이모지 */
+export type StatusLook = 'sleep' | 'bind' | 'confuse' | 'fog' | 'dark' | 'frost';
+export const STATUS_ROWS: StatusLook[] = ['sleep', 'bind', 'confuse', 'fog', 'dark', 'frost'];
+export const STATUS_LOOK: Record<StatusLook, { ic: string; txt: string }> = { sleep: { ic: '💤', txt: '수면' }, bind: { ic: '⛓', txt: '속박' }, confuse: { ic: '🌀', txt: '혼란' }, fog: { ic: '🌊', txt: '느려짐' }, dark: { ic: '🌑', txt: '느려짐' }, frost: { ic: '❄️', txt: '느려짐' } };
+export const ATK_STATUS: Partial<Record<AtkKind, StatusLook>> = { sleep: 'sleep', bind: 'bind', confuse: 'confuse', fog: 'fog', dark: 'dark', darkHit: 'dark', frost: 'frost', ice: 'frost' };
 /** 👹 보스 공격 3종 (📜 요청 #35 선생님 확정 2026-11-21) = 🎯 단일 → 🛡 탱커 엄호 · 💥 광역 → 🎵 서포터 격려(+ 💚 힐러 뒤 힐) · 🌀 특수(모으기) → ⚔ 딜러 강타로 끊음
  *  저울 = 기울면 단일 · 수평이면 광역 · 숨 고르기(SIG.breath) = 특수 */
 export type AtkClass = 'single' | 'aoe' | 'special';

@@ -285,3 +285,6 @@ export function mhitOf(ref: string | undefined | null): MhitKind {
     return (MHIT_KINDS as string[]).includes(hit ?? '') ? (hit as MhitKind) : 'smash';
   } catch { return 'smash'; }
 }
+/** 👹 공격 종류 → 맞는 그림 (📜 게시판 던전 요청 #40 ①) · 표에 없는 종류(기본 · 광역 · 저울 · 수면 · 혼란 · 물결) = 그 보스 짝(mhitOf) 그대로 · 레이드(#26)는 공격 종류가 따로 없어 지금 그대로 */
+export const ATK_HIT: Readonly<Record<string, MhitKind>> = { smash: 'smash', poison: 'poison', fire: 'fire', fire13: 'fire', ice: 'ice', frost: 'ice', tail: 'lash', tongue: 'lash', bind: 'lash', dark: 'beam', darkHit: 'beam', mirror: 'beam' };
+export const atkHitOf = (atk: string | undefined, ref: string | undefined | null): MhitKind => (atk && ATK_HIT[atk]) || mhitOf(ref);

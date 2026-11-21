@@ -261,3 +261,23 @@ describe('ATB 보스 분노 (요청 #37)', () => {
     for (let i = 0; i < 20; i++) tick(S, 0.1); expect(calmed(S)).toBe(false); expect(S.rage).toBe(true);
   });
 });
+
+// 👹 📜 요청 #40 공격 종류별 맞는 그림 + 상태 그림 자리
+import { ATK_HIT, atkHitOf, mhitOf } from '../src/ui/manifest';
+import { ATK_STATUS, STATUS_ROWS } from '../src/board/atb/tune';
+describe('ATB 공격 종류 그림 · 상태 (요청 #40)', () => {
+  it('보스 공격 사건 = 종류(kind) 실림 · 느려짐 = 건 공격(slowKind) 기억', () => {
+    const S = fresh(); const h = S.heroes[1]!; h.cover = 0; S.nextAtk = 'dark' as never; S.aoeNext = true; S.target = S.heroes.map((x) => x.id); S.bossT = T.bossEvery - 0.05; S.weakUntil = 0;
+    for (let i = 0; i < 40 && !S.ev.some((e) => e.k === 'boss'); i++) tick(S, 0.1);
+    const e = S.ev.find((x) => x.k === 'boss') as Extract<State['ev'][number], { k: 'boss' }>; expect(e?.kind).toBe('dark');
+    expect(S.heroes.some((x) => x.slowKind === 'dark' && x.slowUntil > S.t)).toBe(true);
+  });
+  it('ATK_HIT = 강타 · 독 · 불 · 얼음 · 채찍 · 빛줄기 · 표에 없으면 보스 짝', () => {
+    expect([atkHitOf('smash', 'extra:4'), atkHitOf('poison', 'extra:4'), atkHitOf('fire13', 'extra:4'), atkHitOf('frost', 'extra:4'), atkHitOf('bind', 'extra:4'), atkHitOf('mirror', 'extra:4')]).toEqual(['smash', 'poison', 'fire', 'ice', 'lash', 'beam']);
+    for (const k of ['basic', 'aoe', 'scale', 'sleep', 'confuse', 'fog']) { expect(ATK_HIT[k]).toBeUndefined(); expect(atkHitOf(k, 'extra:4')).toBe(mhitOf('extra:4')); }
+  });
+  it('상태 6가지 = 수면 · 속박 · 혼란 · 물결 · 어둠 · 냉기 (그림 6줄 순서)', () => {
+    expect(STATUS_ROWS).toEqual(['sleep', 'bind', 'confuse', 'fog', 'dark', 'frost']);
+    expect(new Set(Object.values(ATK_STATUS))).toEqual(new Set(STATUS_ROWS));
+  });
+});

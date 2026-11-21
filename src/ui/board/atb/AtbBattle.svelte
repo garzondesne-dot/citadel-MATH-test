@@ -13,7 +13,7 @@
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
   import MonHit from '../../battle/MonHit.svelte';
-  import { MHIT, mhitOf, type MhitKind } from '../../manifest';
+  import { MHIT, mhitOf, atkHitOf, type MhitKind } from '../../manifest';
   import { rectIn, ROT_ATTR } from '../../rot';
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
@@ -32,7 +32,7 @@
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
-  import { ATK, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, type Fam, type Role } from '../../../board/atb/tune';
+  import { ATK, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
   const { L, S, me, bots, seed = 'me', speed = 1, onend, fx = {}, bg = '' }: {
     L: LessonPack; S: State; /** 내 용사 번호 · -1 = 관전 */ me: number; bots: Bot[]; seed?: string; speed?: number; onend: (S: State) => void; /** 🎲 랜덤 던전 배경 열쇠 (Y9 · 없으면 차시 배경) */ bg?: string;
@@ -271,6 +271,8 @@
   let wasFull = false, fullMsg = $state(0);
   $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) { const t = Date.now(); fullMsg = t; setTimeout(() => { if (fullMsg === t) fullMsg = 0; }, 1600); snd('skill-unlock', 0.6); } wasFull = f; }); }); // 📜 요청 #31 ④ 단추 위 「스킬 쓸 수 있어요!」 한 번
   /** 🆘 위험 체력 (📜 요청 #18): 30% 아래(T.lowHp) = 체력 막대 · 숫자 빨갛게 깜박 + 머리 위 🆘 · 처음 내려갈 때 한 줄(친구) · 진동(나) · 힐러 💚 · 💖 부활 단추 반짝 */
+  /** 😵 상태 그림 자리 (📜 요청 #40 ②) = 수면 · 속박(묶임) > 혼란 · 물결 · 어둠 · 냉기(느려짐) · 풀리면 사라짐 · 그림 오면 data-slot 자리에 바꿔 끼움 */
+  const statusOf = (h: State['heroes'][number]): StatusLook | null => (h.down || S.end ? null : S.t < h.stunUntil && h.stunKind ? h.stunKind : S.t < h.slowUntil && h.slowKind ? (ATK_STATUS[h.slowKind] ?? null) : null);
   const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
   const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
   const anyNeed = $derived(lowIds.some((i) => i !== me) || S.heroes.some((h) => h.down && h.id !== me));
@@ -359,7 +361,7 @@
       bossEl?.animate?.([{ translate: '0 0' }, { translate: `${-Math.round(Wd * 0.06)}px 6px`, offset: 0.4 }, { translate: '0 0' }], { duration: 520, easing: 'ease-out' });
       setTimeout(() => {
         // 👹 몬스터 맞는 그림 (📜 요청 #27 · 레이드 #26 과 같은 함수 mhitOf · MonHit) = 보스 몸짓 → 맞는 용사 위 6칸 0.42초 · 광역 = 모두 동시에 · 게시판 보스 = 1.5배
-        const kind = mhitOf(S.boss.sprite), mk = ++mhN; mhit = { k: mk, kind, to: [...e.to] }; setTimeout(() => { if (mhit?.k === mk) mhit = null; }, MHIT.ms + 40);
+        const kind = atkHitOf(e.kind, S.boss.sprite), mk = ++mhN; /* 📜 요청 #40 ① 공격 종류 먼저 (ATK_HIT) · 없으면 보스 짝 */ mhit = { k: mk, kind, to: [...e.to] }; setTimeout(() => { if (mhit?.k === mk) mhit = null; }, MHIT.ms + 40);
         e.to.forEach((id, i) => { pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, e.aoe ? 'hurt big' : 'hurt'); hurt(id); });
         if (e.aoe) { shake(stageEl ?? null, 10, 520); boom = true; ring(); setTimeout(() => (boom = false), 620); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
         else { shake(stageEl ?? null, 4, 220); sfx('hurt', 0.6); }
@@ -522,6 +524,7 @@
       {#if shatter?.ids.includes(h.id)}<i class="ringx" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" data-k="atb-ringx" aria-hidden="true">{#each [0, 1, 2, 3, 4, 5] as j}<i style:--r="{j * 60}deg"></i>{/each}</i>{/if}
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
+      {#if statusOf(h)}{@const st = statusOf(h)!}<i class="stx {st}" style:top="{-Math.round(base * p.s * 64 * 1.02) - (lowIds.includes(h.id) || isWeak(h.id) ? 62 : 36)}px" data-k="atb-status" data-st={st} data-slot="atb-status-hero:{st}" aria-label={STATUS_LOOK[st].txt}><span>{STATUS_LOOK[st].ic}</span><span>{STATUS_LOOK[st].ic}</span></i>{/if}
       {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
       <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}</span></div>
@@ -804,6 +807,12 @@
   .boss.burning::after { content: '🔥'; position: absolute; left: 50%; top: 10%; font-size: 22px; transform: translateX(-50%); animation: blink 0.35s steps(2) infinite; pointer-events: none; }
   .boss.frost :global(.sprite), .boss.frost :global(i) { filter: drop-shadow(0 0 8px #8fe0ff) saturate(0.6) brightness(1.15) hue-rotate(160deg); }
   /* 👹 분노 (요청 #37) */
+  /* 😵 요청 #40 상태 = 머리 위에서 도는 이모지 2개 (그림 자리 atb-status-hero) */
+  .stx { position: absolute; left: 0; z-index: 20; width: 52px; height: 16px; margin-left: -22px; pointer-events: none; font-style: normal; }
+  .stx span { position: absolute; left: 50%; top: 50%; font-size: 21px; line-height: 1; translate: -50% -50%; animation: storb 1.6s linear infinite; filter: drop-shadow(0 1px 1px #000a); }
+  .stx span + span { animation-delay: -0.8s; }
+  @keyframes storb { 0% { transform: translateX(-20px) scale(0.8); } 25% { transform: translateX(0) scale(1.1); } 50% { transform: translateX(20px) scale(0.8); } 75% { transform: translateX(0) scale(0.6); opacity: 0.6; } 100% { transform: translateX(-20px) scale(0.8); } }
+  @media (prefers-reduced-motion: reduce) { .stx span { animation: none; } .stx span + span { display: none; } }
   /* 🛡 요청 #39 가장자리 = 남은 체력 단계(70 · 50 · 30%) · 맞음 번쩍(피해 비율) · 30% 아래 쿵쿵 */
   .hedge { position: absolute; inset: 0; z-index: 16; pointer-events: none; transition: box-shadow 0.6s, opacity 0.6s; }
   .hedge.lv1 { box-shadow: inset 0 0 40px 4px #ff1a1a40; }
