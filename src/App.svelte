@@ -186,6 +186,8 @@
     {#await loadAtk() then M}<M.default />{/await}
   {:else if role === 'atb'}
     {#await loadAtbRoom() then M}<M.default />{/await}
+  {:else if (role === 'atbnet' || role === 'atbnet2') && TEST_ADDR}
+    {#await import('./ui/board/atb/dev/AtbNetDev.svelte') then M}<M.default />{/await}
   {:else if role === 'dev' && TEST_ADDR}
     <section class="home">
       <h1>모두의 던전 v1.0 테스트</h1>
