@@ -6,7 +6,7 @@
   import { portraitOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import { famOf, lookOfStats, roleOf, statRows, statsOf } from '../../../board/atb/heroes';
-  import { FAM_NAME, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
+  import { FAM_NAME, FAM_FX_TXT, ROLE_NAME, ROLE_SKILL, T, type BossCfg, type Fam, type Role } from '../../../board/atb/tune';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
   const { ids, owned, boss, cur, lv, enh, awk = false, tierOf, fxOf, onpick, onclose, onskill }: {
@@ -35,6 +35,7 @@
   <section class="info">
     <h3>{info.name} · {info.job}</h3>
     <div class="badges"><span><AtbIcon name={RI[st.role]} size={18} /> {ROLE_NAME[st.role]}</span><span><FamShield fam={st.fam} size={18} /> {FAM_NAME[st.fam]}</span>{#if isWeak(sel)}<span class="wk2">약점!</span>{/if}</div>
+    <p class="famfx" data-k="atb-pick-famfx"><FamShield fam={st.fam} size={16} /> 🌈 {FAM_FX_TXT[st.fam].name} · {FAM_FX_TXT[st.fam].desc} <small>(장착 · 각성 스킬이 맞을 때)</small></p>
     <div class="mid">
       <div class="big"><HeroSprite id={lookOfStats(st)} aura={enh} scale={2} play /></div>
       <ul class="stats" aria-label="용사 수치">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}</b></li>{/each}</ul>
@@ -89,4 +90,5 @@
   .cond { display: flex; flex-direction: column; gap: 1px; font: 700 11px var(--font-plain); } .cond .off { opacity: 0.55; }
   .go { min-height: 48px; border-radius: 12px; border: 3px solid #ffd34d; background: linear-gradient(#f6c25a, #c8862a); color: #2a1600; font: 900 20px var(--font); box-shadow: 0 4px 0 #6a4210; }
   .lg .pv { display: block; font: 800 12px var(--font-plain); font-style: normal; color: #b0400a; } /* 📜 요청 #19 덧3 스킬 칸 어림 피해 */
+  .famfx { margin: 2px 0 0; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font: 800 13px var(--font-plain); } .famfx small { font-weight: 600; opacity: 0.75; }
 </style>

@@ -214,3 +214,25 @@ describe('ATB 반응 막기 (요청 #35)', () => {
     for (let i = 0; i < 40; i++) tick(S2, 0.1); expect(S2.heroes.map((h) => h.hp)).toEqual(hp0); void dl;
   });
 });
+
+// 🌈 📜 요청 #36 계열 덧효과 = 장착 · 각성 스킬이 맞을 때만
+import { famFx } from '../src/board/atb/tune';
+describe('ATB 계열 덧효과 (요청 #36)', () => {
+  const famHero = (fam: string) => HEROES.find((h) => statsOf({ hero: h.id, lv: 1, enh: 1, tier: 1 }).fam === fam)!;
+  const solo = (fam: string) => { const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: [statsOf({ hero: famHero(fam).id, lv: 1, enh: 1, tier: 1 }), ...party(['발도르'])], seed: 3 }); S.heroes[0]!.atb = 1; S.heroes[0]!.ch = 4; return S; };
+  it('화염 = 3초 동안 피해 30% 더 · 자연 = 보스 다음 공격 2초 늦춤(최대 4) · 일반 공격엔 없음', () => {
+    const F = solo('flame'); const b0 = F.bossHp; useSkill(F, 0, 'equip'); const hit = b0 - F.bossHp; const b1 = F.bossHp; for (let i = 0; i < 35; i++) tick(F, 0.1);
+    expect(b1 - F.bossHp).toBeGreaterThanOrEqual(Math.round(hit * famFx.burn.pct) - 3);
+    const N = solo('nature'); N.bossT = 5; useSkill(N, 0, 'equip'); expect(N.bossT).toBe(3); N.heroes[0]!.atb = 1; useSkill(N, 0, 'equip'); N.heroes[0]!.atb = 1; useSkill(N, 0, 'equip'); expect(N.bossT).toBe(1);
+    const N2 = solo('nature'); N2.bossT = 5; attack(N2, 0, 'ok'); expect(N2.bossT).toBe(5);
+  });
+  it('지혜 = 약점 시간 +3 (없으면 다음 약점) · 신비 = 체력 비율 가장 낮은 친구 +5', () => {
+    const W = solo('wisdom'); useSkill(W, 0, 'equip'); expect(W.exposeNext).toBe(famFx.expose);
+    const M = solo('mystic'); M.heroes[1]!.hp = 10; useSkill(M, 0, 'equip'); expect(M.heroes[1]!.hp).toBe(10 + famFx.bless);
+  });
+  it('무기 = 실드가 있을 때 피해 더 들어감(관통)', () => {
+    const A = solo('arms'), B = solo('flame'); for (const S of [A, B]) { S.shieldUp = true; S.cells = [{ owner: 1, fam: 'nature', broken: false }]; S.heroes[0]!.ch = 4; }
+    const a0 = A.bossHp; useSkill(A, 0, 'equip'); const da = a0 - A.bossHp; const pure = Math.round(T.skillBase * A.heroes[0]!.s.skillMul * T.ratio.equip * T.shieldDmg);
+    expect(da).toBeGreaterThan(pure);
+  });
+});

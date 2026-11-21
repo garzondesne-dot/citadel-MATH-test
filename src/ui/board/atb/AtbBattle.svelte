@@ -100,7 +100,7 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
-  let barrierFx = $state(0);
+  let barrierFx = $state(0), bossFrost = $state(0);
   /** 아직 날아가는 구슬 수 = 단추 구슬은 닿을 때 한 칸씩 켜짐 (엔진 충전은 이미 들어감) */
   let pendOrb = $state(0);
   const shownCh = $derived(Math.max(0, (meH?.ch ?? 0) - pendOrb));
@@ -337,6 +337,14 @@
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
     else if (e.k === 'react') { const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who === me) big(t, 'note', 1100); sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
+      const B0 = { x: bx + (open ? 0 : 4), y: 40 };
+      if (e.fx === 'pierce') pop(B0.x, B0.y, '🗡 관통!', 'fam');
+      else if (e.fx === 'burn') pop(B0.x + 3, B0.y + 6, e.tick ? `🔥 −${e.v}` : '🔥 화상!', 'fam');
+      else if (e.fx === 'freeze') { pop(B0.x, B0.y, '🧊 얼림!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 1600); }
+      else if (e.fx === 'expose') pop(B0.x, B0.y, '📖 약점 노출!', 'fam');
+      else if (e.fx === 'bless' && e.to != null) pop(posOf(e.to).x, posOf(e.to).y - 24, '🔮 축복! +5', 'fam');
+    }
     else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
     else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.n}`, 'role');
@@ -429,7 +437,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
+  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}><i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} /></i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -722,4 +730,9 @@
   .b.skb.react { animation: rflash 0.45s steps(2) infinite; border-color: var(--rc); box-shadow: 0 0 20px var(--rc); } @keyframes rflash { 50% { background: var(--rc); } }
   .tbarrier { position: absolute; z-index: 12; left: 2%; width: 30%; top: 30%; height: 52%; border-radius: 50%; pointer-events: none; border: 3px solid #b8f0ff; background: radial-gradient(ellipse, #8fe0ff22, #8fe0ff55 70%, #0000 72%); box-shadow: 0 0 22px #8fe0ff; animation: bup 0.4s ease-out; }
   @media (prefers-reduced-motion: reduce) { .reactb, .b.skb.react { animation: none; } }
+  /* 🌈 계열 덧효과 (요청 #36) */
+  .pop.fam { font-size: 15px; color: #fff3c0; animation-duration: 0.8s; }
+  .boss.burning :global(.sprite), .boss.burning :global(i) { filter: drop-shadow(0 0 6px #ff7a2a) drop-shadow(0 -4px 8px #ffb84a); }
+  .boss.burning::after { content: '🔥'; position: absolute; left: 50%; top: 10%; font-size: 22px; transform: translateX(-50%); animation: blink 0.35s steps(2) infinite; pointer-events: none; }
+  .boss.frost :global(.sprite), .boss.frost :global(i) { filter: drop-shadow(0 0 8px #8fe0ff) saturate(0.6) brightness(1.15) hue-rotate(160deg); }
 </style>

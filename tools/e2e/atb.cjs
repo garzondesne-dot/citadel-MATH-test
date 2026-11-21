@@ -271,6 +271,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('⑥ 고르는 창 = 실제 초상 · 로안 방어 「0%」 · ATB 「8.0초」 · 약점! 배지', stats.def === '0%' && stats.atb === '8.0초' && !!(await p.$('[data-k="atb-pick"] .face')) && !!(await p.$('[data-k="atb-pick"] .wk2')), JSON.stringify(stats));
   await p.screenshot({ path: `${SHOTS}/atb-pick-844.png` });
   ok('⑥ 고르는 창 가로 넘침 0', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  ok('요청 #36 고르는 창 = 계열 덧효과 한 줄(방패 + 이름 + 설명)', /🌈 (관통|화상|얼림|약점 노출|축복)/.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
   // 다른 크기
   for (const [w, h] of [[667, 375], [1024, 768]]) {
     const q = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(600);

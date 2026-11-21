@@ -143,6 +143,16 @@ export const atkClass = (k: AtkKind, aoe: boolean): AtkClass => (ATK_SPECIAL.has
 /** 반응 막기 = 예고 중 그 역할 스킬을 ATB 없이 ⚡1 로 · 단일 = 탱커 대신 맞음(cover) · 광역 = 서포터 결계(피해 ×0.7 · 느려짐 없음) · 특수 = 딜러 강타로 끊음 */
 export const REACT: Record<AtkClass, Role> = { single: 'tank', aoe: 'support', special: 'dealer' };
 export const REACT_CFG = { barrier: 0.3, botChance: 0.7 };
+/** 🌈 계열 덧효과 (📜 요청 #36 선생님 「그래야 재밌지」) = 장착 · 각성 스킬이 보스에 맞을 때만 · 일반 공격 · 역할 스킬 없음
+ *  무기 관통 = 실드가 있을 때 피해 줄임(×0.3)을 1.5배 덜 받음 · 화염 화상 = 3초 동안 그 피해 30% 나눠 · 자연 얼림 = 보스 다음 공격 2초 늦춤(최대 4) · 지혜 약점 노출 = 약점 시간 +3초 · 신비 축복 = 체력 비율 가장 낮은 친구 +5 */
+export const famFx = { pierce: 1.5, burn: { pct: 0.3, sec: 3 }, freeze: { sec: 2, max: 4 }, expose: 3, bless: 5 };
+export const FAM_FX_TXT: Record<Fam, { name: string; desc: string }> = {
+  arms: { name: '관통', desc: '실드가 있어도 피해 덜 줄어듦 (×1.5)' },
+  flame: { name: '화상', desc: '3초 동안 피해 30% 더' },
+  nature: { name: '얼림', desc: '보스 다음 공격 2초 늦춤 (최대 4초)' },
+  wisdom: { name: '약점 노출', desc: '약점 시간 +3초 (없으면 다음 약점 시간)' },
+  mystic: { name: '축복', desc: '체력이 가장 낮은 친구 +5' },
+};
 /** 대표 행동 숫자 (어림값 · 📜 설정표 v3 「⚠ ×0.2 · 8% · 30% · 30초 = 모의실험에 안 넣은 값」) */
 export const SIG = {
   breath: { every: 30, warn: 4, heal: 0.08 }, // 6 · 7 숨 고르기: 실드가 뜬 뒤 30초마다 3초 예고 → HP 8% 회복 · 예고 중 실드 칸을 깨면 끊김
