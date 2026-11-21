@@ -32,6 +32,11 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await Promise.all(ps.map((p) => p.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {})));
   const meta = await rest(`atb/${pid}/meta`), post = await rest(`school/board/posts/${pid}`);
   ok('출발 = atb meta 4칸(사람 N · 봇 4-N) · 글 play · code A', meta && meta.slots.length === 4 && meta.slots.filter((s) => s.bot).length === 4 - N && post.phase === 'play' && post.code === `A${pid}`, meta ? meta.slots.map((s) => s.bot ? 'bot' : s.uid).join(',') : 'meta 없음');
+  // 🎬 #69 조우 · 정찰 → 모든 폰 「⚔ 준비 완료」 → 3 · 2 · 1 (atb/{pid}/ready · go 규칙 확인)
+  for (const p of ps) await p.waitForSelector('[data-k="atb-scout-go"]:not([disabled])', { timeout: 15000 }).then(() => p.click('[data-k="atb-scout-go"]')).catch(() => {});
+  await wait(1500); const rd = await rest(`atb/${pid}/ready`), go = await rest(`atb/${pid}/go`);
+  ok('🎬 정찰 준비 완료 → 서버 ready · go (방장 씀 · 규칙 통과)', Array.isArray(rd) ? rd.length >= N : Object.keys(rd || {}).length >= N, `ready ${JSON.stringify(rd)} · go ${go}`);
+  await wait(4500);
   const stages = await Promise.all(ps.map((p) => p.$('[data-k="atb-stage"]').then(Boolean)));
   ok('모든 폰 ATB 전투 화면', stages.every(Boolean), stages.join(','));
   const onTop = await Promise.all(ps.map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));

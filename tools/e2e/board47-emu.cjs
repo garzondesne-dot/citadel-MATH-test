@@ -8,7 +8,7 @@ const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path
 const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTimeout(r, ms));
 (async () => {
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
-  const open = async () => { const ctx = await b.newContext({ viewport: { width: 360, height: 640 } }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(`${B}?${E}`); return p; };
+  const open = async () => { const ctx = await b.newContext({ viewport: { width: 360, height: 640 } }), p = await ctx.newPage(); await p.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); } catch { /* */ } }); /* #69 조우 · 정찰 건너뜀 (e2e) */ p.on('pageerror', (e) => errs.push(String(e))); await p.goto(`${B}?${E}`); return p; };
   const signup = async (p, cls, num) => {
     await p.waitForSelector('select'); await p.selectOption('select >> nth=0', cls); await p.waitForTimeout(200); await p.selectOption('select >> nth=1', String(num)); await p.waitForTimeout(200);
     await p.click('.links button:has-text("가입")'); await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
