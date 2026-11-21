@@ -7,9 +7,9 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
 (async () => {
   const b = await chromium.launch(), errs = [], out = [];
   const ok = (n, c, i = '') => { out.push(`${c ? '✅' : '❌'} ${n}${i ? ` · ${i}` : ''}`); if (!c) errs.push(n); };
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }), t = await ctx.newPage(); t.on('pageerror', (e) => errs.push(String(e)));
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } }), t = await ctx.newPage(); await t.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); } catch { /* */ } }); t.on('pageerror', (e) => errs.push(String(e)));
   await t.goto(B + '?role=teacher'); await t.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-v1-me', JSON.stringify({ hero: 3, socket: {} })); }); await t.reload(); await t.waitForSelector('.tabs'); // 이 기기 학생 칸 = 닌자(교사 화면에 나오면 안 됨)
-  await t.click('.tabs button:has-text("나")'); await t.waitForTimeout(300); await t.click('.item:has-text("내 용사")'); await t.waitForSelector('button.top[aria-label="용사 바꾸기"]');
+  await t.click('.tabs button:has-text("나")'); await t.waitForTimeout(300); await t.click('button.hc'); await t.waitForSelector('button.top[aria-label="용사 바꾸기"]');
   await t.click('button.top[aria-label="용사 바꾸기"]'); await t.waitForSelector('.hsw .swc'); await t.click('.hsw .swc:has-text("공식")'); await t.waitForTimeout(200); await t.click('.hsw .pmain'); await t.waitForTimeout(300); await t.click('button:has-text("💾 저장")'); await t.waitForTimeout(600);
   const srv = await t.evaluate(() => window.__dbGet('school/tlook')); ok('① 교사 폰 저장 → 서버', srv?.hero === 17, JSON.stringify(srv && { hero: srv.hero, fx: srv.fx }));
   // ② 교사 캠프
@@ -17,9 +17,10 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const card = (await t.textContent('.hero-card')).replace(/\s+/g, ' '); ok('② 교사 캠프 카드 = 공식(📐 수식)', /수식/.test(card), card.slice(0, 50));
   // ③ 📋 게시판 1인 전투 용사
   await t.click('button[aria-label="게시판"]'); await t.waitForSelector('.bd'); await t.waitForTimeout(300);
-  await t.click('.bd .act .btn'); await t.waitForSelector('.run', { timeout: 15000 }); await t.waitForTimeout(1500);
-  const lab = await t.$eval('.run .hb .hero', (e) => e.getAttribute('aria-label') + ' ' + getComputedStyle(e).backgroundImage).catch(() => '');
-  ok('③ 게시판 전투 용사 = 공식(수학자)', /수학자/.test(lab) && !/닌자/.test(lab), lab.replace(/url\(".*\/(hero-[^"]+)"\)/, '$1'));
+  if (await t.$('[data-k="board-story"]')) await t.click('[data-k="board-story"]');
+  await t.click('.bd .act .btn'); await t.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await t.waitForTimeout(1500); // 📜 #65 혼자 도전 = 새 전투
+  const lab = await t.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim()).join(' · ')).catch(() => '');
+  ok('③ 게시판 새 전투 내 용사 = 공식', /공식/.test(lab.split(' · ')[0] || ''), lab);
   const pl = await t.evaluate(() => { const rs = Object.entries(JSON.parse(JSON.stringify(localStorage))).filter(([k]) => /rooms\/T/.test(k)); return rs.map(([k, v]) => { try { const o = JSON.parse(v); return JSON.stringify(Object.values(o.players || o || {}).map((x) => x && x.hero)); } catch { return ''; } }).join(' '); });
   await t.screenshot({ path: path.join(SHOTS, 'tme1-board.png') });
   // ④ 다른 기기에서 바꿈(서버 값) → 교사 캠프 다시
