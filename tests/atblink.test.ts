@@ -26,8 +26,9 @@ describe('📡 출발', () => {
     expect(S.get(`atb/p1/host`)).toBe('s1_3_1');
     const p2 = S.get<Post>(`${POSTS}/p1`)!; expect(p2.phase).toBe('play'); expect(isAtb(p2)).toBe(true);
   });
-  it('테스트 반이 끼면 · 이 기기 체험 = 로컬 그대로', () => {
-    expect(atbOnline(mk(), post([m('a', '1-3', 1, 1, 1), m('b', '1-6', 2, 2, 2)]))).toBe(false);
+  it('서버 = 테스트 반(1-6) · 교사도 새 전투 · 이 기기 체험만 로컬 (#65-1)', () => {
+    expect(atbOnline(mk(), post([m('a', '1-3', 1, 1, 1), m('b', '1-6', 2, 2, 2)]))).toBe(true);
+    expect(atbOnline(mk(), post([m('b', '1-6', 2, 2, 2)]))).toBe(true);
     expect(atbOnline(mk('memory'), post([m('a', '1-3', 1, 1, 1)]))).toBe(false);
     expect(atbOnline(mk(), post([m('a', '1-3', 1, 1, 1)]))).toBe(true);
   });
