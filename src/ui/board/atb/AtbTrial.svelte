@@ -15,6 +15,7 @@
   import Land from './Land.svelte';
   import AtbResult from './AtbResult.svelte';
   import { bossArt } from './rdunBoss';
+  import { botHeroes } from '../../../board/atbLink';
 
   const { packs, hero, xp = 0, enh = 0, fx0 = '', nick = '체험 용사', start = null, onclose }: {
     /** 체험판 차시 팩 (trialPacks) */ packs: LessonPack[]; hero: number; xp?: number; enh?: number; /** 장착 스킬 (없으면 사다리 첫 칸) */ fx0?: string; nick?: string; /** #66-8 게시판에서 고른 차시 = 바로 전투 · 나가면 onclose(게시판으로) */ start?: LessonPack | null; onclose: () => void;
@@ -27,7 +28,8 @@
   const labels = $derived<Record<number, string>>({ 0: '나', 1: '🤖 모험가 A', 2: '🤖 모험가 B', 3: '🤖 모험가 C' });
   function begin(p: LessonPack) {
     L = p; end = null;
-    const mates = MATES.map((n) => HEROES.find((h) => h.name === n)?.id ?? 0).filter((id) => id !== hero).slice(0, 3);
+    const mi = MATES.map((n) => HEROES.find((h) => h.name === n)?.id ?? 0), pool = [...mi, ...HEROES.map((h) => h.id).filter((id) => !mi.includes(id))].filter((id) => id !== hero);
+    const mates = botHeroes(p.no, [hero], pool, 3); /* 📜 #100 = 게시판과 같은 봇 고르기 (보스 실드 속성 중 비어 있는 속성부터 · 그다음 MATES 순서) */
     const lv = levelOf(xp), ids = [hero, ...mates];
     const party = ids.map((id, i) => statsOf({ hero: id, lv: i ? 1 : lv, enh: i ? 0 : enh, tier: i ? 1 : tierOf(id, fxOf(id)), name: String(heroOf(id).name) }));
     const art = bossArt(bossOf(p.no), 'normal', p.theme); bg = art.bg;
