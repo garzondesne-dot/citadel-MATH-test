@@ -5,7 +5,7 @@
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
 (async () => {
-  const b = await chromium.launch(), errs = [], out = [];
+  const b = await chromium.launch(); { const np = b.newPage.bind(b); b.newPage = async (o) => { const pg = await np(o); await pg.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); } catch { /* 무시 */ } }); return pg; }; } /* 🗺 요청 #69 조우 · 정찰은 atbintro.cjs 가 따로 봄 */ const errs = [], out = [];
   // 📜 요청 #24 v2 = 스킬은 「스킬」 단추를 눌러 위로 뜬 메뉴에서 · 닫기 = 손잡이 끌어 내림 · 소리 설정 = ⚙
   const skc = async (pg, k, tap = false) => { if (!(await pg.$('[data-k="atb-skills"].open'))) { if (tap) await pg.tap('[data-k="atb-skill-btn"]'); else await pg.click('[data-k="atb-skill-btn"]'); await pg.waitForTimeout(220); } if (tap) await pg.tap(`[data-k="atb-sk-${k}"]`); else await pg.click(`[data-k="atb-sk-${k}"]`); };
   const closeQ = async (pg) => { await pg.evaluate(() => globalThis.__atb.close()); await pg.waitForTimeout(300); };

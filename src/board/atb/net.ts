@@ -19,7 +19,8 @@ export interface Meta { v: 1; pid: string; lid: string; no: number; diff: Diff; 
 export type Act =
   | { k: 'atk'; s: number; timing: Timing; auto?: boolean }
   | { k: 'skill'; s: number; sk: SkillK; to?: number }
-  | { k: 'earn'; s: number; e: { done: boolean; perfect: boolean; right: boolean; miss?: number } };
+  | { k: 'earn'; s: number; e: { done: boolean; perfect: boolean; right: boolean; miss?: number } }
+  /** 🗺 정찰 「준비 완료」 (요청 #69 · 엔진 밖 · 방장이 모아 go 시각을 정함) */ | { k: 'ready'; s: number };
 /** atb/{pid}/snap (방장만 · 5Hz) · j = 상태 JSON 글자(서버가 빈 배열을 지우지 않게) · ack = 학생마다 처리한 마지막 행동 번호 */
 export interface Snap { v: 1; n: number; t: number; host: string; at: number; ack: Record<string, number>; j: string }
 export const NET = { snapMs: 200, hbMs: 3000, lostMs: 10000, evKeep: 40 } as const;
@@ -38,6 +39,7 @@ export function applyAct(S: State, a: Act): boolean {
   if (S.end || !S.heroes[a.s]) return false;
   if (a.k === 'atk') return attack(S, a.s, a.timing, !!a.auto);
   if (a.k === 'skill') return useSkill(S, a.s, a.sk, a.to);
+  if (a.k === 'ready') return false;
   earn(S, a.s, a.e); return true;
 }
 
@@ -55,6 +57,11 @@ export function pickHost(meta: Meta, hb: Record<string, number> | null, now: num
   const alive = (u: string) => now - (hb?.[u] ?? 0) < NET.lostMs;
   if (cur && alive(cur)) return cur;
   return humans(meta).find((s) => alive(s.uid))?.uid ?? null;
+}
+/** 🗺 정찰 끝 = 모두 준비(봇 · 끊긴 자리 = 준비로 셈) 또는 정찰 시간 끝 (요청 #69) */
+export function introDone(meta: Meta, ready: Iterable<number>, hb: Record<string, number> | null, now: number, scoutEnd: number): boolean {
+  if (now >= scoutEnd) return true; const r = new Set(ready), lost = new Set(lostSlots(meta, hb, now));
+  return meta.slots.every((s, i) => isBot(s) || lost.has(i) || r.has(i));
 }
 /** 끊긴 학생 자리 (봇이 이어받음) */
 export const lostSlots = (meta: Meta, hb: Record<string, number> | null, now: number): number[] => meta.slots.map((s, i) => (!isBot(s) && now - (hb?.[s.uid] ?? 0) >= NET.lostMs ? i : -1)).filter((i) => i >= 0);

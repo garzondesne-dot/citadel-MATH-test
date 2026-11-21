@@ -12,6 +12,8 @@
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
+  import AtbIntro from './AtbIntro.svelte';
+  import { INTRO, markMet, metBefore } from '../../../board/atb/story';
   import AtbFx, { fxUrl, fxCss } from './AtbFx.svelte';
   import MonCrack from '../../fx/MonCrack.svelte';
   import { crackShake, crackStep, hitBits, hitReel } from '../../fx/hitfx';
@@ -39,7 +41,9 @@
   import { answerOf } from '../../../raid/raid';
   import { ATK, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
-  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false }: {
+  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false }: {
+    /** 🗺 조우 · 정찰 (요청 #69) 여럿이 판 = 부모(AtbNet)가 시각 · 준비를 맞춤 · 없으면 이 폰 혼자 · noIntro = 바로 전투(시험) */
+    intro?: { t0: number; goAt: number | null; ready: number[]; short?: boolean; now: () => number; onready: () => void }; noIntro?: boolean;
     /** 📡 게시판 연결 (요청 #48): remote = 방장 아님(엔진 안 돌림 · 내 행동만 보냄) */ net?: { remote: boolean; send: (a: Act) => void }; /** 👥 자리마다 보이는 이름 (파티원 실명 · 나 = 「나」 · 봇 = 「🤖 모험가 A」) */ labels?: Record<number, string>; /** 받은 상태로 시작 = 지난 사건 다시 안 그림 */ skipOld?: boolean;
     L: LessonPack; S: State; /** 내 용사 번호 · -1 = 관전 */ me: number; bots: Bot[]; seed?: string; speed?: number; onend: (S: State) => void; /** 📕 #67 내가 소문항을 맞힌 몬스터 칸 (복습 완료 기록 · 손발 #1) */ onright?: (mid: string) => void; /** 🎲 랜덤 던전 배경 열쇠 (Y9 · 없으면 차시 배경) */ bg?: string;
     /** 용사마다 장착 스킬 id (컷인 이름) */ fx?: Record<number, string>;
@@ -57,11 +61,26 @@
   let paused = $state(false), ended = false, slowUntil = 0, slowSkip = 0, slowOn = $state(0);
   function slowmo(ms: number) { slowUntil = Date.now() + ms; const t = Date.now(); slowOn = t; setTimeout(() => { if (slowOn === t) slowOn = 0; }, ms); try { navigator.vibrate?.([30, 40, 30, 40, 60]); } catch { /* 무시 */ } }
   const STEP = 0.1;
+  // 🗺 조우 → 정찰 → 3 · 2 · 1 → 전투 (📜 요청 #69) · 그동안 엔진 멈춤(보스 공격 · ATB · 시간) · 판 중간에 들어옴 = 바로 전투
+  /** 🧪 옛 e2e 시험 = 조우 · 정찰 없이 바로 (localStorage atb-e2e-nointro · 학생 폰엔 없음) */
+  const e2eNoIntro = () => { try { return localStorage.getItem('atb-e2e-nointro') === '1'; } catch { return false; } };
+  const introNow = () => intro?.now() ?? Date.now();
+  const iShort = untrack(() => intro?.short ?? metBefore(S.boss.no)), MEET = iShort ? INTRO.meetShort : INTRO.meet, SCOUT_END = untrack(() => (intro?.t0 ?? Date.now()) + INTRO.meet + INTRO.scout);
+  const iT0 = untrack(() => intro?.t0 ?? Date.now()), skipIntro = untrack(() => noIntro || S.t > 0 || e2eNoIntro());
+  let goLocal = $state<number | null>(null), nowMs = $state(Date.now());
+  const goAt = $derived(intro ? intro.goAt : goLocal);
+  const phase = $derived<'meet' | 'scout' | 'count' | 'fight'>(skipIntro ? 'fight' : nowMs < iT0 + MEET ? 'meet' : goAt == null ? (!intro && nowMs >= (iShort ? iT0 + MEET + INTRO.scoutShort : SCOUT_END) ? 'count' : 'scout') : nowMs < goAt + INTRO.count ? 'count' : 'fight');
+  const introLeft = $derived(phase === 'scout' ? Math.max(0, Math.ceil(((iShort && !intro ? iT0 + MEET + INTRO.scoutShort : SCOUT_END) - nowMs) / 1000)) : phase === 'count' ? Math.max(0, Math.ceil(((goAt ?? nowMs) + INTRO.count - nowMs) / 1000)) : 0);
+  const introReady = $derived(intro ? intro.ready : [...bots.map((b) => b.who), ...(goLocal != null && me >= 0 ? [me] : [])]);
+  function introGo() { if (intro) intro.onready(); else if (goLocal == null) goLocal = Date.now(); }
+  $effect(() => { if (!intro && phase === 'count' && goLocal == null) goLocal = nowMs; }); // 혼자 = 정찰 시간이 다 되면 바로 셈
+  if (!skipIntro) setTimeout(() => sfx('block', 0.9), 350); // 쿵
   const loop = setInterval(() => {
+    nowMs = introNow();
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
-    if (S.end) { if (!ended) { ended = true; setTimeout(() => onend(S), 1800); } return; }
-    if (paused) return;
+    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); setTimeout(() => onend(S), 1800); } return; }
+    if (paused || phase !== 'fight') return;
     if (net?.remote) { autoStep(); return; } // 📡 방장 아님 = 엔진은 방장 폰 · 화면은 받은 상태로
     if (Date.now() < slowUntil && ++slowSkip % 3) return; // 🎬 슬로 모션 (요청 #50 · 연출 · 0.4 ~ 0.6초 동안 1/3 속도)
     for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b, busyOf); autoStep(); }
@@ -581,7 +600,7 @@
     {/if}
   </div>
   {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
+  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -612,6 +631,7 @@
   {/each}
 
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
+  {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
 
   <!-- 문제 카드 -->
   {#if open && run}
@@ -949,6 +969,13 @@
   .aimring { position: absolute; left: 0; z-index: 22; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 3px solid #ff3a2a; box-shadow: 0 0 12px #ff3a2a, inset 0 0 8px #ff3a2a88; transform: scale(calc(0.7 + var(--k) * 1.8)); pointer-events: none; transition: transform 0.12s linear; }
   .aimring.aoe { border-color: #ff8a2a; box-shadow: 0 0 12px #ff8a2a; }
   .aimring.special { border-color: #b07aff; box-shadow: 0 0 12px #b07aff; }
+  /* 🗺 조우 = 보스가 위에서 쿵 (흔들 · 먼지 · 요청 #69) */
+  .boss.drop { animation: bdrop 0.55s cubic-bezier(.5,0,.8,.4) both, bthud 0.35s ease-out 0.55s; z-index: 61; }
+  .boss.drop::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -4%; height: 18%; border-radius: 50%; background: radial-gradient(#d8c8a0cc, #0000 70%); animation: dust 0.7s ease-out 0.5s both; pointer-events: none; }
+  @keyframes bdrop { from { transform: translate(-50%, -240%); } to { transform: translate(-50%, -100%); } }
+  @keyframes bthud { 30% { transform: translate(calc(-50% - 4px), calc(-100% + 3px)); } 60% { transform: translate(calc(-50% + 4px), calc(-100% - 2px)); } }
+  @keyframes dust { from { transform: scale(0.3); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .boss.drop, .boss.drop::after { animation: none; } }
   .aimring b { position: absolute; left: 50%; top: 0; font: 900 30px/1 var(--font); color: #fff; text-shadow: 0 0 6px #ff1a1a, 0 0 2px #000, 0 2px 0 #000; transform: translate(-50%, -50%) scale(calc(1 / (0.7 + var(--k) * 1.8))); }
   .ringx { position: absolute; left: 0; z-index: 19; pointer-events: none; }
   .ringx i { position: absolute; left: -14px; top: -3px; width: 28px; height: 6px; border-radius: 3px; background: #ffd0c8; box-shadow: 0 0 8px #ff3a2a; rotate: var(--r); animation: rx 0.5s ease-out forwards; }

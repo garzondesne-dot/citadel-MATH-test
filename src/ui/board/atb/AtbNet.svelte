@@ -11,7 +11,8 @@
   import { bossOf } from '../../../board/atb/tune';
   import type { State } from '../../../board/atb/engine';
   import { newBot, type Bot } from '../../../board/atb/bots';
-  import { applyAct, atbResultFor, battleOf, decodeSnap, encodeSnap, isBot, lostSlots, NET, overwrite, pickHost, slotOf, type Act, type AtbEnd, type Meta, type Snap } from '../../../board/atb/net';
+  import { INTRO, metBefore } from '../../../board/atb/story';
+  import { applyAct, atbResultFor, battleOf, decodeSnap, encodeSnap, introDone, isBot, lostSlots, NET, overwrite, pickHost, slotOf, type Act, type AtbEnd, type Meta, type Snap } from '../../../board/atb/net';
   import { bossArt } from './rdunBoss';
   import AtbBattle from './AtbBattle.svelte';
   import AtbResult from './AtbResult.svelte';
@@ -41,6 +42,17 @@
   unsubs.push(store.watch<Record<string, number>>(`${base}/hb`, (v) => { hb = v ?? {}; }));
   unsubs.push(store.watch<Snap>(`${base}/snap`, (v) => untrack(() => onSnap(v))));
   unsubs.push(store.watch<Record<string, Record<string, Act>>>(`${base}/act`, (v) => untrack(() => onActs(v))));
+  // 🗺 조우 · 정찰 (요청 #69): 시작 = meta.t0 (모든 폰 같은 때) · 준비 = act ready → 방장이 ready 목록 · go 시각을 씀
+  let readyL = $state<number[]>([]), goAt = $state<number | null>(null), readySet = new Set<number>();
+  unsubs.push(store.watch<number[]>(`${base}/ready`, (v) => { readyL = Array.isArray(v) ? v : []; }));
+  unsubs.push(store.watch<number>(`${base}/go`, (v) => { goAt = typeof v === 'number' ? v : null; }));
+  const scoutEnd = () => (meta?.t0 ?? 0) + INTRO.meet + INTRO.scout;
+  function hostIntro() {
+    if (!meta || host !== uid || goAt != null) return;
+    const bots0 = meta.slots.map((s, i) => (isBot(s) ? i : -1)).filter((i) => i >= 0), list = [...new Set([...bots0, ...readySet])].sort((a, b) => a - b);
+    if (list.join() !== readyL.join()) store.set(`${base}/ready`, list);
+    if (introDone(meta, readySet, hb, store.now(), scoutEnd())) { const t = store.now(); store.set(`${base}/go`, t); goAt = t; }
+  }
 
   function start() {
     if (!meta || !art) return;
@@ -62,8 +74,9 @@
     for (const [u, list] of Object.entries(all)) {
       const s = slotOf(meta, u); if (s < 0) continue;
       const qs = Object.keys(list ?? {}).map(Number).filter((q) => Number.isFinite(q) && q > (ack[u] ?? 0)).sort((a, b) => a - b);
-      for (const q of qs) { const a = list[String(q)]!; if (a && a.s === s && !(u === uid)) applyAct(G, a); ack[u] = q; }
+      for (const q of qs) { const a = list[String(q)]!; if (a?.k === 'ready' && a.s === s) readySet.add(s); else if (a && a.s === s && !(u === uid)) applyAct(G, a); ack[u] = q; }
     }
+    hostIntro();
   }
   function send(a: Act) { myQ++; store.set(`${base}/act/${uid}/${myQ}`, a); }
   function beat() { store.set(`${base}/hb/${uid}`, store.now()); }
@@ -73,7 +86,8 @@
   const tWho = setInterval(() => {
     if (!meta || !G || !L) return;
     const now = store.now(), want = pickHost(meta, hb, now, host);
-    if (want === uid && host !== uid) { const sn = store.get<Snap>(`${base}/snap`), d = sn ? decodeSnap(sn) : null; if (d && sn) { overwrite(G, d); ack = { ...(sn.ack ?? {}) }; snapN = sn.n; } store.set(`${base}/host`, uid); host = uid; } // 👑 방장 넘겨받음 = 마지막 상태에서 이어감
+    if (want === uid && host !== uid) { for (const i of store.get<number[]>(`${base}/ready`) ?? []) readySet.add(i); const sn = store.get<Snap>(`${base}/snap`), d = sn ? decodeSnap(sn) : null; if (d && sn) { overwrite(G, d); ack = { ...(sn.ack ?? {}) }; snapN = sn.n; } store.set(`${base}/host`, uid); host = uid; } // 👑 방장 넘겨받음 = 마지막 상태에서 이어감
+    if (host === uid) hostIntro();
     if (host === uid) { const lost = lostSlots(meta, hb, now).filter((i) => i !== me), key = lost.join(','); if (key !== lostKey || !bots.length) { lostKey = key; bots = meta.slots.map((s, i) => (isBot(s) || lost.includes(i) ? newBot(L, i, isBot(s) ? s.bot : 'normal', meta!.seed) : null)).filter((b): b is Bot => !!b); } }
     else if (bots.length) bots = [];
   }, 1000);
@@ -91,7 +105,7 @@
 {#if phase === 'wait' || !G || !L || !meta}
   <div class="netwait" role="status" data-k="atb-net-wait">⏳ 판을 준비하는 중… (방장 폰을 기다려요)</div>
 {:else if phase === 'battle' && started}
-  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} onend={ended} />
+  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} intro={{ t0: meta.t0, goAt, ready: readyL, short: metBefore(meta.no) || mastery > 0, now: () => store.now(), onready: () => { if (me >= 0) send({ k: 'ready', s: me }); } }} onend={ended} />
 {:else if phase === 'result'}
   <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} end={res} onagain={() => onend(res, true)} onswap={() => onend(res)} onexit={() => onend(res)} />
 {/if}
