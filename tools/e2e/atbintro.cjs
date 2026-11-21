@@ -23,6 +23,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.waitForTimeout(2400); ok('① 정찰 카드', (await phase(p)) === 'scout' && !!(await p.$('[data-k="atb-scout"]')));
   ok('#64 조우 = 등장 대사', /뒤집어도/.test(await p.textContent('[data-k="atb-intro-line"]')), await p.textContent('[data-k="atb-intro-line"]'));
   const card = await p.textContent('[data-k="atb-scout"]');
+  { const sh = await p.$$eval('[data-k="atb-scout-shield"] .fam', (x) => x.map((e) => ({ f: e.dataset.fam, own: e.classList.contains('own'), none: e.classList.contains('none'), t: e.textContent }))); ok('📜 #95 정찰 카드 = 실드 속성 4칸 · 내 속성 금테 · 팀에 없는 속성 「📜 도움표로」', sh.length === 4 && sh.every((x) => !x.none || /도움표로/.test(x.t)), JSON.stringify(sh)); }
   ok('① 카드 = 약점 · 공격 3종 → 탱커 · 서포터 · 딜러 · 내 임무 · 분노 30%', /약점/.test(card) && /탱커/.test(card) && /서포터/.test(card) && /딜러/.test(card) && /내 임무/.test(card) && /30%/.test(card), card.replace(/\s+/g, ' ').slice(0, 160));
   ok('① 정찰 = 10초 남음 표시', /⏳ (9|10)초/.test(await p.textContent('[data-k="atb-scout-left"]')));
   await p.screenshot({ path: `${SHOTS}/atb-r69-scout-844.png` });

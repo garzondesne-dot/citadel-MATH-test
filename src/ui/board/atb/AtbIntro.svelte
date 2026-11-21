@@ -3,7 +3,7 @@
   //   meet = 어둡게 + 보스 이름 띠 + 등장 대사 · scout = 보스 카드(약점 · 공격 3종 → 막는 역할 · 내 임무 · 분노) + 남은 초 + 「⚔ 준비 완료」 · count = 3 · 2 · 1 · 전투 시작!
   import type { State } from '../../../board/atb/engine';
   import { missionOf } from '../../../board/atb/engine';
-  import { ATK, ATK_SPECIAL, FAM_NAME, atkClass, atkName, bossOf, rage as RAGE, type AtkClass, type AtkKind } from '../../../board/atb/tune';
+  import { ATK, ATK_SPECIAL, FAM_NAME, atkClass, atkName, bossOf, rage as RAGE, shieldOf, type AtkClass, type AtkKind } from '../../../board/atb/tune';
   import { bossLine } from '../../../board/atb/story';
   import FamShield from './FamShield.svelte';
   const { S, me, phase, left, short = false, ready = [], labels, onready }: {
@@ -19,6 +19,8 @@
   const mis = $derived(me >= 0 && S.heroes[me] ? missionOf(S, me) : null), role = $derived(me >= 0 ? S.heroes[me]?.s.role : undefined);
   const iReady = $derived(me >= 0 && ready.includes(me)), many = $derived(S.heroes.length > 1);
   const ROLE_NM = { tank: '탱커', dealer: '딜러', support: '서포터', healer: '힐러' } as const;
+  /** 🛡 📜 #95 실드 4칸 = 내 속성 금테 · 팀에 없는 속성 = 📜 도움표로 */
+  const meHero = $derived(me >= 0 ? S.heroes[me] : undefined);
   const nm = (i: number) => labels?.[i] ?? S.heroes[i]?.s.name ?? '';
 </script>
 
@@ -30,6 +32,7 @@
   {#if phase === 'scout'}
     <section class="card" data-k="atb-scout" aria-label="정찰">
       <div class="row weak"><span class="lb">약점</span>{#each S.boss.weak as f (f)}<span class="fam"><FamShield fam={f} size={16} /> {FAM_NAME[f]}</span>{/each}</div>
+      <div class="row shl" data-k="atb-scout-shield"><span class="lb">실드</span>{#each shieldOf(S.boss) as f, i (i)}{@const own = !!meHero && meHero.s.fam === f}{@const none = !S.heroes.some((h) => h.s.fam === f)}<span class="fam" class:own class:none data-fam={f}><FamShield fam={f} size={16} /> {FAM_NAME[f]}{#if none}<small>📜 도움표로</small>{/if}</span>{/each}</div>
       <ul class="atks">{#each atks as a (a.c)}{#if a.names.length}<li data-cls={a.c}><b>{a.ic} {a.names.join(' · ')}</b><span>→ {a.who} {a.how}</span></li>{/if}{/each}</ul>
       {#if mis && role}<div class="row mine" data-k="atb-scout-mission">내 임무: {ROLE_NM[role]} = {mis.ic} {mis.txt} {mis.need}</div>{/if}
       <div class="row rage">😡 분노 = 체력 {Math.round(RAGE.at * 100)}% 아래</div>
@@ -55,6 +58,7 @@
   .say.ph { opacity: 0.4; }
   .card { width: min(440px, 100%); padding: 8px 12px; border-radius: 12px; background: #f6e7c4; border: 2px solid #b88a4a; color: #3a2614; display: grid; gap: 4px; font: 700 13px var(--font-plain); animation: band 0.3s ease-out; }
   .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .fam.own { box-shadow: 0 0 0 2px #e0a020, 0 0 8px #f0c040; } .fam.none { opacity: 0.85; background: #efe4ff; } .fam small { margin-left: 3px; font-size: 0.8em; color: #6a4ab8; font-weight: 800; }
   .lb { font-weight: 900; } .fam { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 8px; background: #fff3d6; }
   .atks { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; } .atks li { display: flex; justify-content: space-between; gap: 6px; } .atks span { color: #6a4a20; white-space: nowrap; }
   .mine { color: #1d5ac8; font-weight: 900; } .rage { color: #b3261e; }

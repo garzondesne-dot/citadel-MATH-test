@@ -5,7 +5,7 @@ import { HEROES } from '../src/model/hero';
 import { attack, breakShield, canBreak, earn, newBattle, revive, roleAct, skillList, tick, timingOf, timingZone, useSkill, skillPeek, type State } from '../src/board/atb/engine';
 import { newBot, simulate } from '../src/board/atb/bots';
 import { statsOf } from '../src/board/atb/heroes';
-import { BOSSES, BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, T } from '../src/board/atb/tune';
+import { BOSSES, BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, SHIELD, T } from '../src/board/atb/tune';
 
 const L2 = SUBJ.lessons.find((p) => p.no === 2)!;
 const id = (n: string) => HEROES.find((h) => h.name === n)!.id;
@@ -61,18 +61,25 @@ describe('ATB 엔진', () => {
     const hp = S.heroes.map((x) => x.hp); tick(S, 0.5); tick(S, 12.05); expect(S.ev.some((e) => e.k === 'guard')).toBe(true); expect(S.heroes.map((x) => x.hp)).toEqual(hp);
     expect(skillList(S, 0).some((x) => x.k === 'aura')).toBe(false);
   });
-  it('실드: HP 70% 에서 각자 1칸(계열) · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 완주 표로만 깸 · 약점 계열 = 친구 칸도', () => {
+  it('📜 #95 실드 = 보스가 정한 속성 4칸(주인 없음) · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 같은 속성 ⚡1 · 약점 계열 = + 아무 칸 · 팀에 없는 속성 = 도움표', () => {
     const S = fresh(); S.bossHp = Math.round(S.bossMax * 0.7) + 5; full(S, 0); attack(S, 0, 'ok');
-    expect(S.shieldUp).toBe(true); expect(S.cells.map((c) => c.fam)).toEqual(['arms', 'mystic', 'mystic', 'wisdom']);
+    expect(S.shieldUp).toBe(true); expect(S.cells.map((c) => c.fam)).toEqual(SHIELD[2]); expect(S.cells.every((c) => c.owner == null)).toBe(true);
     const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok'); expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.3));
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
-    S.heroes[0]!.ch = 0; expect(canBreak(S, 0)).toBe(null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
-    full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 자기 칸 + 친구 칸
-    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(0); // 보호막 부수기 = 충전 1 (재시도 끝 = 소문항 +1 · 요청 #41)
+    const fams = S.heroes.map((h) => h.s.fam), orphan = SHIELD[2]!.filter((f) => !fams.includes(f));
+    S.heroes[0]!.ch = 0; void orphan; expect(canBreak(S, 0)).toBe(S.heroes[0]!.tickets ? 'help' : null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
+    full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 무기 칸 + 아무 칸 하나(도움표 칸 먼저)
+    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.cells.find((c) => c.fam === 'arms')!.broken).toBe(true);
   });
-  it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 + 전원 생존 = 승리', () => {
+  it('📜 #95 도움표 = 팀에 그 속성이 없거나 다 쓰러지면 · 원문항 완주 1장 · ⚡ 없이 아무나', () => {
+    const S = fresh(['로안']); S.shieldUp = true; S.cells = SHIELD[2]!.map((fam) => ({ fam, broken: false })); S.heroes[0]!.ch = 0; full(S, 0);
+    expect(canBreak(S, 0)).toBe(null); S.heroes[0]!.tickets = 1; expect(canBreak(S, 0)).toBe('help');
+    expect(useSkill(S, 0, 'equip')).toBe(true); expect(S.heroes[0]!.tickets).toBe(0); expect(S.rec.helpBrk).toBe(1);
+    expect(S.cells.filter((c) => c.broken).map((c) => c.fam)).not.toContain('arms'); // 무기 칸은 로안 몫 = 도움표로 안 깸
+  });
+  it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 = 승리', () => {
     const S = fresh(['누아', '루멘']); S.bossHp = 200; full(S, 0); attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
-    for (const w of [0, 1]) { earn(S, w, doneR); full(S, w); breakShield(S, w); }
+    S.cells.forEach((c, i) => { if (i > 0) c.broken = true; }); S.cells[0]!.fam = S.heroes[0]!.s.fam; S.heroes[0]!.ch = 1; full(S, 0); breakShield(S, 0);
     expect(S.weakUntil).toBeCloseTo(S.t + 12); const bt = S.bossT; tick(S, 5); expect(S.bossT).toBe(bt);
     S.heroes[0]!.atb = 0; tick(S, 1); expect(S.heroes[0]!.atb).toBeCloseTo(2 / S.heroes[0]!.s.atbSec, 3);
     S.bossHp = 10; full(S, 0); attack(S, 0, 'ok'); expect(S.end).toMatchObject({ win: true });

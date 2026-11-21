@@ -407,6 +407,15 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await v.screenshot({ path: `${SHOTS}/atb-r92-retreat-844.png` });
     ok('📜 #92 7:00 현자 「균열이 불안정해지고 있다…」 + 가장자리 짙게 · 9:00 「1분 뒤 포털」 + 1:00 셈 · 10:00 = 「후퇴」 결과 · 현자가 불러들임', /균열이 불안정/.test(w.sage) && w.edge && /^🌀 (1:00|0:59)$/.test(c.left) && /1분 뒤 포털/.test(c.sage) && r.h === '후퇴' && /포털로 불러들였어요/.test(r.why), JSON.stringify({ w, c, r }));
     await v.close(); }
+  // 📜 요청 #95 실드 = 보스 속성 4칸 · 내 속성 칸 빛 · 팀에 없는 속성 칸 📜 · 스킬 이름 「💥 실드 깨기」
+  { const v = await b.newPage({ viewport: { width: 844, height: 390 } }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(500);
+    await v.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.bossHp = Math.round(S.bossMax * 0.7) + 2; a.full(); }); await v.click('[data-k="atb-attack"]'); await v.waitForSelector('[data-k="atb-timing"]'); await v.evaluate(() => globalThis.__atbTiming('ok')); await v.waitForTimeout(700);
+    await v.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await v.waitForTimeout(200); await v.click('[data-k="atb-skill-btn"]'); await v.waitForTimeout(300);
+    const r = await v.evaluate(() => { const S = globalThis.__atb.S, me = S.heroes[0], fams = S.heroes.map((h) => h.s.fam); return { n: S.cells.length, owner: S.cells.some((c) => c.owner != null), mine: document.querySelectorAll('.cell2.mine').length, wantMine: S.cells.filter((c) => c.fam === me.s.fam).length, orph: document.querySelectorAll('.cell2.orphan').length, wantOrph: S.cells.filter((c) => !fams.includes(c.fam)).length, nm: document.querySelector('[data-k="atb-sk-equip"] .nm')?.textContent ?? '' }; });
+    await v.screenshot({ path: `${SHOTS}/atb-r95-shield-844.png` });
+    ok('📜 #95 실드 = 보스 속성 4칸(주인 없음) · 내 속성 칸 빛 · 팀에 없는 속성 칸 📜 · 메뉴 「💥 실드 깨기」', r.n === 4 && !r.owner && r.mine === r.wantMine && r.orph === r.wantOrph && (r.wantMine === 0 || /실드 깨기/.test(r.nm)), JSON.stringify(r));
+    await v.close(); }
   // 📜 요청 #90 문제 카드 접기 · 펴기 = 빈 곳 누름 접힘(진행 그대로) · 띠 누름 올림 · ⚡ 가득 = 저절로 접힘(한 번) · ⚡ 0 = 저절로 올림
   for (const [w, h, nm] of [[844, 390, '가로 844'], [390, 844, '세로 390 돌림']]) {
     const v = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true }); v.on('pageerror', (e) => errs.push(String(e)));

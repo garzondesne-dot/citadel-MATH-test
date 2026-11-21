@@ -23,7 +23,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin, orphanCell } from '../../../board/atb/engine';
   import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -133,7 +133,7 @@
   /** 📜 #98-b 3칸 시트(대기 · 공격 · 쓰러짐) = 대기 B · 맞음 칸이 없음 → 코드로(숨쉬기 · 움찔) · 5칸 시트면 그림 칸 그대로 */
   const bSheet3 = $derived.by(() => { const p = spriteOf(S.boss.sprite).sheet.poses; return { idleB: p.idleB != null, hit: p.hit != null }; });
   function openQuiz() {
-    if (!run) { const mine = S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken); const o = nextOrigin(OS, done, mine && meH && !meH.ch ? easiestOf(OS)?.mid : null); if (o) run = freshRun(o.mid); hintUsed = false; }
+    if (!run) { const mine = S.shieldUp && S.cells.some((c) => !c.broken && !!meH && (c.fam === meH.s.fam || orphanCell(S, c))); const o = nextOrigin(OS, done, mine && meH && !meH.ch ? easiestOf(OS)?.mid : null); if (o) run = freshRun(o.mid); hintUsed = false; }
     open = true;
   }
   /** 📝 채점 → ⚡ 충전 연출 (Y8 · 약 2초 · 누르면 건너뜀): 소문항 ○ × 차례로 → 카드가 쑥 빨려 들어가 에너지 → 충전 칸 */
@@ -258,7 +258,7 @@
   const CTR_TXT: Record<string, string> = { tank: '🛡 엄호!', support: '🎵 결계!', dealer: '⚔ 끊기!' };
   const mis = $derived(me >= 0 && meH ? (void S.evN, missionOf(S, me)) : null);
   // 💥 B 속성 = 실드가 떴고 내 칸이 남았고 내 계열이 약점 → 2초 카드 위 알림 → 카드 뒤 가운데에 계속 (요청 #50 🔁)
-  const brk = $derived(me >= 0 && !!meH && !meH.down && S.shieldUp && S.boss.weak.includes(meH.s.fam) && S.cells.some((c) => c.owner === me && !c.broken));
+  const brk = $derived(me >= 0 && !!meH && !meH.down && S.shieldUp && S.boss.weak.includes(meH.s.fam) && S.cells.some((c) => !c.broken && !!meH && (c.fam === meH.s.fam || orphanCell(S, c))));
   const brkOk = $derived(brk && canSkill(S, me, 'shield'));
   let brkFront = $state(0), famFlash = $state(0), wasBrk = false;
   $effect(() => { const b = brk; untrack(() => { if (b && !wasBrk) { const t = Date.now(); brkFront = t; famFlash = t; setTimeout(() => { if (brkFront === t) brkFront = 0; }, 2000); setTimeout(() => { if (famFlash === t) famFlash = 0; }, 1100); snd('skill-unlock', 0.7); try { navigator.vibrate?.([40, 30, 40]); } catch { /* 무시 */ } } wasBrk = b; }); });
@@ -275,7 +275,7 @@
   const chargeP = $derived(tg?.cls === 'special' ? (S.breathWarn != null && !S.target ? Math.min(1, (S.t - S.breathWarn) / SIG.breath.warn) : Math.min(1, Math.max(0, (S.bossT - (bossEveryOf(S) - (ATK[S.nextAtk!]?.warn ?? T.telegraph))) / (ATK[S.nextAtk!]?.warn ?? T.telegraph)))) : 0);
   let reactKey = '', healNowT = $state(0);
   $effect(() => { const r = reactNow, k = `${S.bossN}|${S.breathWarn ?? ''}`; untrack(() => { if (r && reactKey !== k) { reactKey = k; try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } snd('focus', 0.6); } }); });
-  const breaksShield = $derived(me >= 0 && S.shieldUp && S.cells.some((c) => c.owner === me && !c.broken));
+  const breaksShield = $derived(me >= 0 && S.shieldUp && S.cells.some((c) => !c.broken && !!meH && (c.fam === meH.s.fam || orphanCell(S, c))));
   /** ✨ 쓸 수 있게 되는 순간 반짝 */
   let lit = $state<Record<string, number>>({}), wasOk: Record<string, boolean> = {};
   $effect(() => { const cur = slots.map((x) => [x.k, x.ok] as const); untrack(() => { for (const [k, ok] of cur) { if (ok && !wasOk[k]) { const t = Date.now(); lit = { ...lit, [k]: t }; setTimeout(() => { if (lit[k] === t) lit = { ...lit, [k]: 0 }; }, 700); } wasOk[k] = ok; } }); });
@@ -291,7 +291,7 @@
     over = ''; skOpen = false; if (ops.skill(k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
-  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '내 스킬' : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급 힐' : '부활';
+  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? (me >= 0 && canBreak(S, me) ? '💥 실드 깨기' : '내 스킬') : k === 'tier4' ? '4레벨 스킬' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급 힐' : '부활';
   const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚡', tier4: '✴', role: '', aura: '🛡', awk: '✨', revive: '💖', heal: '🩹' };
   const onTiming = (t: Timing) => { over = ''; ops.attack(t); };
 
@@ -647,7 +647,7 @@
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" class:fl={flashCell === i} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{S.heroes[c.owner]?.s.name} · {FAM_NAME[c.fam]}"><FamShield fam={c.fam} size={44} state={pendCells.has(i) ? 'empty' : st === 'gone' ? 'gone' : st === 'crack' || st === 'shatter' || (st === 'hold' && cellAnim[i] != null) ? 'crack' : 'ok'} />{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><FamShield fam={c.fam} size={44} state={pendCells.has(i) ? 'empty' : st === 'gone' ? 'gone' : st === 'crack' || st === 'shatter' || (st === 'hold' && cellAnim[i] != null) ? 'crack' : 'ok'} />{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
@@ -859,6 +859,8 @@
   .cell2.shatter { animation: cgone 0.45s ease-in forwards; }
   @keyframes cgone { to { opacity: 0; scale: 1.3; } }
   .cell2.gone { filter: none; }
+  .cell2.mine:not(.gone) { filter: drop-shadow(0 0 4px #ffd34d) drop-shadow(0 0 10px #ffb020); animation: cmine 1.2s ease-in-out infinite; } @keyframes cmine { 50% { filter: drop-shadow(0 0 7px #ffe27a) drop-shadow(0 0 14px #ffb020); } } /* 📜 #95 내가 깰 수 있는 칸 빛 */
+  .cell2.orphan:not(.gone)::after { content: '📜'; position: absolute; right: -4px; bottom: -2px; font-size: 13px; filter: drop-shadow(0 0 2px #000); } /* 팀에 없는 속성 = 도움표 칸 */
   .cell2 .lk { position: absolute; right: -8px; bottom: -8px; font-size: 15px; font-style: normal; }
   /* 🛡 방패막 (그림 atb-shield 오기 전 = 빛 테두리) · 펼침 · 물결 · 산산조각 */
   .barrier { position: absolute; top: 75%; z-index: 11; transform: translate(-50%, -100%); pointer-events: none; background-repeat: no-repeat; background-size: 400% 300%; background-position: 0% 0%; mix-blend-mode: screen; mix-blend-mode: plus-lighter; transition: left 0.45s ease; }

@@ -31,7 +31,7 @@ export const T = {
   /** 📜 #92 10분 상한 (전투 시간 · 조우 · 정찰 빼고): 7:00 현자 경고 + 보스 공격 간격 ×0.8 · 9:00 「1분 뒤 포털」 + 셈 · 10:00 강제 귀환 = 후퇴 */
   cap: { warn: 420, call: 540, end: 600, every: 0.8 },
   shieldHelpAfter: 90, // 실드가 뜬 뒤 90초 지나도 남은 칸 = 다른 사람이 완주 2번으로 대신
-  shieldHelpRuns: 2,
+  shieldHelpRuns: 1, // 📜 #95 도움표 1장 = 팀에 없는 속성 칸 하나
   wrongSwap: 4, // 4번째 오답 = 같은 원문항 새 숫자 판
   /** ⚡ 충전 (📜 11/20 Y1 · 결정 14절): 원문항(한 문제)을 통째로 맞혀야 충전 · 최대 3 · 퍼펙트(오답 없이) · 재시도(오답 있었음) = ⏳ 임시값(설계 방 최종값 오면 바꿈) */
   charge: { max: 4, perSub: 1, perfect: 1, autoGap: 0.6, perfectOld: 3, retry: 2, /** 📜 요청 #49 찍기 막기 = 소문항 틀린 횟수 → 충전 (0번 1 · 1번 ½ · 2번 이상 0) */ byMiss: [1, 0.5, 0] as readonly number[] }, // 📜 요청 #41 선생님 「소문항 한 개에 충전 칸 한 개」 = 소문항 맞힘마다 +1 · 오답 없이 원문항 끝 = +1 더 · 최대 4 · 넘침 자동 스킬 사이 0.6초 (perfectOld · retry = 옛 값 · 화면 표시 안 씀)
@@ -131,7 +131,7 @@ export type Sig = 'footTarget' | 'gaze' | 'iceArmor' | 'fireBreath' | 'breath' |
 export interface RageMod { two?: { kinds: AtkKind[]; mul: number }; late?: number; refreeze?: boolean; swap?: Partial<Record<AtkKind, AtkKind>>; cycle?: AtkKind[]; breathEvery?: number; mirrorBack?: number;
   after?: { on: AtkKind; then: AtkKind; low?: boolean }; cutPct?: number; eqSec?: number; orderRev?: boolean; markMax?: number; revPct?: number }
 export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
-export interface BossCfg { no: number; name: string; sprite: string; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
+export interface BossCfg { no: number; name: string; sprite: string; /** 🛡 📜 #95 실드 4칸 속성 (보스가 정함 · 약점 계열 둘 포함 · 다섯 중 하나 뺌) */ shield?: Fam[]; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
   weak: [Fam, Fam]; type: string; cycle: AtkKind[]; tele: 'foot' | 'gaze' | 'scale'; sig: Sig; signature: string; shieldDmg?: number; draft?: boolean;
   /** 이 보스의 공격 이름 (같은 종류 · 다른 이름 · v4) */ names?: Partial<Record<AtkKind, string>>; /** 분노 들어갈 때 · 분노 차례에 붙는 특수 */ rageSpecial?: AtkKind; /** 차시별 분노 */ rageMod?: RageMod }
 export const BOSSES: Record<number, BossCfg> = {
@@ -153,6 +153,17 @@ export const BOSSES: Record<number, BossCfg> = {
   16: { no: 16, name: '합성의 대기관', sprite: 'd07:3', weak: ['wisdom', 'arms'], type: '연계형', cycle: ['steam', 'hammer', 'aoe', 'bind'], tele: 'foot', sig: 'compose', signature: '두 번 이어 치기 (g∘f)', names: { aoe: '톱니 폭풍', bind: '톱니 물림' }, rageSpecial: 'bind', rageMod: { markMax: 2, cycle: ['steam', 'hammer', 'hammer', 'aoe'] } },
   17: { no: 17, name: '역함수의 거울 군주', sprite: 'd10:3', weak: ['mystic', 'arms'], type: '반사형', cycle: ['whip', 'darkHit', 'reverse'], tele: 'foot', sig: 'inverse', signature: '되돌리기 (f⁻¹)', names: { whip: '거울 조각' }, rageSpecial: 'reverse', rageMod: { revPct: 0.5 } },
 };
+/** 🛡 📜 #95 실드 = 속성 칸 4개 (선생님 「보스가 정함 · 도움표로 깨기」) · 약점 계열 둘 + 나머지 셋 중 둘 (보스 컨셉에 안 맞는 하나를 뺌) · 주인 없음
+ *  같은 속성 용사 누구나 ⚡1 로 깸 · 약점 계열 용사 = 같은 칸 + 아무 칸 하나 · 팀에 그 속성이 없거나 다 쓰러짐 = 📜 도움표(실드 중 원문항 완주 1장) */
+export const SHIELD: Record<number, Fam[]> = {
+  2: ['arms', 'flame', 'wisdom', 'mystic'], 3: ['nature', 'mystic', 'arms', 'wisdom'], 4: ['flame', 'wisdom', 'arms', 'mystic'], 5: ['nature', 'wisdom', 'arms', 'mystic'],
+  6: ['arms', 'flame', 'wisdom', 'mystic'], 7: ['arms', 'flame', 'wisdom', 'mystic'], 8: ['arms', 'mystic', 'flame', 'wisdom'], 9: ['wisdom', 'flame', 'nature', 'mystic'],
+  10: ['mystic', 'arms', 'flame', 'nature'], 11: ['flame', 'nature', 'arms', 'wisdom'], 12: ['nature', 'mystic', 'arms', 'wisdom'], 13: ['wisdom', 'nature', 'arms', 'flame'],
+  14: ['wisdom', 'flame', 'nature', 'mystic'], 15: ['nature', 'mystic', 'arms', 'wisdom'], 16: ['wisdom', 'arms', 'nature', 'mystic'], 17: ['mystic', 'arms', 'flame', 'nature'],
+};
+for (const [n, f] of Object.entries(SHIELD)) { const b = BOSSES[Number(n)]; if (b) b.shield = f; }
+/** 실드 칸 속성 (설정 없으면 약점 둘 + 나머지 앞 둘) */
+export const shieldOf = (b: BossCfg): Fam[] => b.shield ?? [...b.weak, ...(['arms', 'flame', 'nature', 'wisdom', 'mystic'] as Fam[]).filter((f) => !b.weak.includes(f))].slice(0, 4);
 /** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
 export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' | 'breath' | 'contra' | 'reverse' | 'hammer'; /** 행동 불능 초 (없으면 T.stun) */ stunSec?: number; /** 🔩 맞은 용사에게 표식 (16) */ mark?: boolean }> = {
   basic: { name: '공격', mul: 1 },
