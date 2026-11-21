@@ -26,7 +26,7 @@ describe('게시판 던전 엔진 훑기', () => {
       const party = Array.from({ length: (s % 4) + 1 }, (_, i) => ids[(s * 7 + i * 5 + L.no) % ids.length]!).map((id) => statsOf({ hero: id, lv: 10, enh: 5, tier: 2 }));
       const S: State = newBattle({ boss: bossArt(bossOf(L.no), diff), diff, party, seed: s * 31 + L.no });
       const bots = S.heroes.map((h) => newBot(L, h.id, s % 2 ? 'normal' : 'random', s));
-      try { simulate(L, S, bots, { maxT: 900 }); } catch (e) { out.push(`SIMTHROW ${L.no} ${diff} ${String(e).slice(0, 100)}`); continue; }
+      try { simulate(L, S, bots, { maxT: 1200 }); /* 📜 머리 2026-11-21 = 900 → 1200초 (찍기 봇 도전 1인 탱커 판이 905초에 끝남 · 게임엔 시간 제한 없음) */ } catch (e) { out.push(`SIMTHROW ${L.no} ${diff} ${String(e).slice(0, 100)}`); continue; }
       for (const e of S.ev) if (e.k === 'fam') fxSeen.add((e as { fx: string }).fx);
       const bad = [S.bossHp, S.t, ...S.heroes.flatMap((h) => [h.hp, h.ch, h.atb])].some((x) => !Number.isFinite(x));
       if (bad) out.push(`NaN ${L.no} ${diff} s${s}`);
