@@ -1,0 +1,200 @@
+{
+ "sk-wave": [
+  {
+   "src": "skill-v4/sk4-wave-a-v1.webp",
+   "w": 240,
+   "h": 160,
+   "n": 24,
+   "cols": 24,
+   "fps": 20,
+   "px": 150,
+   "py": 106,
+   "pk": 6,
+   "name": "wave-a"
+  },
+  {
+   "src": "skill-v4/sk4-wave-b-v1.webp",
+   "w": 240,
+   "h": 160,
+   "n": 26,
+   "cols": 26,
+   "fps": 20,
+   "px": 150,
+   "py": 106,
+   "pk": 12,
+   "name": "wave-b"
+  }
+ ],
+ "sk-tsunami": [
+  {
+   "src": "skill-v4/sk4-tsunami-a-v1.webp",
+   "w": 280,
+   "h": 200,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 170,
+   "py": 106,
+   "pk": 10,
+   "name": "tsunami-a"
+  },
+  {
+   "src": "skill-v4/sk4-tsunami-b-v1.webp",
+   "w": 280,
+   "h": 200,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 140,
+   "py": 106,
+   "pk": 10,
+   "name": "tsunami-b"
+  }
+ ],
+ "sk-slash": [
+  {
+   "src": "skill-v4/sk4-slash-a-v1.webp",
+   "w": 240,
+   "h": 150,
+   "n": 22,
+   "cols": 22,
+   "fps": 20,
+   "px": 140,
+   "py": 78,
+   "pk": 6,
+   "name": "slash-a"
+  },
+  {
+   "src": "skill-v4/sk4-slash-b-v1.webp",
+   "w": 240,
+   "h": 150,
+   "n": 22,
+   "cols": 22,
+   "fps": 20,
+   "px": 140,
+   "py": 78,
+   "pk": 7,
+   "name": "slash-b"
+  }
+ ],
+ "sk-twin": [
+  {
+   "src": "skill-v4/sk4-twin-a-v1.webp",
+   "w": 260,
+   "h": 180,
+   "n": 28,
+   "cols": 28,
+   "fps": 20,
+   "px": 140,
+   "py": 92,
+   "pk": 10,
+   "name": "twin-a"
+  },
+  {
+   "src": "skill-v4/sk4-twin-b-v1.webp",
+   "w": 260,
+   "h": 180,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 140,
+   "py": 92,
+   "pk": 12,
+   "name": "twin-b"
+  }
+ ],
+ "sk-cyclone": [
+  {
+   "src": "skill-v4/sk4-cyclone-a-v1.webp",
+   "w": 230,
+   "h": 250,
+   "n": 26,
+   "cols": 26,
+   "fps": 20,
+   "px": 115,
+   "py": 166,
+   "pk": 7,
+   "name": "cyclone-a"
+  }
+ ],
+ "sk-pillar": [
+  {
+   "src": "skill-v4/sk4-pillar-a-v1.webp",
+   "w": 260,
+   "h": 220,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 130,
+   "py": 146,
+   "pk": 10,
+   "name": "pillar-a"
+  }
+ ],
+ "sk-thunder": [
+  {
+   "src": "skill-v4/sk4-thunder-a-v1.webp",
+   "w": 300,
+   "h": 180,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 150,
+   "py": 110,
+   "pk": 1,
+   "name": "thunder-a"
+  },
+  {
+   "src": "skill-v4/sk4-thunder-b-v1.webp",
+   "w": 260,
+   "h": 200,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 130,
+   "py": 110,
+   "pk": 6,
+   "name": "thunder-b"
+  }
+ ],
+ "sk-vortex": [
+  {
+   "src": "skill-v4/sk4-vortex-a-v1.webp",
+   "w": 280,
+   "h": 220,
+   "n": 30,
+   "cols": 30,
+   "fps": 20,
+   "px": 140,
+   "py": 112,
+   "pk": 14,
+   "name": "vortex-a"
+  }
+ ],
+ "sk-void": [
+  {
+   "src": "skill-v4/sk4-void-a-v1.webp",
+   "w": 260,
+   "h": 200,
+   "n": 32,
+   "cols": 32,
+   "fps": 20,
+   "px": 130,
+   "py": 104,
+   "pk": 6,
+   "name": "void-a"
+  },
+  {
+   "src": "skill-v4/sk4-void-b-v1.webp",
+   "w": 260,
+   "h": 240,
+   "n": 32,
+   "cols": 32,
+   "fps": 20,
+   "px": 130,
+   "py": 124,
+   "pk": 7,
+   "name": "void-b"
+  }
+ ]
+}
