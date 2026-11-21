@@ -6,7 +6,7 @@ import { liveValue } from '../room.svelte';
 type P = { phase?: string; mem?: Record<string, Member>; at?: number };
 const nOf = (p: P) => Object.keys(p.mem || {}).length;
 /** 모집 중 = 대기(wait) · 사람이 있고 아직 안 참(차면 다시 불씨 · 📜 2026-11-15 캠프 A) */
-const recruiting = (p: P | null | undefined) => !!p && p.phase === 'wait' && nOf(p) > 0 && nOf(p) < MAX;
+const recruiting = (p: P | null | undefined) => !!p && p.phase === 'wait' && !(p as { when?: number }).when && !(p as { solo?: boolean }).solo && nOf(p) > 0 && nOf(p) < MAX; // 📅 #73 예약 · ⚔ 혼자 판 = 포털 「같이 하재요」 · 바로 참여에서 뺌
 export function portalOf(S: Store) {
   const v = liveValue<Record<string, P>>(S, POSTS);
   const st = $state({ openUntil: 0, now: Date.now() });
