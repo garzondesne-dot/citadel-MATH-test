@@ -155,6 +155,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.waitForTimeout(1400); await p.evaluate(() => globalThis.__atb.miss()); await p.waitForTimeout(80); const fxB = await p.$eval('[data-k="atb-quiz"]', (e) => e.dataset.fx).catch(() => '');
   ok('선생님 덧붙임 10 · 11 = 맞음 초록 테두리 · 틀림 빨간 테두리 + 흔들림', fxG === 'good' && fxB === 'bad', `${fxG} · ${fxB}`);
   await p.screenshot({ path: `${SHOTS}/atb-v2-card-844.png` });
+  { await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.weakUntil = 0; S.stoneUntil = 0; S.bossT = 11.8; a.pause(false); });
+    const mh = await p.waitForSelector('[data-k="mhit"]', { timeout: 4000 }).then((e) => e.evaluate((x) => x.dataset.kind)).catch(() => '');
+    await p.evaluate(() => globalThis.__atb.pause(true)); await p.waitForTimeout(600);
+    ok('요청 #27 보스가 칠 때 = 맞는 용사 위 몬스터 맞는 그림(레이드와 같은 mhitOf · MonHit) · 0.4초 뒤 사라짐', !!mh && !(await p.$('[data-k="mhit"]')), mh); }
   await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.heroes[1].down = true; S.heroes[1].hp = 0; S.heroes[0].ch = 1; a.full(); }); await p.waitForTimeout(150);
   await skc(p, 'revive'); await p.waitForTimeout(250);
   ok('요청 #24 ⑤ 팀 부활 = 평소 숨김 · 쓸 때만 「💖 3 → 2」', /3 → 2/.test(await p.textContent('[data-k="atb-revfx"]').catch(() => '')));

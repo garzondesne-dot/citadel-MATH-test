@@ -12,6 +12,8 @@
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
+  import MonHit from '../../battle/MonHit.svelte';
+  import { MHIT, mhitOf, type MhitKind } from '../../manifest';
   import { rectIn, ROT_ATTR } from '../../rot';
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
@@ -94,6 +96,7 @@
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
+  let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
   let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
   /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
@@ -273,6 +276,8 @@
       bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 600);
       bossEl?.animate?.([{ translate: '0 0' }, { translate: `${-Math.round(Wd * 0.06)}px 6px`, offset: 0.4 }, { translate: '0 0' }], { duration: 520, easing: 'ease-out' });
       setTimeout(() => {
+        // 👹 몬스터 맞는 그림 (📜 요청 #27 · 레이드 #26 과 같은 함수 mhitOf · MonHit) = 보스 몸짓 → 맞는 용사 위 6칸 0.42초 · 광역 = 모두 동시에 · 게시판 보스 = 1.5배
+        const kind = mhitOf(S.boss.sprite), mk = ++mhN; mhit = { k: mk, kind, to: [...e.to] }; setTimeout(() => { if (mhit?.k === mk) mhit = null; }, MHIT.ms + 40);
         e.to.forEach((id, i) => { pop(posOf(id).x, posOf(id).y - 22, `−${e.dmg[i]}`, e.aoe ? 'hurt big' : 'hurt'); hurt(id); });
         if (e.aoe) { shake(stageEl ?? null, 10, 520); boom = true; ring(); setTimeout(() => (boom = false), 620); sfx('smash', 0.9); try { navigator.vibrate?.([50, 30, 90]); } catch { /* 무시 */ } }
         else { shake(stageEl ?? null, 4, 220); sfx('hurt', 0.6); }
@@ -381,6 +386,7 @@
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
       {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit')} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} scale={sc} aura={h.s.enh} /></div>{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
+      {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64 * 0.9)} boss z={19} />{/key}{/if}
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
       {#if lowIds.includes(h.id)}<i class="sos" style:top="{-Math.round(base * p.s * 64 * 1.02) - (isWeak(h.id) ? 62 : 40)}px" data-k="atb-sos" aria-label="위험">🆘</i>{/if}
       {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
