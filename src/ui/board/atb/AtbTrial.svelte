@@ -42,7 +42,7 @@
 </script>
 
 {#if S && L}<Land>{#if !end}
-  {#key runKey}<AtbBattle {L} {S} me={0} {bots} seed={`trial${runKey}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxOf(h.s.hero)]))} {bg} {labels} onend={ended} />{/key}
+  {#key runKey}<AtbBattle {L} {S} me={0} {bots} seed={`trial${runKey}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxOf(h.s.hero)]))} {bg} {labels} whoNames={{ 0: nick }} onend={ended} />{/key}
 {:else}
   <AtbResult {S} no={L.no} me={0} mastery={0} practice={false} trial {labels} {end} onagain={() => begin(L!)} onswap={out} onexit={out} />
 {/if}</Land>

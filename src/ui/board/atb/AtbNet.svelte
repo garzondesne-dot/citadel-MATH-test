@@ -35,6 +35,8 @@
   const art = $derived(meta ? bossArt(bossOf(meta.no), meta.diff) : null);
   /** 👥 자리 이름: 나 = 「나」 · 친구 = 실명 · 봇 = 「🤖 모험가 A」 */
   const labels = $derived.by(() => { const o: Record<number, string> = {}; let b = 0; meta?.slots.forEach((s, i) => { o[i] = isBot(s) ? `🤖 모험가 ${'ABCD'[b++]}` : s.uid === uid ? '나' : (names[s.uid] ?? s.nick ?? heroOf(s.hero).name); }); return o; });
+  /** 📜 #80 컷인 이름 = 나도 실명(명단 이름 · 없으면 별명 · 용사 이름) · 봇 = 용사 이름 (모든 폰 같은 meta → 같은 글) */
+  const whoNames = $derived.by(() => { const o: Record<number, string> = {}; meta?.slots.forEach((s, i) => { o[i] = isBot(s) ? String(heroOf(s.hero).name) : (names[s.uid] ?? s.nick ?? String(heroOf(s.hero).name)); }); return o; });
   const fx = $derived(Object.fromEntries((meta?.slots ?? []).map((s, i) => [i, s.fx || (ladder(s.hero)[Math.max(0, (s.tier ?? 1) - 1)] as string) || (ladder(s.hero)[0] as string)])));
 
   const unsubs: (() => void)[] = [];
@@ -107,7 +109,7 @@
 {#if phase === 'wait' || !G || !L || !meta}
   <div class="netwait" role="status" data-k="atb-net-wait">⏳ 판을 준비하는 중… (방장 폰을 기다려요)</div>
 {:else if phase === 'battle' && started}
-  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} intro={{ t0: meta.t0, goAt, ready: readyL, short: metBefore(meta.no) || mastery > 0, now: () => store.now(), onready: () => { if (me >= 0) send({ k: 'ready', s: me }); } }} onend={ended} />
+  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} {whoNames} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} intro={{ t0: meta.t0, goAt, ready: readyL, short: metBefore(meta.no) || mastery > 0, now: () => store.now(), onready: () => { if (me >= 0) send({ k: 'ready', s: me }); } }} onend={ended} />
 {:else if phase === 'result'}
   <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} end={res} onagain={() => onend(res, true)} onswap={() => onend(res)} onexit={() => onend(res)} />
 {/if}
