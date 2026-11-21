@@ -26,7 +26,8 @@
   import { guard } from '../fx/aura';
   import { HERO, heroHead, heroUrl, monBody, type HPose } from '../manifest';
   import { rowAnim } from '../fx/heroRow';
-  import { monVis, spriteOf } from '../manifest';
+  import { monVis, spriteOf, MHIT, mhitOf, type MhitKind } from '../manifest';
+  import MonHit from '../battle/MonHit.svelte';
   // ⚔ TV 전투 장면 (#157): PixiJS 캔버스(TV 들어갈 때만 불러옴) · WebGL 이 안 되면(또는 ?dom) 같은 배치의 DOM 장면
   //   공격 사건 = 학생마다 공격 횟수 · 데미지 비교(정식 hall.js attacks) → 0.35초 간격으로 차례로 · 쓰러지면 「몬스터 격파!」 + 머리 위 +EXP
   const { L, R, step, now, ids, nameOf, submitted, lost, split, shadow, tstrike = null, quiet = false }:
@@ -63,12 +64,14 @@
 
   // 🧊 몬스터 공격 = 폰과 같은 시계(atkClock) · 얼음이면 용사단 모두 얼음 덩어리 → 3초(분노 4초) 뒤 녹음 (TV 는 학생 톡을 모름 = 시간으로만)
   const amemo = {}; let iceDom = $state(0);
+  let mhitTv = $state<{ k: number; kind: MhitKind } | null>(null), mhN = 0, mhT: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
     const c = atkClock(L, R, now); if (!c || c.paused || !step || !feat('mon-attack')) return;
     if (!atkTrack(amemo, c, `${c.kind}|${c.mid}`).strike) return;
-    untrack(() => { if (split) return; /* 🎮 시연 중 = TV 공격 연출 없음 (시계 · 게이지 · 학생 폰은 그대로) */ const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); if (!quiet) sfx(atkSfx(d), 0.5); /* 🔊 #43 몬스터 공격 = 종류 소리 · 수업 사건 소리보다 작게 */ tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
+    untrack(() => { if (split) return; /* 🎮 시연 중 = TV 공격 연출 없음 (시계 · 게이지 · 학생 폰은 그대로) */ const hg = holyArmed(R, c.mid, now, c.per); if (hg.length) { void tvGuard(hg); return; } const d = attackOf(L, step, c.k), ms = attackMs(d, c.lock, attackStrong(hp)); if (!quiet) sfx(atkSfx(d), 0.5); /* 🔊 #43 몬스터 공격 = 종류 소리 · 수업 사건 소리보다 작게 */ tvPose('*', 'hit', 400); setTimeout(() => tvPose('*', 'pant', Math.max(200, ms - 400)), 400); monAct('attack', 600); mhitTv = { k: ++mhN, kind: mhitOf(sprite) }; clearTimeout(mhT); mhT = setTimeout(() => (mhitTv = null), MHIT.ms + 40); /* 👹 #26 맞는 그림 = 용사마다 */ if (d.id !== 'ice') return; if (A) A.freeze(ms); else domFreeze(ms); }); // 🎞 공격 받음 = 맞음 0.4초 → 헐떡(정식 hall.js)
   });
   (globalThis as { __tvFreeze?: (ms?: number) => void }).__tvFreeze = (ms = 3000) => { if (A) A.freeze(ms); else domFreeze(ms); }; // 화면 시험 고리
+  (globalThis as { __tvMhit?: () => void }).__tvMhit = () => { mhitTv = { k: ++mhN, kind: mhitOf(sprite) }; clearTimeout(mhT); mhT = setTimeout(() => (mhitTv = null), MHIT.ms + 40); }; // 👹 #26 화면 시험 고리
   // 🎞 용사 모션 (📜 2026-11-14 머리 🔨 · 정식 hall.js pose): Pixi = A.pose · DOM 장면 = HeroSprite pose · 잠깐 모션(ms) 위에 바탕 모션(쓰러짐 · 기쁨 · 생각)
   // 🎲 몬스터 잠깐 자세 (공격 · 맞음) — Pixi = A.monPose · DOM = Sprite pose
   let domMon = $state<'' | 'attack' | 'hit'>(''), domMonT: ReturnType<typeof setTimeout> | undefined;
@@ -349,6 +352,7 @@
   {#if W && step && mins.length}{@const sz = box.mon.size * 0.3}{@const gap = sz * 1.35}<div class="mins" data-k="tv-minions">{#each mins as m (m.k)}<div class="mn" class:down={m.down} style:left="{box.mon.cx + (m.k - (mins.length - 1) / 2) * gap - sz / 2}px" style:top="{box.mon.top + box.mon.size * 1.02 - sz}px" style:width="{sz}px"><span class="mtag"><b>졸개{m.k + 1}</b><span class="mbar"><i style:width="{m.max ? (m.left / m.max) * 100 : 100}%"></i></span></span><Sprite ref={sprite} pose={m.down ? 'down' : 'idle'} size={sz} /></div>{/each}</div>{/if}
   {#if W && gauge}<div class="agauge" class:hot={gauge.hot} class:blue={gauge.blue} data-k="tv-gauge" style:left="{box.hp.x}px" style:top="{box.hp.y + box.hp.h + H * 0.012}px" style:width="{box.hp.w}px"><i style:width="{Math.round(gauge.p * 100)}%"></i><span>{gauge.txt}</span></div>{/if}
   {#each sparks as z (z.k)}<i class="spk" class:w={z.w} data-k="heal-spark" style:left="{z.x}px" style:top="{z.y}px" style:--dx="{z.dx}px" style:--dy="{z.dy}px" style:--s="{z.s}px" style:animation-delay="{z.dl}ms"></i>{/each}
+  {#if mhitTv && W}{#key mhitTv.k}{#each slots as sl, k (k)}<MonHit kind={mhitTv.kind} x={sl.x} y={sl.y - 34 * sl.s} size={64 * sl.s * 1.35} {boss} z={5000} />{/each}{/key}{/if}
   {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}

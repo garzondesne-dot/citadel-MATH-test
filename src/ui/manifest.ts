@@ -262,3 +262,26 @@ export const SFX: Record<string, string> = { swing: 'sfx/swing-v2.mp3', launch: 
 export const NOTE_ICON = { src: artUrl('art/note-icons-v1.webp'), n: 8, idx: { x: 0, '-': 1, n: 1, a: 1, o: 2, f: 2, p: 3, star: 4, c: 4, badge: 5, done: 6, book: 7 } as Record<string, number> };
 /** 🎒 오늘의 전리품 상자 (📜 2026-11-17 #7 = 옛 정식 assets/art/thrill-chest-v1.webp · 3칸 128×128: ① 닫힘 ② 흔들림(반짝 선) ③ 열림 + 금빛) */
 export const CHEST = { src: `${import.meta.env.BASE_URL}art/thrill/thrill-chest-v1.webp`, frames: 3 };
+
+// 👹 몬스터 맞는 그림 10종 (🔨 #26 · 📜 2026-11-20 선생님 「초안 그대로 넣기」 · 머리 hv2 3137ef2)
+//   시트 = 6칸 256 × 256 가로 · 투명 · 칸 순서 = 시작 → 큰 타격 → 사라짐 · 0.42초 · 오른쪽 → 왼쪽 그대로 · 보스 = 1.5배
+//   짝 = 과목 팩 SUBJ.monsterHit (subjects/…/mhit-map.json · 「시트줄|몬스터 이름」 → 종류 · 130마리) · 없는 몬스터 = smash · 레이드 · 게시판 던전이 이 함수 하나만 씀
+export type MhitKind = 'claw' | 'bite' | 'smash' | 'ram' | 'lash' | 'fire' | 'ice' | 'bolt' | 'poison' | 'beam';
+export const MHIT_KINDS: MhitKind[] = ['claw', 'bite', 'smash', 'ram', 'lash', 'fire', 'ice', 'bolt', 'poison', 'beam'];
+/** 빛 그림(검은 바탕에서 뽑은 것) = 더하기 섞기 */
+export const MHIT_LIGHT: ReadonlySet<MhitKind> = new Set(['fire', 'ice', 'bolt', 'poison', 'beam']);
+export const MHIT = { frames: 6, cell: 256, ms: 420, boss: 1.5 } as const;
+export const mhitUrl = (k: MhitKind) => `${import.meta.env.BASE_URL}art/mhit/mhit-${k}-v1.webp`;
+const MH = SUBJ.monsterHit ?? {};
+const MH_NAME: Record<string, MhitKind> = {};
+for (const [key, v] of Object.entries(MH)) { const nm = key.split('|')[1]; if (nm && !(nm in MH_NAME)) MH_NAME[nm] = v as MhitKind; }
+/** 몬스터 그림 ref(예 'extra:4' · 'd01:2' · 'bg1:0') → 맞는 그림 종류 */
+export function mhitOf(ref: string | undefined | null): MhitKind {
+  if (!ref) return 'smash';
+  try {
+    const sp = spriteOf(ref), nm = sp.sheet.names[sp.row] ?? '';
+    const [k0 = '', i0 = '0'] = ref.replace(/@.*$/, '').split(':');
+    const hit = MH[`${k0}${i0}|${nm}`] ?? MH[`${k0}|${nm}`] ?? MH_NAME[nm];
+    return (MHIT_KINDS as string[]).includes(hit ?? '') ? (hit as MhitKind) : 'smash';
+  } catch { return 'smash'; }
+}

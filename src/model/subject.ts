@@ -68,6 +68,8 @@ export interface Subject {
   recheck?: (q: import('./types').Question) => { ok: boolean | null; want?: string };
   /** 몬스터 줄 · 던전 배경 (변환기가 만든 표) */
   themes: { sheets: Record<string, { src: string; cell: number; names: string[] }>; dungeons: Record<string, string> };
+  /** 👹 #26 몬스터 맞는 그림 짝 「시트|몬스터 이름」 → 종류(claw · bite · smash · ram · lash · fire · ice · bolt · poison · beam) · 없는 몬스터 = smash */
+  monsterHit?: Record<string, string>;
   /** 👩‍🏫 체험판 (📜 2026-11-17 #33): 차시 카드 · 단계 · 쉼터 자리 · 방 설정 · 같이 싣는 팩 글(차시 팩 json) — 없으면 체험판 없음 */
   trial?: TrialCfg;
   /** 테스트 판 가짜 자료 글 (소식 · 설문 · 서술형 · 기호 표) */
