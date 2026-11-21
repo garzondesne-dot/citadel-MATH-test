@@ -72,10 +72,13 @@ function hitBoss(S: State, raw: number, pierce = 1, flat = false): number {
   if (!S.rage && S.bossHp > 0 && S.bossHp <= S.bossMax * RAGE.at) { S.rage = true; S.ragePerf = 0; S.rageN = 0; S.forceAtk = rageSpecial(S); S.target = null; S.nextAtk = null; S.aoeNext = false; S.bossT = Math.max(S.bossT, RAGE.every[S.diff] - (ATK[S.forceAtk].warn ?? T.telegraph)); push(S, { k: 'rage', t: S.t, on: 'rage' }); const M = modOf(S); if (M?.refreeze && S.lastBrk != null && S.cells[S.lastBrk]?.broken) { const c = S.cells[S.lastBrk]!; c.broken = false; S.refrozen = S.lastBrk; S.weakUntil = Math.min(S.weakUntil, S.t); push(S, { k: 'sig', t: S.t, what: 'refreeze', who: c.owner }); } } // 👹 분노 = 특수 한 번 바로(예고 4초) · 4 얼음 갑옷 다시
   if (!S.shieldUp && !S.cells.length && S.bossHp <= S.bossMax * T.shieldAt) { // 실드 펼침 · 각자 1칸 · 그 용사 계열
     S.shieldUp = true; S.shieldAt = S.t; S.breathNext = S.t + breathEvery(S); S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); push(S, { k: 'shieldUp', t: S.t });
+    if (S.bossHp <= 0) S.bossHp = 1; /* 한 방에 70% 위 → 0 = 실드가 펼쳐진 채 HP 0 이던 틈 · 실드 칸이 남으면 HP 1 (#84 규칙과 같게) */
   }
   checkEnd(S);
   return before - S.bossHp;
 }
+/** 🧪 e2e 전용 = 판을 이기게 끝냄 (실드 칸 다 깸 · HP 0 · 엔진의 끝 판정 그대로) */
+export function debugWin(S: State) { if (S.end) return; if (!S.cells.length) S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.cells.forEach((c) => (c.broken = true)); S.shieldUp = true; S.bossHp = 0; checkEnd(S); }
 function checkEnd(S: State) {
   if (S.end) return;
   if (S.bossHp <= 0 && S.cells.every((c) => c.broken)) { /* 📜 #84 보스 HP 0 = 바로 승리 (쓰러진 친구가 있어도 · 그 뒤 패배 판정 없음) */ S.end = { win: true, why: '보스 쓰러뜨림', t: S.t }; push(S, { k: 'end', t: S.t, win: true, why: S.end.why }); return; }
