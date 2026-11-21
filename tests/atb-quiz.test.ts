@@ -58,7 +58,8 @@ describe('ATB 문제 반복 없애기 (요청 #19 덧2)', () => {
           const before = [...(seen[`${L.id}|${o.mid}`] ?? [])], r = freshRun(L, o.mid, seed, seen, [], rnd);
           if (!r.seed) expect(before).not.toContain(r.ver); // 묶음이 겹쳐 판을 넘긴 때만 예외
           const t = JSON.stringify(questionsOf(L, r, seed)), set = sets.get(o.mid) ?? new Set();
-          expect(set.has(t), `${L.no}차시 ${o.mid} ${run + 1}판째`).toBe(false); set.add(t); sets.set(o.mid, set);
+          const cap = new Set([1, 2, 3, 4, 5, 6].map((v) => JSON.stringify(questionsOf(L, { mid: o.mid, ver: v }, seed)))).size; // 📜 #53 세트0 뺌 = 작은 pool 은 판이 5개보다 적을 수 있음
+          if (set.size < cap) expect(set.has(t), `${L.no}차시 ${o.mid} ${run + 1}판째`).toBe(false); set.add(t); sets.set(o.mid, set);
         }
       }
       if (originsOf(L).length > 2) expect(new Set(orders).size).toBeGreaterThan(1); // 원문항 순서도 판마다 바뀜
@@ -139,5 +140,19 @@ describe('ATB 찍기 막기 · 문제 쪽 (요청 #49)', () => {
     o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', ao49(q())); expect(o.earn.miss).toBe(1); r = o.run;
     o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', wo49(q())); r = o.run; o = ans49(L, r, 's', ao49(q())); expect(o.earn.miss).toBe(2); r = o.run;
     expect(r.gains?.slice(0, 3)).toEqual([1, 0.5, 0]);
+  });
+});
+
+// 🚫 📜 요청 #53 세트0 빼기 = 판 100번 돌려 세트0(판 0 문항) 0번 · 세트0 만 있는 원문항 뺌
+import { set0Only as s0only, variantOf as varOf, normVer as nv } from '../src/board/atb/quiz';
+import { items as itemsOf, chainItems as chainOf } from '../src/engine/lessons';
+describe('ATB 세트0 빼기 (요청 #53)', () => {
+  it('모든 차시 · 판 100번 = 세트0 문항 0번 · 4번째 오답 새 판도 1 ~ 6', () => {
+    for (const L of SUBJ.lessons) for (const o of originsOf(L)) {
+      const set0 = JSON.stringify(L.monsters[o.mid]!.chain ? chainOf(L, o.mid, 's', 0) : itemsOf(L, o.mid, 's', 0)), seen: Seen = {};
+      expect(s0only(L, o.mid)).toBe(false);
+      for (let i = 0; i < 100; i++) { const r = freshRun(L, o.mid, 's', seen, [], rngOf(`r${i}`)); expect(r.ver).toBeGreaterThanOrEqual(1); expect(varOf(L, o.mid, r.ver)).toBeGreaterThan(0); const t = JSON.stringify(questionsOf(L, { mid: o.mid, ver: r.ver }, 's')); if (L.monsters[o.mid]!.first || 'pool' in (L.monsters[o.mid]!.chain ?? {}) || !('gen' in L.monsters[o.mid]!.retry)) expect(t, `${L.no}차시 ${o.mid}`).not.toBe(set0); }
+    }
+    expect([nv(0), nv(7), nv(-1), nv(6)]).toEqual([6, 1, 5, 6]);
   });
 });

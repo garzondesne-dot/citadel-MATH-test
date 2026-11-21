@@ -6,7 +6,7 @@
   import type { LessonPack } from '../../../model/types';
   import { HEROES, TEACHER_HEROES, heroOf, ladder } from '../../../model/hero';
   import { PACKS, UPLOADED } from '../../../engine/packs';
-  import { atbLessons } from '../../../board/atb/lessons';
+  import { atbLessons, atbReady } from '../../../board/atb/lessons';
   import { newBattle, runRecord, tick, type State } from '../../../board/atb/engine';
   import { BOT_LABEL, newBot, type BotKind } from '../../../board/atb/bots';
   import { originsOf } from '../../../board/atb/quiz';
@@ -91,7 +91,8 @@
     <section><b>키운 정도</b><div class="chips">{#each Object.entries(GROW) as [k, g] (k)}<button type="button" class:on={grow === k} onclick={() => (grow = k as typeof grow)}>{g.label}</button>{/each}</div></section>
     <section><b>시작 지점</b><div class="chips">{#each [['start', '전투 시작'], ['shield', '실드 등장 직전'], ['one', '실드 한 칸 남음'], ['aoe', '광역기 직후']] as [k, t] (k)}<button type="button" class:on={start === k} onclick={() => (start = k as typeof start)}>{t}</button>{/each}</div></section>
     <section class="row"><b>씨앗</b><span class="chips"><button type="button" class:on={seedNew} data-k="atb-seed-new" onclick={() => (seedNew = true)}>🎲 매번 새로</button><button type="button" class:on={!seedNew} data-k="atb-seed-fix" onclick={() => (seedNew = false)}>고정</button></span>{#if !seedNew}<input type="number" min="1" max="9999" bind:value={seed} aria-label="씨앗" />{:else}<small class="sub">지난 판 씨앗 {seed}</small>{/if}{#if mode === 'watch'}<span class="chips">{#each [1, 2, 4] as v (v)}<button type="button" class:on={speed === v} onclick={() => (speed = v)}>×{v}</button>{/each}</span>{/if}</section>
-    <button type="button" class="go" data-k="atb-start" disabled={!L} onclick={begin}>⚔ 출발 (폰을 눕혀요)</button>
+    {#if L && !atbReady(L)}<p class="noq" role="status" data-k="atb-noq">📝 이 차시는 아직 게시판 문제가 준비 중이에요</p>{/if}
+    <button type="button" class="go" data-k="atb-start" disabled={!L || !atbReady(L)} onclick={begin}>⚔ 출발 (폰을 눕혀요)</button>
     {#if recs.length}<section><b>최근 {recs.length}판 (이 폰)</b><ol class="recs">{#each recs as r (r.at)}<li>{md(r.at)} · {r.no}차시 {({ easy: '연습', normal: '일반', hard: '도전' })[r.diff]} · {r.mode} · {r.win ? '✔ 승리' : '✘ 실패'} · {Math.floor(r.sec / 60)}분 {r.sec % 60}초 · {r.who} · 씨앗 {r.seed}{#if r.r}<br /><small data-k="atb-rec">📊 소문항 {r.r.subs}개 · 하나에 {r.r.subSecMed}초 · 타이밍 {r.r.timingOk ?? '−'}% · 충전 {r.r.charges ?? '−'} · 스킬 {Object.values(r.r.skills ?? {}).reduce((a, x) => a + (x ?? 0), 0)} · 쓰러짐 {r.r.downs} · {r.r.roles}</small>{/if}</li>{/each}</ol></section>{/if}
   </main>
 {:else}

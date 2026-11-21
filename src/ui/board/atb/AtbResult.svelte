@@ -7,13 +7,15 @@
   //   🏅 숙련 = 그 차시 게시판 던전 이긴 판 1 · 3 · 5 → 빨강 · 은 · 금 (보여 주기만 · 연습방 판은 안 셈)
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import { missionOf, type State } from '../../../board/atb/engine';
+  import type { AtbEnd } from '../../../board/atb/net';
   import { onMount } from 'svelte';
   import { sfx } from '../../sound.svelte';
   import { lookOfStats } from '../../../board/atb/heroes';
   import { gradeOf } from '../../../board/board';
   import { STAR } from '../../../board/goals';
   import { portraitOf } from '../../manifest';
-  const { S, no, me, mastery, practiceWins = 0, practice = true, onagain, onswap, onexit }: {
+  const { S, no, me, mastery, practiceWins = 0, practice = true, onagain, onswap, onexit, labels, end = null }: {
+    /** 👥 자리 이름 (게시판 파티 = 실명 · 📜 #48 덧) */ labels?: Record<number, string>; /** 📡 게시판 판 결과 (공적 · 💎 · ⭐ · 📜 #51) · 있으면 단추 = 「게시판으로」 하나 */ end?: AtbEnd | null;
     S: State; no: number; me: number; /** 이 차시 게시판 던전 이긴 판 (연습방 판 뺌) */ mastery: number; /** 🧪 연습방 이긴 판 (숙련엔 안 셈 · 알림만) */ practiceWins?: number; practice?: boolean; onagain: () => void; onswap: () => void; onexit: () => void;
   } = $props();
   const R = (f: string) => `${import.meta.env.BASE_URL}art/board-atb/result/${f}-v1.webp`;
@@ -61,7 +63,7 @@
           <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win ? 0 : 8} play={win} /></span></span>
           <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">{#if missionOf(S, h.id).done}<i class="mdone" data-k="atb-res-mission" title="임무 완수">✔</i>{/if}
             <i class="face">{#if pt}<i style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}</i>
-            <span class="st"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if d.ic}<img src={R(d.ic === 'shield' ? 'res-ic-shield-broken' : 'res-ic-sparkle')} alt="" />{/if}{d.t}</small></span>
+            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small>{#if d.ic}<img src={R(d.ic === 'shield' ? 'res-ic-shield-broken' : 'res-ic-sparkle')} alt="" />{/if}{d.t}</small></span>
           </div>
         </div>
       {/each}
@@ -69,9 +71,19 @@
   </div>
   <div class="paper" data-k="atb-res-panel" style:background-image="url({R('res-scroll')})">
     <div class="pin">
+      {#if end}
+        <!-- 📡 📜 요청 #51 게시판 판 = 🚩 우리 기사단 공적 · 💎 예상(베타 = 지급 안 함) · ⭐ 새 별 · ⭐3 차시 = 절반 -->
+        <details class="merit" data-k="atb-merit"><summary>🚩 우리 기사단 +{end.meritSum} 공적</summary><p>클리어 +{end.merit.clear} · 새 별 +{end.merit.star} · 한 번에 맞힘 +{end.merit.first} · 막기 · 구조 · 브레이크 +{end.merit.act} · 임무 +{end.merit.role}</p></details>
+        {#if end.newStars}<p class="row" data-k="atb-newstar"><span>⭐ 새 별 +{end.newStars}</span><b>💎 +{end.gem.star}</b></p>{/if}
+        {#if end.full}<p class="note" data-k="atb-full">⭐3 다 모았어요 · 보상 절반 → 다른 차시로!</p>{/if}
+        <p class="rw" data-k="atb-reward">💎 예상 보상 (베타 · 아직 받지 않음)</p>
+        <p class="row"><span>맞힌 소문항 ×3 (최대 30)</span><b>💎 +{end.gem.items}</b></p>{#if end.gem.clear}<p class="row"><span>클리어</span><b>💎 +{end.gem.clear}</b></p>{/if}{#if end.gem.guard}<p class="row"><span>수호</span><b>💎 +{end.gem.guard}</b></p>{/if}
+        <p class="sum" style:background-image="url({R('res-total-bar')})"><span>합계</span><b>💎 {end.gemSum}</b></p>
+      {:else}
       <p class="rw" data-k="atb-reward">{practice ? '💎 예상 보상 (연습방 = 받지 않음)' : '💎 보상'}</p>
       {#each rows as r (r.t)}<p class="row"><span>{r.t}</span><b>💎 +{r.g}</b></p>{/each}
       <p class="sum" style:background-image="url({R('res-total-bar')})"><span>합계</span><b>💎 {total}</b></p>
+      {/if}
       <p class="ms" style:background-image="url({R('res-title-plate')})">{no}차시 숙련</p>
       <div class="medals" data-k="atb-medals">{#each STEPS as s, i (s)}<span class="md" class:on={mastery >= s}><img src={R(mastery >= s ? `res-medal-${MEDAL[i]}` : 'res-medal-empty')} alt="" /><b>{s}판</b></span>{/each}</div>
       <i class="mbar"><b style:width="{Math.min(100, (mastery / nextStep) * 100)}%"></b><span>{mastery} / {nextStep}</span></i>
@@ -80,9 +92,10 @@
     </div>
   </div>
   <nav class="btns" data-k="atb-res-buttons">
-    <button type="button" class="b gold" data-k="atb-again" style:background-image="url({R('res-btn-gold')})" onclick={onagain}><img src={R('res-ic-again')} alt="" />다시 도전</button>
+    {#if end}<button type="button" class="b gold" data-k="atb-to-board" style:background-image="url({R('res-btn-gold')})" onclick={onexit}><img src={R('res-ic-exit')} alt="" />게시판으로</button>
+    {:else}<button type="button" class="b gold" data-k="atb-again" style:background-image="url({R('res-btn-gold')})" onclick={onagain}><img src={R('res-ic-again')} alt="" />다시 도전</button>
     <button type="button" class="b" data-k="atb-swap" style:background-image="url({R('res-btn-brown')})" onclick={onswap}><img src={R('res-ic-party')} alt="" />용사 바꿔 다시</button>
-    <button type="button" class="b" data-k="atb-exit" style:background-image="url({R('res-btn-brown')})" onclick={onexit}><img src={R('res-ic-exit')} alt="" />나가기</button>
+    <button type="button" class="b" data-k="atb-exit" style:background-image="url({R('res-btn-brown')})" onclick={onexit}><img src={R('res-ic-exit')} alt="" />나가기</button>{/if}
   </nav>
 </div>
 
@@ -127,4 +140,6 @@
   .b img { height: 62%; } .b.gold { color: #2a1600; text-shadow: 0 1px 0 #fff8; }
   @media (prefers-reduced-motion: reduce) { .star.on { animation: none; } }
   .slot { position: relative; } .mdone { position: absolute; right: 2px; top: 2px; z-index: 3; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #2faa5a; color: #fff; font: 900 12px var(--font); font-style: normal; box-shadow: 0 0 6px #7dff9a; } /* 🎯 임무 완수 (요청 #50) */
+  .merit { margin: 0 0 4px; font: 800 14px var(--font); } .merit summary { cursor: pointer; color: #8a2a10; } .merit p { margin: 2px 0 0; font: 600 11px var(--font-plain); }
+  .hn2 { margin-left: 3px; font: 600 10px var(--font-plain); opacity: 0.7; }
 </style>

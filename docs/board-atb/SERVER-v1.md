@@ -15,10 +15,10 @@
 |---|---|---|
 | `meta` | 출발 때 방장 1번 (글 host) | `{ v:1, pid, lid, no, diff:'normal', seed, t0, slots:[{ uid, cls, num, hero, lv, enh, tier, fx, awk, nick } ‖ { bot:'normal', hero }] }` (빈자리 = 봇 · 4칸 고정) |
 | `host` | 지금 엔진 폰 uid · 끊기면 다음 사람이 가져감 | `'s1_3_7'` |
-| `snap` | 엔진 폰만 (host) · 5Hz | 손발 #2 정함 (State 줄인 꼴 · `n` 사건 번호 포함) |
-| `act/{uid}` | 그 학생만 · push 키 | `{ k, at, ... }` 손발 #2 정함 (atk · skill · quiz 답 · react) |
+| `snap` | 엔진 폰만 (host) · 5Hz | `{ v:1, n, t, host, at, ack:{ [uid]: 마지막 처리한 q }, j }` · j = State JSON **글자**(서버가 빈 배열을 지우지 않게 · 사건 마지막 40개 · 균형 기록 큰 배열 뺌) · 약 6 ~ 12 KB |
+| `act/{uid}/{q}` | 그 학생만 · q = 1, 2, 3 … (그 학생이 늘려 씀 · push 키 대신) | `{ k:'atk', s, timing:'miss'‖'ok'‖'crit', auto? }` · `{ k:'skill', s, sk:'equip'‖'role'‖'heal'‖'revive'‖'aura'‖'awk', to? }` · `{ k:'earn', s, e:{ done, perfect, right, miss? } }` · s = 자리 번호(방장이 그 uid 자리인지 확인) · 반응 막기 = skill role |
 | `hb/{uid}` | 그 학생만 | 시각 (3초마다) · 10초 끊김 = 봇이 이어받음(손발 #2) |
-| `end/{uid}` | 엔진 폰 (끝날 때 1번) | `{ win, sec, right, total, first, perfect, stars, merit:{clear,star,first,act,role}, gem:{items,clear,guard}, role, why }` |
+| `end/{uid}` | **그 학생 폰** (끝날 때 1번 · 손발 #2 바꿈: 규칙 = 자기 칸만 · 끊긴 학생은 안 씀) | `{ win, sec, right, total, first, perfect, stars, merit:{clear,star,first,act,role}, gem:{items,clear,guard}, role, why }` |
 
 - 판 끝나고 24시간 = 게시판 청소(sweep)가 `atb/{pid}` 도 지움(지금 글 청소와 같이).
 - 🧪 테스트 반 · 연습방 = `atb` 안 씀(로컬 그대로) · 기록 · 공적 없음.
@@ -47,6 +47,9 @@
 - 옛 랭킹 탭(rk2 · rank) = 기사단 막대로 바꿈(옛 칸 읽기만 남김)
 
 ## 6. 손발 #2 에 바라는 것 (서로 맞출 함수)
-- `AtbNet.svelte` props: `{ S: Store, pid, uid, onend(results) }` — meta 읽고 엔진 / 관전 / 행동 보내기 다 안에서
-- `atbResultFor(S: State, idx, ctx:{ prevStars }) → end/{uid} 모양` (공적 · 💎 · ⭐)
+- ✅ `AtbNet.svelte` props: `{ S: Store, pid, uid, names?: {uid → 보이는 이름}, prevStars?: 0~3, mastery?: 이긴 판, onend(r: AtbEnd | null) }` — meta 읽고 엔진 / 받은 상태 / 행동 보내기 · 방장 넘김 · 봇 이어받기 · 결과 화면(「게시판으로」 = onend) 다 안에서 (src/ui/board/atb/AtbNet.svelte)
+- ✅ meta.slots 모양 = `src/board/atb/net.ts` Slot (학생 `{ uid, cls, num, hero, lv, enh, tier, fx?, awk?, nick? }` · 봇 `{ bot:'normal', hero }`) · host 는 비어 있어도 됨(자리 순서 첫 살아 있는 학생이 가져감)
+- ✅ names = 방 안 실명 규칙(같은 반 = 실명 · 다른 반 = 「1-3 실명」) · 나 = 「나」 · 봇 = 「🤖 모험가 A」 는 AtbNet 이 붙임
+- ✅ `atbResultFor(S, idx, { prevStars }) → AtbEnd` (src/board/atb/net.ts) = `{ win, sec, right, total, first, perfect, stars, newStars, full, merit:{clear,star,first,act,role}, meritSum, gem:{items,clear,guard,star}, gemSum, role, mission, why }` · 공적 = 클리어 10 · 새 별 5 · 한 번에 맞힘 1 · (막기 + 구조 + 속성 브레이크) × 2 · 임무 5 · 💎 = 소문항 ×3(최대 30) · 클리어 10 · 수호 ×2(최대 10) · 새 별 20 · ⭐3 차시(prevStars 3) = 공적 · 💎 절반 · 하루 200 한도 = 손발 #1
+- 🧪 시험: `?role=atbnet2`(테스트 주소) = 폰 두 대 iframe · 메모리 서버 칸 · `tools/e2e/atbnet.cjs`
 - 끊김 · 방장 넘김 · 봇 이어받기 = AtbNet 안
