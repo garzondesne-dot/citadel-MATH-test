@@ -4,6 +4,7 @@
   //   소문항 맞음 = 테두리 초록 + 초록 반짝 · 틀림 = 단호한 좌우 흔들림 + 빨간 테두리 (진동 · 소리 = 부모) · 짧은 보기 4개 = 2 × 2 · 긴 문항 = 보기 칸만 스크롤
   import type { Given, LessonPack } from '../../../model/types';
   import QItem from '../../q/QItem.svelte';
+  import { fxCss } from './AtbFx.svelte';
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
   import { questionsOf, type Run } from '../../../board/atb/quiz';
@@ -27,7 +28,7 @@
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
 </script>
 
-<section class="qc" class:hitlock={locked > 0} class:good={fx === 'good'} class:bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
+<section class="qc" style:--ui-card={fxCss('ui-card')} style:--ui-ch={fxCss('ui-choice')} style:--ui-ch-on={fxCss('ui-choice-on')} class:hitlock={locked > 0} class:good={fx === 'good'} class:bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
   {#key flashN}{#if fx}<i class="fxr {fx}" aria-hidden="true"></i>{/if}{/key}
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
@@ -84,6 +85,11 @@
   .fb { margin: 6px 0 0; font: 800 14px var(--font-plain); } .fb.ok { color: #1f7a3c; } .fb.bad { color: #b3261e; }
   /* 💥 몬스터 공격 = 카드 흔들흔들 + 잠깐 잠금 (레이드 3초 · 분노 4초) · .hitpic = 👹 「맞는 그림」 10종 겹칠 자리(아직 빈 칸) */
   .qc.hitlock { animation: wob 0.5s ease-in-out 2; }
+  /* 🎨 atb-ui-parts: 문제 카드 틀(위 리본 = 제목 칸) · 보기 칸(보통 · 고름) = 9조각 늘이기 */
+  .qc { border-style: solid; border-width: 24px 14px 0; border-image: var(--ui-card) 92 56 0 fill / 24px 14px 0 stretch; background: none; box-shadow: 0 10px 24px #0008; }
+  .qc.good { box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; } .qc.bad { box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
+  .body :global(.opt) { border: 10px solid transparent; border-image: var(--ui-ch) 44 fill / 10px stretch; background: none; box-shadow: none; }
+  .body :global(.opt.on) { border-image: var(--ui-ch-on) 46 fill / 10px stretch; outline: none; }
   @keyframes wob { 20% { transform: translateX(-8px) rotate(-1.5deg); } 40% { transform: translateX(7px) rotate(1.2deg); } 60% { transform: translateX(-5px) rotate(-0.8deg); } 80% { transform: translateX(3px); } }
   .lock { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #3a0a0a99; color: #fff; text-align: center; pointer-events: auto; }
   .lock b { padding: 4px 16px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 20px var(--font); }
