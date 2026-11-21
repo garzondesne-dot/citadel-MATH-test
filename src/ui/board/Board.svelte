@@ -90,7 +90,7 @@
   });
   const lkB = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안 16) — 동료 · 게시글 · 달리기 화면
   // 🧙 #48 판에 들고 가는 내 용사 (ATB 메타 = 레벨 · 강화 · 장착 스킬 등급 · 각성) — 글 mem/{uid}/g
-  const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(isAwakened(me as never) ? { awk: true } : {}) }; });
+  const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(meLookId(me) !== h ? { awk: true } : {}) /* 🐞 #94 덧: 예전 isAwakened(me) = 장착 스킬(fx)을 못 읽어 늘 false → 게시판 판에 각성이 안 실렸음 */ }; });
   // 🧙 #93 게시판에서 용사 바꾸기 (📜 선생님 「추천대로」): 고른 차시 카드 → 손발 #2 HeroPick(교사 연습방 창) · 가진 용사만 · 보스 약점 「약점!」 · 고르면 캠프 출전 용사도(저장 한 곳 = me.hero)
   //   팀 · 예약 글에 들어가 있으면 출발 전까지 글 mem/{uid} 의 용사 · 판 들고 갈 값(g)도 같이 · 교사 = 모두 · 체험판 = 체험 지갑 그대로
   let pickHero = $state(false);

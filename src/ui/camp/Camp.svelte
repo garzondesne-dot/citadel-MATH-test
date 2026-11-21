@@ -54,6 +54,8 @@
   import { prepOpenList } from '../../school/prepopen';
   import RecordRoom from './RecordRoom.svelte';
   import AchievePop from './AchievePop.svelte';
+  import AwakenPop from './AwakenPop.svelte';
+  import { awkSeen, markAwkSeen } from '../../school/awakenSeen';
   import EggFx from './EggFx.svelte';
   import TeacherPanel from './TeacherPanel.svelte';
   import { questNeeds } from '../../school/quest';
@@ -107,6 +109,9 @@
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
+  // ⚡ #94 각성 해금 연출: 고른 용사의 각성 조건이 처음 다 채워지는 순간(강화 · 스킬 · 칭호 · 출전 바꿈 어느 화면이든 캠프 위에서) · 놓쳤으면 다음 앱 열 때 · 용사마다 한 번
+  let awkPop = $state<number | null>(null);
+  $effect(() => { const h = Number(me.hero) || 0; if (meLookId(me) === h) return; /* 각성 = 보이는 모습이 각성 id (장착 스킬은 socket → fx 로 바꿔 셈) */ untrack(() => { if (awkPop === null && !awkSeen(h)) awkPop = h; }); });
   // 👩‍🏫 체험판: 이름 = 첫 화면에 적은 이름 · 첫 차시를 끝내면 한 번 💎 620 · 📜 9 (10강 🛡 홀리 방패 + Ⅳ 🌟 진필살기를 써 볼 만큼 · 원래 수업은 풀어서 벌고 하루 한도 100)
   { const tr = untrack(() => trial); if (tr) { let ch = false; if (me.nick !== tr.nick) { me.nick = tr.nick; ch = true; } if (tr.grant && !me.seen['trial-grant']) { me.seen['trial-grant'] = true; me.wallet.gem = Math.max(me.wallet.gem, TRIAL_GEM[1]); me.wallet.scroll = Math.max(me.wallet.scroll, TRIAL_SCROLL); ch = true; } if (ch) M.save(); } }
   // 🎨 테마 (#144): 서버 accounts 에 고른 테마가 있으면(다른 폰에서 고름) 이 폰도 그 테마로
@@ -590,6 +595,7 @@
   </BottomAction>
 </div>
 
+{#if awkPop !== null}<AwakenPop hero={awkPop} onclose={() => { markAwkSeen(awkPop!, S); awkPop = null; }} />{/if}
 {#if achQ.length}<AchievePop list={achQ} more={achMore} claim={achClaim} ondone={() => { achQ = []; achMore = 0; }} />{/if}<!-- 🏆 #73 -->
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->

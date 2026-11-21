@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AwakenPop from './AwakenPop.svelte';
   import { earnedFrom, titleData } from '../../model/titles';
   import { meBound } from '../../store/meSync';
   import { untrack } from 'svelte';
@@ -40,6 +41,7 @@
   // 🌟 #29 각성한 로안 = 보이는 모습만 (고른 그대로 · 저장 전 미리 보기도 금발) · 조건 3 체크
   const lkM = $derived(lookId({ hero: look.hero, enh: lv, fx: equipOf(look), title: look.title }));
   // ⚡ #83 고른 용사 카드의 각성 칸 = 그 용사 조건 4 (출전 · +10 · 그 용사 Ⅳ 장착 · 전용 칭호 장착)
+  let awkRe = $state<number | null>(null); // ⚡ #94 각성 연출 다시 보기
   const aChecks = $derived(awakenChecks({ hero: look.hero, enh: lv, fx: equipOf({ ...look, hero: pickH }), title: look.title }, pickH));
   const lf = $derived(left(W, P, L0.enh));
   const isDirty = $derived(dirty(P, L0, look));
@@ -240,7 +242,7 @@
     <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {POOL.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
     <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
     <HeroIntro id={pickH} prog={progOf(pickH)} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
-    {#if awkTitle(pickH)}<AwakenBox hero={pickH} checks={aChecks} blocked={awakenBlocked(pickH)} prog={pickH === 0 ? `🏆 업적 ${UN?.seals ?? 0} / 3` : aProg} />{/if}
+    {#if awkTitle(pickH)}<AwakenBox hero={pickH} checks={aChecks} blocked={awakenBlocked(pickH)} prog={pickH === 0 ? `🏆 업적 ${UN?.seals ?? 0} / 3` : aProg} />{#if !awakenBlocked(pickH) && aChecks.every((c) => c.ok)}<button type="button" class="awkre" data-k="awaken-replay" onclick={() => (awkRe = pickH)}>▶ 각성 연출 다시 보기</button>{/if}{/if}
     <div class="swg">
       {#each allHeroes as h (h.id)}
         {@const own = ownH(h.id)}
@@ -302,7 +304,9 @@
   </div>
 {/if}
 
+{#if awkRe !== null}<AwakenPop hero={awkRe} onclose={() => (awkRe = null)} />{/if}
 <style>
+  .awkre { width: 100%; min-height: 44px; margin-top: 8px; border: 1px solid var(--accent); border-radius: var(--r); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
   .mh { position: fixed; inset: 0; z-index: 15; max-width: 430px; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s2); }
   .back { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text); display: grid; place-items: center; }
