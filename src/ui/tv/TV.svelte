@@ -1,4 +1,5 @@
 <script lang="ts">
+  import WarBar from '../board/WarBar.svelte';
   import { explorers, expOf } from '../../school/explore';
   import { keyBoard, keysOf } from '../../school/keys';
   import { ccOpen, ccStats, closeCC, openCC } from '../../school/cc';
@@ -358,6 +359,7 @@
             <b class="ecls" data-k="entry-cls">입장 대기</b>
           {/if}
           <p class="ewait" data-k="entry-wait">선생님이 수업을 열면 시작해요</p>
+          {#if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}
           {#if nxa}<p class="eauto" data-k="entry-auto">⏰ {nxa.hm} {nxa.cls}반 · {nxa.L?.no}차시 자동으로 열려요{#if !tvAdmin}<br /><small>⚠ 자동 열기는 교사 로그인한 종합실 PC 에서만 · 이 PC 는 교사 폰으로 열어 주세요</small>{/if}</p>{/if}
         {/if}
         <div class="ebtn">
@@ -695,4 +697,5 @@
   .hk { position: relative; flex: none; width: 430px; height: 760px; border-radius: 22px; overflow: hidden; color: var(--text); background: var(--bg); }
   .demoban { position: absolute; left: 34%; transform: translateX(-50%); top: 9cqh; z-index: 8; padding: 0.6cqh 1.6cqw; border-radius: 999px; background: rgba(10, 12, 18, 0.82); color: #ffe7a8; font: 800 2.2cqh var(--font); letter-spacing: 0.02em; box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.55); pointer-events: none; white-space: nowrap; }
   .expl { margin: 0.6cqh 0 0; font: 700 2.6cqh var(--font); color: #ffc070; } /* 🔥 #67 */
+  .ewar :global(.wl) { font-size: 22px; margin-top: 12px; }
 </style>
