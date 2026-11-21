@@ -22,6 +22,8 @@ export interface Arena {
   monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o?: HitO): void;
   /** ⚡ #83 A3 각성 연출 몬스터 색조 (얼음 · 금빛 · 초록 글리치 · 핏빛) · ms 뒤 원래 색 */
   monTint(color: number, ms: number): void;
+  /** 🕳 #99-1 블랙홀: 몬스터가 0.4초 빨려 들었다 튕김 */
+  monSuck(): void;
   /** 🪨 #54 금 단계 넘음 = 쿵 */
   crack(): void;
   /** 🎆 격파 예약: 다음 맞힘(1.5초 안 · 없으면 그때) = 마지막 일격 → 느리게 0.5초 · 충격파 · 조각 */
@@ -312,6 +314,10 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     JS.shards = 0; JS.far = 0; void m;
   }
   let tintC = 0xffffff, tintUntil = 0;
+  function monSuck() { // 🕳 #99-1 (폰 attack.ts suckMon 과 같은 박자 · 0.4초 빨려 듦 → 0.25초 튕김)
+    const m = monSp; if (!m) return; const sx = m.scale.x, sy = m.scale.y, r0 = m.rotation;
+    tween(400, (p) => { const e = p * p; m.scale.set(sx * (1 - 0.55 * e), sy * (1 - 0.55 * e)); m.rotation = r0 - 0.28 * e; m.tint = 0x8a6bff; }, () => tween(250, (p) => { const k = 0.45 + 0.55 * p + Math.sin(p * Math.PI) * 0.12; m.scale.set(sx * k, sy * k); m.rotation = r0 - 0.28 * (1 - p); }, () => { m.scale.set(sx, sy); m.rotation = r0; m.tint = performance.now() < tintUntil ? tintC : 0xffffff; }));
+  }
   function monTint(color: number, ms: number) { tintC = color; tintUntil = performance.now() + ms; const m = monSp; if (m) m.tint = color; const back = () => { if (performance.now() >= tintUntil) { tintC = 0xffffff; if (monSp) monSp.tint = 0xffffff; } else setTimeout(back, 120); }; setTimeout(back, ms); }
   function monHit(dmg: number, kind: 'hit' | 'miss' | 'practice', o: HitO = {}) {
     const m = monSp; if (!m) return; const mx = m.x;
@@ -397,7 +403,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
       st = s; cancelAnimationFrame(raf);
       raf = requestAnimationFrame(async () => { await drawMon(s); drawHp(s); await drawParty(s); if (s.shadow && !scoutOn && st === s) scoutStart(s); else if (!s.shadow && scoutOn) scoutEnd(); }); // 🌑 #67 정찰 들어감 · 나옴
     },
-    hit, exp, sparkle, banner, freeze, pose, monTint, crack, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
+    hit, exp, sparkle, banner, freeze, pose, monTint, monSuck, crack, monPose: (p, ms) => { mflash = p; mflashUntil = performance.now() + ms; }, monNow: () => monCur, monSeen: () => { const a = [...monSeen]; monSeen.clear(); return a; }, poses: () => Object.fromEntries([...heroes].map(([k, v]) => [k, v.cur || 'idle'])), heroVisible, monHit, stone, armKill,
     juice: (on) => { if (on != null) fancy = on; return fancy; },
     juiceStats: () => ({ ...JS }),
     slash: (o, fall) => SL.add(o, fall),
