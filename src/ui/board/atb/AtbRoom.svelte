@@ -96,7 +96,7 @@
 {#if phase === 'battle' && S && L}
   {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} {bg} onend={ended} />{/key}
 {:else if phase === 'result' && S && L}
-  <AtbResult {S} no={L.no} me={meIdx} {mastery} onagain={begin} onswap={() => { phase = 'setup'; picking = -1; }} onexit={() => (phase = 'setup')} />
+  <AtbResult {S} no={L.no} me={meIdx} mastery={0} practiceWins={mastery} onagain={begin} onswap={() => { phase = 'setup'; picking = -1; }} onexit={() => (phase = 'setup')} />
 {/if}
 </div>
 {/if}

@@ -116,3 +116,13 @@ describe('ATB 학습지 번호 (요청 #24 덧붙임)', () => {
     const fake = { ...L4, steps: L4.steps.map((st) => (st.id === 'm2' ? { ...st, title: '집합 놀이' } : st)) }; expect(sheetTitle(fake, 'm2', 0, 2)).toBe('4차시 · 문제 2 (1) · 1/2');
   });
 });
+
+// ⭐ 📜 요청 #29 = 결과 별은 차시 정복 지도와 같은 규칙 (board gradeOf · goals STAR)
+import { gradeOf } from '../src/board/board';
+import { STAR } from '../src/board/goals';
+describe('ATB 결과 별 = 지도 별 규칙 그대로 (요청 #29)', () => {
+  it('틀림 + 안 푼 비율 ≤10% ⭐3 · ≤25% ⭐2 · ≤50% ⭐1 · 그 밖 0', () => {
+    const st = (bad: number, none: number, total = 20) => STAR[gradeOf({ bad, none, total })] ?? 0;
+    expect([st(2, 0), st(3, 2), st(5, 5), st(6, 6)]).toEqual([3, 2, 1, 0]);
+  });
+});

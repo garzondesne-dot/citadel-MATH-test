@@ -234,7 +234,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     const ended = await q.evaluate(() => !!globalThis.__atb.S.end?.win);
     ok(`🐞 처치(${how}) → 결과 화면 (멈춤 중이어도)`, ended && shown, `처치 ${ended} · 결과 ${shown}`);
     if (how === '타이밍 공격' && shown) { const t = await q.evaluate(() => { const d = document.querySelector('[data-k="atb-deeds"]'), r = document.querySelector('[data-k="atb-reward"]'), rows = document.querySelector('[data-k="atb-result"] .paper .row'); return { d: d?.textContent ?? '', r: r?.textContent ?? '', first: !!d && !!rows && !!(d.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING) }; });
-      ok('요청 #24 ⑦ 결과 = 「🏅 내 활약」이 💎 보다 먼저 · 연습방 💎 = 「예상 보상」', /내 활약/.test(t.d) && /예상 보상/.test(t.r) && t.first, JSON.stringify(t).slice(0, 160)); await q.screenshot({ path: `${SHOTS}/atb-v2-result-844.png` }); }
+      const z = await q.evaluate(() => ({ banner: !!document.querySelector('[data-k="atb-res-banner"]'), panel: !!document.querySelector('[data-k="atb-res-panel"]'), btns: document.querySelectorAll('[data-k="atb-res-buttons"] .b').length, slots: document.querySelectorAll('[data-k="atb-res-slot"]').length, stars: document.querySelectorAll('[data-k="atb-stars"] .star').length, medals: document.querySelectorAll('[data-k="atb-medals"] .md').length, over: Math.max(document.documentElement.scrollWidth - innerWidth, document.documentElement.scrollHeight - innerHeight), imgs: [...document.querySelectorAll('[data-k="atb-result"] img')].every((i) => i.complete && i.naturalWidth > 0) }));
+      ok('요청 #29 결과 = 배너(별 3칸) · 용사 칸 · 양피지(💎 · 숙련 메달 3) · 단추 3 · 조각 그림 다 뜸 · 넘침 0 · 「내 활약」 = 판 안 · 연습방 = 예상 보상', z.banner && z.panel && z.btns === 3 && z.slots === 4 && z.stars === 3 && z.medals === 3 && z.over <= 0 && z.imgs && /내 활약/.test(t.d) && /예상 보상/.test(t.r), JSON.stringify(z)); await q.screenshot({ path: `${SHOTS}/atb-v2-result-844.png` }); }
     await q.close();
   }
   // ⑤ 관전
