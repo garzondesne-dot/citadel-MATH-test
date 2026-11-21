@@ -36,5 +36,5 @@ describe('게시판 던전 엔진 훑기', () => {
     const attrs = new Set(HEROES.map((h) => fxOfAttr(String(h.attr))));
     out.push(`FX seen ${[...fxSeen].sort()} / hero fx ${[...attrs].sort()} · lessons ${Ls.map((l) => l.no)}`);
   });
-  it('결과 = 문제 없음', () => { const bad = out.filter((x) => !x.startsWith('FX seen')); expect(bad).toEqual([]); expect(out.find((x) => x.startsWith('FX seen'))!.split(' / ')[0].split(',').length).toBeGreaterThanOrEqual(6); });
+  it('결과 = 문제 없음', () => { const bad = out.filter((x) => !x.startsWith('FX seen')); expect(bad).toEqual([]); expect((out.find((x) => x.startsWith('FX seen')) ?? '').split(' / ')[0]?.split(',').length ?? 0).toBeGreaterThanOrEqual(6); });
 });
