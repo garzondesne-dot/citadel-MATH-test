@@ -18,6 +18,7 @@ export interface Format { grade(q: Question, g: Given): boolean; pen(q: Question
   /** 가상 학생 답 (맞힘 / 일부러 틀림 · 없으면 정답 또는 빈 답) */ bot?(q: Question, right: boolean): Given;
   /** 정답 한 줄 (교사 · 틀린 뒤 보여 줌 · 없으면 pen(answer)) */ answerText?(q: Question): string;
   /** 📦 차시 팩 올리기: 팩 문항 칸 → 문항 (base = 문제 글 · 풀이 · 덧칸 · err = 검사 문구 · 이 꼴이 없으면 올릴 수 없음) */ fromPack?(it: Record<string, unknown>, base: Record<string, unknown>, err: (msg: string) => null): Question | null }
+export interface Quest { boss: string; line: string }
 export interface Subject {
   id: string;
   /** 첫 화면 · 앱 이름에 붙는 과목 이름 */
@@ -27,12 +28,14 @@ export interface Subject {
   lessons: LessonPack[];
   generators: { gens: Record<string, Generator>; chains: Record<string, ChainGenerator>; boss: Record<string, BossGenerator> };
   /** 📖 기호 톡: 사전 + 문제 글에서 기호 찾기 (없으면 기호 톡 숨김) */
-  symtalk?: { BY: Record<string, SymRow>; segments(t: string, o?: { prop?: boolean }): Seg[]; /** 단원 낱말(과목 팩 PROP)을 붙이는 차시인가 (#49) */ propOn?(L: { id: string; no?: number; kind?: string }): boolean };
+  symtalk?: { BY: Record<string, SymRow>; segments(t: string, o?: { prop?: boolean; func?: boolean }): Seg[]; /** 📈 함수 줄을 붙이는 차시인가 (#58) */ funcOn?(L: { id: string; no?: number; kind?: string }): boolean; /** 단원 낱말(과목 팩 PROP)을 붙이는 차시인가 (#49) */ propOn?(L: { id: string; no?: number; kind?: string }): boolean };
   /** ⭐ 기호 → 모루 카드 */
   cards?: { bySym: Record<string, SymCard>; wishLeft(wishes: Record<string, true> | undefined, made: Record<string, true> | undefined): number };
   /** ⚒ 모루 연성법 (#148 · 정식 unit-set.js 원문) · 카드 그림 틀 */
   forge?: { unit: import('./forge').ForgeUnit; kit: import('./forge').CardKit; perks?: { id: number; a: number; b: number; skip?: string }[] };
   /** 오개념 사전 (세특 문구) */
+  /** 📜 게시판 던전 차시별 토벌 의뢰문 (차시 번호 → 보스 · 한 줄 · #66 출정 탭 고른 차시 카드 · 없으면 카드에 차시만) */
+  quests?: Record<number, Quest>;
   misconceptions: Record<string, { name?: string; seteuk: string; [k: string]: unknown }>;
   standards: { id: string; name: string; lessons: number[] }[];
   /** 대시보드 · 학생 시트 · 「준비 안 됨」 차시 목록 (개념 3개씩) */

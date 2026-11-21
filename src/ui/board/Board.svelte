@@ -1,6 +1,9 @@
 <script lang="ts">
   import { FAME, fameLv, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
+  import { SUBJ } from '../../engine/subject';
+  const questOf = (no: number) => SUBJ.quests?.[no] ?? null;
+  type Btab = 'go' | 'war' | 'rec';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { meLookId, type Me } from '../../store/me.svelte';
@@ -43,6 +46,10 @@
   // 나눈 차시(7차시)는 정식 기록이 원래 차시 칸에 있음(정식 6차시 기록의 u4 ~ u7 = v1.0 7차시 · 출시 전 메모 10)
   const recOf = (p: LessonPack) => recs[p.id] ?? (p.partOf && Object.keys(recs[p.partOf]?.mons || {}).some((k) => p.steps.some((s) => s.id === k)) ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack | null | undefined) => !!p && (!cls || !!recOf(p) || p.no <= reach);
+  // 🗺 #66 탭 3 · 고른 차시 = 지난번 고른 차시(이 기기 기억) · 없으면 진도 맨 끝
+  const BTABS: [Btab, string][] = [['go', '🗺 출정'], ['war', '🏆 기사단'], ['rec', '📜 기록']];
+  let btab = $state<Btab>('go');
+  const sel = $derived(LESSONS.find((p) => p.no === chip) ?? LESSONS.filter(isOpen).at(-1) ?? LESSONS[0] ?? null);
   const lessonOf = (id: string) => PACKS.find((p) => p.id === id) ?? null;
   // ⑬ 서버 연결 (시험 서버 = .info/connected · 이 기기 = 늘 됨)
   let online = $state(true);
@@ -55,7 +62,7 @@
   const swT = setInterval(() => { tick++; if (online) sweepAll(S, untrack(() => pv.v.val), S.now()); }, LIFE.sweep); onDestroy(() => clearInterval(swT));
   queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
-  const shown = $derived(posts.filter((p) => p.phase === 'wait' && !p.solo && (chip === 'all' || p.no === chip)));
+  const shown = $derived(posts.filter((p) => p.phase === 'wait' && !p.solo && (!sel || p.no === sel.no)));
   // 📡 #48 판이 끝나 글이 done 이 되어도 내 결과를 아직 못 봤으면 그 글 그대로 (한 폰이 먼저 「게시판으로」 눌러도 다른 폰 결과 화면이 사라지지 않게)
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
   // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
@@ -265,45 +272,54 @@
       <BottomAction dock={false} text={mine.mem[uid]?.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료'} onmain={() => setReady(S, mine, uid, !mine.mem[uid]?.ready)}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>나가기</button>{/snippet}</BottomAction>
     {/if}
   {:else}
-    <!-- ⑥ 전체 게시판 -->
-    <div class="chips" role="group" aria-label="차시 거르기">
-      <button type="button" class:on={chip === 'all'} aria-pressed={chip === 'all'} onclick={() => setChip('all')}>전체</button>
-      {#each LESSONS as p (p.id)}<button type="button" class:on={chip === p.no} class:lock={!isOpen(p)} aria-pressed={chip === p.no} onclick={() => setChip(p.no)}>{isOpen(p) ? '' : '🔒 '}{p.no}차시</button>{/each}
-    </div>
+    <!-- ⑥ 게시판 = 탭 3 (📜 #66 선생님 선택창 2026-11-21) 🗺 출정(처음) · 🏆 기사단 · 📜 기록 -->
+    <div class="btabs" role="tablist" aria-label="게시판 탭">{#each BTABS as [k, t] (k)}{#if k !== 'war' || S.kind !== 'memory'}<button type="button" role="tab" class:on={btab === k} aria-selected={btab === k} data-btab={k} onclick={() => (btab = k)}>{t}</button>{/if}{/each}</div>
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
-      {#if S.kind !== 'memory'}<WarBar {S} {cls} />{/if}
-      <section class="gmap" data-k="board-map" aria-label="차시 정복 지도">
-        <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
-          {#each MAP_PTS as pt, i (i)}{@const l = i < 14 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}
-            {#if i === 14}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="성채">🏰</span>
-            {:else if l}<button type="button" class="mp" class:on={chip === l.no} class:got={(stars[l.no] ?? 0) > 0} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-label="{l.no}차시 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}><b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
-            {:else}<span class="mp lockd" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원">🔒</span>{/if}
-          {/each}
-        </div>
-        <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
+      {#if btab === 'go'}
+        {#if S.kind !== 'memory'}<button type="button" class="warln" data-k="war-chip" onclick={() => (btab = 'war')}><WarBar {S} {cls} line /><span class="chev" aria-hidden="true">›</span></button>{/if}
+        <section class="gmap" data-k="board-map" aria-label="차시 정복 지도 · 칸을 눌러 차시 고르기">
+          <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
+            {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
+              {#if i === MAP_PTS.length - 1}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="성채">🏰</span>
+              {:else if l}<button type="button" class="mp" class:on={sel?.no === l.no} class:got={(stars[l.no] ?? 0) > 0} class:lockd={lk} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-pressed={sel?.no === l.no} aria-label="{l.no}차시{lk ? ' · 진도 전' : ''} 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}>{#if lk}<b>🔒</b>{:else}<b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{/if}{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
+              {:else}<span class="mp lockd" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원">🔒</span>{/if}
+            {/each}
+          </div>
+        </section>
+        {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}
+          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{/if}</div>
+        {/if}
         {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
-        <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>도전자와 함께 클리어 {fame}판{nextFame(fame) ? ` · ${nextFame(fame)!.n}판 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
-      </section>
-      {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
-      {#if shown.length}
-        <small class="lbl">{chip === 'all' ? '전체' : `${chip}차시`} · 모집 중 {shown.length} · 새 글 위로</small>
-        {#each shown as p (p.pid)}
-          {@const L = lessonOf(p.lesson)}
-          {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
-          <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
-        {/each}
+        {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
+        {#if shown.length}
+          <small class="lbl">{sel?.no}차시 · 모집 중 {shown.length} · 새 글 위로</small>
+          {#each shown as p (p.pid)}
+            {@const L = lessonOf(p.lesson)}
+            {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
+            <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
+          {/each}
+        {:else}
+          <div class="empty"><span>📭</span><b>{sel ? `${sel.no}차시 모집 글이 아직 없어요` : '모집 글이 아직 없어요'}</b><small>혼자 도전하거나 · 팀을 모집해요</small></div>
+        {/if}
+      {:else if btab === 'war'}
+        <WarBar {S} {cls} />
       {:else}
-        <div class="empty"><span>📭</span><b>{chip === 'all' ? '모집 글이 아직 없어요' : `${chip}차시 모집 글이 아직 없어요`}</b><small>팀 없이 도전하거나 · 모집 글을 올려요</small></div>
+        <section class="gmap rec" data-k="board-rec">
+          <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
+          <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>도전자와 함께 클리어 {fame}판{nextFame(fame) ? ` · ${nextFame(fame)!.n}판 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
+        </section>
+        <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>📜 내 기록 · 지난 랭킹</span><small>익명 · 이번 학기</small></button>
+        {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
+        {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
+          <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{:else}<div class="empty"><span>📣</span><b>아직 최근 전투가 없어요</b></div>{/if}
+        {#if Number.isFinite(GEM.dayCap)}<p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>{/if}
       {/if}
-      {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
-      <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>📜 내 기록 · 지난 랭킹</span><small>익명 · 이번 학기</small></button>
-      {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
-        <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{/if}
-      {#if Number.isFinite(GEM.dayCap)}<p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>{/if}
     </div>
-    <BottomAction dock={false} text="⚔ 팀 없이 도전 ›" onmain={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'solo'; }}
-      why={open || !online ? (open ? '수업 중엔 모집 글을 못 올려요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" disabled={open || !online} onclick={() => { pick = LESSONS.find((p) => p.no === chip && isOpen(p)) ?? LESSONS.filter(isOpen).at(-1) ?? null; sheet = 'post'; }}>＋ 모집 글 올리기</button>{/snippet}</BottomAction>
+    {#if btab === 'go'}
+      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 혼자 도전` : '⚔ 혼자 도전'} disabled={!sel || !isOpen(sel)} onmain={() => { if (!sel) return; pick = sel; sheet = 'solo'; go(); }}
+        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{/snippet}</BottomAction>
+    {/if}
   {/if}
   {#if rkOpen}
     <div class="rkp" role="dialog" aria-label="랭킹 · 내 기록" data-k="board-rank-panel">
@@ -431,6 +447,17 @@
   .fh { display: flex; flex: none; } .ft { display: flex; flex-direction: column; min-width: 0; } .ft b { font-size: 14px; } .ft small { font-size: 13px; color: var(--text-2); }
   .rkp { position: absolute; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; overflow: auto; padding-bottom: var(--s5); }
   .tabs3 { display: flex; gap: 6px; padding: 0 var(--s4) var(--s2); }
+  /* 🗺 #66 게시판 탭 3 · 출정 띠 · 고른 차시 카드 */
+  .btabs { flex: none; display: flex; gap: 6px; padding: 0 var(--s4) var(--s2); }
+  .btabs button { flex: 1; min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
+  .btabs button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; box-shadow: 0 3px 0 var(--press-sh, #000); }
+  .warln { display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--tap); padding: 8px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: inherit; font: inherit; text-align: left; }
+  .warln :global(.wl) { flex: 1; } .warln .chev { color: var(--text-3); font-size: 20px; }
+  .qcard { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+  .qcard .qh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; } .qcard .qh b { font-size: 17px; color: var(--accent); }
+  .qcard .qs { flex: none; font-size: 14px; color: #ffd25a; white-space: nowrap; } .qcard .qs em { font-style: normal; color: var(--text-3); }
+  .qcard p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-2); } .qcard small { font-size: 13px; color: var(--text-3); }
+  .gmap.rec { gap: 10px; }
   .tabs3 button { flex: 1; min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
   .tabs3 button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
   .seg2 { display: flex; gap: 6px; padding: var(--s2) var(--s4) 0; }

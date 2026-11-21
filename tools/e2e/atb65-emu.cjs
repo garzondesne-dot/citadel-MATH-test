@@ -23,9 +23,11 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
   // ① 혼자 도전 = 새 전투
-  await A.click('button:has-text("팀 없이 도전")'); await A.waitForSelector('.lgrid'); await A.click('.lgrid .lg:has(b:text-is("6"))'); await A.click('.sheet .act .btn');
+  await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 혼자 도전")');
   await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {});
   ok('혼자 도전 → 새 전투 화면', !!(await A.$('[data-k="atb-stage"]')));
+  const onTop = await Promise.all([A].map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));
+  ok('🐞 #68 전투 화면이 맨 위 (화면 가운데 · 양옆 = 전투 · 게시판 시트에 안 덮임)', onTop.every(Boolean), onTop.join(','));
   const posts0 = (await rest('school/board/posts')) || {}, solo = Object.values(posts0)[0];
   const meta = solo ? await rest(`atb/${solo.pid}/meta`) : null;
   ok('혼자 판 = 나 + 봇 3 · solo 글', !!meta && meta.slots.filter((x) => x.bot).length === 3 && solo.solo === true, meta ? meta.slots.map((x) => x.bot ? 'bot' : x.uid).join(',') : '없음');
@@ -37,12 +39,12 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const bd = Object.values((await rest(`bonus/${CLS}/1/board`)) || {}).filter((r) => r.atb), rv = (await rest(`bonus/${CLS}/1/review/set-06`)) || {};
   if (BETA) { ok('🧪 테스트 반 = 기록 · 복습 기록 없음', bd.length === 0 && !Object.keys(rv).length); }
   else { ok('혼자 판 학생 기록 1줄', bd.length === 1, `${bd.length}`); ok('📕 복습 완료 = 맞힌 몬스터 칸', Object.keys(rv).length >= 1, Object.keys(rv).join(',')); }
-  ok('게시판으로 돌아옴', !!(await A.$('[data-k="war-bar"]')));
+  ok('게시판으로 돌아옴', !!(await A.$('[data-k="board-map"]')));
   // ② 모집 글 = 암호 없이 바로 · 다른 폰 합류 = 암호 입력 없음
   const B2 = await open(); await signup(B2, CLS, 2); await board(B2);
-  await A.click('.bd .chips button:has-text("6")').catch(() => {}); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid');
-  ok('모집 시트에 암호 칸 없음', !(await A.$('[data-k="pin-must"]')) && !(await A.$('.sheet .rune-keys')));
-  await A.click('.lgrid .lg:has(b:text-is("6"))'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('[data-map="6"]').catch(() => {});
+  ok('「👥 6차시 팀 모집」 = 시트 없이 바로 (암호 칸 없음)', /6차시 팀 모집/.test((await A.textContent('[data-k="board-post"]')) || ''));
+  await A.click('[data-k="board-post"]'); await wait(1800); ok('모집 시트 · 암호 칸 안 뜸', !(await A.$('.lgrid')) && !(await A.$('.sheet .rune-keys')));
   const pst = Object.values((await rest('school/board/posts')) || {}).find((p) => p.phase === 'wait');
   const lock = pst ? await rest(`boardLock/${pst.pid}`) : 'x';
   ok('모집 글 = 암호 없음(lk 없음 · boardLock 없음)', !!pst && !pst.lk && !lock, pst ? pst.pid : '없음');

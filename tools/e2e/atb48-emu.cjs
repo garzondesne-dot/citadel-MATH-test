@@ -22,7 +22,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const ps = []; for (let i = 1; i <= N; i++) { const p = await open(); await signup(p, CLS, i); await board(p); ps.push(p); }
   const [A, ...others] = ps;
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
   for (const p of others) { await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await p.click('.post .go'); await wait(1200); }
   for (const p of others) { const r = await p.$('button:has-text("준비")'); if (r) await r.click().catch(() => {}); await wait(600); }
@@ -34,6 +34,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   ok('출발 = atb meta 4칸(사람 N · 봇 4-N) · 글 play · code A', meta && meta.slots.length === 4 && meta.slots.filter((s) => s.bot).length === 4 - N && post.phase === 'play' && post.code === `A${pid}`, meta ? meta.slots.map((s) => s.bot ? 'bot' : s.uid).join(',') : 'meta 없음');
   const stages = await Promise.all(ps.map((p) => p.$('[data-k="atb-stage"]').then(Boolean)));
   ok('모든 폰 ATB 전투 화면', stages.every(Boolean), stages.join(','));
+  const onTop = await Promise.all(ps.map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));
+  ok('🐞 #68 전투 화면이 맨 위 (화면 가운데 · 양옆 = 전투 · 게시판 시트에 안 덮임)', onTop.every(Boolean), onTop.join(','));
   await wait(3000); await A.screenshot({ path: `${SHOTS}/atb48-battle-A.png` });
   const host = await rest(`atb/${pid}/host`); ok('방장 엔진 = 글 올린 사람', host === `s${CK}_1`, String(host));
   const snap = await rest(`atb/${pid}/snap`); ok('상태 요약 snap 서버에 씀 (20KB 안)', snap && typeof snap.j === 'string' && snap.j.length < 20000, snap ? `${snap.j.length}자` : '없음');
@@ -54,8 +56,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const war = await rest(`classWar/${wk(Date.now())}/sum/${CLS}`);
   if (BETA) ok('🧪 테스트 반 = 반 공적 없음', !war, String(war)); else ok('반 공적 = 모두의 공적 합', war === msum && msum > 0, `${war} / ${msum}`);
   const ph = await rest(`school/board/posts/${pid}/phase`); ok('글 done', ph === 'done', ph);
-  const back = await Promise.all(ps.map((p) => p.$('[data-k="war-bar"]').then(Boolean)));
-  ok('모든 폰 게시판으로 돌아옴 (기사단 막대)', back.every(Boolean), back.join(','));
+  const back = await Promise.all(ps.map((p) => p.$('[data-k="board-map"]').then(Boolean)));
+  ok('모든 폰 게시판으로 돌아옴 (출정 지도)', back.every(Boolean), back.join(','));
   await A.screenshot({ path: `${SHOTS}/atb48-back-A.png` });
   await b.close(); console.log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();

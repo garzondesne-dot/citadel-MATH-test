@@ -11,7 +11,7 @@ describe('🎯 게시판 목표', () => {
     expect(starTotal(starsByNo(r), [{ no: 2 }, { no: 3 }, { no: 5 }])).toBe(5);
   });
   it('지도 = 차시 번호마다 한 칸(쪼갠 팩도) · 돌 원 15 · 칸 수 ≤ 14', () => {
-    const L = mapLessons(PACKS); expect(new Set(L.map((x) => x.no)).size).toBe(L.length); expect(MAP_PTS).toHaveLength(15); expect(L.length).toBeLessThanOrEqual(14);
+    const L = mapLessons(PACKS); expect(new Set(L.map((x) => x.no)).size).toBe(L.length); expect(MAP_PTS).toHaveLength(17); expect(L.length).toBeLessThanOrEqual(MAP_PTS.length - 1);
     MAP_PTS.forEach(([x, y]) => { expect(x).toBeGreaterThan(0); expect(x).toBeLessThan(100); expect(y).toBeGreaterThan(0); expect(y).toBeLessThan(100); });
   });
   it('🛡 명성 = 🛡 · 2명 이상 · 클리어 · 견습 3 · 기사 10 · 스승 25', () => {

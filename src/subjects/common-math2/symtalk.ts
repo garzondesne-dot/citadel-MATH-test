@@ -43,7 +43,48 @@ export const PROP: SymRow[] = [
   { id: 'absineq', sym: '절대부등식', easy: '문자에 무엇을 넣어도 늘 참인 부등식', def: '부등식의 문자에 어떤 실수를 대입해도 항상 성립하는 부등식', memo: '예 x² ≥ 0 · 등호가 언제 성립하는지 꼭 적기' },
   { id: 'amgm', sym: '(a + b)/2 ≥ √(ab)', easy: '양수 둘: 더해서 반 ≥ 곱해서 루트', def: 'a > 0, b > 0 일 때 산술평균은 기하평균보다 크거나 같다', memo: '등호 = a = b 일 때 · 양수일 때만 씀' },
 ];
-export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS, ...PROP].map((r) => [r.id, r]));
+/** 📈 함수 단원 (📜 #58 · hero-v2 docs/handoff/forge-func/symtalk-map.json newRows · 14 ~ 17차시에서만) — 「함수」 한 낱말은 줄로 안 만듦 · 「f : X → Y」 꼴만 */
+export const FUNC: SymRow[] = [
+  { id: "bij", sym: "일대일대응", easy: "하나씩 딱 짝이 맞는다 (남는 것도 겹치는 것도 없음)", def: "일대일함수이고 치역과 공역이 같은 함수", memo: "역함수가 있으려면 꼭 일대일대응" },
+  { id: "inj", sym: "일대일함수", easy: "다른 것을 넣으면 다른 것이 나온다", def: "x₁ ≠ x₂ 이면 f(x₁) ≠ f(x₂) 인 함수", memo: "가로선을 그어 그래프와 한 번만 만나면 일대일함수" },
+  { id: "ident", sym: "항등함수", easy: "넣은 그대로 나온다", def: "정의역의 각 원소에 자기 자신이 대응하는 함수 f(x) = x", memo: "그래프는 직선 y = x" },
+  { id: "const", sym: "상수함수", easy: "무엇을 넣어도 같은 값 하나", def: "정의역의 모든 원소에 공역의 원소 하나가 대응하는 함수 f(x) = c", memo: "그래프는 가로선 · 치역의 원소는 1개" },
+  { id: "compose", sym: "g∘f", easy: "f 하고 나서 g (오른쪽부터)", def: "(g∘f)(x) = g(f(x)) · f 와 g 의 합성함수", memo: "g∘f ≠ f∘g (순서 중요) · 결합법칙은 성립" },
+  { id: "inverse", sym: "f⁻¹", easy: "화살표를 거꾸로 돌린 함수", def: "f 가 일대일대응일 때 y = f(x) ⇔ x = f⁻¹(y)", memo: "f⁻¹(b) = a ⇔ f(a) = b · (f⁻¹)⁻¹ = f" },
+  { id: "fmap", sym: "f : X → Y", easy: "X 의 원소마다 Y 의 원소를 하나씩 짝지음", def: "집합 X 의 각 원소에 집합 Y 의 원소가 오직 하나씩 대응할 때 이 대응을 X 에서 Y 로의 함수라 한다", memo: "짝이 없는 원소 · 짝이 둘인 원소가 있으면 함수가 아님" },
+  { id: "domain", sym: "정의역", easy: "화살표가 출발하는 집합", def: "함수 f : X → Y 에서 집합 X", memo: "주어지지 않으면 함수가 정의되는 실수 전체" },
+  { id: "codomain", sym: "공역", easy: "화살표가 도착할 수 있는 집합 전체", def: "함수 f : X → Y 에서 집합 Y", memo: "치역은 공역의 부분집합" },
+  { id: "range", sym: "치역", easy: "화살표를 실제로 받은 것만 모음", def: "함숫값 전체의 집합 {f(x) | x ∈ X}", memo: "치역 ⊂ 공역" },
+  { id: "yx", sym: "직선 y = x", easy: "접으면 함수와 역함수가 겹치는 선", def: "y = f(x) 와 y = f⁻¹(x) 의 그래프는 직선 y = x 에 대하여 대칭", memo: "(a, b) ↔ (b, a)" },
+  { id: "graph", sym: "그래프", easy: "(x, f(x)) 를 좌표평면에 찍은 그림", def: "순서쌍 (x, f(x)) 전체의 집합", memo: "세로선과 한 점에서만 만나야 함수의 그래프" },
+  { id: "fval", sym: "f(x)", easy: "x 를 넣었을 때 나오는 값", def: "함수 f 에서 x 에 대응하는 Y 의 원소 = 함숫값", memo: "f(2) = x 자리에 2 를 넣은 값" },
+];
+// 찾는 순서 = 위에서부터 (긴 낱말 먼저 · f(x) 는 (g∘f)(x) · f⁻¹(x) 의 일부가 아닐 때만)
+const FUNCFIND: [string, string][] = [
+  ["일대일대응", "bij"],
+  ["일대일함수", "inj"],
+  ["항등함수", "ident"],
+  ["상수함수", "const"],
+  ["[fgh]⁻¹∘[fgh]|[fgh]∘[fgh]⁻¹|[fgh]∘[fgh]|합성함수", "compose"],
+  ["[fgh]⁻¹|역함수", "inverse"],
+  ["[fgh]\\s*:\\s*[A-Z]\\s*→\\s*[A-Z]", "fmap"],
+  ["정의역", "domain"],
+  ["공역", "codomain"],
+  ["치역", "range"],
+  ["직선\\s*y\\s*=\\s*x(?![\\w²])|y\\s*=\\s*x\\s*(?:에 대하여 )?대칭", "yx"],
+  ["그래프", "graph"],
+  ["(?<![∘⁻¹A-Za-z가-힣)])[fgh]\\((?=[^)]*\\))", "fval"],
+];
+const FUNCRE = FUNCFIND.map(([f, id]) => [new RegExp(f, 'g'), id] as [RegExp, string]);
+/** 함수 낱말 · 기호 찾기 (겹치면 앞 줄이 이김) */
+export function funcHits(t: string): { i: number; len: number; id: string }[] {
+  const out: { i: number; len: number; id: string }[] = [];
+  for (const [re, id] of FUNCRE) { re.lastIndex = 0; let m; while ((m = re.exec(t))) { if (!m[0].length) { re.lastIndex++; continue; } const a = m.index, b = a + m[0].length; if (out.some((h) => a < h.i + h.len && b > h.i)) continue; out.push({ i: a, len: m[0].length, id }); } }
+  return out.sort((x, y) => x.i - y.i);
+}
+/** 함수 줄을 붙이는 차시 = 14차시부터 (성채 제외) */
+export const funcOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && !/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 14;
+export const BY: Record<string, SymRow> = Object.fromEntries([...ROWS, ...CONCEPTS, ...PROP, ...FUNC].map((r) => [r.id, r]));
 /** 명제 낱말 · 기호를 붙이는 차시 = 명제 차시(8차시부터 · 성채 제외) + 성채 2층(명제 방) + 3층(대단원 · 📜 #51 2026-11-17 선생님 「3층 켜기」) */
 export const propOn = (L: { id: string; no?: number; kind?: string } | null | undefined): boolean => !!L && (L.id === 'eval-2' || L.id === 'eval-3' || (!/^eval-/.test(L.id) && L.kind !== 'castle' && Number(L.no) >= 8));
 // 긴 낱말 먼저: 필요충분조건(⇔ 줄) → 충분조건 · 필요조건 → 조건 · ⇒ · ⇔ 는 → 와 다른 글자 · 산술기하 = 그 식 꼴 또는 「산술평균」 · 「기하평균」
@@ -85,7 +126,7 @@ export function pick(t: string, i: number): string | null {
 const CH = /[∈∉⊂⊄∅∩∪=−ᶜ]|n(?=\()/g;
 export type Seg = { text: string; id?: string };
 /** 문제 글 → 글 조각 · 기호 조각 (기호 = 한 글자 · ᶜ 는 앞 글자와 함께 「Aᶜ」 로 묶어 누르는 칸을 넓힘) · 끝에 개념 톡 칩 */
-export function segments(t: string, o: { prop?: boolean } = {}): Seg[] {
+export function segments(t: string, o: { prop?: boolean; func?: boolean } = {}): Seg[] {
   const hits: { i: number; len: number; id: string }[] = [];
   CH.lastIndex = 0; let m;
   while ((m = CH.exec(t))) {
@@ -94,6 +135,7 @@ export function segments(t: string, o: { prop?: boolean } = {}): Seg[] {
     hits.push({ i: m.index, len: 1, id });
   }
   if (o.prop) { hits.push(...propHits(t)); hits.sort((a, b) => a.i - b.i); } // 📜 #49 명제 차시 = 명제 낱말 · ~ · → 도
+  if (o.func) { const fh = funcHits(t); const keep = hits.filter((h) => !fh.some((f) => h.i < f.i + f.len && h.i + h.len > f.i)); hits.length = 0; hits.push(...keep, ...fh); hits.sort((a, b) => a.i - b.i); } // 📈 #58 함수 차시 = 함수 줄 (겹치면 함수 줄 우선)
   const out: Seg[] = []; let at = 0;
   for (const h of hits) { if (h.i < at) continue; if (h.i > at) out.push({ text: t.slice(at, h.i) }); out.push({ text: t.slice(h.i, h.i + h.len), id: h.id }); at = h.i + h.len; }
   if (at < t.length) out.push({ text: t.slice(at) });

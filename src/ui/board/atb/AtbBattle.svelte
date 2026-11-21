@@ -683,7 +683,7 @@
 </div>
 
 <style>
-  .stage { position: fixed; inset: 0 var(--safe-r, 0px) 0 var(--safe-l, 0px); overflow: hidden; background: #1a1424 center / cover no-repeat; color: #fff; font-family: var(--font); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+  .stage { position: fixed; z-index: 50; /* 🐞 #68 게시판 · 캠프 시트(z 15 · 20 · 21) 위 = 결과 화면과 같은 층 */ inset: 0 var(--safe-r, 0px) 0 var(--safe-l, 0px); overflow: hidden; background: #1a1424 center / cover no-repeat; color: #fff; font-family: var(--font); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
   .stage::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(#0000 55%, #0006); }
   .stage.weak::after { background: radial-gradient(ellipse at 70% 50%, #ffcf4a33, #0000 60%), linear-gradient(#0000 55%, #0006); }
   .tr { position: absolute; top: 2%; right: 1.5%; z-index: 20; display: flex; align-items: center; gap: 6px; }

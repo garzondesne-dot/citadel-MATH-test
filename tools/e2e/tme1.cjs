@@ -17,7 +17,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   const card = (await t.textContent('.hero-card')).replace(/\s+/g, ' '); ok('② 교사 캠프 카드 = 공식(📐 수식)', /수식/.test(card), card.slice(0, 50));
   // ③ 📋 게시판 1인 전투 용사
   await t.click('button[aria-label="게시판"]'); await t.waitForSelector('.bd'); await t.waitForTimeout(300);
-  await t.click('.bd .act .btn'); await t.waitForSelector('.lgrid'); await t.click('.sheet .act .btn'); await t.waitForSelector('.run', { timeout: 15000 }); await t.waitForTimeout(1500);
+  await t.click('.bd .act .btn'); await t.waitForSelector('.run', { timeout: 15000 }); await t.waitForTimeout(1500);
   const lab = await t.$eval('.run .hb .hero', (e) => e.getAttribute('aria-label') + ' ' + getComputedStyle(e).backgroundImage).catch(() => '');
   ok('③ 게시판 전투 용사 = 공식(수학자)', /수학자/.test(lab) && !/닌자/.test(lab), lab.replace(/url\(".*\/(hero-[^"]+)"\)/, '$1'));
   const pl = await t.evaluate(() => { const rs = Object.entries(JSON.parse(JSON.stringify(localStorage))).filter(([k]) => /rooms\/T/.test(k)); return rs.map(([k, v]) => { try { const o = JSON.parse(v); return JSON.stringify(Object.values(o.players || o || {}).map((x) => x && x.hero)); } catch { return ''; } }).join(' '); });

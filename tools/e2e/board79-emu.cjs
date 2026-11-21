@@ -21,12 +21,14 @@ const log = (...a) => console.log(...a);
   await p.reload(); await p.waitForTimeout(2500);
   if (!(await p.$('.bd'))) await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(1500);
   ok('지도 = 차시 칸', (await p.$$('[data-map]')).length >= 9, `${(await p.$$('[data-map]')).length}칸`);
-  const st = await p.$eval('[data-k="board-map"] .gl b', (e) => e.textContent); ok('⭐ 합계 = 3 + 2 + 1 + 3 + 0 + 3 = 12', /⭐ 12 \//.test(st), st);
-  ok('📕 남은 오답 막대', /남은 오답 \d+/.test((await p.textContent('[data-k="board-note"]').catch(() => '')) || ''));
+  ok('📕 남은 오답 막대 (출정)', /남은 오답 \d+/.test((await p.textContent('[data-k="board-note"]').catch(() => '')) || ''));
+  await p.click('[data-btab="rec"]'); await p.waitForTimeout(300); // 📜 #66 ⭐ 합 · 명성 = 📜 기록 탭
+  const st = await p.$eval('[data-k="board-rec"] .gl b', (e) => e.textContent); ok('⭐ 합계 = 3 + 2 + 1 + 3 + 0 + 3 = 12', /⭐ 12 \//.test(st), st);
   const fm = (await p.textContent('[data-k="board-fame"]')).replace(/\s+/g, ' ');
   ok('🛡 명성 = 🛡 · 2명+ · 클리어 5판 → 수호 견습 배지', /수호 견습/.test(fm) && /5판/.test(fm) && !!(await p.$('[data-k="board-fame"] .badge')), fm);
   await p.screenshot({ path: `${SHOTS}/b79-goals.png` });
-  await p.click('[data-map="5"]'); await p.waitForTimeout(300); ok('지도 칸 누르면 그 차시 거르기', !!(await p.$('[data-map="5"].on')));
+  await p.click('[data-btab="go"]'); await p.waitForTimeout(300);
+  await p.click('[data-map="5"]'); await p.waitForTimeout(300); ok('지도 칸 누르면 그 차시 고름', !!(await p.$('[data-map="5"].on')) && (await p.getAttribute('[data-k="board-pick"]', 'data-no')) === '5');
   ok('360 가로 넘침 0', (await p.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0);
   ok('콘솔 오류 0', !errs.some((e) => /Error/.test(e) && !/❌/.test(e)), errs.filter((e) => !/❌/.test(e)).slice(0, 2).join(' | '));
   await b.close(); log(errs.length ? `실패 ${errs.length}` : '모두 통과'); process.exit(errs.length ? 1 : 0);
