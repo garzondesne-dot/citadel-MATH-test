@@ -54,3 +54,15 @@ describe('📚 #25 진도 = 진행한 가장 큰 차시', () => {
     expect(doneNo(S, '1-5')).toBe(3); expect(nextNo(S, '1-5')).toBe(4);
   });
 });
+
+describe('📚 #30 🧪 테스트로 연 차시 = 학생 열림에서도 뺌 (📜 2026-11-21 선생님 「빼기」)', () => {
+  it('12차시까지 진행 + 🧪 테스트 13 = 성채 · 예습 기준 12', () => {
+    if (!has(12, 13)) return;
+    const S = mk();
+    teach(S, '1-1', 12); teach(S, '1-1', 13, true);
+    expect(S.get<{ no: number }>('school/lastTest/1-1')?.no).toBe(13);
+    expect(progressOf(S, '1-1')).toBe(12);
+    expect(heldNo(S, '1-1')).toBe(12);
+    expect(doneNo(S, '1-1')).toBe(12);
+  });
+});

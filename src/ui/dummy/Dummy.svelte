@@ -21,7 +21,7 @@
   import { meBound } from '../../store/meSync';
   import { DUMMY_G, dummyReward, fieldIds, noteOf, OPEN, type Bon, type Rec } from '../../school/dummy';
   import { seals } from '../../model/titles';
-  import { lastClass, lastTest } from '../../school/school';
+  import { lastClass } from '../../school/school';
   import { doneNo } from '../../school/progress';
   import { NOTE_ICON } from '../manifest';
   import { liveRoom, liveValue } from '../room.svelte';
@@ -42,10 +42,10 @@
   const { S, me, save, uid, num, cls, onclose, onforge }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; onclose: () => void; /** ⚒ 이 차시 카드 → 모루 */ onforge?: () => void } = $props();
   // 🐞 11/20 「12차시 수업 종료하면 곧바로 허수아비에 12차시가 안 생김」: 기록 · 지난 수업을 열 때 한 번만 읽어서(서버 거울이 아직 안 받은 칸 = 빈 값) 그대로 굳었음 → 받으면 다시 그림
   const recsL = untrack(() => liveValue<Record<string, Rec>>(S, cls && num ? `records/${cls}/${num}` : 'records/_none/0'));
-  const lastL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/last/${cls}` : 'school/last/_none')), lastTL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/lastTest/${cls}` : 'school/lastTest/_none'));
-  onDestroy(() => { recsL.stop(); lastL.stop(); lastTL.stop(); });
+  const lastL = untrack(() => liveValue<{ no?: number }>(S, cls ? `school/last/${cls}` : 'school/last/_none'));
+  onDestroy(() => { recsL.stop(); lastL.stop(); });
   const recs = $derived<Record<string, Rec>>((cls && num ? recsL.v.val : null) || {});
-  const reach = $derived(Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(cls ? (lastL.v.val ?? lastClass(S, cls))?.no : 0) || 0, cls ? doneNo(S, cls) : 0, /* 📚 #25 */ Number(cls ? (lastTL.v.val ?? lastTest(S, cls))?.no : 0) || 0));
+  const reach = $derived(Math.max(0, ...Object.keys(recs).map((id) => PACKS.find((p) => p.id === id)?.no ?? 0), Number(cls ? (lastL.v.val ?? lastClass(S, cls))?.no : 0) || 0, cls ? doneNo(S, cls) : 0)); // 📚 #25 · #30 🧪 테스트로 연 차시는 안 셈
   const LESSONS = PACKS.filter((p) => p.steps.some((s) => s.kind === 'monster') || p.boss);
   const recOf = (p: LessonPack): Rec | undefined => recs[p.id] ?? (p.partOf ? recs[p.partOf] : undefined);
   const isOpen = (p: LessonPack) => !cls || !!recOf(p) || p.no <= reach;

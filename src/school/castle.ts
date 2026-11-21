@@ -8,7 +8,7 @@ import type { LessonPack, Question, Store } from '../model/types';
 import { type Issue, recheckAll, toQ, versions } from './packUpload';
 import { PACKS } from '../engine/packs';
 import { forget } from '../engine/lessons';
-import { CLASSES, lastClass, lastTest } from './school';
+import { CLASSES, lastClass } from './school';
 
 export interface CastleRoom { id: string; no: number; title: string; sprite: string; boss?: boolean; photo?: boolean; chain?: boolean; note?: string; video?: string; /** 방 카드 글 (#53 · 예 「⚔ 소레이드 · 5단계 · 📷 서술형」) */ card?: string; vers: Question[][] }
 export interface CastlePack { kind: 'castle'; id: string; floor: number; title: string; unit: string; theme?: string; goal?: string; bossPct: number; rooms: CastleRoom[]; /** 👀 학생에게 숨김 */ hide?: boolean; /** 올린 때 */ at?: number; /** 올린 글 그대로 (⬇ 내려받기 · 다시 올리기) */ raw: Record<string, unknown> }
@@ -150,13 +150,13 @@ export const forgetCastle = (P: CastlePack) => P.rooms.forEach((r) => forget(`${
 
 // ── 진도 · 기록 ──
 /** 반 진도 (정식 bonus.js upto = unlock/{반} = 그 반이 게임으로 연 가장 큰 차시) — 베타 = held/{반}(정식에서 옮긴 · 수업 시작 때 적힘 · 출시 대조: 6반 모두 unlock 과 같음)
- *  + school/last · 🧪 lastTest + 내 수업 기록 중 큰 것 · 반이 없으면(교사 · 시험 캠프) 모든 반 중 큰 것 · all = 👩‍🏫 교사 캠프(정식 교사 = 모든 방 열림) */
+ *  + school/last (🧪 테스트로 연 차시는 안 셈 #30) + 내 수업 기록 중 큰 것 · 반이 없으면(교사 · 시험 캠프) 모든 반 중 큰 것 · all = 👩‍🏫 교사 캠프(정식 교사 = 모든 방 열림) */
 const noOfLesson = (id: string) => PACKS.find((p) => p.id === id)?.no ?? (Number(/(\d+)$/.exec(id)?.[1]) || 0);
 export function progressOf(S: Store, cls: string, recs: Record<string, unknown> = {}, all = false): number {
   if (all) return 99;
   const cs = cls ? [cls] : CLASSES;
   const held = cs.flatMap((c) => Object.keys(S.get<Record<string, unknown>>(`held/${c.replace(/[.#$/[\]]/g, '_')}`) || {}).map(noOfLesson));
-  return Math.max(0, ...held, ...Object.keys(recs).map(noOfLesson), ...cs.flatMap((c) => [Number(lastClass(S, c)?.no) || 0, Number(lastTest(S, c)?.no) || 0]));
+  return Math.max(0, ...held, ...Object.keys(recs).map(noOfLesson), ...cs.map((c) => Number(lastClass(S, c)?.no) || 0)); // #30 🧪 테스트로 연 차시(lastTest)는 안 셈 (📜 2026-11-21 선생님 「빼기」)
 }
 /** 처치 기록 자리 (정식 bonus/{반}/{번호}) */
 export const bonusBase = (cls: string, num: number | string) => `bonus/${(cls || 'me').replace(/[.#$/[\]]/g, '_')}/${num || 0}`;
