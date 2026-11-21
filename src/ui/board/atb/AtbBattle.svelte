@@ -653,8 +653,8 @@
       {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
       {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       <div class="skw">
-        <button type="button" class="b skb" class:brkglow={brk && open && !brkFront} style:--fc2={meH ? FAM_COL[meH.s.fam] : undefined} class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
-        {#if fullMsg}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
+        <button type="button" class="b skb" class:brkglow={brk && open && !brkFront} style:--fc2={meH ? FAM_COL[meH.s.fam] : undefined} class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span></button>
+        {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
@@ -765,7 +765,7 @@
   /* ⊕ 노림 (📜 요청 #7 ③) */
   .aimme { position: absolute; left: 0; top: -14px; z-index: 21; transform: translate(-50%, -100%); white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: linear-gradient(#e8332a, #8e1010); border: 2px solid #ffcf6a; font: 900 13px var(--font); animation: blink 0.4s steps(2) infinite; }
   .rhp { width: 100%; } /* 👹 「맞는 그림」 10종 겹칠 자리 (아직 빈 칸 · hero-v2 monster-hit-map.json) */
-  .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 44px; height: 44px; margin: -11px 0 0 -11px; pointer-events: none; background: var(--fx-orb) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.36s steps(5, jump-none) infinite; } @keyframes -global-afx-orb { from { background-position-x: 0%; } to { background-position-x: 100%; } } /* 🎨 charge-orb */
+  .stage :global(.atb-orb) { position: absolute; z-index: 38; width: 44px; height: 44px; margin: -11px 0 0 -11px; pointer-events: none; background: var(--fx-orb) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.36s steps(6, jump-none) infinite; } @keyframes -global-afx-orb { from { background-position-x: 0%; } to { background-position-x: 100%; } } /* 🎨 charge-orb */
   .stage :global(.atb-orb.half) { width: 30px; height: 30px; opacity: 0.6; } /* ½ 칸 = 작은 반투명 구슬 (요청 #49) */
   .co i.half { filter: none !important; opacity: 0.55; clip-path: inset(0 50% 0 0); }
   .bigmsg.slow { background: #3a3a44e6; border-color: #8a8a96; color: #d8d8e0; font-size: clamp(14px, 4.6vh, 20px); } /* 💤 0 칸 */
@@ -882,11 +882,13 @@
   .b.skb { background: linear-gradient(#2a2a36, #14141c); border-color: #8a8aa0; color: #fff; }
   .sw { position: relative; display: inline-block; width: 40px; height: 22px; border-radius: 11px; background: #555; border: 2px solid #ddd; font-style: normal; } .sw b { position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left 0.15s; } .sw.on { background: #2faa3a; } .sw.on b { left: 20px; }
   /* ⚡ 충전 기믹 (요청 #31) */
-  .stage :global(.atb-burst) { position: absolute; z-index: 39; width: 72px; height: 72px; margin: -36px 0 0 -36px; pointer-events: none; background: var(--fx-burst) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.42s steps(5, jump-none) 1 forwards; } /* 🎨 charge-burst */
+  .stage :global(.atb-burst) { position: absolute; z-index: 39; width: 72px; height: 72px; margin: -36px 0 0 -36px; pointer-events: none; background: var(--fx-burst) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.42s steps(6, jump-none) 1 forwards; } /* 🎨 charge-burst */
   .stage :global(.atb-burst.g) { filter: hue-rotate(-150deg) saturate(1.6) brightness(1.1); }
   @keyframes burst { from { transform: scale(0.3); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
   .b.skb { position: relative; overflow: visible; }
-  .ringfx { position: absolute; inset: -14px -10px; pointer-events: none; background: var(--fx-ring) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.9s steps(5, jump-none) infinite; } /* 🎨 charge-ring = 가득 빛 고리 */
+  /* 🐞 #74 ② 가득 고리 = 충전 구슬 줄에 붙어 제자리 (전: 넓은 스킬 단추에 정사각 칸을 늘려 고리 조각 · 반짝이가 단추 위를 떠다님) · 칸 정사각 그대로 · 고리(칸 너비 75%) = 구슬 줄 너비 */
+  .orbs { position: relative; }
+  .ringfx { position: absolute; left: 50%; top: 50%; width: 136%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; background: var(--fx-ring) no-repeat 0 0 / 600% 100%; mix-blend-mode: screen; image-rendering: pixelated; animation: afx-orb 0.9s steps(6, jump-none) infinite; }
   @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
   @keyframes ringspin { to { --a: 360deg; } }
   .fullmsg { position: absolute; right: 1.5%; bottom: calc(100% + 8px); z-index: 33; padding: 4px 14px; border-radius: 12px; border: 2px solid #8fe0ff; background: #0d1830f0; color: #dff6ff; font: 900 15px var(--font); white-space: nowrap; animation: bigin 0.25s ease-out; pointer-events: none; }
@@ -1007,4 +1009,11 @@
   .pop.dmg.miss { color: #ccc; }
   .pop.dmg.sum { font-size: 30px; } .pop.dmg.sum.me { font-size: 58px; } .pop.dmg.sum.fr { font-size: 20px; }
   @keyframes dmgup { 0% { opacity: 1; transform: translate(-50%, 10px) scale(0.6); } 18% { transform: translate(-50%, -26px) scale(1.25); } 35% { transform: translate(-50%, -20px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60px) scale(1); } }
+  /* 🎨 #74 ③ 스킬 메뉴 = 문제 카드 · 정찰 카드와 같은 양피지 칸 (새 꼴 없음 · 같은 테두리 #b88a4a · 바탕 · 갈색 글자 · 칸 = 보기 칸 꼴) · 스킬 종류 = 왼쪽 색 띠 */
+  .ring.skm { border: 3px solid #b88a4a; background: radial-gradient(ellipse at 50% 40%, #fbf0d6 0%, #f1dfb6 70%, #e2c995 100%); box-shadow: 0 0 0 2px #5a3a1a, 0 10px 24px #0008; }
+  .ring.skm .sk2 { --acc: #3a6ac8; border: 2px solid #c9a36a; border-left: 6px solid var(--acc); border-radius: 10px; background: #fff3d6; color: #3a2614; box-shadow: 0 3px 0 #b08a52; }
+  .ring.skm .sk2.role { --acc: #2a9a84; } .ring.skm .sk2.heal { --acc: #d0402a; } .ring.skm .sk2.aura { --acc: #c8a82a; } .ring.skm .sk2.awk { --acc: #e09a1e; } .ring.skm .sk2.revive { --acc: #d0508a; } .ring.skm .sk2.tier4 { --acc: #c8762a; }
+  .ring.skm .sk2 .nm { text-shadow: none; } .ring.skm .sk2 .nm small { color: #6a4a20; } .ring.skm .sk2 .pv { color: #7a4e10; } .ring.skm .sk2 .pv.gold { color: #9a6a00; text-shadow: none; }
+  .ring.skm .sk2.dis, .ring.skm .sk2:disabled { filter: grayscale(0.9); opacity: 0.55; }
+  .ring.skm .sk2 .need1 { color: #8a4a0a; }
 </style>

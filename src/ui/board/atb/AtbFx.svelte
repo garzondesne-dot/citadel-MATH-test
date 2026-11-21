@@ -17,8 +17,8 @@
   style:background-image="url({fxUrl(name)})" style:--ms="{ms}ms" style:--dl="{delay}ms"></i>
 
 <style>
-  .afx { position: absolute; transform: translate(-50%, -50%); pointer-events: none; background-repeat: no-repeat; background-size: 600% 100%; background-position: 0 0; image-rendering: pixelated; animation: afx-run var(--ms) steps(5, jump-none) var(--dl) infinite; }
-  .afx.once { animation: afx-run var(--ms) steps(5, jump-none) var(--dl) 1 forwards, afx-out 0.15s linear calc(var(--ms) + var(--dl)) forwards; }
+  .afx { position: absolute; transform: translate(-50%, -50%); pointer-events: none; background-repeat: no-repeat; background-size: 600% 100%; background-position: 0 0; image-rendering: pixelated; animation: afx-run var(--ms) steps(6, jump-none) var(--dl) infinite; }
+  .afx.once { animation: afx-run var(--ms) steps(6, jump-none) var(--dl) 1 forwards, afx-out 0.15s linear calc(var(--ms) + var(--dl)) forwards; }
   .afx.light { mix-blend-mode: screen; -webkit-mask-image: radial-gradient(ellipse closest-side, #000 62%, #0000 100%); mask-image: radial-gradient(ellipse closest-side, #000 62%, #0000 100%); } /* 빛 그림 칸 가장자리 = 부드럽게 (검은 바탕 → 투명 변환에 남은 옅은 빛이 네모로 보이지 않게) */
   @keyframes afx-run { from { background-position-x: 0%; } to { background-position-x: 100%; } }
   @keyframes afx-out { to { opacity: 0; } }
