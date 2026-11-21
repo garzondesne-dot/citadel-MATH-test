@@ -137,6 +137,18 @@
   const inClass = $derived(!!lvApp.v.val?.code && (role === 'teacher' || role === 'hall' || (!!login && lvApp.v.val.cls === login.cls) || (role === 'student' && !!code && lvApp.v.val.code === code)));
   // 🫥 #162 ① · #172 학생 화면(첫 화면 · 캠프 · 수업 · 게시판)엔 「BETA · 판」 · 「시험 서버」 글자를 숨김 → 캠프 ⚙ 설정 맨 아래 작은 「판」 줄 · 끊김 붉은 띠 · 새 판 ↻ 는 그대로
   const stuScreen = !role || role === 'student' || role === 'camp';
+  // 📮 #81 B 폰 보관함 띠 (📜 선생님 2026-11-21): 못 보낸 기록이 5초 넘게 남으면 위 띠 · 교사 대시보드용 accounts/{반}/{번호}/pend = { n, at } (0 = 지움 · 10초에 한 번)
+  type OB = { count(): number; on(fn: () => void): () => void };
+  const ob = (S as Store & { outbox?: OB }).outbox;
+  let obN = $state(0), obT: ReturnType<typeof setTimeout> | null = null, pendSent = -1, pendAt = 0;
+  function obTick() {
+    if (!ob) return; const n = ob.count();
+    if (!n) { if (obT) { clearTimeout(obT); obT = null; } obN = 0; } else if (!obN && !obT) obT = setTimeout(() => { obT = null; obN = ob.count(); }, 5000); else if (obN) obN = n;
+    const b = meBound(); if (!b || n === pendSent || (n && Date.now() - pendAt < 10000)) return;
+    if (!n && pendSent < 0 && !b.S.get(`accounts/${b.cls}/${b.num}/pend`)) { pendSent = 0; return; } // 처음 0 = 서버에 남은 표시가 없으면 안 씀
+    pendSent = n; pendAt = Date.now(); b.S.set(`accounts/${b.cls}/${b.num}/pend`, n ? { n, at: b.S.now() } : null);
+  }
+  if (ob) { ob.on(obTick); setTimeout(obTick, 3000); setInterval(obTick, 15000); }
   submitScreen(stuScreen); // 📝 제출 모드 = 학생 화면만
   const verOld = $derived(!!site && site !== BUILD_ID && !inClass);
   // 🔄 #38 ③ 새 판 띠: 화면 맨 위 「🔄 새 판 b○○ · 눌러서 새로 고침」 · 첫 화면 · 캠프에서 막 열었을 때(20초 안 · 혼자 하는 판 아님) = 저절로 한 번(같은 판은 한 번만 · 되풀이 막기)
@@ -159,6 +171,7 @@
 {#if where.blocked}<div class="blocked" role="alert">⛔ {where.blocked}</div>{/if}
 {#if role !== 'dev' && role !== 'atb' && (!stuScreen || (where.kind !== 'device' && !netOk))}<div class="srv" class:server={where.kind !== 'device'} class:off={where.kind !== 'device' && !netOk} class:tsrv={role === 'teacher'} class:hsrv={role === 'hall'} aria-label="저장 위치 {where.label}">{where.kind === 'device' ? '이 기기' : netOk ? where.label : '⚠ 끊김 · 다시 잇는 중'}</div>{/if}
 {#if role !== 'dev' && role !== 'atb'}{#if verOld}<button type="button" class="newbuild" class:hall={role === 'hall'} data-k="newbuild" aria-label="새 판 {site} · 눌러서 새로 고침 (지금 {BUILD_ID})" onclick={reloadNew}>🔄 새 판 {site} · 눌러서 새로 고침</button>{:else if !stuScreen}<div class="beta-pill" class:hall={role === 'hall'} class:low={role === 'camp' || (!role && !!login)} class:tpill={role === 'teacher'} class:rel={!BETA} aria-label="{verName(BUILD, REV)}{site ? ' · 최신' : ''}">{verName(BUILD, REV)}{site === BUILD_ID ? ' ✔' : ''}</div>{/if}{:else}<div class="beta">{BETA ? `BETA · ${BUILD_ID} · 테스트 버전 (서버에 닿지 않음 · 이 기기 저장)` : '서버에 닿지 않음 · 이 기기 저장'}</div>{/if}
+{#if stuScreen && obN > 0}<p class="wtip obar" role="status" data-k="outbox-bar">⏳ 아직 안 올라간 기록 {obN} · 인터넷 켜고 앱 열어 두기</p>{/if}
 {#if stuScreen && wakeTip.text}<p class="wtip" role="status" data-k="wake-tip">{wakeTip.text}<button type="button" aria-label="닫기" onclick={() => (wakeTip.text = '')}>✕</button></p>{/if}
 <main class:full={role !== 'dev'}>
   <!-- 🐞 11/20 ③ 반쪽 데이터(서버 값이 비거나 반만 옴)로 화면 그리기가 터져도 앱 전체가 멈추지 않게 = 이 화면만 「다시 그리기」 -->
@@ -239,6 +252,7 @@
   .err { color: var(--bad); }
   /* 📜 2026-11-17 #17: 전투 화면(장면 띠 280) = 띠를 장면 아래로 (몬스터 · 용사를 가리지 않게) */
   :global(body:has([data-scene])) .wtip { top: calc(env(safe-area-inset-top, 0px) + 56px); } /* 🐞 #60-4 전투 화면 = 장면 띠 위(그림 위)에 · 아래 정찰 · 문제 카드(남은 초 · 제목)를 덮지 않게 */
+  .obar { top: calc(env(safe-area-inset-top, 0px) + 8px); border: 1px solid var(--accent); }
   .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .relogin { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 10px 14px; max-width: 92vw; border-radius: 12px; background: #2b1e10; border: 1px solid #f5b84a; color: #ffe3a8; font: 700 14px var(--font); text-align: center; }
   .crash { margin: 24px 16px; padding: 16px; border-radius: 12px; background: var(--card, #fff); color: var(--ink, #222); text-align: center; }
