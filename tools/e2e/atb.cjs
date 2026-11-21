@@ -5,7 +5,7 @@
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
 (async () => {
-  const b = await chromium.launch(); { const np = b.newPage.bind(b); b.newPage = async (o) => { const pg = await np(o); await pg.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); } catch { /* 무시 */ } }); return pg; }; } /* 🗺 요청 #69 조우 · 정찰은 atbintro.cjs 가 따로 봄 */ const errs = [], out = [];
+  const b = await chromium.launch(); { const np = b.newPage.bind(b); b.newPage = async (o) => { const pg = await np(o); await pg.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); globalThis.__atbNoAutoQ = true; /* 📜 #90 자동 접기 · 올림은 #90 칸에서만 켬 */ } catch { /* 무시 */ } }); return pg; }; } /* 🗺 요청 #69 조우 · 정찰은 atbintro.cjs 가 따로 봄 */ const errs = [], out = [];
   // 📜 요청 #24 v2 = 스킬은 「스킬」 단추를 눌러 위로 뜬 메뉴에서 · 닫기 = 손잡이 끌어 내림 · 소리 설정 = ⚙
   const skc = async (pg, k, tap = false) => { if (!(await pg.$('[data-k="atb-skills"].open'))) { if (tap) await pg.tap('[data-k="atb-skill-btn"]'); else await pg.click('[data-k="atb-skill-btn"]'); await pg.waitForTimeout(220); } if (tap) await pg.tap(`[data-k="atb-sk-${k}"]`); else await pg.click(`[data-k="atb-sk-${k}"]`); };
   const closeQ = async (pg) => { await pg.evaluate(() => globalThis.__atb.close()); await pg.waitForTimeout(300); };
@@ -16,7 +16,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const st = await p.evaluate(() => ({ heroes: document.querySelectorAll('[data-k="atb-hero"]').length, btn: document.querySelectorAll('.btns .b').length, me: !!document.querySelector('[data-k="atb-me"]') && !document.querySelector('.me'), foot: document.querySelectorAll('.hero .tag .thin.atb').length, bhp: !!document.querySelector('[data-k="atb-boss-hp"]'), revs: document.querySelectorAll('.revs .hrt').length, gear: !!document.querySelector('[data-k="atb-gear"]'), hpb: document.querySelectorAll('[data-k="atb-hpb"]').length, boss: !!document.querySelector('[data-k="atb-boss"] .sprite') }));
   ok('① 가로 무대 = 용사 4 · 아래 단추 3(공격 · 문제 풀이 · 스킬) · 팀 부활 숨김 · ⚙ · 머리 위 HP 4 · 보스 그림(요청 #24)', st.heroes === 4 && st.btn === 3 && st.revs === 0 && st.gear && st.hpb === 4 && st.boss, JSON.stringify(st));
   ok('요청 #14 이름표 = Lv · 이름 · 계열 + 체력 막대 · 「hp/max」 + 노란 ATB 막대(용사 4) · 보스 「Lv.」 + 체력 · ATB', st.me && st.foot === 4 && st.bhp && /Lv\.\d/.test(await p.textContent('.hero .tag > b')) && !!(await p.$('.hero .tag [data-k="fam-shield"]')) && /Lv\.2/.test(await p.textContent('[data-k="raid-hp"]')));
-  ok('Y9 몬스터 = 랜덤 던전 그림(2차시 = d01)', /^d01:/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
+  ok('Y9 · #98-b 몬스터 = 컨셉 몬스터(2차시 = 흑표범 new6)', /^(new6:0|cm5-a:0)/.test(await p.evaluate(() => globalThis.__atb.S.boss.sprite)));
   await p.screenshot({ path: `${SHOTS}/atb-wide-844.png` });
   // 🆘 요청 #18 위험 체력 = 30% 아래 빨갛게 깜박 + 🆘 + 친구 화면 한 줄 · 나 = 초상 빨강 · 회복하면 꺼짐
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[1].hp = Math.floor(a.S.heroes[1].s.maxHp * 0.2); a.S.heroes[0].hp = Math.floor(a.S.heroes[0].s.maxHp * 0.2); }); await p.waitForTimeout(200);
@@ -147,8 +147,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   { const h = await p.$eval('[data-k="atb-qhandle"]', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; });
     await p.mouse.move(h[0], h[1]); await p.mouse.down(); await p.mouse.move(h[0], h[1] + 25, { steps: 4 }); await p.mouse.up(); await p.waitForTimeout(400);
     const stay = !!(await p.$('[data-k="atb-quiz"]'));
-    await p.mouse.move(h[0], h[1]); await p.mouse.down(); await p.mouse.move(h[0], h[1] + 90, { steps: 4 }); const mid = await p.$eval('.card', (e) => e.style.translate || ''); await p.mouse.move(h[0], h[1] + 220, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(500);
-    ok('요청 #24 ⑨ 손잡이 = 조금 끌면 되돌아감 · 끌 때 카드가 따라 내려옴 · 많이 끌면 닫힘', stay && /90px/.test(mid) && !(await p.$('[data-k="atb-quiz"]')), `stay ${stay} · ${mid}`); }
+    await p.mouse.move(h[0], h[1]); await p.mouse.down(); await p.mouse.move(h[0], h[1] + 90, { steps: 4 }); const mid = await p.$eval('.card', (e) => e.style.translate || ''); await p.mouse.move(h[0], h[1] + 300, { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(500);
+    ok('요청 #24 ⑨ · #90 ③ 손잡이 = 조금 끌면 되돌아감 · 끌 때 카드가 따라 내려옴 · 많이 끌면 접힘', stay && /90px/.test(mid) && !!(await p.$('.card[data-fold="1"]')), `stay ${stay} · ${mid}`); }
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(450);
   { const k0 = await p.textContent('[data-k="atb-qtitle"]'); await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(120);
     await skc(p, 'equip'); await p.waitForTimeout(400);
@@ -381,6 +381,44 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.screenshot({ path: `${SHOTS}/atb-pick-844.png` });
   ok('⑥ 고르는 창 가로 넘침 0', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   ok('요청 #36′ 고르는 창 = 속성 덧효과 한 줄(이모지 + 이름 + 설명)', /(관통|화상|감전|얼림|순풍|약점 노출|축복|저주) · /.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
+  // 📜 요청 #85 교사 연습방 = Land(CSS 돌림)만 · 전체 화면 · 방향 잠금 호출 0 · 나오면 세로
+  { const v = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.addInitScript(() => { globalThis.__lk = { lock: 0, fs: 0 }; try { const o = screen.orientation; if (o) o.lock = async () => { globalThis.__lk.lock++; }; } catch { /* 무시 */ } const rf = Element.prototype.requestFullscreen; Element.prototype.requestFullscreen = function (...a) { globalThis.__lk.fs++; return rf ? rf.apply(this, a).catch(() => {}) : Promise.resolve(); }; });
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.tap('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(700);
+    const rot = !!(await v.$('[data-rot90]'));
+    await v.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: true })); S.bossHp = 3; S.target = null; S.heroes[0].ch = 3; a.full(); }); await v.waitForTimeout(150); await skc(v, 'equip', true); await v.waitForSelector('[data-k="atb-exit"]', { timeout: 8000 }); await v.waitForTimeout(500);
+    await v.tap('[data-k="atb-exit"]'); await v.waitForSelector('[data-k="atb-setup"]'); await v.waitForTimeout(300);
+    const r = await v.evaluate(() => ({ ...globalThis.__lk, fsEl: !!document.fullscreenElement, rot: !!document.querySelector('[data-rot90]') }));
+    ok('요청 #85 세로 390 연습방 → 판(돌림 상자) → 나가기 = 방향 잠금 0 · 전체 화면 0 · 설정 화면 세로', rot && r.lock === 0 && r.fs === 0 && !r.fsEl && !r.rot, JSON.stringify({ inBattleRot: rot, ...r }));
+    await v.close(); }
+  // 📜 요청 #90 문제 카드 접기 · 펴기 = 빈 곳 누름 접힘(진행 그대로) · 띠 누름 올림 · ⚡ 가득 = 저절로 접힘(한 번) · ⚡ 0 = 저절로 올림
+  for (const [w, h, nm] of [[844, 390, '가로 844'], [390, 844, '세로 390 돌림']]) {
+    const v = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: true }); v.on('pageerror', (e) => errs.push(String(e)));
+    await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(600);
+    await v.evaluate(() => { globalThis.__atbNoAutoQ = false; const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 0; });
+    await v.click('[data-k="atb-quiz-open"]'); await v.waitForSelector('[data-k="atb-quiz"]'); await v.waitForTimeout(500);
+    const t0 = await v.textContent('[data-k="atb-qtitle"]');
+    await v.evaluate(() => { const c = document.querySelector('.card'); c.__mk = 1; const bd = c.querySelector('.body'); if (bd) bd.scrollTop = 30; });
+    const sc0 = await v.evaluate(() => document.querySelector('.card .body')?.scrollTop ?? 0);
+    /* 빈 곳 = 무대에서 단추 · 카드 · 용사 · 보스가 아닌 첫 점 (돌린 화면도 같은 셈) */
+    const pt = await v.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'), R = st.getBoundingClientRect(); for (let fy = 0.2; fy < 0.8; fy += 0.04) for (let fx = 0.04; fx < 0.96; fx += 0.04) { const x = R.left + R.width * fx, y = R.top + R.height * fy, e = document.elementFromPoint(x, y); if (e && !e.closest('button, .card, .hero, .boss, nav, .tr, a, input')) return [x, y]; } return null; });
+    if (pt) await v.mouse.click(pt[0], pt[1]); await v.waitForTimeout(400);
+    const f1 = await v.evaluate(() => ({ fold: document.querySelector('.card')?.dataset.fold, mk: document.querySelector('.card')?.__mk, bar: !!document.querySelector('[data-k="atb-quiz-fold"]'), atk: !!document.querySelector('[data-k="atb-attack"]') }));
+    await v.screenshot({ path: `${SHOTS}/atb-r90-fold-${w}.png` });
+    ok(`요청 #90 ① ${nm} 빈 곳 누름 = 카드 접힘(지워지지 않음) · 띠 「▲ 문제 풀기」 · 공격 단추 돌아옴`, !!pt && f1.fold === '1' && f1.mk === 1 && f1.bar && f1.atk, JSON.stringify({ pt, ...f1 }));
+    await v.click('[data-k="atb-quiz-fold"]'); await v.waitForTimeout(400);
+    const f2 = await v.evaluate(() => ({ fold: document.querySelector('.card')?.dataset.fold, mk: document.querySelector('.card')?.__mk, sc: document.querySelector('.card .body')?.scrollTop ?? 0 }));
+    ok(`요청 #90 ② ${nm} 띠 누름 = 같은 카드 그대로 올라옴(같은 문제 · 스크롤 그대로)`, f2.fold === '0' && f2.mk === 1 && (await v.textContent('[data-k="atb-qtitle"]')) === t0 && f2.sc === sc0, `${t0} · ${JSON.stringify(f2)} · sc0 ${sc0}`);
+    await v.evaluate(() => { const H = globalThis.__atb.S.heroes[0]; H.ch = 3; }); await v.waitForTimeout(250); await v.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 4; }); await v.waitForTimeout(600);
+    const f3 = await v.$eval('.card', (e) => e.dataset.fold);
+    await v.click('[data-k="atb-quiz-fold"]'); await v.waitForTimeout(700); const f4 = await v.$eval('.card', (e) => e.dataset.fold);
+    ok(`요청 #90 덧 ${nm} ⚡ 가득 닿음 = 저절로 접힘 · 다시 올리면 또 안 접힘`, f3 === '1' && f4 === '0', `${f3} → ${f4}`);
+    await v.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 2; }); await v.waitForTimeout(200); await v.evaluate(() => globalThis.__atb.close()); await v.waitForTimeout(300);
+    await v.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; }); await v.waitForTimeout(700);
+    const f5 = await v.evaluate(() => document.querySelector('.card')?.dataset.fold);
+    ok(`요청 #90 ④ ${nm} ⚡ 0 이 되는 순간 = 카드 저절로 다 올라옴`, f5 === '0', String(f5));
+    await v.close();
+  }
   // 다른 크기
   for (const [w, h] of [[667, 375], [1024, 768]]) {
     const q = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(600);

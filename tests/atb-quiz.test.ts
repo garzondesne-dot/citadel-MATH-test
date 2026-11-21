@@ -52,7 +52,7 @@ describe('ATB 문제 반복 없애기 (요청 #19 덧2)', () => {
     for (const L of SUBJ.lessons) {
       const seen: Seen = {}, sets = new Map<string, Set<string>>(), orders: string[] = [];
       for (let run = 0; run < 5; run++) {
-        const seed = `me${1 + Math.floor(Math.random() * 9999)}`, rnd = rngOf(`${seed}|q`), os = shuffled(originsOf(L), rnd);
+        const seed = `me${1 + ((run * 2654 + L.no * 97) % 9999)}`, /* 고정 씨앗 = 흔들림 없음 (전: Math.random → 원문항 3개 차시는 5판 순서가 다 같을 때가 3000번에 2번) */ rnd = rngOf(`${seed}|q`), os = shuffled(originsOf(L), rnd);
         orders.push(os.map((o) => o.mid).join(''));
         for (const o of os) {
           const before = [...(seen[`${L.id}|${o.mid}`] ?? [])], r = freshRun(L, o.mid, seed, seen, [], rnd);

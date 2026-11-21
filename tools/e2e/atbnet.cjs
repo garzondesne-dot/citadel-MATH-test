@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atbnet2';
 const out = [], errs = []; const ok = (n, c, d = '') => out.push(`${c ? '✅' : '❌'} ${n}${d ? ' · ' + d : ''}`);
 (async () => {
-  const b = await chromium.launch(); { const np = b.newPage.bind(b); b.newPage = async (o) => { const pg = await np(o); await pg.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); } catch { /* 무시 */ } }); return pg; }; } /* 🗺 요청 #69 조우 · 정찰은 atbintro.cjs 가 따로 봄 */ const p = await b.newPage({ viewport: { width: 860, height: 800 } });
+  const b = await chromium.launch(); { const np = b.newPage.bind(b); b.newPage = async (o) => { const pg = await np(o); await pg.addInitScript(() => { try { localStorage.setItem('atb-e2e-nointro', '1'); globalThis.__atbNoAutoQ = true; } catch { /* 무시 */ } }); return pg; }; } /* 🗺 요청 #69 조우 · 정찰은 atbintro.cjs 가 따로 봄 */ const p = await b.newPage({ viewport: { width: 860, height: 800 } });
   p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto(B); await p.waitForSelector('[data-k="phone-2"]');
   const fr = async (k) => (await (await p.$(`[data-k="phone-${k}"]`)).contentFrame());

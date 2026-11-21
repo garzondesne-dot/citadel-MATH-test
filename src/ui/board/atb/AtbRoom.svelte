@@ -51,22 +51,23 @@
     if (seedNew) seed = 1 + Math.floor(Math.random() * 9999); // 📜 요청 #19 덧2 = 연습방 씨앗 기본 「매번 새로」
     const g = GROW[grow], ids = mode === 'play' ? [meHero, ...mates.slice(0, size - 1)] : mates.slice(0, size);
     const party = ids.map((id) => statsOf({ hero: id, lv: g.lv, enh: g.enh, tier: tierFor(id), name: nameOf(id), awk: grow === 'awk' }));
-    const art = bossArt(bossOf(L.no), diff); bg = art.bg;
+    const art = bossArt(bossOf(L.no), diff, L.theme); bg = art.bg;
     const B = newBattle({ boss: art, diff, party, seed });
     if (start === 'shield' || start === 'one') { B.bossHp = Math.round(B.bossMax * T.shieldAt) - 1; B.shieldUp = true; B.shieldAt = 0; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); if (start === 'one') B.cells.forEach((c, i) => { if (i > 0) { c.broken = true; c.by = c.owner; } }); }
     if (start === 'aoe') { while (!B.ev.some((e) => e.k === 'boss' && e.aoe) && B.t < 60) tick(B, 0.1); }
     S = B; meIdx = mode === 'play' ? 0 : -1;
     bots = B.heroes.map((h) => newBot(L!, h.id, botKind, seed)).filter((b) => mode === 'watch' || b.who !== 0);
-    phase = 'battle'; runKey++;
-    tryLand();
+    phase = 'battle'; runKey++; /* 📜 #85 돌림 = Land(CSS 돌림 상자)만 · 전체 화면 · 방향 잠금 안 부름 */
   }
   function ended(B: State) {
     saveRec({ at: Date.now(), no: L!.no, diff, win: !!B.end?.win, sec: Math.round(B.t), who: B.heroes.map((h) => h.s.name).join('·'), seed, mode: mode === 'play' ? '직접' : '관전', r: runRecord(B, { no: L!.no, practice: true }) });
     phase = 'result';
   }
   const mastery = $derived(L ? recs.filter((r) => r.no === L!.no && r.win).length : 0);
-  // ── 가로 화면 ──
-  async function tryLand() { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.(); await (screen.orientation as unknown as { lock?: (o: string) => Promise<void> }).lock?.('landscape'); } catch { /* iOS · 데스크톱 = 덮개로 안내 */ } }
+  // ── 가로 화면 = Land 가 맡음 ──
+  /** 📜 #85 안전망 = 혹시 남은 전체 화면 · 방향 잠금을 나갈 때 풂 (연습방 → 캠프 · 게시판이 세로로 돌아오게) */
+  function unLand() { try { (screen.orientation as unknown as { unlock?: () => void }).unlock?.(); } catch { /* 무시 */ } try { if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); } catch { /* 무시 */ } }
+  onDestroy(unLand);
   const md = (t: number) => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
 </script>
 

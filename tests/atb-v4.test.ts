@@ -1,7 +1,7 @@
 // 📋 게시판 보스 설정표 v4 (📜 요청 #57 · docs/board-atb/BOSS-TABLE-v4.md) — 12 ~ 17차시 새 보스 · 차시별 분노 · 차례 고침 · 약점 고르게
 import { describe, expect, it } from 'vitest';
 import { HEROES } from '../src/model/hero';
-import { attack, earn, newBattle, orderNext, rageCycleOf, react, tick, useSkill, type State } from '../src/board/atb/engine';
+import { attack, debugWin, earn, newBattle, orderNext, rageCycleOf, react, tick, useSkill, type State } from '../src/board/atb/engine';
 import { statsOf } from '../src/board/atb/heroes';
 import { ATK, ATK_SPECIAL, BOSSES, SIG, atkClass, type Diff, type Fam } from '../src/board/atb/tune';
 
@@ -154,5 +154,12 @@ describe('🚨 #84 보스 HP 1 에서 버티다 패배 (선생님 베타 판)', 
   it('실드 칸이 남아 있으면 HP 1 에서 멈춤 (그대로)', () => {
     const S = at(8); S.shieldUp = true; S.cells = S.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); S.bossHp = 3; S.heroes[0]!.atb = 1;
     attack(S, 0, 'crit'); expect(S.bossHp).toBe(1); expect(S.end).toBeNull();
+  });
+});
+
+describe('🧪 debugWin · 한 방 실드 틈', () => {
+  it('debugWin = 실드 전이어도 바로 승리', () => {
+    const S = at(2); expect(S.cells.length).toBe(0);
+    debugWin(S); expect(S.end?.win).toBe(true);
   });
 });
