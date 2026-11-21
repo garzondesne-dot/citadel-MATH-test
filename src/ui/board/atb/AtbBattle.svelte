@@ -19,7 +19,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak } from '../../../board/atb/engine';
   import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -49,13 +49,15 @@
   const onResize = () => { const r = rotNow(); H = r ? innerWidth : innerHeight; Wd = r ? innerHeight : innerWidth; };
   onMount(onResize);
   if (typeof window !== 'undefined') addEventListener('resize', onResize);
-  let paused = $state(false), ended = false;
+  let paused = $state(false), ended = false, slowUntil = 0, slowSkip = 0, slowOn = $state(0);
+  function slowmo(ms: number) { slowUntil = Date.now() + ms; const t = Date.now(); slowOn = t; setTimeout(() => { if (slowOn === t) slowOn = 0; }, ms); try { navigator.vibrate?.([30, 40, 30, 40, 60]); } catch { /* 무시 */ } }
   const STEP = 0.1;
   const loop = setInterval(() => {
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
     if (S.end) { if (!ended) { ended = true; setTimeout(() => onend(S), 1800); } return; }
     if (paused) return;
+    if (Date.now() < slowUntil && ++slowSkip % 3) return; // 🎬 슬로 모션 (요청 #50 · 연출 · 0.4 ~ 0.6초 동안 1/3 속도)
     for (let i = 0; i < speed && !S.end; i++) { tick(S, STEP); for (const b of bots) botStep(L, S, b, busyOf); autoStep(); }
   }, STEP * 1000);
   /** ⚔ 문제 카드를 연 채 ATB 가 차면 = T.autoAtkDelay 뒤 자동 일반 공격 (치명 없음 · ×1 · 타이밍 바 없음 · 📜 요청 #11) · 카드를 닫았으면 지금처럼 타이밍 */
@@ -193,6 +195,18 @@
   const ROLE_KO: Record<string, string> = { tank: '탱커', support: '서포터', dealer: '딜러' };
   const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => S.heroes[i]?.s.name).join(' · ') ?? ''} 노림 · 🛡 탱커가 막을 수 있어요` : tg.cls === 'aoe' ? `💥 광역! · 🎵 서포터 결계로 줄여요` : `🌀 ${tg.atk} 모으는 중 · ⚔ 딜러 강타로 끊어요`) : '');
   const hasRole = (r: string) => S.heroes.some((h) => h.s.role === r && !h.down);
+  // 🎯 📜 요청 #50 A 역할 = 카운터 단추(화면 가운데 · 카드 위 · 남은 예고 고리) · ⚡ 0 = 작은 띠 · 임무
+  const roleTg = $derived(me >= 0 && !!meH && !meH.down && !!tg && !S.blocked && REACT[tg.cls] === meH.s.role);
+  const CTR_TXT: Record<string, string> = { tank: '🛡 엄호!', support: '🎵 결계!', dealer: '⚔ 끊기!' };
+  const mis = $derived(me >= 0 && meH ? (void S.evN, missionOf(S, me)) : null);
+  // 💥 B 속성 = 실드가 떴고 내 칸이 남았고 내 계열이 약점 → 2초 카드 위 알림 → 카드 뒤 가운데에 계속 (요청 #50 🔁)
+  const brk = $derived(me >= 0 && !!meH && !meH.down && S.shieldUp && S.boss.weak.includes(meH.s.fam) && S.cells.some((c) => c.owner === me && !c.broken));
+  const brkOk = $derived(brk && canSkill(S, me, 'shield'));
+  let brkFront = $state(0), famFlash = $state(0), wasBrk = false;
+  $effect(() => { const b = brk; untrack(() => { if (b && !wasBrk) { const t = Date.now(); brkFront = t; famFlash = t; setTimeout(() => { if (brkFront === t) brkFront = 0; }, 2000); setTimeout(() => { if (famFlash === t) famFlash = 0; }, 1100); snd('skill-unlock', 0.7); try { navigator.vibrate?.([40, 30, 40]); } catch { /* 무시 */ } } wasBrk = b; }); });
+  /** 👁 눈빛 컷인 (브레이크 · 카운터 성공 · 0.7초) */
+  let eye = $state<{ who: number; col: string; n: number; big: string; small: string } | null>(null);
+  function eyeCut(who: number, col: string, bigT: string, smallT: string, ms = 700) { const n = Date.now(); eye = { who, col, n, big: bigT, small: smallT }; setTimeout(() => { if (eye?.n === n) eye = null; }, ms + 500); }
   /** 🌀 특수 모으기 막대 (보스 머리 위 · 4초) */
   const chargeP = $derived(tg?.cls === 'special' ? (S.breathWarn != null && !S.target ? Math.min(1, (S.t - S.breathWarn) / SIG.breath.warn) : Math.min(1, Math.max(0, (S.bossT - (bossEveryOf(S) - (ATK[S.nextAtk!]?.warn ?? T.telegraph))) / (ATK[S.nextAtk!]?.warn ?? T.telegraph)))) : 0);
   let reactKey = '', healNowT = $state(0);
@@ -231,6 +245,7 @@
   const setCell = (i: number, v: 'hold' | 'crack' | 'shatter' | null) => { const n = { ...cellAnim }; if (v) n[i] = v; else delete n[i]; cellAnim = n; };
   /** 🛡 보호막 부수기 = 그 용사 공격이 방패막에 부딪혀 물결 → 칸 금 감 → 조각나며 사라짐(한 칸씩 · 쨍) · 마지막 = 방패막 산산조각 + 약점 시간 */
   function shieldHit(e: Extract<Ev, { k: 'shield' }>) {
+    if (e.who === me && meH && S.boss.weak.includes(meH.s.fam)) { const col = FAM_COL[meH.s.fam]; eyeCut(me, col, 'SHIELD BREAK!', '속성 브레이크', 700); slowmo(600); sfx('chain-break', 1); shake(stageEl ?? null, 10, 500); } // 💥 요청 #50 B4 브레이크 성공
     e.cells.forEach((i) => setCell(i, 'hold'));
     const go = () => {
       barrier = 'ripple'; setTimeout(() => { if (barrier === 'ripple') barrier = 'up'; }, 500);
@@ -292,7 +307,7 @@
     const d = (e as { dmg?: number }).dmg ?? 0, isSk = e.k === 'skill', ult = isSk && e.kind === 'awk', big = isSk && e.kind !== 'equip', miss = e.k === 'atk' && e.timing === 'miss', crit = e.k === 'atk' && e.timing === 'crit';
     const fk = fit(h.s.hero, fx[e.who] || 'flame'); let hit = false, shown = 0;
     // 👹 📜 요청 #38 · #42 = 피해 숫자 단계(보통 흰 · 치명 노랑 · 약점 빨강 · 스킬 크게 · 각성 금) · 여러 타 = 하나씩 + 마지막 「합계」 · 내 것 2배 · 친구 0.7배 옅게
-    const mine = e.who === me, wk = weak(S), tier = miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : wk ? 'weak' : 'norm';
+    const mine = e.who === me, wk = weak(S), tier = miss ? 'miss' : ult ? 'ult' : isSk ? 'sk' : crit ? 'crit' : wk ? 'weak' : 'norm', wkFam = wk && S.boss.weak.includes(h.s.fam); // 📜 요청 #50 B5 약점 계열로 약점 시간에
     const onHit = (info?: { k: number; n: number }) => {
       if (!info && hit) return; // 끝(finally) 한 번 더 = 이미 다 띄웠으면 그만
       const n = Math.max(1, info?.n ?? 1), k = info?.k ?? n - 1, bx = open ? 86 : 72, x = bx + (Math.random() - 0.5) * 6, y = 34 - k * 3;
@@ -301,7 +316,8 @@
       if (hit) return; hit = true;
       if (miss) pop(x, 36, '빗나감', `dmg miss ${mine ? 'me' : 'fr'}`, mine ? 900 : 600);
       else if (n > 1 && d) setTimeout(() => pop(bx, 26, `합계 −${d}`, `dmg sum ${tier} ${mine ? 'me' : 'fr'}`, mine ? 1100 : 700), 120);
-      if (d) { bossPose = 'hit'; setTimeout(() => (bossPose = S.end?.win ? 'down' : 'idle'), 420); burstBits(isSk || crit ? 2 : 1); if (isSk || crit) bossReel(); }
+      if (d) { bossPose = 'hit'; setTimeout(() => (bossPose = S.end?.win ? 'down' : 'idle'), 420); burstBits(isSk || crit ? 2 : 1); if (isSk || crit || wkFam) bossReel(wkFam); }
+      if (d && wkFam) { pop(bx, 18, '약점!', `weakbig ${mine ? 'me' : 'fr'}`, mine ? 1000 : 700); const t = Date.now(); weakFx = { fam: h.s.fam, n: t }; setTimeout(() => { if (weakFx?.n === t) weakFx = null; }, 650); }
       if (ult && stageEl && bossEl) void ultBlast(stageEl, bossEl, fk);
     };
     const box = heroEls[e.who];
@@ -319,7 +335,8 @@
     for (let i = 0; i < n; i++) { const el = document.createElement('i'); el.className = 'atb-bit'; const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 50; el.style.cssText = `left:${cx}px;top:${cy}px;background:${P.c};border-radius:${P.r};--dx:${Math.cos(a) * v}px;--dy:${Math.sin(a) * v - 20}px;--rot:${Math.round(Math.random() * 360)}deg`; st.appendChild(el); setTimeout(() => el.remove(), 420); }
   }
   /** 👹 큰 공격 = 보스가 뒤로 더 밀리며 비틀 (기울기 −6° → 0 · 📜 요청 #38 ④) */
-  function bossReel() { bossEl?.animate?.([{ translate: '0 0', rotate: '0deg' }, { translate: `${Math.round(Wd * 0.03)}px 0`, rotate: '-6deg', offset: 0.3 }, { translate: '0 0', rotate: '0deg' }], { duration: 480, easing: 'ease-out' }); }
+  let weakFx = $state<{ fam: Fam; n: number } | null>(null);
+  function bossReel(strong = false) { const k = strong ? 2 : 1; bossEl?.animate?.([{ translate: '0 0', rotate: '0deg' }, { translate: `${Math.round(Wd * 0.03 * k)}px 0`, rotate: `${-6 * k}deg`, offset: 0.3 }, { translate: '0 0', rotate: '0deg' }], { duration: 480 + 120 * (k - 1), easing: 'ease-out' }); }
   // 🪨 체력 75 · 50 · 25% 를 넘는 순간 = 크게 휘청 + 「쿵」 + 몸에 금 한 단계 (📜 요청 #38 ⑤ · 금 = 보스 몸 모양 안에서만 · 분노보다 먼저)
   let crackLv = $state(0), lastRatio = 1;
   $effect(() => { const r = S.bossMax ? S.bossHp / S.bossMax : 1; untrack(() => { const lv = r <= 0.25 ? 3 : r <= 0.5 ? 2 : r <= 0.75 ? 1 : 0; if (lv > crackLv && r < lastRatio) { crackLv = lv; bossEl?.animate?.([{ translate: '0 0', rotate: '0deg' }, { translate: `${Math.round(Wd * 0.02)}px 4px`, rotate: '-4deg', offset: 0.25 }, { translate: `-${Math.round(Wd * 0.01)}px 0`, rotate: '3deg', offset: 0.6 }, { translate: '0 0', rotate: '0deg' }], { duration: 500, easing: 'ease-out' }); sfx('dummy-hit', 0.8); shake(stageEl ?? null, 6, 300); } lastRatio = r; }); });
@@ -392,7 +409,7 @@
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); const n = Date.now(); revFx = { from: S.revives + 1, to: S.revives, n }; setTimeout(() => { if (revFx?.n === n) revFx = null; }, 1600); } // 📜 요청 #24 ⑤ 평소 숨김 · 쓸 때만 💖 깨지며 3 → 2
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); auraOn = true; sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
-    else if (e.k === 'react') { if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who === me) big(t, 'note', 1100); sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; if (e.who === me) { eyeCut(e.who, col, EN, KO); slowmo(400); sfx('block', 1); } else pop(posOf(e.who).x, posOf(e.who).y - 40, `${name(e.who)} ${EN}`, 'role'); } /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
       { const bm = bossMid(), W2 = Math.round(bossSize * 0.7), FXN: Record<string, string> = { pierce: 'st-pierce', burn: 'st-burn', freeze: 'st-freeze', expose: 'st-weak', shock: 'st-shock', curse: 'st-curse' }; if (FXN[e.fx] && !e.tick) spawnFx(FXN[e.fx]!, bm.x, bm.y, W2, e.fx === 'pierce' ? 520 : 800); if (e.fx === 'bless' && e.to != null) { const m = heroMid(e.to); spawnFx('st-bless', m.x, m.y, 90, 800); } if (e.fx === 'gust') { const m = heroMid(e.who); spawnFx('st-wind', m.x, m.y, 90, 800); } } // 🎨 그림 = 덧효과 조각
@@ -491,7 +508,7 @@
   (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
 
-<div class="stage" class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<div class="stage" class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -501,11 +518,19 @@
     {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
   </div>
   {#if revFx}<div class="revfx" role="status" data-k="atb-revfx"><span class="hb">💔</span><b>💖 {revFx.from} → {revFx.to}</b></div>{/if}
-  {#if reactNow && meH}<div class="reactb" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
+  {#if reactNow && meH}<div class="reactb mini" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
   {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 큰 힐로 가장 다친 친구</div>
   {:else if tg && tgLine}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}{#if !hasRole(REACT[tg.cls])} · (팀에 {ROLE_KO[REACT[tg.cls]]} 없음){/if}</div>{/if}
   {#if edge}<i class="hedge lv{edge}" class:beat={edge === 3} aria-hidden="true" data-k="atb-hedge" data-lv={edge}>{#key beatN}<i class="bt"></i>{/key}</i>{/if}
   {#if hflash}{#key hflash.n}<i class="hflash" style:--a={hflash.a} aria-hidden="true" data-k="atb-hflash"></i>{/key}{/if}
+  <!-- 🎯 📜 요청 #50 카운터 단추 (카드 위 가운데 · 남은 예고 고리) · ⚡ 0 = 작은 띠 -->
+  {#if reactNow && meH}<button type="button" class="ctr" style:--rc={ROLE_COL[meH.s.role]} data-k="atb-counter" onclick={() => fire('role')}><svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" class="trk" /><circle cx="50" cy="50" r="46" class="rem" style:stroke-dashoffset={(289 * (1 - ringK)).toFixed(1)} /></svg><b>{CTR_TXT[meH.s.role]}</b><small>⚡1 · 바로</small></button>
+  {:else if roleTg && meH && meH.ch < 1}<div class="ctrno" role="status" data-k="atb-counter-noch">⚡ 이 없어요 · 문제를 풀어요</div>{/if}
+  {#if mis}<div class="mis" class:done={mis.done} data-k="atb-mission">{mis.done ? '✔ 임무 완수!' : `${mis.ic} 임무 ${mis.txt} ${mis.got}/${mis.need}`}</div>{/if}
+  <!-- 💥 속성 브레이크 = 실드 뜨면 2초 카드 위 → 카드 뒤 가운데 (요청 #50 🔁) -->
+  {#if brk && meH}<button type="button" class="brk" class:front={!!brkFront} class:off={!brkOk} style:--fc={FAM_COL[meH.s.fam]} data-k="atb-break" data-front={brkFront ? 1 : 0} onclick={() => { if (brkOk) fire('equip'); }}><FamShield fam={meH.s.fam} size={Math.round(40 * U)} /><b>💥 속성 브레이크</b><small>{brkOk ? '내 스킬 ⚡' + (T.cost.shield) + ' · 실드 깸' : meH.ch < T.cost.shield ? '⚡ 이 모자라요' : 'ATB 차는 중'}</small></button>{/if}
+  {#if eye}{#key eye.n}<div class="eye" style:--ec={eye.col} data-k="atb-eye" aria-live="polite">{#if portraitOf(S.heroes[eye.who]!.s.hero)}{@const pt = portraitOf(S.heroes[eye.who]!.s.hero)!}<i class="face" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}<i class="glint l"></i><i class="glint r"></i><b class="eyet" data-k="atb-eye-text">{eye.big}</b><small>{eye.small}</small></div>{/key}{/if}
+  {#if weakFx}{#key weakFx.n}<i class="wkfx" aria-hidden="true" style:left="{open ? 86 : 73}%"><FamShield fam={weakFx.fam} size={Math.round(64 * U)} /></i>{/key}{/if}
   {#if S.rage && !calmLeft && !S.end}<i class="ragedge" aria-hidden="true" data-k="atb-ragedge"></i>{/if}
   {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"><AtbFx name="rage-barrier" x="50%" y="50%" w={Math.round(Wd * 0.48)} h={Math.round(H * 0.58)} ms={900} z={1} /></i>{/if}
   {#each fxs as f (f.id)}<AtbFx name={f.name} x="{f.x}%" y="{f.y}%" w={f.w} loop={false} ms={f.ms} z={36} />{/each}
@@ -552,7 +577,7 @@
       {#if h.id === me && meAimed}<b class="aimme" role="alert" data-k="atb-aim-me">⚠ 나를 노려요!</b>{/if}
       <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
       <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}</span></div>
-      <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
+      <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:famflash={h.id === me && !!famFlash} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
         <b><FamShield fam={h.s.fam} size={14} /> Lv.{h.s.lv} {name(h.id)} <AtbIcon name={ROLE_ICON[h.s.role]} size={12} /></b>
         <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
       </div>
@@ -577,7 +602,7 @@
       {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
       {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       <div class="skw">
-        <button type="button" class="b skb" class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
+        <button type="button" class="b skb" class:brkglow={brk && open && !brkFront} style:--fc2={meH ? FAM_COL[meH.s.fam] : undefined} class:react={reactNow} style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
         {#if fullMsg}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
@@ -845,6 +870,35 @@
   .stx span + span { animation-delay: -0.8s; }
   @keyframes storb { 0% { transform: translateX(-20px) scale(0.8); } 25% { transform: translateX(0) scale(1.1); } 50% { transform: translateX(20px) scale(0.8); } 75% { transform: translateX(0) scale(0.6); opacity: 0.6; } 100% { transform: translateX(-20px) scale(0.8); } }
   @media (prefers-reduced-motion: reduce) { .stx span { animation: none; } .stx span + span { display: none; } }
+  /* 🎯 📜 요청 #50 카운터 단추 · 임무 · 속성 브레이크 · 눈빛 컷인 · 슬로 모션 · 약점 크게 */
+  .reactb.mini { padding: 3px 12px; font-size: clamp(11px, 3.4vh, 15px); border-width: 2px; animation: none; }
+  .ctr { position: absolute; z-index: 60; left: 50%; top: 46%; translate: -50% -50%; width: calc(132px * var(--u)); height: calc(132px * var(--u)); border-radius: 50%; border: 4px solid #fff; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--rc) 70%, #fff), var(--rc) 60%, color-mix(in srgb, var(--rc) 60%, #000)); color: #fff; display: grid; place-items: center; align-content: center; gap: 2px; box-shadow: 0 0 30px var(--rc), 0 6px 0 #0006; animation: ctrpop 0.25s ease-out, ctrpulse 0.6s ease-in-out 0.25s infinite; cursor: pointer; }
+  .ctr svg { position: absolute; inset: -10px; width: calc(100% + 20px); height: calc(100% + 20px); rotate: -90deg; pointer-events: none; }
+  .ctr .trk { fill: none; stroke: #0005; stroke-width: 6; } .ctr .rem { fill: none; stroke: #fff; stroke-width: 6; stroke-dasharray: 289; stroke-linecap: round; transition: stroke-dashoffset 0.12s linear; }
+  .ctr b { font: 900 calc(24px * var(--u)) var(--font); text-shadow: 0 2px 0 #0008; } .ctr small { font: 800 calc(12px * var(--u)) var(--font-plain); opacity: 0.9; }
+  @keyframes ctrpop { from { scale: 0.3; } 70% { scale: 1.1; } to { scale: 1; } } @keyframes ctrpulse { 50% { scale: 1.06; } }
+  .ctrno { position: absolute; z-index: 60; left: 50%; top: 12%; translate: -50% 0; padding: 4px 14px; border-radius: 12px; background: #2a2a34e6; border: 2px solid #8a8a96; color: #e0e0ea; font: 800 13px var(--font); pointer-events: none; }
+  .mis { position: absolute; z-index: 30; left: 1%; top: 1.5%; padding: 2px 10px; border-radius: 10px; background: #1a1424cc; border: 1px solid #ffffff44; font: 800 12px var(--font); pointer-events: none; }
+  .mis.done { background: linear-gradient(#4ad07a, #1e8a44); border-color: #c8ffd8; animation: ctrpop 0.3s ease-out; }
+  .brk { position: absolute; z-index: 25; left: 50%; top: 44%; translate: -50% -50%; display: grid; justify-items: center; gap: 2px; padding: 10px 22px; border-radius: 18px; border: 3px solid var(--fc); background: linear-gradient(#2a1a3aee, #120a1aee); color: #fff; box-shadow: 0 0 24px var(--fc); cursor: pointer; }
+  .brk.front { z-index: 60; animation: ctrpop 0.3s ease-out, brkflash 0.5s steps(2) 4; }
+  .brk b { font: 900 calc(22px * var(--u)) var(--font); color: var(--fc); text-shadow: 0 2px 0 #000; } .brk small { font: 800 12px var(--font-plain); }
+  .brk.off { filter: grayscale(0.6) brightness(0.7); }
+  @keyframes brkflash { 50% { box-shadow: 0 0 50px 10px var(--fc); } }
+  .b.skb.brkglow { box-shadow: 0 0 18px 4px var(--fc2), inset 0 0 0 2px var(--fc2); }
+  .hero .tag.famflash { animation: famfl 0.35s steps(2) 3; } @keyframes famfl { 50% { filter: drop-shadow(0 0 10px var(--fc)) brightness(1.6); } }
+  .eye { position: absolute; z-index: 70; left: 0; right: 0; top: 30%; height: 26%; pointer-events: none; overflow: hidden; background: linear-gradient(90deg, #000c, #000e 50%, #000c); border-block: 3px solid var(--ec); animation: eyein 0.7s ease-out forwards; }
+  .eye .face { position: absolute; left: 36%; top: 50%; width: 30%; aspect-ratio: 1; translate: -50% -50%; image-rendering: pixelated; filter: contrast(1.2); } /* 얼굴 = 눈 줄이 띠 가운데 */
+  .eye .glint { position: absolute; top: 46%; width: 10%; aspect-ratio: 3; translate: -50% -50%; border-radius: 50%; background: radial-gradient(closest-side, #fff, var(--ec) 45%, #0000); mix-blend-mode: screen; animation: glint 0.7s ease-out; } .eye .glint.l { left: 32%; } .eye .glint.r { left: 40%; }
+  .eye .eyet { position: absolute; right: 3%; top: 50%; translate: 0 -50%; font: 900 clamp(26px, 9vh, 48px) var(--font); color: var(--ec); -webkit-text-stroke: 3px #000; paint-order: stroke; text-shadow: 0 0 14px var(--ec); letter-spacing: 1px; animation: eyet 0.7s ease-out; }
+  .eye small { position: absolute; right: 5%; bottom: 8%; font: 800 14px var(--font); color: #fff; }
+  @keyframes eyein { 0% { clip-path: inset(50% 0); } 15% { clip-path: inset(0 0); } 85% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes glint { 0%, 30% { opacity: 0; scale: 0.4; } 45% { opacity: 1; scale: 1.6; } 100% { opacity: 0; } }
+  @keyframes eyet { from { translate: 30% -50%; opacity: 0; } 25% { translate: 0 -50%; opacity: 1; } }
+  .stage.slowmo { filter: saturate(1.4) contrast(1.15); } .stage.slowmo .hero, .stage.slowmo .boss { transition-duration: 1.2s; }
+  .pop.weakbig { font-size: 40px; color: #ff4a3a; -webkit-text-stroke: 2px #fff; paint-order: stroke; text-shadow: 0 0 12px #ff2a1a; }
+  .wkfx { position: absolute; z-index: 22; top: 34%; translate: -50% -50%; pointer-events: none; animation: wkfx 0.6s ease-out forwards; } @keyframes wkfx { from { scale: 0.4; opacity: 1; filter: brightness(2); } to { scale: 1.6; opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .ctr, .brk.front, .hero .tag.famflash, .eye .glint, .eye .eyet { animation: none; } }
   /* 💚 요청 #46 힐 = 초록 반짝 · 숫자 */
   .hero.healed .spr { filter: drop-shadow(0 0 8px #5aff8a) brightness(1.15); }
   .pop.heal { color: #7dff9a; text-shadow: 0 0 6px #0a5a1a, 0 2px 0 #000; }

@@ -40,7 +40,7 @@ export interface State {
   /** 👹 분노 (요청 #37): 들어감 · 진정 끝 시각 · 진정까지 모은 퍼펙트 · 다음에 낼 공격(특수) · 분노 뒤 공격 차례 */ /** ⚡ 넘침 자동 스킬 줄 (요청 #41) */ autoQ?: { who: number; at: number }[]; autoLast?: number;
   rage?: boolean; calmUntil?: number; ragePerf?: number; forceAtk?: AK | null; rageN?: number;
   /** 🛡 이번 예고된 공격을 반응 막기 한 용사 (📜 요청 #35 · 먼저 쓴 사람만) */ blocked?: { by: number; how: 'cover' | 'barrier' | 'cut' } | null;
-  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; downs: number; revives: number; lastAns: number[] };
+  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; /** 🎯 예고 종류별 횟수 · 30% 아래 친구가 생긴 적 (임무 기회 · 요청 #50) */ tele?: Record<AtkClass, number>; lowSeen?: boolean; downs: number; revives: number; lastAns: number[] };
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
@@ -111,9 +111,10 @@ export function tick(S: State, dt: number): State {
     if (A.special === 'scale') { const tiltN = rand(S) < SIG.scaleTilt; aoe = !tiltN; } // 기우는 저울: 기울면 단일 · 수평이면 광역
     S.nextAtk = kind; S.aoeNext = aoe; S.target = aoe ? live.map((h) => h.id) : [live[Math.floor(rand(S) * live.length)]!.id];
     if (A.special === 'scale' && !aoe) S.tilt = S.target[0]! % 2 ? 'R' : 'L';
+    { const c = atkClass(kind, aoe), tl = (S.rec.tele ??= { single: 0, aoe: 0, special: 0 }); tl[c]++; } // 🎯 임무 기회 셈 (요청 #50)
   }
   if (S.boss.sig === 'breath' && S.shieldUp && S.cells.some((c) => !c.broken)) { // 6 · 7 숨 고르기
-    if (S.breathWarn == null && S.t >= S.breathNext) { S.breathWarn = S.t; push(S, { k: 'sig', t: S.t, what: 'breathWarn' }); }
+    if (S.breathWarn == null && S.t >= S.breathNext) { S.breathWarn = S.t; (S.rec.tele ??= { single: 0, aoe: 0, special: 0 }).special++; push(S, { k: 'sig', t: S.t, what: 'breathWarn' }); }
     else if (S.breathWarn != null && S.t >= S.breathWarn + SIG.breath.warn) { const v = Math.round(S.bossMax * SIG.breath.heal); S.bossHp = Math.min(S.bossMax, S.bossHp + v); S.breathWarn = null; S.breathNext = S.t + SIG.breath.every; push(S, { k: 'sig', t: S.t, what: 'breathHeal', v }); }
   }
   if (S.bossT >= EV) bossAttack(S);
@@ -138,6 +139,7 @@ function bossAttack(S: State) {
     if (A.status === 'slow' && !noStatus) { h.slowUntil = S.t + T.slow[S.diff]; h.slowKind = kind; }
     if (A.status === 'stun' && !noStatus) { h.stunUntil = S.t + T.stun[S.diff]; h.stunKind = kind === 'sleep' ? 'sleep' : 'bind'; }
     if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who: id }); }
+    else if (h.hp < h.s.maxHp * T.role.healer.rescueAt) S.rec.lowSeen = true;
   }
   push(S, { k: 'boss', t: S.t, atk: A.name, kind, aoe, to: A.special === 'mirror' ? [] : hits, dmg });
   if (aoe && base > 0) push(S, { k: 'sig', t: S.t, what: 'healNow' }); // 💚 광역 직후 = 힐러에게 「지금 힐!」
@@ -278,6 +280,13 @@ export function roleAct(S: State, who: number, to?: number): boolean {
   if (!tg) { h.ch += T.cost.role; return false; }
   tg.atb = 1; if (tg.stunUntil > S.t) { tg.stunUntil = 0; tg.stunKind = ''; push(S, { k: 'sig', t: S.t, what: 'unbind', who: tg.id }); } // 9 속박된 친구 = 격려로 바로 풀림
   h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
+}
+/** 🎯 역할 임무 (📜 요청 #50 · 판마다 · 보여 주기만 · 💎 없음): 탱커 막기 2 · 딜러 끊기 1 · 서포터 결계 1 · 힐러 구조 1 · 그 판에 기회(그 종류 예고 · 30% 아래 친구)가 없으면 chance = false */
+export const MISSION: Record<Role, { need: number; txt: string; ic: string }> = { tank: { need: 2, txt: '막기', ic: '🛡' }, dealer: { need: 1, txt: '끊기', ic: '⚔' }, support: { need: 1, txt: '결계', ic: '🎵' }, healer: { need: 1, txt: '구조', ic: '💚' } };
+export function missionOf(S: State, who: number): { need: number; got: number; done: boolean; chance: boolean; txt: string; ic: string } {
+  const h = S.heroes[who]!, M = MISSION[h.s.role], got = h.s.role === 'healer' ? (h.log.rescues ?? 0) : (h.log.blocks ?? 0), tl = S.rec.tele;
+  const chance = h.s.role === 'healer' ? !!S.rec.lowSeen : (tl?.[h.s.role === 'tank' ? 'single' : h.s.role === 'support' ? 'aoe' : 'special'] ?? 0) > 0;
+  return { need: M.need, got: Math.min(got, M.need), done: got >= M.need, chance: chance || got > 0, txt: M.txt, ic: M.ic };
 }
 // ── 🛡 반응 막기 (📜 요청 #35) ──
 /** 지금 예고된 공격의 종류 (예고 없으면 null) · 숨 고르기 예고 = 특수 */

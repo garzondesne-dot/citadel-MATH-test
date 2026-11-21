@@ -6,7 +6,7 @@
   //   💎 = 맞힌 소문항(최대 12) · 클리어 +4 · 🛡 수호 보너스 = 친구를 지킨 행동(엄호 · 힐 · 부활 · 실드 칸) 1번에 +1 · 최대 +3 · 연습방 = 예상 보상
   //   🏅 숙련 = 그 차시 게시판 던전 이긴 판 1 · 3 · 5 → 빨강 · 은 · 금 (보여 주기만 · 연습방 판은 안 셈)
   import HeroSprite from '../../camp/HeroSprite.svelte';
-  import type { State } from '../../../board/atb/engine';
+  import { missionOf, type State } from '../../../board/atb/engine';
   import { onMount } from 'svelte';
   import { sfx } from '../../sound.svelte';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -26,7 +26,7 @@
   const STEPS = [1, 3, 5] as const, MEDAL = ['red', 'silver', 'gold'] as const;
   const nextStep = $derived(STEPS.find((s) => mastery < s) ?? 5);
   // 🏅 내 활약 자세히 (요청 #24 ⑦ 내용 그대로 · 줄이지 않음)
-  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; return [g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.blocks && `🛡 막기 ${g.blocks}번`, g.rescues && `💚 구조 ${g.rescues}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
+  const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; const M = missionOf(S, me); return [`🎯 임무 ${M.txt} ${M.done ? `${M.got}/${M.need} ✔ 완수` : M.chance ? `${M.got}/${M.need}` : '— (기회 없음)'}`, g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.blocks && `🛡 막기 ${g.blocks}번`, g.rescues && `💚 구조 ${g.rescues}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
   /** 용사 칸 = 대표 활약 한 줄 (실드 → 퍼펙트 → 힐 → 엄호 → 부활 → 격려 → 각성 → 피해) */
   const top = (h: State['heroes'][number]): { ic: 'shield' | 'sparkle' | ''; t: string } => {
     const g = h.log;
@@ -59,7 +59,7 @@
         {@const d = top(h)}
         <div class="hp">
           <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win ? 0 : 8} play={win} /></span></span>
-          <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">
+          <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">{#if missionOf(S, h.id).done}<i class="mdone" data-k="atb-res-mission" title="임무 완수">✔</i>{/if}
             <i class="face">{#if pt}<i style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}</i>
             <span class="st"><b>{h.s.name}{h.id === me ? '(나)' : ''}</b><small>{#if d.ic}<img src={R(d.ic === 'shield' ? 'res-ic-shield-broken' : 'res-ic-sparkle')} alt="" />{/if}{d.t}</small></span>
           </div>
@@ -126,4 +126,5 @@
   .b { display: flex; align-items: center; justify-content: center; gap: 8px; height: clamp(46px, 14cqh, 64px); border: none; background: center / 100% 100% no-repeat; color: #fff2d6; font: 900 clamp(15px, 5cqh, 24px) var(--font); text-shadow: 0 2px 0 #000a; }
   .b img { height: 62%; } .b.gold { color: #2a1600; text-shadow: 0 1px 0 #fff8; }
   @media (prefers-reduced-motion: reduce) { .star.on { animation: none; } }
+  .slot { position: relative; } .mdone { position: absolute; right: 2px; top: 2px; z-index: 3; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: #2faa5a; color: #fff; font: 900 12px var(--font); font-style: normal; box-shadow: 0 0 6px #7dff9a; } /* 🎯 임무 완수 (요청 #50) */
 </style>

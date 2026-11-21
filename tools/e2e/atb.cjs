@@ -282,6 +282,29 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch); await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(500);
     seen = await p.evaluate(() => globalThis.__slow); const ch1 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
     ok('요청 #49 두 번 틀리고 맞힘 = ⚡ 0 · 「💤 다음 문제는 천천히!」', ch1 === ch0 && /천천히/.test(seen), JSON.stringify({ ch0, ch1, seen })); }
+  // 🎯 요청 #50 A 카운터 단추(카드 위 가운데) · ⚡ 0 = 작은 띠 · 임무 · 성공 = 눈빛 컷인 「GUARD!」
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'tank'; h.ch = 0; h.atb = 0; S.nextAtk = 'ice'; S.aoeNext = false; S.target = [1]; S.bossT = a.every() - 3.5; }); await p.waitForTimeout(250);
+  { const noch = !!(await p.$('[data-k="atb-counter-noch"]')); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 1; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(500);
+    const top = await p.evaluate(() => { const c = document.querySelector('[data-k="atb-counter"]'); if (!c) return 'none'; const r = c.getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return c.contains(el) ? 'top' : 'covered'; });
+    const mis = await p.textContent('[data-k="atb-mission"]').catch(() => '');
+    await p.screenshot({ path: `${SHOTS}/atb-r50-counter-844.png` });
+    await p.click('[data-k="atb-counter"]', { force: true }); await p.waitForTimeout(200);
+    const r = await p.evaluate(() => ({ b: globalThis.__atb.S.blocked?.how, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', gone: !document.querySelector('[data-k="atb-counter"]') }));
+    ok('요청 #50 카운터 = ⚡0 작은 띠 → ⚡1 = 카드 위 가운데 단추 · 누르면 막음 · 눈빛 「GUARD!」 · 임무 표시', noch && top === 'top' && r.b === 'cover' && /GUARD/.test(r.eye) && r.gone && /임무/.test(mis), JSON.stringify({ noch, top, mis, ...r }));
+    await p.evaluate(() => globalThis.__atb.close()); }
+  // 💥 요청 #50 B 속성 브레이크 = 2초 카드 위 → 카드 뒤 · 누르면 내 칸 깸 · 「SHIELD BREAK!」 + 슬로 모션
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; S.boss.weak = [h.s.fam]; h.ch = 0; h.atb = 0; S.shieldUp = true; S.cells = S.heroes.map((x) => ({ owner: x.id, fam: x.s.fam, broken: false })); }); await p.waitForTimeout(300);
+  { const f0 = await p.$eval('[data-k="atb-break"]', (e) => e.dataset.front).catch(() => ''); await p.screenshot({ path: `${SHOTS}/atb-r50-break-844.png` }); await p.waitForTimeout(2100);
+    const f1 = await p.$eval('[data-k="atb-break"]', (e) => e.dataset.front).catch(() => '');
+    await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(500);
+    const cov = await p.evaluate(() => { const c = document.querySelector('[data-k="atb-break"]'); const r = c.getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !c.contains(el); });
+    await p.evaluate(() => globalThis.__atb.close()); await p.waitForTimeout(300); await p.evaluate(() => { const h = globalThis.__atb.S.heroes[0]; h.ch = 1; h.atb = 1; }); await p.waitForTimeout(200);
+    await p.click('[data-k="atb-break"]'); await p.waitForTimeout(250);
+    const r = await p.evaluate(() => ({ cell: globalThis.__atb.S.cells.find((c) => c.owner === 0)?.broken, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', slow: document.querySelector('[data-k="atb-stage"]').classList.contains('slowmo') }));
+    await p.screenshot({ path: `${SHOTS}/atb-r50-shieldbreak-844.png` });
+    ok('요청 #50 속성 브레이크 = 처음 2초 카드 위 → 뒤(카드에 가려짐) · 누르면 내 칸 깸 · 「SHIELD BREAK!」 · 슬로 모션', f0 === '1' && f1 === '0' && cov && r.cell === true && /SHIELD BREAK/.test(r.eye) && r.slow, JSON.stringify({ f0, f1, cov, ...r })); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
