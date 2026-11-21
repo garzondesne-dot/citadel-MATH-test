@@ -30,17 +30,17 @@ describe('ATB 엔진', () => {
     full(S, 0); attack(S, 0, 'ok'); const a = S.bossMax - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
     full(S, 0); attack(S, 0, 'crit'); expect(S.heroes[0]!.atb).toBeCloseTo(0.2);
   });
-  it('⚡ 충전 (Y1) = 원문항을 통째로 끝내야 · 퍼펙트 2 · 재시도 1 · 최대 3 · 소문항 정답만으론 0', () => {
+  it('⚡ 충전 (Y1) = 원문항을 통째로 끝내야 · 퍼펙트 3 · 재시도 2 · 최대 4 · 소문항 정답만으론 0', () => {
     const S = fresh(), h = S.heroes[0]!; expect(h.ch).toBe(T.chargeStart); h.ch = 0; // 📜 요청 #6 ③ 판 시작 = 1칸
     earn(S, 0, right); expect(h.ch).toBe(0);
-    earn(S, 0, doneP); expect(h.ch).toBe(T.charge.perfect); earn(S, 0, doneR); expect(h.ch).toBe(3); earn(S, 0, doneP); expect(h.ch).toBe(T.charge.max);
+    earn(S, 0, doneP); expect(h.ch).toBe(T.charge.perfect); earn(S, 0, doneR); expect(h.ch).toBe(Math.min(T.charge.max, T.charge.perfect + T.charge.retry)); earn(S, 0, doneP); expect(h.ch).toBe(T.charge.max);
   });
   it('⚡ 가득인데 또 끝냄 = 넘친 충전으로 장착 스킬 자동 (요청 #13 · 충전 · ATB 그대로 · 4레벨 · 각성은 자동 안 됨)', () => {
     const S = fresh(), h = S.heroes[0]!; h.ch = T.charge.max; h.atb = 0.2; const hp = S.bossHp;
     earn(S, 0, doneR); const e = S.ev.at(-1) as { k: string; kind: string; auto?: boolean; dmg: number };
     expect([e.k, e.kind, e.auto, h.ch, h.atb]).toEqual(['skill', 'equip', true, T.charge.max, 0.2]); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * h.s.skillMul));
-    h.ch = 2; const n0 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n0).some((x) => x.k === 'skill')).toBe(true); // 2칸 + 재시도 2 = 1칸 넘침 · 장착 비용 1 = 자동
-    h.ch = 1; const n1 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(3); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
+    h.ch = T.charge.max - 1; const n0 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n0).some((x) => x.k === 'skill')).toBe(true); // 가득 − 1 + 재시도 2 = 1칸 넘침 · 장착 비용 1 = 자동 (📜 요청 #34 최대 4)
+    h.ch = T.charge.max - 2; const n1 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
   });
   it('⚡ 스킬 (요청 #19): ⚡ 내 스킬 · 역할 · 🌟 비장(각성이면 각성 · 아니면 +10 홀리 방패) · 비용 1 · 1 · 3(2) · 피해 비 1 · 3.8', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;

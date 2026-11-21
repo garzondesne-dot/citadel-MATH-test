@@ -661,7 +661,7 @@
   .b.skb { width: 100%; height: 100%; min-height: 0; flex-direction: column; gap: 2px; border-color: #8fd0ff; background: linear-gradient(#3a6ac8, #16285a); font-size: calc(17px * var(--u)); }
   .b.skb.hot { box-shadow: 0 0 16px #8fe0ff, 0 3px 0 #0a1430; animation: glow 1.1s ease-in-out infinite; } .b.skb.on { filter: brightness(1.2); }
   .orbs { display: flex; gap: 1px; padding: 0 6px; border-radius: 8px; background: #0006; } .orbs i { font-style: normal; font-size: calc(14px * var(--u)); filter: grayscale(1) brightness(0.55); } .orbs i.on { filter: drop-shadow(0 0 4px #ffd34d); }
-  .ring.skm { position: absolute; right: 0; bottom: calc(100% + 8px); width: max-content; max-width: 76vw; flex-direction: row; gap: 6px; padding: 8px; border-radius: 14px; border: 2px solid #8fd0ff; background: #0d1830f0; visibility: hidden; opacity: 0; transform: translateY(8px); transition: opacity 0.15s, transform 0.15s; z-index: 32; }
+  .ring.skm { position: absolute; right: 0; bottom: calc(100% + 8px); width: max-content; max-width: none; flex-direction: row; gap: 6px; padding: 8px; border-radius: 14px; border: 2px solid #8fd0ff; background: #0d1830f0; visibility: hidden; opacity: 0; transform: translateY(8px); transition: opacity 0.15s, transform 0.15s; z-index: 32; }
   .ring.skm.open { visibility: visible; opacity: 1; transform: none; }
   .ring.skm .sk2 { flex: 0 0 calc(124px * var(--u)); height: calc(64px * var(--u)); }
   .btns.v2.full3 .b.skb .orbs i.on { animation: pipglow 0.7s ease-in-out infinite; }

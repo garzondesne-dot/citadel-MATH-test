@@ -40,9 +40,9 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   for (let i = 0; i < 40 && !(await p.$('[data-k="atb-grade"]')); i++) { await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150); } await p.waitForSelector('[data-k="atb-grade"]', { timeout: 5000 }); // 판마다 원문항 순서가 섞여 소문항이 많은 칸(최대 8)이 나올 수 있음 · 맞음 잠금이면 다음 번에
   ok('Y8 원문항 끝 = 채점 ○ × 차례로', (await p.$$eval('[data-k="atb-grade"] .mk', (x) => x.length)) >= 1);
   await p.waitForTimeout(500); await p.screenshot({ path: `${SHOTS}/atb-grade-844.png` });
-  ok('Y1 퍼펙트 = 충전 3(가득 · 요청 #5)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(3, ch0 + 3));
-  ok('요청 #10 채점 = 「🏁 퍼펙트! ⚡+3」 · ○ △ · 넘치면 「가득(+n 받음)」', /퍼펙트! ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 3 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
-  ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 3 그대로)', ch0 + 3 <= 3 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0))));
+  ok('Y1 퍼펙트 = 충전 +3 (최대 4 · 요청 #34)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(4, ch0 + 3));
+  ok('요청 #10 채점 = 「🏁 퍼펙트! ⚡+3」 · ○ △ · 넘치면 「가득(+n 받음)」', /퍼펙트! ⚡\+3/.test(await p.textContent('[data-k="atb-grade-title"]')) && (ch0 + 3 <= 4 || /가득\(\+\d 받음\)/.test(await p.textContent('[data-k="atb-grade"]'))));
+  ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 4 그대로)', ch0 + 3 <= 4 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0))));
   await p.dispatchEvent('[data-k="atb-grade"]', 'click', {}, { timeout: 1000 }).catch(() => {}); await p.waitForTimeout(150); // 도장 연출로 움직이는 중에도 누름(움직임 기다리지 않음)
   ok('요청 #13 충전 가득 = 공격 단추 동그라미 · 스킬 빛(full3)', !!(await p.$('.btns.full3')));
   ok('Y8 누르면 건너뜀 → 에너지 구슬이 충전 칸으로', !(await p.$('[data-k="atb-grade"]')) && !!(await p.$('.atb-orb')));
@@ -180,7 +180,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const seq = []; for (let i = 0; i < 14; i++) { seq.push(await p.$$eval('[data-k="atb-orbs"] i.on', (x) => x.length)); if (i === 3) await p.screenshot({ path: `${SHOTS}/atb-r31-fly-844.png` }); await p.waitForTimeout(110); }
   const chE = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   ok('요청 #31 ② 구슬 = 날아가 닿을 때마다 단추 구슬 한 칸씩 켜짐(한꺼번에 아님)', new Set(seq).size >= 2 && seq[seq.length - 1] === chE && seq[0] < chE, `${seq.join('')} → ${chE}`);
-  await closeQ(p); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 3; }); await p.waitForTimeout(250);
+  await closeQ(p); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 4; }); await p.waitForTimeout(250);
   ok('요청 #31 ④ 가득 = 스킬 단추 빛 고리 + 「스킬 쓸 수 있어요!」 한 번', !!(await p.$('[data-k="atb-fullring"]')) && /스킬 쓸 수 있어요/.test(await p.textContent('[data-k="atb-fullmsg"]').catch(() => '')));
   await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; globalThis.__atb.full(); }); await p.waitForTimeout(150); await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(250);
   ok('요청 #31 ⑤ 스킬 메뉴 = 필요한 ⚡ 홈 + 「⚡ n개 더 풀면」', /⚡ 1개 더 풀면/.test(await p.textContent('[data-k="atb-cost-equip"]').catch(() => '')));
