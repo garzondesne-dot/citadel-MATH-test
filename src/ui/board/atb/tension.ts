@@ -2,8 +2,8 @@
 import { synth } from '../../sound.svelte';
 import type { AtkClass } from '../../../board/atb/tune';
 
-/** 남은 체력 → 가장자리 붉은 기운 단계 (0 = 없음 · 1 = 70% 아래 옅게 · 2 = 50% 중간 · 3 = 30% 아래 맥박(📜 #75) · 4 = 15% 아래 맥박 진하게) */
-export const edgeLv = (ratio: number): 0 | 1 | 2 | 3 | 4 => (ratio < 0.15 ? 4 : ratio < 0.3 ? 3 : ratio < 0.5 ? 2 : ratio < 0.7 ? 1 : 0);
+/** 남은 체력 → 가장자리 붉은 기운 단계 (0 = 없음 · 3 = 30% 아래 맥박(📜 #75) · 4 = 15% 아래 맥박 진하게 · 📜 #79 ① 70% · 50% 단계 없앰) */
+export const edgeLv = (ratio: number): 0 | 3 | 4 => (ratio < 0.15 ? 4 : ratio < 0.3 ? 3 : 0);
 /** 맞을 때 번쩍 진하기 = 받은 피해 비율 (최대 체력 대비) · 0.35 ~ 1 */
 export const flashA = (dmg: number, maxHp: number): number => Math.max(0.35, Math.min(1, 0.35 + (dmg / Math.max(1, maxHp)) * 2.6));
 /** 심장 박동 간격(초) · 진동 = 짧게 2번 */

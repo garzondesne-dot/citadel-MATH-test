@@ -231,7 +231,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.evaluate(() => { const h = globalThis.__atb.S.heroes[0]; h.hp = Math.round(h.s.maxHp * 0.45); }); await p.waitForTimeout(200); const l2 = await p.$eval('[data-k="atb-hedge"]', (e) => e.dataset.lv).catch(() => '');
     await p.evaluate(() => { globalThis.__sfxLog.length = 0; const h = globalThis.__atb.S.heroes[0]; h.hp = Math.round(h.s.maxHp * 0.25); }); await p.waitForTimeout(3300);
     const r = await p.evaluate(() => ({ lv: document.querySelector('[data-k="atb-hedge"]')?.dataset.lv, beat: globalThis.__sfxLog.filter((x) => x === 'heartbeat').length, buzz: globalThis.__vib.filter((x) => Array.isArray(x) && x.length === 3 && x[0] === 40).length }));
-    ok('요청 #39 가장자리 = 70% 아래 1 · 50% 아래 2 · 30% 아래 3 + 3초마다 쿵-쿵 · 진동 2번', l1 === '1' && l2 === '2' && r.lv === '3' && r.beat === 2 && r.buzz === 2, JSON.stringify({ l1, l2, ...r }));
+    ok('요청 #39 · #79 가장자리 = 70% · 50% 단계 없음 · 30% 아래 3 + 3초마다 쿵-쿵 · 진동 2번', l1 === '' && l2 === '' && r.lv === '3' && r.beat === 2 && r.buzz === 2, JSON.stringify({ l1, l2, ...r }));
     await p.evaluate(() => globalThis.__atb.flash(30)); await p.waitForTimeout(60);
     const fa = await p.$eval('[data-k="atb-hflash"]', (e) => parseFloat(e.style.getPropertyValue('--a'))).catch(() => 0);
     ok('요청 #39 맞음 = 가장자리 붉게 번쩍 · 진하기 = 받은 피해 비율', fa > 0.35 && fa <= 1, String(fa)); }
