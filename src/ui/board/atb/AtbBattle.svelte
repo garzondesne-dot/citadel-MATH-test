@@ -162,6 +162,10 @@
   function tone(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5, 1318.5][Math.min(4, i)]!, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.24); }
   const firstTry: Record<string, boolean[]> = {};
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
+  // 💖 📜 요청 #88 팀 부활 0 = 「한 명만 쓰러져도 패배」 알림 (그 순간 큰 글 한 번 · 그 뒤 작은 빨간 칸 · 0.8초 맥박 = 번쩍 규칙 안)
+  const revZero = $derived(!S.end && S.heroes.length > 1 && S.revives <= 0);
+  let revZeroWas = untrack(() => S.revives <= 0);
+  $effect(() => { const z = revZero; untrack(() => { if (z && !revZeroWas) setTimeout(() => big('💖 팀 부활 0 · 이제 한 명만 쓰러져도 패배!', 'rage', 2400), 900); revZeroWas = z || S.revives <= 0; }); });
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
   let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
   /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
@@ -588,6 +592,7 @@
   <div class="tr"><button type="button" class="gear" data-k="atb-gear" aria-label="설정" aria-expanded={gearOpen} onclick={() => { gearOpen = !gearOpen; sfx('click', 0.4); }}>⚙</button>
     {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
   </div>
+  {#if revZero}<b class="rev0" role="status" data-k="atb-rev0">💖 0 · 한 명만 쓰러져도 패배</b>{/if}
   {#if revFx}<div class="revfx" role="status" data-k="atb-revfx"><span class="hb">💔</span><b>💖 {revFx.from} → {revFx.to}</b></div>{/if}
   {#if reactNow && meH}<div class="reactb mini" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
   {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 큰 힐로 가장 다친 친구</div>
@@ -1069,4 +1074,8 @@
   .ring.skm .sk2 .nm { text-shadow: none; } .ring.skm .sk2 .nm small { color: #6a4a20; } .ring.skm .sk2 .pv { color: #7a4e10; } .ring.skm .sk2 .pv.gold { color: #9a6a00; text-shadow: none; }
   .ring.skm .sk2.dis, .ring.skm .sk2:disabled { filter: grayscale(0.9); opacity: 0.55; }
   .ring.skm .sk2 .need1 { color: #8a4a0a; }
+  /* 💖 #88 팀 부활 0 = 위 가운데 작은 빨간 칸 · 0.8초 맥박(1초 3번 안) */
+  .rev0 { position: absolute; z-index: 30; left: 50%; top: 2%; transform: translateX(-50%); padding: 2px 12px; border-radius: 10px; background: #8e1010e6; border: 2px solid #ff6a5a; color: #fff; font: 800 13px var(--font-plain); white-space: nowrap; pointer-events: none; animation: rev0 0.8s ease-in-out infinite; }
+  @keyframes rev0 { 50% { background: #e8332ae6; box-shadow: 0 0 12px #ff3a2a; } }
+  @media (prefers-reduced-motion: reduce) { .rev0 { animation: none; } }
 </style>
