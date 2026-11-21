@@ -28,9 +28,12 @@
   import { josa } from '../../board/josa';
   import { resvDays, resvLabel } from '../../board/resv';
   import { RESV, resvWaiting } from '../../board/team';
-  import { isAwakened, ladder } from '../../model/hero';
+  import { HEROES, isAwakened, ladder } from '../../model/hero';
+  import HeroPick from './atb/HeroPick.svelte';
+  import { bossOf } from '../../board/atb/tune';
+  import { emptyPlan, ownsHero } from '../../model/draft';
   import { levelOf } from '../../school/reward';
-  import { tierOf } from '../../board/atb/heroes';
+  import { famOf, tierOf } from '../../board/atb/heroes';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import { sfx } from '../sound.svelte';
   import { clock } from '../clock.svelte';
@@ -88,6 +91,18 @@
   const lkB = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안 16) — 동료 · 게시글 · 달리기 화면
   // 🧙 #48 판에 들고 가는 내 용사 (ATB 메타 = 레벨 · 강화 · 장착 스킬 등급 · 각성) — 글 mem/{uid}/g
   const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(isAwakened(me as never) ? { awk: true } : {}) }; });
+  // 🧙 #93 게시판에서 용사 바꾸기 (📜 선생님 「추천대로」): 고른 차시 카드 → 손발 #2 HeroPick(교사 연습방 창) · 가진 용사만 · 보스 약점 「약점!」 · 고르면 캠프 출전 용사도(저장 한 곳 = me.hero)
+  //   팀 · 예약 글에 들어가 있으면 출발 전까지 글 mem/{uid} 의 용사 · 판 들고 갈 값(g)도 같이 · 교사 = 모두 · 체험판 = 체험 지갑 그대로
+  let pickHero = $state(false);
+  const pickNo = $derived(mine && mine.phase === 'wait' && mine.mem?.[uid] ? mine.no : sel?.no);
+  const heroIds = HEROES.map((h) => h.id);
+  const ownH = (id: number) => !cls || ownsHero(me.wallet, emptyPlan(), id);
+  function choseHero(id: number) {
+    pickHero = false; if (id === me.hero) return;
+    me.hero = id; save();
+    const p = mine; if (p && p.phase === 'wait' && p.mem?.[uid] && S.kind !== 'memory') { S.set(`${POSTS}/${p.pid}/mem/${uid}/hero`, meLookId(me)); S.set(`${POSTS}/${p.pid}/mem/${uid}/g`, growM); }
+    say(`🧙 ${heroOf(id).name} 출전!`);
+  }
   const meM = $derived({ uid, cls: cls || (S.kind === 'server' ? '선생님' : '이 기기'), num, nick: me.nick, hero: lkB, fame: fameNow(), g: growM });
   function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
   let sheet = $state<'' | 'solo' | 'post' | 'pin' | 'resv'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
@@ -302,6 +317,7 @@
       <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{#if fameLv(Number(m.fame) || 0)}<i class="badge sm" style="background-position:{fameLv(Number(m.fame) || 0)!.cell * 50}% 0" title={fameLv(Number(m.fame) || 0)!.name}></i>{/if}{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
+      {#if mine.phase === 'wait'}<div class="qhero" data-k="room-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(mine.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="room-hero" onclick={() => (pickHero = true)}>🧙 용사 바꾸기</button></div>{/if}
     </div>
     {#if host}
       <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) { if (tag(mine).length > 1) say('🤝 연합 원정대 출발! 공적은 각자 자기 깃발에.'); if (atbOnline(S, mine)) startAtb(S, L, mine); else startTeam(S, L, mine, 0); } }}
@@ -327,7 +343,7 @@
         </section>
         {@const openN = LESSONS.filter((p) => isOpen(p) && !(stars[p.no] ?? 0)).length}{#if openN}<p class="rift" data-k="board-rifts">🌀 아직 열려 있는 균열 {openN}곳</p>{/if}
         {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}
-          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}</div>
+          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}<div class="qhero" data-k="board-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(sel.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="board-hero" onclick={() => (pickHero = true)}>🧙 용사 바꾸기</button></div></div>
         {/if}
         {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
         {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
@@ -411,7 +427,9 @@
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}
 
+{#if pickHero && (pickNo ?? 0)}<HeroPick ids={heroIds} owned={ownH} boss={bossOf(pickNo ?? 0)} cur={me.hero} lv={growM.lv} enh={growM.enh} awk={!!growM.awk} tierOf={(id) => tierOf(id, me.socket?.[id] || (ladder(id)[0] as string | undefined))} fxOf={(id) => me.socket?.[id] || (ladder(id)[0] as string)} onpick={choseHero} onclose={() => (pickHero = false)} />{/if}
 <style>
+  .qhero { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .qhero span { flex: 1; font: 600 14px var(--font); color: var(--text); } .qhero .btn2.sm { min-height: 44px; }
   /* 🎯 #79 차시 정복 지도 · 오답 막대 · 명성 */
   .gmap { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: var(--r); background: var(--surface-2); }
   .mapw { position: relative; width: 100%; aspect-ratio: 1672 / 941; border-radius: 10px; overflow: hidden; }
