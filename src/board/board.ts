@@ -10,6 +10,18 @@ export const END_MS = 2000;
 export const GRADE: [string, number][] = [['S', 0.1], ['A', 0.25], ['B', 0.5]];
 /** 💎 (❓ #143-b 답 오기 전 = 손발 추천 A: 맞힌 소문제 × 1 (최대 12) + 시간 안 클리어 4 · 정식 레이드 solvedMax · clear) · 하루 한도 = 정식 DAY_CAP */
 export const GEM = { perItem: 1, itemMax: 12, clear: 4, dayCap: Infinity }; // 📜 2026-11-19 하루 한도 없앰(무제한) · wallet.day 기록은 그대로
+/** 📜 2026-11-21 선생님 「게시판만 하루 200」: 게시판 던전 판 💎(혼자 · 팀 · 예약 · 구조 합)만 한국 시각 하루 200 · 수업 · 허수아비 · 성채 · 우편 · 토벌 주간 상 = 한도 밖
+ *  쓴 양 = 그날 gem log 의 board_ · rescue_ · rescued_ 줄 합 (서버 원장 · 새 칸 없음) */
+export const BOARD_DAY = 200;
+const BOARD_LOG = (day: string) => [`board_${day}_`, `rescue_${day}_`, `rescued_${day}_`];
+export function boardDayUsed(log: Record<string, unknown> | null | undefined, day: string): number {
+  let n = 0; const pre = BOARD_LOG(day);
+  for (const [k, v] of Object.entries(log || {})) if (pre.some((p) => k.startsWith(p))) n += Number((v as { g?: number } | null)?.g) || 0;
+  return n;
+}
+/** 이번에 받을 수 있는 몫 (want 중 한도 안 · extra = 이번 판에서 이미 셈한 것) */
+export const boardTake = (log: Record<string, unknown> | null | undefined, day: string, want: number, extra = 0) => Math.max(0, Math.min(Math.floor(want), BOARD_DAY - boardDayUsed(log, day) - extra));
+export const BOARD_FULL = '오늘 받을 💎 는 다 받았어요 · 공적은 계속 쌓여요';
 /** 팀 배수 · 수호 보너스 · 도전자만 (확정안) */
 export const TEAM_X = [1, 1, 1.1, 1.2, 1.3];
 

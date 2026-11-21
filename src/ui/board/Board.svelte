@@ -10,7 +10,7 @@
   import { PACKS } from '../../engine/packs';
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
-  import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
+  import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry, BOARD_DAY, BOARD_FULL, boardDayUsed, boardTake } from '../../board/board';
   import { bonusOf, RESCUE, canJoin, canStart, createPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
@@ -150,7 +150,7 @@
     // 👋 팀 배수 = 끝날 때 남은 인원 · 끝까지 남은 사람만 💎 (나간 사람 = 맞힌 기록 · 📕 복습 완료 · 순위만) (📜 2026-11-14)
     const left = team ? r.stay === false : false, n = team ? Math.max(1, r.nEnd ?? membersOf(team).length) : 1, role: Role = team?.mem[uid]?.role ?? 'c', guard = team ? hasGuard(team) : false;
     const base = Math.min(GEM.itemMax, r.right * GEM.perItem) + (r.clear ? GEM.clear : 0), mult = TEAM_X[Math.max(1, Math.min(4, n))] ?? 1, bonus = bonusOf(role, n, guard, r.clear);
-    const total2 = left ? 0 : Math.round(base * mult * (1 + bonus)), got = earnDaily(me.wallet, total2, kstDay(S.now()), GEM.dayCap);
+    const total2 = left ? 0 : Math.round(base * mult * (1 + bonus)), bLog0 = (cls && num && S.get<Record<string, unknown>>(`gem/${cls}/${num}/log`)) || {}, got = earnDaily(me.wallet, boardTake(bLog0, kstDay(S.now()), total2), kstDay(S.now()), GEM.dayCap); // 📜 게시판 하루 200
     // 🤝 구조 보상 (📜 DECISIONS 2026-11-14): 수호자 💎 +5(하루 3번) · 도전자 💎 +3 · 하루 한도 안 · 서버 log = rescue_{날짜}_{n} · rescued_{날짜}_{n}
     let rescueGot = 0;
     if (!left && r.rescue && (r.rescue.g || r.rescue.c) && S.kind !== 'memory') {
@@ -158,8 +158,8 @@
       const usedG = Object.keys(log).filter((k) => k.startsWith(`rescue_${day}_`)).length, usedC = Object.keys(log).filter((k) => k.startsWith(`rescued_${day}_`)).length;
       const nG = Math.max(0, Math.min(r.rescue.g, RESCUE.perDay - usedG));
       const nFull = Math.min(nG, r.rescue.full ?? 0); // 🤝 완전 구조 = 그 구조에 +5 더 (하루 3번 안 · 같은 칸)
-      for (let i = 0; i < nG; i++) { const want = RESCUE.guard + (i < nFull ? RESCUE.guard : 0), g = earnDaily(me.wallet, want, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: i < nFull ? '🤝 완전 구조 (수호자)' : '🤝 구조 (수호자)' }); }
-      for (let i = 0; i < r.rescue.c; i++) { const g = earnDaily(me.wallet, RESCUE.chall, day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescued_${day}_${usedC + i}`, { g, at: S.now(), why: '🤝 구조 받음' }); }
+      for (let i = 0; i < nG; i++) { const want = RESCUE.guard + (i < nFull ? RESCUE.guard : 0), g = earnDaily(me.wallet, boardTake(S.get<Record<string, unknown>>(`${gp}/log`), day, want, got), day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescue_${day}_${usedG + i}`, { g, at: S.now(), why: i < nFull ? '🤝 완전 구조 (수호자)' : '🤝 구조 (수호자)' }); }
+      for (let i = 0; i < r.rescue.c; i++) { const g = earnDaily(me.wallet, boardTake(S.get<Record<string, unknown>>(`${gp}/log`), day, RESCUE.chall, got), day, GEM.dayCap); rescueGot += g; if (gp && g) S.set(`${gp}/log/rescued_${day}_${usedC + i}`, { g, at: S.now(), why: '🤝 구조 받음' }); }
     }
     if (got && cls && num && S.kind !== 'memory') S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); // 💰 #65 누적 받은 💎 (한도 안 · board_)
     if (got || rescueGot) save();
@@ -193,8 +193,9 @@
     const L = lessonOf(p.lesson);
     if (r && L && cls && num && !isBeta(S, cls)) { // 🧪 테스트 반 = 새 전투만 · 기록 · 💎 · 공적 없음 (#65-1)
       const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
-      if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } }
-      { const others = tag(p).filter((c) => c !== cls); if (r.win && others.length) say(`🤝 ${josa(knightOf(S, others[0]!).name, '과/와')} 함께 균열을 닫았다`); else if (sv.merit) say(`🚩 우리 기사단 +${sv.merit} 공적`); } // 📜 #70
+      let full = false;
+      if (payOn(S) && r.gemSum > 0) { const day = kstDay(S.now()), want = boardTake(S.get<Record<string, unknown>>(`gem/${cls}/${num}/log`), day, r.gemSum), got = want ? earnDaily(me.wallet, want, day, GEM.dayCap) : 0; full = got < r.gemSum; if (got) { S.set(`gem/${cls}/${num}/log/board_${day}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } } // 📜 게시판 하루 200 (넘친 몫 = 안 받음)
+      { const others = tag(p).filter((c) => c !== cls), tail = full ? ` · ${BOARD_FULL}` : ''; if (r.win && others.length) say(`🤝 ${josa(knightOf(S, others[0]!).name, '과/와')} 함께 균열을 닫았다${tail}`); else if (sv.merit) say(`🚩 우리 기사단 +${sv.merit} 공적${tail}`); else if (full) say(`💎 ${BOARD_FULL}`); } // 📜 #70
       for (const mid of r.mids ?? []) if (L.monsters[mid]) S.set(`bonus/${cls}/${num}/review/${L.id}/${mid}`, S.now()); // 📕 #67 새 전투도 「복습 완료」 (옛 길과 같은 칸 · 맞힌 소문항이 있는 몬스터)
     }
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
@@ -237,7 +238,7 @@
   const mmss2 = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   const day2 = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(5, 10).replace('-', '/');
   const rk = $derived.by(() => { const r0 = res?.rank; if (!r0 || !pidMine) return null; const rows = rowsOf(rkv.v.val?.[r0.sem] ?? null), v = r0.role === 'g' ? viewOf(guardList(rows), pidMine) : viewOf(growList(rows), pidMine); return { pos: v.pos, n: v.n, role: r0.role, up: r0.up }; });
-  const dayLeft = $derived(GEM.dayCap - (Number(me.wallet.day?.[kstDay(S.now())]) || 0));
+  const dayLeft = $derived.by(() => { void lr2.v.val; return BOARD_DAY - boardDayUsed(cls && num ? S.get<Record<string, unknown>>(`gem/${cls}/${num}/log`) : null, kstDay(S.now())); }); // 📜 게시판 하루 200
   // 🐞 (📜 2026-11-14) 이끄는 폰이 먼저 끝내 글이 'done' 이 되어도, 이 폰이 자기 결과를 아직 못 봤으면 전투를 닫지 않음 (예전 = 바로 닫혀 결과 없이 게시판으로)
   const SEEN = 'citadel-board-seen';
   let seen = $state<string[]>((() => { try { return JSON.parse(localStorage.getItem(SEEN) || '[]') as string[]; } catch { return []; } })());
@@ -342,7 +343,7 @@
         {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
         {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
           <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{:else}<div class="empty"><span>📣</span><b>아직 최근 전투가 없어요</b></div>{/if}
-        {#if Number.isFinite(GEM.dayCap)}<p class="why">{dayLeft <= 0 ? '오늘 받을 💎 는 다 받았어요 · 공적은 계속 쌓여요' : `오늘 받을 수 있는 💎 ${dayLeft} / ${GEM.dayCap}`}</p>{/if}
+        {#if payOn(S) && cls && num && !isBeta(S, cls)}<p class="why" data-k="board-daycap">{dayLeft <= 0 ? BOARD_FULL : `오늘 받을 수 있는 💎 ${dayLeft} / ${BOARD_DAY}`}</p>{/if}
       {/if}
     </div>
     {#if btab === 'go'}
