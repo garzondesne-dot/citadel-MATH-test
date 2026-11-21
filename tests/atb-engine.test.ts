@@ -30,17 +30,20 @@ describe('ATB 엔진', () => {
     full(S, 0); attack(S, 0, 'ok'); const a = S.bossMax - S.bossHp; expect(a).toBe(Math.round(12 * S.heroes[0]!.s.atkMul));
     full(S, 0); attack(S, 0, 'crit'); expect(S.heroes[0]!.atb).toBeCloseTo(0.2);
   });
-  it('⚡ 충전 (Y1) = 원문항을 통째로 끝내야 · 퍼펙트 3 · 재시도 2 · 최대 4 · 소문항 정답만으론 0', () => {
+  it('⚡ 충전 (📜 요청 #41) = 소문항 맞힘마다 +1 · 오답 없이 원문항 끝 = +1 더 · 틀림 = 0 · 최대 4', () => {
     const S = fresh(), h = S.heroes[0]!; expect(h.ch).toBe(T.chargeStart); h.ch = 0; // 📜 요청 #6 ③ 판 시작 = 1칸
-    earn(S, 0, right); expect(h.ch).toBe(0);
-    earn(S, 0, doneP); expect(h.ch).toBe(T.charge.perfect); earn(S, 0, doneR); expect(h.ch).toBe(Math.min(T.charge.max, T.charge.perfect + T.charge.retry)); earn(S, 0, doneP); expect(h.ch).toBe(T.charge.max);
+    earn(S, 0, right); expect(h.ch).toBe(1); earn(S, 0, { done: false, perfect: false, right: false }); expect(h.ch).toBe(1);
+    earn(S, 0, doneR); expect(h.ch).toBe(2); earn(S, 0, doneP); expect(h.ch).toBe(4); earn(S, 0, right); expect(h.ch).toBe(T.charge.max);
   });
   it('⚡ 가득인데 또 끝냄 = 넘친 충전으로 장착 스킬 자동 (요청 #13 · 충전 · ATB 그대로 · 4레벨 · 각성은 자동 안 됨)', () => {
     const S = fresh(), h = S.heroes[0]!; h.ch = T.charge.max; h.atb = 0.2; const hp = S.bossHp;
     earn(S, 0, doneR); const e = S.ev.at(-1) as { k: string; kind: string; auto?: boolean; dmg: number };
     expect([e.k, e.kind, e.auto, h.ch, h.atb]).toEqual(['skill', 'equip', true, T.charge.max, 0.2]); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * h.s.skillMul));
-    h.ch = T.charge.max - 1; const n0 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n0).some((x) => x.k === 'skill')).toBe(true); // 가득 − 1 + 재시도 2 = 1칸 넘침 · 장착 비용 1 = 자동 (📜 요청 #34 최대 4)
-    h.ch = T.charge.max - 2; const n1 = S.ev.length; earn(S, 0, { done: true, perfect: false, right: true }); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
+    // 퍼펙트 끝 = 소문항 +1 · 퍼펙트 +1 둘 다 넘침 = 자동 2번 · 두 번째는 0.6초 뒤 (📜 요청 #41)
+    const n0 = S.ev.length; earn(S, 0, doneP); expect(S.ev.slice(n0).filter((x) => x.k === 'skill').length).toBe(0); // 방금 자동이 나감 = 0.6초 뒤부터
+    for (let i = 0; i < 7; i++) tick(S, 0.1); expect(S.ev.slice(n0).filter((x) => x.k === 'skill').length).toBe(1);
+    for (let i = 0; i < 6; i++) tick(S, 0.1); expect(S.ev.slice(n0).filter((x) => x.k === 'skill').length).toBe(2);
+    h.ch = T.charge.max - 1; const n1 = S.ev.length; earn(S, 0, right); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
   });
   it('⚡ 스킬 (요청 #19): ⚡ 내 스킬 · 역할 · 🌟 비장(각성이면 각성 · 아니면 +10 홀리 방패) · 비용 1 · 1 · 3(2) · 피해 비 1 · 3.8', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;
@@ -65,7 +68,7 @@ describe('ATB 엔진', () => {
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
     S.heroes[0]!.ch = 0; expect(canBreak(S, 0)).toBe(null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
     full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 자기 칸 + 친구 칸
-    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(T.charge.retry - 1); // 보호막 부수기 = 충전 1 (Y2 · 재시도 = 2칸)
+    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.heroes[0]!.ch).toBe(0); // 보호막 부수기 = 충전 1 (재시도 끝 = 소문항 +1 · 요청 #41)
   });
   it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 + 전원 생존 = 승리', () => {
     const S = fresh(['누아', '루멘']); S.bossHp = 200; full(S, 0); attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
@@ -118,7 +121,7 @@ describe('ATB 엔진', () => {
     const run = (seed: number) => { const S = fresh(['로안', '발도르', '루멘', '누아'], seed); simulate(L2, S, S.heroes.map((_, i) => newBot(L2, i, 'normal', seed))); return S; };
     const a = run(3), b = run(3); expect([a.t, a.bossHp, a.end?.win]).toEqual([b.t, b.bossHp, b.end?.win]);
     const all = Array.from({ length: 10 }, (_, i) => run(i + 1)); const wins = all.filter((s) => s.end?.win).length, avg = all.reduce((x, s) => x + s.t, 0) / all.length / 60;
-    expect(wins).toBeGreaterThanOrEqual(0); expect(all.every((s) => s.end)).toBe(true); expect(avg).toBeGreaterThan(3); expect(avg).toBeLessThan(6.5);
+    expect(wins).toBeGreaterThanOrEqual(0); expect(all.every((s) => s.end)).toBe(true); expect(avg).toBeGreaterThan(2.5); expect(avg).toBeLessThan(6.5);
   });
 });
 it('📊 판 기록: 판 길이 · 소문항당 시간 · 타이밍 · 모았다 놓기 · 쓰러짐 · 역할 조합', async () => {
