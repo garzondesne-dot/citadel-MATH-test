@@ -173,9 +173,17 @@
     ev.preventDefault(); const rot = !!stageEl?.closest('[data-rot90]'), x0 = ev.clientX, y0 = ev.clientY, h = cardEl?.offsetHeight ?? 300; dragging = true;
     const mv = (e: PointerEvent) => { dragY = Math.max(0, rot ? -(e.clientX - x0) : e.clientY - y0); };
     const up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); dragging = false;
-      if (dragY > h * 0.28) { dragY = h; setTimeout(() => { if (grading) finishGrade(); open = false; dragY = 0; }, 200); } else dragY = 0; };
+      if (dragY > h * 0.45) { dragY = h; setTimeout(() => { fold(); dragY = 0; }, 200); } else dragY = 0; }; /* 📜 #90 ③ 문턱 45% · 닫힘 = 접힘(진행 그대로) */
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
+  /** 📜 요청 #90 문제 카드 접기 = 카드는 그대로 둔 채 아래로 내림 (푼 단계 · 입력 · 고른 보기 · 스크롤 그대로) · 띠 누르면 다시 올라옴 */
+  function fold() { if (grading) { finishGrade(); return; } open = false; }
+  /** 📜 #90 ① 빈 곳 한 번 누름 = 접힘 (카드 · 단추 · 용사 · 보스 · 스킬 메뉴 밖) */
+  function tapEmpty(e: MouseEvent) { if (!open || !run || phase !== 'fight' || dragging) return; const t = e.target as Element | null; if (!t || t.closest('button, a, input, textarea, select, label, [role="dialog"], [role="tooltip"], .card, .hero, .boss, nav, .tr, .foldbar')) return; fold(); }
+  /** 📜 #90 ④ ⚡ 0 이 되는 순간 = 카드 다 올라옴(없으면 다음 문제) · 덧붙임 = 가득(4칸)에 닿는 순간 접힘 · 같은 가득 참에서 또 접지 않음 · 컷인 · 채점 · 구슬 날아가는 중 · 정찰이면 끝난 뒤 */
+  let chWas = untrack(() => meH?.ch ?? 0), fullDone = untrack(() => (meH?.ch ?? 0) >= T.charge.max), wantUp = $state(false), wantFold = $state(false), wantAt = 0, wake = $state(0);
+  $effect(() => { const c = meH?.ch ?? 0; untrack(() => { if (c <= 0 && chWas > 0) { wantUp = true; wantFold = false; wantAt = Date.now() + 160; } if (c >= T.charge.max && chWas < T.charge.max && !fullDone) { wantFold = true; wantUp = false; fullDone = true; wantAt = Date.now() + 160; } if (c < T.charge.max) fullDone = false; chWas = c; }); });
+  $effect(() => { void wake; if (!wantUp && !wantFold) return; if ((globalThis as unknown as { __atbNoAutoQ?: boolean }).__atbNoAutoQ) { wantUp = wantFold = false; return; } /* 🧪 예전 e2e 용 끄개 */ if (cut || grading || pendOrb > 0 || dragging || phase !== 'fight' || S.end) return; const w = wantAt - Date.now(); if (w > 0) { const id = setTimeout(() => wake++, w + 10); return () => clearTimeout(id); } untrack(() => { if (wantFold) { wantFold = false; if (open && run) fold(); } if (wantUp) { wantUp = false; skOpen = false; if (!open) openQuiz(); } }); });
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : 0, suck: false }; // n = 퍼펙트 +1 중 실제로 들어간 칸 (넘치면 0)
     const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
@@ -583,7 +591,8 @@
   (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), fxlog: () => FXLOG.slice(), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
 
-<div class="stage" class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="stage" onclick={tapEmpty} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -672,10 +681,12 @@
   {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
 
   <!-- 문제 카드 -->
-  {#if open && run}
+  {#if run}
     {#if grading?.suck}<AtbFx name="charge-suck" x="50%" y="45%" w={Math.round(H * 0.5)} loop={false} ms={450} z={42} />{/if}
-    <div class="card" class:suck={grading?.suck} class:drag={dragging} style:translate="0 {dragY}px" bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
+    <div class="card" class:suck={grading?.suck} class:drag={dragging} class:fold={!open} inert={!open} data-fold={open ? 0 : 1} style:translate={open ? `0 ${dragY}px` : '0 112%'} bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
   {/if}
+
+  {#if run && !open && !S.end && phase === 'fight'}<button type="button" class="foldbar" data-k="atb-quiz-fold" onclick={openQuiz}><b>{titleOf(run).replace(/^\s*\d+차시\s*학습지\s*·\s*/, '').replace(/\s*·\s*\d+\/\d+$/, '')}</b> ▲ 문제 풀기</button>{/if}
 
   <!-- 단추 -->
   {#if me >= 0 && meH}
@@ -912,6 +923,9 @@
   .stage.q .tag { transform: none; }
   .card { left: 26.5%; top: 2%; bottom: 0; width: 47%; animation: rise 0.32s cubic-bezier(.2,.9,.3,1.1); transform-origin: 50% 100%; transition: translate 0.2s ease-out; }
   .card.drag { transition: none; }
+  .card.fold { visibility: hidden; transition: translate 0.22s ease-in, visibility 0s 0.22s; } /* 📜 #90 접힘 = 아래로 내려가 숨음(지워지지 않음) */
+  .foldbar { position: absolute; z-index: 27; left: 50%; bottom: calc(2% + max(48px, calc(54px * var(--u, 1))) + 6px); translate: -50% 0; display: flex; gap: 8px; align-items: center; padding: 5px 16px; border-radius: 12px 12px 4px 4px; border: 3px solid #b88a4a; background: #f6ecd6; color: #4a3010; font-weight: 800; font-size: calc(var(--u, 1) * 13px); box-shadow: 0 3px 10px #0008; animation: foldbar 1.6s ease-in-out infinite; white-space: nowrap; }
+  .foldbar b { font-weight: 700; color: #7a5a2a; } @keyframes foldbar { 50% { box-shadow: 0 3px 10px #0008, 0 0 0 3px #f0c04099, 0 0 16px #f0c040aa; } }
   @keyframes rise { from { transform: translateY(100%); } }
   .btns.v2 { justify-content: space-between; gap: 0; z-index: 27; } /* 카드 위 = 아래 단추 줄(가운데 = ✅ 제출이 카드 아래 끝에 얹힘) */
   .orbs.flash { animation: gflash 0.45s; }
