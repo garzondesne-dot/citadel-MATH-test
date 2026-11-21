@@ -35,8 +35,8 @@ export const knightOf = (S: Store | null, cls: string) => ({ ...(KNIGHT0[cls] ??
 export const payOn = (S: Store | null) => !!S?.get<{ pay?: boolean }>(WAR_CFG)?.pay;
 export interface Stand { cls: string; name: string; crest: string; pts: number; rank: number }
 /** 그 주 순위 (공적 큰 순 · 같으면 반 이름 순 · 같은 공적 = 같은 등수) */
-export function standings(S: Store | null, week: string): Stand[] {
-  const sum = (S?.get<Record<string, number>>(`${WAR}/${week}/sum`)) || {};
+export function standings(S: Store | null, week: string, sum0?: Record<string, number> | null): Stand[] {
+  const sum = sum0 ?? (S?.get<Record<string, number>>(`${WAR}/${week}/sum`)) ?? {};
   const rows = warClasses(S).map((c) => ({ cls: c, ...knightOf(S, c), pts: Math.max(0, Number(sum[ck(c)]) || 0), rank: 0 })).sort((a, b) => b.pts - a.pts || (a.cls < b.cls ? -1 : 1));
   rows.forEach((r, i) => { r.rank = i > 0 && rows[i - 1]!.pts === r.pts ? rows[i - 1]!.rank : i + 1; });
   return rows;
@@ -51,16 +51,17 @@ export function addMerit(S: Store, cls: string, num: number, pts: number, now = 
   return n;
 }
 /** 지난주 왕의 깃발 (마감된 1위 · 없으면 null) */
-export function lastKing(S: Store | null, now: number): Stand | null {
-  const pw = prevWeek(weekOf(now)), d = S?.get<{ rank?: string[] }>(`${WAR}/${pw}/done`);
+export function lastKing(S: Store | null, now: number, wk0?: { done?: { rank?: string[] }; sum?: Record<string, number> } | null): Stand | null {
+  const pw = prevWeek(weekOf(now)), d = wk0 !== undefined ? wk0?.done : S?.get<{ rank?: string[] }>(`${WAR}/${pw}/done`);
   const c = d?.rank?.[0]; if (!c) return null;
-  const st = standings(S, pw).find((x) => x.cls === c);
+  const st = standings(S, pw, wk0 !== undefined ? wk0?.sum ?? {} : undefined).find((x) => x.cls === c);
   return st ?? { cls: c, ...knightOf(S, c), pts: 0, rank: 1 };
 }
 /** 🗓 마감 (교사 기기 · 월요일 0시 뒤 처음): 지난주 done 이 없으면 순위 확정 → done → 스위치 켜져 있으면 1~3위 반 학생에게 우편 선물
  *  두 교사 기기가 동시에 해도 done 은 transaction 으로 한 번만 · 돌려주는 값 = 이번에 확정했으면 순위 · 아니면 null */
 export async function closeWeek(S: Store, now = S.now()): Promise<{ week: string; rank: string[]; paid: number } | null> {
   const pw = prevWeek(weekOf(now)), path = `${WAR}/${pw}/done`;
+  if (S.fetch) { await S.fetch(`${WAR}/${pw}`).catch(() => null); await S.fetch(KNIGHTS).catch(() => null); } // 거울이 아직 안 받았으면 빈 합으로 마감하지 않게 먼저 받음
   if (S.get(path)) return null;
   const st = standings(S, pw).filter((x) => x.pts > 0), rank = st.map((x) => x.cls), pay = payOn(S);
   let mine = false;
@@ -69,6 +70,7 @@ export async function closeWeek(S: Store, now = S.now()): Promise<{ week: string
   let paid = 0;
   if (pay) for (const s of st) {
     const g = PRIZE[s.rank - 1]; if (!g) continue;
+    if (S.fetch) await S.fetch(`accounts/${ck(s.cls)}`).catch(() => null);
     const nums = Object.keys((S.get<Record<string, unknown>>(`accounts/${ck(s.cls)}`)) || {}).map(Number).filter((n) => n > 0);
     for (const n of nums) { S.set(`gifts/${uidOf(s.cls, n)}/war_${pw}`, { g, at: now, fun: `⚔ 토벌 주간 보상 · ${s.rank}위 ${s.name}`, got: false, hold: true }); paid++; }
   }
