@@ -25,6 +25,7 @@
   import { attack as fxAttack, fit, shake, ultBlast, type Pose } from '../../fx/attack';
   import { sfx, soundPref, setSound } from '../../sound.svelte';
   import { bgm } from '../../bgm';
+  import { actx } from '../../webaudio';
   import type { HPose } from '../../manifest';
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
   import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
@@ -90,12 +91,20 @@
   /** 📝 채점 → ⚡ 충전 연출 (Y8 · 약 2초 · 누르면 건너뜀): 소문항 ○ × 차례로 → 카드가 쑥 빨려 들어가 에너지 → 충전 칸 */
   let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
   function finishGrade() {
-    if (!grading) return; const n = grading.n; gT.forEach(clearTimeout); gT = []; grading = null; run = null;
-    for (let i = 0; i < n; i++) setTimeout(() => flyOrb(), i * 180);
+    if (!grading) return; const n = grading.n, over = Math.max(0, grading.want - n), from = cardCenter(); gT.forEach(clearTimeout); gT = []; grading = null; run = null;
+    // ⚡ 구슬 n개 = 0.18초 간격 곡선 비행 → 「스킬」 단추 · 닿을 때마다 흡수 터짐 + 단추 구슬 한 칸 + 도 · 미 · 솔 (📜 요청 #31) · 넘친 구슬 = 내 용사에게(자동 스킬)
+    pendOrb = n; for (let i = 0; i < n; i++) setTimeout(() => flyOrb(true, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - 1); tone(i); }), i * 180);
+    for (let j = 0; j < over; j++) setTimeout(() => flyOrb(true, from, 'me', () => tone(3 + j)), (n + j) * 180);
     if (n) setTimeout(() => { chgPop = `⚡+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
     setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
+  /** 아직 날아가는 구슬 수 = 단추 구슬은 닿을 때 한 칸씩 켜짐 (엔진 충전은 이미 들어감) */
+  let pendOrb = $state(0);
+  const shownCh = $derived(Math.max(0, (meH?.ch ?? 0) - pendOrb));
+  const cardCenter = () => { const st = stageEl, c = st?.querySelector('.card'); if (!st || !c) return null; const R = rectIn(st), A = rectIn(c); return { x: A.left + A.width / 2 - R.left, y: A.top + A.height * 0.45 - R.top }; };
+  /** 🎵 한 음씩 올라감 (도 · 미 · 솔 · 높은 도 …) · 효과음 설정 따름 */
+  function tone(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5, 1318.5][Math.min(4, i)]!, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.24); }
   const firstTry: Record<string, boolean[]> = {};
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false), revFx = $state<{ from: number; to: number; n: number } | null>(null);
@@ -110,6 +119,7 @@
   }
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
+    pendOrb = n; // 구슬이 단추에 닿기 전까지 단추 구슬은 그대로 (📜 요청 #31 ②)
     const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
     marks.forEach((m, i) => gT.push(setTimeout(() => { if (grading) sfx(m ? 'correct' : 'ink', m ? 0.35 : 0.3); }, 300 + i * 260)));
     gT.push(setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450));
@@ -214,8 +224,8 @@
   let lastSnd = 0;
   const snd = (k: string, v = 0.6) => { const t = Date.now(); if (t - lastSnd < 150) return; lastSnd = t; sfx(k, v); };
   const fullCh = $derived(!!meH && meH.ch >= T.charge.max);
-  let wasFull = false;
-  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) { big('⚡ 가득! 스킬을 써요', 'note', 1200); snd('skill-unlock', 0.6); } wasFull = f; }); });
+  let wasFull = false, fullMsg = $state(0);
+  $effect(() => { const f = fullCh; untrack(() => { if (f && !wasFull && me >= 0) { const t = Date.now(); fullMsg = t; setTimeout(() => { if (fullMsg === t) fullMsg = 0; }, 1600); snd('skill-unlock', 0.6); } wasFull = f; }); }); // 📜 요청 #31 ④ 단추 위 「스킬 쓸 수 있어요!」 한 번
   /** 🆘 위험 체력 (📜 요청 #18): 30% 아래(T.lowHp) = 체력 막대 · 숫자 빨갛게 깜박 + 머리 위 🆘 · 처음 내려갈 때 한 줄(친구) · 진동(나) · 힐러 💚 · 💖 부활 단추 반짝 */
   const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
   const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
@@ -252,16 +262,18 @@
   /** 💢 용사가 맞음 = 맞음 자세 · 붉게 번쩍 (👹 「맞는 그림」 10종이 오면 .hitpic 자리에 겹침) */
   function hurt(id: number) { hurtOn = { ...hurtOn, [id]: true }; if (!busy.has(id)) setPose(id, 'hit'); setTimeout(() => { hurtOn = { ...hurtOn, [id]: false }; if (!busy.has(id) && !S.heroes[id]?.down) setPose(id, 'idle'); }, 450); }
   /** ✨ 채점이 끝나면 = 카드 자리에서 에너지 구슬이 내 충전 칸으로 날아가 차오름 (Y8) */
-  function flyOrb(gold = true) {
-    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = st?.querySelector('[data-k="atb-orbs"]') ?? st?.querySelector('[data-k="atb-attack"]'); if (!st || !a || !b) return;
-    const R = rectIn(st), A = rectIn(a), B = rectIn(b);
-    const x0 = A.left + A.width / 2 - R.left, y0 = A.top + A.height / 2 - R.top, dx = B.left + B.width / 2 - R.left - x0, dy = B.top + B.height / 2 - R.top - y0;
+  function flyOrb(gold = true, from: { x: number; y: number } | null = null, to: 'orbs' | 'me' = 'orbs', cb?: () => void) {
+    const st = stageEl, a = st?.querySelector('.card') ?? st?.querySelector('[data-k="atb-boss"]'), b = to === 'me' ? (heroEls[me] ?? null) : st?.querySelector('[data-k="atb-orbs"]') ?? st?.querySelector('[data-k="atb-attack"]'); if (!st || (!a && !from) || !b) { cb?.(); return; }
+    const R = rectIn(st), B = rectIn(b), A = a ? rectIn(a) : null;
+    const x0 = from ? from.x : A!.left + A!.width / 2 - R.left, y0 = from ? from.y : A!.top + A!.height / 2 - R.top, dx = B.left + B.width / 2 - R.left - x0, dy = B.top + B.height * (to === 'me' ? 0.4 : 0.5) - R.top - y0;
     const el = document.createElement('i'); el.className = gold ? 'atb-orb g' : 'atb-orb'; el.style.left = `${x0}px`; el.style.top = `${y0}px`; st.appendChild(el);
-    const fin = () => { el.remove(); sfx(gold ? 'star-bonus' : 'energy-card', 0.55); gaugeFlash = true; setTimeout(() => (gaugeFlash = false), 450); };
+    const fin = () => { el.remove(); burst(x0 + dx, y0 + dy, to === 'me'); if (!cb) sfx(gold ? 'star-bonus' : 'energy-card', 0.55); cb?.(); gaugeFlash = true; setTimeout(() => (gaugeFlash = false), 450); };
     if (!el.animate) { fin(); return; }
     const an = el.animate([{ transform: 'translate(-50%, -50%) scale(0.5)', opacity: 0.6 }, { transform: `translate(calc(-50% + ${dx * 0.45}px), calc(-50% + ${dy * 0.45 - 90}px)) scale(1.3)`, opacity: 1, offset: 0.45 }, { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.6)`, opacity: 1 }], { duration: 620, easing: 'ease-in' });
     an.onfinish = fin;
   }
+  /** 💥 흡수 터짐 (구슬이 닿은 자리 · 넘침 = 금빛) */
+  function burst(x: number, y: number, gold: boolean) { const st = stageEl; if (!st) return; const el = document.createElement('i'); el.className = gold ? 'atb-burst g' : 'atb-burst'; el.style.left = `${x}px`; el.style.top = `${y}px`; st.appendChild(el); setTimeout(() => el.remove(), 480); }
   const pop = (x: number, y: number, t: string, cls: string) => { const id = ++pk; pops = [...pops.slice(-10), { id, x, y, t, cls }]; setTimeout(() => (pops = pops.filter((p) => p.id !== id)), 1100); };
   $effect(() => { const n = S.evN; untrack(() => { if (n < seen) seen = 0; for (const e of S.ev) if ((e.n ?? 0) > seen) handle(e); seen = n; }); });
   function handle(e: Ev) {
@@ -420,13 +432,14 @@
       {#if open}<button type="button" class="b quiz go" data-k="atb-submit" disabled={!canSend} onclick={() => qc?.send()}>{lockLeft > 0 ? `⏳ 막는 중… ${lockLeft}` : '✅ 제출'}</button>
       {:else}<button type="button" class="b quiz" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}>📜 문제 풀이</button>{/if}
       <div class="skw">
-        <button type="button" class="b skb" class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span></button>
+        <button type="button" class="b skb" class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}>스킬 <span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {meH.ch} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j < shownCh}>⚡</i>{/each}</span>{#if shownCh >= T.charge.max}<i class="ringfx" data-k="atb-fullring" aria-hidden="true"></i>{/if}</button>
+        {#if fullMsg}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={anyNeed && sk.ok && ((sk.k === 'role' && meH.s.role === 'healer') || sk.k === 'revive')} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
             <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'equip' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
             <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
-            <span class="co">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}</span>
+            <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<i class:on={j < meH.ch}>⚡</i>{/each}{#if meH.ch < sk.cost}<small class="need1">⚡ {sk.cost - meH.ch}개 더 풀면</small>{/if}</span>
             {#if sk.k === 'role' && meH.s.role === 'healer' && healBlocked(S)}<small class="hw" data-k="atb-heal-wait">보스 공격 뒤</small>{/if}
           </button>
         {/each}
@@ -641,4 +654,16 @@
   .btns.v2 .b.atk.stopb { font-size: calc(20px * var(--u)); }
   .b.skb { background: linear-gradient(#2a2a36, #14141c); border-color: #8a8aa0; color: #fff; }
   .sw { position: relative; display: inline-block; width: 40px; height: 22px; border-radius: 11px; background: #555; border: 2px solid #ddd; font-style: normal; } .sw b { position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left 0.15s; } .sw.on { background: #2faa3a; } .sw.on b { left: 20px; }
+  /* ⚡ 충전 기믹 (요청 #31) */
+  .stage :global(.atb-burst) { position: absolute; z-index: 39; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0 18%, #8fe0ff88 40%, #0000 70%); box-shadow: 0 0 18px 6px #8fd0ffaa; animation: burst 0.45s ease-out forwards; }
+  .stage :global(.atb-burst.g) { background: radial-gradient(circle, #fff 0 18%, #ffe27a88 40%, #0000 70%); box-shadow: 0 0 20px 8px #ffd34daa; }
+  @keyframes burst { from { transform: scale(0.3); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+  .b.skb { position: relative; overflow: visible; }
+  .ringfx { position: absolute; inset: -5px; border-radius: 999px; pointer-events: none; padding: 3px; background: conic-gradient(from var(--a, 0deg), #0000 0 60%, #8fe0ff, #fff, #8fe0ff, #0000 85%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; animation: ringspin 1.4s linear infinite; }
+  @property --a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  @keyframes ringspin { to { --a: 360deg; } }
+  .fullmsg { position: absolute; right: 1.5%; bottom: calc(100% + 8px); z-index: 33; padding: 4px 14px; border-radius: 12px; border: 2px solid #8fe0ff; background: #0d1830f0; color: #dff6ff; font: 900 15px var(--font); white-space: nowrap; animation: bigin 0.25s ease-out; pointer-events: none; }
+  .need1 { margin-left: 4px; font: 800 calc(9px * var(--u)) var(--font-plain); color: #ffd98a; white-space: nowrap; }
+  .card.suck { transition: transform 0.45s cubic-bezier(.6,0,.9,.4), opacity 0.45s ease-in; transform: scale(0.04) rotate(540deg); transform-origin: 50% 45%; opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .ringfx { animation: none; } }
 </style>

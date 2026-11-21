@@ -17,6 +17,9 @@
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
   let val = $state<Given>(null), hint = $state(''), key = $state('');
   $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; } });
+  /** 조각 상태: 끝낸 소문항 = 첫 시도 맞음 full · 고쳐 맞힘 half · 아직 = empty (채점 중 = 모두 끝낸 것) */
+  const done = $derived(grading ? qs.length : run.k);
+  const shardOf = (i: number) => (i < done ? (run.marks[i] === false ? 'half' : 'full') : 'empty');
   const can = $derived(!!q && filled(q, val) && !locked && !grading);
   $effect(() => { onfill?.(can); });
   /** ✅ 제출 (부모 아래 가운데 단추) */
@@ -30,6 +33,9 @@
   <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
   <header>
     <span class="tt" data-k="atb-qtitle">{title}</span>
+    <!-- ⚡ 충전 미리 보기 (📜 요청 #31 · 푸는 게 곧 충전): 소문항 수만큼 기력 조각 · 맞히면 켜짐(첫 시도 = 꽉 · 고쳐 맞힘 = 반) · 퍼펙트 +3 / 고치면 +2 -->
+    <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}>⚡</i>{/each}</span>
+    <b class="cpv" class:gold={run.clean} data-k="atb-chgpv">{run.clean ? '✨ 퍼펙트 +3' : '⚡ +2'}</b>
     <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </header>
   <div class="body">
@@ -104,4 +110,13 @@
   .body :global(.opt.on) { position: relative; outline: 3px solid #2f6ad0; outline-offset: -1px; }
   .body :global(.opt.on)::after { content: '✓'; position: absolute; right: 6px; top: 4px; font: 900 16px var(--font); color: #2f6ad0; }
   @media (prefers-reduced-motion: reduce) { .qc.bad, .fxr.good { animation: none; } }
+  /* ⚡ 충전 조각 (요청 #31) */
+  header { flex-wrap: wrap; row-gap: 2px; }
+  .shards { display: inline-flex; gap: 2px; padding: 1px 6px; border-radius: 8px; background: #3a2618; transition: transform 0.4s ease-in, opacity 0.4s; }
+  .sh { font-style: normal; font-size: 13px; line-height: 1; filter: grayscale(1) brightness(0.45); }
+  .sh.full { filter: drop-shadow(0 0 4px #5ff0ff) hue-rotate(150deg) saturate(2); animation: shon 0.36s ease-out; }
+  .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
+  @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
+  .shards.gather { transform: translate(0, 34vh) scale(1.8); opacity: 0; }
+  .cpv { font: 900 13px var(--font); padding: 1px 8px; border-radius: 8px; background: #e6eef8; color: #1d5ac8; } .cpv.gold { background: linear-gradient(#fff3b0, #f5c542); color: #6a3a00; box-shadow: 0 0 6px #ffd34d; }
 </style>
