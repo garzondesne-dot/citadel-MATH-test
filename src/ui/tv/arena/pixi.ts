@@ -7,7 +7,7 @@ import { GlowFilter, ShockwaveFilter } from 'pixi-filters';
 import { feat } from '../../../school/features.svelte';
 import { arenaBox, partyLayout, TV_FS, TV_FW } from './layout';
 import { SlashLayer, type SlashO } from './slash';
-import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, glowOf, GLOW_MS, monBody, monNudge, monVis, spriteOf } from '../../manifest';
+import { ANIM, type HPose, HERO, heroGeo, poseCol, runeAt, type MonPose, heroNudge, ICE, IDLE8, idle8Of, idle8HdOf, IDLE8_HD, glowOf, GLOW_MS, monBody, monNudge, monVis, spriteOf } from '../../manifest';
 import { awkFx, heroOf } from '../../../model/hero';
 import OBJ from '../../fx/obj.json';
 
@@ -109,7 +109,7 @@ export async function createArena(host: HTMLElement, font: string): Promise<Aren
     for (const w of [...tweens]) { const p = Math.min(1, (vt - w.t0) / w.ms); w.f(p); if (p >= 1) { tweens.delete(w); w.done?.(); } }
     bob = Math.round(Math.round(Math.sin(t / 520) * 2) / 2 * H() * 0.006); if (monSp && !st?.down && !stoned) monSp.y = Math.round(monY + bob); // 둥실 = #164 늘이기 없이 정수 px · 5단 계단
     if (monSp && monTex.idle && !st?.down) { const p: MonPose = mflash && t < mflashUntil ? mflash : !stoned && !st?.shadow && monTex.idleB !== monTex.idle && Math.floor(t / 700) % 2 ? 'idleB' : 'idle'; if (p !== monCur) { monCur = p; monSp.texture = monTex[p]!; monSeen.add(p); } placeRune(p); }
-    const tick = t - heroT > 162; if (tick) { heroT = t; heroF = (heroF + 1) % 8; }
+    const f8 = Math.floor(t / (IDLE8_HD.ms / 8)) % 8, tick = f8 !== heroF; if (tick) { heroT = t; heroF = f8; } // 🫁 #97 숨쉬기 칸 = 문서 시계(1.3초에 8칸) → 오라 층 후광(aura.ts bob)과 같은 칸
     if (darkC.visible) scoutTick(t);
     for (const h of heroes.values()) if (h.exDx || h.exDy || h.exS) { h.c.x = h.x + (h.exDx || 0); h.c.y = h.y + (h.exDy || 0); h.c.scale.set(1 - (h.exS || 0)); } else if (h.c.scale.x !== 1) { h.c.scale.set(1); h.c.y = h.y; }
     for (const h of heroes.values()) {

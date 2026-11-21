@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroHead, heroNudge, heroUrl, spriteOf, STATUS, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
+  import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroBreath, heroHead, heroNudge, heroUrl, lockBeat, spriteOf, STATUS, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
   import { heroOf } from '../../model/hero';
   import { savedLook } from '../../store/me.svelte';
   import { fx } from './fx.svelte';
@@ -103,7 +103,12 @@
   const monBg = (size: number, pose: MonPose) => { const f = [sp.hue ? `hue-rotate(${sp.hue}deg)` : '', shadow ? 'brightness(0)' : '', sp.elite && !shadow ? 'drop-shadow(0 0 2px #ffd25a) drop-shadow(0 0 6px #e8a81f)' : ''].filter(Boolean).join(' '); return `background-image:url(${sp.url});background-size:${sp.sheet.cols * size}px ${sp.sheet.rows * size}px;background-position:-${poseCol(sp.sheet, pose) * size}px -${sp.row * size}px;width:${size}px;height:${size}px;--s:${size}px;--y:-${sp.row * size}px;${f ? `filter:${f};` : ''}${shadow && !sp.hue ? 'opacity:.85;' : ''}`; };
   // 👑 +10 후광 = 머리 뒤 중앙: 이 장면은 그림 상자(.art)가 heroNudge 만큼 밀려 있음 → 머리 자리에서 밀림을 뺌(가로) · 더함(높이)
   const bodyIn = (id: number): [number, number] => { const n = heroNudge(id, 0); return [-n.dx, n.dy]; };
-  const headIn = (id: number): [number, number] => { const h = heroHead(id), n = heroNudge(id, 0); return [h[0] - n.dx, h[1] + n.dy]; };
+  // 🐞 #97 세밀화 용사 = 그림 상자(.art)가 그림 칸 그대로(옛 칸보다 넓고 발 아래 여백 있음) → 그 상자 단위(폭 ÷ 80)로 바꿈 · 숨쉬기 띠면 그 띠 머리 + 같은 박자
+  const boxK = (id: number) => { const g = heroGeo(id); return { f: HERO.w / g.w, up: g.dy + g.h - HERO.h }; };
+  const headIn = (id: number, hd8?: string | null): [number, number] => { const h = heroHead(id, false, hd8), n = heroNudge(id, 0), b = boxK(id); return [(h[0] - n.dx) * b.f, (h[1] + n.dy + b.up) * b.f]; };
+  const breathIn = (id: number, hd8?: string | null) => { const br = heroBreath(hd8), f = boxK(id).f; return br ? br.map((d) => d * f) : null; };
+  let heroArt = $state<HTMLElement | null>(null);
+  $effect(() => { if (!use8 || !heroArt) return; const el = heroArt; requestAnimationFrame(() => lockBeat(el)); });
 </script>
 
 <div class="edge" data-scene bind:this={edge} class:hit class:rage class:iced={ice} class:lift style:background-image="url({dungeonOf(theme)})" style:--lh={lift ? `${LH}px` : undefined} style:--hy={lift ? `${HY}px` : undefined} style:--my={lift ? `${MY}px` : undefined} style:--mh={lift ? `${MH}px` : undefined} style:--hx={HX ? `${HX}px` : undefined}>
@@ -158,7 +163,7 @@
     <span class="mname" style:left="{sl[0] + (HERO.w * MS) / 2}px" style:top="{sl[1] + HERO.h * MS - 6}px">{m.name}</span>
   {/if}{/each}
   <!-- ⚔ 용사 = .hb(돌진 · 정식 heroBox) 안 .art(그림) · 공격 중엔 정식 자세(walk · attack) · 끝나면 prop 자세 -->
-  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero), body: bodyIn(savedLook().hero), hero: savedLook().hero }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({use8 ?? heroUrl()})" style:background-size={use8 ? `${IDLE8_HD.frames * hg.w * HS}px ${hg.h * HS}px` : `${HERO.cols * hg.w * HS}px ${HERO.rows * hg.h * HS}px`}
+  <span class="hb" bind:this={heroBox} style:width="{hg.w * HS}px" style:height="{hg.h * HS}px"><i bind:this={heroArt} class="hero art" class:frozen={iceMode === 'on'} use:auraAct={{ lv: savedLook().enh, head: headIn(savedLook().hero, use8), breath: breathIn(savedLook().hero, use8), body: bodyIn(savedLook().hero), hero: savedLook().hero }} class:lunge={!apose && pose === 'attack'} class:whiff={!apose && pose === 'miss'} style:translate="{(heroNudge(savedLook().hero, 0).dx + hg.dx) * HS}px {(heroNudge(savedLook().hero, 0).dy + hg.dy) * HS}px" style:background-image="url({use8 ?? heroUrl()})" style:background-size={use8 ? `${IDLE8_HD.frames * hg.w * HS}px ${hg.h * HS}px` : `${HERO.cols * hg.w * HS}px ${HERO.rows * hg.h * HS}px`}
     data-pose={hpose} class:once={!!anim[3]} class:still={anim[1] < 2 || iceMode === 'on'} style:--fw="{hg.w * HS}px" style:--n={anim[1]} style:--dur="{anim[2]}s" style:--end="-{anim[1] * hg.w * HS}px" style:--end1="-{(anim[1] - 1) * hg.w * HS}px" style:--n1={Math.max(1, anim[1] - 1)}
     style:background-position-y="-{anim[0] * hg.h * HS}px" style:width="{hg.w * HS}px" style:height="{hg.h * HS}px" aria-label="내 용사 {heroOf(savedLook().hero).job}"></i>{#if mhit}{#key mhit.k}<MonHit kind={mhit.kind} x="50%" y="48%" size={hg.h * HS * 1.25} {boss} />{/key}{/if}{#if explore}<span class="torch" aria-hidden="true"><i class="tg"></i><b>🔥</b></span>{/if}</span>
 </div>

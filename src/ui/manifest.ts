@@ -132,10 +132,18 @@ export function idle8HdReady(url: string): Promise<boolean> {
   return p;
 }
 /** 👑 머리 자리 (tools/make-hero-head.py · 「후광 = 머리 뒤 중앙」 2026-11-13): [가로(보이는 상자 가운데에서), 높이(발에서 위로)] · 옛 칸 80 × 64 px · idle8 = 캠프 숨쉬기 시트 */
-export function heroHead(id: number, idle8 = false): [number, number] {
-  const H = (BBOX as unknown as { heads?: Record<string, [number, number]> }).heads ?? {};
-  return H[idle8 && idle8Of(id) ? `idle8:${id}` : heroOf(id).sprite || 'hero-sword-v3c.webp'] ?? [0, 37];
+//   🐞 #97 hd8 = 지금 그리는 세밀화 숨쉬기 띠 주소 → 그 띠 첫 칸 머리 (각성 · 원래 용사 따로 · 화면 그대로 잰 값)
+export function heroHead(id: number, idle8 = false, hd8?: string | null): [number, number] {
+  const H = (BBOX as unknown as { heads?: Record<string, [number, number]> }).heads ?? {}, f = hd8?.split('/').pop();
+  return (f && H[`hd8:${f}`]) || H[idle8 && idle8Of(id) ? `idle8:${id}` : heroOf(id).sprite || 'hero-sword-v3c.webp'] || [0, 37];
 }
+/** 🫁 #97 숨쉬기 띠 8칸마다 머리가 첫 칸보다 내려간 만큼(화면 px · 배율 1 · 아래 +) → 후광 · 빛살이 같은 박자로 따라감 · 없으면 null */
+export function heroBreath(hd8?: string | null): number[] | null {
+  const f = hd8?.split('/').pop(), B = (BBOX as unknown as { breath?: Record<string, number[]> }).breath ?? {};
+  const b = f ? B[f] : undefined; return b && b.some((v) => v !== 0) ? b : null;
+}
+/** 🫁 #97 숨쉬기 박자 맞추기: 그 요소의 CSS · WAAPI 움직임을 문서 시계 0 에 맞춤 → 같은 길이(1.3초)면 어디서 그려도 같은 칸 (용사 띠 · 후광 · TV Pixi 가 같은 박자) */
+export function lockBeat(el: Element | null | undefined) { if (!el?.getAnimations) return; for (const a of el.getAnimations()) try { a.startTime = 0; } catch { /* */ } }
 /** 그리는 칸: cw · ch = 그림 칸 · w · h = 화면 칸 · dx · dy = 옛 80 × 64 칸 왼쪽 위에서 그릴 상자까지(배율 1 기준) */
 export function heroGeo(id: number) {
   const f = heroOf(id).sprite || 'hero-sword-v3c.webp', hd = HERO_HD[f];

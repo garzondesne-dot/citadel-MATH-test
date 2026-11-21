@@ -5,7 +5,7 @@
 //   v1.0 다른 점: MutationObserver 대신 Svelte 액션 use:aura={{ lv, tv }}
 import { rectIn } from '../rot';
 import { AURA } from './fx';
-import { artUrl } from '../manifest';
+import { artUrl, IDLE8_HD } from '../manifest';
 import { heroOf } from '../../model/hero';
 import A10 from './aura10-map.json';
 // ⭐ #64 10강 오라 = 용사별 그림 (PixelLab · 2026-11-18): 그 용사 시트 이름 → { src · frames · cell · scale } · keep(각성 로안) = 옛 성스러운 후광 + 빛살 · 지도에 없으면 옛 후광
@@ -44,7 +44,7 @@ function style() {
 }
 /** 오라 붙이기 (lv 0 = 없음) · 돌려주는 값 = 지우기 */
 /** head = 그 상자 안 머리 자리 [가로 = 상자 가운데에서, 높이 = 상자 아래에서] (옛 칸 80 px 단위 · manifest heroHead 에 그림 칸 밀림을 더한 값) · +10 후광 · 빛살 중심 = 머리 뒤 */
-export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number], hero?: number): () => void {
+export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, number], body?: [number, number], hero?: number, breath?: number[] | null): () => void {
   art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au');
   if (!lv) return () => {};
   const w = rectIn(art).width; if (w && w < 40) return () => {};
@@ -63,14 +63,22 @@ export function deco(art: HTMLElement, lv: number, tv = false, head?: [number, n
   art.insertAdjacentHTML('afterbegin', back + me); art.insertAdjacentHTML('beforeend', front);
   if (a10) { // ⭐ #64 용사별 10강 오라 = 받은 뒤 그 그림으로 (못 받으면 옛 후광 + 빛살 그대로 두기 위해 빛살을 그때 붙임)
     const url = artUrl(`art/${a10.src}`), h = art.querySelector(':scope > .au-h') as HTMLElement | null;
-    if (h) { h.style.visibility = 'hidden'; void a10Ready(url).then((ok) => { if (!h.isConnected) return; if (ok) { h.style.setProperty('--as', String(a10.scale)); h.style.background = `url('${url}') 0 0/${a10.frames * 100}% 100% no-repeat`; h.style.animation = `auF8 1s steps(${a10.frames}) infinite`; h.dataset.a10 = a10.src; } else if (AURA.haloBurst) h.insertAdjacentHTML('beforebegin', '<span class="au-s au-hb"></span>'); h.style.visibility = ''; }); }
+    if (h) { h.style.visibility = 'hidden'; void a10Ready(url).then((ok) => { if (!h.isConnected) return; if (ok) { h.style.setProperty('--as', String(a10.scale)); h.style.background = `url('${url}') 0 0/${a10.frames * 100}% 100% no-repeat`; h.style.animation = `auF8 1s steps(${a10.frames}) infinite`; h.dataset.a10 = a10.src; } else if (AURA.haloBurst) { h.insertAdjacentHTML('beforebegin', '<span class="au-s au-hb"></span>'); bob(art.querySelector(':scope > .au-hb'), breath); } h.style.visibility = ''; }); }
   }
+  art.querySelectorAll<HTMLElement>(':scope > .au-h, :scope > .au-hb').forEach((e) => bob(e, breath));
   return () => { art.querySelectorAll(':scope > .au-s').forEach((e) => e.remove()); art.classList.remove('au'); };
 }
+/** 🫁 #97 후광 · 빛살 = 용사 숨쉬기 띠와 같은 박자로 위아래 (breath = 8칸 · 옛 칸 80 px 단위 · 아래 +) · 문서 시계 0 에 맞춤(manifest lockBeat 와 같은 기준) · 움직임 줄이기 = 안 함 */
+const RM = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function bob(el: HTMLElement | null, breath?: number[] | null) {
+  if (!el || !breath?.length || typeof el.animate !== 'function' || RM()) return;
+  const n = breath.length, kf = breath.map((d, j) => ({ translate: `0 ${(d * 1.25).toFixed(3)}cqw`, offset: j / n, easing: 'step-end' }));
+  const a = el.animate([...kf, { translate: kf[n - 1]!.translate, offset: 1 }], { duration: IDLE8_HD.ms, iterations: Infinity }); a.startTime = 0;
+}
 /** Svelte 액션: <i class="art" use:aura={{ lv, tv }}> */
-type AuraP = { lv: number; tv?: boolean; head?: [number, number]; body?: [number, number]; hero?: number };
+type AuraP = { lv: number; tv?: boolean; head?: [number, number]; body?: [number, number]; hero?: number; breath?: number[] | null };
 export function aura(node: HTMLElement, p: AuraP) {
-  let off = () => {}; const run = (q: AuraP) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head, q.body, q.hero); }); };
+  let off = () => {}; const run = (q: AuraP) => { off(); requestAnimationFrame(() => { off = deco(node, q.lv, !!q.tv, q.head, q.body, q.hero, q.breath); }); };
   run(p);
   return { update: run, destroy: () => off() };
 }

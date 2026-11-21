@@ -26,7 +26,7 @@
   import { cutin, ultFor } from '../fx/attack';
   import { place } from '../fx/fx';
   import { guard } from '../fx/aura';
-  import { HERO, heroHead, heroUrl, monBody, type HPose } from '../manifest';
+  import { HERO, heroBreath, heroHead, heroUrl, idle8HdOf, monBody, type HPose } from '../manifest';
   import { rowAnim } from '../fx/heroRow';
   import { monVis, spriteOf, MHIT, mhitOf, type MhitKind } from '../manifest';
   import MonHit from '../battle/MonHit.svelte';
@@ -275,7 +275,7 @@
     if (sig === auraSig) return;
     untrack(() => {
       auraSig = sig; lay.replaceChildren();
-      for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); deco(a, lv, true, heroHead(hero, true), undefined, hero); }
+      for (const { sl, lv, hero } of rows) { if (!sl || !lv) continue; const w = HERO.w * sl.s, hgt = HERO.h * sl.s, a = document.createElement('i'); a.className = 'art'; a.style.cssText = `position:absolute;left:${sl.x - w / 2}px;top:${sl.y - hgt}px;width:${w}px;height:${hgt}px`; lay.appendChild(a); const h8 = idle8HdOf(hero); deco(a, lv, true, heroHead(hero, true, h8), undefined, hero, heroBreath(h8)); } // 🐞 #97 TV 도 숨쉬기 띠 머리 · 같은 박자(Pixi heroF = 문서 시계)
     });
   });
   $effect(() => { if (split) untrack(() => { queue.length = 0; if (A) A.banner(null); domBan = ''; }); }); // 시연을 열면 떠 있던 띠도 내림
