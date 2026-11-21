@@ -35,7 +35,7 @@
     <span class="tt" data-k="atb-qtitle">{title}</span>
     <!-- ⚡ 충전 미리 보기 (📜 요청 #31 · 푸는 게 곧 충전): 소문항 수만큼 기력 조각 · 맞히면 켜짐(첫 시도 = 꽉 · 고쳐 맞힘 = 반) · 퍼펙트 +3 / 고치면 +2 -->
     <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}>⚡</i>{/each}</span>
-    <b class="cpv" class:gold={run.clean} data-k="atb-chgpv">{run.clean ? '✨ 퍼펙트 +3' : '⚡ +2'}</b>
+    {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
     <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
   </header>
   <div class="body">
@@ -48,9 +48,9 @@
   {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 기력은 그대로)</p>{/if}
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
-      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'} <em>⚡+{grading.want}</em></b>
+      <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'}{#if grading.perfect} <em>✨+1</em>{/if}</b>
       <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:tri={!m} style:animation-delay="{0.3 + i * 0.26}s" data-k="atb-mark" data-m={m ? 'o' : 'tri'}>{#if m}○{:else}△<small>고침</small>{/if}</i>{/each}</span>
-      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">{grading.n >= grading.want ? `⚡ 기력 +${grading.n}` : `⚡+${grading.want} → 가득(+${grading.n} 받음)`}{grading.perfect ? ' · ATB 가득' : ''}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ 소문항마다 +1 (풀면서 받음){grading.perfect ? (grading.n ? ' · ✨ 퍼펙트 +1 · ATB 가득' : ' · ✨ 퍼펙트 +1 → 가득이라 자동 스킬 · ATB 가득') : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
   {/if}

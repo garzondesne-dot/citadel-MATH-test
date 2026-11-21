@@ -93,11 +93,11 @@
   let grading = $state<{ marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null>(null), gT: ReturnType<typeof setTimeout>[] = [];
   function finishGrade() {
     if (!grading) return; const n = grading.n, over = Math.max(0, grading.want - n), from = cardCenter(); gT.forEach(clearTimeout); gT = []; grading = null; run = null;
-    // ⚡ 구슬 n개 = 0.18초 간격 곡선 비행 → 「스킬」 단추 · 닿을 때마다 흡수 터짐 + 단추 구슬 한 칸 + 도 · 미 · 솔 (📜 요청 #31) · 넘친 구슬 = 내 용사에게(자동 스킬)
-    pendOrb = n; for (let i = 0; i < n; i++) setTimeout(() => flyOrb(true, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - 1); tone(i); }), i * 180);
-    for (let j = 0; j < over; j++) setTimeout(() => flyOrb(true, from, 'me', () => tone(3 + j)), (n + j) * 180);
-    if (n) setTimeout(() => { chgPop = `⚡+${n}`; setTimeout(() => (chgPop = ''), 1400); }, 450);
-    setTimeout(() => { if (!run) open = false; }, n * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
+    // ✨ 퍼펙트 +1 = 금 구슬 1개 (소문항 구슬은 맞힐 때마다 이미 날아감 · 📜 요청 #41) · 넘친 금 구슬 = 내 용사에게(자동 스킬)
+    for (let i = 0; i < n; i++) setTimeout(() => flyOrb(true, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - 1); tone(4); }), i * 180);
+    for (let j = 0; j < over; j++) setTimeout(() => flyOrb(true, from, 'me', () => tone(4)), (n + j) * 180);
+    if (n) setTimeout(() => { chgPop = '✨ 퍼펙트 +1'; setTimeout(() => (chgPop = ''), 1400); }, 450);
+    setTimeout(() => { if (!run) open = false; }, Math.max(n, over) * 180 + 60); // 📜 요청 #10 ① 충전 뒤 = 문제 카드 닫음 · 무대가 다 보이게 · 다음 문제 = 「문제 풀기」를 눌러야
   }
   let chgPop = $state('');
   let barrierFx = $state(0), bossFrost = $state(0), bossCurse = $state(0);
@@ -108,6 +108,8 @@
   /** 아직 날아가는 구슬 수 = 단추 구슬은 닿을 때 한 칸씩 켜짐 (엔진 충전은 이미 들어감) */
   let pendOrb = $state(0);
   const shownCh = $derived(Math.max(0, (meH?.ch ?? 0) - pendOrb));
+  /** 카드 머리 조각 자리 (요청 #41 구슬 출발) */
+  const shardCenter = (k: number) => { const st = stageEl, c = st?.querySelectorAll('[data-k="atb-shards"] .sh')[k]; if (!st || !c) return cardCenter(); const R = rectIn(st), A = rectIn(c); return { x: A.left + A.width / 2 - R.left, y: A.top + A.height / 2 - R.top }; };
   const cardCenter = () => { const st = stageEl, c = st?.querySelector('.card'); if (!st || !c) return null; const R = rectIn(st), A = rectIn(c); return { x: A.left + A.width / 2 - R.left, y: A.top + A.height * 0.45 - R.top }; };
   /** 🎵 한 음씩 올라감 (도 · 미 · 솔 · 높은 도 …) · 효과음 설정 따름 */
   function tone(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5, 1318.5][Math.min(4, i)]!, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.24); }
@@ -124,8 +126,7 @@
     addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
-    grading = { marks, perfect, n, want: perfect ? T.charge.perfect : T.charge.retry, suck: false };
-    pendOrb = n; // 구슬이 단추에 닿기 전까지 단추 구슬은 그대로 (📜 요청 #31 ②)
+    grading = { marks, perfect, n, want: perfect ? T.charge.perfect : 0, suck: false }; // n = 퍼펙트 +1 중 실제로 들어간 칸 (넘치면 0)
     const t1 = 300 + marks.length * 260; // ○ △ 하나씩 0.26초 · 📜 채점 △ = 고쳐 맞힘 · 소리 = ○ 맑게 · △ 부드럽게(× 소리 안 씀)
     marks.forEach((m, i) => gT.push(setTimeout(() => { if (grading) sfx(m ? 'correct' : 'ink', m ? 0.35 : 0.3); }, 300 + i * 260)));
     gT.push(setTimeout(() => { if (grading) grading = { ...grading, suck: true }; sfx('scroll', 0.6); }, t1), setTimeout(finishGrade, t1 + 450));
@@ -133,7 +134,13 @@
   function submit(g: Given) {
     if (!run || grading) return;
     if (lockLeft > 0) return;
-    const k0 = run.k, mid0 = run.mid, before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); earn(S, me, o.earn);
+    const ev0 = S.evN, k0 = run.k, mid0 = run.mid, before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); earn(S, me, o.earn);
+    // ⚡ 📜 요청 #41 = 맞힌 소문항 조각에서 구슬 1개가 바로 「스킬」 단추로 (카드 안 닫힘) · 넘치면 내 용사에게 · 퍼펙트 금 구슬은 채점 끝에
+    let pfN = 0;
+    { const ce = S.ev.filter((x) => (x.n ?? 0) > ev0 && x.k === 'charge' && x.who === me) as Extract<Ev, { k: 'charge' }>[];
+      const sub = ce.find((x) => !x.perfect), pf = ce.find((x) => x.perfect), from = shardCenter(k0);
+      if (sub) { pendOrb += sub.add; if (sub.add) flyOrb(false, from, 'orbs', () => { pendOrb = Math.max(0, pendOrb - 1); tone(Math.min(3, combo)); }); if (sub.over) flyOrb(true, from, 'me', () => tone(4)); }
+      if (pf) { pendOrb += pf.add; pfN = pf.add; } void before; }
     if (o.earn.swapped) { const k = seenKey(L, run.mid); vSeen[k] = noteSeen(vSeen[k] ?? [], o.run.ver); saveSeen(vSeen); }
     flash = o.earn.done ? '' : o.earn.right ? (o.earn.gold ? 'gold' : 'ok') : o.earn.swapped ? 'swap' : 'wrong';
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
@@ -143,7 +150,7 @@
     fN++; // 📜 선생님 덧붙임 10 · 11 = 맞음 톡-톡 · 연달아 = 박자 맞춘 소리 · 틀림 = 찌잉(한 번 길게)
     if (o.earn.right) { combo++; sfx('correct', 0.5); if (combo >= 2) setTimeout(() => sfx('star', Math.min(0.5, 0.2 + combo * 0.06)), 92); try { navigator.vibrate?.([22, 70, 22]); } catch { /* 무시 */ } }
     else { combo = 0; try { navigator.vibrate?.(320); } catch { /* 무시 */ } }
-    if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; if (meH) { const sn = `${sheetNo(L, run.mid).no}${o.earn.perfect ? '✨' : ''}`; meH.log.sheets = [...(meH.log.sheets ?? []), sn]; } run = o.run; startGrade(o.earn.marks ?? [], o.earn.perfect, Math.max(0, (meH?.ch ?? 0) - before)); } else run = o.run;
+    if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; if (meH) { const sn = `${sheetNo(L, run.mid).no}${o.earn.perfect ? '✨' : ''}`; meH.log.sheets = [...(meH.log.sheets ?? []), sn]; } run = o.run; startGrade(o.earn.marks ?? [], o.earn.perfect, pfN); } else run = o.run;
   }
   /** 🛡 실드가 뜨면 = 내 칸을 깰 표가 없고 지금 문제가 가장 쉬운 칸이 아니면 → 가장 쉬운 칸으로 (U3 막힘 안전망 · 충전은 그대로) */
   function shieldSwap() {
@@ -360,7 +367,7 @@
     }
     else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
     else if (e.k === 'guard') { auraOn = false; S.heroes.forEach((h) => { if (!h.down) pop(posOf(h.id).x, posOf(h.id).y - 22, '막음!', 'role'); }); sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
-    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.n}`, 'role');
+    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${e.add}`, 'role');
     else if (e.k === 'sig') {
       if (e.what === 'breathHeal') pop(bx, 30, `+${e.v} 회복`, 'heal');
       else if (e.what === 'breathCut') pop(bx, 26, '숨 끊음!', 'shield');

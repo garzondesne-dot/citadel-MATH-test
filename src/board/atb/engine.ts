@@ -18,7 +18,7 @@ export type Ev =
   | { k: 'rage'; t: number; on: 'rage' | 'calm' | 'calmEnd' | 'perf'; n?: number }
   | { k: 'fam'; t: number; who: number; fx: AttrFx; v?: number; to?: number; tick?: boolean }
   | { k: 'react'; t: number; who: number; how: 'cover' | 'barrier' | 'cut'; cls: AtkClass; atk: string; to?: number; dmg?: number }
-  | { k: 'charge'; t: number; who: number; n: number; perfect: boolean }
+  | { k: 'charge'; t: number; who: number; /** 들어간 칸 (사건 번호 n 과 겹치지 않게 · 요청 #41) */ add: number; perfect: boolean; /** 넘친 칸 (자동 스킬로 감) */ over?: number }
   | { k: 'shield'; t: number; who: number; cells: number[]; last: boolean }
   | { k: 'shieldUp'; t: number }
   | { k: 'role'; t: number; who: number; role: Role; to?: number; dmg?: number }
@@ -36,7 +36,8 @@ export interface State {
   /** 🛡 오라 방패 = 다음 보스 공격 1번 팀 전체 막음 · 🗿 석화 끝 시각(보스 공격 시계 멈춤) */ guard: boolean; stoneUntil: number;
   /** 광역 회복을 마지막으로 쓴 보스 공격 차례 (팀 전체 · 보스 공격 한 번 사이 1번) */ healN: number;
   /** 🌈 계열 덧효과 (요청 #36): 🔥 화상(끝 · 초당 · 다음 틱) · 🧊 이번 공격까지 늦춘 초 · 📖 다음 약점 시간 덤 */ burn?: { until: number; per: number; next: number; who: number } | null; frozen?: number; exposeNext?: number; curseUntil?: number;
-  /** 👹 분노 (요청 #37): 들어감 · 진정 끝 시각 · 진정까지 모은 퍼펙트 · 다음에 낼 공격(특수) · 분노 뒤 공격 차례 */ rage?: boolean; calmUntil?: number; ragePerf?: number; forceAtk?: AK | null; rageN?: number;
+  /** 👹 분노 (요청 #37): 들어감 · 진정 끝 시각 · 진정까지 모은 퍼펙트 · 다음에 낼 공격(특수) · 분노 뒤 공격 차례 */ /** ⚡ 넘침 자동 스킬 줄 (요청 #41) */ autoQ?: { who: number; at: number }[]; autoLast?: number;
+  rage?: boolean; calmUntil?: number; ragePerf?: number; forceAtk?: AK | null; rageN?: number;
   /** 🛡 이번 예고된 공격을 반응 막기 한 용사 (📜 요청 #35 · 먼저 쓴 사람만) */ blocked?: { by: number; how: 'cover' | 'barrier' | 'cut' } | null;
   /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; downs: number; revives: number; lastAns: number[] };
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
@@ -92,6 +93,7 @@ const spend = (h: Hero) => { h.atb = Math.min(0.99, h.atbBonus); h.atbBonus = 0;
 export function tick(S: State, dt: number): State {
   if (S.end) return S;
   S.t = +(S.t + dt).toFixed(4);
+  runAuto(S); if (S.end) return S;
   const W = weak(S);
   for (const h of S.heroes) {
     if (h.down || S.t < h.stunUntil) continue;
@@ -152,10 +154,11 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
     if (to != null) { const f = S.heroes[to]!; f.atb = Math.min(1, f.atb + T.downedAtbGift); push(S, { k: 'gift', t: S.t, who, to }); }
     return;
   }
-  if (e.done) {
-    const want = e.perfect ? T.charge.perfect : T.charge.retry, n = Math.min(T.charge.max - h.ch, want); h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, n, perfect: e.perfect });
-    if (want - n >= T.cost.equip && !S.end) overflowSkill(S, h); // ⚡ 넘침 → 장착 스킬 자동 (📜 요청 #13 · 4레벨 · 오라 · 각성은 손으로만 · 남은 넘침은 버림)
-  }
+  // ⚡ 📜 요청 #41 = 소문항 맞힘마다 +1(첫 시도 · 고쳐 맞힘 같음) · 원문항을 오답 없이 끝냄 = +1 더 · 넘치면 장착 스킬 자동(넘칠 때마다 · 연달아면 0.6초 간격)
+  const gain = (want: number, perfect: boolean) => { const n = Math.min(T.charge.max - h.ch, want); h.ch += n; S.rec.charges += n; push(S, { k: 'charge', t: S.t, who, add: n, perfect, over: want - n }); for (let i = 0; i < want - n; i++) queueAuto(S, h); };
+  if (e.right) gain(T.charge.perSub, false);
+  if (e.done && e.perfect) gain(T.charge.perfect, true);
+  runAuto(S); // 첫 넘침 = 바로 · 연달아 = 0.6초 뒤 (tick)
   if (e.done && S.shieldUp) h.tickets++;
   if (e.perfect) { h.atb = 1; h.log.perfect = (h.log.perfect ?? 0) + 1; if (S.rage && !calmed(S)) { S.ragePerf = (S.ragePerf ?? 0) + 1; if (S.ragePerf >= RAGE.calmPerfect) { S.ragePerf = 0; S.calmUntil = S.t + RAGE.calmSec; S.target = null; S.nextAtk = null; S.aoeNext = false; S.bossT = 0; push(S, { k: 'rage', t: S.t, on: 'calm' }); } else push(S, { k: 'rage', t: S.t, on: 'perf', n: S.ragePerf }); } }
 }
@@ -243,6 +246,9 @@ export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean
   return true;
 }
 /** ⚡ 넘친 충전으로 장착 스킬 자동 발동 (요청 #13) · ATB · 충전 칸은 그대로 · 피해 = 손으로 쓴 장착 스킬과 같음 */
+/** ⚡ 넘침 자동 스킬 줄 (0.6초 간격 · tick 이 꺼냄) */
+function queueAuto(S: State, h: Hero) { const q = (S.autoQ ??= []), last = q.length ? q[q.length - 1]!.at : (S.autoLast ?? -9); q.push({ who: h.id, at: Math.max(S.t, last + T.charge.autoGap) }); }
+function runAuto(S: State) { const q = S.autoQ; if (!q?.length) return; while (q.length && q[0]!.at <= S.t + 1e-6 && !S.end) { const x = q.shift()!, h = S.heroes[x.who]; S.autoLast = S.t; if (h && !h.down) overflowSkill(S, h); } }
 function overflowSkill(S: State, h: Hero) {
   S.rec.skills.equip = (S.rec.skills.equip ?? 0) + 1; S.rec.overflow = (S.rec.overflow ?? 0) + 1;
   const dmg = famHit(S, h, T.skillBase * h.s.skillMul * T.ratio.equip); h.log.dmg += dmg; gustAfter(h);
