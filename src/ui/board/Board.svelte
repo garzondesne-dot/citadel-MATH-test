@@ -8,7 +8,7 @@
   import { heroOf } from '../../model/hero';
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry } from '../../board/board';
-  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
+  import { bonusOf, RESCUE, canJoin, canStart, createLockedPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, validPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
   import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, uidOf } from '../../school/school';
@@ -50,6 +50,8 @@
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? null);
+  // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
+  $effect(() => { const p = mine; if (!p || !overCap(p, uid)) return; untrack(() => { S.set(`${POSTS}/${p.pid}/mem/${uid}`, null); say('방이 꽉 찼어요 · 다른 방을 골라요'); }); });
   // ⏱ #76 내 숨: 대기 · 진행 중 20초마다 (방장이 1분 끊기면 다른 팀원에게 넘어감)
   const mineB = $derived(mine && (mine.phase === 'wait' || mine.phase === 'play') ? mine.pid : '');
   $effect(() => { const pid = mineB; if (!pid) return; const go = () => { const p = untrack(() => pv.v.val?.[pid]); if (p) beat(S, p, uid); }; go(); const t = setInterval(go, LIFE.beat); return () => clearInterval(t); });
