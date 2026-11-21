@@ -289,7 +289,7 @@
   {:else if isLobby(R)}
     <div class="bcard"><span class="lab acc">{expOf(R, uid) ? '🔥 ' : ''}{nick} · 입장 완료</span><p>선생님이 시작하면 바로 시작해요.</p>{#if expOf(R, uid)}<p class="expok" data-k="lobby-explore">🔥 탐사대! 예습한 용사 · 정찰 때 횃불을 들어요</p>{/if}</div>
     <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
-    {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
+    {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{(R.meta as { trial?: boolean }).trial ? (expOf(R, uid) ? '🔥 탐사대예요' : '✔ 탐사대로 보기') : expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
   {:else if result}
     <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />
