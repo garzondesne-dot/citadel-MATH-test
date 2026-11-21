@@ -44,7 +44,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     ok('요청 #41 퍼펙트 = 소문항마다 +1 + 퍼펙트 +1 (최대 4)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(4, ch0 + m + 1), `${ch0} + ${m} + 1`);
     { const g = await p.evaluate(() => ({ t: document.querySelector('[data-k="atb-grade-title"]')?.textContent ?? '', m: [...document.querySelectorAll('[data-k="atb-mark"]')].map((e) => e.dataset.m).join(',') }));
       ok('요청 #41 채점 = 「🏁 퍼펙트! ✨+1」 (고친 게 있으면 「완주!」)', /퍼펙트!\s*✨\+1/.test(g.t) || (/완주/.test(g.t) && /tri|x/.test(g.m)) || !g.t, JSON.stringify(g)); }
-    ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 4 그대로)', ch0 + m + 1 <= 4 || (await p.evaluate(() => globalThis.__atb.S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0) || (globalThis.__atb.S.autoQ?.length ?? 0) > 0))); }
+    ok('요청 #13 가득인데 넘침 = 장착 스킬 자동(충전은 4 그대로)', (await p.evaluate(() => { const S = globalThis.__atb.S; return !S.ev.some((e) => e.k === 'charge' && e.who === 0 && e.over > 0) || S.ev.some((e) => e.k === 'skill' && e.auto && e.who === 0) || (S.autoQ?.length ?? 0) > 0; })), await p.evaluate(() => { const S = globalThis.__atb.S; return JSON.stringify({ ch: S.ev.filter((e) => e.k === 'charge').map((e) => `${e.who}:${e.add}/${e.over}`), sk: S.ev.filter((e) => e.k === 'skill').map((e) => `${e.who}:${e.auto}`), q: S.autoQ, t: S.t }); })); }
   await p.dispatchEvent('[data-k="atb-grade"]', 'click', {}, { timeout: 1000 }).catch(() => {}); await p.waitForTimeout(150); // 도장 연출로 움직이는 중에도 누름(움직임 기다리지 않음)
   ok('요청 #13 충전 가득 = 공격 단추 동그라미 · 스킬 빛(full3)', !!(await p.$('.btns.full3')));
   ok('Y8 누르면 건너뜀 → 채점 닫힘 (퍼펙트 금 구슬 = 넘치지 않을 때)', !(await p.$('[data-k="atb-grade"]')));
@@ -166,7 +166,9 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   { await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.weakUntil = 0; S.stoneUntil = 0; S.bossT = 11.8; a.pause(false); });
     const mh = await p.waitForSelector('[data-k="mhit"]', { timeout: 4000 }).then((e) => e.evaluate((x) => x.dataset.kind)).catch(() => '');
     await p.evaluate(() => globalThis.__atb.pause(true)); await p.waitForTimeout(600);
-    ok('요청 #27 보스가 칠 때 = 맞는 용사 위 몬스터 맞는 그림(레이드와 같은 mhitOf · MonHit) · 0.4초 뒤 사라짐', !!mh && !(await p.$('[data-k="mhit"]')), mh); }
+    ok('요청 #27 보스가 칠 때 = 맞는 용사 위 몬스터 맞는 그림(레이드와 같은 mhitOf · MonHit) · 0.4초 뒤 사라짐', !!mh && !(await p.$('[data-k="mhit"]')), mh);
+    const ak = await p.evaluate(() => globalThis.__atb.S.ev.filter((e) => e.k === 'boss').pop()?.kind), AH = { smash: 'smash', poison: 'poison', fire: 'fire', fire13: 'fire', ice: 'ice', frost: 'ice', tail: 'lash', tongue: 'lash', bind: 'lash', dark: 'beam', darkHit: 'beam', mirror: 'beam' };
+    ok('요청 #40 ① 맞는 그림 = 공격 종류 먼저 (ATK_HIT) · 없으면 보스 짝', !!ak && (!AH[ak] || AH[ak] === mh), `${ak} → ${mh}`); }
   await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.heroes[1].down = true; S.heroes[1].hp = 0; S.heroes[0].ch = 1; a.full(); }); await p.waitForTimeout(150);
   await skc(p, 'revive'); await p.waitForTimeout(250);
   ok('요청 #24 ⑤ 팀 부활 = 평소 숨김 · 쓸 때만 「💖 3 → 2」', /3 → 2/.test(await p.textContent('[data-k="atb-revfx"]').catch(() => '')));
@@ -246,6 +248,13 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(120);
     const x = await p.evaluate(() => ({ shard: document.querySelectorAll('[data-k="atb-ringx"] i').length, ring: !!document.querySelector('[data-k="atb-aimring"]'), clang: globalThis.__sfxLog.includes('clang'), stop: globalThis.__vib.includes(0) }));
     ok('요청 #39 반응 막기 = 원이 챙 깨짐(조각 6) · 소리 · 진동 멈춤', x.shard === 6 && !x.ring && x.clang && x.stop, JSON.stringify(x)); }
+  // 😵 요청 #40 ② 상태 그림 자리 = 머리 위에서 돎 · 풀리면 사라짐 · data-slot = atb-status-hero:<상태>
+  await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const [h0, h1, h2, h3] = S.heroes; h1.stunKind = 'sleep'; h1.stunUntil = S.t + 9; h2.slowKind = 'darkHit'; h2.slowUntil = S.t + 9; if (h3) { h3.stunKind = 'bind'; h3.stunUntil = S.t + 9; } h0.slowKind = 'ice'; h0.slowUntil = S.t + 9; }); await p.waitForTimeout(250);
+  { const st = await p.$$eval('[data-k="atb-status"]', (x) => x.map((e) => `${e.dataset.st}:${e.dataset.slot}:${e.textContent.slice(0, 2)}`)); await p.screenshot({ path: `${SHOTS}/atb-r40-status-844.png` });
+    await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[1].stunUntil = 0; S.heroes[1].stunKind = ''; }); await p.waitForTimeout(200);
+    const n2 = await p.$$eval('[data-k="atb-status"]', (x) => x.length);
+    ok('요청 #40 ② 상태 = 수면 💤 · 어둠 🌑 · 냉기 ❄️ · 속박 ⛓ 머리 위 · 그림 자리 이름 · 풀리면 사라짐', st.some((x) => x.startsWith('sleep:atb-status-hero:sleep')) && st.some((x) => x.startsWith('dark:')) && st.some((x) => x.startsWith('frost:')) && n2 === st.length - 1, JSON.stringify({ st, n2 })); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);

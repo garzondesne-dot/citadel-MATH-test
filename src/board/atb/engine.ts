@@ -7,7 +7,7 @@ import type { Stats } from './heroes';
 export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive';
-export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind';
+export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind;
   /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { owner: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
@@ -23,7 +23,7 @@ export type Ev =
   | { k: 'shieldUp'; t: number }
   | { k: 'role'; t: number; who: number; role: Role; to?: number; dmg?: number }
   | { k: 'revive'; t: number; who: number; to: number }
-  | { k: 'boss'; t: number; atk: string; aoe: boolean; to: number[]; dmg: number[] }
+  | { k: 'boss'; t: number; atk: string; kind?: AtkKind; aoe: boolean; to: number[]; dmg: number[] }
   | { k: 'down'; t: number; who: number }
   | { k: 'gift'; t: number; who: number; to: number }
   | { k: 'sig'; t: number; what: 'breathWarn' | 'breathHeal' | 'breathCut' | 'mirrorOn' | 'reflect' | 'unbind' | 'healNow'; who?: number; v?: number }
@@ -134,11 +134,11 @@ function bossAttack(S: State) {
     const d = base > 0 ? Math.max(1, Math.round(base * (1 - h.s.def) * cut)) : 0; dmg.push(d);
     if (d > 0) { if (!tank) h.cover = 0; h.hp = Math.max(0, h.hp - d); if (h.stunKind === 'sleep') { h.stunUntil = 0; h.stunKind = ''; } } // 수면 = 맞으면 깸
     const noStatus = !!B; // 막으면 얼음 · 느려짐 · 묶임 없음
-    if (A.status === 'slow' && !noStatus) h.slowUntil = S.t + T.slow[S.diff];
+    if (A.status === 'slow' && !noStatus) { h.slowUntil = S.t + T.slow[S.diff]; h.slowKind = kind; }
     if (A.status === 'stun' && !noStatus) { h.stunUntil = S.t + T.stun[S.diff]; h.stunKind = kind === 'sleep' ? 'sleep' : 'bind'; }
     if (h.hp <= 0) { h.down = true; h.atb = 0; h.ch = 0; S.rec.downs++; push(S, { k: 'down', t: S.t, who: id }); }
   }
-  push(S, { k: 'boss', t: S.t, atk: A.name, aoe, to: A.special === 'mirror' ? [] : hits, dmg });
+  push(S, { k: 'boss', t: S.t, atk: A.name, kind, aoe, to: A.special === 'mirror' ? [] : hits, dmg });
   if (aoe && base > 0) push(S, { k: 'sig', t: S.t, what: 'healNow' }); // 💚 광역 직후 = 힐러에게 「지금 힐!」
   S.target = null; S.aoeNext = false; S.nextAtk = null; S.tilt = '';
   checkEnd(S);
@@ -247,7 +247,8 @@ export function useSkill(S: State, who: number, k: SkillK, to?: number): boolean
 }
 /** ⚡ 넘친 충전으로 장착 스킬 자동 발동 (요청 #13) · ATB · 충전 칸은 그대로 · 피해 = 손으로 쓴 장착 스킬과 같음 */
 /** ⚡ 넘침 자동 스킬 줄 (0.6초 간격 · tick 이 꺼냄) */
-function queueAuto(S: State, h: Hero) { const q = (S.autoQ ??= []), last = q.length ? q[q.length - 1]!.at : (S.autoLast ?? -9); q.push({ who: h.id, at: Math.max(S.t, last + T.charge.autoGap) }); }
+/** 넣은 배열을 다시 읽어 씀 (화면 상태 감싸개는 넣는 순간 다른 배열이 됨 · ??= 의 돌려준 값은 감싸기 전 배열) */
+function queueAuto(S: State, h: Hero) { if (!S.autoQ) S.autoQ = []; const q = S.autoQ, last = q.length ? q[q.length - 1]!.at : (S.autoLast ?? -9); q.push({ who: h.id, at: Math.max(S.t, last + T.charge.autoGap) }); }
 function runAuto(S: State) { const q = S.autoQ; if (!q?.length) return; while (q.length && q[0]!.at <= S.t + 1e-6 && !S.end) { const x = q.shift()!, h = S.heroes[x.who]; S.autoLast = S.t; if (h && !h.down) overflowSkill(S, h); } }
 function overflowSkill(S: State, h: Hero) {
   S.rec.skills.equip = (S.rec.skills.equip ?? 0) + 1; S.rec.overflow = (S.rec.overflow ?? 0) + 1;
