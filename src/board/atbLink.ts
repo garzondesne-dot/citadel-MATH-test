@@ -5,19 +5,20 @@ import { HEROES } from '../model/hero';
 import { isBeta } from '../school/school';
 import { MAX, POSTS, membersOf, type Post } from './team';
 import { addMerit } from './war';
+import type { AtbEnd, Meta as AtbMeta, Slot as AtbSlot } from './atb/net';
 
 export const ATB = 'atb';
-export interface AtbSlot { uid?: string; cls?: string; num?: number; hero: number; nick?: string; role?: 'g' | 'c'; bot?: 'normal' }
-export interface AtbMeta { v: 1; pid: string; lid: string; no: number; diff: 'normal'; seed: number; t0: number; slots: AtbSlot[] }
-export interface AtbEnd { win: boolean; sec: number; right: number; total: number; first?: number; perfect?: boolean; stars: number; merit: Record<string, number>; gem: Record<string, number>; role?: 'g' | 'c'; why?: string }
-const sum = (o: Record<string, number> | undefined) => Object.values(o || {}).reduce((a, x) => a + (Number(x) || 0), 0);
+export type { AtbEnd, AtbMeta, AtbSlot };
+/** 🧙 판에 들고 가는 내 용사 (모집 · 합류 때 글 mem/{uid}/g 에 같이 씀 · 손발 #2 net.ts HumanSlot) */
+export interface Grow { h: number; lv: number; enh: number; tier: number; fx?: string; awk?: boolean }
+const sum = (o: object | undefined) => Object.values((o || {}) as Record<string, number>).reduce((a, x) => a + (Number(x) || 0), 0);
 /** 🧪 테스트 반 · 연습방 = 로컬 그대로(atb 안 씀) */
 export const atbOnline = (S: Store, p: Post) => S.kind !== 'memory' && !membersOf(p).some((m) => isBeta(S, m.cls));
 /** 출발 (방장 1번): meta → 글 play · code 'A'+pid · 빈자리 = 봇 (4칸 고정 · 봇 용사 = 아직 안 고른 용사 차례로) */
 export function startAtb(S: Store, L: LessonPack, p: Post, seed = Math.floor(Math.random() * 2 ** 31)): AtbMeta {
   const ms = membersOf(p), used = new Set(ms.map((m) => m.hero));
   const free = HEROES.map((h) => h.id).filter((h) => !used.has(h));
-  const slots: AtbSlot[] = ms.map((m) => ({ uid: m.uid, cls: m.cls, num: m.num, hero: m.hero, nick: m.nick, role: m.role }));
+  const slots: AtbSlot[] = ms.map((m) => { const g = (m as { g?: Grow }).g; return { uid: m.uid, cls: m.cls, num: m.num, hero: g?.h ?? m.hero, lv: g?.lv ?? 1, enh: g?.enh ?? 0, tier: g?.tier ?? 1, ...(g?.fx ? { fx: g.fx } : {}), ...(g?.awk ? { awk: true } : {}), nick: m.nick }; });
   while (slots.length < MAX) slots.push({ bot: 'normal', hero: free.shift() ?? 1 });
   const meta: AtbMeta = { v: 1, pid: p.pid, lid: L.id, no: L.no, diff: 'normal', seed, t0: S.now() + 2000, slots };
   S.set(`${ATB}/${p.pid}/meta`, meta);
@@ -30,11 +31,11 @@ export const atbMeta = (S: Store, pid: string) => S.get<AtbMeta>(`${ATB}/${pid}/
 /** 지금까지 그 차시 최고 별 (⭐ 골고루 돌기 · 손발 #2 계산의 prevStars) */
 export const prevStars = (S: Store, cls: string, num: number, lid: string) => Math.max(0, Math.min(3, Number(S.get(`bonus/${cls}/${num}/boardStar/${lid}`)) || 0));
 /** 끝 (각 폰 = 자기 것만): 학생 기록 · ⭐ 최고 별 · 반 공적 — 돌려주는 값 = 이번 판 💎 (지갑에 더하는 건 화면 쪽) · 공적 */
-export function saveAtbResult(S: Store, ctx: { cls: string; num: number; L: LessonPack; pid: string; n: number }, e: AtbEnd): { gem: number; merit: number; newStars: number } {
+export function saveAtbResult(S: Store, ctx: { cls: string; num: number; L: LessonPack; pid: string; n: number; role?: 'g' | 'c' }, e: AtbEnd): { gem: number; merit: number; newStars: number } {
   const { cls, num, L, pid, n } = ctx, t = S.now();
   if (S.kind === 'memory' || !cls || !num || isBeta(S, cls)) return { gem: sum(e.gem), merit: 0, newStars: 0 };
   const merit = sum(e.merit), was = prevStars(S, cls, num, L.id), stars = Math.max(0, Math.min(3, e.stars | 0));
-  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, { at: t, lid: L.id, no: L.no, n, role: e.role ?? 'c', win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, stars, merit, atb: true });
+  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, { at: t, lid: L.id, no: L.no, n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, stars, merit, atb: true });
   if (stars > was) S.set(`bonus/${cls}/${num}/boardStar/${L.id}`, stars);
   return { gem: sum(e.gem), merit: addMerit(S, cls, num, merit, t), newStars: Math.max(0, stars - was) };
 }

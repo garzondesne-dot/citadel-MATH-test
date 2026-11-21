@@ -18,6 +18,12 @@
   import HeroSprite from '../camp/HeroSprite.svelte';
   import BoardRun from './BoardRun.svelte';
   import WarBar from './WarBar.svelte';
+  import AtbNet from './atb/AtbNet.svelte';
+  import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow } from '../../board/atbLink';
+  import { payOn } from '../../board/war';
+  import { isAwakened, ladder } from '../../model/hero';
+  import { levelOf } from '../../school/reward';
+  import { tierOf } from '../../board/atb/heroes';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import { sfx } from '../sound.svelte';
   import { clock } from '../clock.svelte';
@@ -50,7 +56,8 @@
   queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
   const shown = $derived(posts.filter((p) => p.phase === 'wait' && (chip === 'all' || p.no === chip)));
-  const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? null);
+  // 📡 #48 판이 끝나 글이 done 이 되어도 내 결과를 아직 못 봤으면 그 글 그대로 (한 폰이 먼저 「게시판으로」 눌러도 다른 폰 결과 화면이 사라지지 않게)
+  const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
   // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
   $effect(() => { const p = mine; if (!p || !overCap(p, uid)) return; untrack(() => { S.set(`${POSTS}/${p.pid}/mem/${uid}`, null); say('방이 꽉 찼어요 · 다른 방을 골라요'); }); });
   // ⏱ #76 내 숨: 대기 · 진행 중 20초마다 (방장이 1분 끊기면 다른 팀원에게 넘어감)
@@ -68,7 +75,9 @@
     });
   });
   const lkB = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안 16) — 동료 · 게시글 · 달리기 화면
-  const meM = $derived({ uid, cls: cls || (S.kind === 'server' ? '선생님' : '이 기기'), num, nick: me.nick, hero: lkB, fame: fameNow() });
+  // 🧙 #48 판에 들고 가는 내 용사 (ATB 메타 = 레벨 · 강화 · 장착 스킬 등급 · 각성) — 글 mem/{uid}/g
+  const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(isAwakened(me as never) ? { awk: true } : {}) }; });
+  const meM = $derived({ uid, cls: cls || (S.kind === 'server' ? '선생님' : '이 기기'), num, nick: me.nick, hero: lkB, fame: fameNow(), g: growM });
   function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
@@ -141,6 +150,19 @@
     if (team) markSeen(team.pid);
     res = { ...r, L, n, role, mult, bonus, base, total2, got: got + rescueGot, rescueGot, rank }; stageGo(0);
   }
+  // 📡 #48 ATB 판 끝 (결과 화면 「게시판으로」): 기록 · ⭐ · 반 공적 · 💎(지급 스위치 켜짐만 · 베타 = 끔 = 예상만) → 게시판
+  function atbEnded(p: Post, r: AtbEnd | null) {
+    const L = lessonOf(p.lesson);
+    if (r && L && cls && num) {
+      const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
+      if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } }
+      if (sv.merit) say(`🚩 우리 기사단 공적 +${sv.merit}`);
+    }
+    if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
+    markSeen(p.pid);
+  }
+  /** 👥 #77 방 안 실명: 같은 반 = 이름 · 다른 반 = 「1-3 이름」 · 명단 없으면 용사 이름 */
+  const atbNames = (p: Post) => Object.fromEntries(membersOf(p).map((m) => { const nm = realName(m) || heroOf(m.hero).name; return [m.uid, m.cls === cls ? nm : `${m.cls} ${nm}`]; }));
   // 🐞 결과 연출 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 등급 도장 → 💎 올라감 → 다 보임 · 단계마다 최소 2초 · 화면을 누르면 다음 단계 · 결과 화면은 단추를 누를 때까지 그대로
   let stage = $state(2), gemShown = $state(0), stT: ReturnType<typeof setTimeout> | undefined, gemRaf = 0;
   function stageGo(k: number) {
@@ -233,7 +255,7 @@
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
     </div>
     {#if host}
-      <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) startTeam(S, L, mine, 0); }}
+      <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) { if (atbOnline(S, mine)) startAtb(S, L, mine); else startTeam(S, L, mine, 0); } }}
         why={!online ? '서버와 끊겼어요' : canStart(mine) ? '함께할 친구를 기다리거나 바로 출발해요' : '친구가 「준비 완료」를 누르면 출발할 수 있어요'}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>모집 글 내리기</button>{/snippet}</BottomAction>
     {:else}
       <BottomAction dock={false} text={mine.mem[uid]?.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료'} onmain={() => setReady(S, mine, uid, !mine.mem[uid]?.ready)}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>나가기</button>{/snippet}</BottomAction>
@@ -318,7 +340,10 @@
   </Sheet>
 {/if}
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
-{#if teamRun}
+{#if teamRun && isAtb(teamRun)}
+  {@const L = lessonOf(teamRun.lesson)}
+  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r) => atbEnded(teamRun!, r)} />
+{:else if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}

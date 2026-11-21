@@ -124,7 +124,9 @@ describe.skipIf(!up)('⚔ #48 · #51 atb · classWar 규칙', () => {
     await set(ref(anon.db, `school/board/posts/${pid}`), { pid, host: 'u1', phase: 'wait', at: 1, mem: { u1: { uid: 'u1', at: 1 } } });
     await expect(set(ref(anon.db, `atb/${pid}/meta`), { v: 1 })).resolves.toBeUndefined();
     await expect(set(ref(own.db, `atb/${pid}/meta`), { v: 2 })).rejects.toThrow(); // 한 번만
-    await expect(set(ref(own.db, `atb/${pid}/snap`), { n: 1 })).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `atb/${pid}/snap`), { n: 1, j: '{}' })).resolves.toBeUndefined();
+    await expect(set(ref(own.db, `atb/${pid}/snap`), { n: 2, j: 'x'.repeat(20001) })).rejects.toThrow(); // 20KB 넘음
+    await expect(set(ref(own.db, `atb/${pid}/end/s9_9_9`), { win: true })).rejects.toThrow(); // 남의 결과
     await expect(set(ref(own.db, `atb/${pid}/hb/s9_9_9`), 5)).rejects.toThrow(); // 남의 칸
     await expect(set(ref(own.db, `atb/${pid}`), null)).resolves.toBeUndefined(); // 청소
   }, 30000);
