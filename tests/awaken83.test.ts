@@ -37,7 +37,8 @@ describe('⚡ 각성 조건 4', () => {
   it('모습 id → 속성 · 이름 · 그림 (그림 없는 용사 = 원래 그림)', () => {
     expect(attrOf(118)).toBe('dark'); expect(heroOf(118).name).toBe('각성한 녹스');
     expect(heroOf(118).sprite).toBe('hero-dknight-awk-v8.webp');
-    expect(heroOf(101).sprite).toBe(heroOf(1).sprite);
+    expect(heroOf(101).sprite).toBe('hero-witch-awk-v8.webp'); // 🔨 #44 각성 GPT 시트
+    expect(heroOf(132).sprite).toBe(heroOf(32).sprite); // 칸델 = 아직 그림 없음 → 원래 그림
     expect(heroOf(101).name).toBe('각성한 누아');
   });
   it('🚫 모루 꺼진 판 = 연성 용사(리라 · 타미 · 마진) 각성 막음', () => {
@@ -82,5 +83,19 @@ describe('⚡ A3 각성 필살기 연출 34', () => {
     for (const h of HEROES.map((x) => x.id)) expect(awkKey(awkId(h)), `용사 ${h}`).not.toBeNull();
     expect(awkKey(16)).toBe('blond'); expect(awkKey(118)).toBe('dknight'); expect(awkKey(18)).toBeNull();
     expect(Object.keys(AWK_TINT).sort()).toEqual(['dknight', 'frost', 'hacker', 'merchant']);
+  });
+});
+
+describe('⚡ #44 각성 GPT 시트 29명 (칸델 빼고)', () => {
+  it('그림 · 숨쉬기 파일이 있고 칸 크기 = 원래 시트와 같음', async () => {
+    const fs = await import('node:fs'); const path = await import('node:path');
+    const { AWK_ART, AWK_HAVE } = await import('../src/model/hero');
+    const idle = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/ui/idle8-hd-map.json'), 'utf8')) as Record<string, string>;
+    expect(AWK_HAVE.length).toBe(29);
+    for (const id of AWK_HAVE) {
+      const f = AWK_ART[id]!; expect(f).toMatch(/-awk-v8\.webp$/);
+      expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', f))).toBe(true);
+      expect(idle[f]).toBeTruthy(); expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', idle[f]!))).toBe(true);
+    }
   });
 });

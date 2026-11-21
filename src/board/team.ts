@@ -27,8 +27,14 @@ export function roleOf(rec: { right?: number; total?: number; boss?: number | { 
   if (r >= GUARD_RATE) return { role: 'g', why: `🛡 이 차시 수업 정답률이 ${Math.round(r * 100)}%라서 수호자예요` };
   return { role: 'c', why: `🌱 이 차시 수업 정답률 ${Math.round(r * 100)}% · 같이 풀며 키워요` };
 }
-const mems = (p: Post | null) => Object.values(p?.mem || {}).filter(Boolean).sort((a, b) => a.at - b.at);
+// 🐞 #47 (2026-11-21 선생님 「4인 던전에 여러 명 동시에 누르니까 7명까지 들어왔어」): 합류 = 「인원 읽기 → 자리 쓰기」가 따로라 동시에 누르면 모두 빈자리로 봄
+//   → 모든 기기가 같은 줄(글 올린 사람 먼저 → 들어온 때 → uid)로 세워 앞 MAX 명만 자리 · 넘친 사람 = 자기 기기가 스스로 나감 + 「방이 꽉 찼어요」 (규칙 바꿈 없음)
+const all = (p: Post | null) => Object.values(p?.mem || {}).filter(Boolean).sort((a, b) => (p && a.uid === p.host ? -1 : p && b.uid === p.host ? 1 : 0) || (Number(a.at) || 0) - (Number(b.at) || 0) || (a.uid < b.uid ? -1 : a.uid > b.uid ? 1 : 0));
+/** 자리에 앉은 사람 = 앞 MAX 명 (화면 · 출발 · 역할 모두 이것만) */
+const mems = (p: Post | null) => all(p).slice(0, MAX);
 export const membersOf = mems;
+/** 이 글에 넘쳐 들어온 사람인가 (자리 밖 = 나가야 함) */
+export const overCap = (p: Post | null, uid: string) => !!p?.mem?.[uid] && !mems(p).some((m) => m.uid === uid);
 export const hasGuard = (p: Post) => mems(p).some((m) => m.role === 'g');
 // 🔒 입장 암호 (2026-11-13 선생님 「게시판 던전은 입장 암호 기능 추가해야 돼」): 숫자 4자리 · 서버엔 해시만(boardLock/{pid} = 아무도 못 읽음 · 규칙이 합류 때 맞춰 봄)
 //   모집한 학생 = 이 기기에 암호 기억(대기실 위에만 보임) · 3번 틀리면 1분 뒤 다시(그 학생 · 그 글만 · 이 기기)
@@ -65,7 +71,7 @@ export function canJoin(p: Post, uid: string, o: { open: boolean; inClass: boole
   if (!o.open) return '아직 진도 전이에요';
   if (p.phase !== 'wait') return '이미 출발했어요';
   if (p.mem?.[uid]) return '';
-  if (mems(p).length >= MAX) return '자리가 다 찼어요';
+  if (all(p).length >= MAX) return '자리가 다 찼어요';
   return '';
 }
 export function joinPost(S: Store, p: Post, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], k?: string) { S.set(`${POSTS}/${p.pid}/mem/${me.uid}`, { ...me, ...roleOf(rec, only), at: S.now(), seen: S.now(), ready: false, ...(k ? { k } : {}) }); S.set(`${POSTS}/${p.pid}/act`, S.now()); }

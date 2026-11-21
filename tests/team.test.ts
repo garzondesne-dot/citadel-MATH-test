@@ -6,7 +6,7 @@ import { heartbeat, nextStep, roomPath, submit } from '../src/raid/actions';
 import { itemsFor, stepOf } from '../src/raid/raid';
 import { packOf } from '../src/engine/packs';
 import { boardPack } from '../src/board/board';
-import { bonusOf, canJoin, canStart, createLockedPost, createPost, joinLocked, LOCK, myPin, pinHash, pinWait, elapsed, hintOf, joinPost, pauseOff, pauseOn, pausesLeft, POSTS, rankOf, roleOf, sendHint, setReady, startTeam, stuckItem, thinkUsed, type Post } from '../src/board/team';
+import { bonusOf, canJoin, canStart, createLockedPost, createPost, joinLocked, LOCK, myPin, pinHash, pinWait, elapsed, hintOf, joinPost, membersOf, overCap, pauseOff, pauseOn, pausesLeft, POSTS, rankOf, roleOf, sendHint, setReady, startTeam, stuckItem, thinkUsed, type Post } from '../src/board/team';
 
 function clockStore() { let t = 1_000_000; const b = memoryStore(); return { S: { ...b, kind: 'memory', now: () => t } as Store, tick: (ms: number) => { t += ms; } }; }
 const meA = { uid: 'a', cls: '1-3', num: 1, nick: '가', hero: 0 }, meB = { uid: 'b', cls: '1-5', num: 2, nick: '나', hero: 1 };
@@ -94,5 +94,29 @@ describe('🔒 입장 암호 (2026-11-13)', () => {
   it('암호 없는 글 = 그대로 (lk 없음 · boardLock 없음)', async () => {
     const { S } = clockStore(), pid = createPost(S, packOf('set-06')!, meA, null);
     expect(S.get<Post>(`${POSTS}/${pid}`)!.lk).toBeUndefined(); expect(S.get(`${LOCK}/${pid}`)).toBeNull();
+  });
+});
+
+describe('🐞 #47 동시에 눌러 정원 넘침 (2026-11-21 「4인 던전에 7명까지 들어왔어」)', () => {
+  it('8명이 같은 글(빈 3자리)을 동시에 봄 → 모두 씀 → 자리 = 앞 4명 · 나머지 4명 = 넘침 · 어느 기기가 봐도 같은 줄', () => {
+    const { S, tick } = clockStore(), L = packOf('set-06')!;
+    const pid = createPost(S, L, meA, null), stale = S.get<Post>(`${POSTS}/${pid}`)!; // 모두 같은 옛 글을 봄 = 「빈자리 3」
+    const us = ['h', 'b', 'g', 'c', 'f', 'd', 'e', 'z'];
+    for (const u of us) { expect(canJoin(stale, u, { open: true, inClass: false, online: true })).toBe(''); joinPost(S, stale, { uid: u, cls: '1-1', num: 9, nick: u, hero: 0 }, null); tick(u === 'c' || u === 'f' ? 0 : 5); }
+    const p = S.get<Post>(`${POSTS}/${pid}`)!;
+    expect(Object.keys(p.mem).length).toBe(9); // 옛 방식이면 이대로 9명
+    const seat = membersOf(p).map((m) => m.uid);
+    expect(seat.length).toBe(4); expect(seat[0]).toBe('a'); // 글 올린 사람 = 늘 자리
+    const over = us.filter((u) => overCap(p, u));
+    expect(over.length).toBe(5); expect(overCap(p, 'a')).toBe(false);
+    // 넘친 사람이 스스로 빠지면 = 4명 · 앉은 사람은 그대로
+    for (const u of over) S.set(`${POSTS}/${pid}/mem/${u}`, null);
+    const p2 = S.get<Post>(`${POSTS}/${pid}`)!; expect(Object.keys(p2.mem).length).toBe(4); expect(membersOf(p2).map((m) => m.uid)).toEqual(seat);
+    expect(us.filter((u) => overCap(p2, u))).toEqual([]);
+  });
+  it('같은 때(at) = uid 순으로 똑같이 갈림 · 글 올린 사람은 늦게 적혀도 첫 자리', () => {
+    const mem = Object.fromEntries(['x', 'b', 'a', 'c', 'h'].map((u) => [u, { uid: u, cls: '1-1', num: 1, nick: u, hero: 0, role: 'c', why: '', at: u === 'h' ? 9 : 5 }]));
+    const p = { pid: 'p', lesson: 'set-06', no: 6, at: 1, host: 'h', phase: 'wait', mem } as unknown as Post;
+    expect(membersOf(p).map((m) => m.uid)).toEqual(['h', 'a', 'b', 'c']); expect(overCap(p, 'x')).toBe(true);
   });
 });
