@@ -22,9 +22,9 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const ps = []; for (let i = 1; i <= N; i++) { const p = await open(); await signup(p, CLS, i); await board(p); ps.push(p); }
   const [A, ...others] = ps;
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .lkt'); await rune(A, '4821'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
-  for (const p of others) { await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await p.click('.post .go'); await p.waitForSelector('.sheet'); await rune(p, '4821'); await p.click('.sheet .act .btn'); await wait(1200); }
+  for (const p of others) { await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await p.click('.post .go'); await wait(1200); }
   for (const p of others) { const r = await p.$('button:has-text("준비")'); if (r) await r.click().catch(() => {}); await wait(600); }
   const mem = (await rest(`school/board/posts/${pid}/mem`)) || {};
   ok(`합류 ${N}명 · 용사 정보(g) 같이 씀`, Object.keys(mem).length === N && Object.values(mem).every((m) => m.g && m.g.lv >= 1), Object.values(mem).map((m) => JSON.stringify(m.g)).join(' '));
@@ -51,7 +51,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   let msum = 0, recs = 0, starOk = true;
   for (let n = 1; n <= N; n++) { const bd = (await rest(`bonus/${CLS}/${n}/board`)) || {}, rs = Object.values(bd).filter((r) => r.atb); recs += rs.length; const e = ends[`s${CK}_${n}`]; if (e) msum += e.meritSum; const st = await rest(`bonus/${CLS}/${n}/boardStar/set-06`); if ((e?.stars ?? 0) > 0 && st !== e.stars) starOk = false; }
   if (BETA) { ok('🧪 테스트 반 = 학생 기록 0줄 · ⭐ 0', recs === 0, `${recs}줄`); } else { ok('학생 기록 한 줄씩 (atb)', recs === N, `${recs}줄`); ok('⭐ 최고 별 = 판 별', starOk); }
-  const war = await rest(`classWar/${wk(Date.now())}/sum/${CK}`);
+  const war = await rest(`classWar/${wk(Date.now())}/sum/${CLS}`);
   if (BETA) ok('🧪 테스트 반 = 반 공적 없음', !war, String(war)); else ok('반 공적 = 모두의 공적 합', war === msum && msum > 0, `${war} / ${msum}`);
   const ph = await rest(`school/board/posts/${pid}/phase`); ok('글 done', ph === 'done', ph);
   const back = await Promise.all(ps.map((p) => p.$('[data-k="war-bar"]').then(Boolean)));

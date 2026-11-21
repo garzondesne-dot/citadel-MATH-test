@@ -22,13 +22,12 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     const ps = []; for (let i = 1; i <= 9; i++) { const p = await open(); await signup(p, '1-3', i); await board(p); ps.push(p); }
     const [A, ...rest8] = ps;
     const rune = async (p, x) => { for (const d of x) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
-    await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .lkt'); await rune(A, '4821'); await A.click('.sheet .act .btn'); await wait(1800);
+    await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
     let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0];
     ok(`[${round}] 모집 글`, !!pid);
     for (const p of rest8) await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }).catch(() => {});
-    for (const p of rest8) { await p.click('.post .go'); await p.waitForSelector('.sheet'); await rune(p, '4821'); } // 🔒 암호 다 넣고
-    await Promise.all(rest8.map((p) => p.click('.sheet .act .btn').catch(() => {}))); // 한꺼번에 합류
-    const toasts = await Promise.all(rest8.map(async (p) => { for (let i = 0; i < 30; i++) { const t = (await p.textContent('.bd').catch(() => '')) || ''; if (/꽉 찼어요/.test(t)) return true; await p.waitForTimeout(200); } return false; }));
+    await Promise.all(rest8.map((p) => p.click('.post .go').catch(() => {}))); // 📜 #65-2 암호 없음 = 「합류」를 한꺼번에 누름 (동시 입장 race)
+    const toasts = await Promise.all(rest8.map(async (p) => { for (let i = 0; i < 30; i++) { const t = (await p.textContent('.bd').catch(() => '')) || ''; if (/꽉 찼어요|자리가 다 찼어요/.test(t)) return true; /* 📜 #65-2 암호 없음 = 늦게 누른 폰은 합류 전에 「자리가 다 찼어요」 */ await p.waitForTimeout(200); } return false; }));
     await wait(2500);
     posts = await rest('school/board/posts'); const mem = Object.keys(posts?.[pid]?.mem || {});
     ok(`[${round}] 서버 자리 = 정확히 4명`, mem.length === 4, `${mem.length}명`);

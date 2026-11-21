@@ -20,10 +20,11 @@
     /** 서버 칸 (게시판과 같은 Store) */ S: Store; pid: string; uid: string;
     /** 👥 파티원 보이는 이름 (uid → 같은 반 = 실명 · 다른 반 = 「1-3 실명」 · 게시판이 명단에서 만듦 · 📜 #48 덧) */ names?: Record<string, string>;
     /** ⭐ 이 차시 지금까지 최고 별 (boardStar/{lid} · ⭐ 골고루 돌기) */ prevStars?: number; /** 🏅 이 차시 게시판 이긴 판 (숙련 메달) */ mastery?: number;
-    onend: (r: AtbEnd | null) => void;
+    onend: (r: AtbEnd | null, again?: boolean) => void;
   } = $props();
   const base = `atb/${pid}`;
   let meta = $state<Meta | null>(null), host = $state<string | null>(null), hb: Record<string, number> = {}, snapN = $state(-1);
+  const rightMids = new Set<string>(); // 📕 #67 내가 맞힌 몬스터 칸 (판 끝 결과 mids → 복습 완료)
   let G = $state<State | null>(null), started = $state(false), res = $state<AtbEnd | null>(null), phase = $state<'wait' | 'battle' | 'result'>('wait');
   let ack: Record<string, number> = {}, myQ = 0, bots = $state<Bot[]>([]), lostKey = '';
   const isHost = $derived(!!meta && host === uid);
@@ -83,16 +84,16 @@
   function ended(B: State) {
     if (res || me < 0) { phase = 'result'; return; }
     if (host === uid) store.set(`${base}/snap`, encodeSnap(B, uid, store.now(), ack)); // 마지막 상태
-    res = atbResultFor(B, me, { prevStars }); store.set(`${base}/end/${uid}`, res); phase = 'result';
+    res = { ...atbResultFor(B, me, { prevStars }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res); phase = 'result';
   }
 </script>
 
 {#if phase === 'wait' || !G || !L || !meta}
   <div class="netwait" role="status" data-k="atb-net-wait">⏳ 판을 준비하는 중… (방장 폰을 기다려요)</div>
 {:else if phase === 'battle' && started}
-  <AtbBattle {L} S={G} {me} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} onend={ended} />
+  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} onend={ended} />
 {:else if phase === 'result'}
-  <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} end={res} onagain={() => onend(res)} onswap={() => onend(res)} onexit={() => onend(res)} />
+  <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} end={res} onagain={() => onend(res, true)} onswap={() => onend(res)} onexit={() => onend(res)} />
 {/if}
 
 <style>

@@ -27,11 +27,11 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const T = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); T.on('pageerror', (e) => errs.push('T ' + String(e))); T.on('console', (m) => { if (/error|warn|denied|PERMISSION/i.test(m.type() + m.text())) console.log('T>', m.type(), m.text().slice(0, 200)); });
   await T.goto(`${B}?role=teacher&${E}`); await T.waitForSelector('.tabs, .tgate', { timeout: 20000 }); await asAdmin(T, '.tabs');
   await T.goto(`${B}?role=camp&from=me&${E}`); await T.waitForTimeout(3000); await board(T);
-  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .lkt'); await rune(A, '4821'); await A.click('.sheet .act .btn'); await wait(1800);
+  await A.click('.bd .chips button:has-text("6")'); await A.click('.bd .act .btn2'); await A.waitForSelector('.lgrid'); await A.click('.sheet .act .btn'); await wait(1800);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
   await T.waitForSelector('.post .go', { timeout: 15000 }).catch(() => {}); const dis = await T.$eval('.post .go', (x) => x.disabled).catch(() => 'none'); console.log('교사 합류 단추 disabled:', dis);
   await T.screenshot({ path: SHOTS + '/tch-board.png' });
-  if (dis === false) { await T.click('.post .go'); await T.waitForSelector('.sheet'); await T.screenshot({ path: SHOTS + '/tch-j1.png' }); await rune(T, '4821'); await T.screenshot({ path: SHOTS + '/tch-j2.png' }); await T.click('.sheet .act .btn'); await wait(1500); await T.screenshot({ path: SHOTS + '/tch-j3.png' }); }
+  if (dis === false) { await T.click('.post .go'); await wait(1500); await T.screenshot({ path: SHOTS + '/tch-j3.png' }); }
   const mem = (await rest(`school/board/posts/${pid}/mem`)) || {}; console.log('mem:', JSON.stringify(Object.fromEntries(Object.entries(mem).map(([k, v]) => [k, { cls: v.cls, num: v.num, g: !!v.g }]))));
   console.log('T after join:', (await T.evaluate(() => document.body.innerText)).replace(/\s+/g,' ').slice(0,300)); const r = await T.$('button:has-text("준비 완료")'); if (r) await r.click().catch(() => {}); await wait(800);
   const st = await A.$('button:has-text("출발")'); if (st) await st.click().catch(() => {});

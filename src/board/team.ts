@@ -13,7 +13,7 @@ export const MAX = 4, PAUSE_N = 2, PAUSE_MS = 120000, THINK_MS = 60000;
 export const POSTS = 'school/board/posts';
 export type Role = 'g' | 'c';
 export interface Member { uid: string; cls: string; num: number; nick: string; hero: number; role: Role; why: string; ready?: boolean; at: number; /** ⏱ #76 이 폰이 보낸 마지막 숨 (20초마다 · 서버 시각) */ seen?: number; /** 🛡 #79 수호자 명성 판 수 (모집 · 합류 때) */ fame?: number; /** 🔒 합류 때 낸 암호 해시 (규칙이 boardLock 과 맞춰 봄) */ k?: string }
-export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; mem: Record<string, Member>; /** ⏱ #76 마지막 움직임(모집 · 합류 · 준비 · 나가기) */ act?: number; /** ⏱ #76 저절로 끝남 (손 놓은 판) */ idle?: boolean; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
+export interface Post { pid: string; lesson: string; no: number; at: number; host: string; phase: 'wait' | 'play' | 'done'; code?: string; /** ⚔ #65 혼자 도전(나 + 봇 3) = 모집 목록에 안 보임 */ solo?: boolean; mem: Record<string, Member>; /** ⏱ #76 마지막 움직임(모집 · 합류 · 준비 · 나가기) */ act?: number; /** ⏱ #76 저절로 끝남 (손 놓은 판) */ idle?: boolean; /** 🔒 입장 암호 있음 (암호 해시는 boardLock/{pid} · 글과 따로) */ lk?: boolean }
 
 /** 🛡 판정 (❓ #143-a B · 숫자는 여기 한 곳): 그 차시 수업 기록 정답률 ≥ 80% 또는 형성평가 만점 → 수호자 · 기록 없으면 도전자 */
 export const GUARD_RATE = 0.8;
@@ -53,9 +53,9 @@ const tryKey = (uid: string, pid: string) => `citadel-board-try-${uid}-${pid}`;
 export function pinWait(uid: string, pid: string, now: number): number { try { const v = JSON.parse(ls()?.getItem(tryKey(uid, pid)) || 'null') as { n: number; until: number } | null; return v && v.until > now ? v.until - now : 0; } catch { return 0; } }
 function pinMiss(uid: string, pid: string, now: number): number { try { const v = (JSON.parse(ls()?.getItem(tryKey(uid, pid)) || 'null') as { n: number; until: number } | null) || { n: 0, until: 0 }; const n = v.until && v.until <= now ? 1 : v.n + 1; const until = n >= PIN_TRIES ? now + PIN_WAIT : 0; ls()?.setItem(tryKey(uid, pid), JSON.stringify({ n: n >= PIN_TRIES ? 0 : n, until })); return PIN_TRIES - (n >= PIN_TRIES ? PIN_TRIES : n); } catch { return PIN_TRIES; } }
 /** 글 올리기 · 합류 · 나가기 · 준비 · 내리기 */
-export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], lk = false, pid0?: string): string {
+export function createPost(S: Store, L: LessonPack, me: Omit<Member, 'role' | 'why' | 'at'>, rec: Parameters<typeof roleOf>[0], only?: string[], lk = false, pid0?: string, solo = false): string {
   const pid = pid0 ?? newPid(S), r = roleOf(rec, only);
-  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', act: S.now(), ...(lk ? { lk: true } : {}), mem: { [me.uid]: { ...me, ...r, at: S.now(), seen: S.now(), ready: true } } });
+  S.set(`${POSTS}/${pid}`, { pid, lesson: L.id, no: L.no, at: S.now(), host: me.uid, phase: 'wait', act: S.now(), ...(lk ? { lk: true } : {}), ...(solo ? { solo: true } : {}), mem: { [me.uid]: { ...me, ...r, at: S.now(), seen: S.now(), ready: true } } });
   return pid;
 }
 /** 🔒 암호 건 글: 해시를 먼저 boardLock 에 → 글 · 모집한 기기에 암호 기억 */
