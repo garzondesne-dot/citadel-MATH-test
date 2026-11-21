@@ -82,18 +82,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/';
   await s2.click('[data-k="themebtn"]').then(() => s2.click('[data-k="theme-sheet"] [data-th="gold"]')).then(() => s2.click('.sheet .x')); await s2.waitForTimeout(300); await s2.reload(); await s2.waitForSelector('[data-k="proof"]', { timeout: 9000 }).catch(() => {});
   { const t = (await s2.textContent('[data-k="proof"]').catch(() => '')).trim(); ok('B 지난주보다 +k · 게임 모드에서도', t === `오늘 푼 문제 ${n2}개 · 지난주보다 +${n2 - 5}`, `${t} (${JSON.stringify(k2)})`); await sh2('9-result-game'); }
   await s2.click('[data-k="themebtn"]').then(() => s2.click('[data-k="theme-sheet"] [data-k="th-submit"]')).then(() => s2.click('.sheet .x')).catch(() => {}); await s2.waitForTimeout(300);
-  // ③ 소레이드 = 게시판 던전 7차시 첫 단계(u4) · 게임 모드 캠프에서 들어가 위 막대 「제출」
-  { const ctx3 = await b.newContext({ viewport: { width: 360, height: 760 }, deviceScaleFactor: 2 }), p = await ctx3.newPage(); p.on('pageerror', (e) => errs.push(String(e)));
-    await p.goto(B + '?role=camp&room=SUBR'); await p.waitForSelector('.stage');
-    await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd');
-    await p.click('[data-map=\"7\"]'); await p.click('.bd .pmain');
-    await p.waitForSelector('.minions', { timeout: 15000 }); await p.waitForTimeout(500);
-    await p.click('[data-k="themebtn"]').then(() => p.click('[data-k="theme-sheet"] [data-k="th-submit"]')).then(() => p.click('.sheet .x')); await p.waitForTimeout(500);
-    const lab = await p.textContent('.bcard .lab').catch(() => ''), body = await p.textContent('body'), btn = (await p.$$eval('.act .btn', (xs) => xs.map((x) => x.textContent.trim()).join(' | ')).catch(() => ''));
-    ok('③ 소레이드 = 「단계 k / m」 · 졸개 · 대장 없음 · 단추 제출', /단계 1 \/ \d/.test(lab) && !/졸개|대장/.test(body) && /제출/.test(btn), `${lab.trim()} · ${btn}`);
-    const r = await p.evaluate(() => ({ sub: document.documentElement.dataset.submit === '1', over: document.documentElement.scrollWidth - innerWidth, edge: !!document.querySelector('.edge') && getComputedStyle(document.querySelector('.edge')).display !== 'none' }));
-    ok('③ 소레이드: 학습지 꼴 · 넘침 0 · 장면 없음', r.sub && r.over <= 0 && !r.edge, JSON.stringify(r));
-    await p.evaluate(() => window.scrollTo(0, 0)); await p.screenshot({ path: `${SHOTS}/submit-3-soraid.png` }); await ctx3.close(); }
+  // ③ 소레이드 (게시판 옛 전투 길) = 📜 #65 뒤 게시판은 새 전투만 → 이 칸 뺌 (소레이드 꼴 = tests/soraid.test.ts · 수업 레이드 e2e)
   // ⑦ 수업 밖 = 오늘 할 일 · ⚙ 설정 → 테마 줄 「제출」
   const c = await open('?role=camp&room=SUB'); await c.waitForSelector('[data-k="todo"]', { timeout: 9000 }).catch(() => {});
   { const t = await c.textContent('[data-k="todo"]').catch(() => ''); ok('⑦ 오늘 할 일 · 학습 이름 (통일 용어)', /차시 수업/.test(t) && /선생님 소식 \(우편함\)/.test(t), t.replace(/\s+/g, ' ').slice(0, 160)); }

@@ -34,7 +34,7 @@
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
-  const { S, me, save, uid, num, cls, open, onclose, joinPid = '', onquest }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** ✏ #75 친구 문제 → 출제 공방 「📜」 */ onquest?: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
+  const { S, me, save, uid, num, cls, open, onclose, joinPid = '', onquest, trial = null }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** 👩‍🏫 #66-8 체험판 = 같은 화면 · 체험 차시만 열림 · 혼자 도전(봇 3 · 기록 없음)만 · 팀 모집 · 기사단 없음 */ trial?: { ids: string[]; onsolo: (L: LessonPack) => void } | null; /** ✏ #75 친구 문제 → 출제 공방 「📜」 */ onquest?: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
   const qN = $derived(Object.keys((cls ? S.get<Record<string, unknown>>(QBOARD(cls)) : null) || {}).length); // ✏ #75
   const KEY = 'citadel-v1-board-chip';
   let chip = $state<number | 'all'>(untrack(() => { try { const v = localStorage.getItem(KEY); return v && v !== 'all' ? Number(v) : 'all'; } catch { return 'all'; } }));
@@ -46,7 +46,7 @@
   const LESSONS = PACKS.filter((p) => (p.steps.some((s) => s.kind === 'monster') || p.boss));
   // 나눈 차시(7차시)는 정식 기록이 원래 차시 칸에 있음(정식 6차시 기록의 u4 ~ u7 = v1.0 7차시 · 출시 전 메모 10)
   const recOf = (p: LessonPack) => recs[p.id] ?? (p.partOf && Object.keys(recs[p.partOf]?.mons || {}).some((k) => p.steps.some((s) => s.id === k)) ? recs[p.partOf] : undefined);
-  const isOpen = (p: LessonPack | null | undefined) => !!p && (!cls || !!recOf(p) || p.no <= reach);
+  const isOpen = (p: LessonPack | null | undefined) => !!p && (trial ? trial.ids.includes(p.id) : !cls || !!recOf(p) || p.no <= reach);
   // 🗺 #66 탭 3 · 고른 차시 = 지난번 고른 차시(이 기기 기억) · 없으면 진도 맨 끝
   const BTABS: [Btab, string][] = [['go', '🗺 출정'], ['war', '🏆 기사단'], ['rec', '📜 기록']];
   let btab = $state<Btab>('go');
@@ -285,11 +285,11 @@
     {/if}
   {:else}
     <!-- ⑥ 게시판 = 탭 3 (📜 #66 선생님 선택창 2026-11-21) 🗺 출정(처음) · 🏆 기사단 · 📜 기록 -->
-    <div class="btabs" role="tablist" aria-label="게시판 탭">{#each BTABS as [k, t] (k)}{#if k !== 'war' || S.kind !== 'memory'}<button type="button" role="tab" class:on={btab === k} aria-selected={btab === k} data-btab={k} onclick={() => (btab = k)}>{t}</button>{/if}{/each}</div>
+    <div class="btabs" role="tablist" aria-label="게시판 탭">{#each BTABS as [k, t] (k)}{#if k !== 'war' || (S.kind !== 'memory' && !trial)}<button type="button" role="tab" class:on={btab === k} aria-selected={btab === k} data-btab={k} onclick={() => (btab = k)}>{t}</button>{/if}{/each}</div>
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
       {#if btab === 'go'}
-        {#if S.kind !== 'memory'}<button type="button" class="warln" data-k="war-chip" onclick={() => (btab = 'war')}><WarBar {S} {cls} line /><span class="chev" aria-hidden="true">›</span></button>{/if}
+        {#if S.kind !== 'memory' && !trial}<button type="button" class="warln" data-k="war-chip" onclick={() => (btab = 'war')}><WarBar {S} {cls} line /><span class="chev" aria-hidden="true">›</span></button>{/if}
         <section class="gmap" data-k="board-map" aria-label="차시 정복 지도 · 칸을 눌러 차시 고르기">
           <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
             {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
@@ -330,8 +330,8 @@
       {/if}
     </div>
     {#if btab === 'go'}
-      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 혼자 도전` : '⚔ 혼자 도전'} disabled={!sel || !isOpen(sel)} onmain={() => { if (!sel) return; pick = sel; sheet = 'solo'; go(); }}
-        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{/snippet}</BottomAction>
+      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 혼자 도전` : '⚔ 혼자 도전'} disabled={!sel || !isOpen(sel)} onmain={() => { if (!sel) return; if (trial) { trial.onsolo(sel); return; } pick = sel; sheet = 'solo'; go(); }}
+        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
     {/if}
   {/if}
   {#if rkOpen}

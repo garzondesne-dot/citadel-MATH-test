@@ -1,6 +1,7 @@
 <script lang="ts">
   // 👩‍🏫 #55 체험판 게시판 던전 (📜 2026-11-21 선생님 고름 · CLAUDE.md 체험판 규칙 「📋 게시판 던전 = 봇 3명 · 기록 없음 (원래 수업은 친구 · 서버 기록 · 반 공적)」)
   //   체험판 차시 중 게시판 문제가 있는 차시 · 내 용사 + 봇 3 · 서버 안 닿음 · 공적 · 💎 · ⭐ 저장 없음 · 결과 💎 = 「체험판 · 받지 않음」
+  import { untrack } from 'svelte';
   import type { LessonPack } from '../../../model/types';
   import { HEROES, heroOf, ladder } from '../../../model/hero';
   import { atbLessons } from '../../../board/atb/lessons';
@@ -14,8 +15,8 @@
   import AtbResult from './AtbResult.svelte';
   import { bossArt } from './rdunBoss';
 
-  const { packs, hero, xp = 0, enh = 0, fx0 = '', nick = '체험 용사', onclose }: {
-    /** 체험판 차시 팩 (trialPacks) */ packs: LessonPack[]; hero: number; xp?: number; enh?: number; /** 장착 스킬 (없으면 사다리 첫 칸) */ fx0?: string; nick?: string; onclose: () => void;
+  const { packs, hero, xp = 0, enh = 0, fx0 = '', nick = '체험 용사', start = null, onclose }: {
+    /** 체험판 차시 팩 (trialPacks) */ packs: LessonPack[]; hero: number; xp?: number; enh?: number; /** 장착 스킬 (없으면 사다리 첫 칸) */ fx0?: string; nick?: string; /** #66-8 게시판에서 고른 차시 = 바로 전투 · 나가면 onclose(게시판으로) */ start?: LessonPack | null; onclose: () => void;
   } = $props();
   const lessons = $derived(atbLessons(packs, new Set()));
   let L = $state<LessonPack | null>(null);
@@ -35,12 +36,14 @@
     runKey++;
   }
   function ended(B: State) { end = atbResultFor(B, 0, { prevStars: 0 }); }
+  $effect(() => { if (start && !S && !end) untrack(() => begin(start)); });
+  const out = () => { S = null; end = null; if (start) onclose(); };
 </script>
 
 {#if S && L && !end}
   {#key runKey}<AtbBattle {L} {S} me={0} {bots} seed={`trial${runKey}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxOf(h.s.hero)]))} {bg} {labels} onend={ended} />{/key}
 {:else if S && L && end}
-  <AtbResult {S} no={L.no} me={0} mastery={0} practice={false} trial {labels} {end} onagain={() => begin(L!)} onswap={() => (S = null)} onexit={() => { S = null; end = null; }} />
+  <AtbResult {S} no={L.no} me={0} mastery={0} practice={false} trial {labels} {end} onagain={() => begin(L!)} onswap={out} onexit={out} />
 {:else}
   <div class="tb" role="dialog" aria-label="게시판 던전 체험" data-k="atb-trial">
     <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b>📋 게시판 던전 · 체험</b><span></span></div>
