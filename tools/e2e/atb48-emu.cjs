@@ -45,7 +45,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const host = await rest(`atb/${pid}/host`); ok('방장 엔진 = 글 올린 사람', host === `s${CK}_1`, String(host));
   const snap = await rest(`atb/${pid}/snap`); ok('상태 요약 snap 서버에 씀 (20KB 안)', snap && typeof snap.j === 'string' && snap.j.length < 20000, snap ? `${snap.j.length}자` : '없음');
   // 방장 엔진 보스 체력 0 → 판 끝
-  for (let i = 0; i < 20; i++) { await A.evaluate(() => { const S = globalThis.__atb?.S; if (!S || S.end) return; S.bossHp = 0; (S.cells || []).forEach((c) => { c.broken = true; }); S.heroes.forEach((h) => { h.down = false; h.hp = Math.max(1, h.hp || 1); }); }); await wait(300); }
+  await A.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */
   console.log('엔진 끝:', JSON.stringify(await A.evaluate(() => globalThis.__atb?.S?.end ?? null)));
   await Promise.all(ps.map((p) => p.waitForSelector('[data-k="atb-to-board"]', { timeout: 60000 }).catch(() => {})));
   const btn = await Promise.all(ps.map((p) => p.$('[data-k="atb-to-board"]').then(Boolean)));

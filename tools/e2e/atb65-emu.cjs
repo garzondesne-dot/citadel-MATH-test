@@ -32,7 +32,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const meta = solo ? await rest(`atb/${solo.pid}/meta`) : null;
   ok('혼자 판 = 나 + 봇 3 · solo 글', !!meta && meta.slots.filter((x) => x.bot).length === 3 && solo.solo === true, meta ? meta.slots.map((x) => x.bot ? 'bot' : x.uid).join(',') : '없음');
   for (let i = 0; i < 6; i++) { await A.evaluate(() => globalThis.__atb?.solve?.()); await wait(500); }
-  for (let i = 0; i < 20; i++) { await A.evaluate(() => { const S = globalThis.__atb?.S; if (!S || S.end) return; S.bossHp = 0; (S.cells || []).forEach((c) => { c.broken = true; }); S.heroes.forEach((h) => { h.down = false; h.hp = Math.max(1, h.hp || 1); }); }); await wait(300); }
+  await A.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */
   await A.waitForSelector('[data-k="atb-to-board"]', { timeout: 60000 }).catch(() => {});
   ok('결과 화면', !!(await A.$('[data-k="atb-to-board"]')));
   await A.click('[data-k="atb-to-board"]').catch(() => {}); await wait(2500);

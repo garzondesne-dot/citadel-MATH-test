@@ -33,7 +33,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 혼자 도전")');
   await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {});
   for (let i = 0; i < 6; i++) { await A.evaluate(() => globalThis.__atb?.solve?.()); await wait(500); }
-  for (let i = 0; i < 20; i++) { await A.evaluate(() => { const S = globalThis.__atb?.S; if (!S || S.end) return; S.bossHp = 0; (S.cells || []).forEach((c) => { c.broken = true; }); S.heroes.forEach((h) => { h.down = false; h.hp = Math.max(1, h.hp || 1); }); }); await wait(300); }
+  await A.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */
   await A.waitForSelector('[data-k="atb-to-board"]', { timeout: 60000 }).catch(() => {});
   await A.click('[data-k="atb-to-board"]').catch(() => {});
   let toast = ''; for (let i = 0; i < 20 && !/다 받았어요/.test(toast); i++) { await wait(150); toast = (await A.textContent('body').catch(() => '')) || ''; }

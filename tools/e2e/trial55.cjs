@@ -18,7 +18,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/trial/';
     await p.click(`[data-map="${nos[0]}"]`); await p.click('.bd .act .btn'); await p.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await p.waitForTimeout(1500);
     const tags = await p.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim()));
     ok(`[${role}] 나 + 봇 3`, tags.length === 4 && tags.filter((t) => /모험가/.test(t)).length === 3, tags.join(' · '));
-    for (let i = 0; i < 20; i++) { await p.evaluate(() => { const S = globalThis.__atb?.S; if (!S || S.end) return; S.bossHp = 0; (S.cells || []).forEach((c) => { c.broken = true; }); S.heroes.forEach((h) => { h.down = false; h.hp = Math.max(1, h.hp || 1); }); }); await p.waitForTimeout(300); }
+    await p.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */
     await p.waitForSelector('[data-k="atb-reward"]', { timeout: 30000 }).catch(() => {});
     const rw = (await p.textContent('[data-k="atb-reward"]').catch(() => '')) || '', merit = !!(await p.$('[data-k="atb-merit"]'));
     ok(`[${role}] 결과 💎 = 체험판 · 받지 않음 · 공적 줄 없음`, /체험판 · 받지 않음/.test(rw) && !merit, rw);
