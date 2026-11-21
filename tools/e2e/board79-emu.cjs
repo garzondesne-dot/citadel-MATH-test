@@ -9,7 +9,7 @@ const log = (...a) => console.log(...a);
   await rest('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' }).catch(() => {});
   await rest('school/last/1-3', 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
-  const p = await (await b.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 })).newPage(); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(`${B}?${E}`);
+  const p = await (await b.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2 })).newPage(); await p.addInitScript(() => { try { localStorage.setItem('citadel-v1-board-story', '1'); } catch { /* */ } }); p.on('pageerror', (e) => errs.push(String(e))); await p.goto(`${B}?${E}`);
   await p.waitForSelector('select'); await p.selectOption('select >> nth=0', '1-3'); await p.waitForTimeout(200); await p.selectOption('select >> nth=1', '1'); await p.waitForTimeout(200);
   await p.click('.links button:has-text("가입")'); await p.click('button.pw >> nth=0'); for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);
   await p.waitForTimeout(150); if (await p.$('.pad')) for (const d of '1234') await p.click(`.pad .keys button:has-text("${d}")`);

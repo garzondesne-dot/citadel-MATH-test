@@ -23,7 +23,8 @@
   import WarBar from './WarBar.svelte';
   import AtbNet from './atb/AtbNet.svelte';
   import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow } from '../../board/atbLink';
-  import { payOn } from '../../board/war';
+  import { knightOf, payOn, standings, weekOf } from '../../board/war';
+  import { josa } from '../../board/josa';
   import { isAwakened, ladder } from '../../model/hero';
   import { levelOf } from '../../school/reward';
   import { tierOf } from '../../board/atb/heroes';
@@ -88,6 +89,17 @@
   function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
   let sheet = $state<'' | 'solo' | 'post' | 'pin'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
+  // 📜 #70 공통 문구 (STORY-LINES-v1 3절) — 처음 열 때 이야기 두 줄(이 기기 한 번) · 새 토벌 주간(주마다 한 번) · 우리 기사단 순위 오름 · 내림 · 선두(지난번 본 순위와 견줌)
+  const STORY_K = 'citadel-v1-board-story', WK_K = 'citadel-v1-board-week';
+  let story = $state(untrack(() => { try { return !localStorage.getItem(STORY_K); } catch { return false; } }));
+  const storyDone = () => { story = false; try { localStorage.setItem(STORY_K, '1'); } catch { /* 무시 */ } };
+  $effect(() => { if (S.kind === 'memory' || !cls) return; untrack(() => {
+    const w = weekOf(S.now()); let last: { w?: string; rank?: number } = {}; try { last = JSON.parse(localStorage.getItem(WK_K) || '{}'); } catch { /* 무시 */ }
+    const me0 = standings(S, w).find((r) => r.cls === cls);
+    if (last.w !== w) say('⚔ 새 토벌 주간이 시작됐다! 균열이 다시 열렸다.');
+    else if (me0 && last.rank && me0.pts > 0 && me0.rank !== last.rank) say(me0.rank === 1 ? '🚩 우리 기사단이 선두에 섰다!' : me0.rank < last.rank ? `🚩 우리 기사단 ${me0.rank}위로 올라섰다!` : `🚩 ${me0.rank}위로 밀렸다. 한 판만 더!`);
+    try { localStorage.setItem(WK_K, JSON.stringify({ w, rank: me0?.rank })); } catch { /* 무시 */ }
+  }); });
   const RK2 = 'school/board/rk2', FEED = 'school/board/feed';
   const rkv = untrack(() => liveValue<Record<string, Record<string, Agg>>>(S, RK2));
   const MYFEED = 'citadel-board-myfeed';
@@ -166,7 +178,7 @@
     if (r && L && cls && num && !isBeta(S, cls)) { // 🧪 테스트 반 = 새 전투만 · 기록 · 💎 · 공적 없음 (#65-1)
       const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
       if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } }
-      if (sv.merit) say(`🚩 우리 기사단 공적 +${sv.merit}`);
+      { const others = tag(p).filter((c) => c !== cls); if (r.win && others.length) say(`🤝 ${josa(knightOf(S, others[0]!).name, '과/와')} 함께 균열을 닫았다`); else if (sv.merit) say(`🚩 우리 기사단 +${sv.merit} 공적`); } // 📜 #70
       for (const mid of r.mids ?? []) if (L.monsters[mid]) S.set(`bonus/${cls}/${num}/review/${L.id}/${mid}`, S.now()); // 📕 #67 새 전투도 「복습 완료」 (옛 길과 같은 칸 · 맞힌 소문항이 있는 몬스터)
     }
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
@@ -266,7 +278,7 @@
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
     </div>
     {#if host}
-      <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) { if (atbOnline(S, mine)) startAtb(S, L, mine); else startTeam(S, L, mine, 0); } }}
+      <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) { if (tag(mine).length > 1) say('🤝 연합 원정대 출발! 공적은 각자 자기 깃발에.'); if (atbOnline(S, mine)) startAtb(S, L, mine); else startTeam(S, L, mine, 0); } }}
         why={!online ? '서버와 끊겼어요' : canStart(mine) ? '함께할 친구를 기다리거나 바로 출발해요' : '친구가 「준비 완료」를 누르면 출발할 수 있어요'}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>모집 글 내리기</button>{/snippet}</BottomAction>
     {:else}
       <BottomAction dock={false} text={mine.mem[uid]?.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료'} onmain={() => setReady(S, mine, uid, !mine.mem[uid]?.ready)}>{#snippet aux()}<button type="button" class="btn2 wide" onclick={() => leavePost(S, mine, uid)}>나가기</button>{/snippet}</BottomAction>
@@ -287,8 +299,9 @@
             {/each}
           </div>
         </section>
+        {@const openN = LESSONS.filter((p) => isOpen(p) && !(stars[p.no] ?? 0)).length}{#if openN}<p class="rift" data-k="board-rifts">🌀 아직 열려 있는 균열 {openN}곳</p>{/if}
         {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}
-          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{/if}</div>
+          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}</div>
         {/if}
         {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
         {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
@@ -297,7 +310,7 @@
           {#each shown as p (p.pid)}
             {@const L = lessonOf(p.lesson)}
             {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
-            <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
+            <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#if tag(p).length > 1}<i class="ally" data-k="ally">🤝 연합 원정대</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
           {/each}
         {:else}
           <div class="empty"><span>📭</span><b>{sel ? `${sel.no}차시 모집 글이 아직 없어요` : '모집 글이 아직 없어요'}</b><small>혼자 도전하거나 · 팀을 모집해요</small></div>
@@ -313,7 +326,7 @@
         {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
         {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
           <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{:else}<div class="empty"><span>📣</span><b>아직 최근 전투가 없어요</b></div>{/if}
-        {#if Number.isFinite(GEM.dayCap)}<p class="why">오늘 받을 수 있는 💎 {Math.max(0, dayLeft)} / {GEM.dayCap}</p>{/if}
+        {#if Number.isFinite(GEM.dayCap)}<p class="why">{dayLeft <= 0 ? '오늘 받을 💎 는 다 받았어요 · 공적은 계속 쌓여요' : `오늘 받을 수 있는 💎 ${dayLeft} / ${GEM.dayCap}`}</p>{/if}
       {/if}
     </div>
     {#if btab === 'go'}
@@ -339,6 +352,7 @@
       {/if}
     </div>
   {/if}
+  {#if story && !res && !(mine && mine.phase === 'wait')}<button type="button" class="story" data-k="board-story" onclick={storyDone}><span>왕국 변두리에 균열이 열렸다. 학습지 속 몬스터가 쏟아져 나온다.</span><span>왕은 반마다 기사단을 세웠다. 균열을 닫는 것은 너희다.</span><small>누르면 닫혀요</small></button>{/if}
   {#if toast}<p class="toast3" role="status">{toast}</p>{/if}
 </div>
 
@@ -473,4 +487,9 @@
   .rr em { font-style: normal; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
   .card.up { border: 2px solid var(--accent); text-align: center; } .card.up b { font-size: 22px; color: var(--accent); }
   button.card.rk { width: 100%; text-align: left; color: var(--text); font: inherit; }
+  /* 📜 #70 */
+  .rift { margin: 0; font-size: 14px; color: var(--text-2); }
+  .post .ally { color: var(--accent); }
+  .story { position: absolute; inset: auto 16px 96px; z-index: 6; display: grid; gap: 6px; padding: 16px; border-radius: var(--r-lg, 20px); border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); background: rgba(10, 8, 6, 0.94); color: var(--text); font: 500 15px/1.5 var(--font); text-align: left; box-shadow: 0 6px 24px #000a; }
+  .story small { color: var(--text-3); font-size: 13px; }
 </style>

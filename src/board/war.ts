@@ -5,6 +5,7 @@
 import type { Store } from '../model/types';
 import { CLASSES, isBeta, uidOf } from '../school/school';
 import { addTo, txOn } from '../store/atomic';
+import { josa } from './josa';
 
 export const WAR = 'classWar', KNIGHTS = 'school/knights', WAR_CFG = 'school/war';
 /** 한 판에 더할 수 있는 공적 최대 (규칙도 같은 값으로 막음) */
@@ -26,6 +27,8 @@ export function weekOf(t: number): string {
 export const prevWeek = (week: string) => new Date(Date.parse(`${week}T00:00:00Z`) - 7 * DAY).toISOString().slice(0, 10);
 /** 이번 주 마감까지 남은 날 (월 = 7 · 일 = 1) */
 export function daysLeft(t: number): number { const k = new Date(t + KST); return 7 - ((k.getUTCDay() + 6) % 7); }
+/** 이번 주 마감(다음 월요일 0시 KST)까지 남은 분 */
+export function minsLeft(t: number): number { const end = Date.parse(`${weekOf(t)}T00:00:00Z`) - KST + 7 * DAY; return Math.ceil((end - t) / 60000); }
 /** 순위에 드는 반 = 기사단 표가 있는 반 중 테스트 반 빼고 */
 export function warClasses(S: Store | null): string[] {
   const names = (S?.get<Record<string, unknown>>(KNIGHTS)) || {};
@@ -59,6 +62,12 @@ export function lastKing(S: Store | null, now: number, wk0?: { done?: { rank?: s
 }
 /** 🗓 마감 (교사 기기 · 월요일 0시 뒤 처음): 지난주 done 이 없으면 순위 확정 → done → 스위치 켜져 있으면 1~3위 반 학생에게 우편 선물
  *  두 교사 기기가 동시에 해도 done 은 transaction 으로 한 번만 · 돌려주는 값 = 이번에 확정했으면 순위 · 아니면 null */
+/** ✉ 📜 #70 우편함 보상 편지 (STORY-LINES-v1 3절 · 제목 「⚔ 토벌 주간 보상」) */
+export function warLetter(rank: number, name: string, g: number): string {
+  if (rank === 1) return `⚔ 토벌 주간 보상 · 왕의 이름으로. ${josa(name, '이/가')} 가장 많은 균열을 닫았다. 💎 ${g} 과 「${PRIZE_TITLE}」 칭호를 내린다.`;
+  if (rank <= 3) return `⚔ 토벌 주간 보상 · 왕의 이름으로. ${name}의 공을 기억한다. 💎 ${g} 을 내린다.`;
+  return '⚔ 토벌 주간 보상 · 이번 주도 수고했다. 다음 주에 다시 깃발을 올리자.';
+}
 export async function closeWeek(S: Store, now = S.now()): Promise<{ week: string; rank: string[]; paid: number } | null> {
   const pw = prevWeek(weekOf(now)), path = `${WAR}/${pw}/done`;
   if (S.fetch) { await S.fetch(`${WAR}/${pw}`).catch(() => null); await S.fetch(KNIGHTS).catch(() => null); } // 거울이 아직 안 받았으면 빈 합으로 마감하지 않게 먼저 받음
@@ -72,7 +81,7 @@ export async function closeWeek(S: Store, now = S.now()): Promise<{ week: string
     const g = PRIZE[s.rank - 1]; if (!g) continue;
     if (S.fetch) await S.fetch(`accounts/${ck(s.cls)}`).catch(() => null);
     const nums = Object.keys((S.get<Record<string, unknown>>(`accounts/${ck(s.cls)}`)) || {}).map(Number).filter((n) => n > 0);
-    for (const n of nums) { S.set(`gifts/${uidOf(s.cls, n)}/war_${pw}`, { g, at: now, fun: `⚔ 토벌 주간 보상 · ${s.rank}위 ${s.name}`, got: false, hold: true }); paid++; }
+    for (const n of nums) { S.set(`gifts/${uidOf(s.cls, n)}/war_${pw}`, { g, at: now, fun: warLetter(s.rank, s.name, g), got: false, hold: true }); paid++; }
   }
   return { week: pw, rank, paid };
 }

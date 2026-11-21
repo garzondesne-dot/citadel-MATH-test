@@ -22,9 +22,11 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' }).catch(() => {});
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
+  const st = await A.$('[data-k="board-story"]'); ok('📜 처음 열 때 이야기 두 줄', !!st && /균열이 열렸다/.test(await st.textContent())); if (st) await st.click(); await wait(200); ok('   누르면 닫힘 (다시 안 뜸)', !(await A.$('[data-k="board-story"]')));
+  ok('📜 균열 안내 「🌀 아직 열려 있는 균열 n곳」', /아직 열려 있는 균열 \d+곳/.test((await A.textContent('[data-k="board-rifts"]').catch(() => '')) || ''));
   const tabs = await A.$$eval('.btabs button', (x) => x.map((e) => e.textContent.trim())); ok('탭 3 = 출정 · 기사단 · 기록', tabs.join('|') === '🗺 출정|🏆 기사단|📜 기록', tabs.join('|'));
   ok('차시 칩 줄 없음', !(await A.$('.bd > .chips')));
-  ok('출정 = 토벌 주간 띠', !!(await A.$('[data-k="war-chip"]')), ((await A.textContent('[data-k="war-chip"]').catch(() => '')) || '').trim());
+  ok('출정 = 토벌 주간 띠 (남은 날 · 마지막 날 · 마감 n분)', /토벌 주간|마감까지/.test(((await A.textContent('[data-k="war-chip"]').catch(() => '')) || '')), ((await A.textContent('[data-k="war-chip"]').catch(() => '')) || '').trim());
   const pick0 = await A.$eval('[data-k="board-pick"]', (e) => ({ no: e.getAttribute('data-no'), t: e.textContent.replace(/\s+/g, ' ').trim() })).catch(() => null);
   ok('처음 고른 칸 = 진도 맨 끝(6차시) · 카드 = 보스 · ⭐ · 의뢰문', pick0?.no === '6' && /청록 드래곤/.test(pick0.t) && /0\/3/.test(pick0.t), pick0?.t);
   const btns = await A.$$eval('.bd .act button', (x) => x.map((e) => e.textContent.trim())); ok('단추 = 「⚔ 6차시 혼자 도전」 · 「👥 6차시 팀 모집」', btns.some((t) => /6차시 혼자 도전/.test(t)) && btns.some((t) => /6차시 팀 모집/.test(t)), btns.join(' | '));
