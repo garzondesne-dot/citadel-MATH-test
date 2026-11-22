@@ -42,7 +42,7 @@
     </div>
     <!-- ⚡ 스킬 (📜 요청 #16): 장착 스킬 고르기 = 그 용사 속성 사다리 Ⅰ ~ Ⅳ · 값 = 캠프 「내 용사」와 같은 💎 · 📜 · 연습방 = 미리 보기(저장 안 됨) -->
     <div class="sk16" data-k="atb-pick-skills">
-      <b class="sh">⚡ 장착 스킬</b>
+      <b class="sh">장착 스킬</b>
       <div class="lad">
         {#each ladder(sel) as k, i (k)}
           {@const on = tierOf(sel) === i + 1}
@@ -51,9 +51,9 @@
       </div>
       <p class="note">🧪 연습방 = 미리 보기 · 저장 안 됨 · 학생 판 = 캠프 「내 용사」와 같은 값으로 업그레이드</p>
       <div class="cond">
-        <span class:off={st.tier < 4}>✴ 4레벨 스킬 = Ⅳ 장착하면 · ⚡⚡</span>
-        <span class:off={!st.aura}>🛡 홀리 방패 = 🔨 +10 이면 · ⚡⚡</span>
-        <span class:off={!st.awk}>✨ 각성 = 각성하면(+10 · Ⅳ · 호칭) · ⚡⚡⚡</span>
+        <span class:off={st.tier < 4}>✴ 스킬 2 = Ⅳ 장착하면 · 구슬 2</span>
+        <span class:off={!st.aura}>🛡 홀리 방패 = 🔨 +10 이면 · 자동</span>
+        <span class:off={!st.awk}>✨ 각성 = 각성하면(+10 · Ⅳ · 호칭) · 구슬 3</span>
       </div>
     </div>
     <button type="button" class="go" data-k="atb-pick-go" onclick={() => onpick(sel)}>⚔ 이 용사로</button>

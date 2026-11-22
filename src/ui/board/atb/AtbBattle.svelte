@@ -12,6 +12,7 @@
   import Sprite from '../../Sprite.svelte';
   import AtbIcon, { type IconName } from './AtbIcon.svelte';
   import FamShield from './FamShield.svelte';
+  import Orb from './Orb.svelte';
   import { BOX, landBox } from './landBox.svelte';
   import AtbIntro from './AtbIntro.svelte';
   import { INTRO, FLEE_LINE, bossLine, markMet, metBefore, type LineK } from '../../../board/atb/story';
@@ -171,6 +172,9 @@
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   /** 💨 📜 #92 · #108 10분 상한 = 7:00 보스 말풍선 + 가장자리 짙게 · 9:00 「1분 뒤 도망」 + 위 셈 · 10:00 몬스터 도망(엔진 이름 후퇴) (방장 시각 = S.t 그대로 · 모든 폰 같은 때) */
   let fleeing = $state(false), leaveAsk = $state(false);
+  /* ⚡ #125 막 찬 구슬 = 반짝(icons-v1 10) 0.7초 */
+  let orbNew = $state<number[]>([]), orbWas = 0;
+  $effect(() => { const c = Math.floor(shownCh); untrack(() => { if (c > orbWas) { const add = Array.from({ length: c - orbWas }, (_, i) => orbWas + i); orbNew = [...orbNew, ...add]; setTimeout(() => (orbNew = orbNew.filter((x) => !add.includes(x))), 700); } orbWas = c; }); });
   /** 🏆 #116 보스 처치 연출 (이김만 · 모두 같은 때 · 건너뛰기 없음): 히트 스톱 0.15초 → 슬로 1.2초 → 마지막 일격 용사 클로즈업 1초(금빛 띠) → 용사 4명 기뻐함 1.5초 + 🎺 팡파레 → 결과 (약 3.9초) */
   let kill = $state<{ ph: 'stop' | 'slow' | 'close' | 'cheer'; who: number } | null>(null);
   const killName = (who: number) => (whoNames?.[who] ?? labels?.[who]?.replace(/^🤖\s*/, '') ?? S.heroes[who]?.s.name ?? '').replace(/^나$/, S.heroes[who]?.s.name ?? '나');
@@ -272,7 +276,7 @@
   const tg = $derived(S.end ? null : telegraphOf(S));
   const reactNow = $derived(me >= 0 && canReact(S, me));
   const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호!', support: '🎵 지금 격려!', dealer: '✂ 지금 끊기!' }; /* 📜 #119 한 줄 */
-  const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#c8862a', dealer: '#d8402a', healer: '#2faa5a' };
+  const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#1fae9e', dealer: '#d8402a', healer: '#2faa5a' }; /* 📜 #124 역할 색 = 힐러 초록 · 탱커 파랑 · 서포터 청록 · 딜러 빨강 */
   /** 📜 #119 ① 알림 = 짧은 한 줄 (설명 · 「팀에 ○○ 없음」 없음) */
   const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => tagName(i)).join(' · ') ?? ''} 노림` : tg.cls === 'aoe' ? '💥 광역 공격' : `🌀 ${tg.atk} 모으는 중`) : '');
   // 🎯 📜 요청 #50 A 역할 = 카운터 단추(화면 가운데 · 카드 위 · 남은 예고 고리) · ⚡ 0 = 작은 띠 · 임무
@@ -290,7 +294,7 @@
   const whoOf = (id: number) => whoNames?.[id] || S.heroes[id]?.s.name || '';
   /** 📜 #82 스킬마다 그 스킬 그림 · 이름: 장착 · 넘침 자동 · 강타 = 장착 스킬 · 4레벨 = 그 계열 사다리 Ⅳ 칸 · 각성 = 각성 필살기(awkfx) */
   const skIdOf = (who: number, kind?: string) => (kind === 'tier4' ? (ladder(S.heroes[who]!.s.hero)[3] as string | undefined) ?? fx[who] : fx[who]);
-  const skIc = (id: number, kind?: string) => { const k = skIdOf(id, kind); return k ? (SKILL_NAMES[k] ?? '').split(' ')[0] || '⚡' : '⚡'; };
+  const skIc = (id: number, kind?: string) => { const k = skIdOf(id, kind); return k ? (SKILL_NAMES[k] ?? '').split(' ')[0] || '✦' : '✦'; };
   const fitPx = (t: string, w: number, max: number) => Math.max(14, Math.min(max, Math.floor(w / Math.max(1, [...t].length * 0.98))));
   function eyeCut(who: number, col: string, bigT: string, smallT: string, ms = 700) { const n = Date.now(); eye = { who, col, n, big: bigT, small: smallT }; setTimeout(() => { if (eye?.n === n) eye = null; }, ms + 500); }
   /** 🌀 특수 모으기 막대 (보스 머리 위 · 4초) */
@@ -319,27 +323,30 @@
   const askTo = $derived.by((): number | null => { if (!meH?.gd || meH.down || S.end) return null; const xs = Object.entries(S.asks ?? {}).filter(([k, a]) => a.by < 0 && +k !== me && !S.heroes[+k]?.down).sort((a, b) => a[1].t - b[1].t); return xs.length ? +xs[0]![0] : null; });
   function askHelpNow() { if (ops.ask()) { hintUsed = true; try { navigator.vibrate?.(30); } catch { /* 무시 */ } } }
   function aidNow(to: number) { skOpen = false; if (ops.aid(to)) { try { navigator.vibrate?.(60); } catch { /* 무시 */ } } }
+  /** ⚡ #125 변신 단추 둘째 줄 「구슬 n」 = 구슬 그림 n개 */
+  const subN = (t: string) => { const m = /구슬 ([\d.]+)$/.exec(t); return m ? Math.ceil(parseFloat(m[1]!) || 1) : 0; };
+  const subTxt = (t: string) => t.replace(/\s*·?\s*구슬 [\d.]+$/, '');
   /** 📜 #102 ④ 상황 = 「스킬」 단추가 그 스킬 단추로 바뀜 (강조 순서 = emph) · 누르면 바로 발동 · ☰ = 메뉴 */
   const EMPH_IC: Partial<Record<SkillK, string>> = { role: '🛡', heal: '🩹', revive: '💖', tier4: '💥' };
   /** 🎨 그림 아이콘 (ui-ic4 · atb-counter-ui · 📜 UI-FINAL 7절) */
   const ART = (p: string) => `${import.meta.env.BASE_URL}art/board-atb/${p}.webp`;
   const IC4: Partial<Record<SkillK, string>> = { tier4: ART('ic4/sk2'), revive: ART('ic4/revive') };
   /** 📜 UI-FINAL-1122 3절 변신 순서 = 반응 막기(탱커 · 표적 나 = 「🛡 막기!」 · 친구 = 「🛡 엄호! ○○ 지키기」) > 친구 30% 아래 회복(힐러 「💚 힐!」 · 그 밖 「🩹 응급붕대!」) > 수호자 「💡 ○○ 도와줘!」 > 「💖 부활!」 > 딜러 「✂ 끊기!」 > 약점 용사 실드 「💥 스킬 2!」 · 충전 있을 때만(도와줘 = 충전 없이) */
-  const morph = $derived.by((): { k: SkillK | 'aid'; t: string; sub: string; dk: string; img?: string } | null => {
+  const morph = $derived.by((): { k: SkillK | 'aid'; t: string; sub: string; dk: string; img?: string; ic?: IconName } | null => {
     if (!meH || meH.down || over === 'timing') return null; const R = meH.s.role, ok = (k: SkillK) => slots.some((x) => x.k === k && x.ok), cost = (k: SkillK) => slots.find((x) => x.k === k)?.cost ?? 0, c = (k: SkillK) => (cost(k) ? `구슬 ${cost(k)}` : '구슬 없이');
     const low = S.heroes.filter((h) => !h.down && h.hp < h.s.maxHp * T.lowHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0];
     if (reactNow && R === 'tank' && ok('role')) { const tg = S.target?.[0]; return tg == null || tg === me ? { k: 'role', t: '막기!', sub: c('role'), dk: 'atb-counter', img: ART('counter/btn-cover') } : { k: 'role', t: '엄호!', sub: `${tagName(tg)} 지키기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cover') }; }
     if (reactNow && R === 'support' && ok('role')) return { k: 'role', t: '격려!', sub: `모두 지키기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-boost') }; /* 📜 11/22 선생님 = 광역 반응 = 서포터 「🎵 격려! 모두 지키기」 (막기 · 엄호와 같은 1순위) */
-    if (low && R === 'healer' && ok('role')) return { k: 'role', t: '💚 힐!', sub: `${tagName(low.id)} · ${c('role')}`, dk: 'atb-morph-heal' };
-    if (low && ok('heal')) return { k: 'heal', t: '🩹 응급붕대!', sub: `${tagName(low.id)} · ${c('heal')}`, dk: 'atb-morph-heal' };
+    if (low && R === 'healer' && ok('role')) return { k: 'role', ic: 'role-healer', t: '힐!', sub: `${tagName(low.id)} · ${c('role')}`, dk: 'atb-morph-heal' };
+    if (low && ok('heal')) return { k: 'heal', ic: 'role-healer', t: '응급붕대!', sub: `${tagName(low.id)} · ${c('heal')}`, dk: 'atb-morph-heal' };
     if (askTo != null) return { k: 'aid', t: `💡 ${tagName(askTo)} 도와줘!`, sub: '힌트 보내기 · 구슬 없이', dk: 'atb-aid' };
     if (ok('revive')) { const d = S.heroes.find((h) => h.down && h.id !== me); return { k: 'revive', img: IC4.revive, t: '부활!', sub: `${d ? tagName(d.id) + ' · ' : ''}${c('revive')}`, dk: 'atb-morph-revive' }; }
     if (reactNow && R === 'dealer' && ok('role')) return { k: 'role', t: '끊기!', sub: `모으기 끊기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cut') };
     if (S.shieldUp && canBreak(S, me) && ok('tier4')) return { k: 'tier4', img: IC4.tier4, t: '스킬 2!', sub: `실드 1칸 · ${c('tier4')}`, dk: 'atb-break' };
     return null;
   });
-  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '스킬 1' : k === 'tier4' ? (me >= 0 && canBreak(S, me) ? '💥 스킬 2 · 실드' : '스킬 2') : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급붕대' : '부활';
-  const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚡', tier4: '💥', role: '', aura: '🛡', awk: '✨', revive: '💖', heal: '🩹' };
+  const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '스킬 1' : k === 'tier4' ? '스킬 2' : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급붕대' : '부활';
+  const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '✦', tier4: '💥', role: '', aura: '🛡', awk: '✨', revive: '💖', heal: '🩹' };
   const onTiming = (t: Timing) => { over = ''; ops.attack(t); };
 
   // ── 연출 (사건 → 떠오르는 숫자 · 공격 자세 · 컷인) ──
@@ -498,7 +505,7 @@
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
       const bigSk = e.k === 'skill' && !e.auto && (e.kind === 'tier4' || e.kind === 'awk'), /* 📜 #102 ⑤ 컷인 = 스킬 2 · 각성만 (스킬 1 · 넘침 자동 = 없음) */ ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
       if (e.k === 'skill' && bigSk) { const sid = skIdOf(e.who, e.kind), nm = e.kind === 'awk' ? (sid ? `각성 ${skillName(sid)}` : '각성') : sid ? skillName(sid) : '스킬', c = { who: e.who, awk: e.kind === 'awk', name: nm, short: e.kind === 'equip', line: `${whoOf(e.who)}의 ${e.kind === 'awk' ? '✨' : skIc(e.who, e.kind)} ${nm}!` }; const cn = ++cutN; claim(4, ms, 'cutin'); cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
-      if (e.k === 'skill' && e.auto && e.who === me) pop(posOf(me).x, posOf(me).y - 30, `${whoOf(me)} ⚡ 자동 스킬!`, 'role', 1000); // 📜 요청 #13 · #79 ③ 작은 글만
+      if (e.k === 'skill' && e.auto && e.who === me) pop(posOf(me).x, posOf(me).y - 30, `${whoOf(me)} 자동 스킬!`, 'role', 1000); // 📜 요청 #13 · #79 ③ 작은 글만
       if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
       if (bigSk) setTimeout(() => playAtk(e as Extract<Ev, { k: 'skill' }>), ms - 200); else playAtk(e as Extract<Ev, { k: 'atk' | 'skill' | 'role' }>);
     } else if (e.k === 'shield') shieldHit(e);
@@ -544,7 +551,7 @@
       else if (e.fx === 'freeze') { pop(B0.x, B0.y, '🧊 얼림!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 1600); }
       else if (e.fx === 'expose') pop(B0.x, B0.y, '약점 노출!', 'fam');
       else if (e.fx === 'bless' && e.to != null) pop(posOf(e.to).x, posOf(e.to).y - 24, '✨ 축복! +5', 'fam');
-      else if (e.fx === 'shock') { pop(B0.x, B0.y, '⚡ 감전!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 900); }
+      else if (e.fx === 'shock') { pop(B0.x, B0.y, '감전!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 900); }
       else if (e.fx === 'gust') pop(posOf(e.who).x, posOf(e.who).y - 26, '🌪 순풍! ATB +30%', 'fam');
       else if (e.fx === 'curse') { pop(B0.x, B0.y, '🌑 저주!', 'fam'); bossCurse = Date.now(); setTimeout(() => (bossCurse = 0), 3000); }
     }
@@ -556,7 +563,7 @@
     }
     else if (e.k === 'sig' && e.what === 'healNow') { if (meH?.s.role === 'healer' && !meH.down) { const t = Date.now(); healNowT = t; setTimeout(() => { if (healNowT === t) healNowT = 0; }, 3500); } }
     else if (e.k === 'guard') { domeBlock('aura'); barrierArmed = false; sfx('block', 0.9); bossPose = 'attack'; setTimeout(() => (bossPose = 'idle'), 500); }
-    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `⚡+${halfTxt(e.add)}`, 'role');
+    else if (e.k === 'charge' && e.who !== me) pop(posOf(e.who).x, posOf(e.who).y - 26, `구슬 +${halfTxt(e.add)}`, 'role');
     else if (e.k === 'sig') {
       if (e.what === 'breathHeal') pop(bx, 30, `+${e.v} 회복`, 'heal');
       else if (e.what === 'breathCut') pop(bx, 26, '숨 끊음!', 'shield');
@@ -681,7 +688,7 @@
   {#if hflash}{#key hflash.n}<i class="hflash" style:--a={hflash.a} aria-hidden="true" data-k="atb-hflash"></i>{/key}{/if}
   <!-- 🎯 📜 요청 #50 카운터 단추 (카드 위 가운데 · 남은 예고 고리) · ⚡ 0 = 작은 띠 -->
   <!-- 📜 #102 ④ 카운터 큰 단추 없앰 = 스킬 단추가 바뀜 -->
-  {#if roleTg && meH && meH.ch < 1}<div class="ctrno" role="status" data-k="atb-counter-noch">⚡ 이 없어요 · 문제를 풀어요</div>{/if}
+  {#if roleTg && meH && meH.ch < 1}<div class="ctrno" role="status" data-k="atb-counter-noch"><Orb st="empty" size={16} /> 구슬이 없어요 · 문제를 풀어요</div>{/if}
   {#if mis}<div class="mis" class:done={mis.done} data-k="atb-mission">{mis.done ? '✔ 임무 완수!' : `${mis.ic} 임무 ${mis.txt} ${mis.got}/${mis.need}`}</div>{/if}
   <!-- 💥 속성 브레이크 = 실드 뜨면 2초 카드 위 → 카드 뒤 가운데 (요청 #50 🔁) -->
   <!-- 📜 #102 ④ 실드 깨기 판 없앰 = 스킬 단추가 「💥 스킬 2」로 바뀜 -->
@@ -741,7 +748,7 @@
       <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}<small class="lv">Lv{h.s.lv}</small></span></div>
       <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:famflash={h.id === me && !!famFlash} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
         <b><FamShield fam={h.s.fam} size={18} /><AtbIcon name={ROLE_ICON[h.s.role]} size={16} /><span class="nm">{tagName(h.id)}</span>{#if h.gd}<i class="gdb" data-k="atb-gd" title="수호자">🛡</i>{/if}</b>
-        <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
+        <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚔</i>{/if}</span>
       </div>
     </div>
   {/each}
@@ -767,22 +774,22 @@
       {#if open && over !== 'timing'}<div class="b atk tg on" data-k="atb-autoon" role="status"><span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span><span class="two">공격<small data-k="atb-auto-state">{skOpen ? '⏸ 자동 멈춤' : '자동 중'}</small></span></div>
       {:else}<button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span> 공격{/if}</button>{/if}
       <div class="skw">
-        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{#if morph.img}<img class="mic" src={morph.img} alt="" />{/if}{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{#if IC4[emph]}<img class="ic4" src={IC4[emph]} alt="" />{:else}{EMPH_IC[emph]}{/if}</span>{/if}</button>{/if}
-        {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
+        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{#if morph.img}<img class="mic" src={morph.img} alt="" />{:else if morph.ic}<span class="mic"><AtbIcon name={morph.ic} size={28} /></span>{/if}{morph.t}</b><small>{subTxt(morph.sub)}{#if subN(morph.sub)}{#if subTxt(morph.sub)} · {/if}{#each Array(subN(morph.sub)) as _, j (j)}<Orb size={16} />{/each}{/if}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{#if IC4[emph]}<img class="ic4" src={IC4[emph]} alt="" />{:else}{EMPH_IC[emph]}{/if}</span>{/if}</button>{/if}
+        {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status"><Orb size={16} /> 스킬 쓸 수 있어요!</b>{/if}
       </div>
       <!-- 📜 #102 스킬 메뉴 = 단추 줄(nav) 기준 왼쪽 끝 (가운데 스킬 단추 기준이면 왼쪽 밖) -->
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
-          <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={emph === sk.k} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
-            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else if IC4[sk.k]}<img class="ic4" src={IC4[sk.k]} alt="" />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'tier4' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
-            <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
-            <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<i class:on={j + 1 <= meH.ch} class:half={j + 1 > meH.ch && j < meH.ch}>⚡</i>{/each}{#if meH.ch < sk.cost}<small class="need1">⚡ {halfTxt(sk.cost - meH.ch)}개 더 풀면</small>{/if}</span>
+          <button type="button" class="sk2 {sk.k}" style:--acc={sk.k === 'role' ? ROLE_COL[meH.s.role] : sk.k === 'heal' ? ROLE_COL.healer : sk.k === 'revive' ? '#d0508a' : sk.k === 'aura' ? '#c8a82a' : FAM_COL[meH.s.fam]} class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={emph === sk.k} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
+            <span class="ic">{#if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={28} />{:else if sk.k === 'heal'}<AtbIcon name="role-healer" size={28} />{:else if sk.k === 'revive'}<img class="ic4 big" src={IC4.revive} alt="" />{:else if sk.k === 'aura'}<AtbIcon name="shield" size={28} />{:else}<FamShield fam={meH.s.fam} size={28} />{/if}{#if sk.k === 'tier4' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
+            <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'tier4' && breaksShield}<small data-k="atb-sk-shield-line">실드 1칸</small>{:else if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
+            <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<Orb st={j + 1 <= meH.ch ? 'full' : j < meH.ch ? 'half' : 'empty'} size={18} />{/each}{#if meH.ch < sk.cost}<small class="need1"><Orb size={14} /> {halfTxt(sk.cost - meH.ch)}개 더 풀면</small>{/if}</span>
           </button>
         {/each}
-        {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
+        {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small><Orb size={14} /> {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
         </div>
-      {#if open}<div class="orbline"><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span></div>
-      {:else}<button type="button" class="b quiz main" class:pulse0={(meH?.ch ?? 0) <= 0 && !S.end} data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
+      {#if open}<div class="orbline"><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<Orb st={j + 1 <= shownCh ? (orbNew.includes(j) ? 'new' : 'full') : j < shownCh ? 'half' : 'empty'} size={Math.round(20 * U)} />{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span></div>
+      {:else}<button type="button" class="b quiz main" class:pulse0={(meH?.ch ?? 0) <= 0 && !S.end} data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<Orb st={j + 1 <= shownCh ? (orbNew.includes(j) ? 'new' : 'full') : j < shownCh ? 'half' : 'empty'} size={Math.round(20 * U)} />{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
     </nav>
   {:else}
@@ -796,7 +803,7 @@
   {#if cut}
     <div class="cut" class:short={cut.short} data-k="atb-cutin" aria-live="polite">
       <div class="band"><HeroSprite id={lookOfStats(S.heroes[cut.who]!.s)} scale={Math.max(2, Math.round(H / 90))} row={2} play /></div>
-      <p class="cn" data-k="atb-cut-line"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성 ⚡⚡⚡' : '4레벨 스킬 ⚡⚡'}</small><span style:font-size="{fitPx(cut.line, Wd * 0.9, Math.min(54, H * 0.1))}px">{cut.line}</span></p>
+      <p class="cn" data-k="atb-cut-line"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성' : '스킬 2'}</small><span style:font-size="{fitPx(cut.line, Wd * 0.9, Math.min(54, H * 0.1))}px">{cut.line}</span></p>
     </div>
   {/if}
   {#if kill?.ph === 'close'}{@const kp = portraitOf(S.heroes[kill.who]!.s.hero)}<div class="kband" data-k="atb-lasthit" style:--kc={FAM_COL[S.heroes[kill.who]!.s.fam]}><div class="kb">{#if kp}<i class="kface" style="background-image:url({kp.url});background-size:{kp.cols * 100}% {kp.rows * 100}%;background-position:{(kp.c[0] / Math.max(1, kp.cols - 1)) * 100}% {(kp.c[1] / Math.max(1, kp.rows - 1)) * 100}%"></i>{/if}<b>⚔ 마지막 일격!</b><span>{killName(kill.who)}</span></div></div>{/if}
@@ -1282,4 +1289,10 @@
   .bst { position: absolute; z-index: 3; right: 6%; top: -2px; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 1px; border-radius: 8px; background: #1a1d26e6; border: 1px solid #9fb7d8; }
   .bst img { width: 20px; height: 20px; image-rendering: pixelated; } .bst b { font: 900 14px var(--font-plain); color: #dfe9ff; }
   .stage.q .tgline, .stage.q .reactb { left: 30%; }
+  /* ── 📜 #124 스킬 줄 = 왼쪽 큰 픽셀 아이콘 · 왼쪽 띠 색(공격 = 내 속성 · 역할 = 역할 색) · #125 비용 = 번개 구슬 ── */
+  .btns.v3 .ring.skm .sk2 { border-left-color: var(--acc) !important; }
+  .btns.v3 .ring.skm .sk2 .ic { width: 30px; display: grid; place-items: center; }
+  .ic4.big { width: 28px; height: 28px; }
+  .sk2 .co { display: inline-flex; align-items: center; gap: 1px; } .sk2 .co .need1 { display: inline-flex; align-items: center; gap: 2px; }
+  .orbs { display: inline-flex; gap: 2px; align-items: center; }
 </style>

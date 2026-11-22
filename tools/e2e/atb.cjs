@@ -155,7 +155,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     await p.mouse.move(bx[0], bx[1]); await p.mouse.down(); await p.waitForTimeout(600);
     const pk = await p.textContent('[data-k="atb-peek"]').catch(() => '');
     await p.mouse.up(); await p.waitForTimeout(150);
-    ok('요청 #19 덧3 꾹 = 설명 카드(이름 · 효과 · ⚡ 비용) · 손 떼면 닫힘 · 발동 안 함', /내 스킬/.test(pk) && /⚡ 1/.test(pk) && !(await p.$('[data-k="atb-peek"]')) && (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 1, pk);
+    ok('요청 #19 덧3 꾹 = 설명 카드(이름 · 효과 · 구슬 비용 · 📜 #125 구슬 그림) · 손 떼면 닫힘 · 발동 안 함', /내 스킬/.test(pk) && /\b1\b/.test(pk) && !/⚡/.test(pk) && !(await p.$('[data-k="atb-peek"]')) && (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 1, pk);
     await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; }); await p.waitForTimeout(120);
     await p.mouse.move(bx[0], bx[1]); await p.mouse.down(); await p.waitForTimeout(600); const pk2 = await p.textContent('[data-k="atb-peek"]').catch(() => ''); await p.mouse.up();
     ok('요청 #19 덧3 못 쓰는 단추도 꾹 = 「지금 못 씀: ⚡ 1 필요」', /지금 못 씀/.test(pk2), pk2); }
@@ -203,13 +203,14 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.waitForSelector('.card.suck', { timeout: 4000 }).catch(() => {}); await p.screenshot({ path: `${SHOTS}/atb-r31-suck-844.png` });
   await p.waitForTimeout(1500); await closeQ(p);
   { await p.evaluate(() => { const S = globalThis.__atb.S; S.heroes[0].ch = 0; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(400);
-    await p.evaluate(() => globalThis.__atb.solve()); const o0 = await p.$$eval('[data-k="atb-orbs"] i.on', (x) => x.length); await p.waitForTimeout(160); await p.screenshot({ path: `${SHOTS}/atb-r31-fly-844.png` }); await p.waitForTimeout(700);
-    const o1 = await p.$$eval('[data-k="atb-orbs"] i.on', (x) => x.length), open1 = !!(await p.$('[data-k="atb-quiz"]'));
+    await p.evaluate(() => globalThis.__atb.solve()); const o0 = await p.$$eval('[data-k="atb-orbs"] [data-k="orb"]:is([data-st="full"], [data-st="new"])', (x) => x.length); await p.waitForTimeout(160); await p.screenshot({ path: `${SHOTS}/atb-r31-fly-844.png` }); await p.waitForTimeout(700);
+    const o1 = await p.$$eval('[data-k="atb-orbs"] [data-k="orb"]:is([data-st="full"], [data-st="new"])', (x) => x.length), open1 = !!(await p.$('[data-k="atb-quiz"]'));
     ok('요청 #41 소문항 맞힘 = 그 조각에서 구슬 1개가 바로 날아가 닿을 때 한 칸 · 카드 안 닫힘', o0 === 0 && o1 === 1 && open1, `${o0} → ${o1} · 카드 ${open1}`); }
   await closeQ(p); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 4; }); await p.waitForTimeout(250);
   ok('요청 #31 ④ 가득 = 스킬 단추 빛 고리 + 「스킬 쓸 수 있어요!」 한 번', !!(await p.$('[data-k="atb-fullring"]')) && /스킬 쓸 수 있어요/.test(await p.textContent('[data-k="atb-fullmsg"]').catch(() => '')));
   await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; globalThis.__atb.full(); }); await p.waitForTimeout(150); await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(250);
-  ok('요청 #31 ⑤ 스킬 메뉴 = 필요한 ⚡ 홈 + 「⚡ n개 더 풀면」', /⚡ 1개 더 풀면/.test(await p.textContent('[data-k="atb-cost-equip"]').catch(() => '')));
+  { const t = await p.textContent('[data-k="atb-cost-equip"]').catch(() => ''), n = await p.$$eval('[data-k="atb-cost-equip"] [data-k="orb"]', (x) => x.length).catch(() => 0);
+    ok('요청 #31 ⑤ · 📜 #125 스킬 메뉴 = 비용 구슬 그림 + 「구슬 그림 n개 더 풀면」 (⚡ 글자 없음)', /1개 더 풀면/.test(t) && !/⚡/.test(t) && n >= 2, `${t} · 구슬 ${n}`); }
   await p.click('[data-k="atb-skill-btn"]');
   // 🛡 요청 #35 보스 공격 3종 + 반응 막기 = 예고 4초 · 그 역할 = 큰 띠 + 스킬 단추 깜박 + 메뉴 맨 앞 역할 · ATB 없이 ⚡1 · 특수 = 보라 모으기 막대
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);

@@ -4,6 +4,7 @@
   //   소문항 맞음 = 테두리 초록 + 초록 반짝 · 틀림 = 단호한 좌우 흔들림 + 빨간 테두리 (진동 · 소리 = 부모) · 짧은 보기 4개 = 2 × 2 · 긴 문항 = 보기 칸만 스크롤
   import type { Given, LessonPack } from '../../../model/types';
   import QItem from '../../q/QItem.svelte';
+  import Orb from './Orb.svelte';
   import { fxCss } from './AtbFx.svelte';
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
@@ -58,7 +59,7 @@
   <header>
     <span class="tt" data-k="atb-qtitle">{shortTitle}</span>
     <!-- ⚡ 충전 미리 보기 (📜 요청 #31 · 푸는 게 곧 충전): 소문항 수만큼 기력 조각 · 맞히면 켜짐(첫 시도 = 꽉 · 고쳐 맞힘 = 반) · 퍼펙트 +3 / 고치면 +2 -->
-    <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}>⚡</i>{/each}</span>
+    <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}><Orb st={st === 'full' ? 'full' : st === 'half' ? 'half' : 'empty'} size={16} /></i>{/each}</span>
     {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
     {#if help?.mode === 'ask'}<button type="button" class="lnk" class:wait={help.wait} data-k="atb-help" disabled={!hintOk || !q || !!hint || help.wait} onclick={() => onask?.()}>{help.wait ? '⏳ 수호자 기다리는 중' : '💡 도와줘'}</button>{:else}<button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) { hint = hintOf(q); onhint?.(); } }}>💡 힌트</button>{/if}
   </header>
@@ -71,13 +72,13 @@
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
   {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
-  {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (⚡ 기력은 그대로)</p>
-  {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (⚡ 기력은 그대로)</p>{/if}
+  {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (구슬은 그대로)</p>
+  {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (구슬은 그대로)</p>{/if}
   {#if grading}
     <button type="button" class="grade" data-k="atb-grade" aria-label="채점 · 누르면 건너뛰기" onclick={() => onskip?.()}>
       <b class="gt" data-k="atb-grade-title">{grading.perfect ? '🏁 퍼펙트!' : '🏁 완주!'}{#if grading.perfect} <em>✨+1</em>{/if}</b>
       <span class="marks">{#each grading.marks as m, i (i)}<i class="mk" class:tri={!m} style:animation-delay="{0.3 + i * 0.26}s" data-k="atb-mark" data-m={m ? 'o' : 'tri'}>{#if m}○{:else}△<small>고침</small>{/if}</i>{/each}</span>
-      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">⚡ 한 번에 +1 · 한 번 틀림 +½ · 두 번+ 0 (풀면서 받음){grading.perfect ? (grading.n ? ' · ✨ 퍼펙트 +1 · ATB 가득' : ' · ✨ 퍼펙트 +1 → 가득이라 자동 스킬 · ATB 가득') : ''}</span>
+      <span class="gain" style:animation-delay="{0.3 + grading.marks.length * 0.26}s">구슬 = 한 번에 +1 · 한 번 틀림 +½ · 두 번+ 0 (풀면서 받음){grading.perfect ? (grading.n ? ' · ✨ 퍼펙트 +1 · ATB 가득' : ' · ✨ 퍼펙트 +1 → 가득이라 자동 스킬 · ATB 가득') : ''}</span>
       <small>누르면 건너뛰기</small>
     </button>
   {/if}
@@ -145,10 +146,7 @@
   /* ⚡ 충전 조각 (요청 #31) */
   header { flex-wrap: wrap; row-gap: 2px; }
   .shards { display: inline-flex; gap: 2px; padding: 1px 6px; border-radius: 8px; background: #3a2618; transition: transform 0.4s ease-in, opacity 0.4s; }
-  .sh { font-style: normal; font-size: 13px; line-height: 1; filter: grayscale(1) brightness(0.45); }
-  .sh.full { filter: drop-shadow(0 0 4px #5ff0ff) hue-rotate(150deg) saturate(2); animation: shon 0.36s ease-out; }
-  .sh.zero { filter: grayscale(1) brightness(0.3); opacity: 0.5; }
-  .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
+  .sh { font-style: normal; line-height: 0; display: inline-flex; } .sh.full, .sh.half { animation: shon 0.36s ease-out; } .sh.zero { opacity: 0.5; } /* ⚡ #125 = 번개 구슬 그림 */
   @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
   .shards.gather { transform: translate(0, calc(var(--lvh, 1vh) * 34)) scale(1.8); opacity: 0; }
   /* 📜 요청 #61 더 있음 = 카드 아래 그림자 + 알림 (누르면 아래로) */

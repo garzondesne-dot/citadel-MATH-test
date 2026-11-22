@@ -6,9 +6,7 @@ import { ATTACKS } from '../src/raid/attacks';
 import { checkUpload } from '../src/school/packUpload';
 import { answerOf } from '../src/raid/raid';
 import { answer, canSkip, easiestOf, nextOrigin, originsOf, questionsOf, skip, startRun } from '../src/board/atb/quiz';
-import { askHelp, earn, newBattle, sendHelp } from '../src/board/atb/engine';
-import { BOSSES } from '../src/board/atb/tune';
-import { statsOf } from '../src/board/atb/heroes';
+import { askHelp, earn, sendHelp } from '../src/board/atb/engine';
 
 const L2 = SUBJ.lessons.find((p) => p.no === 2)!;
 const look = { sheet: (r: string) => (r.split(':')[0]!.replace(/@.*$/, '') in SUBJ.themes.sheets), theme: (t: string) => !t || t in SUBJ.themes.dungeons, attack: (a: string) => a in ATTACKS, builtIn: () => false };
