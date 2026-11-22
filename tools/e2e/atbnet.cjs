@@ -42,5 +42,29 @@ const out = [], errs = []; const ok = (n, c, d = '') => out.push(`${c ? '✅' : 
     const ra = await A.$('[data-k="atb-merit"]'), rc = await C.$('[data-k="atb-to-board"]');
     await (await p.$(`[data-k="phone-2"]`)).screenshot({ path: `${SHOTS}/atb-r48-result.png` });
     ok('#51 판 끝 = 두 폰 결과 화면(🚩 공적 · 💎 예상 · 「게시판으로」) · end/{uid} 둘 다', !!ra && !!rc && ends && ends.s1_3_1 && ends.s1_3_2 && typeof ends.s1_3_2.meritSum === 'number' && typeof ends.s1_3_2.gemSum === 'number', JSON.stringify(Object.keys(ends || {}))); }
+  // 🚪 #113 도중에 나가기 = 새 판(새 메모리 서버) · 방장 폰 ‹ → 확인 → 나가기 → 친구 폰이 바로 방장 · 내 자리 봇 「(봇)」 · 위 띠 · 다시 열어도 게시판 · 혼자 남은 친구가 나가면 판 끝 「나감」
+  { const q = await b.newPage({ viewport: { width: 900, height: 820 } }); q.on('pageerror', (e) => errs.push(String(e)));
+    await q.goto(B); await q.waitForSelector('[data-k="phone-2"]');
+    const f2 = async (k) => (await (await q.$(`[data-k="phone-${k}"]`)).contentFrame());
+    let X = await f2(1); const Y = await f2(2);
+    await X.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await Y.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await q.waitForTimeout(1500);
+    await X.click('[data-k="atb-leave"]'); const ask = await X.textContent('[data-k="atb-leave-ask"]').catch(() => '');
+    await X.click('[data-k="atb-leave-stay"]'); const stay = !(await X.$('[data-k="atb-leave-ask"]')) && !!(await X.$('[data-k="atb-stage"]'));
+    const t0 = await Y.evaluate(() => globalThis.__atb.S.t);
+    await X.click('[data-k="atb-leave"]'); await X.click('[data-k="atb-leave-go"]'); await q.waitForTimeout(400);
+    const band = await Y.waitForFunction(() => /떠나고 봇이 이어받았어요/.test(document.querySelector('[data-k="atb-bigmsg"]')?.textContent ?? ''), null, { timeout: 4000 }).then(() => true).catch(() => false);
+    await q.waitForTimeout(2600);
+    const r = await q.evaluate(() => { const st = window.__atbStore; return { host: st.get('atb/dev/host'), left: Object.keys(st.get('atb/dev/left') ?? {}), end: st.get('atb/dev/end/s1_3_1') }; });
+    const y = await Y.evaluate(() => ({ t: globalThis.__atb.S.t, tags: [...document.querySelectorAll('.hero .tag .nm')].map((e) => e.textContent) }));
+    const board = !!(await X.$('[data-k="dev-board"]'));
+    ok('🚪 #113 ‹ = 확인 창(봇이 이어서 · 맞힌 문제 몫 💎) · 계속 싸우기 = 그대로 · 나가기 = 게시판', /나갈까요/.test(ask) && /봇이 이어서/.test(ask) && /💎/.test(ask) && stay && board, JSON.stringify({ ask, stay, board }));
+    ok('🚪 #113 방장이 나감 = 친구 폰이 바로 방장(10초 안 기다림) · 판 이어감 · 내 자리 이름표 「(봇)」 · 위 띠 「떠나고 봇이 이어받았어요」', r.host === 's1_3_2' && y.t > t0 + 2 && y.tags.some((t) => /\(봇\)/.test(t)) && band, JSON.stringify({ host: r.host, t0, t: y.t, tags: y.tags, band }));
+    ok('🚪 #113 나간 사람 결과 = 「나감」 · 맞힌 소문항 몫만(공적 0 · 클리어 0)', r.end?.why === '나감' && r.end?.left === true && r.end?.meritSum === 0 && r.end?.gem?.clear === 0, JSON.stringify(r.end ?? null).slice(0, 160));
+    await q.evaluate(() => { const f = document.querySelector('[data-k="phone-1"]'); f.src = f.src; }); await q.waitForTimeout(2500); X = await f2(1);
+    const back = !!(await X.$('[data-k="dev-board"]')) && !(await X.$('[data-k="atb-stage"]'));
+    await Y.click('[data-k="atb-leave"]'); const ask2 = await Y.textContent('[data-k="atb-leave-ask"]').catch(() => ''); await Y.click('[data-k="atb-leave-go"]'); await q.waitForTimeout(800);
+    const r2 = await q.evaluate(() => { const st = window.__atbStore; return { end: st.get('atb/dev/end/s1_3_2'), snap: JSON.parse(st.get('atb/dev/snap')?.j ?? '{}').end ?? null }; });
+    ok('🚪 #113 나간 판 = 다시 열어도 게시판(그 전투로 안 감) · 혼자 남은 사람이 나감 = 「혼자 판은 여기서 끝나요」 · 판 끝(나감 · 벌 없음)', back && /혼자 판/.test(ask2) && r2.end?.why === '나감' && r2.snap?.why === '나감', JSON.stringify({ back, ask2, end: r2.end?.why, snap: r2.snap }));
+    await q.screenshot({ path: `${SHOTS}/atb-r113-leave.png` }); await q.close(); }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

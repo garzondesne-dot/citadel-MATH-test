@@ -17,15 +17,18 @@
     { bot: 'normal', hero: id('루멘') }, { bot: 'normal', hero: id('누아') }] };
   if (!store.get('atb/dev/meta')) store.set('atb/dev/meta', meta); // 한 대만 열어도 됨 (빈 친구 자리 = 봇이 이어받음)
   const names = { s1_3_1: '테스트 가', s1_3_2: '테스트 나' };
+  /* 🚪 #113 ‹ 로 나감 = 게시판처럼 「게시판」 칸 · 다시 열어도 그 판으로 안 감 */
+  let gone = $state(!!store.get(`atb/dev/left/${u}`));
 </script>
 
 {#if two}
   <div class="two"><iframe title="폰 1" src="?role=atbnet&u=s1_3_1" data-k="phone-1"></iframe><iframe title="폰 2" src="?role=atbnet&u=s1_3_2" data-k="phone-2"></iframe></div>
 {:else}
-  <AtbNet S={store} pid="dev" uid={u} {names} onend={(r) => { (window as W).__atbEnd = r; }} />
+  {#if gone}<div class="board" data-k="dev-board">📋 게시판 (나간 판엔 다시 안 들어감)</div>{:else}<AtbNet S={store} pid="dev" uid={u} {names} onend={(r, _again, left) => { (window as W).__atbEnd = r; if (left) gone = true; }} />{/if}
 {/if}
 
 <style>
   .two { display: grid; gap: 4px; }
+  .board { padding: 20px; font: 800 18px var(--font); }
   iframe { width: 844px; height: 390px; border: 0; display: block; }
 </style>

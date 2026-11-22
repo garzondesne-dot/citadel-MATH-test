@@ -47,7 +47,7 @@ export const atbMeta = (S: Store, pid: string) => S.get<AtbMeta>(`${ATB}/${pid}/
 export const prevStars = (S: Store, cls: string, num: number, lid: string) => Math.max(0, Math.min(3, Number(S.get(`bonus/${cls}/${num}/boardStar/${lid}`)) || 0));
 /** 판 기록 한 줄 (서버 · 🧪 테스트 저장소 같은 꼴) */
 export function atbRec(ctx: { L: LessonPack; n: number; role?: 'g' | 'c' }, e: AtbEnd, t: number, stars: number, merit: number) {
-  return { at: t, lid: ctx.L.id, no: ctx.L.no, n: ctx.n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true };
+  return { at: t, lid: ctx.L.id, no: ctx.L.no, n: ctx.n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...((e as { left?: boolean }).left ? { left: true, why: '나감' } : {}), ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true }; // 🚪 #113 도중 나감 = left · 「나감」
 }
 /** 끝 (각 폰 = 자기 것만): 학생 기록 · ⭐ 최고 별 · 반 공적 — 돌려주는 값 = 이번 판 💎 (지갑에 더하는 건 화면 쪽) · 공적 */
 export function saveAtbResult(S: Store, ctx: { cls: string; num: number; L: LessonPack; pid: string; n: number; role?: 'g' | 'c' }, e: AtbEnd): { gem: number; merit: number; newStars: number } {

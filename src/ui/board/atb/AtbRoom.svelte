@@ -97,7 +97,7 @@
 <!-- 🔄 게시판 던전만 가로 (📜 요청 #8): 세로 폰 = 화면 전체를 CSS 로 시계 방향 90° (폰 회전 잠금 그대로 · 눕혀 들기만) · 가로 잠금이 되는 폰 = 안 돌림 · 나오면 원래대로 -->
 <Land z={1}>
 {#if phase === 'battle' && S && L}
-  {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} {bg} onend={ended} />{/key}
+  {#key runKey}<AtbBattle {L} {S} me={meIdx} {bots} speed={mode === 'watch' ? speed : 1} seed={`me${seed}`} fx={Object.fromEntries(S.heroes.map((h) => [h.id, fxFor(h.s.hero)]))} {bg} onend={ended} onleave={() => { S = null; phase = 'setup'; }} />{/key} <!-- 🚪 #113 연습방 ‹ = 설정으로 -->
 {:else if phase === 'result' && S && L}
   <AtbResult {S} no={L.no} me={meIdx} mastery={0} practiceWins={mastery} onagain={begin} onswap={() => { phase = 'setup'; picking = -1; }} onexit={() => (phase = 'setup')} />
 {/if}

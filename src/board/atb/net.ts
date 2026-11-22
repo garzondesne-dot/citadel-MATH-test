@@ -58,18 +58,18 @@ export function decodeSnap(sn: Snap): State | null { try { const S = JSON.parse(
 export function overwrite(dst: State, src: State): void { for (const k of Object.keys(dst) as (keyof State)[]) if (!(k in src)) delete (dst as unknown as Record<string, unknown>)[k]; Object.assign(dst, src); }
 
 /** 방장 고르기: 지금 방장이 살아 있으면 그대로 · 아니면 자리 순서대로 살아 있는 첫 학생 */
-export function pickHost(meta: Meta, hb: Record<string, number> | null, now: number, cur: string | null): string | null {
-  const alive = (u: string) => now - (hb?.[u] ?? 0) < NET.lostMs;
+export function pickHost(meta: Meta, hb: Record<string, number> | null, now: number, cur: string | null, left: Record<string, number> | null = null): string | null {
+  const alive = (u: string) => now - (hb?.[u] ?? 0) < NET.lostMs && !left?.[u]; /* 🚪 #113 ‹ 로 나간 사람 = 방장 못 함 */
   if (cur && alive(cur)) return cur;
   return humans(meta).find((s) => alive(s.uid))?.uid ?? null;
 }
 /** 🗺 정찰 끝 = 모두 준비(봇 · 끊긴 자리 = 준비로 셈) 또는 정찰 시간 끝 (요청 #69) */
-export function introDone(meta: Meta, ready: Iterable<number>, hb: Record<string, number> | null, now: number, scoutEnd: number): boolean {
-  if (now >= scoutEnd) return true; const r = new Set(ready), lost = new Set(lostSlots(meta, hb, now));
+export function introDone(meta: Meta, ready: Iterable<number>, hb: Record<string, number> | null, now: number, scoutEnd: number, left: Record<string, number> | null = null): boolean {
+  if (now >= scoutEnd) return true; const r = new Set(ready), lost = new Set(lostSlots(meta, hb, now, left));
   return meta.slots.every((s, i) => isBot(s) || lost.has(i) || r.has(i));
 }
-/** 끊긴 학생 자리 (봇이 이어받음) */
-export const lostSlots = (meta: Meta, hb: Record<string, number> | null, now: number): number[] => meta.slots.map((s, i) => (!isBot(s) && now - (hb?.[s.uid] ?? 0) >= NET.lostMs ? i : -1)).filter((i) => i >= 0);
+/** 끊긴 학생 자리 · 🚪 #113 ‹ 로 나간 자리(바로 · 돌아와도 안 돌려줌) = 봇이 이어받음 */
+export const lostSlots = (meta: Meta, hb: Record<string, number> | null, now: number, left: Record<string, number> | null = null): number[] => meta.slots.map((s, i) => (!isBot(s) && (!!left?.[s.uid] || now - (hb?.[s.uid] ?? 0) >= NET.lostMs) ? i : -1)).filter((i) => i >= 0);
 
 // ── 📜 요청 #51 판 결과 = 공적 · 판당 💎 · ⭐ 골고루 돌기 (atb/{pid}/end/{uid}) ──
 export const MERIT = { clear: 10, star: 5, first: 1, act: 2, role: 5 } as const;
@@ -78,12 +78,13 @@ export interface AtbEnd {
   win: boolean; sec: number; right: number; total: number; first: number; perfect: number; stars: number; newStars: number; /** ⭐3 다 모은 차시 = 공적 · 💎 절반 */ full: boolean;
   merit: { clear: number; star: number; first: number; act: number; role: number }; meritSum: number;
   gem: { items: number; clear: number; guard: number; star: number }; gemSum: number;
-  role: string; mission: boolean; why: string;
+  role: string; mission: boolean; why: string; /** 🚪 #113 ‹ 로 도중에 나감 = 맞힌 소문항 몫 💎 만 · 판 기록 「나감」 */ left?: boolean;
   /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; /** 🤝 #103 · #104 구조 성공 = 내가 보낸 힌트로 친구가 맞힌 횟수 (수호 명성) */ rescue: number; cut: number; brk: number; /** 💚 큰 힐 구조 (30% 아래 친구 · 옛 rescue) */ heal?: number; /** 🛡 실드 깨기 (스킬 2 · 도움표 · 깬 칸 수 · 📜 #101 뒤 대시보드 칸) */ shd?: number };
   /** 📕 #67 내가 소문항을 하나라도 맞힌 몬스터 칸 (복습 완료 · 손발 #1 화면이 채움 · 없으면 없음) */ mids?: string[];
 }
 /** 내 판 결과 · prevStars = 그 차시 지금까지 최고 별(0 ~ 3) */
-export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }): AtbEnd {
+export function atbResultFor(S: State, idx: number, ctx: { prevStars: number; left?: boolean }): AtbEnd {
+  if (ctx.left) { const r = atbResultFor(S, idx, { prevStars: ctx.prevStars }), z = <T extends Record<string, number>>(o: T): T => Object.fromEntries(Object.keys(o).map((k) => [k, 0])) as T; return { ...r, win: false, stars: 0, newStars: 0, merit: z(r.merit), meritSum: 0, gem: { ...z(r.gem), items: r.gem.items }, gemSum: r.gem.items, mission: false, why: '나감', left: true, acts: z(r.acts) }; } /* 🚪 #113 나간 사람 = 맞힌 소문항 몫만 · 클리어 · 공적 · 수호 명성(acts) 없음 */
   const h = S.heroes[idx]!, g = h.log, win = !!S.end?.win, f = g.first ?? { ok: 0, bad: 0, none: 0, total: 0 };
   const stars = win && f.total > 0 ? (STAR[gradeOf(f)] ?? 0) : 0, prev = Math.max(0, Math.min(3, ctx.prevStars | 0)), newStars = Math.max(0, stars - prev), full = prev >= 3;
   const k = (x: number) => (full ? Math.floor(x / 2) : x), M = missionOf(S, idx);
