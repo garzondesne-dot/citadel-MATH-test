@@ -25,11 +25,11 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await A.click('[data-map="6"]'); await wait(300);
   const h0 = await rest(`accounts/${CLS}/1/hero`);
   ok("고른 차시 카드 위 「🧙 지금 용사 ›」 칩", !!(await A.$("[data-k=\"board-hero\"]")));
-  await A.click('[data-k="board-hero"]'); await A.waitForSelector('[data-k="atb-pick"]', { timeout: 5000 }).catch(() => {});
-  const cells = await A.$$eval('[data-k="atb-pick"] .cell', (x) => x.map((e) => ({ id: Number(e.getAttribute('data-id')), lock: e.classList.contains('lock'), weak: !!e.querySelector('.wk') })));
+  await A.click('[data-k="board-hero"]'); await A.waitForSelector('[data-k="hero-sheet"]', { timeout: 5000 }).catch(() => {}); await A.click('[data-k="hero-sheet"] [data-flt="all"]').catch(() => {}); // 📜 #135 시트 거름 = 모두
+  const cells = await A.$$eval('[data-k="hero-sheet"] .cell', (x) => x.map((e) => ({ id: Number(e.getAttribute('data-id')), lock: e.classList.contains('lock'), weak: !!e.querySelector('.wk') })));
   ok('창 = 용사 격자 · 못 가진 칸 잠김 · 약점 리본', cells.length > 5 && cells.some((c) => c.lock) && cells.some((c) => !c.lock), `칸 ${cells.length} · 잠김 ${cells.filter((c) => c.lock).length} · 약점 ${cells.filter((c) => c.weak).length}`);
   const other = cells.find((c) => !c.lock && c.id !== h0);
-  if (other) { await A.click(`[data-k="atb-pick"] .cell[data-id="${other.id}"]`); await A.click('[data-k="atb-pick"] button:has-text("이 용사로")'); await wait(1500); }
+  if (other) { await A.click(`[data-k="hero-sheet"] .cell[data-id="${other.id}"]`); await A.click('[data-k="hero-sheet"] [data-k="hero-sheet-go"]'); await wait(1500); }
   const h1 = await rest(`accounts/${CLS}/1/hero`);
   ok('고르면 캠프 출전 용사도 바뀜 (서버 accounts/…/hero)', !!other && h1 === other.id, `${h0} → ${h1}`);
   // 팀 모집 글에 들어간 뒤 바꾸기 = 글 mem 용사 · g 갱신
@@ -37,7 +37,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const pid = Object.keys((await rest('school/board/posts')) || {})[0];
   const back = cells.find((c) => !c.lock && c.id !== h1);
   ok('모집 대기실에도 「🧙 용사 바꾸기」', !!(await A.$('[data-k="room-hero"]')));
-  if (await A.$('[data-k="room-hero"]')) { await A.click('[data-k="room-hero"]'); await A.waitForSelector('[data-k="atb-pick"]', { timeout: 5000 }).catch(() => {}); if (back) { await A.click(`[data-k="atb-pick"] .cell[data-id="${back.id}"]`); await A.click('[data-k="atb-pick"] button:has-text("이 용사로")'); await wait(1500); } }
+  if (await A.$('[data-k="room-hero"]')) { await A.click('[data-k="room-hero"]'); await A.waitForSelector('[data-k="hero-sheet"]', { timeout: 5000 }).catch(() => {}); if (back) { await A.click(`[data-k="hero-sheet"] .cell[data-id="${back.id}"]`); await A.click('[data-k="hero-sheet"] [data-k="hero-sheet-go"]'); await wait(1500); } }
   const mem = pid ? await rest(`school/board/posts/${pid}/mem`) : null, me = mem && Object.values(mem)[0];
   ok('모집 글 안에서 바꾸기 = 글 mem 용사 · 판 값(g.h) 갱신', !!me && !!back && me.g?.h === back.id, me ? `g.h ${me.g?.h} · hero ${me.hero}` : '글 없음');
   await A.screenshot({ path: `${SHOTS}/b93.png` });

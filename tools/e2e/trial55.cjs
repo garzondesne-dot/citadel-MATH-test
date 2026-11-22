@@ -15,7 +15,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/trial/';
     ok(`[${role}] 📜 #66-8 체험판 게시판 = 같은 화면 (탭 출정 · 기록 · 기사단 없음 · 팀 모집 없음)`, tabs.length === 2 && !tabs.some((t) => /기사단/.test(t)) && !(await p.$('[data-k="board-post"]')) && !!(await p.$('[data-k="trial-note"]')), tabs.join('|'));
     const nos = await p.$$eval('[data-map]:not(.lockd)', (x) => x.map((e) => e.getAttribute('data-map')));
     ok(`[${role}] 열린 칸 = 체험 차시`, nos.length > 0, nos.join(','));
-    await p.click(`[data-map="${nos[0]}"]`); await p.click('.bd .act .btn'); await p.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await p.waitForTimeout(1500);
+    await p.click(`[data-map="${nos[0]}"]`); await p.click('.bd .act .btn'); await p.waitForSelector('[data-k="hero-sheet"]'); await p.click('[data-k="hero-sheet-go"]'); /* 📜 #135 혼자 출정 = 용사 확인 시트 거침 */ await p.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await p.waitForTimeout(1500);
     const tags = await p.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim()));
     ok(`[${role}] 나 + 봇 3`, tags.length === 4 && tags.filter((t) => /봇|모험가/.test(t)).length === 3, tags.join(' · '));
     await p.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */

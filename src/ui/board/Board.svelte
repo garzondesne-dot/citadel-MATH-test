@@ -29,11 +29,14 @@
   import { resvDays, resvLabel } from '../../board/resv';
   import { RESV, resvWaiting } from '../../board/team';
   import { HEROES, isAwakened, ladder } from '../../model/hero';
-  import HeroPick from './atb/HeroPick.svelte';
-  import { bossOf } from '../../board/atb/tune';
+  import HeroSheet from './atb/HeroSheet.svelte';
+  import FamShield from './atb/FamShield.svelte';
+  import Sprite from '../Sprite.svelte';
+  import { bossArt } from './atb/rdunBoss';
+  import { bossOf, FAM_NAME, ROLE_NAME } from '../../board/atb/tune';
   import { emptyPlan, ownsHero } from '../../model/draft';
   import { levelOf } from '../../school/reward';
-  import { famOf, tierOf } from '../../board/atb/heroes';
+  import { famOf, roleOf as heroRole, tierOf } from '../../board/atb/heroes';
   import RuneKeypad from '../q/RuneKeypad.svelte';
   import { sfx } from '../sound.svelte';
   import { clock } from '../clock.svelte';
@@ -93,12 +96,16 @@
   const growM = $derived.by((): Grow => { const h = me.hero, fx = me.socket?.[h] || (ladder(h)[0] as string | undefined); return { h, lv: levelOf(me.xp || 0), enh: me.enh || 0, tier: tierOf(h, fx), ...(fx ? { fx } : {}), ...(meLookId(me) !== h ? { awk: true } : {}) /* 🐞 #94 덧: 예전 isAwakened(me) = 장착 스킬(fx)을 못 읽어 늘 false → 게시판 판에 각성이 안 실렸음 */ }; });
   // 🧙 #93 게시판에서 용사 바꾸기 (📜 선생님 「추천대로」): 고른 차시 카드 → 손발 #2 HeroPick(교사 연습방 창) · 가진 용사만 · 보스 약점 「약점!」 · 고르면 캠프 출전 용사도(저장 한 곳 = me.hero)
   //   팀 · 예약 글에 들어가 있으면 출발 전까지 글 mem/{uid} 의 용사 · 판 들고 갈 값(g)도 같이 · 교사 = 모두 · 체험판 = 체험 지갑 그대로
-  let pickHero = $state(false);
+  /* 🧙 📜 #135 용사 확인 시트 = 'go'(혼자 출정 · 늘 거침 · 「⚔ 이 용사로 출발」) · 'swap'(출정 카드 「🧙 바꾸기」) · 'room'(팀 대기실 · 「✔ 이 용사로」) */
+  let pickHero = $state<'' | 'go' | 'swap' | 'room'>('');
+  /** 👥 모집 목록 펼침 = 이 기기 기억 */
+  let recOpen = $state((() => { try { return localStorage.getItem('board-recruit-open') === '1'; } catch { return false; } })());
+  const toggleRec = () => { recOpen = !recOpen; try { localStorage.setItem('board-recruit-open', recOpen ? '1' : '0'); } catch { /* 사생활 창 */ } };
   const pickNo = $derived(mine && mine.phase === 'wait' && mine.mem?.[uid] ? mine.no : sel?.no);
   const heroIds = HEROES.map((h) => h.id);
   const ownH = (id: number) => !cls || ownsHero(me.wallet, emptyPlan(), id);
   function choseHero(id: number) {
-    pickHero = false; if (id === me.hero) return;
+    pickHero = ''; if (id === me.hero) return;
     me.hero = id; save();
     const p = mine; if (p && p.phase === 'wait' && p.mem?.[uid] && S.kind !== 'memory') { S.set(`${POSTS}/${p.pid}/mem/${uid}/hero`, meLookId(me)); S.set(`${POSTS}/${p.pid}/mem/${uid}/g`, growM); }
     say(`🧙 ${heroOf(id).name} 출전!`);
@@ -330,7 +337,7 @@
       <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{#if fameLv(Number(m.fame) || 0)}<i class="badge sm" style="background-position:{fameLv(Number(m.fame) || 0)!.cell * 50}% 0" title={fameLv(Number(m.fame) || 0)!.name}></i>{/if}{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
-      {#if mine.phase === 'wait'}<div class="qhero" data-k="room-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(mine.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="room-hero" onclick={() => (pickHero = true)}>🧙 용사 바꾸기</button></div>{/if}
+      {#if mine.phase === 'wait'}<div class="qhero" data-k="room-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(mine.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="room-hero" onclick={() => (pickHero = 'room')}>🧙 용사 바꾸기</button></div>{/if}
     </div>
     {#if host}
       <BottomAction dock={false} text="⚔ 출발 ({ms.length}명)" disabled={!canStart(mine) || !online} onmain={() => { const L = lessonOf(mine.lesson); if (L) { if (tag(mine).length > 1) say('🤝 연합 원정대 출발! 공적은 각자 자기 깃발에.'); if (atbOnline(S, mine)) startAtb(S, L, mine); else startTeam(S, L, mine, 0); } }}
@@ -344,37 +351,42 @@
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
       {#if btab === 'go'}
-        {#if S.kind !== 'memory' && !trial}<button type="button" class="warln" data-k="war-chip" onclick={() => (btab = 'war')}><WarBar {S} {cls} line /><span class="chev" aria-hidden="true">›</span></button>{/if}
         <section class="gmap" data-k="board-map" aria-label="차시 정복 지도 · 칸을 눌러 차시 고르기">
           <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v2.webp" alt="" />
             {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? (MAPL.find((x) => x.no === i + 2) ?? null) : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
               {#if i === MAP_PTS.length - 1}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원 성문">🔒</span>
-              {:else if l}<button type="button" class="mp" class:on={sel?.no === l.no} class:got={(stars[l.no] ?? 0) > 0} class:lockd={lk} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-pressed={sel?.no === l.no} aria-label="{l.no}차시{lk ? ' · 진도 전' : ''} 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}>{#if lk}<b>🔒</b>{:else}<b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{/if}{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
+              {:else if l}<button type="button" class="mp" class:on={sel?.no === l.no} class:got={(stars[l.no] ?? 0) > 0} class:left={!lk && (stars[l.no] ?? 0) < 3} class:lockd={lk} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-pressed={sel?.no === l.no} aria-label="{l.no}차시{lk ? ' · 진도 전' : ''} 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}>{#if lk}<b>🔒</b>{:else}<b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{/if}{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
               {:else}<span class="mp lockd" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원">🔒</span>{/if}
             {/each}
           </div>
         </section>
-        {@const openN = LESSONS.filter((p) => isOpen(p) && !(stars[p.no] ?? 0)).length}{#if openN}<p class="rift" data-k="board-rifts">🌀 아직 열려 있는 균열 {openN}곳</p>{/if}
-        {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}
-          <div class="qcard" data-k="board-pick" data-no={sel.no}><div class="qh"><b>{sel.no}차시{q ? ` · ${q.boss}` : ''}</b><button type="button" class="hchip" class:weak={bossOf(sel.no).weak.includes(famOf(me.hero))} data-k="board-hero" aria-label="용사 바꾸기 · 지금 {heroOf(me.hero).name}" onclick={() => (pickHero = true)}>🧙 {heroOf(me.hero).name}{bossOf(sel.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''} ›</button><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em> {st}/3</span></div>{#if q}<p>{q.line}</p>{/if}{#if !isOpen(sel)}<small>🔒 아직 진도 전이에요</small>{:else if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 → 다른 균열로! · 이 균열은 다 닫았어요 · 보상이 절반이에요</small>{/if}</div>
+        <!-- ⚔ 📜 #135 ③ 출정 카드 하나: 보스 · 차시 · 단원 · ★ / 약점 / 내 용사 줄 + 「🧙 바꾸기」 / 다 모음 · 한 줄 -->
+        {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}{@const B = bossOf(sel.no)}{@const wk = B.weak.includes(famOf(me.hero))}{@const opn = isOpen(sel)}
+          <div class="qcard v2" data-k="board-pick" data-no={sel.no}>
+            <div class="gh"><span class="bimg" aria-hidden="true">{#if opn}<Sprite ref={bossArt(B, 'normal').sprite} pose="idle" size={48} />{:else}🔒{/if}</span><span class="t"><b>{sel.no}차시{q && opn ? ` · ${q.boss}` : ''}</b><small>{opn ? shortOf(sel) : '수업에서 배우면 열려요'}</small></span><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em></span></div>
+            {#if opn}
+              <div class="wkr" data-k="board-weak">약점 {#each B.weak as f (f)}<span class="fam"><FamShield fam={f} size={18} /> {FAM_NAME[f]}</span>{/each}</div>
+              <div class="hrow" data-k="board-hero-row"><span class="hs"><HeroSprite id={lkB} scale={0.6} /></span><span class="n"><b>{heroOf(me.hero).name}{#if wk}<i class="wk" data-k="board-hero-weak">약점!</i>{/if}</b><small>{ROLE_NAME[heroRole(me.hero)]} · {FAM_NAME[famOf(me.hero)]} · Lv {growM.lv}</small></span><button type="button" class="chg" data-k="board-hero" aria-label="용사 바꾸기 · 지금 {heroOf(me.hero).name}" onclick={() => (pickHero = 'swap')}>🧙 바꾸기</button></div>
+              {#if st >= 3}<small data-k="board-full">⭐⭐⭐ 다 모음 · 이 균열은 보상이 절반이에요</small>{:else if q}<small class="ql">{q.line}</small>{/if}
+            {/if}
+          </div>
         {/if}
-        {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
-        {#if open}<div class="card"><b>📢 지금 {cls}반 수업 중</b><small>팀 모집은 수업 뒤에 · 혼자는 지금도 돼요</small></div>{/if}
         {#if shown.length}
-          <small class="lbl">{sel?.no}차시 · 모집 중 {shown.length} · 새 글 위로</small>
-          {#each shown as p (p.pid)}
+          <button type="button" class="fold" data-k="board-recruit-fold" aria-expanded={recOpen} onclick={toggleRec}><span>👥 모집 중 {shown.length}</span><span aria-hidden="true">{recOpen ? '▴' : '▾'}</span></button>
+          {#if recOpen}{#each shown as p (p.pid)}
             {@const L = lessonOf(p.lesson)}
             {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
             <div class="post" class:resv={!!p.when} data-resv={p.when ? '1' : undefined}><span class="ic">{p.when ? '📅' : isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.when ? `${resvLabel(p.when)} · ` : ''}{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#if tag(p).length > 1}<i class="ally" data-k="ally">🤝 연합 원정대</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span>{#if p.when && p.mem?.[uid]}<button type="button" class="go on" data-k="resv-cancel" onclick={() => leavePost(S, p, uid)}>✔ 예약함 · 취소</button>{:else if p.when}<button type="button" class="go" data-k="resv-join" disabled={!!why} title={why} onclick={() => joinResv(p)}>🙋 참여 예약</button>{:else}<button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button>{/if}</div>
-          {/each}
+          {/each}{/if}
         {:else}
-          <div class="empty"><span>📭</span><b>{sel ? `${sel.no}차시 모집 글이 아직 없어요` : '모집 글이 아직 없어요'}</b><small>혼자 도전하거나 · 팀을 모집해요</small></div>
+          <p class="empty1" data-k="board-recruit-none">📭 {sel ? `${sel.no}차시 ` : ''}모집 글이 아직 없어요 · 혼자 출정하거나 팀을 모집해요</p>
         {/if}
       {:else if btab === 'war'}
         <WarBar {S} {cls} test={testAcc} />
         <small class="lbl">🛡 수호 명성 · {cls ? `${cls}반` : '우리 반'} · 🤝 구조 성공</small>
         <div class="rkl" data-k="board-fame-list">{#each fameTop as r (r.id)}<div class="rr" class:me={r.id === pidMine}><b class="no">{r.rank}</b><HeroSprite id={r.a.hero} scale={0.5} aura={r.a.enh} /><span class="who">{r.id === pidMine ? `나 · ${r.a.cls}반` : `${r.a.cls}반`}</span><em>🤝 {r.a.rz}</em></div>{:else}<div class="empty"><span>🤝</span><b>아직 구조 기록이 없어요</b><small>쓰러지기 직전 친구를 살리면 올라가요</small></div>{/each}</div>
       {:else}
+        {#if note0}<div class="gl note" data-k="board-note"><b>📕 남은 오답 {noteN}</b><i class="bar"><i style:width="{note0 ? Math.round((noteOk / note0) * 100) : 0}%"></i></i><small>✔ 오답 정리 {noteOk} / {note0}차시 · {noteN ? '게시판에서 다시 풀면 줄어요 → 0' : '모두 정리!'}</small></div>{/if}
         <section class="gmap rec" data-k="board-rec">
           <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
           <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>🤝 구조 성공 {rescueN}번{nextFame(fame) ? ` · ${nextFame(fame)!.n}번 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
@@ -387,8 +399,8 @@
       {/if}
     </div>
     {#if btab === 'go'}
-      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 혼자 도전` : '⚔ 혼자 도전'} disabled={!sel || !isOpen(sel)} onmain={() => { if (!sel) return; if (trial) { trial.onsolo(sel); return; } pick = sel; sheet = 'solo'; go(); }}
-        why={!sel || !isOpen(sel) ? '진도를 나간 차시를 골라요' : open || !online ? (open ? '수업 중엔 팀 모집을 못 해요' : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 {sel ? `${sel.no}차시 ` : ''}팀 모집</button>{#if S.kind !== 'memory'}<button type="button" class="btn2 wide" data-k="board-resv" disabled={open || !online || !sel || !isOpen(sel)} onclick={openResv}>📅 예약 모집</button>{/if}{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
+      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 출정` : '⚔ 출정'} disabled={!sel || !isOpen(sel)} onmain={() => { if (sel) pickHero = 'go'; }}
+        why={!sel || !isOpen(sel) ? '🔒 진도를 나간 차시를 골라요' : open || !online ? (open ? `📢 지금 ${cls}반 수업 중 · 팀 모집은 수업 뒤에 · 혼자는 돼요` : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; sheet = 'post'; go(); }}>👥 팀 모집</button>{#if S.kind !== 'memory'}<button type="button" class="btn2 wide" data-k="board-resv" disabled={open || !online || !sel || !isOpen(sel)} onclick={openResv}>📅 예약 모집</button>{/if}{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
     {/if}
   {/if}
   {#if rkOpen}
@@ -435,7 +447,9 @@
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
 {/if}
 
-{#if pickHero && (pickNo ?? 0)}<HeroPick ids={heroIds} owned={ownH} boss={bossOf(pickNo ?? 0)} cur={me.hero} lv={growM.lv} enh={growM.enh} awk={!!growM.awk} tierOf={(id) => tierOf(id, me.socket?.[id] || (ladder(id)[0] as string | undefined))} fxOf={(id) => me.socket?.[id] || (ladder(id)[0] as string)} onpick={choseHero} onclose={() => (pickHero = false)} />{/if}
+{#if pickHero && (pickNo ?? 0)}<HeroSheet ids={heroIds} owned={ownH} boss={bossOf(pickNo ?? 0)} no={pickNo ?? 0} cur={me.hero} lv={growM.lv} enh={growM.enh} awk={!!growM.awk} tierOf={(id) => tierOf(id, me.socket?.[id] || (ladder(id)[0] as string | undefined))}
+  mainText={pickHero === 'go' ? '⚔ 이 용사로 출발' : '✔ 이 용사로'} onclose={() => (pickHero = '')}
+  onpick={(id) => { const mode = pickHero; choseHero(id); if (mode === 'go' && sel && isOpen(sel)) { if (trial) { trial.onsolo(sel); return; } pick = sel; sheet = 'solo'; go(); } }} />{/if}
 <style>
   .hchip { margin-left: auto; min-height: 36px; padding: 0 10px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px var(--font); white-space: nowrap; } .hchip.weak { border-color: var(--accent); }
   .qhero { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .qhero span { flex: 1; font: 600 14px var(--font); color: var(--text); } .qhero .btn2.sm { min-height: 44px; }
@@ -546,4 +560,23 @@
   .rdays button, .rtimes button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
   .rdays button.off { opacity: 0.45; }
   .rdays button.on, .rtimes button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+
+  /* ⚔ 📜 #135 출정 탭 (세로 360 ~ 430 기준) */
+  .mp.left:not(.on) { box-shadow: 0 0 0 3px #f5b84a99, 0 0 12px #f5b84acc; animation: mpleft 1.6s ease-in-out infinite; } /* 별이 남은 열린 차시 = 금빛 테 (「균열 n곳」 글 대신) */
+  @keyframes mpleft { 50% { box-shadow: 0 0 0 3px #ffd98a, 0 0 18px #f5b84a; } }
+  .qcard.v2 { gap: 10px; padding: 12px; grid-template-columns: minmax(0, 1fr); min-width: 0; } .qcard.v2 > * { min-width: 0; }
+  .qcard.v2 .gh { display: flex; align-items: center; gap: 10px; }
+  .qcard.v2 .bimg { flex: none; width: 52px; height: 52px; border-radius: 12px; background: #2a1f33; display: grid; place-items: center; overflow: hidden; font-size: 24px; }
+  .qcard.v2 .t { flex: 1; min-width: 0; } .qcard.v2 .t b { display: block; font: 900 17px var(--font); color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .qcard.v2 .t small { font-size: 14px; color: var(--text-2); }
+  .qcard.v2 .wkr { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 700 14px var(--font); color: var(--text-2); }
+  .qcard.v2 .fam { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 0 8px; border-radius: 14px; background: var(--surface-2); color: var(--text); }
+  .qcard.v2 .hrow { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 12px; background: var(--surface-2); }
+  .qcard.v2 .hs { flex: none; width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; overflow: hidden; background: #2a2016; }
+  .qcard.v2 .n { flex: 1; min-width: 0; } .qcard.v2 .n b { display: block; font: 800 15px var(--font); } .qcard.v2 .n small { font-size: 14px; color: var(--text-2); }
+  .qcard.v2 .wk { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: var(--accent); color: #2a1c05; font: 900 14px/20px var(--font); font-style: normal; }
+  .qcard.v2 .chg { flex: none; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); white-space: nowrap; box-shadow: 0 3px 0 #0b0c10; }
+  .qcard.v2 .ql, .qcard.v2 [data-k='board-full'] { font-size: 14px; color: var(--text-3); }
+  .fold { min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 12px; border: none; background: var(--surface); color: var(--text-2); font: 700 14px var(--font); }
+  .empty1 { margin: 2px 0; font-size: 14px; color: var(--text-2); text-align: center; }
+  @media (prefers-reduced-motion: reduce) { .mp.left { animation: none; } }
 </style>
