@@ -4,9 +4,11 @@
   //   소문항 맞음 = 테두리 초록 + 초록 반짝 · 틀림 = 단호한 좌우 흔들림 + 빨간 테두리 (진동 · 소리 = 부모) · 짧은 보기 4개 = 2 × 2 · 긴 문항 = 보기 칸만 스크롤
   import type { Given, LessonPack } from '../../../model/types';
   import QItem from '../../q/QItem.svelte';
+  import ChainStage from '../../q/ChainStage.svelte';
+  import AnswerRow, { type Cell } from '../../q/AnswerRow.svelte';
   import Orb from './Orb.svelte';
   import { fxCss } from './AtbFx.svelte';
-  import { emptyOf, filled, finalOf } from '../../../engine/input';
+  import { emptyOf, filled, finalOf, penLine, stripNo } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
   import { canSkip, questionsOf, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
@@ -36,6 +38,25 @@
   $effect(() => { onfill?.(can); });
   /** ✅ 제출 (e2e · 꾹 제출이 부름) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
+  /** 🧾 #128 부모 submit 이 부름 = 낸 답 기억 → 결과(flash)가 오면 그 칸 뒤집힘 */
+  export function sentAs(g: Given): void { if (q) sent = { i: run.k, text: penLine(q, g, 0), n: flashN }; }
+  /* 🧾 📜 #128 레이드 학생 화면과 같은 부품 (src/ui/q · AnswerRow · ChainStage): 낸 칸 0.65초 뒤집힘 ✔ / ✘ · 소레이드 = 「📜 나의 풀이」 쌓임 → 👑 대장 */
+  let sent: { i: number; text: string | null; n: number } | null = null, flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const n = flashN, f = flash; if (!sent || n === sent.n || !f) return; const ok = f === 'ok' || f === 'gold'; flip = { i: sent.i, ok, text: sent.text }; lastBad = ok ? null : sent.text; sent = null; clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); });
+  let lastBad = $state<string | null>(null);
+  $effect(() => { void run.mid; void run.ver; void run.k; if ((run.subMiss ?? 0) === 0) lastBad = null; });
+  const chain = $derived(!!L.monsters[run.mid]?.chain);
+  const lastWrong = $derived((run.subMiss ?? 0) > 0 && !grading);
+  /** 📜 나의 풀이 = 레이드 chainRecord 와 같은 줄 (푼 단계마다 say · 근거 why) */
+  const says = $derived.by(() => { const a: string[] = []; for (let i = 0; i < Math.min(done, qs.length); i++) { const x = qs[i]!; a.push(x.say || ''); if (x.why) a.push(x.why.text); } return a.filter((t) => t); });
+  const cells = $derived.by((): Cell[] => qs.map((x, i) => {
+    if (flip && flip.i === i) return { text: flip.text ? stripNo(flip.text) : null, state: flip.ok ? 'ok' : 'bad' };
+    if (i < done) { const l = penLine(x, answerOf(x), 0); return { text: l ? stripNo(l) : '✓', state: run.marks[i] === false ? 'oldbad' : 'ok', lock: true }; }
+    if (i === run.k) { const l = penLine(x, val, 0); return { text: l ? stripNo(l) : null, state: lastWrong && !l ? 'oldbad' : l ? 'filled' : 'empty', old: lastWrong ? lastBad : null }; }
+    return { text: null, state: 'empty' };
+  }));
+  /* 📜 #128 ④ 긴 「나의 풀이」 = 카드 안 스크롤 · 지금 단계가 아래에 보이게 (단계 이름표를 위 끝에 · 다 들어가면 맨 아래) */
+  $effect(() => { void key; void says.length; const b = bodyEl; if (!b || !chain) return; requestAnimationFrame(() => { const lab = b.querySelector('.lab') as HTMLElement | null; const max = b.scrollHeight - b.clientHeight; if (max <= 0) return; const top = lab ? lab.getBoundingClientRect().top - b.getBoundingClientRect().top + b.scrollTop - ((b.querySelector('.row') as HTMLElement | null)?.offsetHeight ?? 0) - 6 : max; b.scrollTop = Math.min(max, Math.max(0, top)); measure(); }); });
   /* 📜 #114 ② 꾹 제출 없앰 = 보기 톡 = 고르기(다시 톡 = 바꾸기) · 카드 아래 「제출」 단추(고르기 전엔 흐림) */
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
   /** 📜 #89 제목 = 「문제 2 (1) · 1/2」 만 (차시 · 학습지 글은 뺌) */
@@ -52,8 +73,8 @@
   $effect(() => { const b = bodyEl; if (!b) return; void key; void hint; measure(); const ro = new ResizeObserver(measure); ro.observe(b); for (const c of b.children) ro.observe(c); const mo = new MutationObserver(measure); mo.observe(b, { childList: true, subtree: true }); return () => { ro.disconnect(); mo.disconnect(); }; });
 </script>
 
-<section class="qc" style:--ui-card={fxCss('ui-card')} style:--ui-ch={fxCss('ui-choice')} style:--ui-ch-on={fxCss('ui-choice-on')} class:hitlock={locked > 0} class:good={fx === 'good'} class:bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
-  {#key flashN}{#if fx}<i class="fxr {fx}" aria-hidden="true"></i>{/if}{/key}
+<section class="qc" style:--ui-card={fxCss('ui-card')} style:--ui-ch={fxCss('ui-choice')} style:--ui-ch-on={fxCss('ui-choice-on')} class:hitlock={locked > 0} class:fx-good={fx === 'good'} class:fx-bad={fx === 'bad'} data-k="atb-quiz" data-fx={fx} aria-label="문제">
+  {#key flashN}{#if fx}<i class="fxr fx-{fx}" aria-hidden="true"></i>{/if}{/key}
   {#if auto}<p class="auto" role="status" data-k="atb-auto">⚔ 자동 공격!</p>{/if}
   <button type="button" class="grab" data-k="atb-qhandle" aria-label="아래로 끌어 넣으면 닫혀요" onpointerdown={(ev) => ongrab?.(ev)}><i></i></button>
   <header>
@@ -65,7 +86,8 @@
   </header>
   <div class="body" bind:this={bodyEl} onscroll={measure}>
     {#if q && reveal}<div class="reveal" data-k="atb-reveal"><b class="rvt">정답</b><div class="rvq" inert>{#key key}<QItem {q} i={run.k} value={answerOf(q)} runeLen={4} showNo={false} onchange={() => {}} />{/key}</div>{#if solOf(q)}<p class="rvs" data-k="atb-reveal-sol">💡 {solOf(q)}</p>{/if}<button type="button" class="rvok" class:on={revealOk} disabled={!revealOk} data-k="atb-reveal-ok" onclick={() => { reveal = false; onpass?.(); }}>✔ 알았어요</button></div>
-    {:else if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
+    {:else if q && chain}<div class="cs" data-k="atb-chain"><ChainStage items={qs} stage={grading ? qs.length : run.k} {says} title={shortTitle} value={val} {lastWrong} v4 wrongText={lastBad} {flip} disabled={!!locked} onchange={(v) => (val = v)} /></div>
+    {:else if q}<div class="cs" data-k="atb-cells"><AnswerRow {cells} cur={grading ? -1 : run.k} /></div>{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}💡 {hint}</p>{/if}
   </div>
   {#if !grading && !reveal}<div class="qrow">{#if canPass}<button type="button" class="qpass" data-k="atb-pass" onclick={startReveal}>⏭ 넘기기</button>{/if}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button></div>{/if}
@@ -102,6 +124,9 @@
   .gain { font: 900 20px var(--font); color: #1d5ac8; opacity: 0; animation: stamp 0.3s ease-out forwards; }
   .grade small { font: 600 11px var(--font-plain); color: #8a6e4e; }
   .body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  /* 🧾 #128 레이드 부품 = 양피지 위에서도 같은 모양 · 칸 위 배지가 잘리지 않게 */
+  .cs { padding: 0 4px 4px; } .cs :global(.row) { position: sticky; top: 0; z-index: 2; padding-bottom: 4px; background: #f3e1b6; } /* 답안 줄 = 위에 붙어 늘 보임 (✔ ✘ 뒤집힘) */
+  .cs :global(.row) { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; } .cs :global(.row .cell) { min-height: 40px; padding: 0 4px; font-size: 14px; } /* 카드 폭 45% = 한 줄 (누르는 칸 아님 · 보기만) */ .cs :global(.bcard) { margin-top: 6px; } .cs :global(.story ol) { margin: 2px 0 6px; padding-left: 22px; font: 600 14px var(--font-plain); }
   .body :global(.q2) { color: #2b1a0c; }
   .body :global(.q1) { color: #4a3420; }
   /* 가로 폰(높이 390) = 룬 키패드를 낮게 (학생 수업 화면 크기는 그대로) */
@@ -114,7 +139,7 @@
   .qc.hitlock { animation: wob 0.5s ease-in-out 2; }
   /* 🎨 atb-ui-parts: 문제 카드 틀(위 리본 = 제목 칸) · 보기 칸(보통 · 고름) = 9조각 늘이기 */
   .qc { border-style: solid; border-width: 24px 14px 0; border-image: var(--ui-card) 92 56 0 fill / 24px 14px 0 stretch; background: none; box-shadow: 0 10px 24px #0008; }
-  .qc.good { box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; } .qc.bad { box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
+  .qc.fx-good { box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; } .qc.fx-bad { box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
   .body :global(.opt) { border: 10px solid transparent; border-image: var(--ui-ch) 44 fill / 10px stretch; background: none; box-shadow: none; }
   .body :global(.opt.on) { border-image: var(--ui-ch-on) 46 fill / 10px stretch; outline: none; }
   @keyframes wob { 20% { transform: translateX(-8px) rotate(-1.5deg); } 40% { transform: translateX(7px) rotate(1.2deg); } 60% { transform: translateX(-5px) rotate(-0.8deg); } 80% { transform: translateX(3px); } }
@@ -129,20 +154,21 @@
   .grab i { display: block; width: 64px; height: 6px; border-radius: 3px; background: #b88a4a; box-shadow: 0 1px 0 #fff8; }
   .body { overflow-x: hidden; }
   /* 맞음 = 초록 테두리 + 반짝 · 틀림 = 빨간 테두리 + 단호한 좌우 흔들림 (📜 선생님 덧붙임 10 · 11) */
-  .qc.good { border-color: #2faa3a; box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; }
-  .qc.bad { border-color: #d0261e; box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
+  .qc.fx-good { border-color: #2faa3a; box-shadow: 0 0 0 3px #7de06a, 0 0 22px #7de06a; }
+  .qc.fx-bad { border-color: #d0261e; box-shadow: 0 0 0 3px #ff5a4a, 0 0 18px #ff3a2a; }
+  /* 🩹 #128 전역 .bad(배너 · theme/ui.css) 와 이름이 겹쳐 오답 때 카드가 진한 갈색으로 가려지던 것 → fx-good · fx-bad */
   .fxr { position: absolute; inset: 0; z-index: 8; pointer-events: none; border-radius: inherit; }
-  .fxr.good { background: radial-gradient(circle at 50% 40%, #b8ffb066, #0000 60%); animation: sparkle 0.5s ease-out forwards; }
+  .fxr.fx-good { background: radial-gradient(circle at 50% 40%, #b8ffb066, #0000 60%); animation: sparkle 0.5s ease-out forwards; }
   @keyframes sparkle { from { opacity: 1; transform: scale(0.9); } to { opacity: 0; transform: scale(1.08); } }
-  .fxr.bad { animation: none; }
-  .qc.bad { animation: no 0.36s cubic-bezier(.36,.07,.19,.97); }
+  .fxr.fx-bad { animation: none; }
+  .qc.fx-bad { animation: no 0.36s cubic-bezier(.36,.07,.19,.97); }
   @keyframes no { 15% { transform: translateX(-12px); } 30% { transform: translateX(11px); } 45% { transform: translateX(-9px); } 60% { transform: translateX(7px); } 75% { transform: translateX(-4px); } 90% { transform: translateX(2px); } }
   .fb { position: absolute; left: 14px; right: 14px; bottom: calc(64px * var(--u, 1) + 16px); z-index: 4; margin: 0; padding: 3px 10px; border-radius: 8px; background: #fffbeecc; text-align: center; pointer-events: none; }
   /* 짧은 보기 = 2 × 2 · 고른 보기 = 테두리 + ✓ */
   .body :global(.opts.col:has(> .opt:nth-child(4):last-child)), .body :global(.opts.col:has(> .opt:nth-child(2):last-child)) { display: grid; grid-template-columns: 1fr 1fr; }
   .body :global(.opt.on) { position: relative; outline: 3px solid #2f6ad0; outline-offset: -1px; }
   .body :global(.opt.on)::after { content: '✓'; position: absolute; right: 6px; top: 4px; font: 900 16px var(--font); color: #2f6ad0; }
-  @media (prefers-reduced-motion: reduce) { .qc.bad, .fxr.good { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .qc.fx-bad, .fxr.fx-good { animation: none; } }
   /* ⚡ 충전 조각 (요청 #31) */
   header { flex-wrap: wrap; row-gap: 2px; }
   .shards { display: inline-flex; gap: 2px; padding: 1px 6px; border-radius: 8px; background: #3a2618; transition: transform 0.4s ease-in, opacity 0.4s; }

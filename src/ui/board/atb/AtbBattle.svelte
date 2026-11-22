@@ -193,7 +193,7 @@
   const capLeft = $derived(!S.end && S.t >= T.cap.call ? Math.max(0, Math.ceil(T.cap.end - S.t)) : null);
   const capOn = $derived(!S.end && S.t >= T.cap.warn);
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false);
-  let qc = $state<{ send: () => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
+  let qc = $state<{ send: () => void; sentAs: (g: Given) => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
   /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
   function grab(ev: PointerEvent) {
     ev.preventDefault(); const rot = !!stageEl?.closest('[data-rot90]'), x0 = ev.clientX, y0 = ev.clientY, h = cardEl?.offsetHeight ?? 300; dragging = true;
@@ -219,6 +219,7 @@
   function submit(g: Given) {
     if (!run || grading) return;
     if (lockLeft > 0) return;
+    qc?.sentAs(g); // 🧾 #128 낸 칸 뒤집힘(✔ ✘)용 · 카드 단추 · e2e 모두 여기로
     const ev0 = S.evN, k0 = run.k, mid0 = run.mid, before = meH?.ch ?? 0, o = answer(L, run, seed, g, [...(vSeen[seenKey(L, run.mid)] ?? []), ...busyOf(run.mid, me)]); ops.earn(o.earn); if (o.earn.right) onright?.(mid0);
     // ⚡ 📜 요청 #41 = 맞힌 소문항 조각에서 구슬 1개가 바로 「스킬」 단추로 (카드 안 닫힘) · 넘치면 내 용사에게 · 퍼펙트 금 구슬은 채점 끝에
     let pfN = 0;
