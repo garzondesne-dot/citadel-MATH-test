@@ -84,7 +84,7 @@
     nowMs = introNow();
     lockLeft = lockUntil > Date.now() ? Math.ceil((lockUntil - Date.now()) / 1000) : 0;
     // 🐞 11/20 「처치 뒤 결과 화면 안 넘어감」 = 판 끝을 시계 안(봇 · 틱)에서만 봤음 → 내 공격 · 스킬 · 넘침 자동 스킬로 끝나면 다음 틱이 S.end 에서 바로 빠져 onend 를 못 부름 · 판 끝 검사를 맨 앞에(멈춤과도 상관없이)
-    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); const down = S.end.win && !!bossLine(S.boss.no, 'down'); if (down) say('down', 2400); setTimeout(() => onend(S), down ? 2600 : 1800); } return; } /* 💬 이김 = 보스 「쓰러질 때」 대사 뒤 결과 (요청 #64) */
+    if (S.end) { if (!ended) { ended = true; markMet(S.boss.no); if (S.end.win) killSeq(); else setTimeout(() => onend(S), 1800); } return; } /* 💬 이김 = 보스 「쓰러질 때」 대사 뒤 결과 (요청 #64) */
     if (paused || phase !== 'fight') return;
     if (net?.remote) { autoStep(); return; } // 📡 방장 아님 = 엔진은 방장 폰 · 화면은 받은 상태로
     if (Date.now() < slowUntil && ++slowSkip % 3) return; // 🎬 슬로 모션 (요청 #50 · 연출 · 0.4 ~ 0.6초 동안 1/3 속도)
@@ -169,6 +169,19 @@
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   /** 💨 📜 #92 · #108 10분 상한 = 7:00 보스 말풍선 + 가장자리 짙게 · 9:00 「1분 뒤 도망」 + 위 셈 · 10:00 몬스터 도망(엔진 이름 후퇴) (방장 시각 = S.t 그대로 · 모든 폰 같은 때) */
   let fleeing = $state(false), leaveAsk = $state(false);
+  /** 🏆 #116 보스 처치 연출 (이김만 · 모두 같은 때 · 건너뛰기 없음): 히트 스톱 0.15초 → 슬로 1.2초 → 마지막 일격 용사 클로즈업 1초(금빛 띠) → 용사 4명 기뻐함 1.5초 + 🎺 팡파레 → 결과 (약 3.9초) */
+  let kill = $state<{ ph: 'stop' | 'slow' | 'close' | 'cheer'; who: number } | null>(null);
+  const killName = (who: number) => (whoNames?.[who] ?? labels?.[who]?.replace(/^🤖\s*/, '') ?? S.heroes[who]?.s.name ?? '').replace(/^나$/, S.heroes[who]?.s.name ?? '나');
+  function lastHitter(): number { for (let i = S.ev.length - 1; i >= 0; i--) { const e = S.ev[i] as { k: string; who?: number; dmg?: number; v?: number }; if ((e.k === 'atk' || e.k === 'skill' || e.k === 'role') && (e.dmg ?? 0) > 0 && e.who != null) return e.who; if (e.k === 'fam' && e.who != null && (e.v ?? 0) > 0) return e.who; if (e.k === 'sig' && e.who != null && (e.v ?? 0) > 0) return e.who; } return me >= 0 ? me : 0; }
+  function fanfare() { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5], t0 = c.currentTime + 0.02; f.forEach((hz, i) => { for (const [type, vol, det] of [['sawtooth', 0.09, 0], ['square', 0.05, 4]] as const) { const t = t0 + i * 0.15, len = i === 3 ? 0.95 : 0.2, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = hz; o.detune.value = det; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.025); g.gain.setValueAtTime(vol, t + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0008, t + len); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + len + 0.05); } }); } /* 🎺 도-미-솔-높은 도 (금관 느낌 · 임시 · 진짜 소리 오면 바꿈) */
+  function killSeq() {
+    const who = lastHitter(); open = false; skOpen = false; over = ''; kill = { ph: 'stop', who };
+    try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ }
+    setTimeout(() => { kill = { ph: 'slow', who }; bossPose = 'hit'; setTimeout(() => (bossPose = 'down'), 500); if (bossLine(S.boss.no, 'down')) say('down', 2200); }, 150);
+    setTimeout(() => { kill = { ph: 'close', who }; }, 1350);
+    setTimeout(() => { kill = { ph: 'cheer', who }; const o: Record<number, HPose | ''> = {}; for (const h of S.heroes) if (!h.down) o[h.id] = 'win'; hpose = o; fanfare(); }, 2350);
+    setTimeout(() => onend(S), 3850);
+  }
   $effect(() => { const nt = notice; if (nt) untrack(() => big(nt.t, 'note', 1500)); }); /* 🚪 #113 친구가 떠남 = 위 띠 */
   const iga = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? '이' : '가'; };
   const capLeft = $derived(!S.end && S.t >= T.cap.call ? Math.max(0, Math.ceil(T.cap.end - S.t)) : null);
@@ -639,7 +652,7 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="stage" onclick={tapEmpty} class:capon={capOn} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<div class="stage" onclick={tapEmpty} class:kstop={kill?.ph === 'stop'} class:kslow={kill?.ph === 'slow'} class:kclose={kill?.ph === 'close'} class:kcheer={kill?.ph === 'cheer'} style:--kx="{kill ? posOf(kill.who).x : 50}%" style:--ky="{kill ? posOf(kill.who).y - 12 : 50}%" class:capon={capOn} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -777,6 +790,7 @@
       <p class="cn" data-k="atb-cut-line"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성 ⚡⚡⚡' : '4레벨 스킬 ⚡⚡'}</small><span style:font-size="{fitPx(cut.line, Wd * 0.9, Math.min(54, H * 0.1))}px">{cut.line}</span></p>
     </div>
   {/if}
+  {#if kill?.ph === 'close'}{@const kp = portraitOf(S.heroes[kill.who]!.s.hero)}<div class="kband" data-k="atb-lasthit" style:--kc={FAM_COL[S.heroes[kill.who]!.s.fam]}><div class="kb">{#if kp}<i class="kface" style="background-image:url({kp.url});background-size:{kp.cols * 100}% {kp.rows * 100}%;background-position:{(kp.c[0] / Math.max(1, kp.cols - 1)) * 100}% {(kp.c[1] / Math.max(1, kp.rows - 1)) * 100}%"></i>{/if}<b>⚔ 마지막 일격!</b><span>{killName(kill.who)}</span></div></div>{/if}
   {#if bigMsg}<div class="bigmsg {bigMsg.cls}" class:burst={/실드 파괴|막았다|SHIELD/.test(bigMsg.t)} style:--burst="url({ART('counter/burst')})" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
   {#if S.end}<div class="endb" class:win={S.end.win} role="status">{S.end.win ? '⚔ 처치!' : `💀 ${S.end.why}`}</div>{/if}
 </div>
@@ -1230,4 +1244,26 @@
   .btns .b.quiz.pulse0 { animation: q0pulse 0.9s ease-in-out infinite; }
   @keyframes q0pulse { 0%, 100% { box-shadow: 0 3px 0 #000, 0 0 0 0 rgba(255, 210, 100, 0.9); } 50% { box-shadow: 0 3px 0 #000, 0 0 16px 6px rgba(255, 210, 100, 0.95); filter: brightness(1.12); } }
   @media (prefers-reduced-motion: reduce) { .btns .b.quiz.pulse0 { animation: none; outline: 3px solid #ffd77a; } }
+  /* ── 🏆 #116 보스 처치 연출 ── */
+  .stage.kstop::after { content: ''; position: absolute; inset: 0; z-index: 80; background: #fff; opacity: 0.85; pointer-events: none; animation: kflash 0.15s linear forwards; }
+  @keyframes kflash { to { opacity: 0.25; } }
+  .stage.kstop :global(*) { animation-play-state: paused !important; }
+  .stage.kslow { filter: saturate(1.35) contrast(1.15); }
+  .stage.kslow .boss { animation: kshake 0.4s ease-in-out 3; }
+  @keyframes kshake { 0%, 100% { translate: 0 0; } 25% { translate: -4px 1px; } 75% { translate: 4px -1px; } }
+  .stage.kslow :global(.fx), .stage.kslow :global(.hitfx), .stage.kslow :global(.pop) { animation-duration: 1.2s !important; }
+  .stage { transition: transform 0.45s ease, filter 0.3s; transform-origin: var(--kx) var(--ky); }
+  .stage.kclose { transform: scale(1.6); }
+  .stage.kclose .btns, .stage.kcheer .btns, .stage.kclose .bossui, .stage.kclose .rhp { opacity: 0; transition: opacity 0.2s; }
+  .stage.kcheer::before { content: ''; position: absolute; inset: 0; z-index: 40; pointer-events: none; background: radial-gradient(circle at 25% 70%, #ffe9a060 0 2px, transparent 3px) 0 0 / 46px 38px, radial-gradient(circle at 70% 30%, #fff6c890 0 2px, transparent 3px) 0 0 / 60px 52px; animation: ksparkle 1.5s linear forwards; }
+  @keyframes ksparkle { from { opacity: 0; background-position: 0 0, 0 0; } 20% { opacity: 1; } to { opacity: 0.7; background-position: 0 -60px, 0 -90px; } }
+  .stage.kcheer .hero:not(.down) .spr { animation: khop 0.5s ease-in-out 2; }
+  @keyframes khop { 0%, 100% { translate: 0 0; } 50% { translate: 0 -14px; } }
+  /* 🏆 #116 마지막 일격 띠 = 확대 밖(되돌림 배율 1 / 1.6) · 스킬 2 컷인 꼴(−7° 금빛 띠 · 얼굴 · 큰 기울임 글자) */
+  .kband { position: absolute; inset: 0; z-index: 85; pointer-events: none; transform: scale(0.625); transform-origin: var(--kx) var(--ky); display: grid; place-items: center; }
+  .kband .kb { display: flex; align-items: center; gap: 12px; padding: 10px 40px 10px 14px; transform: rotate(-7deg); background: linear-gradient(90deg, transparent, #2a1a04 8%, #3a2608 50%, #2a1a04 92%, transparent); border-top: 3px solid #ffd77a; border-bottom: 3px solid #ffd77a; box-shadow: 0 0 40px #ffd77a88; animation: kbin 0.35s cubic-bezier(.2, 1.4, .4, 1); }
+  .kband .kface { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--kc, #ffd77a); background-repeat: no-repeat; image-rendering: pixelated; box-shadow: 0 0 0 3px #000; }
+  .kband b { font: italic 900 34px var(--font); color: #ffe27a; text-shadow: 0 3px 0 #7a4a00, 0 0 12px #ffb84a; } .kband span { font: 900 22px var(--font-plain); color: #fff; text-shadow: 0 2px 0 #000; }
+  @keyframes kbin { from { transform: rotate(-7deg) translateX(-60%) scaleX(1.3); opacity: 0; } to { transform: rotate(-7deg); opacity: 1; } }
+  .stage.kclose .bigmsg, .stage.kcheer .bigmsg, .stage.kclose .bsay, .stage.kcheer .bsay, .stage.kclose .endb { display: none; }
 </style>

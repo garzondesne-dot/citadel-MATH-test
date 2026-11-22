@@ -114,10 +114,10 @@
     </div>
   </div>
   <nav class="btns" data-k="atb-res-buttons">
-    {#if end}<button type="button" class="b gold" data-k="atb-to-board" style:background-image="url({R('res-btn-gold')})" onclick={onexit}><img src={R('res-ic-exit')} alt="" />게시판으로</button>
-    {:else}<button type="button" class="b gold" data-k="atb-again" style:background-image="url({R('res-btn-gold')})" onclick={onagain}><img src={R('res-ic-again')} alt="" />다시 도전</button>
-    <button type="button" class="b" data-k="atb-swap" style:background-image="url({R('res-btn-brown')})" onclick={onswap}><img src={R('res-ic-party')} alt="" />용사 바꿔 다시</button>
-    <button type="button" class="b" data-k="atb-exit" style:background-image="url({R('res-btn-brown')})" onclick={onexit}><img src={R('res-ic-exit')} alt="" />나가기</button>{/if}
+    {#if end}<button type="button" class="b gold" data-k="atb-to-board" onclick={onexit}><img src={R('res-ic-exit')} alt="" />게시판으로</button>
+    {:else}<button type="button" class="b gold" data-k="atb-again" onclick={onagain}><img src={R('res-ic-again')} alt="" />다시 도전</button>
+    <button type="button" class="b" data-k="atb-swap" onclick={onswap}><img src={R('res-ic-party')} alt="" />용사 바꿔 다시</button>
+    <button type="button" class="b" data-k="atb-exit" onclick={onexit}><img src={R('res-ic-exit')} alt="" />나가기</button>{/if}
   </nav>
 </div>
 
@@ -187,4 +187,10 @@
   .tip { margin: 0; font: 800 14px var(--font-plain); color: #ffe7a8; text-align: center; text-shadow: 0 1px 2px #000; }
   .hp .crown { display: inline-flex; align-items: center; gap: 2px; } .hp .crown img { width: 18px; height: 18px; image-rendering: pixelated; }
   .chip .md { width: 18px; height: 22px; object-fit: contain; }
+  /* ── 📜 #115 결과 단추 = 전투 아래 단추와 같은 한 벌 (시안 R1 ~ R3 · 옛 res-btn 그림 안 씀) · 「게시판으로」 = 금색 · 폭 360 · 가운데 ── */
+  .btns .b { height: 56px; min-height: 56px; border-radius: 12px; border: 2px solid #0b0d12; background: linear-gradient(#3a3f4d, #262a34); color: #f2f3f5; box-shadow: 0 3px 0 #000; font: 900 16px var(--font-plain); text-shadow: none; padding: 0 12px; gap: 6px; }
+  .btns .b.gold { border-color: #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; }
+  .btns .b img { width: 26px; height: 26px; image-rendering: pixelated; }
+  .btns .b:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  .btns > .b:only-child { width: min(100%, 360px); }
 </style>
