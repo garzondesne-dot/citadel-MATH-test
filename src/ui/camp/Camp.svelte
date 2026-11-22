@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { auraName } from '../fx/aura';
   import { clock, useClock } from '../clock.svelte';
   import { atbLessons } from '../../board/atb/lessons';
   import { doneNo } from '../../school/progress';
@@ -576,7 +577,7 @@
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
         <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b>{#if cfHi && feat('campfire')}<i class="cfhi" data-k="cf-hi" title="모닥불에서 받은 인사">👋 {cfHi}</i>{/if}</span>
-        <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? AURA_NAMES[me.enh] : '오라 없음'}</span>
+        <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? auraName(me.enh, lk) : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>
     </button>

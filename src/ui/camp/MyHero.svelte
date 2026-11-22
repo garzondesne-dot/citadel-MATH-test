@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { auraName } from '../fx/aura';
   import AwakenPop from './AwakenPop.svelte';
   import { earnedFrom, titleData } from '../../model/titles';
   import { meBound } from '../../store/meSync';
@@ -189,7 +190,7 @@
           <span class="esp"><HeroSprite id={lkM} play aura={lv} /><b>+{lv}</b></span>
           {#if nx}<span class="arrow" aria-hidden="true">→</span><span class="esp next"><HeroSprite id={lookId({ hero: look.hero, enh: lv + 1, fx: equipOf(look), title: look.title })} play aura={lv + 1} /><b>+{lv + 1}</b></span>{/if}
         </div>
-        <p class="aname">{nx ? `다음 오라 · ${AURA_NAMES[lv + 1]}` : `🌈 최고 단계 +${lv} · ${AURA_NAMES[lv]}`}</p>
+        <p class="aname">{nx ? `다음 오라 · ${AURA_NAMES[lv + 1]}` : `🌈 최고 단계 +${lv} · ${auraName(lv, lkM)}`}</p>
         <p class="muted">가진 용사 모두에게 함께 · 실패 없음{P.enh ? ` · 고름 +${L0.enh} → +${lv}` : ''}</p>
       </div>
     {:else if tab === 'sk'}

@@ -6,13 +6,15 @@
 import { rectIn } from '../rot';
 import { AURA } from './fx';
 import { artUrl, IDLE8_HD } from '../manifest';
-import { baseOf, heroOf } from '../../model/hero';
+import { AURA_NAMES, baseOf, heroOf } from '../../model/hero';
 import A10 from './aura10-map.json';
 // ⭐ #64 10강 오라 = 용사별 그림 (PixelLab · 2026-11-18): 그 용사 시트 이름 → { src · frames · cell · scale } · keep(각성 로안) = 옛 성스러운 후광 + 빛살 · 지도에 없으면 옛 후광
 //   자리 = 옛 후광과 같음(머리 = 상자 가운데 + hx · 발에서 hy) · 크기만 × scale(가운데 기준) · 1초 한 바퀴 · 빛살(halo-burst) = keep 만 · 그림을 받은 뒤에만 바꿈(못 받으면 옛 후광)
 const AURA10 = A10 as Record<string, { src: string; frames: number; cell: number; scale: number; keep?: boolean }>;
 // 🐞 #112 각성 용사(id 100 + n · 각성 외형 hero-*-awk-v8) = 시트 이름이 지도에 없어 옛 후광으로 떨어졌음 → 자기 시트가 없으면 본래 용사(baseOf)의 10강 오라 · 각성 로안(hero-blond = keep)은 그대로 옛 후광 + 빛살
 export const aura10Of = (hero?: number) => { if (hero == null) return null; const m = AURA10[heroOf(hero).sprite || ''] ?? AURA10[heroOf(baseOf(hero)).sprite || '']; return m && !m.keep ? m : null; };
+/** 🐞 #112 덧 오라 이름: +10 = 그 용사 전용 오라가 있으면 「○○ 전용 오라」 · 없으면(각성 로안 = 옛 후광) 단계 이름 그대로(성스러운 후광) */
+export const auraName = (lv: number, hero?: number) => (lv >= 10 && hero != null && aura10Of(hero) ? `${heroOf(baseOf(hero)).name} 전용 오라` : AURA_NAMES[lv] ?? '');
 const a10Seen = new Map<string, Promise<boolean>>();
 const a10Ready = (url: string) => { let p = a10Seen.get(url); if (!p) { p = new Promise<boolean>((ok) => { const im = new Image(); im.onload = () => ok(true); im.onerror = () => ok(false); im.src = url; }); a10Seen.set(url, p); } return p; };
 
