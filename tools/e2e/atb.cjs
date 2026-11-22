@@ -55,6 +55,13 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   { const hp1 = await p.evaluate(() => { const a = globalThis.__atb; a.full(); a.pause(false); return a.S.bossHp; }); await p.waitForTimeout(1500); await p.evaluate(() => globalThis.__atb.pause(true));
     const r = await p.evaluate(() => { const a = globalThis.__atb, e = a.S.ev.filter((x) => x.k === 'atk' && x.who === 0).at(-1); return { auto: !!e?.auto, timing: e?.timing }; });
     ok('요청 #11 카드 연 채 = 자동 일반 공격(치명 없음) · 타이밍 바 안 뜸 · 「⚔ 자동 공격!」 한 줄', r.auto && r.timing === 'ok' && !(await p.$('[data-k="atb-timing"]')) && (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp1, JSON.stringify(r)); }
+  { /* 📜 #122 카드 열림 + 스킬 메뉴 열림 = 자동 공격 멈춤 · 닫으면 다시 1초 뒤 */
+    const n0 = await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.full(); return a.S.ev.filter((e) => e.k === 'atk' && e.who === 0 && e.auto).length; });
+    await p.click('[data-k="atb-skill-btn"]', { force: true }); await p.waitForTimeout(200); await p.evaluate(() => globalThis.__atb.pause(false)); await p.waitForTimeout(1800);
+    const r = await p.evaluate(() => ({ n: globalThis.__atb.S.ev.filter((e) => e.k === 'atk' && e.who === 0 && e.auto).length, atb: globalThis.__atb.S.heroes[0].atb, lab: document.querySelector('[data-k="atb-auto-state"]')?.textContent ?? '' }));
+    await p.click('[data-k="atb-skill-btn"]', { force: true }); await p.waitForTimeout(1800); await p.evaluate(() => globalThis.__atb.pause(true));
+    const n2 = await p.evaluate(() => globalThis.__atb.S.ev.filter((e) => e.k === 'atk' && e.who === 0 && e.auto).length);
+    ok('📜 #122 카드 열림 + 스킬 메뉴 열림 = 자동 공격 멈춤(ATB 가득 그대로 · 「⏸ 자동 멈춤」) · 메뉴 닫으면 다시 자동', r.n === n0 && r.atb >= 1 && /자동 멈춤/.test(r.lab) && n2 > n0, JSON.stringify({ n0, ...r, n2 })); }
   await p.waitForTimeout(300);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
   ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && !(await p.$('[data-k="atb-submit"].on')));
