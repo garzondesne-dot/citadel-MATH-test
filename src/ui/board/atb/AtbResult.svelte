@@ -15,7 +15,8 @@
   import { gradeOf } from '../../../board/board';
   import { STAR } from '../../../board/goals';
   import { portraitOf } from '../../manifest';
-  const { S, no, me, mastery, practiceWins = 0, practice = true, onagain, onswap, onexit, labels, end = null, trial = false }: {
+  const { S, no, me, mastery, practiceWins = 0, practice = true, onagain, onswap, onexit, labels, end = null, trial = false, leftIds = [] }: {
+    /** 🚪 #113 도중에 나간 자리 (MVP 없음) */ leftIds?: number[];
     /** 👩‍🏫 #55 체험판 = 공적 줄 숨김 · 💎 = 「체험판 · 받지 않음」 */ trial?: boolean;
     /** 👥 자리 이름 (게시판 파티 = 실명 · 📜 #48 덧) */ labels?: Record<number, string>; /** 📡 게시판 판 결과 (공적 · 💎 · ⭐ · 📜 #51) · 있으면 단추 = 「게시판으로」 하나 */ end?: AtbEnd | null;
     S: State; no: number; me: number; /** 이 차시 게시판 던전 이긴 판 (연습방 판 뺌) */ mastery: number; /** 🧪 연습방 이긴 판 (숙련엔 안 셈 · 알림만) */ practiceWins?: number; practice?: boolean; onagain: () => void; onswap: () => void; onexit: () => void;
@@ -48,7 +49,7 @@
   /** 📜 #102 ⑨ 공적 칩 = 역할 아이콘 + 한 일(회복 · 격려 · 엄호 · 막기 · 끊기 · 실드 · 부활) · 👑 MVP = 도운 횟수 합이 가장 큰 사람(동점 = 맞힌 소문항) */
   const helpOf = (h: State['heroes'][number]) => { const g = h.log; return g.heals + (g.rescues ?? 0) + g.covers + (g.blocks ?? 0) + g.revives + g.boosts + g.shields + (g.aids ?? 0); };
   const chipOf = (h: State['heroes'][number]): string => { const g = h.log, a: string[] = []; if (g.aids) a.push(`도움 ${g.aids}`); /* 칸이 좁아 「구조 성공」 = 「도움」 (「구조」 = 큰 힐) */ if (g.heals) a.push(`회복 ${g.heals}`); if (g.rescues) a.push(`구조 ${g.rescues}`); if (g.boosts) a.push(`격려 ${g.boosts}`); if (g.covers) a.push(`엄호 ${g.covers}`); const blk = Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)); if (blk) a.push(`막기 ${blk}`); if (g.cuts) a.push(`끊기 ${g.cuts}`); if (g.shields) a.push(`실드 ${g.shields}`); if (g.revives) a.push(`부활 ${g.revives}`); return a[0] || `맞힘 ${g.right}`; };
-  const mvp = $derived.by(() => { let best = -1, id = -1, r = -1; for (const h of S.heroes) { const v = helpOf(h), rr = h.log.right; if (v > best || (v === best && rr > r)) { best = v; id = h.id; r = rr; } } return best > 0 || r > 0 ? id : -1; /* 아무도 한 게 없으면 👑 없음 */ });
+  const mvp = $derived.by(() => { let best = -1, id = -1, r = -1; for (const h of S.heroes) { if (leftIds.includes(h.id)) continue; const v = helpOf(h), rr = h.log.right; if (v > best || (v === best && rr > r)) { best = v; id = h.id; r = rr; } } return best > 0 || r > 0 ? id : -1; /* 아무도 한 게 없으면 👑 없음 */ });
   const ART = (p: string) => `${import.meta.env.BASE_URL}art/board-atb/${p}.webp`;
   /** 🎨 공적 칩 메달 (atb-counter-ui 가운데 줄) = 칩 첫 일 · 방패 = 엄호 · 막기 · 십자 = 회복 · 칼+사슬 = 끊기 · 반구 = 실드 · 도장 = 도움(구조 성공) */
   const medalOf = (h: State['heroes'][number]): string => { const t = chipOf(h); return /^(엄호|막기)/.test(t) ? 'cover' : /^(회복|구조 )/.test(t) ? 'heal' : /^끊기/.test(t) ? 'cut' : /^실드/.test(t) ? 'holy' : /^도움/.test(t) ? 'check' : ''; };

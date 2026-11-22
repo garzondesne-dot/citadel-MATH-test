@@ -41,7 +41,8 @@
   import { answerOf } from '../../../raid/raid';
   import { ATK, ATK_SPECIAL, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
-  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false, whoNames }: {
+  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false, whoNames, onleave, leaveSolo = true, notice = null }: {
+    /** 🚪 #113 ‹ 도중에 나가기 (없으면 단추 없음) · leaveSolo = 혼자 판(나가면 판 끝) · notice = 위 띠 한 줄 (친구가 떠남 등) */ onleave?: () => void; leaveSolo?: boolean; notice?: { t: string; n: number } | null;
     /** 📜 #80 컷인 「누구의 무슨 기술!」 이름 (나도 실명 · 같은 반 = 이름 · 다른 반 = 「1-3 이름」 · 봇 = 용사 이름 · 없으면 용사 이름) */ whoNames?: Record<number, string>;
     /** 🗺 조우 · 정찰 (요청 #69) 여럿이 판 = 부모(AtbNet)가 시각 · 준비를 맞춤 · 없으면 이 폰 혼자 · noIntro = 바로 전투(시험) */
     intro?: { t0: number; goAt: number | null; ready: number[]; short?: boolean; now: () => number; onready: () => void }; noIntro?: boolean;
@@ -167,7 +168,8 @@
   const firstTry: Record<string, boolean[]> = {};
   let mhit = $state<{ k: number; kind: MhitKind; to: number[] } | null>(null), mhN = 0;
   /** 💨 📜 #92 · #108 10분 상한 = 7:00 보스 말풍선 + 가장자리 짙게 · 9:00 「1분 뒤 도망」 + 위 셈 · 10:00 몬스터 도망(엔진 이름 후퇴) (방장 시각 = S.t 그대로 · 모든 폰 같은 때) */
-  let fleeing = $state(false);
+  let fleeing = $state(false), leaveAsk = $state(false);
+  $effect(() => { const nt = notice; if (nt) untrack(() => big(nt.t, 'note', 1500)); }); /* 🚪 #113 친구가 떠남 = 위 띠 */
   const iga = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? '이' : '가'; };
   const capLeft = $derived(!S.end && S.t >= T.cap.call ? Math.max(0, Math.ceil(T.cap.end - S.t)) : null);
   const capOn = $derived(!S.end && S.t >= T.cap.warn);
@@ -631,7 +633,7 @@
   const pct = (a: number, b: number) => `${Math.max(0, Math.min(100, (a / Math.max(1, b)) * 100))}%`;
   const name = (id: number) => labels?.[id] ?? `${S.heroes[id]!.s.name}${id === me ? '(나)' : ''}`;
   /** 📜 #91 이름표 A = [속성 방패][역할] 이름 · 이름 4자 넘으면 줄임 · 용사 이름 글자 · 이모지 뺌 · 봇 = 「봇A」 (레벨 = 체력바 끝) */
-  const tagName = (id: number) => { const l = labels?.[id]; const t = (l ? l.replace(/^🤖\s*모험가\s*/, '봇').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim() : id === me ? '나' : S.heroes[id]!.s.name) || S.heroes[id]!.s.name; return [...t].length > 4 ? [...t].slice(0, 4).join('') + '…' : t; };
+  const tagName = (id: number) => { const l = labels?.[id]; const t = (l ? l.replace(/^🤖\s*모험가\s*/, '봇').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim() : id === me ? '나' : S.heroes[id]!.s.name) || S.heroes[id]!.s.name; const bot = /\(봇\)$/.test(t), b = bot ? t.replace(/\(봇\)$/, '') : t, c = [...b].length > 4 ? [...b].slice(0, (bot ? 3 : 4)).join('') + '…' : b; return bot ? `${c}(봇)` : c; }; /* 🚪 #113 나간 자리 = 「○○(봇)」 꼬리는 남김 */
   // 🧪 화면 시험 고리 (봇 없이 내 차례 만들기)
   (globalThis as unknown as { __atb?: object }).__atb = { S: untrack(() => S), full: () => { if (meH) meH.atb = 1; }, charge: (n: number) => { if (meH) meH.ch = Math.min(T.charge.max, meH.ch + n); }, skip: () => finishGrade(), pause: (v: boolean) => (paused = v), solve: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(answerOf(q)); }, miss: () => { if (!run) openQuiz(); const q = run ? questionsOf(L, run, seed)[run.k] : null; if (q) submit(wrongOf(q)); }, close: () => { open = false; }, win: () => debugWin(S), /* 🧪 손발 #1 e2e (trial55 · atb65 · cap200 · atb48) */ lock: () => { lockUntil = Date.now() + T.hitLockMs; lockLeft = 1; lockTag = '💥 시험!'; }, /** 📏 요청 #19 덧1 카드 폭 재기 = 원문항 · 판 · 소문항 바로 띄움 (소문항 수 돌려줌) */ show: (mid: string, ver: number, k: number) => { const r = startRun(mid, ver); const n = questionsOf(L, r, seed).length; run = { ...r, k: Math.min(k, n - 1) }; open = true; return n; }, origins: () => OS.map((o) => o.mid), every: () => bossEveryOf(S), fxlog: () => FXLOG.slice(), flash: (d: number) => { if (meH) hflash = { n: Date.now(), a: flashA(d, meH.s.maxHp) }; } };
 </script>
@@ -642,6 +644,9 @@
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
   {#if boom}<i class="boom" aria-hidden="true"></i>{/if}
+  <!-- 🚪 #113 ‹ = 왼쪽 맨 위 · 확인 창 → 나가기 -->
+  {#if onleave && !S.end}<button type="button" class="leaveb" data-k="atb-leave" aria-label="전투에서 나가기" onclick={() => (leaveAsk = true)}>‹</button>{/if}
+  {#if leaveAsk && onleave}<div class="leavebg" role="dialog" aria-modal="true" aria-label="전투에서 나가기" data-k="atb-leave-ask"><div class="leavebox"><b>전투에서 나갈까요?</b><p>{leaveSolo ? '혼자 판은 여기서 끝나요 (벌 없음)' : '내 용사는 봇이 이어서 싸워요'}<br />맞힌 문제 몫 💎은 받아요</p><div class="lbtn"><button type="button" class="go" data-k="atb-leave-go" onclick={() => { leaveAsk = false; onleave?.(); }}>나가기</button><button type="button" class="stay" data-k="atb-leave-stay" onclick={() => (leaveAsk = false)}>계속 싸우기</button></div></div></div>{/if}
   <!-- ⚙ = 오른쪽 맨 위 고정 (📜 요청 #24 ①) · 배경음 · 효과음 · 팀 부활 = 평소 숨김(쓸 때만 💖 깨지며 3 → 2 · ⑤) -->
   <div class="tr"><button type="button" class="gear" data-k="atb-gear" aria-label="설정" aria-expanded={gearOpen} onclick={() => { gearOpen = !gearOpen; sfx('click', 0.4); }}>⚙</button>
     {#if gearOpen}<div class="gmenu" role="menu"><button type="button" class:off={!soundPref.bgm} data-k="atb-bgm" aria-pressed={soundPref.bgm} onclick={() => { setSound({ bgm: !soundPref.bgm }); sfx('click', 0.5); }}>{soundPref.bgm ? '🎵 배경음 켜짐' : '🔇 배경음 꺼짐'}</button><button type="button" class:off={!soundPref.sfx} data-k="atb-sfx" aria-pressed={soundPref.sfx} onclick={() => setSound({ sfx: !soundPref.sfx })}>{soundPref.sfx ? '🔊 효과음 켜짐' : '🔈 효과음 꺼짐'}</button><span class="gr">💖 팀 부활 {S.revives} / {T.revives}</span></div>{/if}
@@ -1213,4 +1218,12 @@
   .btns.v3 .b.skb.morph .mt { display: inline-flex; align-items: center; }
   .ic4 { width: 1.15em; height: 1.15em; vertical-align: middle; image-rendering: pixelated; }
   .bigmsg.burst { background: var(--burst) center / 100% 100% no-repeat !important; border: 0 !important; box-shadow: none !important; padding-left: 48px !important; padding-right: 48px !important; color: #3a1600 !important; text-shadow: 0 1px 0 #fff8 !important; }
+  /* ── 🚪 #113 ‹ 나가기 · 확인 창 ── */
+  .leaveb { position: absolute; z-index: 46; left: 1%; top: 1.5%; width: 48px; height: 48px; border-radius: 12px; border: 2px solid #6a5a3a; background: #1a1424dd; color: #ffe9b0; font: 900 28px/1 var(--font-plain); box-shadow: 0 2px 0 #000; }
+  .stage:has(.leaveb) .mis { left: calc(1% + 56px); }
+  .leavebg { position: absolute; inset: 0; z-index: 90; display: grid; place-items: center; background: #000a; }
+  .leavebox { width: min(360px, 86%); padding: 16px; border-radius: 14px; background: #f6ecd6; border: 3px solid #b88a4a; box-shadow: 0 0 0 2px #5a3a1a, 0 10px 30px #000a; color: #2a1a04; text-align: center; font: 700 14px var(--font-plain); }
+  .leavebox b { display: block; font: 900 18px var(--font-plain); margin-bottom: 6px; } .leavebox p { margin: 0 0 12px; line-height: 1.4; }
+  .lbtn { display: flex; gap: 8px; } .lbtn button { flex: 1; height: 48px; border-radius: 12px; font: 900 16px var(--font-plain); box-shadow: 0 3px 0 #000; }
+  .lbtn .go { border: 2px solid #5a1a10; background: #d9603a; color: #fff; } .lbtn .stay { border: 2px solid #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; }
 </style>

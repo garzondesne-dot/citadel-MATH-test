@@ -43,3 +43,16 @@ describe('ATB 판 결과 = 공적 · 💎 · ⭐ 골고루 (요청 #51)', () => 
     const L = won(); L.end = { win: false, why: '쓰러짐', t: 200 }; expect(atbResultFor(L, 0, { prevStars: 0 }).stars).toBe(0);
   });
 });
+describe('🚪 #113 도중에 나가기', () => {
+  it('나간 자리 = 바로 봇(끊김 10초 안 기다림) · 방장 못 함 · 정찰 준비로 셈', () => {
+    const left = { s1_3_1: 1 };
+    expect(lostSlots(meta, { s1_3_1: 100, s1_3_2: 100, s1_4_5: 100 }, 101, left)).toEqual([0]);
+    expect(pickHost(meta, { s1_3_1: 100, s1_3_2: 100, s1_4_5: 100 }, 101, 's1_3_1', left)).toBe('s1_3_2');
+  });
+  it('나간 사람 결과 = 맞힌 소문항 몫 💎만 · 클리어 · 공적 · 활약(명성) 0 · 「나감」', () => {
+    const S = battleOf(meta, BOSSES[2]!); const h = S.heroes[0]!; h.log.right = 4; h.log.covers = 3; h.log.aids = 2; S.end = { win: true, why: '', t: 100 };
+    const r = atbResultFor(S, 0, { prevStars: 0, left: true });
+    expect(r).toMatchObject({ win: false, why: '나감', left: true, meritSum: 0, stars: 0, gemSum: 12 });
+    expect(r.gem).toEqual({ items: 12, clear: 0, guard: 0, star: 0 }); expect(r.acts.rescue).toBe(0);
+  });
+});

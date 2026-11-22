@@ -50,7 +50,7 @@ export function saveAtbResult(S: Store, ctx: { cls: string; num: number; L: Less
   const { cls, num, L, pid, n } = ctx, t = S.now();
   if (S.kind === 'memory' || !cls || !num || isBeta(S, cls)) return { gem: sum(e.gem), merit: 0, newStars: 0 };
   const merit = sum(e.merit), was = prevStars(S, cls, num, L.id), stars = Math.max(0, Math.min(3, e.stars | 0));
-  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, { at: t, lid: L.id, no: L.no, n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true }); // 📊 #56 대시보드 = 첫 시도 · 활약(막기 · 구조 · 끊기 · 브레이크)
+  S.set(`bonus/${cls}/${num}/board/${pid}_${t.toString(36)}`, { at: t, lid: L.id, no: L.no, n, role: ctx.role ?? 'c', job: e.role, win: !!e.win, clear: !!e.win, sec: e.sec, right: e.right, total: e.total, first: e.first ?? 0, stars, merit, ...(e.left ? { left: true, why: '나감' } : {}), ...((e as { acts?: object }).acts ? { acts: (e as { acts?: object }).acts } : {}), atb: true }); // 📊 #56 대시보드 = 첫 시도 · 활약(막기 · 구조 · 끊기 · 브레이크)
   if (stars > was) S.set(`bonus/${cls}/${num}/boardStar/${L.id}`, stars);
   return { gem: sum(e.gem), merit: addMerit(S, cls, num, merit, t), newStars: Math.max(0, stars - was) };
 }

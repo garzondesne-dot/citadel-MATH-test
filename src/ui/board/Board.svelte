@@ -200,6 +200,17 @@
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
     markSeen(p.pid);
   }
+  /** 🚪 #113 ‹ 로 도중에 나감 = 맞힌 소문항 몫 💎만(기록 「나감」) · 글에서 내 이름 뺌 → 다시 들어와도 이 판으로 안 감 · 혼자 판 = 글 끝 */
+  function atbLeft(p: Post, r: AtbEnd | null) {
+    const L = lessonOf(p.lesson), solo1 = membersOf(p).length <= 1;
+    if (r && L && cls && num && !isBeta(S, cls)) {
+      saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
+      if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전 (나감)' }); save(); } }
+    }
+    if (solo1 && p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
+    gone = [...gone, p.pid]; markSeen(p.pid); leavePost(S, p, uid);
+    say(r && r.gemSum > 0 ? `🚪 전투에서 나왔어요 · 맞힌 문제 몫 💎 ${r.gemSum}` : '🚪 전투에서 나왔어요');
+  }
   /** 👥 #77 방 안 실명: 같은 반 = 이름 · 다른 반 = 「1-3 이름」 · 명단 없으면 용사 이름 */
   const atbNames = (p: Post) => Object.fromEntries(membersOf(p).map((m) => { const nm = realName(m) || heroOf(m.hero).name; return [m.uid, m.cls === cls ? nm : `${m.cls} ${nm}`]; }));
   // 🐞 결과 연출 (📜 2026-11-14 「결과 보는 게 너무 빨리 지나가」): 등급 도장 → 💎 올라감 → 다 보임 · 단계마다 최소 2초 · 화면을 누르면 다음 단계 · 결과 화면은 단추를 누를 때까지 그대로
@@ -395,7 +406,7 @@
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun && isAtb(teamRun)}
   {@const L = lessonOf(teamRun.lesson)}
-  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again) => { const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
+  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L && cls && num ? prevStars(S, cls, num, L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again, gone1) => { if (gone1) { atbLeft(teamRun!, r); return; } const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
 {:else if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
