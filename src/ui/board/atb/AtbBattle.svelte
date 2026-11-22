@@ -532,11 +532,11 @@
   // 📜 요청 #15 = 오라 · 날개 · 이름표가 이웃과 안 겹치게 간격(가로 11% · 이름표 84px) · 그리는 순서 = 뒤 → 앞(z) · 원근 100 → 70%
   // 📜 요청 #24 ① = 처음부터 문제 카드 자리(26.5 ~ 73.5%)를 비운 자리 · 크기 고정 · 카드가 열려도 용사는 안 움직임(맨 뒤 용사 일부 가려져도 됨) · 몬스터만 움직임
   /** 🦶 용사 자리 = 발밑(그림 아래 끝 실제 픽셀 · #121 nd) 기준 · 📜 요청 #45 처음엔 모두 땅 위: 배경 12종 땅이 시작되는 줄(약 52 ~ 55%) 아래로만 · 안쪽 = 조금 작게 · 이름표 안 겹치게 가로 간격 · 맨 앞(아래) = 나 */
-  const ROWV = [{ x: 8, y: 73, s: 0.84 }, { x: 18, y: 67, s: 0.79 }, { x: 28, y: 61.5, s: 0.74 }, { x: 38, y: 56.5, s: 0.69 }];
-  /** 문제 카드가 열리면 = 발 높이는 그대로 · 가로만 왼쪽으로 모음 (카드 왼쪽 밖에 이름표 · 보스가 오른쪽으로 비키는 것과 짝) */
-  /** 📜 #91 ② 카드가 열리면 = 왼쪽 칸(카드 밖 26%)에 2 × 2 로 · 조금 작게(0.8) → 4명이 안 겹침 · 이름표 · 약점 배지 다 보임 (앞줄 = 나 · 다음 · 뒷줄 = 나머지) */
-  const OPEN2 = [{ x: 7, y: 76 }, { x: 19.5, y: 76 }, { x: 7, y: 47 }, { x: 19.5, y: 47 }];
-  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!, o = OPEN2[k]; return open && o ? { x: o.x, y: o.y, s: (k < 2 ? ROWV[0]!.s : ROWV[1]!.s) * 0.8 } : r; };
+  /** 📜 #102 ③ 지그재그(앞뒤 엇갈림 · 서로 안 겹침) · 왼쪽 아래 · 맨 앞 오른쪽 = 나 · 같은 크기 (시안 x 8 · 19.5 · 31 · 42.5% · 발 73 / 81.5%) */
+  const ROWV = [{ x: 42.5, y: 74, s: 0.76 }, { x: 31, y: 66, s: 0.76 }, { x: 19.5, y: 74, s: 0.76 }, { x: 8, y: 66, s: 0.76 }]; /* 발 = 이름표가 단추 줄 위에 남게 */
+  /** 카드 열림 = 왼쪽 칸(55%) 안 2 × 2 · 작게 (시안 = 앞줄 나 · 뒷줄 둘) */
+  const OPEN2 = [{ x: 19.3, y: 76 }, { x: 7.7, y: 70 }, { x: 17, y: 54 }, { x: 5.5, y: 48 }];
+  const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!, o = OPEN2[k]; return open && o ? { x: o.x, y: o.y, s: 0.5 } : r; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
   // 🛡 📜 요청 #76 ③ 결계 돔 = 오라 방패(S.guard) · 서포터 결계(반응 막기) 가 걸린 동안 파티 전체를 덮는 반투명 돔 하나 · 막는 순간 파문 + 「🛡 결계로 막음!」 → 조각
   const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
@@ -548,7 +548,8 @@
     const hh = ((base * 0.84 * 64) / Math.max(1, H)) * 100, x0 = Math.min(...ps.map((p) => p.x)) - 8, x1 = Math.max(...ps.map((p) => p.x)) + 8, y1 = Math.max(...ps.map((p) => p.y)) + 3, y0 = Math.min(...ps.map((p) => p.y)) - hh - 8;
     return { x0: Math.max(0, x0), w: Math.min(100, x1) - Math.max(0, x0), y0: Math.max(0, y0), h: y1 - Math.max(0, y0) };
   });
-  const bossSize = $derived(Math.round(H * (open ? 0.3 : 0.42))); // 문제 카드 가운데(요청 #14) = 보스는 카드 오른쪽에 작게
+  const bossSize = $derived(Math.round(H * (open ? 0.27 : 0.42))); // 📜 #102 ③ 사선 대치 = 접힘 보스 오른쪽 가운데 높이 · 열림 = 왼쪽 칸(55%) 안 오른쪽 위에 작게
+  const BX = $derived(open ? '40.5%' : '74%'), BY = $derived(open ? '61.5%' : '66%');
   const stone = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
   const C = 2 * Math.PI * 30; // 내 초상 고리 둘레 (r 30)
   const tele = $derived(S.target && !weak(S) ? Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)) : 0);
@@ -636,7 +637,7 @@
   <!-- 💥 속성 브레이크 = 실드 뜨면 2초 카드 위 → 카드 뒤 가운데 (요청 #50 🔁) -->
   <!-- 📜 #102 ④ 실드 깨기 판 없앰 = 스킬 단추가 「💥 스킬 2」로 바뀜 -->
   {#if eye}{#key eye.n}<div class="eye" style:--ec={eye.col} data-k="atb-eye" aria-live="polite">{#if portraitOf(S.heroes[eye.who]!.s.hero)}{@const pt = portraitOf(S.heroes[eye.who]!.s.hero)!}<i class="face" style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}<i class="glint l"></i><i class="glint r"></i><b class="eyet" data-k="atb-eye-text" style:font-size="{fitPx(eye.big, Wd * 0.58, Math.min(48, H * 0.09))}px">{eye.big}</b><small>{eye.small}</small></div>{/key}{/if}
-  {#if weakFx}{#key weakFx.n}<i class="wkfx" aria-hidden="true" style:left="{open ? 86 : 73}%"><FamShield fam={weakFx.fam} size={Math.round(64 * U)} /></i>{/key}{/if}
+  {#if weakFx}{#key weakFx.n}<i class="wkfx" aria-hidden="true" style:left={BX}><FamShield fam={weakFx.fam} size={Math.round(64 * U)} /></i>{/key}{/if}
   {#if S.rage && !calmLeft && !S.end}<i class="ragedge" aria-hidden="true" data-k="atb-ragedge"></i>{/if}
   {#if rageBurst}{#key rageBurst}<i class="rageburst" aria-hidden="true" data-k="atb-rageburst"></i>{/key}{/if}
   {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"><AtbFx name="rage-barrier" x="50%" y="50%" w={Math.round(Wd * 0.48)} h={Math.round(H * 0.58)} ms={900} z={1} /></i>{/if}
@@ -644,7 +645,7 @@
   {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
 
   <!-- 보스 -->
-  <div class="bossui" style:left={open ? '74.5%' : '54%'} style:width={open ? '24%' : '40%'}>
+  <div class="bossui" style:left={open ? '27.5%' : '50%'} style:width={open ? '47%' : '46%'}>
     {#if stone}<i class="stonek" data-k="atb-stone" aria-hidden="true"></i>{/if}<!-- 📜 #91 ⑩ 석화 글 = 체력바 아래 한 줄만 (알약 뺌) -->
     {#if tele && tiltTxt}<div class="tele" role="status" data-k="atb-tele">{tiltTxt}</div>{/if}
     {#if breathLeft}<div class="tele sig" role="status" data-k="atb-breath">🫁 숨 고르기 {breathLeft}초 · 실드를 깨면 끊겨요</div>{/if}
@@ -664,8 +665,8 @@
       </div>
     {/if}
   </div>
-  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={open ? '86%' : '73%'} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={open ? '86%' : '73%'} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:soft-idle={bossPose === 'idle' && !bSheet3.idleB} class:soft-hit={bossPose === 'hit' && !bSheet3.hit} class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
+  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={BX} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
+  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} style:left={BX} style:top={BY} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:soft-idle={bossPose === 'idle' && !bSheet3.idleB} class:soft-hit={bossPose === 'hit' && !bSheet3.hit} class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -697,7 +698,7 @@
   {/each}
 
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
-  {#if bossSay}{#key bossSay.n}<p class="bsay {bossSay.k}" style:left={open ? '86%' : '73%'} role="status" data-k="atb-boss-say" data-say={bossSay.k}>「{bossSay.t}」</p>{/key}{/if}
+  {#if bossSay}{#key bossSay.n}<p class="bsay {bossSay.k}" style:left={BX} role="status" data-k="atb-boss-say" data-say={bossSay.k}>「{bossSay.t}」</p>{/key}{/if}
   {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
 
   <!-- 문제 카드 -->
@@ -1141,4 +1142,10 @@
   .btns.v3 .skmore { position: absolute; right: -6px; top: -12px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #0b0d12; background: #262a34; color: #fff; font: 900 14px var(--font-plain); display: grid; place-items: center; z-index: 2; padding: 0; }
   .btns.v3.q { right: auto; width: calc(55% - 16px); }
   @media (prefers-reduced-motion: reduce) { .btns.v3 .b.skb.morph, .btns.v3 .b.skb .badge { animation: none; } }
+  /* ── 📜 #102 ② 문제 카드 = 오른쪽 45%(최소 360px) · 아래에서 0.3초 · 전투는 왼쪽 55% ── */
+  .stage .card { left: auto; right: 0; top: 0; bottom: 0; width: max(360px, 45%); animation: rise102 0.3s ease-out; transform-origin: 50% 100%; }
+  @keyframes rise102 { from { transform: translateY(100%); } to { transform: none; } }
+  .stage .bossui { transform: translateX(-50%); }
+  .stage .boss { transition: left 0.3s ease, top 0.3s ease; }
+  .stage.q .foldbar { left: 27.5%; }
 </style>
