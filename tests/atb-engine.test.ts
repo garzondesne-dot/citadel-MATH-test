@@ -98,11 +98,11 @@ describe('ATB 엔진', () => {
     const hp0 = tg.hp; tick(S, 2); const hit = Math.min(Math.round(tg.s.maxHp * T.oneHitCap), Math.round(BOSS_HIT.normal[3]![0] * (T.bossAtkByNo[2] ?? 1) * (T.bossHitByNo[2]?.[3] ?? 1) * 1.5 * (1 - tg.s.def) * 0.5)); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
     tick(S, 12); tick(S, 12); const ev = S.ev.filter((e) => e.k === 'boss'); expect(ev.map((e) => (e as { aoe: boolean }).aoe)).toEqual([false, false, true]);
   });
-  it('📜 #92 쓰러짐: 부활 ⚡2 → 3 → 4(힐러 1 → 2 → 3) · 횟수 제한 없음 · 패배 = 전멸만 · 1인 = 바로 실패', () => {
+  it('📜 #92 · #101 쓰러짐: 부활 = 구슬 2 고정(힐러 1) · 횟수 제한 없음 · 패배 = 전멸만 · 1인 = 바로 실패', () => {
     const S = fresh(['로안', '누아', '발도르']); const d = (i: number) => { S.heroes[i]!.hp = 0; S.heroes[i]!.down = true; };
     d(1); S.heroes[0]!.ch = 1; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')).toMatchObject({ cost: 2, ok: false });
     S.heroes[0]!.ch = 2; expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect([S.heroes[0]!.ch, S.heroes[1]!.down, S.heroes[1]!.hp]).toEqual([0, false, Math.round(S.heroes[1]!.s.maxHp * T.reviveHp)]);
-    d(1); S.heroes[0]!.ch = 4; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')?.cost).toBe(3); expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect(S.heroes[0]!.ch).toBe(1);
+    d(1); S.heroes[0]!.ch = 4; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')?.cost).toBe(2); expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect(S.heroes[0]!.ch).toBe(2); /* 📜 #101 덧 = 늘 구슬 2 (+1 없앰) */
     d(1); tick(S, 0.1); expect(S.end).toBeNull(); /* 한 명 쓰러져도 판 계속 (전: 팀 부활 다 쓰면 패배) */
     d(0); d(2); tick(S, 12.1); expect(S.end).toMatchObject({ win: false, why: '전멸' });
     const O = fresh(['로안']); O.heroes[0]!.hp = 1; tick(O, 12.1); expect(O.end).toMatchObject({ win: false, why: '쓰러짐' });

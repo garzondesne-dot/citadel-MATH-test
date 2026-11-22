@@ -45,6 +45,7 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
 function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
+  { const f = alive(S).filter((x) => x.hp < x.s.maxHp * 0.3).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0]; if (f) { if (R === 'healer' && canRole(S, b.who) && roleAct(S, b.who, f.id)) return 'skill'; if (R !== 'healer' && can('heal') && useSkill(S, b.who, 'heal', f.id)) return 'skill'; } } // 📜 #101 덧 = 위험한 친구(30% 아래) 회복 먼저
   if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return 'skill';
   if (can('shield') && useSkill(S, b.who, 'tier4')) return 'skill'; // 📜 #101 스킬 2 = 맞는 속성 실드 칸 · 도움표 (홀리 방패 = 자동)
   if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';

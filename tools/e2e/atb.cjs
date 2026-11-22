@@ -171,7 +171,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await closeQ(p); await p.evaluate(() => { const a = globalThis.__atb, S = a.S; S.heroes[1].down = true; S.heroes[1].hp = 0; S.heroes[0].ch = 2; a.full(); }); await p.waitForTimeout(150);
   { const c0 = await p.textContent('[data-k="atb-cost-revive"]').catch(() => ''); await skc(p, 'revive'); await p.waitForTimeout(250);
     const r = await p.evaluate(() => ({ up: !globalThis.__atb.S.heroes[1].down, ch: globalThis.__atb.S.heroes[0].ch, n: globalThis.__atb.S.rec.revives }));
-    ok('📜 #92 부활 = ⚡2(서포터) · 팀 횟수 판 없음 · 다음 부활은 ⚡3', r.up && r.ch === 0 && r.n === 1 && !(await p.$('[data-k="atb-revfx"]')) && !(await p.$('[data-k="atb-rev0"]')), JSON.stringify({ c0, ...r })); }
+    ok('📜 #92 · #101 부활 = 구슬 2(서포터) · 팀 횟수 판 없음', r.up && r.ch === 0 && r.n === 1 && !(await p.$('[data-k="atb-revfx"]')) && !(await p.$('[data-k="atb-rev0"]')), JSON.stringify({ c0, ...r })); }
   // ⚡ 요청 #31 충전 기믹 = 카드 머리 조각 · 퍼펙트 +3 → 고치면 +2 · 구슬이 단추에 닿을 때 한 칸씩 · 가득 = 빛 고리 + 한 줄 · 메뉴 「⚡ n개 더 풀면」
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 0; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(400);

@@ -362,8 +362,8 @@
   const statusOf = (h: State['heroes'][number]): StatusLook | null => (h.down || S.end ? null : S.t < h.stunUntil && h.stunKind ? h.stunKind : S.t < h.slowUntil && h.slowKind ? (ATK_STATUS[h.slowKind] ?? null) : null);
   const isLow = (h: State['heroes'][number]) => !h.down && h.hp < h.s.maxHp * T.lowHp;
   const lowIds = $derived(S.heroes.filter(isLow).map((h) => h.id));
-  /** 📜 #101 ⑦ 상황 강조 = 한 번에 하나 · 반응 막기 > 부활 > 스킬 2(실드) > 응급붕대 */
-  const emph = $derived.by((): SkillK | null => { if (!meH || meH.down) return null; const ok = (k: SkillK) => slots.some((x) => x.k === k && x.ok); if (reactNow && ok('role')) return 'role'; if (ok('revive')) return 'revive'; if (S.shieldUp && canBreak(S, me) && ok('tier4')) return 'tier4'; if (lowIds.length && ok('heal')) return 'heal'; if (lowIds.length && meH.s.role === 'healer' && ok('role')) return 'role'; return null; });
+  /** 📜 #101 ⑦ · 덧 상황 강조 = 한 번에 하나 · 반응 막기 > 친구 체력 30% 아래 회복(응급붕대 · 힐러 💚 힐) > 부활 > 스킬 2(실드) */
+  const emph = $derived.by((): SkillK | null => { if (!meH || meH.down) return null; const ok = (k: SkillK) => slots.some((x) => x.k === k && x.ok); if (reactNow && ok('role')) return 'role'; if (lowIds.length) { if (meH.s.role === 'healer' && ok('role')) return 'role'; if (ok('heal')) return 'heal'; } if (ok('revive')) return 'revive'; if (S.shieldUp && canBreak(S, me) && ok('tier4')) return 'tier4'; return null; });
   let wasLow = new Set<number>();
   $effect(() => { const now = new Set(lowIds); untrack(() => { for (const id of now) if (!wasLow.has(id)) { if (id === me) { try { navigator.vibrate?.([60, 40, 60]); } catch { /* 무시 */ } } else if (me >= 0) big(`🆘 ${S.heroes[id]!.s.name} 위험!`, 'sosmsg', 1300); if (me >= 0) snd('heart-break', 0.55); } wasLow = now; }); });
   /** ⚔ 약점 상성 = 보스 약점 계열 용사 (📜 요청 #12 ④) */
