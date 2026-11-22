@@ -7,8 +7,10 @@ import { PACKS, packOf } from '../src/engine/packs';
 import { baseItems, bossItem, chainItems, items, relabel, validate } from '../src/engine/lessons';
 import type { Question } from '../src/model/types'; // 🔢 정식 기대값도 번호 겹침 정리(relabel)를 거쳐 비교 (2026-11-14)
 import { SHEETS, DUNGEONS } from '../src/ui/manifest';
+import { fixBoss, fixChain, fixGen } from '../src/subjects/common-math2/gens/selfsolve'; // 🔎 #126 정식 출력 + 혼자 풀리게 글 덧씌움 = 기대값
 
 const OFFICIAL_TEST: Record<string, string> = { 'set-02': 'lesson2.test.js', 'set-03': 'lesson.test.js', 'set-04': 'lesson4.test.js', 'set-05': 'lesson5.test.js', 'set-06': 'lesson6.test.js', 'set-08': 'lesson8.test.js', 'set-09': 'lesson9.test.js', 'set-10': 'lesson10.test.js' };
+const gk = (id: string, mid: string) => `${id.replace('-', '')}.${mid}`, J = (x: unknown) => JSON.parse(JSON.stringify(x));
 const SEEDS = ['A1|s1_3_1', 'B2|s1_3_7', 'C3|s1_5_12'], VARS = [0, 1, 2, 3, 5, 9];
 
 describe.each(Object.keys(OFFICIAL_TEST))('%s 차시 팩', (id) => {
@@ -20,7 +22,7 @@ describe.each(Object.keys(OFFICIAL_TEST))('%s 차시 팩', (id) => {
   }, 60000);
   it('엔진 문항 = 정식 출력 (몬스터 · 시드 3 × 판 0 · 1 · 2 · 3 · 5 · 9)', () => {
     for (const [mid, bySeed] of Object.entries(fix.monsters as Record<string, unknown[][]>))
-      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(baseItems(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(relabel(bySeed[k]![j] as Question[]))));
+      SEEDS.forEach((sd, k) => VARS.forEach((v, j) => expect(JSON.parse(JSON.stringify(baseItems(L, mid, sd, v))), `${mid} ${sd} 판 ${v}`).toEqual(relabel(fixGen(gk(id, mid), bySeed[k]![j] as Question[])))));
   });
   it('🐞 ⓓ 한 번 더 판 = 바로 앞 판과 같은 소문제 없음 (판 0 = 정식 그대로)', () => {
     const sig = (q: unknown) => JSON.stringify(q, (kk, vv) => (kk === 'say' || kk === 'why' ? undefined : vv));
@@ -31,12 +33,12 @@ describe.each(Object.keys(OFFICIAL_TEST))('%s 차시 팩', (id) => {
   });
   it('⚔ 소레이드 = 정식 chainItems (시드 3 × 판 0 ~ 3)', () => {
     for (const [mid, bySeed] of Object.entries((fix.chain || {}) as Record<string, unknown[][]>))
-      SEEDS.forEach((sd, k) => [0, 1, 2, 3].forEach((ps, j) => expect(JSON.parse(JSON.stringify(chainItems(L, mid, sd, ps))), `${mid} ${sd} 판 ${ps}`).toEqual(bySeed[k]![j])));
+      SEEDS.forEach((sd, k) => [0, 1, 2, 3].forEach((ps, j) => expect(JSON.parse(JSON.stringify(chainItems(L, mid, sd, ps))), `${mid} ${sd} 판 ${ps}`).toEqual(J(fixChain(gk(id, mid), bySeed[k]![j] as Question[], ps)))));
   });
   it('형성평가 = 정식 (시도 0 = 학습지 세트 1 · 시도 1 ~ 3 = 정식 make)', () => {
     const n = L.boss!.items;
-    for (let i = 0; i < n; i++) expect(JSON.parse(JSON.stringify(bossItem(L, 'x', i, 0)))).toEqual(fix.boss.first[i]);
-    SEEDS.forEach((sd, k) => { for (let i = 0; i < n; i++) [1, 2, 3].forEach((a, j) => expect(JSON.parse(JSON.stringify(bossItem(L, sd, i, a))), `보스 ${i} 시도 ${a}`).toEqual(fix.boss.retry[k][i][j])); });
+    for (let i = 0; i < n; i++) expect(JSON.parse(JSON.stringify(bossItem(L, 'x', i, 0)))).toEqual(J(fixBoss(gk(id, 'boss'), fix.boss.first[i])));
+    SEEDS.forEach((sd, k) => { for (let i = 0; i < n; i++) [1, 2, 3].forEach((a, j) => expect(JSON.parse(JSON.stringify(bossItem(L, sd, i, a))), `보스 ${i} 시도 ${a}`).toEqual(J(fixBoss(gk(id, 'boss'), fix.boss.retry[k][i][j])))); });
   });
   it('팩 확인 · 그림 · 배경 · 분 · 출처', () => {
     expect(validate(L)).toEqual([]);

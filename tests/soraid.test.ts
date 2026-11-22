@@ -90,7 +90,8 @@ describe('문제 4~7 (교과서 78~79쪽)', () => {
     expect(ch('u7', 's', 0)[3]?.say).toBe('7 과 5 의 최소공배수 35 씩 커지므로 A ∩ B = {28, 63, 98} 이다.');
     const v = u6Chain(40, 18, 25), e = u6Chain(40, 20, 20);
     expect((v[0] as Choice).answer === 'A ⊂ B' && (v[0] as Choice).choices.includes('B ⊂ A') && (v[1] as Num).answer === 18 && (v[3] as Num).answer === 3 && !!v[0]?.say?.startsWith('A ⊂ B 일 때') && (e[1] as Num).answer === 20).toBe(true);
-    expect(['u4', 'u5', 'u6', 'u7'].every((id) => ch(id, 's', 0).every((x) => !x.problem)), '첫 판 = 📜 문제 상자 없음').toBe(true);
+    expect(['u4', 'u5', 'u6', 'u7'].every((id) => ch(id, 's', 0).every((x, i, a) => !!x.problem && x.question.startsWith(`${x.problem}\n${i === a.length - 1 ? '👑' : '①②③④⑤'[i]} `))), '🔎 #126 첫 판도 단계 글 = 교과서 문제 글 ⏎ ① ~ 👑 단계 (혼자 풀리게)').toBe(true);
+    expect(ch('u5', 's', 0)[1]?.question).toBe('두 집합 A = {x² + 2x, 4, 6}, B = {x, 6}에 대하여 A ∩ B = B 를 만족시키는 정수 x 를 모두 구하시오.\n② B ⊂ A 가 성립하기 위해 맞는 식을 모두 고르시오.');
     expect(['u4', 'u5', 'u6', 'u7'].every((id) => ch(id, 's1', 1).every((x) => !!x.problem && /구하시오\.$/.test(x.problem))), '한 판 더 = 모든 단계에 바뀐 숫자의 원문').toBe(true);
   });
 
