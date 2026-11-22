@@ -6,9 +6,10 @@ import type { LessonPack } from '../model/types';
 import { noteOf, type Bon, type Rec } from '../school/dummy';
 export interface BoardRec { at?: number; lid?: string; no?: number; n?: number; role?: 'g' | 'c'; grade?: string; clear?: boolean }
 export const STAR: Record<string, number> = { S: 3, A: 2, B: 1 };
-/** 지도 돌 원 15개 (그림 board-map 1672 × 941 · 길 순서 = 캠프 → 성채 · 손발이 그림에서 잰 가운데 · %) */
-/** 📍 차시 칸(앞에서부터 2 ~ 17차시 · 16 = 성채 아래 돌 · 17 = 성문 · 📜 #66-7 새 지도 board-map-v2 오기 전 임시) + 맨 끝 = 🏰 성채 */
-export const MAP_PTS: [number, number][] = ([[326, 816], [585, 772], [853, 761], [1165, 746], [1463, 716], [1318, 538], [1003, 538], [560, 532], [167, 485], [314, 306], [585, 276], [861, 268], [1112, 306], [1354, 301], [1513, 234], [1566, 168], [1560, 92]] as [number, number][]).map(([x, y]) => [+(x / 16.72).toFixed(2), +(y / 9.41).toFixed(2)]);
+/** 🗺 📜 #133 지도 v2 (그림 board-map-v2 1672 × 941 · 손발이 빨간 점으로 잰 돌 원판 가운데 · %) — 칸 i = (i + 2)차시 (머리 11/22 답)
+ *  아래 줄 왼→오 = 2 ~ 7 (숲 · 폐허 · 얼음 동굴 · 화산 · 버섯 동굴 · 용) · 가운데 = 8 ~ 13 (별 사슴 · 도서관 · 연못 · ⚖ 저울 · 열쇠 · 수정 광산) · 위 = 14 ~ 17 (금광 · 별자리 · 톱니 · 거울 폭포)
+ *  맨 끝 = 🔒 성문(다음 단원 · 칸 아님 · 장식) */
+export const MAP_PTS: [number, number][] = ([[261, 835], [491, 823], [716, 836], [946, 824], [1195, 823], [1439, 824], [208, 541], [443, 550], [687, 549], [950, 549], [1210, 553], [1461, 550], [307, 270], [566, 269], [846, 268], [1143, 272], [1482, 150]] as [number, number][]).map(([x, y]) => [+(x / 16.72).toFixed(2), +(y / 9.41).toFixed(2)]);
 export const MAP_SIZE: [number, number] = [1672, 941];
 /** 게시판 차시 (차시 번호마다 하나 · 쪼갠 팩 = 같은 번호면 한 칸) */
 export function mapLessons(packs: LessonPack[]): { no: number; ids: string[] }[] {
