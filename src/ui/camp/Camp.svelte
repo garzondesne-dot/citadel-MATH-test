@@ -450,6 +450,7 @@
     e?.stopPropagation();
     M.mark(id);
     if (id === 'gate' && trial) { trial.ongate(); return; }
+    if (id === 'mail' && teach) { tPanel = 'mail'; return; } // 🐞 #153 교사 우편함 = 교사 소식함 하나(학생 빈 우편함 + 「선생님 칸」 📮 두 겹 없앰)
     if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
     if (id === 'scare') { sheet = 'review'; return; }
     if (id === 'tentdeco') { sheet = 'rec'; return; } // ⛺ #73 기록 텐트 // 🎯 #71 허수아비 = 복습만 (#66 배움터 두 단추 없앰)
