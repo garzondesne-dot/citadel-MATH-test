@@ -74,7 +74,7 @@ export interface AtbEnd {
   merit: { clear: number; star: number; first: number; act: number; role: number }; meritSum: number;
   gem: { items: number; clear: number; guard: number; star: number }; gemSum: number;
   role: string; mission: boolean; why: string;
-  /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; rescue: number; cut: number; brk: number };
+  /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; rescue: number; cut: number; brk: number; /** 🛡 실드 깨기 (스킬 2 · 도움표 · 깬 칸 수 · 📜 #101 뒤 대시보드 칸) */ shd?: number };
   /** 📕 #67 내가 소문항을 하나라도 맞힌 몬스터 칸 (복습 완료 · 손발 #1 화면이 채움 · 없으면 없음) */ mids?: string[];
 }
 /** 내 판 결과 · prevStars = 그 차시 지금까지 최고 별(0 ~ 3) */
@@ -86,5 +86,5 @@ export function atbResultFor(S: State, idx: number, ctx: { prevStars: number }):
   const guardN = g.covers + g.heals + g.revives + g.shields + (g.blocks ?? 0) + (g.rescues ?? 0);
   const gem = { items: k(Math.min(GEM.itemMax, g.right * GEM.perItem)), clear: k(win ? GEM.clear : 0), guard: S.end?.why === '후퇴' ? 0 : k(Math.min(GEM.guardMax, guardN * GEM.perGuard)), /* 📜 #92 후퇴 = 맞힌 문제 몫 💎 만 (클리어 · 수호 💎 없음 · 벌 없음) */ star: newStars * GEM.star };
   const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
-  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0 } };
+  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0, shd: g.shields ?? 0 } };
 }

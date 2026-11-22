@@ -195,13 +195,13 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
       const weak = weakNos(rows.map((r) => r.b)), w = weekOf(S.now()), war = standings(S, w), mine = sc.classes.length === 1 ? war.find((x) => x.cls === sc.classes[0]) : null;
       const played = rows.filter((r) => r.b.runs > 0).length, runs = rows.reduce((a, r) => a + r.b.runs, 0), wins = rows.reduce((a, r) => a + r.b.wins, 0);
       const st = (n: number) => (n ? '⭐'.repeat(n) : '·');
-      return { id, title: '게시판 던전', info: '수업 밖 팀 전투 기록 · 게임 기록이라 성적이 아니에요 · 첫 시도 = 그 판에서 처음 낸 답 · 활약 = 막기 · 구조 · 끊기 · 브레이크',
+      return { id, title: '게시판 던전', info: '수업 밖 팀 전투 기록 · 게임 기록이라 성적이 아니에요 · 첫 시도 = 그 판에서 처음 낸 답 · 활약 = 막기 · 구조 · 끊기 · 🛡 실드 깨기',
         kpis: [
           { lab: '해 본 학생', big: `${played}`, sub: `${studs.length}명 중 · 판 ${runs} · 이긴 판 ${wins}` },
           { lab: '약한 차시', big: weak[0] ? `${weak[0].no}차시` : '—', sub: weak[0] ? `첫 시도 ${weak[0].pct}% (${weak[0].ok}/${weak[0].total})${weak[1] ? ` · 다음 ${weak[1].no}차시 ${weak[1].pct}%` : ''}` : '아직 기록 없음' },
           ...(mine ? [{ lab: '⚔ 이번 주 반 공적', big: `${mine.pts}`, sub: `${mine.crest} ${mine.name} · ${mine.rank}위 / ${war.length}` }] : cls === ALL ? [{ lab: '⚔ 이번 주 1위', big: war[0] && war[0].pts ? `${war[0].crest} ${war[0].cls}` : '—', sub: war[0] && war[0].pts ? `${war[0].name} · ${war[0].pts}` : '아직 공적 없음' }] : []),
         ],
-        table: { sort: true, head: ['번호 · 이름', '판', '이긴 판', '⭐ 합', '첫 시도', '막기', '구조', '끊기', '브레이크', '공적', ...nos.map((n) => `${n}차시 ⭐`)], legend: [['ok', '첫 시도 80%↑'], ['md', '60~79%'], ['ng', '60%↓'], ['na', '기록 없음']],
+        table: { sort: true, head: ['번호 · 이름', '판', '이긴 판', '⭐ 합', '첫 시도', '막기', '구조', '끊기', '🛡 실드 깨기', '공적', ...nos.map((n) => `${n}차시 ⭐`)], legend: [['ok', '첫 시도 80%↑'], ['md', '60~79%'], ['ng', '60%↓'], ['na', '기록 없음']],
           rows: rows.map(({ s, b }) => { const fp = b.firstTotal ? pct(b.first, b.firstTotal) : null; return { pick: s, cells: [
             { t: nm(s), v: nm(s) }, { t: String(b.runs), v: b.runs }, { t: String(b.wins), v: b.wins }, { t: String(b.starSum), v: b.starSum },
             { t: p(fp), tone: b.firstTotal ? tone(fp) : 'na', v: pv(fp) }, { t: String(b.acts.block), v: b.acts.block }, { t: String(b.acts.rescue), v: b.acts.rescue }, { t: String(b.acts.cut), v: b.acts.cut }, { t: String(b.acts.brk), v: b.acts.brk },
