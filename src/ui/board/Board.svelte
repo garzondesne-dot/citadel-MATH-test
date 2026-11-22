@@ -346,9 +346,9 @@
       {#if btab === 'go'}
         {#if S.kind !== 'memory' && !trial}<button type="button" class="warln" data-k="war-chip" onclick={() => (btab = 'war')}><WarBar {S} {cls} line /><span class="chev" aria-hidden="true">›</span></button>{/if}
         <section class="gmap" data-k="board-map" aria-label="차시 정복 지도 · 칸을 눌러 차시 고르기">
-          <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v1.webp" alt="" />
-            {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? MAPL[i] : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
-              {#if i === MAP_PTS.length - 1}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="성채">🏰</span>
+          <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v2.webp" alt="" />
+            {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? (MAPL.find((x) => x.no === i + 2) ?? null) : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
+              {#if i === MAP_PTS.length - 1}<span class="mp castle" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원 성문">🔒</span>
               {:else if l}<button type="button" class="mp" class:on={sel?.no === l.no} class:got={(stars[l.no] ?? 0) > 0} class:lockd={lk} style="left:{pt[0]}%;top:{pt[1]}%" data-map={l.no} aria-pressed={sel?.no === l.no} aria-label="{l.no}차시{lk ? ' · 진도 전' : ''} 별 {stars[l.no] ?? 0}" onclick={() => setChip(l.no)}>{#if lk}<b>🔒</b>{:else}<b>{l.no}</b><i class="st">{'★'.repeat(stars[l.no] ?? 0)}<em>{'★'.repeat(3 - (stars[l.no] ?? 0))}</em></i>{/if}{#if nt?.had && nt.left === 0}<img class="ok" src="{import.meta.env.BASE_URL}art/board/egg-stamp-v1.webp" alt="오답 정리" />{/if}</button>
               {:else}<span class="mp lockd" style="left:{pt[0]}%;top:{pt[1]}%" aria-label="다음 단원">🔒</span>{/if}
             {/each}
