@@ -1,6 +1,6 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
-//   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
+//   🔌 재접속 = 학생 판에서 붙임 (📜 11/22 #103 덧 = 전투 멈춤(작전 시간 · 강적 출현 · 길잡이 생각 시간) 없앰 · 수호자 「💡 도와줘」가 대신)
 import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, REACT, REACT_CFG, atkClass, attrFx, ATTR_FX_TXT, fxOfAttr, type AttrFx, rage as RAGE, ATK_SPECIAL, atkName, type RageMod, type AtkClass, type AtkKind as AK, type AtkKind, type BossCfg, type Diff, type Fam, type Role, shieldOf } from './tune';
 import type { Stats } from './heroes';
 
