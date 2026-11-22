@@ -6,6 +6,7 @@
   //   💎 = 맞힌 소문항(최대 12) · 클리어 +4 · 🛡 수호 보너스 = 친구를 지킨 행동(엄호 · 힐 · 부활 · 실드 칸) 1번에 +1 · 최대 +3 · 연습방 = 예상 보상
   //   🏅 숙련 = 그 차시 게시판 던전 이긴 판 1 · 3 · 5 → 빨강 · 은 · 금 (보여 주기만 · 연습방 판은 안 셈)
   import HeroSprite from '../../camp/HeroSprite.svelte';
+  import AtbIcon from './AtbIcon.svelte';
   import { missionOf, type State } from '../../../board/atb/engine';
   import type { AtbEnd } from '../../../board/atb/net';
   import { onMount } from 'svelte';
@@ -24,7 +25,7 @@
   const right = $derived(Math.min(12, mine ? mine.log.right : Math.max(0, ...S.heroes.map((h) => h.log.right))));
   const guard = $derived(mine ? Math.min(3, mine.log.covers + mine.log.heals + mine.log.revives + mine.log.shields + (mine.log.blocks ?? 0) + (mine.log.rescues ?? 0)) : 0); // 💚 구조 = 수호 보너스 1번 (요청 #46)
   const stars = $derived(win && mine ? (STAR[gradeOf(mine.log.first ?? { bad: 0, none: 1, total: 1 })] ?? 0) : 0);
-  const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(guard ? [{ t: '수호 보너스', g: guard }] : [])]);
+  const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(guard ? [{ t: '팀 도움', g: guard }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
   const STEPS = [1, 3, 5] as const, MEDAL = ['red', 'silver', 'gold'] as const;
   const nextStep = $derived(STEPS.find((s) => mastery < s) ?? 5);
@@ -44,6 +45,11 @@
     if (g.ult) return { ic: 'sparkle', t: `각성 ${g.ult}번` };
     return { ic: '', t: `💥 피해 ${g.dmg}` };
   };
+  /** 📜 #102 ⑨ 공적 칩 = 역할 아이콘 + 한 일(회복 · 격려 · 엄호 · 막기 · 끊기 · 실드 · 부활) · 👑 MVP = 도운 횟수 합이 가장 큰 사람(동점 = 맞힌 소문항) */
+  const helpOf = (h: State['heroes'][number]) => { const g = h.log; return g.heals + (g.rescues ?? 0) + g.covers + (g.blocks ?? 0) + g.revives + g.boosts + g.shields + ((g as { aids?: number }).aids ?? 0); };
+  const chipOf = (h: State['heroes'][number]): string => { const g = h.log, a: string[] = []; if (g.heals) a.push(`회복 ${g.heals}`); if (g.rescues) a.push(`구조 ${g.rescues}`); if (g.boosts) a.push(`격려 ${g.boosts}`); if (g.covers) a.push(`엄호 ${g.covers}`); const blk = Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)); if (blk) a.push(`막기 ${blk}`); if (g.cuts) a.push(`끊기 ${g.cuts}`); if (g.shields) a.push(`실드 ${g.shields}`); if (g.revives) a.push(`부활 ${g.revives}`); return a.slice(0, 2).join(' · ') || `맞힘 ${g.right}`; };
+  const mvp = $derived.by(() => { let best = -1, id = -1, r = -1; for (const h of S.heroes) { const v = helpOf(h), rr = h.log.right; if (v > best || (v === best && rr > r)) { best = v; id = h.id; r = rr; } } return id; });
+  const ROLE_IC = { tank: 'role-tank', dealer: 'role-dealer', healer: 'role-healer', support: 'role-support' } as const;
   // 🔊 💎 줄 = 한 줄씩 star · 별 = 하나씩 (요청 #23)
   onMount(() => { const ts = [...rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 700 + i * 350)), ...Array.from({ length: stars }, (_, i) => setTimeout(() => sfx('star-bonus', 0.45), 250 + i * 220))]; return () => ts.forEach(clearTimeout); });
   const n = $derived(S.heroes.length);
@@ -67,11 +73,11 @@
       {#each S.heroes as h (h.id)}
         {@const pt = portraitOf(h.s.hero)}
         {@const d = top(h)}
-        <div class="hp">
+        <div class="hp" class:mvp={h.id === mvp}>{#if h.id === mvp}<b class="crown" data-k="atb-res-mvp">👑 MVP</b>{/if}
           <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win ? 0 : 8} play={win} /></span></span>
           <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">{#if missionOf(S, h.id).done}<i class="mdone" data-k="atb-res-mission" title="임무 완수">✔</i>{/if}
             <i class="face">{#if pt}<i style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}</i>
-            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small>{#if d.ic}<img src={R(d.ic === 'shield' ? 'res-ic-shield-broken' : 'res-ic-sparkle')} alt="" />{/if}{d.t}</small></span>
+            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small class="chip" data-k="atb-res-chip"><AtbIcon name={ROLE_IC[h.s.role]} size={16} />{chipOf(h)}</small></span>{void d}
           </div>
         </div>
       {/each}
@@ -86,7 +92,7 @@
         {#if end.newStars}<p class="row" data-k="atb-newstar"><span>⭐ 새 별 +{end.newStars}{#if !trial} · 공적 +{end.merit.star}{/if}</span><b>💎 +{end.gem.star}</b></p>{/if}
         {#if end.full}<p class="note" data-k="atb-full">이 균열은 다 닫았어요 · 보상이 절반이에요</p>{/if}
         <p class="rw" data-k="atb-reward">{trial ? '💎 체험판 · 받지 않음' : '💎 예상 보상 (베타 · 아직 받지 않음)'}</p>
-        <p class="row"><span>맞힌 소문항 ×3 (최대 30)</span><b>💎 +{end.gem.items}</b></p>{#if end.gem.clear}<p class="row"><span>클리어</span><b>💎 +{end.gem.clear}</b></p>{/if}{#if end.gem.guard}<p class="row"><span>수호</span><b>💎 +{end.gem.guard}</b></p>{/if}
+        <p class="row"><span>맞힌 소문항 ×3 (최대 30)</span><b>💎 +{end.gem.items}</b></p>{#if end.gem.clear}<p class="row"><span>클리어</span><b>💎 +{end.gem.clear}</b></p>{/if}{#if end.gem.guard}<p class="row"><span>팀 도움</span><b>💎 +{end.gem.guard}</b></p>{/if}
         <p class="sum" style:background-image="url({R('res-total-bar')})"><span>합계</span><b>💎 {end.gemSum}</b></p>
       {:else}
       <p class="rw" data-k="atb-reward">{practice ? '💎 예상 보상 (연습방 = 받지 않음)' : '💎 보상'}</p>
@@ -130,7 +136,7 @@
   .slot .st { position: absolute; left: 37%; right: 5%; top: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; }
   .slot b { font: 800 clamp(9px, 2.8cqh, 13px) var(--font-plain); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ffe9b0; }
   .slot small { display: flex; align-items: center; gap: 2px; font: 800 clamp(9px, 2.7cqh, 13px) var(--font-plain); color: #fff; white-space: nowrap; overflow: hidden; }
-  .slot small img { height: 1.6em; }
+
   .paper { position: relative; background: center / 100% 100% no-repeat; min-height: 0; padding: 9% 10% 9% 11%; box-sizing: border-box; color: #3a2614; display: flex; }
   .pin { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), #0000); mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), #0000); padding-bottom: 12px; } /* 🐞 #74 ③ 넘친 줄 = 아래 흐리게(스크롤 있음 표시) */
   .pin { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 4px; overscroll-behavior: contain; }
@@ -163,4 +169,9 @@
   .rs.port .row, .rs.port .merit summary { font-size: 15px; }
   .rs.port .sum { font-size: 20px; }
   .whyb { position: relative; z-index: 3; margin: 2px auto 0; word-break: keep-all; overflow-wrap: break-word; text-wrap: balance; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, 4vh, 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
+  /* ── 📜 #102 ⑨ 공적 칩 · 👑 MVP ── */
+  .hp { position: relative; }
+  .hp .crown { position: absolute; left: 50%; top: -6px; translate: -50% 0; z-index: 3; font: 900 14px var(--font-plain); color: #2a1a04; background: #f5b84a; border-radius: 6px; padding: 0 6px; white-space: nowrap; box-shadow: 0 2px 0 #000; }
+  .hp.mvp .bod { filter: drop-shadow(0 0 8px rgba(255, 210, 100, 0.8)); }
+  .chip { display: inline-flex !important; align-items: center; gap: 3px; font-size: 14px !important; white-space: nowrap; }
 </style>
