@@ -301,7 +301,12 @@
   const tagOn = (k: string) => !!todo[k] || tagAll || !!tagFlash[k] || showAll;
   const anyTodo = $derived(Object.keys(todo).length > 0);
   // 📜 2026-11-20 선생님 「왜 어둡나 · 원래 밝게 하고 누르면 이펙트」: 할 일 없는 물건 흐림(dim) 없앰 · 할 일 = 금빛 숨쉬기만
-  const hl = (k: string): 'todo' | '' => (todo[k] ? 'todo' : '');
+  // ✨ 📜 #142 게시판 던전 「새 단장」 (선생님 「캠프에서 게시판 던전에 새 단장되었다는 표시」): 금빛 리본 + 반짝 1개(다른 반짝보다 우선) · 한 번 열면 사라짐(이 기기 · 기기 바꾸면 다시 보여도 됨) · 체험판 = 없음 · 🧪 · 교사 = 보임
+  const FRESH_K = 'citadel-v1-board-fresh-v11';
+  let freshLeft = $state(untrack(() => { if (trial) return false; try { return localStorage.getItem(FRESH_K) !== '1'; } catch { return false; } }));
+  const boardFresh = $derived(freshLeft && !trial && feat('board'));
+  $effect(() => { if (sheet === 'dummy' && untrack(() => freshLeft)) { freshLeft = false; try { localStorage.setItem(FRESH_K, '1'); } catch { /* 무시 */ } } });
+  const hl = (k: string): 'todo' | '' => (boardFresh ? (k === 'dummy' ? 'todo' : '') : todo[k] ? 'todo' : '');
   // 👆 누를 때 이펙트: 0.15초 톡(눌렸다 1.08 로 튐) + 밝기 1.4 번쩍 + 둘레 반짝이 6개(0.5초 · 물건마다 색) · 동작 줄이기 = 번쩍만 · 창은 기다리지 않고 바로 열림
   const TCOL: Record<string, string> = { dummy: '#ffd25a', tent: '#7cd4ff', scare: '#6ee7a0', mail: '#ff9fc6', gate: '#ff7a5c' };
   let tapN = $state<Record<string, number>>({}), tapSeq = 0;
@@ -551,6 +556,7 @@
       <button type="button" class="prop {hl(k)}" style={propPos(p)} aria-label={todo[k] ? `${NAME[k]} · ${todo[k]}` : NAME[k]} data-prop={k} class:pk={!!poked[k]} class:tp={!!tapN[k]} class:rm={RM} onclick={(e) => go(k, e)}>
         <CampProp {p} phase={k === 'dummy' ? portal.phase : 'idle'} hit={!!poked[k]} on={(news[k] ?? 0) > 0} />
         {#if tapN[k]}{#key tapN[k]}<span class="tfx" class:rm={RM} style:--tc={TCOL[k] ?? '#ffd25a'} aria-hidden="true" data-k="tap-fx">{#if !RM}{#each [0, 1, 2, 3, 4, 5] as i (i)}<i style:--a="{i * 60 + 15}deg"></i>{/each}{/if}</span>{/key}{/if}
+        {#if k === 'dummy' && boardFresh}<span class="fresh" data-k="board-fresh">✨ 새 단장</span>{/if}
         {#if k === 'scare' && e7Ready && (eggFx?.kind === 'e7' || eggHave('e7'))}<span class="bandaid" class:flop={eggFx?.kind === 'e7'} aria-hidden="true" data-k="bandaid">🩹</span>{/if}
         {@render tag(k)}
       </button>
@@ -938,6 +944,7 @@
   .tfx i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; background: var(--tc); clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 3px var(--tc)); animation: tfx 0.5s ease-out forwards; }
   @keyframes tfx { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-10px) scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-46px) scale(1.1); } }
   @keyframes todoGlow { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 214, 120, 0.5)) brightness(1); } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 120, 1)) brightness(1.25); } }
+  .fresh { position: absolute; left: 50%; top: -14%; transform: translateX(-50%) rotate(-4deg); z-index: 6; pointer-events: none; white-space: nowrap; padding: 3px 10px 3px 8px; border-radius: 6px; background: linear-gradient(180deg, #ffe08a, #f5b84a); color: #3a2205; font: 800 14px var(--font); box-shadow: 0 2px 0 #9a6a14, 0 0 12px rgba(255, 214, 120, 0.7); } /* ✨ #142 새 단장 리본 */
   .zone.todo { box-shadow: none; }
   .zone.todo::after { content: ''; position: absolute; inset: 10%; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 120, 0.35), transparent); animation: todoHalo 1.8s ease-in-out infinite; }
   @keyframes todoHalo { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.9; } }
