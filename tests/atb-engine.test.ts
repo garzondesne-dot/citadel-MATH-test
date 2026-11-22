@@ -212,7 +212,7 @@ describe('ATB 스킬 미리 보기 (요청 #19 덧3)', () => {
   it('역할 · 부활 · 못 쓰는 까닭', () => {
     const S = fresh(); const h = S.heroes[2]!; h.ch = 0; h.atb = 1; S.heroes[0]!.hp -= 10;
     expect(skillPeek(S, 2, 'role').line).toBe('💚 큰 힐 90%');
-    expect(skillPeek(S, 2, 'role').why).toMatch(/⚡ 1 필요/);
+    expect(skillPeek(S, 2, 'role').why).toMatch(/구슬 1 필요/);
     expect(skillPeek(S, 0, 'revive').line).toBe('💖 부활 HP 30%');
     h.ch = 1; h.atb = 0.5; expect(skillPeek(S, 2, 'role').why).toBe('ATB 차는 중');
   });

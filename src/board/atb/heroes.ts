@@ -35,12 +35,12 @@ export const statRows = (s: Stats): { k: string; label: string; v: string; sub?:
   return [
     { k: 'hp', label: 'HP', v: String(s.maxHp) },
     { k: 'atk', label: '공격', v: String(Math.round(T.attackBase * s.atkMul)), sub: `×${s.atkMul.toFixed(2)}` },
-    { k: 'skill', label: '스킬', v: String(Math.round(T.skillBase * sk)), sub: `×${sk.toFixed(2)}${healer ? ` · ⚡${H.skillCost}` : ''}` },
+    { k: 'skill', label: '스킬', v: String(Math.round(T.skillBase * sk)), sub: `×${sk.toFixed(2)}${healer ? ` · 구슬 ${H.skillCost}` : ''}` },
     { k: 'def', label: '방어', v: s.def ? `−${Math.round(s.def * 100)}%` : '0%' },
     { k: 'atb', label: 'ATB', v: `${s.atbSec.toFixed(1)}초` },
     { k: 'crit', label: '치명', v: `×${s.crit.toFixed(1)}` },
     healer
       ? { k: 'heal', label: '힐', v: `💚 큰 힐 ${Math.round((H.big + (s.awk ? T.awk.healerBig : 0)) * 100)}%`, sub: `공격 맞힘 = 팀 +${Math.round(H.atkHeal * 100)}%` }
-      : { k: 'heal', label: '힐', v: `🩹 응급붕대 ${Math.round(s.maxHp * T.firstAid)}`, sub: '최대 체력 1/3 · ⚡1' },
+      : { k: 'heal', label: '힐', v: `🩹 응급붕대 ${Math.round(s.maxHp * T.firstAid)}`, sub: '최대 체력 1/3 · 구슬 1' },
   ];
 };
