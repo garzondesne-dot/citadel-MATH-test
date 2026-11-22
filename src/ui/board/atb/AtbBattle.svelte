@@ -338,7 +338,6 @@
   type Pop = { id: number; x: number; y: number; t: string; cls: string };
   let pops = $state<Pop[]>([]), seen = untrack(() => (skipOld ? S.evN : 0)), pk = 0, hpose = $state<Record<number, HPose | ''>>({}), hurtOn = $state<Record<number, boolean>>({}), bossPose = $state<'idle' | 'attack' | 'hit' | 'down'>('idle'), cut = $state<{ who: number; awk: boolean; name: string; short: boolean; line: string } | null>(null);
   // 🛡 실드 (📜 요청 #12): 칸마다 연출 단계(hold = 아직 멀쩡해 보임 · crack = 금 감 · shatter = 조각나며 사라짐) · 방패막 물결 · 산산조각 · 큰 문구
-  const FAM_EMO: Record<Fam, string> = { arms: '🗡', flame: '🔥', nature: '🍃', wisdom: '📖', mystic: '🔮' };
   // 🎨 실드 그림 (작업대 atb-shield · atb-shield-slots · 11/20): 방패막 4칸 × 3줄(서 있음 · 막음 · 깨짐) · 칸 아이콘 5계열 × 3줄(멀쩡 · 금 감 · 깨짐)
   const SHIELD_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-v1.webp`;
   /** 📜 #102 ⑦ 실드 칸 = atb-shield-slots (5계열 × 3단계: 멀쩡 · 금 감 · 깨짐) */
@@ -382,7 +381,7 @@
   function ting(i: number) { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = 1046.5 * Math.pow(1.122, i); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.connect(g).connect(c.destination); o.start(t); o.stop(t + 0.36); }
   function shieldDone() {
     shT.forEach(clearTimeout); shT = []; flies = []; pendCells = new Set(); removeEventListener('pointerdown', shieldDone, true);
-    const wk = S.boss.weak.map((f) => `${FAM_EMO[f]} ${FAM_NAME[f]}`).join(' · '); big(`🛡 실드! 약점 = ${wk}`, 'shield');
+    const wk = S.boss.weak.map((f) => FAM_NAME[f]).join(' · '); /* 📜 #117 이모지 속성 표시 없앰 */ big(`🛡 실드! 약점 = ${wk}`, 'shield');
   }
   function shieldUpFx() {
     try { navigator.vibrate?.(80); } catch { /* 무시 */ } sfx('holy-on', 0.8);
@@ -530,10 +529,10 @@
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
       { const bm = bossMid(), W2 = Math.round(bossSize * 0.7), FXN: Record<string, string> = { pierce: 'st-pierce', burn: 'st-burn', freeze: 'st-freeze', expose: 'st-weak', shock: 'st-shock', curse: 'st-curse' }; if (FXN[e.fx] && !e.tick) spawnFx(FXN[e.fx]!, bm.x, bm.y, W2, e.fx === 'pierce' ? 520 : 800); if (e.fx === 'bless' && e.to != null) { const m = heroMid(e.to); spawnFx('st-bless', m.x, m.y, 90, 800); } if (e.fx === 'gust') { const m = heroMid(e.who); spawnFx('st-wind', m.x, m.y, 90, 800); } } // 🎨 그림 = 덧효과 조각
-      if (e.fx === 'pierce') pop(B0.x, B0.y, '🗡 관통!', 'fam');
+      if (e.fx === 'pierce') pop(B0.x, B0.y, '관통!', 'fam');
       else if (e.fx === 'burn') pop(B0.x + 3, B0.y + 6, e.tick ? `🔥 −${e.v}` : '🔥 화상!', 'fam');
       else if (e.fx === 'freeze') { pop(B0.x, B0.y, '🧊 얼림!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 1600); }
-      else if (e.fx === 'expose') pop(B0.x, B0.y, '📖 약점 노출!', 'fam');
+      else if (e.fx === 'expose') pop(B0.x, B0.y, '약점 노출!', 'fam');
       else if (e.fx === 'bless' && e.to != null) pop(posOf(e.to).x, posOf(e.to).y - 24, '✨ 축복! +5', 'fam');
       else if (e.fx === 'shock') { pop(B0.x, B0.y, '⚡ 감전!', 'fam'); bossFrost = Date.now(); setTimeout(() => (bossFrost = 0), 900); }
       else if (e.fx === 'gust') pop(posOf(e.who).x, posOf(e.who).y - 26, '🌪 순풍! ATB +30%', 'fam');
@@ -700,7 +699,7 @@
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><i class="slot" style:background-image="url({SLOT_URL})" style:background-position="{FAM_X[c.fam]}% {pendCells.has(i) ? 0 : st === 'gone' || st === 'shatter' ? 100 : st === 'crack' || (st === 'hold' && cellAnim[i] != null) ? 50 : 0}%" data-k="atb-slot" aria-label={FAM_NAME[c.fam]}></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><i class="slot" style:background-image="url({SLOT_URL})" style:background-position="{FAM_X[c.fam]}% {pendCells.has(i) ? 0 : st === 'gone' || st === 'shatter' ? 100 : st === 'crack' || (st === 'hold' && cellAnim[i] != null) ? 50 : 0}%" data-k="atb-slot" aria-label={FAM_NAME[c.fam]}></i>{#if !pendCells.has(i)}<i class="slotic" class:gone={st === 'gone' || st === 'shatter'} class:crack={st === 'crack'} aria-hidden="true"><AtbIcon name={FAM_ICON[c.fam]} size={24} /></i>{/if}{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
@@ -731,7 +730,7 @@
       <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
       <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}<small class="lv">Lv{h.s.lv}</small></span></div>
       <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:famflash={h.id === me && !!famFlash} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
-        <b><FamShield fam={h.s.fam} size={14} /><AtbIcon name={ROLE_ICON[h.s.role]} size={12} /><span class="nm">{tagName(h.id)}</span>{#if h.gd}<i class="gdb" data-k="atb-gd" title="수호자">🛡</i>{/if}</b>
+        <b><FamShield fam={h.s.fam} size={18} /><AtbIcon name={ROLE_ICON[h.s.role]} size={16} /><span class="nm">{tagName(h.id)}</span>{#if h.gd}<i class="gdb" data-k="atb-gd" title="수호자">🛡</i>{/if}</b>
         <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
       </div>
     </div>
@@ -1266,4 +1265,9 @@
   .kband b { font: italic 900 34px var(--font); color: #ffe27a; text-shadow: 0 3px 0 #7a4a00, 0 0 12px #ffb84a; } .kband span { font: 900 22px var(--font-plain); color: #fff; text-shadow: 0 2px 0 #000; }
   @keyframes kbin { from { transform: rotate(-7deg) translateX(-60%) scaleX(1.3); opacity: 0; } to { transform: rotate(-7deg); opacity: 1; } }
   .stage.kclose .bigmsg, .stage.kcheer .bigmsg, .stage.kclose .bsay, .stage.kcheer .bsay, .stage.kclose .endb { display: none; }
+  /* ── 🎨 #117 실드 칸 = 방패 그림 가운데에 icons-v1 같은 속성 아이콘 (금 감 → 어둡게 · 깨짐 → 사라짐) ── */
+  .cell2 { position: relative; }
+  .cell2 .slotic { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle, #0009 0 55%, transparent 72%); pointer-events: none; transition: opacity 0.3s, filter 0.3s; }
+  .cell2 .slotic.crack { filter: brightness(0.7); }
+  .cell2 .slotic.gone { opacity: 0; }
 </style>

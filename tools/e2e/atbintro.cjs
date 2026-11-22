@@ -38,7 +38,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   // 판 끝 = 이 차시 만남 기록
   await p.waitForTimeout(2000); await p.evaluate(() => { const S = globalThis.__atb.S; S.end = { win: true, why: '', t: S.t }; }); await p.waitForTimeout(600);
   const ds = await p.textContent('[data-k="atb-boss-say"][data-say="down"]').catch(() => ''); ok('#64 이김 = 「쓰러질 때」 말풍선 (결과 직전)', /숨이 닿지/.test(ds), ds);
-  await p.screenshot({ path: `${SHOTS}/atb-r64-down-844.png` }); await p.waitForTimeout(2600);
+  await p.screenshot({ path: `${SHOTS}/atb-r64-down-844.png` }); await p.waitForTimeout(3700); /* 📜 #116 처치 연출 약 3.9초 */
   ok('#64 말풍선 뒤 결과 화면 · 연습방 = 공적 없음 문구', !!(await p.$('[data-k="atb-nomerit"]')), await p.textContent('[data-k="atb-nomerit"]').catch(() => ''));
   ok('① 판 끝 = 만남 기록 (atb-met:6)', (await p.evaluate(() => localStorage.getItem('atb-met:6'))) === '1');
 
