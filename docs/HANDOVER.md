@@ -2,6 +2,8 @@
 
 정식(Citadel-MATH)을 새로 짓는 v1.0 시험판. 운영 Firebase(`citadel-math`)에는 절대 붙지 않음(코드가 빨간 띠로 거부). 시험 서버 = `public/server.json`(citadel-math-test) · 에뮬레이터 = `?emu=127.0.0.1`.
 
+> ⚠ 공용 문제 부품 규칙 (📜 #130 ⑦ · 2026-11-22): `src/ui/q/QItem.svelte` · `ChainStage.svelte` · `AnswerRow.svelte` 는 수업 레이드 학생 화면과 게시판 던전 문제 카드(`src/ui/board/atb/QuizCard.svelte`)가 같이 씀 → 고치면 **레이드 e2e(허수아비 소레이드 dummywr40 등) + 게시판 시험(`tools/e2e/atb.cjs` · `atb128.cjs` · `atb130.cjs`) 둘 다** 돌림. 게시판만 다르게 할 것은 선택 항목(기본값 = 레이드 그대로 · 예: ChainStage `fold`)이나 QuizCard 쪽 CSS 로.
+
 ## 1. 지금 있는 것 (요청 번호 · 판)
 | 판 | 요청 | 들어간 것 |
 |---|---|---|
