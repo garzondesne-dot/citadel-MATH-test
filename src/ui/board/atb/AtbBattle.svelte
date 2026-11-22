@@ -179,7 +179,7 @@
   let kill = $state<{ ph: 'stop' | 'slow' | 'close' | 'cheer'; who: number } | null>(null);
   const killName = (who: number) => (whoNames?.[who] ?? labels?.[who]?.replace(/^🤖\s*/, '') ?? S.heroes[who]?.s.name ?? '').replace(/^나$/, S.heroes[who]?.s.name ?? '나');
   function lastHitter(): number { for (let i = S.ev.length - 1; i >= 0; i--) { const e = S.ev[i] as { k: string; who?: number; dmg?: number; v?: number }; if ((e.k === 'atk' || e.k === 'skill' || e.k === 'role') && (e.dmg ?? 0) > 0 && e.who != null) return e.who; if (e.k === 'fam' && e.who != null && (e.v ?? 0) > 0) return e.who; if (e.k === 'sig' && e.who != null && (e.v ?? 0) > 0) return e.who; } return me >= 0 ? me : 0; }
-  function fanfare() { if (!soundPref.sfx) return; const c = actx(); if (!c) return; const f = [523.25, 659.25, 783.99, 1046.5], t0 = c.currentTime + 0.02; f.forEach((hz, i) => { for (const [type, vol, det] of [['sawtooth', 0.09, 0], ['square', 0.05, 4]] as const) { const t = t0 + i * 0.15, len = i === 3 ? 0.95 : 0.2, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.value = hz; o.detune.value = det; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.025); g.gain.setValueAtTime(vol, t + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0008, t + len); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + len + 0.05); } }); } /* 🎺 도-미-솔-높은 도 (금관 느낌 · 임시 · 진짜 소리 오면 바꿈) */
+  function fanfare() { sfx('victory-fanfare', 0.9); } // 🔊 📜 #129 덧 = 진짜 팡파레 (임시 Web Audio 대신)
   function killSeq() {
     const who = lastHitter(); open = false; skOpen = false; over = ''; kill = { ph: 'stop', who };
     try { navigator.vibrate?.([80, 40, 120]); } catch { /* 무시 */ }
@@ -356,13 +356,15 @@
   // 🛡 실드 (📜 요청 #12): 칸마다 연출 단계(hold = 아직 멀쩡해 보임 · crack = 금 감 · shatter = 조각나며 사라짐) · 방패막 물결 · 산산조각 · 큰 문구
   // 🎨 실드 그림 (작업대 atb-shield · atb-shield-slots · 11/20): 방패막 4칸 × 3줄(서 있음 · 막음 · 깨짐) · 칸 아이콘 5계열 × 3줄(멀쩡 · 금 감 · 깨짐)
   const SHIELD_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-v1.webp`;
+  /** 📜 #129 ① 방패막 금 = 깬 칸 수만큼 한 줄씩 (꺾인 선 · 반구 안쪽) */
+  const CRACKS = ['M50 18 L46 34 L53 44 L47 60', 'M30 40 L40 46 L36 58 L44 70', 'M70 36 L60 48 L66 58 L58 72', 'M22 62 L34 64 L40 76', 'M78 60 L66 66 L62 80', 'M50 60 L55 72 L49 86'];
   /** 📜 #102 ⑦ 실드 칸 = atb-shield-slots (5계열 × 3단계: 멀쩡 · 금 감 · 깨짐) */
   const SLOT_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-slots-v1.webp`, FAM_X: Record<Fam, number> = { arms: 0, flame: 25, nature: 50, wisdom: 75, mystic: 100 };
   /** 📜 #102 ⑥ 홀리 방패 = rage-barrier 반구(파티 전체) + aura-guardshield 한 번(발동한 용사 위) */
   const HOLY_URL = `${import.meta.env.BASE_URL}art/aura-guardshield-v1.webp`;
   let holyFx = $state<{ who: number; n: number } | null>(null);
   const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
-  let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
+  let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter' | 'cracked'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
   let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
   // 🎛 📜 요청 #76 연출 정리: 화면 전체를 덮는 연출은 한 번에 하나(컷인 4 > 브레이크 3 > 분노 진입 2 > 쿵 · 광역 번쩍 1) · 화면 흔들림 = 큰 일만(보스 특수 · 분노 진입 · 쓰러짐)
   //   번쩍 = 1초에 3번 이하(광과민 안전) · 문제 카드가 열려 있으면 화면 흔들림 대신 보스만 · 번쩍은 카드 아래 층
@@ -381,17 +383,37 @@
   /** 🛡 보호막 부수기 = 그 용사 공격이 방패막에 부딪혀 물결 → 칸 금 감 → 조각나며 사라짐(한 칸씩 · 쨍) · 마지막 = 방패막 산산조각 + 약점 시간 */
   function shieldHit(e: Extract<Ev, { k: 'shield' }>) {
     if (e.who === me && meH && S.boss.weak.includes(meH.s.fam)) { const col = FAM_COL[meH.s.fam]; if (claim(3, 900, 'break')) { eyeCut(me, col, `${whoOf(me)}의 💥 속성 브레이크!`, 'SHIELD BREAK!', 700); slowmo(600); } sfx('chain-break', 1); } /* 📜 #76 흔들림 없음 (브레이크 = 눈빛 · 슬로) */ // 💥 요청 #50 B4 브레이크 성공
-    e.cells.forEach((i) => setCell(i, 'hold'));
+    e.cells.forEach((i) => setCell(i, 'hold')); if (e.last) shatterWait = true; // 무방비 모양은 산산조각 뒤에
     const go = () => {
       barrier = 'ripple'; setTimeout(() => { if (barrier === 'ripple') barrier = 'up'; }, 500);
-      e.cells.forEach((i, j) => setTimeout(() => { setCell(i, 'crack'); sfx('ice-crack', 0.7); setTimeout(() => { setCell(i, 'shatter'); sfx('ice-shatter', 0.8); setTimeout(() => setCell(i, null), 450); }, 380); }, j * 420));
-      if (e.last) setTimeout(() => { barrier = 'shatter'; sfx('chain-break', 0.9); big('실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
+      e.cells.forEach((i, j) => setTimeout(() => { setCell(i, 'crack'); sfx('shield-crack', e.last && j === e.cells.length - 1 ? 0.5 : 0.8); setTimeout(() => { setCell(i, 'shatter'); setTimeout(() => setCell(i, null), 450); }, 380); }, j * 420)); // 🔊 📜 #129 ① 칸 = 「쩍」 + 방패막 금 한 줄 더(brokeN)
+      if (e.last) { shatterWait = true; setTimeout(shatterAll, e.cells.length * 420 + 300); }
     };
     const h = S.heroes[e.who], box = heroEls[e.who];
     if (!h || !stageEl || !bossEl || !box || busy.has(e.who)) { go(); return; }
     busy.add(e.who);
     void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: h.s.hero, fx: fit(h.s.hero, fx[e.who] || 'flame'), finish: true, hits: 1, mult: 1.2, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit: go }).catch(() => {}).finally(() => { busy.delete(e.who); setPose(e.who, 'idle'); });
   }
+  /* 💥 📜 #129 ② 마지막 칸 = 방패막 유리처럼 산산조각: 히트 스톱 0.12초 + 하얀 번쩍 → 금 간 반구 0.1초 → 유리 조각 26개 사방으로 튀고 떨어져 바닥에서 반짝 → 사라짐(약 0.8초) · 흔들림 · 쨍그랑 · 위 띠 「💥 실드 파괴!」
+     ③ 무방비 = 휘청(뒤로 밀림 0.4초) → 머리 위 빙글 별 · 몸 붉게 맥박 · 숨쉬기 2배 느리게 · 발밑 금 간 바닥 · 이름 옆 「💢 무방비 n초」 · 게이지 금색 줄이 줄어듦 · 피해 숫자 크게 + 금색 ×2 · 끝 = 몸 세움 0.3초 */
+  type Shard = { id: number; x: number; y: number; dx: number; dy: number; r: number; s: number; c: string; d: number; k: number };
+  let hstop = $state(false), sflash = $state(0), glass = $state<{ n: number; parts: Shard[] } | null>(null), daze = $state(false), stag = $state(false), rise = $state(false), dazeMax = 1, shatterWait = false;
+  const SHARD_C = ['#bfe8ff', '#9fd6ff', '#e6f7ff', '#ffffff', '#ffe9a8'];
+  function shatterAll() {
+    hstop = true; setTimeout(() => (hstop = false), 120); if (canFlash('shatter')) { sflash = Date.now(); const f = sflash; setTimeout(() => { if (sflash === f) sflash = 0; }, 260); }
+    barrier = 'cracked';
+    setTimeout(() => {
+      barrier = 'shatter'; setTimeout(() => { if (barrier === 'shatter') barrier = ''; }, 700);
+      const n = Date.now(), parts: Shard[] = Array.from({ length: 26 }, (_, i) => { const a = (i / 26) * Math.PI * 2 + Math.random() * 0.4, v = 0.5 + Math.random() * 0.6; return { id: i, x: 50 + Math.cos(a) * 26, y: 45 + Math.sin(a) * 30, dx: Math.cos(a) * v * 90, dy: Math.sin(a) * v * 60 - 30, r: (Math.random() - 0.5) * 720, s: 5 + Math.round(Math.random() * 7), c: SHARD_C[i % SHARD_C.length]!, d: Math.round(Math.random() * 80), k: i % 3 }; });
+      glass = { n, parts }; setTimeout(() => { if (glass?.n === n) glass = null; }, 1000);
+      bigShake(12, 420, 'shatter'); sfx('shield-shatter', 0.95); big('💥 실드 파괴!', 'shatter');
+      setTimeout(dazeIn, 260);
+    }, 220);
+  }
+  function dazeIn() { shatterWait = false; if (!weak(S) || daze) return; daze = true; stag = true; bossPose = 'hit'; dazeMax = Math.max(1, S.weakUntil - S.t); sfx('boss-stagger', 0.85); setTimeout(() => { stag = false; if (bossPose === 'hit') bossPose = 'idle'; }, 420); }
+  /* 무방비 끝 = 몸 세움 · 다른 길로 약점 시간이 생겨도(늘림 등) 1.6초 뒤 무방비 모양 */
+  $effect(() => { const w = weakLeft > 0; untrack(() => { if (!w && daze) { daze = false; rise = true; setTimeout(() => (rise = false), 300); } else if (w && !daze) { const tryIn = (n: number) => setTimeout(() => { if (!weak(S) || daze) return; if (shatterWait && n < 4) tryIn(n + 1); else dazeIn(); }, 1600); tryIn(0); } }); });
+  const brokeN = $derived(S.cells.filter((c) => c.broken).length);
   /** 🛡 실드 생김 = 화면 가운데 큰 문구 · 진동 · 보스 웅크렸다 일어나며 포효 · 방패막 펼침 */
   // 🛡 📜 요청 #32 실드 생김 = 방패막 + 빈 방패 칸 먼저(0.3초) → 칸마다 차례로 그 속성 방패가 가운데 크게(3배) → 작아지며 제 칸으로 쏙 + 「팅」(한 음씩 올라감) + 계열 색 반짝
   //   → 다 합쳐지면 「🛡 실드! 약점 = …」 · 약 1.5초 · 전투 · 문제 풀이 안 멈춤 · 화면 아무 데나 누르면 바로 끝 모양
@@ -446,7 +468,7 @@
     const onHit = (info?: { k: number; n: number }) => {
       if (!info && hit) return; // 끝(finally) 한 번 더 = 이미 다 띄웠으면 그만
       const n = Math.max(1, info?.n ?? 1), k = info?.k ?? n - 1, bx = open ? 86 : 72, x = bx + (Math.random() - 0.5) * 6, y = 34 - k * 3;
-      if (!miss && d) { const part = k === n - 1 ? d - shown : Math.round(d / n); shown += part; pop(x, y, `${tier === 'crit' && n === 1 ? '💥 치명! ' : ''}${tier === 'weak' ? '약점! ' : ''}−${part}`, `dmg ${tier} ${mine ? 'me' : 'fr'}`, mine ? 900 : 600); }
+      if (!miss && d) { const part = k === n - 1 ? d - shown : Math.round(d / n); shown += part; pop(x, y, `${tier === 'crit' && n === 1 ? '💥 치명! ' : ''}${tier === 'weak' ? '약점! ' : ''}−${part}`, `dmg ${tier} ${mine ? 'me' : 'fr'}${wk ? ' x2' : ''}`, mine ? 900 : 600); }
       if (k < n - 1) { burstBits(isSk || crit ? 2 : 1); return; }
       if (hit) return; hit = true;
       if (miss) pop(x, 36, '빗나감', `dmg miss ${mine ? 'me' : 'fr'}`, mine ? 900 : 600);
@@ -616,7 +638,7 @@
   const stoneG = $derived(S.t < S.stoneUntil ? Math.ceil(S.stoneUntil - S.t) : 0);
   const bossGauge = $derived.by(() => {
     if (S.end) return null;
-    if (weak(S)) return { p: 1, txt: `⏸ 약점 시간 ${Math.ceil(S.weakUntil - S.t)}초 · 공격 멈춤`, blue: true };
+    if (weak(S)) return { p: Math.max(0, Math.min(1, (S.weakUntil - S.t) / Math.max(dazeMax, S.weakUntil - S.t))), txt: `💢 무방비 ${Math.ceil(S.weakUntil - S.t)}초 · 공격 멈춤 · 피해 2배`, gold: true }; // 📜 #129 ③ 금색 줄이 줄어듦
     if (stoneG) return { p: Math.min(1, S.bossT / bossEveryOf(S)), txt: `석화 ${stoneG}초 · 공격 멈춤`, blue: true, ic: ART('ic4/stone') };
     const left = Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)), ic = ATK_IC[upcoming] ?? '💥', nm = ATK[upcoming as keyof typeof ATK] ? bossAtkName(S.boss, upcoming) : '공격';
     if (S.target) { const who = S.aoeNext ? '모두' : S.target.map((i) => name(i)).join(' · '); return { p: S.bossT / bossEveryOf(S), txt: `${S.aoeNext ? '⚠ 광역! ' : ''}${ic} ${nm} → ${who} · ${left}초`, hot: true }; }
@@ -669,7 +691,7 @@
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div class="stage" onclick={tapEmpty} class:kstop={kill?.ph === 'stop'} class:kslow={kill?.ph === 'slow'} class:kclose={kill?.ph === 'close'} class:kcheer={kill?.ph === 'cheer'} style:--kx="{kill ? posOf(kill.who).x : 50}%" style:--ky="{kill ? posOf(kill.who).y - 12 : 50}%" class:capon={capOn} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
+<div class="stage" class:hstop onclick={tapEmpty} class:kstop={kill?.ph === 'stop'} class:kslow={kill?.ph === 'slow'} class:kclose={kill?.ph === 'close'} class:kcheer={kill?.ph === 'cheer'} style:--kx="{kill ? posOf(kill.who).x : 50}%" style:--ky="{kill ? posOf(kill.who).y - 12 : 50}%" class:capon={capOn} class:meet={phase === 'meet'} class:slowmo={!!slowOn} class:q={open} class:weak={weakLeft > 0} style:background-image="url({dungeonOf(bg || L.theme)})" data-k="atb-stage" style:--ui-orb0={fxCss('ui-orb-empty')} style:--ui-orb1={fxCss('ui-orb-full')} style:--ui-sk={fxCss('ui-skill-btn')} style:--ui-sk-rd={fxCss('ui-skill-btn-ready')} style:--ui-sk-on={fxCss('ui-skill-btn-open')} style:--u={U} style:--fx-orb={fxCss('charge-orb')} style:--fx-burst={fxCss('charge-burst')} style:--fx-ring={fxCss('charge-ring')} bind:this={stageEl}>
   <!-- ⚠ 광역 예고 = 용사 줄 바닥 붉게 깜빡 · 터질 때 붉은 번쩍 -->
   <i class="floor" class:on={aoeWarn} class:q={open} data-k="atb-aoe-floor" aria-hidden="true"></i>
   <!-- 📜 요청 #24 ⑥ 빨간 점선 없앰 · 예고 = 보스 체력바 아래 한 줄 + 표적 발밑 -->
@@ -699,7 +721,7 @@
   {#if rageBurst}{#key rageBurst}<i class="rageburst" aria-hidden="true" data-k="atb-rageburst"></i>{/key}{/if}
   {#if barrierFx}<i class="tbarrier" aria-hidden="true" data-k="atb-tbarrier"><AtbFx name="rage-barrier" x="50%" y="50%" w={Math.round(Wd * 0.48)} h={Math.round(H * 0.58)} ms={900} z={1} /></i>{/if}
   {#each fxs as f (f.id)}<AtbFx name={f.name} x="{f.x}%" y="{f.y}%" w={f.w} loop={false} ms={f.ms} z={36} />{/each}
-  {#if weakLeft}<div class="weakb" role="status"><AtbIcon name="weak" size={26} /> 약점 시간 {weakLeft}초 · 피해 2배</div>{/if}
+  {#if sflash}<i class="sflash" aria-hidden="true"></i>{/if}
 
   <!-- 보스 -->
   <div class="bossui" style:left={open ? '27.5%' : '50%'} style:width={open ? '47%' : '46%'}>
@@ -712,7 +734,7 @@
     {#if chainMe}<div class="tele sig" role="status" data-k="atb-chain">⛓ 묶여도 문제를 맞히면 사슬로 보스 피해!</div>{/if}
     {#if tg?.cls === 'special'}<div class="chbar" data-k="atb-charge-bar"><i style:width="{Math.round(chargeP * 100)}%"></i><span>🌀 {tg.atk} 모으는 중</span></div>{/if}
     {#if S.rage}<div class="calmb" class:on={calmLeft > 0} data-k="atb-calm">{#if calmLeft > 0}😮‍💨 진정 {calmLeft}초 · 공격 안 함{:else}👹 분노 · 퍼펙트 {S.ragePerf ?? 0}/{RAGE.calmPerfect} 모이면 진정{/if}</div>{/if}
-    <div class="rhp" class:rage={S.rage && !calmLeft} data-k="atb-tele-g">{#if stoneG}<span class="bst" data-k="atb-boss-stat" title="석화"><img src={ART('ic4/stone')} alt="석화" /><b>{stoneG}</b></span>{/if}<RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}${S.rage ? ' · 👹 분노' : ''}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside marks={[{ at: T.shieldAt, k: 'shield', t: '실드' }, { at: RAGE.at, k: 'rage', t: '분노' }]} /></div>
+    <div class="rhp" class:rage={S.rage && !calmLeft} data-k="atb-tele-g">{#if weakLeft || stoneG}<span class="bsts">{#if weakLeft}<span class="bst daze" data-k="atb-daze" title="무방비 · 피해 2배"><i>💢</i><b>무방비 {weakLeft}초</b></span>{/if}{#if stoneG}<span class="bst" data-k="atb-boss-stat" title="석화"><img src={ART('ic4/stone')} alt="석화" /><b>{stoneG}</b></span>{/if}</span>{/if}<RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}${S.rage ? ' · 👹 분노' : ''}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside marks={[{ at: T.shieldAt, k: 'shield', t: '실드' }, { at: RAGE.at, k: 'rage', t: '분노' }]} /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
@@ -722,8 +744,10 @@
       </div>
     {/if}
   </div>
-  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={BX} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" aria-hidden="true"></i>{/if}
-  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0} class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} class:flee={fleeing} style:left={BX} style:top={BY} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:soft-idle={bossPose === 'idle' && !bSheet3.idleB} class:soft-hit={bossPose === 'hit' && !bSheet3.hit} class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i></div>
+  {#if barrier || (S.shieldUp && S.cells.some((c) => !c.broken))}<i class="barrier {barrier || 'up'}" style:left={BX} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" style:background-image="url({SHIELD_URL})" data-k="atb-barrier" data-broke={brokeN} aria-hidden="true">{#if brokeN || barrier === 'cracked'}<svg class="bcrk" viewBox="0 0 100 100" preserveAspectRatio="none">{#each CRACKS.slice(0, barrier === 'cracked' ? CRACKS.length : brokeN) as d, i (i)}<path {d} />{/each}</svg>{/if}</i>{/if}
+  {#if glass}{#key glass.n}<div class="glass" style:left={BX} style:top={BY} style:width="{Math.round(bossSize * 1.25)}px" style:height="{Math.round(bossSize * 1.25)}px" data-k="atb-glass" aria-hidden="true">{#each glass.parts as g (g.id)}<i class="gs k{g.k}" style:left="{g.x}%" style:top="{g.y}%" style:--dx="{g.dx}px" style:--dy="{g.dy}px" style:--r="{g.r}deg" style:--c={g.c} style:width="{g.s}px" style:height="{g.s}px" style:animation-delay="{g.d}ms"></i>{/each}</div>{/key}{/if}
+  {#if daze}<i class="dfloor" style:left={BX} style:top={BY} style:width="{Math.round(bossSize * 0.9)}px" data-k="atb-dfloor" aria-hidden="true"></i>{/if}
+  <div class="boss" class:drop={phase === 'meet'} class:roar={bossShield} class:stone={stone > 0 && !daze} class:dazed={daze} class:stag class:rise class:burning={!!S.burn} class:frost={!!bossFrost} class:cursed={!!bossCurse} class:raging={S.rage && !calmLeft} class:flee={fleeing} style:left={BX} style:top={BY} style:width="{bossSize}px" style:height="{bossSize}px" data-k="atb-boss" data-flip={S.boss.flip?.[bossPose] ? 1 : 0} bind:this={bossEl}>{#if S.rage && !calmLeft}<AtbFx name="rage-aura" x="50%" y="86%" w={Math.round(bossSize * 0.85)} ms={800} z={0} /><AtbFx name="rage-steam" x="50%" y="14%" w={Math.round(bossSize * 0.4)} ms={1000} z={3} />{/if}{#if calmLeft}<AtbFx name="rage-calm" x="50%" y="8%" w={Math.round(bossSize * 0.55)} ms={900} z={3} />{/if}{#if S.burn}<AtbFx name="st-burn" x="50%" y="30%" w={Math.round(bossSize * 0.45)} ms={700} z={3} />{/if}{#if bossCurse}<AtbFx name="st-curse" x="50%" y="45%" w={Math.round(bossSize * 0.6)} ms={900} z={3} />{/if}<i class="bflip" class:soft-idle={bossPose === 'idle' && !bSheet3.idleB} class:soft-hit={bossPose === 'hit' && !bSheet3.hit} class:flip={!!S.boss.flip?.[bossPose]} class:armor class:shine={mirrorLeft > 0} class:breath={breathLeft > 0}><Sprite ref={S.boss.sprite} pose={bossPose} size={bossSize} />{#if crackLv}<MonCrack lv={crackLv} />{/if}</i>{#if daze}<i class="stars" data-k="atb-stars" aria-hidden="true"><i></i><i></i><i></i></i>{/if}</div>
 
   {#each flies as f (f.id)}<span class="shfly" style:left="{f.x0}px" style:top="{f.y0}px" style:--dx="{f.dx}px" style:--dy="{f.dy}px" data-k="atb-shfly" data-fam={f.fam}><FamShield fam={f.fam} size={132} /></span>{/each}
 
@@ -1296,4 +1320,31 @@
   .ic4.big { width: 28px; height: 28px; }
   .sk2 .co { display: inline-flex; align-items: center; gap: 1px; } .sk2 .co .need1 { display: inline-flex; align-items: center; gap: 2px; }
   .orbs { display: inline-flex; gap: 2px; align-items: center; }
+
+  /* 💥 📜 #129 실드 산산조각 · 무방비 */
+  .stage.hstop :global(*) { animation-play-state: paused !important; } /* 히트 스톱 0.12초 */
+  .sflash { position: absolute; inset: 0; z-index: 40; pointer-events: none; background: #fff; animation: sflash 0.26s ease-out forwards; } @keyframes sflash { from { opacity: 0.85; } to { opacity: 0; } }
+  .barrier .bcrk { position: absolute; inset: 8% 10% 4%; width: 80%; height: 88%; overflow: visible; } .barrier .bcrk path { fill: none; stroke: #f4fbff; stroke-width: 1.6; stroke-linejoin: miter; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px #7fd0ff); stroke-dasharray: 120; animation: crk 0.25s ease-out both; } @keyframes crk { from { stroke-dashoffset: 120; } to { stroke-dashoffset: 0; } }
+  .barrier.cracked { background-position-y: 50%; filter: brightness(1.6); } .barrier.cracked .bcrk path { stroke-width: 2.4; }
+  .glass { position: absolute; z-index: 30; transform: translate(-50%, -100%); pointer-events: none; }
+  .glass .gs { position: absolute; background: var(--c); image-rendering: pixelated; box-shadow: 0 0 0 1px #ffffff99, 0 0 6px #bfe8ff; opacity: 0; animation: gfly 0.82s cubic-bezier(.2,.6,.4,1) forwards; }
+  .glass .gs.k0 { clip-path: polygon(0 0, 100% 30%, 40% 100%); } .glass .gs.k1 { clip-path: polygon(20% 0, 100% 60%, 0 100%); } .glass .gs.k2 { clip-path: polygon(0 20%, 100% 0, 70% 100%, 10% 80%); }
+  @keyframes gfly { 0% { opacity: 1; transform: translate(0, 0) rotate(0); } 55% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * 0.7)); } 80% { opacity: 1; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 70px)) rotate(var(--r)); filter: brightness(1.8); } 90% { opacity: 0.4; filter: brightness(3); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.2), calc(var(--dy) + 78px)) rotate(var(--r)); } }
+  .bigmsg.shatter { font-size: 1.35em; letter-spacing: 1px; color: #fff3c4; text-shadow: 0 0 10px #ff9a2a, 0 2px 0 #7a2a00; }
+  .dfloor { position: absolute; z-index: 9; aspect-ratio: 3.2; transform: translate(-50%, -55%); pointer-events: none; border-radius: 50%; background: radial-gradient(closest-side, #1a0c0499 30%, #ffd84a55 62%, #ffb84a22 80%, #0000 100%); animation: dfin 0.3s ease-out; }
+  .dfloor::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from 8deg, #ffe08acc 0 1.5deg, #0000 1.5deg 17deg, #120800ee 17deg 19deg, #0000 19deg 37deg); mask: radial-gradient(closest-side, #000 25%, #0000 98%); }
+  @keyframes dfin { from { scale: 0.4; opacity: 0; } }
+  .boss.stag .bflip { animation: stag 0.42s ease-out; } @keyframes stag { 0% { translate: 0 0; rotate: 0deg; } 35% { translate: 9% 2%; rotate: 7deg; } 100% { translate: 4% 2%; rotate: 3deg; } }
+  .boss.dazed .bflip { translate: 4% 2%; rotate: 3deg; animation: dbreath 3.2s ease-in-out infinite; } @keyframes dbreath { 50% { translate: 4% calc(2% + 3px); } } /* 숨쉬기 2배 느리게 · 기운 채로 */
+  .boss.dazed .bflip :global(.sprite), .boss.dazed .bflip :global(img) { animation: dpulse 0.8s ease-in-out infinite; } @keyframes dpulse { 50% { filter: drop-shadow(0 0 6px #ff3a2a) sepia(0.5) saturate(3) hue-rotate(-30deg) brightness(1.05); } }
+  .boss.rise .bflip { animation: drise 0.3s ease-out; } @keyframes drise { from { translate: 4% 2%; rotate: 3deg; } to { translate: 0 0; rotate: 0deg; } }
+  .stars { position: absolute; left: 46%; top: 16%; width: 46%; height: 16%; transform: translateX(-50%); pointer-events: none; z-index: 4; }
+  .stars i { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px; background: #ffe24a; clip-path: polygon(50% 0, 62% 38%, 100% 38%, 69% 60%, 80% 100%, 50% 76%, 20% 100%, 31% 60%, 0 38%, 38% 38%); image-rendering: pixelated; filter: drop-shadow(0 0 2px #fff); animation: orbit 1.2s linear infinite; }
+  .stars i:nth-child(2) { animation-delay: -0.4s; } .stars i:nth-child(3) { animation-delay: -0.8s; }
+  @keyframes orbit { 0% { transform: translate(-110%, 0) scale(0.8); z-index: 0; } 25% { transform: translate(0, 30%) scale(1.1); } 50% { transform: translate(110%, 0) scale(0.8); } 75% { transform: translate(0, -40%) scale(0.6); opacity: 0.7; } 100% { transform: translate(-110%, 0) scale(0.8); } }
+  .pop.dmg.x2 { font-size: 1.3em; } .pop.dmg.x2::after { content: ' ×2'; color: #ffd84a; -webkit-text-stroke: 1px #6a3a00; }
+  .bsts { position: absolute; z-index: 3; right: 6%; top: -2px; display: inline-flex; gap: 4px; } .bsts .bst { position: static; }
+  .bst.daze { border-color: #ffcf4a; background: linear-gradient(#5a1a0ae6, #2a0c06e6); padding: 0 6px 0 3px; animation: dazechip 0.8s ease-in-out infinite; } .bst.daze i { font-style: normal; font-size: 15px; } .bst.daze b { color: #ffe08a; }
+  @keyframes dazechip { 50% { box-shadow: 0 0 8px #ff6a2a; } }
+  @media (prefers-reduced-motion: reduce) { .glass .gs, .stars i, .boss.dazed .bflip, .boss.dazed .bflip :global(*), .bst.daze, .sflash { animation: none; } }
 </style>
