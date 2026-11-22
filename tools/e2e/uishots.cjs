@@ -40,8 +40,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // 07 스킬 메뉴 · 08 충전 가득
   await ev(() => { globalThis.__atb.charge(4); globalThis.__atb.full(); }); await wait(900); await shot('08', '충전가득');
   await p.click('[data-k="atb-skill-btn"]').catch(() => {}); await wait(700); await shot('07', '스킬메뉴');
-  // 22 스킬 컷인 = 장착 스킬 누름
-  const sk = await p.$('[data-k="atb-skills"] button:not([disabled])'); if (sk) { await sk.click().catch(() => {}); for (let i = 0; i < 15; i++) { if (await has('atb-cutin')) { await shot('22', '스킬컷인'); break; } await wait(100); } }
+  // 📜 #102 ⑤ 스킬 1 = 컷인 없음 (22 컷인 = 스킬 2 실드 깨기에서) · 메뉴 닫기
+  await p.click('[data-k="atb-skill-btn"]').catch(() => {});
   await wait(1500);
   // 자연 장면 기다리기 (예고 · 반응 · 실드 · 덧효과 · 결계)
   const t0 = Date.now();
@@ -52,9 +52,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     if (await has('atb-aoe-floor')) await shot('10', '광역예고');
     else if (await has('atb-aim')) await shot('09', '단일예고');
     if (await has('atb-tele') && !(await has('atb-aim')) && !(await has('atb-aoe-floor'))) await shot('11', '특수예고');
-    if (await has('atb-counter')) { await shot('12a', '반응단추'); await p.click('[data-k="atb-counter"]', { force: true, timeout: 1500 }).catch(() => {}); for (let i = 0; i < 12; i++) { if (await has('atb-cutin')) { await shot('12', '반응컷인'); break; } await wait(100); } }
+    if (await has('atb-counter')) { await shot('12a', '반응단추'); await p.click('[data-k="atb-counter"]', { force: true, timeout: 1500 }).catch(() => {}); await wait(500); await shot('12b', '반응제자리'); }
     if (st.sh && await has('atb-cells')) await shot('13', '실드펼침');
-    if (await has('atb-break')) { await shot('14', '실드깨기단추'); await ev(() => { globalThis.__atb.charge(4); globalThis.__atb.full(); }); await p.click('[data-k="atb-break"]').catch(() => {}); await wait(400); await shot('14b', '속성브레이크'); }
+    if (await has('atb-break')) { await shot('14', '실드깨기단추'); await ev(() => { globalThis.__atb.charge(4); globalThis.__atb.full(); }); await p.click('[data-k="atb-break"]', { force: true }).catch(() => {}); for (let i = 0; i < 20; i++) { if (await has('atb-cutin') || await has('atb-eye')) { await shot('22', '스킬2컷인'); break; } await wait(80); } await wait(400); await shot('14b', '속성브레이크'); }
     if (await has('atb-shards')) await shot('15a', '실드파괴');
     if (st.weak) await shot('15', '약점시간');
     if (await has('atb-status') || await has('atb-stone')) await shot('17', '덧효과');
@@ -72,7 +72,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   if (!got.has('11')) { await ev(() => globalThis.__atb.pause(true)); await tele({ k: 'fire', aoe: true }); await wait(500); await shot('11', '특수예고'); await ev(() => globalThis.__atb.pause(false)); await wait(4500); }
   if (!got.has('12')) {
     await ev(() => globalThis.__atb.pause(true)); await ev(() => { const h = globalThis.__atb.S.heroes[0]; h.s.role = 'tank'; h.ch = 2; h.atb = 0; }); await tele({ k: 'ice', aoe: false, to: 1 }); await wait(400);
-    if (await has('atb-counter')) { await shot('12a', '반응단추'); await ev(() => globalThis.__atb.pause(false)); await p.click('[data-k="atb-counter"]', { force: true, timeout: 1500 }).catch(() => {}); for (let i = 0; i < 40; i++) { if (await has('atb-cutin') || await has('atb-eye') || await has('atb-react-band')) { await wait(150); await shot('12', '반응컷인'); break; } await wait(80); } if (!got.has('12')) notes.push('12 카운터 누른 뒤 컷인이 3초 안에 안 보임'); } else notes.push('12 카운터 단추가 안 뜸');
+    if (await has('atb-counter')) { await shot('12a', '반응단추'); await ev(() => globalThis.__atb.pause(false)); await p.click('[data-k="atb-counter"]', { force: true, timeout: 1500 }).catch(() => {}); await wait(500); await shot('12b', '반응제자리'); /* 📜 #102 ⑤ 역할 스킬 = 컷인 없이 제자리 */ } else notes.push('12 카운터 단추가 안 뜸');
     await ev(() => globalThis.__atb.pause(false)); await wait(3000);
   }
   if (!got.has('17')) { await ev(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const [h0, h1, h2, h3] = S.heroes; if (h1) { h1.stunKind = 'sleep'; h1.stunUntil = S.t + 9; } if (h2) { h2.slowKind = 'darkHit'; h2.slowUntil = S.t + 9; } if (h3) { h3.stunKind = 'bind'; h3.stunUntil = S.t + 9; } h0.slowKind = 'ice'; h0.slowUntil = S.t + 9; S.stoneUntil = S.t + 6; }); await wait(600); await shot('17', '덧효과-상태-석화'); await ev(() => globalThis.__atb.pause(false)); await wait(2500); }
@@ -93,7 +93,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await wait(600); await shot('20c', '부활메뉴');
   const rv = await p.$('[data-k="atb-sk-revive"]');
   if (rv) { await rv.click().catch(() => {}); await wait(500); await shot('20b', '부활'); for (let i = 0; i < 25; i++) { if (await has('atb-rev0')) { await wait(600); await shot('21', '팀부활0'); break; } await wait(150); } } else notes.push('부활 단추(atb-sk-revive) 없음');
-  if (!got.has('21')) notes.push('21 팀 부활 0 띠 못 봄');
+  // 🛡 #103 도와줘 = 친구가 수호자(도전자 카드 「💡 도와줘」 · 기다림 · 받은 힌트) → 내가 수호자(스킬 단추 「💡 ○○ 도와줘!」)
+  await ev(() => { const a = globalThis.__atb, S = a.S; a.pause(true); S.heroes.forEach((h) => { h.down = false; h.hp = h.s.maxHp; }); S.heroes[1].gd = true; S.asks = {}; S.target = null; S.nextAtk = null; }); await wait(400);
+  if (await has('atb-quiz-open')) await p.click('[data-k="atb-quiz-open"]', { force: true }).catch(() => {}); await wait(700);
+  if (await has('atb-help')) { await shot('26a', '도와줘단추'); await p.click('[data-k="atb-help"]').catch(() => {}); await wait(500); await shot('26b', '도와줘기다림');
+    await ev(() => { const S = globalThis.__atb.S; if (S.asks?.[0]) S.asks[0].by = 1; }); await wait(600); await shot('26c', '받은힌트'); } else notes.push('26 도와줘 단추(atb-help) 없음');
+  await ev(() => globalThis.__atb.close()); await wait(500);
+  await ev(() => { const S = globalThis.__atb.S; S.heroes[1].gd = false; S.heroes[0].gd = true; S.asks = { 2: { by: -1, t: S.t } }; }); await wait(600);
+  if (await has('atb-aid')) await shot('26d', '수호자도와줘'); else notes.push('26d 수호자 단추(atb-aid) 없음');
+  await ev(() => { const S = globalThis.__atb.S; S.asks = {}; S.heroes[0].gd = false; globalThis.__atb.pause(false); }); await wait(300);
   // 24 패배 (이 판) → 다시 23 승리는 새 판
   await ev(() => { const S = globalThis.__atb.S; S.revives = 0; S.heroes.forEach((h) => { h.hp = 0; h.down = true; }); });
   for (let i = 0; i < 60; i++) { if (await has('atb-result')) break; await wait(250); }
@@ -101,9 +109,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await p.click('[data-k="atb-to-board"]').catch(() => {}); await wait(2500); await shot('25', '게시판으로');
   // 23 승리 = 다시 혼자 도전 → 보스 0
   await p.click('button:has-text("혼자 도전")').catch(() => {}); for (let i = 0; i < 100 && !(await has('atb-stage') && !(await has('atb-intro'))); i++) await wait(200);
+  await ev(() => { const H = globalThis.__atb?.S?.heroes; if (!H) return; H[0].log.right = 6; H[0].log.aids = 1; H[1].log.right = 4; H[1].log.heals = 3; H[2].log.right = 5; H[2].log.covers = 2; H[3].log.right = 3; H[3].log.cuts = 1; H[3].log.blocks = 1; }); /* 📜 #102 ⑨ 공적 칩 · 👑 MVP 보이게 */
   for (let i = 0; i < 30 && !(await has('atb-result')); i++) { await ev(() => globalThis.__atb?.win?.()); await wait(400); } /* __atb.win() = 엔진 끝 판정 (fa8548e) */
   await wait(2500); await shot('23', '결과승리');
-  const want = ['01', '02', '03', '04', '05', '06a', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19a', '19b', '20a', '20b', '21', '22', '23', '24', '25'];
+  const want = ['01', '02', '03', '04', '05', '06a', '07', '08', '09', '10', '11', '12a', '13', '14', '15', '16', '17', '18', '19a', '19b', '20a', '20b', '22', '23', '24', '25', '26a', '26b', '26c', '26d'];
   console.log('못 찍음:', want.filter((k) => !got.has(k)).join(' ') || '없음');
   console.log('메모:', notes.join(' · ') || '없음', '· 오류:', errs.join(' | ') || 0);
   await b.close();

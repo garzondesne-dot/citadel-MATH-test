@@ -739,6 +739,8 @@
       <div class="skw">
         {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{EMPH_IC[emph]}</span>{/if}</button>{/if}
         {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
+      </div>
+      <!-- 📜 #102 스킬 메뉴 = 단추 줄(nav) 기준 왼쪽 끝 (가운데 스킬 단추 기준이면 왼쪽 밖) -->
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={emph === sk.k} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
@@ -749,7 +751,6 @@
         {/each}
         {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
         </div>
-      </div>
       {#if open}<div class="orbline"><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span></div>
       {:else}<button type="button" class="b quiz main" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
@@ -1183,4 +1184,8 @@
   .stage.q :is(.bigmsg, .tgline, .reactb, .weakb, .capt) { left: 27.5%; max-width: 52%; } /* 카드 열림 = 위 띠도 왼쪽 칸 가운데 */
   /* ── 🛡 #103 수호자 이름표 배지 ── */
   .gdb { font-style: normal; font-size: 12px; margin-left: 2px; filter: drop-shadow(0 1px 0 #000); }
+  /* ── 📜 #102 스킬 메뉴 = 단추 줄 왼쪽 끝에 맞춤(가운데 스킬 단추 기준이면 왼쪽 밖으로 나감) · 카드 열림 = 왼쪽 칸 폭 안에서 줄 바꿈 ── */
+  .btns.v3 .ring.skm { left: 0; right: auto; max-width: calc(100% - 4px); flex-wrap: wrap; justify-content: flex-start; }
+  /* ── 📜 #102 접힌 카드 띠 = 문제 풀이 단추 오른쪽 위 (가운데면 내 이름표를 가림) ── */
+  .stage:not(.q) .foldbar { left: auto; right: 1.5%; translate: 0 0; }
 </style>
