@@ -2,7 +2,7 @@
   import type { ForgeCard } from '../../model/forge';
   import { SUBJ } from '../../engine/subject';
   import { artUrl } from '../manifest';
-  // 🃏 수학 카드 (#148 · 정식 js/raid/cards.js html2 그대로): 금테 틀(card-frame-v3) · 위 등급 · 쪽 · 그림(card-arts-v2) · 뜻 · 가운데 수식 · 아래 이름판 · 보석 = 등급 색
+  // 🃏 수학 카드 (#148 · 정식 js/raid/cards.js html2 그대로): 금테 틀(card-frame-v3) · 위 등급 · 쪽 · 그림(card-arts-v3 · 8 × 4 · 16 ~ 25 = 함수 · #58) · 뜻 · 가운데 수식 · 아래 이름판 · 보석 = 등급 색
   //   unknown = 아직 못 만든 카드(흐린 그림 · ??? · 💡 힌트) · wish = ⭐ 찜(금빛 테두리 · 이름 · 기호만)
   const { card, w = 104, unknown = false, wish = false }: { card: ForgeCard; w?: number; unknown?: boolean; wish?: boolean } = $props();
   const K = SUBJ.forge!.kit, B = K.box, A = K.arts;
@@ -10,7 +10,7 @@
   const GN: Record<number, string> = { 1: '일반', 2: '매직', 3: '레어' };
   const s = $derived(w / K.w);
   const i = $derived(A.map[card.id] ?? card.art ?? 0);
-  const noArt = $derived(i >= A.cols * A.rows); // 📈 #58 함수 카드 그림(16 ~ 25 · 새 시트)이 오기 전 = 빈 그림 칸 + 📈
+  const noArt = $derived(i >= A.cols * A.rows); // 시트 밖 번호 = 빈 그림 칸 + 📈 (#58 함수 그림 16 ~ 25 = v3 시트에 들어감)
   const box = (b: [number, number, number, number]) => `left:${b[0]}px;top:${b[1]}px;width:${b[2]}px;height:${b[3]}px`;
   const fmLen = $derived(String(card.fm).length), nm = $derived(card.short || card.name);
   const showName = $derived(!unknown || wish);
