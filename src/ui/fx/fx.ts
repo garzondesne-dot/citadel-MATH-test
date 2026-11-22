@@ -5,6 +5,7 @@
 import { rectIn } from '../rot';
 import DATA from './fx-data.json';
 import NEWJ from './fx-new.json';
+import V4J from './fx-v4.json';
 import { FAMS, SKILL_NAMES } from '../../model/hero';
 import { artUrl } from '../manifest';
 import './fx.css';
@@ -40,8 +41,11 @@ let mode: 'auto' | 'all' | 'old' = 'auto';
 export const setNewFx = (on: boolean | 'auto') => { mode = on === 'auto' ? 'auto' : on ? 'all' : 'old'; };
 // 🌙 쌍월 참 시제품 (twin-a · b · c) = 갤러리 · TV ?twin= 이 고른 것 (slash.ts setTwin)
 const twinKey = (k: string) => (k === 'twin' && NEW.fx[`twin-${twinOf()}`] ? `twin-${twinOf()}` : k);
-export const isNewFx = (k: string) => !!NEW.fx[twinKey(k)] && (mode === 'all' || (mode === 'auto' && ADOPTED.has(k)));
-export const spec = (k: string): Spec | null => (isNewFx(k) ? NEW.fx[twinKey(k)]! : FX2.fx[k] ?? (COMBO[k] ? FX2.fx[COMBO[k]!.base] ?? null : null));
+// 📥 #111 스킬 도감 「도감 넣기」 (선생님 비교 탭) = v4 띠 9개(삼연 참격 · 쌍월참 · 대선풍 · 화염 기둥 · 뇌명 · 차원 소용돌이 · 블랙홀 · 파도 · 해일) = 폰 · TV · 게시판 · 허수아비 · 캠프 모두 이 띠 · 갤러리 「옛 것」 = 옛 띠
+const V4 = V4J as unknown as { fx: Record<string, Spec>; bb: Record<string, number[]> };
+export const isV4 = (k: string) => mode !== 'old' && !!V4.fx[k];
+export const isNewFx = (k: string) => !isV4(k) && !!NEW.fx[twinKey(k)] && (mode === 'all' || (mode === 'auto' && ADOPTED.has(k)));
+export const spec = (k: string): Spec | null => (isV4(k) ? V4.fx[k]! : isNewFx(k) ? NEW.fx[twinKey(k)]! : FX2.fx[k] ?? (COMBO[k] ? FX2.fx[COMBO[k]!.base] ?? null : null));
 const url = (sp: Spec) => artUrl(`art/${sp.src}`);
 const imgs: Record<string, HTMLImageElement> = {};
 export const load = (sp: Spec) => { const u = url(sp); if (!imgs[u] && typeof Image !== 'undefined') { const im = new Image(); im.src = u; imgs[u] = im; } return imgs[u]; };
@@ -64,7 +68,7 @@ export function strip(box: HTMLElement, sp: Spec, x: number, y: number, s: numbe
 export const GROUND = ['flame', 'ring', 'fire', 'pillar', 'lightning', 'thunder', 'frost', 'spikes', 'ice', 'nova', 'mana', 'meteor', 'vortex', 'void', 'smite', 'hammer', 'quake', 'cyclone', 'leaf'];
 export const SHOT = ['orb', 'chain'];
 export const modeOf = (k: string) => (SHOT.includes(k) ? 'shot' : GROUND.includes(k) ? 'ground' : 'body');
-const bbOf = (k: string, sp: Spec) => (isNewFx(k) ? NEW.bb[k] : FXBB[k]) ?? [0, 0, sp.w, sp.h];
+const bbOf = (k: string, sp: Spec) => (isV4(k) ? V4.bb[k] : isNewFx(k) ? NEW.bb[k] : FXBB[k]) ?? [0, 0, sp.w, sp.h];
 function stripXY(box: HTMLElement, sp: Spec, left: number, top: number, sx: number, sy: number, opt: { z?: number; rot?: number; ox?: number; oy?: number; flip?: boolean } = {}) {
   const el = document.createElement('i'); el.className = 'fx-spr';
   const W = px(sp.w * sx), H = px(sp.h * sy), dur = sp.n / sp.fps;

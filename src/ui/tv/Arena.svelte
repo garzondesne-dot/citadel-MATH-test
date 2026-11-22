@@ -5,7 +5,7 @@
   import { keysOf, keyUses } from '../../school/keys';
   import { serverNow } from '../clock.svelte';
   import { NEW_SKILLS } from '../fx/twin';
-  import { OLD_CUT } from '../fx/fx'; // 📜 11/17 #37 베기 Ⅲ · Ⅳ = 옛 대각선 띠
+  import { isV4, OLD_CUT } from '../fx/fx'; // 📜 11/17 #37 베기 Ⅲ · Ⅳ = 옛 대각선 띠
   import { feat } from '../../school/features.svelte';
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { LessonPack, Room, Step } from '../../model/types';
@@ -128,7 +128,7 @@
   const NEWFX0 = !(typeof location !== 'undefined' && /[?&]newfx=0\b/.test(location.search)); // 📜 2026-11-14 기본 켬 (채택한 새 것) · ?newfx=0 = 옛 띠
   const NEWFX_ALL = typeof location !== 'undefined' && /[?&]newfx(?!=0)\b/.test(location.search); // ?newfx = 시제품 모두(베기 Ⅰ · Ⅱ 포함)
   let NEWFX = $state(NEWFX0);
-  const famIdOf = (k: string) => ((NEWFX_ALL ? ['cut', 'moon', 'slash', 'twin'].includes(k) : false) || (NEW_SKILLS.includes(k) && !OLD_CUT.has(k)) ? 'cut' : ''); // 🗡 👎 다시 만든 스킬(SKILLS)도 새 엔진
+  const famIdOf = (k: string) => (isV4(k) ? '' : (NEWFX_ALL ? ['cut', 'moon', 'slash', 'twin'].includes(k) : false) || (NEW_SKILLS.includes(k) && !OLD_CUT.has(k)) ? 'cut' : ''); // 📥 #111 v4 띠 9개 = TV 도 폰과 같은 띠 (Pixi 그리기 안 씀) // 🗡 👎 다시 만든 스킬(SKILLS)도 새 엔진
   const tierIdx = (k: string) => Math.max(0, ['cut', 'moon', 'slash', 'twin'].indexOf(k));
   setForce(true);
   function ultOf(u: string, fxk: string, hero: number): boolean {
