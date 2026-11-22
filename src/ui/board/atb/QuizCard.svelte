@@ -28,21 +28,7 @@
   $effect(() => { onfill?.(can); });
   /** ✅ 제출 (e2e · 꾹 제출이 부름) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
-  // 📜 #102 ② 제출 단추 없음 = 보기를 0.5초 꾹 → 금빛이 차오르면 고르고 바로 제출 · 짧게 = 고르기만 · 여러 개 고르기 · 숫자판 = 아래 「⏎ 꾹」 띠
-  const HOLD = 500;
-  let holdEl: HTMLElement | null = null, holdT: ReturnType<typeof setTimeout> | undefined, eatClick = false, barHold = $state(false), barT: ReturnType<typeof setTimeout> | undefined;
-  const holdOff = () => { clearTimeout(holdT); holdEl?.classList.remove('holding'); holdEl = null; };
-  function holdDown(e: PointerEvent) {
-    if (locked || grading || !oneTap) return; const t = (e.target as Element | null)?.closest('button, [role="button"], [role="radio"], [role="checkbox"], label') as HTMLElement | null;
-    if (!t || !bodyEl?.contains(t) || t.closest('.more, .hint') || (t as HTMLButtonElement).disabled) return;
-    holdOff(); holdEl = t; t.classList.add('holding');
-    holdT = setTimeout(() => { const el = holdEl; holdOff(); if (!el) return; el.click(); eatClick = true; setTimeout(() => { send(); try { navigator.vibrate?.(20); } catch { /* 무시 */ } }, 30); }, HOLD);
-  }
-  function eat(e: MouseEvent) { if (eatClick) { eatClick = false; e.stopPropagation(); e.preventDefault(); } }
-  function barDown(e: PointerEvent) { e.preventDefault(); if (!can) return; barHold = true; clearTimeout(barT); barT = setTimeout(() => { barHold = false; send(); try { navigator.vibrate?.(20); } catch { /* 무시 */ } }, HOLD); }
-  const barUp = () => { clearTimeout(barT); barHold = false; };
-  /** 보기 하나로 끝나는 문제 = 보기 꾹 · 아니면(여러 개 · 숫자 · 식) = 아래 띠 */
-  const oneTap = $derived(!!q && ((q as { type?: string }).type === 'choice' || (q as { type?: string }).type === 'ox'));
+  /* 📜 #114 ② 꾹 제출 없앰 = 보기 톡 = 고르기(다시 톡 = 바꾸기) · 카드 아래 「제출」 단추(고르기 전엔 흐림) */
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
   /** 📜 #89 제목 = 「문제 2 (1) · 1/2」 만 (차시 · 학습지 글은 뺌) */
   const shortTitle = $derived(title.replace(/^\s*\d+차시\s*학습지\s*·\s*/, ''));
@@ -69,11 +55,11 @@
     {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
     {#if help?.mode === 'ask'}<button type="button" class="lnk" class:wait={help.wait} data-k="atb-help" disabled={!hintOk || !q || !!hint || help.wait} onclick={() => onask?.()}>{help.wait ? '⏳ 수호자 기다리는 중' : '💡 도와줘'}</button>{:else}<button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) { hint = hintOf(q); onhint?.(); } }}>💡 힌트</button>{/if}
   </header>
-  <div class="body" bind:this={bodyEl} onscroll={measure} onpointerdown={holdDown} onpointerup={holdOff} onpointercancel={holdOff} onpointerleave={holdOff} onclickcapture={eat} role="presentation">
+  <div class="body" bind:this={bodyEl} onscroll={measure}>
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}💡 {hint}</p>{/if}
   </div>
-  {#if !grading && !locked}<button type="button" class="holdsend" class:on={can} class:held={barHold} disabled={!can} data-k="atb-holdsend" onpointerdown={barDown} onpointerup={barUp} onpointerleave={barUp} onpointercancel={barUp} oncontextmenu={(e) => e.preventDefault()}>{#if oneTap}보기를 <b>꾹</b> = 제출{:else}⏎ <b>꾹</b> = 제출{/if}</button>{/if}
+  {#if !grading}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button>{/if}
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
   {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
@@ -156,7 +142,7 @@
   .sh.zero { filter: grayscale(1) brightness(0.3); opacity: 0.5; }
   .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
   @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
-  .shards.gather { transform: translate(0, 34vh) scale(1.8); opacity: 0; }
+  .shards.gather { transform: translate(0, calc(var(--lvh, 1vh) * 34)) scale(1.8); opacity: 0; }
   /* 📜 요청 #61 더 있음 = 카드 아래 그림자 + 알림 (누르면 아래로) */
   .more { position: absolute; left: 0; right: 0; bottom: calc(64px * var(--u, 1) + 10px); z-index: 3; height: 34px; border: none; padding: 0 0 4px; display: flex; align-items: flex-end; justify-content: center; background: linear-gradient(#f1dfb600, #e2c995 70%); color: #7a4e10; font: 800 13px var(--font-plain); animation: morebob 1.2s ease-in-out infinite; }
   @keyframes morebob { 50% { padding-bottom: 0; } }
@@ -200,14 +186,9 @@
   @media (max-height: 430px) { .body :global(.opts.grid .opt), .body :global(.chips.figs .chip) { padding: 2px; } }
   /* ── 📜 #102 ② 꾹 제출 (아래 단추 줄이 카드 밖 = 아래 여백 줄임) ── */
   .qc { padding-bottom: 8px; }
-  .body :global(.holding) { position: relative; overflow: hidden; }
-  .body :global(.holding)::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, #ffe29a, #f5b84a); transform-origin: 0 50%; animation: holdfill 0.5s linear forwards; pointer-events: none; opacity: 0.85; }
-  @keyframes holdfill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  .holdsend { flex: 0 0 auto; position: relative; overflow: hidden; height: 40px; border-radius: 10px; border: 2px solid #c9b385; background: #efe4cc; color: #6b604a; font: 800 14px var(--font-plain); touch-action: none; user-select: none; -webkit-user-select: none; }
-  .holdsend.on { border-color: #1d1a14; color: #2a1a04; background: #fff6dc; }
-  .holdsend.held::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #ffe29a, #f5b84a); transform-origin: 0 50%; animation: holdfill 0.5s linear forwards; z-index: 0; }
-  .holdsend b { position: relative; }
-  @media (prefers-reduced-motion: reduce) { .body :global(.holding)::before, .holdsend.held::before { animation-duration: 0.01s; } }
+  .qsend { flex: 0 0 auto; height: 48px; border-radius: 12px; border: 2px solid #8a7a5a; background: #d9cfb8; color: #7a6e58; font: 900 16px var(--font-plain); box-shadow: 0 3px 0 #0006; }
+  .qsend.on { border-color: #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; box-shadow: 0 3px 0 #000; }
+  .qsend.on:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
   /* ── 🛡 #103 도와줘 · 수호자 힌트 ── */
   .lnk.wait { opacity: 1; color: #6b5a3a; }
   .hint.gd { border: 2px solid #5b8fd6; background: #eaf2ff; }

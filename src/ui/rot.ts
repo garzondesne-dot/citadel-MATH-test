@@ -5,7 +5,14 @@
 export const ROT_ATTR = 'data-rot90';
 export interface Box { left: number; top: number; width: number; height: number; right: number; bottom: number }
 /** 요소 상자 = 돌린 뿌리의 안쪽 좌표 (뿌리 = 화면 오른쪽 위가 안쪽 (0, 0) · 안쪽 x = 화면 아래쪽 · 안쪽 y = 화면 왼쪽) */
+/** 📐 #118 비율 고정 상자(data-landscale · 배율 s) 안 = 상자 안쪽 좌표(배율 되돌림) · 돌린 화면과 함께여도 */
 export function rectIn(el: Element): Box {
+  const base = rotRect(el), sc = el.closest('[data-landscale]') as HTMLElement | null;
+  if (!sc) return base;
+  const B = rotRect(sc), s = sc.offsetWidth ? B.width / sc.offsetWidth : 1, left = (base.left - B.left) / s, top = (base.top - B.top) / s, width = base.width / s, height = base.height / s;
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+function rotRect(el: Element): Box {
   const r = el.getBoundingClientRect(), root = el.closest(`[${ROT_ATTR}]`);
   if (!root) return { left: r.left, top: r.top, width: r.width, height: r.height, right: r.right, bottom: r.bottom };
   const R = root.getBoundingClientRect(), left = r.top - R.top, top = R.right - r.right, width = r.height, height = r.width;
