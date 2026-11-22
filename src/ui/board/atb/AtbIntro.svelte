@@ -43,7 +43,7 @@
       <div class="in">
         <div class="col">
           <h3>약점과 실드</h3>
-          <div class="row weak"><span class="lb">약점</span>{#each S.boss.weak as f (f)}<span class="fam"><FamShield fam={f} size={18} /> {FAM_NAME[f]}</span>{/each}</div>
+          <div class="row weak"><span class="lb">약점</span>{#each S.boss.weak as f (f)}<span class="fam"><FamShield fam={f} size={26} /> {FAM_NAME[f]}</span>{/each}</div>
           <div class="row shl" data-k="atb-scout-shield">{#each shieldOf(S.boss) as f, i (i)}{@const own = !!meHero && meHero.s.fam === f}{@const none = !S.heroes.some((h) => h.s.fam === f)}<span class="fam slot" class:own class:none data-fam={f}><i class="sc" style:background-image="url({SLOT})" style:background-position="{FX[f]}% 0%"></i>{#if none}<small>📜 도움표로</small>{/if}</span>{/each}<small class="shn">실드 {shieldOf(S.boss).length}칸 · 체력 70%<br />스킬 2 로 1칸씩</small></div>
           <div class="row rage">😡 분노 · 체력 {Math.round(RAGE.at * 100)}% 아래</div>
         </div>

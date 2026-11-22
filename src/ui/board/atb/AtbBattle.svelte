@@ -264,10 +264,11 @@
   // 🛡 📜 요청 #35 예고 · 반응 막기 안내
   const tg = $derived(S.end ? null : telegraphOf(S));
   const reactNow = $derived(me >= 0 && canReact(S, me));
-  const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호! 대신 맞아 줘요 (바로 쓸 수 있어요)', support: '🎵 지금 격려! 모두 지켜요 · 피해 −30% (바로 쓸 수 있어요)', dealer: '⚔ 지금 강타! 모으기를 끊어요 (바로 쓸 수 있어요)' };
+  const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호!', support: '🎵 지금 격려!', dealer: '✂ 지금 끊기!' }; /* 📜 #119 한 줄 */
   const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#c8862a', dealer: '#d8402a', healer: '#2faa5a' };
   const ROLE_KO: Record<string, string> = { tank: '탱커', support: '서포터', dealer: '딜러' };
-  const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => S.heroes[i]?.s.name).join(' · ') ?? ''} 노림 · 🛡 탱커가 막을 수 있어요` : tg.cls === 'aoe' ? `💥 광역! · 🎵 서포터 격려로 줄여요` : `🌀 ${tg.atk} 모으는 중 · ⚔ 딜러 강타로 끊어요`) : '');
+  /** 📜 #119 ① 알림 = 짧은 한 줄 (설명 · 「팀에 ○○ 없음」 없음) */
+  const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => tagName(i)).join(' · ') ?? ''} 노림` : tg.cls === 'aoe' ? '💥 광역 공격' : `🌀 ${tg.atk} 모으는 중`) : '');
   const hasRole = (r: string) => S.heroes.some((h) => h.s.role === r && !h.down);
   // 🎯 📜 요청 #50 A 역할 = 카운터 단추(화면 가운데 · 카드 위 · 남은 예고 고리) · ⚡ 0 = 작은 띠 · 임무
   const roleTg = $derived(me >= 0 && !!meH && !meH.down && !!tg && !S.blocked && REACT[tg.cls] === meH.s.role);
@@ -360,7 +361,9 @@
   /** 📜 UI-FINAL 0절 큰 글 = 위 가운데 띠 한 줄 · 1.5초 · 차례로(밀리면 오래된 것 버림 · 3개까지) · 같은 글 10초 쉼 */
   const bigQ: { t: string; cls: string }[] = [], bigLast: Record<string, number> = {};
   function bigNext() { const m = bigQ.shift(); if (!m) { bigMsg = null; return; } const n = ++msgN; bigMsg = m; setTimeout(() => { if (msgN === n) bigNext(); }, 1500); }
-  const big = (t: string, cls: string, _ms = 1500) => { const now = Date.now(); if (now - (bigLast[t] ?? -1e9) < 10000) return; bigLast[t] = now; bigQ.push({ t, cls }); if (bigQ.length > 3) bigQ.shift(); if (!bigMsg) bigNext(); };
+  /** 📜 #119 ② 차례 = 팀 위기(분노 · 쓰러짐 · 부활 · 위험) → 전투 변화(실드 · 깨기 · 홀리) → 칭찬 · 겹치면 앞 것 먼저 */
+  const PRIO = (cls: string, t: string) => (/sos|rage|down/.test(cls) || /분노|쓰러|부활|위험|도망/.test(t) ? 0 : /실드|약점|홀리|격려|막음|떠나/.test(t) || /shield|weak|note/.test(cls) ? 1 : 2);
+  const big = (t: string, cls: string, _ms = 1500) => { const now = Date.now(); if (now - (bigLast[t] ?? -1e9) < 10000) return; bigLast[t] = now; const pr = PRIO(cls, t), at = bigQ.findIndex((m) => PRIO(m.cls, m.t) > pr); if (at < 0) bigQ.push({ t, cls }); else bigQ.splice(at, 0, { t, cls }); if (bigQ.length > 3) bigQ.pop(); if (!bigMsg) bigNext(); };
   const setCell = (i: number, v: 'hold' | 'crack' | 'shatter' | null) => { const n = { ...cellAnim }; if (v) n[i] = v; else delete n[i]; cellAnim = n; };
   /** 🛡 보호막 부수기 = 그 용사 공격이 방패막에 부딪혀 물결 → 칸 금 감 → 조각나며 사라짐(한 칸씩 · 쨍) · 마지막 = 방패막 산산조각 + 약점 시간 */
   function shieldHit(e: Extract<Ev, { k: 'shield' }>) {
@@ -667,8 +670,8 @@
   </div>
   {#if capLeft != null}<div class="capt" role="timer" data-k="atb-cap-left" aria-label="도망까지 {capLeft}초">⏳ {Math.floor(capLeft / 60)}:{String(capLeft % 60).padStart(2, '0')}</div>{/if}
   {#if reactNow && meH}<div class="reactb mini" style:--rc={ROLE_COL[meH.s.role]} role="alert" data-k="atb-react-band">{REACT_TXT[meH.s.role]}</div>
-  {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐! 큰 힐로 가장 다친 친구</div>
-  {:else if tg && tgLine}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}{#if !hasRole(REACT[tg.cls])} · (팀에 {ROLE_KO[REACT[tg.cls]]} 없음){/if}</div>{/if}
+  {:else if healNowT}<div class="reactb heal" role="alert" data-k="atb-heal-now">💚 지금 힐!</div>
+  {:else if tg && tgLine && !bigMsg}<div class="tgline {tg.cls}" role="status" data-k="atb-tg-line">{tgLine}</div>{/if} <!-- 📜 #119 ② 한 자리 = 내 행동 > 큰 글(팀 위기 > 전투 변화 > 칭찬) > 예고 -->
   {#if edge}<i class="hedge lv{edge}" class:beat={edge >= 3} style:--lb="{T.lowBeat}s" aria-hidden="true" data-k="atb-hedge" data-lv={edge}>{#key beatN}<i class="bt"></i>{/key}</i>{/if}
   {#if hflash}{#key hflash.n}<i class="hflash" style:--a={hflash.a} aria-hidden="true" data-k="atb-hflash"></i>{/key}{/if}
   <!-- 🎯 📜 요청 #50 카운터 단추 (카드 위 가운데 · 남은 예고 고리) · ⚡ 0 = 작은 띠 -->
@@ -696,12 +699,12 @@
     {#if chainMe}<div class="tele sig" role="status" data-k="atb-chain">⛓ 묶여도 문제를 맞히면 사슬로 보스 피해!</div>{/if}
     {#if tg?.cls === 'special'}<div class="chbar" data-k="atb-charge-bar"><i style:width="{Math.round(chargeP * 100)}%"></i><span>🌀 {tg.atk} 모으는 중</span></div>{/if}
     {#if S.rage}<div class="calmb" class:on={calmLeft > 0} data-k="atb-calm">{#if calmLeft > 0}😮‍💨 진정 {calmLeft}초 · 공격 안 함{:else}👹 분노 · 퍼펙트 {S.ragePerf ?? 0}/{RAGE.calmPerfect} 모이면 진정{/if}</div>{/if}
-    <div class="rhp" class:rage={S.rage && !calmLeft} data-k="atb-tele-g"><RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}${S.rage ? ' · 👹 분노' : ''}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside marks={[{ at: T.shieldAt, k: 'shield', t: '실드' }, { at: RAGE.at, k: 'rage', t: '분노' }]} /></div>
+    <div class="rhp" class:rage={S.rage && !calmLeft} data-k="atb-tele-g">{#if stoneG}<span class="bst" data-k="atb-boss-stat" title="석화"><img src={ART('ic4/stone')} alt="석화" /><b>{stoneG}</b></span>{/if}<RaidHp name={`Lv.${S.diff === 'easy' ? 1 : S.diff === 'normal' ? 2 : 3} ${S.boss.name}${S.rage ? ' · 👹 분노' : ''}`} left={S.bossHp} max={S.bossMax} gauge={bossGauge} align="center" inside marks={[{ at: T.shieldAt, k: 'shield', t: '실드' }, { at: RAGE.at, k: 'rage', t: '분노' }]} /></div>
     {#if S.cells.length}
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><i class="slot" style:background-image="url({SLOT_URL})" style:background-position="{FAM_X[c.fam]}% {pendCells.has(i) ? 0 : st === 'gone' || st === 'shatter' ? 100 : st === 'crack' || (st === 'hold' && cellAnim[i] != null) ? 50 : 0}%" data-k="atb-slot" aria-label={FAM_NAME[c.fam]}></i>{#if !pendCells.has(i)}<i class="slotic" class:gone={st === 'gone' || st === 'shatter'} class:crack={st === 'crack'} aria-hidden="true"><AtbIcon name={FAM_ICON[c.fam]} size={24} /></i>{/if}{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><i class="slot" style:background-image="url({SLOT_URL})" style:background-position="{FAM_X[c.fam]}% {pendCells.has(i) ? 0 : st === 'gone' || st === 'shatter' ? 100 : st === 'crack' || (st === 'hold' && cellAnim[i] != null) ? 50 : 0}%" data-k="atb-slot" aria-label={FAM_NAME[c.fam]}></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
@@ -792,7 +795,7 @@
     </div>
   {/if}
   {#if kill?.ph === 'close'}{@const kp = portraitOf(S.heroes[kill.who]!.s.hero)}<div class="kband" data-k="atb-lasthit" style:--kc={FAM_COL[S.heroes[kill.who]!.s.fam]}><div class="kb">{#if kp}<i class="kface" style="background-image:url({kp.url});background-size:{kp.cols * 100}% {kp.rows * 100}%;background-position:{(kp.c[0] / Math.max(1, kp.cols - 1)) * 100}% {(kp.c[1] / Math.max(1, kp.rows - 1)) * 100}%"></i>{/if}<b>⚔ 마지막 일격!</b><span>{killName(kill.who)}</span></div></div>{/if}
-  {#if bigMsg}<div class="bigmsg {bigMsg.cls}" class:burst={/실드 파괴|막았다|SHIELD/.test(bigMsg.t)} style:--burst="url({ART('counter/burst')})" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
+  {#if bigMsg && !(reactNow && meH) && !healNowT}<div class="bigmsg {bigMsg.cls}" class:burst={/실드 파괴|막았다|SHIELD/.test(bigMsg.t)} style:--burst="url({ART('counter/burst')})" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
   {#if S.end}<div class="endb" class:win={S.end.win} role="status">{S.end.win ? '⚔ 처치!' : `💀 ${S.end.why}`}</div>{/if}
 </div>
 
@@ -1267,9 +1270,11 @@
   .kband b { font: italic 900 34px var(--font); color: #ffe27a; text-shadow: 0 3px 0 #7a4a00, 0 0 12px #ffb84a; } .kband span { font: 900 22px var(--font-plain); color: #fff; text-shadow: 0 2px 0 #000; }
   @keyframes kbin { from { transform: rotate(-7deg) translateX(-60%) scaleX(1.3); opacity: 0; } to { transform: rotate(-7deg); opacity: 1; } }
   .stage.kclose .bigmsg, .stage.kcheer .bigmsg, .stage.kclose .bsay, .stage.kcheer .bsay, .stage.kclose .endb { display: none; }
-  /* ── 🎨 #117 실드 칸 = 방패 그림 가운데에 icons-v1 같은 속성 아이콘 (금 감 → 어둡게 · 깨짐 → 사라짐) ── */
-  .cell2 { position: relative; }
-  .cell2 .slotic { position: absolute; left: 50%; top: 50%; translate: -50% -50%; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle, #0009 0 55%, transparent 72%); pointer-events: none; transition: opacity 0.3s, filter 0.3s; }
-  .cell2 .slotic.crack { filter: brightness(0.7); }
-  .cell2 .slotic.gone { opacity: 0; }
+  /* ── 📜 #119 알림 한 줄 · 보스 이어지는 상태 = 이름 옆 아이콘 + 남은 초 ── */
+  .tgline { font: 800 14px var(--font-plain); padding: 3px 14px; }
+  .reactb { font-size: 16px; padding: 4px 16px; white-space: nowrap; }
+  .rhp { position: relative; }
+  .bst { position: absolute; z-index: 3; right: 6%; top: -2px; display: inline-flex; align-items: center; gap: 2px; padding: 0 4px 0 1px; border-radius: 8px; background: #1a1d26e6; border: 1px solid #9fb7d8; }
+  .bst img { width: 20px; height: 20px; image-rendering: pixelated; } .bst b { font: 900 14px var(--font-plain); color: #dfe9ff; }
+  .stage.q .tgline, .stage.q .reactb { left: 30%; }
 </style>
