@@ -142,7 +142,7 @@
   .sh.zero { filter: grayscale(1) brightness(0.3); opacity: 0.5; }
   .sh.half { filter: drop-shadow(0 0 2px #5ff0ff) hue-rotate(150deg) saturate(1.2) brightness(0.8); opacity: 0.75; clip-path: inset(40% 0 0 0); animation: shon 0.36s ease-out; }
   @keyframes shon { 0% { transform: scale(2.2); } 60% { transform: scale(0.9); } }
-  .shards.gather { transform: translate(0, 34vh) scale(1.8); opacity: 0; }
+  .shards.gather { transform: translate(0, calc(var(--lvh, 1vh) * 34)) scale(1.8); opacity: 0; }
   /* 📜 요청 #61 더 있음 = 카드 아래 그림자 + 알림 (누르면 아래로) */
   .more { position: absolute; left: 0; right: 0; bottom: calc(64px * var(--u, 1) + 10px); z-index: 3; height: 34px; border: none; padding: 0 0 4px; display: flex; align-items: flex-end; justify-content: center; background: linear-gradient(#f1dfb600, #e2c995 70%); color: #7a4e10; font: 800 13px var(--font-plain); animation: morebob 1.2s ease-in-out infinite; }
   @keyframes morebob { 50% { padding-bottom: 0; } }

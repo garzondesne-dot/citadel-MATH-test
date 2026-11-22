@@ -175,7 +175,7 @@
   .rs.port .paper { padding: 8% 9% 8% 10%; }
   .rs.port .row, .rs.port .merit summary { font-size: 15px; }
   .rs.port .sum { font-size: 20px; }
-  .whyb { position: relative; z-index: 3; margin: 2px auto 0; word-break: keep-all; overflow-wrap: break-word; text-wrap: balance; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, 4vh, 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
+  .whyb { position: relative; z-index: 3; margin: 2px auto 0; word-break: keep-all; overflow-wrap: break-word; text-wrap: balance; max-width: 92%; padding: 4px 14px; border-radius: 10px; background: #2a0a0ae6; border: 2px solid #ff6a5a; color: #ffe2dc; font: 800 clamp(13px, calc(var(--lvh, 1vh) * 4), 17px) var(--font-plain); text-align: center; } /* 💀 #88 */
   /* ── 📜 #102 ⑨ 공적 칩 · 👑 MVP ── */
   .hp { position: relative; }
   .hp .crown { position: absolute; left: 50%; top: -6px; translate: -50% 0; z-index: 3; font: 900 14px var(--font-plain); color: #2a1a04; background: #f5b84a; border-radius: 6px; padding: 0 6px; white-space: nowrap; box-shadow: 0 2px 0 #000; }
