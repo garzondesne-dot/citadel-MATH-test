@@ -13,13 +13,13 @@
   } = $props();
   const no = $derived(S.boss.no), name = $derived(bossOf(no).name), line = $derived(bossLine(no, 'enter'));
   const CLS: { c: AtkClass; ic: string; who: string; how: string }[] = [
-    { c: 'single', ic: '🎯', who: '🛡 탱커', how: '막기' }, { c: 'aoe', ic: '💥', who: '🎵 서포터', how: '결계' }, { c: 'special', ic: '🌀', who: '⚔ 딜러', how: '끊기' },
+    { c: 'single', ic: '🎯', who: '🛡 탱커', how: '막기' }, { c: 'aoe', ic: '💥', who: '🎵 서포터', how: '격려' }, { c: 'special', ic: '🌀', who: '⚔ 딜러', how: '끊기' },
   ];
   const clsOf = (k: AtkKind): AtkClass[] => (ATK[k].special === 'scale' ? ['single', 'aoe'] : ATK[k].aoe && ATK_SPECIAL.has(k) ? ['special'] : [atkClass(k, !!ATK[k].aoe)]);
   const atks = $derived(CLS.map((x) => ({ ...x, names: [...new Set(S.boss.cycle.filter((k) => clsOf(k).includes(x.c)).map((k) => atkName(S.boss, k)))] })));
   /** 📜 #102 ⑧ 공격마다 = 이름 · 누구에게(한 명 · 모두 · 모으기) · 막는 역할 아이콘 + 그 역할 스킬 (엔진 반응 규칙 그대로) */
   const TGT: Record<AtkClass, string> = { single: '한 명', aoe: '모두', special: '모으기' };
-  const BLK: Record<AtkClass, { role: 'tank' | 'support' | 'dealer'; nm: string; sk: string }> = { single: { role: 'tank', nm: '탱커', sk: '엄호' }, aoe: { role: 'support', nm: '서포터', sk: '결계' }, special: { role: 'dealer', nm: '딜러', sk: '끊기' } };
+  const BLK: Record<AtkClass, { role: 'tank' | 'support' | 'dealer'; nm: string; sk: string }> = { single: { role: 'tank', nm: '탱커', sk: '엄호' }, aoe: { role: 'support', nm: '서포터', sk: '격려' }, special: { role: 'dealer', nm: '딜러', sk: '끊기' } };
   const rows = $derived.by(() => { const seen = new Set<string>(), out: { nm: string; c: AtkClass; ic: string }[] = []; for (const k of S.boss.cycle) { const nm = atkName(S.boss, k); if (seen.has(nm)) continue; seen.add(nm); const c = clsOf(k)[0]!; out.push({ nm, c, ic: CLS.find((x) => x.c === c)!.ic }); } return out; });
   const SLOT = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-slots-v1.webp`, FX: Record<string, number> = { arms: 0, flame: 25, nature: 50, wisdom: 75, mystic: 100 };
   const mis = $derived(me >= 0 && S.heroes[me] ? missionOf(S, me) : null), role = $derived(me >= 0 ? S.heroes[me]?.s.role : undefined);
