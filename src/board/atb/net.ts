@@ -5,8 +5,8 @@ import { askHelp, attack, earn, missionOf, sendHelp, newBattle, useSkill, type S
 import { statsOf } from './heroes';
 import type { BossCfg, Diff } from './tune';
 import type { BotKind } from './bots';
-import { gradeOf } from '../board';
-import { STAR } from '../goals';
+
+import { atbStars } from '../goals';
 
 /** 자리 하나 = 학생(uid · 반 · 번호 · 용사) 또는 봇 */
 export type HumanSlot = { uid: string; cls: string; num: number; hero: number; lv: number; enh: number; tier: number; fx?: string; awk?: boolean; nick?: string; /** 🛡 #103 수호자 (글 mem role 'g') */ gd?: boolean };
@@ -86,7 +86,7 @@ export interface AtbEnd {
 export function atbResultFor(S: State, idx: number, ctx: { prevStars: number; left?: boolean }): AtbEnd {
   if (ctx.left) { const r = atbResultFor(S, idx, { prevStars: ctx.prevStars }), z = <T extends Record<string, number>>(o: T): T => Object.fromEntries(Object.keys(o).map((k) => [k, 0])) as T; return { ...r, win: false, stars: 0, newStars: 0, merit: z(r.merit), meritSum: 0, gem: { ...z(r.gem), items: r.gem.items }, gemSum: r.gem.items, mission: false, why: '나감', left: true, acts: z(r.acts) }; } /* 🚪 #113 나간 사람 = 맞힌 소문항 몫만 · 클리어 · 공적 · 수호 명성(acts) 없음 */
   const h = S.heroes[idx]!, g = h.log, win = !!S.end?.win, f = g.first ?? { ok: 0, bad: 0, none: 0, total: 0 };
-  const stars = win && f.total > 0 ? (STAR[gradeOf(f)] ?? 0) : 0, prev = Math.max(0, Math.min(3, ctx.prevStars | 0)), newStars = Math.max(0, stars - prev), full = prev >= 3;
+  const stars = atbStars(win, f), /* ⭐ 📜 #140-2 = 내가 낸 소문제 기준 (goals 한 함수) */ prev = Math.max(0, Math.min(3, ctx.prevStars | 0)), newStars = Math.max(0, stars - prev), full = prev >= 3;
   const k = (x: number) => (full ? Math.floor(x / 2) : x), M = missionOf(S, idx);
   const merit = { clear: k(win ? MERIT.clear : 0), star: newStars * MERIT.star, first: k(f.ok * MERIT.first), act: k(((g.blocks ?? 0) + (g.rescues ?? 0) + (g.brk ?? 0)) * MERIT.act), role: k(M.done ? MERIT.role : 0) };
   const guardN = g.covers + g.heals + g.revives + g.shields + (g.blocks ?? 0) + (g.rescues ?? 0);

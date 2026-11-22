@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, recMark, recStar, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
+  import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, recMark, recStar, STAR_RULE_TEXT, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
   import { SUBJ } from '../../engine/subject';
   const questOf = (no: number) => SUBJ.quests?.[no] ?? null;
@@ -364,6 +364,7 @@
         {#if sel}{@const q = questOf(sel.no)}{@const st = stars[sel.no] ?? 0}{@const B = bossOf(sel.no)}{@const wk = B.weak.includes(famOf(me.hero))}{@const opn = isOpen(sel)}
           <div class="qcard v2" data-k="board-pick" data-no={sel.no}>
             <div class="gh"><span class="bimg" aria-hidden="true">{#if opn}<Sprite ref={bossArt(B, 'normal').sprite} pose="idle" size={48} />{:else}🔒{/if}</span><span class="t"><b>{sel.no}차시{q && opn ? ` · ${q.boss}` : ''}</b><small>{opn ? shortOf(sel) : '수업에서 배우면 열려요'}</small></span><span class="qs" aria-label="별 {st} / 3">{'★'.repeat(st)}<em>{'★'.repeat(3 - st)}</em></span></div>
+            {#if opn}<p class="srule" data-k="board-star-rule">{STAR_RULE_TEXT}</p>{/if}
             {#if opn}
               <div class="wkr" data-k="board-weak">약점 {#each B.weak as f (f)}<span class="fam"><FamShield fam={f} size={18} /> {FAM_NAME[f]}</span>{/each}</div>
               <div class="hrow" data-k="board-hero-row"><span class="hs"><HeroSprite id={lkB} scale={0.6} /></span><span class="n"><b>{heroOf(me.hero).name}{#if wk}<i class="wk" data-k="board-hero-weak">약점!</i>{/if}</b><small>{ROLE_NAME[heroRole(me.hero)]} · {FAM_NAME[famOf(me.hero)]} · Lv {growM.lv}</small></span><button type="button" class="chg" data-k="board-hero" aria-label="용사 바꾸기 · 지금 {heroOf(me.hero).name}" onclick={() => (pickHero = 'swap')}>🧙 바꾸기</button></div>
@@ -537,6 +538,7 @@
   .warln :global(.wl) { flex: 1; } .warln .chev { color: var(--text-3); font-size: 20px; }
   .qcard { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
   .qcard .qh { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; } .qcard .qh b { font-size: 17px; color: var(--accent); }
+  .qcard .srule { margin: -2px 0 0; font: 600 14px var(--font); color: var(--text-2); text-align: right; } /* ⭐ #140-2 별 기준 한 줄 */
   .qcard .qs { flex: none; font-size: 14px; color: #ffd25a; white-space: nowrap; } .qcard .qs em { font-style: normal; color: var(--text-3); }
   .qcard p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-2); } .qcard small { font-size: 13px; color: var(--text-3); }
   .gmap.rec { gap: 10px; }

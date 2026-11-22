@@ -119,13 +119,29 @@ describe('ATB 학습지 번호 (요청 #24 덧붙임)', () => {
   });
 });
 
-// ⭐ 📜 요청 #29 = 결과 별은 차시 정복 지도와 같은 규칙 (board gradeOf · goals STAR)
-import { gradeOf } from '../src/board/board';
-import { STAR } from '../src/board/goals';
-describe('ATB 결과 별 = 지도 별 규칙 그대로 (요청 #29)', () => {
-  it('틀림 + 안 푼 비율 ≤10% ⭐3 · ≤25% ⭐2 · ≤50% ⭐1 · 그 밖 0', () => {
-    const st = (bad: number, none: number, total = 20) => STAR[gradeOf({ bad, none, total })] ?? 0;
-    expect([st(2, 0), st(3, 2), st(5, 5), st(6, 6)]).toEqual([3, 2, 1, 0]);
+// ⭐ 📜 #140-2 결과 별 = 내가 낸 소문제 기준 (goals atbStars · 저장 · 지도 같은 함수)
+import { atbStars, nextStarHint, starsByNo } from '../src/board/goals';
+import { atbRec } from '../src/board/atbLink';
+describe('ATB 결과 별 = 새 별 기준 (#140-2)', () => {
+  it('⭐ 처치 · ⭐⭐ 70% · ⭐⭐⭐ 90% · 낸 소문제 5 이상 · 짐 0 · 안 푼 것 안 셈', () => {
+    expect(atbStars(true, { ok: 10, bad: 0 })).toBe(3); // 10문제 다 맞힘
+    expect(atbStars(true, { ok: 4, bad: 0 })).toBe(1); // 4문제만 = 5 미만
+    expect(atbStars(false, { ok: 10, bad: 0 })).toBe(0); // 짐
+    expect([atbStars(true, { ok: 9, bad: 1 }), atbStars(true, { ok: 7, bad: 3 }), atbStars(true, { ok: 6, bad: 4 })]).toEqual([3, 2, 1]);
+    expect(atbStars(true, { ok: 5, bad: 0, none: 40 } as never)).toBe(3); // 봇 · 친구가 빨리 잡아 못 푼 것 = 안 셈
+  });
+  it('다음 별까지 한 줄', () => {
+    expect(nextStarHint(true, { ok: 4, bad: 0 })).toBe('다음 별까지: 1문제 더 풀면');
+    expect(nextStarHint(true, { ok: 6, bad: 4 })).toBe('다음 별까지: 첫 시도 4개 더 맞히면');
+    expect(nextStarHint(true, { ok: 10, bad: 0 })).toBe('');
+    expect(nextStarHint(false, { ok: 3, bad: 0 })).toBe('');
+  });
+  it('결과 별 = 저장 stars = 지도 칸', () => {
+    const L = SUBJ.lessons.find((p) => p.no === 6)!;
+    for (const f of [{ ok: 10, bad: 0 }, { ok: 4, bad: 0 }, { ok: 7, bad: 3 }]) for (const win of [true, false]) {
+      const st = atbStars(win, f), r = atbRec({ L, n: 4 }, { role: 'dps', win, sec: 200, right: f.ok, total: f.ok + f.bad, first: f.ok } as never, 1, st, 0);
+      expect(starsByNo({ a: r })[6] ?? 0).toBe(st);
+    }
   });
 });
 

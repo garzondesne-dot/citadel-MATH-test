@@ -17,6 +17,24 @@ export function mapLessons(packs: LessonPack[]): { no: number; ids: string[] }[]
   for (const p of packs) if (p.steps.some((s) => s.kind === 'monster') || p.boss) by.set(p.no, [...(by.get(p.no) || []), p.id]);
   return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([no, ids]) => ({ no, ids }));
 }
+/** ⭐ 📜 #140-2 새 전투 별 기준 (DECISIONS 11/22 「게시판 던전 별 기준 새로」 · 선생님 「여기서 정하자 별 기준」)
+ *  분모 = 이 판에서 내가 낸 소문제(ok + bad · 안 푼 것 none 안 셈 · ⏭ 넘김 = 첫 시도 틀림 bad)
+ *  ⭐ = 처치(win) · ⭐⭐ = 첫 시도 정답 ÷ 낸 소문제 ≥ 70 % 그리고 낸 소문제 ≥ 5 · ⭐⭐⭐ = ≥ 90 % 그리고 ≥ 5 · 지면 0 */
+export const STAR_RULE = { min: 5, two: 0.7, three: 0.9 } as const;
+export const STAR_RULE_TEXT = '⭐ 처치 · ⭐⭐ 70% · ⭐⭐⭐ 90%';
+export function atbStars(win: boolean, f: { ok: number; bad: number } | null | undefined): number {
+  if (!win) return 0;
+  const ok = Math.max(0, Number(f?.ok) || 0), n = ok + Math.max(0, Number(f?.bad) || 0);
+  if (n < STAR_RULE.min) return 1;
+  return ok / n >= STAR_RULE.three ? 3 : ok / n >= STAR_RULE.two ? 2 : 1;
+}
+/** 결과 화면 「다음 별까지」 한 줄 (처치 못 함 · ⭐3 = 없음) */
+export function nextStarHint(win: boolean, f: { ok: number; bad: number } | null | undefined): string {
+  const st = atbStars(win, f); if (!win || st >= 3) return '';
+  const ok = Math.max(0, Number(f?.ok) || 0), n = ok + Math.max(0, Number(f?.bad) || 0), th = st >= 2 ? STAR_RULE.three : STAR_RULE.two;
+  let k = Math.max(0, STAR_RULE.min - n); while ((ok + k) / (n + k) < th - 1e-9) k++;
+  return n > 0 && ok / n >= th - 1e-9 ? `다음 별까지: ${k}문제 더 풀면` : `다음 별까지: 첫 시도 ${k}개 더 맞히면`;
+}
 /** 🐞 #140 판 하나의 ⭐ = max(옛 판 등급 S/A/B → 3/2/1 (클리어만), 새 전투 stars = 결과 화면 별 그대로) · 옛 별은 깎지 않음 */
 export const recStar = (r: BoardRec | null | undefined) => (r ? Math.min(3, Math.max(r.clear ? (STAR[String(r.grade)] ?? 0) : 0, Number(r.stars) || 0)) : 0);
 /** 판 하나의 등급 글 (옛 판 = S/A/B/C · 새 전투 = ⭐ 수) */
