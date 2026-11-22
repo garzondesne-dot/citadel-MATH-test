@@ -21,6 +21,10 @@ describe('📋 학생 게시판 기록', () => {
     const y = boardStu({ a: { at: 1, no: 6, first: 4, total: 10, atb: true } }, null, noOf);
     expect(weakNos([x, y]).map((w) => [w.no, w.pct])).toEqual([[6, 30], [7, 90]]);
   });
+  it('🛡 #101 「실드 깨기」 칸 = 새 판 shd + 옛 판 brk 합', () => {
+    const b = boardStu({ a: { at: 1, no: 6, atb: true, acts: { block: 0, rescue: 0, cut: 0, brk: 0, shd: 3 } }, b: { at: 2, no: 6, atb: true, acts: { block: 0, rescue: 0, cut: 0, brk: 2 } } } as never, null, noOf);
+    expect(b.acts.brk).toBe(5);
+  });
   it('기록 없음 = 0', () => { expect(boardStu(null, null, noOf)).toMatchObject({ runs: 0, wins: 0, starSum: 0, firstTotal: 0 }); });
 });
 
