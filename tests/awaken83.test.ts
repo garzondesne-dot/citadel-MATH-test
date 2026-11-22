@@ -36,8 +36,8 @@ describe('⚡ 각성 조건 4', () => {
   });
   it('모습 id → 속성 · 이름 · 그림 (그림 없는 용사 = 원래 그림)', () => {
     expect(attrOf(118)).toBe('dark'); expect(heroOf(118).name).toBe('각성한 녹스');
-    expect(heroOf(118).sprite).toBe('hero-dknight-awk-v8.webp');
-    expect(heroOf(101).sprite).toBe('hero-witch-awk-v8.webp'); // 🔨 #44 각성 GPT 시트
+    expect(heroOf(118).sprite).toBe('hero-dknight-awk-v9.webp');
+    expect(heroOf(101).sprite).toBe('hero-witch-awk-v9.webp'); // 🔨 #44 각성 GPT 시트
     expect(heroOf(132).sprite).toBe(heroOf(32).sprite); // 칸델 = 아직 그림 없음 → 원래 그림
     expect(heroOf(101).name).toBe('각성한 누아');
   });
@@ -93,7 +93,7 @@ describe('⚡ #44 각성 GPT 시트 29명 (칸델 빼고)', () => {
     const idle = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/ui/idle8-hd-map.json'), 'utf8')) as Record<string, string>;
     expect(AWK_HAVE.length).toBe(29);
     for (const id of AWK_HAVE) {
-      const f = AWK_ART[id]!; expect(f).toMatch(/-awk-v8\.webp$/);
+      const f = AWK_ART[id]!; expect(f).toMatch(/-awk-v9\.webp$/);
       expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', f))).toBe(true);
       expect(idle[f]).toBeTruthy(); expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', idle[f]!))).toBe(true);
     }
