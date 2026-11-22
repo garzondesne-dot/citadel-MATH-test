@@ -18,7 +18,7 @@ const [SHOTS = '.'] = process.argv.slice(2), B = 'http://localhost:4173/';
   // ③ 📋 게시판 1인 전투 용사
   await t.click('button[aria-label="게시판"]'); await t.waitForSelector('.bd'); await t.waitForTimeout(300);
   if (await t.$('[data-k="board-story"]')) await t.click('[data-k="board-story"]');
-  await t.click('.bd .act .btn'); await t.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await t.waitForTimeout(1500); // 📜 #65 혼자 도전 = 새 전투
+  await t.click('.bd .act .btn'); await t.waitForSelector('[data-k="hero-sheet"]'); await t.click('[data-k="hero-sheet-go"]'); /* 📜 #135 용사 확인 시트 */ await t.waitForSelector('[data-k="atb-stage"]', { timeout: 15000 }); await t.waitForTimeout(1500); // 📜 #65 혼자 도전 = 새 전투
   const lab = await t.$$eval('[data-k="atb-hero"] .tag > b', (x) => x.map((e) => e.textContent.trim()).join(' · ')).catch(() => '');
   ok('③ 게시판 새 전투 내 용사 = 공식', /공식/.test(lab.split(' · ')[0] || ''), lab);
   const pl = await t.evaluate(() => { const rs = Object.entries(JSON.parse(JSON.stringify(localStorage))).filter(([k]) => /rooms\/T/.test(k)); return rs.map(([k, v]) => { try { const o = JSON.parse(v); return JSON.stringify(Object.values(o.players || o || {}).map((x) => x && x.hero)); } catch { return ''; } }).join(' '); });

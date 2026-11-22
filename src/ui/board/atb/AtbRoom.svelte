@@ -16,7 +16,7 @@
   import Land from './Land.svelte';
   import FamShield from './FamShield.svelte';
   import AtbResult from './AtbResult.svelte';
-  import HeroPick from './HeroPick.svelte';
+  import HeroSheet from './HeroSheet.svelte';
   import { bossArt } from './rdunBoss';
 
   const KEY = 'citadel-atb-practice';
@@ -104,8 +104,11 @@
 </Land>
 {/if}
 {#if picking != null && L}
-  <HeroPick ids={ALL} owned={() => true} boss={bossOf(L.no)} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} fxOf={fxFor} onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
-    onpick={(id) => { if (picking === -1) meHero = id; else mates[picking!] = id; picking = null; }} onclose={() => (picking = null)} />
+  <!-- 🧙 📜 #135 B7 연습방 = 게시판과 같은 용사 확인 시트 + 강화 단계 줄 · 자세히(수치 · 덧효과) · 스킬 단계 미리 보기 -->
+  <HeroSheet ids={ALL} owned={() => true} boss={bossOf(L.no)} no={L.no} cur={picking === -1 ? meHero : mates[picking]!} lv={GROW[grow].lv} enh={GROW[grow].enh} awk={grow === 'awk'} tierOf={tierFor} detail mainText="✔ 이 용사로" note="🧪 연습방 = 미리 보기 · 저장 안 됨" onskill={(id, t) => (skSel = { ...skSel, [id]: t })}
+    onpick={(id) => { if (picking === -1) meHero = id; else mates[picking!] = id; picking = null; }} onclose={() => (picking = null)}>
+    {#snippet extra()}<div class="gchips" data-k="hero-sheet-grow" role="group" aria-label="강화 단계">{#each Object.entries(GROW) as [k, g] (k)}<button type="button" class:on={grow === k} onclick={() => (grow = k as typeof grow)}>{g.label}</button>{/each}</div>{/snippet}
+  </HeroSheet>
 {/if}
 
 <style>
@@ -124,4 +127,5 @@
   .recs { margin: 0; padding-left: 18px; font: 600 12px var(--font-plain); color: var(--text-2); display: flex; flex-direction: column; gap: 2px; }
   /* 🔄 게시판 던전만 가로 (요청 #8): 안 돌림 = 상자 없음(display: contents) · 돌림 = 화면 오른쪽 위를 축으로 90° · 안의 fixed 화면들은 이 상자 기준
      안전 영역 = 돌린 뒤 왼쪽 = 폰 위(노치) · 오른쪽 = 폰 아래(홈 바) → --safe-l · --safe-r (전투 무대가 씀) */
+  .gchips { display: flex; flex-wrap: wrap; gap: 6px; } .gchips button { min-height: 44px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text-2); font: 700 14px var(--font); } .gchips button.on { background: var(--accent); color: #2a1c05; }
 </style>

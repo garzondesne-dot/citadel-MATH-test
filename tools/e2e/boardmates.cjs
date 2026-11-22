@@ -18,7 +18,7 @@ const BOTS = [['b1', 3, 5, 6, 'frost'], ['b2', 4, 9, 10, 'flame']]; // uid · �
     const tip0 = await p.$('[data-k="wake-tip"] button'); if (tip0) await tip0.click(); // 📱 화면 꺼짐 안내 띠 (지원 안 되는 브라우저) 닫기
     await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(300);
     await p.click('[data-map=\"6\"]');
-    if (!team) { await p.click('.bd .act .btn'); }
+    if (!team) { await p.click('.bd .act .btn'); if (await p.waitForSelector('[data-k="hero-sheet"]', { timeout: 3000 }).catch(() => null)) await p.click('[data-k="hero-sheet-go"]'); /* 📜 #135 */ }
     else {
       await p.click('[data-k=\"board-post\"]'); await p.waitForTimeout(800);
       const pid = await p.evaluate(() => Object.keys(window.__dbGet('school/board/posts') || {})[0]);

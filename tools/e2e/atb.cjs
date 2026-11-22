@@ -390,10 +390,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-exit"]'); await p.waitForSelector('[data-k="atb-setup"]');
   ok('⑤ 최근 판 = 이 폰 기록 1줄', (await p.$$eval('.recs li', (x) => x.length)) === 1);
   // ⑥ 용사 고르기
-  await p.click('[data-k="atb-mode-play"]'); await p.click('[data-k="atb-me-hero"]'); await p.waitForSelector('[data-k="atb-pick"]');
-  await p.click('[data-k="atb-pick"] .cell[aria-label^="로안"]');
-  const stats = await p.$$eval('[data-k="atb-pick"] .stats li', (x) => Object.fromEntries(x.map((l) => [l.dataset.stat, l.querySelector('b').textContent])));
-  ok('⑥ 고르는 창 = 실제 초상 · 로안 방어 「0%」 · ATB 「8.0초」 · 약점! 배지', stats.def === '0%' && stats.atb === '8.0초' && !!(await p.$('[data-k="atb-pick"] .face')) && !!(await p.$('[data-k="atb-pick"] .wk2')), JSON.stringify(stats));
+  await p.click('[data-k="atb-mode-play"]'); await p.click('[data-k="atb-me-hero"]'); await p.waitForSelector('[data-k="hero-sheet"]'); // 📜 #135 연습방 = 용사 확인 시트(자세히)
+  await p.click('[data-k="hero-sheet"] [data-flt="all"]'); await p.click('[data-k="hero-sheet"] .cell[aria-label^="로안"]');
+  const stats = await p.$$eval('[data-k="hero-sheet"] .stats li', (x) => Object.fromEntries(x.map((l) => [l.dataset.stat, l.querySelector('b').textContent])));
+  ok('⑥ 고르는 창 = 실제 초상 · 로안 방어 「0%」 · ATB 「8.0초」 · 약점! 배지', stats.def === '0%' && stats.atb === '8.0초' && !!(await p.$('[data-k="hero-sheet"] .face')) && !!(await p.$('[data-k="hero-sheet-wk"]')), JSON.stringify(stats));
   await p.screenshot({ path: `${SHOTS}/atb-pick-844.png` });
   ok('⑥ 고르는 창 가로 넘침 0', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   ok('요청 #36′ 고르는 창 = 속성 덧효과 한 줄(이모지 + 이름 + 설명)', /(관통|화상|감전|얼림|순풍|약점 노출|축복|저주) · /.test(await p.textContent('[data-k="atb-pick-famfx"]').catch(() => '')));
