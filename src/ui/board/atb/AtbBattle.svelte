@@ -500,7 +500,7 @@
     const box = heroEls[e.who];
     if (!stageEl || !bossEl || !box || busy.has(e.who)) { onHit(); return; }
     busy.add(e.who);
-    void fxAttack(stageEl, { calm: true, heroBox: box, monBox: bossEl, hero: ult ? lookOfStats(h.s) : h.s.hero, ultimate: ult /* 📜 #82 각성 = 각성 필살기 그림(awkfx · 없으면 큰 폭발) */, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
+    void fxAttack(stageEl, { calm: true, cutHost: stageEl /* 📜 #152 각성 컷인 = 가로 전투 상자 안 */, heroBox: box, monBox: bossEl, hero: ult ? lookOfStats(h.s) : h.s.hero, ultimate: ult /* 📜 #82 각성 = 각성 필살기 그림(awkfx · 없으면 큰 폭발) */, fx: fk, miss, finish: isSk || crit || e.k === 'role', hits: big ? 3 : isSk ? 2 : 1, mult: ult ? 1.8 : big ? 1.5 : isSk ? 1.25 : crit ? 1.15 : 1, noDmg: true, vol: me < 0 || e.who === me ? 1 : 0.45, rest: 'idle', pose: (p) => setPose(e.who, p), onHit })
       .catch(() => {}).finally(() => { busy.delete(e.who); onHit(); setPose(e.who, 'idle'); });
   }
   /** 💥 몬스터 파편 (📜 요청 #38 ⑥) = 그 몬스터 맞는 그림 종류(mhitOf) 짝 색 · 모양 · 4 ~ 6개 0.4초 · 큰 공격 2배 · 저사양(코어 4 이하) · 움직임 줄이기 = 3개 */

@@ -164,7 +164,7 @@ export function cutin(hero: number, fx: string, opt: CutOpt = {}): Promise<void>
 }
 function cutinNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
   const fam = (famOf(fx) ?? { id: 'star' }).id, [c1, c2] = opt.guard ? ['#9fdcff', '#e6f6ff'] : opt.gold ? ['#ffd25a', '#fff3c0'] : ULT_COLOR[fam] ?? ULT_COLOR.star!;
-  const d = document.createElement('div'); d.className = `ult${opt.gold ? ' true' : ''}${opt.guard ? ' guard' : ''}${opt.peek ? ' peek' : ''}`; d.style.setProperty('--uc', c1); d.style.setProperty('--uc2', c2);
+  const d = document.createElement('div'); d.className = `ult${opt.gold ? ' true' : ''}${opt.guard ? ' guard' : ''}${opt.peek ? ' peek' : ''}${opt.host ? ' in' : ''}`; d.style.setProperty('--uc', c1); d.style.setProperty('--uc2', c2);
   const crack = Array.from({ length: 9 }, (_, i) => `${(i * 12.5).toFixed(1)},${(50 + (i % 2 ? -1 : 1) * (6 + Math.random() * 10) + (i - 4) * 4).toFixed(1)}`).join(' ');
   const skill = String(NAMES[fx] || '').replace(/^\S+\s/, ''), who = opt.who ? `${esc(opt.who)}의 ` : '';
   const name = opt.peek ? `${esc(opt.name || '')}${opt.sub ? `<small class="u-sub">${esc(opt.sub)}</small>` : ''}` : opt.guard ? (who ? `${who}홀리 방패` : 'HOLY GUARD') : `${who}${opt.gold ? '진필살기 · ' : ''}${esc(skill)}!`;
@@ -192,7 +192,7 @@ function awakenNow(hero: number, fx: string, opt: CutOpt): Promise<void> {
   const b = baseOf(Number(hero)), pt = portraitOf(b), skill = String(NAMES[fx] || '').replace(/^\S+\s/, ''), who = opt.who ? `${esc(opt.who)} · ` : '';
   const spr = AWK_ART[b] ? idle8HdOf(Number(hero)) : null; // 각성 그림이 있으면 각성 모습(숨쉬기 첫 칸) · 없으면 초상
   const face = spr ? `<i class="ak-pic spr" style="background-image:url('${spr}');background-size:800% 100%;background-position:0 0"></i>` : pt ? `<i class="ak-pic" style="background-image:url('${pt.url}');background-size:${pt.cols * 100}% ${pt.rows * 100}%;background-position:${(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% ${(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>` : `<div class="ak-pic">${opt.heroArt ? opt.heroArt(hero) : ''}</div>`;
-  const d = document.createElement('div'); d.className = 'awk-cut'; d.dataset.k = 'awaken-cut'; d.dataset.hero = String(hero);
+  const d = document.createElement('div'); d.className = `awk-cut${opt.host ? ' in' : ''}`; d.dataset.k = 'awaken-cut'; d.dataset.hero = String(hero);
   d.innerHTML = `<i class="ak-dim"></i>${face}<i class="ak-flash"></i><div class="ak-band"><b>⚡ 각성 ${esc(heroOf(b).name)}</b><small>${who}${esc(skill)}</small></div>`;
   (opt.host || document.body).appendChild(d);
   if (!opt.mute) sfx('awaken-cutin', 0.9);
@@ -257,7 +257,7 @@ export function ultFor(scene: HTMLElement, monBox: HTMLElement | null, fx: strin
   return k && B ? awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, k, { monBox, tint }) : ultBlast(scene, monBox, fx);
 }
 
-export type PlayO = { /** 📜 게시판 #76 = 맞을 때 화면 전체 흔들림 없음 */ calm?: boolean; /** 🎯 #54 내 공격(폰 크게) · 화면(폰 · TV) · 파편 종류 */ mine?: boolean; view?: 'phone' | 'tv'; bits?: string; /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🕳 #99-1 블랙홀 빨아들이기 (TV Pixi) */ suck?: () => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { /** 📜 게시판 #76 = 맞을 때 화면 전체 흔들림 없음 */ calm?: boolean; /** 📜 #152 컷인을 이 상자 안에 (게시판 가로 전투 · 돌린 화면) · 없으면 화면 전체(레이드 그대로) */ cutHost?: HTMLElement | null; /** 🎯 #54 내 공격(폰 크게) · 화면(폰 · TV) · 파편 종류 */ mine?: boolean; view?: 'phone' | 'tv'; bits?: string; /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🕳 #99-1 블랙홀 빨아들이기 (TV Pixi) */ suck?: () => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
@@ -270,7 +270,7 @@ export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void>
   const shot = modeOf(fx) === 'shot', ranged = isRanged(hero), inPlace = shot || ranged;
   const V = o.vol ?? 1, hitO: HitO = { calm: o.calm, awk: o.ultimate ? awkKey(hero) : null, tint: o.tint, suck: o.suck, vol: V, prac: o.noDmg ? o.prac : 0, mult, finish: o.finish || o.ultimate, noDmg: o.noDmg, ult: o.ultimate, onHit: o.onHit ? () => o.onHit!() : undefined, custom: o.custom, mine: o.mine, view: o.view, bits: o.bits };
   if (reso) { heroBox.classList.add('atk-reso'); setTimeout(() => heroBox.classList.remove('atk-reso'), 1400); }
-  if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt, who: o.who });
+  if (o.ultimate) await cutin(hero, fx, { heroArt: o.heroArt, who: o.who, ...(o.cutHost ? { host: o.cutHost } : {}) });
   if (inPlace) {
     const gap = Math.hypot(B.cx - hc.x, B.cy - hc.y) || 1, k = Math.min(36, gap * 0.1) / gap, step = { x: (B.cx - hc.x) * k, y: (B.y1 - hc.y) * k * 0.5 };
     setPose('walk'); await dash(scene, heroBox, { x: 0, y: 0 }, step, 140, false);
