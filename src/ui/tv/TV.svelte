@@ -17,7 +17,7 @@
   import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
-  import { clsLabel, isOld, roster, type Live } from '../../school/school';
+  import { clsLabel, isOld, maskName, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
   import { liveRoom, liveValue } from '../room.svelte';
   import { CAMP, CAMP_PROPS, dungeonOf, propPos } from '../manifest';
@@ -85,7 +85,7 @@
   $effect(() => { applyTheme(tvTheme, { tv: true }); });
   function pickTv(t: Theme) { tvTheme = t; try { localStorage.setItem(TVK, t); } catch { /* 무시 */ } themeOpen = false; }
   // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
-  const pupils = $derived.by(() => { const nm = (R?.meta as { names?: Record<string, string> } | undefined)?.names || {}; return live ? roster(live.cls, S).map((p) => (nm[p.uid] ? { ...p, name: nm[p.uid]! } : p)) : []; }); // 📜 2026-11-16 전체 이름 = 방 meta/names (교사가 열 때 적음)
+  const pupils = $derived.by(() => { const nm = (R?.meta as { names?: Record<string, string> } | undefined)?.names || {}; const film = (R?.meta as { film?: boolean } | undefined)?.film === true; return live ? roster(live.cls, S).map((p) => { const n = nm[p.uid] ?? p.name; return { ...p, name: film ? maskName(n) : n }; }) : []; }); // 🎥 #150 촬영 모드 = 가린 이름 // 📜 2026-11-16 전체 이름 = 방 meta/names (교사가 열 때 적음)
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});

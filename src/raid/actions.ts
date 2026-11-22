@@ -13,6 +13,7 @@ import { answerOf, bossRecord, cleared, perfStreak, petrify, stone, ultUsed, unl
 import { activeNow, cpPatch } from './combo';
 import { classPeriodEnd } from '../school/bells';
 import { feat } from '../school/features.svelte';
+import { maskName } from '../school/school';
 
 // 방에서 하는 일 (쓰기) — 화면은 이 함수만 부르고, 그리는 쪽은 상태를 읽기만 한다
 export const roomPath = (code: string) => `rooms/${code}`;
@@ -206,7 +207,9 @@ export function appearNow(S: Store, L: LessonPack, code: string): void {
 /** 학생 탭 들어옴 · 살아 있음 알림 (몇 초마다) — 🔥 한 판 더 판 수(pr)는 지킴 */
 export function heartbeat(S: Store, code: string, uid: string, num: number, nick: string, more?: { cls?: string; ver?: string; hero?: number; base?: number; x?: boolean; fx?: string; enh?: number }): void {
   const base = `${roomPath(code)}/players/${uid}`;
-  S.set(`${base}/num`, num); S.set(`${base}/nick`, nick); S.set(`${base}/seen`, S.now());
+  // 🎥 #150 촬영 모드(방 meta/film) = 방에 올리는 이름도 가린 이름(김*수) → TV · 리모컨 · 친구 폰 모두 (내 폰의 내 이름은 그대로)
+  const film = S.get(`${roomPath(code)}/meta/film`) === true;
+  S.set(`${base}/num`, num); S.set(`${base}/nick`, film ? maskName(nick) : nick); S.set(`${base}/seen`, S.now());
   if (more?.cls) S.set(`${base}/cls`, more.cls);
   if (more?.cls && !more.x) usageJoin(S, more.cls, num, code); // 📈 활용 추이 ⚔ 수업 참여 (방마다 한 번 · 서버만 · 정식 usage.js join)
   if (more?.ver) S.set(`${base}/ver`, more.ver);

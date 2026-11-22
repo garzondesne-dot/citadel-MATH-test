@@ -16,7 +16,7 @@
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
-  import { isOld, roster, resetPw, hasAccount, type Live } from '../../school/school';
+  import { isOld, maskName, roster, resetPw, hasAccount, type Live } from '../../school/school';
   import { BUILD } from '../../build';
   import { unlocksOf } from '../../raid/raid';
   import { hhmm } from '../../school/bells';
@@ -49,7 +49,8 @@
   const code = $derived(live.code);
   // 🤖 가상 학생 (📜 2026-11-14 · 🧪 테스트 수업만): 번호 칸 뒤에 🤖 칸 · 이름 앞 🤖
   const botPupils = $derived(R ? Object.entries(R.players || {}).filter(([u, p]) => isBot(u) && (p as { bot?: boolean }).bot).map(([u, p]) => ({ cls: live.cls, num: Number((p as { num?: number }).num) || 101, name: `·${(p as { nick?: string }).nick ?? '🤖'}`, uid: u })).sort((a, b) => a.num - b.num) : []);
-  const pupils = $derived([...roster(live.cls, S), ...botPupils]);
+  const filmOn = $derived((R?.meta as { film?: boolean } | undefined)?.film === true); // 🎥 #150 촬영 모드 (그 수업 방에만 · 방이 끝나면 저절로 꺼짐)
+  const pupils = $derived([...roster(live.cls, S).map((p) => (filmOn ? { ...p, name: maskName(p.name) } : p)), ...botPupils]);
   const nl = (n: number) => (n > 100 ? `🤖${n - 100}` : String(n));
   $effect(() => { if (R?.state.closed && bot.code === code) untrack(botsOff); });
   const ids = $derived(R ? activeIds(R, now) : []);
@@ -258,6 +259,7 @@
   <div class="tbar">
     <button type="button" class="back" aria-label="수업 열기로" onclick={onhome}>‹</button>
     <div class="t">{live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
+    <button type="button" class="film" class:on={filmOn} data-k="tl-film" aria-pressed={filmOn} onclick={() => S.set(`${roomPath(code)}/meta/film`, filmOn ? null : true)}>🎥<small>{filmOn ? '촬영 중' : '촬영'}</small></button>
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
 
@@ -516,6 +518,8 @@
 {/if}
 
 <style>
+  .film { flex: none; min-width: 48px; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 6px; border-radius: var(--r-sm, 8px); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 18px var(--font); line-height: 1.1; } /* 🎥 #150 촬영 모드 (교사 폰에만 표시 · TV 엔 아무 표시 없음) */
+  .film small { font-size: 11px; font-weight: 700; } .film.on { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 18%, var(--surface)); color: var(--text); }
   /* 📲 시안 v12 (2026-11-14 컨펌): 두 번째 칸 높이 36 · 번호 칸 = 대기실 · 수업 중 같은 자리 · 같은 크기 */
   .svc { display: flex; align-items: center; gap: var(--s2); font: 700 14px var(--font); }
   .svc > span { flex: 1; } .svc small { color: var(--text-3); font-weight: 500; } .svc b { color: var(--accent); }
