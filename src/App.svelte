@@ -255,6 +255,8 @@
   .obar { top: calc(env(safe-area-inset-top, 0px) + 8px); border: 1px solid var(--accent); }
   .wtip { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 60px); z-index: 60; width: min(400px, calc(100% - 32px)); display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 500 14px var(--font); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); } .wtip button { margin-left: auto; min-width: 40px; min-height: 40px; border: 0; background: none; color: var(--text-2); font-size: 16px; }
   .relogin { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; margin: 0; padding: 10px 14px; max-width: 92vw; border-radius: 12px; background: #2b1e10; border: 1px solid #f5b84a; color: #ffe3a8; font: 700 14px var(--font); text-align: center; }
-  .crash { margin: 24px 16px; padding: 16px; border-radius: 12px; background: var(--card, #fff); color: var(--ink, #222); text-align: center; }
-  .crash button { min-height: 48px; padding: 0 16px; margin: 6px; border-radius: 10px; }
+  /* 🐞 #127 울타리 글자가 어두운 바탕에 묻혀 안 읽혔음(옛 --card · --ink 토큰) = v1 토큰 */
+  .crash { margin: 24px 16px; padding: 16px; border-radius: var(--r, 12px); background: var(--surface, #181b22); color: var(--text, #f2f3f5); border: 1px solid var(--line, #3a3f4b); text-align: center; font: 600 16px/1.5 var(--font, system-ui); }
+  .crash p { margin: 0 0 8px; color: var(--text, #f2f3f5); }
+  .crash button { min-height: 48px; padding: 0 16px; margin: 6px; border-radius: 10px; border: 1px solid var(--line, #3a3f4b); background: var(--surface-2, #222632); color: var(--text, #f2f3f5); font: 700 15px var(--font, system-ui); }
 </style>

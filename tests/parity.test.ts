@@ -13,6 +13,7 @@ const norm = (t: string) => t.replace(/^(\(\d+\)) [①-⑨] /, '$1 ');
 import { grade } from '../src/engine/grade';
 import { atkClock, bossHp, bossState, chainDown, chainRecord, itemsFor, monsterHp, plainRecord, pracUsed, solveLock } from '../src/raid/raid';
 import { chainItems as packChainItems } from '../src/engine/lessons';
+import { fixChain } from '../src/subjects/common-math2/gens/selfsolve'; // 🔎 #126 혼자 풀리게 글 덧씌움
 import { chipToggle, runeNext } from '../src/engine/input';
 import { CONCEPTS, pick, ROWS } from '../src/subjects/common-math2/symtalk';
 import { AURA_NAMES, ENH, FAMS, HEROES, ladder, level, SKILL_NAMES, SKILL_PRICE, SKILL_SCROLL, TIER_NAMES } from '../src/model/hero';
@@ -85,7 +86,7 @@ describe(`정식과 같음 (${fx.from})`, () => {
   });
 
   it(`소레이드 단계 문항 ${fx.chain.length}판 (문제 4~7 × 시드 20 × 판 0~2 · 나의 풀이 · 근거 줄 · 📜 원문 포함)`, () => {
-    for (const c of fx.chain) expect(packChainItems(L, c.mid, c.seed, c.p).map((q) => pickQ(q as AnyQ)), `${c.mid} ${c.seed} 판 ${c.p}`).toEqual(c.items);
+    for (const c of fx.chain) expect(packChainItems(L, c.mid, c.seed, c.p).map((q) => pickQ(q as AnyQ)), `${c.mid} ${c.seed} 판 ${c.p}`).toEqual(fixChain(`set06.${c.mid}`, c.items as Question[], c.p).map((q) => pickQ(q as AnyQ)));
   });
 
   it(`소레이드 기록 ${fx.chainRec.length}장면 (잠김 · 풀어주기 · 못 맞힘 · 한 판 더 · 근거 빈칸 · 받은 힐 · 체력 · 졸개 쓰러짐)`, () => {

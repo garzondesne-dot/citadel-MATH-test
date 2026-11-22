@@ -292,7 +292,7 @@ function u7Chain(N: number, p: number, q: number, rem: number, r: Rng): Question
   ];
 }
 /** 📜 한 판 더 = 바뀐 숫자의 원문 문제 전체 */
-const PROB: Record<string, (...a: number[]) => string> = {
+export const PROB: Record<string, (...a: number[]) => string> = {
   u4: (p, q, N) => `두 집합 A = {x | x는 ${p}의 약수}, B = {x | x는 ${N} 이하의 ${q}의 배수}에 대하여 A ∩ X = ∅ 과 B ∪ X = B 를 만족시키는 집합 X 의 개수를 구하시오.`,
   u5: (c, b, d) => `두 집합 A = {x² + ${c}x, ${b}, ${d}}, B = {x, ${d}}에 대하여 A ∩ B = B 를 만족시키는 정수 x 를 모두 구하시오.`,
   u6: (T, a, b) => `어느 자전거 동아리 회원 ${T}명을 대상으로 두 코스 A와 B를 다녀온 경험이 있는 회원 수를 조사하였더니 A 코스는 ${a}명이고 B 코스는 ${b}명이었다. 두 코스 A와 B를 모두 다녀온 회원 수의 최댓값과 최솟값을 구하시오.`,
@@ -304,7 +304,7 @@ const CHAIN_FN: Record<string, (a: number[], r: Rng) => Question[]> = {
   u6: (a) => u6Chain(a[0] as number, a[1] as number, a[2] as number),
   u7: (a, r) => u7Chain(a[0] as number, a[1] as number, a[2] as number, a[3] as number, r),
 };
-const BOOK: Record<string, number[]> = { u4: [8, 4, 20], u5: [2, 4, 6], u6: [40, 28, 21], u7: [100, 7, 5, 3] };
+export const BOOK: Record<string, number[]> = { u4: [8, 4, 20], u5: [2, 4, 6], u6: [40, 28, 21], u7: [100, 7, 5, 3] };
 /** 등록 소레이드 생성기: 판 0 = 교과서 숫자 · 판 1~ = 같은 꼴 새 숫자(모든 단계에 📜 원문 문제) */
 export const chainOf = (id: 'u4' | 'u5' | 'u6' | 'u7') => (pass: number, r: Rng): Question[] => {
   const args = pass === 0 ? (BOOK[id] as number[]) : (RETRY_ARGS[id] as (r: Rng) => number[])(r), items = (CHAIN_FN[id] as (a: number[], r: Rng) => Question[])(args, r);

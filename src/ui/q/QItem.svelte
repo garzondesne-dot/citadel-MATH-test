@@ -25,7 +25,8 @@
   $effect(() => () => fT.forEach(clearTimeout));
   const allBits = (t: string) => t.split(/(모두)/);
   // 문제 글: 「… 일 때」 앞부분(조건) = 작은 글 · 묻는 부분 = 큰 글 (②B q1 · q2)
-  const parts = $derived.by(() => { const t0 = q.question, t = showNo ? t0 : t0.replace(/^\s*\(\d+\)\s*/, ''), k = t.lastIndexOf(' 일 때 '); return k > 0 ? [t.slice(0, k + 4), t.slice(k + 5)] : ['', t]; });
+  //   🔎 #126 「문제 글 ⏎ ① 단계」(혼자 풀리게 · 성채 · 7차시 소레이드) = 줄바꿈 앞 = 작은 글 · 뒤 = 큰 글
+  const parts = $derived.by(() => { const t0 = q.question, t = showNo ? t0 : t0.replace(/^\s*\(\d+\)\s*/, ''), n = t.lastIndexOf('\n'); if (n > 0) return [t.slice(0, n), t.slice(n + 1)]; const k = t.lastIndexOf(' 일 때 '); return k > 0 ? [t.slice(0, k + 4), t.slice(k + 5)] : ['', t]; });
   const value = $derived(normFor(q, raw));
   const qno = $derived(/^\s*\(\d+\)/.test(q.question) || /^\d+\.\s/.test(q.question) ? null : `(${i + 1})`);
   const line = $derived(penLine(q, value, i));

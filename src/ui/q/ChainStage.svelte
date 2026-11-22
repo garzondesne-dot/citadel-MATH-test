@@ -11,7 +11,7 @@
   const { items, stage, says, title, value, lastWrong = false, prac = false, disabled = false, flip = null, onchange, v4 = false, wrongText = null, prev = undefined, hintKey = '', prevAt = 0 }:
     { items: Question[]; stage: number; says: string[]; title: string; value: Given; lastWrong?: boolean; prac?: boolean; disabled?: boolean; downs?: number[]; flip?: { i: number; ok: boolean; text: string | null } | null; onchange: (v: Given) => void; /** v4: 틀렸을 때 배너 없음 · 📜 나의 풀이 이번 단계 줄 = 빨강 ✘ 줄 긋기 */ v4?: boolean; wrongText?: string | null; /** ☑ 지난번 틀린 답 · 처음 틀림 열쇠 (multiFb.ts) */ prev?: Given; hintKey?: string; prevAt?: number } = $props();
   const q = $derived(items[Math.min(stage, items.length - 1)] as Question);
-  const prob = $derived(prac ? items[0]?.problem : undefined);
+  const prob = $derived(prac && items[0]?.problem && !q.question?.startsWith(items[0].problem) ? items[0]?.problem : undefined); // 🔎 #126 단계 글에 문제가 이미 있으면 📜 문제 칸 안 띄움(두 번 보임)
   const stName = (i: number): string => (i === items.length - 1 && !paperOn() ? '대장' : '①②③④⑤⑥'[i] ?? String(i + 1));
   const no = $derived((/문제 \d+/.exec(title) || [title])[0]);
   // 🧾 답안 줄 = 단계 하나 = 칸 하나 (#108 ③ · 일반 몬스터와 같은 모양): 푼 단계 = ✔ 그 답 · 지금 = 고른 답 · 틀린 뒤 = 빨간 테두리
