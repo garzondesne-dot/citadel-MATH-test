@@ -35,7 +35,8 @@
   let heroSheet = $state(false), pickH = $state(untrack(() => me.hero));
   let ttlSheet = $state(false), confirm = $state(false), ask = $state(false), resetAsk = $state(false);
   let savedFlash = $state(false), topEl = $state<HTMLElement | null>(null), swTop = $state(160);
-  function openHeroes() { pickH = look.hero; if (topEl) swTop = topEl.offsetTop + topEl.offsetHeight + 8; heroSheet = true; }
+  // 🐞 #120 시트 위끝 = 내 용사 카드 아래(화면 기준 getBoundingClientRect · 스크롤해도 맞음) · 단 시트 높이는 화면의 min(100%, 520px) 이상 = 낮은 폰 · 가로에서 격자가 밀려 나가지 않게
+  function openHeroes() { pickH = look.hero; const vh = window.innerHeight; const want = topEl ? Math.round(topEl.getBoundingClientRect().bottom) + 8 : 160; swTop = Math.max(0, Math.min(want, vh - Math.min(vh, 520))); heroSheet = true; }
   let toast = $state(''), toastT: ReturnType<typeof setTimeout> | null = null;
   const say = (t: string, ms = 2200) => { toast = t; if (toastT) clearTimeout(toastT); toastT = setTimeout(() => (toast = ''), ms); };
   const tip96 = untrack(() => !me.seen['tip96']); // 「이제 용사마다 자기 속성…」 = 개편 뒤 한 번만
@@ -247,8 +248,10 @@
     <div class="grab"><i></i></div>
     <div class="hswh"><b>용사 바꾸기</b><span>가진 용사 {mine.length} · 모두 {POOL.length}</span><button type="button" aria-label="닫기" onclick={() => (heroSheet = false)}>✕</button></div>
     <!-- 🧙 용사 소개 카드 (몽타주 · 이름 · 직업 · 근접/원거리 · 속성 · 별명 · 이야기 · 스킬 단계 · 잠김 = 흐림 + 열림 조건) -->
+    <div class="swtop"><!-- 🐞 #120 위 = 소개 카드 · ⚡ 각성 칸 = 자리가 모자라면 여기만 줄고 넘김 · 격자는 늘 1줄 반 이상 보임 -->
     <HeroIntro id={pickH} prog={progOf(pickH)} owned={ownsPick} lv={ownsPick ? lv : 0} stage={ownedSk(pickH).filter(Boolean).length} />
     {#if awkTitle(pickH)}<AwakenBox hero={pickH} checks={aChecks} blocked={awakenBlocked(pickH)} prog={pickH === 0 ? `🏆 업적 ${UN?.seals ?? 0} / 3` : aProg} />{#if !awakenBlocked(pickH) && aChecks.every((c) => c.ok)}<button type="button" class="awkre" data-k="awaken-replay" onclick={() => (awkRe = pickH)}>▶ 각성 연출 다시 보기</button>{/if}{/if}
+    </div>
     <div class="swg">
       {#each allHeroes as h (h.id)}
         {@const own = ownH(h.id)}
@@ -393,7 +396,8 @@
   .grab { height: 14px; display: grid; place-items: center; } .grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line); display: block; }
   .hswh { display: flex; align-items: center; gap: var(--s2); } .hswh b { font-size: 18px; } .hswh span { flex: 1; font-size: 13px; color: var(--text-2); }
   .hswh button { width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text-2); font-size: 18px; }
-  .swg { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-content: start; padding-top: 8px; }
+  .swtop { flex: 0 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  .swg { flex: 1 1 0; min-height: 150px; overflow: auto; overscroll-behavior: contain; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; align-content: start; padding-top: 8px; }
   .swc { position: relative; min-height: 96px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); padding: 6px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; color: var(--text); font-family: var(--font); }
   .swi { width: 64px; height: 52px; display: grid; place-items: center; overflow: visible; }
   .swi :global(.hs) { scale: 0.8; }
