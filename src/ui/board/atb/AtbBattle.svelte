@@ -266,10 +266,8 @@
   const reactNow = $derived(me >= 0 && canReact(S, me));
   const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호!', support: '🎵 지금 격려!', dealer: '✂ 지금 끊기!' }; /* 📜 #119 한 줄 */
   const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#c8862a', dealer: '#d8402a', healer: '#2faa5a' };
-  const ROLE_KO: Record<string, string> = { tank: '탱커', support: '서포터', dealer: '딜러' };
   /** 📜 #119 ① 알림 = 짧은 한 줄 (설명 · 「팀에 ○○ 없음」 없음) */
   const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => tagName(i)).join(' · ') ?? ''} 노림` : tg.cls === 'aoe' ? '💥 광역 공격' : `🌀 ${tg.atk} 모으는 중`) : '');
-  const hasRole = (r: string) => S.heroes.some((h) => h.s.role === r && !h.down);
   // 🎯 📜 요청 #50 A 역할 = 카운터 단추(화면 가운데 · 카드 위 · 남은 예고 고리) · ⚡ 0 = 작은 띠 · 임무
   const roleTg = $derived(me >= 0 && !!meH && !meH.down && !!tg && !S.blocked && REACT[tg.cls] === meH.s.role);
   const CTR_TXT: Record<string, string> = { tank: '🛡 엄호!', support: '🎵 격려!', dealer: '⚔ 끊기!' };
