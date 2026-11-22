@@ -201,13 +201,14 @@ describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => 
 
 // 🔎 📜 요청 #19 덧3 스킬 미리 보기 = 어림값이 실제 피해와 같음 · 실드 · 약점 · 못 쓰는 까닭
 describe('ATB 스킬 미리 보기 (요청 #19 덧3)', () => {
-  it('⚡ 내 스킬 어림값 = 실제 피해 · 약점 시간 = ×2 금색 · 실드 = 「실드 깸」', () => {
+  it('⚡ 내 스킬 어림값 = 실제 피해 · 약점 시간 = ×2 금색 · 실드 안내 = 스킬 2 줄만 (#101 · #124 덧)', () => {
     const S = fresh(); const h = S.heroes[0]!; h.atb = 1; h.ch = 3;
     const p = skillPeek(S, 0, 'equip'), hp0 = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true);
     expect(p.line).toBe(`💥 약 ${hp0 - S.bossHp}`); expect(p.gold).toBe(false);
     S.weakUntil = S.t + 10; h.atb = 1; const w = skillPeek(S, 0, 'equip'); expect(w.gold).toBe(true); expect(w.line).toMatch(/약점 ×2/);
     S.weakUntil = 0; S.shieldUp = true; S.cells = S.heroes.map((x) => ({ owner: x.id, fam: x.s.fam, broken: false }));
-    expect(skillPeek(S, 0, 'equip').line).toMatch(/^🛡 실드 깸/);
+    expect(skillPeek(S, 0, 'equip').line).toMatch(/^💥 약 \d+/); expect(skillPeek(S, 0, 'equip').line).not.toMatch(/실드/);
+    expect(skillPeek(S, 0, 'tier4').line).toMatch(/실드 1칸/);
   });
   it('역할 · 부활 · 못 쓰는 까닭', () => {
     const S = fresh(); const h = S.heroes[2]!; h.ch = 0; h.atb = 1; S.heroes[0]!.hp -= 10;
