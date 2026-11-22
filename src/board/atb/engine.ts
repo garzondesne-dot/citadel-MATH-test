@@ -1,14 +1,14 @@
 // ⚔ 게시판 던전 ATB — 전투 엔진 (순수 · 같은 씨앗 = 같은 판) · 📜 docs/board-atb/design/정리.md 3절 · 결정 S · U · V
 //   한 곳(진행 폰 · 연습방 = 이 폰)만 tick · 행동을 적용 · 화면은 state 를 그리기만 · 시각 = 초(서버 시각에서 뺀 게임 시각)
-//   ⏳ 작전 시간(수호자) · 강적 출현 연출 · 재접속 = 학생 판에서 붙임
+//   🔌 재접속 = 학생 판에서 붙임 (📜 11/22 #103 덧 = 전투 멈춤(작전 시간 · 강적 출현 · 길잡이 생각 시간) 없앰 · 수호자 「💡 도와줘」가 대신)
 import { BOSS_HIT, BOSS_HP_BASE, DIFF_MUL, ATK, ROLE_SKILL, SIG, T, REACT, REACT_CFG, atkClass, attrFx, ATTR_FX_TXT, fxOfAttr, type AttrFx, rage as RAGE, ATK_SPECIAL, atkName, type RageMod, type AtkClass, type AtkKind as AK, type AtkKind, type BossCfg, type Diff, type Fam, type Role, shieldOf } from './tune';
 import type { Stats } from './heroes';
 
 export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive' | 'heal';
-export interface Hero { id: number; s: Stats; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 넘친 충전 모음 (½ 칸 · 요청 #49) */ ovf?: number; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind; /** 🔩 16 톱니 표식 겹 (요청 #57) */ mark?: number;
-  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 💥 속성 브레이크 (약점 계열 · 내 칸) */ brk?: number; /** ⚔ 끊기 (딜러 반응 막기 · blocks 안에 들어 있음) */ cuts?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
+export interface Hero { id: number; s: Stats; /** 🛡 #103 수호자 (사람만 · 봇 = 없음) */ gd?: boolean; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 넘친 충전 모음 (½ 칸 · 요청 #49) */ ovf?: number; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind; /** 🔩 16 톱니 표식 겹 (요청 #57) */ mark?: number;
+  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 💥 속성 브레이크 (약점 계열 · 내 칸) */ brk?: number; /** ⚔ 끊기 (딜러 반응 막기 · blocks 안에 들어 있음) */ cuts?: number; /** 🤝 #103 구조 성공 = 내가 보낸 힌트로 친구가 그 소문항을 맞힘 */ aids?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { /** (옛 · 📜 #95 주인 없음 · 무시) */ owner?: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
@@ -29,6 +29,8 @@ export type Ev =
   | { k: 'gift'; t: number; who: number; to: number }
   | { k: 'sig'; t: number; what: 'breathWarn' | 'breathHeal' | 'breathCut' | 'mirrorOn' | 'reflect' | 'unbind' | 'healNow' | /** 📜 #57 */ 'contra' | 'reverseBack' | 'chain' | 'refreeze' | 'retarget'; who?: number; v?: number }
   | { k: 'cap'; t: number; at: 'warn' | 'call' } /* 📜 #92 10분 상한 알림 */
+  | { k: 'ask'; t: number; who: number } /* 🛡 #103 「도와줘」 */
+  | { k: 'aid'; t: number; who: number; to: number; ok?: boolean } /* 🛡 #103 수호자가 힌트 보냄 · ok = 그 소문항 맞힘(구조 성공) · false = 못 맞힘 */
   | { k: 'end'; t: number; win: boolean; why: string };
 export interface State {
   t: number; diff: Diff; boss: BossCfg; seed: number; rnd: number;
@@ -43,8 +45,9 @@ export interface State {
   /** 📜 요청 #57 v4: 13 등호의 순간 끝 · 15 다음 차례 자리 · 17 방금 가장 큰 스킬 피해 · 되돌릴 값 · 분노 늦은 표적 다시 정함 · 마지막으로 깬 실드 칸 · 다시 언 칸 · 이어 쓰는 공격 표적 = 느려진 용사 중 HP 가장 낮은 */
   /** 숨 고르기로 회복한 합 */ healed?: number; eqUntil?: number; ordI?: number; big?: { who: number; v: number } | null; revV?: number; lateDone?: boolean; lastBrk?: number; refrozen?: number | null; pickLow?: boolean;
   /** 🛡 이번 예고된 공격을 반응 막기 한 용사 (📜 요청 #35 · 먼저 쓴 사람만) */ blocked?: { by: number; how: 'cover' | 'barrier' | 'cut' } | null;
-  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { /** 📜 #95 도움표로 깬 칸 */ helpBrk?: number; subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; /** 🎯 예고 종류별 횟수 · 30% 아래 친구가 생긴 적 (임무 기회 · 요청 #50) */ tele?: Record<AtkClass, number>; lowSeen?: boolean; downs: number; revives: number; lastAns: number[] };
+  /** 📊 판 기록 (균형 도구 · 📜 11/20 「판마다 실제 기록」) */ rec: { /** 📜 #95 도움표로 깬 칸 */ helpBrk?: number; /** 🤝 #103 구조 성공 (힌트 받고 그 소문항 맞힘) */ aidOk?: number; subSec: number[]; timing: { n: number; ok: number; crit: number }; skills: Partial<Record<SkillK | 'react', number>>; charges: number; /** 넘침 자동 스킬 수 */ overflow?: number; /** 🎯 예고 종류별 횟수 · 30% 아래 친구가 생긴 적 (임무 기회 · 요청 #50) */ tele?: Record<AtkClass, number>; lowSeen?: boolean; downs: number; revives: number; lastAns: number[] };
   /** 📜 #92 10분 상한 알림 단계 (1 = 7:00 · 2 = 9:00) */ capAt?: number;
+  /** 🛡 #103 도와줘 = 도전자 번호 → 보낸 수호자(-1 = 기다림) */ asks?: Record<number, { by: number; t: number }>;
   heroes: Hero[]; revives: number; ev: (Ev & { n?: number })[]; /** 사건 번호 (화면이 「어디까지 봤나」) */ evN: number; end: null | { win: boolean; why: string; t: number };
 }
 // ── 난수 (mulberry32) ──
@@ -208,6 +211,7 @@ function bossAttack(S: State) {
 /** 문제로 얻은 것 (quiz.ts answer 의 earn) · ⚡ 충전 = 원문항을 통째로 끝냈을 때만(Y1 · 퍼펙트 2 · 재시도 1 · 최대 3) · 쓰러진 학생 = 친구 ATB +50% */
 export function earn(S: State, who: number, e: { done: boolean; perfect: boolean; right: boolean; miss?: number }, giftTo?: number): void {
   const h = S.heroes[who]; if (!h || S.end) return;
+  const ak = S.asks?.[who]; if (ak) { if (ak.by >= 0) { delete S.asks![who]; const g = S.heroes[ak.by]; if (e.right && g) { g.log.aids = (g.log.aids ?? 0) + 1; S.rec.aidOk = (S.rec.aidOk ?? 0) + 1; } push(S, { k: 'aid', t: S.t, who: ak.by, to: who, ok: e.right }); } else if (e.done) delete S.asks![who]; } /* 🛡 #103 힌트 뒤 첫 소문항 = 구조 성공 / 실패 · 기다리다 원문항 끝 = 취소 */
   if (e.right) { h.log.right++; S.rec.subSec.push(+(S.t - (S.rec.lastAns[who] ?? 0)).toFixed(1)); S.rec.lastAns[who] = S.t; } // 소문항 하나 = 앞 정답부터 이 정답까지
   if (h.down) {
     if (!e.right) return;
@@ -225,6 +229,18 @@ export function earn(S: State, who: number, e: { done: boolean; perfect: boolean
   runAuto(S); // 첫 넘침 = 바로 · 연달아 = 0.6초 뒤 (tick)
   if (e.done && S.shieldUp) h.tickets++;
   if (e.perfect) { h.atb = 1; h.log.perfect = (h.log.perfect ?? 0) + 1; if (S.rage && !calmed(S)) { S.ragePerf = (S.ragePerf ?? 0) + 1; if (S.ragePerf >= RAGE.calmPerfect) { S.ragePerf = 0; S.calmUntil = S.t + RAGE.calmSec; S.target = null; S.nextAtk = null; S.aoeNext = false; S.bossT = 0; push(S, { k: 'rage', t: S.t, on: 'calm' }); } else push(S, { k: 'rage', t: S.t, on: 'perf', n: S.ragePerf }); } }
+}
+
+/** 🛡 #103 「도와줘」 = 팀에 (나 말고) 살아 있는 수호자가 있을 때 · 원문항마다 한 번은 화면이 셈 · 이미 기다리는 중 = 무시 */
+export const guardsOf = (S: State, who: number) => S.heroes.filter((g) => g.gd && !g.down && g.id !== who);
+export function askHelp(S: State, who: number): boolean {
+  const h = S.heroes[who]; if (!h || h.down || S.end || h.gd || !guardsOf(S, who).length) return false;
+  S.asks ??= {}; if (S.asks[who]) return false; S.asks[who] = { by: -1, t: S.t }; push(S, { k: 'ask', t: S.t, who }); return true;
+}
+/** 🛡 수호자 = 「○○ 도와줘!」 (충전 · ATB 필요 없음) · 먼저 누른 수호자 한 명 */
+export function sendHelp(S: State, by: number, to: number): boolean {
+  const g = S.heroes[by], a = S.asks?.[to]; if (!g || !g.gd || g.down || S.end || !a || a.by >= 0 || by === to) return false;
+  a.by = by; push(S, { k: 'aid', t: S.t, who: by, to }); return true;
 }
 
 // ── 행동 (ATB 가득) ──

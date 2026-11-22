@@ -30,10 +30,10 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => globalThis.__atb.pause(true));
   await p.click('[data-k="atb-quiz-open"]'); await p.waitForSelector('[data-k="atb-quiz"]'); await p.waitForTimeout(700); // 보스가 걸어 나오는 0.45초
   const cardL = await p.$eval('.card', (x) => x.getBoundingClientRect().left), bossR = await p.$eval('[data-k="atb-boss"]', (x) => x.getBoundingClientRect().right);
-  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), b = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), h = [...document.querySelectorAll('.hero .tag')].map((e) => e.getBoundingClientRect().left), bh = document.querySelector('[data-k="raid-hp"]').getBoundingClientRect(); return { cx: Math.round(c.left + c.width / 2), w: c.width / innerWidth, bossL: Math.round(b.left), cardR: Math.round(c.right), tagsL: Math.max(...h) < c.left, bhpR: bh.left >= c.right - 4 }; });
-    ok('요청 #14 문제 카드 = 화면 가운데 · 약 47%(요청 #19 덧1) · 왼쪽 용사 이름표 · 오른쪽 보스(체력) 보임', Math.abs(g.cx - 414) < 14 && Math.abs(g.w - 0.47) < 0.02 && g.bossL >= g.cardR - 30 && g.tagsL && g.bhpR, JSON.stringify(g)); }
-  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), st = document.querySelector('[data-k="atb-stage"]').getBoundingClientRect(), sb = document.querySelector('[data-k="atb-submit"]').getBoundingClientRect(), tg = document.querySelector('[data-k="atb-autoon"]'), sk = document.querySelector('[data-k="atb-skill-btn"]'); return { gap: Math.round(st.bottom - c.bottom), sub: sb.left >= c.left && sb.right <= c.right, tg: !!tg, sk: !!sk, top: Math.round(c.top - st.top) }; });
-    ok('요청 #24 ③ 카드 = 화면 위 ~ 아래 끝 · 가운데 단추 = ✅ 제출(카드 안) · 왼쪽 = 자동 공격 켬 · 스킬 단추 그대로', g.gap <= 2 && g.top < 20 && g.sub && g.tg && g.sk, JSON.stringify(g)); }
+  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), b = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), h = [...document.querySelectorAll('.hero .tag')].map((e) => e.getBoundingClientRect().right); return { w: Math.round(c.width), r: Math.round(innerWidth - c.right), bossR: Math.round(b.right), cardL: Math.round(c.left), tags: Math.max(...h) <= c.left + 2 }; });
+    ok('📜 #102 ② 문제 카드 = 오른쪽 45%(최소 360px) · 전투 왼쪽 55% (보스 · 용사 이름표가 카드 왼쪽)', g.r <= 1 && Math.abs(g.w - Math.max(360, 844 * 0.45)) < 3 && g.bossR <= g.cardL + 8 && g.tags, JSON.stringify(g)); }
+  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), st = document.querySelector('[data-k="atb-stage"]').getBoundingClientRect(), hs = document.querySelector('[data-k="atb-holdsend"]'), tg = document.querySelector('[data-k="atb-autoon"]'), sk = document.querySelector('[data-k="atb-skill-btn"]'); return { gap: Math.round(st.bottom - c.bottom), hold: !!hs, sub: !document.querySelector('[data-k="atb-submit"]'), tg: !!tg, sk: !!sk, top: Math.round(c.top - st.top) }; });
+    ok('📜 #102 ② 카드 = 위 ~ 아래 끝 · 제출 단추 없음(꾹 제출 띠) · 공격 자리 = 「자동 중」 · 스킬 단추 그대로', g.gap <= 2 && g.top < 20 && g.hold && g.sub && g.tg && g.sk, JSON.stringify(g)); }
   const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
   ok('요청 #41 소문항 하나 맞힘 = 충전 +1 (바로)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(4, ch0 + 1));
@@ -57,7 +57,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     ok('요청 #11 카드 연 채 = 자동 일반 공격(치명 없음) · 타이밍 바 안 뜸 · 「⚔ 자동 공격!」 한 줄', r.auto && r.timing === 'ok' && !(await p.$('[data-k="atb-timing"]')) && (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp1, JSON.stringify(r)); }
   await p.waitForTimeout(300);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
-  ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && (await p.$eval('[data-k="atb-submit"]', (e) => e.disabled)));
+  ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && !(await p.$('[data-k="atb-holdsend"].on')));
   await p.screenshot({ path: `${SHOTS}/atb-lock-844.png` });
   await p.waitForTimeout(1300); ok('요청 #20 ① 1초 뒤 잠금 풀림', !(await p.$('[data-k="atb-qlock"]')));
   for (let i = 0; i < 3; i++) await p.evaluate(() => globalThis.__atb.miss());
@@ -66,7 +66,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => globalThis.__atb.miss()); await p.waitForTimeout(100);
   ok('② 4번째 오답 = 「새 숫자 판으로 처음부터」', /새 숫자 판으로 처음부터/.test(await p.textContent('.qc .fb').catch(() => '')));
   await p.screenshot({ path: `${SHOTS}/atb-quiz-844.png` });
-  ok('② 카드 안 가로 넘침 0 · 제출 단추 보임', await p.evaluate(() => { const c = document.querySelector('.qc'); const s = document.querySelector('[data-k="atb-submit"]').getBoundingClientRect(); return c.scrollWidth <= c.clientWidth + 1 && s.bottom <= innerHeight; }));
+  ok('② 카드 안 가로 넘침 0 · 제출 단추 보임', await p.evaluate(() => { const c = document.querySelector('.qc'); const s = document.querySelector('[data-k="atb-holdsend"]').getBoundingClientRect(); return c.scrollWidth <= c.clientWidth + 1 && s.bottom <= innerHeight; }));
   await closeQ(p);
   await p.evaluate(() => { globalThis.__atb.full(); }); const ab0 = await p.$eval('[data-k="atb-attack"]', (e) => { const r = e.getBoundingClientRect(); return [r.x, r.y]; });
   await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]');
@@ -84,12 +84,12 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => { const a = globalThis.__atb; a.S.heroes[0].ch = 3; a.full(); }); await p.waitForTimeout(150);
   const fan = await p.$$eval('[data-k="atb-skills"] .sk2', (x) => x.map((e) => e.dataset.k.replace('atb-sk-', '')));
   ok('요청 #9 스킬 = 공격 둘레 고정 단추 · 새내기 = 장착 · 역할 · 🩹 응급 힐 (늘 보임 · #46)', JSON.stringify(fan) === '["equip","role","heal","tier4"]', JSON.stringify(fan));
-  ok('요청 #24 ② 아래 단추 3개 = 왼쪽 공격 · 가운데 문제 풀이 · 오른쪽 스킬 · 한 줄 · 엄지 48px↑', await p.evaluate(() => { const r = ['atb-attack', 'atb-quiz-open', 'atb-skill-btn'].map((k) => document.querySelector(`[data-k="${k}"]`).getBoundingClientRect()), mid = (x) => x.top + x.height / 2; return r[0].right <= r[1].left && r[1].right <= r[2].left && r.every((x) => x.height >= 46 && Math.abs(mid(x) - mid(r[0])) < 4); }));
+  ok('📜 #102 ① 아래 단추 3개 = 공격 · 스킬 · 문제 풀이(금) · 한 줄 · 엄지 48px↑', await p.evaluate(() => { const r = ['atb-attack', 'atb-skill-btn', 'atb-quiz-open'].map((k) => document.querySelector(`[data-k="${k}"]`).getBoundingClientRect()), mid = (x) => x.top + x.height / 2; return r[0].right <= r[1].left && r[1].right <= r[2].left && r.every((x) => x.height >= 46 && Math.abs(mid(x) - mid(r[0])) < 4); }));
   await p.screenshot({ path: `${SHOTS}/atb-fan-844.png` });
   await skc(p, 'equip');
   await p.waitForSelector('[data-k="atb-cutin"]', { timeout: 1500 }).catch(() => {});
   ok('Y2 장착 = 충전 1 · 고르면 바로', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === 2);
-  ok('⑦ 장착 스킬 = 짧은 컷인', !!(await p.$('[data-k="atb-cutin"]')));
+  ok('📜 #102 ⑤ 스킬 1 = 컷인 없음(제자리 연출 · 컷인 = 스킬 2 · 각성만)', !(await p.$('[data-k="atb-cutin"]')));
   // ✨ 각성 용사 = 부채꼴에 4레벨 · 오라 방패 · 각성 · 각성 = 긴 컷인 · 오라 방패 = 다음 공격 막음 + 석화
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('.chips button:has-text("각성")'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(600);
   await p.evaluate(() => { const a = globalThis.__atb; a.pause(true); a.S.heroes[0].ch = 3; a.full(); }); await p.waitForTimeout(150);
@@ -285,26 +285,22 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   // 🎯 요청 #50 A 카운터 단추(카드 위 가운데) · ⚡ 0 = 작은 띠 · 임무 · 성공 = 눈빛 컷인 「GUARD!」
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'tank'; h.ch = 0; h.atb = 0; S.nextAtk = 'ice'; S.aoeNext = false; S.target = [1]; S.bossT = a.every() - 3.5; }); await p.waitForTimeout(250);
-  { const noch = !!(await p.$('[data-k="atb-counter-noch"]')); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 1; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(500);
+  { const none = !(await p.$('[data-k="atb-counter"]')); await p.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 1; }); await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(500);
     const top = await p.evaluate(() => { const c = document.querySelector('[data-k="atb-counter"]'); if (!c) return 'none'; const r = c.getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return c.contains(el) ? 'top' : 'covered'; });
-    const mis = await p.textContent('[data-k="atb-mission"]').catch(() => '');
-    await p.screenshot({ path: `${SHOTS}/atb-r50-counter-844.png` });
+    await p.screenshot({ path: `${SHOTS}/atb-r102-counter-844.png` });
     await p.click('[data-k="atb-counter"]', { force: true }); await p.waitForTimeout(200);
-    const r = await p.evaluate(() => ({ b: globalThis.__atb.S.blocked?.how, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', gone: !document.querySelector('[data-k="atb-counter"]') }));
-    ok('요청 #50 카운터 = ⚡0 작은 띠 → ⚡1 = 카드 위 가운데 단추 · 누르면 막음 · 눈빛 「GUARD!」 · 임무 표시', noch && top === 'top' && r.b === 'cover' && /의 🛡 막기!/.test(r.eye) /* 📜 #80 누구의 무슨 기술 */ && r.gone && /임무/.test(mis), JSON.stringify({ noch, top, mis, ...r }));
+    const r = await p.evaluate(() => ({ b: globalThis.__atb.S.blocked?.how, eye: !!document.querySelector('[data-k="atb-eye-text"]'), gone: !document.querySelector('[data-k="atb-counter"]') }));
+    ok('📜 #102 ④ ⑤ 반응 = 구슬 0 = 단추 안 바뀜 → 구슬 1 = 「스킬」 단추가 막기로 바뀜(카드 열려도 보임) · 누르면 막음 · 컷인 없이 제자리', none && top === 'top' && r.b === 'cover' && !r.eye && r.gone, JSON.stringify({ none, top, ...r }));
     await p.evaluate(() => globalThis.__atb.close()); }
   // 💥 요청 #50 B 속성 브레이크 = 2초 카드 위 → 카드 뒤 · 누르면 내 칸 깸 · 「SHIELD BREAK!」 + 슬로 모션
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; S.boss.weak = [h.s.fam]; h.ch = 0; h.atb = 0; S.shieldUp = true; S.cells = [{ fam: h.s.fam, broken: false }, { fam: S.heroes[1].s.fam === h.s.fam ? 'flame' : S.heroes[1].s.fam, broken: false }]; }); await p.waitForTimeout(300);
-  { const f0 = await p.$eval('[data-k="atb-break"]', (e) => e.dataset.front).catch(() => ''); await p.screenshot({ path: `${SHOTS}/atb-r50-break-844.png` }); await p.waitForTimeout(2100);
-    const f1 = await p.$eval('[data-k="atb-break"]', (e) => e.dataset.front).catch(() => '');
-    await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(500);
-    const cov = await p.evaluate(() => { const c = document.querySelector('[data-k="atb-break"]'); const r = c.getBoundingClientRect(), el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !c.contains(el); });
-    await p.evaluate(() => globalThis.__atb.close()); await p.waitForTimeout(300); await p.evaluate(() => { const h = globalThis.__atb.S.heroes[0]; h.ch = 2; h.atb = 1; }); await p.waitForTimeout(200);
-    await p.click('[data-k="atb-break"]'); await p.waitForTimeout(250);
-    const r = await p.evaluate(() => ({ cell: globalThis.__atb.S.cells[0]?.broken, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '', slow: document.querySelector('[data-k="atb-stage"]').classList.contains('slowmo') }));
-    await p.screenshot({ path: `${SHOTS}/atb-r50-shieldbreak-844.png` });
-    ok('요청 #50 · #101 실드 깨기 판 = 처음 2초 카드 위 → 뒤(카드에 가려짐) · 누르면 스킬 2 로 맞는 속성 칸 깸 · 컷인 · 슬로 모션', f0 === '1' && f1 === '0' && cov && r.cell === true && /의 /.test(r.eye) /* 📜 #80 */ && r.slow, JSON.stringify({ f0, f1, cov, ...r })); }
+  { const none = !(await p.$('[data-k="atb-break"]')); await p.evaluate(() => { const h = globalThis.__atb.S.heroes[0]; h.ch = 2; h.atb = 1; }); await p.waitForTimeout(200);
+    await p.screenshot({ path: `${SHOTS}/atb-r102-break-844.png` });
+    await p.click('[data-k="atb-break"]', { force: true }); await p.waitForTimeout(250);
+    const r = await p.evaluate(() => ({ cell: globalThis.__atb.S.cells[0]?.broken, eye: document.querySelector('[data-k="atb-eye-text"]')?.textContent ?? '' }));
+    await p.screenshot({ path: `${SHOTS}/atb-r102-shieldbreak-844.png` });
+    ok('📜 #102 ④ ⑤ 실드 = 구슬 모자람 = 안 바뀜 → 구슬 2 = 「💥 스킬 2!」 단추 · 누르면 맞는 속성 칸 깸 · 컷인(스킬 2)', none && r.cell === true && /의 /.test(r.eye), JSON.stringify({ none, ...r })); }
   // △ 채점 = 틀렸다 고쳐 맞힘 · 「완주!」 · △ 소리 = ink (× 소리 없음) · 📜 요청 #23 효과음
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { globalThis.__atb.pause(true); globalThis.__atb.miss(); }); await p.waitForTimeout(100);
@@ -447,8 +443,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   for (const [w, h] of [[667, 375], [1024, 768]]) {
     const q = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(600);
     await q.evaluate(() => globalThis.__atb.pause(true)); await q.click('[data-k="atb-quiz-open"]'); await q.waitForTimeout(500);
-    const r = await q.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, sub: document.querySelector('[data-k="atb-submit"]').getBoundingClientRect().bottom <= innerHeight }));
-    ok(`${w} × ${h} = 넘침 0 · 제출 단추 화면 안`, r.over <= 0 && r.sub, JSON.stringify(r)); await q.screenshot({ path: `${SHOTS}/atb-quiz-${w}.png` }); await q.close();
+    const r = await q.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, sub: document.querySelector('[data-k="atb-holdsend"]').getBoundingClientRect().bottom <= innerHeight + 1 }));
+    ok(`${w} × ${h} = 넘침 0 · 꾹 제출 띠 화면 안`, r.over <= 0 && r.sub, JSON.stringify(r)); await q.screenshot({ path: `${SHOTS}/atb-quiz-${w}.png` }); await q.close();
   }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();

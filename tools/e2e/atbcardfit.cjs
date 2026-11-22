@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
     await p.click('[data-k="atb-mode-play"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(800); await p.evaluate(() => globalThis.__atb.pause(true));
     await p.click('[data-k="atb-quiz-open"]'); await p.waitForTimeout(800);
     for (let k = 0; k < 6; k++) {
-      const r = await p.evaluate(() => { const card = document.querySelector('[data-k="atb-quiz"]'); const sub = document.querySelector('[data-k="atb-submit"]')?.getBoundingClientRect();
+      const r = await p.evaluate(() => { const card = document.querySelector('[data-k="atb-quiz"]'); const sub = document.querySelector('[data-k="atb-holdsend"]')?.getBoundingClientRect();
         const opts = [...card.querySelectorAll('button.opt, button.rune, button.chip')]; const scs = [card, ...card.querySelectorAll('*')].filter((e) => e.scrollHeight > e.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(e).overflowY));
         const bad = opts.filter((e) => { const r = e.getBoundingClientRect(); const top = document.elementFromPoint(Math.min(innerWidth - 1, r.left + r.width / 2), Math.min(innerHeight - 1, r.top + r.height / 2)); return r.bottom > innerHeight || r.right > innerWidth || (top && top !== e && !e.contains(top)); }).map((e) => e.textContent.trim().slice(0, 12));
         return { title: document.querySelector('[data-k="atb-qtitle"]')?.textContent.trim().slice(0, 40), n: opts.length, bad, scroll: scs.map((s) => `${s.className.split(' ')[0]} ${s.scrollHeight}/${s.clientHeight}`), sub: sub && [Math.round(sub.top), Math.round(sub.bottom)], vh: innerHeight }; });

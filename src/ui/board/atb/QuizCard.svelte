@@ -8,23 +8,41 @@
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
   import { questionsOf, type Run } from '../../../board/atb/quiz';
-  const { L, run, seed, title, hintOk, onsubmit, ongrab, onfill, flash = '', flashN = 0, locked = 0, lockTag = '', grading = null, onskip, auto = false }: {
+  const { L, run, seed, title, hintOk, onsubmit, ongrab, onfill, flash = '', flashN = 0, locked = 0, lockTag = '', grading = null, onskip, auto = false, help, onask, onhint }: {
     L: LessonPack; run: Run; seed: string; title: string; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
     onsubmit: (g: Given) => void; /** 손잡이 바를 누름 → 부모가 끌어 닫기를 받음 */ ongrab?: (ev: PointerEvent) => void; /** 답을 골라 제출할 수 있나 (부모 「✅ 제출」 단추) */ onfill?: (ok: boolean) => void;
     /** 방금 결과 (ok · gold · wrong · swap · shieldSwap) */ flash?: string; /** 같은 결과가 잇따라도 연출을 다시 (맞음 · 틀림 번호) */ flashN?: number;
     /** 💥 몬스터 공격에 맞아 잠긴 남은 초 */ locked?: number; lockTag?: string;
     /** 📝 채점 연출 (Y8) · 소문항 ○ △ · 누르면 건너뜀 */ grading?: { marks: boolean[]; perfect: boolean; n: number; want: number; suck: boolean } | null; onskip?: () => void; /** ⚔ 방금 자동 일반 공격 (한 줄만) */ auto?: boolean;
+    /** 🛡 #103 팀에 수호자 = ask(「💡 도와줘」 · wait = 기다림 · from = 보낸 수호자 이름 · id = 이 부탁) · 없음 = auto(「💡 힌트」 팩 힌트) */ help?: { mode: 'ask' | 'auto'; wait: boolean; from: string; id: number }; onask?: () => void; onhint?: () => void;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
-  let val = $state<Given>(null), hint = $state(''), key = $state('');
-  $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; } });
+  let val = $state<Given>(null), hint = $state(''), hintBy = $state(''), key = $state(''), gotId = -1;
+  $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; hintBy = ''; } });
+  /* 🛡 #103 수호자가 보낸 힌트 = 카드에 「🛡 ○○가 보낸 힌트」 (부탁마다 한 번) */
+  $effect(() => { const h = help; if (h?.from && q && h.id !== gotId) { gotId = h.id; hint = hintOf(q); hintBy = h.from; } });
   /** 조각 상태: 끝낸 소문항 = 첫 시도 맞음 full · 고쳐 맞힘 half · 아직 = empty (채점 중 = 모두 끝낸 것) */
   const done = $derived(grading ? qs.length : run.k);
   const shardOf = (i: number) => { if (i >= done) return 'empty'; const g = run.gains?.[i] ?? (run.marks[i] === false ? 0.5 : 1); return g >= 1 ? 'full' : g > 0 ? 'half' : 'zero'; }; // 📜 요청 #49 꽉(1) · 반(½) · 빈(0)
   const can = $derived(!!q && filled(q, val) && !locked && !grading);
   $effect(() => { onfill?.(can); });
-  /** ✅ 제출 (부모 아래 가운데 단추) */
+  /** ✅ 제출 (e2e · 꾹 제출이 부름) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
+  // 📜 #102 ② 제출 단추 없음 = 보기를 0.5초 꾹 → 금빛이 차오르면 고르고 바로 제출 · 짧게 = 고르기만 · 여러 개 고르기 · 숫자판 = 아래 「⏎ 꾹」 띠
+  const HOLD = 500;
+  let holdEl: HTMLElement | null = null, holdT: ReturnType<typeof setTimeout> | undefined, eatClick = false, barHold = $state(false), barT: ReturnType<typeof setTimeout> | undefined;
+  const holdOff = () => { clearTimeout(holdT); holdEl?.classList.remove('holding'); holdEl = null; };
+  function holdDown(e: PointerEvent) {
+    if (locked || grading || !oneTap) return; const t = (e.target as Element | null)?.closest('button, [role="button"], [role="radio"], [role="checkbox"], label') as HTMLElement | null;
+    if (!t || !bodyEl?.contains(t) || t.closest('.more, .hint') || (t as HTMLButtonElement).disabled) return;
+    holdOff(); holdEl = t; t.classList.add('holding');
+    holdT = setTimeout(() => { const el = holdEl; holdOff(); if (!el) return; el.click(); eatClick = true; setTimeout(() => { send(); try { navigator.vibrate?.(20); } catch { /* 무시 */ } }, 30); }, HOLD);
+  }
+  function eat(e: MouseEvent) { if (eatClick) { eatClick = false; e.stopPropagation(); e.preventDefault(); } }
+  function barDown(e: PointerEvent) { e.preventDefault(); if (!can) return; barHold = true; clearTimeout(barT); barT = setTimeout(() => { barHold = false; send(); try { navigator.vibrate?.(20); } catch { /* 무시 */ } }, HOLD); }
+  const barUp = () => { clearTimeout(barT); barHold = false; };
+  /** 보기 하나로 끝나는 문제 = 보기 꾹 · 아니면(여러 개 · 숫자 · 식) = 아래 띠 */
+  const oneTap = $derived(!!q && ((q as { type?: string }).type === 'choice' || (q as { type?: string }).type === 'ox'));
   const fx = $derived(flash === 'ok' || flash === 'gold' ? 'good' : flash === 'wrong' || flash === 'swap' ? 'bad' : '');
   /** 📜 #89 제목 = 「문제 2 (1) · 1/2」 만 (차시 · 학습지 글은 뺌) */
   const shortTitle = $derived(title.replace(/^\s*\d+차시\s*학습지\s*·\s*/, ''));
@@ -49,12 +67,13 @@
     <!-- ⚡ 충전 미리 보기 (📜 요청 #31 · 푸는 게 곧 충전): 소문항 수만큼 기력 조각 · 맞히면 켜짐(첫 시도 = 꽉 · 고쳐 맞힘 = 반) · 퍼펙트 +3 / 고치면 +2 -->
     <span class="shards" class:gather={!!grading?.suck} data-k="atb-shards" aria-label="충전 조각 {done}/{qs.length}">{#each qs as _, i (i)}{@const st = shardOf(i)}<i class="sh {st}" data-st={st}>⚡</i>{/each}</span>
     {#if run.clean}<b class="cpv gold" data-k="atb-chgpv">✨ 퍼펙트 +1</b>{/if}
-    <button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) hint = hintOf(q); }}>💡 수호자에게 묻기</button>
+    {#if help?.mode === 'ask'}<button type="button" class="lnk" class:wait={help.wait} data-k="atb-help" disabled={!hintOk || !q || !!hint || help.wait} onclick={() => onask?.()}>{help.wait ? '⏳ 수호자 기다리는 중' : '💡 도와줘'}</button>{:else}<button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) { hint = hintOf(q); onhint?.(); } }}>💡 힌트</button>{/if}
   </header>
-  <div class="body" bind:this={bodyEl} onscroll={measure}>
+  <div class="body" bind:this={bodyEl} onscroll={measure} onpointerdown={holdDown} onpointerup={holdOff} onpointercancel={holdOff} onpointerleave={holdOff} onclickcapture={eat} role="presentation">
     {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
-    {#if hint}<p class="hint" role="status">💡 {hint}</p>{/if}
+    {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}💡 {hint}</p>{/if}
   </div>
+  {#if !grading && !locked}<button type="button" class="holdsend" class:on={can} class:held={barHold} disabled={!can} data-k="atb-holdsend" onpointerdown={barDown} onpointerup={barUp} onpointerleave={barUp} onpointercancel={barUp} oncontextmenu={(e) => e.preventDefault()}>{#if oneTap}보기를 <b>꾹</b> = 제출{:else}⏎ <b>꾹</b> = 제출{/if}</button>{/if}
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
   {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
@@ -179,4 +198,18 @@
   .body :global(.opts.grid .opt svg text), .body :global(.chips.figs .chip svg text) { font-weight: 800; }
   .body :global(.opts.grid), .body :global(.chips.figs) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   @media (max-height: 430px) { .body :global(.opts.grid .opt), .body :global(.chips.figs .chip) { padding: 2px; } }
+  /* ── 📜 #102 ② 꾹 제출 (아래 단추 줄이 카드 밖 = 아래 여백 줄임) ── */
+  .qc { padding-bottom: 8px; }
+  .body :global(.holding) { position: relative; overflow: hidden; }
+  .body :global(.holding)::before { content: ''; position: absolute; inset: 0; z-index: 0; background: linear-gradient(90deg, #ffe29a, #f5b84a); transform-origin: 0 50%; animation: holdfill 0.5s linear forwards; pointer-events: none; opacity: 0.85; }
+  @keyframes holdfill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .holdsend { flex: 0 0 auto; position: relative; overflow: hidden; height: 40px; border-radius: 10px; border: 2px solid #c9b385; background: #efe4cc; color: #6b604a; font: 800 14px var(--font-plain); touch-action: none; user-select: none; -webkit-user-select: none; }
+  .holdsend.on { border-color: #1d1a14; color: #2a1a04; background: #fff6dc; }
+  .holdsend.held::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #ffe29a, #f5b84a); transform-origin: 0 50%; animation: holdfill 0.5s linear forwards; z-index: 0; }
+  .holdsend b { position: relative; }
+  @media (prefers-reduced-motion: reduce) { .body :global(.holding)::before, .holdsend.held::before { animation-duration: 0.01s; } }
+  /* ── 🛡 #103 도와줘 · 수호자 힌트 ── */
+  .lnk.wait { opacity: 1; color: #6b5a3a; }
+  .hint.gd { border: 2px solid #5b8fd6; background: #eaf2ff; }
+  .hint .from { display: block; font: 900 14px var(--font-plain); color: #2b4f8a; margin-bottom: 2px; }
 </style>

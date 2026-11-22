@@ -33,7 +33,7 @@ export function botHeroes(no: number, taken: number[], free: number[], n: number
 export function startAtb(S: Store, L: LessonPack, p: Post, seed = Math.floor(Math.random() * 2 ** 31)): AtbMeta {
   const ms = membersOf(p), used = new Set(ms.map((m) => m.hero));
   const free = HEROES.map((h) => h.id).filter((h) => !used.has(h));
-  const slots: AtbSlot[] = ms.map((m) => { const g = (m as { g?: Grow }).g; return { uid: m.uid, cls: m.cls, num: m.num, hero: g?.h ?? m.hero, lv: g?.lv ?? 1, enh: g?.enh ?? 0, tier: g?.tier ?? 1, ...(g?.fx ? { fx: g.fx } : {}), ...(g?.awk ? { awk: true } : {}), nick: m.nick }; });
+  const slots: AtbSlot[] = ms.map((m) => { const g = (m as { g?: Grow }).g; return { uid: m.uid, cls: m.cls, num: m.num, hero: g?.h ?? m.hero, lv: g?.lv ?? 1, enh: g?.enh ?? 0, tier: g?.tier ?? 1, ...(g?.fx ? { fx: g.fx } : {}), ...(g?.awk ? { awk: true } : {}), nick: m.nick, ...(m.role === 'g' ? { gd: true } : {}) }; }); /* 🛡 #103 수호자 표시 */
   for (const h of botHeroes(L.no, slots.map((x) => x.hero), free, MAX - slots.length)) slots.push({ bot: 'normal', hero: h });
   const meta: AtbMeta = { v: 1, pid: p.pid, lid: L.id, no: L.no, diff: 'normal', seed, t0: S.now() + 2000, slots };
   S.set(`${ATB}/${p.pid}/meta`, meta);
