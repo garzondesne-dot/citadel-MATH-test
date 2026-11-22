@@ -502,6 +502,97 @@
    "names": [
     "진리의 심판관"
    ]
+  },
+  "fn5-14": {
+   "src": "art/fn5/fn5-14-v1.webp",
+   "from": [
+    "fn5-14-src.png",
+    "fn5-14-src.png",
+    "fn5-14-src.png"
+   ],
+   "names": [
+    "짝 잃은 열쇠",
+    "정의역 문지기",
+    "치역 그릇 정령"
+   ],
+   "cell": 352,
+   "rows": 3,
+   "cols": 5,
+   "hash": "65e292fb0948"
+  },
+  "fn5-15": {
+   "src": "art/fn5/fn5-15-v1.webp",
+   "from": [
+    "fn5-15-src.png",
+    "fn5-15-src.png",
+    "fn5-15-src.png",
+    "fn5-15-src.png"
+   ],
+   "names": [
+    "수평선 박쥐",
+    "대각선 골렘",
+    "쌍둥이 뿔 늑대",
+    "짝꿍 올빼미"
+   ],
+   "cell": 288,
+   "rows": 4,
+   "cols": 5,
+   "hash": "970f782bdb8c"
+  },
+  "fn5-16": {
+   "src": "art/fn5/fn5-16-v1.webp",
+   "from": [
+    "fn5-16-src.png",
+    "fn5-16-src.png",
+    "fn5-16-src.png",
+    "fn5-16-src.png"
+   ],
+   "names": [
+    "톱니 기계 병정 첫째",
+    "톱니 기계 병정 둘째",
+    "합성 골렘",
+    "순서 뒤바뀐 컨베이어 미믹"
+   ],
+   "cell": 312,
+   "rows": 4,
+   "cols": 5,
+   "hash": "c13323f88592"
+  },
+  "fn5-17": {
+   "src": "art/fn5/fn5-17-v1.webp",
+   "from": [
+    "fn5-17-src.png",
+    "fn5-17-src.png",
+    "fn5-17-src.png"
+   ],
+   "names": [
+    "y=x 대칭 석상",
+    "되감는 시계 정령",
+    "뒤집힌 화살 사수"
+   ],
+   "cell": 352,
+   "rows": 3,
+   "cols": 5,
+   "hash": "a8e5f2fcdb02"
+  },
+  "fn5-boss": {
+   "src": "art/fn5/fn5-boss-v1.webp",
+   "from": [
+    "fn5-boss-src.png",
+    "fn5-boss-src.png",
+    "fn5-boss-src.png",
+    "fn5-boss-src.png"
+   ],
+   "names": [
+    "대응의 사슬 군주",
+    "그래프 용",
+    "합성의 대기관",
+    "역함수의 거울 군주"
+   ],
+   "cell": 296,
+   "rows": 4,
+   "cols": 5,
+   "hash": "36abe9b4eb12"
   }
  },
  "dungeons": {
