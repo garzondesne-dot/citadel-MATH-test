@@ -28,8 +28,8 @@
   const stars = $derived(mine ? atbStars(win, mine.log.first) : 0), starHint = $derived(mine ? nextStarHint(win, mine.log.first) : ''); // ⭐ 📜 #140-2 저장 stars 와 같은 함수
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(guard ? [{ t: '팀 도움', g: guard }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
-  const STEPS = [1, 3, 5] as const, MEDAL = ['red', 'silver', 'gold'] as const;
-  const nextStep = $derived(STEPS.find((s) => mastery < s) ?? 5);
+  const STEPS = [1, 2, 3] as const, MEDAL = ['red', 'silver', 'gold'] as const; // 🏅 📜 #143 선생님 「숙련 횟수 줄여 줘 1 2 3회」 (전 1 · 3 · 5)
+  const nextStep = $derived(STEPS.find((s) => mastery < s) ?? STEPS[STEPS.length - 1]);
   // 🏅 내 활약 자세히 (요청 #24 ⑦ 내용 그대로 · 줄이지 않음)
   const deeds = $derived.by(() => { const g = mine?.log; if (!g) return []; const M = missionOf(S, me); return [`🎯 임무 ${M.txt} ${M.done ? `${M.got}/${M.need} ✔ 완수` : M.chance ? `${M.got}/${M.need}` : '— (기회 없음)'}`, g.shields && `🛡 실드 ${g.shields}칸 파괴`, g.perfect && `✨ 퍼펙트 ${g.perfect}번`, g.blocks && `🛡 막기 ${g.blocks}번`, g.rescues && `💚 구조 ${g.rescues}번`, g.heals && `💚 힐 ${g.heals}번`, g.covers && `🛡 엄호 ${g.covers}번`, g.boosts && `✨ 격려 ${g.boosts}번`, g.revives && `💖 부활 ${g.revives}번`, g.ult && `🌟 각성 ${g.ult}번`, g.dmg && `💥 피해 ${g.dmg}`, `📜 맞힌 소문항 ${right}개`, g.sheets?.length && `📄 ${no}차시 학습지 문제 ${g.sheets.join(' · ')}`].filter(Boolean) as string[]; });
   /** 용사 칸 = 대표 활약 한 줄 (실드 → 퍼펙트 → 힐 → 엄호 → 부활 → 격려 → 각성 → 피해) */

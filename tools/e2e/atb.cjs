@@ -384,6 +384,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]');
   await p.waitForSelector('[data-k="atb-result"]', { timeout: 150000 });
   const rs = await p.textContent('[data-k="atb-result"]');
+  ok('📜 #143 숙련 메달 = 1판 · 2판 · 3판', (await p.$$eval('[data-k="atb-medals"] .md b', (es) => es.map((e) => e.textContent).join(','))) === '1판,2판,3판');
   ok('⑤ 봇 4 관전 → 결과 = 💎 줄 · 합계 · 숙련 · 단추 3', /맞힌 소문항/.test(rs) && /합계/.test(rs) && /숙련/.test(rs) && (await p.$$eval('[data-k="atb-result"] .btns .b', (x) => x.length)) === 3, rs.replace(/\s+/g, ' ').slice(0, 90));
   await p.screenshot({ path: `${SHOTS}/atb-result-844.png` });
   ok('⑤ 결과 = 양피지 · 단추가 화면 안', await p.evaluate(() => [...document.querySelectorAll('[data-k="atb-result"] .paper, [data-k="atb-result"] .btns .b')].every((x) => { const r = x.getBoundingClientRect(); return r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; })));
