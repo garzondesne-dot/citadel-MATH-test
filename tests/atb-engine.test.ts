@@ -75,7 +75,8 @@ describe('ATB 엔진', () => {
     const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok'); expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.3));
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
     S.heroes[0]!.ch = 1; full(S, 0); expect(useSkill(S, 0, 'equip')).toBe(true); expect(S.cells.every((c) => !c.broken)).toBe(true); // 스킬 1 = 못 깸
-    S.heroes[0]!.ch = 2; full(S, 0); expect(canBreak(S, 0)).toBe('own'); expect(useSkill(S, 0, 'tier4')).toBe(true); // 로안 = 무기 = 약점
+    S.bossHp = 500; const hp2 = S.bossHp; S.heroes[0]!.ch = 2; full(S, 0); expect(canBreak(S, 0)).toBe('own'); expect(useSkill(S, 0, 'tier4')).toBe(true); // 로안 = 무기 = 약점
+    { const d = hp2 - S.bossHp, full1 = Math.round(T.skillBase * S.heroes[0]!.s.skillMul); expect(d).toBeGreaterThanOrEqual(Math.round(full1 * 0.3)); expect(d).toBeLessThan(full1); } // 📜 #101 칸 + 장착 스킬 1번 피해(실드 중 감소 · 관통 속성이면 덜 깎임)
     expect(S.cells.filter((c) => c.broken).map((c) => c.fam)).toEqual(['arms']); expect(S.heroes[0]!.ch).toBe(0); expect(S.heroes[0]!.log.brk ?? 0).toBe(0);
   });
 
@@ -88,7 +89,7 @@ describe('ATB 엔진', () => {
   it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 = 승리', () => {
     const S = fresh(['누아', '루멘']); S.bossHp = 200; full(S, 0); attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
     S.cells.forEach((c, i) => { if (i > 0) c.broken = true; }); S.cells[0]!.fam = S.heroes[0]!.s.fam; S.heroes[0]!.ch = 2; full(S, 0); breakShield(S, 0);
-    expect(S.weakUntil).toBeCloseTo(S.t + 12); const bt = S.bossT; tick(S, 5); expect(S.bossT).toBe(bt);
+    expect(S.weakUntil).toBeGreaterThanOrEqual(S.t + 12 - 1e-6); /* + 약점 노출(누아 속성) 덧 */ const bt = S.bossT; tick(S, 5); expect(S.bossT).toBe(bt);
     S.heroes[0]!.atb = 0; tick(S, 1); expect(S.heroes[0]!.atb).toBeCloseTo(2 / S.heroes[0]!.s.atbSec, 3);
     S.bossHp = 10; full(S, 0); attack(S, 0, 'ok'); expect(S.end).toMatchObject({ win: true });
   });

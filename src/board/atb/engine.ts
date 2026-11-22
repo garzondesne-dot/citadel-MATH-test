@@ -251,7 +251,7 @@ export function breakShield(S: State, who: number): boolean {
   if (how === 'own') h.ch -= T.cost.tier4; else { h.tickets -= T.shieldHelpRuns; S.rec.helpBrk = (S.rec.helpBrk ?? 0) + 1; } S.rec.skills.shield = (S.rec.skills.shield ?? 0) + 1;
   const cells: number[] = [], weakFam = S.boss.weak.includes(h.s.fam);
   const take = (c: Cell | undefined) => { if (!c) return; c.broken = true; c.by = who; cells.push(S.cells.indexOf(c)); S.lastBrk = S.cells.indexOf(c); if (S.refrozen === S.lastBrk) S.refrozen = null; };
-  if (how === 'own') take(S.cells.find((c) => !c.broken && c.fam === h.s.fam)); // 📜 #101 맞는 속성 칸 1칸 (속성 브레이크 = 2칸 없앰)
+  if (how === 'own') { const d = famHit(S, h, T.skillBase * h.s.skillMul * T.ratio.equip); h.log.dmg += d; if (S.end) return true; take(S.cells.find((c) => !c.broken && c.fam === h.s.fam)); } // 📜 #101 맞는 속성 칸 1칸 + 장착 스킬 1번(×1) 피해 (칸 깨기 전 = 실드 중 ×0.3 그대로) · 속성 브레이크 = 2칸 없앰
   else take(S.cells.find((c) => orphanCell(S, c)));
   h.log.shields += cells.length; void weakFam; spend(h); /* 📜 #101 속성 브레이크 공적 셈 없앰 */ // 💥 속성 브레이크 셈 (요청 #51 공적)
   if (S.breathWarn != null) { S.breathWarn = null; S.breathNext = S.t + breathEvery(S); push(S, { k: 'sig', t: S.t, what: 'breathCut', who }); } // 숨 고르기 예고 중 실드 깨면 끊김
@@ -445,7 +445,7 @@ export function skillPeek(S: State, who: number, k: SkillK): Peek {
     name = '🌟 각성'; line = `💥 약 ${estHit(S, base * T.ratio.awk)} · 1번`; gold = wk;
     desc = `큰 피해 + ${R === 'dealer' ? `약점 시간 +${T.awk.dealerWeak}초` : R === 'tank' ? `팀 받는 피해 −${Math.round(T.awk.tankCut * 100)}%` : R === 'healer' ? `큰 힐 +${Math.round(T.awk.healerBig * 100)}%p` : `팀 ATB +${Math.round(T.awk.supportAtb * 100)}%`}`; per = '판당 1번';
   } else if (k === 'revive') { name = '💖 부활'; line = `💖 부활 HP ${Math.round(T.reviveHp * 100)}%`; desc = `쓰러진 친구를 체력 ${Math.round(T.reviveHp * 100)}%로 살림`; per = `이번 판 ${S.rec.revives}번 살림 · 다음 ⚡${costOf(h, 'revive', S) + T.revive2.step}`; }
-  else if (k === 'tier4') { name = '스킬 2'; const cb = canBreak(S, who); line = cb ? '💥 실드 1칸 깸' : `💥 약 ${estHit(S, base * T.ratio.tier4)}`; desc = cb === 'help' ? '📜 도움표로 팀에 없는 속성 칸 1칸' : cb ? '맞는 속성 실드 칸 1칸' : S.shieldUp ? '속성이 안 맞으면 피해만(실드 중 ×0.3)' : `장착 스킬 ×${T.ratio.tier4}`; } /* 📜 #101 */
+  else if (k === 'tier4') { name = '스킬 2'; const cb = canBreak(S, who); line = cb === 'own' ? `💥 실드 1칸 + 약 ${estHit(S, base * T.ratio.equip)}` : cb ? '💥 실드 1칸 깸' : `💥 약 ${estHit(S, base * T.ratio.tier4)}`; desc = cb === 'help' ? '📜 도움표로 팀에 없는 속성 칸 1칸' : cb ? '맞는 속성 실드 칸 1칸' : S.shieldUp ? '속성이 안 맞으면 피해만(실드 중 ×0.3)' : `장착 스킬 ×${T.ratio.tier4}`; } /* 📜 #101 */
   if ((k === 'equip' && !canBreak(S, who)) || k === 'awk') { const X = ATTR_FX_TXT[fxOfAttr(h.s.attr)]; desc += ` · ${X.emo} ${X.name}: ${X.desc}`; } // 📜 요청 #36′
   const why = S.end ? '판 끝' : h.down ? '쓰러짐' : S.t < h.stunUntil ? '묶임 · 기절' : (k === 'aura' && h.auraUsed) || (k === 'awk' && h.awkUsed) ? '이번 판에 이미 씀' : (k === 'role' && R === 'healer') || k === 'heal' ? (alive(S).some((x) => x.hp < x.s.maxHp) ? '' : '다친 친구 없음') || (h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '') : k === 'revive' && S.revives <= 0 ? '팀 부활 다 씀' : h.ch < cost ? `⚡ ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '';
   return { line, gold, name, desc, cost, per, why };
