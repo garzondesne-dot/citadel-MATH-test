@@ -376,8 +376,9 @@
   /** 📜 #102 ⑦ 실드 칸 = atb-shield-slots (5계열 × 3단계: 멀쩡 · 금 감 · 깨짐) */
   const SLOT_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-slots-v1.webp`, FAM_X: Record<Fam, number> = { arms: 0, flame: 25, nature: 50, wisdom: 75, mystic: 100 };
   /** 📜 #102 ⑥ 홀리 방패 = rage-barrier 반구(파티 전체) + aura-guardshield 한 번(발동한 용사 위) */
-  const HOLY_URL = `${import.meta.env.BASE_URL}art/aura-guardshield-v1.webp`;
   let holyFx = $state<{ who: number; n: number } | null>(null);
+  /** 🛡 📜 #146 홀리 반구 = 석화 동안 남음 (엔진 시각 · 맞기 직전 발동이라 막음이 곧바로 와도 반구가 바로 사라지지 않게) */
+  let holyUntil = $state(0), holyAt = 0;
   const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
   let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter' | 'cracked'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
   let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
@@ -579,7 +580,7 @@
     else if (e.k === 'cap') { if (e.at === 'warn') { const n = Date.now(); bossSay = { t: bossLine(S.boss.no, 'flee') ?? FLEE_LINE, k: 'flee', n }; setTimeout(() => { if (bossSay?.n === n) bossSay = null; }, 4000); sfx('mon-appear', 0.5); } else { big(`⏳ 1분 뒤 ${S.boss.name}${iga(S.boss.name)} 도망쳐요!`, 'note', 2200); sfx('mon-appear', 0.7); } } /* 💨 #108 7:00 = 보스 말풍선 · 9:00 = 도망 예고 */
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); } // 📜 #92 팀 부활 횟수 없음 → 💖 n → m 판 없앰
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
-    else if (e.k === 'aura') { const n = Date.now(); holyFx = { who: e.who, n }; if (canFlash('holy')) { sflash = n; setTimeout(() => { if (sflash === n) sflash = 0; }, 160); } /* 📜 #131 ② 하얀 번쩍 0.15초 */ barrierFx = n; setTimeout(() => { if (holyFx?.n === n) holyFx = null; }, 1300); setTimeout(() => { if (barrierFx === n) barrierFx = 0; }, 2400); big(`🛡 홀리 방패! ${whoOf(e.who)} · 보스 ${e.stone}초 굳음`, 'weak', 1800); sfx('holy-on', 0.8); } /* 📜 #102 ⑥ 자동 홀리 = 반구 + 방패 한 번 + 위 띠 */
+    else if (e.k === 'aura') { const n = Date.now(); holyFx = { who: e.who, n }; holyAt = n; holyUntil = S.t + e.stone; if (canFlash('holy')) { sflash = n; setTimeout(() => { if (sflash === n) sflash = 0; }, 160); } /* 📜 #131 ② 하얀 번쩍 0.15초 */ barrierFx = n; setTimeout(() => { if (holyFx?.n === n) holyFx = null; }, 1300); setTimeout(() => { if (barrierFx === n) barrierFx = 0; }, 2400); big(`🛡 홀리 방패! ${whoOf(e.who)} · 보스 ${e.stone}초 굳음`, 'weak', 1800); sfx('holy-on', 0.8); } /* 📜 #102 ⑥ 자동 홀리 = 반구 + 방패 한 번 + 위 띠 */
     else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 CHEER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '격려!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; void EN; void col; pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); if (e.who === me) { slowmo(300); sfx('block', 1); } } /* 📜 #102 ⑤ 역할 반응 = 그 자리 연출(막기 호 · 끊기 번쩍) · 눈빛 컷인 없음 */ /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
@@ -631,10 +632,10 @@
   const posOf = (id: number) => { const k = Math.max(0, order.indexOf(id)), r = ROWV[k] ?? ROWV[0]!, o = OPEN2[k]; return open && o ? { x: o.x, y: o.y, s: 0.5 } : r; };
   const base = $derived(Math.max(1, (H * 0.27) / 64)); // 맨 앞 용사 키 = 화면 높이 27%
   // 🛡 📜 요청 #76 ③ 결계 돔 = 오라 방패(S.guard) · 서포터 결계(반응 막기) 가 걸린 동안 파티 전체를 덮는 반투명 돔 하나 · 막는 순간 파문 + 「🛡 결계로 막음!」 → 조각
-  const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
+  const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard || S.t < holyUntil ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
   let domeFx = $state<{ k: 'aura' | 'barrier'; n: number } | null>(null), barrierArmed = false;
   $effect(() => { if (domeKind === 'barrier') barrierArmed = true; });
-  function domeBlock(k: 'aura' | 'barrier') { const n = Date.now(); domeFx = { k, n }; big(k === 'aura' ? '🛡 홀리 방패로 막음!' : '🎵 격려! 피해 −30%', 'note', 1300); setTimeout(() => { if (domeFx?.n === n) domeFx = null; }, 1000); }
+  function domeBlock(k: 'aura' | 'barrier') { const wait = k === 'aura' ? Math.max(0, holyAt + 650 - Date.now()) : 0; if (wait) { setTimeout(() => domeBlock(k), wait); return; } /* 📜 #146 반구가 다 펼쳐진 뒤 막는 불꽃 */ const n = Date.now(); domeFx = { k, n }; big(k === 'aura' ? '🛡 홀리 방패로 막음!' : '🎵 격려! 피해 −30%', 'note', 1300); setTimeout(() => { if (domeFx?.n === n) domeFx = null; }, 1000); }
   const domeBox = $derived.by(() => {
     const ps = S.heroes.filter((h) => !h.down).map((h) => posOf(h.id)); if (!ps.length) return null;
     const hh = ((base * 0.84 * 64) / Math.max(1, H)) * 100, x0 = Math.min(...ps.map((p) => p.x)) - 8, x1 = Math.max(...ps.map((p) => p.x)) + 8, y1 = Math.max(...ps.map((p) => p.y)) + 3, y0 = Math.min(...ps.map((p) => p.y)) - hh - 8;
@@ -778,7 +779,7 @@
       {#if isWeak(h.id) && !h.down}<i class="wglow" style:--fc={FAM_COL[h.s.fam]} aria-hidden="true"></i><i class="wbadge" style:--fc={FAM_COL[h.s.fam]} style:top="{-Math.round(base * p.s * 64 * 1.02) - 40}px" data-k="atb-weak"><FamShield fam={h.s.fam} size={14} /> 약점!</i>{/if}
       {#if S.target?.includes(h.id) && tele}{#if S.boss.tele === 'gaze' && !S.aoeNext}<i class="gaze" aria-label="보스가 바라봄">👁</i>{:else}<i class="tgt" aria-label="표적"></i>{/if}{#if aimT && (h.id === me || !S.aoeNext)}<i class="aimring {tg?.cls ?? ''}" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" style:--k={ringK.toFixed(3)} data-k="atb-aimring" aria-hidden="true">{#if cntN}<b data-k="atb-aimcnt">{cntN}</b>{/if}</i>{/if}{#if !S.aoeNext}<i class="aimx" style:top="{-Math.round(base * p.s * 64 * 0.95)}px" data-k="atb-aim" aria-label="노림">⊕</i>{/if}{/if}
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
-      {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit')} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.s.enh} /></div>{/if}
+      {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit') || domeKind === 'aura'} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.s.enh} /></div>{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : !h.down && lowIds.includes(h.id) ? 'pant' : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
       {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64 * 0.9)} boss z={19} />{/key}{/if}
       {#if shatter?.ids.includes(h.id)}<i class="ringx" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" data-k="atb-ringx" aria-hidden="true">{#each [0, 1, 2, 3, 4, 5] as j}<i style:--r="{j * 60}deg"></i>{/each}</i>{/if}
@@ -796,7 +797,7 @@
     </div>
   {/each}
 
-  {#if holyFx}{@const hp = posOf(holyFx.who)}{#key holyFx.n}<i class="holy1" style:left="{hp.x}%" style:top="{hp.y}%" style:--hs="{Math.round(H * 0.32)}px" style:background-image="url({HOLY_URL})" data-k="atb-holy" aria-hidden="true"></i>{/key}{/if}
+  <!-- 🛡 📜 #146 발동한 용사 위 금빛 방패(aura-guardshield) 따로 그리기 없앰 = 파티 덮는 금빛 반구 하나만 -->
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
   {#if bossSay}{#key bossSay.n}<p class="bsay {bossSay.k}" style:left={BX} role="status" data-k="atb-boss-say" data-say={bossSay.k}>「{bossSay.t}」</p>{/key}{/if}
   {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
@@ -881,6 +882,7 @@
   @keyframes domein { from { transform: scale(0.6); opacity: 0; } }
   @keyframes domeidle { 50% { opacity: 0.75; } }
   .dome.hit { animation: domebrk 0.9s ease-out forwards; }
+  .dome.aura.hit { animation: domehit 0.6s ease-out; } @keyframes domehit { 0% { filter: brightness(2.2); transform: scale(1.04); } 100% { filter: none; transform: none; } } /* 📜 #146 홀리 = 막아도 석화 동안 남음 (깨지지 않음) */
   @keyframes domebrk { 0% { opacity: 1; filter: brightness(1.8); } 35% { opacity: 1; filter: brightness(1.2); } 100% { opacity: 0; transform: scale(1.06); } }
   .dome .rip { position: absolute; inset: 10%; border-radius: inherit; border: 3px solid #fff; animation: rip 0.5s ease-out forwards; }
   @keyframes rip { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
@@ -1249,8 +1251,6 @@
   .stage.q .foldbar { left: 27.5%; }
   /* ── 📜 #102 ⑥ ⑦ 실드 칸 그림 · 홀리 방패 ── */
   .cell2 .slot { display: block; width: 40px; height: 40px; background-repeat: no-repeat; background-size: 500% 300%; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #000); }
-  .holy1 { position: absolute; z-index: 30; width: var(--hs); height: var(--hs); margin: calc(var(--hs) * -1) 0 0 calc(var(--hs) * -0.5); background-repeat: no-repeat; background-size: 1200% 100%; image-rendering: pixelated; pointer-events: none; animation: holy12 1.2s steps(11, jump-none) 1 forwards; }
-  @keyframes holy12 { from { background-position-x: 0%; } to { background-position-x: 100%; } }
   /* ── 📜 #102 ⑩ 글자 최소 14px (읽는 글 · 숫자 막대 안의 작은 수치 = 12px 예외) ── */
   .stage .tag > b, .stage .tag > b .nm { font-size: 14px; } .stage .tag > b .nm { max-width: 72px; }
   .stage .tag { left: -50px; width: 100px; }
@@ -1392,7 +1392,8 @@
   .b.morph .tgb { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: 22px; line-height: 1; filter: drop-shadow(0 0 3px #000); } /* 막을 공격 아이콘 = 예고 칸과 짝 */
   .b.morph { position: relative; }
   /* 🛡 📜 #131 ② 홀리 방패 = 파티 4명을 덮는 금빛 반구 하나 (바닥 막 없음) · 큰 방패 문양 → 반구로 펼쳐짐 · 막으면 튕기는 불꽃 */
-  .dome.aura { --dc: #ffd84a; border-width: 3px; border-color: #ffe9a0; background: radial-gradient(ellipse at 50% 90%, #ffd84a22 25%, #ffd84a3a 70%, #fff3b866 100%); box-shadow: 0 0 22px #ffd84aaa, inset 0 0 30px #ffd84a77; }
+  .dome.aura { --dc: #ffd84a; border: 4px solid #fff2b8; background: radial-gradient(ellipse at 50% 92%, #ffd84a3a 20%, #ffd84a66 68%, #fff3b8aa 100%); animation: domeidle2 2.4s ease-in-out infinite; box-shadow: 0 0 22px #ffd84aaa, inset 0 0 30px #ffd84a77; }
+  @keyframes domeidle2 { 50% { box-shadow: 0 0 34px #ffd84add, inset 0 0 40px #ffd84aaa; } } /* 📜 #146 홀리 = 흐려지지 않고 빛만 숨쉼 · 막은 뒤 다시 펼쳐지는 깜박임 없음 */
   .dome.born { animation: domeborn 0.55s cubic-bezier(.2,.9,.3,1.2) both, domeidle 2.4s ease-in-out 0.55s infinite; transform-origin: 50% 100%; } @keyframes domeborn { 0% { transform: scale(0.15); opacity: 0; } 35% { opacity: 1; } 100% { transform: scale(1); } }
   .dome .hemb { position: absolute; left: 50%; top: 46%; width: 20%; aspect-ratio: 0.85; transform: translate(-50%, -50%); background: linear-gradient(#fffbe6 0 0) 50% 42% / 14% 62% no-repeat, linear-gradient(#fffbe6 0 0) 50% 34% / 54% 12% no-repeat, radial-gradient(circle at 35% 25%, #fffbe6 0 8%, #0000 30%), linear-gradient(#ffe98a, #f0b020 50%, #a8700e); clip-path: polygon(50% 0, 100% 14%, 92% 62%, 50% 100%, 8% 62%, 0 14%); filter: drop-shadow(0 0 10px #fff); animation: hemb 0.7s ease-out forwards; }
   @keyframes hemb { 0% { scale: 0.2; opacity: 0; } 30% { scale: 1.2; opacity: 0.95; } 60% { scale: 1; opacity: 0.9; } 100% { scale: 3.2; opacity: 0; } }
