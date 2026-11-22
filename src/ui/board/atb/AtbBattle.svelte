@@ -187,9 +187,9 @@
   function fold() { if (grading) { finishGrade(); return; } open = false; }
   /** 📜 #90 ① 빈 곳 한 번 누름 = 접힘 (카드 · 단추 · 용사 · 보스 · 스킬 메뉴 밖) */
   function tapEmpty(e: MouseEvent) { if (!open || !run || phase !== 'fight' || dragging) return; const t = e.target as Element | null; if (!t || t.closest('button, a, input, textarea, select, label, [role="dialog"], [role="tooltip"], .card, .hero, .boss, nav, .tr, .foldbar, .ring, .pick')) return; if (skOpen) { skOpen = false; return; } if (over || reactNow) return; /* 📜 #101 ⑧ 빈 곳만 · 스킬 메뉴가 열려 있으면 메뉴만 닫음 · 대상 고르기 · 반응 단추 중엔 안 접힘 */ fold(); }
-  /** 📜 #90 ④ ⚡ 0 이 되는 순간 = 카드 다 올라옴(없으면 다음 문제) · 덧붙임 = 가득(4칸)에 닿는 순간 접힘 · 같은 가득 참에서 또 접지 않음 · 컷인 · 채점 · 구슬 날아가는 중 · 정찰이면 끝난 뒤 */
+  /** 📜 #114 ① 충전 0 자동 열림 없앰(문제 풀이 단추만 금빛 맥박) · 📜 #90 ④ 가득(4칸)에 닿는 순간 접힘 · 같은 가득 참에서 또 접지 않음 · 컷인 · 채점 · 구슬 날아가는 중 · 정찰이면 끝난 뒤 */
   let chWas = untrack(() => meH?.ch ?? 0), fullDone = untrack(() => (meH?.ch ?? 0) >= T.charge.max), wantUp = $state(false), wantFold = $state(false), wantAt = 0, wake = $state(0);
-  $effect(() => { const c = meH?.ch ?? 0; untrack(() => { if (c <= 0 && chWas > 0) { wantUp = true; wantFold = false; wantAt = Date.now() + 160; } if (c >= T.charge.max && chWas < T.charge.max && !fullDone) { wantFold = true; wantUp = false; fullDone = true; wantAt = Date.now() + 160; } if (c < T.charge.max) fullDone = false; chWas = c; }); });
+  $effect(() => { const c = meH?.ch ?? 0; untrack(() => { if (c >= T.charge.max && chWas < T.charge.max && !fullDone) { wantFold = true; wantUp = false; fullDone = true; wantAt = Date.now() + 160; } if (c < T.charge.max) fullDone = false; chWas = c; }); });
   $effect(() => { void wake; if (!wantUp && !wantFold) return; if ((globalThis as unknown as { __atbNoAutoQ?: boolean }).__atbNoAutoQ) { wantUp = wantFold = false; return; } /* 🧪 예전 e2e 용 끄개 */ if (cut || grading || pendOrb > 0 || dragging || phase !== 'fight' || S.end) return; const w = wantAt - Date.now(); if (w > 0) { const id = setTimeout(() => wake++, w + 10); return () => clearTimeout(id); } untrack(() => { if (wantFold) { wantFold = false; if (open && run) fold(); } if (wantUp) { wantUp = false; skOpen = false; if (!open) openQuiz(); } }); });
   function startGrade(marks: boolean[], perfect: boolean, n: number) {
     grading = { marks, perfect, n, want: perfect ? T.charge.perfect : 0, suck: false }; // n = 퍼펙트 +1 중 실제로 들어간 칸 (넘치면 0)
@@ -760,7 +760,7 @@
         {#if peek && pv[peek]}{@const P = pv[peek]!}<span class="peekc" role="tooltip" data-k="atb-peek" style:left="{peekX}px"><b>{P.name}</b><span>{P.desc}</span><span class="pl">{P.line}</span><small>⚡ {P.cost} · {P.per}</small>{#if P.why}<small class="why">지금 못 씀: {P.why}</small>{/if}</span>{/if}
         </div>
       {#if open}<div class="orbline"><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span></div>
-      {:else}<button type="button" class="b quiz main" data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
+      {:else}<button type="button" class="b quiz main" class:pulse0={(meH?.ch ?? 0) <= 0 && !S.end} data-k="atb-quiz-open" disabled={!!S.end} onclick={openQuiz}><span class="orbs" class:flash={gaugeFlash} data-k="atb-orbs" aria-label="기력 {halfTxt(meH.ch)} / {T.charge.max}">{#each Array(T.charge.max) as _, j (j)}<i class:on={j + 1 <= shownCh} class:half={j + 1 > shownCh && j < shownCh}>⚡</i>{/each}{#if shownCh >= T.charge.max}<b class="ringfx" data-k="atb-fullring" aria-hidden="true"></b>{/if}</span><img class="uic" src={fxUrl('ui-ic-quiz')} alt="" /> 문제 풀이</button>{/if}
       {#if chgPop}<b class="chpop" data-k="atb-chg-pop">{chgPop}</b>{/if}
     </nav>
   {:else}
@@ -1226,4 +1226,8 @@
   .leavebox b { display: block; font: 900 18px var(--font-plain); margin-bottom: 6px; } .leavebox p { margin: 0 0 12px; line-height: 1.4; }
   .lbtn { display: flex; gap: 8px; } .lbtn button { flex: 1; height: 48px; border-radius: 12px; font: 900 16px var(--font-plain); box-shadow: 0 3px 0 #000; }
   .lbtn .go { border: 2px solid #5a1a10; background: #d9603a; color: #fff; } .lbtn .stay { border: 2px solid #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; }
+  /* ── 📜 #114 ① 충전 0 = 「문제 풀이」 단추 금빛 맥박 (자동으로 안 열림) ── */
+  .btns .b.quiz.pulse0 { animation: q0pulse 0.9s ease-in-out infinite; }
+  @keyframes q0pulse { 0%, 100% { box-shadow: 0 3px 0 #000, 0 0 0 0 rgba(255, 210, 100, 0.9); } 50% { box-shadow: 0 3px 0 #000, 0 0 16px 6px rgba(255, 210, 100, 0.95); filter: brightness(1.12); } }
+  @media (prefers-reduced-motion: reduce) { .btns .b.quiz.pulse0 { animation: none; outline: 3px solid #ffd77a; } }
 </style>

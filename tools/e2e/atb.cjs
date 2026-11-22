@@ -32,8 +32,8 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   const cardL = await p.$eval('.card', (x) => x.getBoundingClientRect().left), bossR = await p.$eval('[data-k="atb-boss"]', (x) => x.getBoundingClientRect().right);
   { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), b = document.querySelector('[data-k="atb-boss"]').getBoundingClientRect(), h = [...document.querySelectorAll('.hero .tag')].map((e) => e.getBoundingClientRect().right); return { w: Math.round(c.width), r: Math.round(innerWidth - c.right), bossR: Math.round(b.right), cardL: Math.round(c.left), tags: Math.max(...h) <= c.left + 2 }; });
     ok('📜 #102 ② 문제 카드 = 오른쪽 45%(최소 360px) · 전투 왼쪽 55% (보스 · 용사 이름표가 카드 왼쪽)', g.r <= 1 && Math.abs(g.w - Math.max(360, 844 * 0.45)) < 3 && g.bossR <= g.cardL + 8 && g.tags, JSON.stringify(g)); }
-  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), st = document.querySelector('[data-k="atb-stage"]').getBoundingClientRect(), hs = document.querySelector('[data-k="atb-holdsend"]'), tg = document.querySelector('[data-k="atb-autoon"]'), sk = document.querySelector('[data-k="atb-skill-btn"]'); return { gap: Math.round(st.bottom - c.bottom), hold: !!hs, sub: !document.querySelector('[data-k="atb-submit"]'), tg: !!tg, sk: !!sk, top: Math.round(c.top - st.top) }; });
-    ok('📜 #102 ② 카드 = 위 ~ 아래 끝 · 제출 단추 없음(꾹 제출 띠) · 공격 자리 = 「자동 중」 · 스킬 단추 그대로', g.gap <= 2 && g.top < 20 && g.hold && g.sub && g.tg && g.sk, JSON.stringify(g)); }
+  { const g = await p.evaluate(() => { const c = document.querySelector('.card').getBoundingClientRect(), st = document.querySelector('[data-k="atb-stage"]').getBoundingClientRect(), hs = document.querySelector('[data-k="atb-submit"]'), tg = document.querySelector('[data-k="atb-autoon"]'), sk = document.querySelector('[data-k="atb-skill-btn"]'); return { gap: Math.round(st.bottom - c.bottom), hold: !!hs, sub: !!document.querySelector('.card [data-k="atb-submit"]'), tg: !!tg, sk: !!sk, top: Math.round(c.top - st.top) }; });
+    ok('📜 #114 ② 카드 = 위 ~ 아래 끝 · 카드 아래 「제출」 단추 · 공격 자리 = 「자동 중」 · 스킬 단추 그대로', g.gap <= 2 && g.top < 20 && g.hold && g.sub && g.tg && g.sk, JSON.stringify(g)); }
   const ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
   await p.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(150);
   ok('요청 #41 소문항 하나 맞힘 = 충전 +1 (바로)', (await p.evaluate(() => globalThis.__atb.S.heroes[0].ch)) === Math.min(4, ch0 + 1));
@@ -57,7 +57,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     ok('요청 #11 카드 연 채 = 자동 일반 공격(치명 없음) · 타이밍 바 안 뜸 · 「⚔ 자동 공격!」 한 줄', r.auto && r.timing === 'ok' && !(await p.$('[data-k="atb-timing"]')) && (await p.evaluate(() => globalThis.__atb.S.bossHp)) < hp1, JSON.stringify(r)); }
   await p.waitForTimeout(300);
   await p.evaluate(() => globalThis.__atb.lock()); await p.waitForTimeout(150);
-  ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && !(await p.$('[data-k="atb-holdsend"].on')));
+  ok('① 몬스터 공격에 맞음 = 문제 카드 흔들 + 잠금(제출 막힘 · 맞는 그림 자리)', !!(await p.$('.qc.hitlock [data-k="atb-qlock"] [data-k="atb-qhitpic"]')) && !(await p.$('[data-k="atb-submit"].on')));
   await p.screenshot({ path: `${SHOTS}/atb-lock-844.png` });
   await p.waitForTimeout(1300); ok('요청 #20 ① 1초 뒤 잠금 풀림', !(await p.$('[data-k="atb-qlock"]')));
   for (let i = 0; i < 3; i++) await p.evaluate(() => globalThis.__atb.miss());
@@ -66,7 +66,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.evaluate(() => globalThis.__atb.miss()); await p.waitForTimeout(100);
   ok('② 4번째 오답 = 「새 숫자 판으로 처음부터」', /새 숫자 판으로 처음부터/.test(await p.textContent('.qc .fb').catch(() => '')));
   await p.screenshot({ path: `${SHOTS}/atb-quiz-844.png` });
-  ok('② 카드 안 가로 넘침 0 · 제출 단추 보임', await p.evaluate(() => { const c = document.querySelector('.qc'); const s = document.querySelector('[data-k="atb-holdsend"]').getBoundingClientRect(); return c.scrollWidth <= c.clientWidth + 1 && s.bottom <= innerHeight; }));
+  ok('② 카드 안 가로 넘침 0 · 제출 단추 보임', await p.evaluate(() => { const c = document.querySelector('.qc'); const s = document.querySelector('[data-k="atb-submit"]').getBoundingClientRect(); return c.scrollWidth <= c.clientWidth + 1 && s.bottom <= innerHeight; }));
   await closeQ(p);
   await p.evaluate(() => { globalThis.__atb.full(); }); const ab0 = await p.$eval('[data-k="atb-attack"]', (e) => { const r = e.getBoundingClientRect(); return [r.x, r.y]; });
   await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]');
@@ -435,16 +435,16 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     ok(`요청 #90 덧 ${nm} ⚡ 가득 닿음 = 저절로 접힘 · 다시 올리면 또 안 접힘`, f3 === '1' && f4 === '0', `${f3} → ${f4}`);
     await v.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 2; }); await v.waitForTimeout(200); await v.evaluate(() => globalThis.__atb.close()); await v.waitForTimeout(300);
     await v.evaluate(() => { globalThis.__atb.S.heroes[0].ch = 0; }); await v.waitForTimeout(700);
-    const f5 = await v.evaluate(() => document.querySelector('.card')?.dataset.fold);
-    ok(`요청 #90 ④ ${nm} ⚡ 0 이 되는 순간 = 카드 저절로 다 올라옴`, f5 === '0', String(f5));
+    const f5 = await v.evaluate(() => ({ fold: document.querySelector('.card')?.dataset.fold, pulse: !!document.querySelector('[data-k="atb-quiz-open"].pulse0') }));
+    ok(`📜 #114 ① ${nm} ⚡ 0 = 카드 저절로 안 올라옴 · 「문제 풀이」 단추만 금빛 맥박`, f5.fold === '1' && f5.pulse, JSON.stringify(f5));
     await v.close();
   }
   // 다른 크기
   for (const [w, h] of [[667, 375], [1024, 768]]) {
     const q = await b.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 2 }); await q.goto(B); await q.waitForSelector('[data-k="atb-setup"]'); await q.click('[data-k="atb-start"]'); await q.waitForSelector('[data-k="atb-stage"]'); await q.waitForTimeout(600);
     await q.evaluate(() => globalThis.__atb.pause(true)); await q.click('[data-k="atb-quiz-open"]'); await q.waitForTimeout(500);
-    const r = await q.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, sub: document.querySelector('[data-k="atb-holdsend"]').getBoundingClientRect().bottom <= innerHeight + 1 }));
-    ok(`${w} × ${h} = 넘침 0 · 꾹 제출 띠 화면 안`, r.over <= 0 && r.sub, JSON.stringify(r)); await q.screenshot({ path: `${SHOTS}/atb-quiz-${w}.png` }); await q.close();
+    const r = await q.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, sub: document.querySelector('[data-k="atb-submit"]').getBoundingClientRect().bottom <= innerHeight + 1 }));
+    ok(`${w} × ${h} = 넘침 0 · 제출 단추 화면 안`, r.over <= 0 && r.sub, JSON.stringify(r)); await q.screenshot({ path: `${SHOTS}/atb-quiz-${w}.png` }); await q.close();
   }
   console.log(out.join('\n')); console.log(errs.length ? `❌ 오류 ${errs.length}\n${errs.join('\n')}` : '✅ 오류 0'); await b.close();
 })();
