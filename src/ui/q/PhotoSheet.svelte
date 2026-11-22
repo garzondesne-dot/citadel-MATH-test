@@ -139,10 +139,12 @@
     {#if trial}
       <p class="q"><b>{title}</b></p>
       <p class="hand">✍ 실제 수업에서는 학습지 서술형 칸에 <b>직접 손으로 쓴 풀이</b>를 📸 찍으면 AI 가 기준표대로 채점하고, 통과하면 🌟 진필살기가 나가요.</p>
+      <p class="noname" data-k="photo-noname">✋ 이름 칸은 빼고 풀이만 찍어요</p><!-- 🛠 #137 사진은 저장 안 하지만 AI 채점 요청에 그대로 가서 이름이 찍히지 않게 (체험판 · 🧪 · 시연도 같은 부품) -->
       <p class="muted">👩‍🏫 이 기기 체험은 사진을 받지 않아요 — 아래 단추로 「통과」 장면을 봐요.</p>
     {:else if view === 'intro'}
       <p class="q"><b>{title}</b><br />{P.ask}</p>
       {#if msg}<p class="err" role="alert">{msg}</p>{/if}
+      <p class="noname" data-k="photo-noname">✋ 이름 칸은 빼고 풀이만 찍어요</p>
       <p class="hand">✍ 학습지 서술형 칸에 <b>직접 손으로 쓴 풀이</b>만 찍어요 · 화면 · 인쇄 글은 통과 안 돼요</p>
       <ul class="tips">
         <li>📄 <b>이 숫자 그대로</b> 종이에 풀이를 처음부터 끝까지 써요</li>
@@ -153,7 +155,8 @@
       <button type="button" class="alb" disabled={!!wait || left === 0 || roomLeft === 0} onclick={() => choose(false)}>🖼 앨범에서</button>
       <p class="muted">AI 가 기준표대로 먼저 채점하고, 애매하면 선생님이 직접 확인해요. 성적에는 쓰지 않아요.</p>
     {:else if view === 'edit'}
-      <p class="muted">사진 위를 손가락으로 끌면 그 부분만 남아요 (풀이 전체가 들어가게).</p>
+      <p class="noname" data-k="photo-noname">✋ 이름 칸은 빼고 풀이만 찍어요</p>
+      <p class="muted">사진 위를 손가락으로 끌면 그 부분만 남아요 (풀이 전체가 들어가게 · 이름 칸은 밖으로).</p>
       {#if pre}<p class="err" role="alert" data-k="photo-pre">{pre}</p>{/if}
       <div class="stage" bind:this={stage}><canvas bind:this={cv} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={up}></canvas></div>
       <div class="tools"><button type="button" onclick={turn}>🔄 돌리기</button><button type="button" onclick={whole}>↺ 전체</button><button type="button" onclick={() => choose(cam)}>📷 다시 찍기</button></div>
@@ -180,6 +183,7 @@
 </Sheet>
 
 <style>
+  .noname { margin: 0; padding: 10px 12px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); border: 1px solid var(--accent); color: var(--text); font: 700 15px/1.4 var(--font); }
   .hide { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   .ph { display: flex; flex-direction: column; gap: var(--s3); padding-bottom: var(--s2); }
   .ph p { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
