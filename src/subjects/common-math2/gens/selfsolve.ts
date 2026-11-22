@@ -18,10 +18,24 @@ export function withProblem(items: Question[], prob: string): Question[] {
     return { ...q, question: `${prob}\n${mark} ${q.question}`, problem: q.problem ?? prob };
   });
 }
+/** #126 덧 (머리 소레이드 216칸 읽기): 단계 글이 앞 단계 답 · 정의를 전제하던 것
+ *   u7 ④ 「A ∩ B 의 원소는 몇씩 커지는가?」 = ② 의 A · B 정의를 넣음 · u5 👑 「x = 4 도 넣어」 = ③ 의 식을 넣음 */
+function stepFix(id: string, items: Question[]): Question[] {
+  if (id === 'u7') {
+    const m = /^(A = \{[^}]+\}), B = \{([^}]+)\} 일 때/.exec(items[1]?.question ?? '');
+    return m ? items.map((q) => (q.question === 'A ∩ B 의 원소는 몇씩 커지는가?' ? { ...q, question: `${m[1]}, B = {${m[2]}인 수} 일 때 A ∩ B 의 원소는 몇씩 커지는가?` } : q)) : items;
+  }
+  if (id === 'u5') {
+    const eq = /^(x = [^,]+), 이 식만/.exec(items[2]?.question ?? '')?.[1];
+    return eq ? items.map((q) => { const m = /^x = (\S+) 도 넣어, (.+)$/.exec(q.question ?? ''); return m ? { ...q, question: `${eq} 를 만족시키는 x 와 x = ${m[1]} 를 모두 넣어, ${m[2]}` } : q; }) : items;
+  }
+  return items;
+}
 /** 단계 묶음 고침 (생성기 이름 · 판) — 시험(정식 출력 비교)도 같은 함수로 기대값을 고침 */
 export function fixChain(key: string, items: Question[], pass: number): Question[] {
   const id = key.replace(/^set06\./, '') as (typeof UNIT)[number];
   if (key.startsWith('set06.') && (UNIT as readonly string[]).includes(id)) {
+    items = stepFix(id, items);
     const prob = items[0]?.problem ?? (pass === 0 ? (PROB[id] as (...a: number[]) => string)(...(BOOK[id] as number[])) : '');
     return prob ? withProblem(items, prob) : items;
   }

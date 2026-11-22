@@ -20,7 +20,14 @@ describe('① 7차시 문제 4 ~ 7 소레이드', () => {
       const prob = got[0]!.problem!;
       expect(prob, `${id} ${sd} 판 ${p}`).toMatch(/구하시오\.$/);
       if (p > 0) expect(prob).toBe(raw[0]!.problem);
-      got.forEach((q, i) => expect(q.question, `${id} ${sd} 판 ${p} 단계 ${i + 1}`).toBe(`${prob}\n${i === got.length - 1 ? '👑' : '①②③④⑤'[i]} ${raw[i]!.question}`));
+      got.forEach((q, i) => {
+        const head = `${prob}\n${i === got.length - 1 ? '👑' : '①②③④⑤'[i]} `;
+        expect(q.question.startsWith(head), `${id} ${sd} 판 ${p} 단계 ${i + 1}`).toBe(true);
+        const body = q.question.slice(head.length);
+        if (id === 'u7' && i === 3) expect(body).toMatch(/^A = \{\d+의 배수\}, B = \{\d+(으로|로) 나눈 나머지가 \d+인 수\} 일 때 A ∩ B 의 원소는 몇씩 커지는가\?$/);
+        else if (id === 'u5' && i === got.length - 1) expect(body).toMatch(/^x = x² \+ \d+x 를 만족시키는 x 와 x = \d+ 를 모두 넣어, A ∩ B = B 를/);
+        else expect(body).toBe(raw[i]!.question);
+      });
       expect(noQ(got), '⑤ 글 말고는 정식 그대로').toEqual(noQ(raw));
     }
   });
@@ -61,4 +68,11 @@ it('⑥ 체험판 성채 1층 · 12차시 = 혼자 풀리게 판 (q08 · q09 · 
   expect(s1).toMatch(/100 이하의 자연수 중 k 의 배수의 집합을 Aₖ 라 할 때/);
   expect(s2).toMatch(/서로소인 자연수\)로 놓았더니 m, n 이 모두 짝수가 되었다/);
   expect(s2).toMatch(/를 귀류법으로 증명/);
+});
+
+it('🧩 소레이드 모든 단계 = 앞 단계 · 학습지를 가리키는 말 없음 (위의 · 앞에서 · 앞 문제 · 「도 넣어」) · 6 · 7 · 9 · 10차시 · 판 0 ~ 3', () => {
+  const bad: string[] = [];
+  for (const [k, g] of Object.entries(CHAIN_GENS)) for (const sd of SEEDS.slice(0, 2)) for (let p = 0; p <= 3; p++)
+    g(p, makeRng('r'), sd).forEach((q, i) => { if (/위의 |앞에서|앞 문제|도 넣어/.test(q.question.split('\n').pop()!)) bad.push(`${k} 판 ${p} 단계 ${i + 1}: ${q.question.split('\n').pop()}`); });
+  expect(bad).toEqual([]);
 });
