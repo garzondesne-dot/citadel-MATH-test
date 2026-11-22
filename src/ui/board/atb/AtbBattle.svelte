@@ -298,17 +298,20 @@
   function aidNow(to: number) { skOpen = false; if (ops.aid(to)) { try { navigator.vibrate?.(60); } catch { /* 무시 */ } } }
   /** 📜 #102 ④ 상황 = 「스킬」 단추가 그 스킬 단추로 바뀜 (강조 순서 = emph) · 누르면 바로 발동 · ☰ = 메뉴 */
   const EMPH_IC: Partial<Record<SkillK, string>> = { role: '🛡', heal: '🩹', revive: '💖', tier4: '💥' };
+  /** 🎨 그림 아이콘 (ui-ic4 · atb-counter-ui · 📜 UI-FINAL 7절) */
+  const ART = (p: string) => `${import.meta.env.BASE_URL}art/board-atb/${p}.webp`;
+  const IC4: Partial<Record<SkillK, string>> = { tier4: ART('ic4/sk2'), revive: ART('ic4/revive') };
   /** 📜 UI-FINAL-1122 3절 변신 순서 = 반응 막기(탱커 · 표적 나 = 「🛡 막기!」 · 친구 = 「🛡 엄호! ○○ 지키기」) > 친구 30% 아래 회복(힐러 「💚 힐!」 · 그 밖 「🩹 응급붕대!」) > 수호자 「💡 ○○ 도와줘!」 > 「💖 부활!」 > 딜러 「✂ 끊기!」 > 약점 용사 실드 「💥 스킬 2!」 · 충전 있을 때만(도와줘 = 충전 없이) */
-  const morph = $derived.by((): { k: SkillK | 'aid'; t: string; sub: string; dk: string } | null => {
+  const morph = $derived.by((): { k: SkillK | 'aid'; t: string; sub: string; dk: string; img?: string } | null => {
     if (!meH || meH.down || over === 'timing') return null; const R = meH.s.role, ok = (k: SkillK) => slots.some((x) => x.k === k && x.ok), cost = (k: SkillK) => slots.find((x) => x.k === k)?.cost ?? 0, c = (k: SkillK) => (cost(k) ? `구슬 ${cost(k)}` : '구슬 없이');
     const low = S.heroes.filter((h) => !h.down && h.hp < h.s.maxHp * T.lowHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0];
-    if (reactNow && R === 'tank' && ok('role')) { const tg = S.target?.[0]; return tg == null || tg === me ? { k: 'role', t: '🛡 막기!', sub: c('role'), dk: 'atb-counter' } : { k: 'role', t: '🛡 엄호!', sub: `${tagName(tg)} 지키기 · ${c('role')}`, dk: 'atb-counter' }; }
+    if (reactNow && R === 'tank' && ok('role')) { const tg = S.target?.[0]; return tg == null || tg === me ? { k: 'role', t: '막기!', sub: c('role'), dk: 'atb-counter', img: ART('counter/btn-cover') } : { k: 'role', t: '엄호!', sub: `${tagName(tg)} 지키기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cover') }; }
     if (low && R === 'healer' && ok('role')) return { k: 'role', t: '💚 힐!', sub: `${tagName(low.id)} · ${c('role')}`, dk: 'atb-morph-heal' };
     if (low && ok('heal')) return { k: 'heal', t: '🩹 응급붕대!', sub: `${tagName(low.id)} · ${c('heal')}`, dk: 'atb-morph-heal' };
     if (askTo != null) return { k: 'aid', t: `💡 ${tagName(askTo)} 도와줘!`, sub: '힌트 보내기 · 구슬 없이', dk: 'atb-aid' };
-    if (ok('revive')) { const d = S.heroes.find((h) => h.down && h.id !== me); return { k: 'revive', t: '💖 부활!', sub: `${d ? tagName(d.id) + ' · ' : ''}${c('revive')}`, dk: 'atb-morph-revive' }; }
-    if (reactNow && R === 'dealer' && ok('role')) return { k: 'role', t: '✂ 끊기!', sub: `모으기 끊기 · ${c('role')}`, dk: 'atb-counter' };
-    if (S.shieldUp && canBreak(S, me) && ok('tier4')) return { k: 'tier4', t: '💥 스킬 2!', sub: `실드 1칸 · ${c('tier4')}`, dk: 'atb-break' };
+    if (ok('revive')) { const d = S.heroes.find((h) => h.down && h.id !== me); return { k: 'revive', img: IC4.revive, t: '부활!', sub: `${d ? tagName(d.id) + ' · ' : ''}${c('revive')}`, dk: 'atb-morph-revive' }; }
+    if (reactNow && R === 'dealer' && ok('role')) return { k: 'role', t: '끊기!', sub: `모으기 끊기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cut') };
+    if (S.shieldUp && canBreak(S, me) && ok('tier4')) return { k: 'tier4', img: IC4.tier4, t: '스킬 2!', sub: `실드 1칸 · ${c('tier4')}`, dk: 'atb-break' };
     return null; /* 서포터 광역 결계 = 변신 없음(☰ 메뉴 · 머리 질문 중) */
   });
   const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '스킬 1' : k === 'tier4' ? (me >= 0 && canBreak(S, me) ? '💥 스킬 2 · 실드' : '스킬 2') : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급붕대' : '부활';
@@ -349,7 +352,7 @@
     const go = () => {
       barrier = 'ripple'; setTimeout(() => { if (barrier === 'ripple') barrier = 'up'; }, 500);
       e.cells.forEach((i, j) => setTimeout(() => { setCell(i, 'crack'); sfx('ice-crack', 0.7); setTimeout(() => { setCell(i, 'shatter'); sfx('ice-shatter', 0.8); setTimeout(() => setCell(i, null), 450); }, 380); }, j * 420));
-      if (e.last) setTimeout(() => { barrier = 'shatter'; sfx('chain-break', 0.9); big('💥 실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
+      if (e.last) setTimeout(() => { barrier = 'shatter'; sfx('chain-break', 0.9); big('실드 파괴! 약점 시간 · 피해 2배', 'weak', 1800); setTimeout(() => { barrier = ''; }, 700); }, e.cells.length * 420 + 420);
     };
     const h = S.heroes[e.who], box = heroEls[e.who];
     if (!h || !stageEl || !bossEl || !box || busy.has(e.who)) { go(); return; }
@@ -581,7 +584,7 @@
   const bossGauge = $derived.by(() => {
     if (S.end) return null;
     if (weak(S)) return { p: 1, txt: `⏸ 약점 시간 ${Math.ceil(S.weakUntil - S.t)}초 · 공격 멈춤`, blue: true };
-    if (stoneG) return { p: Math.min(1, S.bossT / bossEveryOf(S)), txt: `🗿 석화 ${stoneG}초 · 공격 멈춤`, blue: true };
+    if (stoneG) return { p: Math.min(1, S.bossT / bossEveryOf(S)), txt: `석화 ${stoneG}초 · 공격 멈춤`, blue: true, ic: ART('ic4/stone') };
     const left = Math.max(0, Math.ceil(bossEveryOf(S) - S.bossT)), ic = ATK_IC[upcoming] ?? '💥', nm = ATK[upcoming as keyof typeof ATK] ? bossAtkName(S.boss, upcoming) : '공격';
     if (S.target) { const who = S.aoeNext ? '모두' : S.target.map((i) => name(i)).join(' · '); return { p: S.bossT / bossEveryOf(S), txt: `${S.aoeNext ? '⚠ 광역! ' : ''}${ic} ${nm} → ${who} · ${left}초`, hot: true }; }
     return { p: S.bossT / bossEveryOf(S), txt: `다음 ${ic} ${nm} · ${left}초` };
@@ -736,14 +739,14 @@
       {#if open && over !== 'timing'}<div class="b atk tg on" data-k="atb-autoon" role="status"><span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span><span class="two">공격<small>자동 중</small></span></div>
       {:else}<button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span> 공격{/if}</button>{/if}
       <div class="skw">
-        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{EMPH_IC[emph]}</span>{/if}</button>{/if}
+        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{#if morph.img}<img class="mic" src={morph.img} alt="" />{/if}{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{#if IC4[emph]}<img class="ic4" src={IC4[emph]} alt="" />{:else}{EMPH_IC[emph]}{/if}</span>{/if}</button>{/if}
         {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
       </div>
       <!-- 📜 #102 스킬 메뉴 = 단추 줄(nav) 기준 왼쪽 끝 (가운데 스킬 단추 기준이면 왼쪽 밖) -->
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
           <button type="button" class="sk2 {sk.k}" class:situ={!sk.fix} class:lit={!!lit[sk.k]} class:need={emph === sk.k} class:dis={!sk.ok || over === 'timing'} aria-disabled={!sk.ok || over === 'timing'} data-k="atb-sk-{sk.k}" aria-label="{SK_NAME(sk.k)} · 기력 {sk.cost} · {pv[sk.k]?.line ?? ''}" onpointerdown={(ev) => pressStart(sk.k, ev)} onpointerup={pressEnd} onpointerleave={pressEnd} onpointercancel={pressEnd} oncontextmenu={(ev) => ev.preventDefault()} onclick={() => { if (peekUsed) { peekUsed = false; return; } if (sk.ok && over !== 'timing') fire(sk.k); }}>
-            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'tier4' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
+            <span class="ic">{#if sk.k === 'role' && meH.s.role === 'healer'}💚{:else if sk.k === 'role'}<AtbIcon name={ROLE_ICON[meH.s.role]} size={Math.round(22 * U)} />{:else if IC4[sk.k]}<img class="ic4" src={IC4[sk.k]} alt="" />{:else}{SK_ICON[sk.k]}{/if}{#if sk.k === 'tier4' && breaksShield}<i class="shb" data-k="atb-sk-shield-badge" title="실드도 깸">🛡</i>{/if}</span>
             <span class="nm">{SK_NAME(sk.k)}{#if sk.k === 'equip' && fx[me]}<small>{skillName(fx[me]!)}{meH.s.tier >= 4 ? ' Ⅳ' : ''}</small>{:else if sk.k === 'aura' || sk.k === 'awk'}<small>🌟 비장</small>{/if}{#if pv[sk.k]}<em class="pv" class:gold={pv[sk.k]!.gold} data-k="atb-pv-{sk.k}">{pv[sk.k]!.line}</em>{/if}</span>
             <span class="co" data-k="atb-cost-{sk.k}">{#each Array(sk.cost) as _, j (j)}<i class:on={j + 1 <= meH.ch} class:half={j + 1 > meH.ch && j < meH.ch}>⚡</i>{/each}{#if meH.ch < sk.cost}<small class="need1">⚡ {halfTxt(sk.cost - meH.ch)}개 더 풀면</small>{/if}</span>
           </button>
@@ -768,7 +771,7 @@
       <p class="cn" data-k="atb-cut-line"><small>{cut.short ? '스킬' : cut.awk ? '✨ 각성 ⚡⚡⚡' : '4레벨 스킬 ⚡⚡'}</small><span style:font-size="{fitPx(cut.line, Wd * 0.9, Math.min(54, H * 0.1))}px">{cut.line}</span></p>
     </div>
   {/if}
-  {#if bigMsg}<div class="bigmsg {bigMsg.cls}" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
+  {#if bigMsg}<div class="bigmsg {bigMsg.cls}" class:burst={/실드 파괴|막았다|SHIELD/.test(bigMsg.t)} style:--burst="url({ART('counter/burst')})" role="alert" data-k="atb-bigmsg">{bigMsg.t}</div>{/if}
   {#if S.end}<div class="endb" class:win={S.end.win} role="status">{S.end.win ? '⚔ 처치!' : `💀 ${S.end.why}`}</div>{/if}
 </div>
 
@@ -1204,4 +1207,9 @@
   .boss.flee::after { content: '💨'; position: absolute; left: -10%; bottom: 10%; font-size: 48px; animation: puff108 0.8s ease-out forwards; }
   @keyframes flee108 { 0% { transform: translateX(0); opacity: 1; } 20% { transform: translateX(-4%); } 100% { transform: translateX(120%); opacity: 0; } }
   @keyframes puff108 { from { opacity: 0.9; transform: scale(0.6); } to { opacity: 0; transform: translateX(-30px) scale(1.6); } }
+  /* ── 🎨 그림 아이콘 (ui-ic4 · atb-counter-ui) ── */
+  .mic { width: 30px; height: 30px; margin-right: 4px; vertical-align: middle; image-rendering: auto; filter: drop-shadow(0 1px 0 #0008); }
+  .btns.v3 .b.skb.morph .mt { display: inline-flex; align-items: center; }
+  .ic4 { width: 1.15em; height: 1.15em; vertical-align: middle; image-rendering: pixelated; }
+  .bigmsg.burst { background: var(--burst) center / 100% 100% no-repeat !important; border: 0 !important; box-shadow: none !important; padding-left: 48px !important; padding-right: 48px !important; color: #3a1600 !important; text-shadow: 0 1px 0 #fff8 !important; }
 </style>

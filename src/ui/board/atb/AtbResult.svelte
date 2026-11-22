@@ -49,6 +49,9 @@
   const helpOf = (h: State['heroes'][number]) => { const g = h.log; return g.heals + (g.rescues ?? 0) + g.covers + (g.blocks ?? 0) + g.revives + g.boosts + g.shields + (g.aids ?? 0); };
   const chipOf = (h: State['heroes'][number]): string => { const g = h.log, a: string[] = []; if (g.aids) a.push(`도움 ${g.aids}`); /* 칸이 좁아 「구조 성공」 = 「도움」 (「구조」 = 큰 힐) */ if (g.heals) a.push(`회복 ${g.heals}`); if (g.rescues) a.push(`구조 ${g.rescues}`); if (g.boosts) a.push(`격려 ${g.boosts}`); if (g.covers) a.push(`엄호 ${g.covers}`); const blk = Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)); if (blk) a.push(`막기 ${blk}`); if (g.cuts) a.push(`끊기 ${g.cuts}`); if (g.shields) a.push(`실드 ${g.shields}`); if (g.revives) a.push(`부활 ${g.revives}`); return a[0] || `맞힘 ${g.right}`; };
   const mvp = $derived.by(() => { let best = -1, id = -1, r = -1; for (const h of S.heroes) { const v = helpOf(h), rr = h.log.right; if (v > best || (v === best && rr > r)) { best = v; id = h.id; r = rr; } } return best > 0 || r > 0 ? id : -1; /* 아무도 한 게 없으면 👑 없음 */ });
+  const ART = (p: string) => `${import.meta.env.BASE_URL}art/board-atb/${p}.webp`;
+  /** 🎨 공적 칩 메달 (atb-counter-ui 가운데 줄) = 칩 첫 일 · 방패 = 엄호 · 막기 · 십자 = 회복 · 칼+사슬 = 끊기 · 반구 = 실드 · 도장 = 도움(구조 성공) */
+  const medalOf = (h: State['heroes'][number]): string => { const t = chipOf(h); return /^(엄호|막기)/.test(t) ? 'cover' : /^(회복|구조 )/.test(t) ? 'heal' : /^끊기/.test(t) ? 'cut' : /^실드/.test(t) ? 'holy' : /^도움/.test(t) ? 'check' : ''; };
   const ROLE_IC = { tank: 'role-tank', dealer: 'role-dealer', healer: 'role-healer', support: 'role-support' } as const;
   // 🔊 💎 줄 = 한 줄씩 star · 별 = 하나씩 (요청 #23)
   onMount(() => { const ts = [...rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 700 + i * 350)), ...Array.from({ length: stars }, (_, i) => setTimeout(() => sfx('star-bonus', 0.45), 250 + i * 220))]; return () => ts.forEach(clearTimeout); });
@@ -76,11 +79,11 @@
       {#each S.heroes as h (h.id)}
         {@const pt = portraitOf(h.s.hero)}
         {@const d = top(h)}
-        <div class="hp" class:mvp={h.id === mvp}>{#if h.id === mvp}<b class="crown" data-k="atb-res-mvp">👑 MVP</b>{/if}
+        <div class="hp" class:mvp={h.id === mvp}>{#if h.id === mvp}<b class="crown" data-k="atb-res-mvp"><img src={ART('ic4/mvp')} alt="" />MVP</b>{/if}
           <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win || fled ? 0 : 8} play={win} /></span></span>
           <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">{#if missionOf(S, h.id).done}<i class="mdone" data-k="atb-res-mission" title="임무 완수">✔</i>{/if}
             <i class="face">{#if pt}<i style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}</i>
-            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small class="chip" data-k="atb-res-chip"><AtbIcon name={ROLE_IC[h.s.role]} size={16} />{chipOf(h)}</small></span>{void d}
+            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small class="chip" data-k="atb-res-chip">{#if medalOf(h)}<img class="md" src={ART('counter/medal-' + medalOf(h))} alt="" />{:else}<AtbIcon name={ROLE_IC[h.s.role]} size={16} />{/if}{chipOf(h)}</small></span>{void d}
           </div>
         </div>
       {/each}
@@ -181,4 +184,6 @@
   .rs.lose:not(.fled) .banner { filter: grayscale(0.85) brightness(0.9); }
   .rs.fled .banner { filter: hue-rotate(-75deg) saturate(0.85); }
   .tip { margin: 0; font: 800 14px var(--font-plain); color: #ffe7a8; text-align: center; text-shadow: 0 1px 2px #000; }
+  .hp .crown { display: inline-flex; align-items: center; gap: 2px; } .hp .crown img { width: 18px; height: 18px; image-rendering: pixelated; }
+  .chip .md { width: 18px; height: 22px; object-fit: contain; }
 </style>
