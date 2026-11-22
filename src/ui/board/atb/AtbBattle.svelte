@@ -1158,4 +1158,13 @@
   .cell2 .slot { display: block; width: 40px; height: 40px; background-repeat: no-repeat; background-size: 500% 300%; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #000); }
   .holy1 { position: absolute; z-index: 30; width: var(--hs); height: var(--hs); margin: calc(var(--hs) * -1) 0 0 calc(var(--hs) * -0.5); background-repeat: no-repeat; background-size: 1200% 100%; image-rendering: pixelated; pointer-events: none; animation: holy12 1.2s steps(11, jump-none) 1 forwards; }
   @keyframes holy12 { from { background-position-x: 0%; } to { background-position-x: 100%; } }
+  /* ── 📜 #102 ⑩ 글자 최소 14px (읽는 글 · 숫자 막대 안의 작은 수치 = 12px 예외) ── */
+  .stage .tag > b, .stage .tag > b .nm { font-size: 14px; } .stage .tag > b .nm { max-width: 72px; }
+  .stage .tag { left: -50px; width: 100px; }
+  .stage .hpb .hn { font-size: 12px; } .stage .hpb .hn .lv { font-size: 11px; }
+  .stage :is(.tgline, .reactb, .mis, .ctrno, .calmb, .wbadge, .ordn, .gmenu .gr, .sage, .sage b, .peekc, .peekc span, .peekc small) { font-size: 14px; }
+  .stage .pop.heal.sm { font-size: 14px; }
+  .stage .sk2 .nm, .stage .sk2 .nm small, .stage .sk2 .pv, .stage .sk2 .need1 { font-size: 14px; }
+  .btns.v3 .b.atk.tg small, .btns.v3 .b.skb.morph small { font-size: 13px; }
+  .stage.q :is(.bigmsg, .tgline, .reactb, .weakb, .capt) { left: 27.5%; max-width: 52%; } /* 카드 열림 = 위 띠도 왼쪽 칸 가운데 */
 </style>
