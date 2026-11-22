@@ -733,7 +733,7 @@
 {/if}
 {#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
-{#if teach && sheet && T_SHEET[sheet] && !tPanel}<button type="button" class="tpbtn" data-k="t-panel" onclick={() => (tPanel = T_SHEET[sheet ?? ''] ?? '')}>👩‍🏫 선생님 칸{#if tTodo[T_SHEET[sheet] ?? '']}<i>{tTodo[T_SHEET[sheet] ?? '']}</i>{/if}</button>{/if}
+{#if teach && sheet && T_SHEET[sheet] && !tPanel}<button type="button" class="tpbtn" class:tpbd={sheet === 'dummy'} data-k="t-panel" onclick={() => (tPanel = T_SHEET[sheet ?? ''] ?? '')}>👩‍🏫 선생님 칸{#if tTodo[T_SHEET[sheet] ?? '']}<i>{tTodo[T_SHEET[sheet] ?? '']}</i>{/if}</button>{/if}
 {#if teach && tPanel}<TeacherPanel {S} kind={tPanel} cls={tCls} onclose={() => (tPanel = '')} />{/if}
 
 <style>
@@ -745,6 +745,7 @@
   .tchips button { flex: none; min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(8, 9, 12, 0.55); color: #fff; font: 700 13px var(--font); }
   .tchips button.on { background: var(--accent); color: var(--on-accent, #1d1406); border-color: var(--accent); }
   .tpbtn { position: fixed; right: max(12px, calc(50% - 203px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 156px); z-index: 44; /* 🐞 #66-6 제목(맨 위) 덮지 않게 = 오른쪽 아래 · 아래 단추 위 */ min-height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 14px var(--font); box-shadow: 0 3px 0 color-mix(in srgb, var(--accent) 55%, #000), 0 6px 16px rgba(0, 0, 0, 0.45); }
+  .tpbtn.tpbd { bottom: calc(env(safe-area-inset-bottom, 0px) + 300px); } /* 🐞 #135 게시판 = 모집 줄 ▾ · 「합류」 덮지 않게(차시 카드 설명 글 위) */
   .tpbtn i { margin-left: 6px; font-style: normal; padding: 0 6px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 12px; }
   /* 📝 제출 모드 v2 ⑦ 오늘 할 일 */
   .camp.paper { background: transparent; }
