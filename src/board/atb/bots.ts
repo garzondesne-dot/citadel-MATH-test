@@ -3,14 +3,23 @@
 import type { Given, LessonPack, Question } from '../../model/types';
 import { answerOf } from '../../raid/raid';
 import { answer, easiestOf, nextOrigin, originsOf, pickVer, questionsOf, rngOf, shuffled, startRun, type Origin, type Run } from './quiz';
-import { REACT_CFG, T } from './tune';
-import { alive, attack, canReact, canRole, canSkill, earn, orphanCell, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
+import { REACT_CFG, T, shieldOf } from './tune';
+import { alive, attack, canReact, costOf, canRole, canSkill, earn, orphanCell, roleAct, tick, useSkill, weak, type SkillK, type State } from './engine';
 
 export type BotKind = 'normal' | 'ideal' | 'random' | 'retry';
 export interface Bot { who: number; kind: BotKind; acc: number; think: [number, number]; run: Run | null; due: number; /** ATB 가 가득 찬 시각 (-1 = 아님) */ fullAt: number; done: Record<string, number>; os: Origin[]; seed: string; rnd: number; /** 반응 막기를 정한 예고 (요청 #35) */ reactKey?: string }
 const ACT_SEC = 3;
 export const BOT_LABEL: Record<BotKind, string> = { normal: '보통 학생', ideal: '도전 기준(완벽)', random: '무작위 제출', retry: '오답 후 힌트 · 재도전' };
 const r01 = (b: Bot) => { let a = (b.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>> 15), a | 1); a ^= a + Math.imul(a ^ (a >>> 7), a | 61); return ((a ^ (a >>> 14)) >>> 0) / 4294967296; };
+/** 🛡 📜 #144 내 속성 실드 칸 = 지금 남았거나(실드 중) · 곧 뜸(보스 HP 가 실드 선 +12% 안 · 그 보스 실드에 내 속성) → 구슬 2 를 스킬 2 몫으로 */
+function shieldDue(S: State, who: number): 'now' | 'soon' | null {
+  const h = S.heroes[who]; if (!h || S.end) return null;
+  if (S.shieldUp) return S.cells.some((c) => !c.broken && c.fam === h.s.fam) ? 'now' : null;
+  if (S.cells.length) return null; // 이미 지나감
+  return S.bossHp <= S.bossMax * (T.shieldAt + 0.12) && shieldOf(S.boss).includes(h.s.fam) ? 'soon' : null;
+}
+/** 꼭 필요한 상황 = 쓰러질 듯한 친구(30% 아래) */
+const critical = (S: State) => alive(S).some((x) => x.hp < x.s.maxHp * 0.3);
 export function newBot(L: LessonPack, who: number, kind: BotKind, seed = 1): Bot {
   const acc = kind === 'ideal' ? 1 : kind === 'random' ? 0.3 : kind === 'retry' ? 0.5 : 0.6; // 설계 방 모의실험 = 정답률 60%
   const think: [number, number] = kind === 'ideal' ? [12, 18] : kind === 'random' ? [4, 8] : [12, 24]; // 소문항 하나 평균 18초 (sim2.py sub_sec)
@@ -35,7 +44,7 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
     } else b.run = null;
   }
   // 🛡 반응 막기 (📜 요청 #35): 예고 중 그 역할 봇 = 70% 로 바로 막음 (예고 하나에 한 번만 정함)
-  { const key = `${S.bossN}|${S.breathWarn ?? ''}`; if (canReact(S, b.who) && b.reactKey !== key) { b.reactKey = key; if (r01(b) < REACT_CFG.botChance) useSkill(S, b.who, 'role'); } }
+  { const key = `${S.bossN}|${S.breathWarn ?? ''}`; if (canReact(S, b.who) && b.reactKey !== key) { b.reactKey = key; const due = shieldDue(S, b.who), hh = S.heroes[b.who]!, save = !!due && hh.ch < T.cost.tier4 + T.cost.role && !critical(S); /* 📜 #144 구슬 2 = 스킬 2 몫 · 위급할 때만 막기 */ if (!save && r01(b) < REACT_CFG.botChance) useSkill(S, b.who, 'role'); } }
   if (h.down || h.atb < 1 || S.t < h.stunUntil) { b.fullAt = -1; return; }
   if (b.fullAt < 0) b.fullAt = S.t;
   const r = act(S, b, S.t - b.fullAt >= T.autoAtkDelay);
@@ -45,20 +54,22 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
 function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
+  /* 🛡 📜 #144 내 실드 칸이 남았거나 곧 뜸 = 구슬 2 를 스킬 2 몫으로 남김 · 그 밖 스킬은 남는 구슬로만 (쓰러짐 막기 · 부활 = 그대로 먼저) */
+  const due = shieldDue(S, b.who), spare = (k: SkillK) => !due || h.ch - costOf(h, k, S) >= T.cost.tier4;
   { const f = alive(S).filter((x) => x.hp < x.s.maxHp * 0.3).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0]; if (f) { if (R === 'healer' && canRole(S, b.who) && roleAct(S, b.who, f.id)) return 'skill'; if (R !== 'healer' && can('heal') && useSkill(S, b.who, 'heal', f.id)) return 'skill'; } } // 📜 #101 덧 = 위험한 친구(30% 아래) 회복 먼저
   if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return 'skill';
   if (can('shield') && useSkill(S, b.who, 'tier4')) return 'skill'; // 📜 #101 스킬 2 = 맞는 속성 실드 칸 · 도움표 (홀리 방패 = 자동)
-  if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
+  if (can('awk') && spare('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
   // 💚 요청 #46: 힐러 = 한 명이라도 40% 아래면 큰 힐 · 힐러 아닌 봇 = 35% 아래 친구(나 포함 · 머리 2026-11-21 50 → 35)가 있으면 🩹 응급 힐
   const low = (k: number) => alive(S).filter((x) => x.hp < x.s.maxHp * k).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0];
-  if (R !== 'healer' && can('heal')) { const f = low(0.35); if (f && useSkill(S, b.who, 'heal', f.id)) return 'skill'; }
-  if (canRole(S, b.who)) {
+  if (R !== 'healer' && can('heal') && spare('heal')) { const f = low(0.35); if (f && useSkill(S, b.who, 'heal', f.id)) return 'skill'; }
+  if (canRole(S, b.who) && spare('role')) {
     if (R === 'healer') { const f = low(0.4); if (f && roleAct(S, b.who, f.id)) return 'skill'; }
     if (R === 'tank' && S.target && S.target.length === 1 && !S.heroes[S.target[0]!]!.cover && roleAct(S, b.who, S.target[0])) return 'skill';
     if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return 'skill'; }
   }
   const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 충전 아낌(×0.3 · 실드 깨기용) · 약점 시간에 몰아침
-  const keep = shieldHold && h.ch <= 2 && S.cells.some((c) => !c.broken && c.fam === h.s.fam); // 📜 #101 내 속성 칸이 남았으면 구슬 2 아낌
+  const keep = (shieldHold && h.ch <= 2 && S.cells.some((c) => !c.broken && c.fam === h.s.fam)) || (due === 'soon' && h.ch <= T.cost.tier4); // 📜 #101 내 속성 칸이 남았으면 구슬 2 아낌
   if (!keep && (weak(S) || h.ch >= T.charge.max || !shieldHold)) {
     if (R === 'dealer' && can('role') && roleAct(S, b.who)) return 'skill';
     if (h.ch >= T.cost.tier4 && can('tier4') && useSkill(S, b.who, 'tier4')) return 'skill'; // 스킬 2 = ATB 한 번에 ×1.7
