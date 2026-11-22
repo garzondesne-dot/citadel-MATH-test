@@ -382,6 +382,9 @@ export function telegraphOf(S: State): { cls: AtkClass; atk: string } | null {
   if (S.breathWarn != null) return { cls: 'special', atk: '숨 고르기' };
   return null;
 }
+/** 📜 #131 ⑤ 예고 아이콘 종류 = 🎯 단일 · 💥 광역 · 🌀 특수(모으기) · 👹 분노(분노 때 그 보스 특수) — 화면 표시만 (막는 규칙 = REACT 그대로) */
+export type TgKind = AtkClass | 'rage';
+export function tgKindOf(S: State): TgKind | null { const tg = telegraphOf(S); if (!tg) return null; return S.rage && S.nextAtk != null && S.nextAtk === rageSpecial(S) ? 'rage' : tg.cls; }
 /** 예고 중 그 역할이면 ATB 없이 ⚡1 로 바로 · 쓰러짐 · 묶임 · 이미 누가 막았으면 못 씀 */
 export function canReact(S: State, who: number): boolean {
   const h = S.heroes[who], tg = telegraphOf(S); if (!h || !tg || S.end || h.down || S.t < h.stunUntil || h.ch < T.cost.role) return false;
