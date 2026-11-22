@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FAME, fameLv, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
+  import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
   import { SUBJ } from '../../engine/subject';
   const questOf = (no: number) => SUBJ.quests?.[no] ?? null;
@@ -12,7 +12,7 @@
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry, BOARD_DAY, BOARD_FULL, boardDayUsed, boardTake } from '../../board/board';
   import { bonusOf, RESCUE, canJoin, canStart, createPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
-  import { addRun, growList, growOf, guardList, rowsOf, semOf, viewOf, GS, type Agg } from '../../board/ladder';
+  import { addRun, growOf, rowsOf, semOf, GS, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, uidOf } from '../../school/school';
   import { testLoad, testSaveRun, testStar, testWho } from '../../board/testRecs';
@@ -104,7 +104,7 @@
     say(`🧙 ${heroOf(id).name} 출전!`);
   }
   const meM = $derived({ uid, cls: cls || (S.kind === 'server' ? '선생님' : '이 기기'), num, nick: me.nick, hero: lkB, fame: fameNow(), g: growM });
-  function fameNow() { return cls && num ? fameOf(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
+  function fameNow() { return cls && num ? fameHeld(S.get(`bonus/${cls}/${num}/board`) as Record<string, BoardRec> | null) : 0; }
   let sheet = $state<'' | 'solo' | 'post' | 'pin' | 'resv'>(''), lockOn = $state(false), pin = $state(''), pinErr = $state(''), pinPost = $state<Post | null>(null), busy = $state(false), pick = $state<LessonPack | null>(null), run = $state<LessonPack | null>(null), toast = $state('');
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 2200); };
   // 📅 📜 #73 예약 모집 (선생님 2026-11-21): 차시 · 날짜 · 시각 → 글 when · 「🙋 참여 예약」 · 한 학생 예약 동시 1개 · 시각 = 방 열림 · +5분 출발(안 온 자리 = 봇) · +30분 해산
@@ -215,6 +215,8 @@
       let full = false;
       if (payOn(S) && r.gemSum > 0) { const day = kstDay(S.now()), want = boardTake(S.get<Record<string, unknown>>(`gem/${cls}/${num}/log`), day, r.gemSum), got = want ? earnDaily(me.wallet, want, day, GEM.dayCap) : 0; full = got < r.gemSum; if (got) { S.set(`gem/${cls}/${num}/log/board_${day}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전' }); save(); } } // 📜 게시판 하루 200 (넘친 몫 = 안 받음)
       { const others = tag(p).filter((c) => c !== cls), tail = full ? ` · ${BOARD_FULL}` : ''; if (r.win && others.length) say(`🤝 ${josa(knightOf(S, others[0]!).name, '과/와')} 함께 균열을 닫았다${tail}`); else if (sv.merit) say(`🚩 우리 기사단 +${sv.merit} 공적${tail}`); else if (full) say(`💎 ${BOARD_FULL}`); } // 📜 #70
+      const rz = Number(r.acts?.rescue) || 0; // 🛡 #104 🤝 구조 성공 → 이번 학기 rk2 rz (🏆 기사단 탭 「수호 명성」)
+      if (rz > 0) { const t = S.now(), rp = `${RK2}/${semOf(t)}/${uidOf(cls, num)}`, was = S.get<Agg>(rp) ?? { cls, hero: lkB, enh: me.enh }; S.set(rp, { ...was, cls, hero: lkB, enh: me.enh, at: t, rz: (Number(was.rz) || 0) + rz }); }
       for (const mid of r.mids ?? []) if (L.monsters[mid]) S.set(`bonus/${cls}/${num}/review/${L.id}/${mid}`, S.now()); // 📕 #67 새 전투도 「복습 완료」 (옛 길과 같은 칸 · 맞힌 소문항이 있는 몬스터)
     }
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
@@ -233,10 +235,11 @@
   const skip = () => { if (stage < 2) stageGo(stage + 1); };
   onDestroy(() => { clearTimeout(stT); cancelAnimationFrame(gemRaf); });
   const pidMine = untrack(() => (cls && num ? uidOf(cls, num) : ''));
-  // 🏆 랭킹 · 📜 내 기록 창 (탭 = 🛡 수호자 · 🌱 도전자 · 📜 내 기록 · 전체 / 차시 칩 · 학년 / 우리 반)
-  let rkOpen = $state(false), rkTab = $state<'g' | 'c' | 'me'>('g'), rkChip = $state<string>('all'), rkMine = $state(false);
+  // 📜 내 기록 창 (📜 #104 수호자 · 도전자 랭킹 탭 없앰 → 🛡 수호 명성 = 🏆 기사단 탭 · 🌱 내 성장 = 이 창)
+  let rkOpen = $state(false);
   const sem = $derived(semOf(clock.now));
-  const board = $derived.by(() => { const rows = rowsOf(rkv.v.val?.[sem] ?? null, rkMine ? cls : undefined), lid = rkChip === 'all' ? undefined : rkChip; return rkTab === 'g' ? viewOf(guardList(rows, lid), pidMine) : rkTab === 'c' ? viewOf(growList(rows, lid), pidMine) : null; });
+  // 🛡 #104 수호 명성 = 반 안 🤝 구조 성공(rz) 상위 10 + 나 · 익명(반 · 용사 그림만)
+  const fameTop = $derived.by(() => { const xs = rowsOf(rkv.v.val?.[sem] ?? null, cls || undefined).filter((r) => (Number(r.a.rz) || 0) > 0).sort((p, q) => (q.a.rz ?? 0) - (p.a.rz ?? 0)).map((r, i) => ({ ...r, rank: i + 1 })); const top = xs.slice(0, 10), me1 = xs.find((r) => r.id === pidMine); return me1 && !top.includes(me1) ? [...top, me1] : top; });
   const mineAgg = $derived(pidMine ? rkv.v.val?.[sem]?.[pidMine] ?? null : null);
   const lr2 = untrack(() => liveValue<Record<string, { at: number; lid: string; no: number; n: number; role: 'g' | 'c'; grade: string; right: number; total: number; sec: number; clear: boolean; left?: boolean }>>(S, cls && num ? `bonus/${cls}/${num}/board` : 'bonus/_none'));
   onDestroy(lr2.stop);
@@ -250,7 +253,7 @@
   const MAPL = mapLessons(PACKS);
   const stars = $derived(starsByNo(recSrc as Record<string, BoardRec> | null));
   const starN = $derived(starTotal(stars, MAPL)), starMax = MAPL.length * 3;
-  const fame = $derived(fameOf(recSrc as Record<string, BoardRec> | null));
+  const fame = $derived(fameHeld(recSrc as Record<string, BoardRec> | null)), rescueN = $derived(fameOf(recSrc as Record<string, BoardRec> | null)); // 🛡 #104 단계 = 받은 것 유지 · 숫자 = 🤝 구조 성공만
   const notes = $derived.by(() => { void lr2.v.val; return cls && num ? noteLeftByNo(PACKS, (S.get(`records/${cls}/${num}`) || {}) as never, (S.get(`bonus/${cls}/${num}`) || {}) as never) : {}; });
   const noteN = $derived(Object.values(notes).reduce((a, x) => a + x.left, 0)), note0 = $derived(Object.values(notes).reduce((a, x) => a + (x.had ? 1 : 0), 0));
   const noteOk = $derived(Object.values(notes).filter((x) => x.had && x.left === 0).length);
@@ -261,7 +264,6 @@
   const feed = $derived(Object.entries(lf2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at && (chip === 'all' || x.no === chip)).sort((a, b) => b.at - a.at).slice(0, 8));
   const mmss2 = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   const day2 = (t: number) => new Date(t + 9 * 3600e3).toISOString().slice(5, 10).replace('-', '/');
-  const rk = $derived.by(() => { const r0 = res?.rank; if (!r0 || !pidMine) return null; const rows = rowsOf(rkv.v.val?.[r0.sem] ?? null), v = r0.role === 'g' ? viewOf(guardList(rows), pidMine) : viewOf(growList(rows), pidMine); return { pos: v.pos, n: v.n, role: r0.role, up: r0.up }; });
   const dayLeft = $derived.by(() => { void lr2.v.val; return BOARD_DAY - boardDayUsed(cls && num ? S.get<Record<string, unknown>>(`gem/${cls}/${num}/log`) : null, kstDay(S.now())); }); // 📜 게시판 하루 200
   // 🐞 (📜 2026-11-14) 이끄는 폰이 먼저 끝내 글이 'done' 이 되어도, 이 폰이 자기 결과를 아직 못 봤으면 전투를 닫지 않음 (예전 = 바로 닫혀 결과 없이 게시판으로)
   const SEEN = 'citadel-board-seen';
@@ -295,8 +297,7 @@
     <div class="mid" role="button" tabindex="0" aria-label="결과 · 누르면 다음" data-k="board-res" data-stage={stage} onclick={skip} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') skip(); }}>
       <div class="card grade stamp" class:x={!res.clear}><b class="g">{res.clear ? res.grade : '✕'}</b><span><b>{res.clear ? `${res.L.no}차시 클리어 · ${res.n > 1 ? '팀 ' : ''}등급 ${res.grade}` : '⌛ 시간이 끝났어요 · 클리어 ✕'}</b><small>첫 시도 기준 · {res.tf.total}문항 중 틀림 + 미제출 {res.tf.bad + res.tf.none}개</small></span></div>
       <div class="stat"><span><b>{res.tf.ok}</b>⭕ 맞힘</span><span><b>{res.tf.bad}</b>❌ 틀림</span><span><b>{res.tf.none}</b>⏭ 미제출</span></div>
-      {#if stage >= 2 && rk?.up}<div class="card up" data-k="board-up"><b>🛡 승급!</b><small>{res.L.no}차시 정답률 80% 넘김 · 다음 판부터 수호자로 들어갈 수 있어요</small></div>{/if}
-      {#if stage >= 2 && rk && rk.pos}<button type="button" class="card rk" data-k="board-rank" onclick={(e) => { e.stopPropagation(); rkTab = rk.role; rkOpen = true; }}><small>익명 · 이번 학기 · 학년</small><div><span>{rk.role === 'g' ? '🛡 수호자 랭킹' : '🌱 도전자 랭킹'}</span><em>{rk.pos} / {rk.n}</em></div></button>{/if}
+      {#if stage >= 2 && res.rank?.up}<div class="card up" data-k="board-up"><b>🛡 승급!</b><small>{res.L.no}차시 정답률 80% 넘김 · 다음 판부터 수호자로 들어갈 수 있어요</small></div>{/if}
       {#if stage >= 1}<div class="card rw rise">
         <div><span>💎 맞힌 소문제 {res.right} (최대 {GEM.itemMax}){res.clear ? ` + ⏰ 클리어 ${GEM.clear}` : ''}</span><span>{res.base}</span></div>
         {#if res.n > 1}<div><span>👥 {res.n}인 팀 × {res.mult}</span><span>× {res.mult}</span></div>{/if}
@@ -359,12 +360,14 @@
         {/if}
       {:else if btab === 'war'}
         <WarBar {S} {cls} test={testAcc} />
+        <small class="lbl">🛡 수호 명성 · {cls ? `${cls}반` : '우리 반'} · 🤝 구조 성공</small>
+        <div class="rkl" data-k="board-fame-list">{#each fameTop as r (r.id)}<div class="rr" class:me={r.id === pidMine}><b class="no">{r.rank}</b><HeroSprite id={r.a.hero} scale={0.5} aura={r.a.enh} /><span class="who">{r.id === pidMine ? `나 · ${r.a.cls}반` : `${r.a.cls}반`}</span><em>🤝 {r.a.rz}</em></div>{:else}<div class="empty"><span>🤝</span><b>아직 구조 기록이 없어요</b><small>쓰러지기 직전 친구를 살리면 올라가요</small></div>{/each}</div>
       {:else}
         <section class="gmap rec" data-k="board-rec">
           <div class="gl"><b>⭐ {starN} / {starMax}</b><small>{nextStar}</small></div>
-          <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>도전자와 함께 클리어 {fame}판{nextFame(fame) ? ` · ${nextFame(fame)!.n}판 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
+          <div class="gl fame" data-k="board-fame">{#if fameLv(fame)}{@const f = fameLv(fame)!}<i class="badge" style="background-position:{f.cell * 50}% 0" aria-hidden="true"></i><b>🛡 {f.name}</b>{:else}<b>🛡 수호자 명성</b>{/if}<small>🤝 구조 성공 {rescueN}번{nextFame(fame) ? ` · ${nextFame(fame)!.n}번 = 「${nextFame(fame)!.name}」` : ' · 최고 단계'}</small></div>
         </section>
-        <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => { rkTab = 'g'; rkOpen = true; }}><span>📜 내 기록 · 지난 랭킹</span><small>익명 · 이번 학기</small></button>
+        <button type="button" class="rkbtn" data-k="board-rank-open" onclick={() => (rkOpen = true)}><span>📜 내 기록 · 🌱 내 성장</span><small>나만 보여요 · 이번 학기</small></button>
         {#if onquest && qN}<button type="button" class="rkbtn" data-k="board-quest" onclick={onquest}><span>✏ 친구 문제 {qN}</span><small>우리 반 친구가 낸 문제 · 풀어 보기</small></button>{/if}<!-- ✏ #75 🔵 승인 = 반 친구 문제 -->
         {#if feed.length}<small class="lbl">📣 최근 전투 · 익명</small>
           <div class="feed" data-k="board-feed">{#each feed as f (f.k)}<div class="fl" class:me={myFeeds.includes(f.k)}><span class="fh">{#each (f.who || []).slice(0, 4) as w, i (i)}<HeroSprite id={w.h} scale={0.5} />{/each}</span><span class="ft"><b>{f.no}차시 · {f.n > 1 ? `${f.n}인` : '혼자'} · {f.clear ? f.grade : '✕'} · {mmss2(f.sec)} · {f.clear ? '클리어' : '시간 끝'}</b><small>{myFeeds.includes(f.k) ? '나 · ' : ''}{[...new Set((f.who || []).map((w) => `${w.c}반`))].join(' · ')}</small></span></div>{/each}</div>{:else}<div class="empty"><span>📣</span><b>아직 최근 전투가 없어요</b></div>{/if}
@@ -377,21 +380,14 @@
     {/if}
   {/if}
   {#if rkOpen}
-    <div class="rkp" role="dialog" aria-label="랭킹 · 내 기록" data-k="board-rank-panel">
-      <div class="bar"><button type="button" class="back" aria-label="게시판으로" onclick={() => (rkOpen = false)}>‹</button><b class="t">🏆 랭킹 · {sem.replace('-', '년 ')}학기</b><span></span></div>
-      <div class="tabs3" role="tablist">{#each [['g', '🛡 수호자'], ['c', '🌱 도전자'], ['me', '📜 내 기록']] as [k, t] (k)}<button type="button" role="tab" class:on={rkTab === k} aria-selected={rkTab === k} onclick={() => (rkTab = k as 'g' | 'c' | 'me')}>{t}</button>{/each}</div>
-      {#if rkTab !== 'me'}
-        <div class="chips" role="group" aria-label="차시"><button type="button" class:on={rkChip === 'all'} onclick={() => (rkChip = 'all')}>전체</button>{#each LESSONS as p (p.id)}<button type="button" class:on={rkChip === p.id} onclick={() => (rkChip = p.id)}>{p.no}차시</button>{/each}</div>
-        <div class="seg2"><button type="button" class:on={!rkMine} onclick={() => (rkMine = false)}>학년 전체</button><button type="button" class:on={rkMine} onclick={() => (rkMine = true)}>우리 반만</button></div>
-        <p class="mypos" data-k="board-mypos">{board && board.pos ? `내 순위 ${board.pos} / ${board.n}` : `아직 ${rkTab === 'g' ? '수호자로 한' : '도전자로 한'} 판이 없어요`}</p>
-        <small class="lbl">{rkTab === 'g' ? '차시별 최고 등급 합(S4 A3 B2 C1) → 첫 시도 정답률 → 시간' : '수업 정답률보다 오른 만큼(차시마다 최대 +60%p) · 80% 넘기면 🛡 승급'}</small>
-        <div class="rkl">{#each board?.rows ?? [] as r (r.id)}<div class="rr" class:me={r.id === pidMine}><b class="no">{r.rank}</b><HeroSprite id={r.a.hero} scale={0.5} aura={r.a.enh} /><span class="who">{r.id === pidMine ? `나 · ${r.a.cls}반` : `${r.a.cls}반`}{#if rkTab === 'g' && r.a.rz}<i> · 🤝 {r.a.rz}</i>{/if}</span><em>{rkTab === 'g' ? `${r.score}점` : `+${r.score}%p`}</em></div>{:else}<div class="empty"><span>🏆</span><b>아직 기록이 없어요</b><small>게시판 던전을 한 판 하면 올라가요</small></div>{/each}</div>
-      {:else}
+    <div class="rkp" role="dialog" aria-label="내 기록 · 내 성장" data-k="board-rank-panel">
+      <div class="bar"><button type="button" class="back" aria-label="게시판으로" onclick={() => (rkOpen = false)}>‹</button><b class="t">📜 내 기록 · {sem.replace('-', '년 ')}학기</b><span></span></div>
         <small class="lbl">차시별 최고 (나만 보여요)</small>
         <div class="rkl">{#each best as b (b.lid)}{@const c = mineAgg?.c?.[b.lid]}<div class="rr"><b class="no">{b.no}</b><span class="who">{b.no}차시 · 최고 {b.grade} · {b.right}/{b.total}</span><em>{c ? (c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`) : ''}</em></div>{:else}<div class="empty"><span>📜</span><b>아직 판이 없어요</b></div>{/each}</div>
+        <small class="lbl">🌱 내 성장 (수업 정답률보다 오른 만큼 · 80% 넘기면 🛡 승급)</small>
+        <div class="rkl" data-k="board-grow">{#each Object.entries(mineAgg?.c ?? {}) as [lid, c] (lid)}<div class="rr"><b class="no">{lessonOf(lid)?.no ?? '·'}</b><span class="who">{lessonOf(lid)?.no ?? ''}차시 · 수업 {Math.round(c.base * 100)}% → 최고 {Math.round(c.best * 100)}%</span><em>{c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`}</em></div>{:else}<div class="empty"><span>🌱</span><b>아직 성장 기록이 없어요</b><small>🌱 도전자로 한 판 하면 생겨요</small></div>{/each}</div>
         <small class="lbl">지난 판</small>
         <div class="rkl" data-k="board-myruns">{#each runs.slice(0, 30) as r (r.k)}<div class="rr"><b class="no">{day2(r.at)}</b><span class="who">{r.no}차시 · {r.n > 1 ? `${r.n}인` : '혼자'} · {r.role === 'g' ? '🛡' : '🌱'} {r.grade} · {r.right}/{r.total} · {mmss2(r.sec)}</span><em>{r.left ? '👋' : r.clear ? '○' : '✕'}</em></div>{/each}</div>
-      {/if}
     </div>
   {/if}
   {#if story && !res && !(mine && mine.phase === 'wait')}<button type="button" class="story" data-k="board-story" onclick={storyDone}><span>왕국 변두리에 균열이 열렸다. 학습지 속 몬스터가 쏟아져 나온다.</span><span>왕은 반마다 기사단을 세웠다. 균열을 닫는 것은 너희다.</span><small>누르면 닫혀요</small></button>{/if}
@@ -449,11 +445,6 @@
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); }
   .back { width: 44px; height: 48px; border: 0; background: none; color: var(--text); font-size: 26px; }
   .t { flex: 1; font-size: 18px; } .wal { height: 32px; padding: 0 10px; border-radius: 16px; background: var(--surface); display: flex; align-items: center; font: 700 14px var(--font); color: var(--gem); }
-  .chips { flex: none; display: flex; gap: 8px; overflow-x: auto; padding: 0 var(--s4) var(--s2); scrollbar-width: none; }
-  .chips button { flex: none; height: 40px; min-width: 48px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); position: relative; }
-  .chips button::before { content: ''; position: absolute; inset: -4px 0; }
-  .chips button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-  .chips button.lock { border-style: dashed; color: var(--text-3); }
   .off { margin: 0 var(--s4) var(--s2); padding: 8px 12px; border-radius: var(--r); background: var(--bad-bg); font-size: 13.5px; font-weight: 700; }
   .mid { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
   .card { background: var(--surface); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
@@ -494,7 +485,6 @@
   .grade { flex-direction: row; align-items: center; gap: 14px; } .grade .g { width: 64px; height: 64px; flex: none; border-radius: 18px; background: var(--surface-2); display: grid; place-items: center; font-size: 38px; color: var(--accent); }
   .grade.x .g { color: var(--text-3); } .grade span { display: flex; flex-direction: column; gap: 2px; }
   .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .stat span { background: var(--surface); border-radius: 10px; padding: 8px 0; text-align: center; display: flex; flex-direction: column; font-size: 12.5px; color: var(--text-2); } .stat b { font-size: 20px; color: var(--text); }
-  .rk div { display: flex; justify-content: space-between; font-size: 14.5px; } .rk em { font-style: normal; font-weight: 700; color: var(--accent); }
   .rw div { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-2); padding: 2px 0; } .rw .tot { color: var(--text); font-weight: 700; font-size: 16px; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
   .card.pin { border: 1px solid var(--line); } .card.pin.host { border-color: var(--accent); } .card.pin.host b { font-size: 20px; color: var(--accent); letter-spacing: 1px; }
   .post i.lk { background: var(--accent); color: var(--on-accent); }
@@ -513,7 +503,6 @@
   .fl.me { box-shadow: inset 0 0 0 2px var(--accent); }
   .fh { display: flex; flex: none; } .ft { display: flex; flex-direction: column; min-width: 0; } .ft b { font-size: 14px; } .ft small { font-size: 13px; color: var(--text-2); }
   .rkp { position: absolute; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; overflow: auto; padding-bottom: var(--s5); }
-  .tabs3 { display: flex; gap: 6px; padding: 0 var(--s4) var(--s2); }
   /* 🗺 #66 게시판 탭 3 · 출정 띠 · 고른 차시 카드 */
   .btabs { flex: none; display: flex; gap: 6px; padding: 0 var(--s4) var(--s2); }
   .btabs button { flex: 1; min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
@@ -525,12 +514,6 @@
   .qcard .qs { flex: none; font-size: 14px; color: #ffd25a; white-space: nowrap; } .qcard .qs em { font-style: normal; color: var(--text-3); }
   .qcard p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-2); } .qcard small { font-size: 13px; color: var(--text-3); }
   .gmap.rec { gap: 10px; }
-  .tabs3 button { flex: 1; min-height: var(--tap); border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); }
-  .tabs3 button.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
-  .seg2 { display: flex; gap: 6px; padding: var(--s2) var(--s4) 0; }
-  .seg2 button { flex: 1; min-height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); background: transparent; color: var(--text-2); font: 700 14px var(--font); }
-  .seg2 button.on { color: var(--text); border-color: var(--accent); }
-  .mypos { margin: var(--s3) var(--s4) 0; font: 800 18px var(--font); color: var(--accent); }
   .rkp .lbl { display: block; padding: var(--s2) var(--s4) 0; }
   .rkl { display: flex; flex-direction: column; gap: 4px; padding: var(--s2) var(--s4) 0; }
   .rr { display: flex; align-items: center; gap: var(--s2); min-height: 44px; padding: 0 var(--s3); border-radius: var(--r-sm); background: var(--surface); }
@@ -539,7 +522,6 @@
   .rr .who { flex: 1; min-width: 0; font-size: 14px; } .rr .who i { font-style: normal; color: var(--text-2); }
   .rr em { font-style: normal; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
   .card.up { border: 2px solid var(--accent); text-align: center; } .card.up b { font-size: 22px; color: var(--accent); }
-  button.card.rk { width: 100%; text-align: left; color: var(--text); font: inherit; }
   /* 📜 #70 */
   .rift { margin: 0; font-size: 14px; color: var(--text-2); }
   .post .ally { color: var(--accent); }

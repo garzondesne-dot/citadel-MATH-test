@@ -6,7 +6,7 @@ import { SUBJ } from '../engine/subject';
 import { AWAKEN_T, AWK_ALL, AWK_NEED, level } from './hero';
 import { veteranN } from '../school/explore';
 import { PACKS } from '../engine/packs';
-import { fameOf, legendOf, mapLessons, starTotal, starsByNo, STAR_TITLES, type BoardRec } from '../board/goals';
+import { fameHeld, legendOf, mapLessons, starTotal, starsByNo, STAR_TITLES, type BoardRec } from '../board/goals';
 const bRecs = (d: TitleData) => ((d.bonus as Record<string, unknown> | undefined)?.board as Record<string, BoardRec> | undefined) || {};
 const bStars = (d: TitleData) => starTotal(starsByNo(bRecs(d)), mapLessons(PACKS));
 
@@ -64,7 +64,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   board_explore: (d) => bStars(d) >= STAR_TITLES.explore, // 🎯 #79 게시판 목표
   board_conquer: (d) => bStars(d) >= STAR_TITLES.conquer,
   board_legend: (d) => legendOf(starsByNo(bRecs(d)), mapLessons(PACKS)),
-  guard1: (d) => fameOf(bRecs(d)) >= 3, guard2: (d) => fameOf(bRecs(d)) >= 10, guard3: (d) => fameOf(bRecs(d)) >= 25,
+  guard1: (d) => fameHeld(bRecs(d)) >= 3, guard2: (d) => fameHeld(bRecs(d)) >= 10, guard3: (d) => fameHeld(bRecs(d)) >= 25, // 🛡 #104 = 🤝 구조 수 · 옛 셈으로 받은 것은 그대로
   hallmaker: (d) => logKeys(d).some((k) => k.startsWith('quest_p_')), // 🏛 #75 명예의 전당
   improver: (d) => logKeys(d).some((k) => k.startsWith('fbk_')), // 🛠 #98 개선단 = 의견 채택(받을 때 💎 로그 fbk_{id})
   writer: (d) => photoPass(d) >= 3,

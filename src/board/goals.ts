@@ -24,7 +24,12 @@ export function starsByNo(recs: Record<string, BoardRec | null> | null | undefin
 }
 export const starTotal = (byNo: Record<number, number>, lessons: { no: number }[]) => lessons.reduce((a, l) => a + (byNo[l.no] ?? 0), 0);
 /** 🛡 수호자 명성 = 🛡 로 · 2명 이상 팀 · 클리어 */
-export const fameOf = (recs: Record<string, BoardRec | null> | null | undefined) => Object.values(recs || {}).filter((r) => r && r.role === 'g' && r.clear && (Number(r.n) || 1) >= 2).length;
+/** 🛡 #104 (📜 DECISIONS 11/22 「수호자 · 도전자 다시 세우기」 ⑤): 수호자 명성 = 🤝 구조 성공 수 (판 기록 acts.rescue 합 · 옛 판 = 칸 없음 = 0) */
+export const fameOf = (recs: Record<string, BoardRec | null> | null | undefined) => Object.values(recs || {}).reduce((a, r) => a + (Number((r as { acts?: { rescue?: number } } | null)?.acts?.rescue) || 0), 0);
+/** 옛 셈(수호자로 2명 이상 클리어한 판 수) — 이미 받은 배지 · 칭호를 빼지 않으려고만 씀 (새로 세지 않음) */
+export const fameLegacy = (recs: Record<string, BoardRec | null> | null | undefined) => Object.values(recs || {}).filter((r) => r && r.role === 'g' && r.clear && (Number(r.n) || 1) >= 2).length;
+/** 배지 · 칭호 단계 = 새 셈과 옛 셈 중 높은 단계 (fameLv 는 커질수록 같거나 높음) */
+export const fameHeld = (recs: Record<string, BoardRec | null> | null | undefined) => Math.max(fameOf(recs), fameLegacy(recs));
 export const FAME: { n: number; id: string; name: string; cell: number }[] = [{ n: 3, id: 'guard1', name: '수호 견습', cell: 0 }, { n: 10, id: 'guard2', name: '수호 기사', cell: 1 }, { n: 25, id: 'guard3', name: '수호 스승', cell: 2 }];
 export const fameLv = (n: number) => [...FAME].reverse().find((f) => n >= f.n) ?? null;
 export const nextFame = (n: number) => FAME.find((f) => n < f.n) ?? null;

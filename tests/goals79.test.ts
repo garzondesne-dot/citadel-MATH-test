@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fameLv, fameOf, legendOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starsByNo, starTotal } from '../src/board/goals';
+import { fameHeld, fameLegacy, fameLv, fameOf, legendOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starsByNo, starTotal } from '../src/board/goals';
 import { PACKS } from '../src/engine/packs';
 import { earnedFrom } from '../src/model/titles';
 
@@ -14,9 +14,12 @@ describe('🎯 게시판 목표', () => {
     const L = mapLessons(PACKS); expect(new Set(L.map((x) => x.no)).size).toBe(L.length); expect(MAP_PTS).toHaveLength(17); expect(L.length).toBeLessThanOrEqual(MAP_PTS.length - 1);
     MAP_PTS.forEach(([x, y]) => { expect(x).toBeGreaterThan(0); expect(x).toBeLessThan(100); expect(y).toBeGreaterThan(0); expect(y).toBeLessThan(100); });
   });
-  it('🛡 명성 = 🛡 · 2명 이상 · 클리어 · 견습 3 · 기사 10 · 스승 25', () => {
-    const recs = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, { role: 'g' as const, n: i % 4 === 0 ? 1 : 2, clear: i !== 5 }]));
-    expect(fameOf(recs)).toBe(8); expect(fameLv(8)?.name).toBe('수호 견습'); expect(nextFame(8)?.n).toBe(10); expect(fameLv(2)).toBeNull(); expect(fameLv(25)?.name).toBe('수호 스승');
+  it('🛡 #104 명성 = 🤝 구조 성공 합 · 옛 판 = 0 · 이미 받은 단계는 그대로(fameHeld) · 견습 3 · 기사 10 · 스승 25', () => {
+    const old = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`k${i}`, { role: 'g' as const, n: i % 4 === 0 ? 1 : 2, clear: i !== 5 }]));
+    expect(fameOf(old)).toBe(0); expect(fameLegacy(old)).toBe(8); expect(fameHeld(old)).toBe(8);
+    const nw = { ...old, a: { role: 'c' as const, n: 3, clear: false, acts: { rescue: 4 } }, b: { role: 'g' as const, n: 2, clear: true, acts: { rescue: 7 } } };
+    expect(fameOf(nw)).toBe(11); expect(fameHeld(nw)).toBe(11);
+    expect(fameLv(8)?.name).toBe('수호 견습'); expect(nextFame(8)?.n).toBe(10); expect(fameLv(2)).toBeNull(); expect(fameLv(25)?.name).toBe('수호 스승');
   });
   it('칭호: 별 · 전설 · 수호', () => {
     const L = mapLessons(PACKS), board = Object.fromEntries(L.map((l, i) => [`b${i}`, { no: l.no, grade: 'S', clear: true, role: 'g' as const, n: 2 }]));
