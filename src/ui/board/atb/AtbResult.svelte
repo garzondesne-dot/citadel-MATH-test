@@ -52,7 +52,7 @@
   let port = $state(false);
   $effect(() => { port = portNow(); const f = () => (port = portNow()); addEventListener('resize', f); return () => removeEventListener('resize', f); });
   /** 💀 📜 요청 #88 패배 이유 = 큰 줄 (엔진 why → 학생 말) */
-  const WHY: Record<string, string> = { 후퇴: '🌀 현자가 포털로 불러들였어요 · 벌 없음 · 맞힌 문제는 기록돼요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급 힐로 버텨 봐요' };
+  const WHY: Record<string, string> = { 후퇴: '🌀 현자가 포털로 불러들였어요 · 벌 없음 · 맞힌 문제는 기록돼요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급붕대로 버텨 봐요' };
 </script>
 
 <div class="rs" class:lose={!win} class:port data-k="atb-result">

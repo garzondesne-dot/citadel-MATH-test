@@ -43,9 +43,9 @@ export const T = {
   /** 💠 스킬 비용 (Y2) */
   cost: { shield: 1, equip: 1, role: 1, revive: 1, tier4: 2, aura: 2, awk: 3, heal: 1 }, // heal = 🩹 응급 힐 (요청 #46) // tier4 = 요청 #19 로 단추 없앰(Ⅳ 장착 = 장착 스킬 피해에 단계 보너스 · G.tier)
   /** 💥 스킬 피해 비 (Y11): 장착 1 · 4레벨 2.3 · 각성 3.8(판당 1번) + 역할 덧효과 그대로 */
-  ratio: { equip: 1, tier4: 2.3, awk: 3.8 },
+  ratio: { equip: 1, tier4: 1.7, awk: 3.8 }, // 📜 #101 스킬 1 = 장착 ×1 · 구슬 1 · 스킬 2(tier4 키) = ×1.7 · 구슬 2 · 누구나
   /** 🛡 오라 방패 (Y12 · +10 · 판당 1번): 다음 보스 공격 1번 팀 전체 막음 + 보스 석화 ⏳ 임시 6초(선생님 확인 전) */
-  aura: { stone: 6 },
+  aura: { stone: 6, chance: 0.3 }, // 📜 #101 홀리 방패 = 단추 없음 · +10 용사(각성 포함)가 맞기 직전 30% · 판당 1번 · 그 공격 팀 전체 막음 + 보스 6초 석화
   skillBase: 140, attackBase: 12, // 스킬 기본(장착 = 140 · 📜 모의실험4 「55 → 140」) · 일반 공격 기본
   timing: { miss: 0, ok: 1, crit: 1.5 }, // 일반 공격 타이밍 바
   /** ⏳ 타이밍 바 (📜 11/20 요청 #3 ⑥): 판마다 성공 칸 폭 · 치명 칸 폭 · 바늘 한 번 지나는 시간(ms) 을 이 범위에서 고르고 칸 자리도 무작위
@@ -83,7 +83,7 @@ export const T = {
   role: {
     dealer: { hp: 1.0, def: 0, spd: 1.0, smash: 1.5 },
     tank: { hp: 1.3, def: 0.2, spd: 0.9, cover: 0.5 },
-    healer: { hp: 0.9, def: 0, spd: 0.95, big: 0.9, atkHeal: 0.05, skillCost: 2, skillMul: 1.6, rescueAt: 0.3 }, // 📜 요청 #46 (선생님 2026-11-21) 💚 큰 힐 = 한 명 최대 체력 90% · 일반 공격 맞힘 = 팀 모두 5% · 공격 스킬 ⚡2 ×1.6 · 30% 아래 친구 살림 = 구조 (옛 +12 · 보스 공격 사이 1번 없앰)
+    healer: { hp: 0.9, def: 0, spd: 0.95, big: 0.9, atkHeal: 0.05, skillCost: 1, skillMul: 1, /* 📜 #101 힐러도 스킬 1 · 2 같은 구조 (전: 공격 스킬 구슬 2 · ×1.6) */ rescueAt: 0.3 }, // 📜 요청 #46 (선생님 2026-11-21) 💚 큰 힐 = 한 명 최대 체력 90% · 일반 공격 맞힘 = 팀 모두 5% · 공격 스킬 ⚡2 ×1.6 · 30% 아래 친구 살림 = 구조 (옛 +12 · 보스 공격 사이 1번 없앰)
     support: { hp: 0.95, def: 0, spd: 1.1 },
   },
   atbSec: 8, defCap: 0.4, crit: 1.5,
@@ -164,7 +164,9 @@ export const SHIELD: Record<number, Fam[]> = {
 };
 for (const [n, f] of Object.entries(SHIELD)) { const b = BOSSES[Number(n)]; if (b) b.shield = f; }
 /** 실드 칸 속성 (설정 없으면 약점 둘 + 나머지 앞 둘) */
-export const shieldOf = (b: BossCfg): Fam[] => b.shield ?? [...b.weak, ...(['arms', 'flame', 'nature', 'wisdom', 'mystic'] as Fam[]).filter((f) => !b.weak.includes(f))].slice(0, 4);
+/** 📜 #101 실드 = 2칸 = 보스 약점 계열 2개 (SHIELD 표 앞 둘과 같음) */
+export const shieldOf = (b: BossCfg): Fam[] => b.weak.slice(0, 2);
+export const shieldOf4 = (b: BossCfg): Fam[] => b.shield ?? [...b.weak, ...(['arms', 'flame', 'nature', 'wisdom', 'mystic'] as Fam[]).filter((f) => !b.weak.includes(f))].slice(0, 4);
 /** 공격 종류 → 효과 (배율 = 그 판 기본 단일 · 광역 값에 곱 · 0 = HP 피해 없음) · 설계안 5절 묶음: HP · HP+감속 · 감속 · 행동 불능 */
 export const ATK: Record<AtkKind, { name: string; mul: number; aoe?: boolean; status?: 'slow' | 'stun'; wake?: boolean; split?: number; warn?: number; special?: 'mirror' | 'scale' | 'breath' | 'contra' | 'reverse' | 'hammer'; /** 행동 불능 초 (없으면 T.stun) */ stunSec?: number; /** 🔩 맞은 용사에게 표식 (16) */ mark?: boolean }> = {
   basic: { name: '공격', mul: 1 },

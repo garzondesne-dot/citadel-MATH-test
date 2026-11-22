@@ -30,8 +30,8 @@ describe('ATB 용사 수치', () => {
     const st = statsOf({ hero: 0, lv: 1, enh: 0, tier: 1 }), r = statRows(st);
     expect(r.find((x) => x.k === 'atk')).toMatchObject({ v: String(Math.round(T.attackBase * st.atkMul)), sub: `×${st.atkMul.toFixed(2)}` });
     expect(r.find((x) => x.k === 'skill')!.v).toBe(String(Math.round(T.skillBase * st.skillMul)));
-    expect(r.find((x) => x.k === 'heal')!.v).toBe(`🩹 응급 힐 ${Math.round(st.maxHp / 3)}`);
+    expect(r.find((x) => x.k === 'heal')!.v).toBe(`🩹 응급붕대 ${Math.round(st.maxHp / 3)}`);
     const hl = HEROES.find((h) => roleOf(h.id) === 'healer')!, sh = statsOf({ hero: hl.id, lv: 1, enh: 0, tier: 1 }), rh = statRows(sh);
-    expect(rh.find((x) => x.k === 'skill')!.v).toBe(String(Math.round(T.skillBase * sh.skillMul * 1.6))); expect(rh.find((x) => x.k === 'heal')!.v).toBe('💚 큰 힐 90%');
+    expect(rh.find((x) => x.k === 'skill')!.v).toBe(String(Math.round(T.skillBase * sh.skillMul * T.role.healer.skillMul))); expect(rh.find((x) => x.k === 'heal')!.v).toBe('💚 큰 힐 90%');
   });
 });
