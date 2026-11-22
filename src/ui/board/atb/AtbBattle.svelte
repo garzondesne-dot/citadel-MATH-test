@@ -247,14 +247,14 @@
   // 🛡 📜 요청 #35 예고 · 반응 막기 안내
   const tg = $derived(S.end ? null : telegraphOf(S));
   const reactNow = $derived(me >= 0 && canReact(S, me));
-  const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호! 대신 맞아 줘요 (바로 쓸 수 있어요)', support: '🎵 지금 격려! 결계로 광역을 줄여요 (바로 쓸 수 있어요)', dealer: '⚔ 지금 강타! 모으기를 끊어요 (바로 쓸 수 있어요)' };
+  const REACT_TXT: Record<string, string> = { tank: '🛡 지금 엄호! 대신 맞아 줘요 (바로 쓸 수 있어요)', support: '🎵 지금 격려! 모두 지켜요 · 피해 −30% (바로 쓸 수 있어요)', dealer: '⚔ 지금 강타! 모으기를 끊어요 (바로 쓸 수 있어요)' };
   const ROLE_COL: Record<string, string> = { tank: '#3a7ad8', support: '#c8862a', dealer: '#d8402a', healer: '#2faa5a' };
   const ROLE_KO: Record<string, string> = { tank: '탱커', support: '서포터', dealer: '딜러' };
-  const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => S.heroes[i]?.s.name).join(' · ') ?? ''} 노림 · 🛡 탱커가 막을 수 있어요` : tg.cls === 'aoe' ? `💥 광역! · 🎵 서포터 결계로 줄여요` : `🌀 ${tg.atk} 모으는 중 · ⚔ 딜러 강타로 끊어요`) : '');
+  const tgLine = $derived(tg ? (tg.cls === 'single' ? `⚠ ${S.target?.map((i) => S.heroes[i]?.s.name).join(' · ') ?? ''} 노림 · 🛡 탱커가 막을 수 있어요` : tg.cls === 'aoe' ? `💥 광역! · 🎵 서포터 격려로 줄여요` : `🌀 ${tg.atk} 모으는 중 · ⚔ 딜러 강타로 끊어요`) : '');
   const hasRole = (r: string) => S.heroes.some((h) => h.s.role === r && !h.down);
   // 🎯 📜 요청 #50 A 역할 = 카운터 단추(화면 가운데 · 카드 위 · 남은 예고 고리) · ⚡ 0 = 작은 띠 · 임무
   const roleTg = $derived(me >= 0 && !!meH && !meH.down && !!tg && !S.blocked && REACT[tg.cls] === meH.s.role);
-  const CTR_TXT: Record<string, string> = { tank: '🛡 엄호!', support: '🎵 결계!', dealer: '⚔ 끊기!' };
+  const CTR_TXT: Record<string, string> = { tank: '🛡 엄호!', support: '🎵 격려!', dealer: '⚔ 끊기!' };
   const mis = $derived(me >= 0 && meH ? (void S.evN, missionOf(S, me)) : null);
   // 💥 B 속성 = 실드가 떴고 내 칸이 남았고 내 계열이 약점 → 2초 카드 위 알림 → 카드 뒤 가운데에 계속 (요청 #50 🔁)
   const brk = $derived(me >= 0 && !!meH && !meH.down && S.shieldUp && S.cells.some((c) => !c.broken && !!meH && (c.fam === meH.s.fam || (orphanCell(S, c) && meH.tickets > 0)))); /* 📜 #101 = 스킬 2 로 깰 수 있는 칸이 있을 때 */
@@ -306,13 +306,14 @@
     if (!meH || meH.down || over === 'timing') return null; const R = meH.s.role, ok = (k: SkillK) => slots.some((x) => x.k === k && x.ok), cost = (k: SkillK) => slots.find((x) => x.k === k)?.cost ?? 0, c = (k: SkillK) => (cost(k) ? `구슬 ${cost(k)}` : '구슬 없이');
     const low = S.heroes.filter((h) => !h.down && h.hp < h.s.maxHp * T.lowHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0];
     if (reactNow && R === 'tank' && ok('role')) { const tg = S.target?.[0]; return tg == null || tg === me ? { k: 'role', t: '막기!', sub: c('role'), dk: 'atb-counter', img: ART('counter/btn-cover') } : { k: 'role', t: '엄호!', sub: `${tagName(tg)} 지키기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cover') }; }
+    if (reactNow && R === 'support' && ok('role')) return { k: 'role', t: '격려!', sub: `모두 지키기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-boost') }; /* 📜 11/22 선생님 = 광역 반응 = 서포터 「🎵 격려! 모두 지키기」 (막기 · 엄호와 같은 1순위) */
     if (low && R === 'healer' && ok('role')) return { k: 'role', t: '💚 힐!', sub: `${tagName(low.id)} · ${c('role')}`, dk: 'atb-morph-heal' };
     if (low && ok('heal')) return { k: 'heal', t: '🩹 응급붕대!', sub: `${tagName(low.id)} · ${c('heal')}`, dk: 'atb-morph-heal' };
     if (askTo != null) return { k: 'aid', t: `💡 ${tagName(askTo)} 도와줘!`, sub: '힌트 보내기 · 구슬 없이', dk: 'atb-aid' };
     if (ok('revive')) { const d = S.heroes.find((h) => h.down && h.id !== me); return { k: 'revive', img: IC4.revive, t: '부활!', sub: `${d ? tagName(d.id) + ' · ' : ''}${c('revive')}`, dk: 'atb-morph-revive' }; }
     if (reactNow && R === 'dealer' && ok('role')) return { k: 'role', t: '끊기!', sub: `모으기 끊기 · ${c('role')}`, dk: 'atb-counter', img: ART('counter/btn-cut') };
     if (S.shieldUp && canBreak(S, me) && ok('tier4')) return { k: 'tier4', img: IC4.tier4, t: '스킬 2!', sub: `실드 1칸 · ${c('tier4')}`, dk: 'atb-break' };
-    return null; /* 서포터 광역 결계 = 변신 없음(☰ 메뉴 · 머리 질문 중) */
+    return null;
   });
   const SK_NAME = (k: SkillK) => k === 'shield' ? '보호막 부수기' : k === 'equip' ? '스킬 1' : k === 'tier4' ? (me >= 0 && canBreak(S, me) ? '💥 스킬 2 · 실드' : '스킬 2') : k === 'role' ? (meH ? ROLE_SKILL[meH.s.role] : '역할') : k === 'aura' ? '홀리 방패' : k === 'awk' ? '각성' : k === 'heal' ? '응급붕대' : '부활';
   const SK_ICON: Record<SkillK, string> = { shield: '🔨', equip: '⚡', tier4: '💥', role: '', aura: '🛡', awk: '✨', revive: '💖', heal: '🩹' };
@@ -510,7 +511,7 @@
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); } // 📜 #92 팀 부활 횟수 없음 → 💖 n → m 판 없앰
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
     else if (e.k === 'aura') { const n = Date.now(); holyFx = { who: e.who, n }; barrierFx = n; setTimeout(() => { if (holyFx?.n === n) holyFx = null; }, 1300); setTimeout(() => { if (barrierFx === n) barrierFx = 0; }, 2400); big(`🛡 홀리 방패! ${whoOf(e.who)} · 보스 ${e.stone}초 굳음`, 'weak', 1800); sfx('holy-on', 0.8); } /* 📜 #102 ⑥ 자동 홀리 = 반구 + 방패 한 번 + 위 띠 */
-    else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; void EN; void col; pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); if (e.who === me) { slowmo(300); sfx('block', 1); } } /* 📜 #102 ⑤ 역할 반응 = 그 자리 연출(막기 호 · 끊기 번쩍) · 눈빛 컷인 없음 */ /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 CHEER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '격려!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; void EN; void col; pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); if (e.who === me) { slowmo(300); sfx('block', 1); } } /* 📜 #102 ⑤ 역할 반응 = 그 자리 연출(막기 호 · 끊기 번쩍) · 눈빛 컷인 없음 */ /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
       { const bm = bossMid(), W2 = Math.round(bossSize * 0.7), FXN: Record<string, string> = { pierce: 'st-pierce', burn: 'st-burn', freeze: 'st-freeze', expose: 'st-weak', shock: 'st-shock', curse: 'st-curse' }; if (FXN[e.fx] && !e.tick) spawnFx(FXN[e.fx]!, bm.x, bm.y, W2, e.fx === 'pierce' ? 520 : 800); if (e.fx === 'bless' && e.to != null) { const m = heroMid(e.to); spawnFx('st-bless', m.x, m.y, 90, 800); } if (e.fx === 'gust') { const m = heroMid(e.who); spawnFx('st-wind', m.x, m.y, 90, 800); } } // 🎨 그림 = 덧효과 조각
@@ -564,7 +565,7 @@
   const domeKind = $derived<'' | 'aura' | 'barrier'>(S.end ? '' : S.guard ? 'aura' : S.blocked?.how === 'barrier' ? 'barrier' : '');
   let domeFx = $state<{ k: 'aura' | 'barrier'; n: number } | null>(null), barrierArmed = false;
   $effect(() => { if (domeKind === 'barrier') barrierArmed = true; });
-  function domeBlock(k: 'aura' | 'barrier') { const n = Date.now(); domeFx = { k, n }; big('🛡 결계로 막음!', 'note', 1300); setTimeout(() => { if (domeFx?.n === n) domeFx = null; }, 1000); }
+  function domeBlock(k: 'aura' | 'barrier') { const n = Date.now(); domeFx = { k, n }; big(k === 'aura' ? '🛡 홀리 방패로 막음!' : '🎵 격려! 피해 −30%', 'note', 1300); setTimeout(() => { if (domeFx?.n === n) domeFx = null; }, 1000); }
   const domeBox = $derived.by(() => {
     const ps = S.heroes.filter((h) => !h.down).map((h) => posOf(h.id)); if (!ps.length) return null;
     const hh = ((base * 0.84 * 64) / Math.max(1, H)) * 100, x0 = Math.min(...ps.map((p) => p.x)) - 8, x1 = Math.max(...ps.map((p) => p.x)) + 8, y1 = Math.max(...ps.map((p) => p.y)) + 3, y0 = Math.min(...ps.map((p) => p.y)) - hh - 8;

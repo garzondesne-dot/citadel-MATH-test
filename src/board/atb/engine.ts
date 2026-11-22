@@ -368,7 +368,7 @@ export function roleAct(S: State, who: number, to?: number): boolean {
   h.log.boosts++; spend(h); push(S, { k: 'role', t: S.t, who, role: R, to: tg.id }); return true;
 }
 /** 🎯 역할 임무 (📜 요청 #50 · 판마다 · 보여 주기만 · 💎 없음): 탱커 막기 2 · 딜러 끊기 1 · 서포터 결계 1 · 힐러 구조 1 · 그 판에 기회(그 종류 예고 · 30% 아래 친구)가 없으면 chance = false */
-export const MISSION: Record<Role, { need: number; txt: string; ic: string }> = { tank: { need: 2, txt: '막기', ic: '🛡' }, dealer: { need: 1, txt: '끊기', ic: '⚔' }, support: { need: 1, txt: '결계', ic: '🎵' }, healer: { need: 1, txt: '구조', ic: '💚' } };
+export const MISSION: Record<Role, { need: number; txt: string; ic: string }> = { tank: { need: 2, txt: '막기', ic: '🛡' }, dealer: { need: 1, txt: '끊기', ic: '⚔' }, support: { need: 1, txt: '격려', ic: '🎵' }, healer: { need: 1, txt: '구조', ic: '💚' } };
 export function missionOf(S: State, who: number): { need: number; got: number; done: boolean; chance: boolean; txt: string; ic: string } {
   const h = S.heroes[who]!, M = MISSION[h.s.role], got = h.s.role === 'healer' ? (h.log.rescues ?? 0) : (h.log.blocks ?? 0), tl = S.rec.tele;
   const chance = h.s.role === 'healer' ? !!S.rec.lowSeen : (tl?.[h.s.role === 'tank' ? 'single' : h.s.role === 'support' ? 'aoe' : 'special'] ?? 0) > 0;

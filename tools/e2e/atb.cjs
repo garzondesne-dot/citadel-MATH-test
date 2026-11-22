@@ -387,17 +387,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     const r = await v.evaluate(() => ({ ...globalThis.__lk, fsEl: !!document.fullscreenElement, rot: !!document.querySelector('[data-rot90]') }));
     ok('요청 #85 세로 390 연습방 → 판(돌림 상자) → 나가기 = 방향 잠금 0 · 전체 화면 0 · 설정 화면 세로', rot && r.lock === 0 && r.fs === 0 && !r.fsEl && !r.rot, JSON.stringify({ inBattleRot: rot, ...r }));
     await v.close(); }
-  // 📜 #92 · #108 10분 상한 = 7:00 보스 말풍선 + 가장자리 · 9:00 「1분 뒤 ○○이 도망쳐요」 + 셈 · 10:00 몬스터 도망 결과
+  // 📜 #92 · #108 8분 상한(6:00 · 7:00 · 8:00) = 7:00 보스 말풍선 + 가장자리 · 9:00 「1분 뒤 ○○이 도망쳐요」 + 셈 · 10:00 몬스터 도망 결과
   { const v = await b.newPage({ viewport: { width: 844, height: 390 } }); v.on('pageerror', (e) => errs.push(String(e)));
     await v.goto(B); await v.waitForSelector('[data-k="atb-setup"]'); await v.click('[data-k="atb-start"]'); await v.waitForSelector('[data-k="atb-stage"]'); await v.waitForTimeout(500);
     const keep = () => v.evaluate(() => { const S = globalThis.__atb.S; S.heroes.forEach((h) => { h.hp = h.s.maxHp; h.down = false; }); S.bossHp = S.bossMax; });
-    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 419.8; }); await v.waitForTimeout(700);
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 359.8; }); await v.waitForTimeout(700);
     const w = await v.evaluate(() => ({ sage: document.querySelector('[data-k="atb-boss-say"][data-say="flee"]')?.textContent ?? '', edge: document.querySelector('[data-k="atb-stage"]').classList.contains('capon') }));
     await v.screenshot({ path: `${SHOTS}/atb-r108-warn-844.png` });
-    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 539.8; }); await v.waitForTimeout(700);
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 419.8; }); await v.waitForTimeout(700);
     const c = await v.evaluate(() => ({ left: document.querySelector('[data-k="atb-cap-left"]')?.textContent ?? '', sage: document.querySelector('.bigmsg, [data-k="atb-big"]')?.textContent ?? '', flee: false }));
     await v.screenshot({ path: `${SHOTS}/atb-r108-call-844.png` });
-    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 599.8; }); await v.waitForTimeout(500); c.flee = await v.evaluate(() => !!document.querySelector('[data-k="atb-boss"].flee')); await v.waitForSelector('[data-k="atb-result"]', { timeout: 8000 }).catch(() => {}); await v.waitForTimeout(1500);
+    await keep(); await v.evaluate(() => { globalThis.__atb.S.t = 479.8; }); await v.waitForTimeout(500); c.flee = await v.evaluate(() => !!document.querySelector('[data-k="atb-boss"].flee')); await v.waitForSelector('[data-k="atb-result"]', { timeout: 8000 }).catch(() => {}); await v.waitForTimeout(1500);
     const r = await v.evaluate(() => ({ h: document.querySelector('[data-k="atb-result"] h2')?.textContent ?? '', why: document.querySelector('[data-k="atb-lose-why"]')?.textContent ?? '', tip: document.querySelector('[data-k="atb-flee-tip"]')?.textContent ?? '', bad: /현자|포털|후퇴/.test(document.body.innerText) }));
     await v.screenshot({ path: `${SHOTS}/atb-r108-flee-844.png` });
     ok('📜 #108 7:00 보스 말풍선(도망 예고) + 가장자리 짙게 · 9:00 「1분 뒤 …도망쳐요!」 + ⏳ 1:00 셈 · 10:00 보스 오른쪽으로 사라짐 → 「도망쳤다!」 · 벌 없음 · 💡 · 현자/포털/후퇴 글자 없음', w.sage.length > 3 && w.edge && /^⏳ (1:00|0:59)$/.test(c.left) && /1분 뒤 .+ 도망쳐요/.test(c.sage) && c.flee && r.h === '도망쳤다!' && /도망쳤어요 · 벌 없음/.test(r.why) && /조금 더 빨리/.test(r.tip) && !r.bad, JSON.stringify({ w, c, r }));
