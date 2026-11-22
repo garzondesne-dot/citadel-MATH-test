@@ -2,7 +2,7 @@
 //   NODE_PATH=$(npm root -g) node tools/e2e/herosw120.cjs <폴더> [주소]
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4173/';
-const VP = [['phone', 360, 740], ['phone-l', 740, 360], ['iphone', 390, 844], ['tablet', 820, 1180]];
+const VP = [['phone', 360, 740], ['phone-l', 740, 360], ['iphone', 390, 844], ['tablet', 820, 1180], ['tab-l', 1024, 768], ['tab-p', 768, 1024]];
 (async () => {
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   for (const [nm, w, h] of VP) {

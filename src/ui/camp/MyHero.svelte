@@ -390,8 +390,8 @@
   .chg2 { flex: 1; min-width: 0; margin: 0; font-size: 13px; color: var(--text-2); overflow: hidden; }
   .chg2 b { color: var(--text); }
   .chg2 small { display: block; font-size: 12px; color: var(--text-3); white-space: nowrap; }
-  .swbg { position: fixed; left: 0; right: 0; bottom: 0; z-index: 16; max-width: 430px; margin: 0 auto; background: rgba(0, 0, 0, 0.45); }
-  .hsw { position: fixed; left: 0; right: 0; bottom: 0; z-index: 17; max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); padding: 0 var(--s4); display: flex; flex-direction: column; gap: 10px; }
+  .swbg { position: fixed; left: 0; right: 0; bottom: 0; z-index: 16; background: rgba(0, 0, 0, 0.45); }
+  .hsw { position: fixed; left: 0; right: 0; bottom: 0; z-index: 17; box-sizing: border-box; max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.55); padding: 0 var(--s4); display: flex; flex-direction: column; gap: 10px; }
   .hsw > :global(.act) { margin: 0 calc(-1 * var(--s4)); background: var(--surface); }
   .grab { height: 14px; display: grid; place-items: center; } .grab i { width: 40px; height: 4px; border-radius: 2px; background: var(--line); display: block; }
   .hswh { display: flex; align-items: center; gap: var(--s2); } .hswh b { font-size: 18px; } .hswh span { flex: 1; font-size: 13px; color: var(--text-2); }
