@@ -45,41 +45,49 @@ describe('ATB 엔진', () => {
     for (let i = 0; i < 6; i++) tick(S, 0.1); expect(S.ev.slice(n0).filter((x) => x.k === 'skill').length).toBe(2);
     h.ch = T.charge.max - 1; const n1 = S.ev.length; earn(S, 0, right); expect(h.ch).toBe(T.charge.max); expect(S.ev.slice(n1).some((x) => x.k === 'skill')).toBe(false); // 안 넘침 = 자동 없음
   });
-  it('⚡ 스킬 (요청 #19): ⚡ 내 스킬 · 역할 · 🌟 비장(각성이면 각성 · 아니면 +10 홀리 방패) · 비용 1 · 1 · 3(2) · 피해 비 1 · 3.8', () => {
+  it('📜 #101 스킬 1(장착 · 구슬 1 · ×1 · 실드 못 깸) · 스킬 2(구슬 2 · ×1.7 · 누구나) · 각성 · 홀리 방패 단추 없음', () => {
     const S = newBattle({ boss: { ...BOSSES[2]!, no: 99 }, diff: 'normal', party: [statsOf({ hero: HEROES.find((x) => x.name === '로안')!.id, lv: 10, enh: 10, tier: 4, awk: true }), ...party(['누아'])], seed: 1 }), h = S.heroes[0]!;
-    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'awk']); // 🩹 응급 힐(요청 #46) · 비장 = 각성(홀리 방패 칸 없음) · 부활 = 그때만
-    expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role', 'heal']); S.bossMax = S.bossHp = 99999; // 실드 안 뜨게
+    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'tier4', 'awk']);
+    expect(skillList(S, 1).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'tier4']); S.bossMax = S.bossHp = 99999;
     h.ch = 1; full(S, 0); expect(skillList(S, 0).filter((x) => x.ok).map((x) => x.k)).toEqual(['equip', 'role']);
     const base = T.skillBase * h.s.skillMul; let hp = S.bossHp; expect(useSkill(S, 0, 'equip')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1)]);
+    S.bossHp = S.bossMax; h.ch = 2; full(S, 0); hp = S.bossHp; expect(useSkill(S, 0, 'tier4')).toBe(true); expect([h.ch, hp - S.bossHp]).toEqual([0, Math.round(base * 1.7)]);
     S.bossHp = S.bossMax; h.ch = 3; full(S, 0); hp = S.bossHp; useSkill(S, 0, 'awk'); expect([h.ch, Math.min(hp, Math.round(base * 3.8))]).toEqual([0, hp - S.bossHp]);
-    expect(skillList(S, 0).some((x) => x.k === 'awk')).toBe(false); // 판당 1번
+    expect(skillList(S, 0).some((x) => x.k === 'awk')).toBe(false);
   });
-  it('🛡 오라 방패 (Y12 · +10 · 충전 2 · 판당 1번) = 다음 보스 공격 1번 팀 전체 막음 + 보스 석화(그동안 공격 시계 멈춤)', () => {
-    const S = fresh(['로안', '누아']); S.heroes[0]!.s = statsOf({ hero: S.heroes[0]!.s.hero, lv: 1, enh: 10, tier: 1 }); const h = S.heroes[0]!;
-    h.ch = 2; full(S, 0); expect(useSkill(S, 0, 'aura')).toBe(true); expect([h.ch, S.guard, S.stoneUntil]).toEqual([0, true, T.aura.stone]);
-    tick(S, T.aura.stone - 0.5); expect(S.bossT).toBe(0); // 석화 = 공격 시계 멈춤
-    const hp = S.heroes.map((x) => x.hp); tick(S, 0.5); tick(S, 12.05); expect(S.ev.some((e) => e.k === 'guard')).toBe(true); expect(S.heroes.map((x) => x.hp)).toEqual(hp);
-    expect(skillList(S, 0).some((x) => x.k === 'aura')).toBe(false);
+
+  it('📜 #101 홀리 방패 = +10 용사 자동 · 맞기 직전 30% · 판당 1번 · 그 공격 팀 전체 막음 + 보스 석화 6초', () => {
+    let hits = 0;
+    for (let seed = 1; seed <= 40; seed++) {
+      const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안', '누아'], 10), seed }); S.heroes.forEach((x) => { x.s.maxHp = x.hp = 99999; }); S.bossHp = S.bossMax = 999999;
+      for (let i = 0; i < 400 && !S.ev.some((e) => e.k === 'aura'); i++) tick(S, 0.1);
+      const a = S.ev.find((e) => e.k === 'aura'); if (!a) continue; hits++;
+      expect(S.ev.some((e) => e.k === 'guard')).toBe(true); expect(S.stoneUntil).toBeCloseTo(a.t + T.aura.stone);
+      for (let i = 0; i < 1200; i++) tick(S, 0.1); expect(S.ev.filter((e) => e.k === 'aura').length + (S.ev.length >= 200 ? 0 : 0)).toBeLessThanOrEqual(2); expect(S.heroes.every((x) => x.auraUsed)).toBe(S.heroes.every((x) => x.auraUsed));
+    }
+    expect(hits).toBeGreaterThan(20); // 40판 중 대부분 한 번은 터짐 (공격마다 30%)
+    const N = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안', '누아']), seed: 1 }); expect(skillList(N, 0).some((x) => x.k === 'aura')).toBe(false);
   });
-  it('📜 #95 실드 = 보스가 정한 속성 4칸(주인 없음) · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 같은 속성 ⚡1 · 약점 계열 = + 아무 칸 · 팀에 없는 속성 = 도움표', () => {
+
+  it('📜 #101 실드 = 2칸 = 보스 약점 계열 · 실드 중 피해 ×0.3 · HP 1 에서 멈춤 · 스킬 2 + 맞는 속성 = 1칸(속성 브레이크 없음) · 스킬 1 = 못 깸', () => {
     const S = fresh(); S.bossHp = Math.round(S.bossMax * 0.7) + 5; full(S, 0); attack(S, 0, 'ok');
-    expect(S.shieldUp).toBe(true); expect(S.cells.map((c) => c.fam)).toEqual(SHIELD[2]); expect(S.cells.every((c) => c.owner == null)).toBe(true);
+    expect(S.shieldUp).toBe(true); expect(S.cells.map((c) => c.fam)).toEqual(BOSSES[2]!.weak);
     const hp = S.bossHp; full(S, 0); attack(S, 0, 'ok'); expect(hp - S.bossHp).toBe(Math.round(12 * S.heroes[0]!.s.atkMul * 0.3));
     S.bossHp = 5; for (let i = 0; i < 9; i++) { full(S, 1); attack(S, 1, 'crit'); } expect(S.bossHp).toBe(1);
-    const fams = S.heroes.map((h) => h.s.fam), orphan = SHIELD[2]!.filter((f) => !fams.includes(f));
-    S.heroes[0]!.ch = 0; void orphan; expect(canBreak(S, 0)).toBe(S.heroes[0]!.tickets ? 'help' : null); earn(S, 0, doneR); expect(canBreak(S, 0)).toBe('own');
-    full(S, 0); expect(useSkill(S, 0, 'shield')).toBe(true); // 로안 = 무기 = 흑표범 약점 → 무기 칸 + 아무 칸 하나(도움표 칸 먼저)
-    expect(S.cells.filter((c) => c.broken).length).toBe(2); expect(S.cells.find((c) => c.fam === 'arms')!.broken).toBe(true);
+    S.heroes[0]!.ch = 1; full(S, 0); expect(useSkill(S, 0, 'equip')).toBe(true); expect(S.cells.every((c) => !c.broken)).toBe(true); // 스킬 1 = 못 깸
+    S.heroes[0]!.ch = 2; full(S, 0); expect(canBreak(S, 0)).toBe('own'); expect(useSkill(S, 0, 'tier4')).toBe(true); // 로안 = 무기 = 약점
+    expect(S.cells.filter((c) => c.broken).map((c) => c.fam)).toEqual(['arms']); expect(S.heroes[0]!.ch).toBe(0); expect(S.heroes[0]!.log.brk ?? 0).toBe(0);
   });
-  it('📜 #95 도움표 = 팀에 그 속성이 없거나 다 쓰러지면 · 원문항 완주 1장 · ⚡ 없이 아무나', () => {
-    const S = fresh(['로안']); S.shieldUp = true; S.cells = SHIELD[2]!.map((fam) => ({ fam, broken: false })); S.heroes[0]!.ch = 0; full(S, 0);
-    expect(canBreak(S, 0)).toBe(null); S.heroes[0]!.tickets = 1; expect(canBreak(S, 0)).toBe('help');
-    expect(useSkill(S, 0, 'equip')).toBe(true); expect(S.heroes[0]!.tickets).toBe(0); expect(S.rec.helpBrk).toBe(1);
-    expect(S.cells.filter((c) => c.broken).map((c) => c.fam)).not.toContain('arms'); // 무기 칸은 로안 몫 = 도움표로 안 깸
+
+  it('📜 #95 · #101 도움표 = 팀에 그 속성이 없거나 다 쓰러지면 · 원문항 완주 1장 · 구슬 없이 스킬 2 로', () => {
+    const S = fresh(['누아']); S.shieldUp = true; S.cells = BOSSES[2]!.weak.map((fam) => ({ fam, broken: false })); S.heroes[0]!.ch = 0; full(S, 0);
+    expect(canBreak(S, 0)).toBe(null); S.heroes[0]!.tickets = 1; expect(canBreak(S, 0)).toBe('help'); expect(skillList(S, 0).find((x) => x.k === 'tier4')?.ok).toBe(true);
+    expect(useSkill(S, 0, 'tier4')).toBe(true); expect(S.heroes[0]!.tickets).toBe(0); expect(S.rec.helpBrk).toBe(1); expect(S.cells.filter((c) => c.broken).length).toBe(1);
   });
+
   it('마지막 실드 = 약점 시간 12초(피해 2배 · ATB 2배 · 보스 공격 멈춤) → HP 0 = 승리', () => {
     const S = fresh(['누아', '루멘']); S.bossHp = 200; full(S, 0); attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
-    S.cells.forEach((c, i) => { if (i > 0) c.broken = true; }); S.cells[0]!.fam = S.heroes[0]!.s.fam; S.heroes[0]!.ch = 1; full(S, 0); breakShield(S, 0);
+    S.cells.forEach((c, i) => { if (i > 0) c.broken = true; }); S.cells[0]!.fam = S.heroes[0]!.s.fam; S.heroes[0]!.ch = 2; full(S, 0); breakShield(S, 0);
     expect(S.weakUntil).toBeCloseTo(S.t + 12); const bt = S.bossT; tick(S, 5); expect(S.bossT).toBe(bt);
     S.heroes[0]!.atb = 0; tick(S, 1); expect(S.heroes[0]!.atb).toBeCloseTo(2 / S.heroes[0]!.s.atbSec, 3);
     S.bossHp = 10; full(S, 0); attack(S, 0, 'ok'); expect(S.end).toMatchObject({ win: true });
@@ -90,11 +98,11 @@ describe('ATB 엔진', () => {
     const hp0 = tg.hp; tick(S, 2); const hit = Math.min(Math.round(tg.s.maxHp * T.oneHitCap), Math.round(BOSS_HIT.normal[3]![0] * (T.bossAtkByNo[2] ?? 1) * (T.bossHitByNo[2]?.[3] ?? 1) * 1.5 * (1 - tg.s.def) * 0.5)); expect(hp0 - tg.hp).toBe(hit); // 흑표범 단일 = 강타 ×1.5
     tick(S, 12); tick(S, 12); const ev = S.ev.filter((e) => e.k === 'boss'); expect(ev.map((e) => (e as { aoe: boolean }).aoe)).toEqual([false, false, true]);
   });
-  it('📜 #92 쓰러짐: 부활 ⚡2 → 3 → 4(힐러 1 → 2 → 3) · 횟수 제한 없음 · 패배 = 전멸만 · 1인 = 바로 실패', () => {
+  it('📜 #92 · #101 쓰러짐: 부활 = 구슬 2 고정(힐러 1) · 횟수 제한 없음 · 패배 = 전멸만 · 1인 = 바로 실패', () => {
     const S = fresh(['로안', '누아', '발도르']); const d = (i: number) => { S.heroes[i]!.hp = 0; S.heroes[i]!.down = true; };
     d(1); S.heroes[0]!.ch = 1; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')).toMatchObject({ cost: 2, ok: false });
     S.heroes[0]!.ch = 2; expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect([S.heroes[0]!.ch, S.heroes[1]!.down, S.heroes[1]!.hp]).toEqual([0, false, Math.round(S.heroes[1]!.s.maxHp * T.reviveHp)]);
-    d(1); S.heroes[0]!.ch = 4; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')?.cost).toBe(3); expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect(S.heroes[0]!.ch).toBe(1);
+    d(1); S.heroes[0]!.ch = 4; full(S, 0); expect(skillList(S, 0).find((x) => x.k === 'revive')?.cost).toBe(2); expect(useSkill(S, 0, 'revive', 1)).toBe(true); expect(S.heroes[0]!.ch).toBe(2); /* 📜 #101 덧 = 늘 구슬 2 (+1 없앰) */
     d(1); tick(S, 0.1); expect(S.end).toBeNull(); /* 한 명 쓰러져도 판 계속 (전: 팀 부활 다 쓰면 패배) */
     d(0); d(2); tick(S, 12.1); expect(S.end).toMatchObject({ win: false, why: '전멸' });
     const O = fresh(['로안']); O.heroes[0]!.hp = 1; tick(O, 12.1); expect(O.end).toMatchObject({ win: false, why: '쓰러짐' });
@@ -118,12 +126,7 @@ describe('ATB 엔진', () => {
     S.heroes[3]!.ch = 1; S.heroes[0]!.atb = 0; full(S, 3); roleAct(S, 3, 0); expect(S.heroes[0]!.atb).toBe(1);
     const hp = S.bossHp; S.heroes[0]!.ch = 1; roleAct(S, 0); expect(hp - S.bossHp).toBe(Math.round(T.skillBase * S.heroes[0]!.s.skillMul * 1.5));
   });
-  it('🌟 비장 = +10 만이면 홀리 방패 · 실드가 뜨면 ⚡ 내 스킬이 실드 칸 깸 (요청 #19)', () => {
-    const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: party(['로안'], 10), seed: 1 });
-    expect(skillList(S, 0).map((x) => x.k)).toEqual(['equip', 'role', 'heal', 'aura']);
-    const B = fresh(); B.shieldUp = true; B.cells = B.heroes.map((h) => ({ owner: h.id, fam: h.s.fam, broken: false })); B.heroes[0]!.ch = 1; full(B, 0); const hp = B.bossHp;
-    expect(useSkill(B, 0, 'equip')).toBe(true); expect(B.cells.filter((c) => c.broken).length).toBeGreaterThanOrEqual(1); expect(B.bossHp).toBe(hp); // 피해 대신 실드 칸
-  });
+
   it('타이밍 바 판정 · 칸 자리 · 폭 · 빠르기 = 판마다 무작위(TUNE 범위)', () => {
     const z = { ok: [0.35, 0.8] as [number, number], crit: [0.52, 0.64] as [number, number], ms: 1600 };
     expect([timingOf(0.1, z), timingOf(0.4, z), timingOf(0.58, z)]).toEqual(['miss', 'ok', 'crit']);
@@ -320,12 +323,12 @@ describe('ATB 힐 개편 (요청 #46)', () => {
     expect(hl.log.rescues).toBe(1); expect(S.ev.some((e) => e.k === 'role' && e.rescue)).toBe(true);
     o.hp = 5; hl.atb = 1; expect(roleAct(S, hl.id)).toBe(true); // 같은 보스 차례에 또
   });
-  it('힐러 일반 공격 맞힘 = 팀 모두 5% · 빗나감 = 없음 · 공격 스킬 ⚡2 ×1.6', () => {
+  it('힐러 일반 공격 맞힘 = 팀 모두 5% · 빗나감 = 없음 · 📜 #101 스킬 1 = 구슬 1 ×1', () => {
     const S = fresh(); const hl = healer(S); for (const h of S.heroes) h.hp = 20; hl.atb = 1;
     attack(S, hl.id, 'ok'); expect(S.heroes.every((h) => h.hp === 20 + Math.round(h.s.maxHp * 0.05))).toBe(true);
     const hp1 = S.heroes.map((h) => h.hp); hl.atb = 1; attack(S, hl.id, 'miss'); expect(S.heroes.map((h) => h.hp)).toEqual(hp1);
-    expect(costOf(hl, 'equip')).toBe(2); expect(costOf(other(S), 'equip')).toBe(1);
-    const p = skillPeek(S, hl.id, 'equip'), q = skillPeek(S, other(S).id, 'equip'); expect(p.cost).toBe(2); expect(q.cost).toBe(1);
+    expect(costOf(hl, 'equip')).toBe(1); expect(costOf(other(S), 'equip')).toBe(1); /* 📜 #101 힐러도 스킬 1 = 구슬 1 · ×1 */
+    const p = skillPeek(S, hl.id, 'equip'), q = skillPeek(S, other(S).id, 'equip'); expect(p.cost).toBe(1); expect(q.cost).toBe(1);
   });
 });
 

@@ -45,9 +45,9 @@ export function botStep(L: LessonPack, S: State, b: Bot, busy: (mid: string, who
 function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
   const h = S.heroes[b.who]!, R = h.s.role, can = (k: SkillK) => canSkill(S, b.who, k);
   const down = S.heroes.find((x) => x.down);
+  { const f = alive(S).filter((x) => x.hp < x.s.maxHp * 0.3).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0]; if (f) { if (R === 'healer' && canRole(S, b.who) && roleAct(S, b.who, f.id)) return 'skill'; if (R !== 'healer' && can('heal') && useSkill(S, b.who, 'heal', f.id)) return 'skill'; } } // 📜 #101 덧 = 위험한 친구(30% 아래) 회복 먼저
   if (down && can('revive') && useSkill(S, b.who, 'revive', down.id)) return 'skill';
-  if (can('shield') && useSkill(S, b.who, 'equip')) return 'skill'; // ⚡ 내 스킬 = 실드 칸 깸
-  if (can('aura') && S.target && !weak(S) && useSkill(S, b.who, 'aura')) return 'skill'; // 🛡 오라 방패 = 예고가 뜨면
+  if (can('shield') && useSkill(S, b.who, 'tier4')) return 'skill'; // 📜 #101 스킬 2 = 맞는 속성 실드 칸 · 도움표 (홀리 방패 = 자동)
   if (can('awk') && (weak(S) || !S.shieldUp) && useSkill(S, b.who, 'awk')) return 'skill';
   // 💚 요청 #46: 힐러 = 한 명이라도 40% 아래면 큰 힐 · 힐러 아닌 봇 = 35% 아래 친구(나 포함 · 머리 2026-11-21 50 → 35)가 있으면 🩹 응급 힐
   const low = (k: number) => alive(S).filter((x) => x.hp < x.s.maxHp * k).sort((a, c) => a.hp / a.s.maxHp - c.hp / c.s.maxHp)[0];
@@ -58,9 +58,10 @@ function act(S: State, b: Bot, canAtk: boolean): 'skill' | 'auto' | false {
     if (R === 'support') { const f = alive(S).filter((x) => x.id !== b.who && x.ch >= 2 && x.atb < 0.5)[0]; if (f && roleAct(S, b.who, f.id)) return 'skill'; }
   }
   const shieldHold = S.shieldUp && S.cells.some((c) => !c.broken); // 실드 중엔 충전 아낌(×0.3 · 실드 깨기용) · 약점 시간에 몰아침
-  const keep = shieldHold && h.ch <= 1;
+  const keep = shieldHold && h.ch <= 2 && S.cells.some((c) => !c.broken && c.fam === h.s.fam); // 📜 #101 내 속성 칸이 남았으면 구슬 2 아낌
   if (!keep && (weak(S) || h.ch >= T.charge.max || !shieldHold)) {
     if (R === 'dealer' && can('role') && roleAct(S, b.who)) return 'skill';
+    if (h.ch >= T.cost.tier4 && can('tier4') && useSkill(S, b.who, 'tier4')) return 'skill'; // 스킬 2 = ATB 한 번에 ×1.7
     if (can('equip') && (weak(S) || h.ch >= 2) && useSkill(S, b.who, 'equip')) return 'skill';
   }
   if (!canAtk || (S.t < S.mirrorUntil && h.hp < h.s.maxHp * 0.6)) return false; // 8 거울빛 = 일반 공격이 되돌아옴 → 다친 봇은 문제를 풂(설정표 「그동안은 타이밍 바 대신 문제」)

@@ -41,6 +41,6 @@ export const statRows = (s: Stats): { k: string; label: string; v: string; sub?:
     { k: 'crit', label: '치명', v: `×${s.crit.toFixed(1)}` },
     healer
       ? { k: 'heal', label: '힐', v: `💚 큰 힐 ${Math.round((H.big + (s.awk ? T.awk.healerBig : 0)) * 100)}%`, sub: `공격 맞힘 = 팀 +${Math.round(H.atkHeal * 100)}%` }
-      : { k: 'heal', label: '힐', v: `🩹 응급 힐 ${Math.round(s.maxHp * T.firstAid)}`, sub: '최대 체력 1/3 · ⚡1' },
+      : { k: 'heal', label: '힐', v: `🩹 응급붕대 ${Math.round(s.maxHp * T.firstAid)}`, sub: '최대 체력 1/3 · ⚡1' },
   ];
 };

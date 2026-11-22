@@ -111,7 +111,7 @@ describe('v4 차시별 분노 (일반 · 도전만)', () => {
   });
   it('4 얼음 갑옷 다시 = 마지막으로 깬 칸이 다시 얼고 · 그 사람이 소문항 하나 맞히면 깸', () => {
     const S = at(4); tough(S); S.bossHp = Math.round(S.bossMax * 0.69); S.heroes[0]!.atb = 1; attack(S, 0, 'ok'); expect(S.shieldUp).toBe(true);
-    for (const h of S.heroes) { h.ch = 3; h.atb = 1; useSkill(S, h.id, 'equip'); } expect(S.cells.every((c) => c.broken)).toBe(true);
+    for (const h of S.heroes) { h.ch = 3; h.atb = 1; h.tickets = 2; useSkill(S, h.id, 'tier4'); } expect(S.cells.every((c) => c.broken)).toBe(true); /* 📜 #101 스킬 2 · 도움표 */
     const last = S.lastBrk!, owner = S.cells[last]!.by!; S.weakUntil = 0; S.bossHp = Math.floor(S.bossMax * 0.3) + 2; S.heroes[1]!.atb = 1; attack(S, 1, 'crit');
     expect(S.rage).toBe(true); expect(S.cells[last]!.broken).toBe(false); expect(S.refrozen).toBe(last);
     earn(S, owner, { done: false, perfect: false, right: true }); expect(S.cells[last]!.broken).toBe(true); expect(S.refrozen).toBeNull();
