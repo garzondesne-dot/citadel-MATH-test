@@ -49,7 +49,7 @@
         </div>
         <div class="col">
           <h3>공격 예고와 대응</h3>
-          <table class="atks" data-k="atb-scout-atks"><tbody>{#each rows as r (r.nm)}<tr data-cls={r.c}><td>{r.ic} {r.nm} <span class="t">{TGT[r.c]}</span></td><td class="r"><AtbIcon name={`role-${BLK[r.c].role}` as 'role-tank'} size={18} /> {BLK[r.c].nm} · {BLK[r.c].sk}</td></tr>{/each}</tbody></table>
+          <table class="atks" data-k="atb-scout-atks"><tbody>{#each rows as r (r.nm)}<tr data-cls={r.c}><td>{r.ic} {r.nm} <span class="t">{TGT[r.c]}</span></td><td class="r"><AtbIcon name={`role-${BLK[r.c].role}` as 'role-tank'} size={18} /> {BLK[r.c].nm} · {BLK[r.c].sk}</td></tr>{/each}<tr data-cls="rage" data-k="atb-scout-rage"><td>👹 분노 공격 <span class="t">체력 {Math.round(RAGE.at * 100)}% 아래</span></td><td class="r">✨ 퍼펙트로 진정</td></tr></tbody></table>
         </div>
       </div>
       <div class="foot">

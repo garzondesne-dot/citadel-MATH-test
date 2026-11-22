@@ -31,7 +31,7 @@ const SHOTS = process.argv[2] || '.';
             return { title: document.querySelector('[data-k="atb-qtitle"]').textContent, bt, over: Math.max(body.scrollWidth - body.clientWidth, card.scrollWidth - card.clientWidth), chain: !!lab, labTop: vis(lab), qTop: vis(qt), fold: !!body.querySelector('[data-k="chain-fold"]') || !body.querySelector('.story') };
           });
           const bad = r.bt.filter((x) => x.h < 44 || x.w < 44); if (bad.length) small.push(`${no}차시 ${r.title}: ${bad.slice(0, 3).map((x) => `${x.t}(${x.w}×${x.h})`).join(' ')}`);
-          if (r.over > 1) over.push(`${no}차시 ${r.title}: +${r.over}px`);
+          if (r.over > 1) { await p.waitForTimeout(400); const o2 = await p.evaluate(() => { const body = document.querySelector('[data-k="atb-quiz"] .body'), card = document.querySelector('[data-k="atb-quiz"]'); return Math.max(body.scrollWidth - body.clientWidth, card.scrollWidth - card.clientWidth); }); if (o2 > 1) over.push(`${no}차시 ${r.title}: +${o2}px`); } // 바로 앞 문항 움직임(0.16초 안) = 한 번 더 잼
           if (r.chain && !(r.labTop && r.qTop && r.fold)) chainBad.push(`${no}차시 ${r.title}: lab ${r.labTop} q ${r.qTop} fold ${r.fold}`);
           if (r.chain && k === k0 - 1) await p.screenshot({ path: `${SHOTS}/atb130-chain-${W}-${no}.png` });
         }

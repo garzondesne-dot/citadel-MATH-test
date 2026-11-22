@@ -221,7 +221,7 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
     const r = await p.evaluate(() => { const S = globalThis.__atb.S; return { b: S.blocked?.how, ch: S.heroes[0].ch, atb: S.heroes[0].atb }; });
     ok('요청 #35 단일 예고 = 탱커 띠 「지금 엄호!」 · 메뉴 맨 앞 역할 · ATB 없이 ⚡1 로 막음', /지금 엄호/.test(band) && first === 'atb-sk-role' && r.b === 'cover' && r.ch === 0 && r.atb === 0, `${band} · ${first} · ${JSON.stringify(r)}`); }
   await p.evaluate(() => { const S = globalThis.__atb.S; S.blocked = null; S.nextAtk = 'fire'; S.aoeNext = true; S.target = S.heroes.map((h) => h.id); S.bossT = 10; }); await p.waitForTimeout(200);
-  ok('요청 #35 특수 예고 = 보스 위 보라 「🌀 … 모으는 중」 막대 · 다른 역할 = 작은 띠', !!(await p.$('[data-k="atb-charge-bar"]')) && /모으는 중/.test(await p.textContent('[data-k="atb-tg-line"]').catch(() => '')));
+  ok('요청 #35 특수 예고 = 보스 위 보라 「🌀 … 모으는 중」 막대 · 📜 #131 글 띠 대신 예고 칸 🌀', !!(await p.$('[data-k="atb-charge-bar"]')) && (await p.getAttribute('[data-k="atb-tgslot"]', 'data-kind').catch(() => '')) === 'special');
   await p.screenshot({ path: `${SHOTS}/atb-r35-special-844.png` });
   // 👹 요청 #37 보스 분노 = HP 30% 아래 · 「👹 분노!」 · 가장자리 붉게 · 진정 막대 · 특수 예고 바로
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
