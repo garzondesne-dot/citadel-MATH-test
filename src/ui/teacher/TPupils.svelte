@@ -45,7 +45,7 @@
   function delCls(c: string) { const rest = clsNow.filter((x) => x !== c); if (!rest.length) return; S.set('school/info/classes', rest); if (pcls === c) pcls = rest[0]!; if (cls === c) cls = rest[0]!; delAsk = ''; }
   $effect(() => { if (seg === 'list' && cls === ALL) cls = '1-3'; });
   /** 📮 #81 B 학생 폰 보관함에 남은 기록 수 (accounts/{반}/{번호}/pend · 7일 지난 표시는 안 셈) */
-  let pv = $state(0); $effect(() => S.watch('accounts', () => { pv++; }));
+  let pv = $state(0); $effect(() => untrack(() => S.watch('accounts', () => { untrack(() => { pv++; }); }))); // 🐞 #127 서버 watch 는 값이 있으면 바로 부름 → 효과 안에서 pv 를 읽고 써서 끝없이 다시 돎(effect_update_depth_exceeded · 「서버 값이 덜 와서」) = untrack (Title.svelte 와 같은 꼴)
   const pendOf = (c: string, n: number): number => { void pv; const x = S.get<{ n?: number; at?: number }>(`accounts/${c}/${n}/pend`); return x && x.n && S.now() - (x.at || 0) < 7 * 86400e3 ? x.n : 0; };
   const pendN = () => data.studs.filter((s) => pendOf(cls, s.n)).length;
 </script>
