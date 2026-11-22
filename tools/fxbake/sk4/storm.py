@@ -178,4 +178,4 @@ def thunder_B(W=260, H=200, n=30, fps=20):
         frames.append(c.image())
     return frames, dict(px=cx, py=cy, pk=int(0.32 * fps))
 
-ALL = {'cyclone-a': cyclone_A, 'pillar-a': pillar_A, 'thunder-a': thunder_A, 'thunder-b': thunder_B}
+ALL = {'cyclone-a': cyclone_A}  # pillar-a · thunder-a · b = #110 으로 mix.py 가 대신 (함수는 mix 가 씀)

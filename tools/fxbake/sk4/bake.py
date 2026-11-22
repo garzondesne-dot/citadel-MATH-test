@@ -4,8 +4,8 @@ import sys, os, json
 sys.path.insert(0, os.path.dirname(__file__))
 from PIL import Image, ImageDraw
 from lib import strip
-import water, blades, storm, arcane
-ALL = {**water.ALL, **blades.ALL, **storm.ALL, **arcane.ALL}
+import water, blades, storm, arcane, mix
+ALL = {**water.ALL, **blades.ALL, **storm.ALL, **arcane.ALL, **mix.ALL}
 KEY = {'wave': 'wave', 'tsunami': 'tsunami', 'slash': 'slash', 'twin': 'twin', 'cyclone': 'cyclone', 'pillar': 'pillar', 'thunder': 'thunder', 'vortex': 'vortex', 'void': 'void'}
 opt = {sys.argv[i]: sys.argv[i + 1] for i in range(1, len(sys.argv) - 1) if sys.argv[i].startswith('--')}
 args = [a for a in sys.argv[1:] if not a.startswith('--') and a not in opt.values()]

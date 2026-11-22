@@ -107,42 +107,30 @@
  ],
  "sk-pillar": [
   {
-   "src": "skill-v4/sk4-pillar-a-v1.webp",
+   "src": "skill-v4/sk4-pillar-mix-v1.webp",
    "w": 260,
    "h": 220,
    "n": 30,
    "cols": 30,
    "fps": 20,
    "px": 130,
-   "py": 146,
-   "pk": 10,
-   "name": "pillar-a"
+   "py": 110,
+   "pk": 15,
+   "name": "pillar-mix"
   }
  ],
  "sk-thunder": [
   {
-   "src": "skill-v4/sk4-thunder-a-v1.webp",
+   "src": "skill-v4/sk4-thunder-mix-v1.webp",
    "w": 300,
    "h": 180,
    "n": 30,
    "cols": 30,
    "fps": 20,
    "px": 150,
-   "py": 110,
-   "pk": 1,
-   "name": "thunder-a"
-  },
-  {
-   "src": "skill-v4/sk4-thunder-b-v1.webp",
-   "w": 260,
-   "h": 200,
-   "n": 30,
-   "cols": 30,
-   "fps": 20,
-   "px": 130,
-   "py": 110,
-   "pk": 6,
-   "name": "thunder-b"
+   "py": 140,
+   "pk": 4,
+   "name": "thunder-mix"
   }
  ],
  "sk-vortex": [
