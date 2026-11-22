@@ -296,3 +296,7 @@ export function mhitOf(ref: string | undefined | null): MhitKind {
 /** 👹 공격 종류 → 맞는 그림 (📜 게시판 던전 요청 #40 ①) · 표에 없는 종류(기본 · 광역 · 저울 · 수면 · 혼란 · 물결) = 그 보스 짝(mhitOf) 그대로 · 레이드(#26)는 공격 종류가 따로 없어 지금 그대로 */
 export const ATK_HIT: Readonly<Record<string, MhitKind>> = { smash: 'smash', poison: 'poison', fire: 'fire', fire13: 'fire', ice: 'ice', frost: 'ice', tail: 'lash', tongue: 'lash', bind: 'lash', dark: 'beam', darkHit: 'beam', mirror: 'beam' };
 export const atkHitOf = (atk: string | undefined, ref: string | undefined | null): MhitKind => (atk && ATK_HIT[atk]) || mhitOf(ref);
+/** 🚩 #73 기사단 깃발 (atb-knight-flags-v1 · 4 × 2 · 칸 96 × 128): 0 사자 · 1 매 · 2 곰 · 3 늑대 · 4 사슴 · 5 근위대 · 6 왕의 깃발(주간 우승) · 7 빈 깃발(다른 문장 = 이 위에 이모지) */
+export const KNIGHT_FLAG = { src: 'art/board/atb-knight-flags-v1.webp', cols: 4, rows: 2, crest: { '🦁': 0, '🦅': 1, '🐻': 2, '🐺': 3, '🦌': 4 } as Record<string, number>, guard: 5, king: 6, blank: 7 };
+export const flagOf = (crest: string) => KNIGHT_FLAG.crest[crest] ?? KNIGHT_FLAG.blank;
+export const flagBg = (i: number) => `background-image:url(${artUrl(KNIGHT_FLAG.src)});background-size:${KNIGHT_FLAG.cols * 100}% ${KNIGHT_FLAG.rows * 100}%;background-position:${((i % KNIGHT_FLAG.cols) / (KNIGHT_FLAG.cols - 1)) * 100}% ${(Math.floor(i / KNIGHT_FLAG.cols) / (KNIGHT_FLAG.rows - 1)) * 100}%`;

@@ -5,6 +5,7 @@
   import { daysLeft, KNIGHTS, lastKing, minsLeft, prevWeek, standings, WAR, weekOf } from '../../board/war';
   import { liveValue } from '../room.svelte';
   import { clock } from '../clock.svelte';
+  import { flagBg, flagOf, KNIGHT_FLAG } from '../manifest';
 
   let { S, cls = '', line = false, test = false }: { S: Store; cls?: string; line?: boolean; /** 🧪 #86 테스트 계정 = 「테스트 · 공적 안 쌓임」 */ test?: boolean } = $props();
   const w0 = untrack(() => weekOf(S.now()));
@@ -35,11 +36,11 @@
   <section class="wb" data-k="war-bar" aria-label="기사단 토벌 주간">
     <div class="hd"><b>⚔ 기사단 토벌 주간</b><small>{leftT.replace('⚔ 토벌 주간 · ', '')}</small></div>
     {#if test}<p class="tst" data-k="war-test">🧪 테스트 · 공적 안 쌓임</p>{/if}
-    {#if kingT}<p class="ln k" data-k="war-king">{kingT}</p>{/if}
+    {#if kingT}<p class="ln k" data-k="war-king"><span class="fl kf" aria-hidden="true" style={flagBg(KNIGHT_FLAG.king)}></span>{kingT}</p>{/if}
     {#if gapT}<p class="ln" data-k="war-gap">{gapT}</p>{/if}
     {#each rows as r (r.cls)}
       <div class="row" class:me={r.cls === cls} data-war={r.cls}>
-        <span class="no" aria-label={allZero ? '순위 없음' : `${r.rank}위`}>{rankT(r.rank)}</span><span class="cr" aria-hidden="true">{r.crest}</span>
+        <span class="no" aria-label={allZero ? '순위 없음' : `${r.rank}위`}>{rankT(r.rank)}</span><span class="cr fl" aria-hidden="true" style={flagBg(flagOf(r.crest))}>{#if flagOf(r.crest) === KNIGHT_FLAG.blank}<i>{r.crest}</i>{/if}</span>
         <span class="nm">{r.name} <small>· {r.cls}반</small>{#if king?.cls === r.cls}<i class="kg" title="지난주 왕의 기사단">👑</i>{/if}{#if r.cls === cls}<em class="us">우리 반</em>{/if}</span>
         <i class="bar"><i style:width="{Math.round((r.pts / top) * 100)}%"></i></i>
         <b class="pt">{r.pts.toLocaleString()}</b>
@@ -53,7 +54,7 @@
   .wb { display: grid; gap: 6px; padding: 12px; border-radius: var(--r, 12px); background: var(--surface, #181b22); }
   .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
   .hd b { font-size: 16px; } .hd small { font-size: 13px; color: var(--text-2, #b4b8c2); }
-  .row { display: grid; grid-template-columns: 24px 22px minmax(0, 1fr) 64px 44px; align-items: center; gap: 6px; min-height: 28px; padding: 0 4px; border-radius: 8px; font-size: 14px; }
+  .row { display: grid; grid-template-columns: 24px 24px minmax(0, 1fr) 64px 44px; align-items: center; gap: 6px; min-height: 36px; padding: 0 4px; border-radius: 8px; font-size: 14px; }
   .row.me { background: color-mix(in srgb, var(--accent, #f5b84a) 16%, transparent); outline: 1px solid var(--accent, #f5b84a); }
   .no { color: var(--text-3, #7c8190); font-variant-numeric: tabular-nums; text-align: center; }
   .nm { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -62,6 +63,8 @@
   .row.me { outline-width: 2px; }
   .bar { display: block; height: 8px; border-radius: 4px; background: var(--surface-2, #222632); overflow: hidden; }
   .bar > i { display: block; height: 100%; background: var(--accent, #f5b84a); transition: width 160ms ease-out; }
+  .fl { display: inline-grid; place-items: center; width: 24px; height: 32px; background-repeat: no-repeat; image-rendering: pixelated; } .fl i { font-style: normal; font-size: 12px; margin-top: 4px; }
+  .ln.k { display: flex; align-items: center; gap: 6px; } .kf { flex: none; width: 27px; height: 36px; }
   .pt { text-align: right; font-variant-numeric: tabular-nums; }
   .ln { margin: 0; font-size: 14px; color: var(--text-2, #b4b8c2); } .ln.k { color: var(--accent, #f5b84a); font-weight: 700; }
   .wl { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--text-2, #b4b8c2); }
