@@ -5,7 +5,10 @@ import { SUBJ } from '../src/engine/subject';
 import { ATTACKS } from '../src/raid/attacks';
 import { checkUpload } from '../src/school/packUpload';
 import { answerOf } from '../src/raid/raid';
-import { answer, easiestOf, nextOrigin, originsOf, questionsOf, startRun } from '../src/board/atb/quiz';
+import { answer, canSkip, easiestOf, nextOrigin, originsOf, questionsOf, skip, startRun } from '../src/board/atb/quiz';
+import { askHelp, earn, newBattle, sendHelp } from '../src/board/atb/engine';
+import { BOSSES } from '../src/board/atb/tune';
+import { statsOf } from '../src/board/atb/heroes';
 
 const L2 = SUBJ.lessons.find((p) => p.no === 2)!;
 const look = { sheet: (r: string) => (r.split(':')[0]!.replace(/@.*$/, '') in SUBJ.themes.sheets), theme: (t: string) => !t || t in SUBJ.themes.dungeons, attack: (a: string) => a in ATTACKS, builtIn: () => false };
@@ -154,5 +157,22 @@ describe('ATB 세트0 빼기 (요청 #53)', () => {
       for (let i = 0; i < 100; i++) { const r = freshRun(L, o.mid, 's', seen, [], rngOf(`r${i}`)); expect(r.ver).toBeGreaterThanOrEqual(1); expect(varOf(L, o.mid, r.ver)).toBeGreaterThan(0); const t = JSON.stringify(questionsOf(L, { mid: o.mid, ver: r.ver }, 's')); if (L.monsters[o.mid]!.first || 'pool' in (L.monsters[o.mid]!.chain ?? {}) || !('gen' in L.monsters[o.mid]!.retry)) expect(t, `${L.no}차시 ${o.mid}`).not.toBe(set0); }
     }
     expect([nv(0), nv(7), nv(-1), nv(6)]).toEqual([6, 1, 5, 6]);
+  });
+});
+describe('⏭ #123 넘기기', () => {
+  it('같은 소문항 3번 틀림 = 넘기기 가능 · 넘김 = 다음 소문항 · 맞힘 아님 · 충전 0 · 원문항 끝이면 done', () => {
+    let r = startRun('m1', 0); const q0 = questionsOf(L2, r, 's1')[0]!;
+    expect(canSkip(r)).toBe(false);
+    for (let i = 0; i < 3; i++) r = answer(L2, r, 's1', bad(q0)).run;
+    expect(canSkip(r)).toBe(true); expect(r.k).toBe(0);
+    const n = questionsOf(L2, r, 's1').length, o = skip(L2, r, 's1');
+    expect(o.earn).toMatchObject({ skip: true, right: false, gold: false, perfect: false, done: n === 1 });
+    if (n > 1) { expect(o.run.k).toBe(1); expect(o.run.subMiss).toBe(0); expect(canSkip(o.run)).toBe(false); }
+  });
+  it('엔진: 넘김 = 충전 0 · skips 1 · 도와줘 기다림 취소 · 구조 성공 안 셈', () => {
+    const S = newBattle({ boss: BOSSES[2]!, diff: 'normal', party: [statsOf({ hero: 1, lv: 1, enh: 0, tier: 1 }), statsOf({ hero: 2, lv: 1, enh: 0, tier: 1 })], seed: 3 });
+    S.heroes[1]!.gd = true; askHelp(S, 0); sendHelp(S, 1, 0); const ch0 = S.heroes[0]!.ch;
+    earn(S, 0, { done: false, perfect: false, right: false, skip: true });
+    expect(S.heroes[0]!.ch).toBe(ch0); expect(S.heroes[0]!.log.skips).toBe(1); expect(S.asks?.[0]).toBeUndefined(); expect(S.heroes[1]!.log.aids ?? 0).toBe(0);
   });
 });

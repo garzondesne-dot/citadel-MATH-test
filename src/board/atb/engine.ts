@@ -8,7 +8,7 @@ export type Timing = 'miss' | 'ok' | 'crit';
 /** 💠 스킬 종류 (Y2 · Y3): 보호막 부수기 · 장착 · 4레벨 · 역할 · 오라 방패 · 각성 · 부활 */
 export type SkillK = 'shield' | 'equip' | 'tier4' | 'role' | 'aura' | 'awk' | 'revive' | 'heal';
 export interface Hero { id: number; s: Stats; /** 🛡 #103 수호자 (사람만 · 봇 = 없음) */ gd?: boolean; hp: number; atb: number; /** ⚡ 충전 칸 (0 ~ T.charge.max · Y1) */ ch: number; down: boolean; slowUntil: number; stunUntil: number; cover: number; tickets: number; awkUsed: boolean; auraUsed: boolean; atbBonus: number; /** 수면 = 맞으면 깸 */ stunKind: '' | 'sleep' | 'bind'; /** 넘친 충전 모음 (½ 칸 · 요청 #49) */ ovf?: number; /** 느려짐을 건 공격 (상태 그림 · 요청 #40) */ slowKind?: AtkKind; /** 🔩 16 톱니 표식 겹 (요청 #57) */ mark?: number;
-  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 💥 속성 브레이크 (약점 계열 · 내 칸) */ brk?: number; /** ⚔ 끊기 (딜러 반응 막기 · blocks 안에 들어 있음) */ cuts?: number; /** 🤝 #103 구조 성공 = 내가 보낸 힌트로 친구가 그 소문항을 맞힘 */ aids?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
+  /** 기록 (결과창) */ log: { shields: number; dmg: number; covers: number; heals: number; revives: number; boosts: number; right: number; ult: number; /** 🛡 반응 막기 (요청 #35) */ blocks?: number; /** 💚 구조 = 30% 아래 친구를 큰 힐로 (요청 #46) */ rescues?: number; /** 💥 속성 브레이크 (약점 계열 · 내 칸) */ brk?: number; /** ⚔ 끊기 (딜러 반응 막기 · blocks 안에 들어 있음) */ cuts?: number; /** 🤝 #103 구조 성공 = 내가 보낸 힌트로 친구가 그 소문항을 맞힘 */ aids?: number; /** ⏭ #123 넘긴 소문항 */ skips?: number; /** 퍼펙트 원문항 (결과 「내 활약」 · 요청 #24 ⑦) */ perfect?: number; /** 끝낸 학습지 문제 번호 (화면이 적음 · 요청 #24 덧붙임) */ sheets?: string[]; /** ⭐ 첫 시도 기록 (소문항 · 화면이 적음 · 별 = board gradeOf 그대로 · 요청 #29) */ first?: { ok: number; bad: number; none: number; total: number } } }
 export interface Cell { /** (옛 · 📜 #95 주인 없음 · 무시) */ owner?: number; fam: Fam; broken: boolean; by?: number }
 export type Ev =
   | { k: 'atk'; t: number; who: number; dmg: number; timing: Timing; /** 문제 카드를 연 채 자동 일반 공격 (요청 #11) */ auto?: boolean }
@@ -209,9 +209,10 @@ function bossAttack(S: State) {
 }
 // ── 문제 ──
 /** 문제로 얻은 것 (quiz.ts answer 의 earn) · ⚡ 충전 = 원문항을 통째로 끝냈을 때만(Y1 · 퍼펙트 2 · 재시도 1 · 최대 3) · 쓰러진 학생 = 친구 ATB +50% */
-export function earn(S: State, who: number, e: { done: boolean; perfect: boolean; right: boolean; miss?: number }, giftTo?: number): void {
+export function earn(S: State, who: number, e: { done: boolean; perfect: boolean; right: boolean; miss?: number; /** ⏭ #123 넘김 */ skip?: boolean }, giftTo?: number): void {
   const h = S.heroes[who]; if (!h || S.end) return;
-  const ak = S.asks?.[who]; if (ak) { if (ak.by >= 0) { delete S.asks![who]; const g = S.heroes[ak.by]; if (e.right && g) { g.log.aids = (g.log.aids ?? 0) + 1; S.rec.aidOk = (S.rec.aidOk ?? 0) + 1; } push(S, { k: 'aid', t: S.t, who: ak.by, to: who, ok: e.right }); } else if (e.done) delete S.asks![who]; } /* 🛡 #103 힌트 뒤 첫 소문항 = 구조 성공 / 실패 · 기다리다 원문항 끝 = 취소 */
+  if (e.skip) { h.log.skips = (h.log.skips ?? 0) + 1; if (S.asks?.[who]) delete S.asks[who]; } /* ⏭ #123 넘김 = 도와줘 부탁 취소 · 구조 성공 안 셈 */
+  const ak = e.skip ? undefined : S.asks?.[who]; if (ak) { if (ak.by >= 0) { delete S.asks![who]; const g = S.heroes[ak.by]; if (e.right && g) { g.log.aids = (g.log.aids ?? 0) + 1; S.rec.aidOk = (S.rec.aidOk ?? 0) + 1; } push(S, { k: 'aid', t: S.t, who: ak.by, to: who, ok: e.right }); } else if (e.done) delete S.asks![who]; } /* 🛡 #103 힌트 뒤 첫 소문항 = 구조 성공 / 실패 · 기다리다 원문항 끝 = 취소 */
   if (e.right) { h.log.right++; S.rec.subSec.push(+(S.t - (S.rec.lastAns[who] ?? 0)).toFixed(1)); S.rec.lastAns[who] = S.t; } // 소문항 하나 = 앞 정답부터 이 정답까지
   if (h.down) {
     if (!e.right) return;
