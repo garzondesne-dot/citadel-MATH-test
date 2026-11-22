@@ -19,7 +19,7 @@ export interface Meta { v: 1; pid: string; lid: string; no: number; diff: Diff; 
 export type Act =
   | { k: 'atk'; s: number; timing: Timing; auto?: boolean }
   | { k: 'skill'; s: number; sk: SkillK; to?: number }
-  | { k: 'earn'; s: number; e: { done: boolean; perfect: boolean; right: boolean; miss?: number } }
+  | { k: 'earn'; s: number; e: { done: boolean; perfect: boolean; right: boolean; miss?: number; skip?: boolean } }
   /** 🗺 정찰 「준비 완료」 (요청 #69 · 엔진 밖 · 방장이 모아 go 시각을 정함) */ | { k: 'ready'; s: number }
   /** 🛡 #103 도와줘 · 수호자가 힌트 보냄 */ | { k: 'ask'; s: number } | { k: 'aid'; s: number; to: number };
 /** atb/{pid}/snap (방장만 · 5Hz) · j = 상태 JSON 글자(서버가 빈 배열을 지우지 않게) · ack = 학생마다 처리한 마지막 행동 번호 */
@@ -78,7 +78,7 @@ export interface AtbEnd {
   win: boolean; sec: number; right: number; total: number; first: number; perfect: number; stars: number; newStars: number; /** ⭐3 다 모은 차시 = 공적 · 💎 절반 */ full: boolean;
   merit: { clear: number; star: number; first: number; act: number; role: number }; meritSum: number;
   gem: { items: number; clear: number; guard: number; star: number }; gemSum: number;
-  role: string; mission: boolean; why: string; /** 🚪 #113 ‹ 로 도중에 나감 = 맞힌 소문항 몫 💎 만 · 판 기록 「나감」 */ left?: boolean;
+  role: string; mission: boolean; why: string; /** ⏭ #123 넘긴 소문항 수 */ skip?: number; /** 🚪 #113 ‹ 로 도중에 나감 = 맞힌 소문항 몫 💎 만 · 판 기록 「나감」 */ left?: boolean;
   /** 📋 이 판 내 용사 활약 횟수 (대시보드 · 손발 #1 #56) · block = 엄호 · 결계(끊기 뺌) */ acts: { block: number; /** 🤝 #103 · #104 구조 성공 = 내가 보낸 힌트로 친구가 맞힌 횟수 (수호 명성) */ rescue: number; cut: number; brk: number; /** 💚 큰 힐 구조 (30% 아래 친구 · 옛 rescue) */ heal?: number; /** 🛡 실드 깨기 (스킬 2 · 도움표 · 깬 칸 수 · 📜 #101 뒤 대시보드 칸) */ shd?: number };
   /** 📕 #67 내가 소문항을 하나라도 맞힌 몬스터 칸 (복습 완료 · 손발 #1 화면이 채움 · 없으면 없음) */ mids?: string[];
 }
@@ -92,5 +92,5 @@ export function atbResultFor(S: State, idx: number, ctx: { prevStars: number; le
   const guardN = g.covers + g.heals + g.revives + g.shields + (g.blocks ?? 0) + (g.rescues ?? 0);
   const gem = { items: k(Math.min(GEM.itemMax, g.right * GEM.perItem)), clear: k(win ? GEM.clear : 0), guard: S.end?.why === '후퇴' ? 0 : k(Math.min(GEM.guardMax, guardN * GEM.perGuard)), /* 📜 #92 후퇴 = 맞힌 문제 몫 💎 만 (클리어 · 수호 💎 없음 · 벌 없음) */ star: newStars * GEM.star };
   const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
-  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.aids ?? 0, heal: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0, shd: g.shields ?? 0 } };
+  return { win, sec: Math.round(S.end?.t ?? S.t), right: g.right, total: f.total, first: f.ok, perfect: g.perfect ?? 0, stars, newStars, full, merit, meritSum: sum(merit), gem, gemSum: sum(gem), role: h.s.role, mission: M.done, why: S.end?.why ?? '', ...(g.skips ? { skip: g.skips } : {}), acts: { block: Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)), rescue: g.aids ?? 0, heal: g.rescues ?? 0, cut: g.cuts ?? 0, brk: g.brk ?? 0, shd: g.shields ?? 0 } };
 }

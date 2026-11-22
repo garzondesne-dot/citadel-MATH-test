@@ -74,6 +74,18 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   ok('② 4번째 오답 = 「새 숫자 판으로 처음부터」', /새 숫자 판으로 처음부터/.test(await p.textContent('.qc .fb').catch(() => '')));
   await p.screenshot({ path: `${SHOTS}/atb-quiz-844.png` });
   ok('② 카드 안 가로 넘침 0 · 제출 단추 보임', await p.evaluate(() => { const c = document.querySelector('.qc'); const s = document.querySelector('[data-k="atb-submit"]').getBoundingClientRect(); return c.scrollWidth <= c.clientWidth + 1 && s.bottom <= innerHeight; }));
+  { /* ⏭ 📜 #123 같은 소문항 3번 틀림 → 「⏭ 넘기기」 → 정답(+풀이) · 「알았어요」 2초 뒤 → 다음 소문항 · 충전 0 */
+    await p.evaluate(() => globalThis.__atb.pause(true)); if (!(await p.$('.card[data-fold="0"]'))) { await p.click('[data-k="atb-quiz-open"]', { force: true }); await p.waitForTimeout(600); }
+    const before = await p.evaluate(() => ({ k: document.querySelector('[data-k="atb-qtitle"]')?.textContent ?? '', pass: !!document.querySelector('[data-k="atb-pass"]') }));
+    for (let i = 0; i < 3; i++) { await p.evaluate(() => globalThis.__atb.miss()); await p.waitForTimeout(120); }
+    const vis = !!(await p.$('[data-k="atb-pass"]')), k1 = await p.textContent('[data-k="atb-qtitle"]'), ch0 = await p.evaluate(() => globalThis.__atb.S.heroes[0].ch);
+    await p.click('[data-k="atb-pass"]'); await p.waitForTimeout(200);
+    const rv = await p.evaluate(() => ({ box: !!document.querySelector('[data-k="atb-reveal"]'), ok: document.querySelector('[data-k="atb-reveal-ok"]')?.disabled }));
+    await p.screenshot({ path: `${SHOTS}/atb-r123-reveal-844.png` }); await p.waitForTimeout(2100);
+    await p.click('[data-k="atb-reveal-ok"]'); await p.waitForTimeout(400);
+    const after = await p.evaluate(() => ({ k: document.querySelector('[data-k="atb-qtitle"]')?.textContent ?? '', grade: !!document.querySelector('[data-k="atb-grade"]'), ch: globalThis.__atb.S.heroes[0].ch, skips: globalThis.__atb.S.heroes[0].log.skips }));
+    ok('📜 #123 3번 틀리기 전 = 넘기기 없음 · 3번 틀림 = 「⏭ 넘기기」 · 누르면 정답 칸(알았어요 = 2초 잠금) · 알았어요 = 다음 소문항(또는 채점) · 충전 그대로 · skips 1', !before.pass && vis && rv.box && rv.ok === true && (after.k !== k1 || after.grade) && after.ch === ch0 && after.skips === 1, JSON.stringify({ before, vis, rv, k1, after, ch0 }));
+    await p.evaluate(() => globalThis.__atb.skip?.()); await p.waitForTimeout(200); }
   await closeQ(p);
   await p.evaluate(() => { globalThis.__atb.full(); }); const ab0 = await p.$eval('[data-k="atb-attack"]', (e) => { const r = e.getBoundingClientRect(); return [r.x, r.y]; });
   await p.click('[data-k="atb-attack"]'); await p.waitForSelector('[data-k="atb-timing"]');

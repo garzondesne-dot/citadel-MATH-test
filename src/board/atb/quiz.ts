@@ -40,7 +40,7 @@ export const easiestOf = (os: Origin[]) => os.slice().sort((a, b) => a.n - b.n |
 
 export interface Run { mid: string; ver: number; k: number; wrong: number; clean: boolean; firstTry: boolean; vers: number[]; /** 이 원문항만의 씨앗 (없으면 판 씨앗 · 📜 요청 #19 덧2) */ seed?: string; /** 소문항마다 한 번에 맞혔나 (Y8 채점 ○ ×) */ marks: boolean[]; /** 이 소문항에서 틀린 횟수 · 소문항마다 얻은 충전 (요청 #49) */ subMiss?: number; gains?: number[]; }
 /** 얻은 것 · 충전은 엔진이 done · perfect 로 정함(Y1 원문항 통째) · gold = 이 소문항 첫 시도 정답(표시만) · marks = 끝났을 때 소문항 ○ × */
-export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; marks?: boolean[]; /** 이 소문항에서 틀린 횟수 (요청 #49 충전 = 0번 1 · 1번 ½ · 2번+ 0) */ miss?: number }
+export interface Earn { gold: boolean; done: boolean; perfect: boolean; swapped: boolean; right: boolean; /** ⏭ #123 넘김 (정답 보고 다음 · 충전 0) */ skip?: boolean; marks?: boolean[]; /** 이 소문항에서 틀린 횟수 (요청 #49 충전 = 0번 1 · 1번 ½ · 2번+ 0) */ miss?: number }
 /** 📜 요청 #49 소문항 충전 = 틀린 횟수에 따라 (엔진 · 화면 같은 값) */
 export const subGain = (miss: number): number => T.charge.byMiss[Math.min(miss, T.charge.byMiss.length - 1)] ?? 0;
 const VERS = 7;
@@ -65,6 +65,16 @@ export function answer(L: LessonPack, r: Run, seed: string, given: Given, avoid:
     return { run: { ...(r.seed ? { seed: r.seed } : {}), mid: r.mid, ver: next, k: 0, wrong: 0, clean: false, firstTry: true, vers: [...r.vers, next], marks: [], gains: [], subMiss: 0 }, earn: { ...none, swapped: true } };
   }
   return { run: { ...r, wrong, clean: false, firstTry: false, subMiss: (r.subMiss ?? 0) + 1 }, earn: none };
+}
+/** ⏭ 📜 #123 같은 소문항 3번 틀림 뒤 「넘기기」 = 정답 보고 다음 소문항(끝이면 원문항 끝) · 충전 0 · 맞힘 아님 · 퍼펙트 아님 */
+export const SKIP_AFTER = 3;
+export const canSkip = (r: Run | null) => !!r && (r.subMiss ?? 0) >= SKIP_AFTER;
+export function skip(L: LessonPack, r: Run, seed: string): { run: Run; earn: Earn } {
+  const qs = questionsOf(L, r, seed);
+  if (!qs[r.k]) return { run: r, earn: { gold: false, done: false, perfect: false, swapped: false, right: false } };
+  const last = r.k >= qs.length - 1, marks = [...r.marks.slice(0, r.k), false], gains = [...(r.gains ?? []).slice(0, r.k), 0];
+  const earn: Earn = { gold: false, done: last, perfect: false, swapped: false, right: false, skip: true, miss: r.subMiss ?? 0, ...(last ? { marks } : {}) };
+  return { run: last ? { ...r, marks, gains, subMiss: 0, clean: false } : { ...r, k: r.k + 1, firstTry: true, marks, gains, subMiss: 0, clean: false }, earn };
 }
 /** 다음 원문항 (차례대로 · 안 푼 것 먼저) */
 export function nextOrigin(os: Origin[], done: Record<string, number>, prefer?: string | null): Origin | null {

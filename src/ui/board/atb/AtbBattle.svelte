@@ -38,7 +38,7 @@
   import { subGain } from '../../../board/atb/quiz';
   import { edgeLv, flashA, BEAT, WHOOSH_SEC, COUNT_SEC, vib, heartbeat, whoosh, clang } from './tension';
   import { botStep, wrongOf, type Bot } from '../../../board/atb/bots';
-  import { answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
+  import { skip as skipSub, answer, nextOrigin, originsOf, startRun, easiestOf, questionsOf, noteSeen, shuffled, freshRun as newRun, sheetTitle, sheetNo, rngOf, loadSeen, saveSeen, seenKey, type Run } from '../../../board/atb/quiz';
   import { answerOf } from '../../../raid/raid';
   import { ATK, ATK_SPECIAL, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
@@ -99,7 +99,7 @@
     skill: (k: SkillK, to?: number): boolean => { if (!net?.remote) return useSkill(S, me, k, to); net.send({ k: 'skill', s: me, sk: k, ...(to != null ? { to } : {}) }); return true; },
     /** 🛡 #103 도와줘 · 수호자가 힌트 보냄 */ ask: (): boolean => { if (!net?.remote) return askHelp(S, me); net.send({ k: 'ask', s: me }); return true; },
     aid: (to: number): boolean => { if (!net?.remote) return sendHelp(S, me, to); net.send({ k: 'aid', s: me, to }); return true; },
-    earn: (e: { done: boolean; perfect: boolean; right: boolean; miss?: number }): void => { if (!net?.remote) { earn(S, me, e); return; } net.send({ k: 'earn', s: me, e: { done: e.done, perfect: e.perfect, right: e.right, ...(e.miss != null ? { miss: e.miss } : {}) } }); },
+    earn: (e: { done: boolean; perfect: boolean; right: boolean; miss?: number; skip?: boolean }): void => { if (!net?.remote) { earn(S, me, e); return; } net.send({ k: 'earn', s: me, e: { done: e.done, perfect: e.perfect, right: e.right, ...(e.miss != null ? { miss: e.miss } : {}), ...(e.skip ? { skip: true } : {}) } }); },
   };
   /** 📡 방장 아님 = 충전 구슬을 미리 그릴 값 (엔진과 같은 규칙 · 진짜 값은 방장 상태로) */
   function predictCharge(e: { done: boolean; perfect: boolean; right: boolean; miss?: number }, ch0: number): Extract<Ev, { k: 'charge' }>[] {
@@ -232,6 +232,13 @@
     if (o.earn.right) { combo++; sfx('correct', 0.5); if (combo >= 2) setTimeout(() => sfx('star', Math.min(0.5, 0.2 + combo * 0.06)), 92); try { navigator.vibrate?.([22, 70, 22]); } catch { /* 무시 */ } }
     else { combo = 0; try { navigator.vibrate?.(320); } catch { /* 무시 */ } }
     if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; if (meH) { const sn = `${sheetNo(L, run.mid).no}${o.earn.perfect ? '✨' : ''}`; meH.log.sheets = [...(meH.log.sheets ?? []), sn]; } run = o.run; startGrade(o.earn.marks ?? [], o.earn.perfect, pfN); } else run = o.run;
+  }
+  /** ⏭ 📜 #123 넘기기 = 정답 본 뒤 다음 소문항 · 충전 0 · 맞힘 아님 · 첫 시도 = 이미 틀림(별 = 안 푼 소문항 쪽) · 도와줘 부탁 취소 (엔진) */
+  function passSub() {
+    if (!run || grading) return;
+    const mid0 = run.mid, o = skipSub(L, run, seed); ops.earn(o.earn);
+    flash = ''; combo = 0;
+    if (o.earn.done) { done[run.mid] = (done[run.mid] || 0) + 1; if (meH) meH.log.sheets = [...(meH.log.sheets ?? []), `${sheetNo(L, mid0).no}`]; run = o.run; startGrade(o.earn.marks ?? [], false, 0); } else run = o.run;
   }
   /** 🛡 실드가 뜨면 = 내 칸을 깰 표가 없고 지금 문제가 가장 쉬운 칸이 아니면 → 가장 쉬운 칸으로 (U3 막힘 안전망 · 충전은 그대로) */
   function shieldSwap() {
@@ -747,7 +754,7 @@
   <!-- 문제 카드 -->
   {#if run}
     {#if grading?.suck}<AtbFx name="charge-suck" x="50%" y="45%" w={Math.round(H * 0.5)} loop={false} ms={450} z={42} />{/if}
-    <div class="card" class:suck={grading?.suck} class:drag={dragging} class:fold={!open} inert={!open} data-fold={open ? 0 : 1} style:translate={open ? `0 ${dragY}px` : '0 112%'} bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {help} onask={askHelpNow} onhint={() => (hintUsed = true)} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
+    <div class="card" class:suck={grading?.suck} class:drag={dragging} class:fold={!open} inert={!open} data-fold={open ? 0 : 1} style:translate={open ? `0 ${dragY}px` : '0 112%'} bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {help} onask={askHelpNow} onpass={passSub} onhint={() => (hintUsed = true)} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
   {/if}
 
   {#if run && !open && !S.end && phase === 'fight'}<button type="button" class="foldbar" data-k="atb-quiz-fold" onclick={openQuiz}><b>{titleOf(run).replace(/^\s*\d+차시\s*학습지\s*·\s*/, '').replace(/\s*·\s*\d+\/\d+$/, '')}</b> ▲ 문제 풀기</button>{/if}

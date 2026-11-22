@@ -7,8 +7,10 @@
   import { fxCss } from './AtbFx.svelte';
   import { emptyOf, filled, finalOf } from '../../../engine/input';
   import { hintOf } from '../../../board/team';
-  import { questionsOf, type Run } from '../../../board/atb/quiz';
-  const { L, run, seed, title, hintOk, onsubmit, ongrab, onfill, flash = '', flashN = 0, locked = 0, lockTag = '', grading = null, onskip, auto = false, help, onask, onhint }: {
+  import { canSkip, questionsOf, type Run } from '../../../board/atb/quiz';
+  import { answerOf } from '../../../raid/raid';
+  const { L, run, seed, title, hintOk, onsubmit, ongrab, onfill, flash = '', flashN = 0, locked = 0, lockTag = '', grading = null, onskip, auto = false, help, onask, onhint, onpass }: {
+    /** ⏭ #123 넘기기 (정답 보고 「알았어요」 뒤 다음 소문항) */ onpass?: () => void;
     L: LessonPack; run: Run; seed: string; title: string; /** 💡 이번 원문항에서 쓸 수 있나 */ hintOk: boolean;
     onsubmit: (g: Given) => void; /** 손잡이 바를 누름 → 부모가 끌어 닫기를 받음 */ ongrab?: (ev: PointerEvent) => void; /** 답을 골라 제출할 수 있나 (부모 「✅ 제출」 단추) */ onfill?: (ok: boolean) => void;
     /** 방금 결과 (ok · gold · wrong · swap · shieldSwap) */ flash?: string; /** 같은 결과가 잇따라도 연출을 다시 (맞음 · 틀림 번호) */ flashN?: number;
@@ -17,8 +19,13 @@
     /** 🛡 #103 팀에 수호자 = ask(「💡 도와줘」 · wait = 기다림 · from = 보낸 수호자 이름 · id = 이 부탁) · 없음 = auto(「💡 힌트」 팩 힌트) */ help?: { mode: 'ask' | 'auto'; wait: boolean; from: string; id: number }; onask?: () => void; onhint?: () => void;
   } = $props();
   const qs = $derived(questionsOf(L, run, seed)), q = $derived(qs[run.k] ?? null);
+  let reveal = $state(false), revealOk = $state(false), revealT: ReturnType<typeof setTimeout> | undefined;
   let val = $state<Given>(null), hint = $state(''), hintBy = $state(''), key = $state(''), gotId = -1;
-  $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; hintBy = ''; } });
+  $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; hintBy = ''; reveal = false; revealOk = false; clearTimeout(revealT); } });
+  /* ⏭ 📜 #123 같은 소문항 3번 틀림 = 「⏭ 넘기기」 → 정답 + 풀이 한 줄 · 「✔ 알았어요」(2초 뒤 눌림) → 다음 */
+  const canPass = $derived(!!onpass && canSkip(run) && !grading);
+  const solOf = (x: NonNullable<typeof q>) => String((x as { solution?: string }).solution ?? (x as { say?: string }).say ?? '').trim();
+  function startReveal() { reveal = true; revealOk = false; clearTimeout(revealT); revealT = setTimeout(() => (revealOk = true), 2000); }
   /* 🛡 #103 수호자가 보낸 힌트 = 카드에 「🛡 ○○가 보낸 힌트」 (부탁마다 한 번) */
   $effect(() => { const h = help; if (h?.from && q && h.id !== gotId) { gotId = h.id; hint = hintOf(q); hintBy = h.from; } });
   /** 조각 상태: 끝낸 소문항 = 첫 시도 맞음 full · 고쳐 맞힘 half · 아직 = empty (채점 중 = 모두 끝낸 것) */
@@ -56,10 +63,11 @@
     {#if help?.mode === 'ask'}<button type="button" class="lnk" class:wait={help.wait} data-k="atb-help" disabled={!hintOk || !q || !!hint || help.wait} onclick={() => onask?.()}>{help.wait ? '⏳ 수호자 기다리는 중' : '💡 도와줘'}</button>{:else}<button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) { hint = hintOf(q); onhint?.(); } }}>💡 힌트</button>{/if}
   </header>
   <div class="body" bind:this={bodyEl} onscroll={measure}>
-    {#if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
+    {#if q && reveal}<div class="reveal" data-k="atb-reveal"><b class="rvt">정답</b><div class="rvq" inert>{#key key}<QItem {q} i={run.k} value={answerOf(q)} runeLen={4} showNo={false} onchange={() => {}} />{/key}</div>{#if solOf(q)}<p class="rvs" data-k="atb-reveal-sol">💡 {solOf(q)}</p>{/if}<button type="button" class="rvok" class:on={revealOk} disabled={!revealOk} data-k="atb-reveal-ok" onclick={() => { reveal = false; onpass?.(); }}>✔ 알았어요</button></div>
+    {:else if q}{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}💡 {hint}</p>{/if}
   </div>
-  {#if !grading}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button>{/if}
+  {#if !grading && !reveal}<div class="qrow">{#if canPass}<button type="button" class="qpass" data-k="atb-pass" onclick={startReveal}>⏭ 넘기기</button>{/if}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button></div>{/if}
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
   {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
@@ -193,4 +201,13 @@
   .lnk.wait { opacity: 1; color: #6b5a3a; }
   .hint.gd { border: 2px solid #5b8fd6; background: #eaf2ff; }
   .hint .from { display: block; font: 900 14px var(--font-plain); color: #2b4f8a; margin-bottom: 2px; }
+  /* ── ⏭ #123 넘기기 · 정답 보기 ── */
+  .qrow { flex: 0 0 auto; display: flex; gap: 8px; } .qrow .qsend { flex: 1; }
+  .qpass { flex: 0 0 38%; height: 48px; border-radius: 12px; border: 2px solid #c9a24a; background: #6b6e78; color: #fff; font: 900 16px var(--font-plain); box-shadow: 0 3px 0 #0008; }
+  .reveal { display: grid; gap: 6px; padding: 8px; border-radius: 10px; border: 2px solid #3aa86a; background: #eefbf2; }
+  .reveal .rvt { font: 900 14px var(--font-plain); color: #1e7a48; }
+  .reveal .rvq { pointer-events: none; }
+  .reveal .rvs { margin: 0; font: 700 14px var(--font-plain); color: #2a3a2e; }
+  .reveal .rvok { height: 48px; border-radius: 12px; border: 2px solid #8a7a5a; background: #d9cfb8; color: #7a6e58; font: 900 16px var(--font-plain); }
+  .reveal .rvok.on { border-color: #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; box-shadow: 0 3px 0 #000; }
 </style>
