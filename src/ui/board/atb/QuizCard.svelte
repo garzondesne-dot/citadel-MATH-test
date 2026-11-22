@@ -86,9 +86,9 @@
   </header>
   <div class="body" bind:this={bodyEl} onscroll={measure}>
     {#if q && reveal}<div class="reveal" data-k="atb-reveal"><b class="rvt">정답</b><div class="rvq" inert>{#key key}<QItem {q} i={run.k} value={answerOf(q)} runeLen={4} showNo={false} onchange={() => {}} />{/key}</div>{#if solOf(q)}<p class="rvs" data-k="atb-reveal-sol">💡 {solOf(q)}</p>{/if}<button type="button" class="rvok" class:on={revealOk} disabled={!revealOk} data-k="atb-reveal-ok" onclick={() => { reveal = false; onpass?.(); }}>✔ 알았어요</button></div>
-    {:else if q && chain}<div class="cs" data-k="atb-chain"><ChainStage items={qs} stage={grading ? qs.length : run.k} {says} title={shortTitle} value={val} {lastWrong} v4 wrongText={lastBad} {flip} disabled={!!locked} onchange={(v) => (val = v)} /></div>
+    {:else if q && chain}<div class="cs" data-k="atb-chain"><ChainStage fold items={qs} stage={grading ? qs.length : run.k} {says} title={shortTitle} value={val} {lastWrong} v4 wrongText={lastBad} {flip} disabled={!!locked} onchange={(v) => (val = v)} /></div>
     {:else if q}<div class="cs" data-k="atb-cells"><AnswerRow {cells} cur={grading ? -1 : run.k} /></div>{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
-    {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}💡 {hint}</p>{/if}
+    {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}{hint.startsWith('💡') ? hint : `💡 ${hint}`}</p>{/if}
   </div>
   {#if !grading && !reveal}<div class="qrow">{#if canPass}<button type="button" class="qpass" data-k="atb-pass" onclick={startReveal}>⏭ 넘기기</button>{/if}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button></div>{/if}
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
@@ -234,4 +234,12 @@
   .reveal .rvs { margin: 0; font: 700 14px var(--font-plain); color: #2a3a2e; }
   .reveal .rvok { height: 48px; border-radius: 12px; border: 2px solid #8a7a5a; background: #d9cfb8; color: #7a6e58; font: 900 16px var(--font-plain); }
   .reveal .rvok.on { border-color: #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; box-shadow: 0 3px 0 #000; }
+
+  /* 📏 📜 #130 ⑤ 카드 폭 45% · 누르는 칸 = 44px 이상 (보기 · O X · 고르기 칩 · 숫자 키 · 지우기) · 앞의 낮춘 크기(#61)보다 뒤에 둠 = 이김 · 넘치면 카드 안 스크롤 + 「▼ 더 있음」 */
+  .body :global(.rune-keys) { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(44px, 1fr)); grid-auto-columns: auto; gap: 4px; }
+  .body :global(.rune) { min-height: 44px; height: 44px; width: auto; min-width: 44px; aspect-ratio: auto; }
+  .body :global(.rune-del) { min-width: 48px; min-height: 44px; }
+  .body :global(.opt) { min-height: 44px; }
+  .body :global(.chips) { grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); }
+  .body :global(.chips .chip), .body :global(.chips.wide .chip), .body :global(.chips.many.wide .chip), .body :global(.chips.one .chip) { min-height: 44px; min-width: 44px; }
 </style>
