@@ -4,6 +4,7 @@
   //   소문항 맞음 = 테두리 초록 + 초록 반짝 · 틀림 = 단호한 좌우 흔들림 + 빨간 테두리 (진동 · 소리 = 부모) · 짧은 보기 4개 = 2 × 2 · 긴 문항 = 보기 칸만 스크롤
   import type { Given, LessonPack } from '../../../model/types';
   import QItem from '../../q/QItem.svelte';
+  import SymText from '../../q/SymText.svelte';
   import ChainStage from '../../q/ChainStage.svelte';
   import AnswerRow, { type Cell } from '../../q/AnswerRow.svelte';
   import Orb from './Orb.svelte';
@@ -27,7 +28,8 @@
   $effect(() => { const k = `${run.mid}|${run.ver}|${run.k}`; if (k !== key) { key = k; val = q ? emptyOf(q) : null; hint = ''; hintBy = ''; reveal = false; revealOk = false; clearTimeout(revealT); } });
   /* ⏭ 📜 #123 같은 소문항 3번 틀림 = 「⏭ 넘기기」 → 정답 + 풀이 한 줄 · 「✔ 알았어요」(2초 뒤 눌림) → 다음 */
   const canPass = $derived(!!onpass && canSkip(run) && !grading);
-  const solOf = (x: NonNullable<typeof q>) => String((x as { solution?: string }).solution ?? (x as { say?: string }).say ?? '').trim();
+  /** 📜 #132 정답 까닭 한 줄 = 문항 solution · 소레이드 단계 = why.text · say 가 있으면 그것 (새 데이터 없음) */
+  const solOf = (x: NonNullable<typeof q>) => { const a = x as { solution?: string; say?: string; why?: { text?: string } }; return String((chain ? a.why?.text || a.say || a.solution : a.solution || a.say) ?? '').trim(); };
   function startReveal() { reveal = true; revealOk = false; clearTimeout(revealT); revealT = setTimeout(() => (revealOk = true), 2000); }
   /* 🛡 #103 수호자가 보낸 힌트 = 카드에 「🛡 ○○가 보낸 힌트」 (부탁마다 한 번) */
   $effect(() => { const h = help; if (h?.from && q && h.id !== gotId) { gotId = h.id; hint = hintOf(q); hintBy = h.from; } });
@@ -39,11 +41,13 @@
   /** ✅ 제출 (e2e · 꾹 제출이 부름) */
   export function send(): void { if (q && can) onsubmit(finalOf(q, val)); }
   /** 🧾 #128 부모 submit 이 부름 = 낸 답 기억 → 결과(flash)가 오면 그 칸 뒤집힘 */
-  export function sentAs(g: Given): void { if (q) sent = { i: run.k, text: penLine(q, g, 0), n: flashN }; }
+  export function sentAs(g: Given): void { if (q) sent = { i: run.k, text: penLine(q, g, 0), n: flashN, miss: run.subMiss ?? 0, why: solOf(q) }; }
   /* 🧾 📜 #128 레이드 학생 화면과 같은 부품 (src/ui/q · AnswerRow · ChainStage): 낸 칸 0.65초 뒤집힘 ✔ / ✘ · 소레이드 = 「📜 나의 풀이」 쌓임 → 👑 대장 */
-  let sent: { i: number; text: string | null; n: number } | null = null, flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | undefined;
-  $effect(() => { const n = flashN, f = flash; if (!sent || n === sent.n || !f) return; const ok = f === 'ok' || f === 'gold'; flip = { i: sent.i, ok, text: sent.text }; lastBad = ok ? null : sent.text; sent = null; clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); });
+  let sent: { i: number; text: string | null; n: number; miss?: number; why?: string } | null = null, flip = $state<{ i: number; ok: boolean; text: string | null } | null>(null), flipT: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => { const n = flashN, f = flash; if (!sent || n === sent.n || !f) return; const ok = f === 'ok' || f === 'gold'; flip = { i: sent.i, ok, text: sent.text }; lastBad = ok ? null : sent.text; if (ok && (sent.miss ?? 0) > 0 && sent.why) { fixWhy = sent.why; clearTimeout(fixT); fixT = setTimeout(() => (fixWhy = ''), 1500); } else if (!ok) fixWhy = ''; sent = null; clearTimeout(flipT); flipT = setTimeout(() => (flip = null), 650); });
   let lastBad = $state<string | null>(null);
+  /* 💡 📜 #132 틀렸다가 맞혔을 때만 「왜 맞았나」 한 줄 · 1.5초(또는 다음 소문항에서 또 내기 전까지) · 다음 문제를 막지 않음 · 한 번에 맞힘 · 틀린 순간 = 안 보임 */
+  let fixWhy = $state(''), fixT: ReturnType<typeof setTimeout> | undefined;
   $effect(() => { void run.mid; void run.ver; void run.k; if ((run.subMiss ?? 0) === 0) lastBad = null; });
   const chain = $derived(!!L.monsters[run.mid]?.chain);
   const lastWrong = $derived((run.subMiss ?? 0) > 0 && !grading);
@@ -85,14 +89,16 @@
     {#if help?.mode === 'ask'}<button type="button" class="lnk" class:wait={help.wait} data-k="atb-help" disabled={!hintOk || !q || !!hint || help.wait} onclick={() => onask?.()}>{help.wait ? '⏳ 수호자 기다리는 중' : '💡 도와줘'}</button>{:else}<button type="button" class="lnk" data-k="atb-hint" disabled={!hintOk || !q || !!hint} onclick={() => { if (q) { hint = hintOf(q); onhint?.(); } }}>💡 힌트</button>{/if}
   </header>
   <div class="body" bind:this={bodyEl} onscroll={measure}>
-    {#if q && reveal}<div class="reveal" data-k="atb-reveal"><b class="rvt">정답</b><div class="rvq" inert>{#key key}<QItem {q} i={run.k} value={answerOf(q)} runeLen={4} showNo={false} onchange={() => {}} />{/key}</div>{#if solOf(q)}<p class="rvs" data-k="atb-reveal-sol">💡 {solOf(q)}</p>{/if}<button type="button" class="rvok" class:on={revealOk} disabled={!revealOk} data-k="atb-reveal-ok" onclick={() => { reveal = false; onpass?.(); }}>✔ 알았어요</button></div>
-    {:else if q && chain}<div class="cs" data-k="atb-chain"><ChainStage fold items={qs} stage={grading ? qs.length : run.k} {says} title={shortTitle} value={val} {lastWrong} v4 wrongText={lastBad} {flip} disabled={!!locked} onchange={(v) => (val = v)} /></div>
-    {:else if q}<div class="cs" data-k="atb-cells"><AnswerRow {cells} cur={grading ? -1 : run.k} /></div>{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
+    {#if q && reveal}<div class="reveal" data-k="atb-reveal"><b class="rvt">정답</b><div class="rvq" inert>{#key key}<QItem {q} i={run.k} value={answerOf(q)} runeLen={4} showNo={false} onchange={() => {}} />{/key}</div>{#if solOf(q)}<div class="story why" data-k="atb-reveal-sol"><b>💡 까닭</b><p><SymText text={solOf(q)} /></p></div>{/if}<button type="button" class="rvok" class:on={revealOk} disabled={!revealOk} data-k="atb-reveal-ok" onclick={() => { reveal = false; onpass?.(); }}>✔ 알았어요</button></div>
+    {:else if q && chain}<div class="cs" data-k="atb-chain"><ChainStage fold items={qs} stage={grading ? qs.length : run.k} {says} title={shortTitle} value={val} {lastWrong} v4 wrongText={lastBad} {flip} disabled={!!locked} onchange={(v) => (val = v)} /></div>{#if fixWhy}<div class="story why fix bot" data-k="atb-fixwhy" role="status"><b>💡 왜 맞았나</b><p><SymText text={fixWhy} /></p></div>{/if}
+
+    {:else if q}{#if fixWhy}<div class="story why fix" data-k="atb-fixwhy" role="status"><b>💡 왜 맞았나</b><p><SymText text={fixWhy} /></p></div>{/if}<div class="cs" data-k="atb-cells"><AnswerRow {cells} cur={grading ? -1 : run.k} /></div>{#key key}<QItem {q} i={run.k} value={val} runeLen={4} showNo={false} onchange={(v) => (val = v)} />{/key}{/if}
     {#if hint}<p class="hint" class:gd={!!hintBy} role="status">{#if hintBy}<b class="from" data-k="atb-help-from">🛡 {hintBy}가 보낸 힌트</b>{/if}{hint.startsWith('💡') ? hint : `💡 ${hint}`}</p>{/if}
   </div>
   {#if !grading && !reveal}<div class="qrow">{#if canPass}<button type="button" class="qpass" data-k="atb-pass" onclick={startReveal}>⏭ 넘기기</button>{/if}<button type="button" class="qsend" class:on={can && !locked} disabled={!can || !!locked} data-k="atb-submit" onclick={send}>제출</button></div>{/if}
   {#if more}<button type="button" class="more" data-k="atb-qmore" onclick={() => bodyEl?.scrollBy({ top: bodyEl.clientHeight * 0.7, behavior: 'smooth' })}>▼ 더 있음</button>{/if}
-  {#if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
+  {#if reveal || (fixWhy && chain)}<!-- 📜 #132 정답 · 까닭 줄이 떠 있으면 아래 알림 숨김 (겹침 · 「알았어요」 가림) -->
+  {:else if flash === 'ok' || flash === 'gold'}<p class="fb ok" role="status">{flash === 'gold' ? '✔ 한 번에 정답!' : '✔ 정답'} · 다음 단계</p>
   {:else if flash === 'wrong'}<p class="fb bad" role="status">✘ 다시 · 고치면 △</p>
   {:else if flash === 'swap'}<p class="fb bad" role="status">🔥 재도전 · 새 숫자 판으로 처음부터 (구슬은 그대로)</p>
   {:else if flash === 'shieldSwap'}<p class="fb ok" role="status">🛡 실드! 내 칸을 깨기 쉬운 문제로 바꿨어요 (구슬은 그대로)</p>{/if}
@@ -242,4 +248,11 @@
   .body :global(.opt) { min-height: 44px; }
   .body :global(.chips) { grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); }
   .body :global(.chips .chip), .body :global(.chips.wide .chip), .body :global(.chips.many.wide .chip), .body :global(.chips.one .chip) { min-height: 44px; min-width: 44px; }
+
+  /* 💡 📜 #132 까닭 줄 = 레이드 「📜 나의 풀이」와 같은 .story 모양 · 글씨 (theme/ui.css) · 긴 줄 = 말줄임 없이 줄바꿈 */
+  .story.why { margin: 4px 0; padding: 4px 10px; background: #fff7d6; border: 1px solid #e0c070; }
+  .story.why b { font: 800 14px var(--font-plain); color: #7a4e10; }
+  .story.why p { margin: 2px 0 0; font: 700 14px/1.45 var(--font-plain); color: #1f5a2c; white-space: normal; overflow-wrap: anywhere; }
+  .story.why.fix { animation: whyin 0.2s ease-out; }
+  .story.why.fix.bot { position: sticky; bottom: 0; z-index: 3; box-shadow: 0 -4px 10px #0003; } /* 소레이드 = 카드가 지금 단계로 스크롤되어도 아래에 붙어 보임 */ @keyframes whyin { from { opacity: 0; translate: 0 -4px; } }
 </style>
