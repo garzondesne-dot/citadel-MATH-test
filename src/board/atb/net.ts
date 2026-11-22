@@ -1,7 +1,7 @@
 // 📡 게시판 던전(ATB) ↔ 베타 학생 게시판 (📜 요청 #48 · #51 · 서버 칸 = docs/board-atb/SERVER-v1.md) — 순수 계산 (화면 · 서버 없음)
 //   방장 폰 = 엔진(진짜 상태) · 다른 폰 = 내 행동(act)만 보냄 · 방장이 상태 요약(snap)을 0.2초마다 씀 · 각 폰은 snap 으로 그림
 //   문제 풀이 · 채점 = 각자 폰(정답은 각자 판정 · 결과 earn 만 보냄) · 방장 나감 = 다음 사람 · 끊긴 자리 = 봇이 이어받음
-import { attack, earn, missionOf, newBattle, useSkill, type SkillK, type State, type Timing } from './engine';
+import { askHelp, attack, earn, missionOf, sendHelp, newBattle, useSkill, type SkillK, type State, type Timing } from './engine';
 import { statsOf } from './heroes';
 import type { BossCfg, Diff } from './tune';
 import type { BotKind } from './bots';
@@ -9,7 +9,7 @@ import { gradeOf } from '../board';
 import { STAR } from '../goals';
 
 /** 자리 하나 = 학생(uid · 반 · 번호 · 용사) 또는 봇 */
-export type HumanSlot = { uid: string; cls: string; num: number; hero: number; lv: number; enh: number; tier: number; fx?: string; awk?: boolean; nick?: string };
+export type HumanSlot = { uid: string; cls: string; num: number; hero: number; lv: number; enh: number; tier: number; fx?: string; awk?: boolean; nick?: string; /** 🛡 #103 수호자 (글 mem role 'g') */ gd?: boolean };
 export type BotSlot = { bot: BotKind; hero: number; lv?: number; enh?: number; tier?: number; fx?: string };
 export type Slot = HumanSlot | BotSlot;
 export const isBot = (s: Slot): s is BotSlot => 'bot' in s;
@@ -20,7 +20,8 @@ export type Act =
   | { k: 'atk'; s: number; timing: Timing; auto?: boolean }
   | { k: 'skill'; s: number; sk: SkillK; to?: number }
   | { k: 'earn'; s: number; e: { done: boolean; perfect: boolean; right: boolean; miss?: number } }
-  /** 🗺 정찰 「준비 완료」 (요청 #69 · 엔진 밖 · 방장이 모아 go 시각을 정함) */ | { k: 'ready'; s: number };
+  /** 🗺 정찰 「준비 완료」 (요청 #69 · 엔진 밖 · 방장이 모아 go 시각을 정함) */ | { k: 'ready'; s: number }
+  /** 🛡 #103 도와줘 · 수호자가 힌트 보냄 */ | { k: 'ask'; s: number } | { k: 'aid'; s: number; to: number };
 /** atb/{pid}/snap (방장만 · 5Hz) · j = 상태 JSON 글자(서버가 빈 배열을 지우지 않게) · ack = 학생마다 처리한 마지막 행동 번호 */
 export interface Snap { v: 1; n: number; t: number; host: string; at: number; ack: Record<string, number>; j: string }
 export const NET = { snapMs: 200, hbMs: 3000, lostMs: 10000, evKeep: 40 } as const;
@@ -28,7 +29,9 @@ export const NET = { snapMs: 200, hbMs: 3000, lostMs: 10000, evKeep: 40 } as con
 /** 판 만들기 (모든 폰이 같은 meta → 같은 첫 상태) */
 export function battleOf(meta: Meta, boss: BossCfg, nameOf: (s: Slot, i: number) => string = (s) => String(s.hero)): State {
   const party = meta.slots.map((s, i) => statsOf({ hero: s.hero, lv: s.lv ?? 1, enh: s.enh ?? 1, tier: s.tier ?? 1, awk: !isBot(s) && !!s.awk, name: nameOf(s, i) }));
-  return newBattle({ boss, diff: meta.diff, party, seed: meta.seed });
+  const S = newBattle({ boss, diff: meta.diff, party, seed: meta.seed });
+  meta.slots.forEach((s, i) => { if (!isBot(s) && s.gd && S.heroes[i]) S.heroes[i]!.gd = true; }); /* 🛡 #103 봇 = 수호자 아님 */
+  return S;
 }
 /** 자리 번호 ↔ uid */
 export const slotOf = (meta: Meta, uid: string): number => meta.slots.findIndex((s) => !isBot(s) && s.uid === uid);
@@ -40,6 +43,8 @@ export function applyAct(S: State, a: Act): boolean {
   if (a.k === 'atk') return attack(S, a.s, a.timing, !!a.auto);
   if (a.k === 'skill') return useSkill(S, a.s, a.sk, a.to);
   if (a.k === 'ready') return false;
+  if (a.k === 'ask') return askHelp(S, a.s);
+  if (a.k === 'aid') return sendHelp(S, a.s, a.to);
   earn(S, a.s, a.e); return true;
 }
 

@@ -23,7 +23,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin, orphanCell } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin, orphanCell, askHelp, sendHelp, guardsOf } from '../../../board/atb/engine';
   import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -94,6 +94,8 @@
   const ops = {
     attack: (t: Timing, auto = false): boolean => { if (!net?.remote) return attack(S, me, t, auto); net.send({ k: 'atk', s: me, timing: t, ...(auto ? { auto } : {}) }); return true; },
     skill: (k: SkillK, to?: number): boolean => { if (!net?.remote) return useSkill(S, me, k, to); net.send({ k: 'skill', s: me, sk: k, ...(to != null ? { to } : {}) }); return true; },
+    /** 🛡 #103 도와줘 · 수호자가 힌트 보냄 */ ask: (): boolean => { if (!net?.remote) return askHelp(S, me); net.send({ k: 'ask', s: me }); return true; },
+    aid: (to: number): boolean => { if (!net?.remote) return sendHelp(S, me, to); net.send({ k: 'aid', s: me, to }); return true; },
     earn: (e: { done: boolean; perfect: boolean; right: boolean; miss?: number }): void => { if (!net?.remote) { earn(S, me, e); return; } net.send({ k: 'earn', s: me, e: { done: e.done, perfect: e.perfect, right: e.right, ...(e.miss != null ? { miss: e.miss } : {}) } }); },
   };
   /** 📡 방장 아님 = 충전 구슬을 미리 그릴 값 (엔진과 같은 규칙 · 진짜 값은 방장 상태로) */
@@ -290,10 +292,20 @@
     over = ''; skOpen = false; if (ops.skill(k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);
+  /** 🛡 #103 도전자 카드 = 팀에 수호자 있으면 「💡 도와줘」(원문항마다 한 번) · 없으면 「💡 힌트」 · 수호자 폰 = 기다리는 친구 (먼저 부탁한 순) */
+  const myAsk = $derived(me >= 0 ? S.asks?.[me] ?? null : null);
+  const help = $derived({ mode: (me >= 0 && meH && !meH.gd && guardsOf(S, me).length ? 'ask' : 'auto') as 'ask' | 'auto', wait: !!myAsk && myAsk.by < 0, from: myAsk && myAsk.by >= 0 ? (labels?.[myAsk.by] ?? S.heroes[myAsk.by]?.s.name ?? '') : '', id: myAsk ? Math.round(myAsk.t * 100) : -1 });
+  const askTo = $derived.by((): number | null => { if (!meH?.gd || meH.down || S.end) return null; const xs = Object.entries(S.asks ?? {}).filter(([k, a]) => a.by < 0 && +k !== me && !S.heroes[+k]?.down).sort((a, b) => a[1].t - b[1].t); return xs.length ? +xs[0]![0] : null; });
+  function askHelpNow() { if (ops.ask()) { hintUsed = true; try { navigator.vibrate?.(30); } catch { /* 무시 */ } } }
+  function aidNow(to: number) { skOpen = false; if (ops.aid(to)) { try { navigator.vibrate?.(60); } catch { /* 무시 */ } } }
   /** 📜 #102 ④ 상황 = 「스킬」 단추가 그 스킬 단추로 바뀜 (강조 순서 = emph) · 누르면 바로 발동 · ☰ = 메뉴 */
   const EMPH_IC: Partial<Record<SkillK, string>> = { role: '🛡', heal: '🩹', revive: '💖', tier4: '💥' };
-  const morph = $derived.by((): { k: SkillK; t: string; sub: string; dk: string } | null => {
-    if (!meH || !emph || over === 'timing') return null; const R = meH.s.role, cost = slots.find((x) => x.k === emph)?.cost ?? 0, c = cost ? `구슬 ${cost}` : '구슬 없이';
+  const morph = $derived.by((): { k: SkillK | 'aid'; t: string; sub: string; dk: string } | null => {
+    if (!meH || over === 'timing') return null;
+    /* 🛡 #103 강조 = 반응 막기 > 친구 위험 회복 > 도와줘 > 부활 > 끊기 · 스킬 2 */
+    const hi = emph != null && ((emph === 'role' && reactNow) || (!!lowIds.length && (emph === 'heal' || (emph === 'role' && meH.s.role === 'healer'))));
+    if (!hi && askTo != null) return { k: 'aid', t: `💡 ${tagName(askTo)} 도와줘!`, sub: '힌트 보내기 · 구슬 없이', dk: 'atb-aid' };
+    if (!emph) return null; const R = meH.s.role, cost = slots.find((x) => x.k === emph)?.cost ?? 0, c = cost ? `구슬 ${cost}` : '구슬 없이';
     const low = S.heroes.filter((h) => !h.down && h.hp < h.s.maxHp * T.lowHp).sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0];
     if (emph === 'role' && reactNow) return { k: 'role', t: CTR_TXT[R] ?? ROLE_SKILL[R], sub: `${R === 'tank' && S.target?.[0] != null ? `${name(S.target[0])} 지키기 · ` : ''}${c}`, dk: 'atb-counter' };
     if (emph === 'role' && R === 'healer') return { k: 'role', t: '💚 힐!', sub: `${low ? name(low.id) + ' · ' : ''}${c}`, dk: 'atb-morph-heal' };
@@ -489,6 +501,8 @@
       if (e.kind === 'aid' && e.to != null) { pop(posOf(e.to).x, posOf(e.to).y - 24, `🩹 +${e.v}`, 'heal'); heal1(e.to); snd('heart-up', 0.5); }
       else for (const h of S.heroes) if (!h.down) { pop(posOf(h.id).x, posOf(h.id).y - 18, `+${Math.round(h.s.maxHp * T.role.healer.atkHeal)}`, 'heal sm'); heal1(h.id); }
     }
+    else if (e.k === 'ask') { if (meH?.gd && e.who !== me) { big(`💡 ${name(e.who)} 도와줘!`, 'role', 1400); try { navigator.vibrate?.([40, 30, 40]); } catch { /* 무시 */ } snd('holy-on', 0.45); } else if (e.who === me) pop(posOf(me).x, posOf(me).y - 24, '💡 도와줘!', 'role'); }
+    else if (e.k === 'aid') { const p = posOf(e.to); if (e.ok == null) { pop(posOf(e.who).x, posOf(e.who).y - 24, '💡 힌트 보냄', 'role'); if (e.to === me) big(`🛡 ${name(e.who)}가 힌트를 보냈어요`, 'weak', 1400); } else if (e.ok) { pop(p.x, p.y - 30, '🤝 구조 성공!', 'heal'); if (e.who === me || e.to === me) big('🤝 구조 성공!', 'weak', 1400); sfx('heal', 0.6); } }
     else if (e.k === 'cap') { if (e.at === 'warn') { sageSay('균열이 불안정해지고 있다…'); sfx('mon-appear', 0.5); } else { sageSay('1분 뒤 포털로 불러들이겠다!', 5000); big('🌀 1분 뒤 포털로 불러들이겠다!', 'note', 2200); sfx('mon-appear', 0.7); } }
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); } // 📜 #92 팀 부활 횟수 없음 → 💖 n → m 판 없앰
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
@@ -696,7 +710,7 @@
       <!-- 📜 요청 #24 ① 머리 위 얇은 초록 HP 바 + 「69/100」 · 발밑 「Lv.1 이름 + 역할」 · 그 아래 금색 ATB · 가득 = 작은 ⚡ · 이름표 상자 없음 -->
       <div class="hpb" class:low={lowIds.includes(h.id)} style:top="{-Math.round(base * p.s * 64 * 0.98) - 16}px" data-k="atb-hpb"><i class="thin hp"><b style:width={pct(h.hp, h.s.maxHp)}></b></i><span class="hn">{h.hp}/{h.s.maxHp}<small class="lv">Lv{h.s.lv}</small></span></div>
       <div class="tag" class:full={h.atb >= 1 && !h.down} class:low={lowIds.includes(h.id)} class:aimed={h.id === me && meAimed} class:famflash={h.id === me && !!famFlash} class:wk={h.id === me && isWeak(me)} style:--fc={FAM_COL[h.s.fam]} data-k={h.id === me ? 'atb-me' : undefined}>
-        <b><FamShield fam={h.s.fam} size={14} /><AtbIcon name={ROLE_ICON[h.s.role]} size={12} /><span class="nm">{tagName(h.id)}</span></b>
+        <b><FamShield fam={h.s.fam} size={14} /><AtbIcon name={ROLE_ICON[h.s.role]} size={12} /><span class="nm">{tagName(h.id)}</span>{#if h.gd}<i class="gdb" data-k="atb-gd" title="수호자">🛡</i>{/if}</b>
         <span class="ar"><i class="thin atb" aria-label="ATB"><b style:width="{Math.round(Math.min(1, h.atb) * 100)}%"></b></i>{#if h.atb >= 1 && !h.down}<i class="az" aria-label="ATB 가득">⚡</i>{/if}</span>
       </div>
     </div>
@@ -710,7 +724,7 @@
   <!-- 문제 카드 -->
   {#if run}
     {#if grading?.suck}<AtbFx name="charge-suck" x="50%" y="45%" w={Math.round(H * 0.5)} loop={false} ms={450} z={42} />{/if}
-    <div class="card" class:suck={grading?.suck} class:drag={dragging} class:fold={!open} inert={!open} data-fold={open ? 0 : 1} style:translate={open ? `0 ${dragY}px` : '0 112%'} bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
+    <div class="card" class:suck={grading?.suck} class:drag={dragging} class:fold={!open} inert={!open} data-fold={open ? 0 : 1} style:translate={open ? `0 ${dragY}px` : '0 112%'} bind:this={cardEl}><QuizCard bind:this={qc} {L} {run} {seed} title={titleOf(run)} hintOk={!hintUsed} {help} onask={askHelpNow} onhint={() => (hintUsed = true)} {flash} flashN={fN} locked={lockLeft} {lockTag} {grading} auto={!!autoTag} onskip={finishGrade} onsubmit={submit} ongrab={grab} onfill={(v) => (canSend = v)} /></div>
   {/if}
 
   {#if run && !open && !S.end && phase === 'fight'}<button type="button" class="foldbar" data-k="atb-quiz-fold" onclick={openQuiz}><b>{titleOf(run).replace(/^\s*\d+차시\s*학습지\s*·\s*/, '').replace(/\s*·\s*\d+\/\d+$/, '')}</b> ▲ 문제 풀기</button>{/if}
@@ -723,7 +737,7 @@
       {#if open && over !== 'timing'}<div class="b atk tg on" data-k="atb-autoon" role="status"><span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span><span class="two">공격<small>자동 중</small></span></div>
       {:else}<button type="button" class="b atk" class:hot={ready || over === 'timing'} class:stopb={over === 'timing'} disabled={!ready && over !== 'timing'} data-k="atb-attack" data-stop={over === 'timing' ? 1 : 0} onpointerdown={atkDown} onclick={doAttack}>{#if over === 'timing'}⏹ 멈춤!{:else}<span class="ai"><img class="uic" src={fxUrl('ui-ic-attack')} alt="" /></span> 공격{/if}</button>{/if}
       <div class="skw">
-        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => fire(morph!.k)}><b class="mt">{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{EMPH_IC[emph]}</span>{/if}</button>{/if}
+        {#if morph}<button type="button" class="b skb morph" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} data-k={morph.dk} data-sk={morph.k} onclick={() => { const m = morph!; if (m.k === 'aid') { if (askTo != null) aidNow(askTo); } else fire(m.k); }}><b class="mt">{morph.t}</b><small>{morph.sub}</small></button><button type="button" class="skmore" class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} aria-label="스킬 메뉴" onclick={() => (skOpen = !skOpen)}>☰</button>{:else}<button type="button" class="b skb" style:--rc={meH ? ROLE_COL[meH.s.role] : undefined} class:hot={slots.some((x) => x.ok)} class:on={skOpen} data-k="atb-skill-btn" aria-expanded={skOpen} onclick={() => (skOpen = !skOpen)}><AtbIcon name="zap" size={26} /> 스킬{#if emph}<span class="badge" data-k="atb-sk-badge" aria-hidden="true">{EMPH_IC[emph]}</span>{/if}</button>{/if}
         {#if fullMsg && !skOpen}<b class="fullmsg" data-k="atb-fullmsg" role="status">⚡ 스킬 쓸 수 있어요!</b>{/if}
         <div class="ring skm" class:open={skOpen} data-k="atb-skills" aria-label="스킬" aria-hidden={!skOpen}>
         {#each slots as sk (sk.k)}
@@ -1167,4 +1181,6 @@
   .stage .sk2 .nm, .stage .sk2 .nm small, .stage .sk2 .pv, .stage .sk2 .need1 { font-size: 14px; }
   .btns.v3 .b.atk.tg small, .btns.v3 .b.skb.morph small { font-size: 13px; }
   .stage.q :is(.bigmsg, .tgline, .reactb, .weakb, .capt) { left: 27.5%; max-width: 52%; } /* 카드 열림 = 위 띠도 왼쪽 칸 가운데 */
+  /* ── 🛡 #103 수호자 이름표 배지 ── */
+  .gdb { font-style: normal; font-size: 12px; margin-left: 2px; filter: drop-shadow(0 1px 0 #000); }
 </style>
