@@ -39,6 +39,7 @@
   {#if phase === 'scout'}
     <section class="card c102" data-k="atb-scout" aria-label="정찰">
       <div class="k">{no}차시 · {S.diff === 'hard' ? '도전' : S.diff === 'easy' ? '연습' : '일반'} · 정찰</div>
+      <h2 class="bn" data-k="atb-scout-boss">{S.boss.name}</h2>{#if bossLine(S.boss.no, 'enter')}<p class="bl" data-k="atb-scout-line">「{bossLine(S.boss.no, 'enter')}」</p>{/if}
       <div class="in">
         <div class="col">
           <h3>약점과 실드</h3>
@@ -102,4 +103,5 @@
   .c102 .wk { font-size: 14px; font-weight: 900; color: #2a1a04; background: #f5b84a; border-radius: 4px; padding: 0 4px; }
   .c102 .go { height: 56px; min-width: 200px; border-radius: 12px; border: 2px solid #5a3a08; background: linear-gradient(#ffd47a, #f0a93a); color: #2a1a04; font: 900 16px var(--font-plain); box-shadow: 0 3px 0 #000; }
   .c102 .go:disabled { filter: grayscale(0.5); opacity: 0.75; }
+  .c102 .bn { margin: 0; font: 900 26px var(--font-plain); color: #fff2d0; text-shadow: 0 2px 0 #000; line-height: 1.1; } .c102 .bl { margin: 0; font: 700 14px var(--font-plain); color: #d9cfb8; }
 </style>

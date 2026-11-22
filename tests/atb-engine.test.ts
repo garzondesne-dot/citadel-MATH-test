@@ -155,10 +155,9 @@ it('📊 판 기록: 판 길이 · 소문항당 시간 · 타이밍 · 모았다
   expect(r).toMatchObject({ no: 2, cls: '1-3', n: 4, roles: 'dealer+healer+support+tank', subs: 2, subSecMed: 10, timingOk: 50, timingCrit: 50, downs: 0 });
   expect(r.sec).toBe(16);
 });
-it('🔄 몬스터는 늘 왼쪽을 봄 = 오른쪽 보는 자세만 반전 (2차시 흑표범 대기 · 3 · 5차시 공격)', async () => {
+it('🔄 몬스터는 늘 왼쪽을 봄 = 컨셉 5동작 시트(cm5 · 📜 #98-b 덧) 2 ~ 11차시 = 모두 왼쪽 그림 · 반전 없음', async () => {
   const { BOSSES } = await import('../src/board/atb/tune');
-  expect(BOSSES[2]!.flip).toMatchObject({ idle: true, down: true }); expect(BOSSES[2]!.flip?.attack).toBeFalsy();
-  expect(BOSSES[3]!.flip?.attack).toBe(true); expect(BOSSES[5]!.flip?.attack).toBe(true); expect(BOSSES[11]!.flip).toBeUndefined();
+  for (let n = 2; n <= 11; n++) { expect(BOSSES[n]!.sprite).toMatch(/^cm5-[ab]:\d$/); expect(BOSSES[n]!.flip).toBeUndefined(); }
 });
 describe('대표 행동 9 (📜 설정표 v3 · 선생님 확정 11/20)', () => {
   const at = (no: number, names = ['로안', '발도르', '루멘', '누아'], seed = 1) => newBattle({ boss: BOSSES[no]!, diff: 'normal', party: party(names), seed });

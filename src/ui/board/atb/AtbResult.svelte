@@ -49,6 +49,9 @@
   const helpOf = (h: State['heroes'][number]) => { const g = h.log; return g.heals + (g.rescues ?? 0) + g.covers + (g.blocks ?? 0) + g.revives + g.boosts + g.shields + (g.aids ?? 0); };
   const chipOf = (h: State['heroes'][number]): string => { const g = h.log, a: string[] = []; if (g.aids) a.push(`도움 ${g.aids}`); /* 칸이 좁아 「구조 성공」 = 「도움」 (「구조」 = 큰 힐) */ if (g.heals) a.push(`회복 ${g.heals}`); if (g.rescues) a.push(`구조 ${g.rescues}`); if (g.boosts) a.push(`격려 ${g.boosts}`); if (g.covers) a.push(`엄호 ${g.covers}`); const blk = Math.max(0, (g.blocks ?? 0) - (g.cuts ?? 0)); if (blk) a.push(`막기 ${blk}`); if (g.cuts) a.push(`끊기 ${g.cuts}`); if (g.shields) a.push(`실드 ${g.shields}`); if (g.revives) a.push(`부활 ${g.revives}`); return a[0] || `맞힘 ${g.right}`; };
   const mvp = $derived.by(() => { let best = -1, id = -1, r = -1; for (const h of S.heroes) { const v = helpOf(h), rr = h.log.right; if (v > best || (v === best && rr > r)) { best = v; id = h.id; r = rr; } } return best > 0 || r > 0 ? id : -1; /* 아무도 한 게 없으면 👑 없음 */ });
+  const ART = (p: string) => `${import.meta.env.BASE_URL}art/board-atb/${p}.webp`;
+  /** 🎨 공적 칩 메달 (atb-counter-ui 가운데 줄) = 칩 첫 일 · 방패 = 엄호 · 막기 · 십자 = 회복 · 칼+사슬 = 끊기 · 반구 = 실드 · 도장 = 도움(구조 성공) */
+  const medalOf = (h: State['heroes'][number]): string => { const t = chipOf(h); return /^(엄호|막기)/.test(t) ? 'cover' : /^(회복|구조 )/.test(t) ? 'heal' : /^끊기/.test(t) ? 'cut' : /^실드/.test(t) ? 'holy' : /^도움/.test(t) ? 'check' : ''; };
   const ROLE_IC = { tank: 'role-tank', dealer: 'role-dealer', healer: 'role-healer', support: 'role-support' } as const;
   // 🔊 💎 줄 = 한 줄씩 star · 별 = 하나씩 (요청 #23)
   onMount(() => { const ts = [...rows.filter((r) => r.g > 0).map((_, i) => setTimeout(() => sfx('star', 0.5), 700 + i * 350)), ...Array.from({ length: stars }, (_, i) => setTimeout(() => sfx('star-bonus', 0.45), 250 + i * 220))]; return () => ts.forEach(clearTimeout); });
@@ -58,26 +61,29 @@
   let port = $state(false);
   $effect(() => { port = portNow(); const f = () => (port = portNow()); addEventListener('resize', f); return () => removeEventListener('resize', f); });
   /** 💀 📜 요청 #88 패배 이유 = 큰 줄 (엔진 why → 학생 말) */
-  const WHY: Record<string, string> = { 후퇴: '🌀 현자가 포털로 불러들였어요 · 벌 없음 · 맞힌 문제는 기록돼요', 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급붕대로 버텨 봐요' };
+  /** 💨 #108 10분 상한 = 몬스터 도망 (엔진 이름 '후퇴' 그대로 · 화면 = 도망) */
+  const fled = $derived(S.end?.why === '후퇴');
+  const iga = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? '이' : '가'; };
+  const WHY: Record<string, string> = { 후퇴: `💨 ${S.boss.name}${iga(S.boss.name)} 도망쳤어요 · 벌 없음 · 맞힌 문제는 기록돼요`, 전멸: '💀 모두 쓰러졌어요 · 다음엔 힐 · 엄호로 버텨 봐요', 쓰러짐: '💀 내 용사가 쓰러졌어요 · 다음엔 힐 · 응급붕대로 버텨 봐요' };
 </script>
 
-<div class="rs" class:lose={!win} class:port data-k="atb-result">
+<div class="rs" class:lose={!win} class:fled class:port data-k="atb-result">
   <div class="left">
     <div class="banner" data-k="atb-res-banner" style:background-image="url({R('res-banner')})">
-      <h2 class:win>{win ? '승리!' : S.end?.why === '후퇴' ? '후퇴' : '아쉬워요'}</h2>
+      <h2 class:win>{win ? '승리!' : fled ? '도망쳤다!' : '아쉬워요'}</h2>
       <div class="stars" data-k="atb-stars" data-n={stars} aria-label="별 {stars}개">{#each [0, 1, 2] as i (i)}<img class="star" class:on={i < stars} style:animation-delay="{0.25 + i * 0.22}s" src={R(i < stars ? 'res-star-gold' : 'res-star-gray')} alt="" />{/each}</div>
     </div>
     {#if win || !S.end}<p class="time">{`${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초`}</p>
-    {:else}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{/if}<!-- 📜 #91 ⑬ 패배 이유 = 별 띠 아래 제자리 줄 (위에 겹치지 않음 · 낱말 안 끊김) -->
+    {:else}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{#if fled}<p class="tip" data-k="atb-flee-tip">💡 다음엔 조금 더 빨리!</p>{/if}{/if}<!-- 📜 #91 ⑬ 패배 이유 = 별 띠 아래 제자리 줄 (위에 겹치지 않음 · 낱말 안 끊김) -->
     <div class="party" style:--n={n}>
       {#each S.heroes as h (h.id)}
         {@const pt = portraitOf(h.s.hero)}
         {@const d = top(h)}
-        <div class="hp" class:mvp={h.id === mvp}>{#if h.id === mvp}<b class="crown" data-k="atb-res-mvp">👑 MVP</b>{/if}
-          <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win ? 0 : 8} play={win} /></span></span>
+        <div class="hp" class:mvp={h.id === mvp}>{#if h.id === mvp}<b class="crown" data-k="atb-res-mvp"><img src={ART('ic4/mvp')} alt="" />MVP</b>{/if}
+          <span class="hw">{#if h.s.enh}<span class="aul" aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} auraHero={h.s.hero} aura={h.s.enh} scale={n > 2 ? 1.4 : 1.8} /></span>{/if}<span class="bod"><HeroSprite id={lookOfStats(h.s)} scale={n > 2 ? 1.4 : 1.8} row={win || fled ? 0 : 8} play={win} /></span></span>
           <div class="slot" data-k="atb-res-slot" style:background-image="url({R('res-slot')})">{#if missionOf(S, h.id).done}<i class="mdone" data-k="atb-res-mission" title="임무 완수">✔</i>{/if}
             <i class="face">{#if pt}<i style="background-image:url({pt.url});background-size:{pt.cols * 100}% {pt.rows * 100}%;background-position:{(pt.c[0] / Math.max(1, pt.cols - 1)) * 100}% {(pt.c[1] / Math.max(1, pt.rows - 1)) * 100}%"></i>{/if}</i>
-            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small class="chip" data-k="atb-res-chip"><AtbIcon name={ROLE_IC[h.s.role]} size={16} />{chipOf(h)}</small></span>{void d}
+            <span class="st"><b>{labels?.[h.id] ?? `${h.s.name}${h.id === me ? '(나)' : ''}`}{#if labels?.[h.id]}<small class="hn2">{h.s.name}</small>{/if}</b><small class="chip" data-k="atb-res-chip">{#if medalOf(h)}<img class="md" src={ART('counter/medal-' + medalOf(h))} alt="" />{:else}<AtbIcon name={ROLE_IC[h.s.role]} size={16} />{/if}{chipOf(h)}</small></span>{void d}
           </div>
         </div>
       {/each}
@@ -174,4 +180,10 @@
   .hp .crown { position: absolute; left: 50%; top: -6px; translate: -50% 0; z-index: 3; font: 900 14px var(--font-plain); color: #2a1a04; background: #f5b84a; border-radius: 6px; padding: 0 6px; white-space: nowrap; box-shadow: 0 2px 0 #000; }
   .hp.mvp .bod { filter: drop-shadow(0 0 8px rgba(255, 210, 100, 0.8)); }
   .chip { display: inline-flex !important; align-items: center; gap: 3px; font-size: 14px !important; white-space: nowrap; }
+  /* ── 💨 #108 도망 = 보라 배너 · 패배 = 회색 배너 (UI-FINAL 6절) ── */
+  .rs.lose:not(.fled) .banner { filter: grayscale(0.85) brightness(0.9); }
+  .rs.fled .banner { filter: hue-rotate(-75deg) saturate(0.85); }
+  .tip { margin: 0; font: 800 14px var(--font-plain); color: #ffe7a8; text-align: center; text-shadow: 0 1px 2px #000; }
+  .hp .crown { display: inline-flex; align-items: center; gap: 2px; } .hp .crown img { width: 18px; height: 18px; image-rendering: pixelated; }
+  .chip .md { width: 18px; height: 22px; object-fit: contain; }
 </style>
