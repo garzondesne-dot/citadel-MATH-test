@@ -336,7 +336,8 @@ function overflowSkill(S: State, h: Hero) {
 export const costOf = (h: Hero, k: SkillK, S?: State): number => (k === 'revive' ? Math.min(T.charge.max, (h.s.role === 'healer' ? T.revive2.healer : T.revive2.base) + T.revive2.step * (S?.rec.revives ?? 0)) /* 📜 #92 2 → 3 → 4 (힐러 1 → 2 → 3) */ : k === 'equip' && h.s.role === 'healer' ? T.role.healer.skillCost : T.cost[k]);
 const healMul = (h: Hero) => (h.s.role === 'healer' ? T.role.healer.skillMul : 1);
 /** 힐 대상 = 고른 사람(살아 있으면 · 나 포함) · 아니면 체력 비율이 가장 낮은 사람 */
-export function healTarget(S: State, to?: number): Hero | undefined { const f = to != null ? S.heroes[to] : undefined; if (f && !f.down) return f; return alive(S).slice().sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0]; }
+/** 📜 #101 덧 = 🩹 응급붕대 · 💚 힐 = 대상 고르기 없음 · 체력 비율이 가장 낮은 살아 있는 용사(나 포함)에게 자동 (to 는 무시) */
+export function healTarget(S: State, _to?: number): Hero | undefined { return alive(S).slice().sort((a, b) => a.hp / a.s.maxHp - b.hp / b.s.maxHp)[0]; }
 export function canRole(S: State, who: number): boolean { const h = S.heroes[who]; return !!h && ready(h, S) && h.ch >= T.cost.role && (h.s.role !== 'healer' || alive(S).some((x) => x.hp < x.s.maxHp)); }
 export function roleAct(S: State, who: number, to?: number): boolean {
   const h = S.heroes[who]; if (!h || !canRole(S, who)) return false;

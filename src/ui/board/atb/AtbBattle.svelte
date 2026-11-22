@@ -282,11 +282,11 @@
   // 🔎 📜 요청 #19 덧3 스킬 미리 보기 = 단추 안 한 줄(어림값) · 꾹 0.4초 = 설명 카드(손 떼면 닫힘 · 발동 안 함) · 톡 = 바로 발동
   const pv = $derived.by(() => { void S.t; void S.evN; const o: Partial<Record<SkillK, ReturnType<typeof skillPeek>>> = {}; if (meH) for (const x of slots) o[x.k] = skillPeek(S, me, x.k); return o; });
   let peek = $state<SkillK | ''>(''), peekX = $state(0), peekUsed = false, pressT: ReturnType<typeof setTimeout> | undefined;
-  function pressStart(k: SkillK, ev: PointerEvent) { const b = ev.currentTarget as HTMLElement; peekX = b.offsetLeft + b.offsetWidth / 2; clearTimeout(pressT); peekUsed = false; pressT = setTimeout(() => { peekUsed = true; if (k === 'role' && meH?.s.role === 'healer' && canSkill(S, me, 'role')) { pickK = 'role'; over = 'pick'; skOpen = false; try { navigator.vibrate?.(15); } catch { /* 무시 */ } return; } /* 💚 큰 힐 꾹 = 고르기 (요청 #46) */ peek = k; try { navigator.vibrate?.(15); } catch { /* 무시 */ } }, 400); }
+  function pressStart(k: SkillK, ev: PointerEvent) { const b = ev.currentTarget as HTMLElement; peekX = b.offsetLeft + b.offsetWidth / 2; clearTimeout(pressT); peekUsed = false; pressT = setTimeout(() => { peekUsed = true; /* 📜 #101 덧 = 💚 큰 힐 꾹 고르기 없앰 (자동 대상) */ peek = k; try { navigator.vibrate?.(15); } catch { /* 무시 */ } }, 400); }
   function pressEnd() { clearTimeout(pressT); peek = ''; }
   function fire(k: SkillK, to?: number) {
     if (!meH) return; const R = meH.s.role;
-    if (to == null && !(k === 'role' && canReact(S, me)) && ((k === 'role' && (R === 'tank' || R === 'support')) || k === 'heal' || (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
+    if (to == null && !(k === 'role' && canReact(S, me)) && ((k === 'role' && (R === 'tank' || R === 'support')) || /* 📜 #101 덧 힐 = 고르기 없음 */ (k === 'revive' && S.heroes.filter((x) => x.down && x.id !== me).length > 1))) { pickK = k; over = 'pick'; return; }
     over = ''; skOpen = false; if (ops.skill(k, to)) { try { navigator.vibrate?.(k === 'awk' ? [60, 40, 160] : 60); } catch { /* 무시 */ } }
   }
   const pickTo = (to: number) => fire(pickK, to);

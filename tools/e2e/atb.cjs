@@ -259,9 +259,9 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/?role=atb';
   await p.goto(B); await p.waitForSelector('[data-k="atb-setup"]'); await p.click('[data-k="atb-start"]'); await p.waitForSelector('[data-k="atb-stage"]'); await p.waitForTimeout(400);
   await p.evaluate(() => { const a = globalThis.__atb, S = a.S; a.pause(true); const h = S.heroes[0]; h.s.role = 'dealer'; h.ch = 2; h.atb = 1; S.heroes[1].hp = 10; });
   await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); await p.click('[data-k="atb-sk-heal"]'); await p.waitForTimeout(150);
-  { const dlg = !!(await p.$('[data-k="atb-pick-1"]')); await p.click('[data-k="atb-pick-1"]').catch(() => {}); await p.waitForTimeout(150);
+  { const dlg = !(await p.$('[data-k="atb-pick-1"]')); /* 📜 #101 덧 = 고르기 없음 */
     const r = await p.evaluate(() => { const S = globalThis.__atb.S, f = S.heroes[1]; return { hp: f.hp, want: 10 + Math.round(f.s.maxHp / 3), pop: [...document.querySelectorAll('.pop.heal')].map((e) => e.textContent).join(',') }; });
-    ok('요청 #46 🩹 응급 힐 = 누구에게 고르기 → 최대 체력 1/3 · 초록 숫자', dlg && r.hp === r.want && /🩹/.test(r.pop), JSON.stringify({ dlg, ...r })); }
+    ok('요청 #46 · #101 🩹 응급붕대 = 고르기 없이 체력 비율 가장 낮은 용사 자동 → 최대 체력 1/3 · 초록 숫자', dlg && r.hp === r.want && /🩹/.test(r.pop), JSON.stringify({ dlg, ...r })); }
   await p.evaluate(() => { const S = globalThis.__atb.S, h = S.heroes[0]; h.s.role = 'healer'; h.ch = 2; h.atb = 1; S.heroes[2].hp = 5; });
   await p.click('[data-k="atb-skill-btn"]').catch(() => {}); await p.waitForTimeout(200); if (!(await p.$('[data-k="atb-skills"].open'))) { await p.click('[data-k="atb-skill-btn"]'); await p.waitForTimeout(200); }
   await p.click('[data-k="atb-sk-role"]'); await p.waitForTimeout(250);
