@@ -66,3 +66,8 @@
 
 ## 6. 시험 (2026-11-23 · ux98 #152 합친 뒤 · 최종)
 vitest 159 파일 · 895 통과(서버 규칙 시험 포함 · 에뮬레이터) · svelte-check 오류 0 · e2e = trial55 · board135 · dummywr40 · board93 · board66 · board79 · atbteacher · atb · ultfx · atb131 · atbnet · atb48 · atb65 · boot · bots · castle 통과 · ⚠ b8(리모컨 옛 칸 `.att` 찾음 · 11/17 리모컨 바뀐 뒤 낡은 시험 · 이번 변경과 무관)
+
+## 7. ✅ 배포 끝 (2026-11-23 01:5x KST · 선생님 「배포」)
+- 정식 main 25afd8b (손발 #7) · Pages 성공 · 정식 · 학교판 version.json = citadel-1.1-b236
+- zip citadel-b236-release-r5.zip · sha256 48da0fca… · 트리 4923039… 일치 · 베타 기준 0d4e7ee (작업 가지 release-b236)
+- 되돌리기 = 정식 4885fc2 (b235) · 규칙 게시 = 11/22 판 그대로
