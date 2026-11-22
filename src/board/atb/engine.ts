@@ -443,13 +443,14 @@ export function runRecord(S: State, ctx: { cls?: string; no: number; practice?: 
 export interface Peek { line: string; gold: boolean; name: string; desc: string; cost: number; per: string; why: string }
 const estHit = (S: State, raw: number) => Math.max(1, Math.round(raw * (weak(S) ? T.weakDmg : S.shieldUp && S.cells.some((c) => !c.broken) ? (S.boss.shieldDmg ?? T.shieldDmg) : 1)));
 export function skillPeek(S: State, who: number, k: SkillK): Peek {
-  const h = S.heroes[who]!, R = h.s.role, wk = weak(S), cost = k === 'equip' && canBreak(S, who) ? T.cost.shield : costOf(h, k, S);
+  const h = S.heroes[who]!, R = h.s.role, wk = weak(S), cost = k === 'shield' && canBreak(S, who) ? T.cost.shield : costOf(h, k, S);
   const base = T.skillBase * h.s.skillMul, wTxt = wk ? ` · 약점 ×${T.weakDmg}` : '';
   let line = '', name = '', desc = '', per = '제한 없음', gold = false;
   if (k === 'equip' || k === 'shield') {
     name = '내 스킬';
-    if (canBreak(S, who)) { const two = S.boss.weak.includes(h.s.fam); line = `🛡 실드 깸${two ? ' 2칸' : ''}`; desc = `실드가 떠 있으면 내 칸을 깨요${two ? ' · 약점 계열이라 친구 칸 하나 더' : ''}`; }
-    else { line = `💥 약 ${estHit(S, base * T.ratio.equip * healMul(h))}${wTxt}`; gold = wk; desc = '보스에게 장착 스킬 피해 · 충전이 넘치면 저절로 나감'; }
+    if (k === 'shield' && canBreak(S, who)) { const two = S.boss.weak.includes(h.s.fam); line = `🛡 실드 깸${two ? ' 2칸' : ''}`; desc = `실드가 떠 있으면 내 칸을 깨요${two ? ' · 약점 계열이라 친구 칸 하나 더' : ''}`; }
+    else { line = `💥 약 ${estHit(S, base * T.ratio.equip * healMul(h))}${wTxt}`; // 📜 #101 · #124 덧 스킬 1 = 실드 못 깸 → 작은 글 = 피해만 (실드 안내 = 스킬 2 줄)
+      gold = wk; desc = '보스에게 장착 스킬 피해 · 충전이 넘치면 저절로 나감'; }
   } else if (k === 'role') {
     name = `${ROLE_SKILL[R]}`;
     if (R === 'dealer') { line = `💥 강타 약 ${estHit(S, base * T.ratio.equip * T.role.dealer.smash)}${wTxt}`; gold = wk; desc = `장착 스킬 ×${T.role.dealer.smash} 피해`; }
@@ -463,7 +464,7 @@ export function skillPeek(S: State, who: number, k: SkillK): Peek {
     desc = `큰 피해 + ${R === 'dealer' ? `약점 시간 +${T.awk.dealerWeak}초` : R === 'tank' ? `팀 받는 피해 −${Math.round(T.awk.tankCut * 100)}%` : R === 'healer' ? `큰 힐 +${Math.round(T.awk.healerBig * 100)}%p` : `팀 ATB +${Math.round(T.awk.supportAtb * 100)}%`}`; per = '판당 1번';
   } else if (k === 'revive') { name = '💖 부활'; line = `💖 부활 HP ${Math.round(T.reviveHp * 100)}%`; desc = `쓰러진 친구를 체력 ${Math.round(T.reviveHp * 100)}%로 살림`; per = `이번 판 ${S.rec.revives}번 살림 · 다음 구슬 ${costOf(h, 'revive', S) + T.revive2.step}`; }
   else if (k === 'tier4') { name = '스킬 2'; const cb = canBreak(S, who); line = cb === 'own' ? `💥 실드 1칸 + 약 ${estHit(S, base * T.ratio.equip)}` : cb ? '💥 실드 1칸 깸' : `💥 약 ${estHit(S, base * T.ratio.tier4)}`; desc = cb === 'help' ? '📜 도움표로 팀에 없는 속성 칸 1칸' : cb ? '맞는 속성 실드 칸 1칸' : S.shieldUp ? '속성이 안 맞으면 피해만(실드 중 ×0.3)' : `장착 스킬 ×${T.ratio.tier4}`; } /* 📜 #101 */
-  if ((k === 'equip' && !canBreak(S, who)) || k === 'awk') { const X = ATTR_FX_TXT[fxOfAttr(h.s.attr)]; desc += ` · ${X.emo} ${X.name}: ${X.desc}`; } // 📜 요청 #36′
+  if (k === 'equip' || k === 'awk') { const X = ATTR_FX_TXT[fxOfAttr(h.s.attr)]; desc += ` · ${X.emo} ${X.name}: ${X.desc}`; } // 📜 요청 #36′
   const why = S.end ? '판 끝' : h.down ? '쓰러짐' : S.t < h.stunUntil ? '묶임 · 기절' : (k === 'aura' && h.auraUsed) || (k === 'awk' && h.awkUsed) ? '이번 판에 이미 씀' : (k === 'role' && R === 'healer') || k === 'heal' ? (alive(S).some((x) => x.hp < x.s.maxHp) ? '' : '다친 친구 없음') || (h.ch < cost ? `구슬 ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '') : k === 'revive' && S.revives <= 0 ? '팀 부활 다 씀' : h.ch < cost ? `구슬 ${cost} 필요 (지금 ${h.ch})` : h.atb < 1 ? 'ATB 차는 중' : '';
   return { line, gold, name, desc, cost, per, why };
 }
