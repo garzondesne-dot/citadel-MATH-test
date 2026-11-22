@@ -25,7 +25,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0], hostA = posts[pid].host;
   ok('모집 글 = act · 방장 숨(seen)', !!posts[pid].act && !!posts[pid].mem[hostA].seen);
-  await Bp.waitForTimeout(800); await Bp.click('.post .go'); await wait(1500);
+  await Bp.waitForTimeout(800); (await Bp.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await Bp.click('[data-k="board-recruit-fold"]')), await Bp.click('.post .go'); await wait(1500);
   posts = await rest('school/board/posts'); const uB = Object.keys(posts[pid].mem).find((u) => u !== hostA);
   ok('B 합류', !!uB);
   // A 폰 닫힘 + 숨 2분 전

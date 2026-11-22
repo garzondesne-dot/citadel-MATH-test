@@ -23,7 +23,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
   // ① 혼자 도전 = 새 전투
-  await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 혼자 도전")');
+  await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 출정")'); await A.waitForSelector('[data-k="hero-sheet"]'); await A.click('[data-k="hero-sheet-go"]'); /* 📜 #135 출정 → 용사 확인 시트 */
   await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {});
   ok('혼자 도전 → 새 전투 화면', !!(await A.$('[data-k="atb-stage"]')));
   const onTop = await Promise.all([A].map((p) => p.evaluate(() => { const st = document.querySelector('[data-k="atb-stage"]'); const pts = [[0.5, 0.5], [0.15, 0.6], [0.85, 0.6]]; return !!st && pts.every(([x, y]) => { const e = document.elementFromPoint(innerWidth * x, innerHeight * y); return !!e && st.contains(e); }); })));
@@ -53,12 +53,12 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   // ② 모집 글 = 암호 없이 바로 · 다른 폰 합류 = 암호 입력 없음
   const B2 = await open(); await signup(B2, CLS, 2); await board(B2);
   await A.click('[data-map="6"]').catch(() => {});
-  ok('「👥 6차시 팀 모집」 = 시트 없이 바로 (암호 칸 없음)', /6차시 팀 모집/.test((await A.textContent('[data-k="board-post"]')) || ''));
+  ok('「👥 6차시 팀 모집」 = 시트 없이 바로 (암호 칸 없음)', /^👥 팀 모집$/.test(((await A.textContent('[data-k="board-post"]')) || '').trim()) /* 📜 #135 단추 글 */);
   await A.click('[data-k="board-post"]'); await wait(1800); ok('모집 시트 · 암호 칸 안 뜸', !(await A.$('.lgrid')) && !(await A.$('.sheet .rune-keys')));
   const pst = Object.values((await rest('school/board/posts')) || {}).find((p) => p.phase === 'wait');
   const lock = pst ? await rest(`boardLock/${pst.pid}`) : 'x';
   ok('모집 글 = 암호 없음(lk 없음 · boardLock 없음)', !!pst && !pst.lk && !lock, pst ? pst.pid : '없음');
-  await B2.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await B2.click('.post .go'); await wait(1500);
+  await B2.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); (await B2.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await B2.click('[data-k="board-recruit-fold"]')); await B2.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); (await B2.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await B2.click('[data-k="board-recruit-fold"]')), await B2.click('.post .go'); await wait(1500);
   ok('합류 때 암호 창 안 뜸', !(await B2.$('.sheet .rune-keys')));
   const mem = pst ? (await rest(`school/board/posts/${pst.pid}/mem`)) || {} : {};
   ok('다른 폰 합류 = 2명', Object.keys(mem).length === 2, Object.keys(mem).join(','));

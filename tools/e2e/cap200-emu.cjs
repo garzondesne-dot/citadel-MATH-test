@@ -30,7 +30,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const capLine = (await A.textContent('[data-k="board-daycap"]').catch(() => '')) || '';
   ok('기록 탭 「오늘 받을 수 있는 💎 5 / 200」', /5 \/ 200/.test(capLine), capLine.trim());
   await A.click('[data-btab="go"]').catch(() => {}); await wait(300);
-  await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 혼자 도전")');
+  await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 출정")'); await A.waitForSelector('[data-k="hero-sheet"]'); await A.click('[data-k="hero-sheet-go"]'); /* 📜 #135 출정 → 용사 확인 시트 */
   await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 }).catch(() => {});
   for (let i = 0; i < 6; i++) { await A.evaluate(() => globalThis.__atb?.solve?.()); await wait(500); }
   await A.evaluate(() => globalThis.__atb?.win?.()); /* 📡 손발 #2 시험 고리 = 실드 칸 깸 · HP 0 · 엔진 끝 판정 */

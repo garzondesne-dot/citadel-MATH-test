@@ -25,7 +25,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
     let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0];
     ok(`[${round}] 모집 글`, !!pid);
-    for (const p of rest8) await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }).catch(() => {});
+    for (const p of rest8) { await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); if (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]')) await p.click('[data-k="board-recruit-fold"]'); /* 📜 #135 모집 접힘 = 펼침 */ await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')); await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }).catch(() => {}); }
     await Promise.all(rest8.map((p) => p.click('.post .go').catch(() => {}))); // 📜 #65-2 암호 없음 = 「합류」를 한꺼번에 누름 (동시 입장 race)
     const toasts = await Promise.all(rest8.map(async (p) => { for (let i = 0; i < 30; i++) { const t = (await p.textContent('.bd').catch(() => '')) || ''; if (/꽉 찼어요|자리가 다 찼어요/.test(t)) return true; /* 📜 #65-2 암호 없음 = 늦게 누른 폰은 합류 전에 「자리가 다 찼어요」 */ await p.waitForTimeout(200); } return false; }));
     await wait(2500);

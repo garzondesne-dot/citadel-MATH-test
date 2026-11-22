@@ -24,7 +24,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const [A, ...others] = ps;
   await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
-  for (const p of others) { await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); await p.click('.post .go'); await wait(1200); }
+  for (const p of others) { await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')); await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')), await p.click('.post .go'); await wait(1200); }
   for (const p of others) { const r = await p.$('button:has-text("준비")'); if (r) await r.click().catch(() => {}); await wait(600); }
   const mem = (await rest(`school/board/posts/${pid}/mem`)) || {};
   ok(`합류 ${N}명 · 용사 정보(g) 같이 씀`, Object.keys(mem).length === N && Object.values(mem).every((m) => m.g && m.g.lv >= 1), Object.values(mem).map((m) => JSON.stringify(m.g)).join(' '));
