@@ -19,6 +19,8 @@ export interface Format { grade(q: Question, g: Given): boolean; pen(q: Question
   /** 정답 한 줄 (교사 · 틀린 뒤 보여 줌 · 없으면 pen(answer)) */ answerText?(q: Question): string;
   /** 📦 차시 팩 올리기: 팩 문항 칸 → 문항 (base = 문제 글 · 풀이 · 덧칸 · err = 검사 문구 · 이 꼴이 없으면 올릴 수 없음) */ fromPack?(it: Record<string, unknown>, base: Record<string, unknown>, err: (msg: string) => null): Question | null }
 export interface Quest { boss: string; line: string; /** 💬 보스 대사 (게시판 던전 · 요청 #64) */ say?: { enter: string; rage: string; down: string } }
+/** 📜 #106 묶음 시트 한 장 = 차시 몬스터 · 보스 (줄 순서 = ids) · 그림이 sheets 에 같은 이름으로 들어오기 전엔 줄마다 temp 그림 */
+export interface Bundle { no: number; ids: string[]; names: string[]; boss: number; temp: string[] }
 export interface Subject {
   id: string;
   /** 첫 화면 · 앱 이름에 붙는 과목 이름 */
@@ -70,7 +72,7 @@ export interface Subject {
   /** 🧮 차시 팩 올리기 정답 재계산 (L1) — 문제 글을 다시 풀 수 있으면 맞음 · 틀림 · 못 풀면 ok = null(선생님 확인) */
   recheck?: (q: import('./types').Question) => { ok: boolean | null; want?: string };
   /** 몬스터 줄 · 던전 배경 (변환기가 만든 표) */
-  themes: { sheets: Record<string, { src: string; cell: number; names: string[] }>; dungeons: Record<string, string> };
+  themes: { sheets: Record<string, { src: string; cell: number; names: string[] }>; dungeons: Record<string, string>; /** 📜 #106 묶음 시트(줄 = 몬스터 · 칸 5) · 그림 전 = temp */ bundles?: Record<string, Bundle | string> };
   /** 👹 #26 몬스터 맞는 그림 짝 「시트|몬스터 이름」 → 종류(claw · bite · smash · ram · lash · fire · ice · bolt · poison · beam) · 없는 몬스터 = smash */
   monsterHit?: Record<string, string>;
   /** 👩‍🏫 체험판 (📜 2026-11-17 #33): 차시 카드 · 단계 · 쉼터 자리 · 방 설정 · 같이 싣는 팩 글(차시 팩 json) — 없으면 체험판 없음 */

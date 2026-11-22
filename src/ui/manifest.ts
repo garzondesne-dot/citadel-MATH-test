@@ -7,6 +7,7 @@ export type MonPose = 'idle' | 'idleB' | 'attack' | 'hit' | 'down';
 export const poseCol = (s: Sheet, p: MonPose) => (p === 'idleB' ? s.poses.idleB ?? s.poses.idle : p === 'hit' ? s.poses.hit ?? s.poses.idle : s.poses[p]);
 
 import { SUBJ } from '../engine/subject';
+import type { Bundle } from '../model/subject';
 import RDUN_JSON from './rdun.json';
 import RDUN_BOSS from './rdun-boss.json'; // 👑 보스 묶음 시트 (보스 줄이 없는 던전 · bossRef = '묶음:줄')
 /** 🎲 랜덤 던전 (DECISIONS 「🎲 랜덤 던전」 · 그림 없는 차시에 차례로) — 과목과 상관없는 그림 표 */
@@ -32,9 +33,14 @@ export function spriteOf(ref: string) {
   const [base, h] = r0.replace(/@e\b/, '').split('@h');
   const [k, i] = (base || '').split(':');
   const s = SHEETS[k || ''];
-  if (!s) throw new Error(`배치표에 없는 그림: ${ref}`);
+  if (!s) { const t = bundleTemp(k || '', Number(i || 0)); if (t) return spriteOf(ref.replace(/^[^:@]+(:\d+)?/, t)); throw new Error(`배치표에 없는 그림: ${ref}`); } // 📜 #106 묶음 그림 전 = 임시 그림 (@e · @h · @r 은 그대로)
   return { sheet: s, row: Number(i || 0) % s.rows, hue: Number(h) || 0, elite, rune, url: `${import.meta.env.BASE_URL}${s.src}` };
 }
+/** 📜 #106 묶음 시트 (함수 던전 fn5-14 ~ 17) · 그림이 아직 sheets 에 없으면 그 줄의 임시 그림 */
+export const BUNDLES = Object.fromEntries(Object.entries((GEN as { bundles?: Record<string, unknown> }).bundles ?? {}).filter(([k]) => !k.startsWith('_'))) as Record<string, Bundle>;
+export function bundleTemp(k: string, row: number): string | null { const b = BUNDLES[k]; return b ? b.temp[row % b.temp.length] ?? null : null; }
+/** 묶음 시트 그림이 들어왔는가 (sheets 에 cols 5 · 줄 수 맞음) */
+export const bundleReady = (k: string) => { const s = SHEETS[k], b = BUNDLES[k]; return !!s && !!b && s.cols >= 5 && s.rows >= b.ids.length; };
 /** 🎲 룬 원판 자리 (칸 비율) · 없으면 null */
 export const runeAt = (s: Sheet, row: number, col: number) => s.rune?.[row]?.[col] ?? null;
 

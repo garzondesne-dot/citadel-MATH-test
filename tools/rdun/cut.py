@@ -4,7 +4,7 @@
 #   ① 바탕 허용 범위 투명화 + 가장자리 분홍 테두리 지움 ② 빈 줄로 줄 · 칸 자르기(원본 격자 안 자리는 그대로)
 #   ③ 줄마다 대기 A 의 가운데 · 발 = 칸 가운데 · 바닥선 ④ 룬 원판(청록) 위치 = 칸 비율 · 원판 안 무늬는 원판 색으로 덮어 비움(대기 · 공격 · 맞음)
 #   출력 = public/art/rdun/<id>-v1.webp (5 칸 × 줄 · 칸 cell) + JSON 한 줄(줄마다 룬 [x, y, r] × 5 · 쓰러짐 = null)
-# 사용: python3 tools/rdun/cut.py <원본.png> <id> <출력 폴더> [--rows N]
+# 사용: python3 tools/rdun/cut.py <원본.png> <id> <출력 폴더> [--rows N] [--file 이름(확장자 빼고 · 기본 <id>-v1)] [--norune]
 import json, sys
 from collections import deque
 import numpy as np
@@ -94,6 +94,9 @@ def pick_first(ds):
 def main():
     src, did, out = sys.argv[1], sys.argv[2], sys.argv[3]
     nrows = int(sys.argv[sys.argv.index('--rows') + 1]) if '--rows' in sys.argv else None
+    norune = '--norune' in sys.argv  # 📜 #106 룬 원판 찾기 · 무늬 비우기 안 함 (함수 몬스터 = 청록 구슬이 그림의 일부)
+    fname = sys.argv[sys.argv.index('--file') + 1] if '--file' in sys.argv else f'{did}-v1'  # 📜 #106 출력 이름(판 번호 포함) · 기본 = 옛 그대로
+    import os; web = os.path.relpath(os.path.abspath(out), os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'public')).replace(os.sep, '/')
     im = Image.open(src).convert('RGB'); rgb = np.asarray(im).copy(); H, W = rgb.shape[:2]
     alpha = key(rgb)
     fg = alpha > 0
@@ -130,14 +133,14 @@ def main():
         for k in (0, 1):  # 기준 = 대기 A (없으면 B) 의 원판 · 칸 좌표
             f = row[k]; h, w = f['px'].shape[:2]
             x = max(0, min(cell - w, int(round(f['gx'] + dx)))); y = max(0, min(cell - h, int(round(floor - (base - f['y'])))))
-            d0 = pick_first(discs(f['px'][..., :3], f['px'][..., 3]))
+            d0 = None if norune else pick_first(discs(f['px'][..., :3], f['px'][..., 3]))
             if d0: ref = (x + d0[0], y + d0[1], d0[2]); refcol = np.median(f['px'][d0[3][:, 0], d0[3][:, 1], :3], 0).astype(np.uint8); break
         for k, f in enumerate(row):
             px = f['px'].copy(); h, w = px.shape[:2]
             x = int(round(f['gx'] + dx)); y = int(round(floor - (base - f['y'])))
             x = max(0, min(cell - w, x)); y = max(0, min(cell - h, y))
             rn = None
-            if k < 4:
+            if k < 4 and not norune:
                 if ref is None: rn = pick_first(discs(px[..., :3], px[..., 3]))
                 else:  # 기준 원판 자리(칸 좌표)에서 가장 가까운 둥근 덩이 · 너무 멀면 없음 (가려진 공격 칸 = 기호 안 얹음)
                     ds = discs(px[..., :3], px[..., 3], 0.4)
@@ -159,7 +162,7 @@ def main():
             bbox[f'{ri}:{k}'] = [x, y, x + w, y + h]
         runes.append(rr)
     # 팔레트 255색 + 무손실 = 도트 가장자리 그대로 · 장당 약 1/3 크기 (손실 압축은 얼룩이 생김)
-    Image.fromarray(sheet, 'RGBA').quantize(colors=255, method=Image.Quantize.FASTOCTREE).convert('RGBA').save(f'{out}/{did}-v1.webp', lossless=True, quality=100, method=6)
-    print(json.dumps({'id': did, 'src': f'art/rdun/{did}-v1.webp', 'cell': cell, 'rows': len(frames), 'rune': runes, 'bbox': bbox}, ensure_ascii=False))
+    Image.fromarray(sheet, 'RGBA').quantize(colors=255, method=Image.Quantize.FASTOCTREE).convert('RGBA').save(f'{out}/{fname}.webp', lossless=True, quality=100, method=6)
+    print(json.dumps({'id': did, 'src': f'{web}/{fname}.webp', 'cell': cell, 'rows': len(frames), 'rune': runes, 'bbox': bbox}, ensure_ascii=False))
 
 if __name__ == '__main__': main()
