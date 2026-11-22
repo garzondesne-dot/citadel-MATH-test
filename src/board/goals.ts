@@ -4,7 +4,7 @@
 //   🛡 수호자 명성 = 🛡 로 들어가 도전자와 함께 클리어한 판 수 → 견습 3 · 기사 10 · 스승 25 · 보상 = 칭호 · 배지 · 도장만(💎 ✗)
 import type { LessonPack } from '../model/types';
 import { noteOf, type Bon, type Rec } from '../school/dummy';
-export interface BoardRec { at?: number; lid?: string; no?: number; n?: number; role?: 'g' | 'c'; grade?: string; clear?: boolean }
+export interface BoardRec { at?: number; lid?: string; no?: number; n?: number; role?: 'g' | 'c'; grade?: string; clear?: boolean; stars?: number; atb?: boolean }
 export const STAR: Record<string, number> = { S: 3, A: 2, B: 1 };
 /** 🗺 📜 #133 지도 v2 (그림 board-map-v2 1672 × 941 · 손발이 빨간 점으로 잰 돌 원판 가운데 · %) — 칸 i = (i + 2)차시 (머리 11/22 답)
  *  아래 줄 왼→오 = 2 ~ 7 (숲 · 폐허 · 얼음 동굴 · 화산 · 버섯 동굴 · 용) · 가운데 = 8 ~ 13 (별 사슴 · 도서관 · 연못 · ⚖ 저울 · 열쇠 · 수정 광산) · 위 = 14 ~ 17 (금광 · 별자리 · 톱니 · 거울 폭포)
@@ -17,10 +17,14 @@ export function mapLessons(packs: LessonPack[]): { no: number; ids: string[] }[]
   for (const p of packs) if (p.steps.some((s) => s.kind === 'monster') || p.boss) by.set(p.no, [...(by.get(p.no) || []), p.id]);
   return [...by.entries()].sort((a, b) => a[0] - b[0]).map(([no, ids]) => ({ no, ids }));
 }
+/** 🐞 #140 판 하나의 ⭐ = max(옛 판 등급 S/A/B → 3/2/1 (클리어만), 새 전투 stars = 결과 화면 별 그대로) · 옛 별은 깎지 않음 */
+export const recStar = (r: BoardRec | null | undefined) => (r ? Math.min(3, Math.max(r.clear ? (STAR[String(r.grade)] ?? 0) : 0, Number(r.stars) || 0)) : 0);
+/** 판 하나의 등급 글 (옛 판 = S/A/B/C · 새 전투 = ⭐ 수) */
+export const recMark = (r: BoardRec | null | undefined) => (r?.grade ? r.grade : '⭐' + (Number(r?.stars) || 0));
 /** 차시마다 최고 ⭐ (차시 번호 → 0~3) */
 export function starsByNo(recs: Record<string, BoardRec | null> | null | undefined): Record<number, number> {
   const out: Record<number, number> = {};
-  for (const r of Object.values(recs || {})) { if (!r || !r.clear) continue; const s = STAR[String(r.grade)] ?? 0, no = Number(r.no) || 0; if (no && s > (out[no] ?? 0)) out[no] = s; }
+  for (const r of Object.values(recs || {})) { const s = recStar(r), no = Number(r?.no) || 0; if (no && s > (out[no] ?? 0)) out[no] = s; }
   return out;
 }
 export const starTotal = (byNo: Record<number, number>, lessons: { no: number }[]) => lessons.reduce((a, l) => a + (byNo[l.no] ?? 0), 0);

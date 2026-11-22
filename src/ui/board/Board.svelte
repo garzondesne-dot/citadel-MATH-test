@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
+  import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, recMark, recStar, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
   import { SUBJ } from '../../engine/subject';
   const questOf = (no: number) => SUBJ.quests?.[no] ?? null;
@@ -12,7 +12,7 @@
   import { earnDaily } from '../../model/wallet';
   import { END_MS, GEM, gradeOf, kstDay, TEAM_X, type firstTry, BOARD_DAY, BOARD_FULL, boardDayUsed, boardTake } from '../../board/board';
   import { bonusOf, RESCUE, canJoin, canStart, createPost, overCap, hasGuard, joinLocked, joinPost, leavePost, myPin, MAX, membersOf, POSTS, roleOf, setReady, startTeam, beat, sweepAll, sweepOf, LIFE, type Post, type Role } from '../../board/team';
-  import { addRun, growOf, rowsOf, semOf, GS, type Agg } from '../../board/ladder';
+  import { addRun, growOf, rowsOf, semOf, type Agg } from '../../board/ladder';
   import { liveValue } from '../room.svelte';
   import { isBeta, uidOf } from '../../school/school';
   import { testLoad, testSaveRun, testStar, testWho } from '../../board/testRecs';
@@ -277,7 +277,7 @@
   const noteN = $derived(Object.values(notes).reduce((a, x) => a + x.left, 0)), note0 = $derived(Object.values(notes).reduce((a, x) => a + (x.had ? 1 : 0), 0));
   const noteOk = $derived(Object.values(notes).filter((x) => x.had && x.left === 0).length);
   const nextStar = $derived(starN < STAR_TITLES.explore ? `⭐ ${STAR_TITLES.explore} = 「던전 탐험가」` : starN < STAR_TITLES.conquer ? `⭐ ${STAR_TITLES.conquer} = 「던전 정복자」` : legendOf(stars, MAPL) ? '🏆 게시판의 전설!' : '모든 차시 ⭐⭐⭐ = 「게시판의 전설」');
-  const best = $derived.by(() => { const m: Record<string, (typeof runs)[number]> = {}; for (const r of runs) { const w = m[r.lid]; if (!w || (GS[r.grade] ?? 0) > (GS[w.grade] ?? 0) || ((GS[r.grade] ?? 0) === (GS[w.grade] ?? 0) && r.right / (r.total || 1) > w.right / (w.total || 1))) m[r.lid] = r; } return Object.values(m).sort((a, b) => a.no - b.no); });
+  const best = $derived.by(() => { const m: Record<string, (typeof runs)[number]> = {}; for (const r of runs) { const w = m[r.lid]; if (!w || recStar(r) > recStar(w) || (recStar(r) === recStar(w) && r.right / (r.total || 1) > w.right / (w.total || 1))) m[r.lid] = r; /* 🐞 #140 최고 = 별(옛 등급 · 새 전투 ⭐ 같은 셈) */ } return Object.values(m).sort((a, b) => a.no - b.no); });
   // 📣 최근 전투 (익명 · 판마다 한 줄 · 내 판 = 「나」)
   const lf2 = untrack(() => liveValue<Record<string, { at: number; no: number; n: number; grade: string; sec: number; clear: boolean; who?: { c: string; h: number }[] }>>(S, FEED)); onDestroy(lf2.stop);
   const feed = $derived(Object.entries(lf2.v.val || {}).map(([k, v]) => ({ k, ...v })).filter((x) => x && x.at && (chip === 'all' || x.no === chip)).sort((a, b) => b.at - a.at).slice(0, 8));
@@ -407,11 +407,11 @@
     <div class="rkp" role="dialog" aria-label="내 기록 · 내 성장" data-k="board-rank-panel">
       <div class="bar"><button type="button" class="back" aria-label="게시판으로" onclick={() => (rkOpen = false)}>‹</button><b class="t">📜 내 기록 · {sem.replace('-', '년 ')}학기</b><span></span></div>
         <small class="lbl">차시별 최고 (나만 보여요)</small>
-        <div class="rkl">{#each best as b (b.lid)}{@const c = mineAgg?.c?.[b.lid]}<div class="rr"><b class="no">{b.no}</b><span class="who">{b.no}차시 · 최고 {b.grade} · {b.right}/{b.total}</span><em>{c ? (c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`) : ''}</em></div>{:else}<div class="empty"><span>📜</span><b>아직 판이 없어요</b></div>{/each}</div>
+        <div class="rkl">{#each best as b (b.lid)}{@const c = mineAgg?.c?.[b.lid]}<div class="rr"><b class="no">{b.no}</b><span class="who">{b.no}차시 · 최고 {recMark(b)} · {b.right}/{b.total}</span><em>{c ? (c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`) : ''}</em></div>{:else}<div class="empty"><span>📜</span><b>아직 판이 없어요</b></div>{/each}</div>
         <small class="lbl">🌱 내 성장 (수업 정답률보다 오른 만큼 · 80% 넘기면 🛡 승급)</small>
         <div class="rkl" data-k="board-grow">{#each Object.entries(mineAgg?.c ?? {}) as [lid, c] (lid)}<div class="rr"><b class="no">{lessonOf(lid)?.no ?? '·'}</b><span class="who">{lessonOf(lid)?.no ?? ''}차시 · 수업 {Math.round(c.base * 100)}% → 최고 {Math.round(c.best * 100)}%</span><em>{c.up ? '🛡 승급' : `📈 +${growOf(c)}%p`}</em></div>{:else}<div class="empty"><span>🌱</span><b>아직 성장 기록이 없어요</b><small>🌱 도전자로 한 판 하면 생겨요</small></div>{/each}</div>
         <small class="lbl">지난 판</small>
-        <div class="rkl" data-k="board-myruns">{#each runs.slice(0, 30) as r (r.k)}<div class="rr"><b class="no">{day2(r.at)}</b><span class="who">{r.no}차시 · {r.n > 1 ? `${r.n}인` : '혼자'} · {r.role === 'g' ? '🛡' : '🌱'} {r.grade} · {r.right}/{r.total} · {mmss2(r.sec)}</span><em>{r.left ? '👋' : r.clear ? '○' : '✕'}</em></div>{/each}</div>
+        <div class="rkl" data-k="board-myruns">{#each runs.slice(0, 30) as r (r.k)}<div class="rr"><b class="no">{day2(r.at)}</b><span class="who">{r.no}차시 · {r.n > 1 ? `${r.n}인` : '혼자'} · {r.role === 'g' ? '🛡' : '🌱'} {recMark(r)} · {r.right}/{r.total} · {mmss2(r.sec)}</span><em>{r.left ? '👋' : r.clear ? '○' : '✕'}</em></div>{/each}</div>
     </div>
   {/if}
   {#if story && !res && !(mine && mine.phase === 'wait')}<button type="button" class="story" data-k="board-story" onclick={storyDone}><span>왕국 변두리에 균열이 열렸다. 학습지 속 몬스터가 쏟아져 나온다.</span><span>왕은 반마다 기사단을 세웠다. 균열을 닫는 것은 너희다.</span><small>누르면 닫혀요</small></button>{/if}
