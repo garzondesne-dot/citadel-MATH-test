@@ -21,11 +21,12 @@ const log = (...a) => console.log(...a);
   await p.reload(); await p.waitForTimeout(2500);
   if (!(await p.$('.bd'))) await p.click('button[aria-label="게시판"]'); await p.waitForSelector('.bd'); await p.waitForTimeout(1500);
   ok('지도 = 차시 칸', (await p.$$('[data-map]')).length >= 9, `${(await p.$$('[data-map]')).length}칸`);
-  ok('📕 남은 오답 막대 (출정)', /남은 오답 \d+/.test((await p.textContent('[data-k="board-note"]').catch(() => '')) || ''));
+  ok('📜 #135 출정 탭 = 남은 오답 막대 없음', !(await p.$('[data-k="board-note"]')));
   await p.click('[data-btab="rec"]'); await p.waitForTimeout(300); // 📜 #66 ⭐ 합 · 명성 = 📜 기록 탭
+  ok('📕 남은 오답 막대 = 📜 기록 탭 맨 위 (📜 #135)', /남은 오답 \d+/.test((await p.textContent('[data-k="board-note"]').catch(() => '')) || ''));
   const st = await p.$eval('[data-k="board-rec"] .gl b', (e) => e.textContent); ok('⭐ 합계 = 3 + 2 + 1 + 3 + 0 + 3 = 12', /⭐ 12 \//.test(st), st);
   const fm = (await p.textContent('[data-k="board-fame"]')).replace(/\s+/g, ' ');
-  ok('🛡 명성 = 🛡 · 2명+ · 클리어 5판 → 수호 견습 배지', /수호 견습/.test(fm) && /5판/.test(fm) && !!(await p.$('[data-k="board-fame"] .badge')), fm);
+  ok('🛡 명성 = 🛡 · 2명+ · 클리어 5판 → 수호 견습 배지', /수호 견습/.test(fm) && /구조 성공/.test(fm) && /* 📜 #104 명성 = 구조 성공 수 · 옛 5판 배지는 그대로 */ !!(await p.$('[data-k="board-fame"] .badge')), fm);
   await p.screenshot({ path: `${SHOTS}/b79-goals.png` });
   await p.click('[data-btab="go"]'); await p.waitForTimeout(300);
   await p.click('[data-map="5"]'); await p.waitForTimeout(300); ok('지도 칸 누르면 그 차시 고름', !!(await p.$('[data-map="5"].on')) && (await p.getAttribute('[data-k="board-pick"]', 'data-no')) === '5');

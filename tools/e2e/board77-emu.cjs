@@ -25,7 +25,7 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   await board(A); await board(Bp);
   await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
   const listTxt = await Bp.textContent('.bd'); ok('목록 = 실명 없음', !listTxt.includes('가나다'));
-  await Bp.click('.post .go'); await wait(2000);
+  (await Bp.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await Bp.click('[data-k="board-recruit-fold"]')), await Bp.click('.post .go'); await wait(2000);
   const a = await A.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent)), bb = await Bp.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent));
   ok('A 대기실 = 다른 반 친구 실명', a.some((t) => t.includes('1-5반 · 사아자')), a.join(' / '));
   ok('B 대기실 = 1-3반 실명', bb.some((t) => t.includes('1-3반 · 가나다')), bb.join(' / '));
