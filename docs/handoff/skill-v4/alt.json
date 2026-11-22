@@ -79,7 +79,7 @@
  ],
  "sk-twin": [
   {
-   "src": "skill-v4/sk4-twin-a-v1.webp",
+   "src": "skill-v4/sk4-twin-x-v1.webp",
    "w": 260,
    "h": 180,
    "n": 28,
@@ -87,20 +87,8 @@
    "fps": 20,
    "px": 140,
    "py": 92,
-   "pk": 10,
-   "name": "twin-a"
-  },
-  {
-   "src": "skill-v4/sk4-twin-b-v1.webp",
-   "w": 260,
-   "h": 180,
-   "n": 30,
-   "cols": 30,
-   "fps": 20,
-   "px": 140,
-   "py": 92,
-   "pk": 12,
-   "name": "twin-b"
+   "pk": 3,
+   "name": "twin-x"
   }
  ],
  "sk-cyclone": [
