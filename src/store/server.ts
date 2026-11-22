@@ -14,8 +14,8 @@ type Tree = Record<string, unknown>;
 const ROOTS = ['rooms', 'school', 'gifts', 'mail', 'accounts', 'gem', 'xp', 'cards', 'records', 'bonus', 'roster', 'rosterMask', 'tester', 'admins', 'secrets', 'boardLock', 'held', 'survey', 'surveyDone', 'gcfg', 'photo_rubric', 'photo', 'photo_q', 'quest', 'quest_q', 'act', 'loginFail', 'teacherPush', 'atb', 'classWar'] as const; // 🔑 loginFail = 로그인 실패 기록(학생 = 쓰기만 · 교사 = 통째로 · 📜 2026-11-16 교사 알림) // 📈 act = 활용 추이(학생 = 자기 칸 · 교사 = 통째로) // 📝 survey = 열림 표시(누구나) · surveyDone = 응답했는지(그 학생 · 교사) · surveyA = 거울 밖(학생은 쓰기만 trySet · 교사는 fetch) // boardLock = 📋 게시판 암호 해시(쓰기만 · 아무도 못 읽음) // #141 학생 기록 칸(V1-DESIGN 7절)
 // 🔐 #163-① 규칙 좁히기: 누구나 통째로 받는 칸(OPEN) · 칸마다 받는 칸(BUCKET = 몇 단까지가 한 덩어리) — 교사(admins/{uid}) 폰은 모두 통째로
 //   rooms/{방} · gem|xp|cards|records|bonus/{반}/{번호} · roster/{반} · secrets/{방} = 필요할 때 그 덩어리만 실시간 (get · watch · set 이 처음 닿을 때)
-const OPEN = ['school', 'classWar', 'gifts', 'mail', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held', 'gcfg', 'photo_rubric']; // 📷 gcfg/photo · 기준표 = 누구나 읽기 // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
-const BUCKET: Record<string, number> = { atb: 2, teacherPush: 2, loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, quest: 3, quest_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
+const OPEN = ['classWar', 'accounts', 'rosterMask', 'tester', 'admins', 'survey', 'held', 'gcfg', 'photo_rubric']; // 📷 gcfg/photo · 기준표 = 누구나 읽기 // held = 반마다 게임으로 수업한 차시(작음 · 누구나 읽기) → 🏰 성채 진도 · 🔁 연속 참여
+const BUCKET: Record<string, number> = { school: 2, gifts: 2, mail: 2, atb: 2, teacherPush: 2, loginFail: 3, rooms: 2, gem: 3, xp: 3, cards: 3, records: 3, bonus: 3, roster: 2, secrets: 2, surveyDone: 3, photo: 3, photo_q: 3, quest: 3, quest_q: 3, act: 4 }; // 📷 결과 · 장 수 = 학생은 내 칸 · 교사는 통째로
 // 교사도 통째로 못 받는 칸(규칙이 맨 윗칸 읽기를 안 줌 · 정식 규칙 그대로) = 그 단까지 덩어리 · 📝 surveyDone = 반마다
 const ADMIN_BUCKET: Record<string, number> = { surveyDone: 2, secrets: 2, atb: 2 }; // 📡 atb = 규칙이 판마다만 읽기 → 교사 계정도 판마다 받음 (#65-1 교사 팀 합류 = 새 전투) // 🐞 secrets = 규칙이 맨 윗칸 읽기를 안 줌 → 교사도 방마다(secrets/{방} · secrets/fixed) 받음 (📜 2026-11-17 「종합실 키 저장해도 나갔다 오면 사라짐」)
 const split = (p: string) => p.split('/').filter(Boolean);
@@ -79,7 +79,9 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   };
   const ensure = (path: string) => { const b = bucketOf(path); return b ? sub(b) : Promise.resolve(); };
   let admin = false;
-  await within(Promise.all(OPEN.map((k) => sub(k))), 10000);
+  // 🔐 보안 고침 #149: school = 칸마다(소식함 · 옛 명단 = 교사만) · 학생 기기는 아래 칸을 처음에 받음 · 교사 = 통째로(admin 뒤)
+  const SCHOOL_PRE = ['live', 'info', 'teacher', 'funUsed', 'castleOpen', 'cls', 'board', 'notice', 'last', 'statsPick', 'sched', 'prog', 'prep', 'opened', 'funStats', 'eggHint', 'test', 'ltime', 'lastTest', 'gemFlag', 'castleAuto', 'war', 'tlook', 'rdun', 'qboard', 'prepOpen', 'lastLesson', 'lastClose', 'knights', 'hall', 'gemSeen', 'features', 'auto', 'survey'];
+  await within(Promise.all(OPEN.map((k) => sub(k)).concat(SCHOOL_PRE.map((k) => sub(`school/${k}`)))), 10000);
   const meUid = () => auth.currentUser?.uid ?? null;
   // 📮 #81 B 폰 보관함 — 학생 자기 칸 쓰기를 서버 확인 받을 때까지 이 폰에 (앱을 닫아도 남음) · 교사 · TV = 안 씀
   const box: Outbox = makeOutbox(typeof localStorage !== 'undefined' && !tabAuth ? localStorageOut() : { load: () => [], save: () => {} });
@@ -132,7 +134,14 @@ export async function serverStore(o: ServerOpts): Promise<ServerStore> {
   admin = !!meUid() && getIn(mirror, ['admins', meUid() as string]) === true;
   if (admin) await within(Promise.all(Object.keys(BUCKET).filter((k) => !(k in ADMIN_BUCKET)).map((k) => sub(k))), 10000);
   /** 로그인한 학생의 자기 칸을 먼저 받아 둠 (지갑을 「처음」으로 잘못 알고 덮어쓰지 않게) */
-  async function preload(cls: string, num: number) { await within(Promise.all(['gem', 'xp', 'cards', 'records', 'bonus', 'surveyDone', 'photo', 'photo_q', 'quest', 'quest_q'].map((k) => sub(`${k}/${cls}/${num}`)).concat([sub(`roster/${cls}`)])), 8000); }
+  async function preload(cls: string, num: number) {
+    // 🔐 #149 반 확인표 uids/{로그인} = { c 반, n 번호 } (규칙: 그 반 · 번호 계정 주인만) → 그다음 그 반 명단 · 내 우편 · 선물
+    const u = meUid(), pid = `s${cls.replace('-', '_')}_${num}`;
+    if (u && !admin && getIn(mirror, ['uids', u, 'c']) !== cls) await within(fbSet(ref(db, `uids/${u}`), { c: cls, n: String(num) }).then(() => setIn(mirror, ['uids', u], { c: cls, n: String(num) }), () => {}), 5000);
+    // 주인 표시 pids 도 먼저 (우편 · 선물 읽기 규칙 = pids/{pid}/u 가 나) — 없으면 그 칸 구독이 막혀 다시 안 받음
+    if (u && !admin && getIn(mirror, ['pids', pid, 'u']) !== u) await within(fbSet(ref(db, `pids/${pid}`), { u, c: cls, n: String(num) }).then(() => setIn(mirror, ['pids', pid], { u, c: cls, n: String(num) }), () => {}), 5000);
+    await within(Promise.all(['gem', 'xp', 'cards', 'records', 'bonus', 'surveyDone', 'photo', 'photo_q', 'quest', 'quest_q'].map((k) => sub(`${k}/${cls}/${num}`)).concat([sub(`roster/${cls}`), sub(`gifts/${pid}`), sub(`mail/${pid}`)])), 8000);
+  }
   { // 이미 로그인한 학생 = 내 계정 칸을 찾아 미리
     const u = meUid(), acc = (mirror.accounts || {}) as Record<string, Record<string, { uid?: string }>>;
     if (u && !admin) for (const [c, ns] of Object.entries(acc)) for (const [n, a] of Object.entries(ns || {})) if (a?.uid === u) await preload(c, Number(n));

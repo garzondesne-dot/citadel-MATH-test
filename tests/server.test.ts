@@ -128,6 +128,6 @@ describe.skipIf(!up)('⚔ #48 · #51 atb · classWar 규칙', () => {
     await expect(set(ref(own.db, `atb/${pid}/snap`), { n: 2, j: 'x'.repeat(20001) })).rejects.toThrow(); // 20KB 넘음
     await expect(set(ref(own.db, `atb/${pid}/end/s9_9_9`), { win: true })).rejects.toThrow(); // 남의 결과
     await expect(set(ref(own.db, `atb/${pid}/hb/s9_9_9`), 5)).rejects.toThrow(); // 남의 칸
-    await expect(set(ref(own.db, `atb/${pid}`), null)).resolves.toBeUndefined(); // 청소
+    await expect(set(ref(own.db, `atb/${pid}`), null)).rejects.toThrow(); // 🔐 #149 글이 남은 판 = 교사만 지움 (글이 없어진 뒤 = 누구나 청소)
   }, 30000);
 });
