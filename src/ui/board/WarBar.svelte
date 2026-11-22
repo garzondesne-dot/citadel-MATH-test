@@ -2,18 +2,19 @@
   // ⚔ #51 기사단 토벌 주간 막대 (SERVER-v1.md 5절) — full = 게시판 맨 위(5 기사단 깃발 막대 · 우리 반 강조 · 지난주 왕의 깃발) · line = 캠프 · 종합실 대기 한 줄
   import { onDestroy, untrack } from 'svelte';
   import type { Store } from '../../model/types';
-  import { daysLeft, KNIGHTS, lastKing, minsLeft, prevWeek, standings, WAR, weekOf } from '../../board/war';
+  import { daysLeft, GUARD_KEY, GUARD_NAME, KNIGHTS, lastKing, minsLeft, prevWeek, standings, WAR, weekOf } from '../../board/war';
   import { liveValue } from '../room.svelte';
   import { clock } from '../clock.svelte';
   import { flagBg, flagOf, KNIGHT_FLAG } from '../manifest';
 
   let { S, cls = '', line = false, test = false }: { S: Store; cls?: string; line?: boolean; /** 🧪 #86 테스트 계정 = 「테스트 · 공적 안 쌓임」 */ test?: boolean } = $props();
   const w0 = untrack(() => weekOf(S.now()));
-  const cur = untrack(() => liveValue<{ sum?: Record<string, number> }>(S, `${WAR}/${w0}`)), prev = untrack(() => liveValue<{ done?: { rank?: string[] }; sum?: Record<string, number> }>(S, `${WAR}/${prevWeek(w0)}`)), kn = untrack(() => liveValue<unknown>(S, KNIGHTS));
+  const cur = untrack(() => liveValue<{ sum?: Record<string, number>; guard?: number }>(S, `${WAR}/${w0}`)), prev = untrack(() => liveValue<{ done?: { rank?: string[] }; sum?: Record<string, number> }>(S, `${WAR}/${prevWeek(w0)}`)), kn = untrack(() => liveValue<unknown>(S, KNIGHTS));
   onDestroy(() => { cur.stop(); prev.stop(); kn.stop(); });
   const rows = $derived.by(() => { void kn.v.val; return standings(S, w0, cur.v.val?.sum ?? {}); });
   const king = $derived.by(() => { void kn.v.val; return lastKing(S, S.now(), prev.v.val); });
-  const top = $derived(Math.max(1, ...rows.map((r) => r.pts)));
+  const guard = $derived(Math.max(0, Number(cur.v.val?.[GUARD_KEY]) || 0)); // 🛡 #105 선생님(근위대) = 맨 아래 따로 · 순위 없음 · 0 = 숨김
+  const top = $derived(Math.max(1, guard, ...rows.map((r) => r.pts)));
   const left = $derived(daysLeft(clock.now || S.now()));
   const mine = $derived(rows.find((r) => r.cls === cls) ?? null);
   // 🏆 📜 #77 순위표 꼴: 1 ~ 3위 = 🥇🥈🥉 · 4위부터 숫자 · 모두 0점(공동) = 「–」(반 번호 순) · 이름 옆 반 · 우리 반 = 「우리 반」
@@ -46,6 +47,14 @@
         <b class="pt">{r.pts.toLocaleString()}</b>
       </div>
     {/each}
+    {#if guard > 0}
+      <div class="row gd" data-k="war-guard">
+        <span class="no" aria-hidden="true"></span><span class="cr fl" aria-hidden="true" style={flagBg(KNIGHT_FLAG.guard)}></span>
+        <span class="nm">🛡 {GUARD_NAME} <small>· 선생님</small></span>
+        <i class="bar"><i style:width="{Math.round((guard / top) * 100)}%"></i></i>
+        <b class="pt">{guard.toLocaleString()}</b>
+      </div>
+    {/if}
   </section>
 {/if}
 
@@ -65,6 +74,7 @@
   .bar > i { display: block; height: 100%; background: var(--accent, #f5b84a); transition: width 160ms ease-out; }
   .fl { display: inline-grid; place-items: center; width: 24px; height: 32px; background-repeat: no-repeat; image-rendering: pixelated; } .fl i { font-style: normal; font-size: 12px; margin-top: 4px; }
   .ln.k { display: flex; align-items: center; gap: 6px; } .kf { flex: none; width: 27px; height: 36px; }
+  .row.gd { margin-top: 2px; border-top: 1px dashed var(--line, #2c3140); border-radius: 0; color: var(--text-2, #b4b8c2); } .row.gd .bar > i { background: var(--scroll, #c79bff); }
   .pt { text-align: right; font-variant-numeric: tabular-nums; }
   .ln { margin: 0; font-size: 14px; color: var(--text-2, #b4b8c2); } .ln.k { color: var(--accent, #f5b84a); font-weight: 700; }
   .wl { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--text-2, #b4b8c2); }

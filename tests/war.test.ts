@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Store } from '../src/model/types';
 import { memoryStore } from '../src/store/device';
-import { addMerit, closeWeek, daysLeft, knightOf, lastKing, MERIT_MAX, prevWeek, standings, WAR, warClasses, weekOf } from '../src/board/war';
+import { addGuardMerit, addMerit, closeWeek, GUARD_KEY, daysLeft, knightOf, lastKing, MERIT_MAX, prevWeek, standings, WAR, warClasses, weekOf } from '../src/board/war';
 
 const KST = (s: string) => Date.parse(`${s}+09:00`);
 function store(t: number) { const b = memoryStore(); return { ...b, kind: 'memory', now: () => t } as Store; }
@@ -69,5 +69,16 @@ describe('🏁 주간 마감', () => {
     const g4 = S.get<{ g: number; fun: string; hold: boolean }>('gifts/s1_4_3/war_2026-11-16')!;
     expect(g4).toMatchObject({ g: 0, hold: true }); expect(g4.fun).toMatch(/이번 주도 수고했다/);
     expect(S.get<{ fun: string }>('gifts/s1_2_1/war_2026-11-16')!.fun).toMatch(/가장 많은 균열을 닫았다/);
+  });
+});
+
+describe('🛡 #105 근위대 (교사 판)', () => {
+  it('공적 = 주 guard 칸 · 반 순위 · 왕의 깃발 계산에서 빠짐 · 이 기기(memory) = 안 쌓임', () => {
+    const t = Date.UTC(2026, 10, 18, 3), S = { ...store(t), kind: 'server' } as Store;
+    addMerit(S, '1-1', 3, 50, t); expect(addGuardMerit(S, 120, t)).toBe(120); addGuardMerit(S, 999, t);
+    expect(S.get(`${WAR}/${weekOf(t)}/${GUARD_KEY}`)).toBe(120 + MERIT_MAX);
+    const st = standings(S, weekOf(t));
+    expect(st.find((r) => r.cls === '1-1')?.rank).toBe(1); expect(st.some((r) => String(r.cls).includes('guard'))).toBe(false);
+    expect(addGuardMerit(store(t), 50, t)).toBe(0);
   });
 });

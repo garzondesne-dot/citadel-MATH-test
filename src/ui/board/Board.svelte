@@ -24,7 +24,7 @@
   import WarBar from './WarBar.svelte';
   import AtbNet from './atb/AtbNet.svelte';
   import { atbOnline, isAtb, prevStars, saveAtbResult, startAtb, type AtbEnd, type Grow, atbRec } from '../../board/atbLink';
-  import { knightOf, payOn, standings, weekOf } from '../../board/war';
+  import { addGuardMerit, knightOf, payOn, standings, weekOf } from '../../board/war';
   import { josa } from '../../board/josa';
   import { resvDays, resvLabel } from '../../board/resv';
   import { RESV, resvWaiting } from '../../board/team';
@@ -210,6 +210,7 @@
     if (r && L && testAcc) { // 🧪 #86 테스트 반 · 교사 = 판 기록 · ⭐ 만 이 기기에 (공적 · 💎 · 서버 기록 없음)
       testSaveRun(testWho(cls, num), `${p.pid}_${S.now().toString(36)}`, atbRec({ L, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r, S.now(), Math.max(0, Math.min(3, r.stars | 0)), 0)); tv++;
     }
+    if (r && L && !cls && !trial && S.kind !== 'memory' && r.meritSum > 0) { const g = addGuardMerit(S, r.meritSum); if (g) say(`🛡 근위대 +${g} 공적`); } // 🛡 #105 교사 판 = 근위대 줄 (반 순위 밖)
     if (r && L && cls && num && !isBeta(S, cls)) { // 🧪 테스트 반 = 새 전투만 · 기록 · 💎 · 공적 없음 (#65-1)
       const sv = saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
       let full = false;

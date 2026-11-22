@@ -53,6 +53,14 @@ export function addMerit(S: Store, cls: string, num: number, pts: number, now = 
   addTo(S, `${WAR}/${w}/by/${ck(cls)}/${num}`, n);
   return n;
 }
+/** 🛡 #105 근위대 = 교사 계정 판의 공적 (classWar/{주}/guard · sum 밖 = 순위 · 왕의 깃발 · 주간 우승 계산에서 빠짐) */
+export const GUARD_KEY = 'guard', GUARD_NAME = '근위대';
+export function addGuardMerit(S: Store, pts: number, now = S.now()): number {
+  const n = Math.max(0, Math.min(MERIT_MAX, Math.round(Number(pts) || 0)));
+  if (!n || S.kind === 'memory') return 0;
+  addTo(S, `${WAR}/${weekOf(now)}/${GUARD_KEY}`, n);
+  return n;
+}
 /** 지난주 왕의 깃발 (마감된 1위 · 없으면 null) */
 export function lastKing(S: Store | null, now: number, wk0?: { done?: { rank?: string[] }; sum?: Record<string, number> } | null): Stand | null {
   const pw = prevWeek(weekOf(now)), d = wk0 !== undefined ? wk0?.done : S?.get<{ rank?: string[] }>(`${WAR}/${pw}/done`);
