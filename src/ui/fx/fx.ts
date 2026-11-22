@@ -88,6 +88,7 @@ export function place(box: HTMLElement, kind: string, o: { body?: Body | null; f
   const t = tierOf(kind), tier = o.flat || isNewFx(kind) ? 1 : t === 's' ? TIER_SCALE[3]! : TIER_SCALE[t as number] || 1, mult = (o.mult || 1) * (o.perfect ? 1.15 : 1);
   let s = isNewFx(kind) ? w / bw : Math.min((w * (mode === 'ground' ? 1.15 : 1)) / bw, (h * (mode === 'ground' ? 1.9 : 1.4)) / bh);
   s = q4(clamp(s * tier * mult, 0.6, 8));
+  if (isV4(kind) && mode === 'ground') s = Math.max(0.25, Math.min(s, Math.floor(((B.y1 + h * 0.03) / bh) * 4) / 4)); // 📥 #111 덧 (선생님 · 대선풍 꼭대기 잘림): 발끝 기준 띠가 장면 위로 넘치지 않게 크기만 줄임 (넘칠 때만)
   let el: HTMLElement;
   if (mode === 'shot' && o.from) {
     const tx = sp.tx || bb[2], hit = { x: cx - w * 0.12, y: cy }, dx = hit.x - o.from.x, dy = hit.y - o.from.y, L = Math.max(20, Math.hypot(dx, dy));
