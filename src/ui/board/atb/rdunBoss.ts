@@ -21,10 +21,12 @@ export const CONCEPT = new Set([2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 /** 📜 #98-b 5동작 시트(cm5-a 5줄 · cm5-b 4줄 · 칸 = 대기 A · 대기 B · 공격 · 맞음 · 쓰러짐 · 모두 왼쪽을 봄) = 과목 themes.json sheets 에 cols 5 로 들어오면 자동으로 이걸 씀 · 반전 없음 */
 export const CM5_OF: Record<number, string> = { 2: 'cm5-a:0', 3: 'cm5-a:1', 4: 'cm5-a:2', 5: 'cm5-a:3', 6: 'cm5-a:4', 7: 'cm5-a:4', 8: 'cm5-b:0', 9: 'cm5-b:1', 10: 'cm5-b:2', 11: 'cm5-b:3' };
 const has5 = (ref: string) => { const s = SHEETS[ref.split(':')[0]!]; return !!s && s.cols >= 5 && Number(ref.split(':')[1]) < s.rows; };
-/** 📜 #106 함수 던전(14 ~ 17) 묶음 시트 fn5-{차시} 가 들어왔으면 = 연습 첫 몬스터 · 일반 둘째 · 도전 👑 보스 줄 (그림 전 = null → 지금 임시 그림) */
+/** 📜 #106 함수 던전(14 ~ 17) 묶음 그림이 들어왔으면 = 연습 첫 몬스터 · 일반 둘째(fn5-{차시}) · 도전 👑 보스(fn5-boss 의 그 차시 줄 · 칸 384)
+ *  그 시트 그림이 아직이면 null → 지금 임시 그림 그대로 */
 export function fnRef(no: number, diff: Diff): string | null {
-  const k = `fn5-${no}`, b = BUNDLES[k]; if (!b || !bundleReady(k)) return null;
-  return `${k}:${diff === 'easy' ? 0 : diff === 'normal' ? Math.min(1, b.boss) : b.boss}`;
+  const k = `fn5-${no}`, b = BUNDLES[k]; if (!b) return null;
+  const ref = diff === 'hard' ? b.bossRef ?? null : `${k}:${diff === 'easy' ? 0 : Math.min(1, b.ids.length - 1)}`;
+  return ref && bundleReady(ref.split(':')[0]!) ? ref : null;
 }
 /** 그 판 보스 = 차시 설정(대표 행동 · 약점 · 공격 차례) + 그림 · 이름
  *  2 ~ 11 = 컨셉 몬스터(설정표 sprite · flip · 5동작 시트가 오면 그것) · 12 · 13 = 설정표 그림 · 14 ~ 17 = 랜덤 던전 임시(난이도별)
