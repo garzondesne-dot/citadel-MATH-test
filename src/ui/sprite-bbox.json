@@ -5488,11 +5488,15 @@
 }
 },
 "heads": {
-"hd8:hero-abacus-awk-idle8-v8.webp": [
--9.6,
+"hd8:hero-abacus-awk-idle8-v9.webp": [
+-9.1,
 46.8
 ],
 "hero-abacus-awk-v8.webp": [
+-8.0,
+44.5
+],
+"hero-abacus-awk-v9.webp": [
 -8.0,
 44.5
 ],
@@ -5516,12 +5520,16 @@
 -8.5,
 43.8
 ],
-"hd8:hero-alchemist-awk-idle8-v8.webp": [
--1.9,
+"hd8:hero-alchemist-awk-idle8-v9.webp": [
+-2.4,
 44.2
 ],
 "hero-alchemist-awk-v8.webp": [
 -2.2,
+45.5
+],
+"hero-alchemist-awk-v9.webp": [
+-1.8,
 45.5
 ],
 "hd8:hero-alchemist-idle8-v7.webp": [
@@ -5544,11 +5552,15 @@
 -1.6,
 43.0
 ],
-"hd8:hero-astro-awk-idle8-v8.webp": [
--4.5,
+"hd8:hero-astro-awk-idle8-v9.webp": [
+-4.0,
 43.2
 ],
 "hero-astro-awk-v8.webp": [
+-2.8,
+45.0
+],
+"hero-astro-awk-v9.webp": [
 -2.8,
 45.0
 ],
@@ -5572,11 +5584,15 @@
 -1.8,
 43.2
 ],
-"hd8:hero-bard-awk-idle8-v8.webp": [
--3.1,
+"hd8:hero-bard-awk-idle8-v9.webp": [
+-2.1,
 39.5
 ],
 "hero-bard-awk-v8.webp": [
+-2.8,
+40.0
+],
+"hero-bard-awk-v9.webp": [
 -2.8,
 40.0
 ],
@@ -5620,12 +5636,16 @@
 -1.1,
 44.5
 ],
-"hd8:hero-bone-awk-idle8-v8.webp": [
-1.6,
+"hd8:hero-bone-awk-idle8-v9.webp": [
+2.1,
 41.5
 ],
 "hero-bone-awk-v8.webp": [
 3.0,
+43.5
+],
+"hero-bone-awk-v9.webp": [
+2.5,
 43.5
 ],
 "hd8:hero-bone-idle8-v7.webp": [
@@ -5652,11 +5672,15 @@
 2.1,
 40.8
 ],
-"hd8:hero-crossbow-awk-idle8-v8.webp": [
+"hd8:hero-crossbow-awk-idle8-v9.webp": [
 -4.9,
 45.8
 ],
 "hero-crossbow-awk-v8.webp": [
+-3.9,
+46.0
+],
+"hero-crossbow-awk-v9.webp": [
 -3.9,
 46.0
 ],
@@ -5680,12 +5704,16 @@
 -1.4,
 42.0
 ],
-"hd8:hero-dancer-awk-idle8-v8.webp": [
+"hd8:hero-dancer-awk-idle8-v9.webp": [
 -6.5,
 41.8
 ],
 "hero-dancer-awk-v8.webp": [
 -6.0,
+41.5
+],
+"hero-dancer-awk-v9.webp": [
+-6.5,
 41.5
 ],
 "hd8:hero-dancer-idle8-v7.webp": [
@@ -5708,8 +5736,8 @@
 -6.4,
 41.8
 ],
-"hd8:hero-dknight-awk-idle8-v8.webp": [
-1.5,
+"hd8:hero-dknight-awk-idle8-v9.webp": [
+-1.0,
 50.0
 ],
 "hero-dknight-awk-v5.webp": [
@@ -5726,6 +5754,10 @@
 ],
 "hero-dknight-awk-v8.webp": [
 7.7,
+44.0
+],
+"hero-dknight-awk-v9.webp": [
+8.2,
 44.0
 ],
 "hd8:hero-dknight-idle8-v8c.webp": [
@@ -5756,11 +5788,15 @@
 6.5,
 42.5
 ],
-"hd8:hero-dragoon-awk-idle8-v8.webp": [
--3.4,
+"hd8:hero-dragoon-awk-idle8-v9.webp": [
+-3.9,
 51.8
 ],
 "hero-dragoon-awk-v8.webp": [
+-3.1,
+51.2
+],
+"hero-dragoon-awk-v9.webp": [
 -3.1,
 51.2
 ],
@@ -5784,11 +5820,15 @@
 -3.8,
 42.5
 ],
-"hd8:hero-drone-awk-idle8-v8.webp": [
-0.8,
+"hd8:hero-drone-awk-idle8-v9.webp": [
+0.2,
 41.0
 ],
 "hero-drone-awk-v8.webp": [
+0.4,
+41.2
+],
+"hero-drone-awk-v9.webp": [
 0.4,
 41.2
 ],
@@ -5812,12 +5852,16 @@
 0.5,
 39.2
 ],
-"hd8:hero-dwarf-awk-idle8-v8.webp": [
--11.5,
+"hd8:hero-dwarf-awk-idle8-v9.webp": [
+-12.0,
 47.2
 ],
 "hero-dwarf-awk-v8.webp": [
 -10.5,
+49.5
+],
+"hero-dwarf-awk-v9.webp": [
+-11.0,
 49.5
 ],
 "hd8:hero-dwarf-idle8-v7.webp": [
@@ -5860,11 +5904,15 @@
 1.6,
 48.8
 ],
-"hd8:hero-elf-awk-idle8-v8.webp": [
+"hd8:hero-elf-awk-idle8-v9.webp": [
 0.8,
 43.2
 ],
 "hero-elf-awk-v8.webp": [
+0.8,
+43.5
+],
+"hero-elf-awk-v9.webp": [
 0.8,
 43.5
 ],
@@ -5888,12 +5936,16 @@
 0.7,
 47.5
 ],
-"hd8:hero-frost-awk-idle8-v8.webp": [
+"hd8:hero-frost-awk-idle8-v9.webp": [
 2.9,
 44.0
 ],
 "hero-frost-awk-v8.webp": [
 3.9,
+43.8
+],
+"hero-frost-awk-v9.webp": [
+3.4,
 43.8
 ],
 "hd8:hero-frost-idle8-v7.webp": [
@@ -5916,11 +5968,15 @@
 0.2,
 40.8
 ],
-"hd8:hero-geometry-awk-idle8-v8.webp": [
--0.0,
+"hd8:hero-geometry-awk-idle8-v9.webp": [
+-0.5,
 39.2
 ],
 "hero-geometry-awk-v8.webp": [
+-0.1,
+40.2
+],
+"hero-geometry-awk-v9.webp": [
 -0.1,
 40.2
 ],
@@ -5944,11 +6000,15 @@
 -0.4,
 39.5
 ],
-"hd8:hero-hacker-awk-idle8-v8.webp": [
--3.0,
+"hd8:hero-hacker-awk-idle8-v9.webp": [
+-3.5,
 43.2
 ],
 "hero-hacker-awk-v8.webp": [
+-2.8,
+43.2
+],
+"hero-hacker-awk-v9.webp": [
 -2.8,
 43.2
 ],
@@ -6108,12 +6168,16 @@
 -3.7,
 36.5
 ],
-"hd8:hero-lancer-awk-idle8-v8.webp": [
--8.1,
+"hd8:hero-lancer-awk-idle8-v9.webp": [
+-9.1,
 46.5
 ],
 "hero-lancer-awk-v8.webp": [
 -8.1,
+46.0
+],
+"hero-lancer-awk-v9.webp": [
+-7.6,
 46.0
 ],
 "hd8:hero-lancer-idle8-v7.webp": [
@@ -6156,11 +6220,15 @@
 -3.5,
 44.2
 ],
-"hd8:hero-mathboy-awk-idle8-v8.webp": [
--6.5,
+"hd8:hero-mathboy-awk-idle8-v9.webp": [
+-6.0,
 43.2
 ],
 "hero-mathboy-awk-v8.webp": [
+-6.5,
+44.0
+],
+"hero-mathboy-awk-v9.webp": [
 -6.5,
 44.0
 ],
@@ -6184,11 +6252,15 @@
 -6.5,
 42.2
 ],
-"hd8:hero-mathgirl-awk-idle8-v8.webp": [
--6.1,
+"hd8:hero-mathgirl-awk-idle8-v9.webp": [
+-5.6,
 40.0
 ],
 "hero-mathgirl-awk-v8.webp": [
+-5.7,
+40.2
+],
+"hero-mathgirl-awk-v9.webp": [
 -5.7,
 40.2
 ],
@@ -6212,11 +6284,15 @@
 -6.0,
 38.5
 ],
-"hd8:hero-mechanic-awk-idle8-v8.webp": [
+"hd8:hero-mechanic-awk-idle8-v9.webp": [
 -5.0,
 40.5
 ],
 "hero-mechanic-awk-v8.webp": [
+-5.6,
+43.5
+],
+"hero-mechanic-awk-v9.webp": [
 -5.6,
 43.5
 ],
@@ -6240,12 +6316,16 @@
 -5.0,
 44.0
 ],
-"hd8:hero-merchant-awk-idle8-v8.webp": [
--6.9,
+"hd8:hero-merchant-awk-idle8-v9.webp": [
+-7.4,
 41.8
 ],
 "hero-merchant-awk-v8.webp": [
 -9.2,
+51.0
+],
+"hero-merchant-awk-v9.webp": [
+-8.2,
 51.0
 ],
 "hd8:hero-merchant-idle8-v7.webp": [
@@ -6268,11 +6348,15 @@
 -6.3,
 41.0
 ],
-"hd8:hero-monk-awk-idle8-v8b.webp": [
--6.3,
+"hd8:hero-monk-awk-idle8-v9.webp": [
+-5.8,
 41.5
 ],
 "hero-monk-awk-v8.webp": [
+-7.1,
+39.5
+],
+"hero-monk-awk-v9.webp": [
 -7.1,
 39.5
 ],
@@ -6296,12 +6380,16 @@
 -3.2,
 42.0
 ],
-"hd8:hero-ninja-awk-idle8-v8.webp": [
+"hd8:hero-ninja-awk-idle8-v9.webp": [
 -5.5,
 44.2
 ],
 "hero-ninja-awk-v8.webp": [
 -8.0,
+43.8
+],
+"hero-ninja-awk-v9.webp": [
+-7.5,
 43.8
 ],
 "hd8:hero-ninja-idle8-v7.webp": [
@@ -6324,8 +6412,8 @@
 -2.5,
 41.8
 ],
-"hd8:hero-paladin-awk-idle8-v8.webp": [
-0.4,
+"hd8:hero-paladin-awk-idle8-v9.webp": [
+-0.1,
 47.0
 ],
 "hero-paladin-awk-v5.webp": [
@@ -6338,6 +6426,10 @@
 ],
 "hero-paladin-awk-v8.webp": [
 -0.1,
+45.8
+],
+"hero-paladin-awk-v9.webp": [
+0.4,
 45.8
 ],
 "hd8:hero-paladin-idle8-v7.webp": [
@@ -6360,12 +6452,16 @@
 0.5,
 45.8
 ],
-"hd8:hero-pirate-awk-idle8-v8.webp": [
--4.2,
+"hd8:hero-pirate-awk-idle8-v9.webp": [
+-5.2,
 42.8
 ],
 "hero-pirate-awk-v8.webp": [
 -3.9,
+42.8
+],
+"hero-pirate-awk-v9.webp": [
+-3.4,
 42.8
 ],
 "hd8:hero-pirate-idle8-v7.webp": [
@@ -6388,11 +6484,15 @@
 -3.0,
 41.8
 ],
-"hd8:hero-priest-awk-idle8-v8.webp": [
+"hd8:hero-priest-awk-idle8-v9.webp": [
 2.8,
 40.8
 ],
 "hero-priest-awk-v8.webp": [
+4.5,
+46.0
+],
+"hero-priest-awk-v9.webp": [
 4.5,
 46.0
 ],
@@ -6440,12 +6540,16 @@
 4.0,
 44.0
 ],
-"hd8:hero-spellblade-awk-idle8-v8.webp": [
-5.2,
+"hd8:hero-spellblade-awk-idle8-v9.webp": [
+4.8,
 43.2
 ],
 "hero-spellblade-awk-v8.webp": [
 3.8,
+43.5
+],
+"hero-spellblade-awk-v9.webp": [
+4.3,
 43.5
 ],
 "hd8:hero-spellblade-idle8-v7.webp": [
@@ -6492,12 +6596,16 @@
 0.3,
 43.5
 ],
-"hd8:hero-tamer-awk-idle8-v8.webp": [
--2.2,
+"hd8:hero-tamer-awk-idle8-v9.webp": [
+-3.2,
 49.0
 ],
 "hero-tamer-awk-v8.webp": [
 -1.1,
+48.2
+],
+"hero-tamer-awk-v9.webp": [
+-1.6,
 48.2
 ],
 "hd8:hero-tamer-idle8-v7.webp": [
@@ -6520,8 +6628,8 @@
 -3.9,
 41.2
 ],
-"hd8:hero-valkyrie-awk-idle8-v8.webp": [
--10.3,
+"hd8:hero-valkyrie-awk-idle8-v9.webp": [
+-8.3,
 42.2
 ],
 "hero-valkyrie-awk-v5.webp": [
@@ -6533,6 +6641,10 @@
 46.5
 ],
 "hero-valkyrie-awk-v8.webp": [
+-9.4,
+41.2
+],
+"hero-valkyrie-awk-v9.webp": [
 -9.4,
 41.2
 ],
@@ -6556,11 +6668,15 @@
 -1.2,
 45.5
 ],
-"hd8:hero-witch-awk-idle8-v8.webp": [
+"hd8:hero-witch-awk-idle8-v9.webp": [
 -2.8,
 51.5
 ],
 "hero-witch-awk-v8.webp": [
+-2.3,
+51.2
+],
+"hero-witch-awk-v9.webp": [
 -2.3,
 51.2
 ],
@@ -6586,9 +6702,9 @@
 ]
 },
 "breath": {
-"hero-abacus-awk-idle8-v8.webp": [
+"hero-abacus-awk-idle8-v9.webp": [
 0.0,
-0.5,
+0.0,
 0.0,
 0.0,
 0.0,
@@ -6606,13 +6722,13 @@
 -1.5,
 -1.0
 ],
-"hero-alchemist-awk-idle8-v8.webp": [
+"hero-alchemist-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -0.5,
 -2.0,
--2.0,
--2.0,
+-2.5,
+-2.5,
 -0.5,
 0.0
 ],
@@ -6626,15 +6742,15 @@
 -3.0,
 -1.0
 ],
-"hero-astro-awk-idle8-v8.webp": [
+"hero-astro-awk-idle8-v9.webp": [
 0.0,
+-0.5,
 0.0,
 -0.5,
--1.0,
+0.0,
 -0.5,
--1.0,
 -0.5,
--0.5
+0.0
 ],
 "hero-astro-idle8-v7.webp": [
 0.0,
@@ -6646,12 +6762,12 @@
 0.5,
 0.0
 ],
-"hero-bard-awk-idle8-v8.webp": [
+"hero-bard-awk-idle8-v9.webp": [
 0.0,
 0.0,
 0.0,
 0.0,
--0.5,
+-1.0,
 -1.0,
 -0.5,
 -0.5
@@ -6676,13 +6792,13 @@
 1.5,
 0.0
 ],
-"hero-bone-awk-idle8-v8.webp": [
+"hero-bone-awk-idle8-v9.webp": [
 0.0,
--0.5,
+0.0,
 -1.5,
 -2.5,
--3.0,
--3.0,
+-2.5,
+-2.5,
 -2.0,
 -1.0
 ],
@@ -6696,7 +6812,7 @@
 -3.0,
 0.0
 ],
-"hero-crossbow-awk-idle8-v8.webp": [
+"hero-crossbow-awk-idle8-v9.webp": [
 0.0,
 1.0,
 -2.5,
@@ -6716,14 +6832,14 @@
 -2.5,
 -0.5
 ],
-"hero-dancer-awk-idle8-v8.webp": [
+"hero-dancer-awk-idle8-v9.webp": [
 0.0,
 0.0,
--2.5,
--2.5,
--2.5,
--3.0,
 -2.0,
+-2.5,
+-2.5,
+-2.5,
+-2.5,
 -2.0
 ],
 "hero-dancer-idle8-v7.webp": [
@@ -6736,15 +6852,15 @@
 -2.5,
 -1.5
 ],
-"hero-dknight-awk-idle8-v8.webp": [
-0.0,
-1.0,
-0.0,
+"hero-dknight-awk-idle8-v9.webp": [
 0.0,
 -0.5,
-0.0,
-0.0,
--0.5
+-1.0,
+-1.5,
+-1.5,
+-2.0,
+-1.5,
+-1.0
 ],
 "hero-dknight-idle8-v8c.webp": [
 0.0,
@@ -6756,11 +6872,11 @@
 -2.0,
 -1.0
 ],
-"hero-dragoon-awk-idle8-v8.webp": [
+"hero-dragoon-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -2.5,
--3.5,
+-4.0,
 -3.0,
 -3.0,
 -2.5,
@@ -6776,13 +6892,13 @@
 -1.5,
 0.0
 ],
-"hero-drone-awk-idle8-v8.webp": [
+"hero-drone-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -2.0,
 -3.5,
 -3.0,
--2.5,
+-2.0,
 -2.0,
 -2.0
 ],
@@ -6796,14 +6912,14 @@
 0.0,
 0.0
 ],
-"hero-dwarf-awk-idle8-v8.webp": [
+"hero-dwarf-awk-idle8-v9.webp": [
 0.0,
 -0.5,
 -4.0,
 -3.5,
 -3.5,
 -4.0,
--4.0,
+-3.5,
 -3.5
 ],
 "hero-dwarf-idle8-v7.webp": [
@@ -6826,7 +6942,7 @@
 -1.5,
 -0.5
 ],
-"hero-elf-awk-idle8-v8.webp": [
+"hero-elf-awk-idle8-v9.webp": [
 0.0,
 0.5,
 -1.5,
@@ -6834,7 +6950,7 @@
 -1.5,
 -1.5,
 -1.0,
--1.0
+-1.5
 ],
 "hero-elf-idle8-v7.webp": [
 0.0,
@@ -6846,14 +6962,14 @@
 1.5,
 0.5
 ],
-"hero-frost-awk-idle8-v8.webp": [
+"hero-frost-awk-idle8-v9.webp": [
 0.0,
 0.0,
-0.0,
+1.0,
+0.5,
 0.5,
 1.0,
 1.0,
-0.5,
 1.0
 ],
 "hero-frost-idle8-v7.webp": [
@@ -6866,14 +6982,14 @@
 2.5,
 0.5
 ],
-"hero-geometry-awk-idle8-v8.webp": [
+"hero-geometry-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -1.5,
 -1.5,
 -1.5,
--2.0,
--2.0,
+-1.5,
+-1.5,
 -2.0
 ],
 "hero-geometry-idle8-v7.webp": [
@@ -6886,7 +7002,7 @@
 0.5,
 0.0
 ],
-"hero-hacker-awk-idle8-v8.webp": [
+"hero-hacker-awk-idle8-v9.webp": [
 0.0,
 0.5,
 -2.0,
@@ -6906,7 +7022,7 @@
 -2.0,
 0.0
 ],
-"hero-lancer-awk-idle8-v8.webp": [
+"hero-lancer-awk-idle8-v9.webp": [
 0.0,
 0.0,
 0.0,
@@ -6936,7 +7052,7 @@
 -1.5,
 -0.5
 ],
-"hero-mathboy-awk-idle8-v8.webp": [
+"hero-mathboy-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -0.5,
@@ -6956,13 +7072,13 @@
 0.0,
 0.0
 ],
-"hero-mathgirl-awk-idle8-v8.webp": [
+"hero-mathgirl-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -0.5,
 -0.5,
 0.0,
-0.0,
+0.5,
 0.0,
 0.0
 ],
@@ -6976,10 +7092,10 @@
 1.0,
 0.0
 ],
-"hero-mechanic-awk-idle8-v8.webp": [
+"hero-mechanic-awk-idle8-v9.webp": [
 0.0,
 0.0,
--2.0,
+-2.5,
 0.0,
 0.5,
 0.5,
@@ -6996,12 +7112,12 @@
 2.0,
 1.0
 ],
-"hero-merchant-awk-idle8-v8.webp": [
+"hero-merchant-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -2.5,
 -2.5,
--3.0,
+-2.5,
 -2.5,
 -2.0,
 -2.0
@@ -7016,13 +7132,13 @@
 -2.5,
 -1.0
 ],
-"hero-monk-awk-idle8-v8b.webp": [
+"hero-monk-awk-idle8-v9.webp": [
 0.0,
 1.0,
 -0.5,
--1.0,
--1.0,
--1.0,
+-0.5,
+-0.5,
+-0.5,
 0.0,
 -0.5
 ],
@@ -7036,14 +7152,14 @@
 1.0,
 0.0
 ],
-"hero-ninja-awk-idle8-v8.webp": [
+"hero-ninja-awk-idle8-v9.webp": [
 0.0,
 -1.0,
 -2.5,
 -1.0,
-1.0,
 0.0,
-1.0,
+0.5,
+0.5,
 0.5
 ],
 "hero-ninja-idle8-v7.webp": [
@@ -7056,7 +7172,7 @@
 -1.0,
 0.0
 ],
-"hero-paladin-awk-idle8-v8.webp": [
+"hero-paladin-awk-idle8-v9.webp": [
 0.0,
 1.0,
 -1.0,
@@ -7076,14 +7192,14 @@
 -1.0,
 0.0
 ],
-"hero-pirate-awk-idle8-v8.webp": [
+"hero-pirate-awk-idle8-v9.webp": [
 0.0,
 -0.5,
-0.0,
+0.5,
 -0.5,
-0.0,
-0.0,
-0.0,
+-1.0,
+-1.0,
+-0.5,
 0.0
 ],
 "hero-pirate-idle8-v7.webp": [
@@ -7096,7 +7212,7 @@
 -0.5,
 0.0
 ],
-"hero-priest-awk-idle8-v8.webp": [
+"hero-priest-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -1.0,
@@ -7126,7 +7242,7 @@
 -2.0,
 0.0
 ],
-"hero-spellblade-awk-idle8-v8.webp": [
+"hero-spellblade-awk-idle8-v9.webp": [
 0.0,
 0.0,
 -1.0,
@@ -7156,7 +7272,7 @@
 -0.5,
 0.0
 ],
-"hero-tamer-awk-idle8-v8.webp": [
+"hero-tamer-awk-idle8-v9.webp": [
 0.0,
 1.0,
 -4.0,
@@ -7176,15 +7292,15 @@
 0.0,
 0.0
 ],
-"hero-valkyrie-awk-idle8-v8.webp": [
+"hero-valkyrie-awk-idle8-v9.webp": [
 0.0,
--2.0,
 -1.0,
--1.5,
--2.0,
--2.0,
--1.0,
--1.0
+0.0,
+-0.5,
+0.0,
+-0.5,
+0.0,
+0.0
 ],
 "hero-valkyrie-idle8-v7.webp": [
 0.0,
@@ -7196,7 +7312,7 @@
 1.0,
 0.0
 ],
-"hero-witch-awk-idle8-v8.webp": [
+"hero-witch-awk-idle8-v9.webp": [
 0.0,
 0.5,
 2.5,
@@ -7204,7 +7320,7 @@
 2.5,
 2.5,
 2.5,
-0.5
+1.0
 ],
 "hero-witch-idle8-v7.webp": [
 0.0,

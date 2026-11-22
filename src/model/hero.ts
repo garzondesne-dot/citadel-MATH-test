@@ -40,7 +40,7 @@ export const AWK_TITLES = (AWK_ALL ? Object.entries(AWAKEN_T) : []).map(([h, [na
 export const AWK_HAVE = [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33];
 /** 용사 그림 이름 줄기 (hero-witch-v7.webp → witch) */
 export const heroKey = (id: number) => /^hero-(.+?)-v\d+[a-z]?\.webp$/.exec(String(DATA.heroes.find((h) => h.id === id)?.sprite ?? ''))?.[1] ?? '';
-export const AWK_ART: Record<number, string> = AWK_ALL ? { 0: 'hero-blond-v7.webp', ...Object.fromEntries(AWK_HAVE.map((id) => [id, `hero-${heroKey(id)}-awk-v8.webp`])) } : { 0: 'hero-blond-v7.webp' };
+export const AWK_ART: Record<number, string> = AWK_ALL ? { 0: 'hero-blond-v7.webp', ...Object.fromEntries(AWK_HAVE.map((id) => [id, `hero-${heroKey(id)}-awk-v9.webp`])) } : { 0: 'hero-blond-v7.webp' };
 /** 🚫 이 판에서 칭호를 얻을 수 없는 기록 (학교판 모루 끔 = ⚒ 연성 · features 가 알려 줌 · 📜 11/20 「그 용사 각성 막음」) */
 let craftOn: () => boolean = () => true;
 export const setCraftOn = (f: () => boolean) => { craftOn = f; };

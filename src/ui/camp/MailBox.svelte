@@ -5,7 +5,7 @@
   import type { Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import { inbox, isNew, md, seenGet, seenSet, unreadOf, type MailItem } from '../../school/mailbox';
-  const { S, uid, cls, num, gem, survey = 0, onclaim, onsurvey, onclose }: { S: Store; uid: string; cls: string; num: number; gem: number; survey?: number; onclaim: (id: string) => string | Promise<string>; onsurvey?: () => void; onclose: () => void } = $props();
+  const { S, uid, cls, num, gem, survey = 0, onclaim, onsurvey, onfb, onfbboard, onclose }: { S: Store; uid: string; cls: string; num: number; gem: number; survey?: number; onclaim: (id: string) => string | Promise<string>; onsurvey?: () => void; /** 🛠 #136 개선단 두 줄(설정에서 옮겨 옴) */ onfb?: () => void; onfbboard?: () => void; onclose: () => void } = $props();
   let ver = $state(0), toast = $state('');
   const seen0 = untrack(() => seenGet(cls, num, S)); // 이번에 열기 전 = 안 읽음 표시 기준 (서버 · 이 기기 중 늦은 것)
   const list = $derived.by(() => { void ver; return inbox(S, uid, cls); });
@@ -24,6 +24,12 @@
 <Sheet {onclose} tall>
   {#snippet title()}📮 우편함 <small class="gem">💎 {gem.toLocaleString()}</small>{/snippet}
   <div class="mb" data-k="mailbox">
+    {#if onfb || onfbboard}<!-- 🛠 #136 (선생님 「설정의 개선단 게시판이랑 의견 보내기 우체통으로 옮겨 줘」) = 맨 위 두 줄 · 같은 화면을 엶 · 채택 알림은 아래 소식(빨간 숫자)으로 -->
+      <div class="fbrow">
+        {#if onfb}<button type="button" class="fbb" data-k="fb-open" onclick={onfb}><span aria-hidden="true">💬</span><b>의견 보내기</b><small>버그 · 새 기능 · 그림 · 난이도</small></button>{/if}
+        {#if onfbboard}<button type="button" class="fbb" data-k="fb-board-open" onclick={onfbboard}><span aria-hidden="true">🛠</span><b>개선단 게시판</b><small>친구 의견에 👍</small></button>{/if}
+      </div>
+    {/if}
     <p class="sub"><b>받은 소식</b><span>{un ? `안 읽음 ${un}` : '모두 읽음'}</span></p>
     {#if toast}<p class="toast" role="status">{toast}</p>{/if}
     {#snippet row(x: MailItem)}
@@ -48,6 +54,11 @@
 </Sheet>
 
 <style>
+  .fbrow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); margin-top: var(--s2); }
+  .fbb { min-height: 64px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left; padding: 8px 12px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--line); }
+  .fbb:active { transform: translateY(2px); box-shadow: none; }
+  .fbb span { grid-row: 1 / 3; font-size: 22px; }
+  .fbb small { font-size: 13px; font-weight: 500; color: var(--text-2); }
   .gem { margin-left: 8px; font-size: 14px; color: var(--gem); font-weight: 700; }
   .mb { display: flex; flex-direction: column; gap: var(--s2); padding-bottom: var(--s3); }
   .sub { margin: var(--s2) 0 0; display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }

@@ -610,9 +610,9 @@
   <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
 {:else if sheet === 'fb' || sheet === 'fb-board'}
   {@const fbS = pupil && meBound() ? S : fbLocal()}
-  <FeedbackSheet S={fbS} cls={pupil?.cls ?? 'test'} num={pupil?.num ?? 0} pid={pupil?.uid ?? 'me'} trial={!!trial} tab0={sheet === 'fb' ? 'send' : 'board'} onclose={() => (sheet = 'set')} />
+  <FeedbackSheet S={fbS} cls={pupil?.cls ?? 'test'} num={pupil?.num ?? 0} pid={pupil?.uid ?? 'me'} trial={!!trial} tab0={sheet === 'fb' ? 'send' : 'board'} onclose={() => (sheet = 'mail')} />
 {:else if sheet === 'mail' && mbWho}
-  <MailBox {S} uid={mbWho.uid} cls={mbWho.cls} num={mbWho.num} gem={me.wallet.gem} survey={svNo && !svSent ? svNo : 0} onclaim={mailTake} onsurvey={() => (sheet = 'survey')} onclose={() => { sheet = null; mbSeen = mailSeenGet(mbWho.cls, mbWho.num, S); mbVer++; }} />
+  <MailBox {S} uid={mbWho.uid} cls={mbWho.cls} num={mbWho.num} gem={me.wallet.gem} survey={svNo && !svSent ? svNo : 0} onclaim={mailTake} onsurvey={() => (sheet = 'survey')} onfb={() => (sheet = 'fb')} onfbboard={() => (sheet = 'fb-board')} onclose={() => { sheet = null; mbSeen = mailSeenGet(mbWho.cls, mbWho.num, S); mbVer++; }} />
 {:else if sheet === 'castle'}
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
@@ -643,10 +643,7 @@
       <button type="button" class="fsw" class:on={!off} role="switch" aria-checked={!off} data-k="feed-switch" onclick={() => { S.set(`accounts/${pupil.cls}/${pupil.num}/feedOff`, off ? null : true); feedTick++; }}>{#key feedTick}<span>📣</span><b>내 전투 결과 공개</b><span class="st">{off ? '꺼짐' : '켜짐'}</span><i class="kn" aria-hidden="true"></i>{/key}</button>
       <small class="fnote">익명(반 · 용사)으로 「최근 전투」에 한 줄 · 꺼도 내 기록 · 랭킹은 남아요</small>
     {/if}
-    <!-- 🛠 #98 개선단: 의견 보내기 · 게시판 (테스트 = 이 기기 · 체험판 = 저장 안 함) -->
-    <span class="slab">🛠 개선단</span>
-    <button type="button" class="out" data-k="fb-open" onclick={() => (sheet = 'fb')}>💬 의견 보내기 <small>버그 · 새 기능 · 그림 · 난이도</small></button>
-    <button type="button" class="out" data-k="fb-board-open" onclick={() => (sheet = 'fb-board')}>🛠 개선단 게시판 <small>친구 의견에 👍</small></button>
+    <!-- 🛠 #136 개선단(의견 보내기 · 게시판) = 📮 우편함 맨 위로 옮김 (선생님 2026-11-22) -->
     {#if pupil}<button type="button" class="out" data-k="pw-open" onclick={() => { pwCur = ''; pwNew = ''; pwNew2 = ''; pwMsg = ''; sheet = 'pw'; }}>🔑 비밀번호 바꾸기</button>{/if}
     <!-- ↪ #171 로그아웃 = 첫 화면(반 · 번호 · 「교사 · 종합실 ›」)으로 · 이 폰의 로그인 기억 지움 · 시험 서버 로그인도 끝냄 -->
     <button type="button" class="out" disabled={open} onclick={() => (sheet = 'out')}>🚪 처음 화면으로 <small>{open ? '수업 중엔 못 나가요' : pupil ? `${pupil.cls}반 ${pupil.num}번` : ''}</small></button>
@@ -716,6 +713,11 @@
       {#if codeErr}<p class="cerr" role="alert">{codeErr}</p>{/if}
       <button type="button" class="cgo" onclick={enterCode}>⚔ 던전으로</button>
       {#if prepNos}<button type="button" class="prepln" data-k="gate-prep" onclick={prepGo}>🔥 {prepNos}차시 탐사(예습)<small>연습용 · 보상 없어요</small></button>{/if}<!-- 🔥 #71 예습 입구 = 던전 문 창 한 줄 (임시 · 예습 자리 컨펌 #69 전) -->
+    {:else if sheet === 'mail'}
+      <!-- 🛠 #136 서버 학생이 아닐 때(🧪 테스트 · 이 기기) = 소식 없이 개선단 두 줄만 (테스트 = 이 기기 저장 · 같은 화면) -->
+      <button type="button" class="out" data-k="fb-open" onclick={() => (sheet = 'fb')}>💬 의견 보내기 <small>버그 · 새 기능 · 그림 · 난이도</small></button>
+      <button type="button" class="out" data-k="fb-board-open" onclick={() => (sheet = 'fb-board')}>🛠 개선단 게시판 <small>친구 의견에 👍</small></button>
+      <div class="empty"><span class="ic" aria-hidden="true">📮</span><p>선생님 소식은 반 계정으로 들어오면 여기에 와요</p></div>
     {:else}
     <div class="empty"><span class="ic" aria-hidden="true">{sheet === 'gate' ? '🌀' : sheet === 'dummy' ? '🎯' : sheet === 'mail' ? '📮' : sheet === 'tent' ? '✏' : sheet === 'anvil' ? '⚒' : '🧙'}</span>
       <p>{sheet === 'gate' ? '지금은 닫혀 있어요 · 선생님이 수업을 열면 빛이 들어와요' : '다음 판에서 열려요'}</p></div>
