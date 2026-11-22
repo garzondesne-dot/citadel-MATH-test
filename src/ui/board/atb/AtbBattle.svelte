@@ -313,6 +313,11 @@
   const FAM_EMO: Record<Fam, string> = { arms: '🗡', flame: '🔥', nature: '🍃', wisdom: '📖', mystic: '🔮' };
   // 🎨 실드 그림 (작업대 atb-shield · atb-shield-slots · 11/20): 방패막 4칸 × 3줄(서 있음 · 막음 · 깨짐) · 칸 아이콘 5계열 × 3줄(멀쩡 · 금 감 · 깨짐)
   const SHIELD_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-v1.webp`;
+  /** 📜 #102 ⑦ 실드 칸 = atb-shield-slots (5계열 × 3단계: 멀쩡 · 금 감 · 깨짐) */
+  const SLOT_URL = `${import.meta.env.BASE_URL}art/board-atb/atb-shield-slots-v1.webp`, FAM_X: Record<Fam, number> = { arms: 0, flame: 25, nature: 50, wisdom: 75, mystic: 100 };
+  /** 📜 #102 ⑥ 홀리 방패 = rage-barrier 반구(파티 전체) + aura-guardshield 한 번(발동한 용사 위) */
+  const HOLY_URL = `${import.meta.env.BASE_URL}art/aura-guardshield-v1.webp`;
+  let holyFx = $state<{ who: number; n: number } | null>(null);
   const FAM_COL: Record<Fam, string> = { arms: '#d8dcf0', flame: '#ff7a2a', nature: '#6ee05a', wisdom: '#5ab0ff', mystic: '#c88aff' };
   let cellAnim = $state<Record<number, 'hold' | 'crack' | 'shatter'>>({}), barrier = $state<'' | 'up' | 'ripple' | 'shatter'>(''), bigMsg = $state<{ t: string; cls: string } | null>(null), bossShield = $state(false);
   let msgN = 0, cutN = 0; // $state 는 넣은 객체를 프록시로 바꿈 → 같은지 = 번호로
@@ -451,7 +456,7 @@
     if (e.k === 'atk' || e.k === 'skill' || (e.k === 'role' && e.dmg)) {
       // ⚡ 스킬 = 컷인(필살기 1.7초 · 내 스킬 0.9초) 뒤 큰 이펙트
       // 💠 스킬 = 컷인(각성 1.7초 · 4레벨 1.1초 · 내 장착 0.9초) 뒤 큰 이펙트
-      const bigSk = e.k === 'skill' && !e.auto && (e.kind !== 'equip' || e.who === me), /* 📜 #79 ③ 넘침 자동 스킬 = 컷인 없음 */ ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
+      const bigSk = e.k === 'skill' && !e.auto && (e.kind === 'tier4' || e.kind === 'awk'), /* 📜 #102 ⑤ 컷인 = 스킬 2 · 각성만 (스킬 1 · 넘침 자동 = 없음) */ ms = e.k === 'skill' ? (e.kind === 'awk' ? 1700 : e.kind === 'tier4' ? 1100 : 900) : 0;
       if (e.k === 'skill' && bigSk) { const sid = skIdOf(e.who, e.kind), nm = e.kind === 'awk' ? (sid ? `각성 ${skillName(sid)}` : '각성') : sid ? skillName(sid) : '스킬', c = { who: e.who, awk: e.kind === 'awk', name: nm, short: e.kind === 'equip', line: `${whoOf(e.who)}의 ${e.kind === 'awk' ? '✨' : skIc(e.who, e.kind)} ${nm}!` }; const cn = ++cutN; claim(4, ms, 'cutin'); cut = c; setTimeout(() => { if (cutN === cn) cut = null; }, ms); sfx(e.kind === 'awk' ? 'true-ult' : 'special', 0.8); }
       if (e.k === 'skill' && e.auto && e.who === me) pop(posOf(me).x, posOf(me).y - 30, `${whoOf(me)} ⚡ 자동 스킬!`, 'role', 1000); // 📜 요청 #13 · #79 ③ 작은 글만
       if (e.k === 'atk' && e.auto && e.who === me) { const t = Date.now(); autoTag = t; setTimeout(() => { if (autoTag === t) autoTag = 0; }, 1100); }
@@ -487,8 +492,8 @@
     else if (e.k === 'cap') { if (e.at === 'warn') { sageSay('균열이 불안정해지고 있다…'); sfx('mon-appear', 0.5); } else { sageSay('1분 뒤 포털로 불러들이겠다!', 5000); big('🌀 1분 뒤 포털로 불러들이겠다!', 'note', 2200); sfx('mon-appear', 0.7); } }
     else if (e.k === 'revive') { pop(posOf(e.to).x, posOf(e.to).y - 24, '부활!', 'role'); snd('heart-up', 0.75); } // 📜 #92 팀 부활 횟수 없음 → 💖 n → m 판 없앰
     else if (e.k === 'shieldUp') { shieldUpFx(); shieldSwap(); }
-    else if (e.k === 'aura') { pop(posOf(e.who).x, posOf(e.who).y - 24, '🛡 홀리 방패!', 'role'); /* 📜 #76 = 파티 전체 돔 (domeKind) */ sfx('holy-on', 0.8); pop(bx, 30, `🗿 석화 ${e.stone}초`, 'shield'); }
-    else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; if (e.who === me) { eyeCut(e.who, col, `${whoOf(e.who)}의 ${KN}!`, EN, 700); slowmo(400); sfx('block', 1); } else pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); } /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
+    else if (e.k === 'aura') { const n = Date.now(); holyFx = { who: e.who, n }; barrierFx = n; setTimeout(() => { if (holyFx?.n === n) holyFx = null; }, 1300); setTimeout(() => { if (barrierFx === n) barrierFx = 0; }, 2400); big(`🛡 홀리 방패! ${whoOf(e.who)} · 보스 ${e.stone}초 굳음`, 'weak', 1800); sfx('holy-on', 0.8); } /* 📜 #102 ⑥ 자동 홀리 = 반구 + 방패 한 번 + 위 띠 */
+    else if (e.k === 'react') { { const EN = e.how === 'cover' ? '🛡 GUARD!' : e.how === 'barrier' ? '🎵 BARRIER!' : '⚔ BREAK!', KO = e.how === 'cover' ? '막았다!' : e.how === 'barrier' ? '결계!' : '끊었다!', col = ROLE_COL[S.heroes[e.who]!.s.role] ?? '#fff'; const KN = e.how === 'cover' ? '🛡 막기' : e.how === 'barrier' ? '🎵 결계' : '⚔ 끊기'; void EN; void col; pop(posOf(e.who).x, posOf(e.who).y - 40, `${whoOf(e.who)}의 ${KN}!`, 'role'); if (e.who === me) { slowmo(300); sfx('block', 1); } } /* 📜 #102 ⑤ 역할 반응 = 그 자리 연출(막기 호 · 끊기 번쩍) · 눈빛 컷인 없음 */ /* 📜 #80 누구의 무슨 기술 */ /* 👁 요청 #50 덧 카운터 성공 */ if (e.how === 'cover' && e.to != null) { const m = heroMid(e.to); spawnFx('rage-cover', m.x, m.y, 110, 700); } else if (e.how === 'cut') { const bm = bossMid(); spawnFx('rage-interrupt', bm.x, bm.y, Math.round(bossSize * 0.8), 650); } blockFx(e.how === 'cut' ? [] : [...(S.target ?? [])]); const t = e.how === 'cover' ? '🛡 막았다!' : e.how === 'barrier' ? '🎵 결계!' : '⚔ 끊었다!'; pop(posOf(e.who).x, posOf(e.who).y - 26, t, 'role'); if (e.who !== me) sfx(e.how === 'cut' ? 'smash' : 'block', 0.8); if (e.how === 'cut') { bossPose = 'hit'; setTimeout(() => (bossPose = 'idle'), 500); } if (e.how === 'barrier') { barrierFx = Date.now(); setTimeout(() => (barrierFx = 0), 4200); } }
     else if (e.k === 'fam') { // 🌈 계열 덧효과 (요청 #36) · 작게 0.8초
       const B0 = { x: bx + (open ? 0 : 4), y: 40 };
       { const bm = bossMid(), W2 = Math.round(bossSize * 0.7), FXN: Record<string, string> = { pierce: 'st-pierce', burn: 'st-burn', freeze: 'st-freeze', expose: 'st-weak', shock: 'st-shock', curse: 'st-curse' }; if (FXN[e.fx] && !e.tick) spawnFx(FXN[e.fx]!, bm.x, bm.y, W2, e.fx === 'pierce' ? 520 : 800); if (e.fx === 'bless' && e.to != null) { const m = heroMid(e.to); spawnFx('st-bless', m.x, m.y, 90, 800); } if (e.fx === 'gust') { const m = heroMid(e.who); spawnFx('st-wind', m.x, m.y, 90, 800); } } // 🎨 그림 = 덧효과 조각
@@ -660,7 +665,7 @@
       <div class="cells" data-k="atb-cells" aria-label="실드 {S.cells.filter((c) => !c.broken).length}칸 남음">
         {#each S.cells as c, i (i)}
           {@const st = cellAnim[i] ?? (c.broken ? 'gone' : 'ok')}
-          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><FamShield fam={c.fam} size={44} state={pendCells.has(i) ? 'empty' : st === 'gone' ? 'gone' : st === 'crack' || st === 'shatter' || (st === 'hold' && cellAnim[i] != null) ? 'crack' : 'ok'} />{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
+          <span class="cell2 {st}" class:fl={flashCell === i} class:mine={!c.broken && !!meH && c.fam === meH.s.fam} class:orphan={orphanCell(S, c)} style:--fc={FAM_COL[c.fam]} data-st={pendCells.has(i) ? 'empty' : st} title="{FAM_NAME[c.fam]}{orphanCell(S, c) ? ' · 📜 도움표로' : ''}" data-fam={c.fam}><i class="slot" style:background-image="url({SLOT_URL})" style:background-position="{FAM_X[c.fam]}% {pendCells.has(i) ? 0 : st === 'gone' || st === 'shatter' ? 100 : st === 'crack' || (st === 'hold' && cellAnim[i] != null) ? 50 : 0}%" data-k="atb-slot" aria-label={FAM_NAME[c.fam]}></i>{#if S.boss.sig === 'lock'}<i class="lk" aria-hidden="true">{c.broken ? '🔓' : '🔒'}</i>{/if}</span>
         {/each}
       </div>
     {/if}
@@ -697,6 +702,7 @@
     </div>
   {/each}
 
+  {#if holyFx}{@const hp = posOf(holyFx.who)}{#key holyFx.n}<i class="holy1" style:left="{hp.x}%" style:top="{hp.y}%" style:--hs="{Math.round(H * 0.32)}px" style:background-image="url({HOLY_URL})" data-k="atb-holy" aria-hidden="true"></i>{/key}{/if}
   {#each pops as p (p.id)}<span class="pop {p.cls}" style:left="{p.x}%" style:top="{p.y}%">{p.t}</span>{/each}
   {#if bossSay}{#key bossSay.n}<p class="bsay {bossSay.k}" style:left={BX} role="status" data-k="atb-boss-say" data-say={bossSay.k}>「{bossSay.t}」</p>{/key}{/if}
   {#if phase !== 'fight'}<AtbIntro {S} {me} phase={phase} left={introLeft} short={iShort} ready={introReady} {labels} onready={introGo} />{/if}
@@ -1148,4 +1154,8 @@
   .stage .bossui { transform: translateX(-50%); }
   .stage .boss { transition: left 0.3s ease, top 0.3s ease; }
   .stage.q .foldbar { left: 27.5%; }
+  /* ── 📜 #102 ⑥ ⑦ 실드 칸 그림 · 홀리 방패 ── */
+  .cell2 .slot { display: block; width: 40px; height: 40px; background-repeat: no-repeat; background-size: 500% 300%; image-rendering: pixelated; filter: drop-shadow(0 2px 0 #000); }
+  .holy1 { position: absolute; z-index: 30; width: var(--hs); height: var(--hs); margin: calc(var(--hs) * -1) 0 0 calc(var(--hs) * -0.5); background-repeat: no-repeat; background-size: 1200% 100%; image-rendering: pixelated; pointer-events: none; animation: holy12 1.2s steps(11, jump-none) 1 forwards; }
+  @keyframes holy12 { from { background-position-x: 0%; } to { background-position-x: 100%; } }
 </style>
