@@ -26,8 +26,8 @@ const SHOTS = process.argv[2] || '.';
     const p2 = await pos();
     ok(`④ ${T} 상황 줄 · 예고가 떠도 이름 · 체력 · 예고 막대 안 움직임`, p0 === p1 && p1 === p2, `${p0} | ${p1} | ${p2}`);
     // ⑤ 예고 칸
-    const slot = await ev(() => { const e = document.querySelector('[data-k="atb-tgslot"]'); return e ? { k: e.dataset.kind, ic: e.querySelector('.ti')?.textContent, st: e.querySelector('.tst')?.textContent ?? '', sec: e.querySelector('.tsec')?.textContent } : null; });
-    ok(`⑤ ${T} 광역 예고 = 💥 + 상태 ☠ + 남은 초`, !!slot && slot.k === 'aoe' && slot.ic === '💥' && /☠/.test(slot.st) && /^\d+$/.test(slot.sec ?? ''), JSON.stringify(slot));
+    const slot = await ev(() => { const e = document.querySelector('[data-k="atb-tgslot"]'); return e ? { k: e.dataset.kind, ic: e.querySelector('.ti [data-ic]')?.dataset.ic ?? e.querySelector('.ti')?.textContent, st: e.querySelector('.tst [data-ic]')?.dataset.ic ?? e.querySelector('.tst')?.textContent ?? '', sec: e.querySelector('.tsec')?.textContent } : null; });
+    ok(`⑤ ${T} 광역 예고 = 💥 + 상태 ☠ + 남은 초`, !!slot && slot.k === 'aoe' && slot.ic === 'aoe' && slot.st === 'poison' && /^\d+$/.test(slot.sec ?? ''), JSON.stringify(slot));
     ok(`⑤ ${T} 글 배너(예고 띠) 없음`, !(await p.$('[data-k="atb-tg-line"]')));
     const kinds = [];
     for (const [k, set] of [['single', () => { const S = globalThis.__atb.S; S.rage = false; S.nextAtk = 'smash'; S.target = [1]; S.aoeNext = false; }], ['special', () => { const S = globalThis.__atb.S; S.nextAtk = 'pounce'; S.target = [2]; S.aoeNext = false; }], ['rage', () => { const S = globalThis.__atb.S; S.rage = true; S.nextAtk = S.boss.rageSpecial ?? S.boss.cycle.find((x) => ['fire', 'sleep', 'bind', 'mirror', 'confuse', 'pounce', 'swallow', 'falseHyp', 'reverse', 'breathAtk'].includes(x)) ?? 'aoe'; S.target = [0]; }]]) {
@@ -36,7 +36,7 @@ const SHOTS = process.argv[2] || '.';
     ok(`⑤ ${T} 🎯 단일 · 🌀 모으기 · 👹 분노 아이콘`, kinds.join() === 'single,special,rage', kinds.join());
     // 짝 단추 (내가 서포터 = 광역 · 격려)
     await ev(() => { const S = globalThis.__atb.S, me = S.heroes[0]; S.rage = false; S.heroes.forEach((h, i) => { if (i && h.s.role === 'support') h.s = { ...h.s, role: 'dealer' }; }); me.s = { ...me.s, role: 'support' }; me.ch = 4; S.nextAtk = 'poison'; S.target = [0, 1, 2, 3]; S.aoeNext = true; S.bossT = 8; S.blocked = null; }); await wait(300);
-    ok(`⑤ ${T} 막는 단추에 같은 아이콘(💥 → 🎵 격려)`, (await ev(() => document.querySelector('[data-k="atb-morph-tg"]')?.textContent)) === '💥');
+    ok(`⑤ ${T} 막는 단추에 같은 아이콘(💥 → 🎵 격려)`, (await ev(() => { const e = document.querySelector('[data-k="atb-morph-tg"]'); return e?.querySelector('[data-ic]')?.dataset.ic ?? e?.textContent; })) === 'aoe'); /* 📜 #145 ui-ic16 그림 */
     await ev(() => { const S = globalThis.__atb.S; S.target = null; S.nextAtk = null; S.aoeNext = false; }); await wait(300);
     // ② 홀리 방패
     await ev(() => { const S = globalThis.__atb.S; S.guard = true; S.stoneUntil = S.t + 6; S.evN++; S.ev.push({ k: 'aura', t: S.t, who: 0, stone: 6, n: S.evN }); }); await wait(200);

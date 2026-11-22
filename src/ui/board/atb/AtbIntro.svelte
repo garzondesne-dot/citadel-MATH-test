@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ic16 from './Ic16.svelte';
   // 🗺 게시판 던전 조우 · 정찰 (📜 요청 #69 · 선생님 2026-11-21 「느닷없이 시작 → 정찰 시간 · 조우 짧게」)
   //   meet = 어둡게 + 보스 이름 띠 + 등장 대사 · scout = 보스 카드(약점 · 공격 3종 → 막는 역할 · 내 임무 · 분노) + 남은 초 + 「⚔ 준비 완료」 · count = 3 · 2 · 1 · 전투 시작!
   import type { State } from '../../../board/atb/engine';
@@ -49,7 +50,7 @@
         </div>
         <div class="col">
           <h3>공격 예고와 대응</h3>
-          <table class="atks" data-k="atb-scout-atks"><tbody>{#each rows as r (r.nm)}<tr data-cls={r.c}><td>{r.ic} {r.nm} <span class="t">{TGT[r.c]}</span></td><td class="r"><AtbIcon name={`role-${BLK[r.c].role}` as 'role-tank'} size={18} /> {BLK[r.c].nm} · {BLK[r.c].sk}</td></tr>{/each}<tr data-cls="rage" data-k="atb-scout-rage"><td>👹 분노 공격 <span class="t">체력 {Math.round(RAGE.at * 100)}% 아래</span></td><td class="r">✨ 퍼펙트로 진정</td></tr></tbody></table>
+          <table class="atks" data-k="atb-scout-atks"><tbody>{#each rows as r (r.nm)}<tr data-cls={r.c}><td><Ic16 name={r.c} size={18} /> {r.nm} <span class="t">{TGT[r.c]}</span></td><td class="r"><AtbIcon name={`role-${BLK[r.c].role}` as 'role-tank'} size={18} /> {BLK[r.c].nm} · {BLK[r.c].sk}</td></tr>{/each}<tr data-cls="rage" data-k="atb-scout-rage"><td><Ic16 name="rage" size={18} /> 분노 공격 <span class="t">체력 {Math.round(RAGE.at * 100)}% 아래</span></td><td class="r">✨ 퍼펙트로 진정</td></tr></tbody></table>
         </div>
       </div>
       <div class="foot">
