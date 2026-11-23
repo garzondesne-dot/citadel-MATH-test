@@ -4,6 +4,7 @@
 //   → 소레이드 단계마다 70% → ❤ 0 = 🙋 잠김(선생님 「✔ 풀어주기」 기다림) → 형성평가(첫 시도 80% · 틀린 문항은 숫자 바뀐 재도전에서 맞힘) → 쉼터 놀이(⚖ 🔄 ⭕ · 🙊)
 //   실제 학생과 똑같은 경로(rooms/{code}/…)에 씀 → 교사 폰 · TV 는 진짜 수업과 똑같이 움직임 · 집중 모드면 손을 멈춤
 //   기록: 수업 끝 기록(records/{반}/{번호})은 학생 폰만 씀 → 가상 학생은 랭킹 · 대시보드 · 서버 학생 기록에 남지 않음 · players/{uid}/bot = true · 이름 앞 🤖
+import { qOf, syl, type Aj } from '../rest/ajae';
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
@@ -57,6 +58,11 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
     const f = (R0 as { fun?: Record<string, unknown> }).fun as { kind?: string; phase?: string; to?: number; rk?: string; alive?: Record<string, true>; ans?: string | null; rps?: boolean; g?: number; round?: number } | undefined;
     if (!f) return; const now = S.now();
     if (f.kind === 'td') return; // 🏰 디펜스 = 베타 가상 학생은 안 함(자리 고르기 · 능력치 규칙이 따로)
+    if (f.kind === 'aj') { // 😆 11/24 가상 친구 = 3 ~ 20초 뒤 맞힘(70%) · 아니면 틀린 글자
+      const a = f as unknown as Aj; if (a.phase !== 'q') return;
+      ids.forEach((u) => { if (!a.alive?.[u]) return; later(`aj|${a.g}|${a.rk}|${u}`, rand(3000, 20000), () => { const q = qOf(a.qs[a.n - 1] ?? 0); if (!q) return; S.set(P(`fv/${a.rk}/${u}`), { a: Math.random() < 0.7 ? q.a : a.chips.slice(0, syl(q.a).length).join(''), at: S.now() }); }); });
+      return;
+    }
     if (f.kind === 'drg') { // 🐉 #25 가상 친구 = 잘 때 0.7초마다 2~5칸 · 눈 뜰 때 가끔(20%) 걸림
       const d = f as unknown as Drg; if (d.phase !== 'play') return; const t = now - d.at; if (t < 0) return; const slot = Math.floor(t / 700);
       ids.forEach((u) => { if (!d.alive?.[u]) return; later(`drg|${d.g}|${d.round}|${u}|${slot}`, rand(0, 600), () => { const RR = S.get<Room>(roomPath(code)) as Room & { dg?: Record<string, Record<string, Record<string, { p?: number; h?: number; f?: number }>>> }; const cur = RR?.dg?.[d.g]?.[d.round]?.[u] || {}; if (cur.f != null) return; const st = dragonAt(d, S.now() - d.at).st; let p = Number(cur.p) || 0, h = Number(cur.h) || 0; if (st === 'eye') { if (Math.random() < 0.2) { p = Math.max(0, p - 10); h += 1; } else return; } else p = Math.min(FIN, p + 2 + Math.floor(Math.random() * 4)); S.set(P(`dg/${d.g}/${d.round}/${u}`), { p, h, ...(p >= FIN ? { f: S.now() } : {}) }); }); });

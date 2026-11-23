@@ -1,0 +1,41 @@
+<script lang="ts">
+  import type { Room } from '../../model/types';
+  import { isRight, qOf, standingsAj, syl, type Aj, type Ans } from '../../rest/ajae';
+  // 😆 아재 퀴즈 · 종합실 (📜 2026-11-24): 문제 · 빈칸 수 · 남은 시간 · 맞힌 순서 (정답 글자는 공개 때만)
+  const { R, f, now, nameOf }: { R: Room; f: Aj; now: number; nameOf: (u: string) => string } = $props();
+  const q = $derived(qOf(f.qs[f.n - 1] ?? 0));
+  const sec = $derived(Math.max(0, Math.ceil((f.to - now) / 1000)));
+  const ok = $derived.by(() => { if (!q) return []; const a = ((R as unknown as { fv?: Record<string, Record<string, Ans>> }).fv?.[f.rk]) || {}; return Object.entries(a).filter(([, v]) => v && typeof v === 'object' && isRight(q.no, v.a)).sort((x, y) => x[1].at - y[1].at).map(([u]) => u); });
+  const st = $derived(standingsAj(f));
+</script>
+
+<div class="atv" data-k="aj-tv" data-phase={f.phase}>
+  <div class="top"><b>😆 아재 퀴즈{f.phase === 'q' || f.phase === 'show' ? ` · ${f.n} / ${f.qs.length}` : ''}</b>{#if f.phase === 'q' || f.phase === 'intro'}<span class="sec" data-k="aj-sec">{sec}초</span>{/if}</div>
+  {#if f.phase === 'intro'}
+    <p class="rule">폰에서 <b>글자를 골라</b> 정답을 완성해요 · 먼저 맞히면 <b>3 · 2 · 1점</b> · 틀려도 다시!</p>
+  {:else if f.phase === 'end'}
+    <div class="podium">{#each st.slice(0, 5) as x (x.u)}<span class="pd r{x.rank}"><b>{x.rank}등</b>{nameOf(x.u)} · {x.pts}점</span>{/each}</div>
+    {#if !st.length}<p class="rule">이번엔 맞힌 사람이 없어요</p>{/if}
+  {:else if q}
+    <p class="q" data-k="aj-tv-q">{q.q}</p>
+    {#if f.phase === 'show'}
+      <p class="ans">{q.a}</p><p class="why">{q.why}</p>
+      <p class="rule">{(f.last || []).map(([u, p], i) => `${i + 1}. ${nameOf(u)} +${p}`).join(' · ') || '맞힌 사람 없음'}</p>
+    {:else}
+      <div class="ajs">{#each syl(q.a) as _, k (k)}<span></span>{/each}</div>
+      <ol class="ok" data-k="aj-tv-ok">{#each ok.slice(0, 8) as u, i (u)}<li class:pt={i < 3}>{i + 1}. {nameOf(u)}</li>{/each}</ol>
+    {/if}
+  {/if}
+</div>
+
+<style>
+  .atv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; color: #fff; padding: 3cqh 3cqw; gap: 2.4cqh; text-align: center; }
+  .top { display: flex; justify-content: center; align-items: baseline; gap: 2cqw; font: 900 var(--tv-h, 4cqh) var(--font); }
+  .sec { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .rule { margin: auto 0; max-width: 80cqw; font: 800 4cqh/1.5 var(--font); }
+  .q { margin: 2cqh 0 0; font: 900 7cqh/1.3 var(--font); max-width: 86cqw; }
+  .ans { margin: 0; font: 900 10cqh var(--font); color: var(--accent); } .why { margin: 0; font: 700 4cqh var(--font); opacity: 0.9; }
+  .ajs { display: flex; flex-direction: row; gap: 1.2cqw; } .ajs span { width: 8cqh; height: 9cqh; display: grid; place-items: center; border-radius: 1.2cqh; background: rgba(255, 255, 255, 0.12); font: 900 6cqh var(--font); }
+  .ok { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 1cqh 2cqw; font: 800 3.6cqh var(--font); } .ok .pt { color: var(--accent); }
+  .podium { margin: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 2cqw; } .pd { display: grid; gap: 1cqh; padding: 2cqh 3cqw; border-radius: 2cqh; background: rgba(0, 0, 0, 0.5); font: 800 3.6cqh var(--font); } .pd b { font-size: 5cqh; color: var(--accent); }
+</style>
