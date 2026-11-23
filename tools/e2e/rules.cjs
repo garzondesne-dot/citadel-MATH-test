@@ -8,7 +8,7 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
 (async () => {
   await owner('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' });
   const A = await sign('a@t.local'), B = await sign('b@t.local'), anon = await sign(null), T1 = await sign('t1@t.local'), T2 = await sign('t2@t.local');
-  await owner('', 'PATCH', { accounts: { '1-3': { 1: { uid: A.uid }, 2: { uid: B.uid } } }, gem: { '1-3': { 1: { total: 5 }, 2: { total: 9 } } }, records: { '1-3': { 2: { x: { no: 6 } } } }, roster: { '1-3': { 1: '가나다' } }, rosterMask: { '1-3': { 1: '가*다' } }, rooms: { 111111: { meta: { lesson: 'set-06' }, state: { step: 0 } } }, secrets: { 111111: { hallKey: '4321' } } });
+  await owner('', 'PATCH', { accounts: { '1-3': { 1: { uid: A.uid }, 2: { uid: B.uid } } }, gem: { '1-3': { 1: { total: 5 }, 2: { total: 9 } } }, records: { '1-3': { 2: { x: { no: 6 } } } }, roster: { '1-3': { 1: '가나다' } }, rosterMask: { '1-3': { 1: '가*다', 2: '라*바', 3: '사*자' } }, rooms: { 111111: { meta: { lesson: 'set-06' }, state: { step: 0 } } }, secrets: { 111111: { hallKey: '4321' } } });
   const rows = [], errs = [];
   const want = (name, got, ok) => { const pass = ok ? got === 200 : got >= 400; rows.push(`${pass ? '○' : '✗'} ${name} → ${got}`); if (!pass) errs.push(name); };
   want('학생 A 내 💎 읽기', await as(A.tok, 'gem/1-3/1'), true);
@@ -75,6 +75,7 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('💎 A 내 놀이 보상(fun)', await as(A.tok, 'gifts/s1_3_1/fun3', 'PUT', { g: 5 }), true);
   want('💎 익명(TV) 선물 넣기 막힘', await as(anon.tok, 'gifts/s1_3_1/y', 'PUT', { g: 5 }), false);
   want('학생 팀 방(T…) 진행', await as(B.tok, 'rooms/Tabc/state/step', 'PUT', 1), true);
+  want('🔐 #149 명단에 없는 번호 가입 막힘', (await owner('accounts/1-3/9', 'PUT', { uid: 'OLD', reset: true }), await as(B.tok, 'accounts/1-3/9/uid', 'PUT', B.uid)), false);
   want('옮긴 계정 잇기(reset)', (await owner('accounts/1-3/3', 'PUT', { uid: 'OLD', reset: true }), await as(B.tok, 'accounts/1-3/3/uid', 'PUT', B.uid)), true);
   want('남의 계정 가로채기', await as(B.tok, 'accounts/1-3/1/uid', 'PUT', B.uid), false);
   // 🔒 게시판 입장 암호 (2026-11-13): 해시 = boardLock(아무도 못 읽음) · 합류 = 해시가 맞아야 · 이미 들어온 학생 준비 · 암호 없는 글 그대로
