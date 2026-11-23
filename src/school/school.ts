@@ -1,5 +1,6 @@
 import type { Store } from '../model/types';
 import { BUILD } from '../build';
+import { SCHOOL_BUILD } from '../channel';
 
 // 🏫 학교 자료 (테스트 버전 = 이 기기 저장 · 서버 없음) — 반 명단 · 계정(반 + 번호 + 비밀번호 4자리) · 시간표 · 반마다 지난 수업 · 지금 열린 수업
 //   정식 규칙 그대로: 학생은 이름을 쓰지 않음(명단에서 자동) · 중복 가입 불가 · 잊으면 선생님이 0000 으로 · 한 번 로그인한 폰은 바로 캠프
@@ -18,7 +19,8 @@ export function applySchoolInfo(i: SchoolInfo | null, bells: Record<number, [str
 }
 export const firstClass = () => CLASSES[0] ?? '1-1';
 /** 🧪 베타 반 (#123): 화면 · 규칙 · 보상 · 하루 한도 · 저장은 실제 반과 같고 통계에서만 빠짐 — 반 설정 school/cls/{반}/beta (테스트 판 기본 = 1-6) */
-const BETA_DEFAULT = ['1-6'];
+// 🐞 11/23 학교판(친구 학교) = 테스트 반 기본 없음 · 1-6 = 우리 학교만의 규칙 (반 설정으로 켜는 것은 그대로)
+const BETA_DEFAULT = SCHOOL_BUILD ? [] : ['1-6'];
 const GIVEN = ['민준', '서연', '도윤', '하은', '시우', '지유', '주원', '하린', '예준', '서준', '지아', '은우', '수아', '건우', '지호'];
 const FAMILY = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권'];
 export interface Pupil { cls: string; num: number; name: string; uid: string }
@@ -31,12 +33,14 @@ export function roster(cls: string, S?: Store | null): Pupil[] {
   const up = ok(S?.get(`roster/${cls}`)) || ok(S?.get(`rosterMask/${cls}`)) || ok(S?.get(`school/roster/${cls}`));
   // 🚀 정식 기록 = 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, 1번, 2번 …]) → 빈칸 · 0번 뺌
   if (up && Object.keys(up).length) return Object.entries(up).filter(([n, name]) => !!name && Number(n) > 0).map(([n, name]) => ({ cls, num: Number(n), name, uid: uidOf(cls, Number(n)) })).sort((a, b) => a.num - b.num);
+  if (S?.kind === 'server' && SCHOOL_BUILD) return []; // 🐞 11/23 학교판 서버 = 명단을 안 올린 반은 빈 반 (가짜 이름 15명 = 이 기기 체험 · 우리 학교 시험 서버만)
   const k = Math.max(0, CLASSES.indexOf(cls)); // 목록 밖 반('test') = 첫 반 이름표
   return GIVEN.map((g, i) => ({ cls, num: i + 1, name: `${FAMILY[(i + k * 3) % FAMILY.length]}${g}`, uid: uidOf(cls, i + 1) }));
 }
 /** ＋ 명단 붙여넣기: 한 줄에 「번호 이름」(탭 · 쉼표 · 띄어쓰기) · 같은 번호는 이름만 바뀜 → 올린 수 */
-export function pasteRoster(S: Store, cls: string, text: string): number {
-  const cur = S.get<Record<string, string>>(`roster/${cls}`) || S.get<Record<string, string>>(`school/roster/${cls}`) || Object.fromEntries(roster(cls).map((p) => [p.num, p.name]));
+export function pasteRoster(S: Store, cls: string, text: string, replace = false): number { // replace = 기존 명단을 지우고 붙여 넣은 줄만 (🐞 11/23 가짜 이름이 남은 반 치우기)
+  // 🐞 11/23 명단이 없던 반 = 빈 명단에서 시작 (예전 = 가짜 이름 15명 위에 붙여서 진짜 명단보다 번호가 많으면 가짜 이름이 남았음)
+  const cur: Record<string, string> = replace ? {} : { ...(S.get<Record<string, string>>(`roster/${cls}`) || S.get<Record<string, string>>(`school/roster/${cls}`) || {}) };
   let n = 0;
   for (const line of text.split(/\r?\n/)) { const m = /^\s*(\d{1,2})[\s,\t.번]+(\S.{0,9}?)\s*$/.exec(line); if (m) { cur[String(Number(m[1]))] = (m[2] as string).trim(); n++; } }
   if (n) { S.set(`roster/${cls}`, cur); S.set(`rosterMask/${cls}`, Object.fromEntries(Object.entries(cur).map(([k, v]) => [k, maskName(v)]))); } // 정식 칸 (#163)

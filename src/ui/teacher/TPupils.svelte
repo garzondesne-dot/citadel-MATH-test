@@ -38,9 +38,9 @@
   $effect(() => ondash?.(wide));
   // 🏫 반 만들기 · 지우기 = 「＋ 명단」 창 맨 위 (📜 2026-11-16 선생님 「학교 정보에서 학년 반 집어넣는 부분을 학생 + 명단에 넣어 주면 오히려 직관적」 · 저장 자리 school/info/classes 그대로)
   const clsNow = $derived.by(() => { void schoolInfo.ver; return [...CLASSES]; });
-  let pcls = $state(''), mk = $state(false), nc = $state(''), delAsk = $state('');
+  let pcls = $state(''), repl = $state(false), mk = $state(false), nc = $state(''), delAsk = $state('');
   const ncOk = $derived(/^\d{1,2}-\d{1,2}$/.test(nc.trim()) && !clsNow.includes(nc.trim()));
-  function openPaste() { text = ''; pcls = cls === ALL ? firstClass() : cls; mk = false; nc = ''; paste = true; }
+  function openPaste() { repl = false; text = ''; pcls = cls === ALL ? firstClass() : cls; mk = false; nc = ''; paste = true; }
   function makeCls() { const c = nc.trim(); if (!ncOk) return; S.set('school/info/classes', [...clsNow, c]); pcls = c; mk = false; nc = ''; }
   function delCls(c: string) { const rest = clsNow.filter((x) => x !== c); if (!rest.length) return; S.set('school/info/classes', rest); if (pcls === c) pcls = rest[0]!; if (cls === c) cls = rest[0]!; delAsk = ''; }
   $effect(() => { if (seg === 'list' && cls === ALL) cls = '1-3'; });
@@ -81,12 +81,13 @@
 {#if paste}
   <Sheet onclose={() => (paste = false)}>
     {#snippet title()}＋ 명단 · {pcls}반{/snippet}
-    {#snippet act()}<button type="button" class="btn" disabled={!text.trim() || !pcls} onclick={() => { const n = pasteRoster(S, pcls, text); cls = pcls; ver++; paste = false; toast = n ? `${pcls}반 명단 ${n}명을 올렸어요` : '「번호 이름」 줄을 못 찾았어요'; setTimeout(() => (toast = ''), 1800); }}>{pcls}반 명단 올리기</button>{/snippet}
+    {#snippet act()}<button type="button" class="btn" disabled={!text.trim() || !pcls} onclick={() => { const n = pasteRoster(S, pcls, text, repl); cls = pcls; ver++; paste = false; toast = n ? `${pcls}반 명단 ${n}명을 올렸어요` : '「번호 이름」 줄을 못 찾았어요'; setTimeout(() => (toast = ''), 1800); }}>{pcls}반 명단 올리기</button>{/snippet}
     <div class="pcl" role="group" aria-label="반 고르기" data-k="roster-cls">{#each clsNow as c (c)}<button type="button" class:on={pcls === c} aria-pressed={pcls === c} onclick={() => (pcls = c)}>{c}</button>{/each}<button type="button" class="mk" data-k="cls-make" aria-expanded={mk} onclick={() => (mk = !mk)}>＋ 반 만들기</button></div>
     {#if mk}<div class="mkrow"><input class="in" bind:value={nc} placeholder="예: 1-9 (학년-반)" inputmode="numeric" data-k="cls-new" /><button type="button" class="btn sm" disabled={!ncOk} data-k="cls-make-ok" onclick={makeCls}>만들기</button></div>{#if nc.trim() && !ncOk}<p class="hint2 bad">{clsNow.includes(nc.trim()) ? '이미 있는 반이에요' : '「학년-반」 꼴로 (예: 1-9)'}</p>{/if}{/if}
     {#if clsNow.length > 1}<button type="button" class="dl" data-k="cls-del" onclick={() => (delAsk = pcls)}>🗑 {pcls}반을 반 목록에서 빼기</button>{/if}
     <textarea class="ta" rows="8" bind:value={text} placeholder={'1 김민준\n2 이서연\n3 박지우\n…'}></textarea>
     <p class="hint2">한 줄에 「번호 이름」 · 시트에서 두 칸 복사해 붙여도 돼요 · 같은 번호는 이름만 바뀜</p>
+    <label class="hint2 repl"><input type="checkbox" bind:checked={repl} data-k="roster-replace" /> 기존 명단을 모두 지우고 이 명단으로 바꾸기 <small>(가짜 · 지난 명단이 남았을 때)</small></label>
   </Sheet>
 {/if}
 {#if delAsk}
