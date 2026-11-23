@@ -93,7 +93,7 @@ describe('⚡ #44 각성 GPT 시트 29명 (칸델 빼고)', () => {
     const idle = JSON.parse(fs.readFileSync(path.join(__dirname, '../src/ui/idle8-hd-map.json'), 'utf8')) as Record<string, string>;
     expect(AWK_HAVE.length).toBe(29);
     for (const id of AWK_HAVE) {
-      const f = AWK_ART[id]!; expect(f).toMatch(/-awk-v9\.webp$/);
+      const f = AWK_ART[id]!; expect(f).toMatch(/-awk-v(9|10)\.webp$/);
       expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', f))).toBe(true);
       expect(idle[f]).toBeTruthy(); expect(fs.existsSync(path.join(__dirname, '../public/art/heroes', idle[f]!))).toBe(true);
     }
