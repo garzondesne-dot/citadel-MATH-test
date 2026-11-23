@@ -94,13 +94,12 @@
   const soonKey = $derived(soon ? `${dayKey(now)}|${soon.p}|${soon.L?.id ?? ''}` : '');
   let soonSeen = $state(''), soonPick = $state(false), soonRang = '';
   $effect(() => { const k = soonKey, sl = soon; if (!k || !sl || k === soonRang) return; soonRang = k; untrack(() => void notify('test', '⏰ 1분 뒤 자동으로 열려요', `${sl.p}교시 · ${sl.cls}반 · ${sl.L?.no ?? ''}차시`)); });
-  // ⏰ 📜 11/24 자동 열기 = 교사 폰 (교사 로그인 · 앱이 켜져 화면에 보일 때) · 10초마다 · done 칸으로 두 번 막음 · 열면 수업 화면으로
+  // ⏰ 📜 11/24 자동 열기 = 교사 폰 + 교사 로그인한 종합실 PC (교사 로그인 · 앱이 켜져 화면에 보일 때) · 10초마다 · done 칸으로 두 번 막음 · 열면 수업 화면으로
   $effect(() => {
     if (gate || sim) return;
     const t = setInterval(() => {
       if (!feat('schedule') || needAdmin() || (typeof document !== 'undefined' && document.visibilityState === 'hidden')) return;
-      const code = autoTick(S, Date.now(), packs, (c, L) => openLesson(S, c, L));
-      if (code) { page = 'live'; void notify('test', '⏰ 수업을 열었어요', '시간표 자동 열기'); }
+      void autoTick(S, Date.now(), packs, (c, L) => openLesson(S, c, L), 'phone').then((code) => { if (code) { page = 'live'; void notify('test', '⏰ 수업을 열었어요', '시간표 자동 열기'); } });
     }, 10e3);
     return () => clearInterval(t);
   });

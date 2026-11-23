@@ -28,7 +28,7 @@
   import Sprite from '../Sprite.svelte';
   import DemoPhone from './DemoPhone.svelte';
   import QR from '../QR.svelte';
-  import { AUTO_NOTE, nextAuto, todaySlots } from '../../school/autoOpen';
+  import { AUTO_PC_NOTE, nextAuto, todaySlots } from '../../school/autoOpen';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import MyHero from '../camp/MyHero.svelte';
   import Anvil from '../forge/Anvil.svelte';
@@ -118,6 +118,8 @@
   // 📅 입장 대기 화면: 다음 수업 · ⏰ 자동 열기 (📜 2026-11-17 #21 C · E)
   const nx = $derived(feat('schedule') ? todaySlots(S, now, PACKS).find((r) => r.next) ?? null : null);
   const nxa = $derived(feat('schedule') ? nextAuto(S, now, PACKS) : null);
+  /** ⏰ 이 PC 가 교사 로그인인지 (now 따라 다시 봄 = 로그인하면 새로 고침 없이 바뀜) */
+  const tvAdm = (_t: number) => S.kind !== 'server' || !!(S as Store & { isAdmin?: () => boolean }).isAdmin?.();
   const view = $derived(!R || R.state.closed ? (R && showRes ? 'end' : 'camp') : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
   let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
@@ -360,7 +362,7 @@
           {/if}
           <p class="ewait" data-k="entry-wait">선생님이 수업을 열면 시작해요</p>
           {#if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}
-          {#if nxa}<p class="eauto" data-k="entry-auto">⏰ 다음 자동 열기 {nxa.hm} · {nxa.cls}반 {nxa.L?.no}차시<br /><small>{AUTO_NOTE}</small></p>{/if}
+          {#if nxa}<p class="eauto" data-k="entry-auto">⏰ 다음 자동 열기 {nxa.hm} · {nxa.cls}반 {nxa.L?.no}차시<br /><small>{tvAdm(now) ? '이 PC (교사 로그인) · 교사 폰 중 먼저 켜진 쪽이 열어요' : AUTO_PC_NOTE}</small></p>{/if}
         {/if}
         <div class="ebtn">
           {#if R && R.state.closed}<button type="button" data-k="tv-result" onclick={() => (showRes = true)}>🏫 학급 결과</button>{/if}

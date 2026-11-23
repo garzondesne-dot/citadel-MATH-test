@@ -1,6 +1,7 @@
 import type { LessonPack, Store } from '../model/types';
 import { addMin, BELLS, kst, lessonLen, P7, at } from './bells';
 import { CLASSES, isBeta, week, type Live } from './school';
+import { txOn } from '../store/atomic';
 
 // ⏰ 오늘 시간표 · 자동 열기 (📜 2026-11-17 #21 E · DECISIONS 「⚔ 교사 수업 탭 정리 3」 · 「📅 시간표 화면 정리」 바뀜)
 //   ⚔ 수업 탭 맨 위 「📅 오늘 시간표」(시간표를 쓸 때만) · 바로 다음 수업 = 「▶ 바로 열기」 · 「⏰ 자동 열기」 스위치(기본 끔)
@@ -43,16 +44,21 @@ export const markOpened = (S: Store, now: number, p: number, code: string) => S.
 /** 그 반이 지금 열려 있나 (열려 있으면 자동으로 새로 열지 않음) */
 export const isOpenCls = (S: Store, live: Live | null, cls: string) => !!live && !live.test && live.cls === cls && !S.get<boolean>(`rooms/${live.code}/state/closed`);
 
-/** ⏰ 📜 11/24 자동 열기 한 번 보기 (교사 폰이 10초마다 · 종합실 PC 는 안 엶 = 교사 계정을 두지 않음)
- *  시작종 ~ +5분 · 그 반이 이미 열려 있으면 「열었음」 표시만 · 다른 수업이 열려 있으면 열지 않음 · done 칸 = 두 번 열림 막음
+/** ⏰ 📜 11/24 자동 열기 한 번 보기 (교사 폰 · 교사 로그인한 종합실 PC 가 10초마다 · 선생님 「안 1 + 안 2」)
+ *  시작종 ~ +5분 · 그 반이 이미 열려 있으면 「열었음」 표시만 · 다른 수업이 열려 있으면 열지 않음
+ *  두 기기가 같이 켜져 있어도 한 번만: done 칸을 transaction 으로 먼저 잡은 기기만 엶 (잡은 표시 '…' → 방 코드)
  *  돌려주는 값 = 새로 연 방 코드 (없으면 '') */
-export function autoTick(S: Store, now: number, packs: LessonPack[], open: (cls: string, L: LessonPack) => string): string {
+export async function autoTick(S: Store, now: number, packs: LessonPack[], open: (cls: string, L: LessonPack) => string, who = 'me'): Promise<string> {
   const d = dueSlot(S, now, packs); if (!d?.L) return '';
   const lv0 = S.get<Live>('school/live');
   if (isOpenCls(S, lv0, d.cls)) { markOpened(S, now, d.p, lv0!.code); return ''; }
   if (lv0 && !S.get<boolean>(`rooms/${lv0.code}/state/closed`)) return '';
-  const code = open(d.cls, d.L); if (code) markOpened(S, now, d.p, code);
+  const path = `${AUTO}/done/${dayKey(now)}/${d.p}`; let mine = false;
+  const ok = await txOn<string>(S, path, (cur) => { if (cur) return undefined; mine = true; return `…${who}`; });
+  if (!ok || !mine) return '';
+  const code = open(d.cls, d.L); S.set(path, code || null);
   return code;
 }
 /** 화면 안내 한 줄 */
 export const AUTO_NOTE = '교사 폰 앱이 켜져 있어야 열려요';
+export const AUTO_PC_NOTE = '⏰ 이 PC 는 자동 열기 안 됨 · 교사 폰 앱이 켜져 있거나 이 PC 에 교사 로그인';
