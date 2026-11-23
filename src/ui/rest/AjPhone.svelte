@@ -3,8 +3,7 @@
   import type { Room, Store } from '../../model/types';
   import { isRight, qOf, standingsAj, syl, type Aj, type Ans } from '../../rest/ajae';
   import { ajAnswer } from '../../rest/run';
-  import { AJ_HOST } from '../../rest/ajae';
-  import HeroSprite from '../camp/HeroSprite.svelte';
+  import SageHost from './SageHost.svelte';
   // 😆 아재 퀴즈 · 학생 폰 (📜 2026-11-24): 문제 · 빈칸 □ · 글자 칩 8칸 → 다 채우면 보냄 · 틀리면 흔들고 지움(다시) · 맞히면 「n등!」
   const { S, R, code, uid, now, f }: { S: Store; R: Room; code: string; uid: string; now: number; f: Aj } = $props();
   const q = $derived(qOf(f.qs[f.n - 1] ?? 0));
@@ -41,7 +40,7 @@
     <ol class="top">{#each st.slice(0, 3) as x (x.u)}<li class:me={x.u === uid}>{x.rank}등 · {x.pts}점{x.u === uid ? ' (나)' : ''}</li>{/each}</ol>
   {:else if q}
     <p class="band">{f.n} / {f.qs.length} · {f.phase === 'q' ? `${sec}초` : '정답 공개'}</p>
-    <div class="qrow"><i class="host" data-k="aj-host" aria-hidden="true"><HeroSprite id={AJ_HOST} scale={1} play /></i><p class="q" data-k="aj-q">{q.q}</p></div>
+    <div class="qrow"><span class="host"><SageHost act={f.phase === 'show' ? 'laugh' : 'staff'} h={72} /></span><p class="q" data-k="aj-q">{q.q}</p></div>
     {#if f.phase === 'show'}
       <p class="ans" data-k="aj-ans">{q.a}</p><p class="why">{q.why}</p>
       <p class="rule">{lastMine >= 0 ? `🎉 ${lastMine + 1}번째로 맞힘 · +${f.last![lastMine]![1]}점` : done ? '맞혔어요 (점수는 3등까지)' : '다음 문제에서 다시!'}</p>
