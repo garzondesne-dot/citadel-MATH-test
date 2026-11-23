@@ -8,7 +8,7 @@
   //   위 = 「🧙 용사 확인」 + ✕ · 「n차시 보스 약점 [문양] [문양]」 · 고른 용사 큰 그림 + 이름 · 역할 · 속성 칩 · 약점!
   //   스킬 Ⅰ ~ Ⅳ 가로 한 줄(장착 = 금테 ✔) · 효과 한 줄 · 거름 칩(⭐ 약점 용사 · 내 용사 · 모두) · 격자 4칸 · 아래 = 주요 단추 하나(56)
   //   고르기 값 · 저장 = 부르는 쪽(onpick) 그대로 · 안 가진 용사 = 흐림 🔒
-  import { heroOf, ladder, skillName } from '../../../model/hero';
+  import { AWK_ENH, awkTitle, heroOf, ladder, skillName, titleOf } from '../../../model/hero';
   import { portraitOf } from '../../manifest';
   import HeroSprite from '../../camp/HeroSprite.svelte';
   import { famOf, lookOfStats, statRows, statsOf } from '../../../board/atb/heroes';
@@ -28,6 +28,8 @@
   const st = $derived(statsOf({ hero: sel, lv, enh, tier: tierOf(sel), awk })), info = $derived(heroOf(sel));
   const lad = $derived(ladder(sel) as string[]);
   const t4 = $derived(tierOf(sel) >= 4);
+  // ⚡ 각성 조건 한 줄 (🐞 11/23 「용사 바꾸기 할 때 로안만 각성 조건 표시」 · 11/20 옛 고르는 창 #15 줄이 이 시트로 바꿀 때 빠졌음 → 되살림 · 각성 있는 용사 모두)
+  const awkT = $derived(awkTitle(sel)), awkName = $derived((awkT && titleOf(awkT)?.name) || '');
   const pt = (id: number) => portraitOf(id);
   const FLT: [HeroFilter, string][] = [['weak', '⭐ 약점 용사'], ['mine', '내 용사'], ['all', '모두']];
 </script>
@@ -44,6 +46,7 @@
     </div>
     <div class="sk" data-k="hero-sheet-skills">{#each lad as k, i (k)}{@const on = tierOf(sel) === i + 1}<button type="button" class="s" class:on disabled={!onskill} data-tier={i + 1} aria-label="{['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]} {skillName(k)}{on ? ' · 장착' : ''}" onclick={() => onskill?.(sel, i + 1)}><b>{['Ⅰ', 'Ⅱ', 'Ⅲ', 'Ⅳ'][i]}{on ? ' ✔' : ''}</b><small>{skillName(k)}</small></button>{/each}</div>
     <p class="eff" data-k="hero-sheet-eff">✳ 스킬 2 = Ⅳ {lad[3] ? skillName(lad[3]) : ''}{t4 ? '' : ' 장착하면'} · 구슬 2 · 내 속성 실드 1칸 깸</p>
+    {#if awkT}<p class="awk" class:on={awk && sel === cur} data-k="hero-sheet-awk" data-hero={sel}>⚡ 각성 조건 · {info.name} 출전 · 🔨 +{AWK_ENH} · Ⅳ {lad[3] ? skillName(lad[3]) : ''} · 🏅 「{awkName}」{awk && sel === cur ? ' · ✨ 각성 중' : ''}</p>{/if}
     {#if detail}<p class="famfx" data-k="atb-pick-famfx">{ATTR_FX_TXT[fxOfAttr(st.attr)].emo} {ATTR_FX_TXT[fxOfAttr(st.attr)].name} · {ATTR_FX_TXT[fxOfAttr(st.attr)].desc}</p>
       <ul class="stats" aria-label="용사 수치" data-k="hero-sheet-stats">{#each statRows(st) as r (r.k)}<li data-stat={r.k}><span>{r.label}</span><b>{r.v}{#if r.sub}<small>{r.sub}</small>{/if}</b></li>{/each}</ul>{/if}
     {#if note}<p class="note">{note}</p>{/if}
@@ -65,6 +68,8 @@
 </div>
 
 <style>
+  .awk { margin: 0; font: 600 14px var(--font); color: var(--text-2); line-height: 1.4; }
+  .awk.on { color: var(--accent); }
   .dim { position: fixed; inset: 0; z-index: 80; background: rgba(5, 6, 9, 0.62); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; top: max(48px, 8vh); z-index: 81; margin: 0 auto; max-width: 560px; display: flex; flex-direction: column; border-radius: 20px 20px 0 0; background: var(--surface, #181b22); color: var(--text, #f2f3f5); box-shadow: 0 -8px 24px #0008; animation: up 0.22s ease-out; }
   @keyframes up { from { transform: translateY(40px); opacity: 0; } }

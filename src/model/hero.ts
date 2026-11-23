@@ -13,8 +13,9 @@ export const TEACHER_HEROES: HeroInfo[] = DATA.heroes.filter((h) => (h as { teac
  *   조건 4 = 그 용사 출전 · 🔨 강화 +10 이상 · 그 속성 Ⅳ 스킬(사다리 4번째) 장착 · 그 용사 전용 칭호 장착 → 각성 모습 · 하나라도 빠지면 원래 모습
  *   데미지 · 보상 · 스킬 그대로(속성 · 사다리 = 원래 용사) · 고르는 칸 아님 · ⚠ 10강 홀리 방패의 raid.ts awake() 와 다른 것
  *   모습 id = 로안 16(옛 판 기록 그대로) · 나머지 100 + 용사 번호 · 각성 그림이 없는 용사 = 그림만 원래 것(이름 · 컷인 · 스킬 연출은 각성) */
-/** 🚦 30명 각성 = 베타만 · 정식(release 빌드) = 로안만 (📜 11/20 선생님 「각성 외형 = GPT 30명 끝날 때까지 정식 대기」 · 30명 그림이 오면 이 줄만 true) */
-export const AWK_ALL = import.meta.env?.VITE_CHANNEL !== 'release';
+/** 🚦 30명 각성 = 베타 · 정식 모두 (📜 11/20 「정식 대기」 → 11/21 「기본 모습 + 각성 연출」 = 다음 정식 배포에서 깃발을 켬 · 11/23 b236 에 깃발이 꺼진 채 나가 로안만 보였음 → 켬)
+ *   그림 없는 용사 = 기본 모습 + 금빛 오라 · 금빛 이름 · 각성 스킬 · 컷인 · 전용 칭호 (AWK_ART 에 그림 있는 용사만 각성 그림) */
+export const AWK_ALL = true;
 /** 정식에서도 로안 각성에 새 연출(A1 금빛 컷인 · A2 ✦ 금빛 이름 · A3 전용 연출)을 줌 — 선생님 a/b 고르기 (a = true) */
 export const ROAN_NEW = true;
 export type StatKey = 'str' | 'grit' | 'focus' | 'brave' | 'explore' | 'craft';
