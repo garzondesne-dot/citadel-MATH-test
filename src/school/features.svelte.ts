@@ -61,12 +61,13 @@ export const FEATS: Feat[] = [
 ];
 // 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
 // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16 선생님 「디펜스는 단추 없애고 보존만」): 어느 묶음에도 처음엔 안 켜짐 · ⚙ 자세히 스위치로 켜면 되살아남(코드 · 데이터 그대로)
-const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule' && id !== 'rest-defense');
+// 🐉 용이 잠든 사이 = 숨김 · 보존 (📜 2026-11-24 선생님 · 디펜스와 같은 꼴 · 서버 규칙에 dg 칸이 없어 수업에서 안 돌던 놀이)
+const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule' && id !== 'rest-defense' && id !== 'rest-dragon');
 // 📦 기능 단계 (📜 2026-11-16 · DECISIONS 「📦 차시 팩 · 기능 단계」): 🪶 기본 = 뼈대 · ⚔ 표준 = + 칼 · 양피지 · 선제 공격 · 도장(준비 0) · 🏰 풀 = + 도움 3단 · 익명 풀이 · 개념 체크(팩 덧칸) + 과목 팩 · AI 키
 const STD_NEW: FeatId[] = ['sword', 'qpaper', 'pre', 'stamp', 'keys'];
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [
   { id: 'basic', ic: '🪶', name: '가볍게', sub: '뼈대만 · 수업 레이드 · 결과 · 복습', on: ['scarecrow', 'board'] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
-  { id: 'standard', ic: '⚔', name: '게임처럼', sub: '+ 용사 · 💎 · 강화 · 쉼터 놀이 · 몬스터 공격 · 칼 · 도장', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-ox', 'rest-dragon', 'rest-ajae', 'mon-attack', 'lesson-fx', 'juice', 'theme', ...STD_NEW] },
+  { id: 'standard', ic: '⚔', name: '게임처럼', sub: '+ 용사 · 💎 · 강화 · 쉼터 놀이 · 몬스터 공격 · 칼 · 도장', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-ox', 'rest-ajae', 'mon-attack', 'lesson-fx', 'juice', 'theme', ...STD_NEW] },
   { id: 'full', ic: '🏰', name: '모두', sub: '+ 도움 3단 · 익명 풀이 · 개념 체크 · 과목 팩 · AI', on: ALL },
 ];
 export interface FeatCfg { bundle: BundleId; on?: Partial<Record<FeatId, boolean>> }
