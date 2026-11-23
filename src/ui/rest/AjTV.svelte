@@ -10,7 +10,7 @@
 </script>
 
 <div class="atv" data-k="aj-tv" data-phase={f.phase}>
-  <div class="top"><b>😆 아재 퀴즈{f.phase === 'q' || f.phase === 'show' ? ` · ${f.n} / ${f.qs.length}` : ''}</b>{#if f.phase === 'q' || f.phase === 'intro'}<span class="sec" data-k="aj-sec">{sec}초</span>{/if}</div>
+  <div class="top"><b>😆 아재 퀴즈 {f.round ?? 1}회{f.phase === 'q' || f.phase === 'show' ? ` · ${f.n} / ${f.qs.length}` : ''}</b>{#if f.phase === 'q' || f.phase === 'intro'}<span class="sec" data-k="aj-sec">{sec}초</span>{/if}</div>
   {#if f.phase === 'intro'}
     <p class="rule">폰에서 <b>글자를 골라</b> 정답을 완성해요 · 먼저 맞히면 <b>3 · 2 · 1점</b> · 틀려도 다시!</p>
   {:else if f.phase === 'end'}

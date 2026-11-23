@@ -1,11 +1,12 @@
 // 😆 쉼터 놀이 「아재 퀴즈」 (📜 2026-11-24 선생님 「아재퀴즈 개발 진행」 · hero-v2 docs/handoff/ajae-quiz/README.md · 문제 = ajae.json 51개 그대로)
+//   📜 11/24 회차제: 1회 = 1 ~ 6번 … 8회 = 43 ~ 48번(49 ~ 51 예비) · 반마다 다음 회차 자동(school/funUsed/{반}/ajr) · 판을 끝까지 하면 +1
 //   한 판 = 6문제 · 문제당 30초 · 글자 칩 8칸을 골라 정답 완성(틀리면 지우고 다시) · 문제마다 1등 3 · 2등 2 · 3등 1점(맞힌 시각 순 · 같은 시각 = 같은 등수)
 //   문제 끝 = 정답 + why 5초 공개 · 다 끝나면 다득점 우승(같은 점수 = 공동) · 탈락 없음
 //   학생 답 = rooms/{코드}/fv/{rk}/{uid} = { a: 고른 글자, at: 시각 } (이미 열린 칸 · 규칙 바뀜 없음) · 판정 = 시계 맡은 기기(TV · 교사 폰)
 import BANK from './ajae.json';
 
 /** ⚙ 값 한 곳 (바꾸기 쉽게) */
-export const AJ = { n: 6, qMs: 30000, showMs: 5000, introMs: 4000, pts: [3, 2, 1], chips: 8, min: 1, recentKeep: 18 } as const;
+export const AJ = { n: 6, qMs: 30000, showMs: 5000, introMs: 4000, pts: [3, 2, 1], chips: 8, min: 1, rounds: 8 } as const;
 /** 시간 값 (🧪 화면 시험만 globalThis.__AJ_SPEED 로 줄임 · 디펜스 __TD_PICK 과 같은 꼴) */
 const ms = (k: 'qMs' | 'showMs' | 'introMs') => AJ[k] * (Number((globalThis as { __AJ_SPEED?: number }).__AJ_SPEED) || 1);
 export interface AjQ { no: number; q: string; a: string; why: string; cat: string }
@@ -15,7 +16,7 @@ export const qOf = (no: number) => QS.find((x) => x.no === no) ?? null;
 export const syl = (s: string) => Array.from(s);
 
 export interface Aj {
-  kind: 'aj'; g: number; phase: 'intro' | 'q' | 'show' | 'end'; to: number; endAt?: number;
+  kind: 'aj'; g: number; /** 📜 회차 1 ~ 8 */ round: number; phase: 'intro' | 'q' | 'show' | 'end'; to: number; endAt?: number;
   /** 이번 판 문제 번호들 · 지금 몇 번째(1 ~ n) */ qs: number[]; n: number;
   /** 지금 문제의 글자 칩 (모든 기기가 같은 칩) */ chips: string[];
   /** 지금 문제 답칸 이름 (fv/{rk}) */ rk: string;
@@ -29,11 +30,10 @@ export type Ans = { a: string; at: number };
 type Rnd = () => number;
 const shuffle = <T,>(xs: T[], rnd: Rnd) => { const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j]!, a[i]!]; } return a; };
 
-/** 판 문제 고르기: 최근에 나온 것(recent)은 뒤로 · 같은 판 안 겹침 */
-export function pickQs(recent: number[], rnd: Rnd = Math.random, n: number = AJ.n): number[] {
-  const seen = new Set(recent), fresh = shuffle(QS.filter((x) => !seen.has(x.no)), rnd), old = shuffle(QS.filter((x) => seen.has(x.no)), rnd);
-  return [...fresh, ...old].slice(0, n).map((x) => x.no);
-}
+/** 📜 11/24 회차제 (선생님 「랜덤 말고 · 스포되면 안 되니까 회차로」): no 1 ~ 48 을 6개씩 1 ~ 8회차로 고정 · 49 ~ 51 = 예비(판에 안 나옴) */
+export const roundQs = (r: number): number[] => { const k = ((Math.max(1, Math.round(r)) - 1) % AJ.rounds); return Array.from({ length: AJ.n }, (_, i) => k * AJ.n + i + 1); };
+/** 반마다 다음 회차 (1 ~ 8 · 8 다음 = 1) */
+export const nextRound = (r: number) => (Math.max(1, Math.round(r) || 1) % AJ.rounds) + 1;
 /** 글자 칩 8칸 = 정답 글자 + 다른 정답들의 글자(정답 글자와 겹치지 않는 것만 → 정답이 두 가지로 안 만들어짐) */
 export function chipsFor(no: number, rnd: Rnd = Math.random, k: number = AJ.chips): string[] {
   const q = qOf(no); if (!q) return [];
@@ -46,9 +46,9 @@ export function chipsFor(no: number, rnd: Rnd = Math.random, k: number = AJ.chip
 export const isRight = (no: number, a: string) => { const q = qOf(no); return !!q && a === q.a; };
 const rkOf = (g: number, n: number) => `aj${g}_${n}`;
 
-export function startAj(alive: string[], now: number, recent: number[], rnd: Rnd = Math.random): Aj {
-  const qs = pickQs(recent, rnd);
-  return { kind: 'aj', g: now, phase: 'intro', to: now + ms('introMs'), qs, n: 1, chips: chipsFor(qs[0]!, rnd), rk: rkOf(now, 1), alive: Object.fromEntries(alive.map((u) => [u, true])) as Record<string, true>, total: alive.length, score: {} };
+export function startAj(alive: string[], now: number, round: number, rnd: Rnd = Math.random): Aj {
+  const qs = roundQs(round);
+  return { kind: 'aj', g: now, round: Math.max(1, Math.round(round) || 1), phase: 'intro', to: now + ms('introMs'), qs, n: 1, chips: chipsFor(qs[0]!, rnd), rk: rkOf(now, 1), alive: Object.fromEntries(alive.map((u) => [u, true])) as Record<string, true>, total: alive.length, score: {} };
 }
 /** 맞힌 순서 → 점수 (시각 순 · 같은 시각 = 같은 등수 · 3등까지) */
 export function rankAns(no: number, ans: Record<string, Ans | string> | null | undefined): [string, number][] {
