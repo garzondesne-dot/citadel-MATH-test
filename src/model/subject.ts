@@ -77,6 +77,8 @@ export interface Subject {
   monsterHit?: Record<string, string>;
   /** 👩‍🏫 체험판 (📜 2026-11-17 #33): 차시 카드 · 단계 · 쉼터 자리 · 방 설정 · 같이 싣는 팩 글(차시 팩 json) — 없으면 체험판 없음 */
   trial?: TrialCfg;
+  /** 📝 12월 마무리 설문 15번에 들어갈 「도전 공간」 이름 (📜 11/23 · 과목 팩이 정함 · 없으면 「도전 공간」) */
+  surveyCastle?: string;
   /** 테스트 판 가짜 자료 글 (소식 · 설문 · 서술형 · 기호 표) */
   demo: { inbox: { id: string; kind: 'idea' | 'photo' | 'quiz' | 'survey'; title: string; sub: string; body?: string; from?: { cls: string; num: number } }[]; syms: [string, string][]; photoWhere: string; surveyLesson: string; surveyHard: string };
 }

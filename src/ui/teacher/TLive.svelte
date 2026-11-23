@@ -21,6 +21,7 @@
   import { unlocksOf } from '../../raid/raid';
   import { hhmm } from '../../school/bells';
   import { keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
+  import { NO12, svLabel } from '../../school/survey12';
   import { feat, type FeatId } from '../../school/features.svelte';
   import { FOLD_MS, guideOf } from '../../school/guide';
   import { bossClock, prevPending, stampBlocked } from '../../school/formative';
@@ -491,7 +492,7 @@
   {:else if sheet === 'survey'}
     <Sheet onclose={() => (sheet = '')} mainText="닫기">
       {#snippet title()}📝 수업 설문{/snippet}
-          <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svSt.no}차시</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${no}차시로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${no}차시 설문을 열었어요`); } }}>열기</button>{/if}</div>
+          <div class="adj svc" data-k="sv-ctl"><span>📝 설문 <small>({live.cls}반)</small></span>{#if svSt}<b>열림 · {svLabel(svSt.no)}</b><button type="button" onclick={() => { setOpen(S, live.cls, false, 0); say('📝 설문을 닫았어요'); }}>✕ 닫기</button>{:else}{#if svNo !== NO12}<label>차시 <input type="number" min="1" max="30" bind:value={svNo} /></label>{/if}<label class="m12"><input type="checkbox" data-k="sv-12" checked={svNo === NO12} onchange={(e) => (svNo = e.currentTarget.checked ? NO12 : L.no || 10)} /> 12월 마무리</label><button type="button" data-k="sv-open-cls" onclick={() => { const no = keepNo(svNo); svNo = no; if (confirm(`${live.cls}반 설문을 ${svLabel(no)}(으)로 열까요? (학생 폰 캠프에 📝 단추)`)) { setOpen(S, live.cls, true, no); say(`📝 ${svLabel(no)} 설문을 열었어요`); } }}>열기</button>{/if}</div>
     </Sheet>
   {:else if sheet === 'bossask'}
     {@const lv = bossLive(L, R)}

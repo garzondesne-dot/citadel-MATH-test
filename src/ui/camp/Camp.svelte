@@ -47,10 +47,12 @@
   import { manualOf, bonusBase, castleState, floorName, progressOf, spanOf, withLegacy, type CastleRec } from '../../school/castle';
   import { visibleCastles } from '../../school/castles.svelte';
   import SurveySheet from './SurveySheet.svelte';
+  import SurveySheet12 from './SurveySheet12.svelte';
+  import { is12, pendingAny, svLabel } from '../../school/survey12';
   import FeedbackSheet from './FeedbackSheet.svelte';
   import { adoptLog } from '../../school/feedback';
   import { deviceStore } from '../../store/device';
-  import { donePath, pendingNo, REWARD, statePath } from '../../school/survey';
+  import { donePath, REWARD, statePath } from '../../school/survey';
   import { isExcluded } from '../../school/school';
   import MailBox from './MailBox.svelte';
   import { PACKS } from '../../engine/packs';
@@ -183,7 +185,7 @@
   const svWho = untrack(() => (pupil && S.kind === 'server' && meBound() ? { cls: pupil.cls, num: pupil.num } : null));
   const svOpen = untrack(() => liveValue<unknown>(S, svWho ? statePath(svWho.cls) : 'survey/_none')), svDone = untrack(() => liveValue<unknown>(S, svWho ? donePath(svWho.cls, svWho.num) : 'surveyDone/_none/0'));
   onDestroy(svOpen.stop); onDestroy(svDone.stop);
-  const svNo = $derived.by(() => { void svOpen.v.val; void svDone.v.val; return svWho && feat('survey') ? pendingNo(S, svWho.cls, svWho.num) : 0; });
+  const svNo = $derived.by(() => { void svOpen.v.val; void svDone.v.val; return svWho && feat('survey') ? pendingAny(S, svWho.cls, svWho.num) : 0; });
   let svSent = $state(false);
   // 📝 설문이 열려 있으면 캠프 들어올 때 한 번 안내 띠 (📜 2026-11-16 선생님 b19 「하단에 크게 있긴 한데 못 찾았음」) · 설문(차시)마다 이 폰에서 한 번 · 6초 뒤 접힘
   const SVK = 'citadel-v1-svband';
@@ -510,7 +512,7 @@
       {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
       {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{visibleCastles().length ? `${visibleCastles().map((f) => `${f.floor}층`).join(' · ')} 평가` : '평가'} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
       {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
-      {#if svNo && !svSent}<li><button type="button" data-todo="survey" onclick={() => (sheet = 'survey')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>수업 설문 ({svNo}차시)</b><small>3분 · 이름 없이 · +{REWARD.xp} EXP · 💎+{REWARD.gem}</small></span><em>지금</em></button></li>{/if}
+      {#if svNo && !svSent}<li><button type="button" data-todo="survey" onclick={() => (sheet = 'survey')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>수업 설문 ({svLabel(svNo)})</b><small>3분 · 이름 없이 · +{REWARD.xp} EXP · 💎+{REWARD.gem}</small></span><em>지금</em></button></li>{/if}
       <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
     </ul>
   </section>
@@ -572,14 +574,14 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
-    {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svNo}차시 · 눌러서 답하기 ›</button>{/if}
+    {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
     {#if resvSoon}<button type="button" class="resvb" data-k="resv-bell" onclick={() => (sheet = 'dummy')}>🔔 {resvSoon.no}차시 예약 판 {(resvSoon.when ?? 0) > clock.now ? `${Math.max(1, Math.ceil(((resvSoon.when ?? 0) - clock.now) / 60000))}분 전` : '지금 열렸어요'} · 게시판으로</button>{/if}
   </div>
   </div>
 
   <section class="info">
-    {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svNo}차시 · 3분 · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
+    {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svLabel(svNo)} · {is12(svNo) ? '5분' : '3분'} · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
     {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={heroTap} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
@@ -614,7 +616,7 @@
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
   {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0 || !!trial} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
 {:else if sheet === 'survey' && svWho && svNo && !svSent}
-  <SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />
+  {#if is12(svNo)}<SurveySheet12 {S} cls={svWho.cls} num={svWho.num} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />{:else}<SurveySheet {S} cls={svWho.cls} num={svWho.num} no={svNo} excluded={isExcluded(S, svWho.cls, svWho.num)} onpaid={svPaid} onclose={() => (sheet = null)} />{/if}
 {:else if sheet === 'fb' || sheet === 'fb-board'}
   {@const fbS = pupil && meBound() ? S : fbLocal()}
   <FeedbackSheet S={fbS} cls={pupil?.cls ?? 'test'} num={pupil?.num ?? 0} pid={pupil?.uid ?? 'me'} trial={!!trial} tab0={sheet === 'fb' ? 'send' : 'board'} onclose={() => (sheet = 'mail')} />

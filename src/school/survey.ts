@@ -148,7 +148,7 @@ export const pendingNo = (S: Store, c: string, n: number): number => { const st 
 /** 교사: 반 하나 응답 (한 번 받기 · surveyA 는 실시간 거울 밖 · 교사만 읽기) */
 export async function answers(S: Store, c: string): Promise<Saved[]> {
   const v = (S.fetch ? await S.fetch<Record<string, unknown>>(`surveyA/${ck(c)}`).catch(() => null) : S.get<Record<string, unknown>>(`surveyA/${ck(c)}`)) || {};
-  return Object.values(v).map(norm).filter((a): a is Saved => !!a);
+  return Object.values(v).filter((x) => Number((x as { no?: unknown } | null)?.no) !== 100).map(norm).filter((a): a is Saved => !!a); // 12월 마무리(no 100 · survey12.ts) = 따로 셈
 }
 export const doneCount = (S: Store, c: string) => Object.values(S.get<Record<string, unknown>>(`surveyDone/${ck(c)}`) || {}).filter((v) => v === true).length; // 🐞 #61 번호가 1 부터 빽빽하면 서버가 배열로 줌([빈칸, true …]) → 빈칸까지 세어 「97 / 91」
 
@@ -177,14 +177,18 @@ export function rewardWrites(S: Store, c: string, n: number, at: number): { gem:
 // ── 교사: 차시 번호 (이 기기 기억 · 정식 「설문 10차시에 열거야 · 내가 수동으로」) ──
 const NOKEY = 'citadel-survey-no';
 export const pickNo = (def = 10) => { try { return Number(localStorage.getItem(NOKEY)) || def; } catch { return def; } };
-export const keepNo = (v: number) => { const n = Math.max(1, Math.min(30, Math.round(Number(v)) || 1)); try { localStorage.setItem(NOKEY, String(n)); } catch { /* 이 기기만 */ } return n; };
+export const keepNo = (v: number) => { const n = Number(v) === 100 ? 100 : Math.max(1, Math.min(30, Math.round(Number(v)) || 1)); /* 100 = 12월 마무리 */ try { localStorage.setItem(NOKEY, String(n)); } catch { /* 이 기기만 */ } return n; };
 
 // ── 대시보드 「설문」 보기가 읽는 응답 (교사가 그 보기를 열 때 반마다 한 번 받아 둠 · Dash.svelte) ──
 let cache: Record<string, Saved[]> = {};
+const raw12: Record<string, unknown[]> = {};
+/** 12월 마무리 응답 원본 (survey12.norm12 로 읽음 · 엑셀 「12월」 시트) */
+export const surveyRaw = () => raw12;
+async function rawAnswers(S: Store, c: string): Promise<unknown[]> { const v = (S.fetch ? await S.fetch<Record<string, unknown>>(`surveyA/${ck(c)}`).catch(() => null) : S.get<Record<string, unknown>>(`surveyA/${ck(c)}`)) || {}; return Object.values(v).filter((x) => Number((x as { no?: unknown } | null)?.no) === 100); }
 export const surveyCache = () => cache;
 export async function loadCache(S: Store, classes: string[]): Promise<Record<string, Saved[]>> {
   const out: Record<string, Saved[]> = {};
-  for (const c of classes) { out[c] = await answers(S, c).catch(() => []); if (S.fetch) await S.fetch(`surveyDone/${ck(c)}`).catch(() => null); } // 응답 표시 수도 그 반 덩어리를 받아 둠
+  for (const c of classes) { out[c] = await answers(S, c).catch(() => []); raw12[c] = await rawAnswers(S, c).catch(() => []); if (S.fetch) await S.fetch(`surveyDone/${ck(c)}`).catch(() => null); } // 응답 표시 수도 그 반 덩어리를 받아 둠
   cache = { ...cache, ...out };
   return out;
 }

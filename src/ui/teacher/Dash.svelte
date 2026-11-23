@@ -11,7 +11,8 @@
   import { onDestroy, untrack } from 'svelte';
   import { liveValue } from '../room.svelte';
   import { modeLogs, modeSummary } from '../../school/study';
-  import { loadCache, sheets as svSheets, surveyCache } from '../../school/survey';
+  import { loadCache, sheets as svSheets, surveyCache, surveyRaw } from '../../school/survey';
+  import { norm12, sheets12 } from '../../school/survey12';
   import StatsPick from './StatsPick.svelte';
 
   // 📊 대시보드 (#125 · 시안 ⑳) — 학생 탭 [명단 · 대시보드] 의 대시보드 · 같은 데이터 · 모양 둘(기준 너비 720 · #131)
@@ -39,7 +40,7 @@
     words = Object.values(rooms).filter((r) => r && r.meta && r.words && want.has(String(r.meta.cls))).flatMap((r) => { const no = PACKS.find((x) => x.id === r.meta!.lesson)?.no ?? 0; return Object.values(r.words || {}).filter((x) => x && x.t && !x.bad).map((x) => ({ cls: String(r.meta!.cls), no, t: String(x!.t) })); }).sort((a, b) => a.no - b.no || a.cls.localeCompare(b.cls));
     wBusy = false;
   }
-  function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; download(makeXlsx(svSheets(by)), name); toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
+  function svExcel() { const C = surveyCache(), by = Object.fromEntries(svCls().map((c) => [c, C[c] ?? []])), name = `설문응답_${cls === ALL ? '전체' : cls}_${ymd()}.xlsx`; const R = surveyRaw(), by12 = Object.fromEntries(svCls().map((c) => [c, (R[c] ?? []).map(norm12)])); download(makeXlsx([...svSheets(by), ...(Object.values(by12).some((l) => l.length) ? sheets12(by12) : [])]), name); /* 📝 12월 마무리 = 시트 2장 더 (응답이 있을 때만) */ toast = `⬇ ${name}`; setTimeout(() => (toast = ''), 2600); }
   // 🌡 정식 dash.js heat: % 칸 = 바탕 5단(90↑ · 75↑ · 60↑ · 40↑ · 그 아래) · 대시보드 겉모습 = 옛 정식 (📜 2026-11-15 머리 🔨)
   const heat = (v: unknown) => { if (!v || typeof v !== 'object' || !('pct' in (v as object))) return ''; const p = (v as { pct: number }).pct * 100; return p >= 90 ? 'h5' : p >= 75 ? 'h4' : p >= 60 ? 'h3' : p >= 40 ? 'h2' : 'h1'; };
   let vopt = $state('');

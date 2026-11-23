@@ -6,6 +6,7 @@
   import { allUids, classUids, GEMS, QUICK, sendMail } from '../../school/mail';
   import { hhmm } from '../../school/bells';
   import { doneCount, keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
+  import { NO12, svLabel } from '../../school/survey12';
   import { feat } from '../../school/features.svelte';
   import { allRows, photoNeeds, roomTitle, type PhotoRow } from '../../school/photo';
   import { liveValue } from '../room.svelte';
@@ -86,7 +87,7 @@
   let svNo = $state(pickNo(untrack(() => packs[0]?.no ?? 10)));
   const svRows = $derived.by(() => { void ver; return CLASSES.map((c) => ({ c, st: stateOf(S, c), done: doneCount(S, c), size: roster(c, S).length, beta: isBeta(S, c) })); });
   const svStop = untrack(() => CLASSES.map((c) => S.watch(`surveyDone/${c}`, () => ver++))); onDestroy(() => svStop.forEach((f) => f())); // 응답 수 실시간 (반 덩어리)
-  function svSet(list: string[], on: boolean) { const no = keepNo(svNo); svNo = no; for (const c of list) setOpen(S, c, on, no); ver++; say(on ? `📝 ${no}차시 설문을 열었어요` : '📝 설문을 닫았어요'); }
+  function svSet(list: string[], on: boolean) { const no = keepNo(svNo); svNo = no; for (const c of list) setOpen(S, c, on, no); ver++; say(on ? `📝 ${svLabel(no)} 설문을 열었어요` : '📝 설문을 닫았어요'); }
 </script>
 
 <div class="tbar"><div class="t">소식</div><button type="button" class="tchip" data-k="news-fbk" onclick={() => (side = 'fbk')}>🛠 의견</button><button type="button" class="tchip" data-k="news-note" onclick={() => (side = 'note')}>{notePref.on && notePerm() === 'granted' ? '🔔' : '🔕'} 알림</button><button type="button" class="tchip" data-k="changes" onclick={() => (side = 'changes')}>📜 바뀐 것</button></div>
@@ -146,8 +147,8 @@
     </div>
     {#if feat('survey')}<div class="card" data-k="sv-panel">
       <span class="lab">📝 수업 설문 · 열면 그 반 학생 폰(캠프)에 📝 단추 · 이름 없이 3분 · 결과 = 학생 탭 대시보드 「설문」</span>
-      <div class="row"><label class="svno">차시 <input type="number" min="1" max="30" bind:value={svNo} onchange={() => (svNo = keepNo(svNo))} data-k="sv-no" /></label><button type="button" class="b1" data-k="sv-all1" onclick={() => { if (confirm(`모든 반(${CLASSES.length}개) 설문을 ${keepNo(svNo)}차시로 열까요?`)) svSet(CLASSES, true); }}>모든 반 열기</button><button type="button" class="b2" data-k="sv-all0" onclick={() => { if (confirm('모든 반 설문을 닫을까요?')) svSet(CLASSES, false); }}>모든 반 닫기</button></div>
-      <div class="svt">{#each svRows as r (r.c)}<div class="svr" data-sv-cls={r.c}><b>{r.c}반{r.beta ? ' 🧪' : ''}</b><span class:open={!!r.st}>{r.st ? `열림 · ${r.st.no}차시` : '닫힘'}</span><small>{r.done}/{r.size}명</small><button type="button" class:b1={!r.st} class:b2={!!r.st} onclick={() => svSet([r.c], !r.st)}>{r.st ? '✕ 닫기' : '열기'}</button></div>{/each}</div>
+      <div class="row">{#if svNo !== NO12}<label class="svno">차시 <input type="number" min="1" max="30" bind:value={svNo} onchange={() => (svNo = keepNo(svNo))} data-k="sv-no" /></label>{/if}<label class="svno"><input type="checkbox" data-k="sv-12" checked={svNo === NO12} onchange={(e) => (svNo = keepNo(e.currentTarget.checked ? NO12 : 10))} /> 12월 마무리</label><button type="button" class="b1" data-k="sv-all1" onclick={() => { if (confirm(`모든 반(${CLASSES.length}개) 설문을 ${svLabel(keepNo(svNo))}(으)로 열까요?`)) svSet(CLASSES, true); }}>모든 반 열기</button><button type="button" class="b2" data-k="sv-all0" onclick={() => { if (confirm('모든 반 설문을 닫을까요?')) svSet(CLASSES, false); }}>모든 반 닫기</button></div>
+      <div class="svt">{#each svRows as r (r.c)}<div class="svr" data-sv-cls={r.c}><b>{r.c}반{r.beta ? ' 🧪' : ''}</b><span class:open={!!r.st}>{r.st ? `열림 · ${svLabel(r.st.no)}` : '닫힘'}</span><small>{r.done}/{r.size}명</small><button type="button" class:b1={!r.st} class:b2={!!r.st} onclick={() => svSet([r.c], !r.st)}>{r.st ? '✕ 닫기' : '열기'}</button></div>{/each}</div>
     </div>{/if}
   {/if}
 </div>

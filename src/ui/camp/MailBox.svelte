@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { svLabel } from '../../school/survey12';
   // 📮 우편함 (정식 mail.js open 그대로 · 아래 시트): 받은 소식(안 읽음 = 왼쪽 금빛 줄) · 🎁 아직 안 받은 선물 = 「받기」 · 받은 선물 = ✔ 받음 · 열면 모두 읽음
   //   보내기 = 📝 설문(열렸을 때) · 💌 편지 · 🎁 친구 선물 = 다음 판 (정식에 있지만 베타에 아직 없음)
   import { untrack } from 'svelte';
@@ -46,7 +47,7 @@
       {#if box}{#each kept.slice(0, 60) as x (`${x.k}|${x.id}`)}{@render row(x)}{/each}{/if}{/if}
     <p class="sub"><b>보내기</b></p>
     <div class="send">
-      <button type="button" disabled={!survey} onclick={() => onsurvey?.()}><i>📝</i>설문{#if survey}<small>{survey}차시</small>{/if}</button>
+      <button type="button" disabled={!survey} onclick={() => onsurvey?.()}><i>📝</i>설문{#if survey}<small>{svLabel(survey)}</small>{/if}</button>
       <button type="button" disabled title="다음 판에서 열려요"><i>💌</i>편지<small>다음 판</small></button>
       <button type="button" disabled title="다음 판에서 열려요"><i>🎁</i>친구 선물<small>다음 판</small></button>
     </div>
