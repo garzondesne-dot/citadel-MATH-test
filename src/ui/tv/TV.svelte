@@ -659,6 +659,8 @@
   .ov.fun .err { color: #ffb4ae; font-size: var(--tv-title); } .ov.fun .frz { color: #ffb4ae; font-size: var(--tv-title); }
   .ov.fun.still .cd { opacity: 0.5; }
   .ov small { font-size: var(--tv-body); color: #d6d9e0; }
+  /* 🐞 11/23 「집중 모드에서 문제 단추 → 문제 창이 집중 막 뒤로」: 선생님이 띄운 📄 문제 · 📺 다시 보기 · 🔎 풀이 창 = 집중 막(z 6) 위 · 닫으면 집중 막 그대로 */
+  .ov.sheet, .ov.rev { z-index: 8; }
   .ov.sheet { background: rgba(251, 248, 241, 0.97); color: #1b1a17; align-items: flex-start; justify-content: flex-start; padding: 12cqh 6cqw; text-align: left; }
   .ov.sheet b { font-size: var(--tv-title); text-shadow: none; }
   .ov.sheet p { font-size: var(--tv-title); font-weight: 500; }
