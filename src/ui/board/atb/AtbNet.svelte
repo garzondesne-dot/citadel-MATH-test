@@ -18,11 +18,12 @@
   import Land from './Land.svelte';
   import AtbResult from './AtbResult.svelte';
 
-  const { S: store, pid, uid, names = {}, prevStars = 0, mastery = 0, onend }: {
+  const { S: store, pid, uid, names = {}, prevStars = 0, mastery = 0, onend, onresult }: {
     /** 서버 칸 (게시판과 같은 Store) */ S: Store; pid: string; uid: string;
     /** 👥 파티원 보이는 이름 (uid → 같은 반 = 실명 · 다른 반 = 「1-3 실명」 · 게시판이 명단에서 만듦 · 📜 #48 덧) */ names?: Record<string, string>;
     /** ⭐ 이 차시 지금까지 최고 별 (boardStar/{lid} · ⭐ 골고루 돌기) */ prevStars?: number; /** 🏅 이 차시 게시판 이긴 판 (숙련 메달) */ mastery?: number;
     /** left = 🚪 #113 ‹ 로 도중에 나감 (r = 맞힌 소문항 몫만) */ onend: (r: AtbEnd | null, again?: boolean, left?: boolean) => void;
+    /** 🐞 11/24 결과 화면이 뜨는 순간 = 저장 (단추 = 화면 이동만 · 앱을 닫아도 보상 남음) */ onresult?: (r: AtbEnd) => void;
   } = $props();
   const base = `atb/${pid}`;
   let meta = $state<Meta | null>(null), host = $state<string | null>(null), hb: Record<string, number> = {}, snapN = $state(-1);
@@ -118,6 +119,7 @@
     if (res || me < 0) { phase = 'result'; return; }
     if (host === uid) store.set(`${base}/snap`, encodeSnap(B, uid, store.now(), ack)); // 마지막 상태
     res = { ...atbResultFor(B, me, { prevStars }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res); phase = 'result';
+    onresult?.(res);
   }
 </script>
 

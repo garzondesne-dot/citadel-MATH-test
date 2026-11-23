@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  /** 🐞 11/24 이 앱에서 이미 저장한 판 (Board 가 다시 열려도 기억) */
+  const ATB_SAVED = new Set<string>();
+</script>
+
 <script lang="ts">
   import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, recMark, recStar, STAR_RULE_TEXT, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
@@ -198,7 +203,12 @@
     res = { ...r, L, n, role, mult, bonus, base, total2, got: got + rescueGot, rescueGot, rank }; stageGo(0);
   }
   // 📡 #48 ATB 판 끝 (결과 화면 「게시판으로」): 기록 · ⭐ · 반 공적 · 💎(지급 스위치 켜짐만 · 베타 = 끔 = 예상만) → 게시판
+  /** 🐞 11/24 판 결과 저장 = 판마다 한 번 (결과 화면이 뜰 때 · 단추 · 다시 열 때 되살리기 모두 이 함수 · 이 앱 안에서 기억 + 서버 기록 이름 「판id_」 으로 이중 저장 막음) */
+  const hasRec = (pid: string) => Object.keys((S.get<Record<string, unknown>>(`bonus/${cls}/${num}/board`)) || {}).some((k) => k.startsWith(`${pid}_`));
   function atbEnded(p: Post, r: AtbEnd | null) {
+    if (!ATB_SAVED.has(p.pid) && cls && num && !isBeta(S, cls) && hasRec(p.pid)) ATB_SAVED.add(p.pid); // 서버에 이미 이 판 기록 = 저장 안 함
+    if (ATB_SAVED.has(p.pid)) { if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done'); markSeen(p.pid); return; }
+    ATB_SAVED.add(p.pid);
     const L = lessonOf(p.lesson);
     if (r && L && testAcc) { // 🧪 #86 테스트 반 · 교사 = 판 기록 · ⭐ 만 이 기기에 (공적 · 💎 · 서버 기록 없음)
       testSaveRun(testWho(cls, num), `${p.pid}_${S.now().toString(36)}`, atbRec({ L, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r, S.now(), Math.max(0, Math.min(3, r.stars | 0)), 0)); tv++;
@@ -216,10 +226,27 @@
     if (p.phase === 'play') S.set(`${POSTS}/${p.pid}/phase`, 'done');
     markSeen(p.pid);
   }
+  /** 🐞 11/24 되살리기 (B): 게시판을 열 때 · 판 끝 값(atb/{판}/end/{나})은 있는데 내 기록이 없는 판 = 한 번 저장 (결과 화면에서 앱을 닫은 학생) */
+  let healed = false;
+  $effect(() => {
+    const all = pv.v.val; if (healed || !all || !cls || !num || isBeta(S, cls) || S.kind !== 'server' || !S.fetch || !online) return;
+    healed = true;
+    untrack(() => { void healAtb(Object.values(all).filter((p) => p && p.mem?.[uid] && p.phase !== 'wait' && !ATB_SAVED.has(p.pid))); });
+  });
+  async function healAtb(ps: Post[]) {
+    if (!ps.length || !S.fetch) return;
+    await S.fetch(`bonus/${cls}/${num}/board`).catch(() => null);
+    for (const p of ps) {
+      if (ATB_SAVED.has(p.pid) || hasRec(p.pid)) { ATB_SAVED.add(p.pid); continue; }
+      const r = await S.fetch<AtbEnd>(`atb/${p.pid}/end/${uid}`).catch(() => null);
+      if (!r || r.left || ATB_SAVED.has(p.pid) || hasRec(p.pid)) continue;
+      atbEnded({ ...p, phase: 'done' }, r);
+    }
+  }
   /** 🚪 #113 ‹ 로 도중에 나감 = 맞힌 소문항 몫 💎만(기록 「나감」) · 글에서 내 이름 뺌 → 다시 들어와도 이 판으로 안 감 · 혼자 판 = 글 끝 */
   function atbLeft(p: Post, r: AtbEnd | null) {
-    const L = lessonOf(p.lesson), solo1 = membersOf(p).length <= 1;
-    if (r && L && cls && num && !isBeta(S, cls)) {
+    const L = lessonOf(p.lesson), solo1 = membersOf(p).length <= 1, first = !ATB_SAVED.has(p.pid); ATB_SAVED.add(p.pid);
+    if (first && r && L && cls && num && !isBeta(S, cls)) {
       saveAtbResult(S, { cls, num, L, pid: p.pid, n: membersOf(p).length, role: p.mem?.[uid]?.role ?? 'c' }, r);
       if (payOn(S) && r.gemSum > 0) { const got = earnDaily(me.wallet, r.gemSum, kstDay(S.now()), GEM.dayCap); if (got) { S.set(`gem/${cls}/${num}/log/board_${kstDay(S.now())}_${S.now().toString(36)}`, { g: got, at: S.now(), why: '📋 게시판 던전 (나감)' }); save(); } }
     }
@@ -434,7 +461,7 @@
 {#if run}<BoardRun L0={run} {uid} {num} hero={lkB} nick={me.nick} {cls} onend={(r) => ended(r, null)} onquit={() => (run = null)} />{/if}
 {#if teamRun && isAtb(teamRun)}
   {@const L = lessonOf(teamRun.lesson)}
-  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L ? myPrev(L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again, gone1) => { if (gone1) { atbLeft(teamRun!, r); return; } const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} />
+  <AtbNet {S} pid={teamRun.pid} {uid} names={atbNames(teamRun)} prevStars={L ? myPrev(L.id) : 0} mastery={L ? runs.filter((x) => x.lid === L.id && x.clear).length : 0} onend={(r, again, gone1) => { if (gone1) { atbLeft(teamRun!, r); return; } const L1 = lessonOf(teamRun!.lesson); atbEnded(teamRun!, r); if (again && L1) { pick = L1; sheet = 'solo'; go(); } }} onresult={(r) => { const p0 = teamRun; if (p0) atbEnded({ ...p0, phase: 'wait' }, r); /* phase 는 단추 때 done */ }} />
 {:else if teamRun}
   {@const L = lessonOf(teamRun.lesson)}
   {#if L}<BoardRun L0={L} {uid} {num} hero={lkB} nick={me.nick} {cls} team={{ S, code: teamRun.code!, host: teamRun.host === uid, roles: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.role])), names: names(teamRun), cmd: membersOf(teamRun).find((m) => m.role === 'g')?.uid === uid, heroes: Object.fromEntries(membersOf(teamRun).map((m) => [m.uid, m.hero])) }} onend={(r) => ended(r, teamRun)} onquit={() => leavePost(S, teamRun, uid)} />{/if}
