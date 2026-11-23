@@ -83,5 +83,3 @@ export function standingsAj(f: Pick<Aj, 'score'>): { u: string; pts: number; ran
   rows.forEach((r, i) => { r.rank = i > 0 && rows[i - 1]!.pts === r.pts ? rows[i - 1]!.rank : i + 1; });
   return rows;
 }
-/** 😆 진행자 = 현자 올드윈 (용사 7 · 📜 2026-11-24 선생님 · 진행자 시트(말하기 · 웃기)가 오면 그 그림으로) */
-export const AJ_HOST = 7;
