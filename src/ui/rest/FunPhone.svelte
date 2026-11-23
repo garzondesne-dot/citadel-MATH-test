@@ -12,6 +12,8 @@
   import FUNQ from '../../rest/funq.json';
   import TdPhone from './TdPhone.svelte';
   import DrgPhone from './DrgPhone.svelte';
+  import AjPhone from './AjPhone.svelte';
+  import type { Aj } from '../../rest/ajae';
   import type { Drg } from '../../rest/dragon';
   import FunArena from './FunArena.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -30,7 +32,8 @@
   // ── 고르기 놀이 (⚖ 🔄 ⭕) ──
   const isTd = $derived((f?.kind as string) === 'td');
   const isDrg = $derived((f?.kind as string) === 'drg'); // 🐉 #25
-  const ff = $derived(f && f.kind !== 'nun' && !isTd && !isDrg ? norm(f as Fun) : null);
+  const isAj = $derived((f?.kind as string) === 'aj'); // 😆 11/24
+  const ff = $derived(f && f.kind !== 'nun' && !isTd && !isDrg && !isAj ? norm(f as Fun) : null);
   const fv = $derived((R as unknown as { fv?: Record<string, Record<string, string>> }).fv);
   const mine = $derived(ff ? fv?.[ff.rk]?.[uid] ?? '' : '');
   const alive = $derived(!!f && !!(f.alive || {})[uid]);
@@ -49,7 +52,7 @@
     return outN != null || f.kind === 'nun' ? 'out' : 'see';
   });
   const secs = $derived(f && f.phase !== 'end' ? Math.max(0, Math.ceil(((f.phase === 'show' ? (ff?.until ?? (f as Nun).to) : f.to) - fnow) / 1000)) : 0);
-  const title = $derived(!f ? '🏕 쉼터' : isTd ? '🏰 디펜스' : isDrg ? '🐉 용이 잠든 사이' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
+  const title = $derived(!f ? '🏕 쉼터' : isTd ? '🏰 디펜스' : isDrg ? '🐉 용이 잠든 사이' : isAj ? '😆 아재 퀴즈' : f.kind === 'nun' ? `🙊 눈치게임 · ${(f as Nun).round}판` : f.kind === 'quiz' ? `⭕ OX 타임 · ${ff!.n} / ${Math.min(QN, ff!.queue.length)}` : `${KIND[f.kind as Kind].short} · ${ff!.n}판`);
   const card = $derived.by(() => {
     if (!ff) return '';
     if (ff.s) return ff.s;
@@ -95,7 +98,7 @@
 </script>
 
 <div class="fun" role="region" aria-label="쉼터">
-  <div class="bar"><div class="tt">{title}</div>{#if isTd || isDrg}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
+  <div class="bar"><div class="tt">{title}</div>{#if isTd || isDrg || isAj}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
   <div class="mid" class:dimd={!!cover}>
     {#if !f}
       <div class="ic">🏕</div><b class="h">잠깐 쉬어 가요</b>
@@ -103,6 +106,8 @@
       <p class="bub">선생님이 놀이를 고르는 중</p>
     {:else if isTd}
       <TdPhone {S} {R} {code} {uid} {now} />
+    {:else if isAj}
+      <AjPhone {S} {R} {code} {uid} {now} f={f as unknown as Aj} />
     {:else if isDrg}
       <DrgPhone {S} {R} {code} {uid} {now} f={f as unknown as Drg} />
     {:else if nn}
