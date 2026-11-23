@@ -277,15 +277,22 @@ export const NOTE_ICON = { src: artUrl('art/note-icons-v1.webp'), n: 8, idx: { x
 /** 🎒 오늘의 전리품 상자 (📜 2026-11-17 #7 = 옛 정식 assets/art/thrill-chest-v1.webp · 3칸 128×128: ① 닫힘 ② 흔들림(반짝 선) ③ 열림 + 금빛) */
 export const CHEST = { src: `${import.meta.env.BASE_URL}art/thrill/thrill-chest-v1.webp`, frames: 3 };
 
-// 👹 몬스터 맞는 그림 10종 (🔨 #26 · 📜 2026-11-20 선생님 「초안 그대로 넣기」 · 머리 hv2 3137ef2)
-//   시트 = 6칸 256 × 256 가로 · 투명 · 칸 순서 = 시작 → 큰 타격 → 사라짐 · 0.42초 · 오른쪽 → 왼쪽 그대로 · 보스 = 1.5배
-//   짝 = 과목 팩 SUBJ.monsterHit (subjects/…/mhit-map.json · 「시트줄|몬스터 이름」 → 종류 · 130마리) · 없는 몬스터 = smash · 레이드 · 게시판 던전이 이 함수 하나만 씀
+// 👹 몬스터 공격 효과 10종 (🔨 #26 → 📜 2026-11-24 선생님 「표 그대로 진행」 · 에셋 방 hero-v2 19b53f6 docs/handoff/assets/attack-fx · 배정표 attack-fx-preview/ASSIGNMENT.md)
+//   시트 = 6칸 가로 768 × 128 (칸 128) · 투명 · 칸 순서 = 시작 → 날아감 → 최대(3번째) → 줄어듦 → 사라짐 · 칸당 80ms = 0.48초
+//   크기 = 맞는 용사 칸 높이의 0.8배 · 자리 = 용사 몸 가운데 · 최대 칸(3번째)에 용사 하얗게 번쩍 + 살짝 흔들림
+//   좌우 반전 = 날아가는 5종(fire · poison · beam · ram(돌진) · lash(초승달)) — 원본은 오른쪽으로 날아감 → 몬스터(오른쪽)에서 용사(왼쪽)로
+//   이름 짝: 에셋 방 이름 → 코드 이름 = lightning → bolt · impact → smash · dash → ram · slash → lash (나머지 같음)
+//   짝 = 과목 팩 SUBJ.monsterHit (subjects/…/mhit-map.json · 「시트줄|몬스터 이름」 또는 「|이름」 → 종류) · 배정표에 없는 몬스터(랜덤 던전 등) = 지금 짝 그대로 · 짝 없음 = smash
+//   레이드 · 게시판 던전 · 성채 · 허수아비 · 체험판 · 학교판이 이 함수 하나(MonHit)만 씀
 export type MhitKind = 'claw' | 'bite' | 'smash' | 'ram' | 'lash' | 'fire' | 'ice' | 'bolt' | 'poison' | 'beam';
 export const MHIT_KINDS: MhitKind[] = ['claw', 'bite', 'smash', 'ram', 'lash', 'fire', 'ice', 'bolt', 'poison', 'beam'];
-/** 빛 그림(검은 바탕에서 뽑은 것) = 더하기 섞기 */
-export const MHIT_LIGHT: ReadonlySet<MhitKind> = new Set(['fire', 'ice', 'bolt', 'poison', 'beam']);
-export const MHIT = { frames: 6, cell: 256, ms: 420, boss: 1.5 } as const;
-export const mhitUrl = (k: MhitKind) => `${import.meta.env.BASE_URL}art/mhit/mhit-${k}-v1.webp`;
+/** 좌우 반전할 종류 (원본이 오른쪽으로 날아감) */
+export const MHIT_FLIP: ReadonlySet<MhitKind> = new Set(['fire', 'poison', 'beam', 'ram', 'lash']);
+/** 보스여도 키우지 않는 종류 (화면을 덮지 않게) */
+export const MHIT_NOGROW: ReadonlySet<MhitKind> = new Set(['bolt', 'beam']);
+/** frames 6 · 칸 128 · 0.48초 · 최대 칸 = 3번째(160ms) · 크기 = 용사 칸 높이 × 0.8 · 보스 1.5배(번개 · 광선 빼고) */
+export const MHIT = { frames: 6, cell: 128, ms: 480, peak: 160, size: 0.8, boss: 1.5 } as const;
+export const mhitUrl = (k: MhitKind) => `${import.meta.env.BASE_URL}art/mhit/mhit-${k}-v2.webp`;
 const MH = SUBJ.monsterHit ?? {};
 const MH_NAME: Record<string, MhitKind> = {};
 for (const [key, v] of Object.entries(MH)) { const nm = key.split('|')[1]; if (nm && !(nm in MH_NAME)) MH_NAME[nm] = v as MhitKind; }
