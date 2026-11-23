@@ -64,6 +64,10 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('🏁 땅따먹기 방향 (A → fv/lg1_5/s1_3_1)', await as(A.tok, 'rooms/111111/fv/lg1_5/s1_3_1', 'PUT', 2), true);
   want('🏁 남 방향 쓰기 막힘 (B → s1_3_1)', await as(B.tok, 'rooms/111111/fv/lg1_5/s1_3_1', 'PUT', 0), false);
   want('🏁 학생 출발(fun/go) 막힘', await as(A.tok, 'rooms/111111/fun/go', 'PUT', 1), false);
+  want('🥏 알까기 참가 (A → fv/ak1_j/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1_j/s1_3_1', 'PUT', 1), true);
+  want('🥏 알까기 발사 (A → fv/ak1/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0.5, p: 1, n: 1 }), true);
+  want('🥏 남 발사 쓰기 막힘 (B → s1_3_1)', await as(B.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0, p: 2, n: 2 }), false);
+  want('🥏 학생 판 상태(fun/st) 쓰기 막힘', await as(A.tok, 'rooms/111111/fun/st/s1_3_1/x', 'PUT', 0), false);
   want('😆 아재 퀴즈 답 (A → fv/aj1_1/s1_3_1)', await as(A.tok, 'rooms/111111/fv/aj1_1/s1_3_1', 'PUT', { a: '킹콩', at: 1 }), true);
   want('😆 교사 회차 칸 (funUsed/1-3/ajr)', await as(T1.tok, 'school/funUsed/1-3/ajr', 'PUT', 2), true);
   want('😆 학생 회차 칸 막힘', await as(A.tok, 'school/funUsed/1-3/ajr', 'PUT', 5), false);
