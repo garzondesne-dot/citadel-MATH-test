@@ -43,3 +43,4 @@ describe('12월 마무리 설문', () => {
   });
 });
 describe('15번 = 과목 팩 이름', () => { it('공통수학2 = 단원 평가 도전 공간', () => { expect(Q12S.find((q) => q.n === 15)!.t).toBe('단원 평가 도전 공간에서 어려운 문제에 끝까지 도전해 봤다'); }); });
+describe('교사 응답 수', () => { it('12월 = EXP 칸 수', async () => { const { doneCount12 } = await import('../src/school/survey12'); const S = memoryStore(); S.set('xp/1-3/3/log/survey12', { xp: 5 }); S.set('xp/1-3/4/log/survey', { xp: 5 }); expect(doneCount12(S, '1-3')).toBe(1); }); });

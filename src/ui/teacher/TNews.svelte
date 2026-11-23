@@ -6,7 +6,7 @@
   import { allUids, classUids, GEMS, QUICK, sendMail } from '../../school/mail';
   import { hhmm } from '../../school/bells';
   import { doneCount, keepNo, pickNo, setOpen, stateOf } from '../../school/survey';
-  import { NO12, svLabel } from '../../school/survey12';
+  import { doneCount12, is12, NO12, svLabel } from '../../school/survey12';
   import { feat } from '../../school/features.svelte';
   import { allRows, photoNeeds, roomTitle, type PhotoRow } from '../../school/photo';
   import { liveValue } from '../room.svelte';
@@ -85,8 +85,11 @@
   const fg = (c: string) => { void ver; return !!S.get<boolean>(`school/cls/${c}/friendGift`); };
   // 📝 수업 설문 (정식 survey.js panel · 반마다 열기 · 닫기 · 응답 수 · 차시 번호 = 이 기기 기억 · 기본 10)
   let svNo = $state(pickNo(untrack(() => packs[0]?.no ?? 10)));
-  const svRows = $derived.by(() => { void ver; return CLASSES.map((c) => ({ c, st: stateOf(S, c), done: doneCount(S, c), size: roster(c, S).length, beta: isBeta(S, c) })); });
+  const svRows = $derived.by(() => { void ver; return CLASSES.map((c) => ({ c, st: stateOf(S, c), done: is12(stateOf(S, c)?.no) ? doneCount12(S, c) : doneCount(S, c), size: roster(c, S).length, beta: isBeta(S, c) })); });
   const svStop = untrack(() => CLASSES.map((c) => S.watch(`surveyDone/${c}`, () => ver++))); onDestroy(() => svStop.forEach((f) => f())); // 응답 수 실시간 (반 덩어리)
+  // 📝 12월 마무리 = 응답 수가 학생 EXP 칸에 있음 → 마무리 설문이 열린 반만 xp/{반} 를 지켜봄 (닫히면 그만)
+  const w12 = new Map<string, () => void>(); onDestroy(() => w12.forEach((f) => f()));
+  $effect(() => { void ver; untrack(() => { for (const c of CLASSES) { const on = is12(stateOf(S, c)?.no); if (on && !w12.has(c)) w12.set(c, S.watch(`xp/${c}`, () => ver++)); else if (!on && w12.has(c)) { w12.get(c)!(); w12.delete(c); } } }); });
   function svSet(list: string[], on: boolean) { const no = keepNo(svNo); svNo = no; for (const c of list) setOpen(S, c, on, no); ver++; say(on ? `📝 ${svLabel(no)} 설문을 열었어요` : '📝 설문을 닫았어요'); }
 </script>
 

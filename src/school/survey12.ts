@@ -71,6 +71,8 @@ export function isDone12(S: Store, c: string, n: number): boolean {
 }
 /** 열린 설문이 마무리 설문이면 그 기준으로 · 아니면 11/17 기준 (survey.pendingNo 대신) */
 export const pendingAny = (S: Store, c: string, n: number): number => { const st = stateOf(S, c); if (!st) return 0; const no = Number(st.no) || 1; return (is12(no) ? isDone12(S, c, n) : isDone1117(S, c, n)) ? 0 : no; };
+/** 교사 소식 줄 응답 수 = 반 학생 EXP 칸에 「12월 마무리 설문」이 있는 수 (11/17 surveyDone 대신) */
+export const doneCount12 = (S: Store, c: string) => Object.values(S.get<Record<string, { log?: Record<string, unknown> }>>(`xp/${c}`) || {}).filter((x) => !!x?.log?.[LOG12]).length;
 export function reward12(S: Store, c: string, n: number, at: number): { gem: number; xp: number; writes: [string, unknown][] } {
   if (S.loaded && !(S.loaded(`gem/${c}/${n}`) && S.loaded(`xp/${c}/${n}`))) return { gem: 0, xp: 0, writes: [] }; // 받기 전 = 안 줌 (두 번 받기 막음 · 11/17 과 같음)
   const gl = S.get(`gem/${c}/${n}/log/${LOG12}`), xl = S.get(`xp/${c}/${n}/log/${LOG12}`);
