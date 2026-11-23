@@ -109,3 +109,14 @@ describe('🏰 성채 📷 📜', () => {
     expect(photoScrolls(null)).toBe(1); expect(photoScrolls({ score: 3, total: 4 })).toBe(1); expect(photoScrolls({ score: 4, total: 4 })).toBe(2); expect(photoScrolls({ score: 4, total: 4, up: true })).toBe(3);
   });
 });
+
+describe('📸 소레이드 사진 = 정답 글 (🐞 11/23 「undefined」 · 「0,2」)', () => {
+  it('선다 = 보기 글 · 여러 개 = 보기 글들', async () => {
+    const { chainItems: ci } = await import('../src/school/photo');
+    const ch = { type: 'choice', question: 'q', choices: ['8', '18', '10'], answerIndex: 1 };
+    expect(ci(null, 't', [ch as never], [])[0]!.answer).toBe('18');
+    const mu = { type: 'multi', question: 'q', options: ['ㄱ. a', 'ㄴ. b', 'ㄷ. c'], answer: [0, 2] };
+    expect(ci(null, 't', [mu as never], [])[0]!.answer).toBe('ㄱ. a, ㄷ. c');
+    expect(pack([{ question: 'a' }]).answer).toBe('');
+  });
+});

@@ -54,7 +54,7 @@ export const rubric = (S: Store, lid: string, rid: string): Rubric | null => rub
 export type PhItem = { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> };
 export function pack(items: PhItem[]) {
   const clean = (t: unknown) => String(t || '').replace(/\s*\(풀이는 학습지에\)\s*/g, ' ').replace(/^\d+\s+/, '').replace(/^\(이어서\)\s*/, '').trim();
-  return { ask: items.map((q) => clean(q.question)).join(' / ').slice(0, 600), answer: items.map((q) => String(q.answer)).join(' / ').slice(0, 80), ref: items.map((q) => q.solution || '').join(' / ').slice(0, 600), params: Object.assign({}, ...items.map((q) => q.check || {})) };
+  return { ask: items.map((q) => clean(q.question)).join(' / ').slice(0, 600), answer: items.map((q) => (q.answer == null ? '' : String(q.answer))).filter(Boolean).join(' / ').slice(0, 80), ref: items.map((q) => q.solution || '').join(' / ').slice(0, 600), params: Object.assign({}, ...items.map((q) => q.check || {})) };
 }
 export const ERR: Record<string, string> = { off: '선생님이 사진 채점을 잠깐 꺼 두었어요.', auth: '로그인이 풀렸어요. 다시 로그인해 주세요.', who: '이 기기의 로그인과 계정이 달라요. 다시 로그인해 주세요.', rubric: '이 문항은 아직 사진 채점을 준비 중이에요.', quota: '오늘 사진 채점을 다 썼어요 — 내일 또 해요!', busy: '지금 친구들이 한꺼번에 보내고 있어요. 30초 뒤 다시 보내 주세요.', api: '채점 서버가 잠깐 바빠요. 조금 뒤 다시 보내 주세요 (장 수는 그대로예요).', bad: '사진을 보내지 못했어요. 다시 찍어 주세요.', net: '인터넷이 끊겼거나 너무 오래 걸렸어요. 다시 보내 주세요.' };
 export const errMsg = (res: PhotoRes | null, c: PhotoCfg) => (res && res.err === 'roomquota' ? `이 방은 오늘 ${roomMax(c)}번 다 해 봤어요 — 다른 방을 풀거나 내일 다시 도전해요!` : res && res.err === 'wait' ? `📷 ${Number(res.sec) || coolSec(c)}초 뒤에 다시 보낼 수 있어요 — 그동안 풀이를 고쳐 써요` : ERR[(res && res.err) || 'net'] || ERR.net!);
@@ -85,7 +85,8 @@ export function pendState(S: Store, cls: string, num: number, lid: string, rid: 
 export const appealPath = (cls: string, num: number, lid: string, rid: string, id: string) => `photo/${ck(cls)}/${num}/${keyOf(lid, rid)}/${id}/appeal`;
 /** 소레이드 채점용 문항 (학습지 숫자 · 단계별 중간값) — 정식 student.js wr-snap */
 export function chainItems(rub: Rubric | null, stepTitle: string, items: Question[], says: string[]): PhItem[] {
-  return [{ question: rub?.ask || stepTitle, answer: (items[items.length - 1] as { answer?: unknown } | undefined)?.answer, solution: says.join(' / '), check: Object.assign({}, ...items.map((x) => ((x as { check?: Record<string, unknown> }).check || {}))) }];
+  // 🐞 11/23 정답 = 마지막 단계의 정답 글 (선다 · 여러 개 고르기는 answer 칸이 없거나 보기 번호라 「undefined」 · 「0,2」가 AI 에 갔음) — ✍ 실력 쓰기(rewriteOf)와 같은 ansText
+  return [{ question: rub?.ask || stepTitle, answer: ansText(items[items.length - 1]) || undefined, solution: says.join(' / '), check: Object.assign({}, ...items.map((x) => ((x as { check?: Record<string, unknown> }).check || {}))) }];
 }
 // ── 📜 #57 ✍ 실력 쓰기 = 숫자 바꾼 판 (학습지 숫자 📜 를 받은 뒤 문항당 한 번 더 · 소레이드 단계 없이 문제 → 손글씨 → 📷) ──
 /** 학생 · 문항마다 늘 같은 판 (불통과 = 같은 숫자로 다시) · 1 ~ n−1 (판 0 = 학습지 숫자) */
@@ -98,7 +99,7 @@ const ansText = (q: Question | undefined): string => {
   if (!q) return '';
   const f = SUBJ.formats[q.type]; if (f) return f.answerText?.(q) ?? (f.answer ? f.pen(q, f.answer(q)) ?? '' : ''); // 과목 고유 꼴
   if (q.type === 'choice') return q.choices[q.answerIndex] ?? '';
-  if (q.type === 'multi') { const ch = (q as { choices?: string[] }).choices || []; return (q.answer as number[]).map((i) => ch[i] ?? i).join(', '); }
+  if (q.type === 'multi') { const ch = (q as { choices?: string[]; options?: string[] }).choices || (q as { options?: string[] }).options || []; return (q.answer as number[]).map((i) => ch[i] ?? i).join(', '); }
   const a = (q as { answer?: unknown; answers?: string[] }).answer ?? (q as { answers?: string[] }).answers?.[0];
   return Array.isArray(a) ? a.join(', ') : String(a ?? '');
 };
