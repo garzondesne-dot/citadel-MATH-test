@@ -6,6 +6,7 @@
 //   기록: 수업 끝 기록(records/{반}/{번호})은 학생 폰만 씀 → 가상 학생은 랭킹 · 대시보드 · 서버 학생 기록에 남지 않음 · players/{uid}/bot = true · 이름 앞 🤖
 import { qOf, syl, type Aj } from '../rest/ajae';
 import type { Lg } from '../rest/landgrab';
+import { botShot, rkJoin as akJ, rkShot as akS, type Ak } from '../rest/alkkagi';
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
@@ -64,6 +65,13 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
       if (l.phase === 'join') { ids.forEach((u) => later(`lgj|${l.g}|${u}`, rand(500, 3000), () => S.set(P(`fv/lg${l.g}_j/${u}`), 1))); return; }
       if (l.phase !== 'pick') return;
       ids.forEach((u) => { if (l.team?.[u] == null) return; later(`lg|${l.g}|${l.turn}|${u}`, rand(300, 2500), () => { if (Math.random() < 0.1) return; S.set(P(`fv/lg${l.g}_${l.turn}/${u}`), Math.floor(Math.random() * 4)); }); });
+      return;
+    }
+    if (f.kind === 'ak') { // 🥏 11/24 가상 친구 = 모이기 때 참가 · 쉬는 시간이 끝나면 0.3 ~ 1.5초 뒤 가장 가까운 알을 겨눠 쏨(조준 오차 sim.py 봇) · 10% 는 안 누름
+      const k = f as unknown as Ak;
+      if (k.phase === 'join') { ids.forEach((u) => later(`akj|${k.g}|${u}`, rand(500, 3000), () => S.set(P(`fv/${akJ(k.g)}/${u}`), 1))); return; }
+      if (k.phase !== 'play') return;
+      ids.forEach((u, i) => { const s = k.st?.[u]; if (!s?.on || s.cd > 0 || i % 10 === 9) return; later(`ak|${k.g}|${k.beat}|${u}`, rand(300, 1500), () => { const RR = S.get<Room>(roomPath(code)) as Room & { fun?: Ak }; const cur = RR?.fun; if (!cur || cur.phase !== 'play' || cur.g !== k.g) return; const b = botShot(cur.st, u, 0.25 * [0.5, 1, 1, 2][i % 4]!); if (b) S.set(P(`fv/${akS(k.g)}/${u}`), { ...b, n: (cur.st[u]?.n || 0) + 1 }); }); });
       return;
     }
     if (f.kind === 'aj') { // 😆 11/24 가상 친구 = 3 ~ 20초 뒤 맞힘(70%) · 아니면 틀린 글자

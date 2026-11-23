@@ -54,6 +54,8 @@
   import DrgTV from '../rest/DrgTV.svelte';
   import AjTV from '../rest/AjTV.svelte';
   import LgTV from '../rest/LgTV.svelte';
+  import AkTV from '../rest/AkTV.svelte';
+  import type { Ak } from '../../rest/alkkagi';
   import type { Lg } from '../../rest/landgrab';
   import type { Aj } from '../../rest/ajae';
   import type { Drg } from '../../rest/dragon';
@@ -139,7 +141,7 @@
 
   // ── 🏕 쉼터 놀이 (#142 ⑤) ──
   const fun = $derived(funOf(R));
-  const ff = $derived(fun && fun.kind !== 'nun' && (fun.kind as string) !== 'drg' && (fun.kind as string) !== 'aj' && (fun.kind as string) !== 'lg' ? norm(fun as Fun) : null);
+  const ff = $derived(fun && fun.kind !== 'nun' && (fun.kind as string) !== 'drg' && (fun.kind as string) !== 'aj' && (fun.kind as string) !== 'lg' && (fun.kind as string) !== 'ak' ? norm(fun as Fun) : null);
   const nn = $derived(fun && fun.kind === 'nun' ? (fun as unknown as Nun) : null);
   // 🔄 🙊 쉼터 무리(❓#2 B): 이름 = 번호 뺀 이름 · 번호 = 명단(없으면 방 기록) · TV 높이 1000 넘으면 용사 1.5배
   // 📵 끊긴 학생도 레이드 줄에 남김 (📜 2026-11-16 선생님 「접속이 끊기면 레이드 표시에서 사라진 점」) = 흐리게 + 📵 · 다시 들어오면 그대로 · 자리 = 번호 순(끊겨도 자리 안 바뀜)
@@ -197,6 +199,7 @@
     }
     if (R.state.rest && view !== 'camp' && fun) {
       if ((fun.kind as string) === 'drg') { const d = fun as unknown as { g: number; round: number }, pr = (R as unknown as { dg?: Record<string, Record<string, Record<string, { f?: number }>>> }).dg?.[d.g]?.[d.round] || {}; return { ic: '🏁', lab: '들어옴', n: Object.values(pr).filter((x) => x?.f != null).length, m: Object.keys(fun.alive || {}).length, sub: '' }; } // 🐉 #25
+      if ((fun.kind as string) === 'ak') { const k = fun as unknown as { g: number; st?: Record<string, unknown> }; return { ic: '🥏', lab: '참가', n: Object.keys(k.st || {}).length || Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`ak${k.g}_j`]) || {}).length, m: ids.length, sub: '' }; }
       if ((fun.kind as string) === 'lg') { const l = fun as unknown as { g: number; team?: Record<string, number> }; return { ic: '🏁', lab: '참가', n: Object.keys(l.team || {}).length || Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`lg${l.g}_j`]) || {}).length, m: ids.length, sub: '' }; }
       if ((fun.kind as string) === 'aj') { const a = fun as unknown as { rk: string; total: number }; return { ic: '😆', lab: '답 낸 학생', n: Object.values(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[a.rk]) || {}).length, m: Object.keys(fun.alive || {}).length, sub: '' }; } // 😆 고른 학생 수(맞힘 · 틀림 다 포함 = 답을 낸 학생)
       if (fun.kind === 'quiz') return { ic: '⭕', lab: '고른 학생', n: Object.keys((R as unknown as { fv?: Record<string, Record<string, string>> }).fv?.[ff?.rk ?? ''] || {}).length, m: Object.keys(fun.alive || {}).length, sub: '' };
@@ -433,6 +436,8 @@
         <TdTV {S} {code} R={R as Room} {now} {nameOf} quiet={!sound} />
       {:else if (fun?.kind as string) === 'lg'}
         <LgTV R={R as Room} f={fun as unknown as Lg} {now} />
+      {:else if (fun?.kind as string) === 'ak'}
+        <AkTV R={R as Room} f={fun as unknown as Ak} {now} {nameOf} clock={() => S.now()} />
       {:else if (fun?.kind as string) === 'aj'}
         <AjTV R={R as Room} f={fun as unknown as Aj} {now} {nameOf} />
       {:else if (fun?.kind as string) === 'drg'}

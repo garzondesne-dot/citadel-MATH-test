@@ -9,19 +9,20 @@ import { MIN as DRG_MIN, startDrg, stepDrg, type Drg, type Prog } from './dragon
 import { AJ, nextRound, startAj, stepAj, standingsAj, type Aj, type Ans } from './ajae';
 import { isBeta } from '../school/school';
 import { LG, rkJoin, rkTurn, startLg, stepLg, type Lg } from './landgrab';
+import { AK, rkJoin as akJoinK, rkShot, startAk, stepAk, type Ak, type Shot } from './alkkagi';
 
 // 🏕 쉼터 놀이 진행 (#142 · 정식 fun.js start · stop · drive · hold 를 Store 위로)
 //   시계를 맡는 기기 = 교실 TV(먼저) 또는 교사 폰 · 4초(눈치 3초) 넘게 소식이 없으면 다른 기기가 이어받음 (fun.drv)
 //   🔴 집중 = 놀이 시계 멈춤: 켜진 동안 fun.frz = 멈춘 시각 · 끄면 그만큼 to · lastAt 을 뒤로 (정식 #117 hold)
-export type Game = Kind | 'nun' | 'td' | 'drg' | 'aj' | 'lg';
+export type Game = Kind | 'nun' | 'td' | 'drg' | 'aj' | 'lg' | 'ak';
 /** 🧩 놀이마다 스위치 (⚙ 우리 학교 기능) */
-export const GAME_FEAT: Record<Game, FeatId> = { bal: 'rest-balance', rev: 'rest-flip', quiz: 'rest-ox', ox: 'rest-ox', nun: 'rest-nunchi', td: 'rest-defense', drg: 'rest-dragon', aj: 'rest-ajae', lg: 'rest-landgrab' };
+export const GAME_FEAT: Record<Game, FeatId> = { bal: 'rest-balance', rev: 'rest-flip', quiz: 'rest-ox', ox: 'rest-ox', nun: 'rest-nunchi', td: 'rest-defense', drg: 'rest-dragon', aj: 'rest-ajae', lg: 'rest-landgrab', ak: 'rest-alkkagi' };
 export const gamesOn = () => GAMES.filter((g) => feat(GAME_FEAT[g.k]));
-export const GAMES: { k: Game; ic: string; name: string }[] = [{ k: 'bal', ic: '⚖', name: '밸런스' }, { k: 'rev', ic: '🔄', name: '반대로' }, { k: 'quiz', ic: '⭕', name: 'OX' }, { k: 'nun', ic: '🙊', name: '눈치게임' }, { k: 'drg', ic: '🐉', name: '용이 잠든 사이' }, { k: 'td', ic: '🏰', name: '디펜스' }, { k: 'aj', ic: '😆', name: '아재 퀴즈' }, { k: 'lg', ic: '🏁', name: '땅따먹기' }];
+export const GAMES: { k: Game; ic: string; name: string }[] = [{ k: 'bal', ic: '⚖', name: '밸런스' }, { k: 'rev', ic: '🔄', name: '반대로' }, { k: 'quiz', ic: '⭕', name: 'OX' }, { k: 'nun', ic: '🙊', name: '눈치게임' }, { k: 'drg', ic: '🐉', name: '용이 잠든 사이' }, { k: 'td', ic: '🏰', name: '디펜스' }, { k: 'aj', ic: '😆', name: '아재 퀴즈' }, { k: 'lg', ic: '🏁', name: '땅따먹기' }, { k: 'ak', ic: '🥏', name: '알까기' }];
 const P = (code: string, s: string) => `${roomPath(code)}/${s}`;
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
 export const studentsIn = (R: Room, now: number) => activeIds(R, now).filter((u) => !R.players?.[u]?.teacher);
-export type AnyFun = (Omit<Fun, 'kind'> & { kind: Game }) | (Omit<Nun, 'kind'> & { kind: Game }) | (Omit<Drg, 'kind'> & { kind: Game }) | (Omit<Aj, 'kind'> & { kind: Game }) | (Omit<Lg, 'kind'> & { kind: Game });
+export type AnyFun = (Omit<Fun, 'kind'> & { kind: Game }) | (Omit<Nun, 'kind'> & { kind: Game }) | (Omit<Drg, 'kind'> & { kind: Game }) | (Omit<Aj, 'kind'> & { kind: Game }) | (Omit<Lg, 'kind'> & { kind: Game }) | (Omit<Ak, 'kind'> & { kind: Game });
 export const funOf = (R: Room | null): AnyFun | null => ((R as unknown as { fun?: AnyFun })?.fun ?? null);
 /** 쉼터 분 기본값 = 지난번 값 (정식 restMinDef · 1 ~ 20 · 처음 5) */
 export const restMinDef = (S: Store) => { const m = Number(S.get<number>('school/teacher/restMin')); return m >= 1 && m <= 20 ? m : 5; };
@@ -49,6 +50,10 @@ export function startFun(S: Store, code: string, R: Room, kind: Game, opt: { whi
   if (kind === 'drg') { if (alive.length < DRG_MIN) return `🐉 용이 잠든 사이는 ${DRG_MIN}명 이상일 때 할 수 있어요 (친구를 기다려요)`; S.set(P(code, 'dg'), null); S.set(P(code, 'fun'), { ...startDrg(alive, now), drv: { u: opt.me, at: now } }); return null; } // 🐉 #25
   if (kind === 'lg') { // 🏁 땅따먹기 (📜 11/22 컨펌 · 11/24 진행): 모이기 = 학생 「참가」 → 선생님 「출발」(lgGo) · 2명부터
     S.set(P(code, 'fv'), null); S.set(P(code, 'fun'), { ...startLg(now), drv: { u: opt.me, at: now } });
+    return null;
+  }
+  if (kind === 'ak') { // 🥏 알까기 난장판 (📜 11/24 컨펌 · 머리 「선생님이 엶」): 모이기 = 학생 「참가」 → 선생님 「출발」(lgGo 와 같은 fun/go) · 2명부터
+    S.set(P(code, 'fv'), null); S.set(P(code, 'fun'), { ...startAk(now), drv: { u: opt.me, at: now } });
     return null;
   }
   if (kind === 'aj') { // 😆 아재 퀴즈 (📜 11/24 회차제): 1명부터 · 회차 = 리모컨이 고른 것 또는 그 반 다음 회차(school/funUsed/{반}/ajr)
@@ -79,6 +84,9 @@ export const pick = (S: Store, code: string, rk: string, uid: string, v: string)
 export const lgJoin = (S: Store, code: string, g: number, uid: string) => S.set(P(code, `fv/${rkJoin(g)}/${uid}`), 1);
 export const lgDir = (S: Store, code: string, g: number, turn: number, uid: string, d: number) => S.set(P(code, `fv/${rkTurn(g, turn)}/${uid}`), d);
 export const lgGo = (S: Store, code: string) => S.set(P(code, 'fun/go'), S.now());
+/** 🥏 폰 = 참가 · 발사(각도 · 세기 0 ~ 2 · 번호 = 내 알 n + 1) · 리모컨 출발 = lgGo */
+export const akJoin = (S: Store, code: string, g: number, uid: string) => S.set(P(code, `fv/${akJoinK(g)}/${uid}`), 1);
+export const akShoot = (S: Store, code: string, g: number, uid: string, sh: Shot) => S.set(P(code, `fv/${rkShot(g)}/${uid}`), sh);
 /** 😆 폰 = 고른 글자 (맞힌 시각 = 이 폰 시계(서버 시각 맞춤)) · 틀리면 다시 씀 */
 export const ajAnswer = (S: Store, code: string, rk: string, uid: string, a: string) => S.set(P(code, `fv/${rk}/${uid}`), { a, at: S.now() });
 /** 🐉 폰 = 내 진행 (판정은 폰에서 · 칸 · 걸린 수 · 들어온 시각) · 리모컨 ⏭ = 지금 단계 바로 끝 */
@@ -112,6 +120,9 @@ export function tick(S: Store, code: string, me: string): boolean {
   } else if (f.kind === 'lg') {
     const l = f as unknown as Lg, fv = (R as unknown as { fv?: Record<string, Record<string, number | string>> }).fv;
     nx = stepLg(l, fv?.[rkJoin(l.g)] ?? null, l.phase === 'pick' ? fv?.[rkTurn(l.g, l.turn)] ?? null : null, now) as unknown as AnyFun | null;
+  } else if (f.kind === 'ak') {
+    const k = f as unknown as Ak, fv = (R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv;
+    nx = stepAk(k, fv?.[akJoinK(k.g)] ?? null, (fv?.[rkShot(k.g)] as Record<string, Shot> | undefined) ?? null, now) as unknown as AnyFun | null;
   } else if (f.kind === 'aj') {
     const a = f as unknown as Aj; nx = stepAj(a, ((R as unknown as { fv?: Record<string, Record<string, Ans>> }).fv?.[a.rk]) ?? null, now) as unknown as AnyFun | null;
     if (nx && (nx as unknown as Aj).phase === 'end' && !ajNoSave(S, R)) { const r = (nx as unknown as Aj).round || 1; S.set(ajPath(R), nextRound(r)); if (r >= AJ.rounds) S.set(`${ajPath(R)}Done`, (Number(S.get(`${ajPath(R)}Done`)) || 0) + 1); } // 📜 판을 끝까지 = 다음 회차 · 8회 끝 = 한 바퀴
@@ -143,6 +154,7 @@ export function rewardOf(f: AnyFun, me: string): { gem: number; xp: number; why:
   if (f.kind === 'quiz') { const mk = String(((f as Fun).marks || {})[me] || ''), ok = (mk.match(/o/g) || []).length; if (!mk.length) return null; return { gem: ok === mk.length ? G.quizAll : 0, xp: ok * 2, why: `⭕ ${ok} / ${mk.length} 정답` }; }
   const win = ((f as { win?: string[] }).win || []).includes(me);
   if (f.kind === 'lg') { const l = f as unknown as Lg, t = l.team?.[me]; if (t == null) return null; const w = (l.winTeams || []).includes(t); return { gem: w ? LG.gemWin : LG.gemJoin, xp: 0, why: w ? '🏁 우리 팀 1등' : '🏁 참가' }; } // 📜 1등 팀 💎 30 · 참가 💎 10 · 하루 3판(payFun)
+  if (f.kind === 'ak') { const k = f as unknown as Ak, r = k.rank?.[me]; if (r == null) return null; const gem = r === 1 ? AK.gem1 : r <= 3 ? AK.gem23 : AK.gemJoin; return { gem, xp: 0, why: `🥏 ${r}등 · ${k.sc?.[me] ?? 0}점` }; } // 📜 1등 💎 30 · 2 · 3등 20 · 참가 10 · 하루 3판(payFun)
   if (f.kind === 'aj') { const a = f as unknown as Aj, st = standingsAj(a).find((x) => x.u === me); if (!a.alive?.[me] && !st) return null; const top = !!st && st.rank <= 3; return { gem: G.funJoin + (top ? G.funWin : 0), xp: 0, why: top ? `😆 ${st!.rank}등 · ${st!.pts}점` : st ? `😆 ${st.pts}점` : '참여' }; } // 😆 득점 1 ~ 3등 = 우승 💎
   if (f.kind === 'drg') { const d = f as unknown as Drg; if (d.pts?.[me] == null) return null; return { gem: G.funJoin + (win ? G.funWin : 0), xp: 0, why: win ? (d.clean?.includes(me) && !(d.win || []).slice(0, 3).includes(me) ? '🐉 한 번도 안 걸림' : '🏆 상위') : '참여' }; } // 🐉 #25 = 다른 놀이와 같은 💎(참여 1 · 1~3등 · 안 걸린 용사 +4)
   const joined = f.kind === 'nun' ? !!((f as Nun).hist || []).length || !!(f as Nun).alive?.[me] || win : (f as Fun).outAt?.[me] != null || win || !!(f as Fun).alive?.[me];
@@ -165,10 +177,10 @@ export function driveFun(S: Store, code: string, me: string): () => void {
 export function payFun(S: Store, f: AnyFun, uid: string, code: string): { gem: number; xp: number; why: string } | null {
   const r = rewardOf(f, uid);
   if (!r || (!r.gem && !r.xp)) return r;
-  if (f.kind === 'lg') { // 🏁 하루 3판까지 (그 뒤 = 순위만) · gifts/{uid}/lg{날짜}_{g}
-    const day = new Date(S.now() + 9 * 3600e3).toISOString().slice(0, 10), G = (S.get<Record<string, unknown>>(`gifts/${uid}`)) || {}, kk = `gifts/${uid}/lg${day}_${f.g}`;
+  if (f.kind === 'lg' || f.kind === 'ak') { // 🏁 🥏 하루 3판까지 (그 뒤 = 순위만) · gifts/{uid}/lg{날짜}_{g} · ak{날짜}_{g}
+    const pre = f.kind, max = f.kind === 'ak' ? AK.dayMax : LG.dayMax, day = new Date(S.now() + 9 * 3600e3).toISOString().slice(0, 10), G = (S.get<Record<string, unknown>>(`gifts/${uid}`)) || {}, kk = `gifts/${uid}/${pre}${day}_${f.g}`;
     if (S.get(kk)) return r;
-    if (Object.keys(G).filter((k) => k.startsWith(`lg${day}_`)).length >= LG.dayMax) return { ...r, gem: 0, why: `${r.why} · 오늘 보상은 ${LG.dayMax}판까지` };
+    if (Object.keys(G).filter((k) => k.startsWith(`${pre}${day}_`)).length >= max) return { ...r, gem: 0, why: `${r.why} · 오늘 보상은 ${max}판까지` };
     S.set(kk, { g: r.gem, at: S.now(), code, fun: r.why }); return r;
   }
   const k = `gifts/${uid}/fun${f.g}`;
