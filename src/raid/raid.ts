@@ -336,8 +336,10 @@ export function bossDrop(L: LessonPack, R: Room | null | undefined): number[] {
 export const pickBoss = (b: NonNullable<LessonPack['boss']>, idx: number[]): NonNullable<LessonPack['boss']> => ({ ...b, pick: idx.map((i) => i + (b.first || 0)), first: 0, items: idx.length, hpItems: idx.length, tags: idx.map((i) => b.tags?.[i] ?? ''), links: undefined });
 /** 그 학생 수업 기록에서 몬스터 mid 와 짝으로 빠진 형성평가 문항 (#27) */
 export const droppedFor = (L: LessonPack, rec: { bossDrop?: number[] } | undefined, mid: string): number[] => (rec?.bossDrop || []).filter((i) => L.boss?.links?.[i] === mid);
-/** 👑 화면 한 줄 (리모컨 · TV 같은 글 🪞): 빠진 문항이 있으면 「형성평가 n문항 (k문항은 허수아비로)」 · 없으면 '' */
-export function bossNote(L: LessonPack, R: Room | null | undefined): string { const lv = bossLive(L, R); return lv.drop.length ? `형성평가 ${lv.items}문항 (${lv.drop.length}문항은 허수아비로)` : ''; }
+/** 👑 짝 몬스터를 🎯 복습으로 보내 빠진 형성평가 문항 = 학생 폰 칸 · 리모컨 · 종합실 같은 글 (📜 11/23 선생님 고르기 · 전 「🎯 허수아비로」) */
+export const BOSS_DROP_TEXT = '오늘은 쉬어요 · 🎯 복습 허수아비에서 풀어요';
+/** 👑 화면 한 줄 (리모컨 · TV 같은 글 🪞): 빠진 문항이 있으면 「형성평가 n문항 · k문항은 오늘은 쉬어요 · 🎯 복습 허수아비에서 풀어요」 · 없으면 '' */
+export function bossNote(L: LessonPack, R: Room | null | undefined): string { const lv = bossLive(L, R); return lv.drop.length ? `형성평가 ${lv.items}문항 · ${lv.drop.length}문항은 ${BOSS_DROP_TEXT}` : ''; }
 /** 👑 이 반 수업 형성평가 = 남은 문항 수 · 체력 문항 수 · 빠진 수 */
 export function bossLive(L: LessonPack, R: Room | null | undefined) {
   const n = L.boss?.items || 0, hpN = Math.min(n, L.boss?.hpItems || n), d = new Set(bossDrop(L, R));

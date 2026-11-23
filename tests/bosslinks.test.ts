@@ -57,3 +57,12 @@ describe('🎯 허수아비 = 빠진 형성평가 문항만 (원래 번호 · �
     expect(JSON.stringify(packBossItem(P, 's', 0, 2))).toBe(JSON.stringify(packBossItem(L, 's', 2, 2)));
   });
 });
+
+describe('👑 쉬는 문항 글 (📜 11/23 「🎯 허수아비로」 → 같은 글 세 곳)', () => {
+  it('BOSS_DROP_TEXT · bossNote', async () => {
+    const { BOSS_DROP_TEXT } = await import('../src/raid/raid');
+    expect(BOSS_DROP_TEXT).toBe('오늘은 쉬어요 · 🎯 복습 허수아비에서 풀어요');
+    const src = (await import('node:fs')).readFileSync('src/ui/q/BossForm.svelte', 'utf8');
+    expect(src).toContain('text: BOSS_DROP_TEXT'); expect(src).not.toContain("'🎯 허수아비로'");
+  });
+});

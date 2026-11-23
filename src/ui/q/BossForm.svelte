@@ -5,7 +5,7 @@
   import { isDummy } from '../../raid/raid';
   import type { Given, LessonPack, Question, Room, Store } from '../../model/types';
   import { emptyOf, filled, finalOf, penLine, stripNo } from '../../engine/input';
-  import { BOSS_ID, bossItem, bossRecord, bossTries } from '../../raid/raid';
+  import { BOSS_DROP_TEXT, BOSS_ID, bossItem, bossRecord, bossTries } from '../../raid/raid';
   import { bossSubmitAll } from '../../raid/actions';
   import QItem from './QItem.svelte';
   import KeyTag from './KeyTag.svelte';
@@ -37,7 +37,7 @@
   const nextUnfilled = $derived(todo.find((i) => i !== cur && !!qs[i] && !filled(qs[i]!, given[i] ?? null)) ?? -1);
   const okText = (i: number) => { const t = tries.filter((x) => x.i === i && x.ok).pop(); if (!t?.q) return '✔'; const l = penLine(t.q, t.given, 0); return l ? stripNo(l) : '✔'; };
   const cells = $derived.by((): Cell[] => Array.from({ length: r.n }, (_, i) => {
-    if (r.drop.includes(i)) return { text: '🎯 허수아비로', state: 'ok', lock: true }; // 👑 #27 짝 몬스터를 복습으로 보냄 = 이 수업에선 안 풂
+    if (r.drop.includes(i)) return { text: BOSS_DROP_TEXT, state: 'filled', lock: true, wide: true }; // 👑 #27 짝 몬스터를 복습으로 보냄 = 이 수업에선 안 풂
     if (!todo.includes(i)) return { text: okText(i), state: 'ok', lock: true };
     const qq = qs[i], l = qq ? penLine(qq, given[i] ?? null, 0) : null;
     return { text: l ? stripNo(l) : null, state: tries.some((t) => t.i === i) && !practice && !r.roundOpen ? 'oldbad' : l ? 'filled' : 'empty' };

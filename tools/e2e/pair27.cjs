@@ -21,7 +21,7 @@ const [SHOTS = '.', PACK, B = 'http://localhost:4173/'] = process.argv.slice(2);
   await t.waitForTimeout(500); await t.keyboard.press('Escape'); await t.click('.sheet .x').catch(() => {});
   for (let i = 0; i < 30 && !/형성평가/.test(await txt('[data-k="now-lab"]')); i++) { await t.click('.tact .btn').catch(() => {}); await t.waitForTimeout(400); if (await t.$('[data-k="bossask"]')) break; }
   const lab = await txt('[data-k="now-lab"]');
-  ok('리모컨 「지금」 칸 = 형성평가 4문항 (1문항은 허수아비로)', /형성평가 4문항 \(1문항은 허수아비로\)/.test(lab), lab);
+  ok("리모컨 「지금」 칸 = 형성평가 4문항 · 1문항은 오늘은 쉬어요 · 🎯 복습 허수아비에서 풀어요", /형성평가 4문항 · 1문항은 오늘은 쉬어요 · 🎯 복습 허수아비에서 풀어요/.test(lab), lab);
   const code = await t.evaluate(() => window.__dbGet('school/live').code);
   const sent = await t.evaluate((c) => window.__dbGet(`rooms/${c}/state/sent`), code);
   ok('방 state.sent = m4', !!sent?.m4, JSON.stringify(sent));

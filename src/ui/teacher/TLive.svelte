@@ -11,7 +11,7 @@
   import { hallKeyOf } from '../../school/school';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
+  import { activeIds, BOSS_DROP_TEXT, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
   import { appearNow, goBoss, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
@@ -498,7 +498,7 @@
     <Sheet onclose={() => (sheet = '')}>
       {#snippet title()}👑 형성평가도 복습으로 보낼까요?{/snippet}
       {#snippet act()}<div class="row"><button type="button" class="btn2" data-k="bossask-keep" onclick={() => { bossAsked = true; sheet = ''; nextStep(S, L, code); }}>그대로</button><button type="button" class="btn" data-k="bossask-send" onclick={() => { bossAsked = true; sendSome(['boss']); sheet = ''; }}>🎯 보내기</button></div>{/snippet}
-      <p class="gnote" data-k="bossask">짝 몬스터를 복습으로 보내서 수업 형성평가가 {lv.items}문항만 남았어요 ({lv.drop.length}문항은 허수아비로) · 보내면 형성평가도 학생마다 🎯 허수아비 「⭐ 꼭 풀기」로 가요</p>
+      <p class="gnote" data-k="bossask">짝 몬스터를 복습으로 보내서 수업 형성평가가 {lv.items}문항만 남았어요 ({lv.drop.length}문항은 {BOSS_DROP_TEXT}) · 보내면 형성평가도 학생마다 🎯 허수아비 「⭐ 꼭 풀기」로 가요</p>
     </Sheet>
   {:else if sheet === 'qr'}
     <Sheet onclose={() => (sheet = '')} mainText="닫기">
