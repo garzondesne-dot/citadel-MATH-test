@@ -52,7 +52,9 @@ export function mergePack(old: LessonPack, neu: LessonPack): MergeRes {
   const o = clone(old) as unknown as O, n = clone(neu) as unknown as O, out: O = { ...n, id: old.id }, kept: string[] = [];
   for (const [k, x] of Object.entries(o)) if (!(k in n) && !['rev', 'upAt', 'hide'].includes(k)) { out[k] = x; kept.push(k); }
   if (Array.isArray(o.imgCells) || Array.isArray(n.imgCells)) out.imgCells = [...new Set([...((n.imgCells as string[]) || []), ...((o.imgCells as string[]) || [])])];
-  if (isO(o.videos)) out.videos = { ...o.videos, ...(isO(n.videos) ? n.videos : {}) };
+  // 🐞 11/23 14차시 v6: 새 파일의 「video/v14-58.mp4」(앱에 없는 이름)가 서버에 올린 같은 영상 「rtdb:prep/ex-14/vid/v14-58」을 덮어 영상이 안 나왔음 → 같은 영상 이름이면 서버 것 유지
+  const vbase = (u: unknown) => String(u ?? '').replace(/^.*\//, '').replace(/\.mp4$/i, '');
+  if (isO(o.videos)) { const ov = o.videos as O, nv = (isO(n.videos) ? n.videos : {}) as O; out.videos = { ...ov, ...Object.fromEntries(Object.entries(nv).filter(([c, u]) => !(String(ov[c] ?? '').startsWith('rtdb:') && /^video\//.test(String(u)) && vbase(ov[c]) === vbase(u)))) }; }
   const sameMon: string[] = [], newMon: string[] = [], mons: O = {};
   for (const [id, m] of Object.entries(isO(n.monsters) ? n.monsters : {})) { const r = fillMon(m as O, isO(o.monsters) ? o.monsters[id] : null); mons[id] = r.v; (r.same ? sameMon : newMon).push(id); }
   out.monsters = mons;

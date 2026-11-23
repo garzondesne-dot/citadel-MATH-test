@@ -46,3 +46,13 @@ describe('📦 #82 같은 차시 = 바꾸기', () => {
     await toTrash(S, 'ex-11', 'replace', 5000); expect(await trashList(S, 5000 + 31 * 864e5)).toHaveLength(0);
   });
 });
+
+describe('🎬 영상 칸 병합 (🐞 11/23 14차시 v6)', () => {
+  it('서버에 올린 같은 영상(rtdb:) = 새 파일의 video/ 이름이 덮지 않음 · 다른 영상 · 새 칸은 새 것', async () => {
+    const { mergePack } = await import('../src/school/packMerge');
+    const old = { id: 'ex-14', no: 14, steps: [], monsters: {}, videos: { c1: 'rtdb:prep/ex-14/vid/v14-58', c2: 'rtdb:prep/ex-14/vid/v14-59', c3: 'video/v14-60.mp4' } } as never;
+    const neu = { id: 'ex-14', no: 14, steps: [], monsters: {}, videos: { c1: 'video/v14-58.mp4', c2: 'video/v14-70.mp4', c3: 'video/v14-60-v2.mp4', c5: 'video/v14-62.mp4' } } as never;
+    const v = (mergePack(old, neu).pack as unknown as { videos: Record<string, string> }).videos;
+    expect(v).toEqual({ c1: 'rtdb:prep/ex-14/vid/v14-58', c2: 'video/v14-70.mp4', c3: 'video/v14-60-v2.mp4', c5: 'video/v14-62.mp4' });
+  });
+});
