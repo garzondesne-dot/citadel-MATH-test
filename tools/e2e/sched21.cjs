@@ -46,13 +46,13 @@ const mon0858 = Date.UTC(2026, 10, 15, 23, 58); // 11/16 월 08:58 KST
   await p.click('.tabs button:has-text("수업")'); await p.waitForTimeout(300);
   ok('E 수업 탭 맨 위 = 📅 오늘 시간표 · 1교시 1-3 · ▶ 바로 열기', /1-3반/.test(await txt('[data-k="today"]')) && !!(await p.$('[data-k="go-now"]')));
   await p.click('[data-k="auto-sw"]'); await p.waitForTimeout(150);
-  ok('E ⏰ 자동 열기 켬', /켬/.test(await txt('[data-k="auto-sw"]')));
+  ok('E ⏰ 자동 열기 켬 · 안내 「교사 폰 앱이 켜져 있어야 열려요」', /켬/.test(await txt('[data-k="auto-sw"]')) && /교사 폰 앱이 켜져 있어야/.test(await txt('[data-k="auto-note"]')));
   await p.screenshot({ path: `${SHOTS}/s21-today.png` });
   // C 📺 입장 대기 화면 · E 자동 열기 = 종합실 PC
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e));
   await tv.goto(B + '?role=hall'); await tv.waitForSelector('[data-k="tv-entry"]', { timeout: 15000 }).catch(() => {});
   const e0 = ((await tv.textContent('[data-k="tv-entry"]').catch(() => '')) || '').replace(/\s+/g, ' ');
-  ok('C 입장 대기 = QR · 다음 수업 1-3 · 「선생님이 수업을 열면」 · ⏰ 자동 · ⛶', /1-3반/.test(e0) && /수업을 열면/.test(e0) && /자동으로 열려요/.test(e0) && !!(await tv.$('[data-k="tv-full2"]')) && !!(await tv.$('[data-k="tv-entry"] svg, [data-k="tv-entry"] canvas, [data-k="tv-entry"] img')), e0.slice(0, 160));
+  ok('C 입장 대기 = QR · 다음 수업 1-3 · 「선생님이 수업을 열면」 · ⏰ 자동 · ⛶', /1-3반/.test(e0) && /수업을 열면/.test(e0) && /다음 자동 열기/.test(e0) && /교사 폰 앱이 켜져 있어야 열려요/.test(e0) && !!(await tv.$('[data-k="tv-full2"]')) && !!(await tv.$('[data-k="tv-entry"] svg, [data-k="tv-entry"] canvas, [data-k="tv-entry"] img')), e0.slice(0, 160));
   ok('C TV 교사 캠프 없음', !(await tv.$('.campv')));
   await tv.screenshot({ path: `${SHOTS}/s21-tv-entry.png` });
   // 1분 전 🔔 (교사 폰) · 시작종 → TV 가 엶
@@ -60,9 +60,13 @@ const mon0858 = Date.UTC(2026, 10, 15, 23, 58); // 11/16 월 08:58 KST
   ok('E 1분 전 🔔 교사 폰 [취소] · [다른 차시]', /1분 뒤 자동으로/.test(await txt('.sheet')) && !!(await p.$('[data-k="soon-cancel"]')) && !!(await p.$('[data-k="soon-other"]')));
   await p.screenshot({ path: `${SHOTS}/s21-soon.png` });
   await p.click('[data-k="soon-ok"]');
-  await tv.bringToFront(); await ctx.clock.fastForward('01:00'); await tv.waitForTimeout(12000);
-  const lv = await tv.evaluate(() => window.__dbGet('school/live'));
-  ok('E 시작종 = 종합실 PC 가 1-3 ⭐ 차시 엶', lv?.cls === '1-3' && !lv.test, JSON.stringify(lv));
+  await p.bringToFront(); await ctx.clock.fastForward('01:00'); await p.waitForTimeout(12000);
+  const lv = await p.evaluate(() => window.__dbGet('school/live'));
+  ok('E 📜 11/24 시작종 = 교사 폰이 1-3 ⭐ 차시 엶 (종합실 PC 아님)', lv?.cls === '1-3' && !lv.test, JSON.stringify(lv));
+  const done = await p.evaluate(() => window.__dbGet('school/auto/done'));
+  ok('E done 칸 = 한 번 연 표시', JSON.stringify(done || {}).includes(lv?.code || '@'), JSON.stringify(done));
+  ok('E 교사 폰 = 수업 화면(대기실)으로', !!(await p.$('.lbar .live')));
+  await tv.bringToFront(); await tv.waitForTimeout(2500);
   const e1 = ((await tv.textContent('[data-k="tv-entry"]').catch(() => '')) || '').replace(/\s+/g, ' ');
   ok('C 연 뒤 = 오늘 수업 · 들어온 학생 · 코드', /오늘 수업/.test(e1) && /들어온 학생/.test(e1) && /수업 코드/.test(e1), e1.slice(0, 160));
   await tv.screenshot({ path: `${SHOTS}/s21-tv-open.png` });
