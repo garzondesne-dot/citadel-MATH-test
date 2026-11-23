@@ -13,7 +13,7 @@ import { setPaperDefault } from '../theme/theme';
 const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 
 export type FeatId =
-  | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox' | 'rest-dragon' | 'guide'
+  | 'hero' | 'rest-balance' | 'rest-flip' | 'rest-nunchi' | 'rest-defense' | 'rest-ox' | 'rest-dragon' | 'rest-alkkagi' | 'guide'
   | 'mon-attack' | 'forge' | 'symtalk' | 'citadel' | 'seteuk' | 'schedule' | 'photo'
   | 'survey' | 'author' | 'contest' | 'theme' | 'lesson-fx' | 'juice' | 'scarecrow' | 'board'
   | 'sword' | 'help3' | 'review' | 'cc' | 'pre' | 'stamp' | 'qpaper' | 'keys' | 'keygem' | 'campfire';
@@ -33,6 +33,7 @@ export const FEATS: Feat[] = [
   { id: 'rest-flip', ic: '🔄', name: '쉼터 · 반대로', sub: '', group: '쉼터 놀이' },
   { id: 'rest-nunchi', ic: '🙊', name: '쉼터 · 눈치게임', sub: '', group: '쉼터 놀이' },
   { id: 'rest-dragon', ic: '🐉', name: '쉼터 · 용이 잠든 사이', sub: '두 단추 번갈아 · 2분 30초', group: '쉼터 놀이' }, // 📜 2026-11-17 #25
+  { id: 'rest-alkkagi', ic: '🥏', name: '쉼터 · 알까기', sub: '반 전체 한 판 · 150초 · 약 3분', group: '쉼터 놀이' }, // 📜 2026-11-24
   { id: 'rest-defense', ic: '🏰', name: '쉼터 · 디펜스', sub: '', group: '쉼터 놀이' },
   { id: 'rest-ox', ic: '⭕', name: '쉼터 · OX', sub: '', prep: 'pack', group: '쉼터 놀이', need: () => packNeed(!!SUBJ.funOx?.length, 'OX 문장') },
   { id: 'forge', ic: '⚒', name: '모루 · 📖 도감', sub: '모루 연성법이 있는 과목 팩만', prep: 'pack', group: '과목 팩', need: () => packNeed(!!SUBJ.forge, '모루 연성법') },
@@ -66,7 +67,7 @@ const ALL = FEATS.map((f) => f.id).filter((id) => id !== 'schedule' && id !== 'r
 const STD_NEW: FeatId[] = ['sword', 'qpaper', 'pre', 'stamp', 'keys'];
 export const BUNDLES: { id: BundleId; ic: string; name: string; sub: string; on: FeatId[] }[] = [
   { id: 'basic', ic: '🪶', name: '가볍게', sub: '뼈대만 · 수업 레이드 · 결과 · 복습', on: ['scarecrow', 'board'] }, // 복습 = 10절 🦴 뼈대 쪽 → 기본에도 켬 (스위치는 따로)
-  { id: 'standard', ic: '⚔', name: '게임처럼', sub: '+ 용사 · 💎 · 강화 · 쉼터 놀이 · 몬스터 공격 · 칼 · 도장', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-ox', 'mon-attack', 'lesson-fx', 'juice', 'theme', ...STD_NEW] },
+  { id: 'standard', ic: '⚔', name: '게임처럼', sub: '+ 용사 · 💎 · 강화 · 쉼터 놀이 · 몬스터 공격 · 칼 · 도장', on: ['scarecrow', 'board', 'hero', 'rest-balance', 'rest-flip', 'rest-nunchi', 'rest-ox', 'rest-alkkagi', 'mon-attack', 'lesson-fx', 'juice', 'theme', ...STD_NEW] },
   { id: 'full', ic: '🏰', name: '모두', sub: '+ 도움 3단 · 익명 풀이 · 개념 체크 · 과목 팩 · AI', on: ALL },
 ];
 export interface FeatCfg { bundle: BundleId; on?: Partial<Record<FeatId, boolean>> }

@@ -56,6 +56,10 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   // 🔐 📜 2026-11-14 출시 막는 것 2: 학생 칸 주인(pids) · 💎 선물 · 우편 · 방 학생 칸 = 그 학생 본인 · 교사 · TV 만
   want('pids 내 칸 주인 표시(A = s1_3_1)', await as(A.tok, 'pids/s1_3_1', 'PUT', { u: A.uid, c: '1-3', n: '1' }), true);
   want('pids 남 칸 차지(B → s1_3_1)', await as(B.tok, 'pids/s1_3_1', 'PUT', { u: B.uid, c: '1-3', n: '1' }), false);
+  want('🥏 알까기 참가 (A → fv/ak1_j/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1_j/s1_3_1', 'PUT', 1), true);
+  want('🥏 알까기 발사 (A → fv/ak1/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0.5, p: 1, n: 1 }), true);
+  want('🥏 남 발사 쓰기 막힘 (B → s1_3_1)', await as(B.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0, p: 2, n: 2 }), false);
+  want('🥏 학생 판 상태(fun/st) 쓰기 막힘', await as(A.tok, 'rooms/111111/fun/st/s1_3_1/x', 'PUT', 0), false);
   want('pids 계정과 다른 번호 차지(B → s1_3_3)', await as(B.tok, 'pids/s1_3_3', 'PUT', { u: B.uid, c: '1-3', n: '3' }), false);
   want('pids 이름과 칸이 다름(B 1-3 2 → s1_3_9)', await as(B.tok, 'pids/s1_3_9', 'PUT', { u: B.uid, c: '1-3', n: '2' }), false);
   want('pids B 내 칸', await as(B.tok, 'pids/s1_3_2', 'PUT', { u: B.uid, c: '1-3', n: '2' }), true);

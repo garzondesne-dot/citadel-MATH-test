@@ -4,6 +4,7 @@
 //   → 소레이드 단계마다 70% → ❤ 0 = 🙋 잠김(선생님 「✔ 풀어주기」 기다림) → 형성평가(첫 시도 80% · 틀린 문항은 숫자 바뀐 재도전에서 맞힘) → 쉼터 놀이(⚖ 🔄 ⭕ · 🙊)
 //   실제 학생과 똑같은 경로(rooms/{code}/…)에 씀 → 교사 폰 · TV 는 진짜 수업과 똑같이 움직임 · 집중 모드면 손을 멈춤
 //   기록: 수업 끝 기록(records/{반}/{번호})은 학생 폰만 씀 → 가상 학생은 랭킹 · 대시보드 · 서버 학생 기록에 남지 않음 · players/{uid}/bot = true · 이름 앞 🤖
+import { botShot, rkJoin as akJ, rkShot as akS, type Ak } from '../rest/alkkagi';
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
@@ -57,6 +58,13 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
     const f = (R0 as { fun?: Record<string, unknown> }).fun as { kind?: string; phase?: string; to?: number; rk?: string; alive?: Record<string, true>; ans?: string | null; rps?: boolean; g?: number; round?: number } | undefined;
     if (!f) return; const now = S.now();
     if (f.kind === 'td') return; // 🏰 디펜스 = 베타 가상 학생은 안 함(자리 고르기 · 능력치 규칙이 따로)
+    if (f.kind === 'ak') { // 🥏 11/24 가상 친구 = 모이기 때 참가 · 쉬는 시간이 끝나면 0.3 ~ 1.5초 뒤 가장 가까운 알을 겨눠 쏨(조준 오차 sim.py 봇) · 10% 는 안 누름
+      const k = f as unknown as Ak;
+      if (k.phase === 'join') { ids.forEach((u) => later(`akj|${k.g}|${u}`, rand(500, 3000), () => S.set(P(`fv/${akJ(k.g)}/${u}`), 1))); return; }
+      if (k.phase !== 'play') return;
+      ids.forEach((u, i) => { const s = k.st?.[u]; if (!s?.on || s.cd > 0 || i % 10 === 9) return; later(`ak|${k.g}|${k.beat}|${u}`, rand(300, 1500), () => { const RR = S.get<Room>(roomPath(code)) as Room & { fun?: Ak }; const cur = RR?.fun; if (!cur || cur.phase !== 'play' || cur.g !== k.g) return; const b = botShot(cur.st, u, 0.25 * [0.5, 1, 1, 2][i % 4]!); if (b) S.set(P(`fv/${akS(k.g)}/${u}`), { ...b, n: (cur.st[u]?.n || 0) + 1 }); }); });
+      return;
+    }
     if (f.kind === 'drg') { // 🐉 #25 가상 친구 = 잘 때 0.7초마다 2~5칸 · 눈 뜰 때 가끔(20%) 걸림
       const d = f as unknown as Drg; if (d.phase !== 'play') return; const t = now - d.at; if (t < 0) return; const slot = Math.floor(t / 700);
       ids.forEach((u) => { if (!d.alive?.[u]) return; later(`drg|${d.g}|${d.round}|${u}|${slot}`, rand(0, 600), () => { const RR = S.get<Room>(roomPath(code)) as Room & { dg?: Record<string, Record<string, Record<string, { p?: number; h?: number; f?: number }>>> }; const cur = RR?.dg?.[d.g]?.[d.round]?.[u] || {}; if (cur.f != null) return; const st = dragonAt(d, S.now() - d.at).st; let p = Number(cur.p) || 0, h = Number(cur.h) || 0; if (st === 'eye') { if (Math.random() < 0.2) { p = Math.max(0, p - 10); h += 1; } else return; } else p = Math.min(FIN, p + 2 + Math.floor(Math.random() * 4)); S.set(P(`dg/${d.g}/${d.round}/${u}`), { p, h, ...(p >= FIN ? { f: S.now() } : {}) }); }); });
