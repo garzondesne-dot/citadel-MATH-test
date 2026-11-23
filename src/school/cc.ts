@@ -10,6 +10,14 @@ const key = (id: string) => `cc_${id.replace(/[.#$/[\]]/g, '_')}`;
 export const ccOpen = (R: Room | null | undefined, step: Step | null | undefined, now: number) => !!(R?.state.cc && step && R.state.cc.id === step.id && now < R.state.cc.end);
 /** 이 단계에서 체크를 연 적이 있나 (닫힌 뒤에도 결과를 보여 줌) */
 export const ccRan = (R: Room | null | undefined, step: Step | null | undefined) => !!(R?.state.cc && step && R.state.cc.id === step.id);
+/** 🐞 11/23 「아, 또 떴지」: 이 단계 체크가 이미 끝났으면 단추 = 「끝」 · 누르면 「다시?」(3초) · 한 번 더 눌러야 다시 열림 — 끝난 뒤 한 번 누름으로 새 30초가 열리던 것 */
+export const CC_ARM_MS = 3000;
+export function ccTap(S: Store, code: string, R: Room, step: Step, now: number, armAt: number): number {
+  if (ccOpen(R, step, now)) { closeCC(S, code, R); return 0; }
+  if (ccRan(R, step) && !(armAt && now - armAt < CC_ARM_MS)) return now; // 1번째 누름 = 「다시?」
+  openCC(S, code, step.id); return 0;
+}
+export const ccLabel = (R: Room, step: Step | null | undefined, now: number, armAt: number) => (ccOpen(R, step, now) ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : ccRan(R, step) ? (armAt && now - armAt < CC_ARM_MS ? '다시?' : '끝') : '체크');
 export const openCC = (S: Store, code: string, id: string) => { const t = S.now(); S.set(`rooms/${code}/state/cc`, { id, at: t, end: t + CC_SEC * 1000 }); };
 export const closeCC = (S: Store, code: string, R: Room) => { if (R.state.cc) S.set(`rooms/${code}/state/cc/end`, S.now()); };
 export const gradeCC = (c: ConceptCheck, a: number | boolean) => (c.type === 'ox' ? a === c.a : Number(a) === Number(c.a));

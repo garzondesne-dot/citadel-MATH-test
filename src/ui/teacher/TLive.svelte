@@ -3,7 +3,7 @@
   import { handsOf, lowerHand, openGobi, reviewStep, stepReview } from '../../school/help';
   import { idleOn, stuckCells, STUCK_N } from '../../school/idle';
   import { leftSteps, sendToReview, sentKey } from '../../school/sendReview';
-  import { ccOpen, ccRan, ccStats, closeCC, openCC } from '../../school/cc';
+  import { ccLabel, ccOpen, ccRan, ccStats, ccTap } from '../../school/cc';
   import { setReview } from '../../raid/actions';
   import { siteUrl } from '../../channel';
   import { holdWake, wakeTip } from '../wake.svelte';
@@ -128,6 +128,7 @@
   const hands = $derived(R && mid ? handsOf(R, mid) : []);
   // ✔ 개념 체크 (📜 2026-11-15 · school/cc.ts): 개념 단계에 check 가 있을 때만 단추 · 누름 = 30초 열기 · 다시 = 일찍 닫기 · 아래 한 줄 = 맞힘 n / 인원 · 많이 고른 오답
   const ccIsOpen = $derived(!!R && ccOpen(R, step, now));
+  let ccArm = $state(0);
   const ccSt = $derived(R && step?.check && ccRan(R, step) ? ccStats(R, step) : null);
   // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
   const rv = $derived(reviewStep(L, R, mid, now)); // 종합실 막대와 같은 함수 (🪞 11/17 #13 · #14 📊 고비)
@@ -371,7 +372,7 @@
       <button type="button" data-slot="video" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><i>🎬</i>영상</button>
       <button type="button" data-slot="sheet" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" data-slot="t5" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
-      {#if feat('cc')}<button type="button" data-slot="cc" data-k="cc" class:on={ccIsOpen} aria-pressed={ccIsOpen} disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccIsOpen ? closeCC(S, code, R) : openCC(S, code, step!.id))}><i>✔</i>{ccIsOpen ? `닫기 ${Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000)}` : '체크'}</button>
+      {#if feat('cc')}<button type="button" data-slot="cc" data-k="cc" class:on={ccIsOpen} aria-pressed={ccIsOpen} disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccArm = ccTap(S, code, R, step!, now, ccArm))}><i>✔</i>{ccLabel(R, step, now, ccArm)}</button>
       {:else}<button type="button" data-slot="cc" class="off" aria-disabled="true" onclick={() => say('⚙ 기능에서 켜요 (✔ 개념 체크)')}><i>✔</i>꺼짐</button>{/if}
       {#if feat('review')}<button type="button" data-slot="review" data-k="review" class:on={!!rv.cur} aria-pressed={!!rv.cur} disabled={!rv.show} onclick={nextReview}><i>{rv.gobi ? '📊' : '🔎'}</i>{rv.show ? rv.label : '풀이'}</button>
       {:else}<button type="button" data-slot="review" class="off" aria-disabled="true" onclick={() => say('⚙ 기능에서 켜요 (🔎 익명 풀이)')}><i>🔎</i>꺼짐</button>{/if}

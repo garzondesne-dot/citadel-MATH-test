@@ -2,7 +2,7 @@
   import WarBar from '../board/WarBar.svelte';
   import { explorers, expOf } from '../../school/explore';
   import { keyBoard, keysOf } from '../../school/keys';
-  import { ccOpen, ccStats, closeCC, openCC } from '../../school/cc';
+  import { ccLabel, ccOpen, ccStats, ccTap } from '../../school/cc';
   import { reviewStep, stepReview } from '../../school/help';
   import { gobiCard } from '../../school/gobi';
   import GobiCardView from './GobiCard.svelte';
@@ -99,6 +99,7 @@
   const step = $derived(R ? stepOf(L, R) : null);
   const i = $derived(R ? stepIdx(R) : -1);
   const mid = $derived(step?.kind === 'monster' && L.monsters[step.id] ? step.id : null);
+  let ccArm = $state(0);
   const ccOnTv = $derived(!!R && ccOpen(R, step, now)), rvTv = $derived(reviewStep(L, R, mid, now)); // ✔ · 🔎 막대 단추 (교사 폰과 같은 함수)
   const chain = $derived(!!R && !!mid && isChain(L, R, mid));
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : null);
@@ -483,7 +484,7 @@
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>
       <!-- ✔ · 🔎 (📜 2026-11-17 #13 「종합실 리모컨에 체크랑 풀이」): 교사 폰 리모컨과 같은 함수 · 같은 조건 · 같은 글 (🪞) -->
       <!-- 🧭 #24 ⑦ 자리 고정: ✔ · 🔎 늘 같은 자리 · 못 쓸 때 흐림 · ⚙ 에서 끔 = 점선 「꺼짐」(누르면 안내) -->
-      {#if feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccOnTv ? closeCC(S, code, R) : openCC(S, code, step!.id))}>✔<small>{ccOnTv ? `닫기 ${Math.max(0, Math.ceil(((R.state.cc?.end ?? 0) - now) / 1000))}` : '체크'}</small></button>
+      {#if feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccArm = ccTap(S, code, R, step!, now, ccArm))}>✔<small>{ccLabel(R, step, now, ccArm)}</small></button>
       {:else}<button type="button" class="t off" data-k="dock-cc" aria-disabled="true" title="⚙ 기능에서 켜요" onclick={() => (offTip = '⚙ 기능에서 켜요 (✔ 개념 체크)')}>✔<small>꺼짐</small></button>{/if}
       {#if feat('review')}<button type="button" class="t" class:on={!!rvTv.cur} aria-pressed={!!rvTv.cur} data-k="dock-review" disabled={!rvTv.show} onclick={() => R && stepReview(S, code, L, R as Room, now)}>{rvTv.gobi ? '📊' : '🔎'}<small>{rvTv.show ? rvTv.label : '풀이'}</small></button>
       {:else}<button type="button" class="t off" data-k="dock-review" aria-disabled="true" title="⚙ 기능에서 켜요" onclick={() => (offTip = '⚙ 기능에서 켜요 (🔎 익명 풀이)')}>🔎<small>꺼짐</small></button>{/if}

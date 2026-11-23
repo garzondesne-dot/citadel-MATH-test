@@ -40,3 +40,21 @@ describe('✔ 개념 체크', () => {
     expect(ccRecord(R(), [step], 'a')).toEqual({ c1: 1 }); expect(ccRecord(R(), [step], 'b')).toEqual({ c1: 0 }); expect(ccRecord(R(), [step], 'z')).toEqual({});
   });
 });
+
+describe('✔ 개념 체크 끝난 뒤 다시 누름 (🐞 11/23 「아, 또 떴지」)', () => {
+  it('끝 → 1번 누름 = 「다시?」만 · 3초 안에 한 번 더 = 다시 열림 · 열린 동안 = 닫기', async () => {
+    const { ccTap, ccLabel } = await import('../src/school/cc');
+    let t = 1_000_000; const S = memoryStore(); (S as unknown as { now: () => number }).now = () => t;
+    const step = { id: 'c1', kind: 'concept', check: { type: 'ox', q: 'q', a: true, why: 'w' } } as unknown as Step;
+    const R = () => ({ state: S.get('rooms/X/state') || {} }) as unknown as Room;
+    S.set('rooms/X/state/step', 0);
+    expect(ccLabel(R(), step, t, 0)).toBe('체크');
+    let arm = ccTap(S, 'X', R(), step, t, 0); expect(arm).toBe(0); expect(ccOpen(R(), step, t)).toBe(true); // 처음 = 바로 열림
+    t += 31_000; expect(ccLabel(R(), step, t, 0)).toBe('끝');
+    const at0 = R().state.cc!.at;
+    arm = ccTap(S, 'X', R(), step, t, 0); expect(arm).toBe(t); expect(R().state.cc!.at).toBe(at0); expect(ccLabel(R(), step, t, arm)).toBe('다시?'); // 안 열림
+    t += 4000; arm = ccTap(S, 'X', R(), step, t, arm); expect(ccOpen(R(), step, t)).toBe(false); // 3초 지남 = 다시 「다시?」
+    t += 1000; arm = ccTap(S, 'X', R(), step, t, arm); expect(ccOpen(R(), step, t)).toBe(true); expect(arm).toBe(0); // 두 번째 = 열림
+    arm = ccTap(S, 'X', R(), step, t + 500, arm); expect(ccOpen(R(), step, t + 600)).toBe(false); // 열린 동안 = 닫기
+  });
+});
