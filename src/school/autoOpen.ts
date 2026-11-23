@@ -42,3 +42,17 @@ export const pickToday = (S: Store, now: number, p: number, id: string | null) =
 export const markOpened = (S: Store, now: number, p: number, code: string) => S.set(`${AUTO}/done/${dayKey(now)}/${p}`, code);
 /** 그 반이 지금 열려 있나 (열려 있으면 자동으로 새로 열지 않음) */
 export const isOpenCls = (S: Store, live: Live | null, cls: string) => !!live && !live.test && live.cls === cls && !S.get<boolean>(`rooms/${live.code}/state/closed`);
+
+/** ⏰ 📜 11/24 자동 열기 한 번 보기 (교사 폰이 10초마다 · 종합실 PC 는 안 엶 = 교사 계정을 두지 않음)
+ *  시작종 ~ +5분 · 그 반이 이미 열려 있으면 「열었음」 표시만 · 다른 수업이 열려 있으면 열지 않음 · done 칸 = 두 번 열림 막음
+ *  돌려주는 값 = 새로 연 방 코드 (없으면 '') */
+export function autoTick(S: Store, now: number, packs: LessonPack[], open: (cls: string, L: LessonPack) => string): string {
+  const d = dueSlot(S, now, packs); if (!d?.L) return '';
+  const lv0 = S.get<Live>('school/live');
+  if (isOpenCls(S, lv0, d.cls)) { markOpened(S, now, d.p, lv0!.code); return ''; }
+  if (lv0 && !S.get<boolean>(`rooms/${lv0.code}/state/closed`)) return '';
+  const code = open(d.cls, d.L); if (code) markOpened(S, now, d.p, code);
+  return code;
+}
+/** 화면 안내 한 줄 */
+export const AUTO_NOTE = '교사 폰 앱이 켜져 있어야 열려요';
