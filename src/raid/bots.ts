@@ -5,6 +5,7 @@
 //   실제 학생과 똑같은 경로(rooms/{code}/…)에 씀 → 교사 폰 · TV 는 진짜 수업과 똑같이 움직임 · 집중 모드면 손을 멈춤
 //   기록: 수업 끝 기록(records/{반}/{번호})은 학생 폰만 씀 → 가상 학생은 랭킹 · 대시보드 · 서버 학생 기록에 남지 않음 · players/{uid}/bot = true · 이름 앞 🤖
 import { qOf, syl, type Aj } from '../rest/ajae';
+import type { Lg } from '../rest/landgrab';
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
 import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
@@ -58,6 +59,13 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
     const f = (R0 as { fun?: Record<string, unknown> }).fun as { kind?: string; phase?: string; to?: number; rk?: string; alive?: Record<string, true>; ans?: string | null; rps?: boolean; g?: number; round?: number } | undefined;
     if (!f) return; const now = S.now();
     if (f.kind === 'td') return; // 🏰 디펜스 = 베타 가상 학생은 안 함(자리 고르기 · 능력치 규칙이 따로)
+    if (f.kind === 'lg') { // 🏁 11/24 가상 친구 = 모이기 때 참가 · 턴마다 0.3 ~ 2.5초 뒤 방향(90%) · 안 누름 10%
+      const l = f as unknown as Lg;
+      if (l.phase === 'join') { ids.forEach((u) => later(`lgj|${l.g}|${u}`, rand(500, 3000), () => S.set(P(`fv/lg${l.g}_j/${u}`), 1))); return; }
+      if (l.phase !== 'pick') return;
+      ids.forEach((u) => { if (l.team?.[u] == null) return; later(`lg|${l.g}|${l.turn}|${u}`, rand(300, 2500), () => { if (Math.random() < 0.1) return; S.set(P(`fv/lg${l.g}_${l.turn}/${u}`), Math.floor(Math.random() * 4)); }); });
+      return;
+    }
     if (f.kind === 'aj') { // 😆 11/24 가상 친구 = 3 ~ 20초 뒤 맞힘(70%) · 아니면 틀린 글자
       const a = f as unknown as Aj; if (a.phase !== 'q') return;
       ids.forEach((u) => { if (!a.alive?.[u]) return; later(`aj|${a.g}|${a.rk}|${u}`, rand(3000, 20000), () => { const q = qOf(a.qs[a.n - 1] ?? 0); if (!q) return; S.set(P(`fv/${a.rk}/${u}`), { a: Math.random() < 0.7 ? q.a : a.chips.slice(0, syl(q.a).length).join(''), at: S.now() }); }); });
