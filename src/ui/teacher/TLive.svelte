@@ -34,8 +34,9 @@
   import SymText from '../q/SymText.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import { talkOf } from '../tv/cards';
-  import { drgNext, driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
+  import { ajAllDone, ajRoundOf, drgNext, driveFun, endRest, funOf, GAMES, gamesOn, restMinDef, restOn, startFun, stopFun, tdCheer, tdShield, type Game } from '../../rest/run';
   import { status as funStatus, norm, type Fun } from '../../rest/fun';
+  import { AJ } from '../../rest/ajae';
   import { boardCols, boardScroll, cellOf, givenName, swordDots, todayCols, todayRow, type Cell } from '../../school/stuBoard';
   import { kstToday0 } from '../../school/noteDiff';
 
@@ -213,19 +214,19 @@
   // 🏕 쉼터 (#142 ①): 🏕 = 쉼터 켜고(지난 분) 놀이 고르기 시트 · 놀이 5칸 · ⭕ = 지난 · 오늘 · 분 −/＋ = 다음 쉼터 기본으로 기억 · 이 폰도 놀이 시계를 맡음(TV 가 없을 때)
   const stopDrive = untrack(() => driveFun(S, live.code, 'tp'));
   onDestroy(stopDrive);
-  let game = $state<Game>('bal'), oxWhich = $state<'prev' | 'now'>('now'), rmin = $state(untrack(() => restMinDef(S)));
+  let game = $state<Game>('bal'), oxWhich = $state<'prev' | 'now'>('now'), ajPick = $state(0) /* 😆 0 = 이 반 다음 회차 */, rmin = $state(untrack(() => restMinDef(S)));
   const fun = $derived(funOf(R));
   const funOn = $derived(!!fun && fun.phase !== 'end');
   const tdf = $derived(fun && (fun.kind as string) === 'td' ? (fun as unknown as { g: number; phase: string; sh?: number; ch?: Record<string, number>; res?: { win: boolean } }) : null);
   const tdWave = $derived(tdf ? Number((R as unknown as { tdl?: Record<string, { wave?: number; life?: number }> }).tdl?.[tdf.g]?.wave) || 1 : 1);
-  const funLine = $derived(tdf ? `🏰 디펜스 · ${tdf.phase === 'pick' ? '자리 고르는 중' : tdf.phase === 'play' ? `웨이브 ${tdWave}/5` : tdf.res?.win ? '🏆 승리' : '끝'}` : !fun ? '' : (fun.kind as string) === 'aj' ? `😆 아재 퀴즈 · ${fun.phase === 'intro' ? '안내' : fun.phase === 'end' ? '시상' : `${(fun as unknown as { n: number; qs: number[] }).n} / ${(fun as unknown as { qs: number[] }).qs.length}문제`}` : (fun.kind as string) === 'drg' ? `🐉 용이 잠든 사이 · ${fun.phase === 'intro' ? '안내' : fun.phase === 'end' ? '시상' : `${(fun as unknown as { round: number }).round}판`}` : fun.kind === 'nun' ? `🙊 눈치게임 · ${fun.phase === 'end' ? '끝' : `${(fun as unknown as { round: number }).round}판 · 생존 ${Object.keys(fun.alive || {}).length}명`}` : funStatus(norm(fun as Fun)));
+  const funLine = $derived(tdf ? `🏰 디펜스 · ${tdf.phase === 'pick' ? '자리 고르는 중' : tdf.phase === 'play' ? `웨이브 ${tdWave}/5` : tdf.res?.win ? '🏆 승리' : '끝'}` : !fun ? '' : (fun.kind as string) === 'aj' ? `😆 아재 퀴즈 ${(fun as unknown as { round?: number }).round ?? 1}회 · ${fun.phase === 'intro' ? '안내' : fun.phase === 'end' ? '시상' : `${(fun as unknown as { n: number; qs: number[] }).n} / ${(fun as unknown as { qs: number[] }).qs.length}문제`}` : (fun.kind as string) === 'drg' ? `🐉 용이 잠든 사이 · ${fun.phase === 'intro' ? '안내' : fun.phase === 'end' ? '시상' : `${(fun as unknown as { round: number }).round}판`}` : fun.kind === 'nun' ? `🙊 눈치게임 · ${fun.phase === 'end' ? '끝' : `${(fun as unknown as { round: number }).round}판 · 생존 ${Object.keys(fun.alive || {}).length}명`}` : funStatus(norm(fun as Fun)));
   const gameOf = (k: Game) => GAMES.find((g) => g.k === k)!;
   function openRest() { if (!R) return; if (!R.state.rest) restOn(S, code, R, rmin); sheet = 'rest'; }
   function setMin(d: number) { if (!R) return; rmin = Math.max(1, Math.min(20, rmin + d)); restOn(S, code, R, rmin); }
   function goGame() {
     if (!R) return;
     if (funOn) { stopFun(S, code); return; }
-    const err = startFun(S, code, R, game, { which: oxWhich, no: L.no, me: 'tp' });
+    const err = startFun(S, code, R, game, { which: oxWhich, no: L.no, me: 'tp', round: game === 'aj' ? ajPick || undefined : undefined }); if (!err) ajPick = 0;
     if (err) say(err); else sheet = '';
   }
   // 🚪 입장 (#138 ③): 코드 크게 + QR(주소 ?join=코드 · 로그인한 폰은 바로 · 아니면 로그인 뒤 그 수업) · 교실 TV 주소
@@ -478,6 +479,7 @@
       {#snippet act()}<div class="rsact"><div class="row"><button type="button" class="btn2" onclick={() => { endRest(S, code); sheet = ''; }}>쉼터 끝</button><button type="button" class="btn rbig" onclick={goGame}>{funOn ? `■ 놀이 그만 · ${funLine}` : `▶ ${gameOf(game).ic} ${gameOf(game).name}${game === 'quiz' ? (oxWhich === 'prev' ? ' · 지난' : ' · 오늘') : ''} 시작`}</button></div></div>{/snippet}
       {#if !(tdf && tdf.phase === 'play')}<div class="games" role="group" aria-label="놀이">
         {#each gamesOn() as g (g.k)}<button type="button" class="game" class:on={game === g.k} aria-pressed={game === g.k} disabled={funOn} onclick={() => (game = g.k)}><i>{g.ic}</i>{g.name}</button>{/each}
+        {#if game === 'aj'}{@const nr = ajRoundOf(S, R)}<div class="ajr" data-k="aj-round"><span>😆 {ajPick || nr}회차{ajPick && ajPick !== nr ? ' (골라 씀)' : ''} / {AJ.rounds}{ajAllDone(S, R) && !ajPick ? ' · 모든 회차 끝 → 1회부터 다시' : ''}</span><div class="ajrs" role="group" aria-label="회차">{#each Array(AJ.rounds) as _, i (i)}<button type="button" class:on={(ajPick || nr) === i + 1} aria-pressed={(ajPick || nr) === i + 1} data-r={i + 1} onclick={() => (ajPick = i + 1 === nr ? 0 : i + 1)}>{i + 1}</button>{/each}</div></div>{/if}
         {#if game === 'quiz'}<div class="oxw" role="group" aria-label="OX 문장"><button type="button" class:on={oxWhich === 'prev'} onclick={() => (oxWhich = 'prev')}>지난 차시</button><button type="button" class:on={oxWhich === 'now'} onclick={() => (oxWhich = 'now')}>오늘</button></div>{/if}
       </div>{/if}
       {#if fun && (fun.kind as string) === 'drg' && fun.phase !== 'end'}<div class="tdc"><button type="button" data-k="drg-next" onclick={() => drgNext(S, code)}>⏭ 다음 판<small>지금 단계를 바로 끝내요</small></button></div>{/if}
@@ -743,4 +745,5 @@
   .ask .btn { flex: 1; height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); font: 700 17px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .ask .btn2 { width: 92px; height: 52px; border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--text); font: 700 15px var(--font); }
   .wlist { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; } .wlh { font-size: 13px; font-weight: 700; color: var(--text-2); } .wl { display: flex; align-items: center; gap: 8px; font-size: 14px; } .wl b { flex: none; } .wl span { flex: 1; min-width: 0; overflow-wrap: anywhere; } .wl.bad span { color: var(--bad); } .wl.off { opacity: 0.45; } .wl button { flex: none; min-height: 36px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 600 13px var(--font); }
+  .ajr { display: grid; gap: 6px; font: 700 14px var(--font); color: var(--text-2); } .ajrs { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; } .ajrs button { min-height: 40px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 800 15px var(--font); } .ajrs button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 </style>

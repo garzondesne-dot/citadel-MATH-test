@@ -30,7 +30,7 @@
 
 <div class="aj" data-k="aj-phone" data-phase={f.phase}>
   {#if f.phase === 'intro'}
-    <p class="band">😆 아재 퀴즈 · {f.qs.length}문제</p>
+    <p class="band">😆 아재 퀴즈 {f.round ?? 1}회 · {f.qs.length}문제</p>
     <p class="rule">글자를 골라 정답을 완성해요 · 먼저 맞히면 <b>3 · 2 · 1점</b> · 틀려도 다시!</p>
     <p class="big">{sec}</p>
   {:else if f.phase === 'end'}
