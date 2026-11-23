@@ -36,7 +36,7 @@ describe('⏰ autoTick', () => {
   it('화면: 교사 로그인 PC · 교사 폰 둘 다 · 안내 줄', () => {
     const hall = fs.readFileSync('src/ui/Hall.svelte', 'utf8'), ta = fs.readFileSync('src/ui/teacher/TeacherApp.svelte', 'utf8');
     expect(hall).toMatch(/!feat\('schedule'\) \|\| !isAdm\(\)/); // 📜 안 1 = 교사 로그인 PC 도 (10초마다 다시 봄)
-    expect(ta).toMatch(/autoTick\(S, Date\.now\(\), packs/); expect(AUTO_PC_NOTE).toContain('이 PC 는 자동 열기 안 됨');
+    expect(ta).toMatch(/autoTick\(S, Date\.now\(\), packs/); expect(AUTO_PC_NOTE).toBe('교사 폰 앱을 켜 두거나 이 PC 에 교사 로그인');
     expect(ta).toContain("document.visibilityState === 'hidden'");
     expect(AUTO_NOTE).toBe('교사 폰 앱이 켜져 있어야 열려요');
     expect(fs.readFileSync('src/ui/tv/TV.svelte', 'utf8')).toContain('⏰ 다음 자동 열기 {nxa.hm}');
