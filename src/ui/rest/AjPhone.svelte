@@ -3,6 +3,8 @@
   import type { Room, Store } from '../../model/types';
   import { isRight, qOf, standingsAj, syl, type Aj, type Ans } from '../../rest/ajae';
   import { ajAnswer } from '../../rest/run';
+  import { AJ_HOST } from '../../rest/ajae';
+  import HeroSprite from '../camp/HeroSprite.svelte';
   // 😆 아재 퀴즈 · 학생 폰 (📜 2026-11-24): 문제 · 빈칸 □ · 글자 칩 8칸 → 다 채우면 보냄 · 틀리면 흔들고 지움(다시) · 맞히면 「n등!」
   const { S, R, code, uid, now, f }: { S: Store; R: Room; code: string; uid: string; now: number; f: Aj } = $props();
   const q = $derived(qOf(f.qs[f.n - 1] ?? 0));
@@ -39,7 +41,7 @@
     <ol class="top">{#each st.slice(0, 3) as x (x.u)}<li class:me={x.u === uid}>{x.rank}등 · {x.pts}점{x.u === uid ? ' (나)' : ''}</li>{/each}</ol>
   {:else if q}
     <p class="band">{f.n} / {f.qs.length} · {f.phase === 'q' ? `${sec}초` : '정답 공개'}</p>
-    <p class="q" data-k="aj-q">{q.q}</p>
+    <div class="qrow"><i class="host" data-k="aj-host" aria-hidden="true"><HeroSprite id={AJ_HOST} scale={1} play /></i><p class="q" data-k="aj-q">{q.q}</p></div>
     {#if f.phase === 'show'}
       <p class="ans" data-k="aj-ans">{q.a}</p><p class="why">{q.why}</p>
       <p class="rule">{lastMine >= 0 ? `🎉 ${lastMine + 1}번째로 맞힘 · +${f.last![lastMine]![1]}점` : done ? '맞혔어요 (점수는 3등까지)' : '다음 문제에서 다시!'}</p>
@@ -61,7 +63,9 @@
   .band { margin: 0; font: 800 16px var(--font); color: var(--accent); }
   .rule { margin: 0; font: 600 15px/1.5 var(--font); color: var(--text-2); } .rule.ok { color: var(--ok); } .rule.no { color: var(--bad); }
   .big { margin: 0; font: 900 48px var(--font); }
-  .q { margin: 0; font: 800 22px/1.4 var(--font); }
+  .qrow { display: flex; align-items: center; gap: var(--s2); width: min(100%, 380px); }
+  .host { flex: none; }
+  .q { flex: 1; margin: 0; padding: var(--s3) var(--s4); border-radius: var(--r); background: #fff7e0; color: #2a1f14; font: 800 22px/1.4 var(--font); text-align: left; }
   .ans { margin: 0; font: 900 30px var(--font); color: var(--accent); } .why { margin: 0; font: 600 15px var(--font); color: var(--text-2); }
   .ajs { display: flex; flex-direction: row; justify-content: center; gap: 6px; } .ajs span { width: 44px; height: 52px; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--surface-2); font: 800 24px var(--font); }
   .ajs.bad span { box-shadow: inset 0 0 0 2px var(--bad); animation: nope 0.3s; } .ajs.ok span { box-shadow: inset 0 0 0 2px var(--ok); }
