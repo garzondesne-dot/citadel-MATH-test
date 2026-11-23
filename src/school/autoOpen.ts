@@ -61,4 +61,4 @@ export async function autoTick(S: Store, now: number, packs: LessonPack[], open:
 }
 /** 화면 안내 한 줄 */
 export const AUTO_NOTE = '교사 폰 앱이 켜져 있어야 열려요';
-export const AUTO_PC_NOTE = '⏰ 이 PC 는 자동 열기 안 됨 · 교사 폰 앱이 켜져 있거나 이 PC 에 교사 로그인';
+export const AUTO_PC_NOTE = '교사 폰 앱을 켜 두거나 이 PC 에 교사 로그인';

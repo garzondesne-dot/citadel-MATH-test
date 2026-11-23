@@ -52,7 +52,7 @@ const mon0858 = Date.UTC(2026, 10, 15, 23, 58); // 11/16 월 08:58 KST
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e));
   await tv.goto(B + '?role=hall'); await tv.waitForSelector('[data-k="tv-entry"]', { timeout: 15000 }).catch(() => {});
   const e0 = ((await tv.textContent('[data-k="tv-entry"]').catch(() => '')) || '').replace(/\s+/g, ' ');
-  ok('C 입장 대기 = QR · 다음 수업 1-3 · 「선생님이 수업을 열면」 · ⏰ 자동 · ⛶', /1-3반/.test(e0) && /수업을 열면/.test(e0) && /다음 자동 열기/.test(e0) && /먼저 켜진 쪽이 열어요|이 PC 는 자동 열기 안 됨/.test(e0) && !!(await tv.$('[data-k="tv-full2"]')) && !!(await tv.$('[data-k="tv-entry"] svg, [data-k="tv-entry"] canvas, [data-k="tv-entry"] img')), e0.slice(0, 160));
+  ok('C 입장 대기 = QR · 다음 수업 1-3 · 「선생님이 수업을 열면」 · ⏰ 자동 · ⛶', /1-3반/.test(e0) && /수업을 열면/.test(e0) && /다음 자동 열기/.test(e0) && /먼저 켜진 쪽이 열어요|교사 폰 앱을 켜 두거나/.test(e0) && !!(await tv.$('[data-k="tv-full2"]')) && !!(await tv.$('[data-k="tv-entry"] svg, [data-k="tv-entry"] canvas, [data-k="tv-entry"] img')), e0.slice(0, 160));
   ok('C TV 교사 캠프 없음', !(await tv.$('.campv')));
   await tv.screenshot({ path: `${SHOTS}/s21-tv-entry.png` });
   // 1분 전 🔔 (교사 폰) · 시작종 → TV 가 엶
