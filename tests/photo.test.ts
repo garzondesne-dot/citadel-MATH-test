@@ -11,9 +11,11 @@ import { photoScrolls } from '../src/school/castle';
 
 const mem = (t = 1_000_000): Store => ({ ...memoryStore(), kind: 'memory', now: () => t });
 describe('📷 설정 · 기준표', () => {
-  it('코드 기준표 = 정식 lessons/rubrics.js (수업 소레이드 8 · 성채 7)', () => {
+  it('코드 기준표 = 정식 lessons/rubrics.js (수업 소레이드 8 · 성채 7) + 11/23 확정 6방 (11 m4 · 13 m4 · 14 ~ 17 m3)', () => {
     const R = codeRubrics(), n = (k: string) => Object.keys(R[k] || {}).length;
-    expect([n('set-06'), n('set-09'), n('set-10'), n('set-11'), n('set-12')]).toEqual([4, 1, 1, 1, 1]);
+    expect([n('set-06'), n('set-09'), n('set-10'), n('set-11'), n('set-12')]).toEqual([4, 1, 1, 2, 1]);
+    expect([n('set-13'), n('set-14'), n('set-15'), n('set-16'), n('set-17')]).toEqual([1, 1, 1, 1, 1]);
+    expect([R['set-13']!.m4!.total, R['set-13']!.m4!.pass, R['set-14']!.m3!.pass]).toEqual([5, 4, 3]);
     expect([n('eval-1'), n('eval-2'), n('eval-3')]).toEqual([2, 2, 3]);
     for (const rs of Object.values(R)) for (const r of Object.values(rs)) { expect(r.pass).toBeLessThanOrEqual(r.total); expect((r.steps || []).reduce((a, s) => a + s.pts, 0)).toBe(r.total); }
   });
@@ -30,7 +32,8 @@ describe('📷 설정 · 기준표', () => {
     expect(rubricLesson(S, { id: 'set-06a', no: 6 })).toBe('set-06');
     expect(rubricLesson(S, { id: 'set-06@7', no: 7 })).toBe('set-06'); // 베타 6차시 뒤쪽 팩 (차시 번호 7)
     expect(rubricLesson(S, { id: 'eval-1', no: 0 })).toBe('eval-1');
-    expect(rubricLesson(S, { id: 'ex-13', no: 13 })).toBe('ex-13'); // 기준표 없음 = 그대로 (준비 중)
+    expect(rubricLesson(S, { id: 'ex-13', no: 13 })).toBe('set-13'); // 11/23 확정 기준표
+    expect(rubricLesson(S, { id: 'ex-18', no: 18 })).toBe('ex-18'); // 기준표 없음 = 그대로 (준비 중)
   });
   it('보내는 글 = 정식 pack (번호 · 「풀이는 학습지에」 · 「(이어서)」 지움)', () => {
     const p = pack([{ question: '3 A ⊂ B 를 보여라 (풀이는 학습지에)', answer: 5, solution: 'x', check: { a: 1 } }, { question: '(이어서) 다음', answer: 'y', check: { b: 2 } }]);
