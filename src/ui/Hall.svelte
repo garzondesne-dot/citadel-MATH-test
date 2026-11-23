@@ -11,7 +11,9 @@
   import { PACKS, packOf } from '../engine/packs';
   import { carryOfRoom, withCarry } from '../school/carry';
   import { dressed } from './rdun';
-  import { feat } from '../school/features.svelte'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
+  import { feat } from '../school/features.svelte';
+  import { autoTick } from '../school/autoOpen';
+  import { openLesson } from '../school/openLesson'; // 🎲 그림 없는 차시 · 시험 던전 = 학생 폰과 같은 그림
 
   // 🖥 교실 TV (#119 ⑮) — 교사 폰이 연 수업(school/live)을 따라감 · 수업이 없으면 교사 캠프
   //   주소에 ?room= 이 있으면 그 방(시험 · 두 탭 체험: 없으면 그 던전으로 만들고 1-1반으로 봄)
@@ -69,7 +71,13 @@
   const ready = $derived(!trying && /^\d{4}$/.test(keyIn) && (!byCode || /^\d{6}$/.test(codeIn.trim())));
   // 🔗 옛 정식 TV 주소(?role=hall&code=…&key=…) = 코드로 들어가기에 채워 한 번 (키는 oldUrl 이 이미 주소에서 지움)
   if (oldHall && srv && !admin) untrack(() => { byCode = true; codeIn = oldHall!.code; keyIn = oldHall!.key; void enter().then(() => { keyIn = ''; }); });
-  // ⏰ 자동 열기 = 📜 11/24 교사 폰이 엶 (TeacherApp · autoTick) · 종합실 PC 는 교사 계정을 두지 않으므로 열지 않음
+  // ⏰ 자동 열기 (📜 11/24 선생님 「안 1 + 안 2」): 교사 폰 + 이 종합실 PC 에 교사 로그인했을 때 · 로그인은 10초마다 다시 봄(새로 고침 없이) · done 칸 = 먼저 잡은 기기만
+  const isAdm = () => S.kind !== 'server' || !!(S as AS).isAdmin?.();
+  const autoT = untrack(() => (!fixed ? setInterval(() => {
+    if (!feat('schedule') || !isAdm()) return;
+    void autoTick(S, Date.now(), PACKS, (c, L) => openLesson(S, c, L), 'pc');
+  }, 10e3) : 0));
+  onDestroy(() => clearInterval(autoT));
 </script>
 
 {#if !gated}

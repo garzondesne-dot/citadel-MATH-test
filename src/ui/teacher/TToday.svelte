@@ -3,7 +3,7 @@
   import type { Live } from '../../school/school';
   import type { Carry } from '../../school/carry';
   import { DOW, hhmm, kst } from '../../school/bells';
-  import { AUTO_NOTE, autoCfg, dayKey, dayOff, isOpenCls, setAuto, skipToday, todaySlots, type Slot } from '../../school/autoOpen';
+  import { autoCfg, dayKey, dayOff, isOpenCls, setAuto, skipToday, todaySlots, type Slot } from '../../school/autoOpen';
   import Sheet from '../battle/Sheet.svelte';
 
   // 📅 오늘 시간표 (📜 2026-11-17 #21 E · 시안 Uj7jgeePofh2x9fmKzjqGZ ⑩ ⑪): ⚔ 수업 탭 맨 위 · 시간표를 쓸 때만 · 오늘 칸만 · 끝난 교시 흐리게
@@ -27,7 +27,7 @@
   <div class="hd"><span class="lab">📅 오늘 시간표 · {k.m}/{k.d} ({DOW[k.dow]})</span>
     <button type="button" class="asw" class:on={!!cfg.on} role="switch" aria-checked={!!cfg.on} data-k="auto-sw" onclick={() => { setAuto(S, !cfg.on); ver++; }}>⏰ 자동 열기 <b>{cfg.on ? '켬' : '끔'}</b></button>
   </div>
-  {#if cfg.on}<p class="hint" data-k="auto-note">⏰ {AUTO_NOTE} (화면이 꺼지면 안 열림)</p>{/if}
+  {#if cfg.on}<p class="hint" data-k="auto-note">⏰ 교사 폰 앱이 켜져 있거나 교사 로그인한 종합실 PC 가 열어요 (폰 화면이 꺼지면 안 열림)</p>{/if}
   {#if !rows.length}
     <p class="hint">오늘은 시간표에 수업이 없어요</p>
   {:else}
