@@ -474,6 +474,7 @@
       <!-- 🏕 쉼터 동안 가운데 묶음 = 놀이 5개 (리모컨 시트와 같은 순서) -->
       <span class="sep"></span>
       {#each gamesOn() as g (g.k)}<button type="button" class="t" class:on={fun?.kind === g.k && fun.phase !== 'end'} onclick={() => playGame(g.k)}>{g.ic}<small>{g.name}</small></button>{/each}
+      <button type="button" class="t rend" data-k="dock-rest-end" onclick={() => endRest(S, code)}>🏁<small>쉼터 끝</small></button><!-- 🐞 11/23 선생님 「종합실에 쉼터로 들어가면 나오는 버튼이 없다」: 놀이 닫고 쉼터 전 단계 그대로 (「앞으로 ▶」= 쉼터 끝 + 다음 단계) -->
     {:else if R && !R.state.closed && view !== 'camp'}
       <!-- 📺 시안 (선생님 「1번 추천대로」 2026-11-14): 던전 대기실에서도 같은 도구 줄 + ▶ 수업 시작 -->
       <span class="sep"></span>
@@ -694,6 +695,7 @@
   .dock .n small { font-size: var(--tv-small); color: inherit; opacity: 0.8; }
   .dock .n.go { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: 0 3px 0 var(--accent-sh); }
   .dock .n.fo { border: 2px solid #e5484d; }
+  .dock .t.rend { border: 2px solid var(--accent); }
   .dock .n.fo.on { background: #e5484d; color: #fff; }
   .dock .sep { width: 1px; height: 6cqh; background: rgba(255, 255, 255, 0.2); margin: 0 0.3cqw; }
   .heroov { position: absolute; inset: 0; z-index: 12; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }

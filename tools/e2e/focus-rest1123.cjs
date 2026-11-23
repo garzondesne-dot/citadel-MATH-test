@@ -19,6 +19,18 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.evaluate((c) => window.__dbSet(`rooms/${c}/state/sheet`, null), R); await t.waitForTimeout(400);
   ok('문제 창 닫으면 집중 막 그대로', !(await t.$('.ov.sheet')) && !!(await t.$('.ov.fo')));
   await t.evaluate((c) => window.__dbSet(`rooms/${c}/state/focus`, false), R); await t.waitForTimeout(300);
+  // ①′ 종합실 쉼터 끝 (선생님 11/23 「종합실에 쉼터로 들어가면 나오는 버튼이 없다」)
+  await t.click('button:has-text("던전 입장")').catch(() => {}); await t.waitForTimeout(800);
+  await t.evaluate((c) => window.__dbSet(`rooms/${c}/state/step`, 0), R); await t.waitForTimeout(600); // 대기실 → 첫 단계 (TV 막대만 보려고)
+  const tStep = await t.evaluate((c) => window.__dbGet(`rooms/${c}/state/step`), R);
+  await t.mouse.move(600, 400); await t.click('.dock .t:has-text("쉼터")'); await t.waitForTimeout(500);
+  ok('종합실 🏕 → 쉼터 켜짐', !!(await t.evaluate((c) => window.__dbGet(`rooms/${c}/state/rest`), R)));
+  await t.mouse.move(600, 400); await t.waitForTimeout(200);
+  ok('종합실 쉼터 중 막대 「🏁 쉼터 끝」', !!(await t.$('[data-k="dock-rest-end"]')));
+  await t.screenshot({ path: `${SHOTS}/tv-rest-end.png` });
+  await t.click('[data-k="dock-rest-end"]'); await t.waitForTimeout(500);
+  const ts = await t.evaluate((c) => window.__dbGet(`rooms/${c}/state`), R);
+  ok('종합실 쉼터 끝 → 쉼터 닫힘 · 단계 그대로', !ts.rest && ts.step === tStep, JSON.stringify({ rest: ts.rest, step: ts.step, tStep }));
   // ② 리모컨 (교사 「수업」 탭 → 🧪 테스트 · 📱 리모컨만)
   const { testOpen } = require('./_cls.cjs');
   const r = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); r.setDefaultTimeout(8000); r.on('pageerror', (e) => errs.push('리모컨 ' + e));
