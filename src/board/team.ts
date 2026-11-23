@@ -273,3 +273,7 @@ export function sweepAll(S: Store, posts: Record<string, Post> | null, now: numb
 }
 /** 내 숨 (대기 · 진행 중 20초마다) */
 export const beat = (S: Store, p: Post, uid: string) => { if (p.mem?.[uid]) S.set(`${POSTS}/${p.pid}/mem/${uid}/seen`, S.now()); };
+
+/** 👥 📜 11/23 팀 참가 목록 = 모든 차시의 모집 중 팀 (혼자 판 · 옛 예약 글 빼고) · 새 팀 위 */
+export const joinList = (posts: readonly Post[]): Post[] =>
+  posts.filter((p) => p && p.phase === 'wait' && !p.solo && !p.when).sort((a, b) => (b.at || 0) - (a.at || 0));

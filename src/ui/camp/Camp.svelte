@@ -1,6 +1,5 @@
 <script lang="ts">
   import { auraName } from '../fx/aura';
-  import { clock, useClock } from '../clock.svelte';
   import { atbLessons } from '../../board/atb/lessons';
   import { doneNo } from '../../school/progress';
   import { isReady } from '../../store/atomic';
@@ -129,9 +128,6 @@
   // ⓪ 로그인한 학생 = 이름표 이름 (명단에서 · 학생이 쓰지 않음)
   if (untrack(() => pupil) && me.nick !== untrack(() => pupil)?.name) { me.nick = untrack(() => pupil)?.name ?? me.nick; M.save(); }
   // 🎁 선생님 선물 받기 (gifts/{uid} · 하루 한도 밖) — 캠프에 들어오면 아직 안 받은 것을 지갑에 넣고 한 줄 알림 (지급 = 기록 · 알림 = 보여 주기)
-  $effect(() => useClock()); // ⏱ 예약 띠 · 남은 분 (1초 시계)
-  // 🔔 📜 #73 예약 판 10분 전 ~ 30분 뒤 = 캠프 위 띠(누르면 게시판) · 게시판 물건 빛 · 푸시 없음 · 체험판 없음
-  const resvSoon = $derived.by(() => { void clock.now; const u = pupil?.uid; if (!u || trial) return null; const now = S.now(); const ps = S.get<Record<string, { no: number; when?: number; phase: string; mem?: Record<string, unknown> }>>('school/board/posts') || {}; return Object.values(ps).find((p) => p && p.when && p.phase === 'wait' && p.mem?.[u] && now >= p.when - 10 * 60e3 && now < p.when + 30 * 60e3) ?? null; });
   let trialRun = $state<import('../../model/types').LessonPack | null>(null); // 👩‍🏫 #66-8 체험판 게시판에서 고른 차시
   const atbTrialIds = (packs: import('../../model/types').LessonPack[]) => atbLessons(packs, new Set()).map((p) => p.id);
   let feedTick = $state(0);
@@ -576,7 +572,6 @@
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
-    {#if resvSoon}<button type="button" class="resvb" data-k="resv-bell" onclick={() => (sheet = 'dummy')}>🔔 {resvSoon.no}차시 예약 판 {(resvSoon.when ?? 0) > clock.now ? `${Math.max(1, Math.ceil(((resvSoon.when ?? 0) - clock.now) / 60000))}분 전` : '지금 열렸어요'} · 게시판으로</button>{/if}
   </div>
   </div>
 
@@ -991,6 +986,4 @@
   @media (prefers-reduced-motion: reduce) { .prop.pk :global(.img), .glow { animation: none !important; } .cfx { display: none; } }
   .trophy { position: relative; } .tdot { position: absolute; top: 2px; right: 2px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font: 800 11px var(--font); display: grid; place-items: center; } /* 🏆 #68 */
   .warl { padding: 4px 16px 0; }
-  .resvb { position: fixed; z-index: 30; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%); max-width: 398px; width: calc(100% - 32px); min-height: 48px; padding: 0 16px; border-radius: 24px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 15px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5); animation: resvp 1.6s ease-in-out infinite; }
-  @keyframes resvp { 50% { filter: brightness(1.15); } }
 </style>
