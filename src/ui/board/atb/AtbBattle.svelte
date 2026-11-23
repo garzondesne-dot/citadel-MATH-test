@@ -791,7 +791,7 @@
       <!-- 🌟 오라 = 몸과 따로 아래 층 (📜 요청 #20 ③ · 어떤 오라도 몸을 안 가림 · 오라끼리는 안쪽(뒤) 용사가 위) · 전용 10강 오라 = 원래 용사로 찾음 -->
       {#if h.s.enh > 0 && !h.down}<div class="aul" class:off={busy.has(h.id) || (!!hpose[h.id] && hpose[h.id] !== 'hit') || domeKind === 'aura'} style:z-index={2 + order.indexOf(h.id)} aria-hidden="true"><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={h.s.enh} /></div>{/if}
       <div class="spr" style:transform="translate(-50%, -100%)" bind:this={heroEls[h.id]}><HeroSprite id={lookOfStats(h.s)} scale={sc} aura={0} row={h.down ? 8 : 0} play={!h.down} pose={!h.down && hpose[h.id] ? hpose[h.id] || undefined : !h.down && lowIds.includes(h.id) ? 'pant' : undefined} /><i class="hitpic" data-k="atb-hitpic" aria-hidden="true"></i></div>
-      {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64 * 0.9)} boss z={19} />{/key}{/if}
+      {#if mhit && mhit.to.includes(h.id)}{#key mhit.k}<MonHit kind={mhit.kind} x={0} y={-Math.round(base * p.s * 64 * 0.5)} size={Math.round(base * p.s * 64)} boss z={19} />{/key}{/if}
       {#if shatter?.ids.includes(h.id)}<i class="ringx" style:top="{-Math.round(base * p.s * 64 * 0.5)}px" data-k="atb-ringx" aria-hidden="true">{#each [0, 1, 2, 3, 4, 5] as j}<i style:--r="{j * 60}deg"></i>{/each}</i>{/if}
       {#if ordNext === h.id && !h.down}<i class="ordn" style:top="{-Math.round(base * p.s * 64 * 1.02) - 22}px" data-k="atb-order" aria-label="다음 차례">🎯 다음</i>{/if}{#if (h.mark ?? 0) > 0 && !h.down}<i class="mark" data-k="atb-mark" aria-label="톱니 표식">⚙{h.mark! > 1 ? `×${h.mark}` : ''}</i>{/if}
       {#if h.cover}<i class="cov"><AtbIcon name="role-tank" size={20} label="엄호" /></i>{/if}
