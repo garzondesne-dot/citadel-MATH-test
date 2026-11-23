@@ -31,6 +31,17 @@ export function rubricLesson(S: Store, L: Pick<LessonPack, 'id' | 'no'> & { part
   const alt = `set-${String(L.no).padStart(2, '0')}`;
   return has(alt) ? alt : L.id;
 }
+/** 🐞 11/23 「기준표 15개에서 안 늘어나」 — 교사 설정 목록 = 코드 기준표 + 서버에만 있는 기준표 + 차시 팩의 ⚔ 소레이드(기준 글 없음 = x: null · 켤 수 없음) */
+export type RubricRow = { l: string; r: string; x: Rubric | null; fb?: Rubric; t: string; no: number };
+export const rubricNo = (l: string) => (l.startsWith('eval-') ? 900 + Number(l.slice(5)) : Number(l.replace(/^\D+/, '')) || 999);
+export function rubricRows(S: Store, packs: readonly LessonPack[]): RubricRow[] {
+  const fb = rubOf(S), code = codeRubrics(), out = new Map<string, RubricRow>();
+  const add = (l: string, r: string, t?: string) => { const k = `${l}|${r}`; if (out.has(k)) return; const x = code[l]?.[r] ?? fb[l]?.[r] ?? null; out.set(k, { l, r, x, fb: fb[l]?.[r], t: x?.title || t || r, no: rubricNo(l) }); };
+  for (const [l, rs] of Object.entries(code)) for (const r of Object.keys(rs)) add(l, r);
+  for (const [l, rs] of Object.entries(fb)) for (const r of Object.keys(rs || {})) add(l, r);
+  for (const P of packs) for (const [mid, m] of Object.entries(P.monsters || {})) if ((m as { chain?: unknown }).chain) add(rubricLesson(S, P), mid, `${(m as { title?: string }).title ?? mid} (${P.no}차시 소레이드)`);
+  return [...out.values()].sort((a, b) => a.no - b.no || a.r.localeCompare(b.r));
+}
 /** 켜짐 · 주소 있음 (lid 없으면) / 그 방 기준표도 켜짐 */
 export function ready(S: Store, lid?: string, rid?: string): boolean {
   const c = cfgOf(S); if (!(c.on && c.url)) return false;

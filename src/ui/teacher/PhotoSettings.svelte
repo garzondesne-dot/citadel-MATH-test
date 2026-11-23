@@ -2,7 +2,8 @@
   // 📷 사진 채점 설정 (정식 photo.js settings 그대로): 웹 앱 주소 · 켜기 · 장 수 · 쉬는 초 · 수업 소레이드 장 수 · 경고 기준 · 🔌 연결 확인 · 기준표 켜기 · 📤 기준표 올리기
   //   API 키는 Apps Script 스크립트 속성에만 (여기 넣지 않음) · 사진은 저장되지 않음 · 켠 방만 학생에게 열림
   import type { Store } from '../../model/types';
-  import { cfgOf, codeRubrics, coolSec, daily, raidMax, roomMax, rubOf, usage, DAILY0, ROOM0, WARN_DAY0, WARN_MONTH0, type Rubric } from '../../school/photo';
+  import { cfgOf, coolSec, daily, raidMax, roomMax, rubricNo, rubricRows, usage, DAILY0, ROOM0, WARN_DAY0, WARN_MONTH0 } from '../../school/photo';
+  import { PACKS } from '../../engine/packs';
   import { liveValue } from '../room.svelte';
   import { onDestroy, untrack } from 'svelte';
   const { S }: { S: Store } = $props();
@@ -11,9 +12,9 @@
   let url = $state(c0.url || ''), on = $state(!!c0.on), dl = $state(daily(c0)), rm = $state(roomMax(c0)), cool = $state(coolSec(c0)), raid = $state(raidMax(c0)), wd = $state(Number(c0.warnDay) || WARN_DAY0), wm = $state(Number(c0.warnMonth) || WARN_MONTH0);
   let msg = $state(''), busy = $state(false), ask = $state(false);
   const say = (t: string) => { msg = t; setTimeout(() => (msg = ''), 3500); };
-  const list = $derived.by(() => { void lr.v.val; const fb = rubOf(S); return Object.entries(codeRubrics()).flatMap(([l, rs]) => Object.entries(rs).map(([r, x]) => ({ l, r, x: x as Rubric, fb: fb[l]?.[r] }))); });
-  const where = (l: string) => (l.startsWith('eval-') ? l.replace('eval-', '평가') : `⚔ ${l.replace('set-', '')}차시`);
-  const up = $derived(list.filter((y) => y.fb).length);
+  const list = $derived.by(() => { void lr.v.val; return rubricRows(S, PACKS); });
+  const where = (l: string) => (l.startsWith('eval-') ? l.replace('eval-', '평가') : `⚔ ${rubricNo(l)}차시`);
+  const up = $derived(list.filter((y) => y.fb).length), has = $derived(list.filter((y) => y.x)), none = $derived(list.length - has.length);
   const U = $derived.by(() => { void lc.v.val; return usage(S); });
   const num = (v: number, lo: number, hi: number, d: number) => Math.max(lo, Math.min(hi, Math.round(Number(v) || d)));
   const put = async (p: string, v: unknown) => (S.trySet ? S.trySet(p, v) : (S.set(p, v), Promise.resolve(true)));
@@ -35,7 +36,7 @@
   }
   async function upload() {
     ask = false; busy = true; let bad = 0;
-    for (const y of list) if (!(await put(`photo_rubric/${y.l}/${y.r}`, { ...y.x, on: y.fb ? !!y.fb.on : !!y.x.on }))) bad++;
+    for (const y of has) if (!(await put(`photo_rubric/${y.l}/${y.r}`, { ...y.x, on: y.fb ? !!y.fb.on : !!y.x!.on }))) bad++;
     busy = false; say(bad ? `⚠ ${bad}개를 올리지 못했어요` : '📤 올렸어요');
   }
   async function toggle(l: string, r: string, v: boolean) { if (!(await put(`photo_rubric/${l}/${r}/on`, v))) say('저장하지 못했어요'); }
@@ -56,23 +57,24 @@
   <div class="row"><button type="button" class="pri" data-k="ph-save" disabled={busy} onclick={save}>💾 저장</button><button type="button" disabled={busy} onclick={ping}>🔌 연결 확인</button></div>
   {#if msg}<p class="msg" role="status">{msg}</p>{/if}
   <p class="use" class:warn={U.warn}>{#if U.warn}<b>⚠ 사용량 경고</b> {U.why}<br />{/if}📈 오늘 학교 전체 <b>{U.today}</b>장 · 이번 달 <b>{U.month}</b>장 ≈ <b>{U.won.toLocaleString()}</b>원</p>
-  <h3>채점 기준표 <small>올림 {up} / {list.length} · 켠 방만 학생에게 열려요</small></h3>
+  <h3>채점 기준표 <small>올림 {up} / {has.length}{none ? ` · 기준 글 없음 ${none}` : ''} · 켠 방만 학생에게 열려요</small></h3>
   <table>
     <thead><tr><th>방</th><th>배점</th><th>서버</th><th>켜기</th></tr></thead>
     <tbody>
       {#each list as y (`${y.l}|${y.r}`)}
-        <tr data-rub={`${y.l}|${y.r}`}><td>{where(y.l)} · {y.x.title}</td><td>{y.x.pass} / {y.x.total}</td><td>{y.fb ? '✔' : '—'}</td><td><input type="checkbox" checked={!!y.fb?.on} disabled={!y.fb || busy} onchange={(e) => toggle(y.l, y.r, e.currentTarget.checked)} aria-label="{y.x.title} 켜기" /></td></tr>
+        <tr data-rub={`${y.l}|${y.r}`} class:none={!y.x}><td>{where(y.l)} · {y.t}</td><td>{y.x ? `${y.x.pass} / ${y.x.total}` : '✍ 기준 글 없음'}</td><td>{y.fb ? '✔' : '—'}</td><td><input type="checkbox" checked={!!y.fb?.on} disabled={!y.fb || !y.x || busy} onchange={(e) => toggle(y.l, y.r, e.currentTarget.checked)} aria-label="{y.t} 켜기" /></td></tr>
       {/each}
     </tbody>
   </table>
   {#if ask}
-    <div class="ask"><p>기준표 {list.length}개를 서버에 올릴까요? (켜기 상태는 그대로 · 처음 올리는 방은 코드 기본값)</p><div class="row"><button type="button" class="pri" onclick={upload}>📤 올리기</button><button type="button" onclick={() => (ask = false)}>그만</button></div></div>
+    <div class="ask"><p>기준표 {has.length}개를 서버에 올릴까요? (켜기 상태는 그대로 · 처음 올리는 방은 코드 기본값)</p><div class="row"><button type="button" class="pri" onclick={upload}>📤 올리기</button><button type="button" onclick={() => (ask = false)}>그만</button></div></div>
   {:else}
     <button type="button" class="wide" disabled={busy} onclick={() => (ask = true)}>📤 기준표 올리기 (코드의 기준표 → 서버 · 켜기는 그대로)</button>
   {/if}
 </div>
 
 <style>
+  tr.none td { color: var(--text-3); }
   .ps { display: flex; flex-direction: column; gap: var(--s3); padding-bottom: var(--s3); }
   .ps p { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
   .muted { color: var(--text-2); font-size: 14px; }
