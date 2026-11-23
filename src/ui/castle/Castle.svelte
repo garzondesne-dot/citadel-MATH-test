@@ -67,7 +67,7 @@
   const phTrial = untrack(() => preview || (RS as { kind?: string }).kind !== 'server');
   function phOn(Px: CastlePack, r: CastleRoom): boolean { void ver; if (!r.photo) return false; return phTrial ? !!(phRubric(S, Px.id, r.id) ?? codeRubrics()[Px.id]?.[r.id]) : phReady(S, Px.id, r.id); }
   const phItemsOf = (qs: PhItem[]): PhItem[] => qs.map((q) => ({ question: q.question, answer: (q as { answer?: unknown }).answer ?? (q as { answers?: string[] }).answers?.[0], solution: q.solution, check: q.check }));
-  let shot = $state<{ P: CastlePack; r: CastleRoom; items: PhItem[]; chain: boolean } | null>(null);
+  let shot = $state<{ P: CastlePack; r: CastleRoom; items: PhItem[]; chain: boolean; again?: boolean } | null>(null);
   /** 📷 통과 → 기록 + 보상 (처치 보상은 아직 처치 전 방만) */
   function photoWin(Px: CastlePack, r: CastleRoom, out: { id?: string; score?: number; total?: number; up?: boolean } | null, why = '📷 서술형 통과'): string[] {
     const path = `${base}/${Px.id}/${r.id}`, old = RS.get<CastleRec>(path) || {}, got: string[] = [];
@@ -103,7 +103,7 @@
   function openShot(Px: CastlePack, r: CastleRoom) {
     const rr = recs[r.id];
     if (r.chain) { const qs = Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []; shot = { P: Px, r, items: phItems(phRubric(S, Px.id, r.id), r.title, qs, qs.map((q) => q.solution || '')), chain: true }; return; }
-    if (rr?.ans?.items?.length) { shot = { P: Px, r, items: rr.ans.items, chain: false }; return; }
+    if (rr?.ans?.items?.length) { const v0 = (Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []) as unknown as PhItem[], again = rr.ans.items.map((q) => q.question).join('|') !== v0.map((q) => q.question).join('|'); shot = { P: Px, r, items: rr.ans.items, chain: false, again }; return; } // 🐞 11/23 학생이 푼 판 ≠ 판 0 = 숫자 바꾼 판 → 중계소가 학생 문제 글로 채점
     { const qs = Px.rooms.find((y) => y.id === r.id)?.vers[0] ?? []; shot = { P: Px, r, items: phItemsOf(qs as unknown as PhItem[]), chain: false }; } // 📜 #41 답 맞히기 전에도 = 성채 학습지 숫자(판 0)
   }
   // 📜 #57 ✍ 실력 쓰기 · 📜 +1 = 학습지 숫자 📷 를 통과한 방만 · 숫자 바꾼 판(1~6 중 학생마다 하나 · 숫자 없는 증명 = 판 0) · 방마다 한 번 · 📜 1 만 (💎 · EXP · 수식 책사 = 첫 통과 그대로)
@@ -293,7 +293,7 @@
   <RewriteSheet S={RS} {cls} {num} lesson={rw.P.id} room={rw.r.id} title={rw.r.title} items={rw.items} trial={phTrial} onpass={rwPass} onpend={rwPend} onclose={() => (rw = null)} />
 {/if}
 {#if shot}
-  <PhotoSheet S={RS} {cls} {num} lesson={shot.P.id} room={shot.r.id} title={shot.r.title} items={shot.items} trial={phTrial} onclose={photoDone} />
+  <PhotoSheet S={RS} {cls} {num} lesson={shot.P.id} room={shot.r.id} title={shot.r.title} items={shot.items} fresh={!!shot.again} trial={phTrial} onclose={photoDone} />
   {/if}
 </div>
 {/if}

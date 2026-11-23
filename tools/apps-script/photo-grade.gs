@@ -183,8 +183,15 @@ const SCHEMA = {
 // 기준표의 ask 에 {k} 같은 자리가 있으면 학생 문제의 숫자(params)로 채움 · 없으면 학생 화면의 문제 글
 function fill_(t, p) { return String(t).replace(/\{(\w+)\}/g, (m, k) => (p && p[k] != null ? String(p[k]) : m)); }
 
+function askOf_(q, rub) {
+  const again = !!q.ask && (q.again === true || /숫자 바꾼 판/.test(String(q.ask)));
+  return again ? String(q.ask).slice(0, 600) : rub.ask ? fill_(rub.ask, q.params || {}) : String(q.ask || '').slice(0, 600);
+}
+
 function grade_(q, rub, steps, media) {
-  const ask = rub.ask ? fill_(rub.ask, q.params || {}) : String(q.ask || '').slice(0, 600);
+  // 🐞 11/23 숫자 바꾼 판(✍ 실력 쓰기 · 성채 다른 판)은 학생 화면 문제 글이 먼저 — 기준표 ask(학습지 숫자)를 쓰면 [문제]와 [정답] · [모범 풀이] 숫자가 엇갈림
+  //   q.again = 새 앱이 붙임 · 「숫자 바꾼 판」 = 지금 앱(b236)의 ✍ 실력 쓰기 문제 글 끝 표시 → 중계소만 다시 배포해도 바로 맞음
+  const ask = askOf_(q, rub);
   const text = [
     `[문제] ${ask}`,
     `[이 문제의 정답] ${q.answer == null ? '(기준표 참고)' : String(q.answer).slice(0, 80)}`,

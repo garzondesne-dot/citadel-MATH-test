@@ -11,8 +11,8 @@
   import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, passScroll, post, PRE_MSG, precheckOf, QUAL, rubric, roomMax, type PhotoRes } from '../../school/photo';
 
   export interface PhotoOut { status: 'pass' | 'check' | 'retry' | 'appeal'; id?: string; score?: number; total?: number; scores: number[]; steps?: PhotoRes['steps'] }
-  const { S, cls, num, lesson, room, title, items, trial = false, test = false, again = false, onclose }:
-    { S: Store; cls: string; num: number; lesson: string; room: string; title: string; items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[]; trial?: boolean; /** 📜 #57 ✍ 실력 쓰기 (숫자 바꾼 판 · 📜 칸 따로) */ again?: boolean; test?: boolean; onclose: (v: PhotoOut | null) => void } = $props();
+  const { S, cls, num, lesson, room, title, items, trial = false, test = false, again = false, fresh = false, onclose }:
+    { S: Store; cls: string; num: number; lesson: string; room: string; title: string; items: { question?: string; answer?: unknown; solution?: string; check?: Record<string, unknown> }[]; trial?: boolean; /** 📜 #57 ✍ 실력 쓰기 (숫자 바꾼 판 · 📜 칸 따로) */ again?: boolean; /** 🐞 11/23 숫자 바꾼 판이지만 실력 쓰기는 아님(성채 다른 판) = 중계소에 학생 문제 글로 채점하라고만 알림 */ fresh?: boolean; test?: boolean; onclose: (v: PhotoOut | null) => void } = $props();
   const P = untrack(() => pack(items)), cfg = untrack(() => cfgOf(S)), r0 = untrack(() => rubric(S, lesson, room)) || { total: 4, pass: 3 };
   const rk = untrack(() => keyOf(lesson, room).replace(/[.#$/[\]]/g, '_'));
   type View = 'intro' | 'edit' | 'wait' | 'pass' | 'check' | 'retry' | 'appeal';
@@ -92,7 +92,7 @@
   async function token(): Promise<string | null> { const a = (S as Store & { auth?: { currentUser: { getIdToken(): Promise<string> } | null } }).auth; try { return (await a?.currentUser?.getIdToken()) ?? null; } catch { return null; } }
   async function send(image: string) {
     view = 'wait';
-    const r = await post(cfg.url || '', { idToken: await token(), ...(test ? { test: true } : {}), c: cls, n: num, lesson, room, ask: P.ask, answer: P.answer, ref: P.ref, params: P.params, image, media: 'image/jpeg' });
+    const r = await post(cfg.url || '', { idToken: await token(), ...(test ? { test: true } : {}), ...(again || fresh ? { again: true } : {}), c: cls, n: num, lesson, room, ask: P.ask, answer: P.answer, ref: P.ref, params: P.params, image, media: 'image/jpeg' });
     if (finished) return;
     if (!r || !r.ok) { if (r?.err === 'quota') left = 0; if (r?.err === 'roomquota') roomLeft = 0; if (r?.err === 'wait') coolUntil = Date.now() + (Number(r.sec) || coolSec(cfg)) * 1000; msg = `⚠ ${errMsg(r, cfg)}`; view = 'intro'; return; }
     if (lastHash) keepHash(lastHash);
