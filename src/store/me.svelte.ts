@@ -1,7 +1,8 @@
 import { lookId } from '../model/hero';
 import { equipOf, type Look } from '../model/draft';
 import { cosWorn, type CosOn } from '../model/cosmetics';
-import { activePet, feed, petClean, type PetState } from '../model/pets';
+import { PET_TRIAL, activePet, feed, petClean, type PetState } from '../model/pets';
+import { TRIAL } from '../channel';
 import { ECON_VER, migrate, type Wallet } from '../model/wallet';
 import { meBound, p, type Bound } from './meSync';
 import type { Store } from '../model/types';
@@ -196,9 +197,9 @@ export function savedCos(): import('../model/cosmetics').CosOn {
 export function petFeedNow(why: { lesson: string } | { scare: string }): number {
   if (asTeacher) return 0;
   const b = meBound();
-  if (b) { const st = petClean(b.S.get(p(b, 'accounts') + '/pet')); const n = feed(st, why); if (n) b.S.set(p(b, 'accounts') + '/pet', st); return n; }
+  if (b) { const st = petClean(b.S.get(p(b, 'accounts') + '/pet')); const n = feed(st, why, TRIAL ? PET_TRIAL.foodMul : 1); if (n) b.S.set(p(b, 'accounts') + '/pet', st); return n; }
   const m = readLocal(KEY); if (!m) return 0;
-  const st = petClean(m.pet); const n = feed(st, why); if (n) { try { localStorage.setItem(KEY, JSON.stringify({ ...m, pet: st })); } catch { /* 무시 */ } }
+  const st = petClean(m.pet); const n = feed(st, why, TRIAL ? PET_TRIAL.foodMul : 1); if (n) { try { localStorage.setItem(KEY, JSON.stringify({ ...m, pet: st })); } catch { /* 무시 */ } }
   return n;
 }
 /** 🐾 데리고 다니는 펫 (방 명단 · 종합실 대기 줄에 싣는 것 = 종류 · 먹이 · 꾸미기만) */

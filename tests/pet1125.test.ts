@@ -1,6 +1,6 @@
 // 🐾 둥지 (📜 2026-11-25 · 머리 🔨 · 설계 3절): 알 · 먹이 · 단계 · 꾸미기 · 이름 · 꼬리표
 import { describe, expect, it } from 'vitest';
-import { PET_CFG, PET_NAME_A, PET_NAME_B, activePet, buyEgg, buyPetCos, feed, nextOf, ownsPetCos, petClean, petCosOf, petFromTag, stageOf, togglePetCos, type PetState } from '../src/model/pets';
+import { PET_CFG, PET_TRIAL, eggPriceOf, PET_NAME_A, PET_NAME_B, activePet, buyEgg, buyPetCos, feed, nextOf, ownsPetCos, petClean, petCosOf, petFromTag, stageOf, togglePetCos, type PetState } from '../src/model/pets';
 import { ECON_VER, type Wallet } from '../src/model/wallet';
 
 const W = (gem: number): Wallet => ({ gem, scroll: 0, buys: [], ver: ECON_VER });
@@ -40,4 +40,14 @@ describe('🐾 둥지', () => {
     expect(petFromTag('owl|60|pc_crown,zz')).toEqual({ kind: 'owl', food: 60, cos: 'pc_crown' });
     expect(petFromTag('cat|1|')).toBeNull(); expect(petFromTag(undefined)).toBeNull();
   });
+  it('👩‍🏫 체험판 (#둥지-1 B) = 첫 알 1개 무료 · 먹이 ×5 · 원래 수업 = 그대로', () => {
+    expect(PET_TRIAL).toEqual({ freeEggs: 1, foodMul: 5 });
+    const w = W(0), st: PetState = {};
+    expect(eggPriceOf(st, false)).toBe(150); expect(eggPriceOf(st, true)).toBe(0);
+    expect('id' in buyEgg(w, st, 'owl', '반짝 별', 1, eggPriceOf(st, true))).toBe(true); expect(w.gem).toBe(0);
+    expect(eggPriceOf(st, true)).toBe(150); // 두 번째 알 = 💎 150
+    expect(feed(st, { lesson: 'set-03' }, PET_TRIAL.foodMul)).toBe(25); expect(feed(st, { scare: '2026-11-25' }, PET_TRIAL.foodMul)).toBe(5);
+    expect(stageOf(activePet(st)!.food)).toBe(1); // 30 = 새끼 (수업 두 번이면 다 큼)
+  });
 });
+

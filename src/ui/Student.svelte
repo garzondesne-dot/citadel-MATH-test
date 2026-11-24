@@ -220,6 +220,8 @@
   const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
   // 🐞 11/20 ① 받기 전 빈 값: 내 기록 · 지갑 · EXP · held 칸을 받기 전에 쓰면 = 옛 기록을 null 로 · 받은 보상을 다시 · 💎 total 을 「0 + 보상」으로 덮어씀 → 받은 뒤에 씀
   $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); petFeedNow({ lesson: L.id }); /* 🐾 수업 한 차시 끝까지 = 펫 먹이 +5 (차시마다 한 번 · 📜 11/25) */ }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  // 🐾 👩‍🏫 체험판 = 서버 기록이 없어도 수업 끝(결과)이면 펫 먹이 (📜 11/25 #둥지-1 B · 차시마다 한 번 · ×5 는 petFeedNow 안)
+  $effect(() => { if (!TRIAL || !result || board) return; untrack(() => petFeedNow({ lesson: L.id })); });
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
   function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {

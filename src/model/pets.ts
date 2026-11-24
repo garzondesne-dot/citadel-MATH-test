@@ -12,6 +12,10 @@ export interface PetState { on?: string; list?: Record<string, Pet>; /** 먹이 
 
 /** 💎 · 먹이 값 = 이 표 한 곳 */
 export const PET_CFG = { egg: 150, cos: 80, lesson: 5, scare: 1, scareDay: 5, baby: 15, adult: 50 } as const;
+/** 👩‍🏫 체험판 (📜 11/25 선생님 #둥지-1 B) = 첫 알 1개 무료 · 먹이 ×5 (원래 수업은 알 💎 150 · 수업 +5 · 허수아비 +1) */
+export const PET_TRIAL = { freeEggs: 1, foodMul: 5 } as const;
+/** 알 값 (체험판 = 첫 알 0) */
+export const eggPriceOf = (st: PetState | null | undefined, trial: boolean) => (trial && Object.keys(petClean(st).list || {}).length < PET_TRIAL.freeEggs ? 0 : PET_CFG.egg);
 export const PET_KINDS: { k: PetKind; name: string; ic: string; src: string }[] = [
   { k: 'dragon', name: '아기 용', ic: '🐉', src: 'art/pet/pet-dragon-v1.webp' },
   { k: 'owl', name: '숫자 부엉이', ic: '🦉', src: 'art/pet/pet-owl-v1.webp' },
@@ -56,11 +60,11 @@ export const activePet = (s?: PetState | null): (Pet & { id: string }) | null =>
 export const petCosOf = (p?: Pick<Pet, 'cos'> | null): string[] => (p?.cos ? p.cos.split(',').filter((c) => PET_COS_BY[c]) : []);
 
 /** 알 사기 → 새 펫 id 또는 까닭 */
-export function buyEgg(w: Wallet, st: PetState, kind: PetKind, name: string, now: number): { id: string } | { err: string } {
+export function buyEgg(w: Wallet, st: PetState, kind: PetKind, name: string, now: number, price: number = PET_CFG.egg): { id: string } | { err: string } {
   if (!PET_BY[kind]) return { err: '없는 알이에요' };
-  if (w.gem < PET_CFG.egg) return { err: `💎 ${PET_CFG.egg - w.gem} 이 모자라요` };
+  if (w.gem < price) return { err: `💎 ${price - w.gem} 이 모자라요` };
   const id = `${kind}_${now.toString(36)}`;
-  w.gem -= PET_CFG.egg; w.buys = [...w.buys, { id: `pet_egg_${id}`, ver: ECON_VER, at: now }];
+  w.gem -= price; w.buys = [...w.buys, { id: `pet_egg_${id}`, ver: ECON_VER, at: now }];
   st.list = { ...(st.list || {}), [id]: { kind, food: 0, name } }; st.on = id;
   return { id };
 }
@@ -83,14 +87,14 @@ export function togglePetCos(p: Pet, cosId: string): Pet {
 }
 
 /** 🍖 먹이 (데리고 다니는 펫 한 마리에게만) → 실제로 준 수 · st 를 고침 */
-export function feed(st: PetState, why: { lesson: string } | { scare: string }): number {
+export function feed(st: PetState, why: { lesson: string } | { scare: string }, mul = 1): number {
   const a = st.on && st.list?.[st.on]; if (!a) return 0;
   if ('lesson' in why) {
     const k = why.lesson.replace(/[.#$/[\]]/g, '_'); if (st.fed?.[k]) return 0;
-    st.fed = { ...(st.fed || {}), [k]: true }; a.food += PET_CFG.lesson; return PET_CFG.lesson;
+    st.fed = { ...(st.fed || {}), [k]: true }; a.food += PET_CFG.lesson * mul; return PET_CFG.lesson * mul;
   }
   const n = st.day?.d === why.scare ? st.day.n : 0; if (n >= PET_CFG.scareDay) return 0;
-  st.day = { d: why.scare, n: n + 1 }; a.food += PET_CFG.scare; return PET_CFG.scare;
+  st.day = { d: why.scare, n: n + 1 }; a.food += PET_CFG.scare * mul; return PET_CFG.scare * mul;
 }
 /** 방 명단 꼬리표 「종류|먹이|꾸미기」 → 펫 (종합실 대기 줄) */
 export function petFromTag(tag: unknown): Pick<Pet, 'kind' | 'food' | 'cos'> | null {
