@@ -790,7 +790,7 @@
 60
 ]
 },
-"hero-bard-v7.webp": {
+"hero-bard-v11.webp": {
 "0": [
 20,
 8,
@@ -890,7 +890,7 @@
 60
 ]
 },
-"hero-dragoon-v7.webp": {
+"hero-dragoon-v11.webp": {
 "0": [
 18,
 8,
@@ -910,7 +910,7 @@
 60
 ]
 },
-"hero-drone-v7.webp": {
+"hero-drone-v11.webp": {
 "0": [
 17,
 8,
@@ -970,7 +970,7 @@
 60
 ]
 },
-"hero-elf-v7.webp": {
+"hero-elf-v11.webp": {
 "0": [
 23,
 8,
@@ -1030,7 +1030,7 @@
 60
 ]
 },
-"hero-hacker-v7.webp": {
+"hero-hacker-v11.webp": {
 "0": [
 23,
 8,
@@ -1150,7 +1150,7 @@
 60
 ]
 },
-"hero-merchant-v7.webp": {
+"hero-merchant-v11.webp": {
 "0": [
 21,
 8,
@@ -1190,7 +1190,7 @@
 60
 ]
 },
-"hero-ninja-v7.webp": {
+"hero-ninja-v11.webp": {
 "0": [
 25,
 8,
@@ -1210,7 +1210,7 @@
 60
 ]
 },
-"hero-paladin-v7.webp": {
+"hero-paladin-v11.webp": {
 "0": [
 23,
 8,
@@ -1230,7 +1230,7 @@
 60
 ]
 },
-"hero-pirate-v7.webp": {
+"hero-pirate-v11.webp": {
 "0": [
 22,
 8,
@@ -1290,7 +1290,7 @@
 60
 ]
 },
-"hero-spellblade-v7.webp": {
+"hero-spellblade-v11.webp": {
 "0": [
 22,
 8,
@@ -5612,7 +5612,7 @@
 -2.6,
 39.2
 ],
-"hero-bard-v7.webp": [
+"hero-bard-v11.webp": [
 -2.6,
 39.2
 ],
@@ -5816,7 +5816,7 @@
 -3.8,
 42.5
 ],
-"hero-dragoon-v7.webp": [
+"hero-dragoon-v11.webp": [
 -3.8,
 42.5
 ],
@@ -5848,7 +5848,7 @@
 0.5,
 39.2
 ],
-"hero-drone-v7.webp": [
+"hero-drone-v11.webp": [
 0.5,
 39.2
 ],
@@ -5932,7 +5932,7 @@
 0.7,
 47.5
 ],
-"hero-elf-v7.webp": [
+"hero-elf-v11.webp": [
 0.7,
 47.5
 ],
@@ -6028,7 +6028,7 @@
 -2.9,
 42.2
 ],
-"hero-hacker-v7.webp": [
+"hero-hacker-v11.webp": [
 -2.9,
 42.2
 ],
@@ -6344,7 +6344,7 @@
 -6.3,
 41.0
 ],
-"hero-merchant-v7.webp": [
+"hero-merchant-v11.webp": [
 -6.3,
 41.0
 ],
@@ -6408,7 +6408,7 @@
 -2.5,
 41.8
 ],
-"hero-ninja-v7.webp": [
+"hero-ninja-v11.webp": [
 -2.5,
 41.8
 ],
@@ -6448,7 +6448,7 @@
 0.5,
 45.8
 ],
-"hero-paladin-v7.webp": [
+"hero-paladin-v11.webp": [
 0.5,
 45.8
 ],
@@ -6480,7 +6480,7 @@
 -3.0,
 41.8
 ],
-"hero-pirate-v7.webp": [
+"hero-pirate-v11.webp": [
 -3.0,
 41.8
 ],
@@ -6568,7 +6568,7 @@
 3.0,
 40.0
 ],
-"hero-spellblade-v7.webp": [
+"hero-spellblade-v11.webp": [
 3.0,
 40.0
 ],
