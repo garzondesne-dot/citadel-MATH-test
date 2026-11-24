@@ -34,6 +34,9 @@
   let left = $state<Record<string, number>>({}), notice = $state<{ t: string; n: number } | null>(null), leftSeen = new Set<string>();
   const isHost = $derived(!!meta && host === uid);
   const me = $derived(meta ? slotOf(meta, uid) : -1);
+  /** ⭐ 🐞 11/24 「정답률 70% 넘었는데 별 1개」: 첫 시도 기록은 내 폰에만 있음 → 방장 상태로 덮어쓴 뒤 · 결과 계산 전에 다시 얹음 (예전 = 방장 아닌 친구는 0개로 셈 → 처치만 ⭐1) */
+  let myFirst: { ok: number; bad: number; none: number; total: number } | null = null;
+  const keepFirst = (X: State | null | undefined) => { const h = me >= 0 ? X?.heroes?.[me] : undefined; if (h && myFirst) h.log.first = { ...myFirst }; };
   const L = $derived(meta ? (PACKS.find((p) => p.id === meta!.lid) ?? PACKS.find((p) => p.no === meta!.no && !p.partOf) ?? null) : null);
   const art = $derived(meta ? bossArt(bossOf(meta.no), meta.diff, L?.no === meta.no ? L.theme : undefined) : null);
   /** 👥 자리 이름: 나 = 「나」 · 친구 = 실명 · 봇 = 「🤖 모험가 A」 */
@@ -74,7 +77,7 @@
     if (!sn || !G || sn.n < snapN) return;
     if (host === uid && sn.host === uid) return;
     const d = decodeSnap(sn); if (!d) return;
-    snapN = sn.n; ack = { ...(sn.ack ?? {}) }; overwrite(G, d);
+    snapN = sn.n; ack = { ...(sn.ack ?? {}) }; overwrite(G, d); keepFirst(G);
   }
   /** 방장 = 친구 행동 처리 (번호 순 · 자기 자리 행동만) */
   function onActs(all: Record<string, Record<string, Act>> | null) {
@@ -94,7 +97,7 @@
   const tWho = setInterval(() => {
     if (!meta || !G || !L) return;
     const now = store.now(), want = pickHost(meta, hb, now, host, left);
-    if (want === uid && host !== uid) { for (const i of store.get<number[]>(`${base}/ready`) ?? []) readySet.add(i); const sn = store.get<Snap>(`${base}/snap`), d = sn ? decodeSnap(sn) : null; if (d && sn) { overwrite(G, d); ack = { ...(sn.ack ?? {}) }; snapN = sn.n; } store.set(`${base}/host`, uid); host = uid; } // 👑 방장 넘겨받음 = 마지막 상태에서 이어감
+    if (want === uid && host !== uid) { for (const i of store.get<number[]>(`${base}/ready`) ?? []) readySet.add(i); const sn = store.get<Snap>(`${base}/snap`), d = sn ? decodeSnap(sn) : null; if (d && sn) { overwrite(G, d); keepFirst(G); ack = { ...(sn.ack ?? {}) }; snapN = sn.n; } store.set(`${base}/host`, uid); host = uid; } // 👑 방장 넘겨받음 = 마지막 상태에서 이어감
     if (host === uid) hostIntro();
     if (host === uid) { const lost = lostSlots(meta, hb, now, left).filter((i) => i !== me), key = lost.join(','); if (key !== lostKey || !bots.length) { lostKey = key; bots = meta.slots.map((s, i) => (isBot(s) || lost.includes(i) ? newBot(L, i, isBot(s) ? s.bot : 'normal', meta!.seed) : null)).filter((b): b is Bot => !!b); } }
     else if (bots.length) bots = [];
@@ -111,14 +114,14 @@
     store.set(`${base}/left/${uid}`, store.now()); left = { ...left, [uid]: store.now() };
     if (solo && !G.end) { G.end = { win: false, why: '나감', t: G.t }; if (host === uid) store.set(`${base}/snap`, encodeSnap(G, uid, store.now(), ack)); }
     else if (host === uid) { const nx = pickHost(meta, hb, store.now(), null, left); if (nx) store.set(`${base}/host`, nx); } /* 👑 방장이 나감 = 바로 넘김 */
-    res = { ...atbResultFor(G, me, { prevStars, left: true }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res);
+    keepFirst(G); res = { ...atbResultFor(G, me, { prevStars, left: true }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res);
     onend(res, false, true);
   }
   /** 판 끝 = 내 결과를 내 자리에 (방장 · 친구 모두 · 한 번) */
   function ended(B: State) {
     if (res || me < 0) { phase = 'result'; return; }
     if (host === uid) store.set(`${base}/snap`, encodeSnap(B, uid, store.now(), ack)); // 마지막 상태
-    res = { ...atbResultFor(B, me, { prevStars }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res); phase = 'result';
+    keepFirst(B); res = { ...atbResultFor(B, me, { prevStars }), ...(rightMids.size ? { mids: [...rightMids] } : {}) }; store.set(`${base}/end/${uid}`, res); phase = 'result';
     onresult?.(res);
   }
 </script>
@@ -127,7 +130,7 @@
 {#if phase === 'wait' || !G || !L || !meta}
   <div class="netwait" role="status" data-k="atb-net-wait">⏳ 판을 준비하는 중… (방장 폰을 기다려요)</div>
 {:else if phase === 'battle' && started}
-  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} {whoNames} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} onleave={leave} leaveSolo={solo} {notice} intro={{ t0: meta.t0, goAt, ready: readyL, short: metBefore(meta.no) || mastery > 0, now: () => store.now(), onready: () => { if (me >= 0) send({ k: 'ready', s: me }); } }} onend={ended} />
+  <AtbBattle {L} S={G} {me} onright={(m) => rightMids.add(m)} onfirst={(f) => (myFirst = { ...f })} bots={isHost ? bots : []} seed={`${pid}|${uid}`} {fx} bg={art?.bg ?? ''} {labels} {whoNames} skipOld={!isHost && snapN > 0} net={{ remote: !isHost, send }} onleave={leave} leaveSolo={solo} {notice} intro={{ t0: meta.t0, goAt, ready: readyL, short: metBefore(meta.no) || mastery > 0, now: () => store.now(), onready: () => { if (me >= 0) send({ k: 'ready', s: me }); } }} onend={ended} />
 {:else if phase === 'result'}
   <AtbResult S={G} no={meta.no} {me} {mastery} practice={false} {labels} {leftIds} end={res} onagain={() => onend(res, true)} onswap={() => onend(res)} onexit={() => onend(res)} />
 {/if}

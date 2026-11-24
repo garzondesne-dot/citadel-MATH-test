@@ -37,7 +37,14 @@ const out = [], errs = []; const ok = (n, c, d = '') => out.push(`${c ? '✅' : 
     const r = { h: await host(), tA: await A.evaluate(() => globalThis.__atb.S.t), tC: await C.evaluate(() => globalThis.__atb.S.t), me: await A.$eval('[data-k="atb-me"] b', (e) => e.textContent) };
     ok('#48 다시 들어옴 = 지금 판 그대로(방장은 그대로) · 내 자리 「나」', r.h === 's1_3_2' && Math.abs(r.tA - r.tC) < 1.5 && /나/.test(r.me), JSON.stringify(r)); }
   // 5 판 끝 = 두 폰 결과 · end/{uid} = 공적 · 💎 · ⭐
+  // ⭐ 🐞 11/24 「정답률 70% 넘었는데 별 1개」: 방장 아닌 폰(A)이 첫 시도로 여러 소문제를 맞힘 → 방장 상태가 덮어써도 내 첫 시도 기록이 남아 별 = ⭐⭐ 이상
+  for (let i = 0; i < 9; i++) { await A.evaluate(() => globalThis.__atb.solve()); await p.waitForTimeout(700); await A.evaluate(() => globalThis.__atb.close()).catch(() => {}); await p.waitForTimeout(300); }
+  await p.waitForTimeout(2500); // 방장 상태 요약이 몇 번 덮어쓸 시간
   { await C.evaluate(() => { const S = globalThis.__atb.S; S.end = { win: true, why: '', t: S.t }; }); await p.waitForTimeout(4500);
+    const eA = await p.evaluate(() => globalThis.__atbStore.get('atb/dev/end/s1_3_1'));
+    const basis = await A.$eval('[data-k="atb-star-basis"]', (e) => e.textContent).catch(() => '');
+    ok('🐞 11/24 방장 아닌 폰 = 첫 시도 기록 살아 있음 → 별 계산(낸 소문제 5개 이상 · 다 맞힘 = ⭐⭐⭐) · 결과 근거 줄', eA && eA.first >= 5 && eA.stars >= 2 && /첫 시도 정답/.test(basis), JSON.stringify({ first: eA?.first, total: eA?.total, stars: eA?.stars, basis })); }
+  {
     const ends = await p.evaluate(() => globalThis.__atbStore.get('atb/dev/end'));
     const ra = await A.$('[data-k="atb-merit"]'), rc = await C.$('[data-k="atb-to-board"]');
     await (await p.$(`[data-k="phone-2"]`)).screenshot({ path: `${SHOTS}/atb-r48-result.png` });

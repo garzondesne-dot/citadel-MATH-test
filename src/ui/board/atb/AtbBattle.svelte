@@ -44,7 +44,7 @@
   import { answerOf } from '../../../raid/raid';
   import { ATK, ATK_SPECIAL, atkName as bossAtkName, FAM_NAME, ROLE_SKILL, SIG, T, rage as RAGE, ATK_STATUS, STATUS_LOOK, type StatusLook, type Fam, type Role } from '../../../board/atb/tune';
 
-  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false, whoNames, onleave, leaveSolo = true, notice = null }: {
+  const { L, S, me, bots, seed = 'me', speed = 1, onend, onright, onfirst, fx = {}, bg = '', net, labels, skipOld = false, intro, noIntro = false, whoNames, onleave, leaveSolo = true, notice = null }: {
     /** 🚪 #113 ‹ 도중에 나가기 (없으면 단추 없음) · leaveSolo = 혼자 판(나가면 판 끝) · notice = 위 띠 한 줄 (친구가 떠남 등) */ onleave?: () => void; leaveSolo?: boolean; notice?: { t: string; n: number } | null;
     /** 📜 #80 컷인 「누구의 무슨 기술!」 이름 (나도 실명 · 같은 반 = 이름 · 다른 반 = 「1-3 이름」 · 봇 = 용사 이름 · 없으면 용사 이름) */ whoNames?: Record<number, string>;
     /** 🗺 조우 · 정찰 (요청 #69) 여럿이 판 = 부모(AtbNet)가 시각 · 준비를 맞춤 · 없으면 이 폰 혼자 · noIntro = 바로 전투(시험) */
@@ -52,6 +52,7 @@
     /** 📡 게시판 연결 (요청 #48): remote = 방장 아님(엔진 안 돌림 · 내 행동만 보냄) */ net?: { remote: boolean; send: (a: Act) => void }; /** 👥 자리마다 보이는 이름 (파티원 실명 · 나 = 「나」 · 봇 = 「🤖 모험가 A」) */ labels?: Record<number, string>; /** 받은 상태로 시작 = 지난 사건 다시 안 그림 */ skipOld?: boolean;
     L: LessonPack; S: State; /** 내 용사 번호 · -1 = 관전 */ me: number; bots: Bot[]; seed?: string; speed?: number; onend: (S: State) => void; /** 📕 #67 내가 소문항을 맞힌 몬스터 칸 (복습 완료 기록 · 손발 #1) */ onright?: (mid: string) => void; /** 🎲 랜덤 던전 배경 열쇠 (Y9 · 없으면 차시 배경) */ bg?: string;
     /** 용사마다 장착 스킬 id (컷인 이름) */ fx?: Record<number, string>;
+    /** ⭐ 🐞 11/24 내 첫 시도 기록 (방장 상태가 덮어써도 부모가 다시 얹음 · 별 계산) */ onfirst?: (f: { ok: number; bad: number; none: number; total: number }) => void;
   } = $props();
   const FAM_ICON: Record<Fam, IconName> = { arms: 'fam-arms', flame: 'fam-flame', nature: 'fam-nature', wisdom: 'fam-wisdom', mystic: 'fam-mystic' };
   const ROLE_ICON: Record<Role, IconName> = { dealer: 'role-dealer', tank: 'role-tank', healer: 'role-healer', support: 'role-support' };
@@ -233,7 +234,7 @@
     clearTimeout(fT); fT = setTimeout(() => (flash = ''), 1300);
     // ⭐ 첫 시도 기록 = 소문항마다 처음 낸 답만 (📜 요청 #29 = 차시 정복 지도 별 규칙 gradeOf 그대로 · 틀림 · 안 푼 것 비율)
     { const a = (firstTry[mid0] ??= []); if (a[k0] === undefined && !o.earn.swapped) a[k0] = o.earn.right; else if (a[k0] === undefined && o.earn.swapped) a[k0] = false;
-      if (meH) { const all = Object.values(firstTry).flat(), ok = all.filter((x) => x === true).length, bad = all.filter((x) => x === false).length, total = OS.reduce((s, x) => s + x.n, 0); meH.log.first = { ok, bad, none: Math.max(0, total - ok - bad), total }; } }
+      if (meH) { const all = Object.values(firstTry).flat(), ok = all.filter((x) => x === true).length, bad = all.filter((x) => x === false).length, total = OS.reduce((s, x) => s + x.n, 0); meH.log.first = { ok, bad, none: Math.max(0, total - ok - bad), total }; onfirst?.(meH.log.first); } }
     fN++; // 📜 선생님 덧붙임 10 · 11 = 맞음 톡-톡 · 연달아 = 박자 맞춘 소리 · 틀림 = 찌잉(한 번 길게)
     if (o.earn.right) { combo++; sfx('correct', 0.5); if (combo >= 2) setTimeout(() => sfx('star', Math.min(0.5, 0.2 + combo * 0.06)), 92); try { navigator.vibrate?.([22, 70, 22]); } catch { /* 무시 */ } }
     else { combo = 0; try { navigator.vibrate?.(320); } catch { /* 무시 */ } }
