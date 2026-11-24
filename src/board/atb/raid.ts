@@ -24,3 +24,21 @@ export function raidPack(P: CastlePack, floor: 1 | 2 | 3 = raidFloorOf(P.id) ?? 
     monsters: Object.fromEntries(rooms.map((r) => [r.id, { title: r.title.replace(/^👑\s*/, ''), sprite: r.sprite, attack: 'pause', retry: { pool: r.vers }, ...(r.chain ? { chain: { pool: r.vers } } : {}) }])),
   } as LessonPack;
 }
+
+/** 🏰 지금 올라온 성채 팩(castles.list)에서 레이드 차시 팩 찾기 (id = raid-1 ~ 3 또는 no = 101 ~ 103) · 게시판 · 판 화면이 차시 팩 대신 씀 */
+export function raidLessonOf(list: readonly CastlePack[], key: { id?: string; no?: number }): LessonPack | null {
+  const f = key.id ? (/^raid-([1-3])$/.exec(key.id)?.[1] ? (Number(/^raid-([1-3])$/.exec(key.id)![1]) as 1 | 2 | 3) : null) : key.no && key.no >= 101 && key.no <= 103 ? ((key.no - 100) as 1 | 2 | 3) : null;
+  if (!f) return null;
+  const P = list.find((p) => p.id === `eval-${f}`); return P ? raidPack(P, f) : null;
+}
+export const isRaidNo = (no: number) => no >= 101 && no <= 103;
+
+/** 🔓 층 열림 (📜 컨펌 4): 1층 = 2 ~ 7차시 지도 별 10 + 그 차시 모두 ⭐1 · 2층 = 8 ~ 13차시 별 10 + 모두 ⭐1 · 3층 = 1 · 2층 처치 + 2 ~ 13차시 별 24
+ *  · 차시 별 = 단원 지도 별(레이드 별 101 ~ 103 은 안 셈 · 컨펌 7) · present = 이 서버에 있는 차시 번호(없는 차시는 「모두 ⭐1」에서 뺌) */
+export const RAID_OPEN = { 1: { from: 2, to: 7, need: 10 }, 2: { from: 8, to: 13, need: 10 }, 3: { from: 2, to: 13, need: 24 } } as const;
+export function raidOpen(f: 1 | 2 | 3, stars: Readonly<Record<number, number>>, present: readonly number[]): { ok: boolean; got: number; need: number; miss: number[]; kills: boolean } {
+  const R = RAID_OPEN[f], nos = present.filter((n) => n >= R.from && n <= R.to);
+  const got = nos.reduce((a, n) => a + Math.min(3, stars[n] ?? 0), 0), miss = f === 3 ? [] : nos.filter((n) => !(stars[n] ?? 0));
+  const kills = f !== 3 || ((stars[RAID.no[1]] ?? 0) > 0 && (stars[RAID.no[2]] ?? 0) > 0);
+  return { ok: got >= R.need && !miss.length && kills, got, need: R.need, miss, kills };
+}

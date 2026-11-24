@@ -101,3 +101,19 @@ describe('🏰 레이드 문항', () => {
     }
   });
 });
+
+import { raidOpen } from '../src/board/atb/raid';
+describe('🏰 층 열림 (컨펌 4)', () => {
+  const nos = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+  it('1층 = 2 ~ 7차시 별 10 + 모두 ⭐1 · 레이드 별은 안 셈', () => {
+    expect(raidOpen(1, { 2: 3, 3: 3, 4: 3, 5: 1, 6: 0, 7: 0 }, nos).ok).toBe(false); // 10 이지만 6 · 7 ⭐0
+    expect(raidOpen(1, { 2: 2, 3: 2, 4: 2, 5: 2, 6: 1, 7: 1 }, nos)).toMatchObject({ ok: true, got: 10 });
+    expect(raidOpen(1, { 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 101: 3 }, nos).ok).toBe(false); // 6 + 레이드 별 3 = 안 셈
+    expect(raidOpen(1, { 2: 2, 3: 2, 4: 2, 5: 2, 6: 2 }, [2, 3, 4, 5, 6]).ok).toBe(true); // 서버에 7차시 없음 = 빼고 셈
+  });
+  it('3층 = 1 · 2층 처치 + 2 ~ 13차시 별 24', () => {
+    const s = Object.fromEntries(nos.map((n) => [n, 2]));
+    expect(raidOpen(3, s, nos)).toMatchObject({ ok: false, got: 24, kills: false });
+    expect(raidOpen(3, { ...s, 101: 1, 102: 1 }, nos).ok).toBe(true);
+  });
+});

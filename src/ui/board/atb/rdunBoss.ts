@@ -32,6 +32,7 @@ export function fnRef(no: number, diff: Diff): string | null {
  *  2 ~ 11 = 컨셉 몬스터(설정표 sprite · flip · 5동작 시트가 오면 그것) · 12 · 13 = 설정표 그림 · 14 ~ 17 = 랜덤 던전 임시(난이도별)
  *  theme = 그 차시 팩의 던전 배경(있으면 컨셉 몬스터 배경으로 · 없으면 랜덤 던전 배경) */
 export function bossArt(cfg: BossCfg, diff: Diff, theme?: string): BossCfg & { bg: string } {
+  if (cfg.raid) return { ...cfg, flip: {}, bg: '' }; // 🏰 레이드 보스 = 설정 그림 그대로 (⏳ 임시 · 붉은 빛은 화면이 raid 를 보고 씀)
   const ds = Object.values(RDUN_OF), d = RDUN_OF[cfg.no] ?? ds[cfg.no % ds.length], D = d ? RDUN[d] : undefined;
   if (CONCEPT.has(cfg.no)) { const c5 = CM5_OF[cfg.no]; return c5 && has5(c5) ? { ...cfg, sprite: c5, flip: {}, bg: theme || D?.bg || '' } : { ...cfg, flip: cfg.flip ?? {}, bg: theme || D?.bg || '' }; }
   if (cfg.no === 12 || cfg.no === 13) return { ...cfg, flip: {}, bg: D?.bg ?? '' };
