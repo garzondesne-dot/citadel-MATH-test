@@ -8,10 +8,11 @@ describe('🏫 학교판 알까기 숨김', () => {
     expect(schoolHides('rest-alkkagi', true)).toBe(true);
     for (const id of ['rest-balance', 'rest-flip', 'rest-ox', 'rest-nunchi', 'rest-ajae', 'rest-landgrab'] as const) expect(schoolHides(id, true)).toBe(false);
   });
-  it('우리 학교(이 빌드) = 🥏 알까기 있음 · 쉼터 7번째', () => {
+  it('우리 학교(이 빌드) = 🥏 알까기 있음 · 쉼터 목록 맨 뒤', () => {
     expect(schoolHides('rest-alkkagi', false)).toBe(false);
     expect(FEATS.some((f) => f.id === 'rest-alkkagi')).toBe(true);
-    expect(GAMES.map((g) => g.k).filter((k) => k !== 'drg' && k !== 'td').indexOf('ak')).toBe(6);
+    expect(GAMES.map((g) => g.k)).toContain('ak'); // 쉼터 목록 맨 뒤 (선생님이 엶)
+    expect(GAMES.at(-1)?.k).toBe('ak');
     void feat; void gamesOn;
   });
 });
