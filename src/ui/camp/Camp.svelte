@@ -40,6 +40,8 @@
   import ThemePicker from '../ThemePicker.svelte';
   import Wardrobe from './Wardrobe.svelte';
   import ExamCutin from '../exam/ExamCutin.svelte';
+  import MockExam from '../exam/MockExam.svelte';
+  import { SCHOOL_BUILD } from '../../channel';
   import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import CosAura from '../cos/CosAura.svelte';
@@ -122,6 +124,8 @@
   const exDate = untrack(() => (trial ? '' : examDateOf(S))), exNow = Date.now(), exOn = !!exDate && inPeriod(exDate, exNow), exBand = exOn ? bandText(exDate, exNow) : '';
   const exWho = untrack(() => (pupil ? `${pupil.cls}-${pupil.num}` : fromMe0 ? 'teacher' : 'me'));
   let exCut = $state(untrack(() => exOn && !cutSeen(exWho, exDate)));
+  const mockOn = exOn && !SCHOOL_BUILD; // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
+  let mockGo = $state(false);
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
@@ -620,6 +624,7 @@
   </BottomAction>
 </div>
 
+{#if mockGo}<MockExam {S} packs={PACKS} reach={pupil ? doneNo(S, pupil.cls) : 99} base={realStu && pupil ? bonusBase(pupil.cls, pupil.num) : null} {me} save={M.save} onclose={() => (mockGo = false)} onreview={() => { mockGo = false; sheet = 'review'; }} />{/if}<!-- 📄 모의 시험지 (📜 11/25) -->
 {#if exCut && exDate}<ExamCutin date={exDate} ondone={() => { markCut(exWho, exDate); exCut = false; }} />{/if}<!-- ⚔ 출정 컷인 (📜 11/25) -->
 {#if awkPop !== null}<AwakenPop hero={awkPop} onclose={() => { markAwkSeen(awkPop!, S); awkPop = null; }} />{/if}
 {#if achQ.length}<AchievePop list={achQ} more={achMore} claim={achClaim} ondone={() => { achQ = []; achMore = 0; }} />{/if}<!-- 🏆 #73 -->
@@ -637,6 +642,7 @@
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
     {#snippet title()}🏰 성채 던전{/snippet}
+    {#if mockOn}<button type="button" class="floor mockf" data-k="castle-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="no">📄</span><span><b>{EXAM_TXT.mock.name}</b><span>성채 입구 옆 · 문제 은행 무작위 10문항 · 연습</span></span></button>{/if}<!-- 📄 11/25 -->
     {#each visibleCastles() as f (f.id)}<button type="button" class="floor" data-floor={f.id} onclick={() => { castleGo = f.id; sheet = null; }}><span class="no">{f.floor}</span><span><b>{floorName(f)}</b><span>방 {f.rooms.length}개 · 열림 {spanOf(f)}</span></span></button>{:else}<div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요 · 선생님이 성채 팩을 올리면 열려요</p></div>{/each}
   </Sheet>
 {:else if sheet === 'menu'}
@@ -694,6 +700,7 @@
     <div class="exgo">
       {#if feat('citadel')}<button type="button" class="item" data-k="exam-go-castle" onclick={() => (sheet = 'castle')}><span class="ic">🏰</span><span class="tx"><b>성채</b><small>방마다 문제 하나</small></span></button>{/if}
       {#if feat('scarecrow')}<button type="button" class="item" data-k="exam-go-scare" onclick={() => (sheet = 'review')}><span class="ic">🎯</span><span class="tx"><b>허수아비</b><small>차시 복습 · 숫자 바뀐 판</small></span></button>{/if}
+      {#if mockOn}<button type="button" class="item" data-k="exam-go-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="ic">📄</span><span class="tx"><b>{EXAM_TXT.mock.name}</b><small>문제 은행 무작위 10문항 · 연습</small></span></button>{/if}
       {#if !realStu}<button type="button" class="item" data-k="exam-recut" onclick={() => { sheet = null; exCut = true; }}><span class="ic">🎬</span><span class="tx"><b>컷인 다시 보기</b><small>🧪 테스트 · 교사</small></span></button>{/if}
     </div>
   </Sheet>
