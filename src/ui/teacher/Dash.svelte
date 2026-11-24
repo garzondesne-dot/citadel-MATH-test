@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BETA, SCHOOL_BUILD } from '../../channel';
+  import { SCHOOL_BUILD } from '../../channel';
   import { writeClassShine } from '../../school/shine';
   import { XCLS } from '../../channel';
   import { PACKS } from '../../engine/packs';
@@ -70,7 +70,7 @@
   const sc = $derived.by(() => { void lr.v.val; void lx.v.val; void lg.v.val; void pv; return scope(S, cls); });
   // 🌟 #빛나는-1 A (📜 11/25 선생님): 반을 열면 학생마다 띠 재료만 써 둠(바뀐 칸만 · 기록이 들어오면 1.5초 뒤 다시) · 학교판 = 없음
   let shT = 0; onDestroy(() => clearTimeout(shT));
-  $effect(() => { const s = sc, c = cls; if (c === ALL || SCHOOL_BUILD || !BETA) return; clearTimeout(shT); shT = window.setTimeout(() => { try { writeClassShine(S, c, s.studs, S.now()); } catch (e) { console.warn('빛나는 순위', e); } }, 1500) as unknown as number; });
+  $effect(() => { const s = sc, c = cls; if (c === ALL || SCHOOL_BUILD) return; clearTimeout(shT); shT = window.setTimeout(() => { try { writeClassShine(S, c, s.studs, S.now()); } catch (e) { console.warn('빛나는 순위', e); } }, 1500) as unknown as number; });
   let withX = $state(false), xlPick = $state<'all' | 'cls' | 'view'>('cls'), toast = $state('');
   const ymd = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
   async function excel() {
