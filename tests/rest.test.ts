@@ -27,14 +27,14 @@ describe('정식 시험 그대로 (src/rest 판)', () => {
   it('⚖ 밸런스 · 🔄 반대로 · ⭕ 수학 OX · OX 타임 (tests/fun.test.js)', () => {
     const r = runOfficial('fun.test.js', (s) => s);
     // 📜 #46 반대로 = 3명 이하에서 가위바위보 → 정식 「5명 = 가위바위보」 줄만 다름 (아래 새 시험이 대신)
-    expect(r.bad.filter((b: string) => !/반대로: 6명 = 그대로 · 5명 = 가위바위보/.test(b) && b !== 'exit 1')).toEqual([]);
+    expect(r.bad.filter((b: string) => !/반대로: 6명 = 그대로 · 5명 = 가위바위보/.test(b) && !/💤|관전|다시 참여/.test(b) && b !== 'exit 1')).toEqual([]); // 📜 11/24 (DECISIONS 6849e1e) 안 고른 학생 = 탈락 · 다시 참여 없음 → 정식 「💤 관전 · 다시 참여」 줄 4개 다름 (아래 새 시험)
     expect(r.out.join('\n')).toMatch(/OK: 밸런스 게임/);
   });
   it('🙊 눈치 게임 (tests/nunchi.test.js)', () => {
     const r = runOfficial('nunchi.test.js', (s) => s.replace(/const vm = require[\s\S]*?const NU = ctx\.DS\.Nunchi;/, 'const NU = DS_.Nunchi;'));
     // 📜 11/17 ⓕ 선생님 A = 이번 게임에서 한 번도 안 누른 학생은 「마지막!」 탈락 대신 💤 관전 → 정식 시험의 「안 누른 d = 마지막 탈락」 줄만 다름 (아래 새 시험이 대신)
-    expect(r.bad.filter((b: string) => !/마지막 탈락/.test(b) && !/관전|💤|zz/.test(b) && b !== 'exit 1')).toEqual([]); expect(r.bad.filter((b: string) => /^FAIL/.test(b)).length).toBeLessThanOrEqual(2);
-    expect(r.out.join('\n')).toMatch(/✅ 눈치 게임|❌ 눈치 게임 실패 1$/); // ⓕ 실패 1 = 위 「마지막 탈락」 줄
+    expect(r.bad.filter((b: string) => !/마지막 탈락/.test(b) && !/관전|💤|zz|다시|🙋/.test(b) && b !== 'exit 1')).toEqual([]); expect(r.bad.filter((b: string) => /^FAIL/.test(b)).length).toBeLessThanOrEqual(4); // 📜 11/24 관전 · 다시 참여 줄 (위에서 내용 거름)
+    expect(r.out.join('\n')).toMatch(/✅ 눈치 게임|❌ 눈치 게임 실패 [1-4]$/); // 📜 11/24 (DECISIONS 6849e1e) 🙋 다시 참여 없앰 = 정식 「다시 참여」 줄도 다름 (아래 새 시험) // ⓕ 실패 1 = 위 「마지막 탈락」 줄
   });
 });
 
@@ -65,8 +65,8 @@ describe('진행 층 (run.ts)', () => {
     S.tick(15000 + Fun.LATE); tick(S, 'T', 'tv');
     f = funOf(R()) as unknown as Fun.Fun;
     expect(f.phase).toBe('show');
-    expect(Object.keys(f.alive).sort()).toEqual(['u1', 'u2', 'u5', 'u6']); // 적은 쪽(u3) 탈락 · u4 · u7 = 💤
-    expect(f.zz?.u4).toBe(1); expect(f.outAt.u3).toBe(1);
+    expect(Object.keys(f.alive).sort()).toEqual(['u1', 'u2', 'u5', 'u6']); // 적은 쪽(u3) 탈락 · u4 · u7 안 고름 = 탈락 (📜 11/24)
+    expect(f.zz?.u4).toBeUndefined(); expect([f.outAt.u3, f.outAt.u4, f.outAt.u7]).toEqual([1, 1, 1]);
     S.tick(Fun.SHOW); tick(S, 'T', 'tv');
     f = funOf(R()) as unknown as Fun.Fun;
     expect(f.rps).toBe(true); // 4명 = ✊✌️✋ 선생님과 가위바위보
@@ -109,11 +109,11 @@ describe('진행 층 (run.ts)', () => {
     S.tick(5000); expect(tick(S, 'T', 'tp')).toBe(true); // 4초 넘게 소식 없음 → 이어받음
   });
 });
-describe('🙊 ⓕ 한 번도 안 누른 학생 = 관전 (📜 11/17 선생님 A)', () => {
-  it('누른 적 있는 학생이 혼자 남으면 마지막 탈락 · 한 번도 안 누른 학생이 혼자 남으면 💤 관전', () => {
+describe('🙊 ⓕ 한 번도 안 누른 학생 = 탈락 (📜 11/24 · 옛 11/17 관전 바뀜)', () => {
+  it('누른 적 있는 학생이 혼자 남으면 마지막 탈락 · 한 번도 안 누른 학생이 혼자 남으면 시간 탈락', () => {
     let f: Nun.Nun | null = Nun.startNun(['a', 'b', 'c', 'd'], 0); f = Nun.stepNun(f, null, 3001, null)!; // 준비 → 시작
     f = Nun.stepNun(f, { a: 3100, b: 3800, c: 4600 }, 6000, null)!;
-    expect(f.out.d).toBe('zz'); expect(f.phase).toBe('show'); // d = 안 누름 → 관전
+    expect(f.out.d).toBe('time'); expect(f.phase).toBe('show'); // d = 안 누름 → 탈락 (📜 11/24 DECISIONS 6849e1e · 옛 💤 관전 바뀜)
     let g: Nun.Nun | null = Nun.startNun(['a', 'b', 'c', 'd'], 0); g = Nun.stepNun(g, null, 3001, null)!;
     g = { ...g, act: { d: 1 } } as Nun.Nun; // d 는 앞 판에서 눌렀던 학생
     g = Nun.stepNun(g, { a: 3100, b: 3800, c: 4600 }, 6000, null)!;
@@ -152,5 +152,27 @@ describe('🐞 #44 ⑩ 용이 잠든 사이 = 1판 출발 때 들어와 있는 �
     S.tick(1000); tick(S, 'T', 'tv');
     const f = funOf(R()) as unknown as { phase: string; alive: Record<string, 1>; total: number };
     expect(f.phase).toBe('play'); expect(f.alive.u9).toBe(1); expect(f.total).toBe(5);
+  });
+});
+
+// 📜 11/24 선생님 (DECISIONS 6849e1e) 「안 고른 학생 = 탈락이 맞음」: ⚖ · 🔄 · 🙊 시간 안에 안 고르면 그 판 탈락 · 🙋 다시 참여 없음
+describe('📜 11/24 안 고르면 탈락 · 다시 참여 없음', () => {
+  it('⚖ 밸런스: 안 고른 학생 = 탈락 · 다음 판에 골라도 못 들어옴', () => {
+    const { S, L, R } = setup(7);
+    restOn(S, 'T', R(), 7); startFun(S, 'T', R(), 'bal', { no: L.no, me: 'tv' });
+    let f = funOf(R()) as unknown as Fun.Fun;
+    ['u1', 'u2', 'u3', 'u5', 'u6'].forEach((u) => pick(S, 'T', f.rk, u, 'a')); pick(S, 'T', f.rk, 'u7', 'b');
+    S.tick(15000 + Fun.LATE); tick(S, 'T', 'tv'); f = funOf(R()) as unknown as Fun.Fun;
+    expect(f.alive.u4).toBeUndefined(); expect(f.outAt.u4).toBe(1); expect(f.res?.zz ?? []).toEqual([]);
+    pick(S, 'T', f.rk, 'u4', 'a'); S.tick(Fun.SHOW); tick(S, 'T', 'tv'); f = funOf(R()) as unknown as Fun.Fun;
+    expect(f.alive.u4).toBeUndefined();
+  });
+  it('🙊 눈치: 안 누른 학생이 🙋 해도 다음 판에 안 들어옴', () => {
+    let x = Nun.stepNun(Nun.startNun(['a', 'b', 'c', 'd', 'e', 'f'], 0), null, Nun.READY, null)!; const t0 = Nun.READY, P: Record<string, number> = {};
+    for (const [u, dt] of [['a', 100], ['b', 2000], ['c', 4000], ['d', 6000]] as const) { P[u] = t0 + dt; x = Nun.stepNun(x, P, t0 + dt + 900, null) ?? x; }
+    x = Nun.stepNun(x, P, t0 + 6900 + Nun.TIMEOUT + 10, null) ?? x; // e · f 시간 초과
+    expect(x.phase).toBe('show');
+    const nx = Nun.stepNun(x, null, x.to + 1, { e: { e: '🙋', at: x.to } })!;
+    expect([nx.phase, nx.round]).toEqual(['ready', 2]); expect(Object.keys(nx.alive).sort()).toEqual(['a', 'b', 'c', 'd']);
   });
 });

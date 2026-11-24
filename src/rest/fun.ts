@@ -4,7 +4,7 @@ import { SUBJ } from '../engine/subject';
 // 🏕 쉼터 놀이 (#142 · 정식 js/raid/fun.js 의 순수 계산을 그대로 옮김 · 숫자 · 규칙 · 문구 같음)
 //   ⚖ bal = 적은 쪽 탈락 · 🔄 rev = 많은 쪽 탈락 · ⭕ quiz = OX 타임(탈락 없음 · 5문장 · 10초 · 지난 / 오늘) — ⭕ 수학 OX 문장 = 과목 팩(SUBJ.funOx)
 //   방 rooms/{코드}/fun = 진행 상태(시계를 맡은 기기만 씀) · rooms/{코드}/fv/{판}/{uid} = 'a' | 'b' | 'c'(가위바위보)
-//   💤 안 고른 학생 = 탈락이 아니라 관전 · 관전 중에 아무거나 고르면 다음 판부터 다시 (정식 #57 ⑫)
+//   ✖ 안 고른 학생 = 그 판 탈락 · 다시 참여 없음 (📜 11/24 선생님 · DECISIONS 6849e1e · 옛 「💤 관전 → 다시」 정식 #57 ⑫ 바뀜)
 export type Kind = 'bal' | 'rev' | 'ox' | 'quiz';
 export interface OxRow { no: number; t: string; a: boolean; why: string }
 export const balList = (): [string, string, string][] => FUNQ.list as [string, string, string][];
@@ -83,7 +83,7 @@ export function step(f0: Fun | null, votes: Record<string, string> | null, now: 
       const hist = [...arr<{ qi: number; ok: number; n: number }>(f.hist), { qi: f.qi, ok: ok.length, n: alive.length }];
       return { ...f, phase: 'show', until: now + SHOW, res: { a: r.a, b: r.b, none: r.none, lose: r.lose, out: [], voided: false, sa: 0, sb: 0 }, marks, hist };
     }
-    const zzOn = f.kind === 'bal' || f.kind === 'rev' || !f.kind, spect = Object.keys(votes || {}).filter((u) => !(f!.alive || {})[u]), back = zzOn ? spect.filter((u) => (f!.zz || {})[u]) : [];
+    const zzOn = false /* 📜 11/24 선생님 (DECISIONS 6849e1e) 「안 고른 학생 = 탈락이 맞음」 = 시간 안에 안 고르면 그 판 탈락 · 💤 관전 → 🙋 다시 참여 없앰 (옛 정식 #57 ⑫ 바뀜) */, spect = Object.keys(votes || {}).filter((u) => !(f!.alive || {})[u]), back = zzOn ? spect.filter((u) => (f!.zz || {})[u]) : [];
     const sleep = (r: { voided: boolean; none: string[] }) => (zzOn && !r.voided ? r.none : []), zzOf = (r: { voided: boolean; none: string[] }) => ({ ...(f!.zz || {}), ...Object.fromEntries(sleep(r).map((u) => [u, f!.n])) }), outOf = (r: { voided: boolean; none: string[]; out: string[] }) => r.out.filter((u) => !sleep(r).includes(u));
     if (f.rps) {
       const r = judgeRps(alive, votes, tHand(f.g, f.n)), out = outOf(r);

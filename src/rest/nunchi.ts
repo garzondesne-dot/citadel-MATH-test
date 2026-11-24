@@ -14,7 +14,7 @@ export function stepNun(f: Nun, presses: Record<string, number> | null, now: num
     if (now < x.to) return null;
     const surv = keys(x.alive).filter((u) => x.said[u]);
     if (surv.length <= WIN_AT || x.round >= ROUNDS) { x.phase = 'end'; x.win = surv; x.endAt = now; return x; }
-    const back = keys(x.zz).filter((u) => { const c = (cheers || {})[u]; return c && c.e === '🙋' && Number(c.at) >= Number(x.zz![u]); }), zz = { ...x.zz }; back.forEach((u) => { delete zz[u]; });
+    const back: string[] = [], zz = { ...x.zz }; void cheers; // 📜 11/24 선생님 (DECISIONS 6849e1e) 「안 고른 학생 = 탈락」 = 🙋 다시 참여 없앰 (옛 11/17 ⓕ 💤 관전 → 다시 바뀜)
     return { kind: 'nun', act: x.act || {}, g: x.g, round: x.round + 1, phase: 'ready', to: now + READY, alive: Object.fromEntries([...surv, ...back].map((u) => [u, 1])) as Record<string, 1>, zz, n: 1, said: {}, out: {}, done: {}, ev: [], lastAt: now + READY, hist: [...x.hist, { round: x.round, surv: surv.length, back: back.length }], at: now };
   }
   if (x.phase !== 'play') return null;
@@ -31,6 +31,6 @@ export function stepNun(f: Nun, presses: Record<string, number> | null, now: num
   const L = left();
   if (L.length === 1 && !todo.length) { const u = L[0]!; if ((x.act || {})[u]) { x.out[u] = 'last'; ev({ k: 'last', n: x.n, u: L }); } else x.out[u] = 'time'; changed = true; } // 🐞 11/17 ⓕ (선생님 A) 이번 게임에서 한 번도 안 누른 학생 = 「마지막!」 탈락 대신 💤 관전 (늦게 들어옴 · 문제 풀던 학생)
   else if (L.length > 1 && !todo.length && now - x.lastAt > TIMEOUT) { L.forEach((u) => { x.out[u] = 'time'; }); ev({ k: 'time', n: x.n, u: L }); changed = true; }
-  if (!left().length) { keys(x.alive).forEach((u) => { if (!x.done[u] && x.out[u] === 'time') { x.out[u] = 'zz'; x.zz![u] = now; } }); x.phase = 'show'; x.to = now + SHOW; changed = true; }
+  if (!left().length) { x.phase = 'show'; x.to = now + SHOW; changed = true; } // 📜 11/24 (DECISIONS 6849e1e) 안 누른 학생 = 그 판 탈락 그대로 (옛 💤 관전 · 🙋 다시 참여 없앰)
   return changed ? x : null;
 }
