@@ -5,6 +5,6 @@ exports.testOpen = async (t, opt = {}) => {
   await t.click('[data-cls="test"]'); await t.waitForTimeout(100);
   await t.click(no ? `.pk3 [data-no="${no}"]` : '.pk3 .pk:not(.add)');
   await t.click(`[data-mode="${opt.mode || 'remote'}"]`);
-  for (let i = 0; i < 8 && (await t.textContent('[data-k="bot-n"]')).trim() !== `${opt.bots ?? 0}명`; i++) await t.click('[aria-label="봇 줄이기"]');
+  for (let i = 0; i < 12; i++) { const n = parseInt((await t.textContent('[data-k="bot-n"]')) || '0', 10), want = opt.bots ?? 0; if (n === want) break; await t.click(`[aria-label="봇 ${n < want ? '늘리기' : '줄이기'}"]`); }
   await t.click('[data-k="open-go"]'); await t.click('[data-k="open-yes"]');
 };
