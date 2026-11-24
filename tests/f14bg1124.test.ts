@@ -8,7 +8,7 @@ describe('🎨 14차시 배경', () => {
     const a = [{ id: 'ex-14', theme: '04-mine' }, { id: 'set-08', theme: '04-mine' }, { id: 'ex-14b', theme: '04-mine' }], b = [{ id: 'ex-14', theme: '07-volcano' }];
     applyAddon(a); applyAddon(b);
     expect(a.map((p) => p.theme)).toEqual(['14-chainmine', '04-mine', '04-mine']); expect(b[0]!.theme).toBe('07-volcano');
-    expect(DUNGEONS['14-chainmine']).toBe('art/dg-14-chainmine-v1h.webp'); for (const k of ['15-ridge', '16-twinworks', '17-mirror']) expect(DUNGEONS[k]).toBe(`art/dg-${k}-v1h.webp`);
+    expect(DUNGEONS['14-chainmine']).toBe('art/dg-14-chainmine-v2h.webp'); for (const k of ['15-ridge', '16-twinworks', '17-mirror']) expect(DUNGEONS[k]).toBe(`art/dg-${k}-v2h.webp`);
   });
   it('팩 내보내기 = 옛 theme', () => {
     const L = { id: 'ex-14', no: 14, title: 't', theme: '14-chainmine', steps: [] } as never;

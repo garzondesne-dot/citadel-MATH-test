@@ -629,10 +629,10 @@
   "04-mine": "art/dg-04-mine-v1h.webp",
   "11-keyvault": "art/dg-11-keyvault-v1h.webp",
   "12-skygarden": "art/dg-12-skygarden-v1h.webp",
-  "14-chainmine": "art/dg-14-chainmine-v1h.webp",
-  "15-ridge": "art/dg-15-ridge-v1h.webp",
-  "16-twinworks": "art/dg-16-twinworks-v1h.webp",
-  "17-mirror": "art/dg-17-mirror-v1h.webp"
+  "14-chainmine": "art/dg-14-chainmine-v2h.webp",
+  "15-ridge": "art/dg-15-ridge-v2h.webp",
+  "16-twinworks": "art/dg-16-twinworks-v2h.webp",
+  "17-mirror": "art/dg-17-mirror-v2h.webp"
  },
  "bundles": {
   "_note": "📜 #106 함수 던전 몬스터 묶음 (작업대 v43 · 보스 따로) · 줄 = 위 → 아래 · 칸 5 = 대기 A · 대기 B · 공격 · 맞음 · 쓰러짐 · 그림이 오면 tools/fn5/build.py 가 sheets 에 같은 이름(cols 5)으로 넣음 · 그 전엔 temp(줄마다 임시 그림) · bossRef = 그 차시 👑 보스(fn5-boss 줄)",
