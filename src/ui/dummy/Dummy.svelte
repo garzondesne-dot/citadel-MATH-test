@@ -19,6 +19,7 @@
   import { TEST_ADDR } from '../../channel';
   import { bonusBase } from '../../school/castle';
   import { meBound } from '../../store/meSync';
+  import { petFeedNow } from '../../store/me.svelte';
   import { DUMMY_G, dummyReward, fieldIds, noteOf, OPEN, type Bon, type Rec } from '../../school/dummy';
   import { seals } from '../../model/titles';
   import { lastClass } from '../../school/school';
@@ -169,6 +170,7 @@
     else { const all = readLocal<Record<string, Bon>>(BONK); all[L0.id] = { ...(all[L0.id] || {}), [r.mid]: rec }; try { localStorage.setItem(BONK, JSON.stringify(all)); } catch { /* 무시 */ } }
     const why: string[] = fixNow && feat('pre') ? ['⚔ 다음 수업 선제 공격 +1'] : []; let got = 0, xp = 0;
     if (o.clear) {
+      { const pf = petFeedNow({ scare: day }); if (pf) why.push(`🐾 펫 먹이 +${pf}`); } // 🐾 허수아비 정답 = 먹이 +1 (하루 5 · 📜 11/25)
       const log = logNow(), rw = dummyReward(L0, recOf(L0), bonL, [r.mid], log, day), localLog = gemLogP ? null : { ...log };
       for (const g of rw.gems) {
         const n = g.free ? ((me.wallet.gem += g.n), g.n) : earnDaily(me.wallet, g.n, day, GEM.dayCap);

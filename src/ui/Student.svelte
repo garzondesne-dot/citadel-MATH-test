@@ -51,7 +51,7 @@
   import { SUBJ } from '../engine/subject';
   import { kstDay } from '../board/board';
   import { BUILD } from '../build';
-  import { savedCos, savedLook } from '../store/me.svelte';
+  import { petFeedNow, savedCos, savedLook, savedPet } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
@@ -172,7 +172,7 @@
   // 🔥 #67 탐사대: 이 차시를 배움터 예습에서 몬스터 2개 이상 처치 → 수업 방 내 칸에 exp (TV 횃불 · 🔥 · 점수 0) · 한 번만
   let expDone = false;
   // 🎨 옷장 (📜 11/25): 내가 입은 것 = 방 명단 내 칸에 id 만 (TV 공격 색 · 이름표) · 바뀔 때만
-  let cosSent = ''; $effect(() => { if (board || !R?.players?.[uid]) return; const c = savedCos(), j = JSON.stringify(c); if (j === cosSent || j === JSON.stringify((R.players[uid] as { cos?: unknown }).cos ?? {})) { cosSent = j; return; } cosSent = j; untrack(() => S.set(`rooms/${code}/players/${uid}/cos`, Object.keys(c).length ? c : null)); });
+  let cosSent = ''; $effect(() => { if (board || !R?.players?.[uid]) return; const pt = savedPet(), c = { ...savedCos(), ...(pt ? { pet: `${pt.kind}|${pt.food}|${pt.cos ?? ''}` } : {}) }, j = JSON.stringify(c); if (j === cosSent || j === JSON.stringify((R.players[uid] as { cos?: unknown }).cos ?? {})) { cosSent = j; return; } cosSent = j; untrack(() => S.set(`rooms/${code}/players/${uid}/cos`, Object.keys(c).length ? c : null)); });
   $effect(() => { const b = meBound(); if (expDone || board || !R || !b || !R.players?.[uid]) return; expDone = true; untrack(() => { if ((R.players?.[uid] as { exp?: unknown } | undefined)?.exp) return; const e = expFrom(b.S.get(prepRecPath(bonusBaseX(b.cls, b.num), L.id))); if (e.n >= EXP_MIN) S.set(`rooms/${code}/players/${uid}/exp`, e); }); });
   // 🏆 #73 📺 전설 도전과제: 수업이 끝나면(결과 화면) 아직 캠프에서 못 본 👑 전설 달성 = 방 내 칸 ach 에 한 번 (TV 마무리 화면 한 줄 · 캠프 연출은 그대로)
   let achDone = false;
@@ -219,7 +219,7 @@
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
   const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
   // 🐞 11/20 ① 받기 전 빈 값: 내 기록 · 지갑 · EXP · held 칸을 받기 전에 쓰면 = 옛 기록을 null 로 · 받은 보상을 다시 · 💎 total 을 「0 + 보상」으로 덮어씀 → 받은 뒤에 씀
-  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); payReward(b, before); petFeedNow({ lesson: L.id }); /* 🐾 수업 한 차시 끝까지 = 펫 먹이 +5 (차시마다 한 번 · 📜 11/25) */ }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 💎 · 🌱 수업 보상 (📜 2026-11-15 출시 막는 것 3 · school/reward.ts · 정식 값 그대로) — 같은 수업은 늘어난 만큼만 · 서버 칸 = 정식 gem/log · xp/log
   let rewardLine = $state('');
   function payReward(b: NonNullable<ReturnType<typeof meBound>>, before: Record<string, { code?: string; firstXp?: number } | null>) {

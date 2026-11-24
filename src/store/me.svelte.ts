@@ -1,6 +1,7 @@
 import { lookId } from '../model/hero';
 import { equipOf, type Look } from '../model/draft';
 import { cosWorn, type CosOn } from '../model/cosmetics';
+import { activePet, feed, petClean, type PetState } from '../model/pets';
 import { ECON_VER, migrate, type Wallet } from '../model/wallet';
 import { meBound, p, type Bound } from './meSync';
 import type { Store } from '../model/types';
@@ -10,7 +11,7 @@ import { registerTx } from './outbox';
 // 🧑 학생 한 명의 기록 — 이 기기(서버 없음 · 시험 · 교사 · TV) 또는 시험 서버(#141 · 그 학생으로 로그인한 폰 = store/meSync.ts 정식 경로)
 //   seen = 캠프에서 한 번이라도 눌러 본 물건 (#111 ② 이름표 규칙)
 //   socket = 용사마다 끼운 스킬 · title = 고른 호칭 id(hero-data titles · 'none' = 안 닮) · 산 용사 · 스킬 = wallet.buys { id, ver } · test = 🧪 테스트 기록(「테스터」 배지)
-export interface Me { nick: string; hero: number; enh: number; xp: number; socket: Record<string, string>; title: string; /** 🏅 W2 용사마다 칭호 (accounts/…/titles) */ titles?: Record<string, string>; wallet: Wallet; seen: Record<string, true>; wish: number; test: boolean; /** ⭐ 기호 톡 찜(기호 id) · 모루에서 만든 카드(카드 id) (#129) */ wishes: Record<string, true>; cards: Record<string, true>; /** 🎨 고른 테마 (#144 · 서버 accounts 에 · 다른 폰도 같음) */ theme?: string; /** 🎨 옷장 입은 것 (📜 11/25 · accounts/…/cos · 친구 · TV 가 읽음) */ cos?: CosOn }
+export interface Me { nick: string; hero: number; enh: number; xp: number; socket: Record<string, string>; title: string; /** 🏅 W2 용사마다 칭호 (accounts/…/titles) */ titles?: Record<string, string>; wallet: Wallet; seen: Record<string, true>; wish: number; test: boolean; /** ⭐ 기호 톡 찜(기호 id) · 모루에서 만든 카드(카드 id) (#129) */ wishes: Record<string, true>; cards: Record<string, true>; /** 🎨 고른 테마 (#144 · 서버 accounts 에 · 다른 폰도 같음) */ theme?: string; /** 🎨 옷장 입은 것 (📜 11/25 · accounts/…/cos · 친구 · TV 가 읽음) */ cos?: CosOn; /** 🐾 둥지 (📜 11/25 · accounts/…/pet) */ pet?: PetState }
 const KEY = 'citadel-v1-me';
 const fresh = (gem: number, scroll: number, test: boolean): Me => ({ nick: '학생 01', hero: 0, enh: 0, xp: 0, socket: {}, title: 'none', wallet: { gem, scroll, buys: [], ver: ECON_VER }, seen: {}, wish: 0, test, wishes: {}, cards: {} });
 /** 폰에만 남기는 칸 (서버에 안 씀) */
@@ -27,7 +28,7 @@ export function buysOf(gem: GemRow): { buys: Wallet['buys']; ver: number } {
   return { buys: v.filter((x): x is Wallet['buys'][number] => !!x && typeof x === 'object'), ver: gem.ver ?? (v.length ? ECON_VER : ECON_VER) };
 }
 function fromServer(b: Bound): Partial<Me> {
-  const acc = b.S.get<{ hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn }>(p(b, 'accounts')) || {};
+  const acc = b.S.get<{ hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn; pet?: PetState }>(p(b, 'accounts')) || {};
   const gem = b.S.get<GemRow>(p(b, 'gem'));
   const xp = b.S.get<{ total?: number }>(p(b, 'xp'));
   const cards = b.S.get<Record<string, true>>(p(b, 'cards'));
@@ -38,6 +39,7 @@ function fromServer(b: Bound): Partial<Me> {
   if (acc.titles) out.titles = acc.titles;
   if (acc.theme) out.theme = acc.theme;
   if (acc.cos) out.cos = acc.cos;
+  if (acc.pet) out.pet = acc.pet;
   if (gem) { const bv = buysOf(gem); out.enh = gem.enh ?? 0; out.wallet = { gem: gem.total ?? 0, scroll: gem.scroll ?? 0, buys: bv.buys, ver: bv.ver, ...(gem.mlog ? { log: Object.values(gem.mlog) } : {}), ...(gem.day ? { day: gem.day } : {}) }; }
   if (xp) out.xp = xp.total ?? 0;
   if (cards) out.cards = cards;
@@ -46,15 +48,15 @@ function fromServer(b: Bound): Partial<Me> {
 // 🐞 11/20 ② 통째로 덮어쓰기 막기 — 서버에 「마지막으로 맞춘 값(base)」을 기억하고
 //   수 칸(💎 · 📜 · 강화 · EXP · 하루 💎) = 늘거나 준 만큼만 더함(increment) · 나머지 칸 = 이 폰에서 바뀐 것만 씀 · 산 것 = 서버 최신 목록과 합침(transaction)
 //   다른 기기 · 수업 보상 · 선물이 서버를 바꾸면 = 이 폰 값도 그만큼 옮김(rebase) → 두 기기로 써도 서로 지우지 않음
-type Base = { gem: number; scroll: number; enh: number; xp: number; day: Record<string, number>; hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn; ver?: number; log?: string[]; buys: Wallet['buys'] };
+type Base = { gem: number; scroll: number; enh: number; xp: number; day: Record<string, number>; hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn; pet?: PetState; ver?: number; log?: string[]; buys: Wallet['buys'] };
 const eq = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const cl = <T>(v: T): T => (v == null ? v : (JSON.parse(JSON.stringify(v)) as T));
 function srvBase(b: Bound): Base {
-  const acc = b.S.get<{ hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn }>(p(b, 'accounts')) || {};
+  const acc = b.S.get<{ hero?: number; socket?: Record<string, string>; title?: string; titles?: Record<string, string>; theme?: string; cos?: CosOn; pet?: PetState }>(p(b, 'accounts')) || {};
   const gem = b.S.get<GemRow>(p(b, 'gem')) || {}, xp = b.S.get<{ total?: number }>(p(b, 'xp')) || {}, bv = buysOf(gem);
-  return { gem: Number(gem.total) || 0, scroll: Number(gem.scroll) || 0, enh: Number(gem.enh) || 0, xp: Number(xp.total) || 0, day: { ...(gem.day || {}) }, hero: acc.hero, socket: acc.socket, title: acc.title, titles: acc.titles, theme: acc.theme, cos: acc.cos, ver: gem.ver, log: gem.mlog ? Object.values(gem.mlog) : undefined, buys: bv.buys };
+  return { gem: Number(gem.total) || 0, scroll: Number(gem.scroll) || 0, enh: Number(gem.enh) || 0, xp: Number(xp.total) || 0, day: { ...(gem.day || {}) }, hero: acc.hero, socket: acc.socket, title: acc.title, titles: acc.titles, theme: acc.theme, cos: acc.cos, pet: acc.pet, ver: gem.ver, log: gem.mlog ? Object.values(gem.mlog) : undefined, buys: bv.buys };
 }
-const meBase = (m: Me): Base => cl({ gem: m.wallet.gem, scroll: m.wallet.scroll, enh: m.enh, xp: m.xp, day: m.wallet.day || {}, hero: m.hero, socket: m.socket, title: m.title, titles: m.titles, theme: m.theme, cos: m.cos, ver: m.wallet.ver, log: m.wallet.log, buys: m.wallet.buys });
+const meBase = (m: Me): Base => cl({ gem: m.wallet.gem, scroll: m.wallet.scroll, enh: m.enh, xp: m.xp, day: m.wallet.day || {}, hero: m.hero, socket: m.socket, title: m.title, titles: m.titles, theme: m.theme, cos: m.cos, pet: m.pet, ver: m.wallet.ver, log: m.wallet.log, buys: m.wallet.buys });
 const buyKey = (x: Wallet['buys']) => JSON.stringify([...(x || [])].map((b) => `${b.id}|${b.ver}`).sort());
 /** 산 것 합치기: 내 목록 + 서버에만 있는 것 (같은 id = 내 것 · 산 것은 늘기만) */
 export function mergeBuys(server: GemRow['buy'] | null | undefined, mine: Wallet['buys']): Wallet['buys'] {
@@ -68,8 +70,8 @@ function rebase(me: Me, base: Base, sv: Base) {
   const day = { ...(me.wallet.day || {}) };
   for (const d of new Set([...Object.keys(sv.day), ...Object.keys(base.day)])) { const n = (Number(day[d]) || 0) + (Number(sv.day[d]) || 0) - (Number(base.day[d]) || 0); if (n) day[d] = n; else delete day[d]; }
   if (Object.keys(day).length || me.wallet.day) me.wallet.day = day;
-  const take = <K extends 'hero' | 'socket' | 'title' | 'titles' | 'theme' | 'cos'>(k: K) => { if (sv[k] !== undefined && eq(me[k], base[k])) (me as Me)[k] = cl(sv[k]) as Me[K]; };
-  take('hero'); take('socket'); take('title'); take('titles'); take('theme'); take('cos');
+  const take = <K extends 'hero' | 'socket' | 'title' | 'titles' | 'theme' | 'cos' | 'pet'>(k: K) => { if (sv[k] !== undefined && eq(me[k], base[k])) (me as Me)[k] = cl(sv[k]) as Me[K]; };
+  take('hero'); take('socket'); take('title'); take('titles'); take('theme'); take('cos'); take('pet');
   if (sv.ver !== undefined && eq(me.wallet.ver, base.ver)) me.wallet.ver = sv.ver;
   if (sv.log && eq(me.wallet.log, base.log)) me.wallet.log = [...sv.log];
   const ids = new Set(me.wallet.buys.map((x) => x.id)), more = sv.buys.filter((x) => !ids.has(x.id));
@@ -83,8 +85,8 @@ function toServer(b: Bound, me: Me, base: Base) {
   add('gem', me.wallet.gem, `${g}/total`); add('scroll', me.wallet.scroll, `${g}/scroll`); add('enh', me.enh, `${g}/enh`); add('xp', me.xp, `${x}/total`); // 정식 xp.log · ttl 은 그대로
   for (const [d, n] of Object.entries(me.wallet.day || {})) { const dd = (Number(n) || 0) - (Number(base.day[d]) || 0); if (dd) { base.day[d] = Number(n) || 0; addTo(S, `${g}/day/${d}`, dd); } }
   // 나머지 칸 = 바뀐 것만 (uid · at · 정식 log · earned · medal … 은 그대로)
-  const put = <K extends 'hero' | 'socket' | 'title' | 'titles' | 'theme' | 'cos'>(k: K) => { if (me[k] === undefined || eq(me[k], base[k])) return; (base as Base)[k] = cl(me[k]) as Base[K]; S.set(`${a}/${k}`, cl(me[k])); };
-  put('hero'); put('socket'); put('title'); put('titles'); put('theme'); put('cos');
+  const put = <K extends 'hero' | 'socket' | 'title' | 'titles' | 'theme' | 'cos' | 'pet'>(k: K) => { if (me[k] === undefined || eq(me[k], base[k])) return; (base as Base)[k] = cl(me[k]) as Base[K]; S.set(`${a}/${k}`, cl(me[k])); };
+  put('hero'); put('socket'); put('title'); put('titles'); put('theme'); put('cos'); put('pet');
   if (!eq(me.wallet.ver, base.ver)) { base.ver = me.wallet.ver; S.set(`${g}/ver`, me.wallet.ver); }
   if (me.wallet.log?.length && !eq(me.wallet.log, base.log)) { base.log = [...me.wallet.log]; S.set(`${g}/mlog`, me.wallet.log); }
   if (buyKey(me.wallet.buys) !== buyKey(base.buys)) { // 🐞 #83-12 산 것 = 보관함 합치기 줄(끊긴 채 닫아도 💎 빠짐과 같이 다시 올라감) · 서버 아님 = 예전 그대로
@@ -189,4 +191,19 @@ export function savedCos(): import('../model/cosmetics').CosOn {
   const b = meBound();
   if (b) { const sv = fromServer(b); return cosWorn(sv.wallet ?? { buys: [] }, sv.cos); }
   const m = readLocal(KEY); return cosWorn(m?.wallet ?? { buys: [] }, m?.cos);
+}
+/** 🍖 펫 먹이 (📜 11/25 · 수업 끝 · 허수아비 정답) — 서버 학생 = accounts/…/pet · 이 기기 = 폰 저장 · 교사 = 없음 → 준 수 */
+export function petFeedNow(why: { lesson: string } | { scare: string }): number {
+  if (asTeacher) return 0;
+  const b = meBound();
+  if (b) { const st = petClean(b.S.get(p(b, 'accounts') + '/pet')); const n = feed(st, why); if (n) b.S.set(p(b, 'accounts') + '/pet', st); return n; }
+  const m = readLocal(KEY); if (!m) return 0;
+  const st = petClean(m.pet); const n = feed(st, why); if (n) { try { localStorage.setItem(KEY, JSON.stringify({ ...m, pet: st })); } catch { /* 무시 */ } }
+  return n;
+}
+/** 🐾 데리고 다니는 펫 (방 명단 · 종합실 대기 줄에 싣는 것 = 종류 · 먹이 · 꾸미기만) */
+export function savedPet(): { kind: string; food: number; cos?: string } | null {
+  if (asTeacher) return null;
+  const b = meBound(), raw = b ? fromServer(b).pet : readLocal(KEY)?.pet, a = activePet(raw);
+  return a ? { kind: a.kind, food: a.food, ...(a.cos ? { cos: a.cos } : {}) } : null;
 }

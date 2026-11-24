@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PetSprite from '../cos/PetSprite.svelte';
+  import { activePet, type Pet, type PetState } from '../../model/pets';
   import { onDestroy, untrack } from 'svelte';
   import type { Store } from '../../model/types';
   import type { Pupil } from '../../school/school';
@@ -17,7 +19,7 @@
   //   규칙 게시 전 = campfire · campHi 읽기 · 쓰기가 막힘 → 친구 앉기 · 카드(이름 · 칭호 · 스킬)만 · 오라 · 「오늘」 · 인사는 조용히 빠짐
   type TS = Store & { trySet?: (p: string, v: unknown) => Promise<boolean>; fetch?: <T>(p: string) => Promise<T | null> };
   let { S, pupil = null, enh = 0, hiN = $bindable(0), sheetOpen = $bindable(false) }: { S: TS; pupil?: Pupil | null; enh?: number; hiN?: number; sheetOpen?: boolean } = $props();
-  type F = { num: number; look: number; base: number; name: string; title: string; fx: string; enh: number; today: string; /** 🎨 옷장 입은 것 (accounts/…/cos · 📜 11/25) */ cos?: CosOn };
+  type F = { num: number; look: number; base: number; name: string; title: string; fx: string; enh: number; today: string; /** 🎨 옷장 입은 것 (accounts/…/cos · 📜 11/25) */ cos?: CosOn; /** 🐾 데리고 다니는 펫 */ pet?: Pet | null };
   // 그루터기 = Camp STUMPS 중 용사 자리(앞 왼쪽)를 뺀 셋 (그림 % · 위 기준)
   const SEAT_XY: [number, number][] = [[39.4, 61.7], [60.6, 61.7], [64.8, 68]];
   const P0 = untrack(() => pupil), today = kday(Date.now()), real = untrack(() => !!pupil && S.kind === 'server'); // 캠프가 열릴 때의 학생 (캠프는 학생이 바뀌면 다시 그려짐)
@@ -30,7 +32,7 @@
   const get = async <T,>(p: string): Promise<T | null> => { try { return S.fetch ? await S.fetch<T>(p) : S.get<T>(p); } catch { return null; } };
   const rows = (v: unknown): [number, Record<string, unknown>][] => (v && typeof v === 'object' ? Object.entries(v as Record<string, unknown>).filter(([k, x]) => Number(k) > 0 && x && typeof x === 'object').map(([k, x]) => [Number(k), x as Record<string, unknown>]) : []);
   const mk = (c: Cand & { enh?: number; today?: string }, name: string): F => ({ num: c.num, look: lookId({ hero: c.hero, enh: c.enh ?? 0, fx: c.fx, title: c.title }), base: c.hero, name, title: c.title, fx: c.fx, enh: c.enh ?? 0, today: c.today ?? '' });
-  const withCos = (acc: Record<string, unknown> | null, n: number, f: F): F => { const c = cosClean((acc?.[String(n)] as { cos?: unknown } | undefined)?.cos); return Object.keys(c).length ? { ...f, cos: c } : f; };
+  const withCos = (acc: Record<string, unknown> | null, n: number, f: F): F => { const row = acc?.[String(n)] as { cos?: unknown; pet?: unknown } | undefined, c = cosClean(row?.cos), pt = activePet(row?.pet as PetState); return { ...f, ...(Object.keys(c).length ? { cos: c } : {}), ...(pt ? { pet: pt } : {}) }; };
   let alive = true; onDestroy(() => (alive = false));
   untrack(() => { if (feat('campfire')) void load(); });
   async function load() {
@@ -66,7 +68,7 @@
 {#if feat('campfire')}
   {#each friends as f, i (f.num)}
     {@const p = SEAT_XY[i]}
-    {#if p}<button type="button" class="cfr" style="left:{p[0]}%;top:{p[1]}%" aria-label="{f.name} · 모닥불 친구" data-k="cf-friend" data-num={f.num} onclick={(e) => { e.stopPropagation(); open(f); }}><CosAura color={auraColorOf(f.cos)} /><HeroSprite id={f.look} scale={0.62} play aura={f.enh} /></button>{/if}
+    {#if p}<button type="button" class="cfr" style="left:{p[0]}%;top:{p[1]}%" aria-label="{f.name} · 모닥불 친구" data-k="cf-friend" data-num={f.num} onclick={(e) => { e.stopPropagation(); open(f); }}><CosAura color={auraColorOf(f.cos)} /><HeroSprite id={f.look} scale={0.62} play aura={f.enh} />{#if f.pet}<span class="fpet"><PetSprite pet={f.pet} size={26} /></span>{/if}</button>{/if}
   {/each}
   {#if band}<p class="cfband" role="status" data-k="cf-band">{band}</p>{/if}
 {/if}
@@ -91,6 +93,7 @@
 
 <style>
   .cfr :global(.ca) { bottom: 0; }
+  .fpet { position: absolute; right: -14px; bottom: 0; }
   .cfr { position: absolute; z-index: 6; /* 물건(게시판) 누르는 칸보다 위 */ transform: translate(-50%, -97%); border: 0; padding: 0; background: none; cursor: pointer; min-width: 44px; min-height: 44px; display: grid; place-items: end center; }
   .cfr:active { transform: translate(-50%, -95%) scale(0.97); }
   .cfband { position: absolute; left: 50%; top: 44%; z-index: 8; transform: translateX(-50%); margin: 0; max-width: 86%; padding: 6px 12px; border-radius: 14px; background: rgba(40, 24, 6, 0.86); border: 1px solid var(--accent); color: #ffe7b0; font: 700 var(--fs-small) var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 0 14px rgba(255, 150, 40, 0.5); pointer-events: none; }

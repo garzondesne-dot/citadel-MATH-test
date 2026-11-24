@@ -1,4 +1,6 @@
 <script lang="ts">
+  import PetSprite from '../cos/PetSprite.svelte';
+  import { petFromTag } from '../../model/pets';
   import { bandText, examDateOf } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import { cosClean } from '../../model/cosmetics';
@@ -390,7 +392,7 @@
     <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
     {#if tvExam}<p class="exband-tv" data-k="tv-exam-band">{tvExam}</p>{/if}<!-- ⚔ 기말 D-day 띠 (📜 11/25 · 입장 대기 = 던전 대기실) -->
     <div class="lring" bind:clientWidth={lobbyW}>
-      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{expOf(R, p.uid) ? '🔥 ' : ''}{p.num} <NameTag name={p.name} on={cosClean((R?.players?.[p.uid] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span><NameTag name={nameOf(u)} on={cosClean((R?.players?.[u] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}</div>
+      <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{expOf(R, p.uid) ? '🔥 ' : ''}{p.num} <NameTag name={p.name} on={cosClean((R?.players?.[p.uid] as { cos?: unknown } | undefined)?.cos)} tv />{#if petFromTag((R?.players?.[p.uid] as { cos?: { pet?: string } } | undefined)?.cos?.pet)}<PetSprite pet={petFromTag((R?.players?.[p.uid] as { cos?: { pet?: string } } | undefined)?.cos?.pet)!} size={Math.round(28 * stuK)} still />{/if}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span><NameTag name={nameOf(u)} on={cosClean((R?.players?.[u] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}</div>
       <div class="tchr"><HeroSprite id={meLookId(M.me)} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
   {:else if view === 'concept' && step}
