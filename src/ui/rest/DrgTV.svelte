@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Podium from './Podium.svelte';
   import type { Room } from '../../model/types';
   import { dragonAt, FIN, ranks, type Drg, type Prog } from '../../rest/dragon';
   import HeroSprite from '../camp/HeroSprite.svelte';
@@ -23,7 +24,7 @@
   {#if f.phase === 'intro'}
     <p class="rule">용이 <b>잘 때</b> 👣 두 단추를 <b>번갈아</b> 눌러 달려요 · 용이 <b>눈을 뜨면</b> 멈춰요! · 보물 상자에 먼저 닿으면 이겨요</p>
   {:else if f.phase === 'end'}
-    <div class="podium">{#each rk as x (x.u)}<span class="pd r{x.rank}"><b>{x.rank}등</b>{nameOf(x.u)} · {x.pts}점</span>{/each}</div>
+    <Podium rows={rk.map((x) => ({ u: x.u, rank: x.rank, name: nameOf(x.u), pts: `${x.pts}점`, hero: R.players?.[x.u]?.hero ?? 0 }))} />
     {#if f.clean?.length}<p class="rule">🐉 한 번도 안 걸린 용사 · {f.clean.map(nameOf).join(' · ')}</p>{/if}
   {:else}
     <div class="road" style:--lanes={lanes}>
@@ -55,6 +56,5 @@
   .dragon i { position: absolute; left: -2cqw; top: 0; font-style: normal; font-size: 5cqh; }
   .dragon.warn span { animation: shiver 0.15s linear infinite; } .dragon.eye span { filter: drop-shadow(0 0 3cqh #ff3b30); }
   @keyframes shiver { 50% { transform: translateX(0.4cqw); } }
-  .podium { margin: auto; display: flex; gap: 2cqw; } .pd { display: grid; gap: 1cqh; padding: 2cqh 3cqw; border-radius: 2cqh; background: rgba(0, 0, 0, 0.5); font: 800 3.6cqh var(--font); text-align: center; } .pd b { font-size: 5cqh; color: var(--accent); }
   @media (prefers-reduced-motion: reduce) { .dragon.warn span { animation: none; } .runner { transition: none; } }
 </style>

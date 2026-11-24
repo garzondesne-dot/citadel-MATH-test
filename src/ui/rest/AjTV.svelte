@@ -3,6 +3,7 @@
   import { isRight, qOf, standingsAj, syl, type Aj, type Ans } from '../../rest/ajae';
   import HeroSprite from '../camp/HeroSprite.svelte';
   import SageHost from './SageHost.svelte';
+  import Podium from './Podium.svelte';
   // 😆 아재 퀴즈 · 종합실 (📜 2026-11-24): 문제 · 빈칸 수 · 남은 시간 · 맞힌 순서 (정답 글자는 공개 때만)
   //   📜 11/24 시안(에셋 방 2 ajae-tv-*) = 진행자 현자(올드윈 · 지금 용사 그림 · 진행자 시트가 오면 바꿈) 왼쪽 · 문제 = 말풍선 · 아래 = 참가 용사 줄(맞힌 사람만 밝게)
   const { R, f, now, nameOf }: { R: Room; f: Aj; now: number; nameOf: (u: string) => string } = $props();
@@ -23,7 +24,7 @@
     <p class="rule">폰에서 <b>글자를 골라</b> 정답을 완성해요 · 먼저 맞히면 <b>3 · 2 · 1점</b> · 틀려도 다시!</p>
   {:else if f.phase === 'end'}
     <span class="host"><SageHost act="laugh" h={hostH} /></span>
-    <div class="podium">{#each st.slice(0, 5) as x (x.u)}<span class="pd r{x.rank}"><b>{x.rank}등</b>{nameOf(x.u)} · {x.pts}점</span>{/each}</div>
+    {#if st.length}<Podium rows={st.slice(0, 8).map((x) => ({ u: x.u, rank: x.rank, name: nameOf(x.u), pts: `${x.pts}점`, hero: R.players?.[x.u]?.hero ?? 0 }))} />{/if}
     {#if !st.length}<p class="rule">이번엔 맞힌 사람이 없어요</p>{/if}
   {:else if q}
     <span class="host"><SageHost act={f.phase === 'show' ? 'laugh' : 'talk'} h={hostH} /></span>
@@ -53,5 +54,4 @@
   .ans { margin: 0; font: 900 11cqh var(--font); color: var(--accent); } .why { margin: 0; max-width: 92%; font: 700 4.4cqh var(--font); opacity: 0.9; }
   .ajs { display: flex; flex-direction: row; gap: 1.2cqw; } .ajs span { width: 11cqh; height: 12cqh; display: grid; place-items: center; border-radius: 1.2cqh; background: rgba(255, 255, 255, 0.14); font: 900 6cqh var(--font); }
   .ok { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6cqh 2cqw; max-width: 100%; max-height: 11cqh; overflow: hidden; font: 800 4.6cqh var(--font); } .ok .pt { color: var(--accent); }
-  .podium { margin: auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 2cqw; } .pd { display: grid; gap: 1cqh; padding: 2cqh 3cqw; border-radius: 2cqh; background: rgba(0, 0, 0, 0.5); font: 800 4cqh var(--font); } .pd b { font-size: 5.5cqh; color: var(--accent); }
 </style>

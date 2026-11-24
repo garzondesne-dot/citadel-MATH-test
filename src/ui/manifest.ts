@@ -254,6 +254,8 @@ export const AK_ART: { board: string; ring: number; pixel: boolean; bg: string }
 export const LG_ART = { tiles: 'art/minigame/land-tiles-v1.webp', flags: ['art/minigame/land-flag-0-v1.webp', 'art/minigame/land-flag-1-v1.webp', 'art/minigame/land-flag-2-v1.webp', 'art/minigame/land-flag-3-v1.webp'] } as const;
 /** 칸 그림 자리 (background-position x %) · c = 팀(−1 빈칸) · star = ⭐ */
 export const lgTilePos = (c: number, star: boolean) => `${(star ? 5 : c + 1) * 20}% 0`;
+/** 🏆 쉼터 놀이 결과 시상대 (🎨 11/24 mg-o-podium 코덱스 · 1/4 도트) */
+export const PODIUM_ART = 'art/minigame/podium-v1.webp';
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v1.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
 /** 새 그림 배경(🥏 · 😆)은 어둡게 덮지 않음 (그림 자체가 어두운 쪽을 비워 둠) */
 export const FUN_BG_LIGHT: Record<string, true> = { ak: true, aj: true };
