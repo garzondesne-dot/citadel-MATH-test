@@ -7,7 +7,7 @@ import { keysOf, keyUses, myKeys } from './keys';
 import { helpCount } from './help';
 import { hgOf } from './hintGive';
 import type { LessonPack, Room } from '../model/types';
-import { activeIds, bossHp, bossLive, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf } from '../raid/raid';
+import { activeIds, bossHp, bossLive, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf, healsGivenAll } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
 
 export type St = 'o' | 'f' | 'x' | '-' | 'n' | 's'; // s = 🎯 수업에서 복습으로 넘어온 문제 (📜 2026-11-16)
@@ -52,7 +52,8 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   }
   { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)
   { const h = helpCount(R, uid); if (h.hints) Object.assign(out, { hints: h.hints, help: h.help }); }
-  { const hg = hgOf(R, uid); if (hg) Object.assign(out, { hg }); } // 💡 친구에게 준 힌트 수 (📜 2026-11-17 #23 · 옛 정식 hg · 대시보드 「💡 힌트 준」) // 💡 도움 연 칸 수 · 단계별 (📜 2026-11-17 미래교육상 ① · 옛 정식 hints 칸 · 성적 아님 · 대시보드 「💡 힌트」 · 엑셀 「그림 힌트(소문제)」)
+  { const hg = hgOf(R, uid); if (hg) Object.assign(out, { hg }); }
+  { const hl = healsGivenAll(R, uid); if (hl) Object.assign(out, { hl }); } // 💚 친구에게 준 힐 수 (📜 11/24 · 대시보드 「💚 힐 준」 · 기록 칸 records/{반}/{번호}/{차시} = 규칙 그대로) // 💡 친구에게 준 힌트 수 (📜 2026-11-17 #23 · 옛 정식 hg · 대시보드 「💡 힌트 준」) // 💡 도움 연 칸 수 · 단계별 (📜 2026-11-17 미래교육상 ① · 옛 정식 hints 칸 · 성적 아님 · 대시보드 「💡 힌트」 · 엑셀 「그림 힌트(소문제)」)
   { const ks = keysOf(L); if (ks.length) { const rows = keyUses(L, R, uid), mk = myKeys(R, uid), got = ks.filter((k) => mk[k.id]);
     (out as RecRow & { keys?: unknown }).keys = { n: ks.length, got: got.length, first: got.filter((k) => mk[k.id]!.ok).length, by: Object.fromEntries(ks.map((k) => [k.id, !mk[k.id] ? '-' : mk[k.id]!.ok ? 'o' : 'x'])), chest: rows.filter((r) => r.chest).length, use: rows.filter((r) => r.have && r.state !== 'none').length, cells: Object.fromEntries(rows.map((r) => [`${r.at}_${r.n}`, `${r.have ? 'k' : '-'}${r.state === 'first' ? 'o' : r.state === 'later' ? 'f' : 'x'}`])) }; } } // 🔑 #59 열쇠: 얻음 · 첫 번에 맞힘 · 상자 · 사용 · 걸린 칸(k/- = 열쇠 있음/없음 · o 첫 시도 · f 나중 · x 못 맞힘)
   if (prev?.loot) out.loot = prev.loot;
