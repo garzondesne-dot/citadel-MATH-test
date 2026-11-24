@@ -14,7 +14,7 @@
   import { PACKS } from '../../engine/packs';
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
-  import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
+  import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft, offKind, offIcon } from '../../raid/raid';
   import { roomPath } from '../../raid/actions';
   import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo, setQr } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
@@ -210,7 +210,7 @@
     if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [keysOf(L).length ? `🔑 열쇠 ${keyBoard(L, R, ids).all} / ${ids.length}` : '', oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
     if (scout?.on) return { ic: '✋', lab: '준비 완료', n: Object.keys(R.ready?.[scout.id] || {}).length, m: ids.length, sub: '' };
     if (view === 'end') return { ic: '✔', lab: '참여', n: ids.length, m: expected.length, sub: '' };
-    return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? `📵 끊김 ${lost.map(nameOf).join(' · ')}` : '' };
+    return { ic: '✔', lab: '제출', n: ids.filter(submitted).length, m: ids.length, sub: lost.length ? (['scr', 'net'] as const).map((k) => { const us = lost.filter((u) => offKind(R, u) === k); return us.length ? `${offIcon(k)} ${k === 'scr' ? '화면 꺼짐' : '끊김'} ${us.map(nameOf).join(' · ')}` : ''; }).filter(Boolean).join(' · ') : '' };
   });
 
   // ── 정찰 +30초 = 교사 폰에만 (📺 시안 · 선생님 「2번 교사 폰에만」 2026-11-14) · TV 는 남은 초만 바뀜 ──
