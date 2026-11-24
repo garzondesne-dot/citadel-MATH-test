@@ -256,8 +256,8 @@ export const LG_ART = { tiles: 'art/minigame/land-tiles-v3.webp', flags: ['art/m
 export const lgTilePos = (c: number, star: boolean) => `${(star ? 5 : c + 1) * 20}% 0`;
 /** 🏆 쉼터 놀이 결과 시상대 (🎨 11/24 mg-o-podium 코덱스 · 1/4 도트) */
 export const PODIUM_ART = 'art/minigame/podium-v1.webp';
-/** 📄 기말 · 시험지 마왕 그림 (🎨 11/25 exam-boss 4칸 = 대기 A · 대기 B · 붉은 눈 · 구겨져 쓰러짐 · exam-bg = 밤 교실) */
-export const EXAM_ART = { boss: `${import.meta.env.BASE_URL}art/exam/exam-boss-v1.webp`, bg: `${import.meta.env.BASE_URL}art/exam/exam-bg-v1.webp`, cols: 4 } as const;
+/** 📄 기말 · 시험지 마왕 그림 (🎨 11/25 exam-boss v2 4칸 = 대기 A · 대기 B · 수식 기호 빛 · 재로 흩어짐(쓰러짐) · exam-bg = 밤 교실) */
+export const EXAM_ART = { boss: `${import.meta.env.BASE_URL}art/exam/exam-boss-v2.webp`, bg: `${import.meta.env.BASE_URL}art/exam/exam-bg-v1.webp`, cols: 4 } as const;
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v3.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
 /** 새 그림 배경(🥏 · 😆)은 어둡게 덮지 않음 (그림 자체가 어두운 쪽을 비워 둠) */
 export const FUN_BG_LIGHT: Record<string, true> = { ak: true, aj: true };
