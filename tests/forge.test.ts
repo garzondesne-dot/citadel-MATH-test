@@ -64,3 +64,14 @@ describe('모루 함수 단원', () => {
     for (const c of F) { const e = ex(c.id); expect(e, c.name).toBeTruthy(); if (e.type === 'choice') expect(e.choices![e.answerIndex!], c.name).toBeTruthy(); }
   });
 });
+
+// ⚒ 📜 11/24 선생님 확정 (DECISIONS 7968385 · FORGE-FUNC-v1 9절): 「결합법칙」 이름 그대로 + 3등급(심화) · 「역함수와 합성」 한 카드(두 순서 레시피) + 힌트 「둘 다 항등함수지만 사는 집합이 달라요」
+describe('📜 11/24 모루 함수 카드 두 장', () => {
+  it('결합법칙 = 이름 그대로 · 3등급 / 역함수와 합성 = 한 카드 · 두 순서 · 힌트 한 줄', () => {
+    const C = SUBJ.forge!.unit.CARDS, a = C.find((c) => c.id === 'fassoc')!, v = C.find((c) => c.id === 'invcomp')!;
+    expect([a.name, a.grade]).toEqual(['결합법칙', 3]);
+    expect(v.name).toBe('역함수와 합성'); expect(C.filter((c) => c.name === '역함수와 합성').length).toBe(1);
+    expect((v as { alt?: unknown[] }).alt?.length).toBe(1);
+    expect(v.hint).toMatch(/둘 다 항등함수지만 사는 집합이 달라요/);
+  });
+});
