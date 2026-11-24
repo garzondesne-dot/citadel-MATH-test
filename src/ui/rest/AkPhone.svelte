@@ -81,7 +81,8 @@
     const n = (me?.n ?? 0) + 1; sent = n; akShoot(S, code, f.g, uid, { a: Math.atan2(dy, dx), p, n });
     try { navigator.vibrate?.(25); } catch { /* 없음 */ }
   }
-  const backIn = $derived(me && !me.on ? Math.max(1, Math.ceil(me.back + 1)) : 0);
+  const isOut = $derived(!!(f as Ak & { out?: Record<string, true> }).out?.[uid]); // 📵 #14 이 판 아웃 = 되살아나기 숫자 · 안내 없음
+  const backIn = $derived(me && !me.on && !isOut ? Math.max(1, Math.ceil(me.back + 1)) : 0);
 </script>
 
 <div class="ak" data-k="ak-phone" data-phase={f.phase}>
@@ -106,7 +107,7 @@
         {#if mode === 'all'}<p class="tip">내 알을 누르면 다시 따라가요</p>{/if}
         {#if backIn}<div class="fall" data-k="ak-fall"><b>{backIn}</b><span>{fallMsg || '떨어졌어요'}</span></div>{/if}
       </div>
-      <p class="hint" data-k="ak-hint">{f.phase === 'ready' ? '곧 시작해요' : !me.on ? '곧 다시 나와요 (나온 뒤 2초 무적)' : sent > me.n ? '🚀 날아가는 중…' : me.cd > 0 ? `🔄 ${Math.ceil(me.cd)}초 쉬는 중` : '👆 판을 누르고 뒤로 당겼다 놓아요'}</p>
+      <p class="hint" data-k="ak-hint">{f.phase === 'ready' ? '곧 시작해요' : isOut ? '📵 이번 판은 끝 · 친구들 판을 구경해요' : !me.on ? '곧 다시 나와요 (나온 뒤 2초 무적)' : sent > me.n ? '🚀 날아가는 중…' : me.cd > 0 ? `🔄 ${Math.ceil(me.cd)}초 쉬는 중` : '👆 판을 누르고 뒤로 당겼다 놓아요'}</p>
       <ol class="top">{#each top as u, i (u)}<li class:me={u === uid}><b>{i + 1}</b><span>{nick(u)}{f.crown === u ? ' 👑' : ''}</span><em>{f.sc?.[u] ?? 0}점</em></li>{/each}</ol>
     {/if}
   {/if}
