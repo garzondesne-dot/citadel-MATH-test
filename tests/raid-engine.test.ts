@@ -66,3 +66,38 @@ describe('🏰 성채 레이드 엔진', () => {
     S.cells.forEach((c) => (c.broken = true)); hitTo(S, rage.at); expect(S.rage).toBe(true);
   });
 });
+
+// 🏰 B 문항 = 성채 평가 팩의 「바로 쓰는 방」만 · 판 1 ~ 6 · 사진 단계 없음
+import { readFileSync } from 'node:fs';
+import { checkCastle } from '../src/school/castle';
+import { RAID_ROOMS, raidPack } from '../src/board/atb/raid';
+import { originsOf, questionsOf, variantOf, set0Only } from '../src/board/atb/quiz';
+import { newBot, simulate } from '../src/board/atb/bots';
+const castle = (n: number) => checkCastle(readFileSync(`tools/pack-upload/castle/eval-${n}.json`, 'utf8'), { sheet: () => true }).pack!;
+describe('🏰 레이드 문항', () => {
+  it('층마다 바로 쓰는 방만 · 순서 그대로 · 👑 글자 뺌', () => {
+    for (const f of [1, 2, 3] as const) {
+      const L = raidPack(castle(f), f)!;
+      expect(L.no).toBe(100 + f); expect(L.steps.map((s) => s.id)).toEqual(RAID_ROOMS[f]);
+      expect(originsOf(L).map((o) => o.mid)).toEqual(RAID_ROOMS[f]);
+      expect(L.steps.every((s) => !String(s.title).startsWith('👑'))).toBe(true);
+    }
+  });
+  it('판 1 ~ 6 만 (판 0 = 학습지 원본 안 나옴) · 문항이 비지 않음', () => {
+    for (const f of [1, 2, 3] as const) {
+      const P = castle(f), L = raidPack(P, f)!;
+      for (const o of originsOf(L)) {
+        expect(set0Only(L, o.mid)).toBe(false);
+        const vers = P.rooms.find((r) => r.id === o.mid)!.vers;
+        for (let v = 1; v <= 12; v++) { const k = variantOf(L, o.mid, v); expect(k).toBeGreaterThanOrEqual(1); expect(k).toBeLessThanOrEqual(vers.length - 1); expect(questionsOf(L, { mid: o.mid, ver: v }, 's').length).toBeGreaterThan(0); }
+      }
+    }
+  });
+  it('봇 판이 끝까지 돎 (층 3 · 레이드 보스 · 오류 · 끝없는 판 없음)', () => {
+    for (const f of [1, 2, 3] as const) {
+      const L = raidPack(castle(f), f)!, S = newBattle({ boss: RAID_BOSSES[f], diff: 'normal', party: party(), seed: 7 });
+      const bots = S.heroes.map((h) => newBot(L, h.id, 'normal', 7)); simulate(L, S, bots, { maxT: 700 });
+      expect(S.end).not.toBeNull(); expect(Number.isFinite(S.bossHp)).toBe(true);
+    }
+  });
+});
