@@ -76,7 +76,8 @@
   queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && !p.when /* 📜 11/23 예약 모집 없앰 = 옛 예약 글은 조용히 안 보임 */ && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
   /** 👥 📜 11/23 팀 참가 = 모든 차시 모집 중 팀 (혼자 판 · 옛 예약 글 빼고 · 새 팀 위) */
-  const waitAll = $derived(joinList(posts));
+  /* 📜 11/24 🔨 #8 ① 꽉 찬 팀(4/4) = 목록에서 숨김 (흐리게 → 숨김 · 내 팀은 보임) · 개수 · 필터 칩 · 묶음 모두 숨긴 뒤 셈 */
+  const waitAll = $derived(joinList(posts).filter((p) => !(membersOf(p).length >= MAX && !p.mem?.[uid])));
   /* 📋 📜 11/24 출정 시안(board-join-1 ~ 4): 위 탭 = 👥 팀 참가(왼쪽 · 기본) / ➕ 팀 모집(오른쪽) · 팀 참가 = 열린 팀 전부 바로 목록 · 팀이 많으면(6 ~) 필터 칩 4 + 차시별 묶음 */
   let goTab = $state<'join' | 'make'>('join'), jf = $state<'all' | 'free' | 'guard' | 'nolock'>('all');
   const JMANY = 6;
@@ -375,18 +376,17 @@
           {#if waitAll.length}
             <div class="jhead"><span>지금 열린 팀 {waitAll.length}</span><small>실시간</small></div>
             {#if waitAll.length >= JMANY}<div class="jchips" data-k="board-join-chips">{#each [['all', `전체 ${waitAll.length}`], ['free', '빈자리 있음'], ['guard', '🛡 수호자'], ['nolock', '🔒 빼기']] as [k, t] (k)}<button type="button" class="jc" class:on={jf === k} aria-pressed={jf === k} onclick={() => (jf = k as typeof jf)}>{jf === k ? '✓ ' : ''}{t}</button>{/each}</div>{/if}
-            {#snippet jrow(p: Post)}{@const ok = jOk(p)}{@const full = jFull(p)}{@const mine = !!p.mem?.[uid]}{@const ms = membersOf(p)}{@const host = ms[0]}{@const q = questOf(p.no)}
-              <div class="jcard" class:dim={!ok || full} data-k="board-join-row" data-no={p.no} data-lk={p.lk ? '1' : undefined}>
+            {#snippet jrow(p: Post)}{@const ok = jOk(p)}{@const mine = !!p.mem?.[uid]}{@const ms = membersOf(p)}{@const host = ms[0]}{@const q = questOf(p.no)}
+              <div class="jcard" class:dim={!ok} data-k="board-join-row" data-no={p.no} data-lk={p.lk ? '1' : undefined}>
                 <span class="face" aria-hidden="true"><span class="fin"><HeroSprite id={host?.hero ?? 0} scale={1.25} /></span></span>
                 <span class="jt"><span class="tags"><i class="no">{p.no}차시</i>{#if hasGuard(p)}<i class="gd">🛡 수호자</i>{/if}{#if p.lk}<i class="lkg">🔒 암호</i>{/if}</span><b class="boss">{q?.boss ?? `${p.no}차시 보스`}</b><small class="who">{host?.nick ?? ''} <span class="dots" aria-label="인원 {ms.length} / {MAX}">{#each Array.from({ length: MAX }) as _, i (i)}<i class:f={i < ms.length}></i>{/each}</span> {ms.length}/{MAX}</small></span>
                 {#if mine}<button type="button" class="jgo" data-k="board-join-go" onclick={() => join(p)}>내 팀</button>
                 {:else if !ok}<span class="jno" data-k="board-join-notyet">아직<br />안 배움</span>
-                {:else if full}<span class="jno" data-k="board-join-full">꽉 참</span>
                 {:else}<button type="button" class="jgo" data-k="board-join-go" onclick={() => join(p)}>참가</button>{/if}
               </div>
             {/snippet}
             <div class="jlist" data-k="board-join-list">
-              {#if waitAll.length >= JMANY}{#each jGroups as [no, ps] (no)}<div class="jgrp"><span>{no}차시 · {ps.length}팀</span></div>{#each ps as p (p.pid)}{@render jrow(p)}{/each}{:else}<p class="empty1">고른 조건의 팀이 없어요</p>{/each}
+              {#if waitAll.length >= JMANY}{#each jGroups as [no, ps] (no)}<div class="jgrp" class:dim={!jOk(ps[0]!)}><span>{no}차시 · {ps.length}팀</span></div>{#each ps as p (p.pid)}{@render jrow(p)}{/each}{:else}<p class="empty1">고른 조건의 팀이 없어요</p>{/each}
               {:else}{#each jShown as p (p.pid)}{@render jrow(p)}{/each}{/if}
             </div>
           {:else}
@@ -605,7 +605,7 @@
   .jhead { flex: none; display: flex; justify-content: space-between; align-items: baseline; color: var(--text-2); font: 600 14px var(--font); } .jhead small { color: var(--text-3); }
   .jchips { flex: none; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; } .jc { flex: none; min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 14px var(--font); } .jc.on { border-color: var(--accent); color: var(--accent); }
   .jlist { display: flex; flex-direction: column; gap: 8px; }
-  .jgrp { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--text-2); font: 700 14px var(--font); } .jgrp::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .jgrp { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--text-2); font: 700 14px var(--font); } .jgrp.dim { opacity: 0.55; } .jgrp::after { content: ''; flex: 1; height: 1px; background: var(--line); }
   .jcard { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--r); background: var(--surface); } .jcard.dim { opacity: 0.5; }
   .face { position: relative; width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--line); }
   .face .fin { position: absolute; left: -24px; top: 4px; } /* 용사 칸 80 × 64 × 1.25 → 머리(가운데 위)가 동그라미 가운데 */

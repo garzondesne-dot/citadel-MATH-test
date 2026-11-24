@@ -43,7 +43,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   for (const d of '2580') await B2.click(`.sheet .rune-keys button:has-text("${d}")`); await B2.click('.sheet .act .btn'); await wait(1800);
   ok('맞는 암호 = 합류 2/4', Object.keys((await rest(`school/board/posts/${pid}/mem`)) || {}).length === 2);
   await B2.screenshot({ path: `${SHOTS}/bj-joined.png` });
-  // 📜 11/24 팀이 많을 때 (6 ~) = 필터 칩 4 · 차시별 묶음(배운 차시 번호순 · 안 배운 차시 맨 아래) · 꽉 찬 팀 = 「꽉 참」 흐림
+  // 📜 11/24 팀이 많을 때 (6 ~) = 필터 칩 4 · 차시별 묶음(배운 차시 번호순 · 안 배운 차시 맨 아래 흐림) · 꽉 찬 팀 = 숨김 (🔨 #8)
   const mem = (n, role = 'c') => Object.fromEntries(Array.from({ length: n }, (_, i) => [`z${n}${i}`, { uid: `z${n}${i}`, cls: '1-4', num: 10 + i, nick: `친구${i + 1}`, hero: (i * 3) % 30, role, why: '', at: Date.now() + i }]));
   const seed = [[2, 1, 'c'], [3, 2, 'g'], [3, 4, 'c'], [5, 1, 'c'], [12, 1, 'c'], [4, 2, 'g'], [2, 3, 'c']];
   for (const [i, [no, n, role]] of seed.entries()) { const pid = `pseed${i}`, m = mem(n, role), host = Object.keys(m)[0]; await rest(`school/board/posts/${pid}`, 'PUT', { pid, lesson: `set-${String(no).padStart(2, '0')}`, no, at: Date.now() - i * 1000, host, phase: 'wait', mem: m }); }
@@ -51,11 +51,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok('팀 8개 = 필터 칩 4개', (await C.$$('[data-k="board-join-chips"] .jc')).length === 4);
   const grp = await C.$$eval('.jgrp', (xs) => xs.map((x) => x.textContent.trim()));
   ok('차시별 묶음 = 배운 차시 번호순 · 안 배운 12차시 맨 아래', grp.length >= 4 && /^2차시/.test(grp[0]) && /^12차시/.test(grp[grp.length - 1]), grp.join(' | '));
-  ok('꽉 찬 팀 = 「꽉 참」 · 안 배운 팀 = 「아직 안 배움」', !!(await C.$('[data-k="board-join-full"]')) && !!(await C.$('[data-k="board-join-notyet"]')));
+  ok('꽉 찬 팀(4/4) = 목록에 없음 (📜 11/24 🔨 #8 ①) · 안 배운 팀 = 「아직 안 배움」 · 안 배운 묶음 흐림', (await C.$$eval('[data-k="board-join-row"]', (xs) => xs.filter((x) => x.querySelectorAll('.dots i.f').length === 4).length)) === 0 && !!(await C.$('[data-k="board-join-notyet"]')) && !!(await C.$('.jgrp.dim')));
   await C.screenshot({ path: `${SHOTS}/bj-many.png`, fullPage: true });
   await C.click('.jc:has-text("🛡 수호자")'); await wait(300);
   ok('🛡 수호자 칩 = 수호자 있는 팀만', (await C.$$('[data-k="board-join-row"]')).length === 2, String((await C.$$('[data-k="board-join-row"]')).length));
   await C.click('.jc:has-text("빈자리")'); await wait(300);
-  ok('빈자리 있음 칩 = 꽉 찬 팀 빠짐', !(await C.$('[data-k="board-join-full"]')));
+  ok('빈자리 있음 칩 = 꽉 찬 팀 없음', (await C.$$eval('[data-k="board-join-row"]', (xs) => xs.filter((x) => x.querySelectorAll('.dots i.f').length === 4).length)) === 0);
+  ok('⚔ 혼자 도전 = 출정 맨 아래 보조 단추', !!(await C.$('.jbot [data-k="board-solo"].btn2')));
   await b.close(); console.log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();
