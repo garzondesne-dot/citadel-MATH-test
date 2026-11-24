@@ -51,7 +51,7 @@
 
   // 📋 게시판 던전 (#143 ⑥ ⑥-1 ⑦ ⑧ ⑪ ⑫ ⑬ · 허수아비 자리): 전체 게시판 하나 · 차시 칩 = 내가 거르기 · 진도 전 = 🔒 · 모집 글 = 「n차시 · k / 4」 + 반 꼬리표 + 🛡 있음 / 🌱 도전자만(이름 · 번호 없음)
   //   ⚔ 혼자 시작 › · ＋ 모집 글 → 차시 고르기 시트 · 내 반 수업 중 = 모집 · 합류만 막힘 · 다른 반도 합류(그 차시 진도를 나간 학생만) · 서버가 끊기면 팀 단추만 흐림
-  const { S, me, save, uid, num, cls, open, onclose, joinPid = '', onquest, trial = null }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** 👩‍🏫 #66-8 체험판 = 같은 화면 · 체험 차시만 열림 · 혼자 도전(봇 3 · 기록 없음)만 · 팀 모집 · 기사단 없음 */ trial?: { ids: string[]; onsolo: (L: LessonPack) => void } | null; /** ✏ #75 친구 문제 → 출제 공방 「📜」 */ onquest?: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
+  const { S, me, save, uid, num, cls, open, onclose, joinPid = '', onquest, trial = null, onteach, teachN = 0 }: { S: Store; me: Me; save: () => void; uid: string; num: number; cls: string; open: boolean; onclose: () => void; /** 👩‍🏫 교사 캠프 「선생님 칸」 = 위 막대 안 (🐞 11/25 떠 있는 단추가 카드 별 조건 줄을 가림) */ onteach?: () => void; teachN?: number; /** 👩‍🏫 #66-8 체험판 = 같은 화면 · 체험 차시만 열림 · 혼자 도전(봇 3 · 기록 없음)만 · 팀 모집 · 기사단 없음 */ trial?: { ids: string[]; onsolo: (L: LessonPack) => void } | null; /** ✏ #75 친구 문제 → 출제 공방 「📜」 */ onquest?: () => void; /** 🌀 캠프 포털 · 게시판 말풍선에서 = 그 모집 방에 바로 참여 (📜 2026-11-15 캠프 A) */ joinPid?: string } = $props();
   const qN = $derived(Object.keys((cls ? S.get<Record<string, unknown>>(QBOARD(cls)) : null) || {}).length); // ✏ #75
   const KEY = 'citadel-v1-board-chip';
   let chip = $state<number | 'all'>(untrack(() => { try { const v = localStorage.getItem(KEY); return v && v !== 'all' ? Number(v) : 'all'; } catch { return 'all'; } }));
@@ -333,7 +333,7 @@
 </script>
 
 <div class="bd" role="dialog" aria-label="게시판 던전" style="--gbadge:url({import.meta.env.BASE_URL}art/board/guard-badge-v1.webp)">
-  <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b class="t">{mine && mine.phase === 'wait' ? `📋 ${mine.no}차시 팀` : '📋 게시판 던전'}</b><span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
+  <div class="bar"><button type="button" class="back" aria-label="캠프로" onclick={onclose}>‹</button><b class="t">{mine && mine.phase === 'wait' ? `📋 ${mine.no}차시 팀` : '📋 게시판 던전'}</b>{#if onteach}<button type="button" class="tbtn" data-k="t-panel" onclick={onteach}>👩‍🏫 선생님{#if teachN}<i>{teachN}</i>{/if}</button>{/if}<span class="wal">💎 {me.wallet.gem.toLocaleString()}</span></div>
   {#if res}
     <!-- ⑪ ⑫ 결과 -->
     <!-- 🐞 결과 연출: 등급 도장 → 💎 올라감 → 순위 · 단계마다 최소 2초 · 누르면 다음 (단추는 늘 그대로) -->
@@ -509,6 +509,7 @@
   .badge.sm { width: 18px; height: 18px; margin-right: 3px; }
   .bd { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); }
+  .tbtn { flex: none; margin-left: auto; min-height: 40px; padding: 0 10px; border-radius: 20px; border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 13px var(--font); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); white-space: nowrap; } .tbtn:active { transform: translateY(2px); box-shadow: none; } .tbtn i { margin-left: 4px; font-style: normal; padding: 0 5px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 12px; }
   .back { width: 44px; height: 48px; border: 0; background: none; color: var(--text); font-size: 26px; }
   .t { flex: 1; font-size: 18px; } .wal { height: 32px; padding: 0 10px; border-radius: 16px; background: var(--surface); display: flex; align-items: center; font: 700 14px var(--font); color: var(--gem); }
   .off { margin: 0 var(--s4) var(--s2); padding: 8px 12px; border-radius: var(--r); background: var(--bad-bg); font-size: 13.5px; font-weight: 700; }
