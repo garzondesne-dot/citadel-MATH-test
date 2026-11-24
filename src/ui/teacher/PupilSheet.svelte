@@ -13,6 +13,7 @@
   import { liveValue } from '../room.svelte';
   import PhotoCheck from './PhotoCheck.svelte';
   import { onDestroy } from 'svelte';
+  import { bughHeld, giveBugHunter } from '../../school/bughunt';
 
   // 👤 학생 한 명 시트 (#124 ⑯ · DECISIONS 「👤 학생 한 명 시트」) — 학생 탭 명단 · 대시보드 어디서 이름을 눌러도 같은 부품
   //   위에서 64 아래까지 덮음 · ✕ / 네 숫자 카드(통과율 · 성취도 · 수업 참여 · 방과후 접속) → 수업 기록 차시 칸 → 방과후 2주 달력 → 💎 · 📜 · 자주 막힌 개념 → 🔑 · 💎 선물 · 🚫 결석 · 📝 세특 초안
@@ -23,6 +24,9 @@
   const a = $derived(achieve(s));
   const days = $derived(s.extra.days.filter(Boolean).length);
   const live = $derived(liveOfCls(S, s.cls));
+  // 🎖 버그 사냥꾼 (11/24) = 이 학생 우편함 열쇠로 지금 가졌는지 · 주기 / 회수
+  const lvm = untrack(() => liveValue<Record<string, unknown>>(S, `mail/${uidOf(s.cls, s.n)}`)); onDestroy(lvm.stop);
+  const bugh = $derived(bughHeld(Object.keys((lvm.v.val as Record<string, unknown> | null) ?? {})));
   let toast = $state(''), memo = $state(false), gift = $state(false), amt = $state(3), why = $state(''); // 💎 주기 = 정식 그대로 1~5 · 이유 한 줄
   const say = (t: string) => { toast = t; setTimeout(() => (toast = ''), 1800); };
   const mark = (id: string) => { const r = s.rec[id]; if (!r) return { t: '불참', c: 'no' }; if (r.noBoss) return { t: '— 수업 안 함', c: 'no' }; const ok = r.boss / r.bossN; return { t: `${ok >= 0.8 ? '✔' : ok >= 0.5 ? '△' : '✘'} ${r.boss}/${r.bossN}`, c: ok >= 0.8 ? 'ok' : ok >= 0.5 ? 'mid' : 'bad' }; };
@@ -78,6 +82,7 @@
   <div class="acts">
     <button type="button" disabled={!hasAccount(S, s.cls, s.n)} onclick={() => { if (!canResetPw(S)) { say('🔑 이 서버에서는 아직 초기화가 안 돼요 (관리 도구 = 다음 판)'); return; } resetPw(S, s.cls, s.n); say('🔑 비밀번호를 0000 으로 바꿨어요'); }}>🔑 0000</button>
     <button type="button" onclick={() => (gift = true)}>💎 조각 주기</button>
+    <button type="button" data-k="ps-bugh" onclick={() => { giveBugHunter(S, uidOf(s.cls, s.n), !bugh); say(bugh ? '🎖 버그 사냥꾼 호칭을 거둬들였어요' : '🎖 버그 사냥꾼 호칭을 줬어요'); }}>{bugh ? '🎖 버그 사냥꾼 회수' : '🎖 버그 사냥꾼 주기'}</button>
     <button type="button" disabled={!live} title={live ? '' : '수업 중에만'} onclick={() => { if (live) { setAbsent(S, live.code, uidOf(s.cls, s.n), true); say('🚫 오늘 결석으로'); } }}>🚫 결석</button>
     {#if feat('seteuk')}<button type="button" onclick={() => (memo = true)}>📝 세특</button>{/if}
   </div>

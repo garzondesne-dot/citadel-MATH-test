@@ -5,6 +5,7 @@
   import { CLASSES, roster, uidOf } from '../../school/school';
   import { ADOPT_GEMS, adopt, artTable, diffTable, kindOf, photo, remove, rows, sweep, type Row } from '../../school/feedback';
   import { hhmm } from '../../school/bells';
+  import { giveBugHunter } from '../../school/bughunt';
   // 👩‍🏫 #98 💬 학생 의견 · 🎨 그림 표 · 📊 난이도 표
   //   의견 = 이름 · 번호 보임 · 글 먼저 · 「📷 사진 보기」를 눌러야 사진을 받아 옴 · 채택(💎 30 · 50 · 100) · 지우기(정말?) · 열 때 30일 지난 사진 지움
   const { S, onclose }: { S: Store; onclose: () => void } = $props();
@@ -55,6 +56,7 @@
           {#if !r.ad}
             <div class="gems" role="group" aria-label="채택 💎"><span>채택 💎</span>{#each ADOPT_GEMS as g (g)}<button type="button" class:on={gems === g} aria-pressed={gems === g} onclick={() => (gems = g)}>{g}</button>{/each}</div>
             <div class="row"><button type="button" class="b1" data-k="tfb-adopt" onclick={() => doAdopt(r)}>✅ 채택 · 💎 {gems}</button><button type="button" class="b2" data-k="tfb-del" onclick={() => (ask = r.id)}>🗑 지우기</button></div>
+            <div class="row"><button type="button" class="b2" data-k="tfb-bugh" onclick={() => { giveBugHunter(S, uidOf(r.cls, r.num), true); say(`🎖 ${r.num}번에게 「버그 사냥꾼」 호칭`); }}>🎖 버그 사냥꾼 주기</button></div><!-- 🎖 11/24 회수는 학생 한 명 시트에서 -->
           {:else}<div class="row"><button type="button" class="b2" data-k="tfb-del" onclick={() => (ask = r.id)}>🗑 지우기</button></div>{/if}
           {#if ask === r.id}<div class="ask"><b>정말 지울까요?</b> 사진 · 게시판 줄 · 👍 도 같이 지워져요<div class="row"><button type="button" class="b1 bad" data-k="tfb-del-ok" onclick={() => doRemove(r)}>지우기</button><button type="button" class="b2" onclick={() => (ask = '')}>그만두기</button></div></div>{/if}
         {/if}

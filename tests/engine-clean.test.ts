@@ -25,9 +25,9 @@ describe('엔진 폴더 = 과목 낱말 · 차시 id 없음 (#136)', { timeout: 
     expect(hits).toEqual([]);
   });
 });
-it('칭호 목록 = 분리 전과 같은 순서 (엔진 칭호 + 과목 칭호를 같은 자리에 끼움)', async () => { // 🛡 구조 기사(rescuer) = 📜 2026-11-15 더함 · 🔥 노련한 탐험가(explorer) = 📜 #67 · ⚡ 용사 전용 칭호 30 = 📜 11/20 #83
+it('칭호 목록 = 분리 전과 같은 순서 (엔진 칭호 + 과목 칭호를 같은 자리에 끼움)', async () => { // 🎖 버그 사냥꾼(bughunter) = 📜 11/24 · 🛡 구조 기사(rescuer) = 📜 2026-11-15 더함 · 🔥 노련한 탐험가(explorer) = 📜 #67 · ⚡ 용사 전용 칭호 30 = 📜 11/20 #83
   const { TITLES } = await import('../src/model/hero');
-  expect(TITLES.map((t) => t.id)).toEqual(["none", "dawn", "first", "slayer", "smith", "collector", "magic", "rare", "grit", "sage", "king", "detective", "sovereign", "gambler", "nunchi", "oxsurv", "steady", "quester", "writer", "hunter", "wall", "awake", "slash10k", ...[1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33].map((h) => `awk_${h}`), "explorer", "rescuer", "ahead", "realskill", "castlelord", "scrollmaster", "dummyfriend", "hallmaker", "improver", "board_explore", "board_conquer", "board_legend", "guard1", "guard2", "guard3", "egg_root2", "egg_100", "egg_pi", "egg_fib", "egg_round", "egg_inf", "egg_credit", "secret", "lv1", "lv2", "lv3", "lv4", "lv5", "lv6", "lv7", "lv8", "lv9", "lv10"]);
+  expect(TITLES.map((t) => t.id)).toEqual(["none", "dawn", "first", "slayer", "smith", "collector", "magic", "rare", "grit", "sage", "king", "detective", "sovereign", "gambler", "nunchi", "oxsurv", "steady", "quester", "writer", "hunter", "wall", "awake", "slash10k", ...[1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33].map((h) => `awk_${h}`), "explorer", "rescuer", "ahead", "realskill", "castlelord", "scrollmaster", "dummyfriend", "hallmaker", "improver", "bughunter", "board_explore", "board_conquer", "board_legend", "guard1", "guard2", "guard3", "egg_root2", "egg_100", "egg_pi", "egg_fib", "egg_round", "egg_inf", "egg_credit", "secret", "lv1", "lv2", "lv3", "lv4", "lv5", "lv6", "lv7", "lv8", "lv9", "lv10"]);
 });
 it('스킬 이름 = 과목 팩이 정함 (엔진 기본 「📐 도형」 · 공통수학2 = 「📐 벤 다이어그램」 · #140)', async () => {
   const { SKILL_NAMES } = await import('../src/model/hero');

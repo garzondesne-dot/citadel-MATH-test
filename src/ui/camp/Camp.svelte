@@ -50,6 +50,7 @@
   import { is12, pendingAny, svLabel } from '../../school/survey12';
   import FeedbackSheet from './FeedbackSheet.svelte';
   import { adoptLog } from '../../school/feedback';
+  import { bughLog } from '../../school/bughunt';
   import { deviceStore } from '../../store/device';
   import { donePath, REWARD, statePath } from '../../school/survey';
   import { isExcluded } from '../../school/school';
@@ -169,7 +170,7 @@
         S.set(`mail/${mu}/${k}/got`, true);
         const gf = S.get<{ g: number; got?: boolean }>(`gifts/${mu}/${k}m`);
         if (gf && !gf.got) { g += Number(gf.g) || 0; S.set(`gifts/${mu}/${k}m/got`, true); }
-        const al = gf && pupil ? adoptLog(`${k}m`, S.now()) : null; if (al && pupil && !S.get(`gem/${pupil.cls}/${pupil.num}/log/${al.key}`)) S.set(`gem/${pupil.cls}/${pupil.num}/log/${al.key}`, al.row); // 🛠 #98 채택 = 칭호 「🛠 개선단」 근거 한 줄(💎 0 · 💎 는 위 선물)
+        const al = gf && pupil ? (adoptLog(`${k}m`, S.now()) ?? bughLog(`${k}m`, S.now())) : null; if (al && pupil && !S.get(`gem/${pupil.cls}/${pupil.num}/log/${al.key}`)) S.set(`gem/${pupil.cls}/${pupil.num}/log/${al.key}`, al.row); // 🛠 #98 채택 = 칭호 「🛠 개선단」 근거 한 줄(💎 0 · 💎 는 위 선물)
       }
       if (g) { me.wallet.gem += g; M.save(); }
       const last = fresh[fresh.length - 1]![1];

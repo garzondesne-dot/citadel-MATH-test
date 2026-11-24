@@ -2,6 +2,7 @@
 //   기록 = records · cards · xp · bonus · gem · photo (학생 한 명 칸) · 따로 저장하지 않음 · 고른 호칭만 accounts/{반}/{번호}/title
 //   베타에 아직 없는 것: 📕 오답노트(오답 사냥꾼 = 못 얻음) · 던전 정복 메달(목록에 없음)
 import { EGGS, eggsFound } from '../school/eggs';
+import { bughHeld } from '../school/bughunt';
 import { SUBJ } from '../engine/subject';
 import { AWAKEN_T, AWK_ALL, AWK_NEED, level } from './hero';
 import { veteranN } from '../school/explore';
@@ -66,6 +67,7 @@ const TESTS: Record<string, (d: TitleData) => boolean> = {
   board_legend: (d) => legendOf(starsByNo(bRecs(d)), mapLessons(PACKS)),
   guard1: (d) => fameHeld(bRecs(d)) >= 3, guard2: (d) => fameHeld(bRecs(d)) >= 10, guard3: (d) => fameHeld(bRecs(d)) >= 25, // 🛡 #104 = 🤝 구조 수 · 옛 셈으로 받은 것은 그대로
   hallmaker: (d) => logKeys(d).some((k) => k.startsWith('quest_p_')), // 🏛 #75 명예의 전당
+  bughunter: (d) => bughHeld(logKeys(d)), // 🎖 11/24 선생님이 직접 줌 · 회수 = 가장 늦은 줄
   improver: (d) => logKeys(d).some((k) => k.startsWith('fbk_')), // 🛠 #98 개선단 = 의견 채택(받을 때 💎 로그 fbk_{id})
   writer: (d) => photoPass(d) >= 3,
   hunter: () => false, // 📕 오답노트 = 베타에 아직 없음
