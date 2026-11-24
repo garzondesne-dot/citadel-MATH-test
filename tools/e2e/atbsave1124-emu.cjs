@@ -1,6 +1,7 @@
 // 🐞 11/24 게시판 결과 저장 (에뮬레이터): A 결과 화면이 뜨는 순간 저장 · 앱 닫고 다시 열어도 한 번 · 단추 눌러도 한 번 / B 기록 빠진 판 = 게시판 열 때 되살림 한 번
 //   NODE_PATH=$(npm root -g) node tools/e2e/atbsave1124-emu.cjs <그림 폴더>
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.', N = Number(process.argv[3] || 3), CLS = process.argv[4] || '1-3', CK = CLS.replace('-', '_'), BETA = CLS === '1-6', B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,7 +25,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const recs = async () => Object.entries((await rest(`bonus/${CLS}/1/board`)) || {}).filter(([, r]) => r.atb);
   const mine = async () => Number(await rest(`classWar/${wk(Date.now())}/by/${CLS}/1`)) || 0;
   const play = async () => {
-    await A.click('[data-map="6"]'); await A.click('button:has-text("6차시 출정")'); await A.waitForSelector('[data-k="hero-sheet"]'); await A.click('[data-k="hero-sheet-go"]');
+    await soloGo(A, 6);
     await A.waitForSelector('[data-k="atb-stage"]', { timeout: 25000 });
     for (let i = 0; i < 6; i++) { await A.evaluate(() => globalThis.__atb?.solve?.()); await wait(500); }
     await A.evaluate(() => globalThis.__atb?.win?.());

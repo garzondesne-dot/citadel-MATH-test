@@ -2,6 +2,7 @@
 //   A 🔒 암호 모집(4인 · #78 팀전 암호 의무) → 8명이 암호를 넣고 같은 글 「합류」를 한꺼번에 누름 → 서버 자리 = 정확히 4명(A + 3) · 넘친 폰 = 「방이 꽉 찼어요」 · 방장 화면 = 출발 (4명)
 //   NODE_PATH=$(npm root -g) node tools/e2e/board47-emu.cjs <그림 폴더> [반복 수]
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.', N = Number(process.argv[3] || 1);
 const B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
@@ -22,11 +23,11 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
     const ps = []; for (let i = 1; i <= 9; i++) { const p = await open(); await signup(p, '1-3', i); await board(p); ps.push(p); }
     const [A, ...rest8] = ps;
     const rune = async (p, x) => { for (const d of x) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
-    await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
+    await postTeam(A, 6);
     let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0];
     ok(`[${round}] 모집 글`, !!pid);
-    for (const p of rest8) { await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); if (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]')) await p.click('[data-k="board-recruit-fold"]'); /* 📜 #135 모집 접힘 = 펼침 */ await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')); await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }).catch(() => {}); }
-    await Promise.all(rest8.map((p) => p.click('.post .go').catch(() => {}))); // 📜 #65-2 암호 없음 = 「합류」를 한꺼번에 누름 (동시 입장 race)
+    for (const p of rest8) { await joinTab(p); await p.waitForSelector('[data-k="board-join-go"]', { timeout: 15000 }).catch(() => {}); }
+    await Promise.all(rest8.map((p) => p.click('[data-k="board-join-go"]').catch(() => {}))); // 📜 #65-2 암호 없음 = 「합류」를 한꺼번에 누름 (동시 입장 race)
     const toasts = await Promise.all(rest8.map(async (p) => { for (let i = 0; i < 30; i++) { const t = (await p.textContent('.bd').catch(() => '')) || ''; if (/꽉 찼어요|자리가 다 찼어요/.test(t)) return true; /* 📜 #65-2 암호 없음 = 늦게 누른 폰은 합류 전에 「자리가 다 찼어요」 */ await p.waitForTimeout(200); } return false; }));
     await wait(2500);
     posts = await rest('school/board/posts'); const mem = Object.keys(posts?.[pid]?.mem || {});

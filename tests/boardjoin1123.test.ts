@@ -19,14 +19,14 @@ describe('👥 팀 참가 목록', () => {
   it('🔒 암호 팀도 목록에 · 표시 남음', () => { expect(joinList([post({ pid: 'x', lk: true })])[0]!.lk).toBe(true); });
   it('빈 목록 = 안내 한 줄', () => {
     expect(joinList([])).toEqual([]);
-    expect(src).toContain('📭 지금 모집 중인 팀이 없어요 · ＋ 팀 모집으로 만들어 보세요');
+    expect(src).toContain('지금 열린 팀이 없어요'); expect(src).toContain('➕ 내가 모집하기'); // 📜 11/24 출정 시안
   });
   it('화면: 예약 모집 없음 · 팀 참가 단추 · 모집 시트에 🔒 암호 걸기(기본 끔) · 진도 전 안내', () => {
     expect(src).not.toMatch(/board-resv|joinResv|openResv|예약 모집 글/);
-    expect(src).toContain('data-k="board-join"');
+    expect(src).toContain('data-k="board-tab-join"'); expect(src).toContain('data-k="board-tab-make"'); expect(src).toContain("goTab = $state<'join' | 'make'>('join')"); // 📜 11/24 팀 참가 = 왼쪽 · 기본
     expect(src).toContain('data-k="board-lock-opt"');
     expect(src).toContain('lockOn = false; pin = \'\'; sheet = \'post\'');
-    expect(src).toContain('진도 뒤에 들어갈 수 있어요');
+    expect(src).toContain('안 배움'); expect(src).toContain('꽉 참');
     expect(src).toContain('createLockedPost(S, L1');
   });
 });

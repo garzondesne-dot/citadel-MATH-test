@@ -23,13 +23,14 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
   const st = await A.$('[data-k="board-story"]'); ok('📜 처음 열 때 이야기 두 줄', !!st && /균열이 열렸다/.test(await st.textContent())); if (st) await st.click(); await wait(200); ok('   누르면 닫힘 (다시 안 뜸)', !(await A.$('[data-k="board-story"]')));
+  ok('📜 11/24 출정 = 👥 팀 참가 탭 기본 · 지도는 ➕ 팀 모집 탭', !(await A.$('[data-k="board-map"]'))); await A.click('[data-k="board-tab-make"]'); await wait(300);
   ok('📜 #135 균열 글 대신 = 별이 남은 열린 칸 금빛 테', !(await A.$('[data-k="board-rifts"]')) && !!(await A.$('[data-map].left')));
   const tabs = await A.$$eval('.btabs button', (x) => x.map((e) => e.textContent.trim())); ok('탭 3 = 출정 · 기사단 · 기록', tabs.join('|') === '🗺 출정|🏆 기사단|📜 기록', tabs.join('|'));
   ok('차시 칩 줄 없음', !(await A.$('.bd > .chips')));
   ok('📜 #135 출정 탭 = 기사단 막대 없음(🏆 탭에만)', !(await A.$('[data-k="war-chip"]')));
   const pick0 = await A.$eval('[data-k="board-pick"]', (e) => ({ no: e.getAttribute('data-no'), t: e.textContent.replace(/\s+/g, ' ').trim() })).catch(() => null);
   ok('처음 고른 칸 = 진도 맨 끝(6차시) · 카드 = 보스 · ⭐ · 의뢰문', pick0?.no === '6' && /청록 드래곤/.test(pick0.t) && !!(await A.$('[data-k="board-pick"] [data-k="board-hero"]')) && !!(await A.$('[data-k="board-pick"] .qs')), pick0?.t); /* 📜 #135 카드 = 보스 · ★ · 약점 · 내 용사 줄 · 바꾸기 */
-  const btns = await A.$$eval('.bd .act button', (x) => x.map((e) => e.textContent.trim())); ok('📜 #135 단추 = 「⚔ 6차시 출정」 · 「👥 팀 모집」', btns.some((t) => /6차시 출정/.test(t)) && btns.some((t) => /^👥 팀 모집$/.test(t)), btns.join(' | '));
+  const btns = await A.$$eval('.bd .act button', (x) => x.map((e) => e.textContent.trim())); ok('📜 11/24 단추 = 「➕ 6차시 팀 모집」 · 「⚔ 6차시 혼자 도전」', btns.some((t) => /^➕ 6차시 팀 모집$/.test(t)) && btns.some((t) => /6차시 혼자 도전/.test(t)), btns.join(' | '));
   const pins = await A.$$eval('[data-map]', (x) => x.map((e) => e.getAttribute('data-map'))); ok('지도 칸 = 이 서버 팩 차시마다 하나', pins.length > 0 && new Set(pins).size === pins.length, pins.join(','));
   await A.screenshot({ path: `${SHOTS}/b66-go.png` });
   await A.click('[data-map="4"]'); await wait(300);
@@ -38,7 +39,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await A.screenshot({ path: `${SHOTS}/b66-war.png` });
   await A.click('[data-btab="rec"]'); await wait(400); ok('기록 탭 = ⭐ · 명성 · 내 기록', !!(await A.$('[data-k="board-rec"]')) && !!(await A.$('[data-k="board-rank-open"]')));
   await A.screenshot({ path: `${SHOTS}/b66-rec.png` });
-  await A.reload(); await wait(2500); await board(A); const p5 = await A.$eval('[data-k="board-pick"]', (e) => e.getAttribute('data-no')).catch(() => ''); ok('다시 열면 지난번 고른 차시(4)', p5 === '4', p5);
+  await A.reload(); await wait(2500); await board(A); await A.click('[data-k="board-tab-make"]'); await wait(300); const p5 = await A.$eval('[data-k="board-pick"]', (e) => e.getAttribute('data-no')).catch(() => ''); ok('다시 열면 지난번 고른 차시(4)', p5 === '4', p5);
   const ov = await A.evaluate(() => document.documentElement.scrollWidth > window.innerWidth); ok('가로 넘침 없음', !ov);
   await b.close(); console.log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();
