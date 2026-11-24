@@ -257,9 +257,18 @@ export function ultFor(scene: HTMLElement, monBox: HTMLElement | null, fx: strin
   return k && B ? awkBlast(scene, { cx: B.cx, y1: B.y1, w: B.w, h: B.h }, k, { monBox, tint }) : ultBlast(scene, monBox, fx);
 }
 
-export type PlayO = { /** 📜 게시판 #76 = 맞을 때 화면 전체 흔들림 없음 */ calm?: boolean; /** 📜 #152 컷인을 이 상자 안에 (게시판 가로 전투 · 돌린 화면) · 없으면 화면 전체(레이드 그대로) */ cutHost?: HTMLElement | null; /** 🎯 #54 내 공격(폰 크게) · 화면(폰 · TV) · 파편 종류 */ mine?: boolean; view?: 'phone' | 'tv'; bits?: string; /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🕳 #99-1 블랙홀 빨아들이기 (TV Pixi) */ suck?: () => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
+export type PlayO = { /** 🎨 옷장 공격 색 = 색조 돌리기(도 · 0/없음 = 그대로 · 📜 11/25) */ hue?: number; /** 📜 게시판 #76 = 맞을 때 화면 전체 흔들림 없음 */ calm?: boolean; /** 📜 #152 컷인을 이 상자 안에 (게시판 가로 전투 · 돌린 화면) · 없으면 화면 전체(레이드 그대로) */ cutHost?: HTMLElement | null; /** 🎯 #54 내 공격(폰 크게) · 화면(폰 · TV) · 파편 종류 */ mine?: boolean; view?: 'phone' | 'tv'; bits?: string; /** 컷인 「누구의 기술」 (TV) */ who?: string; /** ⚡ #83 TV 몬스터 색조 (Pixi) */ tint?: (color: number, ms: number) => void; /** 🕳 #99-1 블랙홀 빨아들이기 (TV Pixi) */ suck?: () => void; /** 🔉 소리 배율 (👥 게시판 동료 공격 = 작게 · 기본 1) */ vol?: number; prac?: number; custom?: CustomFx; heroBox: HTMLElement | null; monBox: HTMLElement | null; hero: number; fx: string; miss?: boolean; finish?: boolean; ultimate?: boolean; noDmg?: boolean; onHit?: (k?: { k: number; n: number }) => void; hits?: number; rest?: Pose; mult?: number; s?: number; ps?: number; pose?: (p: Pose) => void; heroArt?: (hero: number) => string };
 /** ⚔ 공격 한 번 (정식 play 그대로) */
+/** 🎨 옷장 공격 색 (📜 2026-11-25): o.hue 가 있으면 이 공격 그림만 장면 위 따로 층(inset 0 = 같은 원점 · 색조 필터)을 장면 삼아 그림 — 다른 친구 공격 · 용사 · 몬스터 색은 그대로 */
 export async function attack(scene: HTMLElement | null, o: PlayO): Promise<void> {
+  if (!o.hue || !scene || !scene.isConnected) return attackIn(scene, o);
+  if (getComputedStyle(scene).position === 'static') scene.style.position = 'relative';
+  const lay = document.createElement('div'); lay.className = 'fx-hue'; lay.dataset.k = 'fx-hue';
+  lay.style.cssText = `position:absolute;inset:0;pointer-events:none;z-index:22;overflow:visible;filter:hue-rotate(${o.hue}deg) saturate(1.25)`;
+  scene.appendChild(lay);
+  try { await attackIn(lay, o); } finally { setTimeout(() => lay.remove(), 1600); } // 이 공격 그림 = 색 층 안에서만 (같은 원점 · 친구 공격은 장면에 그대로)
+}
+async function attackIn(scene: HTMLElement | null, o: PlayO): Promise<void> {
   const { heroBox, monBox } = o, hero = Number(o.hero) || 0, fx = fit(hero, o.fx || 'flame'), reso = resonates(hero, fx), mult = (reso ? 1.15 : 1) * (o.ultimate ? 1.25 : 1) * (o.mult || 1);
   const setPose = (p: Pose) => o.pose?.(p);
   if (!scene || !heroBox || !monBox) { if (scene && !o.miss) void fxPlay(scene, fx, { s: o.s || 1.2 }); return; }

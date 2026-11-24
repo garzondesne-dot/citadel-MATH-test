@@ -51,7 +51,7 @@
   import { SUBJ } from '../engine/subject';
   import { kstDay } from '../board/board';
   import { BUILD } from '../build';
-  import { savedLook } from '../store/me.svelte';
+  import { savedCos, savedLook } from '../store/me.svelte';
   import { isExcluded } from '../school/school';
   import { mailLine, type Mail } from '../school/mail';
   import { meBound } from '../store/meSync';
@@ -171,6 +171,8 @@
   const idleDone = $derived(!R || !mid ? true : chain ? !!chainRecord(L, R, mid, uid).done : !!plainRecord(L, R, mid, uid).perfect);
   // 🔥 #67 탐사대: 이 차시를 배움터 예습에서 몬스터 2개 이상 처치 → 수업 방 내 칸에 exp (TV 횃불 · 🔥 · 점수 0) · 한 번만
   let expDone = false;
+  // 🎨 옷장 (📜 11/25): 내가 입은 것 = 방 명단 내 칸에 id 만 (TV 공격 색 · 이름표) · 바뀔 때만
+  let cosSent = ''; $effect(() => { if (board || !R?.players?.[uid]) return; const c = savedCos(), j = JSON.stringify(c); if (j === cosSent || j === JSON.stringify((R.players[uid] as { cos?: unknown }).cos ?? {})) { cosSent = j; return; } cosSent = j; untrack(() => S.set(`rooms/${code}/players/${uid}/cos`, Object.keys(c).length ? c : null)); });
   $effect(() => { const b = meBound(); if (expDone || board || !R || !b || !R.players?.[uid]) return; expDone = true; untrack(() => { if ((R.players?.[uid] as { exp?: unknown } | undefined)?.exp) return; const e = expFrom(b.S.get(prepRecPath(bonusBaseX(b.cls, b.num), L.id))); if (e.n >= EXP_MIN) S.set(`rooms/${code}/players/${uid}/exp`, e); }); });
   // 🏆 #73 📺 전설 도전과제: 수업이 끝나면(결과 화면) 아직 캠프에서 못 본 👑 전설 달성 = 방 내 칸 ach 에 한 번 (TV 마무리 화면 한 줄 · 캠프 연출은 그대로)
   let achDone = false;

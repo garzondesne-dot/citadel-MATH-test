@@ -1,7 +1,8 @@
 <script lang="ts">
   import { ANIM, artUrl, dungeonOf, ELEM_FX, HERO, type HPose, poseCol, runeAt, type MonPose, heroGeo, heroBreath, heroHead, heroNudge, heroUrl, lockBeat, spriteOf, STATUS, IDLE8_HD, idle8HdOf, idle8HdReady } from '../manifest';
   import { heroOf } from '../../model/hero';
-  import { savedLook } from '../../store/me.svelte';
+  import { savedCos, savedLook } from '../../store/me.svelte';
+  import { fxHueOf } from '../../model/cosmetics';
   import { fx } from './fx.svelte';
   import IceBlock from './IceBlock.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
@@ -63,7 +64,7 @@
   $effect(() => { const g = guardQ.v; if (g === lastGuard || !heroBox || !edge) return; lastGuard = g; untrack(() => guard(heroBox, undefined, edge!.getBoundingClientRect().height, monEl)); });
   $effect(() => {
     const a = atkQ.v; if (!a || a.id === lastAtk || !edge) return; lastAtk = a.id; if (a.at && Date.now() - a.at > 3000) return; const gp = globalThis as { __atkPlays?: number }; gp.__atkPlays = (gp.__atkPlays || 0) + 1;
-    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { mine: true, view: 'phone', bits: mhitOf(sprite), heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
+    untrack(() => { const L = savedLook(); atkPreload(L.hero, L.fx); void attack(edge, { mine: true, view: 'phone', hue: fxHueOf(savedCos()), bits: mhitOf(sprite), heroBox, monBox: monEl, hero: L.hero, fx: L.fx, miss: a.miss, hits: a.hits, ultimate: !!a.ult && canUlt(L.fx, L.hero), finish: a.finish, noDmg: a.noDmg, prac: a.prac, rest: a.win ? 'win' : 'idle', pose: (p) => (apose = p === 'idle' ? '' : p), onHit: a.miss ? undefined : () => monFlash('hit', 360) }).finally(() => { apose = ''; if (a.miss) after('hit', 600); else if (a.win) after('win', 1400); }); });
   });
   // 👥 동료 공격 (📜 2026-11-14): 정식 attack(동료 칸 · 동료 스킬 · TV 와 같은 사건) · 줄 세워 하나씩 · 소리 작게(0.45)
   //   맞음 = 돌진 · 이펙트 · −1 / 틀림 = 튕겨냄 「팅!」 · 정답 · 오답 글자는 없음

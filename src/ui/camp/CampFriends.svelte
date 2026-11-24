@@ -7,6 +7,9 @@
   import { POSTS as T_POSTS } from '../../board/team';
   import { HERO_NAMES, lookId, skillName, ladder, titleOf } from '../../model/hero';
   import HeroSprite from './HeroSprite.svelte';
+  import CosAura from '../cos/CosAura.svelte';
+  import NameTag from '../cos/NameTag.svelte';
+  import { auraColorOf, cardBgOf, cosClean, type CosOn } from '../../model/cosmetics';
   import Sheet from '../battle/Sheet.svelte';
   import { sfx } from '../sound.svelte';
   // 🔥 모닥불 친구 (📜 2026-11-20 · src/school/campfire.ts) — 그루터기 3자리 · 누르면 작은 카드 + 이모지 인사 · 받은 인사 = 들어올 때 한 번 띠
@@ -14,7 +17,7 @@
   //   규칙 게시 전 = campfire · campHi 읽기 · 쓰기가 막힘 → 친구 앉기 · 카드(이름 · 칭호 · 스킬)만 · 오라 · 「오늘」 · 인사는 조용히 빠짐
   type TS = Store & { trySet?: (p: string, v: unknown) => Promise<boolean>; fetch?: <T>(p: string) => Promise<T | null> };
   let { S, pupil = null, enh = 0, hiN = $bindable(0), sheetOpen = $bindable(false) }: { S: TS; pupil?: Pupil | null; enh?: number; hiN?: number; sheetOpen?: boolean } = $props();
-  type F = { num: number; look: number; base: number; name: string; title: string; fx: string; enh: number; today: string };
+  type F = { num: number; look: number; base: number; name: string; title: string; fx: string; enh: number; today: string; /** 🎨 옷장 입은 것 (accounts/…/cos · 📜 11/25) */ cos?: CosOn };
   // 그루터기 = Camp STUMPS 중 용사 자리(앞 왼쪽)를 뺀 셋 (그림 % · 위 기준)
   const SEAT_XY: [number, number][] = [[39.4, 61.7], [60.6, 61.7], [64.8, 68]];
   const P0 = untrack(() => pupil), today = kday(Date.now()), real = untrack(() => !!pupil && S.kind === 'server'); // 캠프가 열릴 때의 학생 (캠프는 학생이 바뀌면 다시 그려짐)
@@ -27,6 +30,7 @@
   const get = async <T,>(p: string): Promise<T | null> => { try { return S.fetch ? await S.fetch<T>(p) : S.get<T>(p); } catch { return null; } };
   const rows = (v: unknown): [number, Record<string, unknown>][] => (v && typeof v === 'object' ? Object.entries(v as Record<string, unknown>).filter(([k, x]) => Number(k) > 0 && x && typeof x === 'object').map(([k, x]) => [Number(k), x as Record<string, unknown>]) : []);
   const mk = (c: Cand & { enh?: number; today?: string }, name: string): F => ({ num: c.num, look: lookId({ hero: c.hero, enh: c.enh ?? 0, fx: c.fx, title: c.title }), base: c.hero, name, title: c.title, fx: c.fx, enh: c.enh ?? 0, today: c.today ?? '' });
+  const withCos = (acc: Record<string, unknown> | null, n: number, f: F): F => { const c = cosClean((acc?.[String(n)] as { cos?: unknown } | undefined)?.cos); return Object.keys(c).length ? { ...f, cos: c } : f; };
   let alive = true; onDestroy(() => (alive = false));
   untrack(() => { if (feat('campfire')) void load(); });
   async function load() {
@@ -38,7 +42,7 @@
     const cfm = Object.fromEntries(rows(cf)), mates = matesOf(S.get<Record<string, unknown>>(T_POSTS), pupil.uid, cls);
     const cands = rows(acc).map(([n, a]) => { const h = Number(a.hero), s = (a.socket as Record<string, string>) || {}, c = cfm[n] as { day?: string; enh?: number; today?: string } | undefined; return { num: n, hero: Number.isFinite(h) ? h : 0, title: String(a.title || 'none'), fx: s[String(h)] || ladder(Number.isFinite(h) ? h : 0)[0] || '', mate: mates[n], day: c?.day, enh: c?.day === today || c?.enh != null ? Number(c?.enh) || 0 : 0, today: c?.day === today ? String(c?.today || '') : '', off: !!a.feedOff }; });
     const chosen = pickFriends(cands, num, today, Math.floor(Math.random() * 1e6));
-    friends = chosen.map((c) => { const x = cands.find((y) => y.num === c.num)!; return mk(x, x.off ? '친구' : (mask && (mask as Record<string, string>)[String(c.num)]) || `${c.num}번 친구`); });
+    friends = chosen.map((c) => { const x = cands.find((y) => y.num === c.num)!; return withCos(acc, x.num, mk(x, x.off ? '친구' : (mask && (mask as Record<string, string>)[String(c.num)]) || `${c.num}번 친구`)); });
     // 받은 인사 (게시 전 = 읽기 막힘 → 없음)
     const box = await get<Record<string, unknown>>(`${HI}/${cls}/${num}`); if (!alive) return;
     const seen = ls<string[]>(SEEN, []), fresh = freshHi(box, seen);
@@ -62,15 +66,15 @@
 {#if feat('campfire')}
   {#each friends as f, i (f.num)}
     {@const p = SEAT_XY[i]}
-    {#if p}<button type="button" class="cfr" style="left:{p[0]}%;top:{p[1]}%" aria-label="{f.name} · 모닥불 친구" data-k="cf-friend" data-num={f.num} onclick={(e) => { e.stopPropagation(); open(f); }}><HeroSprite id={f.look} scale={0.62} play aura={f.enh} /></button>{/if}
+    {#if p}<button type="button" class="cfr" style="left:{p[0]}%;top:{p[1]}%" aria-label="{f.name} · 모닥불 친구" data-k="cf-friend" data-num={f.num} onclick={(e) => { e.stopPropagation(); open(f); }}><CosAura color={auraColorOf(f.cos)} /><HeroSprite id={f.look} scale={0.62} play aura={f.enh} /></button>{/if}
   {/each}
   {#if band}<p class="cfband" role="status" data-k="cf-band">{band}</p>{/if}
 {/if}
 {#if pick}
   <Sheet onclose={close}>
-    {#snippet title()}🔥 {pick?.name}{/snippet}
-    <div class="cfcard" data-k="cf-card">
-      <span class="pic"><HeroSprite id={pick.look} scale={0.9} play aura={pick.enh} /></span>
+    {#snippet title()}🔥 <NameTag name={pick?.name ?? ''} on={pick?.cos} />{/snippet}
+    <div class="cfcard" data-k="cf-card" style:background={cardBgOf(pick.cos) || null}>
+      <span class="pic"><CosAura color={auraColorOf(pick.cos)} /><HeroSprite id={pick.look} scale={0.9} play aura={pick.enh} /></span>
       <span class="who">
         {#if pick.title !== 'none' && titleOf(pick.title)}<em class="tt">{titleOf(pick.title)?.name}</em>{/if}
         <b>{HERO_NAMES[pick.base]?.name ?? '용사'}</b>
@@ -86,11 +90,13 @@
 {/if}
 
 <style>
+  .cfr :global(.ca) { bottom: 0; }
   .cfr { position: absolute; z-index: 6; /* 물건(게시판) 누르는 칸보다 위 */ transform: translate(-50%, -97%); border: 0; padding: 0; background: none; cursor: pointer; min-width: 44px; min-height: 44px; display: grid; place-items: end center; }
   .cfr:active { transform: translate(-50%, -95%) scale(0.97); }
   .cfband { position: absolute; left: 50%; top: 44%; z-index: 8; transform: translateX(-50%); margin: 0; max-width: 86%; padding: 6px 12px; border-radius: 14px; background: rgba(40, 24, 6, 0.86); border: 1px solid var(--accent); color: #ffe7b0; font: 700 var(--fs-small) var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 0 14px rgba(255, 150, 40, 0.5); pointer-events: none; }
   .cfcard { display: flex; align-items: center; gap: 12px; }
-  .cfcard .pic { width: 84px; display: grid; place-items: center; }
+  .cfcard .pic { position: relative; width: 84px; display: grid; place-items: center; }
+  .cfcard { border-radius: 12px; padding: 4px; }
   .cfcard .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .cfcard .tt { font-style: normal; color: var(--accent); font: 700 var(--fs-small) var(--font); }
   .cfcard b { font-size: 18px; }

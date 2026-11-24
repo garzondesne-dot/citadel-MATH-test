@@ -4,6 +4,9 @@
 </script>
 
 <script lang="ts">
+  import NameTag from '../cos/NameTag.svelte';
+  import CosAura from '../cos/CosAura.svelte';
+  import { auraColorOf, cosClean } from '../../model/cosmetics';
   import { FAME, fameLv, fameHeld, fameOf, MAP_PTS, mapLessons, nextFame, noteLeftByNo, recMark, recStar, STAR_RULE_TEXT, starTotal, starsByNo, STAR_TITLES, legendOf, type BoardRec } from '../../board/goals';
   import { QBOARD } from '../../school/quest';
   import { SUBJ } from '../../engine/subject';
@@ -353,7 +356,7 @@
     {@const host = mine.host === uid}
     <div class="mid">
       {#if mine.lk}{@const pn = host ? myPin(mine.pid) : ''}<div class="card pin" class:host><b>🔒 {host ? (pn ? `입장 암호 ${pn}` : '입장 암호 · 이 기기에 없어요') : '암호가 걸린 모집 글'}</b><small>{host ? (pn ? '친구에게 말로 알려 줘요 · 다른 화면엔 안 보여요' : '다른 폰에서 만든 글이에요 · 내리고 다시 모집해요') : '모집한 친구에게 암호를 듣고 들어왔어요'}</small></div>{/if}
-      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}<div class="slot" class:me={m.uid === uid}><HeroSprite id={m.hero} scale={1} /><b data-k="slot-name">{#if fameLv(Number(m.fame) || 0)}<i class="badge sm" style="background-position:{fameLv(Number(m.fame) || 0)!.cell * 50}% 0" title={fameLv(Number(m.fame) || 0)!.name}></i>{/if}{m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`}</b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
+      <div class="slots">{#each Array.from({ length: MAX }) as _, i (i)}{@const m = ms[i]}{#if m}{@const mc = cosClean(S.get(`accounts/${m.cls}/${m.num}/cos`))}<div class="slot" class:me={m.uid === uid}><span class="slh"><CosAura color={auraColorOf(mc)} /><HeroSprite id={m.hero} scale={1} /></span><b data-k="slot-name">{#if fameLv(Number(m.fame) || 0)}<i class="badge sm" style="background-position:{fameLv(Number(m.fame) || 0)!.cell * 50}% 0" title={fameLv(Number(m.fame) || 0)!.name}></i>{/if}<NameTag name={m.uid === uid ? `나 · ${m.cls}반` : `${m.cls}반 · ${realName(m) || heroOf(m.hero).name}`} on={mc} /></b><small>{m.role === 'g' ? '🛡 수호자' : '🌱 도전자'} · {m.uid === mine.host ? '모집' : m.ready ? '✔ 준비' : '기다림'}</small></div>{:else}<div class="slot empty">＋ 빈자리</div>{/if}{/each}</div>
       <p class="bub">{mine.mem[uid]?.why}</p>
       <div class="card row"><span>{mine.no}차시 · 개념 없이 문제 → 형성평가</span><span>{hasGuard(mine) ? '🛡 있음' : '🌱 도전자만 · 길잡이'}</span></div>
       {#if mine.phase === 'wait'}<div class="qhero" data-k="room-hero-row"><HeroSprite id={lkB} scale={0.6} /><span>{heroOf(me.hero).name}{bossOf(mine.no).weak.includes(famOf(me.hero)) ? ' · 약점!' : ''}</span><button type="button" class="btn2 sm" data-k="room-hero" onclick={() => (pickHero = 'room')}>🧙 용사 바꾸기</button></div>{/if}
@@ -484,6 +487,7 @@
   mainText={pickHero === 'go' ? '⚔ 이 용사로 출발' : '✔ 이 용사로'} onclose={() => (pickHero = '')}
   onpick={(id) => { const mode = pickHero; choseHero(id); if (mode === 'go' && sel && isOpen(sel)) { if (trial) { trial.onsolo(sel); return; } pick = sel; sheet = 'solo'; go(); } }} />{/if}
 <style>
+  .slh { position: relative; display: inline-grid; place-items: end center; } /* 🎨 발밑 빛 자리 */
   .hchip { margin-left: auto; min-height: 36px; padding: 0 10px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 600 14px var(--font); white-space: nowrap; } .hchip.weak { border-color: var(--accent); }
   .qhero { display: flex; align-items: center; gap: 8px; margin-top: 8px; } .qhero span { flex: 1; font: 600 14px var(--font); color: var(--text); } .qhero .btn2.sm { min-height: 44px; }
   /* 🎯 #79 차시 정복 지도 · 오답 막대 · 명성 */
