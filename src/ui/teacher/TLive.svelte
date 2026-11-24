@@ -132,6 +132,10 @@
   const ccIsOpen = $derived(!!R && ccOpen(R, step, now));
   let ccArm = $state(0);
   const ccSt = $derived(R && step?.check && ccRan(R, step) ? ccStats(R, step) : null);
+  // ✔ 📜 11/24 선생님 (DECISIONS 6849e1e · A) 「쌤이 결과를 알 수가 없어」 = 체크가 닫히면 결과 창이 한 번 뜸 · 그 차시 끝까지 「✔ 체크 결과」 단추로 다시 보기 (종합실은 「낸 수」만 그대로)
+  const ccAll = $derived(R ? L.steps.filter((s) => s.check && ccStats(R, s).n > 0).map((s) => ({ s, st: ccStats(R, s) })) : []);
+  let ccSheet = $state(false), ccSeen = $state(''), ccWasOpen = false;
+  $effect(() => { const on = ccIsOpen, id = R?.state.cc?.id ?? ''; untrack(() => { if (ccWasOpen && !on && id && ccSeen !== `${id}@${R?.state.cc?.at ?? ''}`) { ccSeen = `${id}@${R?.state.cc?.at ?? ''}`; if (ccAll.length) ccSheet = true; } ccWasOpen = on; }); });
   // 🔎 익명 풀이 (📜 2026-11-15 · 팩 문항 칸 review): 누를 때마다 띄우기 1 → 2 → … → 내리기 · 이 단계에 풀이가 없으면 단추 안 보임
   const rv = $derived(reviewStep(L, R, mid, now)); // 종합실 막대와 같은 함수 (🪞 11/17 #13 · #14 📊 고비)
   function nextReview() { if (R) stepReview(S, code, L, R, now); }
@@ -322,6 +326,7 @@
         <div class="fbar">{#each G as g (g.from)}<i style:flex={g.min} style:background={COLOR[g.kind]}></i>{/each}</div>
       </div>
     </div>
+    {#if ccAll.length}<button type="button" class="ccres" data-k="cc-res-open" onclick={() => (ccSheet = true)}>✔ 체크 결과 <small>{ccAll.length}개</small></button>{/if}
     {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
     {@render keyLine()}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
@@ -388,6 +393,14 @@
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
+  {#if ccSheet}
+    <Sheet onclose={() => (ccSheet = false)} mainText="닫기">
+      {#snippet title()}✔ 개념 체크 결과{/snippet}
+      <div class="ccs" data-k="cc-res-sheet"><small>선생님만 보여요 · 종합실엔 「낸 수」만</small>
+        {#each ccAll as x (x.s.id)}<div class="ccrow" data-k="cc-res-row"><span class="t">{x.s.title.split(' · ')[0]}</span><span class="v">맞힘 <b>{x.st.ok}</b> / {x.st.n}{x.st.n < ids.length ? ` (안 냄 ${ids.length - x.st.n})` : ''}</span>{#if x.st.wrong.length}<small class="w">많이 고른 오답 「{x.st.wrong[0]!.label}」 {x.st.wrong[0]!.n}명</small>{/if}</div>{/each}
+      </div>
+    </Sheet>
+  {/if}
   {#if talkOpen && step?.kind === 'concept'}
     <Sheet onclose={() => (talkOpen = false)} mainText="닫기">
       {#snippet title()}💬 말할 거리 · {short(step)}{/snippet}
@@ -653,6 +666,8 @@
   .stuckg { min-height: 44px; margin: var(--s1) var(--s4) 0; padding: 0 14px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 800 15px var(--font); box-shadow: 0 3px 0 var(--accent-sh); }
   .stuck { margin: var(--s2) var(--s4) 0; width: calc(100% - 2 * var(--s4)); display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r); border: 2px solid #f2994a; background: #3a2410; color: #fff; text-align: left; font: inherit; }
   .stuck b { font-size: 16px; } .stuck span { font-size: 13px; color: #ffd9b8; }
+  .ccres { display: block; margin: 6px 0 0; min-height: 44px; width: 100%; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); } .ccres small { color: var(--text-3); font-weight: 600; }
+  .ccs { display: flex; flex-direction: column; gap: 10px; } .ccs > small { color: var(--text-3); } .ccrow { display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); } .ccrow .t { font-weight: 700; } .ccrow .v { margin-left: auto; } .ccrow .w { width: 100%; color: var(--bad); }
   .ccline { margin: var(--s2) var(--s4) 0; padding: 8px 12px; border-radius: var(--r); background: var(--surface-2); font-size: 15px; }
   .rdock { flex: none; padding: var(--s2) var(--s4) 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(2, 50px); gap: 5px; }
   .rdock button.off { border-style: dashed; background: none; color: var(--text-3); box-shadow: none; }
