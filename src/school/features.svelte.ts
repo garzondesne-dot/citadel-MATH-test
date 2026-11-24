@@ -10,6 +10,7 @@ import { SUBJ } from '../engine/subject';
 import { applySchoolInfo, type SchoolInfo } from './school';
 import { BELLS, PERIODS } from './bells';
 import { setPaperDefault } from '../theme/theme';
+import { SCHOOL_BUILD } from '../channel';
 const BELLS0 = structuredClone(BELLS), PERIODS0 = structuredClone(PERIODS);
 
 export type FeatId =
@@ -22,6 +23,9 @@ export type Prep = 'none' | 'addon' | 'pack' | 'key' | 'info';
 export interface Feat { id: FeatId; ic: string; name: string; sub: string; group: string; /** 🏷 준비할 것 (📜 2026-11-16 · 준비 없음 / 팩 덧칸 / 📚 과목 팩 / AI 키 / 학교 정보) */ prep?: Prep; /** 켜려면 필요한 것 → 없으면 잠김 이유(채우는 길) · null = 됨 */ need?: (S: Store | null) => string | null }
 
 const packNeed = (has: boolean, what: string) => (has ? null : `📚 과목 팩에 ${what}이(가) 없어요 · 「준비」 탭에서 팩을 올리면 열려요`);
+/** 🏫 학교판(VITE_SCHOOL)에서 숨기는 기능 (📜 11/24 🔨 #12 · DECISIONS 2b6a94b: 🥏 알까기 = 우리 학교 정식에서 먼저 해 보고 · 학교판엔 아직) */
+export const SCHOOL_HIDE: readonly FeatId[] = ['rest-alkkagi'];
+export const schoolHides = (id: FeatId, school = SCHOOL_BUILD) => school && SCHOOL_HIDE.includes(id);
 export const FEATS: Feat[] = [
   { id: 'hero', ic: '🧙', name: '용사 · 스킬 · 강화', sub: '호칭 · 💎 상점 포함', group: '용사' },
   { id: 'scarecrow', ic: '🎯', name: '허수아비 · 혼자 복습', sub: '학습지 숫자 · 맞힌 문제는 바뀐 숫자', group: '복습' },
@@ -60,7 +64,7 @@ export const FEATS: Feat[] = [
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },
   { id: 'theme', ic: '🎨', name: '테마', sub: '', group: '그 밖' },
-];
+].filter((f) => !schoolHides(f.id)); // 🏫 학교판 숨김 (⚙ 기능 목록에도 안 보임)
 // 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
 // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16 선생님 「디펜스는 단추 없애고 보존만」): 어느 묶음에도 처음엔 안 켜짐 · ⚙ 자세히 스위치로 켜면 되살아남(코드 · 데이터 그대로)
 // 🐉 용이 잠든 사이 = 숨김 · 보존 (📜 2026-11-24 선생님 · 디펜스와 같은 꼴 · 서버 규칙에 dg 칸이 없어 수업에서 안 돌던 놀이)
@@ -108,7 +112,7 @@ export function bindFeatures(S: Store) {
 export const setFeatCfg = (c: FeatCfg | null) => { cfg = c; };
 export const featCfg = () => cfg ?? DEFAULT_CFG;
 /** 🧩 이 기능이 지금 쓰이나 (켬 + 필요한 것 있음) — 꺼지면 화면에서 통째로 사라짐 */
-export function feat(id: FeatId): boolean { return stateOf(store, cfg, id) === 'on'; }
+export function feat(id: FeatId): boolean { if (schoolHides(id)) return false; return stateOf(store, cfg, id) === 'on'; }
 setCraftOn(() => feat('forge')); // ⚡ #83 모루가 꺼진 판 = ⚒ 연성 칭호 용사 각성 막음
 /** 교사 화면: 묶음 고르기 (낱낱 스위치는 지움) · 낱낱 켬/끔 */
 export function saveBundle(S: Store, b: BundleId) { S.set(PATH, { bundle: b }); }
