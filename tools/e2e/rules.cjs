@@ -45,6 +45,9 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   want('그 뒤 hosts = true', await as(anon.tok, `rooms/111111/hosts/${anon.uid}`, 'PUT', true), true);
   want('hostKeys 는 본인도 못 읽음', await as(anon.tok, `hostKeys/111111/${anon.uid}`, 'GET'), false);
   want('TV hosts 뒤 방 진행 쓰기', await as(anon.tok, 'rooms/111111/state/step', 'PUT', 1), true);
+  want('🎥 📜 11/24 키 TV ⚙ 촬영 모드 켬 (meta/film · 규칙 그대로)', await as(anon.tok, 'rooms/111111/meta/film', 'PUT', true), true);
+  want('🎥 학생은 촬영 모드 못 켬', await as(A.tok, 'rooms/111111/meta/film', 'PUT', true), false);
+  await owner('rooms/111111/meta/film', 'DELETE');
   want('학생 방 진행 쓰기', await as(B.tok, 'rooms/111111/state/step', 'PUT', 9), false);
   // 👩‍🏫 📜 2026-11-15 TV 교사 캠프에서 「내 용사」 바꾸기 = school/tlook (지금 수업 방 hosts + 맞는 키인 TV 만) · 다른 school 칸은 여전히 교사만
   want('TV tlook 수업 방 전 막힘', await as(anon.tok, 'school/tlook', 'PUT', { hero: 3 }), false);

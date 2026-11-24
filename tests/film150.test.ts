@@ -26,4 +26,8 @@ describe('#150 촬영 모드', () => {
     expect(tv).toMatch(/film \? maskName\(n\)/); expect(tv).not.toMatch(/촬영 중/);
     expect(tl).toMatch(/filmOn \? \{ \.\.\.p, name: maskName\(p\.name\) \}/); expect(tl).toMatch(/data-k="tl-film"/);
   });
+  it('📜 11/24 종합실 ⚙ 설정에도 같은 스위치 = 같은 칸(방 meta/film)', () => {
+    const tv = readFileSync(new URL('../src/ui/tv/TV.svelte', import.meta.url), 'utf8');
+    expect(tv).toMatch(/data-k="tvfilm" onclick=\{\(\) => S\.set\(`\$\{roomPath\(code\)\}\/meta\/film`, film \? null : true\)\}/);
+  });
 });

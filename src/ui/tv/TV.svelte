@@ -15,6 +15,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
+  import { roomPath } from '../../raid/actions';
   import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, maskName, roster, type Live } from '../../school/school';
@@ -517,6 +518,8 @@
         <button type="button" role="menuitem" data-k="tvtheme" onclick={() => { themeOpen = true; setOpen = false; }}>🎨<span>테마</span></button>
         <a role="menuitem" class="sbl" data-k="tvcamp" href="?role=camp&from=me&tv=1" target="_blank" rel="noopener">⛺<span>교사 캠프 (새 창 · 학생 화면과 같게)</span></a><!-- 👩‍🏫 #80 0번: #21 C 에서 빠진 입구 되살림 · TV = 이름 · 선생님 칸 없음 -->
         <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
+        {#if R && code && !R.state.closed}{@const film = (R.meta as { film?: boolean } | undefined)?.film === true}<!-- 🎥 #150 촬영 모드 = 교사 폰 리모컨과 같은 칸(방 meta/film · 어느 쪽에서 켜도 같은 상태 · 수업이 끝나면 저절로 꺼짐) · 📜 11/24 「종합실엔 녹화 모드가 없어 · 설정에 넣어 줘」 · TV 에 따로 촬영 표시는 안 함 -->
+        <button type="button" role="menuitemcheckbox" aria-checked={film} data-k="tvfilm" onclick={() => S.set(`${roomPath(code)}/meta/film`, film ? null : true)}>🎥<span>촬영 모드 {film ? '켬 · 친구 이름 가림' : '끔'}</span></button>{/if}
         <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
       </div>
     </div>
