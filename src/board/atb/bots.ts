@@ -14,9 +14,10 @@ const r01 = (b: Bot) => { let a = (b.rnd += 0x6d2b79f5); a = Math.imul(a ^ (a >>
 /** 🛡 📜 #144 내 속성 실드 칸 = 지금 남았거나(실드 중) · 곧 뜸(보스 HP 가 실드 선 +12% 안 · 그 보스 실드에 내 속성) → 구슬 2 를 스킬 2 몫으로 */
 function shieldDue(S: State, who: number): 'now' | 'soon' | null {
   const h = S.heroes[who]; if (!h || S.end) return null;
-  if (S.shieldUp) return S.cells.some((c) => !c.broken && c.fam === h.s.fam) ? 'now' : null;
-  if (S.cells.length) return null; // 이미 지나감
-  return S.bossHp <= S.bossMax * (T.shieldAt + 0.12) && shieldOf(S.boss).includes(h.s.fam) ? 'soon' : null;
+  if (S.cells.some((c) => !c.broken)) return S.cells.some((c) => !c.broken && c.fam === h.s.fam) ? 'now' : null;
+  const R = S.boss.raid, A = R?.acts[S.act ?? 0]; // 🏰 레이드 = 다음 막
+  const next = R ? (A ? { at: A.at, fams: A.fams } : null) : S.cells.length ? null /* 이미 지나감 */ : { at: T.shieldAt, fams: shieldOf(S.boss) };
+  return next && S.bossHp <= S.bossMax * (next.at + 0.12) && next.fams.includes(h.s.fam) ? 'soon' : null;
 }
 /** 꼭 필요한 상황 = 쓰러질 듯한 친구(30% 아래) */
 const critical = (S: State) => alive(S).some((x) => x.hp < x.s.maxHp * 0.3);

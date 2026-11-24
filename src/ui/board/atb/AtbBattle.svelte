@@ -26,7 +26,7 @@
   import QuizCard from './QuizCard.svelte';
   import RaidHp from '../../battle/RaidHp.svelte';
   import TimingBar from './TimingBar.svelte';
-  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, tgKindOf, type TgKind, bossEveryOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin, orphanCell, askHelp, sendHelp, guardsOf } from '../../../board/atb/engine';
+  import { attack, canSkill, earn, skillList, tick, useSkill, weak, type Ev, type SkillK, type State, type Timing, skillPeek, canReact, telegraphOf, tgKindOf, type TgKind, bossEveryOf, capOf, upcomingOf, calmed, missionOf, canBreak, orderNext, modOf, debugWin, orphanCell, askHelp, sendHelp, guardsOf } from '../../../board/atb/engine';
   import { REACT } from '../../../board/atb/tune';
   import { portraitOf } from '../../manifest';
   import { lookOfStats } from '../../../board/atb/heroes';
@@ -191,8 +191,8 @@
   }
   $effect(() => { const nt = notice; if (nt) untrack(() => big(nt.t, 'note', 1500)); }); /* 🚪 #113 친구가 떠남 = 위 띠 */
   const iga = (w: string) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return c >= 0 && c <= 11171 && c % 28 ? '이' : '가'; };
-  const capLeft = $derived(!S.end && S.t >= T.cap.call ? Math.max(0, Math.ceil(T.cap.end - S.t)) : null);
-  const capOn = $derived(!S.end && S.t >= T.cap.warn);
+  const capLeft = $derived(!S.end && S.t >= capOf(S).call ? Math.max(0, Math.ceil(capOf(S).end - S.t)) : null);
+  const capOn = $derived(!S.end && S.t >= capOf(S).warn);
   let fN = $state(0), combo = 0, canSend = $state(false), skOpen = $state(false), gearOpen = $state(false);
   let qc = $state<{ send: () => void; sentAs: (g: Given) => void } | undefined>(), cardEl = $state<HTMLElement | undefined>(), dragY = $state(0), dragging = $state(false);
   /** 🤏 손잡이 바 끌어 넣기 = 닫힘 (📜 선생님 덧붙임 9) · 카드가 손을 따라 내려옴 · 28% 넘게 끌면 쏙 · 덜 끌면 되돌아감 · 돌린 화면 = 화면 가로가 안쪽 세로 */
