@@ -8,7 +8,7 @@
   import { keepScroll } from './keepScroll';
   import { gaugeView } from './battle/gauge';
   import BossForm from './q/BossForm.svelte';
-  import { V4, isDummy } from '../raid/raid';
+  import { HIDE_GRACE, V4, isDummy } from '../raid/raid';
   import { noteHelp } from '../school/help';
   import { feat } from '../school/features.svelte';
   import { onDestroy, untrack } from 'svelte';
@@ -84,10 +84,13 @@
     hb();
     const bye = () => leave(S, code, uid);
     addEventListener('pagehide', bye);
-    // 👻 (📜 11/24 🔨 #9 ① 학교판 첫 수업 「튕긴 학생이 계속 접속 중 → 몬스터가 안 쓰러짐」): 화면이 숨으면(화면 꺼짐 · 다른 앱 · 카메라로 QR · 탭 뒤로) 뒤에서 도는 3초 신호가 「접속 중」을 붙잡지 않게 = 바로 끊김(seen 0) · 다시 보이면 바로 신호
-    const vis = () => { if (document.visibilityState === 'hidden') bye(); else hb(); };
+    // 👻 (📜 11/24 🔨 #9 ① 학교판 첫 수업 「튕긴 학생이 계속 접속 중 → 몬스터가 안 쓰러짐」 · ❓ #10 B 30초 유예 · DECISIONS c90bc05): 화면이 숨으면(화면 꺼짐 · 다른 앱 · 카메라로 QR · 탭 뒤로)
+    //   30초(HIDE_GRACE)까지는 신호를 이어 「접속 중」(계산기 · 카메라 잠깐 = 표시 없음) → 넘으면 끊김(seen 0) · 신호 멈춤 · 다시 보이면 바로 신호 (아이폰은 숨는 순간 앱이 멈춰 8초 뒤 끊김 = 그대로)
+    let hidAt: number | null = null, gone = false;
+    const vis = () => { if (document.visibilityState === 'hidden') { hidAt ??= Date.now(); } else { hidAt = null; gone = false; hb(); } };
+    const tick = () => { if (hidAt == null) { hb(); return; } if (Date.now() - hidAt < HIDE_GRACE) hb(); else if (!gone) { gone = true; bye(); } };
     document.addEventListener('visibilitychange', vis); addEventListener('freeze', bye);
-    const beat = setInterval(() => { if (document.visibilityState !== 'hidden') hb(); }, 3000);
+    const beat = setInterval(tick, 3000);
     const lr = liveRoom(S, code);
     return { v: lr.v, stop: () => { clearInterval(beat); lr.stop(); removeEventListener('pagehide', bye); document.removeEventListener('visibilitychange', vis); removeEventListener('freeze', bye); } };
   });
