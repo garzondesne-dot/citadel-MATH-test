@@ -602,8 +602,8 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
-    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i><button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
-    {#if shine}<div class="shine" class:low={exOn} data-k="shine" data-step={shine.step}><button type="button" class="shineb" data-k="shine-band" aria-expanded={shineSay} onclick={shineTap}>{shine.text}</button>{#if shineSay}<p class="shinesay" data-k="shine-say">{shine.say}</p>{/if}</div>{/if}
+    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i>{#if !sheet}<button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
+    {#if shine && !sheet}<div class="shine" class:low={exOn} data-k="shine" data-step={shine.step}><button type="button" class="shineb" data-k="shine-band" aria-expanded={shineSay} onclick={shineTap}>{shine.text}</button>{#if shineSay}<p class="shinesay" data-k="shine-say">{shine.say}</p>{/if}</div>{/if}
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -754,7 +754,7 @@
   {#if trialRun}{#await loadAtbTrial() then K}<K.default packs={trial.packs ?? []} hero={me.hero} xp={me.xp} enh={me.enh} fx0={me.socket?.[me.hero] ?? ''} nick={trial.nick} start={trialRun} onclose={() => (trialRun = null)} />{/await}{/if}
 {:else if sheet === 'dummy'}
   <!-- 📋 게시판 던전 (#143 · 허수아비 자리 · 허수아비 화면은 없앰) -->
-  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onquest={feat('author') ? () => { questTab = 'mine'; sheet = 'tent'; } : undefined} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
+  {#await loadBoard() then K}<K.default {S} {me} save={M.save} uid={pupil?.uid ?? 'me'} num={pupil?.num ?? 0} cls={pupil?.cls ?? ''} {open} joinPid={boardJoin} onteach={teach && T_SHEET.dummy && !tPanel ? () => (tPanel = T_SHEET.dummy ?? '') : undefined} teachN={Number(tTodo[T_SHEET.dummy ?? ''] ?? 0) || 0} onquest={feat('author') ? () => { questTab = 'mine'; sheet = 'tent'; } : undefined} onclose={() => { sheet = null; boardJoin = ''; }} />{/await}
 {:else if sheet === 'tent' && feat('author')}
   <!-- ✏ #75 출제 공방 (책상) -->
   {#await loadQuest() then K}<K.default {S} {me} cls={pupil?.cls ?? ''} num={pupil?.num ?? 0} uid={pupil?.uid ?? 'me'} test={me.test || !pupil} tab={questTab} claim={chalClaim} onclose={() => { sheet = null; questTab = 'up'; }} />{/await}
@@ -792,7 +792,7 @@
 {/if}
 {#if hero0 && !me.seen['hero0'] && !fromMe0}<FirstHero {me} persist={M.save} ondone={() => { hero0 = false; try { sessionStorage.removeItem('citadel-hero0'); } catch { /* 무시 */ } }} />{/if}
 
-{#if teach && sheet && T_SHEET[sheet] && !tPanel}<button type="button" class="tpbtn" class:tpbd={sheet === 'dummy'} data-k="t-panel" onclick={() => (tPanel = T_SHEET[sheet ?? ''] ?? '')}>👩‍🏫 선생님 칸{#if tTodo[T_SHEET[sheet] ?? '']}<i>{tTodo[T_SHEET[sheet] ?? '']}</i>{/if}</button>{/if}
+{#if teach && sheet && sheet !== 'dummy' && T_SHEET[sheet] && !tPanel}<button type="button" class="tpbtn" class:tpbd={sheet === 'dummy'} data-k="t-panel" onclick={() => (tPanel = T_SHEET[sheet ?? ''] ?? '')}>👩‍🏫 선생님 칸{#if tTodo[T_SHEET[sheet] ?? '']}<i>{tTodo[T_SHEET[sheet] ?? '']}</i>{/if}</button>{/if}
 {#if teach && tPanel}<TeacherPanel {S} kind={tPanel} cls={tCls} onclose={() => (tPanel = '')} />{/if}
 
 <style>
