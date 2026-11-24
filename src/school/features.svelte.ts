@@ -26,7 +26,7 @@ const packNeed = (has: boolean, what: string) => (has ? null : `📚 과목 팩�
 /** 🏫 학교판(VITE_SCHOOL)에서 숨기는 기능 (📜 11/24 🔨 #12 · DECISIONS 2b6a94b: 🥏 알까기 = 우리 학교 정식에서 먼저 해 보고 · 학교판엔 아직) */
 export const SCHOOL_HIDE: readonly FeatId[] = ['rest-alkkagi'];
 export const schoolHides = (id: FeatId, school = SCHOOL_BUILD) => school && SCHOOL_HIDE.includes(id);
-export const FEATS: Feat[] = [
+const FEATS_ALL: Feat[] = [
   { id: 'hero', ic: '🧙', name: '용사 · 스킬 · 강화', sub: '호칭 · 💎 상점 포함', group: '용사' },
   { id: 'scarecrow', ic: '🎯', name: '허수아비 · 혼자 복습', sub: '학습지 숫자 · 맞힌 문제는 바뀐 숫자', group: '복습' },
   { id: 'board', ic: '📋', name: '게시판 던전 · 팀 도전', sub: '1~4명 · 늘 바뀐 숫자', group: '복습' },
@@ -64,7 +64,8 @@ export const FEATS: Feat[] = [
   { id: 'author', ic: '✏', name: '출제 공방', sub: '학생이 문제를 냄', group: '그 밖' },
   { id: 'contest', ic: '🏁', name: '반 대항전', sub: '', group: '그 밖' },
   { id: 'theme', ic: '🎨', name: '테마', sub: '', group: '그 밖' },
-].filter((f) => !schoolHides(f.id)); // 🏫 학교판 숨김 (⚙ 기능 목록에도 안 보임)
+];
+export const FEATS: Feat[] = FEATS_ALL.filter((f) => !schoolHides(f.id)); // 🏫 학교판 숨김 (⚙ 기능 목록에도 안 보임)
 // 📅 시간표 = 모든 묶음 기본 끔 (📜 2026-11-13 밤 선생님 「당분간 시간표기능은 끄고 반 → 차시 → 생성하는 수동 방법」) · 켜는 것은 낱낱 스위치로만
 // 🏰 디펜스 = 단추 숨김 · 보존 (📜 2026-11-16 선생님 「디펜스는 단추 없애고 보존만」): 어느 묶음에도 처음엔 안 켜짐 · ⚙ 자세히 스위치로 켜면 되살아남(코드 · 데이터 그대로)
 // 🐉 용이 잠든 사이 = 숨김 · 보존 (📜 2026-11-24 선생님 · 디펜스와 같은 꼴 · 서버 규칙에 dg 칸이 없어 수업에서 안 돌던 놀이)
