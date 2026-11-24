@@ -1,6 +1,7 @@
 // 👤 #77 게시판 방 안에서만 실명 (에뮬레이터 · 폰 2대 · 다른 반)
 //   명단(roster)에서 반 · 번호로 · 글에는 이름 없음 · 목록 · 피드는 익명 그대로
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.';
 const B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
@@ -23,9 +24,9 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   await rest('roster/1-3', 'PUT', { 1: '가나다', 2: '라마바' }); await rest('roster/1-5', 'PUT', { 1: '사아자' });
   const A = await open(); await signup(A, '1-3', 1); const Bp = await open(); await signup(Bp, '1-5', 1);
   await board(A); await board(Bp);
-  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
+  await postTeam(A, 6);
   const listTxt = await Bp.textContent('.bd'); ok('목록 = 실명 없음', !listTxt.includes('가나다'));
-  (await Bp.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await Bp.click('[data-k="board-recruit-fold"]')), await Bp.click('.post .go'); await wait(2000);
+  await joinGo(Bp); await wait(2000);
   const a = await A.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent)), bb = await Bp.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent));
   ok('A 대기실 = 다른 반 친구 실명', a.some((t) => t.includes('1-5반 · 사아자')), a.join(' / '));
   ok('B 대기실 = 1-3반 실명', bb.some((t) => t.includes('1-3반 · 가나다')), bb.join(' / '));

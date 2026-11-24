@@ -75,9 +75,16 @@
   const swT = setInterval(() => { tick++; if (online) sweepAll(S, untrack(() => pv.v.val), S.now()); }, LIFE.sweep); onDestroy(() => clearInterval(swT));
   queueMicrotask(() => { if (untrack(() => online)) sweepAll(S, untrack(() => pv.v.val), S.now()); });
   const posts = $derived.by(() => { void tick; const now = S.now(); return Object.values(pv.v.val || {}).filter((p) => p && p.mem && !p.when /* 📜 11/23 예약 모집 없앰 = 옛 예약 글은 조용히 안 보임 */ && p.phase !== 'done' && !(sweepOf(p, now)?.kind === 'dissolve' || sweepOf(p, now)?.kind === 'end')).sort((a, b) => b.at - a.at); });
-  const shown = $derived(posts.filter((p) => p.phase === 'wait' && !p.solo && (!sel || p.no === sel.no)));
   /** 👥 📜 11/23 팀 참가 = 모든 차시 모집 중 팀 (혼자 판 · 옛 예약 글 빼고 · 새 팀 위) */
   const waitAll = $derived(joinList(posts));
+  /* 📋 📜 11/24 출정 시안(board-join-1 ~ 4): 위 탭 = 👥 팀 참가(왼쪽 · 기본) / ➕ 팀 모집(오른쪽) · 팀 참가 = 열린 팀 전부 바로 목록 · 팀이 많으면(6 ~) 필터 칩 4 + 차시별 묶음 */
+  let goTab = $state<'join' | 'make'>('join'), jf = $state<'all' | 'free' | 'guard' | 'nolock'>('all');
+  const JMANY = 6;
+  const jOk = (p: Post) => isOpen(lessonOf(p.lesson));
+  const jFull = (p: Post) => membersOf(p).length >= MAX && !p.mem?.[uid];
+  const jShown = $derived(waitAll.filter((p) => jf === 'all' || (jf === 'free' ? !jFull(p) : jf === 'guard' ? hasGuard(p) : !p.lk)));
+  /** 묶음 = 배운 차시 번호순 → 안 배운 차시 맨 아래 */
+  const jGroups = $derived.by(() => { const m = new Map<number, Post[]>(); for (const p of jShown) (m.get(p.no) ?? m.set(p.no, []).get(p.no)!).push(p); return [...m.entries()].sort((a, b) => (jOk(a[1][0]!) === jOk(b[1][0]!) ? a[0] - b[0] : jOk(a[1][0]!) ? -1 : 1)); });
   // 📡 #48 판이 끝나 글이 done 이 되어도 내 결과를 아직 못 봤으면 그 글 그대로 (한 폰이 먼저 「게시판으로」 눌러도 다른 폰 결과 화면이 사라지지 않게)
   const mine = $derived(posts.find((p) => !!p.mem?.[uid]) ?? Object.values(pv.v.val || {}).find((p) => p && p.phase === 'done' && isAtb(p) && !!p.mem?.[uid] && !seen.includes(p.pid)) ?? null);
   // 🐞 #47 동시에 눌러 정원을 넘었으면 늦게 온 나부터 빠짐 (모든 기기가 같은 줄 · 규칙 바꿈 없음)
@@ -104,8 +111,6 @@
   /* 🧙 📜 #135 용사 확인 시트 = 'go'(혼자 출정 · 늘 거침 · 「⚔ 이 용사로 출발」) · 'swap'(출정 카드 「🧙 바꾸기」) · 'room'(팀 대기실 · 「✔ 이 용사로」) */
   let pickHero = $state<'' | 'go' | 'swap' | 'room'>('');
   /** 👥 모집 목록 펼침 = 이 기기 기억 */
-  let recOpen = $state((() => { try { return localStorage.getItem('board-recruit-open') === '1'; } catch { return false; } })());
-  const toggleRec = () => { recOpen = !recOpen; try { localStorage.setItem('board-recruit-open', recOpen ? '1' : '0'); } catch { /* 사생활 창 */ } };
   const pickNo = $derived(mine && mine.phase === 'wait' && mine.mem?.[uid] ? mine.no : sel?.no);
   const heroIds = HEROES.map((h) => h.id);
   const ownH = (id: number) => !cls || ownsHero(me.wallet, emptyPlan(), id);
@@ -364,6 +369,30 @@
     {#if !online}<p class="off">⚠ 서버와 끊겼어요 · 다시 잇는 중 · 혼자는 계속 돼요</p>{/if}
     <div class="mid">
       {#if btab === 'go'}
+        {#if !trial}<div class="seg" role="tablist" aria-label="출정" data-k="board-go-tabs"><button type="button" role="tab" class:on={goTab === 'join'} aria-selected={goTab === 'join'} data-k="board-tab-join" onclick={() => (goTab = 'join')}>👥 팀 참가 <b class="cnt">{waitAll.length}</b></button><button type="button" role="tab" class:on={goTab === 'make'} aria-selected={goTab === 'make'} data-k="board-tab-make" onclick={() => (goTab = 'make')}>➕ 팀 모집</button></div>{/if}
+        {#if !trial && goTab === 'join'}
+          <!-- 👥 📜 11/24 팀 참가 = 열린 팀 전부 바로 목록 (실시간) · 한 줄 = 방장 용사 · 차시 · 🛡 · 🔒 · 보스 · 방장 이름 · 인원 · [참가] / 「아직 안 배움」 / 「꽉 참」 -->
+          {#if waitAll.length}
+            <div class="jhead"><span>지금 열린 팀 {waitAll.length}</span><small>실시간</small></div>
+            {#if waitAll.length >= JMANY}<div class="jchips" data-k="board-join-chips">{#each [['all', `전체 ${waitAll.length}`], ['free', '빈자리 있음'], ['guard', '🛡 수호자'], ['nolock', '🔒 빼기']] as [k, t] (k)}<button type="button" class="jc" class:on={jf === k} aria-pressed={jf === k} onclick={() => (jf = k as typeof jf)}>{jf === k ? '✓ ' : ''}{t}</button>{/each}</div>{/if}
+            {#snippet jrow(p: Post)}{@const ok = jOk(p)}{@const full = jFull(p)}{@const mine = !!p.mem?.[uid]}{@const ms = membersOf(p)}{@const host = ms[0]}{@const q = questOf(p.no)}
+              <div class="jcard" class:dim={!ok || full} data-k="board-join-row" data-no={p.no} data-lk={p.lk ? '1' : undefined}>
+                <span class="face" aria-hidden="true"><span class="fin"><HeroSprite id={host?.hero ?? 0} scale={1.25} /></span></span>
+                <span class="jt"><span class="tags"><i class="no">{p.no}차시</i>{#if hasGuard(p)}<i class="gd">🛡 수호자</i>{/if}{#if p.lk}<i class="lkg">🔒 암호</i>{/if}</span><b class="boss">{q?.boss ?? `${p.no}차시 보스`}</b><small class="who">{host?.nick ?? ''} <span class="dots" aria-label="인원 {ms.length} / {MAX}">{#each Array.from({ length: MAX }) as _, i (i)}<i class:f={i < ms.length}></i>{/each}</span> {ms.length}/{MAX}</small></span>
+                {#if mine}<button type="button" class="jgo" data-k="board-join-go" onclick={() => join(p)}>내 팀</button>
+                {:else if !ok}<span class="jno" data-k="board-join-notyet">아직<br />안 배움</span>
+                {:else if full}<span class="jno" data-k="board-join-full">꽉 참</span>
+                {:else}<button type="button" class="jgo" data-k="board-join-go" onclick={() => join(p)}>참가</button>{/if}
+              </div>
+            {/snippet}
+            <div class="jlist" data-k="board-join-list">
+              {#if waitAll.length >= JMANY}{#each jGroups as [no, ps] (no)}<div class="jgrp"><span>{no}차시 · {ps.length}팀</span></div>{#each ps as p (p.pid)}{@render jrow(p)}{/each}{:else}<p class="empty1">고른 조건의 팀이 없어요</p>{/each}
+              {:else}{#each jShown as p (p.pid)}{@render jrow(p)}{/each}{/if}
+            </div>
+          {:else}
+            <div class="jempty" data-k="board-join-none"><span>📋</span><b>지금 열린 팀이 없어요</b><small>내가 모집하면 친구들이 여기서 봐요</small></div>
+          {/if}
+        {:else}
         <section class="gmap" data-k="board-map" aria-label="차시 정복 지도 · 칸을 눌러 차시 고르기">
           <div class="mapw"><img src="{import.meta.env.BASE_URL}art/board/board-map-v2.webp" alt="" />
             {#each MAP_PTS as pt, i (i)}{@const l = i < MAP_PTS.length - 1 ? (MAPL.find((x) => x.no === i + 2) ?? null) : null}{@const nt = l ? notes[l.no] : null}{@const lk = l ? !isOpen(LESSONS.find((p) => p.no === l.no)) : true}
@@ -385,15 +414,6 @@
             {/if}
           </div>
         {/if}
-        {#if shown.length}
-          <button type="button" class="fold" data-k="board-recruit-fold" aria-expanded={recOpen} onclick={toggleRec}><span>👥 모집 중 {shown.length}</span><span aria-hidden="true">{recOpen ? '▴' : '▾'}</span></button>
-          {#if recOpen}{#each shown as p (p.pid)}
-            {@const L = lessonOf(p.lesson)}
-            {@const why = canJoin(p, uid, { open: isOpen(L), inClass: open, online })}
-            <div class="post"><span class="ic">{isOpen(L) ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span><span class="tx"><b>{p.no}차시 · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{#if tag(p).length > 1}<i class="ally" data-k="ally">🤝 연합 원정대</i>{/if}{#each tag(p) as c (c)}<i>{c}반</i>{/each}{isOpen(L) ? (hasGuard(p) ? '🛡 있음' : '🌱 도전자만') : '아직 진도 전이에요'}</small></span><button type="button" class="go" disabled={!!why} title={why} onclick={() => join(p)}>합류</button></div>
-          {/each}{/if}
-        {:else}
-          <p class="empty1" data-k="board-recruit-none">📭 {sel ? `${sel.no}차시 ` : ''}모집 글이 아직 없어요 · 혼자 출정하거나 팀을 모집해요</p>
         {/if}
       {:else if btab === 'war'}
         <WarBar {S} {cls} test={testAcc} />
@@ -412,9 +432,14 @@
         {#if payOn(S) && cls && num && !isBeta(S, cls)}<p class="why" data-k="board-daycap">{dayLeft <= 0 ? BOARD_FULL : `오늘 받을 수 있는 💎 ${dayLeft} / ${BOARD_DAY}`}</p>{/if}
       {/if}
     </div>
-    {#if btab === 'go'}
-      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 출정` : '⚔ 출정'} disabled={!sel || !isOpen(sel)} onmain={() => { if (sel) pickHero = 'go'; }}
-        why={!sel || !isOpen(sel) ? '🔒 진도를 나간 차시를 골라요' : open || !online ? (open ? `📢 지금 ${cls}반 수업 중 · 팀 모집은 수업 뒤에 · 혼자는 돼요` : '서버와 끊겨서 팀은 잠깐 쉬어요') : ''}>{#snippet aux()}{#if !trial}<button type="button" class="btn2 wide" data-k="board-post" disabled={open || !online || !sel || !isOpen(sel)} onclick={() => { if (!sel) return; pick = sel; lockOn = false; pin = ''; sheet = 'post'; }}>＋ 팀 모집</button><button type="button" class="btn2 wide" data-k="board-join" disabled={!online} onclick={() => (sheet = 'join')}>👥 팀 참가{waitAll.length ? ` ${waitAll.length}` : ''}</button>{:else}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/if}{/snippet}</BottomAction>
+    {#if btab === 'go' && !trial && goTab === 'join'}
+      {#if waitAll.length}<div class="jbot"><button type="button" class="btn2 wide solo" data-k="board-solo" onclick={() => { pick = sel; sheet = 'solo'; }}>⚔ 혼자 도전 (봇 3명)</button></div>
+      {:else}<BottomAction dock={false} text="➕ 내가 모집하기" disabled={open || !online} why={open ? `📢 지금 ${cls}반 수업 중 · 팀 모집은 수업 뒤에 · 혼자는 돼요` : !online ? '서버와 끊겨서 팀은 잠깐 쉬어요' : ''} onmain={() => { pick = sel; lockOn = false; pin = ''; sheet = 'post'; }}>{#snippet aux()}<button type="button" class="btn2 wide" data-k="board-solo" onclick={() => { pick = sel; sheet = 'solo'; }}>⚔ 혼자 도전 (봇 3명)</button>{/snippet}</BottomAction>{/if}
+    {:else if btab === 'go' && !trial}
+      <BottomAction dock={false} text={sel ? `➕ ${sel.no}차시 팀 모집` : '➕ 팀 모집'} disabled={open || !online || !sel || !isOpen(sel)} onmain={() => { if (!sel) return; pick = sel; lockOn = false; pin = ''; sheet = 'post'; }}
+        why={!sel || !isOpen(sel) ? '🔒 진도를 나간 차시를 골라요' : open ? `📢 지금 ${cls}반 수업 중 · 팀 모집은 수업 뒤에 · 혼자는 돼요` : !online ? '서버와 끊겨서 팀은 잠깐 쉬어요' : ''}>{#snippet aux()}<button type="button" class="btn2 wide" data-k="board-solo" disabled={!sel || !isOpen(sel)} onclick={() => { if (sel) pickHero = 'go'; }}>⚔ {sel ? `${sel.no}차시 ` : ''}혼자 도전 (봇 3명)</button>{/snippet}</BottomAction>
+    {:else if btab === 'go'}
+      <BottomAction dock={false} text={sel ? `⚔ ${sel.no}차시 출정` : '⚔ 출정'} disabled={!sel || !isOpen(sel)} onmain={() => { if (sel) pickHero = 'go'; }} why={!sel || !isOpen(sel) ? '🔒 진도를 나간 차시를 골라요' : ''}>{#snippet aux()}<p class="why" data-k="trial-note">체험판 = 🤖 봇 3명과 · 기록 · 💎 · 공적은 남지 않아요 (원래 수업은 친구들과 팀)</p>{/snippet}</BottomAction>
     {/if}
   {/if}
   {#if rkOpen}
@@ -433,26 +458,14 @@
 </div>
 
 {#if sheet === 'pin' && pinPost}
-  <Sheet onclose={() => { sheet = ''; pinPost = null; }} mainText={busy ? '확인 중…' : '🔒 합류'} mainDisabled={busy || pin.length !== 4} onmain={joinPin}>
+  <Sheet onclose={() => { sheet = ''; pinPost = null; }} mainText={busy ? '확인 중…' : '👥 참가'} mainDisabled={busy || pin.length !== 4} onmain={joinPin}>
     {#snippet title()}🔒 {pinPost?.no}차시 · 입장 암호{/snippet}
     <p class="pinq">모집한 친구에게 들은 숫자 4자리</p>
     <RuneKeypad value={pin} len={4} onchange={(v) => { pin = v == null || v === '-' ? '' : String(v); pinErr = ''; }} />
     {#if pinErr}<p class="pinerr" role="alert">{pinErr}</p>{/if}
   </Sheet>
-{:else if sheet === 'join'}
-  <!-- 👥 📜 11/23 팀 참가 (예약 모집 대신): 지금 모집 중인 모든 차시의 팀 · 새 팀 위 · 진도 전 = 🔒 흐리게 · 암호 팀 = 🔒 → 4자리 -->
-  <Sheet onclose={() => (sheet = '')} tall mainText="닫기" onmain={() => (sheet = '')}>
-    {#snippet title()}👥 팀 참가 · 모집 중 {waitAll.length}{/snippet}
-    {#if waitAll.length}<div class="jlist" data-k="board-join-list">{#each waitAll as p (p.pid)}{@const L = lessonOf(p.lesson)}{@const ok = isOpen(L)}{@const q = questOf(p.no)}
-      <button type="button" class="post jrow" class:off={!ok} data-k="board-join-row" data-no={p.no} data-lk={p.lk ? '1' : undefined} onclick={() => { if (!ok) { say(`🔒 ${p.no}차시 진도 뒤에 들어갈 수 있어요`); return; } sheet = ''; join(p); }}>
-        <span class="ic">{ok ? (hasGuard(p) ? '🛡' : '🌱') : '🔒'}</span>
-        <span class="tx"><b>{p.no}차시{q ? ` · ${q.boss}` : ''} · {membersOf(p).length} / {MAX}</b><small>{#if p.lk}<i class="lk">🔒 암호</i>{/if}{tag(p).map((c) => `${c}반`).join(' · ')}</small></span>
-        <em class="jgo">{ok ? (p.mem?.[uid] ? '내 팀' : '참가') : '🔒'}</em>
-      </button>{/each}</div>
-    {:else}<p class="empty1" data-k="board-join-none">📭 지금 모집 중인 팀이 없어요 · ＋ 팀 모집으로 만들어 보세요</p>{/if}
-  </Sheet>
 {:else if sheet}
-  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기${lockOn ? ' 🔒' : ''}` : `⚔ ${pick.no}차시 팀 없이 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && pin.length !== 4)} onmain={go}>
+  <Sheet onclose={() => { sheet = ''; lockOn = false; pin = ''; }} mainText={pick ? (sheet === 'post' ? `＋ ${pick.no}차시 모집 글 올리기${lockOn ? ' 🔒' : ''}` : `⚔ ${pick.no}차시 혼자 도전`) : '차시를 골라요'} mainDisabled={!pick || (sheet === 'post' && lockOn && pin.length !== 4)} onmain={() => { if (sheet === 'post') { go(); return; } if (!pick) return; setChip(pick.no); sheet = ''; pickHero = 'go'; /* 📜 11/24 혼자 도전 = 차시 고르기 → 늘 용사 확인(#135) */ }}>
     {#snippet title()}{sheet === 'post' ? '＋ 어느 차시로 모집할까요?' : '⚔ 어느 차시로 갈까요?'}{/snippet}
     {#if sheet === 'post'}<label class="lkopt" data-k="board-lock-opt"><input type="checkbox" bind:checked={lockOn} onchange={() => (pin = '')} /> 🔒 암호 걸기 <small>(친구에게 숫자 4자리를 알려 줘요)</small></label>{#if lockOn}<RuneKeypad value={pin} len={4} onchange={(v) => { pin = v == null || v === '-' ? '' : String(v); }} />{/if}{/if}
     <div class="lgrid">{#each LESSONS as p (p.id)}<button type="button" class="lg" class:on={pick?.id === p.id} class:lock={!isOpen(p)} disabled={!isOpen(p)} aria-pressed={pick?.id === p.id} onclick={() => (pick = p)}><b>{isOpen(p) ? p.no : '🔒'}</b><small>{isOpen(p) ? shortOf(p) : `${p.no} · 진도 전`}</small></button>{/each}</div>
@@ -500,12 +513,6 @@
   .why.tap { color: var(--text-3); }
   .card.row { flex-direction: row; justify-content: space-between; font-size: 14px; }
   .lbl { font-size: 13px; color: var(--text-3); font-weight: 700; }
-  .post { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: var(--r); padding: 10px 12px; }
-  .post .ic { width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 22px; }
-  .post .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .post .tx b { font-size: 16px; }
-  .post .tx small { font-size: 12.5px; color: var(--text-2); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; } .post i { font-style: normal; padding: 1px 8px; border-radius: 99px; background: var(--surface-2); font-weight: 700; }
-  .post .go { flex: none; height: 44px; padding: 0 14px; border-radius: 10px; border: 0; background: var(--surface-2); color: var(--text); font: 700 15px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
-  .post .go:disabled { color: var(--text-3); box-shadow: none; }
   .empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--text-3); text-align: center; }
   .empty span { font-size: 48px; } .empty b { font-size: 15px; color: var(--text-2); } .empty small { font-size: 13px; }
   .why { margin: 0; text-align: center; font-size: 13px; color: var(--text-3); }
@@ -533,12 +540,6 @@
   .stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } .stat span { background: var(--surface); border-radius: 10px; padding: 8px 0; text-align: center; display: flex; flex-direction: column; font-size: 12.5px; color: var(--text-2); } .stat b { font-size: 20px; color: var(--text); }
   .rw div { display: flex; justify-content: space-between; font-size: 14px; color: var(--text-2); padding: 2px 0; } .rw .tot { color: var(--text); font-weight: 700; font-size: 16px; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 6px; }
   .card.pin { border: 1px solid var(--line); } .card.pin.host { border-color: var(--accent); } .card.pin.host b { font-size: 20px; color: var(--accent); letter-spacing: 1px; }
-  .post i.lk { background: var(--accent); color: var(--on-accent); }
-  .lkt { margin-top: var(--s3); width: 100%; min-height: var(--tap); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3); border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 15px var(--font); text-align: left; }
-  .lkt span { flex: 1; } .lkt small { font-size: 13px; color: var(--text-3); font-weight: 500; }
-  .lkt .kn { width: 40px; height: 24px; border-radius: 12px; background: var(--surface-2); position: relative; flex: none; }
-  .lkt .kn::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--text-3); transition: transform var(--t); }
-  .lkt.on .kn { background: var(--accent); } .lkt.on .kn::after { transform: translateX(16px); background: #fff; }
   .pinq { margin: 0 0 var(--s2); font-size: 14px; color: var(--text-2); text-align: center; }
   .pinerr { margin: var(--s2) 0 0; text-align: center; color: var(--bad); font-weight: 700; font-size: 15px; }
   .toast3 { position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: 12px; background: var(--surface-2); font-weight: 700; white-space: nowrap; z-index: 25; }
@@ -571,13 +572,10 @@
   .card.up { border: 2px solid var(--accent); text-align: center; } .card.up b { font-size: 22px; color: var(--accent); }
   /* 📜 #70 */
   .rift { margin: 0; font-size: 14px; color: var(--text-2); }
-  .post .ally { color: var(--accent); }
   .story { position: absolute; inset: auto 16px 96px; z-index: 6; display: grid; gap: 6px; padding: 16px; border-radius: var(--r-lg, 20px); border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent); background: rgba(10, 8, 6, 0.94); color: var(--text); font: 500 15px/1.5 var(--font); text-align: left; box-shadow: 0 6px 24px #000a; }
   .story small { color: var(--text-3); font-size: 13px; }
   /* 📅 #73 예약 */
-  .jlist { display: flex; flex-direction: column; gap: 8px; } .jrow { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; } .jrow.off { opacity: 0.5; } .jgo { margin-left: auto; font-style: normal; font: 800 14px var(--font); color: var(--accent); } .jrow.off .jgo { color: var(--text-3); }
   .lkopt { display: flex; align-items: center; gap: 8px; min-height: 48px; font: 700 15px var(--font); } .lkopt input { width: 22px; height: 22px; } .lkopt small { color: var(--text-2); font-weight: 500; }
-  .post .go.on { background: var(--surface-2); color: var(--accent); }
   .rdays, .rtimes { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
   .rdays button, .rtimes button { min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 15px var(--font); }
   .rdays button.off { opacity: 0.45; }
@@ -598,7 +596,26 @@
   .qcard.v2 .wk { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: var(--accent); color: #2a1c05; font: 900 14px/20px var(--font); font-style: normal; }
   .qcard.v2 .chg { flex: none; min-height: 48px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 700 14px var(--font); white-space: nowrap; box-shadow: 0 3px 0 #0b0c10; }
   .qcard.v2 .ql, .qcard.v2 [data-k='board-full'] { font-size: 14px; color: var(--text-3); }
-  .fold { min-height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-radius: 12px; border: none; background: var(--surface); color: var(--text-2); font: 700 14px var(--font); }
   .empty1 { margin: 2px 0; font-size: 14px; color: var(--text-2); text-align: center; }
   @media (prefers-reduced-motion: reduce) { .mp.left { animation: none; } }
+  /* 📋 📜 11/24 출정 시안 = 위 탭 2 · 팀 참가 목록 (ui-senior 토큰) */
+  .seg { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: var(--r); background: var(--surface); }
+  .seg button { min-height: var(--tap); border: 0; border-radius: 10px; background: transparent; color: var(--text-2); font: 800 16px var(--font); display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .seg button.on { background: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--press-sh); } .seg .cnt { min-width: 24px; padding: 0 7px; border-radius: 99px; background: rgba(0, 0, 0, 0.18); font: 800 13px/22px var(--font); }
+  .jhead { flex: none; display: flex; justify-content: space-between; align-items: baseline; color: var(--text-2); font: 600 14px var(--font); } .jhead small { color: var(--text-3); }
+  .jchips { flex: none; display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; } .jc { flex: none; min-height: 40px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: 700 14px var(--font); } .jc.on { border-color: var(--accent); color: var(--accent); }
+  .jlist { display: flex; flex-direction: column; gap: 8px; }
+  .jgrp { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--text-2); font: 700 14px var(--font); } .jgrp::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .jcard { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--r); background: var(--surface); } .jcard.dim { opacity: 0.5; }
+  .face { position: relative; width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--line); }
+  .face .fin { position: absolute; left: -24px; top: 4px; } /* 용사 칸 80 × 64 × 1.25 → 머리(가운데 위)가 동그라미 가운데 */
+  .jt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; } .tags i { font: 700 12.5px/22px var(--font); font-style: normal; padding: 0 8px; border-radius: 6px; background: var(--surface-2); color: var(--text); } .tags .gd { color: var(--ok); } .tags .lkg { background: transparent; color: var(--text-2); padding: 0; }
+  .boss { font: 800 16px var(--font); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who { display: flex; align-items: center; gap: 6px; font: 600 13.5px var(--font); color: var(--text-2); } .dots { display: inline-flex; gap: 3px; } .dots i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--text-3); } .dots i.f { background: var(--ok); border-color: var(--ok); }
+  .jgo { flex: none; min-width: 64px; min-height: var(--tap); padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
+  .jgo:active { transform: translateY(2px); box-shadow: none; }
+  .jno { flex: none; min-width: 64px; text-align: center; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--line); color: var(--text-3); font: 700 13px/1.3 var(--font); }
+  .jempty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 32px 12px; color: var(--text-2); text-align: center; } .jempty span { font-size: 44px; } .jempty b { font: 800 17px var(--font); color: var(--text); } .jempty small { font: 600 14px var(--font); color: var(--text-3); }
+  .jbot { position: sticky; bottom: 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 30%); } .jbot .solo { width: 100%; min-height: 52px; font-size: 16px; }
 </style>

@@ -4,6 +4,7 @@
 //   → 서버: bonus/1-3/{n}/board 한 줄씩 · boardStar · classWar 반 합 = 세 명 공적 합 · 글 done
 //   NODE_PATH=$(npm root -g) node tools/e2e/atb48-emu.cjs <그림 폴더> [폰 수 2~4 · 기본 3] [반 · 기본 1-3 · 1-6 = 🧪 테스트 반도 새 전투 · 기록 · 공적 0 (#65-1)]
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.', N = Number(process.argv[3] || 3), CLS = process.argv[4] || '1-3', CK = CLS.replace('-', '_'), BETA = CLS === '1-6', B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -22,7 +23,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest('', 'DELETE'); await fetch('http://127.0.0.1:9099/emulator/v1/projects/demo-citadel-test/accounts', { method: 'DELETE' }).catch(() => {});
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const A = await open(); await signup(A, CLS, 1); await board(A);
-  await A.click('[data-map="6"]'); await wait(300);
+  await A.click('[data-k="board-tab-make"]'); await A.click('[data-map="6"]'); await wait(300);
   const h0 = await rest(`accounts/${CLS}/1/hero`);
   ok("고른 차시 카드 위 「🧙 지금 용사 ›」 칩", !!(await A.$("[data-k=\"board-hero\"]")));
   await A.click('[data-k="board-hero"]'); await A.waitForSelector('[data-k="hero-sheet"]', { timeout: 5000 }).catch(() => {}); await A.click('[data-k="hero-sheet"] [data-flt="all"]').catch(() => {}); // 📜 #135 시트 거름 = 모두
@@ -33,7 +34,7 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const h1 = await rest(`accounts/${CLS}/1/hero`);
   ok('고르면 캠프 출전 용사도 바뀜 (서버 accounts/…/hero)', !!other && h1 === other.id, `${h0} → ${h1}`);
   // 팀 모집 글에 들어간 뒤 바꾸기 = 글 mem 용사 · g 갱신
-  await A.click('[data-k="board-post"]'); await wait(2000);
+  await A.click('button:has-text("6차시 팀 모집")'); await A.waitForSelector('.sheet .act .btn'); await A.click('.sheet .act .btn'); await wait(2000);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0];
   const back = cells.find((c) => !c.lock && c.id !== h1);
   ok('모집 대기실에도 「🧙 용사 바꾸기」', !!(await A.$('[data-k="room-hero"]')));

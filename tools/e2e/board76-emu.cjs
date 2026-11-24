@@ -3,6 +3,7 @@
 //   → 움직임을 11분 전으로 → B 게시판이 해산 + 🔒 암호(boardLock) 지움 · 진행 중 글 숨 11분 전 → done + idle
 //   NODE_PATH=$(npm root -g) node tools/e2e/board76-emu.cjs <그림 폴더>
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.';
 const B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
@@ -22,10 +23,10 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   const rune = async (p, s) => { for (const d of s) await p.click(`.sheet .rune-keys button:has-text("${d}")`); };
   const A = await open(); await signup(A, '1-3', 1); const Bp = await open(); await signup(Bp, '1-3', 2);
   await board(A); await board(Bp);
-  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
+  await postTeam(A, 6);
   let posts = await rest('school/board/posts'); const pid = Object.keys(posts || {})[0], hostA = posts[pid].host;
   ok('모집 글 = act · 방장 숨(seen)', !!posts[pid].act && !!posts[pid].mem[hostA].seen);
-  await Bp.waitForTimeout(800); (await Bp.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await Bp.click('[data-k="board-recruit-fold"]')), await Bp.click('.post .go'); await wait(1500);
+  await Bp.waitForTimeout(800); await joinGo(Bp); await wait(1500);
   posts = await rest('school/board/posts'); const uB = Object.keys(posts[pid].mem).find((u) => u !== hostA);
   ok('B 합류', !!uB);
   // A 폰 닫힘 + 숨 2분 전

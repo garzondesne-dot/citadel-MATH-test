@@ -3,6 +3,7 @@
 //   → 서버: bonus/1-3/{n}/board 한 줄씩 · boardStar · classWar 반 합 = 세 명 공적 합 · 글 done
 //   NODE_PATH=$(npm root -g) node tools/e2e/atb48-emu.cjs <그림 폴더> [폰 수 2~4 · 기본 3] [반 · 기본 1-3 · 1-6 = 🧪 테스트 반도 새 전투 · 기록 · 공적 0 (#65-1)]
 const { chromium } = require('playwright');
+const { postTeam, joinTab, joinGo, soloGo } = require('./_board.cjs'); // 📋 📜 11/24 출정 새 화면
 const SHOTS = process.argv[2] || '.', N = Number(process.argv[3] || 3), CLS = process.argv[4] || '1-3', CK = CLS.replace('-', '_'), BETA = CLS === '1-6', B = 'http://localhost:4173/', E = 'emu=127.0.0.1', NS = 'demo-citadel-test-default-rtdb';
 const rest = (path, method = 'GET', body) => fetch(`http://127.0.0.1:9000/${path}.json?ns=${NS}`, { method, headers: { Authorization: 'Bearer owner', 'content-type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }).then((r) => r.json());
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -22,9 +23,9 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   await rest(`school/last/${CLS}`, 'PUT', { lesson: 'set-06', no: 6, at: Date.now(), done: true, code: 'x' });
   const ps = []; for (let i = 1; i <= N; i++) { const p = await open(); await signup(p, CLS, i); await board(p); ps.push(p); }
   const [A, ...others] = ps;
-  await A.click('[data-map=\"6\"]'); await A.click('[data-k=\"board-post\"]'); await wait(1800);
+  await postTeam(A, 6);
   const pid = Object.keys((await rest('school/board/posts')) || {})[0]; ok('모집 글', !!pid);
-  for (const p of others) { await p.waitForSelector('[data-k="board-recruit-fold"]', { timeout: 15000 }).catch(() => {}); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')); await p.waitForSelector('.post .go:not([disabled])', { timeout: 15000 }); (await p.$('[data-k="board-recruit-fold"][aria-expanded="false"]') && await p.click('[data-k="board-recruit-fold"]')), await p.click('.post .go'); await wait(1200); }
+  for (const p of others) { await joinGo(p); await wait(1200); }
   for (const p of others) { const r = await p.$('button:has-text("준비")'); if (r) await r.click().catch(() => {}); await wait(600); }
   const mem = (await rest(`school/board/posts/${pid}/mem`)) || {};
   ok(`합류 ${N}명 · 용사 정보(g) 같이 씀`, Object.keys(mem).length === N && Object.values(mem).every((m) => m.g && m.g.lv >= 1), Object.values(mem).map((m) => JSON.stringify(m.g)).join(' '));
@@ -61,8 +62,8 @@ const KST = 9 * 3600e3, wk = (t) => { const k = new Date(t + KST), d = (k.getUTC
   const war = await rest(`classWar/${wk(Date.now())}/sum/${CLS}`);
   if (BETA) ok('🧪 테스트 반 = 반 공적 없음', !war, String(war)); else ok('반 공적 = 모두의 공적 합', war === msum && msum > 0, `${war} / ${msum}`);
   const ph = await rest(`school/board/posts/${pid}/phase`); ok('글 done', ph === 'done', ph);
-  const back = await Promise.all(ps.map((p) => p.$('[data-k="board-map"]').then(Boolean)));
-  ok('모든 폰 게시판으로 돌아옴 (출정 지도)', back.every(Boolean), back.join(','));
+  const back = await Promise.all(ps.map((p) => p.$('[data-k="board-go-tabs"], [data-k="board-map"]').then(Boolean)));
+  ok('모든 폰 게시판으로 돌아옴 (출정 탭)', back.every(Boolean), back.join(','));
   await A.screenshot({ path: `${SHOTS}/atb48-back-A.png` });
   await b.close(); console.log(errs.length ? `❌ 실패 ${errs.length}\n${errs.join('\n')}` : '✅ 모두 통과'); process.exit(errs.length ? 1 : 0);
 })();
