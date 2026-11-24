@@ -135,7 +135,7 @@ export interface RageMod { two?: { kinds: AtkKind[]; mul: number }; late?: numbe
 export type MonPoseK = 'idle' | 'attack' | 'hit' | 'down';
 export interface BossCfg { no: number; name: string; sprite: string; /** 🛡 📜 #95 실드 4칸 속성 (보스가 정함 · 약점 계열 둘 포함 · 다섯 중 하나 뺌) */ shield?: Fam[]; /** 🔄 그림이 오른쪽을 보는 자세 = 좌우 반전 (몬스터는 늘 왼쪽 · 용사 쪽을 봄 · 📜 11/20 선생님 「2차시 흑표범 방향 반대」) */ flip?: Partial<Record<MonPoseK, boolean>>;
   weak: [Fam, Fam]; type: string; cycle: AtkKind[]; tele: 'foot' | 'gaze' | 'scale'; sig: Sig; signature: string; shieldDmg?: number; draft?: boolean;
-  /** 이 보스의 공격 이름 (같은 종류 · 다른 이름 · v4) */ names?: Partial<Record<AtkKind, string>>; /** 분노 들어갈 때 · 분노 차례에 붙는 특수 */ rageSpecial?: AtkKind; /** 차시별 분노 */ rageMod?: RageMod }
+  /** 이 보스의 공격 이름 (같은 종류 · 다른 이름 · v4) */ names?: Partial<Record<AtkKind, string>>; /** 분노 들어갈 때 · 분노 차례에 붙는 특수 */ rageSpecial?: AtkKind; /** 차시별 분노 */ rageMod?: RageMod; /** 🏰 성채 레이드 층 보스 */ raid?: RaidCfg }
 export const BOSSES: Record<number, BossCfg> = {
   // 📜 요청 #57 설정표 v4: 차례 고침(모든 보스가 🎯 단일 · 💥 광역 · 🌀 특수를 다 씀) · 약점 = 5계열 6 ~ 7번씩 고르게 · 차시별 분노(rageMod)
   2: { no: 2, name: '숲의 수호자 흑표범', sprite: 'cm5-a:0', weak: ['arms', 'flame'], type: '공격형', cycle: ['smash', 'pounce', 'poison'], tele: 'foot', sig: 'footTarget', signature: '강타 표적', rageSpecial: 'pounce', rageMod: { two: { kinds: ['smash'], mul: 0.7 } } },
@@ -164,6 +164,43 @@ export const SHIELD: Record<number, Fam[]> = {
   14: ['wisdom', 'flame', 'nature', 'mystic'], 15: ['nature', 'mystic', 'arms', 'wisdom'], 16: ['wisdom', 'arms', 'nature', 'mystic'], 17: ['mystic', 'arms', 'flame', 'nature'],
 };
 for (const [n, f] of Object.entries(SHIELD)) { const b = BOSSES[Number(n)]; if (b) b.shield = f; }
+
+/** 🏰 성채 레이드 (📜 11/24 선생님 · DECISIONS 7968385 · 14415bc · 설계 castle-raid/DESIGN-v1 10절 컨펌 8 그대로)
+ *  실드 2막(80% 3칸 ×0.3 → 50% 4칸 ×0.2) · 2막이 뜨는 순간 분노 · 큰 구슬(첫 시도 +2 · 한 번 틀림 +1 · 두 번 이상 0) · 보스 공격 ×1.1 · 체력 ×1.5 · 도망 10분
+ *  🕯 균열 = 사람마다 그 층에서 지거나 도망친 횟수 · 판 = 들어온 사람 중 가장 큰 균열 · 한 번에 체력 −10% (최대 −30%) · 이기면 0 · 균열로 이긴 판 ⭐ 최대 2 */
+export interface RaidAct { at: number; fams: Fam[]; dmg: number; rage?: boolean }
+export interface RaidCfg { floor: 1 | 2 | 3; pack: string; acts: [RaidAct, RaidAct] }
+export const RAID = {
+  orb: [2, 1, 0] as readonly number[],
+  atk: 1.1, hp: 1.5,
+  /** 층마다 체력 맞춤 (봇 보통 50% · 일반 70% · 이긴 판 5.5 ~ 6분 · tools/sim/atb-raid.ts) */
+  floorHp: { 1: 1, 2: 1, 3: 1 } as Record<1 | 2 | 3, number>,
+  cap: { warn: 420, call: 540, end: 600, every: 0.8 }, // 7:00 경고 · 9:00 1분 뒤 · 10:00 도망
+  crack: { step: 0.1, max: 0.3, star: 2 },
+  no: { 1: 101, 2: 102, 3: 103 } as Record<1 | 2 | 3, number>,
+};
+/** 🏰 층 보스 3 (이름 = 컨펌 8 · 그림 = ⏳ 임시: 지금 보스 시트 + 붉은 빛 · 선생님 14415bc ④) */
+export const RAID_BOSSES: Record<1 | 2 | 3, BossCfg> = {
+  1: { no: 101, name: '겹침의 성문지기', sprite: 'bg2:0', weak: ['arms', 'wisdom'], type: '레이드', cycle: ['smash', 'aoe', 'poison'], tele: 'foot', sig: 'footTarget', signature: '실드 2막',
+    raid: { floor: 1, pack: 'eval-1', acts: [{ at: 0.8, fams: ['arms', 'wisdom', 'nature'], dmg: 0.3 }, { at: 0.5, fams: ['flame', 'mystic', 'wisdom', 'arms'], dmg: 0.2, rage: true }] } },
+  2: { no: 102, name: '참과 거짓의 쌍두 기사', sprite: 'bg3:0', weak: ['flame', 'mystic'], type: '레이드', cycle: ['mace', 'confuse', 'aoe'], tele: 'foot', sig: 'footTarget', signature: '실드 2막',
+    raid: { floor: 2, pack: 'eval-2', acts: [{ at: 0.8, fams: ['flame', 'mystic', 'arms'], dmg: 0.3 }, { at: 0.5, fams: ['wisdom', 'nature', 'mystic', 'flame'], dmg: 0.2, rage: true }] } },
+  3: { no: 103, name: '증명의 용왕', sprite: 'bg2:3', weak: ['nature', 'wisdom'], type: '레이드', cycle: ['fire', 'tail', 'aoe'], tele: 'foot', sig: 'footTarget', signature: '실드 2막',
+    raid: { floor: 3, pack: 'eval-3', acts: [{ at: 0.8, fams: ['nature', 'wisdom', 'flame'], dmg: 0.3 }, { at: 0.5, fams: ['arms', 'mystic', 'nature', 'wisdom'], dmg: 0.2, rage: true }] } },
+};
+for (const b of Object.values(RAID_BOSSES)) b.shield = b.raid!.acts[1].fams;
+/* 🏰 층 보스 기본 체력 · 공격 = 일반 차시 평균 × 1.5 · × 1.1 (인원 칸 4개 · 층 맞춤 RAID.floorHp 는 판 시작 때 곱함) */
+{
+  const avg = (xs: number[]) => xs.reduce((a, x) => a + x, 0) / Math.max(1, xs.length), nos = Object.keys(T.bossHpByNo).map(Number).filter((n) => n < 100);
+  for (const f of [1, 2, 3] as const) {
+    const no = RAID.no[f];
+    T.bossHpByNo[no] = [0, 1, 2, 3].map((i) => Math.round(avg(nos.map((n) => T.bossHpByNo[n]![i]!)) * RAID.hp)) as [number, number, number, number];
+    T.bossAtkByNo[no] = +(avg(nos.map((n) => T.bossAtkByNo[n] ?? 1)) * RAID.atk).toFixed(2);
+    T.bossHitByNo[no] = [0, 1, 2, 3].map((i) => +avg(nos.map((n) => T.bossHitByNo[n]?.[i] ?? 1)).toFixed(2)) as [number, number, number, number];
+  }
+}
+/** 🕯 균열 체력 배율 (사람마다 균열 n → 판 = 가장 큰 값) */
+export const crackMul = (n: number) => 1 - Math.min(RAID.crack.max, Math.max(0, n) * RAID.crack.step);
 /** 실드 칸 속성 (설정 없으면 약점 둘 + 나머지 앞 둘) */
 /** 📜 #101 실드 = 2칸 = 보스 약점 계열 2개 (SHIELD 표 앞 둘과 같음) */
 export const shieldOf = (b: BossCfg): Fam[] => b.weak.slice(0, 2);
