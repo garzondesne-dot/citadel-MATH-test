@@ -105,6 +105,7 @@
 
 <div class="fun" role="region" aria-label="쉼터">
   <div class="bar"><div class="tt">{title}</div>{#if isTd || isDrg || isAj || isLg || isAk}{:else if f && f.kind !== 'quiz'}<span class="cnt">🧍 {nAlive} / {f.kind === 'nun' ? Object.keys((nn?.alive) || {}).length + Object.keys(nn?.zz || {}).length : ff?.total}</span>{:else if f}<span class="cnt">🧍 {Object.keys(fv?.[ff?.rk ?? ''] || {}).length} / {nAlive}</span>{/if}</div>
+  {#if (isAk || isLg || isAj) && (f as unknown as { out?: Record<string, true> }).out?.[uid]}<p class="outb" role="status" data-k="fun-out">📵 연결이 끊겨 이번 판은 끝 · 다음 판에 다시 참가해요</p>{/if}<!-- 📵 #14 (📜 11/24 · DECISIONS a61d7d3) 30초 넘게 끊기면 그 판만 아웃 · 점수 · 💎 그대로 -->
   <div class="mid" class:dimd={!!cover}>
     {#if !f}
       <div class="ic">🏕</div><b class="h">잠깐 쉬어 가요</b>
@@ -183,6 +184,7 @@
 
 <style>
   .fun { position: fixed; inset: 0; z-index: 28; background: var(--bg); display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; }
+  .outb { flex: none; margin: 0 var(--s4) var(--s2); padding: var(--s2) var(--s3); border-radius: var(--r); background: var(--surface-2); color: var(--text); font: 700 15px var(--font); text-align: center; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s4); }
   .tt { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cnt { flex: none; background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }

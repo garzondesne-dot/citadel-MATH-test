@@ -96,6 +96,33 @@ export const nunPress = (S: Store, code: string, g: number, rd: number, uid: str
 export const nunCheer = (S: Store, code: string, g: number, uid: string, e: string) => S.set(P(code, `nunE/${g}/${uid}`), { e, at: S.now() });
 
 /** 시계 한 번 (TV · 교사 폰이 0.15초마다 부름) — 맡은 기기만 씀 · true = 이 기기가 맡음 */
+/** 📵 🔨 #14 (📜 11/24 선생님 「중간에 접속 끊기면 아웃 처리해 줘」 · DECISIONS a61d7d3): 🥏 🏁 😆 판에서 접속(📵 · 📶✕ 판정 그대로)이 OUT_MS 넘게 끊기면 그 판만 아웃
+ *  = 알 · 칸 · 차례 · 답에서 빠짐 · 그때까지 점수 · 💎 그대로 · 다음 판은 다시 참가 · fun.off = 끊긴 첫 시각 · fun.out = 아웃 (폰 = 「연결이 끊겨 이번 판은 끝」) */
+export const OUT_MS = 30_000;
+const notOut = <T>(m: Record<string, T> | null | undefined, f: AnyFun): Record<string, T> | null => { const o = (f as { out?: Record<string, true> }).out; if (!m) return null; if (!o) return m; return Object.fromEntries(Object.entries(m).filter(([u]) => !o[u])); };
+function playersOf(f: AnyFun): string[] | null {
+  if (f.kind === 'ak') return f.phase === 'ready' || f.phase === 'play' ? Object.keys((f as unknown as Ak).st || {}) : null;
+  if (f.kind === 'lg') return f.phase === 'ready' || f.phase === 'pick' || f.phase === 'move' ? Object.keys((f as unknown as Lg).team || {}) : null;
+  if (f.kind === 'aj') return f.phase === 'intro' || f.phase === 'q' || f.phase === 'show' ? Object.keys((f as unknown as Aj).alive || {}) : null;
+  return null;
+}
+/** 끊긴 시각 적기 · 30초 넘으면 아웃 (바뀐 게 없으면 null) */
+export function dropOff(R: Room, f: AnyFun, now: number): AnyFun | null {
+  const ps = playersOf(f); if (!ps) return null;
+  const x = f as AnyFun & { off?: Record<string, number>; out?: Record<string, true> }, on = new Set(studentsIn(R, now)), off = { ...(x.off || {}) }, out = { ...(x.out || {}) };
+  let ch = false; const gone: string[] = [];
+  for (const u of ps) {
+    if (out[u]) continue;
+    if (on.has(u)) { if (off[u] != null) { delete off[u]; ch = true; } continue; }
+    if (off[u] == null) { off[u] = now; ch = true; continue; }
+    if (now - off[u]! >= OUT_MS) { out[u] = true; delete off[u]; gone.push(u); ch = true; }
+  }
+  if (!ch) return null;
+  const y = { ...x, off, out } as AnyFun & { off: Record<string, number>; out: Record<string, true> };
+  if (gone.length && f.kind === 'ak') { const k = y as unknown as Ak; k.st = { ...k.st }; for (const u of gone) if (k.st[u]) k.st[u] = { ...k.st[u]!, on: 0, back: 1e9, vx: 0, vy: 0 }; } // 🥏 알 = 판에서 내림 · 되살아나지 않음 · 점수 · 순위는 남음
+  if (gone.length && f.kind === 'aj') { const a = y as unknown as Aj; a.alive = Object.fromEntries(Object.entries(a.alive || {}).filter(([u]) => !gone.includes(u))) as Record<string, true>; } // 😆 「모두 맞힘」 셈에서 빠짐 · 점수는 남음
+  return y;
+}
 export function tick(S: Store, code: string, me: string): boolean {
   const R = S.get<Room>(roomPath(code)), f = funOf(R), now = S.now();
   if (!R || !f || (f.kind as Game) === 'td') return false;
@@ -119,14 +146,14 @@ export function tick(S: Store, code: string, me: string): boolean {
     if (nx && d.phase === 'intro' && d.round === 1 && (nx as unknown as Drg).phase === 'play') { const n2 = nx as unknown as Drg, add = studentsIn(R, now).filter((u) => !n2.alive?.[u]); if (add.length) { n2.alive = { ...(n2.alive || {}), ...Object.fromEntries(add.map((u) => [u, 1 as const])) }; n2.total = Object.keys(n2.alive).length; } }
   } else if (f.kind === 'lg') {
     const l = f as unknown as Lg, fv = (R as unknown as { fv?: Record<string, Record<string, number | string>> }).fv;
-    nx = stepLg(l, fv?.[rkJoin(l.g)] ?? null, l.phase === 'pick' ? fv?.[rkTurn(l.g, l.turn)] ?? null : null, now) as unknown as AnyFun | null;
+    nx = stepLg(l, fv?.[rkJoin(l.g)] ?? null, l.phase === 'pick' ? notOut(fv?.[rkTurn(l.g, l.turn)], f) : null, now) as unknown as AnyFun | null;
   } else if (f.kind === 'ak') {
     const k = f as unknown as Ak, fv = (R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv;
-    nx = stepAk(k, fv?.[akJoinK(k.g)] ?? null, (fv?.[rkShot(k.g)] as Record<string, Shot> | undefined) ?? null, now) as unknown as AnyFun | null;
+    nx = stepAk(k, fv?.[akJoinK(k.g)] ?? null, notOut(fv?.[rkShot(k.g)] as Record<string, Shot> | undefined, f), now) as unknown as AnyFun | null;
   } else if (f.kind === 'aj') {
-    const a = f as unknown as Aj; nx = stepAj(a, ((R as unknown as { fv?: Record<string, Record<string, Ans>> }).fv?.[a.rk]) ?? null, now) as unknown as AnyFun | null;
+    const a = f as unknown as Aj; nx = stepAj(a, notOut((R as unknown as { fv?: Record<string, Record<string, Ans>> }).fv?.[a.rk], f), now) as unknown as AnyFun | null;
     if (nx && (nx as unknown as Aj).phase === 'end' && !ajNoSave(S, R)) { const r = (nx as unknown as Aj).round || 1; S.set(ajPath(R), nextRound(r)); if (r >= AJ.rounds) S.set(`${ajPath(R)}Done`, (Number(S.get(`${ajPath(R)}Done`)) || 0) + 1); } // 📜 판을 끝까지 = 다음 회차 · 8회 끝 = 한 바퀴
-    if (nx) { const n2 = nx as unknown as Aj, add = studentsIn(R, now).filter((u) => !n2.alive?.[u]); if (add.length) { n2.alive = { ...(n2.alive || {}), ...Object.fromEntries(add.map((u) => [u, true as const])) }; n2.total = Object.keys(n2.alive).length; } } // 😆 늦게 들어온 학생도 다음 문제부터 함께 (모두 맞힘 = 바로 공개 셈에 들어감)
+    if (nx) { const n2 = nx as unknown as Aj, add = studentsIn(R, now).filter((u) => !n2.alive?.[u] && !(f as { out?: Record<string, true> }).out?.[u]); if (add.length) { n2.alive = { ...(n2.alive || {}), ...Object.fromEntries(add.map((u) => [u, true as const])) }; n2.total = Object.keys(n2.alive).length; } } // 😆 늦게 들어온 학생도 다음 문제부터 함께 (모두 맞힘 = 바로 공개 셈에 들어감)
   } else if (f.kind === 'nun') {
     const g = (f as Nun).g, rd = (f as Nun).round, x = R as unknown as { nun?: Record<string, Record<string, Record<string, number>>>; nunE?: Record<string, Record<string, { e: string; at: number }>> };
     nx = stepNun(f as Nun, f.phase === 'play' ? x.nun?.[g]?.[rd] ?? {} : {}, now, f.phase === 'show' ? x.nunE?.[g] ?? {} : null) as AnyFun | null;
@@ -136,6 +163,7 @@ export function tick(S: Store, code: string, me: string): boolean {
     if (nx && nx.phase === 'show' && nx.kind !== 'quiz' && !(nx as Fun).rps) tally(S, nx as Fun);
     if (nx && nx.phase === 'pick' && (nx as Fun).n !== ff.n && !(nx as Fun).rps && R.meta.cls) S.set(`school/funUsed/${ck(R.meta.cls as string)}/${KIND[nx.kind as Kind].pre}${(nx as Fun).qi}`, true);
   }
+  if (f.kind === 'ak' || f.kind === 'lg' || f.kind === 'aj') nx = dropOff(R, nx ?? f, now) ?? nx; // 📵 #14 끊긴 학생 = 30초 뒤 그 판만 아웃
   if (nx) S.set(P(code, 'fun'), { ...nx, drv: { u: me, at: now } });
   else if (!f.drv || f.drv.u !== me || now - f.drv.at > 1200) S.set(P(code, 'fun/drv'), { u: me, at: now });
   return true;
