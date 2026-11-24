@@ -15,7 +15,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_ID, bossDrop, bossHp, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo } from '../../raid/actions';
+  import { appearNow, doorStart, endClass, setDemo, extendTime, hallLobby, nextStep, prevStep, setFocus, setRest, setReview, setSheet, setVideo, setQr } from '../../raid/actions';
   import { items, chainItems, bossItem } from '../../engine/lessons';
   import { clsLabel, isOld, maskName, roster, type Live } from '../../school/school';
   import { COLOR, kindOf, minOf, short } from '../teacher/flow';
@@ -420,6 +420,7 @@
       {#if tvRev.ask}<p class="rq">❓ <SymText text={tvRev.ask} on={false} /></p>{/if}
     </div></div>
   {/if}
+  {#if R?.state.qr && !R.state.closed}<!-- 📷 수업 중 입장 QR (📜 11/24 🔨 #9 ②) · 리모컨 「📷 입장 QR」 · 막대 📷 로 켜고 끔 · 누르면 닫힘 --><button type="button" class="ov qrov" data-k="tv-qr" aria-label="입장 QR 닫기" onclick={() => setQr(S, code, false)}><span class="eqr"><QR text={`${site}?join=${encodeURIComponent(code)}`} size={360} /><small>📱 휴대폰 카메라로 찍어요 · 반 · 번호로 로그인</small><span class="ecode">수업 코드 <b>{code}</b></span></span></button>{/if}
   {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
     <div class="ov rest fun" class:still={fun?.frz != null} class:stg={!!ff && ff.phase !== 'end'} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
@@ -484,6 +485,7 @@
       <button type="button" class="t" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}>📄<small>문제</small></button>
       <button type="button" class="t" class:on={demo} disabled={!mid && step?.kind !== 'boss'} onclick={() => (demo = !demo)}>🎮<small>시연</small></button>
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>
+      <button type="button" class="t" class:on={!!R.state.qr} aria-pressed={!!R.state.qr} data-k="dock-qr" onclick={() => setQr(S, code, !R.state.qr)}>📷<small>입장 QR</small></button>
       <!-- ✔ · 🔎 (📜 2026-11-17 #13 「종합실 리모컨에 체크랑 풀이」): 교사 폰 리모컨과 같은 함수 · 같은 조건 · 같은 글 (🪞) -->
       <!-- 🧭 #24 ⑦ 자리 고정: ✔ · 🔎 늘 같은 자리 · 못 쓸 때 흐림 · ⚙ 에서 끔 = 점선 「꺼짐」(누르면 안내) -->
       {#if feat('cc')}<button type="button" class="t" class:on={ccOnTv} aria-pressed={ccOnTv} data-k="dock-cc" disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccArm = ccTap(S, code, R, step!, now, ccArm))}>✔<small>{ccLabel(R, step, now, ccArm)}</small></button>
@@ -632,6 +634,7 @@
   .rl li.fo { background: #ffe066; box-shadow: 0 0 0 0.3cqw #d9a400; }
   .rl .fl { position: absolute; right: 1cqw; top: -1.6cqh; padding: 0.2cqh 0.8cqw; border-radius: 999px; background: #d9a400; color: #2b1d0e; font-size: var(--tv-small); }
   .rq { margin: 2cqh 0 0 !important; font-size: var(--tv-title) !important; color: #5a3a12; }
+  .qrov { border: 0; color: inherit; font: inherit; cursor: pointer; z-index: 7; } .qrov .eqr { display: flex; } .qrov .eqr small { color: #555; } .qrov .ecode b { text-shadow: none; }
   .ov { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6cqh; text-align: center; background: rgba(5, 6, 10, 0.55); }
   .ov b { font-size: var(--tv-big); text-shadow: 0 4px 0 #000; }
   .ov p { margin: 0; font-size: var(--tv-title); font-weight: 700; }

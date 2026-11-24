@@ -222,7 +222,7 @@ export interface Room {
     /** ✔ 개념 체크 열림 (리모컨 · 30초 · 교사 일찍 닫기) = 단계 id · 연 시각 · 닫는 시각 */ cc?: { id: string; at: number; end: number } | null;
     /** 🎯 복습으로 보낸 몬스터 · 형성평가 (📜 2026-11-16) */ sent?: Record<string, number>;
     /** 🔎 익명 풀이 (📜 2026-11-15 · 리모컨 띄우기 / 내리기 · TV 양피지 카드) = 몬스터 · 문항 · 풀이 번호 */ review?: { mid: string; i: number; k: number } | null;
-    video?: string | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
+    video?: string | null; /** 📷 종합실 입장 QR (🔨 #9) */ qr?: boolean | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
     /** 수업 끝 (닫힘) · ⏯ 닫힌 그때 이어서 자리 */ closed?: boolean; stop?: { step: number; fresh: string | null; done: boolean } | null;
     /** 교실 TV: 교사 캠프 → 「⚔ 던전 입장」 누르면 던전 대기실 */ hall?: 'lobby' | null;
   };
