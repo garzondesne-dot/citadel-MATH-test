@@ -12,12 +12,13 @@
   import { savedTheme, setTheme, THEMES, type Theme } from '../../theme/theme';
   import { lessonLen, setLessonLen } from '../../school/bells';
   import { KNIGHTS, WAR_CFG, knightOf, payOn, warClasses } from '../../board/war';
+  import { EXAM_PATH, EXAM_SPAN, bandText, examDateOf } from '../../school/examEvent';
 
   // ⚙ 교사 폰 상시 설정 (📜 2026-11-17 #21 A · 시안 92y5uHBaWvACKgsCQWU6VF): 모든 탭 오른쪽 위 ⚙ → 아래 시트 하나
   //   교사 계정 · 소리 · 테마 · 앱 설치 · 로그아웃 · 📅 시간표(쓰는 중이면 끄기 한 줄 · 수업 길이) — 옛 「나」 탭 줄을 옮김 (기능 · 저장 그대로)
   const { S, onclose, login0 = false }: { S: Store; onclose: () => void; login0?: boolean } = $props();
   // svelte-ignore state_referenced_locally
-  let page = $state<'main' | 'login' | 'sound' | 'theme' | 'app' | 'out' | 'sched' | 'war'>(login0 ? 'login' : 'main'), ver = $state(0);
+  let page = $state<'main' | 'login' | 'sound' | 'theme' | 'app' | 'out' | 'sched' | 'war' | 'exam'>(login0 ? 'login' : 'main'), ver = $state(0);
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
   let theme = $state<Theme>(savedTheme());
   const themeName = $derived(THEMES.find((x) => x.id === theme)?.name ?? '');
@@ -31,8 +32,11 @@
   const CRESTS = ['🦁', '🦅', '🐻', '🐺', '🦌', '🐉', '🦊', '🐯', '🦉', '🐢', '🦈', '🛡'];
   const knights = $derived.by(() => { void ver; return warClasses(S).map((c) => ({ cls: c, ...knightOf(S, c) })); });
   const pay = $derived.by(() => { void ver; return payOn(S); });
+  // 📄 기말 대비 기간 (📜 11/25): 시험 날짜 한 칸 · 비우면(끄기) 컷인 · 띠 · 하늘 · 모의 시험지 모두 안 보임
+  const exam = $derived.by(() => { void ver; return examDateOf(S); });
+  const setExam = (v: string) => { S.set(EXAM_PATH, v || 'off'); ver++; };
   const setKnight = (c: string, v: { name?: string; crest?: string }) => { const k = knightOf(S, c), name = (v.name ?? k.name).trim().slice(0, 12) || k.name; S.set(`${KNIGHTS}/${c}`, { name, crest: v.crest ?? k.crest }); ver++; };
-  const TT: Record<typeof page, string> = { main: '⚙ 설정', login: '🔐 교사 계정', sound: '🔊 소리 · 교사 폰', theme: '🎨 테마', app: '📲 홈 화면에 추가', out: '🚪 처음 화면으로 갈까요?', war: '⚔ 기사단 토벌 주간', sched: '📅 시간표 · 수업 길이' };
+  const TT: Record<typeof page, string> = { exam: '📄 기말 대비 기간', main: '⚙ 설정', login: '🔐 교사 계정', sound: '🔊 소리 · 교사 폰', theme: '🎨 테마', app: '📲 홈 화면에 추가', out: '🚪 처음 화면으로 갈까요?', war: '⚔ 기사단 토벌 주간', sched: '📅 시간표 · 수업 길이' };
 </script>
 
 <Sheet onclose={() => (page === 'main' ? onclose() : (page = 'main'))} tall={page === 'theme'} mainText={page === 'login' ? (busy ? '…' : '로그인') : page === 'out' ? '' : page === 'main' ? '닫기' : '‹ 설정으로'} mainDisabled={page === 'login' && (busy || !email || pw.length < 6)} onmain={() => (page === 'login' ? teacherIn(false) : page === 'main' ? onclose() : (page = 'main'))}>
@@ -45,6 +49,7 @@
       <button type="button" class="item" data-k="install" disabled={pwa.installed} onclick={async () => { if (!(await install())) page = 'app'; }}><span class="ic">📲</span><span class="tx"><b>{pwa.installed ? '홈 화면 앱으로 열림' : '홈 화면에 추가'}</b><small>{pwa.installed ? BETA ? '「던전 베타」 앱 · 정식 앱과 따로' : '「모두의 던전」 앱' : pwa.prompt ? `누르면 바로 설치 · 「${APP_NAME}」` : pwa.ios ? '아이폰 = 공유 → 홈 화면에 추가' : '앱처럼 바로 열기'}</small></span></button>
       {#if sched}<button type="button" class="item" data-k="set-sched" onclick={() => (page = 'sched')}><span class="ic">📅</span><span class="tx"><b>시간표 쓰는 중</b><small>수업 길이 {len}분 · 끄기</small></span></button>{/if}
       {#if srv && admin}<button type="button" class="item" data-k="set-war" onclick={() => (page = 'war')}><span class="ic">⚔</span><span class="tx"><b>기사단 토벌 주간</b><small>반 이름 · 문장 · 💎 지급 {pay ? '켬' : '끔'}</small></span></button>{/if}
+      <button type="button" class="item" data-k="set-exam" onclick={() => (page = 'exam')}><span class="ic">📄</span><span class="tx"><b>기말 대비 기간</b><small>{exam ? `시험 ${exam} · ${bandText(exam, Date.now()) || '기간 밖'}` : '끔'}</small></span></button>
       <button type="button" class="item" data-k="out" onclick={() => (page = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
     </div>
   {:else if page === 'login'}
@@ -76,6 +81,11 @@
     {/each}
     <button type="button" class="item" class:on={pay} data-k="war-pay" onclick={() => { S.set(WAR_CFG, { pay: !pay }); ver++; }}><span class="ic">💎</span><span class="tx"><b>주간 보상 지급 {pay ? '켬' : '끔'}</b><small>월요일 0시 마감 · 1 · 2 · 3위 반 학생 우편 💎 300 · 150 · 100</small></span></button>
     <p class="outq sm">마감 = 월요일 0시 뒤 처음 켠 교사 기기가 해요 · 🧪 테스트 반은 순위 밖</p>
+  {:else if page === 'exam'}
+    <p class="lab2">시험 날짜 · 그 {EXAM_SPAN}일 전부터 학생 캠프 · 교실 TV 에 띠 · 첫 접속 컷인 · 모의 시험지</p>
+    <input class="fld" type="date" data-k="exam-date" value={exam} aria-label="시험 날짜" onchange={(e) => setExam((e.currentTarget as HTMLInputElement).value)} />
+    <p class="outq sm" data-k="exam-now">{exam ? bandText(exam, Date.now()) || `기간 밖 (${EXAM_SPAN}일 전부터 보여요)` : '꺼져 있어요'}</p>
+    {#if exam}<button type="button" class="item off" data-k="exam-off" onclick={() => setExam('')}><span class="ic">📄</span><span class="tx"><b>기말 대비 끄기</b><small>컷인 · 띠 · 하늘 · 모의 시험지 모두 숨김</small></span></button>{/if}
   {:else if page === 'sched'}
     <p class="lab2">수업 길이 · 모든 교시 같음</p>
     <div class="lrow" data-k="len"><button type="button" aria-label="5분 줄이기" onclick={() => { setLessonLen(S, len - 5); ver++; }}>−5</button><b data-k="len-v">{len}분</b><button type="button" aria-label="5분 늘리기" onclick={() => { setLessonLen(S, len + 5); ver++; }}>+5</button></div>

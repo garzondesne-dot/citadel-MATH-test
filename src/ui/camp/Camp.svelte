@@ -39,6 +39,8 @@
   import WarBar from '../board/WarBar.svelte';
   import ThemePicker from '../ThemePicker.svelte';
   import Wardrobe from './Wardrobe.svelte';
+  import ExamCutin from '../exam/ExamCutin.svelte';
+  import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import CosAura from '../cos/CosAura.svelte';
   import { auraColorOf, cardBgOf, cosWorn } from '../../model/cosmetics';
@@ -116,6 +118,10 @@
   }); // 🧙 교사 캠프 = 교사 「내 용사」 서버 하나 (게시판 · 허수아비 · 성채도 같은 용사)
   // 🧑 실제 학생(서버 계정에 묶임 · 시험 반 · 시험 계정 아님) = 테스트 꼴 아님 (📜 2026-11-15 머리 「정식과 같게」: 테스터 표시 = 시험 반 · 테스트 계정만 · 호칭 = 얻은 것 · 새 계정 시작 💎 0)
   //   교사 캠프 · 🧪 시험 반 · 시험 계정 · 이 기기 체험 = 그대로 테스트 꼴(💎 9,999 · 📜 30 시작 · 호칭 모두)
+  // ⚔ 기말 대비 기간 (📜 11/25 · 머리 🔨): 띠 · 붉은 하늘 · 첫 접속 컷인(기기 · 학생 · 시험 날짜마다 1번) · 체험판 = 숨김
+  const exDate = untrack(() => (trial ? '' : examDateOf(S))), exNow = Date.now(), exOn = !!exDate && inPeriod(exDate, exNow), exBand = exOn ? bandText(exDate, exNow) : '';
+  const exWho = untrack(() => (pupil ? `${pupil.cls}-${pupil.num}` : fromMe0 ? 'teacher' : 'me'));
+  let exCut = $state(untrack(() => exOn && !cutSeen(exWho, exDate)));
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
@@ -578,6 +584,7 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
+    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {EXAM_TXT.sky.color}, transparent 55%)" style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i><button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -613,6 +620,7 @@
   </BottomAction>
 </div>
 
+{#if exCut && exDate}<ExamCutin date={exDate} ondone={() => { markCut(exWho, exDate); exCut = false; }} />{/if}<!-- ⚔ 출정 컷인 (📜 11/25) -->
 {#if awkPop !== null}<AwakenPop hero={awkPop} onclose={() => { markAwkSeen(awkPop!, S); awkPop = null; }} />{/if}
 {#if achQ.length}<AchievePop list={achQ} more={achMore} claim={achClaim} ondone={() => { achQ = []; achMore = 0; }} />{/if}<!-- 🏆 #73 -->
 {#if castleGo != null}
@@ -677,6 +685,17 @@
   <Sheet onclose={() => (sheet = null)} mainText="🚪 처음 화면으로" onmain={logout}>
     {#snippet title()}처음 화면으로 갈까요?{/snippet}
     <p class="outq">다른 반 · 번호로 다시 들어가요 · 내 기록 · 💎 는 그대로예요</p>
+  </Sheet>
+{:else if sheet === 'exam'}
+  <!-- ⚔ 기말 대비 띠 → 혼자 대비 길 (📜 11/25) -->
+  <Sheet onclose={() => (sheet = null)}>
+    {#snippet title()}{exBand}{/snippet}
+    <p class="exsub" data-k="exam-sub">{EXAM_TXT.bandSub}</p>
+    <div class="exgo">
+      {#if feat('citadel')}<button type="button" class="item" data-k="exam-go-castle" onclick={() => (sheet = 'castle')}><span class="ic">🏰</span><span class="tx"><b>성채</b><small>방마다 문제 하나</small></span></button>{/if}
+      {#if feat('scarecrow')}<button type="button" class="item" data-k="exam-go-scare" onclick={() => (sheet = 'review')}><span class="ic">🎯</span><span class="tx"><b>허수아비</b><small>차시 복습 · 숫자 바뀐 판</small></span></button>{/if}
+      {#if !realStu}<button type="button" class="item" data-k="exam-recut" onclick={() => { sheet = null; exCut = true; }}><span class="ic">🎬</span><span class="tx"><b>컷인 다시 보기</b><small>🧪 테스트 · 교사</small></span></button>{/if}
+    </div>
   </Sheet>
 {:else if sheet === 'wardrobe'}
   <!-- 🎨 옷장 (📜 2026-11-25 · 꾸미기 상점 1차) -->
@@ -841,6 +860,11 @@
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
   .prop:active :global(.img) { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
   /* 🏷 #72 이름표 = 물건 아래 작은 둥근 띠 · 글씨 정가운데 · 반투명 어두운 바탕 · 할 일 = 금빛 테두리 + 빨간 숫자 배지 · 💎 칩 = 바로 아래 */
+  .exsub { margin: 0 0 12px; color: var(--text-2); font-size: 15px; }
+  .exgo { display: grid; gap: 8px; }
+  .exgo .item { min-height: 56px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
+  .exgo .item:active { transform: translateY(2px); box-shadow: none; }
+  .exgo .ic { font-size: 22px; } .exgo .tx { display: flex; flex-direction: column; } .exgo .tx small { color: var(--text-2); font-size: 13px; }
   .wardz { position: absolute; z-index: 7; transform: translateX(-50%); width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255, 210, 90, 0.85); background: radial-gradient(circle at 40% 35%, #4a3a68, #221a33); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 210, 90, 0.35); display: grid; place-items: center; padding: 0; } /* 🎨 옷장 = 그림 오기 전 아이콘 */
   .wardz > i { font-size: 22px; font-style: normal; line-height: 1; }
   .wardz:active { transform: translateX(-50%) translateY(2px); box-shadow: none; }
@@ -921,7 +945,10 @@
   .nextbtn i { font-style: normal; color: var(--text-2); }
   .nextbtn:active { transform: translateY(2px); box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
-  .svband { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
+  .exband { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 29; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 2px solid #ff8a8a; background: linear-gradient(90deg, #7a0d12, #c8232a, #7a0d12); color: #fff; font: 800 15px var(--font); box-shadow: 0 3px 0 #3a0003, 0 0 14px rgba(255, 60, 60, 0.6); white-space: nowrap; animation: exb 2.4s ease-in-out infinite; } /* ⚔ 기말 D-day 띠 */
+  @keyframes exb { 0%, 100% { box-shadow: 0 3px 0 #3a0003, 0 0 8px rgba(255, 60, 60, 0.45); } 50% { box-shadow: 0 3px 0 #3a0003, 0 0 20px rgba(255, 60, 60, 0.9); } }
+  .exsky { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .svband { position: absolute; left: 50%; top: 104px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
   .pwl { display: flex; flex-direction: column; gap: 4px; font: 600 14px var(--font); color: var(--text-2); margin-bottom: 10px; } .pwi { min-height: 48px; border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 22px var(--font); letter-spacing: 0.4em; text-align: center; } .pwm { color: var(--bad); font-weight: 700; }
   .svbtn { display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r); border: 2px solid var(--accent); background: var(--surface); color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }
   .svbtn:active { transform: translateY(2px); box-shadow: none; }

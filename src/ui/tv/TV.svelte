@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { bandText, examDateOf } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import { cosClean } from '../../model/cosmetics';
   import WarBar from '../board/WarBar.svelte';
@@ -118,6 +119,7 @@
   const left = $derived(R ? timeLeft(R, now) : null);
   const closeAt = $derived(R?.state.deadline ? R.state.deadline + (Number(R.state.extend) || 0) * 60e3 : null);
   const started = $derived(R?.state.stepAt && !isLobby(R as Room) ? (R as Room).state.stepAt : null);
+  const tvExam = $derived.by(() => { if ((R?.meta as { trial?: boolean } | undefined)?.trial) return ''; const d = examDateOf(S); return d ? bandText(d, Date.now()) : ''; }); // ⚔ 기말 D-day 띠 (체험판 = 숨김)
   const nameOf = (u: string) => { const p = pupils.find((x) => x.uid === u); return p ? `${p.num} ${p.name}` : R?.players?.[u]?.nick ?? u; };
   const submitted = (u: string) => !!R && !!step && (step.kind === 'boss' ? bossState(L, R, u).some((x) => x.n > 0) : mid ? (chain ? chainRecord(L, R, mid, u).submitted : plainRecord(L, R, mid, u).submitted) : false);
   const lost = $derived(R ? Object.keys(R.players || {}).filter((u) => !R.players?.[u]?.teacher && !inSet.has(u) && !absent[u]) : []);
@@ -386,6 +388,7 @@
   {:else if view === 'lobby'}
     <!-- ⚔ 던전 대기실: 선생님 용사 둘레에 학생 용사 두 줄 · 선생님 말풍선 -->
     <!-- 🐞 2026-11-15 「교사 위치 · 크기」: 선생님 = 앞쪽 바닥 · 학생의 1.15배 · 말풍선은 옆(후광과 안 겹침) / 학생 = 뒤쪽 줄 · 대기실 폭에 맞춘 크기 · 명단 밖 접속(그 밖)도 줄에 -->
+    {#if tvExam}<p class="exband-tv" data-k="tv-exam-band">{tvExam}</p>{/if}<!-- ⚔ 기말 D-day 띠 (📜 11/25 · 입장 대기 = 던전 대기실) -->
     <div class="lring" bind:clientWidth={lobbyW}>
       <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{expOf(R, p.uid) ? '🔥 ' : ''}{p.num} <NameTag name={p.name} on={cosClean((R?.players?.[p.uid] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span><NameTag name={nameOf(u)} on={cosClean((R?.players?.[u] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}</div>
       <div class="tchr"><HeroSprite id={meLookId(M.me)} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
@@ -546,6 +549,7 @@
 </div>
 
 <style>
+  .exband-tv { position: absolute; left: 50%; top: 2%; transform: translateX(-50%); z-index: 6; margin: 0; padding: 0.4em 1.4em; border-radius: 999px; border: 3px solid #ff8a8a; background: linear-gradient(90deg, #7a0d12, #c8232a, #7a0d12); color: #fff; font: 900 clamp(20px, 2.4vw, 40px) var(--font); box-shadow: 0 0 22px rgba(255, 60, 60, 0.7); white-space: nowrap; }
   /* 📺 TV 글자 = 한 글꼴(테마 토큰 --font) · 크기 4단계 · 굵기 2단계(500 · 700) (#157 · arena/layout TV_FS 와 같은 값) */
   /* 📺 16:9 무대 (📜 2026-11-13 밤 선생님 「화면마다 비율이 달라도 16:9 에 맞춰 정돈」): 창이 어떤 비율이든 가운데 16:9 틀 하나 · 남는 곳 = 흐린 캠프 바탕(.tvout) · 모든 TV 화면이 이 틀 */
   .tvout { position: fixed; inset: 0; background: #0b0a08 center / cover no-repeat; filter: blur(18px) brightness(0.45); transform: scale(1.06); }
