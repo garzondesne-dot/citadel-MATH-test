@@ -25,11 +25,11 @@ describe('🏰 성채 레이드 엔진', () => {
   });
   it('체력 = 일반 차시 평균 × 1.5 · 공격 = × 1.1 · 🕯 균열 −10% 씩 최대 −30%', () => {
     const nos = Object.keys(T.bossHpByNo).map(Number).filter((n) => n < 100), avg4 = nos.reduce((a, n) => a + T.bossHpByNo[n]![3], 0) / nos.length;
-    expect(Math.abs(raid().bossMax - avg4 * RAID.hp * RAID.floorHp[1])).toBeLessThanOrEqual(2);
+    expect(Math.abs(raid().bossMax - avg4 * RAID.hp * RAID.floorHp[1])).toBeLessThanOrEqual(2); expect([RAID.floorHp[1], RAID.floorHp[2], RAID.floorHp[3]]).toEqual([2.03, 1.82, 2.22]);
     expect([crackMul(0), crackMul(1), crackMul(2), crackMul(3), crackMul(5)]).toEqual([1, 0.9, 0.8, 0.7, 0.7]);
     expect(raid(1, crackMul(2)).bossMax).toBe(Math.round(raid().bossMax * 0.8));
     const atk = nos.reduce((a, n) => a + (T.bossAtkByNo[n] ?? 1), 0) / nos.length;
-    expect(T.bossAtkByNo[101]).toBeCloseTo(atk * 1.1, 1);
+    expect(T.bossAtkByNo[101]).toBeCloseTo(atk * 1.1 * 0.6, 1); expect(T.bossAtkByNo[102]).toBeCloseTo(atk * 1.1 * 1.3, 1); expect(T.bossAtkByNo[103]).toBeCloseTo(atk * 1.1 * 0.8, 1); // 📜 274cb46 층마다 공격
   });
   it('실드 1막 = 80% · 3칸 · 피해 ×0.3 · 앞 막이 남으면 2막 안 뜸 · 다 깨면 50% 에서 2막 4칸 ×0.2 + 분노', () => {
     const S = raid();

@@ -174,7 +174,9 @@ export const RAID = {
   orb: [2, 1, 0] as readonly number[],
   atk: 1.1, hp: 1.5,
   /** 층마다 체력 맞춤 (봇 보통 50% · 일반 70% · 이긴 판 5.5 ~ 6분 · tools/sim/atb-raid.ts) */
-  floorHp: { 1: 1, 2: 1, 3: 1 } as Record<1 | 2 | 3, number>,
+  floorHp: { 1: 2.03, 2: 1.82, 3: 2.22 } as Record<1 | 2 | 3, number>,
+  /** 층마다 공격 (📜 11/24 선생님 A · DECISIONS 274cb46 · ×1.1 위에 곱함 = 1층 ×0.66 · 2층 ×1.43 · 3층 ×0.88 · docs/board-atb/TUNE-RAID-1124.md) */
+  floorAtk: { 1: 0.6, 2: 1.3, 3: 0.8 } as Record<1 | 2 | 3, number>,
   cap: { warn: 420, call: 540, end: 600, every: 0.8 }, // 7:00 경고 · 9:00 1분 뒤 · 10:00 도망
   crack: { step: 0.1, max: 0.3, star: 2 },
   no: { 1: 101, 2: 102, 3: 103 } as Record<1 | 2 | 3, number>,
@@ -195,7 +197,7 @@ for (const b of Object.values(RAID_BOSSES)) b.shield = b.raid!.acts[1].fams;
   for (const f of [1, 2, 3] as const) {
     const no = RAID.no[f];
     T.bossHpByNo[no] = [0, 1, 2, 3].map((i) => Math.round(avg(nos.map((n) => T.bossHpByNo[n]![i]!)) * RAID.hp)) as [number, number, number, number];
-    T.bossAtkByNo[no] = +(avg(nos.map((n) => T.bossAtkByNo[n] ?? 1)) * RAID.atk).toFixed(2);
+    T.bossAtkByNo[no] = +(avg(nos.map((n) => T.bossAtkByNo[n] ?? 1)) * RAID.atk * RAID.floorAtk[f]).toFixed(2);
     T.bossHitByNo[no] = [0, 1, 2, 3].map((i) => +avg(nos.map((n) => T.bossHitByNo[n]?.[i] ?? 1)).toFixed(2)) as [number, number, number, number];
   }
 }
