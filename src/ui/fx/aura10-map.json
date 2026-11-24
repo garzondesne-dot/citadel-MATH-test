@@ -11,13 +11,13 @@
   "cell": 160,
   "scale": 1.05
  },
- "hero-elf-v7.webp": {
+ "hero-elf-v11.webp": {
   "src": "aura10-elf-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-ninja-v7.webp": {
+ "hero-ninja-v11.webp": {
   "src": "aura10-ninja-v1.webp",
   "frames": 8,
   "cell": 160,
@@ -47,7 +47,7 @@
   "cell": 160,
   "scale": 1.0
  },
- "hero-paladin-v7.webp": {
+ "hero-paladin-v11.webp": {
   "src": "aura10-paladin-v1.webp",
   "frames": 8,
   "cell": 160,
@@ -65,7 +65,7 @@
   "cell": 160,
   "scale": 0.9
  },
- "hero-bard-v7.webp": {
+ "hero-bard-v11.webp": {
   "src": "aura10-bard-v1.webp",
   "frames": 8,
   "cell": 160,
@@ -77,7 +77,7 @@
   "cell": 160,
   "scale": 1.05
  },
- "hero-pirate-v7.webp": {
+ "hero-pirate-v11.webp": {
   "src": "aura10-pirate-v1.webp",
   "frames": 8,
   "cell": 160,
@@ -125,19 +125,19 @@
   "cell": 160,
   "scale": 1.15
  },
- "hero-hacker-v7.webp": {
+ "hero-hacker-v11.webp": {
   "src": "aura10-hacker-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.95
  },
- "hero-dragoon-v7.webp": {
+ "hero-dragoon-v11.webp": {
   "src": "aura10-dragoon-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 1.0
  },
- "hero-spellblade-v7.webp": {
+ "hero-spellblade-v11.webp": {
   "src": "aura10-spellblade-v7.webp",
   "frames": 8,
   "cell": 160,
@@ -167,13 +167,13 @@
   "cell": 160,
   "scale": 0.95
  },
- "hero-merchant-v7.webp": {
+ "hero-merchant-v11.webp": {
   "src": "aura10-merchant-v1.webp",
   "frames": 8,
   "cell": 160,
   "scale": 0.9
  },
- "hero-drone-v7.webp": {
+ "hero-drone-v11.webp": {
   "src": "aura10-drone-v1.webp",
   "frames": 8,
   "cell": 160,
