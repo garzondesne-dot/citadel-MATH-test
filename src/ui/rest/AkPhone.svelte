@@ -4,6 +4,7 @@
   import { AK, powerOf, predict, rankAk, viewAt, type Ak, type Stone } from '../../rest/alkkagi';
   import { akJoin, akShoot } from '../../rest/run';
   import { drawAk, fitCam, type Cam, type Dust } from './akDraw';
+  import { AK_ART, artUrl } from '../manifest';
   // 🥏 알까기 난장판 · 학생 폰 (📜 2026-11-24 · 에셋 방 2 시안 v3 alk-ph-1 ~ 3): 모이기 = 「참가」
   //   판 = 내 알을 따라가는 창(판 가운데 쪽으로 40% 당김 · 알 지름 59px) · 왼쪽 ＋ / － / ⛶ 전체 · 두 손가락 = 판만 확대 · 축소 · 창 밖 알 = 가장자리 ▶ + 이름
   //   판 어디든 눌러 뒤로 당겼다 놓기(새총 · 당긴 길이 = 세기 3단 · 화면 px) · 점선(멈출 자리 · 처음 부딪히는 알과 밀려갈 방향 · 판 밖 = 빨강) · 쏜 뒤 4초 = 파란 고리
@@ -102,7 +103,7 @@
       <p class="rule">떨어뜨림 {f.kn?.[uid] ?? 0} · 떨어짐 {f.fall?.[uid] ?? 0}</p>
     {:else}
       <div class="wrap">
-        <canvas bind:this={cv} class="board" data-k="ak-board" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={(e) => { ptrs.delete(e.pointerId); drag = null; }} aria-label="알까기 판 · 눌러서 뒤로 당겼다 놓아요"></canvas>
+        <canvas style:--akbg={AK_ART.bg ? `linear-gradient(rgba(10, 8, 14, 0.55), rgba(10, 8, 14, 0.55)), url(${artUrl(AK_ART.bg)})` : 'none'} bind:this={cv} class="board" data-k="ak-board" onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={(e) => { ptrs.delete(e.pointerId); drag = null; }} aria-label="알까기 판 · 눌러서 뒤로 당겼다 놓아요"></canvas>
         <div class="zoom" data-k="ak-zoom"><button type="button" aria-label="확대" onclick={() => (zoom = clampZ(zoom * 1.25))}>＋</button><button type="button" aria-label="축소" onclick={() => (zoom = clampZ(zoom / 1.25))}>－</button><button type="button" class:on={mode === 'all'} aria-label="판 전체" data-k="ak-all" onclick={() => { mode = mode === 'all' ? 'follow' : 'all'; zoom = 1; }}>⛶</button></div>
         {#if mode === 'all'}<p class="tip">내 알을 누르면 다시 따라가요</p>{/if}
         {#if backIn}<div class="fall" data-k="ak-fall"><b>{backIn}</b><span>{fallMsg || '떨어졌어요'}</span></div>{/if}
@@ -119,7 +120,7 @@
   .rule { margin: 0; font: 600 15px/1.5 var(--font); color: var(--text-2); } .ok { margin: 0; font: 700 16px var(--font); color: var(--ok); }
   .big { min-height: 64px; padding: 0 var(--s6); border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 900 22px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .wrap { position: relative; width: min(100vw, 560px); margin-inline: calc((100% - min(100vw, 560px)) / 2); aspect-ratio: 1; } /* 🔨 #17 폰 = 원판이 화면 폭 꽉 (옆 여백까지 · 넓은 화면은 560) */
-  .board { width: 100%; height: 100%; touch-action: none; display: block; border-radius: 0; background: #1a1410; }
+  .board { width: 100%; height: 100%; touch-action: none; display: block; border-radius: 0; background: #1a1410 var(--akbg) center / cover no-repeat; } /* 🎨 11/24 종합실과 같은 배경 · 어둡게 */
   .zoom { position: absolute; left: 8px; top: 8px; display: grid; gap: 6px; }
   .zoom button { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: rgba(15, 17, 21, 0.78); color: #fff; font: 800 20px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .zoom button.on { background: var(--accent); color: var(--on-accent); }
   .tip { position: absolute; left: 0; right: 0; bottom: 8px; margin: 0; text-align: center; font: 700 14px var(--font); color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }

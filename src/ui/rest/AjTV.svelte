@@ -41,13 +41,13 @@
 
 <style>
   /* 🔨 #18 ①: 왼쪽 21% = 현자 전용 칸(아래) · 나머지 = 위 → 아래로 문제 · 빈칸 · 맞힌 순서 · 용사 줄 (서로 안 겹침 · 아래 놀이 막대 자리 비움) */
-  .atv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; color: #fff; padding: 2cqh 3cqw 11cqh 21cqw; gap: 2cqh; text-align: center; container-type: size; }
+  .atv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; color: #fff; padding: 2cqh 3cqw 11cqh 25cqw; text-shadow: 0 0.3cqh 0.6cqh #000; gap: 2cqh; text-align: center; container-type: size; }
   .top { display: flex; justify-content: center; align-items: baseline; gap: 2cqw; font: 900 5cqh var(--font); }
   .sec { color: var(--accent); font-variant-numeric: tabular-nums; }
   .rule { margin: auto 0; max-width: 90%; font: 800 4.4cqh/1.5 var(--font); }
   .q { position: relative; margin: 0; padding: 2cqh 3cqw; border-radius: 2.4cqh; background: #fff7e0; color: #2a1f14; box-shadow: 0 0.8cqh 0 rgba(0, 0, 0, 0.35); font: 900 9.5cqh/1.25 var(--font); max-width: 92%; }
   .q::before { content: ''; position: absolute; left: -2.4cqh; bottom: 2cqh; border: 1.4cqh solid transparent; border-right: 2.4cqh solid #fff7e0; border-left: 0; } /* 말풍선 꼬리 = 현자 쪽 */
-  .host { position: absolute; left: 0; bottom: 11cqh; width: 21cqw; display: flex; justify-content: center; pointer-events: none; }
+  .host { position: absolute; left: 8cqw; bottom: 14cqh; width: 18cqw; /* 🎨 무대(mg-o-ajae-stage) 스포트라이트 자리 */ display: flex; justify-content: center; pointer-events: none; }
   .party { margin-top: auto; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-end; gap: 0 0.3cqw; max-height: 27cqh; overflow: hidden; }
   .party i { opacity: 0.35; filter: grayscale(0.7); transition: opacity 0.2s; } .party i.lit { opacity: 1; filter: none; }
   .ans { margin: 0; font: 900 11cqh var(--font); color: var(--accent); } .why { margin: 0; max-width: 92%; font: 700 4.4cqh var(--font); opacity: 0.9; }

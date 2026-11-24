@@ -62,7 +62,7 @@
   import type { Aj } from '../../rest/ajae';
   import type { Drg } from '../../rest/dragon';
   import FUNQ from '../../rest/funq.json';
-  import { artUrl, FUN_BG } from '../manifest';
+  import { artUrl, FUN_BG, FUN_BG_LIGHT } from '../manifest';
   import { balList, KIND, norm, QN, verdict, type Fun, type Kind } from '../../rest/fun';
   import { HINT as NUN_HINT, type Nun } from '../../rest/nunchi';
 
@@ -434,7 +434,7 @@
   {#if R?.state.qr && !R.state.closed}<!-- 📷 수업 중 입장 QR (📜 11/24 🔨 #9 ②) · 리모컨 「📷 입장 QR」 · 막대 📷 로 켜고 끔 · 누르면 닫힘 --><button type="button" class="ov qrov" data-k="tv-qr" aria-label="입장 QR 닫기" onclick={() => setQr(S, code, false)}><span class="eqr"><QR text={`${site}?join=${encodeURIComponent(code)}`} size={360} /><small>📱 휴대폰 카메라로 찍어요 · 반 · 번호로 로그인</small><span class="ecode">수업 코드 <b>{code}</b></span></span></button>{/if}
   {#if R?.state.video && vidOf(L, R.state.video)}<div class="ov vid"><Vid {S} url={vidOf(L, R.state.video) ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
-    <div class="ov rest fun" class:still={fun?.frz != null} class:stg={!!ff && ff.phase !== 'end'} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
+    <div class="ov rest fun" class:still={fun?.frz != null} class:stg={!!ff && ff.phase !== 'end'} style:background-image={fun && FUN_BG[fun.kind] ? `${FUN_BG_LIGHT[fun.kind] ? 'linear-gradient(rgba(8, 10, 14, 0.12), rgba(8, 10, 14, 0.22))' : 'linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72))'}, url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
       {#if fun?.kind === 'td'}
         <TdTV {S} {code} R={R as Room} {now} {nameOf} quiet={!sound} />
       {:else if (fun?.kind as string) === 'lg'}

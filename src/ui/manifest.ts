@@ -249,8 +249,10 @@ export const ICE = {
 /** 🥏 알까기 그림 (📜 11/24 🔨 #17 「원판 제일 크게 · 배경 고화질」): 그림을 바꾸면 여기만 고침
  *   board = 원판 그림(정사각) · ring = 그림 폭 중 원판 지름 비율(떨어지는 선 = 이 원 · 지금 PixelLab 256 = 218/256 = 0.852) · pixel = 도트 그림(확대 때 뭉개지 않음 · 고해상 그림이면 false)
  *   bg = 종합실 배경(1920×1080 · 비면 기본 바탕) — 🎨 v51 mg-o-alk-board(2048) · mg-o-alk-bg(1920×1080) 받으면 board · ring · pixel · bg 만 바꿈 */
-export const AK_ART: { board: string; ring: number; pixel: boolean; bg: string } = { board: 'art/minigame/alk-board-v1.webp', ring: 0.852, pixel: true, bg: '' };
-export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}) };
+export const AK_ART: { board: string; ring: number; pixel: boolean; bg: string } = { board: 'art/minigame/alk-board-v2.webp', ring: 0.84, pixel: false, bg: 'art/minigame/alk-bg-v1.webp' }; // 🎨 11/24 mg-o-alk-board(1254 → 1024 · 나무 가장자리 = 그림 폭 84%) · mg-o-alk-bg(1672×941 → 1600)
+export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v1.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
+/** 새 그림 배경(🥏 · 😆)은 어둡게 덮지 않음 (그림 자체가 어두운 쪽을 비워 둠) */
+export const FUN_BG_LIGHT: Record<string, true> = { ak: true, aj: true };
 export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
 /** ⚖ 🔄 ⭕ 쉼터 무대 그림 (정식 manifest fun 그대로 · 📜 2026-11-15 「미니게임 연출 = 정식과 같게」): bg 다리 · plat 발판 2칸(멀쩡 · 금 감) · bgRev 숙소 · bgOx 낭떠러지(수학 OX) · bgQuiz 바닥 다 있음(OX 타임) · ox ⭕ ❌ 발판 + 무너지는 발판 */
 export const FUN_ART = { bg: 'art/fun/fun-arena-v1.webp', plat: 'art/fun/fun-plat-v2.webp', platFrames: 2, bgRev: 'art/fun/fun-dorm-v1.webp', bgOx: 'art/fun/fun-ox-pit-v1.webp', bgQuiz: 'art/fun/fun-ox-safe-v1.webp', ox: { a: 'art/fun/fun-ox-o-v1.webp', b: 'art/fun/fun-ox-x-v1.webp', aBreak: 'art/fun/fun-ox-o-break-v1.webp', bBreak: 'art/fun/fun-ox-x-break-v1.webp' } } as const;
