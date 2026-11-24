@@ -34,7 +34,7 @@ export interface View {
   memos?: { s: Stud; text: string; more: string[] }[];
 }
 export const GROUPS: { name: string; views: [string, string][] }[] = [
-  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전'], ['castle', '성채 던전']] },
+  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전'], ['castle', '성채 던전'], ['mock', '모의전 약점']] },
   { name: '누가 도움이 필요해?', views: [['grid', '한눈에 표'], ['watch', '주의 학생'], ['std', '성취기준'], ['rank', '랭킹']] },
   { name: '기록 남기기', views: [['memo', '세특 메모'], ['photo', '서술형'], ['survey', '설문']] },
 ];
@@ -207,6 +207,15 @@ export function view(S: Store, cls: string, id: string, withX = false, opt = '')
             { t: p(fp), tone: b.firstTotal ? tone(fp) : 'na', v: pv(fp) }, { t: String(b.acts.block), v: b.acts.block }, { t: String(b.acts.rescue), v: b.acts.rescue }, { t: String(b.acts.cut), v: b.acts.cut }, { t: String(b.acts.brk), v: b.acts.brk },
             { t: String(b.merit), v: b.merit }, ...nos.map((n) => ({ t: st(b.stars[n] ?? 0), v: b.stars[n] ?? 0 } as TCell)),
           ] }; }) } };
+    }
+    case 'mock': { // 📄 무지의 마왕 모의전 반 약점 (📜 2026-11-25 선생님 고름 B · 머리 🔨): 차시별 틀린 수 합 = 반 약점 · 개인 점수 · 등수 안 보임 · 기록 = bonus/{반}/{번호}/mock (학생마다 나만 보기)
+      const by: Record<string, number> = {}; let who = 0, tries = 0;
+      for (const s of studs) { const m = S.get<{ tries?: number; wrong?: Record<string, number> }>(`${bonusBase(s.cls, s.n)}/mock`); if (!m?.tries) continue; who++; tries += Number(m.tries) || 0; for (const [lid, n] of Object.entries(m.wrong || {})) by[lid] = (by[lid] || 0) + (Number(n) || 0); }
+      const rows = Object.entries(by).sort((a, b) => b[1] - a[1]), top = rows[0]?.[1] || 1, nameOf = (lid: string) => { const P = PACKS.find((x) => x.id === lid || x.id.replace(/[.#$/[\]]/g, '_') === lid); return P ? `${P.no}차시 ${P.title}` : lid; };
+      return { id, title: '모의전 약점', info: '📄 무지의 마왕 모의전에서 반 전체가 틀린 문항 수를 차시별로 더함 · 많을수록 다시 짚을 차시 · 학생 개인 점수 · 순위는 보이지 않음 · 연습이라 성적 아님',
+        kpis: [{ lab: '도전한 학생', big: `${who}명`, sub: `${studs.length}명 중` }, { lab: '도전 수 합', big: `${tries}번`, sub: '숫자가 바뀌어 여러 번' }],
+        table: { sort: false, head: ['차시', '틀린 문항 합', '많은 정도'], legend: [['ng', '가장 많음'], ['md', '절반 이상'], ['ok', '절반 아래']],
+          rows: rows.length ? rows.map(([lid, n]) => ({ cells: [{ t: nameOf(lid), v: nameOf(lid) }, { t: `${n}개`, v: n }, { t: '■'.repeat(Math.max(1, Math.round((n / top) * 10))), tone: (n === top ? 'ng' : n >= top / 2 ? 'md' : 'ok') as Tone, v: n }] })) : [{ cells: [{ t: '아직 도전한 학생이 없어요', v: '' }, { t: '—', v: null }, { t: '—', v: null }] }] } };
     }
     case 'castle': { // 🏰 #56 덧 성채 던전 진행 (📜 2026-11-21 선생님 「대시보드에 성채 던전 진행 정도도 표시해 줘」): 층마다 깬 방 / 열린 방 · 👑 보스 처치 · 층 완료 · 반 평균
       const Ps = visibleCastles();

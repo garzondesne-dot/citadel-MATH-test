@@ -31,3 +31,18 @@ describe('📄 모의 시험지', () => {
     expect(b).toEqual({ best: 6, tries: 2, at: 2, wrong: { 'set-07': 3, x: 2 } });
   });
 });
+describe('📄 대시보드 「모의전 약점」 (📜 11/25 B)', () => {
+  it('반 전체 차시별 틀린 수 합 · 많은 차시부터 · 학생 이름 · 점수 칸 없음', async () => {
+    const { memoryStore } = await import('../src/store/device');
+    const { view, scope } = await import('../src/school/views');
+    const { bonusBase } = await import('../src/school/castle');
+    const S = memoryStore(), studs = scope(S, '1-3').studs;
+    S.set(`${bonusBase('1-3', studs[0]!.n)}/mock`, { best: 7, tries: 2, wrong: { 'set-07': 2, 'set-09': 1 } });
+    S.set(`${bonusBase('1-3', studs[1]!.n)}/mock`, { best: 9, tries: 1, wrong: { 'set-09': 4 } });
+    const v = view(S, '1-3', 'mock');
+    expect(v.kpis?.[0]?.big).toBe('2명'); expect(v.kpis?.[1]?.big).toBe('3번');
+    const rows = v.table!.rows.map((r) => [String(r.cells[0]!.t), r.cells[1]!.t]);
+    expect(rows[0]![0]).toMatch(/^9차시/); expect(rows[0]![1]).toBe('5개'); expect(rows[1]![1]).toBe('2개');
+    expect(JSON.stringify(v)).not.toContain(studs[0]!.name);
+  });
+});
