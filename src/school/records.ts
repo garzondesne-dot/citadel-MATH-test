@@ -1,18 +1,37 @@
 // 📚 수업 기록 = 정식 꼴 (#163 ③ · 정식 js/raid/result.js summary · note.js) — records/{반}/{번호}/{차시}
 //   mons = { 몬스터: o(첫 시도 다 맞힘) · f(고쳐서 다 맞힘) · x(냈지만 못 다 맞힘) · -(남들은 냈는데 안 냄) · n(아무도 안 함) }
 //   bossM = 형성평가 문항마다 'o · x · - · n' 한 줄 · boss = 맞힌 문항 수(체력 문항까지) · bossN = 체력 문항 수 · won = 보스 처치
+//   tries = { 몬스터: 다 맞힐 때까지 낸 횟수 · boss_i = 형성평가 문항 i } (📜 11/25 선생님 · 머리 🔨 · 🎉 축제의 날 「포기하지 않은 용사」 · 화면 없음)
 //   더한 칸(정식에 없음 · 정식 앱은 무시): right · total = 맞힌 소문제 / 전체 (📋 게시판 수호자 기준) · loot · firstXp 는 있던 값 그대로
 import { ccRecord } from './cc';
 import { keysOf, keyUses, myKeys } from './keys';
 import { helpCount } from './help';
 import { hgOf } from './hintGive';
 import type { LessonPack, Room } from '../model/types';
-import { activeIds, bossHp, bossLive, bossState, bossTries, chainRecord, isChain, itemsFor, mastery, plainRecord, resultOf, healsGivenAll } from '../raid/raid';
+import { activeIds, bossHp, bossLive, bossState, bossTries, chainRecord, chainSubs, isChain, itemsFor, mastery, plainRecord, resultOf, healsGivenAll } from '../raid/raid';
 import { SUBJ } from '../engine/subject';
 
 export type St = 'o' | 'f' | 'x' | '-' | 'n' | 's'; // s = 🎯 수업에서 복습으로 넘어온 문제 (📜 2026-11-16)
 export interface RecRow { at: number; code: string; no: number; mons: Record<string, St>; conc?: Record<string, [number, number]>; names?: Record<string, string>; weak?: string[]; mis?: Record<string, [number, number]>; /** 🔁 고친 소문제 */ fixed?: number; misBase?: Record<string, [number, number]>; boss?: number; bossN?: number; bossM?: string; won?: boolean; miss: string[]; perfects: number; right: number; total: number; loot?: unknown; firstXp?: number; /** 🎯 형성평가를 복습으로 보냄 · 복습에서 풂(시각) */ bossSent?: boolean; bossReview?: number }
 
+/** 🔥 몬스터별 시도 수 (📜 11/25 · 축제의 날 끈기 줄): 일반 = 다 맞힐 때까지 낸 횟수(그 뒤 연습 공격 · 🔥 재도전 판 뺌) · 소레이드 = 진짜 판 단계 제출 수(연습 판 · 풀어 줌 뺌)
+ *  형성평가 = 문항마다 맞힐 때까지 낸 횟수(boss_i) · 안 낸 것 = 칸 없음 · 넘어온 몬스터 = 뺌(원래 차시 몫) */
+export function triesOf(L: LessonPack, R: Room, uid: string): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const s of L.steps) {
+    if (s.kind !== 'monster' || !L.monsters[s.id] || L.carryOf?.[s.id]) continue;
+    let n = 0;
+    if (isChain(L, R, s.id)) n = chainSubs(R, s.id, uid).filter((t) => !t.p && !t.ph).length;
+    else { const tr = plainRecord(L, R, s.id, uid).tries, p = tr.findIndex((t) => t.total > 0 && t.correct === t.total); n = p >= 0 ? p + 1 : tr.length; }
+    if (n) out[s.id] = n;
+  }
+  if (L.boss) {
+    const by: Record<number, { a: number; ok: boolean }[]> = {};
+    for (const t of bossTries(L, R, uid)) (by[t.i] ||= []).push({ a: t.a, ok: t.ok });
+    for (const [i, arr] of Object.entries(by)) { arr.sort((x, y) => x.a - y.a); const p = arr.findIndex((t) => t.ok); out[`boss_${i}`] = p >= 0 ? p + 1 : arr.length; }
+  }
+  return out;
+}
 /** 몬스터 하나 기록 칸 (o 한 번에 · f 고침 · x 틀림 · - 안 냄(다른 친구는 냄) · n 아무도 안 냄) */
 function monSt(L: LessonPack, R: Room, id: string, uid: string, others: string[]): St {
   if (isChain(L, R, id)) {
@@ -53,6 +72,7 @@ export function summaryOf(L: LessonPack, R: Room, uid: string, code: string, now
   { const cc = ccRecord(R, L.steps, uid); if (Object.keys(cc).length) (out as RecRow & { cc?: Record<string, number> }).cc = cc; } // ✔ 개념 체크 (참고 칸 · 성적 아님)
   { const h = helpCount(R, uid); if (h.hints) Object.assign(out, { hints: h.hints, help: h.help }); }
   { const hg = hgOf(R, uid); if (hg) Object.assign(out, { hg }); }
+  { const tr = triesOf(L, R, uid); if (Object.keys(tr).length) (out as RecRow & { tries?: Record<string, number> }).tries = tr; } // 🔥 시도 수 (📜 11/25)
   { const hl = healsGivenAll(R, uid); if (hl) Object.assign(out, { hl }); } // 💚 친구에게 준 힐 수 (📜 11/24 · 대시보드 「💚 힐 준」 · 기록 칸 records/{반}/{번호}/{차시} = 규칙 그대로) // 💡 친구에게 준 힌트 수 (📜 2026-11-17 #23 · 옛 정식 hg · 대시보드 「💡 힌트 준」) // 💡 도움 연 칸 수 · 단계별 (📜 2026-11-17 미래교육상 ① · 옛 정식 hints 칸 · 성적 아님 · 대시보드 「💡 힌트」 · 엑셀 「그림 힌트(소문제)」)
   { const ks = keysOf(L); if (ks.length) { const rows = keyUses(L, R, uid), mk = myKeys(R, uid), got = ks.filter((k) => mk[k.id]);
     (out as RecRow & { keys?: unknown }).keys = { n: ks.length, got: got.length, first: got.filter((k) => mk[k.id]!.ok).length, by: Object.fromEntries(ks.map((k) => [k.id, !mk[k.id] ? '-' : mk[k.id]!.ok ? 'o' : 'x'])), chest: rows.filter((r) => r.chest).length, use: rows.filter((r) => r.have && r.state !== 'none').length, cells: Object.fromEntries(rows.map((r) => [`${r.at}_${r.n}`, `${r.have ? 'k' : '-'}${r.state === 'first' ? 'o' : r.state === 'later' ? 'f' : 'x'}`])) }; } } // 🔑 #59 열쇠: 얻음 · 첫 번에 맞힘 · 상자 · 사용 · 걸린 칸(k/- = 열쇠 있음/없음 · o 첫 시도 · f 나중 · x 못 맞힘)
@@ -114,6 +134,7 @@ export function mergeRow(prev: (Partial<RecRow> & Record<string, unknown>) | nul
   const pb = String(prev.bossM || ''), cb = String(cur.bossM || '');
   if (pb && /[ox]/.test(pb) && !/[ox]/.test(cb)) { out.bossM = pb; out.boss = Number(prev.boss) || 0; out.bossN = Number(prev.bossN) || cur.bossN; out.won = !!prev.won || !!cur.won; } // 이번 수업에서 형성평가를 안 했으면 앞 수업 형성평가 그대로
   else if (pb && cb && /[ox]/.test(pb)) { out.bossM = cb.split('').map((c, i) => (c === 'o' || c === 'x' ? c : pb[i] === 'o' || pb[i] === 'x' ? pb[i]! : c)).join(''); out.boss = out.bossM.slice(0, out.bossN || out.bossM.length).split('').filter((c) => c === 'o').length; }
+  { const pt = (prev as { tries?: Record<string, number> }).tries, ct = (cur as { tries?: Record<string, number> }).tries; if (pt || ct) { const t: Record<string, number> = { ...(pt || {}) }; for (const [k, v] of Object.entries(ct || {})) t[k] = Math.max(Number(t[k]) || 0, v); (out as { tries?: Record<string, number> }).tries = t; } } // 🔥 같은 차시를 다시 하면 큰 값
   if (!cur.total && Number(prev.total)) { out.right = Number(prev.right) || 0; out.total = Number(prev.total) || 0; }
   return out;
 }
