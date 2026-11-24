@@ -118,8 +118,8 @@
   .band { margin: 0; font: 800 16px var(--font); color: var(--text); } .sc { color: var(--accent); }
   .rule { margin: 0; font: 600 15px/1.5 var(--font); color: var(--text-2); } .ok { margin: 0; font: 700 16px var(--font); color: var(--ok); }
   .big { min-height: 64px; padding: 0 var(--s6); border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 900 22px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
-  .wrap { position: relative; width: min(100%, 380px); aspect-ratio: 1; }
-  .board { width: 100%; height: 100%; touch-action: none; display: block; border-radius: var(--r); background: #1a1410; }
+  .wrap { position: relative; width: min(100vw, 560px); margin-inline: calc((100% - min(100vw, 560px)) / 2); aspect-ratio: 1; } /* 🔨 #17 폰 = 원판이 화면 폭 꽉 (옆 여백까지 · 넓은 화면은 560) */
+  .board { width: 100%; height: 100%; touch-action: none; display: block; border-radius: 0; background: #1a1410; }
   .zoom { position: absolute; left: 8px; top: 8px; display: grid; gap: 6px; }
   .zoom button { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: rgba(15, 17, 21, 0.78); color: #fff; font: 800 20px var(--font); box-shadow: 0 3px 0 var(--press-sh); } .zoom button.on { background: var(--accent); color: var(--on-accent); }
   .tip { position: absolute; left: 0; right: 0; bottom: 8px; margin: 0; text-align: center; font: 700 14px var(--font); color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }

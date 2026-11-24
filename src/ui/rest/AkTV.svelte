@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import type { Room } from '../../model/types';
   import { AK, rankAk, viewAt, type Ak } from '../../rest/alkkagi';
-  import { drawAk, type Dust } from './akDraw';
+  import { drawAk, fullCam, type Dust } from './akDraw';
   // 🥏 알까기 난장판 · 종합실 (📜 2026-11-24 · 시안 v3 alk-tv): 왼쪽 = 판 전체(알마다 이름표 · 👑 1등 · 떨어짐 먼지) · 오른쪽 = 남은 시간 · 순위 5줄 · 떨어뜨림 소식
   const { R, f, now, nameOf, clock }: { R: Room; f: Ak; now: number; nameOf: (u: string) => string; clock: () => number } = $props();
   const joinN = $derived(Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`ak${f.g}_j`]) || {}).length);
@@ -15,12 +15,12 @@
   const feed = $derived([...(f.ev || [])].filter((e) => e.k === 'fall' && e.by).slice(-4).reverse());
   let cv = $state<HTMLCanvasElement>(), raf = 0;
   const fit = (c: HTMLCanvasElement) => { const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } };
-  function frame() { raf = requestAnimationFrame(frame); const c = cv; if (!c) return; fit(c); const g = c.getContext('2d'); if (!g) return; const v = viewAt(f, clock()); for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.beat}|${e.u}|${e.t}`; if (!seen.has(key)) { seen.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } } dust = dust.filter((d) => performance.now() - d.t0 < 800); drawAk(g, c.width, c.height, f.R, v.st, { crown: f.crown, label: short, ar: f.ar, dpr: Math.min(2, devicePixelRatio || 1), dust, now: performance.now() }); }
+  function frame() { raf = requestAnimationFrame(frame); const c = cv; if (!c) return; fit(c); const g = c.getContext('2d'); if (!g) return; const v = viewAt(f, clock()); for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.beat}|${e.u}|${e.t}`; if (!seen.has(key)) { seen.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } } dust = dust.filter((d) => performance.now() - d.t0 < 800); drawAk(g, c.width, c.height, f.R, v.st, { cam: fullCam(c.width, c.height, f.R), crown: f.crown, label: short, ar: f.ar, dpr: Math.min(2, devicePixelRatio || 1), dust, now: performance.now() }); }
   onMount(() => { raf = requestAnimationFrame(frame); });
   onDestroy(() => cancelAnimationFrame(raf));
 </script>
 
-<div class="atv" data-k="ak-tv" data-phase={f.phase}>
+<div class="atv" class:on={f.phase !== 'join'} data-k="ak-tv" data-phase={f.phase}>
   {#if f.phase === 'join'}
     <div class="intro">
       <p class="t">🥏 알까기 난장판</p>
@@ -44,8 +44,11 @@
   .intro { display: grid; gap: 2cqh; text-align: center; max-width: 80cqw; }
   .t { margin: 0; font: 900 5cqh var(--font); } .rule { margin: 0; font: 600 2.8cqh/1.5 var(--font); color: #b4b8c2; } .small { font-size: 2.4cqh; }
   .big { margin: 0; font: 900 9cqh var(--font); color: #f5b84a; }
-  .board { height: min(80cqh, 56cqw); aspect-ratio: 1; }
-  .side { display: grid; gap: 2cqh; min-width: 28cqw; }
+  /* 🔨 #17 「원판 제일 크게」: 원판 = 위 진행 띠 · 아래 놀이 막대만 빼고 높이 꽉(정사각) · 오른쪽 좁은 칸 = 남은 시간 · 순위 · 소식 */
+  .atv.on { display: grid; grid-template-columns: auto minmax(0, 27cqw); align-items: center; justify-content: center; gap: 2.5cqw; padding: 0 2cqw 0; }
+  .board { width: min(88cqh, 66cqw); height: min(88cqh, 66cqw); display: block; }
+  .atv.on .board { margin-bottom: 10cqh; } /* 아래 놀이 막대 자리 */
+  .side { display: grid; gap: 2cqh; min-width: 0; }
   .turn { margin: 0; font: 900 6cqh var(--font); color: #f5b84a; font-variant-numeric: tabular-nums; }
   .rank { margin: 0; padding: 0; list-style: none; display: grid; gap: 1cqh; }
   .rank li { display: grid; grid-template-columns: 6cqh 1fr auto; gap: 1cqw; align-items: center; padding: 1cqh 1.5cqw; border-radius: 1.2cqh; background: rgba(255, 255, 255, 0.06); font: 700 3cqh var(--font); }

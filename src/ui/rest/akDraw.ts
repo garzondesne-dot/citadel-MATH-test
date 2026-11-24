@@ -2,6 +2,7 @@
 //   판 = 나무 원판 그림(alk-board-v1) · 알 = 색 동그라미 + 이름표 · 내 알 = 금빛 테두리 · 무적 = 반투명 · 👑 = 1등 · 쉬는 고리(내 알만)
 //   카메라 = 화면 가운데에 둘 판 자리(cx, cy) + 판 1 = k px · 창 밖 알 = 가장자리 ▶ + 이름 · 떨어짐 = 코드 먼지
 import { AK, type Stone } from '../../rest/alkkagi';
+import { AK_ART } from '../manifest';
 
 /** 색 = 판 위 학생을 이름순으로 세운 차례 × 황금각 (모든 기기에서 같은 색 · 이웃끼리 다른 색) */
 export const colorOf = (i: number) => `hsl(${Math.round(i * 137.508) % 360} 70% 55%)`;
@@ -17,9 +18,11 @@ export interface DrawOpt {
 
 /** 판 전체가 들어오는 카메라 (판 반지름 → min(W, H) / 2 × 0.94) */
 export const fitCam = (W: number, H: number, R: number): Cam => ({ cx: 0, cy: 0, k: ((Math.min(W, H) / 2) * 0.94) / R });
+/** 📺 종합실 = 원판 그림 테두리까지 캔버스에 꽉 (🔨 #17 · 떨어지는 선 = 그림 폭 × ring) */
+export const fullCam = (W: number, H: number, R: number): Cam => ({ cx: 0, cy: 0, k: ((Math.min(W, H) / 2) * AK_ART.ring * 0.99) / R });
 
 let boardImg: HTMLImageElement | null = null;
-const board = () => { if (!boardImg && typeof Image !== 'undefined') { boardImg = new Image(); boardImg.src = `${import.meta.env.BASE_URL}art/minigame/alk-board-v1.webp`; } return boardImg; };
+const board = () => { if (!boardImg && typeof Image !== 'undefined') { boardImg = new Image(); boardImg.src = `${import.meta.env.BASE_URL}${AK_ART.board}`; } return boardImg; };
 
 export function drawAk(g: CanvasRenderingContext2D, W: number, H: number, R: number, st: Record<string, Stone>, o: DrawOpt = {}) {
   const cam = o.cam ?? fitCam(W, H, R), k = cam.k, dpr = o.dpr ?? 1, ar = o.ar ?? AK.r;
@@ -28,8 +31,8 @@ export function drawAk(g: CanvasRenderingContext2D, W: number, H: number, R: num
   // 나무 원판 (그림 · 못 받으면 색)
   const bi = board();
   g.save(); g.beginPath(); g.arc(X(0), Y(0), R * k, 0, Math.PI * 2);
-  // 그림 속 원판 = 그림 폭의 85.2%(256 중 지름 218) → 원판 가장자리 = 판 반지름 R (떨어지는 선)
-  if (bi?.complete && bi.naturalWidth) { const S = (R * k * 2) / 0.852; g.imageSmoothingEnabled = false; g.drawImage(bi, X(0) - S / 2, Y(0) - S / 2, S, S); }
+  // 그림 속 원판 = 그림 폭의 AK_ART.ring (지금 85.2% = 256 중 지름 218) → 원판 가장자리 = 판 반지름 R (떨어지는 선)
+  if (bi?.complete && bi.naturalWidth) { const S = (R * k * 2) / AK_ART.ring; g.imageSmoothingEnabled = !AK_ART.pixel; g.imageSmoothingQuality = 'high'; g.drawImage(bi, X(0) - S / 2, Y(0) - S / 2, S, S); }
   else { const grd = g.createRadialGradient(X(0), Y(0), 0, X(0), Y(0), R * k); grd.addColorStop(0, '#c99a5b'); grd.addColorStop(1, '#8a5a2b'); g.fillStyle = grd; g.fill(); g.lineWidth = Math.max(3 * dpr, k * 0.25); g.strokeStyle = '#e5484d'; g.stroke(); }
   g.restore();
   // 미리 보기
