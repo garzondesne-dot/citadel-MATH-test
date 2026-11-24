@@ -3,19 +3,20 @@
   import type { LessonPack, Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import Vid from '../q/Vid.svelte';
-  import { isRtdb } from '../../school/video';
+  import { isRtdb, vidOf, vidsAt } from '../../school/video';
   // 🎬 차시 준비 「영상 n편」 → 칸별 목록 · 누르면 재생 (📜 2026-11-14 · TV 🎬 와 같은 영상 · 같은 부품 Vid)
   const { S, L, onclose }: { S: Store; L: LessonPack; onclose: () => void } = $props();
   const V = untrack(() => L); // 열 때 차시 그대로
-  const rows = V.steps.filter((s) => V.videos?.[s.id]).map((s) => ({ id: s.id, title: s.title.split(' · ')[0] || s.id, sub: s.title.split(' · ').slice(1).join(' · '), url: V.videos![s.id]! }));
+  // 🎬 덧영상 = 같은 칸 둘째 줄 「🎬 2」 (📜 11/24 ❓ #6 A)
+  const rows = V.steps.flatMap((s) => vidsAt(V, s.id).map((v) => ({ id: v.key, title: `${s.title.split(' · ')[0] || s.id}${v.n ? ` · 🎬 ${v.n}` : ''}`, sub: s.title.split(' · ').slice(1).join(' · '), url: vidOf(V, v.key)! })));
   const extra = Object.keys(V.videos ?? {}).filter((c) => !V.steps.some((s) => s.id === c));
-  const files = new Set(Object.values(V.videos ?? {}));
+  const files = new Set([...Object.values(V.videos ?? {}), ...Object.values(V.addVids ?? {})]);
   const fname = (u: string) => (isRtdb(u) ? `${u.replace(/^.*\//, '')} (팩 zip)` : u.replace(/^.*\//, ''));
   let on = $state('');
 </script>
 
 <Sheet {onclose} tall mainText="닫기" onmain={onclose}>
-  {#snippet title()}🎬 {L.no}차시 영상 {files.size}편 · 칸 {rows.length}{/snippet}
+  {#snippet title()}🎬 {L.no}차시 영상 {files.size}편 · 칸 {new Set(rows.map((r) => r.id.replace(/~2$/, ""))).size}{/snippet}
   <div class="vl" data-k="vidlist">
     {#if !rows.length}<p class="no">이 차시에는 연결된 영상이 없어요</p>{/if}
     {#each rows as r (r.id)}

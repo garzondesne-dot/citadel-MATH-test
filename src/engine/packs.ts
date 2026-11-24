@@ -1,5 +1,6 @@
 import type { LessonPack } from '../model/types';
 import { SUBJ } from './subject';
+import { applyAddon } from '../school/video';
 // 🧩 차시 팩 목록 (#132 · #136) — 과목 팩의 차시 모두(SUBJ.lessons) · 차시 번호 순
 //   한 차시 팩을 두 수업으로 (parts): parts 하나 = 목록에 차시 하나 더 (id 「<팩>@<번호>」 · 단계 = from 부터 · 문항 · 생성기 = 같은 팩)
 //   #149 앞수업(팩 id 그대로) = 첫 나눔 칸 앞까지 · 형성평가를 나누면(part.boss = [시작, 끝)) 앞 = [0, 시작) · 뒤 = [시작, 끝) · 안 나누면 형성평가는 뒷수업에만
@@ -23,6 +24,7 @@ export const PACKS: LessonPack[] = [...base, ...parts].sort((a, b) => a.no - b.n
 export const packOf = (id: string | null | undefined): LessonPack | null => PACKS.find((p) => p.id === id) ?? null;
 /** 📦 올린 차시 팩 더하기 (L1 · prep/packs) — 같은 id 는 올린 판이 대신함 · 차시 번호 순 유지 (PACKS 는 같은 배열을 고침) */
 export function addPacks(list: LessonPack[]): void {
+  applyAddon(list); // 🎬 덧영상 = 새로 올린 팩에도 (새로 고침 전)
   for (const p of list) { UPLOADED.add(p.id); const k = PACKS.findIndex((x) => x.id === p.id); if (k >= 0) PACKS.splice(k, 1, p); else PACKS.push(p); }
   PACKS.sort((a, b) => a.no - b.no);
 }

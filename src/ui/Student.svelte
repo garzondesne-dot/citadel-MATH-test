@@ -40,6 +40,7 @@
   import Sheet from './battle/Sheet.svelte';
   import PrepImg from './q/PrepImg.svelte';
   import Vid from './q/Vid.svelte';
+  import { vidOf, vidsAt } from '../school/video';
   import Loot from './result/Loot.svelte';
   import ConceptCheckCard from './q/ConceptCheckCard.svelte';
   import { ccRan } from '../school/cc';
@@ -238,20 +239,20 @@
   const readyNow = $derived(!!(R && scout && R.ready?.[scout.id]?.[uid]));
   const probNo = $derived(step ? (step.kind === 'boss' ? '형성평가' : (/문제 \d+/.exec(step.title) || [step.title])[0]) : '');
   // 📘 이 문제의 개념 (#158): 이 문제 바로 앞 개념 단계의 학습지 칸 그림 (없으면 그 개념 글)
-  let cpt = $state(false), vidOn = $state(false), campArm = $state(false), armT: ReturnType<typeof setTimeout> | undefined;
+  let cpt = $state(false), vidOn = $state(''), campArm = $state(false), armT: ReturnType<typeof setTimeout> | undefined;
   // 🏕 (📜 2026-11-17 #8 「수업 끝나면 선생님이 수업끝 누르기 전까지 아무것도 못함 → 바로 캠프로」): 마무리(결과) 화면에 들어온 뒤 1.5초부터 「🏕 내 캠프로」 · 선생님이 닫을 때 단추가 바뀌지 않음(갑자기 넘어감 막음 그대로)
   // ⚠ 집중 켜지는 순간 (11/17 #6): 경고음 두 번(옛 정식 Sound.warn) + 진동 · 재생 중인 영상 멈춤 · 전체 화면이면 나옴
   const focusOn = $derived(!!R && !R.state.closed && !!R.state.focus && !board && !cardOnly);
   $effect(() => { if (!focusOn) return; untrack(() => {
     try { document.querySelectorAll('video').forEach((v) => v.pause()); if (document.fullscreenElement) void document.exitFullscreen().catch(() => {}); } catch { /* 무시 */ }
-    vidOn = false; cpt = false;
+    vidOn = ''; cpt = false;
     try { navigator.vibrate?.([80, 60, 80]); } catch { /* 무시 */ }
     if (soundPref.sfx) { const a = actx(); if (a) [0, 0.28].forEach((d) => { const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + d; o.type = 'square'; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(660, t + 0.2); g.gain.setValueAtTime(0.14, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.22); }); }
   }); });
   const inEnd = $derived(!!result); // 값이 바뀔 때만 (결과 객체는 R 이 바뀔 때마다 새로 만들어져 타이머가 밀리지 않게)
   $effect(() => { const c = inEnd; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
   const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
-  $effect(() => { void step?.id; vidOn = false; });
+  $effect(() => { void step?.id; vidOn = ''; });
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
   // 📝 공부 증거 한 줄 (B · 2026-11-14): 수업 끝 = 이 수업에서 낸 소문제 수를 그날 칸에 적고 「오늘 푼 문제 n개 · 지난주보다 +k」
   const whoKey = untrack(() => (cls ? `${cls}-${num}` : uid));
@@ -317,7 +318,7 @@
       <b class="ttl">{step.title}</b>
       {#if step.say}<p class="say"><SymText text={step.say} /></p>{/if}
       <PrepImg {S} {L} id={step.img || step.id} fb={step.id} alt={step.title} />
-      {#if L.videos?.[step.id]}<button type="button" class="vbtn" data-k="talk-vid" onclick={() => (vidOn = !vidOn)}>{vidOn ? '🎬 영상 닫기' : '🎬 개념 영상 보기'}</button>{#if vidOn}<Vid {S} url={L.videos[step.id]!} autoplay />{/if}{/if}
+      {#if vidsAt(L, step.id).length}<div class="vbtns">{#each vidsAt(L, step.id) as v (v.key)}<button type="button" class="vbtn" data-k="talk-vid" class:on={vidOn === v.key} onclick={() => (vidOn = vidOn === v.key ? '' : v.key)}>{vidOn === v.key ? '🎬 영상 닫기' : v.n ? `🎬 개념 영상 ${v.n}` : '🎬 개념 영상 보기'}</button>{/each}</div>{#if vidOn && vidOf(L, vidOn)}<Vid {S} url={vidOf(L, vidOn)!} autoplay />{/if}{/if}
       <p class="muted">학습지를 펴고 선생님 설명을 들어요.</p>
     </div>
     <BottomAction text="👂 선생님 설명 듣는 중" why="설명이 끝나면 몬스터가 나타나요" />
@@ -397,6 +398,7 @@
   .revband { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
   .revband b { font-size: 18px; } .revband span { font-size: 15px; color: var(--text-2); }
   .talk .ttl { font-size: 19px; line-height: 1.4; }
+  .talk .vbtns { display: flex; gap: var(--s2); } .talk .vbtns .vbtn { flex: 1; min-width: 0; } .talk .vbtn.on { border-color: var(--accent); }
   .talk .vbtn { min-height: var(--tap); border-radius: var(--r); border: 2px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 16px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .gtoast { position: fixed; left: 50%; top: 210px; transform: translateX(-50%); z-index: 40; padding: 10px 16px; border-radius: 14px; background: rgba(12, 24, 40, 0.92); border: 2px solid #ffd25a; color: #fff6c8; font: 700 16px var(--font); white-space: nowrap; box-shadow: 0 0 18px rgba(255, 210, 90, 0.6); }
   .ptop { position: sticky; top: 0; z-index: 5; max-width: 430px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1.5px solid #1d1d1f; background: #f7f6f1; }

@@ -28,6 +28,7 @@
   import Student from '../Student.svelte';
   import Sheet from '../battle/Sheet.svelte';
   import Vid from '../q/Vid.svelte';
+  import { vidLabel, vidOf, vidsAt } from '../../school/video';
   import PrepImg from '../q/PrepImg.svelte';
   import { busy } from '../busy.svelte';
   import { bump as usageBump } from '../../school/usage';
@@ -218,8 +219,8 @@
     {#snippet title()}📚 {shelf?.no}차시 개념 다시 보기{/snippet}
     <div class="shelf" data-k="dummy-shelf">
       {#each concepts(shelf) as c (c.id)}
-        <div class="cp"><b>{c.title}</b><span class="cpb">{#if shelf.videos?.[c.id]}<button type="button" class="mini" onclick={() => (shelfOn = shelfOn === `v${c.id}` ? '' : `v${c.id}`)}>🎬 영상</button>{/if}<button type="button" class="mini" onclick={() => (shelfOn = shelfOn === `i${c.id}` ? '' : `i${c.id}`)}>📄 학습지</button></span></div>
-        {#if shelfOn === `v${c.id}` && shelf.videos?.[c.id]}<Vid {S} url={shelf.videos[c.id]!} autoplay />{/if}
+        <div class="cp"><b>{c.title}</b><span class="cpb">{#each vidsAt(shelf, c.id) as v (v.key)}<button type="button" class="mini" onclick={() => (shelfOn = shelfOn === `v${v.key}` ? '' : `v${v.key}`)}>{vidLabel(v.n)}</button>{/each}<button type="button" class="mini" onclick={() => (shelfOn = shelfOn === `i${c.id}` ? '' : `i${c.id}`)}>📄 학습지</button></span></div>
+        {#each vidsAt(shelf, c.id) as v (v.key)}{#if shelfOn === `v${v.key}`}<Vid {S} url={vidOf(shelf, v.key)!} autoplay />{/if}{/each}
         {#if shelfOn === `i${c.id}`}<PrepImg {S} L={shelf} id={c.id} alt={c.title}><p class="muted">아직 이 개념의 학습지 그림이 없어요</p></PrepImg>{/if}
       {:else}<p class="muted">이 차시에는 개념 칸이 없어요</p>{/each}
     </div>

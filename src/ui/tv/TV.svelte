@@ -39,6 +39,7 @@
   import SymText from '../q/SymText.svelte';
   import PrepImg from '../q/PrepImg.svelte';
   import Vid from '../q/Vid.svelte';
+  import { vidDockLabel, vidNext, vidOf, vidsAt } from '../../school/video';
   import { duck, hush, setMuteAll, sfx } from '../sound.svelte';
   import { setTeacherSink, teacherLook, TLOOK, type TLook } from '../../store/me.svelte';
   import { conceptParts, problemParts } from './cards';
@@ -430,7 +431,7 @@
       {#if tvRev.ask}<p class="rq">❓ <SymText text={tvRev.ask} on={false} /></p>{/if}
     </div></div>
   {/if}
-  {#if R?.state.video && L.videos?.[R.state.video]}<div class="ov vid"><Vid {S} url={L.videos[R.state.video] ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
+  {#if R?.state.video && vidOf(L, R.state.video)}<div class="ov vid"><Vid {S} url={vidOf(L, R.state.video) ?? ""} autoplay muted={!sound} k="tvvid" /></div>{/if}
   {#if R?.state.rest}
     <div class="ov rest fun" class:still={fun?.frz != null} class:stg={!!ff && ff.phase !== 'end'} style:background-image={fun && FUN_BG[fun.kind] ? `linear-gradient(rgba(8, 10, 14, 0.62), rgba(8, 10, 14, 0.72)), url(${artUrl(FUN_BG[fun.kind]!)})` : undefined}>
       {#if fun?.kind === 'td'}
@@ -496,7 +497,7 @@
       <!-- 📺 시안 (선생님 「1번 추천대로」 2026-11-14): 던전 대기실에서도 같은 도구 줄 + ▶ 수업 시작 -->
       <span class="sep"></span>
       <button type="button" class="t" class:on={!!R.state.rest} onclick={() => setRest(S, code, !R.state.rest)}>🏕<small>쉼터</small></button>
-      <button type="button" class="t" disabled={!step || !L.videos?.[step.id]} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}>🎬<small>영상</small></button>
+      <button type="button" class="t" disabled={!vidsAt(L, step?.id).length} onclick={() => setVideo(S, code, vidNext(L, step?.id, R.state.video))}>🎬<small>{vidDockLabel(L, step?.id, R.state.video)}</small></button>
       <button type="button" class="t" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}>📄<small>문제</small></button>
       <button type="button" class="t" class:on={demo} disabled={!mid && step?.kind !== 'boss'} onclick={() => (demo = !demo)}>🎮<small>시연</small></button>
       <button type="button" class="t" class:on={ink} onclick={() => (ink = !ink)}>✏<small>필기</small></button>

@@ -27,6 +27,7 @@
   import { bossClock, prevPending, stampBlocked } from '../../school/formative';
   import { estimate, ltimePath, timeSig } from '../../school/ltime';
   import { setRecall } from '../../raid/actions';
+  import { vidDockLabel, vidNext, vidsAt } from '../../school/video';
   import { liveValue } from '../room.svelte';
   import { COLOR, groups, kindOf, minOf, short, total } from './flow';
   import { liveRoom } from '../room.svelte';
@@ -377,7 +378,7 @@
     <div class="rdock" role="group" aria-label="도구" data-k="rdock">
       <button type="button" data-slot="focus" class:on={!!R.state.focus} aria-pressed={!!R.state.focus} onclick={() => setFocus(S, code, !R.state.focus)}><i>🔴</i>집중</button>
       <button type="button" data-slot="rest" class:on={!!R.state.rest} aria-pressed={!!R.state.rest} onclick={openRest}><i>🏕</i>쉼터</button>
-      <button type="button" data-slot="video" class:on={!!R.state.video} disabled={!step || !L.videos?.[step.id]} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, R.state.video ? null : step?.id ?? null)}><i>🎬</i>영상</button>
+      <button type="button" data-slot="video" data-k="vid-dock" class:on={!!R.state.video} disabled={!vidsAt(L, step?.id).length} aria-pressed={!!R.state.video} onclick={() => setVideo(S, code, vidNext(L, step?.id, R.state.video))}><i>🎬</i>{vidDockLabel(L, step?.id, R.state.video)}</button>
       <button type="button" data-slot="sheet" class:on={!!R.state.sheet} disabled={!mid && step?.kind !== 'concept'} aria-pressed={!!R.state.sheet} onclick={() => setSheet(S, code, R.state.sheet ? null : step?.id ?? null)}><i>📄</i>문제</button>
       <button type="button" data-slot="t5" class="t5" class:glow={boss5 || doorAsk} disabled={!!R.state.extend || !R.state.deadline} onclick={plus5}><i>⏰</i>+5분</button>
       {#if feat('cc')}<button type="button" data-slot="cc" data-k="cc" class:on={ccIsOpen} aria-pressed={ccIsOpen} disabled={!(step?.kind === 'concept' && step.check)} onclick={() => (ccArm = ccTap(S, code, R, step!, now, ccArm))}><i>✔</i>{ccLabel(R, step, now, ccArm)}</button>
