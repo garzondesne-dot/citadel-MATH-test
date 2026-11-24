@@ -9,6 +9,7 @@ import { bossItem as packBossItem, chainItems as packChainItems, items } from '.
 //   모드(수업 · 테스트)로 가르지 않는다: 값은 모두 방 meta(= 다른 점 표에서 옮겨 적은 값)에서 읽는다
 //   (아직 없는 것: 💚 파티 힐 · 필살기 · ⛓ 묶기 · 🔥 콤보 · 🦇 박쥐 · 쉼터 · 💡 힌트 주기 — 그 값들은 0 으로 계산)
 export const PRESENCE_MS = 8000; // 탭이 이만큼 소식이 없으면 나간 것으로
+export const HIDE_GRACE = 30_000; // 👻 📜 11/24 ❓ #10 B: 폰 화면이 숨어도 이만큼은 「접속 중」(계산기 · 카메라 잠깐) · 넘으면 끊김
 export const BOSS_ID = 'boss';
 
 const keys = (o: object | undefined | null) => Object.keys(o || {});

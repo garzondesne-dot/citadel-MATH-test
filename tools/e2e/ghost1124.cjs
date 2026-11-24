@@ -1,4 +1,4 @@
-// 👻 📷 (📜 11/24 🔨 #9 학교판 첫 수업): ① 학생 폰 화면이 숨으면(화면 꺼짐 · 다른 앱 · 카메라) 바로 끊김 → 종합실 「들어온 학생」 줄어듦 · 다시 보이면 돌아옴 ② 수업 중 종합실 막대 「📷 입장 QR」 = QR 크게 · 누르면 닫힘
+// 👻 📷 (📜 11/24 🔨 #9 학교판 첫 수업 · ❓ #10 B): ① 학생 폰 화면이 숨으면(화면 꺼짐 · 다른 앱 · 카메라) 30초까지는 접속 중 · 넘으면 끊김 → 종합실 「들어온 학생」 줄어듦 · 다시 보이면 돌아옴 ② 수업 중 종합실 막대 「📷 입장 QR」 = QR 크게 · 누르면 닫힘
 //   NODE_PATH=$(npm root -g) node tools/e2e/ghost1124.cjs <폴더> [주소]
 const { chromium } = require('playwright');
 const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4173/';
@@ -12,10 +12,13 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const n = async () => { await t.waitForTimeout(300); return Number((await t.evaluate(() => document.querySelector('.nbox b')?.firstChild?.textContent || '')).trim()); };
   const n0 = await n(); ok('폰 들어옴 = 종합실 들어온 학생 ≥ 1', n0 >= 1, String(n0));
   const hide = (h) => s.evaluate((h) => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (h ? 'hidden' : 'visible') }); document.dispatchEvent(new Event('visibilitychange')); }, h);
-  const t0 = Date.now(); await hide(true); let n1 = n0;
-  for (let i = 0; i < 20 && n1 >= n0; i++) { n1 = await n(); }
-  ok('폰 화면 숨김 = 바로 끊김 (6초 안)', n1 === n0 - 1 && Date.now() - t0 < 6000, `${n0} → ${n1} · ${Date.now() - t0}ms`);
-  await t.waitForTimeout(9000); ok('숨긴 채 9초 = 뒤에서 다시 붙지 않음', (await n()) === n0 - 1);
+  // 📜 ❓ #10 B 30초 유예: 숨어도 30초까지는 접속 중 · 넘으면 끊김 · 다시 보이면 바로 돌아옴
+  const t0 = Date.now(); await hide(true); await t.waitForTimeout(12000);
+  ok('숨은 지 12초 = 아직 접속 중 (계산기 · 카메라 잠깐)', (await n()) === n0, String(await n()));
+  let n1 = n0; while (Date.now() - t0 < 45000 && n1 >= n0) n1 = await n();
+  const dt = Date.now() - t0;
+  ok('30초가 지나면 끊김 (30 ~ 42초 사이)', n1 === n0 - 1 && dt >= 30000 && dt < 42000, `${n0} → ${n1} · ${Math.round(dt / 1000)}초`);
+  await t.waitForTimeout(9000); ok('숨긴 채 9초 더 = 뒤에서 다시 붙지 않음', (await n()) === n0 - 1);
   await hide(false); await t.waitForTimeout(1500); ok('다시 보임 = 바로 돌아옴', (await n()) === n0, String(await n()));
   // 📷
   await t.bringToFront(); await t.mouse.move(600, 400); await t.waitForTimeout(200);
