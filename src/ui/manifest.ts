@@ -47,6 +47,7 @@ export const runeAt = (s: Sheet, row: number, col: number) => s.rune?.[row]?.[co
 // 던전 배경 (정식 manifest.dungeons · 차시 팩 theme) — 원본 1672 × 941 을 정확히 절반(최근접)으로 줄인 판
 export const DUNGEONS: Record<string, string> = {
   '01-burrow': 'art/dg-01-burrow-v1h.webp',
+  '14-chainmine': 'art/dg-14-chainmine-v1h.webp', // 🎨 11/24 f14-bg 「대응의 사슬 광산」(코덱스 1600 × 900 → 절반 최근접) · 14차시(ex-14) 팩 theme 04-mine 을 덮음(video.ts applyAddon)
   'citadel-room': 'art/dg-citadel-room-v1h.webp', 'citadel-boss': 'art/dg-citadel-boss-v1h.webp', // 🏰 성채 방 · 보스 방 (정식 citadel.room · boss)
   ...(GEN.dungeons as Record<string, string>),
   // 🎲 랜덤 던전 배경 12 (📜 2026-11-14 🎨 「배경화면12종」 · 던전마다 하나 · 원본 1672 × 941 → 정확히 절반)

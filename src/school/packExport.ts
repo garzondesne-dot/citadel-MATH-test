@@ -4,7 +4,7 @@
 import type { LessonPack, Store } from '../model/types';
 import { slotsOf } from './pdfcrop';
 import { prepImg } from './prep';
-import { isRtdb, vidBytes, type VidDoc } from './video';
+import { ADDON_THEME, isRtdb, vidBytes, type VidDoc } from './video';
 import { ZIP_MAX } from './packUpload';
 
 const nn = (n: number) => String(n).padStart(2, '0');
@@ -17,6 +17,7 @@ const vname = (u: string) => (isRtdb(u) ? u.replace(/^.*\//, '') : u.replace(/^.
 export function packJson(L: LessonPack, builtIn: boolean, imgCells: string[], vids: Record<string, string>): LessonPack {
   const p = JSON.parse(JSON.stringify(L)) as LessonPack & Record<string, unknown>;
   delete p.addVids; // 🎬 덧영상 = 앱 것 (팩 파일에 넣지 않음)
+  { const t = ADDON_THEME[String(p.id)]; if (t && p.theme === t.to) p.theme = t.from; } // 🎨 덮은 배경 = 앱 것 (팩 파일엔 옛 theme 그대로)
   if (builtIn) p.id = `ex-${nn(L.no)}`;
   delete p.partOf; delete p.parts; delete p.imgOf; delete p.source; delete p.imgCells;
   if (imgCells.length) p.imgCells = imgCells;

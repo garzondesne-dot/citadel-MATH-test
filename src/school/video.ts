@@ -102,8 +102,10 @@ export const ADDON_VIDS: Record<string, Record<string, string>> = {
   'ex-12': { c1: 'video/v12-71.mp4' },
   'ex-14': { c1: 'video/v14-72.mp4', c2: 'video/v14-72.mp4', c3: 'video/v14-73.mp4' },
 };
-export function applyAddon(packs: { id: string; addVids?: Record<string, string> }[]): void {
-  for (const p of packs) { const m = ADDON_VIDS[p.id]; if (m) p.addVids = { ...m }; }
+/** 🎨 차시 배경 덮기 (서버 팩은 그대로 · 📜 11/24 머리 🔨 f14-bg) — 팩 id → 던전 배경 열쇠(manifest DUNGEONS) · 팩 theme 이 아래 「옛 값」일 때만 바꿈(선생님이 새로 고른 theme 은 그대로) */
+export const ADDON_THEME: Record<string, { from: string; to: string }> = { 'ex-14': { from: '04-mine', to: '14-chainmine' } };
+export function applyAddon(packs: { id: string; addVids?: Record<string, string>; theme?: string }[]): void {
+  for (const p of packs) { const m = ADDON_VIDS[p.id]; if (m) p.addVids = { ...m }; const t = ADDON_THEME[p.id]; if (t && (!p.theme || p.theme === t.from)) p.theme = t.to; }
 }
 type VL = { videos?: Record<string, string>; addVids?: Record<string, string> };
 /** 열쇠(칸 · 칸~2) → 영상 주소 */
