@@ -5,20 +5,26 @@
 //   💎 로그 = gem/{반}/{번호}/log/cos_{물건} { g: 0, spend: 값, at, why } — g 0 = 받은 💎 셈(게시판 하루 200 · 누적)에 안 섞임
 import { ECON_VER, type Wallet } from './wallet';
 
-export type CosKind = 'nameColor' | 'nameFrame' | 'fx' | 'aura' | 'cardBg';
+export type CosKind = 'nameColor' | 'nameFrame' | 'fx' | 'aura' | 'cardBg' | 'furn';
 export type CosOn = Partial<Record<CosKind, string>>;
-export interface CosItem { id: string; kind: CosKind; name: string; /** 색 · 무늬 값 (종류마다 뜻이 다름) */ v: string; v2?: string }
+export interface CosItem { id: string; kind: CosKind; name: string; /** 색 · 무늬 값 (종류마다 뜻이 다름) */ v: string; v2?: string; /** 💎 값 (없으면 종류 값) */ price?: number; /** 그림 (art/… · 카드 배경 그림 · 가구) */ img?: string }
 
 /** 💎 값 = 이 표 한 곳 (잔액을 보고 다시 맞출 때 여기만) */
-export const COS_PRICE: Record<CosKind, number> = { nameColor: 40, nameFrame: 120, fx: 80, aura: 100, cardBg: 60 };
+export const COS_PRICE: Record<CosKind, number> = { nameColor: 40, nameFrame: 120, fx: 80, aura: 100, cardBg: 60, furn: 200 };
+/** 💎 그림이 있는 물건 값 (같은 표 · 📜 11/25 설계 값표: 카드 배경 그림 150 · 텐트 가구 150 ~ 300) */
+export const COS_ART_PRICE = { cardImg: 150, furn: { flag: 150, lamp: 200, desk: 250, plant: 150, chest: 300, rug: 200 } } as const;
 export const COS_KINDS: { k: CosKind; ic: string; name: string }[] = [
   { k: 'nameColor', ic: '🏷', name: '이름표 색' },
   { k: 'nameFrame', ic: '✨', name: '이름표 테두리' },
   { k: 'fx', ic: '⚔', name: '공격 색' },
   { k: 'aura', ic: '🔆', name: '발밑 빛' },
   { k: 'cardBg', ic: '🪪', name: '카드 배경' },
+  { k: 'furn', ic: '⛺', name: '텐트 가구' },
 ];
 const I = (kind: CosKind, id: string, name: string, v: string, v2?: string): CosItem => ({ id, kind, name, v, ...(v2 ? { v2 } : {}) });
+const ART = (f: string) => `art/cos/${f}`;
+const CARD_IMG = (id: string, name: string, f: string): CosItem => ({ id, kind: 'cardBg', name, v: `#1a1424 url(${ART(f)}) center / cover no-repeat`, price: COS_ART_PRICE.cardImg, img: ART(f) });
+const FURN = (k: keyof typeof COS_ART_PRICE.furn, name: string): CosItem => ({ id: `fu_${k}`, kind: 'furn', name, v: k, price: COS_ART_PRICE.furn[k], img: ART(`furn-${k}-v1.webp`) });
 export const COS: CosItem[] = [
   // 🏷 이름표 색 = 글자 색 (어두운 바탕 · 밝은 바탕 모두 읽히는 밝기)
   I('nameColor', 'nc_gold', '금빛', '#ffd25a'), I('nameColor', 'nc_sky', '하늘', '#7cd4ff'), I('nameColor', 'nc_mint', '민트', '#6ee7b7'), I('nameColor', 'nc_rose', '장미', '#ff8fb1'),
@@ -37,9 +43,14 @@ export const COS: CosItem[] = [
   I('cardBg', 'cb_star', '별밤', 'radial-gradient(circle at 20% 30%,#fff8 0 1px,transparent 2px),radial-gradient(circle at 70% 20%,#fff8 0 1px,transparent 2px),radial-gradient(circle at 45% 70%,#fff6 0 1px,transparent 2px),linear-gradient(180deg,#0b1030 0%,#23215a 100%)'),
   I('cardBg', 'cb_check', '체크', 'repeating-conic-gradient(#3a2a55 0 25%,#4a3870 0 50%) 0 0/24px 24px'),
   I('cardBg', 'cb_stripe', '줄무늬', 'repeating-linear-gradient(135deg,#5a2430 0 12px,#7a3340 12px 24px)'),
+  // 🪪 카드 배경 그림 4 (🎨 11/25 cos-cardbg-1~4 · 💎 150)
+  CARD_IMG('cb_town', '마을 광장', 'cardbg-1-v1.webp'), CARD_IMG('cb_castle', '성채 앞', 'cardbg-2-v1.webp'), CARD_IMG('cb_boss', '마지막 보스 앞', 'cardbg-3-v1.webp'), CARD_IMG('cb_night', '밤하늘 언덕', 'cardbg-4-v1.webp'),
+  // ⛺ 텐트 가구 6 (🎨 11/25 cos-furn6 · 여러 개 함께 놓음 · 캠프 텐트 둘레 자리)
+  FURN('flag', '깃발'), FURN('lamp', '등불'), FURN('desk', '책상'), FURN('plant', '화분'), FURN('chest', '보물 상자'), FURN('rug', '양탄자'),
 ];
 export const COS_BY: Record<string, CosItem> = Object.fromEntries(COS.map((c) => [c.id, c]));
-export const cosPrice = (id: string) => { const c = COS_BY[id]; return c ? COS_PRICE[c.kind] : 0; };
+export const priceOf = (c: CosItem) => c.price ?? COS_PRICE[c.kind];
+export const cosPrice = (id: string) => { const c = COS_BY[id]; return c ? priceOf(c) : 0; };
 export const cosBuyId = (id: string) => `cos_${id}`;
 export const ownsCos = (w: Pick<Wallet, 'buys'>, id: string) => w.buys.some((b) => b.id === cosBuyId(id));
 
@@ -47,7 +58,7 @@ export const ownsCos = (w: Pick<Wallet, 'buys'>, id: string) => w.buys.some((b) 
 export function buyCos(w: Wallet, id: string, now: number): string | null {
   const c = COS_BY[id]; if (!c) return '없는 물건이에요';
   if (ownsCos(w, id)) return '이미 가진 물건이에요';
-  const g = COS_PRICE[c.kind]; if (w.gem < g) return `💎 ${g - w.gem} 이 모자라요`;
+  const g = priceOf(c); if (w.gem < g) return `💎 ${g - w.gem} 이 모자라요`;
   w.gem -= g; w.buys = [...w.buys, { id: cosBuyId(id), ver: ECON_VER, at: now }];
   return null;
 }
@@ -57,11 +68,31 @@ export const cosLog = (id: string, at: number) => ({ key: cosBuyId(id), row: { g
 /** 서버 값 → 믿을 수 있는 입은 것만 (없는 물건 · 다른 종류 칸은 버림) */
 export function cosClean(v: unknown): CosOn {
   const out: CosOn = {}; if (!v || typeof v !== 'object') return out;
-  for (const [k, id] of Object.entries(v as Record<string, unknown>)) { const c = typeof id === 'string' ? COS_BY[id] : undefined; if (c && c.kind === k) out[k as CosKind] = id as string; }
+  for (const [k, id] of Object.entries(v as Record<string, unknown>)) {
+    if (k === 'furn' && typeof id === 'string') { const ids = id.split(',').filter((x) => COS_BY[x]?.kind === 'furn'); if (ids.length) out.furn = [...new Set(ids)].join(','); continue; } // ⛺ 가구 = 여러 개 「,」로
+    const c = typeof id === 'string' ? COS_BY[id] : undefined; if (c && c.kind === k) out[k as CosKind] = id as string;
+  }
   return out;
 }
 /** 입은 것 중 실제로 가진 것만 (산 기록이 없는데 입은 칸 = 벗김) */
-export const cosWorn = (w: Pick<Wallet, 'buys'>, on: CosOn | undefined): CosOn => Object.fromEntries(Object.entries(cosClean(on)).filter(([, id]) => ownsCos(w, id!))) as CosOn;
+export function cosWorn(w: Pick<Wallet, 'buys'>, on: CosOn | undefined): CosOn {
+  const out: CosOn = {};
+  for (const [k, id] of Object.entries(cosClean(on)) as [CosKind, string][]) {
+    if (k === 'furn') { const ids = id.split(',').filter((x) => ownsCos(w, x)); if (ids.length) out.furn = ids.join(','); } else if (ownsCos(w, id)) out[k] = id;
+  }
+  return out;
+}
+/** ⛺ 놓은 가구 목록 */
+export const furnOf = (on?: CosOn | null): string[] => (on?.furn ? on.furn.split(',').filter((x) => COS_BY[x]?.kind === 'furn') : []);
+/** 입었나 (가구 = 목록 안에 있나) */
+export const isWorn = (on: CosOn, c: CosItem) => (c.kind === 'furn' ? furnOf(on).includes(c.id) : on[c.kind] === c.id);
+/** 입기 · 벗기 (가구 = 목록에 넣고 빼기 · 나머지 = 종류마다 하나) */
+export function toggleWear(on: CosOn, c: CosItem): CosOn {
+  const out: CosOn = { ...on };
+  if (c.kind === 'furn') { const f = furnOf(on), has = f.includes(c.id), nx = has ? f.filter((x) => x !== c.id) : [...f, c.id]; if (nx.length) out.furn = nx.join(','); else delete out.furn; return out; }
+  if (on[c.kind] === c.id) delete out[c.kind]; else out[c.kind] = c.id;
+  return out;
+}
 
 // 보이는 값 (부품이 씀)
 export const nameColorOf = (on?: CosOn | null) => (on?.nameColor ? COS_BY[on.nameColor]?.v ?? '' : '');

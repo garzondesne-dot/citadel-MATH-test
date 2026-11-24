@@ -45,7 +45,7 @@
   import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut, skyColor, skyLevel } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import CosAura from '../cos/CosAura.svelte';
-  import { auraColorOf, cardBgOf, cosWorn } from '../../model/cosmetics';
+  import { COS_BY, auraColorOf, cardBgOf, cosWorn, furnOf } from '../../model/cosmetics';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
   import { paperOn, submitWho } from '../submit.svelte';
@@ -388,7 +388,9 @@
   const SEAT = { left: CAMP.hero.left, bottom: CAMP.hero.bottom };
   // 🐞 📜 2026-11-20 선생님 「용사가 자꾸 허수아비 뒤쪽으로 이동 · 앞쪽으로」: 서는 자리 = 물건 발밑(바닥 줄)보다 아래(화면 앞) · 용사 그림 = 물건 위 층(.hmove z 6)
   //   물건 바닥 줄(%) = 게시판 34.6 · 우편함 9.8 · 허수아비 42.1 · 책상 16.3 · 모루 46.6 (manifest CAMP_PROPS) · 성채 · 던전 문 · 텐트 = 배경이라 그 앞 물건(모루 · 허수아비 · 게시판)과 안 겹치는 자리
-  const WARD = { left: 42, bottom: 7 }; // 🎨 옷장 자리 (그림 % · 우편함 오른쪽 빈 땅 · 출제 공방 책상과 안 겹침)
+  const WARD = { left: 42, bottom: 7 };
+  // ⛺ 텐트 가구 자리 (그림 % · 가운데 아래 기준 · 텐트 둘레 · 📜 11/25 옷장 그림)
+  const FURN_AT: Record<string, { left: number; bottom: number; width: number; z?: number }> = { fu_flag: { left: 47.5, bottom: 63, width: 4.5 }, fu_lamp: { left: 52.5, bottom: 62, width: 5.5 }, fu_plant: { left: 69, bottom: 60.5, width: 5 }, fu_desk: { left: 57.5, bottom: 59, width: 7 }, fu_chest: { left: 64, bottom: 57.5, width: 6 }, fu_rug: { left: 58, bottom: 56.5, width: 10, z: 1 } }; // 텐트 오른쪽 빈 땅(게시판 · 모루 · 던전 문과 안 겹침)
   const SPOT: Record<string, { left: number; bottom: number }> = { wardrobe: { left: 40, bottom: 8 }, scare: { left: 50, bottom: 36 }, fire: { left: 38, bottom: 27 }, mail: { left: 28, bottom: 2 }, anvil: { left: 47, bottom: 41 }, dummy: { left: 30, bottom: 29 }, tent: { left: 70, bottom: 12 }, tentdeco: { left: 36, bottom: 32 }, castle: { left: 48, bottom: 42 }, gate: { left: 84, bottom: 38 } };
   type HP = 'sit' | 'walk' | 'attack' | 'idle';
   let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
@@ -540,6 +542,7 @@
     <img class="obj gclosed" class:off={open && !trial} alt="" src={CAMP.gateClosed.src} style={propPos(CAMP.gateClosed)} data-k="gate-closed" data-state={open && !trial ? 'open' : prepNos ? 'explore' : 'closed'} />
     {#if !(open && !trial) && prepNos}<i class="gtorch" style="left:{CAMP.gateClosed.torch.left}%;top:{CAMP.gateClosed.torch.top}%" aria-hidden="true"></i><i class="gcrack" style="left:{CAMP.gateClosed.crack.left}%;top:{CAMP.gateClosed.crack.top}%;height:{CAMP.gateClosed.crack.height}%" aria-hidden="true" data-k="gate-explore"></i>{/if}
     <i class="glow gate" class:on={open} class:flash={!!poked.gate} style={zoneStyle('gate')} aria-hidden="true" data-k="gate-glow"></i>
+    {#each furnOf(myCos) as f (f)}{@const at = FURN_AT[f]}{#if at}<img class="furnp" src={COS_BY[f]?.img} alt="" aria-hidden="true" data-k="camp-furn" data-id={f} style="left:{at.left}%;bottom:{at.bottom}%;width:{at.width}%;z-index:{at.z ?? 2}" />{/if}{/each}<!-- ⛺ 텐트 가구 -->
     <i class="sp tentfx" class:on={!!poked.tentdeco} style="{propPos(CAMP.tentFx)};aspect-ratio:{CAMP.tentFx.aspect};{cellBg(CAMP.tentFx.src, CAMP.tentFx.cols, tentF)}" aria-hidden="true"></i>
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
@@ -868,6 +871,7 @@
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
   .prop:active :global(.img) { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
   /* 🏷 #72 이름표 = 물건 아래 작은 둥근 띠 · 글씨 정가운데 · 반투명 어두운 바탕 · 할 일 = 금빛 테두리 + 빨간 숫자 배지 · 💎 칩 = 바로 아래 */
+  .furnp { position: absolute; transform: translateX(-50%); z-index: 2; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5)); }
   .exsub { margin: 0 0 12px; color: var(--text-2); font-size: 15px; }
   .exgo { display: grid; gap: 8px; }
   .exgo .item { min-height: 56px; border-radius: var(--r); background: var(--surface-2); display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; color: var(--text); font: inherit; text-align: left; box-shadow: 0 3px 0 var(--press-sh); }

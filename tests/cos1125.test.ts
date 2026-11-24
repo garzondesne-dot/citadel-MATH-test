@@ -1,16 +1,18 @@
 // 🎨 옷장 1차 (📜 2026-11-25 · 머리 🔨): 값표 · 사기 · 입은 것 거르기 · 로그 줄
 import { describe, expect, it } from 'vitest';
-import { COS, COS_KINDS, COS_PRICE, buyCos, cosClean, cosLog, cosWorn, fxHueOf, ownsCos, auraColorOf, nameColorOf } from '../src/model/cosmetics';
+import { COS, COS_KINDS, COS_PRICE, buyCos, cosClean, cosLog, cosWorn, fxHueOf, ownsCos, auraColorOf, nameColorOf, priceOf, toggleWear, furnOf } from '../src/model/cosmetics';
 import { ECON_VER, type Wallet } from '../src/model/wallet';
 
 const W = (gem: number): Wallet => ({ gem, scroll: 0, buys: [], ver: ECON_VER });
 describe('🎨 옷장', () => {
-  it('물건 = 이름표 색 8 · 테두리 4 · 공격 색 6 · 발밑 빛 5 · 카드 배경 6 (29개) · 값 40 · 120 · 80 · 100 · 60', () => {
+  it('물건 = 이름표 색 8 · 테두리 4 · 공격 색 6 · 발밑 빛 5 · 카드 배경 6 + 그림 4 · 텐트 가구 6 · 값 40 · 120 · 80 · 100 · 60 · 그림 150 · 가구 150 ~ 300', () => {
     const n = (k: string) => COS.filter((c) => c.kind === k).length;
-    expect([n('nameColor'), n('nameFrame'), n('fx'), n('aura'), n('cardBg')]).toEqual([8, 4, 6, 5, 6]);
-    expect(COS_PRICE).toEqual({ nameColor: 40, nameFrame: 120, fx: 80, aura: 100, cardBg: 60 });
+    expect([n('nameColor'), n('nameFrame'), n('fx'), n('aura'), n('cardBg'), n('furn')]).toEqual([8, 4, 6, 5, 10, 6]);
+    expect(COS.filter((c) => c.img && c.kind === 'cardBg').map(priceOf)).toEqual([150, 150, 150, 150]);
+    expect(COS.filter((c) => c.kind === 'furn').map(priceOf)).toEqual([150, 200, 250, 150, 300, 200]);
+    expect(COS_PRICE).toMatchObject({ nameColor: 40, nameFrame: 120, fx: 80, aura: 100, cardBg: 60 });
     expect(new Set(COS.map((c) => c.id)).size).toBe(COS.length);
-    expect(COS_KINDS.map((k) => k.k)).toEqual(['nameColor', 'nameFrame', 'fx', 'aura', 'cardBg']);
+    expect(COS_KINDS.map((k) => k.k)).toEqual(['nameColor', 'nameFrame', 'fx', 'aura', 'cardBg', 'furn']);
   });
   it('사기 = 💎 빠짐 · 산 기록 cos_ · 두 번 못 삼 · 모자라면 까닭', () => {
     const w = W(100);
@@ -29,5 +31,17 @@ describe('🎨 옷장', () => {
   it('💎 로그 = cos_{물건} · g 0 (받은 💎 셈에 안 섞임) · spend = 값', () => {
     const l = cosLog('nf_fire', 9);
     expect(l.key).toBe('cos_nf_fire'); expect(l.row.g).toBe(0); expect(l.row.spend).toBe(120); expect(l.row.at).toBe(9); expect(l.row.why).toMatch(/불꽃/);
+  });
+});
+describe('⛺ 텐트 가구 · 🪪 카드 그림', () => {
+  it('가구 = 여러 개 함께 놓기 · 치우기 · 산 것만 · 그림 카드 값 150', () => {
+    const w: Wallet = { gem: 2000, scroll: 0, buys: [], ver: ECON_VER };
+    expect(buyCos(w, 'fu_chest', 1)).toBeNull(); expect(w.gem).toBe(1700);
+    expect(buyCos(w, 'fu_flag', 1)).toBeNull(); expect(buyCos(w, 'cb_night', 1)).toBeNull(); expect(w.gem).toBe(1400);
+    let on = toggleWear({}, COS.find((c) => c.id === 'fu_chest')!); on = toggleWear(on, COS.find((c) => c.id === 'fu_flag')!);
+    expect(furnOf(on)).toEqual(['fu_chest', 'fu_flag']);
+    on = toggleWear(on, COS.find((c) => c.id === 'fu_chest')!); expect(furnOf(on)).toEqual(['fu_flag']);
+    expect(cosWorn(w, { furn: 'fu_flag,fu_rug', cardBg: 'cb_night' })).toEqual({ furn: 'fu_flag', cardBg: 'cb_night' });
+    expect(cosClean({ furn: 'fu_flag,zz,nc_gold,fu_flag' })).toEqual({ furn: 'fu_flag' });
   });
 });
