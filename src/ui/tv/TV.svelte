@@ -436,7 +436,7 @@
       {#if fun?.kind === 'td'}
         <TdTV {S} {code} R={R as Room} {now} {nameOf} quiet={!sound} />
       {:else if (fun?.kind as string) === 'lg'}
-        <LgTV R={R as Room} f={fun as unknown as Lg} {now} />
+        <LgTV R={R as Room} f={fun as unknown as Lg} {now} {nameOf} />
       {:else if (fun?.kind as string) === 'ak'}
         <AkTV R={R as Room} f={fun as unknown as Ak} {now} {nameOf} clock={() => S.now()} />
       {:else if (fun?.kind as string) === 'aj'}

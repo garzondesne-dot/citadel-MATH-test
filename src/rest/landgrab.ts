@@ -24,6 +24,8 @@ export interface Lg {
   bumps?: number; alive: Record<string, true>; total: number;
   /** 결과: 팀 순위(0 ~ 3) · 우승 팀들 */ rank?: number[]; winTeams?: number[]; win?: string[];
   go?: number; drv?: { u: string; at: number }; frz?: number | null;
+  /** 🎆 이번 턴 연출 (📜 11/24 🔨 #18 「연출만 세게」 · 규칙은 그대로 · 그리기만 씀): t = 턴 · bump = 다른 팀끼리 부딪힌 칸 · bu = 부딪혀 제자리인 용사 → 가려던 쪽 · steal = 남의 칸을 뺏은 칸 [x, y, 팀] · star = ⭐ 먹은 칸 [x, y, 팀] */
+  fx?: { t: number; bump: [number, number][]; bu: Record<string, [number, number]>; steal: [number, number, number][]; star: [number, number, number][] };
 }
 
 type Rnd = () => number;
@@ -74,22 +76,23 @@ export function moveTurn(f: Lg, dirs: Record<string, number | string>, rnd: Rnd 
     want[u] = nx >= 0 && ny >= 0 && nx < size && ny < size ? [nx, ny] : [x, y];
   }
   // ② 다른 팀과 같은 칸 = 둘 다 제자리 ③ 움직임
+  const fx: NonNullable<Lg['fx']> = { t: turn, bump: [], bu: {}, steal: [], star: [] };
   for (const u of ids) {
     const w = want[u]!, rivals = ids.some((v) => v !== u && f.team[v] !== f.team[u] && want[v]![0] === w[0] && want[v]![1] === w[1]);
     const stay = w[0] === pos[u]![0] && w[1] === pos[u]![1];
-    if (rivals) { if (!stay) bumps++; continue; }
+    if (rivals) { if (!stay) { bumps++; fx.bu[u] = [w[0] - pos[u]![0], w[1] - pos[u]![1]]; if (!fx.bump.some((b) => b[0] === w[0] && b[1] === w[1])) fx.bump.push([w[0], w[1]]); } continue; }
     pos[u] = w;
   }
   // ④ 칸 색 ⑤ ⭐
   for (const u of ids) {
     const [x, y] = pos[u]!, t = f.team[u]!;
     if (ids.some((v) => v !== u && f.team[v] !== t && pos[v]![0] === x && pos[v]![1] === y)) continue;
-    if (own[idx(size, x, y)] !== String(t)) mine[u] = (mine[u] || 0) + 1;
+    if (own[idx(size, x, y)] !== String(t)) { mine[u] = (mine[u] || 0) + 1; if (own[idx(size, x, y)] !== '.' && !fx.steal.some((c) => c[0] === x && c[1] === y)) fx.steal.push([x, y, t]); }
     setOwn(own, size, x, y, t);
     const si = stars.findIndex((s) => s[0] === x && s[1] === y);
-    if (si >= 0) { stars.splice(si, 1); starHit[t] = (starHit[t] || 0) + 1; for (let a = x - 1; a <= x + 1; a++) for (let b = y - 1; b <= y + 1; b++) if (a >= 0 && b >= 0 && a < size && b < size) { if (own[idx(size, a, b)] !== String(t)) mine[u] = (mine[u] || 0) + 1; setOwn(own, size, a, b, t); } }
+    if (si >= 0) { fx.star.push([x, y, t]); stars.splice(si, 1); starHit[t] = (starHit[t] || 0) + 1; for (let a = x - 1; a <= x + 1; a++) for (let b = y - 1; b <= y + 1; b++) if (a >= 0 && b >= 0 && a < size && b < size) { if (own[idx(size, a, b)] !== String(t)) mine[u] = (mine[u] || 0) + 1; setOwn(own, size, a, b, t); } }
   }
-  return { ...f, own: own.join(''), pos, last, mine, starHit, stars, bumps };
+  return { ...f, own: own.join(''), pos, last, mine, starHit, stars, bumps, fx };
 }
 
 /** 순위 (칸 수 → ⭐ → 공동) */
@@ -114,3 +117,24 @@ export function stepLg(f: Lg, joins: Record<string, unknown> | null, dirs: Recor
 }
 /** 마지막 5턴 = 점수 가림 */
 export const hidden = (f: Pick<Lg, 'phase' | 'turn'>) => f.phase !== 'end' && f.turn > LG.turns - LG.hideLast;
+
+/** 🎙 해설 한 줄 (📜 11/24 🔨 #18): ⭐ > 충돌 > 가장 많이 뺏은 팀 > 지금 1등 */
+export const TEAM_DOT = ['🔴', '🔵', '🟡', '🟢'] as const;
+export function fxLine(f: Pick<Lg, 'fx' | 'phase' | 'turn' | 'own' | 'nTeam'>): string {
+  const x = f.fx;
+  if (f.phase === 'ready') return '🏁 곧 출발! 우리 팀 색으로 칸을 칠해요';
+  if (x && x.t >= f.turn - 1) {
+    if (x.star.length) { const t = x.star[0]![2]; return `${TEAM_DOT[t]} ${TEAMS[t]!.n} 팀이 ⭐ 를 먹었다! 둘레 9칸이 한꺼번에!`; }
+    if (x.bump.length) return `⚔ 쾅! ${x.bump.length}곳에서 부딪혔다 · 둘 다 제자리`;
+    if (x.steal.length) { const n = Array(4).fill(0) as number[]; for (const c of x.steal) n[c[2]]!++; const t = n.indexOf(Math.max(...n)); return `${TEAM_DOT[t]} ${TEAMS[t]!.n} 팀이 ${n[t]}칸을 뺏었다!`; }
+  }
+  if (f.phase === 'end') return '🏆 끝! 칸이 가장 많은 팀이 이겼어요';
+  return '👣 다음 칸으로! 남의 칸을 밟으면 뺏어요';
+}
+/** 🎆 칸별 연출 이름 (steal = 뺏은 칸 반짝 · wave0 ~ 2 = ⭐ 파도 · 가운데부터) */
+export function fxCells(x: Lg['fx'] | null | undefined): Record<string, string> {
+  const m: Record<string, string> = {}; if (!x) return m;
+  for (const c of x.steal) m[`${c[0]},${c[1]}`] = 'steal';
+  for (const c of x.star) for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) m[`${c[0] + a},${c[1] + b}`] = `wave${Math.abs(a) + Math.abs(b)}`;
+  return m;
+}

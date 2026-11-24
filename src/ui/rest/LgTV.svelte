@@ -1,9 +1,18 @@
 <script lang="ts">
   import type { Room } from '../../model/types';
-  import { hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
+  import { fxCells, fxLine, hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
+  import { sfx } from '../sound.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
-  // 🏁 땅따먹기 · 종합실 (📜 2026-11-24 · mock-teacher): 왼쪽 = 판 전체 · 오른쪽 = 남은 턴 · 다음 이동까지 초 · 팀 점수 막대(많은 순 · 마지막 5턴 「???」) · 학생 이름은 안 띄움
-  const { R, f, now }: { R: Room; f: Lg; now: number } = $props();
+  // 🏁 땅따먹기 · 종합실 (📜 2026-11-24 · mock-teacher): 왼쪽 = 판 전체 · 오른쪽 = 남은 턴 · 다음 이동까지 초 · 팀 점수 막대(많은 순 · 마지막 5턴 「???」)
+  //   📜 11/24 🔨 #18 「연출만 세게」(규칙 그대로): 정사각 격자 · 용사 이름표 · 위 해설 한 줄 · ⚔ 충돌 불꽃 + 튕김 + 흔들림 + 쾅 · 뺏은 칸 반짝 · ⭐ 9칸 파도 + 큰 소리
+  const { R, f, now, nameOf = (u: string) => u }: { R: Room; f: Lg; now: number; nameOf?: (u: string) => string } = $props();
+  const short = (u: string) => nameOf(u).replace(/^\d+\s*/, '').replace(/^🤖/, '') || '?';
+  const fx = $derived(f.fx && f.phase !== 'end' ? f.fx : null);
+  const fxKey = $derived(fx ? `${f.g}|${fx.t}` : '');
+  const flash = $derived(fxCells(fx));
+  const bumpAt = $derived(new Set((fx?.bump || []).map((b) => `${b[0]},${b[1]}`)));
+  let heard = '';
+  $effect(() => { const k = fxKey; if (!k || k === heard) return; heard = k; if (fx?.star.length) sfx('star-bonus', 0.9); else if (fx?.bump.length) sfx('smash', 0.75); });
   const sec = $derived(Math.max(0, Math.ceil((f.to - now) / 1000)));
   const joinN = $derived(Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`lg${f.g}_j`]) || {}).length);
   const sc = $derived(f.own ? scores(f) : []);
@@ -19,10 +28,13 @@
     <p class="big" data-k="lg-tv-join">참가 {joinN}명</p>
     <p class="rule small">선생님 폰 「▶ 출발」</p>
   {:else}
-    <div class="board" style:--n={f.size}>
-      {#each Array(total) as _, i (i)}{@const x = i % f.size}{@const y = Math.floor(i / f.size)}{@const c = ownAt(f, x, y)}{@const who = at[`${x},${y}`] || []}
-        <span class="c" style:background={c >= 0 ? TEAMS[c]!.c : undefined}>{#if (f.stars || []).some((s) => s[0] === x && s[1] === y)}<em class="st">⭐</em>{/if}{#if who.length}<i class="who" style:--tc={TEAMS[f.team[who[0]!] ?? 0]!.c}><HeroSprite id={R.players?.[who[0]!]?.hero ?? 0} scale={0.42} tv />{#if who.length > 1}<b>{who.length}</b>{/if}</i>{/if}</span>
-      {/each}
+    <div class="left">
+      <p class="cast" data-k="lg-tv-cast">{#key fxKey}<span>{fxLine(f)}</span>{/key}</p>
+      {#key fxKey}<div class="board" class:shake={!!fx?.bump.length} style:--n={f.size} data-k="lg-tv-board">
+        {#each Array(total) as _, i (i)}{@const x = i % f.size}{@const y = Math.floor(i / f.size)}{@const c = ownAt(f, x, y)}{@const who = at[`${x},${y}`] || []}{@const fl = flash[`${x},${y}`]}{@const bu = who.length ? fx?.bu[who[0]!] : undefined}
+          <span class="c {fl ?? ''}" style:background={c >= 0 ? TEAMS[c]!.c : undefined}>{#if (f.stars || []).some((s) => s[0] === x && s[1] === y)}<em class="st">⭐</em>{/if}{#if bumpAt.has(`${x},${y}`)}<em class="bang" data-k="lg-bang">💥</em>{/if}{#if who.length}<i class="who" class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[who[0]!] ?? 0]!.c}><span class="hs"><HeroSprite id={R.players?.[who[0]!]?.hero ?? 0} scale={0.42} tv /></span><b class="nm" data-k="lg-name">{short(who[0]!)}{who.length > 1 ? ` +${who.length - 1}` : ''}</b></i>{/if}</span>
+        {/each}
+      </div>{/key}
     </div>
     <div class="side">
       <p class="t">🏁 땅따먹기</p>
@@ -35,17 +47,30 @@
 </div>
 
 <style>
-  .ltv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 3cqw; color: #fff; padding: 2cqh 3cqw; }
+  .ltv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 3cqw; color: #fff; padding: 2cqh 3cqw; container-type: size; }
   .ltv[data-phase='join'] { flex-direction: column; text-align: center; }
   .t { margin: 0; font: 900 4.4cqh var(--font); } .rule { margin: 0; max-width: 70cqw; font: 700 3.6cqh/1.5 var(--font); } .small { font-size: 2.8cqh; opacity: 0.85; }
   .big { margin: 0; font: 900 10cqh var(--font); color: var(--accent); }
-  .board { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 0.3cqh; height: min(72cqh, 60cqw); aspect-ratio: 1; margin-top: 6cqh; }
-  .c { position: relative; border-radius: 0.6cqh; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center; }
+  /* 🔨 #18 ⑥ 정사각 격자: 칸 = minmax(0, 1fr) (그림 크기에 안 밀림) · 판 = 해설 줄 · 아래 놀이 막대만 빼고 높이 꽉 */
+  .left { display: flex; flex-direction: column; align-items: center; gap: 1.2cqh; margin-bottom: 9cqh; }
+  .cast { margin: 0; height: 5.4cqh; display: grid; place-items: center; font: 900 3.6cqh var(--font); white-space: nowrap; text-shadow: 0 0.3cqh 0 #000; }
+  .cast span { animation: castIn 0.35s ease-out; } @keyframes castIn { from { transform: scale(1.25); opacity: 0; } to { transform: none; opacity: 1; } }
+  .board { --sz: min(78cqh, 60cqw); width: var(--sz); height: var(--sz); display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-template-rows: repeat(var(--n), minmax(0, 1fr)); gap: 0.3cqh; }
+  .board.shake { animation: lgShake 0.32s linear; } @keyframes lgShake { 20% { transform: translate(-0.8cqh, 0.4cqh); } 40% { transform: translate(0.8cqh, -0.4cqh); } 60% { transform: translate(-0.5cqh, -0.3cqh); } 80% { transform: translate(0.4cqh, 0.3cqh); } }
+  .c { position: relative; min-width: 0; min-height: 0; border-radius: 0.6cqh; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center; transition: background-color 0.25s; }
+  .c.steal { animation: steal 0.7s ease-out; } @keyframes steal { 0% { filter: brightness(2.6); transform: scale(1.18); box-shadow: 0 0 2cqh #fff; z-index: 2; } 100% { filter: none; transform: none; box-shadow: none; } }
+  .c.wave0, .c.wave1, .c.wave2 { animation: wave 0.8s ease-out both; z-index: 2; } .c.wave1 { animation-delay: 0.12s; } .c.wave2 { animation-delay: 0.24s; }
+  @keyframes wave { 0% { filter: brightness(1); transform: scale(1); } 30% { filter: brightness(2.4); transform: scale(1.22); box-shadow: 0 0 3cqh #ffd34d; } 100% { filter: none; transform: none; box-shadow: none; } }
   .st { font-style: normal; font-size: 3.4cqh; filter: drop-shadow(0 0 1cqh #ffd34d); }
-  .who { position: absolute; inset: 6%; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 0.5cqh var(--tc); background: rgba(0, 0, 0, 0.35); overflow: hidden; } .who b { position: absolute; right: 0; bottom: 0; font: 900 1.8cqh var(--font); background: #000; border-radius: 0.6cqh; padding: 0 0.4cqh; }
+  .bang { position: absolute; inset: -40%; z-index: 4; display: grid; place-items: center; font-style: normal; font-size: 5.5cqh; pointer-events: none; animation: bang 0.6s ease-out both; } @keyframes bang { 0% { transform: scale(0.2) rotate(-20deg); opacity: 1; } 40% { transform: scale(1.3) rotate(8deg); opacity: 1; } 100% { transform: scale(1.6); opacity: 0; } }
+  .who { position: absolute; inset: 4%; z-index: 3; border-radius: 50%; box-shadow: inset 0 0 0 0.45cqh var(--tc); background: rgba(0, 0, 0, 0.35); }
+  .who.bu { animation: bounce 0.45s ease-out; } @keyframes bounce { 35% { transform: translate(calc(var(--bx) * 38%), calc(var(--by) * 38%)); } 60% { transform: translate(calc(var(--bx) * -10%), calc(var(--by) * -10%)); } }
+  .hs { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; overflow: hidden; }
+  .nm { position: absolute; left: 50%; bottom: -0.6cqh; transform: translateX(-50%); max-width: 150%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.4cqh; border-radius: 0.5cqh; background: rgba(0, 0, 0, 0.72); font: 800 1.7cqh/1.25 var(--font); color: #fff; }
   .side { display: grid; gap: 2cqh; min-width: 30cqw; }
   .turn { margin: 0; font: 900 5cqh var(--font); color: var(--accent); font-variant-numeric: tabular-nums; }
   .bars { margin: 0; padding: 0; list-style: none; display: grid; gap: 1.4cqh; } .bars li { display: grid; grid-template-columns: 9cqw 1fr 8cqw; align-items: center; gap: 1cqw; font: 800 3.4cqh var(--font); }
   .bars b { color: var(--tc); } .bar { height: 3cqh; border-radius: 1cqh; background: rgba(255, 255, 255, 0.12); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--tc); transition: width 0.4s; } .bars em { font-style: normal; text-align: right; }
   .win { margin: 0; font: 900 5cqh var(--font); color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .board.shake, .who.bu, .c.steal, .c.wave0, .c.wave1, .c.wave2 { animation: none; } }
 </style>
