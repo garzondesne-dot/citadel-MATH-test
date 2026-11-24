@@ -41,18 +41,35 @@ export const rkTurn = (g: number, t: number) => `lg${g}_${t}`;
 /** 놀이 열기 = 모이기 (선생님이 「출발」 누를 때까지) */
 export const startLg = (now: number): Lg => ({ kind: 'lg', g: now, phase: 'join', to: now + 3600e3, turn: 0, size: 9, nTeam: 4, own: '', team: {}, pos: {}, last: {}, stars: [], starHit: [0, 0, 0, 0], mine: {}, alive: {}, total: 0 });
 
-/** 출발: 참가한 학생을 순서대로 섞어 팀 배정(차이 최대 1) · 귀퉁이 · 한 명 적은 팀 = 자기 구역 2칸 미리 칠함 */
+/** 🤖 팀 채움 봇 (📜 11/24 🔨 #18 더하기 2 「팀전 숫자 안 맞으면 봇 끼워 넣기」): uid = lgbot-팀-번호 · 💎 · 기록 없음 · 끊김 아웃 없음 */
+export const isLgBot = (u: string) => u.startsWith('lgbot-');
+/** 봇 이름표 · 그림 */
+export const lgBotName = (u: string) => `🤖봇${Number(u.split('-')[2] ?? 0) + 1}`;
+export const lgBotHero = (u: string) => { const [, t, k] = u.split('-'); return (Number(t) * 5 + Number(k) * 3) % 12; };
+
+/** 출발: 참가한 학생을 순서대로 섞어 팀 배정(차이 최대 1) · 귀퉁이 · 인원이 적은 팀 = 🤖 봇으로 채워 모든 팀 같은 인원 (📜 11/24 · 예전 「2칸 미리 칠함」 없앰) */
 export function deal(f: Lg, joined: string[], now: number, rnd: Rnd = Math.random): Lg {
   const ids = shuffle(joined, rnd), n = ids.length, nTeam = n < 4 ? 2 : 4, size = sizeFor(n), cs = corners(size), own = Array(size * size).fill('.');
   const team: Record<string, number> = {}, pos: Record<string, [number, number]> = {}, last: Record<string, number> = {}, mine: Record<string, number> = {};
-  ids.forEach((u, i) => {
-    const t = i % nTeam, k = Math.floor(i / nTeam), [cx, cy] = cs[t]!;
+  const put = (u: string, t: number, k: number) => {
+    const [cx, cy] = cs[t]!;
     const p: [number, number] = [Math.min(size - 1, Math.max(0, cx + ((k % 3) - 1))), Math.min(size - 1, Math.max(0, cy + ((Math.floor(k / 3) % 3) - 1)))];
     team[u] = t; pos[u] = p; last[u] = Math.floor(rnd() * 4); mine[u] = 0; setOwn(own, size, p[0], p[1], t);
-  });
+  };
+  ids.forEach((u, i) => put(u, i % nTeam, Math.floor(i / nTeam)));
   const cnt = Array.from({ length: nTeam }, (_, t) => ids.filter((u) => team[u] === t).length), mx = Math.max(...cnt);
-  cnt.forEach((c, t) => { if (c < mx) { const [cx, cy] = cs[t]!; let left = 2; for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [-1, 0], [0, -1]] as [number, number][]) { if (!left) break; const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < size && y < size && own[idx(size, x, y)] === '.') { setOwn(own, size, x, y, t); left--; } } } });
+  cnt.forEach((c, t) => { for (let k = c; k < mx; k++) put(`lgbot-${t}-${k - c}`, t, k); });
   return { ...f, phase: 'ready', to: now + ms('readyMs'), turn: 0, size, nTeam, own: own.join(''), team, pos, last, mine, stars: [], starHit: Array(nTeam).fill(0), alive: Object.fromEntries(ids.map((u) => [u, true])) as Record<string, true>, total: n };
+}
+
+/** 🤖 봇 방향 (설계 모의 봇): 80% = 가장 가까운 「우리 색 아닌 칸」 쪽 · 20% = 아무 쪽 */
+export function botDir(f: Pick<Lg, 'own' | 'size' | 'team' | 'pos'>, u: string, rnd: Rnd = Math.random): number {
+  if (rnd() < 0.2) return Math.floor(rnd() * 4);
+  const [x, y] = f.pos[u]!, t = String(f.team[u]); let best = -1, bd = 1e9;
+  for (let yy = 0; yy < f.size; yy++) for (let xx = 0; xx < f.size; xx++) { if (f.own[idx(f.size, xx, yy)] === t) continue; const d = Math.abs(xx - x) + Math.abs(yy - y); if (d > 0 && d < bd) { bd = d; best = idx(f.size, xx, yy); } }
+  if (best < 0) return Math.floor(rnd() * 4);
+  const tx = best % f.size, ty = Math.floor(best / f.size), dx = tx - x, dy = ty - y;
+  return Math.abs(dx) >= Math.abs(dy) && dx !== 0 ? (dx > 0 ? 3 : 2) : dy > 0 ? 1 : 0;
 }
 
 /** 늦게 온 학생 = 인원이 가장 적은 팀 귀퉁이 */
@@ -109,10 +126,10 @@ export function stepLg(f: Lg, joins: Record<string, unknown> | null, dirs: Recor
   // 늦게 온 학생 (참가를 누른 학생)
   let x = f; for (const u of Object.keys(joins || {})) if (x.team[u] == null) x = addLate(x, u);
   if (x.phase === 'ready') { if (now < x.to) return x !== f ? x : null; return { ...x, phase: 'pick', turn: 1, to: now + ms('pickMs') }; }
-  if (x.phase === 'pick') { if (now < x.to) return x !== f ? x : null; return { ...moveTurn(x, dirs || {}, rnd), phase: 'move', to: now + ms('moveMs') }; }
+  if (x.phase === 'pick') { if (now < x.to) return x !== f ? x : null; const d: Record<string, number | string> = { ...(dirs || {}) }; for (const u of Object.keys(x.team)) if (isLgBot(u)) d[u] = botDir(x, u, rnd); return { ...moveTurn(x, d, rnd), phase: 'move', to: now + ms('moveMs') }; }
   // move → 다음 턴 또는 끝
   if (now < x.to) return x !== f ? x : null;
-  if (x.turn >= LG.turns) { const r = ranking(x); return { ...x, phase: 'end', endAt: now, to: now + ms('endMs'), rank: r.rank, winTeams: r.winTeams, win: Object.keys(x.team).filter((u) => r.winTeams.includes(x.team[u]!)) }; }
+  if (x.turn >= LG.turns) { const r = ranking(x); return { ...x, phase: 'end', endAt: now, to: now + ms('endMs'), rank: r.rank, winTeams: r.winTeams, win: Object.keys(x.team).filter((u) => !isLgBot(u) && r.winTeams.includes(x.team[u]!)) }; }
   return { ...x, phase: 'pick', turn: x.turn + 1, to: now + ms('pickMs') };
 }
 /** 마지막 5턴 = 점수 가림 */

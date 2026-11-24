@@ -8,7 +8,7 @@ import { MAPS, PICK_MS } from './td';
 import { MIN as DRG_MIN, startDrg, stepDrg, type Drg, type Prog } from './dragon';
 import { AJ, nextRound, startAj, stepAj, standingsAj, type Aj, type Ans } from './ajae';
 import { isBeta } from '../school/school';
-import { LG, rkJoin, rkTurn, startLg, stepLg, type Lg } from './landgrab';
+import { isLgBot, LG, rkJoin, rkTurn, startLg, stepLg, type Lg } from './landgrab';
 import { AK, rkJoin as akJoinK, rkShot, startAk, stepAk, type Ak, type Shot } from './alkkagi';
 
 // 🏕 쉼터 놀이 진행 (#142 · 정식 fun.js start · stop · drive · hold 를 Store 위로)
@@ -102,7 +102,7 @@ export const OUT_MS = 30_000;
 const notOut = <T>(m: Record<string, T> | null | undefined, f: AnyFun): Record<string, T> | null => { const o = (f as { out?: Record<string, true> }).out; if (!m) return null; if (!o) return m; return Object.fromEntries(Object.entries(m).filter(([u]) => !o[u])); };
 function playersOf(f: AnyFun): string[] | null {
   if (f.kind === 'ak') return f.phase === 'ready' || f.phase === 'play' ? Object.keys((f as unknown as Ak).st || {}) : null;
-  if (f.kind === 'lg') return f.phase === 'ready' || f.phase === 'pick' || f.phase === 'move' ? Object.keys((f as unknown as Lg).team || {}) : null;
+  if (f.kind === 'lg') return f.phase === 'ready' || f.phase === 'pick' || f.phase === 'move' ? Object.keys((f as unknown as Lg).team || {}).filter((u) => !isLgBot(u)) : null; // 🤖 팀 채움 봇 = 끊김 아웃 없음
   if (f.kind === 'aj') return f.phase === 'intro' || f.phase === 'q' || f.phase === 'show' ? Object.keys((f as unknown as Aj).alive || {}) : null;
   return null;
 }
@@ -181,7 +181,7 @@ export function rewardOf(f: AnyFun, me: string): { gem: number; xp: number; why:
   if (f.phase !== 'end') return null;
   if (f.kind === 'quiz') { const mk = String(((f as Fun).marks || {})[me] || ''), ok = (mk.match(/o/g) || []).length; if (!mk.length) return null; return { gem: ok === mk.length ? G.quizAll : 0, xp: ok * 2, why: `⭕ ${ok} / ${mk.length} 정답` }; }
   const win = ((f as { win?: string[] }).win || []).includes(me);
-  if (f.kind === 'lg') { const l = f as unknown as Lg, t = l.team?.[me]; if (t == null) return null; const w = (l.winTeams || []).includes(t); return { gem: w ? LG.gemWin : LG.gemJoin, xp: 0, why: w ? '🏁 우리 팀 1등' : '🏁 참가' }; } // 📜 1등 팀 💎 30 · 참가 💎 10 · 하루 3판(payFun)
+  if (f.kind === 'lg') { const l = f as unknown as Lg, t = l.team?.[me]; if (t == null || isLgBot(me)) return null; const w = (l.winTeams || []).includes(t); return { gem: w ? LG.gemWin : LG.gemJoin, xp: 0, why: w ? '🏁 우리 팀 1등' : '🏁 참가' }; } // 📜 1등 팀 💎 30 · 참가 💎 10 · 하루 3판(payFun)
   if (f.kind === 'ak') { const k = f as unknown as Ak, r = k.rank?.[me]; if (r == null) return null; const gem = r === 1 ? AK.gem1 : r <= 3 ? AK.gem23 : AK.gemJoin; return { gem, xp: 0, why: `🥏 ${r}등 · ${k.sc?.[me] ?? 0}점` }; } // 📜 1등 💎 30 · 2 · 3등 20 · 참가 10 · 하루 3판(payFun)
   if (f.kind === 'aj') { const a = f as unknown as Aj, st = standingsAj(a).find((x) => x.u === me); if (!a.alive?.[me] && !st) return null; const top = !!st && st.rank <= 3; return { gem: G.funJoin + (top ? G.funWin : 0), xp: 0, why: top ? `😆 ${st!.rank}등 · ${st!.pts}점` : st ? `😆 ${st.pts}점` : '참여' }; } // 😆 득점 1 ~ 3등 = 우승 💎
   if (f.kind === 'drg') { const d = f as unknown as Drg; if (d.pts?.[me] == null) return null; return { gem: G.funJoin + (win ? G.funWin : 0), xp: 0, why: win ? (d.clean?.includes(me) && !(d.win || []).slice(0, 3).includes(me) ? '🐉 한 번도 안 걸림' : '🏆 상위') : '참여' }; } // 🐉 #25 = 다른 놀이와 같은 💎(참여 1 · 1~3등 · 안 걸린 용사 +4)

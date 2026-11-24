@@ -1,6 +1,6 @@
 // 🏁 땅따먹기 (📜 2026-11-24 · 설계 DESIGN-v1 · sim.py 순서)
 import { describe, expect, it } from 'vitest';
-import { deal, LG, moveTurn, ownAt, ranking, scores, sizeFor, startLg, stepLg, addLate, type Lg } from '../src/rest/landgrab';
+import { botDir, DIRS, isLgBot, deal, LG, moveTurn, ownAt, ranking, scores, sizeFor, startLg, stepLg, addLate, type Lg } from '../src/rest/landgrab';
 import { GAMES, GAME_FEAT, rewardOf } from '../src/rest/run';
 
 let seed = 3; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -10,11 +10,18 @@ const mk = (own: Record<string, number>, team: Record<string, number>, pos: Reco
 };
 describe('🏁 판 · 팀', () => {
   it('판 크기 = 4 ~ 12명 9 · 13 ~ 24명 11 · 25명 이상 13', () => { expect([sizeFor(4), sizeFor(12), sizeFor(13), sizeFor(24), sizeFor(25), sizeFor(32)]).toEqual([9, 9, 11, 11, 13, 13]); });
-  it('4팀 · 인원 차이 최대 1 · 귀퉁이 · 한 명 적은 팀 = 2칸 미리 칠함 · 4명 미만 = 2팀', () => {
-    const f = deal(startLg(0), Array.from({ length: 10 }, (_, i) => `u${i}`), 0, rnd), cnt = [0, 1, 2, 3].map((t) => Object.values(f.team).filter((x) => x === t).length);
-    expect(Math.max(...cnt) - Math.min(...cnt)).toBeLessThanOrEqual(1); expect(f.size).toBe(9);
-    const sc = scores(f); cnt.forEach((c, t) => { if (c < Math.max(...cnt)) expect(sc[t]).toBe(c + 2); else expect(sc[t]).toBe(c); });
-    expect(deal(startLg(0), ['a', 'b', 'c'], 0, rnd).nTeam).toBe(2);
+  it('📜 11/24 🤖 팀 채움: 4팀 · 학생 차이 최대 1 · 적은 팀 = 봇으로 같은 인원 · 2칸 미리 칠하기 없음 · 4명 미만 = 2팀', () => {
+    const f = deal(startLg(0), Array.from({ length: 10 }, (_, i) => `u${i}`), 0, rnd), real = (t: number) => Object.keys(f.team).filter((u) => !isLgBot(u) && f.team[u] === t).length, all = (t: number) => Object.values(f.team).filter((x) => x === t).length;
+    const rc = [0, 1, 2, 3].map(real); expect(Math.max(...rc) - Math.min(...rc)).toBeLessThanOrEqual(1); expect(f.size).toBe(9);
+    expect([0, 1, 2, 3].map(all)).toEqual([3, 3, 3, 3]); expect(Object.keys(f.team).filter(isLgBot)).toHaveLength(2);
+    expect(scores(f)).toEqual([3, 3, 3, 3]); expect(f.total).toBe(10); expect(Object.keys(f.alive)).toHaveLength(10);
+    expect(Object.keys(deal(startLg(0), Array.from({ length: 8 }, (_, i) => `u${i}`), 0, rnd).team).filter(isLgBot)).toHaveLength(0);
+    const g = deal(startLg(0), ['a', 'b', 'c'], 0, rnd); expect(g.nTeam).toBe(2); expect(Object.keys(g.team).filter(isLgBot)).toHaveLength(1);
+  });
+  it('🤖 봇 방향 = 가장 가까운 우리 색 아닌 칸 쪽(80%) · 봇 = 💎 없음 · 우승 명단에 없음', () => {
+    const f = deal(startLg(0), ['a', 'b', 'c', 'd', 'e'], 0, rnd), b = Object.keys(f.team).find(isLgBot)!;
+    const d = botDir(f, b, () => 0.9); const [x, y] = f.pos[b]!, [dx, dy] = DIRS[d]!; expect(ownAt(f, x + dx, y + dy)).not.toBe(f.team[b]);
+    expect(rewardOf({ ...f, phase: 'end', winTeams: [f.team[b]!] } as never, b)).toBeNull();
   });
 });
 describe('🏁 한 턴 (sim.py 순서)', () => {

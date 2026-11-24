@@ -1,12 +1,13 @@
 <script lang="ts">
   import type { Room } from '../../model/types';
   import { fxCells, fxLine, hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
+  import { isLgBot, lgBotHero, lgBotName } from '../../rest/landgrab';
   import { sfx } from '../sound.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
   // 🏁 땅따먹기 · 종합실 (📜 2026-11-24 · mock-teacher): 왼쪽 = 판 전체 · 오른쪽 = 남은 턴 · 다음 이동까지 초 · 팀 점수 막대(많은 순 · 마지막 5턴 「???」)
   //   📜 11/24 🔨 #18 「연출만 세게」(규칙 그대로): 정사각 격자 · 용사 이름표 · 위 해설 한 줄 · ⚔ 충돌 불꽃 + 튕김 + 흔들림 + 쾅 · 뺏은 칸 반짝 · ⭐ 9칸 파도 + 큰 소리
   const { R, f, now, nameOf = (u: string) => u }: { R: Room; f: Lg; now: number; nameOf?: (u: string) => string } = $props();
-  const short = (u: string) => nameOf(u).replace(/^\d+\s*/, '').replace(/^🤖/, '') || '?';
+  const short = (u: string) => (isLgBot(u) ? lgBotName(u) : nameOf(u).replace(/^\d+\s*/, '').replace(/^🤖/, '') || '?');
   const fx = $derived(f.fx && f.phase !== 'end' ? f.fx : null);
   const fxKey = $derived(fx ? `${f.g}|${fx.t}` : '');
   const flash = $derived(fxCells(fx));
@@ -32,7 +33,7 @@
       <p class="cast" data-k="lg-tv-cast">{#key fxKey}<span>{fxLine(f)}</span>{/key}</p>
       {#key fxKey}<div class="board" class:shake={!!fx?.bump.length} style:--n={f.size} data-k="lg-tv-board">
         {#each Array(total) as _, i (i)}{@const x = i % f.size}{@const y = Math.floor(i / f.size)}{@const c = ownAt(f, x, y)}{@const who = at[`${x},${y}`] || []}{@const fl = flash[`${x},${y}`]}{@const bu = who.length ? fx?.bu[who[0]!] : undefined}
-          <span class="c {fl ?? ''}" style:background={c >= 0 ? TEAMS[c]!.c : undefined}>{#if (f.stars || []).some((s) => s[0] === x && s[1] === y)}<em class="st">⭐</em>{/if}{#if bumpAt.has(`${x},${y}`)}<em class="bang" data-k="lg-bang">💥</em>{/if}{#if who.length}<i class="who" class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[who[0]!] ?? 0]!.c}><span class="hs"><HeroSprite id={R.players?.[who[0]!]?.hero ?? 0} scale={0.42} tv /></span><b class="nm" data-k="lg-name">{short(who[0]!)}{who.length > 1 ? ` +${who.length - 1}` : ''}</b></i>{/if}</span>
+          <span class="c {fl ?? ''}" style:background={c >= 0 ? TEAMS[c]!.c : undefined}>{#if (f.stars || []).some((s) => s[0] === x && s[1] === y)}<em class="st">⭐</em>{/if}{#if bumpAt.has(`${x},${y}`)}<em class="bang" data-k="lg-bang">💥</em>{/if}{#if who.length}<i class="who" class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[who[0]!] ?? 0]!.c}><span class="hs"><HeroSprite id={isLgBot(who[0]!) ? lgBotHero(who[0]!) : (R.players?.[who[0]!]?.hero ?? 0)} scale={0.42} tv /></span><b class="nm" data-k="lg-name">{short(who[0]!)}{who.length > 1 ? ` +${who.length - 1}` : ''}</b></i>{/if}</span>
         {/each}
       </div>{/key}
     </div>
