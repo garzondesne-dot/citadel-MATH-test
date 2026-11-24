@@ -259,7 +259,14 @@
     if (nextStepObj?.kind === 'boss' && L.boss?.links?.length && bossLive(L, R).items <= 1 && !bossAsked) { sheet = 'bossask'; return; } // 👑 #27 ④ 남은 문항 ≤ 1 = 형성평가도 복습으로?
     nextStep(S, L, code);
   }
-  const mainText = $derived(!R ? '' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
+  // 🐞 11/24 🔨 #15 선생님 「알까기 시작 어딨어?」: 쉼터 줄의 「▶ 출발」이 스크롤 아래로 밀려 안 보임 → 놀이가 모이는 중이면 큰 아래 단추 = 「▶ 출발 n명」
+  const funJoin = $derived.by(() => {
+    if (!R?.state.rest || !fun || fun.phase !== 'join') return null;
+    const k = fun.kind as string; if (k !== 'ak' && k !== 'lg') return null;
+    return { icon: k === 'ak' ? '🥏' : '🏁', n: Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`${k}${fun.g}_j`]) || {}).length };
+  });
+  function goFun() { if (!funJoin) return; if (funJoin.n < 2) { say('2명부터 시작해요 · 학생 폰에서 참가를 기다려요'); return; } lgGo(S, code); }
+  const mainText = $derived(!R ? '' : funJoin ? `▶ ${funJoin.icon} 출발 ${funJoin.n}명` : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
   function plus5() { sfx('plus5', 0.8); const e = extendTime(S, code); say(e ? `⏰ ${e}` : '⏰ 5분 늘렸어요'); }
   const flex = (s: { s: { id: string } }) => Math.max(1, minOf(L, R, s.s as never));
 </script>
@@ -390,7 +397,7 @@
       <button type="button" data-slot="gift" onclick={() => { picked = {}; sheet = 'gift'; }}><i>💎</i>선물</button>
       <button type="button" data-slot="heal" data-k="heal-first" class:hot={!!order.length} disabled={!order.length} aria-label={order.length ? `⚔ 보급 · 🙋① ${nl(numOf(order[0]!))}번 ${pname(order[0]!)}` : '⚔ 보급 · 도움 요청 없음'} onclick={() => order[0] && release(order[0])}><i>⚔</i>보급</button>
     </div>
-    <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
+    <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" data-k="main" onclick={() => (funJoin ? goFun() : main())}>{mainText}</button></div>
     <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
