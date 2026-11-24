@@ -31,6 +31,19 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await t.click('[data-k="dock-rest-end"]'); await t.waitForTimeout(500);
   const ts = await t.evaluate((c) => window.__dbGet(`rooms/${c}/state`), R);
   ok('종합실 쉼터 끝 → 쉼터 닫힘 · 단계 그대로', !ts.rest && ts.step === tStep, JSON.stringify({ rest: ts.rest, step: ts.step, tStep }));
+  await t.evaluate((a) => window.__dbSet(`rooms/${a.c}/state/sheet`, a.id), { c: R, id: sid }); await t.waitForTimeout(800);
+  // 🐞 11/24 정식 「문제 이미지 띄우고 ✏ 필기 눌러도 필기가 안 돼」 = 문제 창 위에서 필기 판이 맨 위 · 획이 그려짐 · 아래 조작 막대는 그대로 누름
+  await t.mouse.move(600, 400); await t.click('.dock .t:has-text("필기")'); await t.waitForTimeout(300);
+  const inkTop = await t.evaluate(() => { const s = document.querySelector('.ov.sheet'); if (!s) return 'no sheet'; const r = s.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el?.classList.contains('ink') ? 'ink' : String(el?.className || '?'); });
+  ok('📄 문제 창 + ✏ 필기 = 필기 판이 맨 위', inkTop === 'ink', inkTop);
+  const sb = await t.$eval('.ov.sheet', (s) => { const r = s.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await t.mouse.move(sb.x, sb.y); await t.mouse.down(); await t.mouse.move(sb.x + 80, sb.y + 30, { steps: 5 }); await t.mouse.up(); await t.waitForTimeout(150);
+  ok('문제 창 위에 획이 그려짐', (await t.$eval('canvas.ink', (c) => Number(c.dataset.strokes))) === 1);
+  await t.screenshot({ path: `${SHOTS}/focus-sheet-ink.png` });
+  const dockTop = await t.evaluate(() => { const d = document.querySelector('.dock .t'); if (!d) return 'no dock'; const r = d.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return el?.closest('.dock') ? 'dock' : String(el?.className || '?'); });
+  ok('필기 중에도 아래 조작 막대 누름', dockTop === 'dock', dockTop);
+  await t.click('.inkbar [aria-label="필기 끔"]'); await t.waitForTimeout(200);
+  await t.evaluate((c) => window.__dbSet(`rooms/${c}/state/sheet`, null), R); await t.waitForTimeout(300);
   // ② 리모컨 (교사 「수업」 탭 → 🧪 테스트 · 📱 리모컨만)
   const { testOpen } = require('./_cls.cjs');
   const r = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage(); r.setDefaultTimeout(8000); r.on('pageerror', (e) => errs.push('리모컨 ' + e));
