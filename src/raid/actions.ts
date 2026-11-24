@@ -97,6 +97,8 @@ export function setRest(S: Store, code: string, on: boolean, min = 5): void {
   setHold(S, code, R, { rest: on ? { at: S.now(), min } : null });
 }
 /** 🎬 영상 · 📄 문제 창 (TV) — 단계 id 또는 끄기 */
+/** 📷 수업 중 입장 QR 을 종합실에 크게 (📜 11/24 🔨 #9 ② · 튕긴 학생 다시 들이기) */
+export function setQr(S: Store, code: string, on: boolean): void { S.set(`${roomPath(code)}/state/qr`, on || null); }
 export function setVideo(S: Store, code: string, id: string | null): void { const R = getRoom(S, code); const p = R ? cpPatch(R.state as never, { video: id } as never, S.now()) : {}; Object.entries(p).forEach(([k, v]) => S.set(`${roomPath(code)}/state/${k}`, v)); S.set(`${roomPath(code)}/state/video`, id); }
 export function setSheet(S: Store, code: string, id: string | null): void { S.set(`${roomPath(code)}/state/sheet`, id); }
 /** 📊 길잡이 ⑤ 「📺 개념 n 칸 다시 띄우기」 = 지난 개념 칸 그림을 TV 에 다시 (교사 · 단계를 옮기면 닫힘) */
