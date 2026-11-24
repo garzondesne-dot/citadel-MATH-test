@@ -12,7 +12,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const txt = async (p, s) => ((await p.textContent(s).catch(() => '')) || '').replace(/\s+/g, ' ').trim();
   const fun = async (code) => t.evaluate((c) => window.__dbGet(`rooms/${c}/fun`), code);
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp'); await t.evaluate(() => { window.__botSpeed = 4; });
-  await testOpen(t, { no: 6, mode: 'remote', bots: 5 }); await t.waitForSelector('[data-k="bots"]');
+  await testOpen(t, { no: 6, mode: 'remote', bots: +(process.env.BOTS || 5) }); await t.waitForSelector('[data-k="bots"]');
   const live = await t.evaluate(() => window.__dbGet('school/live'));
   const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push('폰 ' + e)); await s.goto(`${B}?role=student&room=${live.code}&as=${live.cls === 'test' ? 'test' : live.cls}:3`); await s.waitForTimeout(2500);
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e));
@@ -30,7 +30,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   if (!(await t.$('[data-k="lg-go"]'))) await t.click('[data-slot="rest"]').catch(() => {});
   await t.click('[data-k="lg-go"]', { timeout: 5000 }); await t.waitForTimeout(1500);
   const f1 = await fun(live.code);
-  ok('▶ 출발 = 팀 나눔 · 판 9×9', ['ready', 'pick', 'move'].includes(f1?.phase) && f1.size === 9 && Object.keys(f1.team || {}).length >= 2, `${f1?.phase} ${f1?.size} ${Object.keys(f1?.team || {}).length}명`);
+  ok('▶ 출발 = 팀 나눔 · 판 9×9', ['ready', 'pick', 'move'].includes(f1?.phase) && f1.size === (Object.keys(f1.team || {}).length >= 25 ? 13 : Object.keys(f1.team || {}).length >= 13 ? 11 : 9) && Object.keys(f1.team || {}).length >= 2, `${f1?.phase} ${f1?.size} ${Object.keys(f1?.team || {}).length}명`);
   await s.bringToFront(); await s.waitForSelector('[data-k="lg-pad"]', { timeout: 10000 });
   ok('폰 = 7×7 창 · 방향 4개', (await s.$$('.win .c')).length === 49 && (await s.$$('[data-k="lg-pad"] button')).length === 4);
   // 방향 누르기 → 그 턴 내 방향 칸에 씀
@@ -40,7 +40,12 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('▶ 누름 = 이번 턴 방향 3(오른쪽) 저장', mine === 3, `${fp.phase} ${fp.turn} → ${mine}`);
   await s.screenshot({ path: `${SHOTS}/lg-phone.png` });
   await tv.bringToFront(); await tv.waitForTimeout(800); await tv.screenshot({ path: `${SHOTS}/lg-tv.png` });
-  ok('종합실 = 판 · 팀 막대', (await tv.$$('[data-k="lg-tv"] .board .c')).length === 81 && (await tv.$$('[data-k="lg-tv"] .bars li')).length >= 2);
+  { const fz = (await fun(live.code))?.size ?? 9; ok('종합실 = 판 · 팀 막대', (await tv.$$('[data-k="lg-tv"] .board .c')).length === fz * fz && (await tv.$$('[data-k="lg-tv"] .bars li')).length >= 2); }
+  { const m = await tv.evaluate(() => { const cs = [...document.querySelectorAll('[data-k="lg-tv"] .board .c')].map((c) => c.getBoundingClientRect()); const w = cs.map((r) => Math.round(r.width)), h = cs.map((r) => Math.round(r.height)); return { wmin: Math.min(...w), wmax: Math.max(...w), hmin: Math.min(...h), hmax: Math.max(...h) }; });
+    ok('🔨 #18 ⑥ 칸 = 모두 같은 정사각', m.wmax - m.wmin <= 1 && m.hmax - m.hmin <= 1 && Math.abs(m.wmax - m.hmax) <= 1, JSON.stringify(m)); }
+  ok('🔨 #18 ⑤ 용사 이름표', (await tv.$$('[data-k="lg-name"]')).length >= 2, `${(await tv.$$('[data-k="lg-name"]')).length}개`);
+  ok('🔨 #18 ④ 위 해설 한 줄', ((await tv.textContent('[data-k="lg-tv-cast"]')) || '').trim().length > 4, (await tv.textContent('[data-k="lg-tv-cast"]')) || '');
+  ok('🔨 #18 ① 이번 턴 연출 기록(fx) 있음', !!(await fun(live.code))?.fx, JSON.stringify((await fun(live.code))?.fx || {}).slice(0, 80));
   await t.bringToFront();
   for (let i = 0; i < 120; i++) { const f = await fun(live.code); if (!f || f.phase === 'end') break; await t.waitForTimeout(1000); }
   const fe = await fun(live.code);

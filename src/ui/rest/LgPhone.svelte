@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Room, Store } from '../../model/types';
-  import { DIRS, hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
+  import { DIRS, fxCells, fxLine, hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
   import { lgDir, lgJoin } from '../../rest/run';
   import HeroSprite from '../camp/HeroSprite.svelte';
   // 🏁 땅따먹기 · 학생 폰 (📜 2026-11-24): 모이기 = 「참가」 · 판 = 나를 가운데 둔 7×7 · 방향 4개(3초 안에 바꿀 수 있음 · 안 고르면 지난 방향) · 내가 칠한 칸 · 개인 순위는 안 보여 줌
@@ -16,6 +16,13 @@
   const sc = $derived(scores(f));
   const order = $derived(Array.from({ length: f.nTeam }, (_, t) => t).sort((a, b) => sc[b]! - sc[a]!));
   const go = (d: number) => { if (f.phase === 'pick' && myT != null) { lgDir(S, code, f.g, f.turn, uid, d); try { navigator.vibrate?.(20); } catch { /* 없음 */ } } };
+  // 📜 11/24 🔨 #18 연출(폰 = 작게): 뺏은 칸 반짝 · ⭐ 파도 · 💥 부딪힘 + 튕김 · 해설 한 줄
+  const fx = $derived(f.fx && f.phase !== 'end' ? f.fx : null);
+  const fxKey = $derived(fx ? `${f.g}|${fx.t}` : '');
+  const flash = $derived(fxCells(fx));
+  const bumpAt = $derived(new Set((fx?.bump || []).map((b) => `${b[0]},${b[1]}`)));
+  let buzzed = '';
+  $effect(() => { const k = fxKey; if (!k || k === buzzed) return; buzzed = k; if (fx && fx.bu[uid]) try { navigator.vibrate?.(60); } catch { /* 없음 */ } });
   let sx = 0, sy = 0;
   const swipe = (e: PointerEvent) => { const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return; go(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 3 : 2) : dy > 0 ? 1 : 0); };
 </script>
@@ -37,9 +44,10 @@
       <ol class="bars">{#each order as t (t)}<li style:--tc={TEAMS[t]!.c}><b>{f.rank?.[t]}등 {TEAMS[t]!.n}</b><span>{sc[t]}칸</span></li>{/each}</ol>
       <p class="rule">내가 칠한 칸 {f.mine?.[uid] ?? 0}</p>
     {:else}
-      <div class="win" role="img" aria-label="내 둘레 7×7" style:--n={W * 2 + 1} onpointerdown={(e) => { sx = e.clientX; sy = e.clientY; }} onpointerup={swipe}>
-        {#each cells as c, i (i)}<span class="c" class:out={!c.in} class:star={c.star} style:background={c.c >= 0 ? TEAMS[c.c]!.c : undefined}>{#if c.star}⭐{/if}{#if c.who.length}<i class="who" class:me={c.who.includes(uid)} style:--tc={TEAMS[f.team[c.who[0]!] ?? 0]!.c}><HeroSprite id={R.players?.[c.who[0]!]?.hero ?? 0} scale={0.36} /></i>{/if}</span>{/each}
-      </div>
+      <p class="cast" data-k="lg-cast">{#key fxKey}<span>{fxLine(f)}</span>{/key}</p>
+      {#key fxKey}<div class="win" class:shake={!!fx?.bu[uid]} role="img" aria-label="내 둘레 7×7" style:--n={W * 2 + 1} onpointerdown={(e) => { sx = e.clientX; sy = e.clientY; }} onpointerup={swipe}>
+        {#each cells as c, i (i)}{@const fl = flash[`${c.x},${c.y}`]}{@const bu = c.who.length ? fx?.bu[c.who[0]!] : undefined}<span class="c {fl ?? ''}" class:out={!c.in} class:star={c.star} style:background={c.c >= 0 ? TEAMS[c.c]!.c : undefined}>{#if c.star}⭐{/if}{#if bumpAt.has(`${c.x},${c.y}`)}<em class="bang">💥</em>{/if}{#if c.who.length}<i class="who" class:me={c.who.includes(uid)} class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[c.who[0]!] ?? 0]!.c}><HeroSprite id={R.players?.[c.who[0]!]?.hero ?? 0} scale={0.36} /></i>{/if}</span>{/each}
+      </div>{/key}
       <div class="pad" data-k="lg-pad">
         {#each [[0, '▲', 'up'], [2, '◀', 'left'], [3, '▶', 'right'], [1, '▼', 'down']] as [d, ic, k] (k)}<button type="button" class="d {k}" class:on={picked === d || (picked == null && f.last?.[uid] === d)} aria-pressed={picked === d} data-d={d} disabled={f.phase !== 'pick'} onclick={() => go(d as number)}>{ic}</button>{/each}
       </div>
@@ -53,9 +61,16 @@
   .band { margin: 0; font: 800 16px var(--font); color: var(--text); } .tm { color: var(--tc); }
   .rule { margin: 0; font: 600 15px/1.5 var(--font); color: var(--text-2); } .ok { margin: 0; font: 700 16px var(--font); color: var(--ok); }
   .big { min-height: 64px; padding: 0 var(--s6); border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent); font: 900 22px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
-  .win { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 2px; width: min(100%, 336px); aspect-ratio: 1; touch-action: none; }
+  .win { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-template-rows: repeat(var(--n), minmax(0, 1fr)); gap: 2px; width: min(100%, 336px); aspect-ratio: 1; touch-action: none; }
   .c { position: relative; display: grid; place-items: center; border-radius: 4px; background: var(--surface-2); font-size: 14px; } .c.out { background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.04) 0 4px, transparent 4px 8px); } /* 벽 밖 */
   .who { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 50%; box-shadow: inset 0 0 0 3px var(--tc); overflow: hidden; } .who.me { box-shadow: inset 0 0 0 3px #ffd34d, 0 0 0 2px #ffd34d; }
+  .cast { margin: 0; min-height: 22px; font: 800 14px var(--font); color: var(--text); } .cast span { display: inline-block; animation: castIn 0.3s ease-out; } @keyframes castIn { from { transform: scale(1.2); opacity: 0; } }
+  .win.shake { animation: lgShake 0.3s linear; } @keyframes lgShake { 25% { transform: translate(-4px, 2px); } 50% { transform: translate(4px, -2px); } 75% { transform: translate(-2px, -1px); } }
+  .c.steal { animation: steal 0.6s ease-out; } @keyframes steal { 0% { filter: brightness(2.4); transform: scale(1.15); } }
+  .c.wave0, .c.wave1, .c.wave2 { animation: wave 0.7s ease-out both; } .c.wave1 { animation-delay: 0.1s; } .c.wave2 { animation-delay: 0.2s; } @keyframes wave { 30% { filter: brightness(2.2); transform: scale(1.18); box-shadow: 0 0 10px #ffd34d; } }
+  .bang { position: absolute; inset: -30%; z-index: 3; display: grid; place-items: center; font-style: normal; font-size: 26px; pointer-events: none; animation: bang 0.55s ease-out both; } @keyframes bang { 0% { transform: scale(0.2); } 40% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+  .who.bu { animation: bounce 0.4s ease-out; } @keyframes bounce { 35% { transform: translate(calc(var(--bx) * 35%), calc(var(--by) * 35%)); } }
+  @media (prefers-reduced-motion: reduce) { .win.shake, .who.bu, .c.steal, .c.wave0, .c.wave1, .c.wave2 { animation: none; } }
   .pad { display: grid; grid-template-columns: repeat(3, 72px); grid-template-rows: repeat(3, 56px); gap: 6px; }
   .d { border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: 800 24px var(--font); box-shadow: 0 3px 0 var(--press-sh); }
   .d.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); } .d:disabled { opacity: 0.5; }
