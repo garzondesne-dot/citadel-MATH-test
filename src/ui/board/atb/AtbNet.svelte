@@ -14,6 +14,8 @@
   import { INTRO, metBefore } from '../../../board/atb/story';
   import { applyAct, atbResultFor, battleOf, decodeSnap, encodeSnap, introDone, isBot, lostSlots, NET, overwrite, pickHost, slotOf, type Act, type AtbEnd, type Meta, type Snap } from '../../../board/atb/net';
   import { bossArt } from './rdunBoss';
+  import { raidLessonOf } from '../../../board/atb/raid';
+  import { castles } from '../../../school/castles.svelte';
   import AtbBattle from './AtbBattle.svelte';
   import Land from './Land.svelte';
   import AtbResult from './AtbResult.svelte';
@@ -34,7 +36,7 @@
   let left = $state<Record<string, number>>({}), notice = $state<{ t: string; n: number } | null>(null), leftSeen = new Set<string>();
   const isHost = $derived(!!meta && host === uid);
   const me = $derived(meta ? slotOf(meta, uid) : -1);
-  const L = $derived(meta ? (PACKS.find((p) => p.id === meta!.lid) ?? PACKS.find((p) => p.no === meta!.no && !p.partOf) ?? null) : null);
+  const L = $derived(meta ? (PACKS.find((p) => p.id === meta!.lid) ?? PACKS.find((p) => p.no === meta!.no && !p.partOf) ?? raidLessonOf(castles.list, { id: meta!.lid, no: meta!.no })) : null); // 🏰 레이드 = 성채 팩에서
   const art = $derived(meta ? bossArt(bossOf(meta.no), meta.diff, L?.no === meta.no ? L.theme : undefined) : null);
   /** 👥 자리 이름: 나 = 「나」 · 친구 = 실명 · 봇 = 「🤖 모험가 A」 */
   const labels = $derived.by(() => { const o: Record<number, string> = {}; let b = 0; meta?.slots.forEach((s, i) => { o[i] = isBot(s) ? `🤖 모험가 ${'ABCD'[b++]}` : s.uid === uid ? '나' : left[s.uid] ? `🤖 ${names[s.uid] ?? s.nick ?? heroOf(s.hero).name}(봇)` : (names[s.uid] ?? s.nick ?? heroOf(s.hero).name); }); return o; });
