@@ -103,3 +103,22 @@ describe('📮 hold 선물 = 우편함에서만 받음 (11/19 「우편으로 �
     expect(claim(S, 's1_1_5', 'sorry_cap230')).toMatchObject({ g: 52 }); expect(claim(S, 's1_1_5', 'sorry_cap230')).toBeNull();
   });
 });
+
+// ⭐ 📜 11/24 선생님 (DECISIONS 6849e1e) 별점술사 해금 = 🎯 허수아비에서 문제 15개 맞히기 (빨간 칸이든 이미 맞힌 칸이든 · 서로 다른 문제 · 지난 기록도 셈)
+import { chalText, condLine } from '../src/model/heroUnlock';
+import { PACKS as P1124 } from '../src/engine/packs';
+import { fieldIds as fid1124 } from '../src/school/dummy';
+describe('⭐ 별점술사 = 허수아비 문제 15개', () => {
+  it('허수아비에서 맞힌 서로 다른 문제(몬스터 칸 · 👑) 셈 · 수업 기록과 상관없음 · 없는 칸 · 안 맞힘은 안 셈', () => {
+    const Ls = P1124.filter((L) => fid1124(L).length).slice(0, 4), bonus: Record<string, Record<string, { clear?: boolean }>> = {};
+    let n = 0; for (const L of Ls) { bonus[L.id] = {}; for (const mid of fid1124(L)) { if (n >= 14) break; bonus[L.id]![mid] = { clear: true }; n++; } }
+    bonus[Ls[0]!.id]!['nope'] = { clear: true }; bonus[Ls[0]!.id]!['boss'] = { clear: false };
+    expect(heroUnlock({ bonus } as never).chal[33]).toEqual({ n: 14, need: 15 });
+    bonus[Ls[1]!.id]!['boss'] = { clear: true };
+    const u = heroUnlock({ bonus } as never); expect(u.chal[33]).toEqual({ n: 15, need: 15 }); expect(u.open).toContain(33);
+  });
+  it('진행 글 = 「🎯 허수아비 문제 n/15 맞힘」', () => {
+    expect(chalText(33, { n: 3, need: 15 })).toBe('🎯 허수아비 문제 3/15 맞힘');
+    expect(condLine(33, heroUnlock({}), '🎯 허수아비 문제 15개 맞히기')).toBe('🎯 허수아비 문제 0/15 맞힘');
+  });
+});
