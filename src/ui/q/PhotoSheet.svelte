@@ -8,7 +8,7 @@
   import type { Store } from '../../model/types';
   import Sheet from '../battle/Sheet.svelte';
   import { sfx } from '../sound.svelte';
-  import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, passScroll, post, PRE_MSG, precheckOf, QUAL, rubric, roomMax, type PhotoRes } from '../../school/photo';
+  import { appealPath, cfgOf, coolSec, daily, EDGE, errMsg, keyOf, leftToday, pack, passScroll, post, PRE_MSG, precheckOf, QUAL, rubric, stretchLevels, roomMax, type PhotoRes } from '../../school/photo';
 
   export interface PhotoOut { status: 'pass' | 'check' | 'retry' | 'appeal'; id?: string; score?: number; total?: number; scores: number[]; steps?: PhotoRes['steps'] }
   const { S, cls, num, lesson, room, title, items, trial = false, test = false, again = false, fresh = false, onclose }:
@@ -47,6 +47,7 @@
   function exportJpeg(s: HTMLCanvasElement, r: typeof rc) {
     const k = Math.min(1, EDGE / Math.max(r.w, r.h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(r.w * k)); c.height = Math.max(1, Math.round(r.h * k));
     const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(s, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+    try { const im = g.getImageData(0, 0, c.width, c.height); if (stretchLevels(im.data)) g.putImageData(im, 0, 0); } catch { /* 그대로 보냄 */ } // 🐞 11/24 흐린 사진 = 대비 펴기
     return c.toDataURL('image/jpeg', QUAL).split(',')[1]!;
   }
   /** 🧹 1차 거르기 (정식 precheck 그대로 · 칸마다 종이 밝기 · 글씨 = 그 칸 종이보다 25 이상 어두운 점) */

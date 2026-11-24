@@ -12,7 +12,18 @@ export interface Rubric { on?: boolean; title: string; total: number; pass: numb
 export interface PhotoCfg { url?: string; on?: boolean; daily?: number; room?: number; cool?: number; raid?: number; warnDay?: number; warnMonth?: number }
 export interface PhotoRes { ok: boolean; err?: string; sec?: number; status?: 'pass' | 'retry' | 'check'; score?: number; total?: number; pass?: number; steps?: Record<string, { id?: string; pts?: number; earned?: number; note?: string }>; feedback?: string; left?: number; roomLeft?: number; cool?: number; id?: string }
 export const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
-export const EDGE = 1024, QUAL = 0.82;
+export const EDGE = 1568, QUAL = 0.85; // 🐞 11/24 학생 인터뷰 「사진 화질이 깨져 글씨가 안 보임」 = 1024px 로 줄이면 학습지 통째 사진의 글씨가 10px 안팎 → AI 가 읽는 최대 긴 변 1568px · 서버 상한(base64 1.6M) 안
+/** 🐞 11/24 흐린 사진(샤프 · 지운 자국 · 어두운 교실) = 밝기 · 대비 펴기: 밝은 쪽 2%(종이) → 255 · 어두운 쪽 1%(글씨) → 0 으로 늘림 · 이미 또렷하면(차이 200 넘고 종이 235 넘음) 그대로 · 색은 그대로(채널마다 같은 늘림) */
+export function stretchLevels(d: Uint8ClampedArray): boolean {
+  const n = d.length >> 2, hist = new Uint32Array(256);
+  for (let i = 0; i < n; i++) hist[Math.round(0.299 * d[i * 4]! + 0.587 * d[i * 4 + 1]! + 0.114 * d[i * 4 + 2]!)]!++;
+  const at = (p: number) => { let c = 0; for (let v = 0; v < 256; v++) { c += hist[v]!; if (c >= n * p) return v; } return 255; };
+  const lo = at(0.01), hi = at(0.98);
+  if ((hi - lo > 200 && hi > 235) || hi - lo < 24) return false; // 또렷함 · 빈 종이(늘리면 잡티만 커짐)
+  const k = 255 / (hi - lo);
+  for (let i = 0; i < n * 4; i++) if ((i & 3) !== 3) d[i] = (d[i]! - lo) * k;
+  return true;
+}
 export const ROOM0 = 2, COOL0 = 30, DAILY0 = 6, WARN_DAY0 = 150, WARN_MONTH0 = 3000, WON = 1.2;
 export const day = (t = Date.now()) => { const d = new Date(t + 9 * 3600e3); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`; };
 export const cfgOf = (S: Store): PhotoCfg => S.get<PhotoCfg>('gcfg/photo') || {};
