@@ -95,3 +95,37 @@ export async function findVideo(name: string, packId: string, head: (url: string
   const p = vidPath(packId, base); if (await srv(`${p}/n`)) return { url: RTDB + p, from: 'server' };
   return null;
 }
+
+// 🎬 덧영상 (📜 11/24 선생님 ❓ #6 A · DECISIONS 634af93): 한 칸에 영상 하나 더 = 「🎬 1 · 🎬 2」 단추 · 영상 파일은 앱 안 video/ · 옛 영상 · 서버 팩은 그대로
+//   리모컨 · 종합실 · 학생 폰 · 허수아비 · 예습 · 영상 목록이 모두 이 함수로 (🪞 선생님 쪽 = 학생 쪽) · 둘째 영상 열쇠 = 「칸~2」
+export const ADDON_VIDS: Record<string, Record<string, string>> = {
+  'ex-12': { c1: 'video/v12-71.mp4' },
+  'ex-14': { c1: 'video/v14-72.mp4', c2: 'video/v14-72.mp4', c3: 'video/v14-73.mp4' },
+};
+export function applyAddon(packs: { id: string; addVids?: Record<string, string> }[]): void {
+  for (const p of packs) { const m = ADDON_VIDS[p.id]; if (m) p.addVids = { ...m }; }
+}
+type VL = { videos?: Record<string, string>; addVids?: Record<string, string> };
+/** 열쇠(칸 · 칸~2) → 영상 주소 */
+export function vidOf(L: VL | null | undefined, key: string | null | undefined): string | null {
+  if (!L || !key) return null;
+  const m = /^(.+)~2$/.exec(key);
+  return (m ? L.addVids?.[m[1]!] : L.videos?.[key]) ?? null;
+}
+/** 한 칸의 영상들 = [{ key, label }] · 하나면 「🎬 영상」 · 둘이면 「🎬 1」 · 「🎬 2」 (원래 영상이 없고 덧영상만 있으면 하나) */
+export function vidsAt(L: VL | null | undefined, cell: string | null | undefined): { key: string; n: number }[] {
+  if (!L || !cell) return [];
+  const a = [L.videos?.[cell] ? cell : null, L.addVids?.[cell] ? `${cell}~2` : null].filter((k): k is string => !!k);
+  return a.length === 2 ? a.map((key, i) => ({ key, n: i + 1 })) : a.map((key) => ({ key, n: 0 }));
+}
+export const vidLabel = (n: number, one = '영상') => (n ? `🎬 ${n}` : `🎬 ${one}`);
+/** 리모컨 · 종합실 🎬 자리 하나(2×5 자리표 그대로): 누를 때마다 끔 → 1 → 2 → 끔 · 영상 하나면 켬 ↔ 끔 */
+export function vidNext(L: VL | null | undefined, cell: string | null | undefined, cur: string | null | undefined): string | null {
+  const ks = vidsAt(L, cell).map((v) => v.key); if (!ks.length) return null;
+  const i = cur ? ks.indexOf(cur) : -1; return cur && i < 0 ? null : ks[i + 1] ?? null;
+}
+/** 🎬 자리 글자: 하나 = 「영상」 · 둘이고 끔 = 「영상 2편」 · 켬 = 「1 / 2」 · 「2 / 2」 */
+export function vidDockLabel(L: VL | null | undefined, cell: string | null | undefined, cur: string | null | undefined): string {
+  const ks = vidsAt(L, cell).map((v) => v.key); if (ks.length < 2) return '영상';
+  const i = cur ? ks.indexOf(cur) : -1; return i < 0 ? '영상 2편' : `${i + 1} / 2`;
+}

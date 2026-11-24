@@ -16,7 +16,7 @@ import { applyTheme, savedTheme } from './theme/theme';
 import { chooseStore } from './store/config';
 import { startPwa } from './pwa.svelte';
 import { addPacks, PACKS } from './engine/packs';
-import { loadVids } from './school/video';
+import { applyAddon, loadVids } from './school/video';
 import { loadUploaded } from './school/packUpload';
 import { loadCastles } from './school/castle';
 import { addCastles } from './school/castles.svelte';
@@ -44,7 +44,7 @@ if (typeof window !== 'undefined') {
 if (TRIAL) {
   void (async () => {
     const [{ trialPacks, trialCastles }, { default: TrialApp }] = await Promise.all([import('./trial/trial'), import('./trial/TrialApp.svelte')]);
-    const tp = trialPacks(); PACKS.splice(0, PACKS.length, ...tp); // 🎯 허수아비 · 모루 = 체험판 차시 두 장
+    const tp = trialPacks(); PACKS.splice(0, PACKS.length, ...tp); applyAddon(PACKS); // 🎯 허수아비 · 모루 = 체험판 차시 두 장
     addCastles(trialCastles()); // 🏰 성채 1층만
     mount(TrialApp, { target, props: {} });
     requestAnimationFrame(() => (window as { bootDone?: () => void }).bootDone?.());
@@ -55,7 +55,7 @@ void chooseStore().catch((e) => { (window as { bootShow?: (t: string) => void })
   const room = new URLSearchParams(location.search).get('room') || new URLSearchParams(location.search).get('join');
   // 📦 방 · 올린 차시 팩 · 성채 팩 = 서로 기다리지 않고 한꺼번에 받음 (더하는 순서는 그대로: 차시 팩 → 영상 → 성채)
   const [, up, cas] = await Promise.all([room && S.fetch ? S.fetch(`rooms/${room}`).catch(() => null) : null, loadUploaded(S), loadCastles(S)]);
-  { const r0 = new URLSearchParams(location.search).get('role'); addPacks(up.filter((p) => !(p.hide && (!r0 || r0 === 'camp')))); } await loadVids(S, PACKS); // 👀 숨긴 팩 = 학생 캠프에서만 빠짐 (수업 · 교사 · TV 는 그대로) // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
+  { const r0 = new URLSearchParams(location.search).get('role'); addPacks(up.filter((p) => !(p.hide && (!r0 || r0 === 'camp')))); } await loadVids(S, PACKS); applyAddon(PACKS); // 👀 숨긴 팩 = 학생 캠프에서만 빠짐 (수업 · 교사 · TV 는 그대로) // 📦 … · 🎬 차시 준비에서 더한 영상(prep/vids)
   addCastles(cas); // 🏰 올린 성채 팩 (prep/addons/castle · 📜 2026-11-14)
   // 📦 올린 차시 팩 (L1 · 서버 = 거울 밖 칸 · 화면을 띄우기 전에 차시 목록에)
   { const m = /^(\d-\d):(\d+)$/.exec(new URLSearchParams(location.search).get('as') || ''); if (m && where.kind === 'emulator' && TEST_ADDR) { const { emuAsLogin } = await import('./school/school'); const e = await emuAsLogin(S, m[1]!, Number(m[2])); if (e) console.warn('?as 로그인', e); } } // 🧪 에뮬레이터 ?as = 진짜 로그인 (📜 2026-11-14 규칙 학생 칸 주인)

@@ -16,6 +16,7 @@ const vname = (u: string) => (isRtdb(u) ? u.replace(/^.*\//, '') : u.replace(/^.
 /** 팩 JSON (엔진 꼴): 앱 차시 = id ex-NN · 나눈 차시도 혼자 서는 팩 · 그림 칸 = 넣은 칸 · 영상 = zip 안 mp4 이름(video/{이름}.mp4) */
 export function packJson(L: LessonPack, builtIn: boolean, imgCells: string[], vids: Record<string, string>): LessonPack {
   const p = JSON.parse(JSON.stringify(L)) as LessonPack & Record<string, unknown>;
+  delete p.addVids; // 🎬 덧영상 = 앱 것 (팩 파일에 넣지 않음)
   if (builtIn) p.id = `ex-${nn(L.no)}`;
   delete p.partOf; delete p.parts; delete p.imgOf; delete p.source; delete p.imgCells;
   if (imgCells.length) p.imgCells = imgCells;

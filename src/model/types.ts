@@ -120,6 +120,7 @@ export interface LessonPack {
   theme?: string;
   defaultPct: number;
   videos?: Record<string, string>;
+  /** 🎬 덧영상 = 칸마다 둘째 영상 (앱 안 video/ · school/video.ts ADDON_VIDS · 서버 팩에는 안 씀) */ addVids?: Record<string, string>;
   /** 🔑 입장 열쇠 = 선수 학습 점검 (📜 #59 · PACK-GUIDE 17 · school/keys.ts) */ keys?: { id: string; name: string; grade?: string; help: string; vers: Question[]; uses: { at: string; n: number }[] }[];
   /** 🧩 #132 정식 차시에서 옮긴 칸 */
   sheet?: string;
