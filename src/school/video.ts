@@ -103,7 +103,7 @@ export const ADDON_VIDS: Record<string, Record<string, string>> = {
   'ex-14': { c1: 'video/v14-72.mp4', c2: 'video/v14-72.mp4', c3: 'video/v14-73.mp4' },
 };
 /** 🎨 차시 배경 덮기 (서버 팩은 그대로 · 📜 11/24 머리 🔨 f14-bg) — 팩 id → 던전 배경 열쇠(manifest DUNGEONS) · 팩 theme 이 아래 「옛 값」일 때만 바꿈(선생님이 새로 고른 theme 은 그대로) */
-export const ADDON_THEME: Record<string, { from: string; to: string }> = { 'ex-14': { from: '04-mine', to: '14-chainmine' } };
+export const ADDON_THEME: Record<string, { from: string; to: string }> = { 'ex-14': { from: '04-mine', to: '14-chainmine' }, 'ex-15': { from: '12-skygarden', to: '15-ridge' }, 'ex-16': { from: '05-ruins', to: '16-twinworks' }, 'ex-17': { from: '06-frost', to: '17-mirror' } }; // 🎨 11/24 · 11/25 함수 던전 배경 f14 ~ f17 (코덱스 · 과목 팩 themes.json dungeons 에 있음 = 차시 팩에서 고를 수 있음)
 export function applyAddon(packs: { id: string; addVids?: Record<string, string>; theme?: string }[]): void {
   for (const p of packs) { const m = ADDON_VIDS[p.id]; if (m) p.addVids = { ...m }; const t = ADDON_THEME[p.id]; if (t && (!p.theme || p.theme === t.from)) p.theme = t.to; }
 }
