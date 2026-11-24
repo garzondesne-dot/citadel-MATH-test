@@ -14,7 +14,7 @@
   import type { Arena, ArenaState, Hero } from './arena/pixi';
   import Sprite from '../Sprite.svelte';
   import HeroSprite from '../camp/HeroSprite.svelte';
-  import { atkClock, atkTrack, bossHp, bossNote, monsterHp, isChain } from '../../raid/raid';
+  import { atkClock, atkTrack, bossHp, bossNote, monsterHp, isChain, offKind, offIcon } from '../../raid/raid';
   import { tvHint } from '../../school/hintGive';
   import { gaugeView } from '../battle/gauge';
   import { attackMs, attackOf, attackStrong } from '../../raid/attacks';
@@ -49,7 +49,7 @@
   // 📺 시안 (2026-11-14): 머리 위 = 몬스터 이름(그림 시트 이름 · 폰 장면 띠와 같음) — 「문제 1」 아님 · 이름이 없으면 단계 이름
   const monName = $derived.by(() => { try { const sp = spriteOf(sprite); return sp.sheet.names[sp.row] || ''; } catch { return ''; } });
   const hpLabel = $derived(`${boss ? '👑 ' : step?.kind === 'monster' && isChain(L, R, step.id) ? '👑 대장 · ' : ''}${monName || (boss ? L.boss?.title.split(' · ').pop() ?? '보스' : step?.title.split(' · ').pop() ?? '')}${boss && R && bossNote(L, R) ? ` · ${bossNote(L, R)}` : ''}`); // 👑 #27
-  const heroes = $derived<Hero[]>(ids.map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, name: nameOf(u), ok: submitted(u), off: lost.has(u) })));
+  const heroes = $derived<Hero[]>(ids.map((u) => ({ u, hero: R.players?.[u]?.hero ?? 0, name: nameOf(u), ok: submitted(u), off: lost.has(u), offK: offKind(R, u) })));
   const st = $derived<ArenaState>({ boss, split, sprite, hp: hp ? { left: hp.left, max: hp.max } : null, hpLabel, down: !!hp?.down, shadow, heroes, ex: explorers(R) }); // 🔥 #67 탐사대
 
   onMount(() => {
@@ -347,7 +347,7 @@
     {#each heroes as h, k (h.u)}{@const sl = slots[k]}{#if sl}
       <div class="hr" data-u={h.u} class:off={h.off} class:lunge={lunge[h.u]} style:left="{sl.x}px" style:top="{sl.y}px" style:--dir={sl.flip ? -1 : 1} style:z-index={Math.round(sl.y)}>
         <span class="art" class:iced={iceDom > 0} style:transform="scaleX({sl.flip ? -1 : 1})"><HeroSprite id={h.hero} scale={sl.s} aura={Number(R.players?.[h.u]?.enh) || 0} tv pose={domPose[h.u] || baseOf(h.u) || undefined} />{#if iceDom > 0}<i class="iceb" class:melt={iceDom === 2}></i>{/if}</span>
-        <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? '📶✕ ' : ''}{h.name}</span>
+        <span class="nm" class:ok={h.ok}>{h.ok ? '✓ ' : h.off ? `${offIcon(h.offK ?? 'net')} ` : ''}{h.name}</span>
       </div>
     {/if}{/each}
     {#if domBan}<div class="ban" style:left="{split ? W * 0.27 : W / 2}px">{domBan}</div>{/if}
