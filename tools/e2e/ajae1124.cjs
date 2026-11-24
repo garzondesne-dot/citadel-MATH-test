@@ -12,7 +12,7 @@ const bank = require('../../src/rest/ajae.json').list;
   const t = await ctx.newPage(); t.on('pageerror', (e) => errs.push('리모컨 ' + e));
   const txt = async (p, s) => ((await p.textContent(s).catch(() => '')) || '').replace(/\s+/g, ' ').trim();
   await t.goto(B + '?role=teacher'); await t.evaluate(() => localStorage.clear()); await t.reload(); await t.waitForSelector('.tp'); await t.evaluate(() => { window.__botSpeed = 4; });
-  await testOpen(t, { no: 6, mode: 'remote', bots: 4 }); await t.waitForSelector('[data-k="bots"]');
+  await testOpen(t, { no: 6, mode: 'remote', bots: +(process.env.BOTS || 4) }); await t.waitForSelector('[data-k="bots"]');
   const live = await t.evaluate(() => window.__dbGet('school/live'));
   const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push('폰 ' + e)); await s.goto(`${B}?role=student&room=${live.code}&as=${live.cls === 'test' ? 'test' : live.cls}:3`); await s.waitForTimeout(2500);
   const tv = await ctx.newPage(); await tv.setViewportSize({ width: 1280, height: 720 }); tv.on('pageerror', (e) => errs.push('TV ' + e));
