@@ -9,13 +9,17 @@
 /** ⚙ 값 한 곳 */
 export const AK = {
   readyMs: 5000, playSec: 150, endMs: 15000, beatMs: 1000, dt: 0.04, steps: 25,
-  r: 0.7, fric: 9, pow: [7, 11, 15] as const, cool: 4, inv: 2, back: 3, credit: 3,
+  r: 0.9, fric: 9, pow: [7 * Math.SQRT2, 11 * Math.SQRT2, 15 * Math.SQRT2] as const, ring: 0.5, cool: 4, inv: 2, back: 3, credit: 3,
   knock: 3, hit: 1, crown: 5, minPlayers: 2, gem1: 30, gem23: 20, gemJoin: 10, dayMax: 3,
 } as const;
 /** 시간 (🧪 화면 시험만 globalThis.__AK_SPEED 로 줄임 · 박자 길이만 바뀜 = 판 안 1초는 그대로) */
 const spd = () => Number((globalThis as { __AK_SPEED?: number }).__AK_SPEED) || 1;
-/** 판 반지름 = max(5.5, 2 + 1.2√인원) (알 반지름 0.7) */
-export const radiusFor = (n: number) => Math.max(5.5, 2 + 1.2 * Math.sqrt(Math.max(1, n)));
+/** 📜 11/24 선생님 「판이 너무 작아 · 반지름 두 배로 · 위치는 반지름 절반쯤」 → 판 반지름 = 2 × max(5.5, 2 + 1.2√인원) · 세기 = 미끄러지는 거리 2배(속도 √2배) */
+export const radiusFor = (n: number) => 2 * Math.max(5.5, 2 + 1.2 * Math.sqrt(Math.max(1, n)));
+/** 출발 원 = 판 반지름의 0.5 · 같은 간격 360°/n */
+export const ringFor = (R: number) => R * AK.ring;
+/** 알 반지름 = min(0.9, 출발 원 둘레에 n명이 같은 간격으로 들어가는 크기(알 사이 틈 = 알 지름의 20%)) */
+export const stoneFor = (n: number, ring: number) => Math.min(AK.r, (Math.PI * ring) / (Math.max(1, n) * 1.2));
 
 export interface Stone {
   x: number; y: number; vx: number; vy: number;
@@ -26,11 +30,11 @@ export interface Stone {
   /** 마지막으로 넣은 발사 번호 */ n: number;
 }
 export type Shot = { a: number; p: number; n: number };
-export type AkEv = { k: 'fall'; u: string; by: string; pts: number; t: number } | { k: 'hit'; u: string; t: number };
+export type AkEv = { k: 'fall'; u: string; by: string; pts: number; t: number; x?: number; y?: number } | { k: 'hit'; u: string; t: number };
 
 export interface Ak {
   kind: 'ak'; g: number; phase: 'join' | 'ready' | 'play' | 'end'; to: number; endAt?: number; go?: number;
-  /** 판 반지름 · 박자 번호 · 박자 시작 시각 · 박자 길이(ms) · 판 시각(초) */ R: number; beat: number; t0: number; bm: number; gt: number;
+  /** 판 반지름 · 출발 원 · 알 반지름 · 박자 번호 · 박자 시작 시각 · 박자 길이(ms) · 판 시각(초) */ R: number; ring?: number; ar?: number; beat: number; t0: number; bm: number; gt: number;
   st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>;
   crown?: string; ev?: AkEv[]; rank?: Record<string, number>; win?: string[]; total: number; alive?: Record<string, true>;
   drv?: { u: string; at: number }; frz?: number | null;
@@ -42,14 +46,11 @@ export const rkShot = (g: number) => `ak${g}`;
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 const ids = (st: Record<string, Stone>) => Object.keys(st).sort();
 
-/** 빈자리 (다른 알과 3r 넘게 · 가장자리 2 안쪽) */
-function spot(st: Record<string, Stone>, R: number, rnd: Rnd): [number, number] {
-  let x = 0, y = 0;
-  for (let k = 0; k < 100; k++) {
-    const rr = Math.sqrt(rnd()) * Math.max(0.5, R - 2), t = rnd() * Math.PI * 2; x = rr * Math.cos(t); y = rr * Math.sin(t);
-    if (Object.values(st).every((s) => !s.on || Math.hypot(x - s.x, y - s.y) > 3 * AK.r)) break;
-  }
-  return [r3(x), r3(y)];
+/** 되살아남 = 출발 원 위 가장 빈 자리 (다른 알과 가장 먼 각도 · 72곳 중) · rnd = 같은 거리일 때 흔들기 */
+function ringSpot(st: Record<string, Stone>, ring: number, rnd: Rnd): [number, number] {
+  const on = Object.values(st).filter((s) => s.on); let best: [number, number] = [ring, 0], bd = -1; const off = rnd() * Math.PI * 2;
+  for (let k = 0; k < 72; k++) { const t = off + (k / 72) * Math.PI * 2, x = ring * Math.cos(t), y = ring * Math.sin(t), d = on.length ? Math.min(...on.map((s) => Math.hypot(x - s.x, y - s.y))) : 1e9; if (d > bd) { bd = d; best = [x, y]; } }
+  return [r3(best[0]), r3(best[1])];
 }
 const fresh = (x: number, y: number, inv = 0): Stone => ({ x, y, vx: 0, vy: 0, on: 1, cd: 0, inv, back: 0, l: '', lt: -9, f: 0, n: 0 });
 
@@ -58,17 +59,19 @@ export const startAk = (now: number): Ak => ({ kind: 'ak', g: now, phase: 'join'
 
 /** 출발 = 참가한 학생 알을 빈자리에 */
 export function deal(f: Ak, joined: string[], now: number, rnd: Rnd = Math.random): Ak {
-  const R = radiusFor(joined.length), st: Record<string, Stone> = {};
-  for (const u of [...joined].sort()) { const [x, y] = spot(st, R, rnd); st[u] = fresh(x, y); }
-  return { ...f, phase: 'ready', to: now + AK.readyMs * spd(), R: r3(R), st, sc: Object.fromEntries(joined.map((u) => [u, 0])), kn: {}, fall: {}, total: joined.length, t0: now, beat: 0, gt: 0, bm: Math.round(AK.beatMs * spd()) };
+  const n = joined.length, R = radiusFor(n), ring = ringFor(R), ar = stoneFor(n, ring), st: Record<string, Stone> = {}, off = rnd() * Math.PI * 2;
+  // 📜 출발 = 출발 원 위 같은 간격 · 자리 순서 = 무작위
+  const order = [...joined].sort(); for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j]!, order[i]!]; }
+  order.forEach((u, i) => { const t = off + (i / n) * Math.PI * 2; st[u] = fresh(r3(ring * Math.cos(t)), r3(ring * Math.sin(t))); });
+  return { ...f, phase: 'ready', to: now + AK.readyMs * spd(), R: r3(R), ring: r3(ring), ar: r3(ar), st, sc: Object.fromEntries(joined.map((u) => [u, 0])), kn: {}, fall: {}, total: joined.length, t0: now, beat: 0, gt: 0, bm: Math.round(AK.beatMs * spd()) };
 }
 
 /** 1초(박자 하나) 움직임 — 폰 · TV · 시계 기기가 모두 같은 식 · steps = 그릴 걸음 수(0 ~ 25) · 점수 · 사건은 결과로 */
-export function simBeat(st0: Record<string, Stone>, R: number, gt0: number, crown: string | undefined, steps: number = AK.steps): { st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>; ev: AkEv[] } {
+export function simBeat(st0: Record<string, Stone>, R: number, gt0: number, crown: string | undefined, steps: number = AK.steps, ar: number = AK.r): { st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>; ev: AkEv[] } {
   const st: Record<string, Stone> = {}; for (const u of ids(st0)) st[u] = { ...st0[u]! };
   const sc: Record<string, number> = {}, kn: Record<string, number> = {}, fall: Record<string, number> = {}, ev: AkEv[] = [];
   const add = (o: Record<string, number>, u: string, v: number) => { o[u] = (o[u] || 0) + v; };
-  const U = ids(st), dt = AK.dt, D = 2 * AK.r;
+  const U = ids(st), dt = AK.dt, D = 2 * ar;
   let t = gt0;
   for (let k = 0; k < steps; k++) {
     t += dt;
@@ -84,7 +87,7 @@ export function simBeat(st0: Record<string, Stone>, R: number, gt0: number, crow
           const by = s.l && s.l !== u && t - s.lt <= AK.credit ? s.l : '';
           const pts = by ? (crown === u ? AK.crown : AK.knock) : 0;
           if (by) { add(sc, by, pts); add(kn, by, 1); }
-          ev.push({ k: 'fall', u, by, pts, t: r3(t) }); s.l = '';
+          ev.push({ k: 'fall', u, by, pts, t: r3(t), x: r3(s.x), y: r3(s.y) }); s.l = '';
         }
       } else { s.vx = 0; s.vy = 0; s.f = 0; }
     }
@@ -130,15 +133,16 @@ export function stepAk(f: Ak, joins: Record<string, unknown> | null, shots: Reco
   if (f.phase === 'ready') { if (now < f.to) return null; return { ...f, phase: 'play', t0: now, beat: 1, gt: 0, to: now + AK.playSec * f.bm }; }
   if (now < f.t0 + f.bm) return null;
   // ① 지난 1초
-  const b = simBeat(f.st, f.R, f.gt, f.crown);
+  const ar = f.ar ?? AK.r, ring = f.ring ?? ringFor(f.R);
+  const b = simBeat(f.st, f.R, f.gt, f.crown, AK.steps, ar);
   const st = b.st, sc = sum(f.sc, b.sc), kn = sum(f.kn, b.kn), fall = sum(f.fall, b.fall), gt = r3(f.gt + AK.steps * AK.dt);
   const ev = [...(f.ev || []), ...b.ev.filter((e) => e.k === 'fall')].slice(-8);
   if (gt >= AK.playSec - 1e-6) {
     const r = rankAk({ sc, kn, st }); return { ...f, phase: 'end', endAt: now, to: now + AK.endMs * spd(), st: pack(st), sc, kn, fall, gt, ev, rank: r.rank, win: r.order.filter((u) => r.rank[u] === 1), crown: crownOf(sc, f.crown) };
   }
   // ② 늦게 온 학생 · 되살리기
-  for (const u of Object.keys(joins || {}).sort()) if (!st[u]) { const [x, y] = spot(st, f.R, rnd); st[u] = fresh(x, y, AK.inv); sc[u] ??= 0; }
-  for (const u of ids(st)) { const s = st[u]!; if (!s.on && s.back <= 1e-6) { const [x, y] = spot(st, f.R, rnd); st[u] = { ...fresh(x, y, AK.inv), cd: 0.5, n: s.n }; } }
+  for (const u of Object.keys(joins || {}).sort()) if (!st[u]) { const [x, y] = ringSpot(st, ring, rnd); st[u] = fresh(x, y, AK.inv); sc[u] ??= 0; }
+  for (const u of ids(st)) { const s = st[u]!; if (!s.on && s.back <= 1e-6) { const [x, y] = ringSpot(st, ring, rnd); st[u] = { ...fresh(x, y, AK.inv), cd: 0.5, n: s.n }; } }
   // ③ 발사 넣기 (쉬는 중 · 떨어짐 = 버림)
   for (const [u, sh] of Object.entries(shots || {})) {
     const s = st[u]; if (!s || !sh || !(Number(sh.n) > s.n)) continue;
@@ -151,14 +155,14 @@ export function stepAk(f: Ak, joins: Record<string, unknown> | null, shots: Reco
 }
 
 /** 지금 보이는 판 (폰 · TV) = 박자 시작 상태에서 지난 시간만큼 */
-export function viewAt(f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase'>, now: number) {
+export function viewAt(f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar'>, now: number) {
   if (f.phase !== 'play') return { st: f.st, ev: [] as AkEv[], k: 0 };
   const k = Math.max(0, Math.min(AK.steps, Math.floor(((now - f.t0) / f.bm) * AK.steps)));
-  const b = simBeat(f.st, f.R, f.gt, f.crown, k); return { st: b.st, ev: b.ev, k };
+  const b = simBeat(f.st, f.R, f.gt, f.crown, k, f.ar ?? AK.r); return { st: b.st, ev: b.ev, k };
 }
 
 /** 궤적 미리 보기 (내 폰 · 서버에 안 물음 · 지금 판 기준 예상): 내 알 혼자 미끄러짐 → 멈출 자리 / 판 밖 / 처음 부딪히는 알과 그 알이 밀려갈 방향 */
-export function predict(st: Record<string, Stone>, R: number, me: string, a: number, p: number): { pts: [number, number][]; out: boolean; hit?: { u: string; x: number; y: number; dx: number; dy: number; out: boolean } } {
+export function predict(st: Record<string, Stone>, R: number, me: string, a: number, p: number, ar: number = AK.r): { pts: [number, number][]; out: boolean; hit?: { u: string; x: number; y: number; dx: number; dy: number; out: boolean } } {
   const s = st[me]; if (!s) return { pts: [], out: false };
   let x = s.x, y = s.y, v: number = AK.pow[Math.max(0, Math.min(2, p))]!; const cx = Math.cos(a), cy = Math.sin(a), pts: [number, number][] = [[x, y]];
   const others = Object.entries(st).filter(([u, o]) => u !== me && o.on && o.inv <= 0);
@@ -166,7 +170,7 @@ export function predict(st: Record<string, Stone>, R: number, me: string, a: num
     v = Math.max(0, v - AK.fric * AK.dt); x += v * cx * AK.dt; y += v * cy * AK.dt;
     if (k % 2 === 0) pts.push([x, y]);
     if (Math.hypot(x, y) > R) { pts.push([x, y]); return { pts, out: true }; }
-    const o = others.find(([, q]) => Math.hypot(q.x - x, q.y - y) < 2 * AK.r);
+    const o = others.find(([, q]) => Math.hypot(q.x - x, q.y - y) < 2 * ar);
     if (o) {
       const [u, q] = o, d = Math.hypot(q.x - x, q.y - y) || 1, nx = (q.x - x) / d, ny = (q.y - y) / d, push = Math.max(0, v * (cx * nx + cy * ny));
       const dist = (push * push) / (2 * AK.fric), ex = q.x + nx * dist, ey = q.y + ny * dist;
@@ -175,8 +179,8 @@ export function predict(st: Record<string, Stone>, R: number, me: string, a: num
   }
   pts.push([x, y]); return { pts, out: false };
 }
-/** 당긴 길이(판 단위) → 세기 0 ~ 2 · 너무 짧으면 -1(안 쏨) */
-export const powerOf = (len: number) => (len < 0.4 ? -1 : len < 1.4 ? 0 : len < 2.6 ? 1 : 2);
+/** 당긴 길이(화면 px · CSS) → 세기 0 ~ 2 · 너무 짧으면 -1(안 쏨) — 확대 · 축소와 상관없이 같은 손 느낌 */
+export const powerOf = (px: number) => (px < 18 ? -1 : px < 60 ? 0 : px < 110 ? 1 : 2);
 
 /** 🤖 가상 친구 · 봇 시험 = sim.py 봇 그대로: 가장 가까운 알(무적 아닌)을 겨눔 · 조준 오차(가우스 sk 라디안) · 거리로 세기 */
 export function botShot(st: Record<string, Stone>, me: string, sk: number, rnd: Rnd = Math.random): { a: number; p: number } | null {
@@ -184,5 +188,5 @@ export function botShot(st: Record<string, Stone>, me: string, sk: number, rnd: 
   const tg = Object.entries(st).filter(([u, o]) => u !== me && o.on && o.inv <= 0); if (!tg.length) return null;
   const [, o] = tg.reduce((m, c) => (Math.hypot(c[1].x - s.x, c[1].y - s.y) < Math.hypot(m[1].x - s.x, m[1].y - s.y) ? c : m)), d = Math.hypot(o.x - s.x, o.y - s.y);
   const g = Math.sqrt(-2 * Math.log(Math.max(1e-9, rnd()))) * Math.cos(2 * Math.PI * rnd());
-  return { a: Math.atan2(o.y - s.y, o.x - s.x) + g * sk, p: d < 2.5 ? 0 : d < 6 ? 1 : 2 };
+  return { a: Math.atan2(o.y - s.y, o.x - s.x) + g * sk, p: d < 5 ? 0 : d < 12 ? 1 : 2 };
 }

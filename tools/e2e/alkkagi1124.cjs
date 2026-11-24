@@ -30,7 +30,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   if (!(await t.$('[data-k="ak-go"]'))) await t.click('[data-slot="rest"]').catch(() => {});
   await t.click('[data-k="ak-go"]', { timeout: 5000 }); await t.waitForTimeout(800);
   const f1 = await fun(live.code);
-  ok('▶ 출발 = 알 놓기 · 판 반지름 = max(5.5, 2 + 1.2√인원)', ['ready', 'play'].includes(f1?.phase) && Object.keys(f1.st || {}).length >= 2 && Math.abs(f1.R - Math.max(5.5, 2 + 1.2 * Math.sqrt(Object.keys(f1.st).length))) < 0.01, `${f1?.phase} ${f1?.R} ${Object.keys(f1?.st || {}).length}명`);
+  ok('▶ 출발 = 📜 판 반지름 = 2 × max(5.5, 2 + 1.2√인원) · 반지름 절반 원 위', ['ready', 'play'].includes(f1?.phase) && Object.keys(f1.st || {}).length >= 2 && Math.abs(f1.R - 2 * Math.max(5.5, 2 + 1.2 * Math.sqrt(Object.keys(f1.st).length))) < 0.01 && Object.values(f1.st).every((x) => Math.abs(Math.hypot(x.x, x.y) - f1.R / 2) < 0.05), `${f1?.phase} ${f1?.R} ${Object.keys(f1?.st || {}).length}명`);
   await s.bringToFront(); await s.waitForSelector('[data-k="ak-board"]', { timeout: 10000 });
   for (let i = 0; i < 40; i++) { const f = await fun(live.code); if (f?.phase === 'play' && f.st?.s1_6_3?.on && !(f.st.s1_6_3.cd > 0)) break; await s.waitForTimeout(100); }
   // 당기기 = 판 가운데에서 왼쪽 아래로 → 오른쪽 위로 날아감 · 점선 미리 보기
@@ -39,12 +39,13 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const dashed = await s.$eval('[data-k="ak-board"]', (c) => { const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data; let w = 0, r = 0; for (let i = 0; i < d.length; i += 16) { if (d[i] > 240 && d[i + 1] > 240 && d[i + 2] > 240) w++; if (d[i] > 240 && d[i + 1] < 100 && d[i + 2] < 100) r++; } return w + r; });
   ok('당기는 동안 = 점선 미리 보기(흰색 · 판 밖이면 빨강)', dashed > 20, `${dashed}`);
   await s.screenshot({ path: `${SHOTS}/ak-phone-aim.png` });
+  ok('📜 폰 = 따라가는 창 · ＋ / － / ⛶ 단추', (await s.$$('[data-k="ak-zoom"] button')).length === 3);
   await s.mouse.up(); await s.waitForTimeout(150);
   const shot = await t.evaluate(([c, g]) => window.__dbGet(`rooms/${c}/fv/ak${g}/s1_6_3`), [live.code, f1.g]);
   ok('놓음 = 발사 저장(각도 · 세기 0 ~ 2 · 번호)', shot && typeof shot.a === 'number' && [0, 1, 2].includes(shot.p) && shot.n >= 1, JSON.stringify(shot));
   await s.waitForTimeout(700);
   const me = (await fun(live.code))?.st?.s1_6_3;
-  ok('다음 박자 = 내 알 날아감 · 쉬는 4초', me && me.n >= 1 && me.cd > 0, JSON.stringify(me));
+  ok('다음 박자 = 내 알 날아감 · 쉬는 4초 (또는 판 밖으로 떨어짐)', me && me.n >= 1 && (me.cd > 0 || me.on === 0), JSON.stringify(me));
   ok('폰 = 「쉬는 중」 또는 「날아가는 중」', /쉬는 중|날아가는 중|다시 나와요/.test(await txt(s, '[data-k="ak-hint"]')), await txt(s, '[data-k="ak-hint"]'));
   await tv.bringToFront(); await tv.waitForTimeout(600); await tv.screenshot({ path: `${SHOTS}/ak-tv.png` });
   ok('종합실 = 판 · 남은 시간 · 순위', !!(await tv.$('[data-k="ak-tv-board"]')) && /남은 \d+초/.test(await txt(tv, '[data-k="ak-tv-time"]')) && (await tv.$$('[data-k="ak-tv"] .rank li')).length >= 2, await txt(tv, '[data-k="ak-tv-time"]'));
