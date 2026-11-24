@@ -81,3 +81,12 @@ describe('⭐ 도전 = 수업 밖으로 뺀 몬스터(later) (📜 11/17 #26)', 
     expect(noteOf(L2, r, { [last]: { clear: true } }).mons[ids.indexOf(last)]).toBe('p');
   });
 });
+
+// 🐞 11/24 학생 인터뷰 「허수아비 푼 것 · 안 푼 것 표시 불분명(초록 칸만)」 = 해결한 줄 끝에 글자 「✔ 해결」
+import { readFileSync as rf1124 } from 'node:fs';
+describe('🎯 허수아비 해결 표시', () => {
+  it('해결한 줄(남은 문제 아님 · 👑 재대결 아님) = ✔ 해결 글자', () => {
+    const s = rf1124('src/ui/dummy/Dummy.svelte', 'utf8');
+    expect(s).toMatch(/\{#if !r\.need && !r\.bossNeed && \(r\.clear \|\| !!r\.st\)\}<b class="done" data-k="dummy-done"[^>]*>✔ 해결<\/b>/);
+  });
+});
