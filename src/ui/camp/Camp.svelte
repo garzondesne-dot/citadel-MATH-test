@@ -38,6 +38,10 @@
   import CampFriends from './CampFriends.svelte';
   import WarBar from '../board/WarBar.svelte';
   import ThemePicker from '../ThemePicker.svelte';
+  import Wardrobe from './Wardrobe.svelte';
+  import NameTag from '../cos/NameTag.svelte';
+  import CosAura from '../cos/CosAura.svelte';
+  import { auraColorOf, cardBgOf, cosWorn } from '../../model/cosmetics';
   import Anvil from '../forge/Anvil.svelte';
   import ModeSwitch from '../ModeSwitch.svelte';
   import { paperOn, submitWho } from '../submit.svelte';
@@ -326,7 +330,7 @@
   let allTimer: ReturnType<typeof setTimeout> | null = null;
   function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
   const wishN = $derived(wishLeft(me.wishes, me.cards));
-  const NAME: Record<string, string> = { tentdeco: '기록 텐트', gate: '던전 문', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '게시판', scare: '허수아비', mail: '우편함', hero: '내 용사' }; // 🏷 #72 이름표 = 2~4글자 · 아이콘 없음 (부제 「복습 n~m차시」 = 그 창 맨 위)
+  const NAME: Record<string, string> = { wardrobe: '옷장', tentdeco: '기록 텐트', gate: '던전 문', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '게시판', scare: '허수아비', mail: '우편함', hero: '내 용사' }; // 🏷 #72 이름표 = 2~4글자 · 아이콘 없음 (부제 「복습 n~m차시」 = 그 창 맨 위)
   const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
 
   // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
@@ -373,7 +377,8 @@
   const SEAT = { left: CAMP.hero.left, bottom: CAMP.hero.bottom };
   // 🐞 📜 2026-11-20 선생님 「용사가 자꾸 허수아비 뒤쪽으로 이동 · 앞쪽으로」: 서는 자리 = 물건 발밑(바닥 줄)보다 아래(화면 앞) · 용사 그림 = 물건 위 층(.hmove z 6)
   //   물건 바닥 줄(%) = 게시판 34.6 · 우편함 9.8 · 허수아비 42.1 · 책상 16.3 · 모루 46.6 (manifest CAMP_PROPS) · 성채 · 던전 문 · 텐트 = 배경이라 그 앞 물건(모루 · 허수아비 · 게시판)과 안 겹치는 자리
-  const SPOT: Record<string, { left: number; bottom: number }> = { scare: { left: 50, bottom: 36 }, fire: { left: 38, bottom: 27 }, mail: { left: 28, bottom: 2 }, anvil: { left: 47, bottom: 41 }, dummy: { left: 30, bottom: 29 }, tent: { left: 70, bottom: 12 }, tentdeco: { left: 36, bottom: 32 }, castle: { left: 48, bottom: 42 }, gate: { left: 84, bottom: 38 } };
+  const WARD = { left: 42, bottom: 7 }; // 🎨 옷장 자리 (그림 % · 우편함 오른쪽 빈 땅 · 출제 공방 책상과 안 겹침)
+  const SPOT: Record<string, { left: number; bottom: number }> = { wardrobe: { left: 40, bottom: 8 }, scare: { left: 50, bottom: 36 }, fire: { left: 38, bottom: 27 }, mail: { left: 28, bottom: 2 }, anvil: { left: 47, bottom: 41 }, dummy: { left: 30, bottom: 29 }, tent: { left: 70, bottom: 12 }, tentdeco: { left: 36, bottom: 32 }, castle: { left: 48, bottom: 42 }, gate: { left: 84, bottom: 38 } };
   type HP = 'sit' | 'walk' | 'attack' | 'idle';
   let hp = $state<{ left: number; bottom: number; pose: HP; flip: boolean; ms: number }>({ ...SEAT, pose: 'sit', flip: false, ms: 0 });
   let walkTok = 0, idleT: ReturnType<typeof setTimeout> | null = null;
@@ -464,6 +469,7 @@
   const earnDots = $derived<Record<string, boolean>>({ chal: chalN > 0, scare: !!todoN.scare, castle: !!todoN.castle, board: !!todoN.dummy, raid: open && !trial, mail: mailN > 0 });
   const earnOff = $derived([...(feat('citadel') ? [] : ['castle']), ...(feat('scarecrow') && !trial ? [] : ['scare']), ...(feat('board') && !trial ? [] : ['board']), ...(trial ? ['mail', 'chest'] : [])]);
   // 정보판 (#111 ④)
+  const myCos = $derived(cosWorn(me.wallet, me.cos)); // 🎨 옷장 입은 것 (산 것만)
   const lk = $derived(meLookId(me)); // 🌟 #29 보이는 모습 (각성한 로안이면 16)
   const fam = $derived(famOfHero(me.hero));
   const lv = $derived(level(me.xp));
@@ -526,9 +532,10 @@
     <i class="sp tentfx" class:on={!!poked.tentdeco} style="{propPos(CAMP.tentFx)};aspect-ratio:{CAMP.tentFx.aspect};{cellBg(CAMP.tentFx.src, CAMP.tentFx.cols, tentF)}" aria-hidden="true"></i>
     <i class="sp fire" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect};background-image:url({CAMP.fire.src});background-size:{CAMP.fire.cols * 100}% {CAMP.fire.rows * 100}%;background-position:{(fireF % CAMP.fire.cols) / (CAMP.fire.cols - 1) * 100}% {Math.floor(fireF / CAMP.fire.cols) * 100}%"></i>
     <!-- 🏕 (📜 2026-11-17 #10 「반전되는 과정이 어색」): 바깥 = 이동만(걷는 시간 동안) · 안 = 좌우 돌아서기만(0.12초 · 그림 가운데 기준) — 예전엔 한 transform 이라 걷는 내내 몸이 얇아졌다 펴짐 -->
-    <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
+    <span class="hmove" style="left:{CAMP.hero.left}%;bottom:{CAMP.hero.bottom}%;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:translate({((hp.left - SEAT.left) / 100) * stW}px, {(-(hp.bottom - SEAT.bottom) / 100) * stH}px);transition:transform {hp.ms}ms linear"><CosAura color={auraColorOf(myCos)} /><i class="sp hero" class:walk={hp.pose === 'walk'} data-k="camp-hero" data-pose={hp.pose} data-flip={hp.flip ? '1' : '0'} style="translate:{heroNudge(lk, heroRow(hp.pose)).dx + heroGeo(lk).dx}px {heroNudge(lk, heroRow(hp.pose)).dy + heroGeo(lk).dy - HERO.h + heroGeo(lk).h}px;left:0;bottom:0;width:{heroGeo(lk).w}px;height:{heroGeo(lk).h}px;transform:scaleX({hp.flip ? -1 : 1});transition:transform {TURN}ms ease-out;background-image:url({heroUrl(lk)});background-size:{HERO.cols * 100}% {HERO.rows * 100}%;background-position:{(heroCol / (HERO.cols - 1)) * 100}% {(heroRow(hp.pose) / (HERO.rows - 1)) * 100}%"></i></span>
     <!-- 🏕 B 모닥불 · 숨은 반응 넷 (나무 · 버섯 · 달 · 반딧불) = 반응만 · 보상 없음 -->
     <button type="button" class="hot tentz" data-hot="tentdeco" data-k="rec-go" aria-label={chalN ? `기록 텐트 · 받을 것 ${chalN}` : '기록 텐트'} style={zoneStyle('tent')} onclick={(e) => go('tentdeco', e)}>{@render tag('tentdeco')}</button>
+    {#if feat('hero')}<button type="button" class="wardz" data-hot="wardrobe" data-prop="wardrobe" aria-label="옷장" style="left:{WARD.left}%;bottom:{WARD.bottom}%" onclick={(e) => go('wardrobe', e)}><i aria-hidden="true">🎨</i>{@render tag('wardrobe')}</button>{/if}<!-- 🎨 옷장 (📜 2026-11-25 · 그림 오기 전 = 아이콘 · 텐트 옆) -->
     <button type="button" class="hot" data-hot="fire" aria-label="모닥불" style="{propPos(CAMP.fire)};aspect-ratio:{CAMP.fire.aspect}" onclick={(e) => { poke0('fire', e); const r = fibTap(fibT, Date.now()); fibT = r.taps; if (r.hit) eggGo('e4'); }}></button>
     {#each STUMPS as st, i (i)}<button type="button" class="hot stump" data-hot="stump{i}" aria-label="그루터기" style="left:{st[0]}%;top:{st[1]}%" onclick={(e) => { poke0('fire', e); const r = stumpStep(stumpSeq, i); stumpSeq = r.seq; if (r.hit) eggGo('e5'); }}></button>{/each}
     {#each SHROOMS as m, i (i)}<button type="button" class="hot shroom" data-hot="shroom{i}" aria-label="빛 버섯" style="left:{m[0]}%;top:{m[1]}%" onclick={(e) => { poke0('shroom', e); shroomHit = { ...shroomHit, [i]: true }; if (Object.keys(shroomHit).length >= SHROOMS.length) { shroomHit = {}; eggGo('e6'); } }}></button>{/each}
@@ -578,10 +585,10 @@
 
   <section class="info">
     {#if svNo && !svSent}<button type="button" class="svbtn" data-k="sv-open" onclick={() => (sheet = 'survey')}><span>📝</span><b>수업 설문 <small>· {svLabel(svNo)} · {is12(svNo) ? '5분' : '3분'} · 이름 없이</small></b><em>+{REWARD.xp} EXP · 💎+{REWARD.gem}</em></button>{/if}
-    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} onclick={heroTap} aria-label="내 용사 보기">
+    {#if feat('hero')}<button type="button" class="card hero-card" class:awk-shine={awkFx(lk)} style:background={cardBgOf(myCos) || null} data-k="hero-card" onclick={heroTap} aria-label="내 용사 보기">
       <span class="pic"><HeroSprite id={lk} scale={HS} aura={me.enh} play />{#if me.enh}<b class="enh">+{me.enh}</b>{/if}</span>
       <span class="who">
-        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b>{#if cfHi && feat('campfire')}<i class="cfhi" data-k="cf-hi" title="모닥불에서 받은 인사">👋 {cfHi}</i>{/if}</span>
+        <span class="nm">{#if ttl}<em class="tt">{ttl.name}</em>{/if}{#if myCos.nameColor || myCos.nameFrame}<NameTag name={fromMe ? '선생님' : me.nick} on={myCos} />{:else}<b class:awk-name={awkFx(lk)}>{fromMe ? '선생님' : me.nick}</b>{/if}{#if cfHi && feat('campfire')}<i class="cfhi" data-k="cf-hi" title="모닥불에서 받은 인사">👋 {cfHi}</i>{/if}</span>
         <span class="sub">{hero.job} {hero.name} · {fam.name} · {me.enh ? auraName(me.enh, lk) : '오라 없음'}</span>
         <span class="lv"><b>Lv.{lv.lv}</b> <small>{lv.title}</small><i class="xp"><i style:width="{(lv.into / lv.next) * 100}%"></i></i><small>{lv.into}/{lv.next}</small></span>
       </span>
@@ -671,6 +678,9 @@
     {#snippet title()}처음 화면으로 갈까요?{/snippet}
     <p class="outq">다른 반 · 번호로 다시 들어가요 · 내 기록 · 💎 는 그대로예요</p>
   </Sheet>
+{:else if sheet === 'wardrobe'}
+  <!-- 🎨 옷장 (📜 2026-11-25 · 꾸미기 상점 1차) -->
+  <Wardrobe {me} save={M.save} {lk} name={fromMe ? '선생님' : me.nick} onclose={() => (sheet = null)} />
 {:else if sheet === 'anvil'}
   <!-- ⚒ 모루 (#148 · 정식 모루 그대로 · 캠프 모루에서만) -->
   <Anvil {me} save={M.save} reach={pupil ? doneNo(S, pupil.cls) : 0} who={pupil ? `${pupil.cls.replace(/[.#$/[\]]/g, '_')}-${pupil.num}` : 'me'} onclose={() => (sheet = null)} />
@@ -831,6 +841,9 @@
   .prop { position: absolute; z-index: 5; background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
   .prop:active :global(.img) { transform: scale(1.06); } /* 누른 느낌 = 물건이 살짝 커졌다 돌아옴 (0.12초 · 파란 네모 대신) */
   /* 🏷 #72 이름표 = 물건 아래 작은 둥근 띠 · 글씨 정가운데 · 반투명 어두운 바탕 · 할 일 = 금빛 테두리 + 빨간 숫자 배지 · 💎 칩 = 바로 아래 */
+  .wardz { position: absolute; z-index: 7; transform: translateX(-50%); width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255, 210, 90, 0.85); background: radial-gradient(circle at 40% 35%, #4a3a68, #221a33); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 0 10px rgba(255, 210, 90, 0.35); display: grid; place-items: center; padding: 0; } /* 🎨 옷장 = 그림 오기 전 아이콘 */
+  .wardz > i { font-size: 22px; font-style: normal; line-height: 1; }
+  .wardz:active { transform: translateX(-50%) translateY(2px); box-shadow: none; }
   .tag { position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 100%); z-index: 5; min-width: 52px; height: 24px; padding: 0 10px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: rgba(12, 14, 20, 0.62); border: 1px solid rgba(255, 255, 255, 0.14); color: #f2f3f5; font: 700 13px/1 var(--font); text-align: center; pointer-events: none; }
   .tag b { font: inherit; line-height: 1; }
   .tag.todo { border: 2px solid var(--accent); color: #ffe7b0; box-shadow: 0 0 10px rgba(245, 184, 74, 0.45); }
