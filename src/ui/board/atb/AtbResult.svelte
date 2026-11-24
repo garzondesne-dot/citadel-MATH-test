@@ -13,7 +13,7 @@
   import { sfx } from '../../sound.svelte';
   import { lookOfStats } from '../../../board/atb/heroes';
 
-  import { atbStars, nextStarHint } from '../../../board/goals';
+  import { atbStars, nextStarHint, starBasis } from '../../../board/goals';
   import { portraitOf } from '../../manifest';
   const { S, no, me, mastery, practiceWins = 0, practice = true, onagain, onswap, onexit, labels, end = null, trial = false, leftIds = [] }: {
     /** 🚪 #113 도중에 나간 자리 (MVP 없음) */ leftIds?: number[];
@@ -25,7 +25,7 @@
   const win = $derived(!!S.end?.win), mine = $derived(me >= 0 ? S.heroes[me] : null);
   const right = $derived(Math.min(12, mine ? mine.log.right : Math.max(0, ...S.heroes.map((h) => h.log.right))));
   const guard = $derived(mine ? Math.min(3, mine.log.covers + mine.log.heals + mine.log.revives + mine.log.shields + (mine.log.blocks ?? 0) + (mine.log.rescues ?? 0)) : 0); // 💚 구조 = 수호 보너스 1번 (요청 #46)
-  const stars = $derived(mine ? atbStars(win, mine.log.first) : 0), starHint = $derived(mine ? nextStarHint(win, mine.log.first) : ''); // ⭐ 📜 #140-2 저장 stars 와 같은 함수
+  const stars = $derived(mine ? atbStars(win, mine.log.first) : 0), starHint = $derived(mine ? nextStarHint(win, mine.log.first) : ''), basis = $derived(mine ? starBasis(win, mine.log.first, mine.log.skips ?? 0) : ''); // ⭐ 📜 #140-2 저장 stars 와 같은 함수
   const rows = $derived([{ t: `맞힌 소문항 ${right}개`, g: right }, ...(win ? [{ t: '클리어', g: 4 }] : []), ...(guard ? [{ t: '팀 도움', g: guard }] : [])]);
   const total = $derived(rows.reduce((a, r) => a + r.g, 0));
   const STEPS = [1, 2, 3] as const, MEDAL = ['red', 'silver', 'gold'] as const; // 🏅 📜 #143 선생님 「숙련 횟수 줄여 줘 1 2 3회」 (전 1 · 3 · 5)
@@ -74,6 +74,7 @@
       <h2 class:win>{win ? '승리!' : fled ? '도망쳤다!' : '아쉬워요'}</h2>
       <div class="stars" data-k="atb-stars" data-n={stars} aria-label="별 {stars}개">{#each [0, 1, 2] as i (i)}<img class="star" class:on={i < stars} style:animation-delay="{0.25 + i * 0.22}s" src={R(i < stars ? 'res-star-gold' : 'res-star-gray')} alt="" />{/each}</div>
     </div>
+    {#if basis}<p class="snext sbasis" data-k="atb-star-basis">{basis}</p>{/if}
     {#if starHint}<p class="snext" data-k="atb-star-next">{starHint}</p>{/if}
     {#if win || !S.end}<p class="time">{`${Math.floor(S.t / 60)}분 ${Math.round(S.t % 60)}초`}</p>
     {:else}<p class="whyb" data-k="atb-lose-why">{WHY[S.end.why] ?? `💀 ${S.end.why}`}</p>{#if fled}<p class="tip" data-k="atb-flee-tip">💡 다음엔 조금 더 빨리!</p>{/if}{/if}<!-- 📜 #91 ⑬ 패배 이유 = 별 띠 아래 제자리 줄 (위에 겹치지 않음 · 낱말 안 끊김) -->
@@ -185,6 +186,7 @@
   /* ── 💨 #108 도망 = 보라 배너 · 패배 = 회색 배너 (UI-FINAL 6절) ── */
   .rs.lose:not(.fled) .banner { filter: grayscale(0.85) brightness(0.9); }
   .rs.fled .banner { filter: hue-rotate(-75deg) saturate(0.85); }
+  .sbasis { color: #fff; font-size: 13px; }
   .snext { position: relative; z-index: 3; margin: 2px auto 0; padding: 2px 10px; border-radius: 9px; background: #0008; font: 800 14px var(--font-plain); color: #ffe7a8; text-align: center; text-shadow: 0 1px 2px #000; word-break: keep-all; } /* ⭐ #140-2 다음 별까지 한 줄 */
   .tip { margin: 0; font: 800 14px var(--font-plain); color: #ffe7a8; text-align: center; text-shadow: 0 1px 2px #000; }
   .hp .crown { display: inline-flex; align-items: center; gap: 2px; } .hp .crown img { width: 18px; height: 18px; image-rendering: pixelated; }

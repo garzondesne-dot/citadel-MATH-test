@@ -21,12 +21,20 @@ export function mapLessons(packs: LessonPack[]): { no: number; ids: string[] }[]
  *  분모 = 이 판에서 내가 낸 소문제(ok + bad · 안 푼 것 none 안 셈 · ⏭ 넘김 = 첫 시도 틀림 bad)
  *  ⭐ = 처치(win) · ⭐⭐ = 첫 시도 정답 ÷ 낸 소문제 ≥ 70 % 그리고 낸 소문제 ≥ 5 · ⭐⭐⭐ = ≥ 90 % 그리고 ≥ 5 · 지면 0 */
 export const STAR_RULE = { min: 5, two: 0.7, three: 0.9 } as const;
-export const STAR_RULE_TEXT = '⭐ 처치 · ⭐⭐ 70% · ⭐⭐⭐ 90%';
+export const STAR_RULE_TEXT = '⭐ 처치 · ⭐⭐ 70% · ⭐⭐⭐ 90% · 5문제 이상'; // 📜 11/24 머리 🔨 「납득할 만한 뚜렷한 근거」 = 5문제 조건도 보임
 export function atbStars(win: boolean, f: { ok: number; bad: number } | null | undefined): number {
   if (!win) return 0;
   const ok = Math.max(0, Number(f?.ok) || 0), n = ok + Math.max(0, Number(f?.bad) || 0);
   if (n < STAR_RULE.min) return 1;
   return ok / n >= STAR_RULE.three ? 3 : ok / n >= STAR_RULE.two ? 2 : 1;
+}
+/** ⭐ 결과 화면 별 근거 한 줄 (📜 11/24 머리 🔨 · 선생님 「학생들이 납득할 만한 뚜렷한 근거」) · skip = ⏭ 넘긴 소문제(틀림으로 셈) */
+export function starBasis(win: boolean, f: { ok: number; bad: number } | null | undefined, skip = 0): string {
+  if (!win) return '⭐ 는 처치해야 받아요';
+  const ok = Math.max(0, Number(f?.ok) || 0), n = ok + Math.max(0, Number(f?.bad) || 0), st = atbStars(win, f), pct = n ? Math.round((ok / n) * 100) : 0;
+  const sk = skip > 0 ? ` (⏭ 넘김 ${skip}개는 틀림으로)` : '';
+  if (n < STAR_RULE.min) return `내가 낸 소문제 ${n}개 · ${STAR_RULE.min}개 이상 풀면 ⭐⭐ 부터 받아요${sk}`;
+  return `내가 낸 소문제 ${n}개 중 첫 시도 정답 ${ok}개 = ${pct}% → ${'⭐'.repeat(st)}${st < 3 ? ` (${st < 2 ? '⭐⭐ 까지 70%' : '⭐⭐⭐ 까지 90%'})` : ''}${sk}`;
 }
 /** 결과 화면 「다음 별까지」 한 줄 (처치 못 함 · ⭐3 = 없음) */
 export function nextStarHint(win: boolean, f: { ok: number; bad: number } | null | undefined): string {
