@@ -27,6 +27,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   await tv.goto(`${B}?role=hall&room=${live.code}`); await tv.waitForTimeout(2500);
   ok('종합실 = 참가 n명', /참가 \d+명/.test(await txt(tv, '[data-k="ak-tv-join"]')), await txt(tv, '[data-k="ak-tv-join"]'));
   await t.bringToFront(); await t.waitForTimeout(3500);
+  { const bg = await t.$('[data-k="band-go"]'); ok('🐞 #13 리모컨 첫 화면 쉼터 줄에도 「▶ 출발 n명」 (놀이 고르기 창 밖)', !!bg && /출발/.test((await bg.textContent()) || ''), bg ? (await bg.textContent()) : '없음'); }
   if (!(await t.$('[data-k="ak-go"]'))) await t.click('[data-slot="rest"]').catch(() => {});
   await t.click('[data-k="ak-go"]', { timeout: 5000 }); await t.waitForTimeout(800);
   const f1 = await fun(live.code);
