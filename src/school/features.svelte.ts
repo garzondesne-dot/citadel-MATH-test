@@ -24,7 +24,7 @@ export interface Feat { id: FeatId; ic: string; name: string; sub: string; group
 
 const packNeed = (has: boolean, what: string) => (has ? null : `📚 과목 팩에 ${what}이(가) 없어요 · 「준비」 탭에서 팩을 올리면 열려요`);
 /** 🏫 학교판(VITE_SCHOOL)에서 숨기는 기능 (📜 11/24 🔨 #12 · DECISIONS 2b6a94b: 🥏 알까기 = 우리 학교 정식에서 먼저 해 보고 · 학교판엔 아직) */
-export const SCHOOL_HIDE: readonly FeatId[] = ['rest-alkkagi'];
+export const SCHOOL_HIDE: readonly FeatId[] = ['rest-alkkagi', 'rest-landgrab', 'rest-ajae']; // 📜 11/24 🔨 #13 더하기 · DECISIONS fc7c720 = 🏁 땅따먹기 · 😆 아재 퀴즈도 학교판 숨김
 export const schoolHides = (id: FeatId, school = SCHOOL_BUILD) => school && SCHOOL_HIDE.includes(id);
 const FEATS_ALL: Feat[] = [
   { id: 'hero', ic: '🧙', name: '용사 · 스킬 · 강화', sub: '호칭 · 💎 상점 포함', group: '용사' },
