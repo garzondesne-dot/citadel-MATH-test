@@ -34,7 +34,7 @@ export interface View {
   memos?: { s: Stud; text: string; more: string[] }[];
 }
 export const GROUPS: { name: string; views: [string, string][] }[] = [
-  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전'], ['castle', '성채 던전'], ['mock', '모의전 약점']] },
+  { name: '우리 반 어때?', views: [['cmp', '반 비교 · 전체'], ['use', '활용 추이'], ['weak', '개념별 약점'], ['mis', '오개념'], ['sym', '기호 톡'], ['board', '게시판 던전'], ['castle', '성채 던전']] }, // 📜 11/25 정식 b243 = 모의전 약점 뺌
   { name: '누가 도움이 필요해?', views: [['grid', '한눈에 표'], ['watch', '주의 학생'], ['std', '성취기준'], ['rank', '랭킹']] },
   { name: '기록 남기기', views: [['memo', '세특 메모'], ['photo', '서술형'], ['survey', '설문']] },
 ];

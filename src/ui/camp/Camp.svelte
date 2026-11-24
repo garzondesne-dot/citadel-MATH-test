@@ -129,7 +129,7 @@
   const exSky = exOn ? skyLevel(exDate, exNow) : 0; // 🌇 점점 붉어지는 빛
   const exWho = untrack(() => (pupil ? `${pupil.cls}-${pupil.num}` : fromMe0 ? 'teacher' : 'me'));
   let exCut = $state(untrack(() => exOn && !cutSeen(exWho, exDate)));
-  const mockOn = exOn && !SCHOOL_BUILD; // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
+  const mockOn = exOn && !SCHOOL_BUILD && BETA; // 📜 11/25 선생님(정식 b243) = 정식에선 모의전 뺌 · 베타만 // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
   let mockGo = $state(false);
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
