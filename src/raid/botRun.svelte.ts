@@ -7,8 +7,8 @@ let cur: Bots | null = null;
 export function setBots(S: Store, L: LessonPack, code: string, on: boolean, n = bot.n): void {
   cur?.stop(); cur = null;
   bot.n = Math.max(1, Math.min(BOT_MAX, Math.round(n))); bot.on = on; bot.code = on ? code : '';
-  const g = globalThis as { __botSpeed?: number; __botAcc?: number }; // 시험 고리(e2e): 빠르게 · 맞힘 비율
-  if (on) cur = startBots(S, L, code, bot.n, { speed: g.__botSpeed || 1, ...(g.__botAcc != null ? { acc: g.__botAcc, accBoss: g.__botAcc } : {}) });
+  const g = globalThis as { __botSpeed?: number; __botAcc?: number; __botNoStuck?: boolean }; // 🙋 #11 교사 판 = 막히는 친구 켬 (옛 e2e 는 __botNoStuck 로 끔) // 시험 고리(e2e): 빠르게 · 맞힘 비율
+  if (on) cur = startBots(S, L, code, bot.n, { speed: g.__botSpeed || 1, stuck: !g.__botNoStuck, ...(g.__botAcc != null ? { acc: g.__botAcc, accBoss: g.__botAcc } : {}) });
 }
 /** 수업이 닫히거나 다른 수업이면 끔 */
 export function botsOff(): void { cur?.stop(); cur = null; bot.on = false; bot.code = ''; }

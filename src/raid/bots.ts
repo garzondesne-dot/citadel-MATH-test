@@ -8,7 +8,7 @@ import { qOf, syl, type Aj } from '../rest/ajae';
 import type { Lg } from '../rest/landgrab';
 import { botShot, rkJoin as akJ, rkShot as akS, type Ak } from '../rest/alkkagi';
 import type { Given, LessonPack, Question, Room, Store } from '../model/types';
-import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor } from './raid';
+import { bossItem, bossRecord, BOSS_ID, chainRecord, focusOn, isChain, isEnd, isLobby, plainRecord, restOn, solveLock, stepOf, V4, activeIds, healsReceived, healTarget, itemsFor, unlocksOf } from './raid';
 import { bossSubmit, bossSubmitAll, chainSubmit, heartbeat, roomPath, scoutReady, spendEnergy, submit } from './actions';
 import { SUBJ } from '../engine/subject';
 import { dragonAt, FIN, type Drg } from '../rest/dragon';
@@ -35,8 +35,16 @@ export function given(q: Question, right: boolean): Given {
 }
 
 export interface Bots { stop(): void; ids: string[] }
+/** 🙋 막히는 가상 학생 (📜 11/24 🔨 #11 · DECISIONS 21ba851): 몬스터마다 1 ~ 2명(4명 아래면 1명)이 기회를 다 틀려 막힘 → 리모컨 빨간 「도움이 필요해요」 · 선생님이 풀어 주면 맞힘
+ *  🧪 테스트 모드 · 체험판 👩‍🏫 교사 판만(setBots) · 실제 수업 · 학생 판 체험(가상 친구) · 게시판 봇은 그대로 · 몬스터마다 같은 줄(새로 고침해도 같은 학생) */
+export function stuckBots(ids: readonly string[], mid: string): Set<string> {
+  if (!ids.length) return new Set();
+  let h = 0; for (const c of mid) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const k = ids.length >= 4 ? 1 + (h % 2) : 1, s = h % ids.length;
+  return new Set(Array.from({ length: k }, (_, i) => ids[(s + i * 2) % ids.length]!));
+}
 /** 가상 학생 n명 시작 (교사 폰 = 이 탭이 살아 있는 동안) · 끄면 stop() = 손을 멈추고 방에서 나감 */
-export function startBots(S: Store, L: LessonPack, code: string, n: number, opt: { speed?: number; acc?: number; accBoss?: number } = {}): Bots {
+export function startBots(S: Store, L: LessonPack, code: string, n: number, opt: { speed?: number; acc?: number; accBoss?: number; /** 🙋 #11 몬스터마다 1 ~ 2명 막힘 */ stuck?: boolean } = {}): Bots {
   const N = Math.max(1, Math.min(BOT_MAX, Math.round(n))), speed = opt.speed || 1, acc = opt.acc ?? 0.8, accBoss = opt.accBoss ?? 0.8;
   const P = (s: string) => `${roomPath(code)}/${s}`, ids = Array.from({ length: N }, (_, i) => botId(i));
   const done = new Set<string>(), timers = new Set<ReturnType<typeof setTimeout>>();
@@ -110,8 +118,8 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
       const lock = solveLock(L, Rn, now);
       if (lock?.on) { const sid = st.kind === 'boss' ? BOSS_ID : st.id; later(`ready|${sid}|${u}`, rand(2000, 12000), () => scoutReady(S, code, sid, u)); return; }
       if (st.kind === 'monster' && L.monsters[st.id] && isChain(L, Rn, st.id)) { // ⚔ 소레이드: 단계 하나씩 (70% 맞힘) · ❤ 0 = 잠김
-        const rec = chainRecord(L, Rn, st.id, u);
-        if (!rec.done && !rec.fail && !rec.locked) later(`ch|${st.id}|${u}|${rec.nextK}`, rand(3000, 9000), () => { const R1 = getR(); if (!R1) return; const r1 = chainRecord(L, R1, st.id, u); if (r1.nextK !== rec.nextK) return; const q = r1.items[r1.stage]; if (q) chainSubmit(S, L, code, st.id, u, r1.stage, 0, given(q, Math.random() < 0.7)); });
+        const rec = chainRecord(L, Rn, st.id, u), sk = stuckOf(Rn, st.id, u); // 🙋 #11 막히는 친구 = 풀어 주기 전엔 틀림 · 풀어 주면 맞힘
+        if (!rec.done && !rec.fail && !rec.locked) later(`ch|${st.id}|${u}|${rec.nextK}`, rand(3000, 9000), () => { const R1 = getR(); if (!R1) return; const r1 = chainRecord(L, R1, st.id, u); if (r1.nextK !== rec.nextK) return; const q = r1.items[r1.stage]; if (q) chainSubmit(S, L, code, st.id, u, r1.stage, 0, given(q, sk === 'wrong' ? false : sk === 'right' ? true : Math.random() < 0.7)); });
         return;
       }
       if (st.kind === 'monster' && L.monsters[st.id]) {
@@ -124,11 +132,12 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
             spendEnergy(S, L, code, st.id, u, to ?? 'bind');
           });
         }
-        const go = !rec.submitted || (rec.canRetry && (rec.perfect || Math.random() < 0.85));
+        const sk = stuckOf(Rn, st.id, u); // 🙋 #11 막히는 친구 = 기회를 다 틀림(늘 다시 냄) · 풀어 주면 다 맞힘
+        const go = !rec.submitted || (rec.canRetry && (rec.perfect ? !sk : sk ? !(sk === 'right' && rec.perfect) : Math.random() < 0.85));
         if (go && !rec.locked) later(`sub|${st.id}|${u}|${a}`, rand(a ? 4000 : 6000, a ? 9000 : 18000), () => {
           const R1 = getR(); if (!R1) return; const r1 = plainRecord(L, R1, st.id, u); if (r1.nextAttempt !== a) return;
-          const items = r1.tries.length ? itemsOf(R1, st.id, u, a) : itemsOf(R1, st.id, u, 0);
-          submit(S, L, code, st.id, u, items.map((q) => given(q, Math.random() < acc + a * 0.12)));
+          const items = r1.tries.length ? itemsOf(R1, st.id, u, a) : itemsOf(R1, st.id, u, 0), sk1 = stuckOf(R1, st.id, u);
+          submit(S, L, code, st.id, u, items.map((q) => given(q, sk1 === 'wrong' ? false : sk1 === 'right' ? true : Math.random() < acc + a * 0.12)));
         });
         return;
       }
@@ -150,6 +159,8 @@ export function startBots(S: Store, L: LessonPack, code: string, n: number, opt:
       }
     });
   }
+  /** 🙋 #11 이 몬스터에서 막히는 친구인가: 'wrong' = 아직 안 풀어 줌 · 'right' = 선생님이 풀어 줌 · null = 보통 친구 */
+  const stuckOf = (R1: Room, mid: string, u: string): 'wrong' | 'right' | null => !opt.stuck || !stuckBots(ids, mid).has(u) ? null : unlocksOf(R1, mid, u) > 0 || !!R1.chainOk?.[mid]?.[u] ? 'right' : 'wrong';
   const itemsOf = (R1: Room, mid: string, u: string, a: number) => { try { return itemsFor(L, R1, mid, u, a); } catch { return [] as Question[]; } };
   const stopW = S.watch(roomPath(code), () => step());
   const hb = setInterval(() => { beat(); step(); }, 2500);
