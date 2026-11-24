@@ -43,6 +43,8 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   { const fz = (await fun(live.code))?.size ?? 9; ok('종합실 = 판 · 팀 막대', (await tv.$$('[data-k="lg-tv"] .board .c')).length === fz * fz && (await tv.$$('[data-k="lg-tv"] .bars li')).length >= 2); }
   { const m = await tv.evaluate(() => { const cs = [...document.querySelectorAll('[data-k="lg-tv"] .board .c')].map((c) => c.getBoundingClientRect()); const w = cs.map((r) => Math.round(r.width)), h = cs.map((r) => Math.round(r.height)); return { wmin: Math.min(...w), wmax: Math.max(...w), hmin: Math.min(...h), hmax: Math.max(...h) }; });
     ok('🔨 #18 ⑥ 칸 = 모두 같은 정사각', m.wmax - m.wmin <= 1 && m.hmax - m.hmin <= 1 && Math.abs(m.wmax - m.hmax) <= 1, JSON.stringify(m)); }
+  { const fz = await fun(live.code), per = [0, 1, 2, 3].slice(0, fz.nTeam).map((t) => Object.values(fz.team).filter((x) => x === t).length), bots = Object.keys(fz.team).filter((u) => u.startsWith('lgbot-')).length, tags = await tv.$$eval('[data-k="lg-name"]', (xs) => xs.filter((x) => /🤖봇/.test(x.textContent || '')).length);
+    ok('🔨 #18 더하기 2 🤖 팀 채움 = 모든 팀 같은 인원 · 봇 이름표 「🤖봇n」', new Set(per).size === 1 && (bots === 0 || tags >= 1), `팀 ${per.join('·')} · 봇 ${bots} · 봇 이름표 ${tags}`); }
   ok('🔨 #18 ⑤ 용사 이름표', (await tv.$$('[data-k="lg-name"]')).length >= 2, `${(await tv.$$('[data-k="lg-name"]')).length}개`);
   ok('🔨 #18 ④ 위 해설 한 줄', ((await tv.textContent('[data-k="lg-tv-cast"]')) || '').trim().length > 4, (await tv.textContent('[data-k="lg-tv-cast"]')) || '');
   ok('🔨 #18 ① 이번 턴 연출 기록(fx) 있음', !!(await fun(live.code))?.fx, JSON.stringify((await fun(live.code))?.fx || {}).slice(0, 80));

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Room, Store } from '../../model/types';
   import { DIRS, fxCells, fxLine, hidden, LG, ownAt, scores, TEAMS, type Lg } from '../../rest/landgrab';
+  import { isLgBot, lgBotHero, lgBotName } from '../../rest/landgrab';
   import { lgDir, lgJoin } from '../../rest/run';
   import HeroSprite from '../camp/HeroSprite.svelte';
   // 🏁 땅따먹기 · 학생 폰 (📜 2026-11-24): 모이기 = 「참가」 · 판 = 나를 가운데 둔 7×7 · 방향 4개(3초 안에 바꿀 수 있음 · 안 고르면 지난 방향) · 내가 칠한 칸 · 개인 순위는 안 보여 줌
@@ -46,7 +47,7 @@
     {:else}
       <p class="cast" data-k="lg-cast">{#key fxKey}<span>{fxLine(f)}</span>{/key}</p>
       {#key fxKey}<div class="win" class:shake={!!fx?.bu[uid]} role="img" aria-label="내 둘레 7×7" style:--n={W * 2 + 1} onpointerdown={(e) => { sx = e.clientX; sy = e.clientY; }} onpointerup={swipe}>
-        {#each cells as c, i (i)}{@const fl = flash[`${c.x},${c.y}`]}{@const bu = c.who.length ? fx?.bu[c.who[0]!] : undefined}<span class="c {fl ?? ''}" class:out={!c.in} class:star={c.star} style:background={c.c >= 0 ? TEAMS[c.c]!.c : undefined}>{#if c.star}⭐{/if}{#if bumpAt.has(`${c.x},${c.y}`)}<em class="bang">💥</em>{/if}{#if c.who.length}<i class="who" class:me={c.who.includes(uid)} class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[c.who[0]!] ?? 0]!.c}><HeroSprite id={R.players?.[c.who[0]!]?.hero ?? 0} scale={0.36} /></i>{/if}</span>{/each}
+        {#each cells as c, i (i)}{@const fl = flash[`${c.x},${c.y}`]}{@const bu = c.who.length ? fx?.bu[c.who[0]!] : undefined}<span class="c {fl ?? ''}" class:out={!c.in} class:star={c.star} style:background={c.c >= 0 ? TEAMS[c.c]!.c : undefined}>{#if c.star}⭐{/if}{#if bumpAt.has(`${c.x},${c.y}`)}<em class="bang">💥</em>{/if}{#if c.who.length}<i class="who" class:me={c.who.includes(uid)} class:bu={!!bu} style:--bx={bu ? bu[0] : 0} style:--by={bu ? bu[1] : 0} style:--tc={TEAMS[f.team[c.who[0]!] ?? 0]!.c}><HeroSprite id={isLgBot(c.who[0]!) ? lgBotHero(c.who[0]!) : (R.players?.[c.who[0]!]?.hero ?? 0)} scale={0.36} /></i>{/if}</span>{/each}
       </div>{/key}
       <div class="pad" data-k="lg-pad">
         {#each [[0, '▲', 'up'], [2, '◀', 'left'], [3, '▶', 'right'], [1, '▼', 'down']] as [d, ic, k] (k)}<button type="button" class="d {k}" class:on={picked === d || (picked == null && f.last?.[uid] === d)} aria-pressed={picked === d} data-d={d} disabled={f.phase !== 'pick'} onclick={() => go(d as number)}>{ic}</button>{/each}
