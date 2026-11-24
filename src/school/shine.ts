@@ -1,10 +1,10 @@
 // 🌟 나의 빛나는 순위 (📜 2026-11-25 머리 🔨): 나만 봄 · 가장 빛나는 갈래 하나만 띠로 · 등수 숫자 · 남의 순위 · 점수 · 낮은 순위는 안 보임
 //   갈래 7 = 성장 · 끈기 · 꾸준함 · 탐험 · 정확 · 서술 · 끝까지 (도움 없음)
 //   띠 사다리: ① 반 안 상위 30% 안 갈래(🔥 TOP 3 · ✨ 상위 10% · ✨ 상위 30%) → ② 📈 지난주의 나보다 ○○ +n → ③ 🙋 이번 달 끝까지 해낸 몬스터 n마리 (0 = 첫 몬스터를 기다리는 중)
-//   ① 반 비교 = 학생 폰은 반 친구 기록을 못 읽음 → 계산 자리는 ❓ #빛나는-1 (손발 추천 A = 선생님 폰이 띠 글자만 bonus/{반}/{번호}/shine 에) · 그 칸이 없으면 ②부터
+//   ① 반 비교 = 학생 폰은 반 친구 기록을 못 읽음 → #빛나는-1 = A (선생님 11/25): 선생님 폰 대시보드가 반을 열 때 writeClassShine 이 갈래 · 등급만 bonus/{반}/{번호}/shine 에 · 그 칸이 없으면 ②부터
 //   켜짐 = 2026-12-05 00:00 KST 부터 · 🧪 테스트 모드 = 날짜 무시 · 학교판 · 체험판 = 숨김
 //   서버에 숫자를 쓰지 않음(폰에서 셈) · 대시보드 · 공개 칸 없음
-import type { TitleData } from '../model/titles';
+import { titleData, type TitleData } from '../model/titles';
 import { PACKS } from '../engine/packs';
 import { mapLessons, starTotal, starsByNo, type BoardRec } from '../board/goals';
 import { kstDate } from './examEvent';
@@ -124,4 +124,18 @@ export function classMarks(all: Record<string, ShineScores>, now: number): Recor
     if (best) out[id] = best;
   }
   return out;
+}
+
+/** (A 안 · 📜 11/25 선생님 「A」) 선생님 폰 대시보드가 반을 열 때: 학생마다 띠 재료(갈래 · 등급)만 bonus/{반}/{번호}/shine 에 · 바뀐 칸만 씀 · 30% 밖 = 지움 · 숫자 · 등수 저장 없음 */
+export function writeClassShine(S: { get<T>(p: string): T | null; set(p: string, v: unknown): void }, cls: string, studs: { n: number; x?: boolean }[], now: number): number {
+  const all: Record<string, ShineScores> = {};
+  for (const s of studs) if (!s.x) all[String(s.n)] = shineScores(titleData(S, cls, s.n), S.get<Record<string, unknown>>(`gifts/${S.get<string>(`accounts/${cls}/${s.n}/uid`) ?? '_'}`));
+  const marks = classMarks(all, now);
+  let w = 0;
+  for (const id of Object.keys(all)) {
+    const p = `bonus/${cls}/${id}/shine`, cur = markOf(S.get(p)), nx = marks[id] ?? null;
+    if (cur?.cat === nx?.cat && cur?.tier === nx?.tier) continue;
+    S.set(p, nx); w++;
+  }
+  return w;
 }

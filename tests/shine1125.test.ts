@@ -1,6 +1,6 @@
 // 🌟 나의 빛나는 순위 (📜 2026-11-25 · 머리 🔨): 7갈래 셈 · 사다리 3단 · 12/5 켜짐 · 반 비교(선생님 폰 A 안) 띠 글자
 import { describe, expect, it } from 'vitest';
-import { SHINE_CATS, classMarks, monthDone, shineBand, shineOn, shineScores, weekGain, type ShineScores } from '../src/school/shine';
+import { SHINE_CATS, classMarks, writeClassShine, monthDone, shineBand, shineOn, shineScores, weekGain, type ShineScores } from '../src/school/shine';
 import type { TitleData } from '../src/model/titles';
 
 const T = (d: string) => Date.parse(`${d}T03:00:00Z`); // KST 정오
@@ -55,5 +55,19 @@ describe('🌟 빛나는 순위', () => {
     expect(m['10']).toBeUndefined(); // 어느 갈래도 30% 밖
     expect(m['21']).toBeUndefined();
     expect(classMarks({ a: z({ grit: 1 }), b: z({}) }, 1)).toEqual({}); // 3명 미만 = 없음
+  });
+  it('(A 안) 선생님 폰이 반을 열면 띠 재료만 씀 · 바뀐 칸만 · 30% 밖 = 지움 · 학생 폰이 그 칸으로 ① 띠', async () => {
+    const { memoryStore } = await import('../src/store/device');
+    const S = memoryStore(), cls = '1-3', studs = Array.from({ length: 10 }, (_, i) => ({ n: i + 1 }));
+    for (const s of studs) S.set(`records/${cls}/${s.n}/set-07`, { at: T('2026-11-20'), code: 'x', no: 7, mons: Object.fromEntries(Array.from({ length: s.n }, (_, k) => [`m${k}`, 'f'])) });
+    S.set(`bonus/${cls}/1/shine`, { cat: 'grit', tier: 'top3', at: 1 }); // 옛 칸 = 지워져야 함
+    expect(writeClassShine(S, cls, [...studs, { n: 11, x: true }], 9)).toBe(4); // 8 · 9 · 10 = TOP 3 · 1 = 지움 (7 = 위 3명 = 30% → 밖)
+    expect(S.get(`bonus/${cls}/10/shine`)).toEqual({ cat: 'grit', tier: 'top3', at: 9 });
+    expect(S.get(`bonus/${cls}/7/shine`)).toBeNull();
+    expect(S.get(`bonus/${cls}/1/shine`)).toBeNull();
+    expect(S.get(`bonus/${cls}/11/shine`)).toBeNull();
+    expect(JSON.stringify(S.get(`bonus/${cls}/10/shine`))).not.toMatch(/score|rank|\"n\"/);
+    expect(writeClassShine(S, cls, studs, 10)).toBe(0); // 바뀐 것 없음 = 안 씀
+    expect(shineBand({ ...{ bonus: S.get(`bonus/${cls}/10`) as never } }, NOW).text).toBe('🔥 우리 반 끈기 TOP 3');
   });
 });
