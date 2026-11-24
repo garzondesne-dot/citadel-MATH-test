@@ -68,7 +68,7 @@ import { AWK_HAVE, heroKey } from '../model/hero';
 { // 🌟 #29 금발 시트 = 로안 시트 색만 바꿈 → 칸 상자 · 머리 자리 같음
   const B = BBOX as unknown as { heroes: Record<string, unknown>; heads?: Record<string, unknown> };
   B.heroes['hero-blond-v1.webp'] = B.heroes['hero-sword-v3c.webp']; if (B.heads) B.heads['hero-blond-v1.webp'] = B.heads['hero-sword-v3c.webp'];
-  for (const k of AWK_HAVE.map(heroKey)) for (const a of [`hero-${k}-awk-v7.webp`, `hero-${k}-awk-v8.webp`, `hero-${k}-awk-v9.webp`, `hero-${k}-awk-v10.webp`]) { const o = `hero-${k}-v7.webp`; B.heroes[a] ??= B.heroes[o] ?? B.heroes[o.replace('-v7.', '-v8.')]; if (B.heads) B.heads[a] ??= B.heads[o] ?? B.heads[o.replace('-v7.', '-v8.')]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
+  for (const k of AWK_HAVE.map(heroKey)) for (const a of [`hero-${k}-awk-v7.webp`, `hero-${k}-awk-v8.webp`, `hero-${k}-awk-v9.webp`, `hero-${k}-awk-v10.webp`]) { const o = `hero-${k}-v7.webp`; B.heroes[a] ??= B.heroes[o] ?? B.heroes[o.replace('-v7.', '-v8.')] ?? B.heroes[o.replace('-v7.', '-v11.')]; if (B.heads) B.heads[a] ??= B.heads[o] ?? B.heads[o.replace('-v7.', '-v8.')] ?? B.heads[o.replace('-v7.', '-v11.')]; } // ⚡ #83 각성 시트 = 같은 칸 · 같은 자리
 }
 type Box = [number, number, number, number];
 // 🧙 새 화풍 세밀 시트 (#166 · #167 · tools/hero-hd/cut.py): 칸 192 × 144 · 화면 = ½(k=2 → 96 × 72) · 발 = 칸 아래 8px(화면 4px)
@@ -84,18 +84,18 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   // ⚡ #83 각성 시트 (hero-v2 docs/handoff/assets/hero-awaken · v5 와 같은 칸 · 그림이 온 용사만 · 모습 id = 100 + 용사)
   'hero-dknight-awk-v9.webp': { cw: 256, ch: 144, k: 2, base: 8 }, // 🐞 #134 덧 서기 줄 가로 맞춤 판
   'hero-witch-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-elf-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-ninja-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-elf-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-ninja-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-priest-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-lancer-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-dwarf-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-sage-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-paladin-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-paladin-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-monk-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-dancer-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-bard-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-bard-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-alchemist-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-pirate-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-pirate-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-frost-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-tamer-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-math-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
@@ -103,15 +103,15 @@ export const HERO_HD: Record<string, { cw: number; ch: number; k: number; base: 
   'hero-mathboy-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mathgirl-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-mechanic-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-hacker-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-dragoon-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-spellblade-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-hacker-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-dragoon-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-spellblade-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-bone-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-crossbow-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-abacus-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-geometry-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-merchant-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
-  'hero-drone-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-merchant-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
+  'hero-drone-v11.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-elemental-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
   'hero-astro-v7.webp': { cw: 256, ch: 144, k: 2, base: 8 },
 };

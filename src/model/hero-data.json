@@ -69,7 +69,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-elf-v7.webp"
+   "sprite": "hero-elf-v11.webp"
   },
   {
    "id": 3,
@@ -87,7 +87,7 @@
    "chal": null,
    "open": true,
    "cond": "",
-   "sprite": "hero-ninja-v7.webp"
+   "sprite": "hero-ninja-v11.webp"
   },
   {
    "id": 4,
@@ -159,7 +159,7 @@
    "chal": null,
    "open": false,
    "cond": "1~3차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
-   "sprite": "hero-paladin-v7.webp"
+   "sprite": "hero-paladin-v11.webp"
   },
   {
    "id": 9,
@@ -213,7 +213,7 @@
    "chal": null,
    "open": false,
    "cond": "8~11차시 도감 카드를 모두 모으면 무료 · 💎 60 로 먼저 열면 다 모았을 때 💎 돌려받아요",
-   "sprite": "hero-bard-v7.webp"
+   "sprite": "hero-bard-v11.webp"
   },
   {
    "id": 12,
@@ -249,7 +249,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-pirate-v7.webp"
+   "sprite": "hero-pirate-v11.webp"
   },
   {
    "id": 14,
@@ -375,7 +375,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-hacker-v7.webp"
+   "sprite": "hero-hacker-v11.webp"
   },
   {
    "id": 23,
@@ -393,7 +393,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-dragoon-v7.webp"
+   "sprite": "hero-dragoon-v11.webp"
   },
   {
    "id": 24,
@@ -411,7 +411,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 60 조각으로 해금",
-   "sprite": "hero-spellblade-v7.webp"
+   "sprite": "hero-spellblade-v11.webp"
   },
   {
    "id": 25,
@@ -505,7 +505,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-merchant-v7.webp"
+   "sprite": "hero-merchant-v11.webp"
   },
   {
    "id": 30,
@@ -523,7 +523,7 @@
    "chal": null,
    "open": false,
    "cond": "💎 30 조각으로 해금",
-   "sprite": "hero-drone-v7.webp"
+   "sprite": "hero-drone-v11.webp"
   },
   {
    "id": 31,
