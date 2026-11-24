@@ -83,6 +83,8 @@ export function gradeAttempt(L: LessonPack, R: Room, mid: string, uid: string, a
 // ── 💚 힐 (정식 v0.9.6 · 받는 사람을 적은 힐만 — 파티 힐 · 필살기 값은 아직 없음) ──
 const healsOf = (R: Room, mid: string) => R.heals?.[mid] || {};
 export const healsGiven = (R: Room, mid: string, uid: string) => keys(healsOf(R, mid)[uid]).length;
+/** 💚 이 수업에서 친구에게 준 힐(⚡ 풀어 주기) 수 · ⛓ 묶기는 뺌 (📜 11/24 선생님 · DECISIONS 6849e1e 대시보드 「💚 힐 준」) */
+export const healsGivenAll = (R: Room, uid: string) => Object.values(R.heals || {}).reduce((a, m) => a + Object.values((m as Record<string, Record<string, unknown>>)?.[uid] || {}).filter((v) => !String(v).startsWith('!bind')).length, 0);
 const num = (R: Room, uid: string) => R.players?.[uid]?.num || 0;
 // 🌟 진필살기 (정식 model.js 72~88 · 2026-11-13 ❓#3 ③B): 힐 칸 값 '!true@시각' = 파티 힐(아직 다 못 맞힌 친구 모두 +1) + 🗿 석화 TRUE_SEC 초(몬스터 공격 멈춤 · 그동안 맞히면 💎) · 한 몬스터에 반 전체 한 번
 export const TRUE_SEC = 20;
