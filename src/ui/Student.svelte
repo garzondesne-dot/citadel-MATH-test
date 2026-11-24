@@ -81,11 +81,14 @@
     const x = untrack(() => !!cls && isExcluded(S, cls, num));
     const hb = () => heartbeat(S, code, uid, num, nick, { cls, ver, hero: savedLook().hero, base: savedLook().base, fx: savedLook().fx, enh: savedLook().enh, x });
     hb();
-    const beat = setInterval(hb, 3000);
     const bye = () => leave(S, code, uid);
     addEventListener('pagehide', bye);
+    // 👻 (📜 11/24 🔨 #9 ① 학교판 첫 수업 「튕긴 학생이 계속 접속 중 → 몬스터가 안 쓰러짐」): 화면이 숨으면(화면 꺼짐 · 다른 앱 · 카메라로 QR · 탭 뒤로) 뒤에서 도는 3초 신호가 「접속 중」을 붙잡지 않게 = 바로 끊김(seen 0) · 다시 보이면 바로 신호
+    const vis = () => { if (document.visibilityState === 'hidden') bye(); else hb(); };
+    document.addEventListener('visibilitychange', vis); addEventListener('freeze', bye);
+    const beat = setInterval(() => { if (document.visibilityState !== 'hidden') hb(); }, 3000);
     const lr = liveRoom(S, code);
-    return { v: lr.v, stop: () => { clearInterval(beat); lr.stop(); removeEventListener('pagehide', bye); } };
+    return { v: lr.v, stop: () => { clearInterval(beat); lr.stop(); removeEventListener('pagehide', bye); document.removeEventListener('visibilitychange', vis); removeEventListener('freeze', bye); } };
   });
   const stopClock = useClock();
   onDestroy(() => { live.stop(); stopClock(); });
