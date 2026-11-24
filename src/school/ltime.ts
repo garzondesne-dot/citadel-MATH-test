@@ -12,7 +12,7 @@ export const REAL_MIN = 3;
 /** 시간에 들어가는 기능 (나머지 = 0분 · 「각자 · 돌면서」) */
 export type TimeFeat = 'cc' | 'review' | 'rest' | 'lesson-fx';
 export const ZERO_FEATS = ['help3', 'sword', 'qpaper', 'pre', 'stamp'] as const;
-const REST_IDS = ['rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'rest-dragon', 'rest-alkkagi'];
+const REST_IDS = ['rest-balance', 'rest-flip', 'rest-nunchi', 'rest-defense', 'rest-ox', 'rest-dragon', 'rest-ajae', 'rest-landgrab', 'rest-alkkagi'];
 
 /** 그 차시 팩에서 세는 것 */
 export function lessonCounts(L: LessonPack) {
