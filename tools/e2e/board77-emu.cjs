@@ -28,8 +28,8 @@ const log = (...a) => console.log(...a), wait = (ms) => new Promise((r) => setTi
   const listTxt = await Bp.textContent('.bd'); ok('목록 = 실명 없음', !listTxt.includes('가나다'));
   await joinGo(Bp); await wait(2000);
   const a = await A.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent)), bb = await Bp.$$eval('[data-k="slot-name"]', (x) => x.map((e) => e.textContent));
-  ok('A 대기실 = 다른 반 친구 실명', a.some((t) => t.includes('1-5반 · 사아자')), a.join(' / '));
-  ok('B 대기실 = 1-3반 실명', bb.some((t) => t.includes('1-3반 · 가나다')), bb.join(' / '));
+  ok('📜 11/24 A 대기실 = 다른 반 친구는 용사 이름 (실명 안 보임 · #149 명단 자기 반만)', a.some((t) => /^1-5반 · /.test(t.trim())) && !a.some((t) => t.includes('사아자')), a.join(' / '));
+  ok('📜 11/24 B 대기실 = 다른 반 친구는 용사 이름', bb.some((t) => /^1-3반 · /.test(t.trim())) && !bb.some((t) => t.includes('가나다')), bb.join(' / '));
   const posts = await rest('school/board/posts'); ok('서버 글에 이름 없음', !JSON.stringify(posts).match(/가나다|사아자/));
   await A.screenshot({ path: `${SHOTS}/b77-room.png` });
   ok('콘솔 오류 0', !errs.some((e) => /Error/.test(e) && !/❌/.test(e)), errs.filter((e) => !/❌/.test(e)).slice(0, 2).join(' | '));
