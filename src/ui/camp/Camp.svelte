@@ -54,6 +54,7 @@
   import { paperOn, submitWho } from '../submit.svelte';
   import { featsOf, isTheme, savedTheme, setTheme, type Theme } from '../../theme/theme';
   import { meBound, unbindMe } from '../../store/meSync';
+  import { shineBand, shineOn } from '../../school/shine';
   import { manualOf, bonusBase, castleState, floorName, progressOf, spanOf, withLegacy, type CastleRec } from '../../school/castle';
   import { visibleCastles } from '../../school/castles.svelte';
   import SurveySheet from './SurveySheet.svelte';
@@ -447,6 +448,10 @@
   // 🎬 8 = 첫 화면에서 찾은 표시(이 기기) → 캠프에 오면 학생 기록에 옮기고 「비밀 발견」 띠
   untrack(() => { try { if (localStorage.getItem('citadel-egg-e8')) { localStorage.removeItem('citadel-egg-e8'); if (!eggHave('e8')) setTimeout(() => eggGo('e8'), 1200); } } catch { /* 사생활 창 */ } });
   // 🎯 7 허수아비의 친구 = 복습 100판 → 캠프에 오면 한 번 털썩 · 그 뒤 반창고 🩹
+  // 🌟 나의 빛나는 순위 (📜 11/25 머리 🔨): 나만 · 12/5 00:00 KST 부터(🧪 = 날짜 무시) · 학교판 · 체험판 숨김 · 폰에서 셈 · 누르면 갈래 설명 한 줄
+  const shine = $derived.by(() => { void sheet; void chVer; if (trial || SCHOOL_BUILD || !shineOn(Date.now(), !!me.test)) return null; try { const b = meBound(); return shineBand(b ? titleData(b.S, b.cls, b.num) : {}, Date.now()); } catch { return null; } });
+  let shineSay = $state(false), shineT = 0;
+  const shineTap = () => { sfx('click', 0.5); shineSay = !shineSay; clearTimeout(shineT); if (shineSay) shineT = window.setTimeout(() => (shineSay = false), 5000) as unknown as number; };
   const e7Ready = $derived.by(() => { void chVer; try { return reviewPlaysOf(chalCtx()) >= 100; } catch { return false; } });
   $effect(() => { if (!e7Ready || sheet || castleGo != null || achQ.length) return; untrack(() => { if (!eggHave('e7')) setTimeout(() => eggGo('e7'), 600); }); });
   /** 모닥불 · 숨은 곳 = 반응만 */
@@ -598,6 +603,7 @@
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
     {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i><button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
+    {#if shine}<div class="shine" class:low={exOn} data-k="shine" data-step={shine.step}><button type="button" class="shineb" data-k="shine-band" aria-expanded={shineSay} onclick={shineTap}>{shine.text}</button>{#if shineSay}<p class="shinesay" data-k="shine-say">{shine.say}</p>{/if}</div>{/if}
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -967,6 +973,11 @@
   .nextbtn i { font-style: normal; color: var(--text-2); }
   .nextbtn:active { transform: translateY(2px); box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
+  .shine { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 28; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: calc(100% - 32px); }
+  .shine.low { top: 100px; }
+  .shineb { min-height: 32px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #ffe29a; background: linear-gradient(90deg, #7a5a12, #c99a2e, #7a5a12); color: #fff8e0; font: 800 14px var(--font); box-shadow: 0 3px 0 #3d2a05; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
+  .shineb:active { transform: translateY(2px); box-shadow: none; }
+  .shinesay { margin: 0; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; padding: 6px 12px; border-radius: 10px; background: rgba(20, 16, 6, 0.88); color: #ffe9b0; font: 600 14px var(--font); text-align: center; }
   .exband { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 29; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 2px solid #ff8a8a; background: linear-gradient(90deg, #7a0d12, #c8232a, #7a0d12); color: #fff; font: 800 15px var(--font); box-shadow: 0 3px 0 #3a0003, 0 0 14px rgba(255, 60, 60, 0.6); white-space: nowrap; animation: exb 2.4s ease-in-out infinite; } /* ⚔ 기말 D-day 띠 */
   @keyframes exb { 0%, 100% { box-shadow: 0 3px 0 #3a0003, 0 0 8px rgba(255, 60, 60, 0.45); } 50% { box-shadow: 0 3px 0 #3a0003, 0 0 20px rgba(255, 60, 60, 0.9); } }
   .exsky { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
