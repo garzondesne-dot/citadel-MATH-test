@@ -449,7 +449,7 @@
   untrack(() => { try { if (localStorage.getItem('citadel-egg-e8')) { localStorage.removeItem('citadel-egg-e8'); if (!eggHave('e8')) setTimeout(() => eggGo('e8'), 1200); } } catch { /* 사생활 창 */ } });
   // 🎯 7 허수아비의 친구 = 복습 100판 → 캠프에 오면 한 번 털썩 · 그 뒤 반창고 🩹
   // 🌟 나의 빛나는 순위 (📜 11/25 머리 🔨): 나만 · 12/5 00:00 KST 부터(🧪 = 날짜 무시) · 학교판 · 체험판 숨김 · 폰에서 셈 · 누르면 갈래 설명 한 줄
-  const shine = $derived.by(() => { void sheet; void chVer; if (trial || SCHOOL_BUILD || !shineOn(Date.now(), !!me.test)) return null; try { const b = meBound(); return shineBand(b ? titleData(b.S, b.cls, b.num) : {}, Date.now()); } catch { return null; } });
+  const shine = $derived.by(() => { void sheet; void chVer; if (trial || SCHOOL_BUILD || !BETA || !shineOn(Date.now(), !!me.test)) return null; try { const b = meBound(); return shineBand(b ? titleData(b.S, b.cls, b.num) : {}, Date.now()); } catch { return null; } });
   let shineSay = $state(false), shineT = 0;
   const shineTap = () => { sfx('click', 0.5); shineSay = !shineSay; clearTimeout(shineT); if (shineSay) shineT = window.setTimeout(() => (shineSay = false), 5000) as unknown as number; };
   const e7Ready = $derived.by(() => { void chVer; try { return reviewPlaysOf(chalCtx()) >= 100; } catch { return false; } });
