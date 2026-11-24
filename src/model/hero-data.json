@@ -578,7 +578,7 @@
     "need": 15
    },
    "open": false,
-   "cond": "🎯 오답노트 빨간 칸 15개 해결",
+   "cond": "🎯 허수아비 문제 15개 맞히기",
    "sprite": "hero-astro-v7.webp"
   },
   {

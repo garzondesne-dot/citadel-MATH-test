@@ -7,7 +7,7 @@
 import DATA from './hero-data.json';
 import { SUBJ } from '../engine/subject';
 import { PACKS } from '../engine/packs';
-import { noteOf, type Bon, type Rec } from '../school/dummy';
+import { fieldIds, noteOf, type Bon, type Rec } from '../school/dummy';
 import { seals, type TitleData } from './titles';
 import type { LessonPack } from './types';
 
@@ -36,8 +36,10 @@ export function chalProgress(d: TitleData, packs: LessonPack[] = PACKS): Record<
     return (!!r && Number(r.boss) > 0 && Number(r.boss) >= (Number(r.bossN) || hp)) || !!bon[L.id]?.boss?.clear;
   }).length;
   let rooms = 0; for (const [k, v] of Object.entries(bon)) if (k.startsWith('eval-') && isObj(v)) for (const x of Object.values(v)) if (isObj(x) && x.clear) rooms++;
-  let fixed = 0; for (const L of les) { const r = rec[L.id]; if (!r) continue; const x = noteOf(L, r, bon[L.id]); fixed += x.mons.filter((s) => s === 'p').length + x.boss.slice(0, x.hp).filter((s) => s === 'p').length; }
-  return { 27: perfect, 28: rooms, 33: fixed };
+  // ⭐ 📜 11/24 선생님 (DECISIONS 6849e1e) 별점술사 = 🎯 허수아비에서 문제 15개 맞히기 (빨간 칸이든 이미 맞힌 칸이든 · 서로 다른 문제 = 차시 × 몬스터 칸 · 👑 재대결 = 한 문제 · 지난 기록도 셈) · 옛 「오답노트 빨간 칸 15개 해결」 바뀜
+  let solved = 0; for (const L of les) { const b = bon[L.id]; if (!isObj(b)) continue; const ok = new Set([...fieldIds(L), 'boss']); for (const [mid, x] of Object.entries(b)) if (ok.has(mid) && isObj(x) && (x as { clear?: boolean }).clear) solved++; }
+  void noteOf;
+  return { 27: perfect, 28: rooms, 33: solved };
 }
 export interface HeroUnlock {
   /** 조건으로 열린 용사 */ open: number[];
@@ -59,7 +61,7 @@ export function heroUnlock(d: TitleData, packs: LessonPack[] = PACKS): HeroUnloc
 /** 잠긴 용사 조건 한 줄 (진행 포함 · 정식 「🔓 조건 · n / need」) */
 export function condLine(id: number, u: HeroUnlock | null, base: string): string {
   if (!u) return base;
-  const c = u.chal[id]; if (c) return `${base} · ${c.n} / ${c.need}`;
+  const c = u.chal[id]; if (c) return id === 33 ? chalText(id, c) : `${base} · ${c.n} / ${c.need}`;
   const k = u.cards[id]; if (k && k.need) return `${base} · 도감 ${k.n} / ${k.need}장`;
   return base;
 }
@@ -68,3 +70,6 @@ export function condLine(id: number, u: HeroUnlock | null, base: string): string
 export { statsOf } from './titles';
 /** 🎖 메달 수 (쉼터 놀이 메달 합) */
 export const medalN = (d: TitleData) => Object.values(isObj(d.gem?.medal) ? (d.gem!.medal as Obj) : {}).reduce<number>((a, b) => a + (Number(b) || 0), 0);
+
+/** 도전 진행 글 (⭐ 별점술사 = 「🎯 허수아비 문제 n/15 맞힘」 · 📜 11/24) */
+export const chalText = (id: number, c: { n: number; need: number }) => (id === 33 ? `🎯 허수아비 문제 ${c.n}/${c.need} 맞힘` : `${c.n} / ${c.need}`);

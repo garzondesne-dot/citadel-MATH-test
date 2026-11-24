@@ -12,7 +12,7 @@
   import DATA from '../../model/hero-data.json';
   import { canEnh, canHero, canSkill, cost, dirty, earnedTitles, emptyPlan, equipOf, switchHero, left, nextSkill, ownsHero, ownsSkill, save, type Look, type Plan } from '../../model/draft';
   import { sfx } from '../sound.svelte';
-  import { heroUnlock, medalN, statsOf, type HeroUnlock } from '../../model/heroUnlock';
+  import { chalText, heroUnlock, medalN, statsOf, type HeroUnlock } from '../../model/heroUnlock';
   import HeroSprite from './HeroSprite.svelte';
   import HeroIntro from './HeroIntro.svelte';
   import SkillPreview from './SkillPreview.svelte';
@@ -103,7 +103,7 @@
   // ── 🧑 용사 바꾸기 ──
   const pick = $derived(heroOf(pickH));
   /** 잠긴 용사 진행 한 줄 (🏆 도전 n / need · 📚 도감 n / need장 · 다 모으면 무료) */
-  const progOf = (id: number) => { const c = UN?.chal[id]; if (c) return `${c.n} / ${c.need}`; const k = UN?.cards[id]; return k && k.need ? `📚 도감 ${k.n} / ${k.need}장 모으면 무료` : ''; };
+  const progOf = (id: number) => { const c = UN?.chal[id]; if (c) return chalText(id, c); const k = UN?.cards[id]; return k && k.need ? `📚 도감 ${k.n} / ${k.need}장 모으면 무료` : ''; };
   const POOL = teacher ? [...TEACHER_HEROES, ...HEROES] : HEROES, ownH = (id: number) => teacher || ownsHero(W, P, id, opened);
   const ownsPick = $derived(ownH(pickH));
   const mine = $derived(POOL.filter((h) => ownH(h.id)));
