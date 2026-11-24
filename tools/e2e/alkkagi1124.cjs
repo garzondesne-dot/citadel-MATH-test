@@ -50,6 +50,8 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('다음 박자 = 내 알 날아감 · 쉬는 4초 (또는 판 밖으로 떨어짐)', me && me.n >= 1 && (me.cd > 0 || me.on === 0), JSON.stringify(me));
   ok('폰 = 「쉬는 중」 또는 「날아가는 중」', /쉬는 중|날아가는 중|다시 나와요/.test(await txt(s, '[data-k="ak-hint"]')), await txt(s, '[data-k="ak-hint"]'));
   await tv.bringToFront(); await tv.waitForTimeout(600); await tv.screenshot({ path: `${SHOTS}/ak-tv.png` });
+  { const m = await tv.evaluate(() => { const b = document.querySelector('[data-k="ak-tv-board"]').getBoundingClientRect(), a = document.querySelector('[data-k="ak-tv"]').getBoundingClientRect(); return { bh: Math.round(b.height), bw: Math.round(b.width), ah: Math.round(a.height), at: Math.round(a.top), bt: Math.round(b.top) }; });
+    ok('🔨 #17 종합실 원판 = 놀이 칸 높이의 80% 이상 · 정사각', m.bh >= m.ah * 0.8 && Math.abs(m.bh - m.bw) <= 2, JSON.stringify(m)); }
   ok('종합실 = 판 · 남은 시간 · 순위', !!(await tv.$('[data-k="ak-tv-board"]')) && /남은 \d+초/.test(await txt(tv, '[data-k="ak-tv-time"]')) && (await tv.$$('[data-k="ak-tv"] .rank li')).length >= 2, await txt(tv, '[data-k="ak-tv-time"]'));
   await t.bringToFront();
   for (let i = 0; i < 120; i++) { const f = await fun(live.code); if (!f || f.phase === 'end') break; await t.waitForTimeout(1000); }
