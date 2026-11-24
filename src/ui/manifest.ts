@@ -249,14 +249,14 @@ export const ICE = {
 /** 🥏 알까기 그림 (📜 11/24 🔨 #17 「원판 제일 크게 · 배경 고화질」): 그림을 바꾸면 여기만 고침
  *   board = 원판 그림(정사각) · ring = 그림 폭 중 원판 지름 비율(떨어지는 선 = 이 원 · 지금 PixelLab 256 = 218/256 = 0.852) · pixel = 도트 그림(확대 때 뭉개지 않음 · 고해상 그림이면 false)
  *   bg = 종합실 배경(1920×1080 · 비면 기본 바탕) — 🎨 v51 mg-o-alk-board(2048) · mg-o-alk-bg(1920×1080) 받으면 board · ring · pixel · bg 만 바꿈 */
-export const AK_ART: { board: string; ring: number; pixel: boolean; bg: string } = { board: 'art/minigame/alk-board-v3.webp', ring: 0.786, pixel: true, bg: 'art/minigame/alk-bg-v1.webp' }; // 🎨 11/24 mg-o-alk-board 코덱스 판(2048 → 512 nearest · 나무 가장자리 = 그림 폭 78.6% · 금빛 출발 고리 = 나무 반지름 56%) · mg-o-alk-bg(1672×941 → 1600)
+export const AK_ART: { board: string; ring: number; pixel: boolean; bg: string } = { board: 'art/minigame/alk-board-v4.webp', ring: 0.832, pixel: true, bg: 'art/minigame/alk-bg-v1.webp' }; // 🎨 11/24 mg-o-alk-board 코덱스 v2 원본(1254 → 512 nearest · 나무 가장자리 = 그림 폭 83.2% · 금빛 출발 고리 = 나무 반지름 56%) · mg-o-alk-bg(1672×941 → 1600)
 /** 🏁 땅따먹기 그림 (🎨 11/24 mg-o-land-tiles · mg-o-land-flag): tiles = 96px 6칸 한 줄(0 빈칸 · 1 붉은 · 2 푸른 · 3 금빛 · 4 초록 · 5 ⭐) · flags = 팀 순서(붉은 · 푸른 · 금빛 · 초록) 천만 물들임 */
-export const LG_ART = { tiles: 'art/minigame/land-tiles-v2.webp', flags: ['art/minigame/land-flag-0-v2.webp', 'art/minigame/land-flag-1-v2.webp', 'art/minigame/land-flag-2-v2.webp', 'art/minigame/land-flag-3-v2.webp'] } as const;
+export const LG_ART = { tiles: 'art/minigame/land-tiles-v3.webp', flags: ['art/minigame/land-flag-0-v3.webp', 'art/minigame/land-flag-1-v3.webp', 'art/minigame/land-flag-2-v3.webp', 'art/minigame/land-flag-3-v3.webp'] } as const;
 /** 칸 그림 자리 (background-position x %) · c = 팀(−1 빈칸) · star = ⭐ */
 export const lgTilePos = (c: number, star: boolean) => `${(star ? 5 : c + 1) * 20}% 0`;
 /** 🏆 쉼터 놀이 결과 시상대 (🎨 11/24 mg-o-podium 코덱스 · 1/4 도트) */
 export const PODIUM_ART = 'art/minigame/podium-v1.webp';
-export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v2.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
+export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v3.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
 /** 새 그림 배경(🥏 · 😆)은 어둡게 덮지 않음 (그림 자체가 어두운 쪽을 비워 둠) */
 export const FUN_BG_LIGHT: Record<string, true> = { ak: true, aj: true };
 export const TD_ART: Record<string, string> = { forest: 'art/td/td-forest-v1.webp', volcano: 'art/td/td-volcano-v1.webp', ice: 'art/td/td-ice-v1.webp', desert: 'art/td/td-desert-v1.webp', crypt: 'art/td/td-crypt-v1.webp' };
