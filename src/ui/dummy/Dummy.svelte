@@ -245,6 +245,7 @@
                 {#if r.st}<i class="ni" class:blink={r.need} style={icon(r.st)} aria-hidden="true"></i>{:else}<span class="mi" aria-hidden="true">{r.id === BOSS_ID ? '👑' : r.clear ? '✔' : '🎯'}</span>{/if}
                 <span class="tx">{#if r.need}<b class="ex">❗</b> {/if}{r.title}{#if r.st}<small> · {WHY[r.st] ?? ''}</small>{/if}
                   {#if r.sent || r.must}<em class="tag sent" data-k="sent-tag">📚 수업에서 넘어온 문제</em>{/if}{#if phLeft(c.L, r.id)}<em class="tag ph" data-k="ph-left">📷 서술형 남음 · 📜 1</em>{:else if phV(c.L, r.id)}<em class="tag ph" data-k="ph-v">✔ 서술형 · 실력 쓰기 가능</em>{:else if phVok(c.L, r.id)}<em class="tag ph" data-k="ph-vok">✔ 실력 쓰기 통과</em>{/if}{#if r.need && view.reviewLeft}<em class="tag">💎 +{DUMMY_G.review}</em>{:else if r.bossNeed && !view.log[`bossre_${c.L.id}`]}<em class="tag">💎 +{DUMMY_G.bossRe + (c.sealed ? 0 : DUMMY_G.seal)}</em>{/if}{#if r.bossNeed && !c.sealed}<em class="tag seal">🏆 업적</em>{/if}</span>
+                {#if !r.need && !r.bossNeed && (r.clear || !!r.st)}<b class="done" data-k="dummy-done" aria-label="해결함">✔ 해결</b>{/if}<!-- 🐞 11/24 학생 인터뷰 「푼 것 · 안 푼 것이 초록 칸만이라 헷갈림」 = 글자 ✔ -->
                 <button type="button" class="go" class:main={r.need || r.bossNeed} onclick={() => fight(c.L, r.id)}>{r.need || r.bossNeed ? '⚔ 풀기' : '다시'}</button>
                 {#if phV(c.L, r.id)}<button type="button" class="rwb" data-k="rw-go" onclick={() => rewrite(c.L, r.id)}>✍ 실력 쓰기 · 📜 +1</button>{/if}
               </li>
@@ -270,6 +271,7 @@
   .card { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3); border-radius: var(--r); background: var(--surface); border: 1px solid var(--line, #2f3440); }
   .card.left { border-color: color-mix(in srgb, var(--bad) 60%, var(--line, #2f3440)); }
   .h { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .h > b { font-size: 15px; flex: 1 1 100%; }
+  .done { flex: none; font: 800 13px var(--font); color: var(--ok); white-space: nowrap; }
   .cnt { font: 700 13px var(--font); color: var(--bad); } .cnt.ok { color: var(--ok); }
   .stamp { font: 700 12px var(--font); color: var(--accent); border: 1px solid var(--accent); border-radius: 10px; padding: 0 6px; }
   .tag { font-style: normal; font: 700 12px var(--font); color: var(--gem); border: 1px solid color-mix(in srgb, var(--gem) 50%, transparent); border-radius: 10px; padding: 0 6px; margin-left: 4px; white-space: nowrap; }
