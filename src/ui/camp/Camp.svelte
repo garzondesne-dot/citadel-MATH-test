@@ -42,7 +42,7 @@
   import ExamCutin from '../exam/ExamCutin.svelte';
   import MockExam from '../exam/MockExam.svelte';
   import { SCHOOL_BUILD } from '../../channel';
-  import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut } from '../../school/examEvent';
+  import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut, skyColor, skyLevel } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
   import CosAura from '../cos/CosAura.svelte';
   import { auraColorOf, cardBgOf, cosWorn } from '../../model/cosmetics';
@@ -122,6 +122,7 @@
   //   교사 캠프 · 🧪 시험 반 · 시험 계정 · 이 기기 체험 = 그대로 테스트 꼴(💎 9,999 · 📜 30 시작 · 호칭 모두)
   // ⚔ 기말 대비 기간 (📜 11/25 · 머리 🔨): 띠 · 붉은 하늘 · 첫 접속 컷인(기기 · 학생 · 시험 날짜마다 1번) · 체험판 = 숨김
   const exDate = untrack(() => (trial ? '' : examDateOf(S))), exNow = Date.now(), exOn = !!exDate && inPeriod(exDate, exNow), exBand = exOn ? bandText(exDate, exNow) : '';
+  const exSky = exOn ? skyLevel(exDate, exNow) : 0; // 🌇 점점 붉어지는 빛
   const exWho = untrack(() => (pupil ? `${pupil.cls}-${pupil.num}` : fromMe0 ? 'teacher' : 'me'));
   let exCut = $state(untrack(() => exOn && !cutSeen(exWho, exDate)));
   const mockOn = exOn && !SCHOOL_BUILD; // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
@@ -588,7 +589,7 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
-    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {EXAM_TXT.sky.color}, transparent 55%)" style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i><button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
+    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i><button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>

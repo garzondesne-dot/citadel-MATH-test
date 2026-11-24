@@ -1,5 +1,5 @@
 // ⚔ 기말 대비 기간 (📜 2026-11-25 · 머리 🔨) — 이 기기 캠프 · 시계 = 기간 안(KST 11/25 = D-15)
-//   ① 첫 접속 = 출정 컷인(띠 · 시험지 마왕 · D-n) · 톡 = 건너뛰기 · 다시 들어오면 안 뜸
+//   ① 첫 접속 = 출정 컷인(띠 · 무지의 마왕 · D-n) · 톡 = 건너뛰기 · 다시 들어오면 안 뜸
 //   ② 캠프 맨 위 붉은 띠 「D-n」 · 붉은 하늘 · 띠 누름 = 성채 · 허수아비 · 컷인 다시 보기
 //   ③ 시험 날짜를 끄면(off) 띠 · 하늘 · 컷인 없음
 //   NODE_PATH=$(npm root -g) node tools/e2e/exam1125.cjs <폴더> [주소]
@@ -14,7 +14,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   ok('① 첫 접속 = 출정 컷인', !!(await p.$('[data-k="exam-cutin"]')));
   await p.screenshot({ path: `${SHOTS}/ex-cut0.png` });
   await p.waitForTimeout(1500); await p.screenshot({ path: `${SHOTS}/ex-cut1.png` });
-  await p.waitForTimeout(1400); ok('정체 공개 = 시험지 마왕 · D-n', !!(await p.$('[data-k="exam-boss"]')) && /D-15/.test((await p.textContent('[data-k="exam-dd"]').catch(() => '')) || ''), (await p.textContent('[data-k="exam-dd"]').catch(() => '')) || '');
+  await p.waitForTimeout(1400); ok('정체 공개 = 무지의 마왕 · D-n', !!(await p.$('[data-k="exam-boss"]')) && /D-15/.test((await p.textContent('[data-k="exam-dd"]').catch(() => '')) || ''), (await p.textContent('[data-k="exam-dd"]').catch(() => '')) || '');
   await p.screenshot({ path: `${SHOTS}/ex-cut2.png` });
   await p.click('[data-k="exam-cutin"]'); await p.waitForTimeout(400);
   ok('톡 = 건너뛰기', !(await p.$('[data-k="exam-cutin"]')));

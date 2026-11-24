@@ -20,8 +20,8 @@ describe('📄 모의 시험지', () => {
       expect(qs.length).toBe(MOCK_N);
       expect(new Set(qs.map((m) => `${m.slot.lid}|${m.slot.mid}|${m.slot.k}`)).size).toBe(MOCK_N);
       expect(qs.map((m) => m.slot.no)).toEqual(qs.map((m) => m.slot.no).slice().sort((a, b) => a - b));
-      const all = gradeMock(qs, qs.map((m) => answerOf(m.q)));
-      expect(all.n).toBe(MOCK_N);
+      const ans = qs.map((m) => answerOf(m.q)), all = gradeMock(qs, ans);
+      expect(all.n).toBe(ans.filter((a) => a != null).length); // 과목 고유 꼴(화살표 잇기 등) = 답 만들기 없음 → 빈칸
       const none = gradeMock(qs, qs.map(() => null));
       expect(none.n).toBe(0); expect(Object.values(none.wrongBy).reduce((a, b) => a + b, 0)).toBe(MOCK_N);
     }

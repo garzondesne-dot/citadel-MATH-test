@@ -34,7 +34,7 @@
     res = { ok: g.ok, n: g.n, gem }; phase = 'result'; scrollTo?.({ top: 0 });
     hp = 1; setTimeout(() => { hp = 1 - g.n / qs.length; sfx(g.n === qs.length ? 'finish' : 'smash', 0.6); }, 500);
   }
-  if (TEST_ADDR) (globalThis as { __mock?: unknown }).__mock = { fill: (n = MOCK_N) => { given = qs.map((m, i) => (i < n ? answerOf(m.q) : null)); } }; // 🧪 시험 주소만: 앞 n 문항 정답 채우기
+  if (TEST_ADDR) (globalThis as { __mock?: unknown }).__mock = { fill: (n = MOCK_N) => { given = qs.map((m, i) => (i < n ? answerOf(m.q) : null)); return given.filter((g) => g != null).length; } }; // 🧪 시험 주소만: 앞 n 문항 정답 채우기 → 채운 수(과목 고유 꼴 = 답을 못 만들어 빔)
   const jump = (i: number) => document.querySelector(`[data-k="mx-q"][data-i="${i}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const lessonName = (lid: string) => { const L = byId.get(lid); return L ? `${L.no}차시 ${L.title}` : lid; };
   const frame = $derived(phase === 'result' && res && res.n === qs.length ? 3 : phase === 'result' && hp < 1 ? 2 : 0);
