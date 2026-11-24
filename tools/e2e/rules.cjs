@@ -56,6 +56,14 @@ const sign = async (email) => { const r = await fetch(`${AU}/accounts:signUp?key
   // 🔐 📜 2026-11-14 출시 막는 것 2: 학생 칸 주인(pids) · 💎 선물 · 우편 · 방 학생 칸 = 그 학생 본인 · 교사 · TV 만
   want('pids 내 칸 주인 표시(A = s1_3_1)', await as(A.tok, 'pids/s1_3_1', 'PUT', { u: A.uid, c: '1-3', n: '1' }), true);
   want('pids 남 칸 차지(B → s1_3_1)', await as(B.tok, 'pids/s1_3_1', 'PUT', { u: B.uid, c: '1-3', n: '1' }), false);
+  // 🏁 😆 📜 2026-11-24 쉼터 놀이 학생 칸 = 이미 열린 fv (규칙 바뀜 없음 확인 · 용이 잠든 사이 dg 처럼 안 써지는 일 막기)
+  want('🏁 땅따먹기 참가 (A → fv/lg1_j/s1_3_1)', await as(A.tok, 'rooms/111111/fv/lg1_j/s1_3_1', 'PUT', 1), true);
+  want('🏁 땅따먹기 방향 (A → fv/lg1_5/s1_3_1)', await as(A.tok, 'rooms/111111/fv/lg1_5/s1_3_1', 'PUT', 2), true);
+  want('🏁 남 방향 쓰기 막힘 (B → s1_3_1)', await as(B.tok, 'rooms/111111/fv/lg1_5/s1_3_1', 'PUT', 0), false);
+  want('🏁 학생 출발(fun/go) 막힘', await as(A.tok, 'rooms/111111/fun/go', 'PUT', 1), false);
+  want('😆 아재 퀴즈 답 (A → fv/aj1_1/s1_3_1)', await as(A.tok, 'rooms/111111/fv/aj1_1/s1_3_1', 'PUT', { a: '킹콩', at: 1 }), true);
+  want('😆 교사 회차 칸 (funUsed/1-3/ajr)', await as(T1.tok, 'school/funUsed/1-3/ajr', 'PUT', 2), true);
+  want('😆 학생 회차 칸 막힘', await as(A.tok, 'school/funUsed/1-3/ajr', 'PUT', 5), false);
   want('🥏 알까기 참가 (A → fv/ak1_j/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1_j/s1_3_1', 'PUT', 1), true);
   want('🥏 알까기 발사 (A → fv/ak1/s1_3_1)', await as(A.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0.5, p: 1, n: 1 }), true);
   want('🥏 남 발사 쓰기 막힘 (B → s1_3_1)', await as(B.tok, 'rooms/111111/fv/ak1/s1_3_1', 'PUT', { a: 0, p: 2, n: 2 }), false);
