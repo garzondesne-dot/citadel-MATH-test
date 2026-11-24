@@ -12,7 +12,7 @@
   import { onDestroy, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { activeIds, BOSS_DROP_TEXT, BOSS_ID, bossHp, bossNote, bossLive, bossState, chainRecord, isChain, isEnd, isLobby, monsterHp, nextIdx, plainRecord, solveLock, stepIdx, stepOf, timeLeft } from '../../raid/raid';
-  import { appearNow, goBoss, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo } from '../../raid/actions';
+  import { appearNow, goBoss, hideWords, chainRelease, heartRelease, endClass, extendTime, giveGift, giveStamp, stamped, unStamp, nextStep, prevStep, roomPath, scoutAdd, sendReload, setAbsent, setBubble, setFocus, setPct, setRest, setSheet, setSolveSec, setThink, setVideo, setQr } from '../../raid/actions';
   import { bot, botsOff, setBots } from '../../raid/botRun.svelte';
   import { sfx } from '../sound.svelte';
   import { BOT_MAX, isBot } from '../../raid/bots';
@@ -390,7 +390,7 @@
       <button type="button" data-slot="heal" data-k="heal-first" class:hot={!!order.length} disabled={!order.length} aria-label={order.length ? `⚔ 보급 · 🙋① ${nl(numOf(order[0]!))}번 ${pname(order[0]!)}` : '⚔ 보급 · 도움 요청 없음'} onclick={() => order[0] && release(order[0])}><i>⚔</i>보급</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" onclick={main}>{mainText}</button></div>
-    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
@@ -520,7 +520,8 @@
       <p class="gnote" data-k="bossask">짝 몬스터를 복습으로 보내서 수업 형성평가가 {lv.items}문항만 남았어요 ({lv.drop.length}문항은 {BOSS_DROP_TEXT}) · 보내면 형성평가도 학생마다 🎯 허수아비 「⭐ 꼭 풀기」로 가요</p>
     </Sheet>
   {:else if sheet === 'qr'}
-    <Sheet onclose={() => (sheet = '')} mainText="닫기">
+    <!-- 📷 수업 중에도 같은 창 (📜 11/24 🔨 #9 ②) · 큰 단추 = 종합실에 QR 크게 띄우기 ↔ 내리기 -->
+    <Sheet onclose={() => (sheet = '')} mainText={R.state.qr ? '📺 종합실 QR 내리기' : '📺 종합실에도 크게 띄우기'} onmain={() => { setQr(S, code, !R.state.qr); sheet = ''; }}>
       {#snippet title()}🚪 수업 입장{/snippet}
       <div class="qrbox"><QR text={joinUrl} size={220} /><b class="qcode">{spaced(code)}</b>
         <p>휴대폰 카메라로 QR → 로그인한 폰은 바로 대기실 · 처음이면 반 · 번호로 로그인 뒤 들어와요<br />QR 이 안 되면 캠프 「🚪 코드」에 위 6자리</p>
