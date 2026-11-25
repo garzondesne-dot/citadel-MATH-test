@@ -17,6 +17,9 @@ describe('📷 설정 · 기준표', () => {
     expect([n('set-13'), n('set-14'), n('set-15'), n('set-16'), n('set-17')]).toEqual([1, 1, 1, 1, 1]);
     expect([R['set-13']!.m4!.total, R['set-13']!.m4!.pass, R['set-14']!.m3!.pass]).toEqual([5, 4, 3]);
     expect([n('eval-1'), n('eval-2'), n('eval-3')]).toEqual([2, 2, 3]);
+    // 📜 11/25 15차시 v9 m3 = 119쪽 서술형 「일대일대응이 되는 (a, b)」 4점 · 3점 통과 · 두 경우 (3, −4) · (−3, 8)
+    const m3 = R['set-15']!.m3!; expect([m3.total, m3.pass, m3.steps!.length, /일대일대응이 되는 \(a, b\)/.test(m3.title)]).toEqual([4, 3, 4, true]);
+    expect(m3.steps!.map((s) => s.desc).join(' ')).toMatch(/\(3, −4\)[\s\S]*\(−3, 8\)/);
     for (const rs of Object.values(R)) for (const r of Object.values(rs)) { expect(r.pass).toBeLessThanOrEqual(r.total); expect((r.steps || []).reduce((a, s) => a + s.pts, 0)).toBe(r.total); }
   });
   it('켜짐 = url + on + 그 방 기준표 on · 값 없으면 정식 기본값', () => {
