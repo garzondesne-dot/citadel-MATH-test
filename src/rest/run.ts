@@ -23,7 +23,21 @@ const P = (code: string, s: string) => `${roomPath(code)}/${s}`;
 const ck = (c: string) => String(c).replace(/[.#$/[\]]/g, '_');
 export const studentsIn = (R: Room, now: number) => activeIds(R, now).filter((u) => !R.players?.[u]?.teacher);
 export type AnyFun = (Omit<Fun, 'kind'> & { kind: Game }) | (Omit<Nun, 'kind'> & { kind: Game }) | (Omit<Drg, 'kind'> & { kind: Game }) | (Omit<Aj, 'kind'> & { kind: Game }) | (Omit<Lg, 'kind'> & { kind: Game }) | (Omit<Ak, 'kind'> & { kind: Game });
-export const funOf = (R: Room | null): AnyFun | null => ((R as unknown as { fun?: AnyFun })?.fun ?? null);
+/** 🐞 11/25 정식 b243 수업 「땅따먹기 안 움직임 · 알까기 화면 안 뜸」: 진짜 서버(Firebase)는 빈 {} · [] 를 저장하지 않음 → 읽으면 칸이 없음(undefined)
+ *  → stars.map · Object.keys(st) 에서 멈춤 (이 기기 시험은 빈 칸을 그대로 둬서 못 잡았음 · tests/funfb1125 = 서버 꼴 흉내) · 놀이마다 빈 칸을 채워서 돌려줌 */
+const FUN_EMPTY: Partial<Record<string, Record<string, () => unknown>>> = {
+  lg: { team: () => ({}), pos: () => ({}), last: () => ({}), stars: () => [], starHit: () => [0, 0, 0, 0], mine: () => ({}), alive: () => ({}) },
+  ak: { st: () => ({}), sc: () => ({}), kn: () => ({}), fall: () => ({}) },
+  aj: { alive: () => ({}), score: () => ({}), qs: () => [], chips: () => [] },
+};
+export function funFill<T>(f: T): T {
+  const k = (f as { kind?: string } | null)?.kind, d = k ? FUN_EMPTY[k] : null; if (!f || !d) return f;
+  let out = f as Record<string, unknown>; for (const [key, mk] of Object.entries(d)) if (out[key] == null) { if (out === (f as unknown)) out = { ...out }; out[key] = mk(); }
+  const fx = out.fx as Record<string, unknown> | undefined; // 🏁 턴 연출 = 빈 목록이 빠짐 (fx.star.length 에서 멈춤 · 종합실 · 폰 「못 그렸어요」)
+  if (k === 'lg' && fx && typeof fx === 'object' && (fx.bump == null || fx.steal == null || fx.star == null || fx.bu == null)) out = { ...out, fx: { bump: [], steal: [], star: [], bu: {}, ...fx } };
+  return out as T;
+}
+export const funOf = (R: Room | null): AnyFun | null => funFill((R as unknown as { fun?: AnyFun })?.fun ?? null);
 /** 쉼터 분 기본값 = 지난번 값 (정식 restMinDef · 1 ~ 20 · 처음 5) */
 export const restMinDef = (S: Store) => { const m = Number(S.get<number>('school/teacher/restMin')); return m >= 1 && m <= 20 ? m : 5; };
 export const saveRestMin = (S: Store, m: number) => S.set('school/teacher/restMin', Math.max(1, Math.min(20, Math.round(m))));
