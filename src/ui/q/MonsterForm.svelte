@@ -27,6 +27,8 @@
   import { V4, answerOf } from '../../raid/raid';
   import { healsTo } from '../../raid/raid';
   import { sfx } from '../sound.svelte';
+  import { hintUsed, markHintUsed, nudgeOn, wrongTimes } from '../../raid/hintNudge';
+  import './nudge.css';
 
   // 📝 일반 몬스터 카드 (②B · ③ 틀렸을 때 · ⑥ 퍼펙트 · 규칙 = 정식 fightForm v3)
   //   카드 맨 위 「문제 n · 소문제 k / m」 · 한 장에 소문제 하나 · 다 채우면 「공격」(하트 = 남은 기회)
@@ -148,6 +150,9 @@
   const numTag = $derived(dummy ? (R.meta.fresh?.[mid] ? '🔁 바뀐 숫자' : '📄 학습지 숫자') : '');
   // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
   let helpOpen = $state(false);
+  let hUsed = $state(hintUsed()); // 💡 말풍선 (📜 11/25) = 같은 소문제 2번 틀림 · 써 본 기기는 안 띄움
+  const nudge = $derived(nudgeOn(wrongTimes(rec.tries as { marks?: boolean[] }[], cur), hUsed) && !rec.perfect);
+  const useHint = () => { if (!hUsed) { markHintUsed(); hUsed = true; } };
   const helpNow = $derived(!feat('help3') ? null : helpOf(L, mid, cur, items[cur] ?? null));
   // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①): 학생 폰 「첫 줄만 같이 볼까?」 → 도움 2단(없으면 1단) · 도움이 없으면 예전 💡 힌트
   let helpStart = $state(1);
@@ -209,7 +214,7 @@
     {/key}
   </div>
   <BottomAction battle disabled={mainOff} {why} onmain={onMain} mainLabel={allFilled ? `${fixing ? '다시 공격' : '공격'} (${v4 ? '⚔' : '도전 기회'} ${rec.submitted ? rec.left : rec.slots}${v4 ? '' : '번'})` : fixing ? '다음 틀린 문제' : '다음 소문제'}>
-    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" aria-label="힌트" data-k="hint" onclick={() => (helpNow ? (helpOpen = true) : onhint?.())}><i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
+    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" class:nudge aria-label="힌트" data-k="hint" onclick={() => { useHint(); if (helpNow) helpOpen = true; else onhint?.(); }}>{#if nudge}<span class="nudgebub" data-k="hint-nudge">막히면 눌러 봐</span>{/if}<i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
     {#snippet right()}{#if v4 && rec.perfect}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 없음 · 소레이드만)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}
       {#if allFilled && v4}<span>{pw(rec.perfect ? '🔥 한 번 더 공격' : fixing ? '다시 공격' : '공격')}</span>{#if rec.perfect}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{/if}

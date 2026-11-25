@@ -228,7 +228,7 @@ export const answerOf = (q: Question): Given => (SUBJ.formats[q.type] ? (SUBJ.fo
 export interface ChainRec {
   chain: true; items: Question[]; n: number; stage: number; cost: number; left: number; slots: number; wrong: number;
   lastWrong: { s: number; given: Given } | null; says: string[]; done: boolean; fail: boolean; locked: boolean; ok: boolean; byPh: boolean;
-  perfect: boolean; perfectAt: number; tokens: number; tokLeft: number; stOk: boolean[]; stFirst: boolean[];
+  perfect: boolean; perfectAt: number; tokens: number; tokLeft: number; stOk: boolean[]; stFirst: boolean[]; /** 💡 말풍선: 단계마다 틀린 횟수 */ wrongN: Record<number, number>;
   whyM: number; whyN: number; whyDone: number[]; whyAll: boolean;
   best: number; total: number; submitted: boolean; tries: never[]; last: null; allRight: boolean; practice: boolean; pass: number; pStage: number; pSays: string[]; pItems: Question[] | null;
   pDoneN: number; pWhy: number; whyOk: boolean; pLeft: number; pFail: boolean; healed: number; canRetry: false; canHeal: boolean; nextAttempt: number; nextK: number;
@@ -239,7 +239,7 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
   const its = chainItems(L, R, mid, uid, 0), n = its.length, subs = chainSubs(R, mid, uid);
   const ok = !!R.chainOk?.[mid]?.[uid];
   let stage = 0, cost = 0, wrong = 0, lastWrong: ChainRec['lastWrong'] = null, byPh = false, leftAt = -1;
-  const says: string[] = [], wrongAt: Record<number, boolean> = {};
+  const says: string[] = [], wrongAt: Record<number, boolean> = {}, wrongN: Record<number, number> = {};
   const v4 = V4(R), healed = noParty ? healsReceived(R, mid, uid) : healsReceived(R, mid, uid, L), slots = CHAIN_SLOTS + healed + (v4 ? unlocksOf(R, mid, uid) : 0) + (isDummy(R) ? 99 : 0); // 🎯 허수아비 = ❤ 없음
   const pWrongBy: Record<number, number> = {}; // v4 🌟: 판마다 틀린 수
   // v4 🙋 풀어주기 뒤 그 칸으로 풀어내면 ❤ +1 (풀어주기 횟수까지): ❤ 가 처음 0 이 된 뒤 맞힌 단계 수
@@ -256,7 +256,7 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
       if (stage >= n || cost >= slots || t.s !== stage) return;
       const q = its[stage] as Question;
       if (grade(q, given)) { says.push(q.say || ''); if (q.why) says.push(q.why.text); stage += 1; lastWrong = null; if (stage >= n) leftAt = slots - cost; if (v4 && zeroed) refundN += 1; }
-      else { cost += stage === n - 1 ? 1 : 0.5; wrong += 1; wrongAt[stage] = true; lastWrong = { s: stage, given }; if (cost >= slots0) zeroed = true; }
+      else { cost += stage === n - 1 ? 1 : 0.5; wrong += 1; wrongAt[stage] = true; wrongN[stage] = (wrongN[stage] ?? 0) + 1; lastWrong = { s: stage, given }; if (cost >= slots0) zeroed = true; }
     } else {
       if (t.p !== pass) { pass = t.p; pStage = 0; pSays = []; pWhy = -1; pCost = 0; pItems = chainItems(L, R, mid, uid, pass); }
       const PI = pItems as Question[];
@@ -275,7 +275,7 @@ export function chainRecord(L: LessonPack, R: Room, mid: string, uid: string, no
   const rounds = pDoneN, roundOpen = v4 && given0 > rounds, trueOk = v4 && done && wrong === 0 && !byPh && given0 === 2 && rounds >= 2 && !pWrongBy[1] && !pWrongBy[2];
   const whyM = whyStages(its).length, whyDone = [...whySet].sort((a, b) => a - b);
   const stOk = Array.from({ length: n }, (_, i) => i < stage), stFirst = stOk.map((v, i) => v && !wrongAt[i]);
-  return { chain: true, stOk, stFirst, whyM, whyN: whyDone.length, whyDone, whyAll: whyM > 0 && whyDone.length >= whyM, items: its, n, stage, cost, left, slots, wrong, lastWrong, says, done, fail, locked, ok, byPh,
+  return { chain: true, stOk, stFirst, wrongN, whyM, whyN: whyDone.length, whyDone, whyAll: whyM > 0 && whyDone.length >= whyM, items: its, n, stage, cost, left, slots, wrong, lastWrong, says, done, fail, locked, ok, byPh,
     perfect: done && wrong === 0 && !byPh, perfectAt: done && wrong === 0 && !byPh ? 0 : -1, tokens, tokLeft,
     best: stage, total: n, submitted: subs.length > 0, tries: [], last: null, allRight: done, practice: pass > 0, pass, pStage, pSays, pItems, pDoneN, pWhy, whyOk, pLeft: v4 ? CHAIN_SLOTS : Math.max(0, CHAIN_SLOTS - pCost), pFail: !v4 && pass > 0 && pCost >= CHAIN_SLOTS && pStage < (pItems || []).length,
     healed, canRetry: false, canHeal: tokLeft > 0 && !roundOpen, nextAttempt: subs.length, ...(v4 ? { spent: given0, rounds, roundOpen, trueOk } : {}), nextK: subs.length ? (subs[subs.length - 1] as { k: number }).k + 1 : 0 };

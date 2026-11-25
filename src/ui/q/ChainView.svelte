@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { hintUsed, markHintUsed, nudgeOn } from '../../raid/hintNudge';
+  import './nudge.css';
   import { petriPop } from './petriPop.svelte';
   import { setSymPack } from '../battle/symsheet.svelte';
   import { helpOf } from '../../school/help';
@@ -128,6 +130,9 @@
   // 💡 도움 3단 (📜 2026-11-15 · school/help.ts): 그 문항에 help 가 있으면 💡 = 도움 3단 시트 · 없으면 예전 힌트(개념)
   let helpOpen = $state(false);
   const helpNow = $derived(!feat('help3') ? null : helpOf(L, mid, stage, q ?? null));
+  let hUsed = $state(hintUsed()); // 💡 말풍선 (📜 11/25) = 같은 단계 2번 틀림 · 써 본 기기는 안 띄움
+  const nudge = $derived(!prac && !rec.done && nudgeOn(rec.wrongN?.[stage] ?? 0, hUsed));
+  const useHint = () => { if (!hUsed) { markHintUsed(); hUsed = true; } };
   // 🤝 손 놓은 학생 (📜 2026-11-16 · 🌊 ①): 학생 폰 「첫 줄만 같이 볼까?」 → 도움 2단(없으면 1단) · 도움이 없으면 예전 💡 힌트
   let helpStart = $state(1);
   $effect(() => { const on = () => { if (helpNow) { helpStart = 2; helpOpen = true; } else onhint?.(); }; window.addEventListener('citadel-idlehelp', on); return () => window.removeEventListener('citadel-idlehelp', on); });
@@ -195,7 +200,7 @@
   </BottomAction>
 {:else}
   <BottomAction battle disabled={!ready || locked || !!flip} why={!ready && !locked ? '답을 고르면 공격할 수 있어요' : ''} onmain={go} mainLabel="{stName(stage, pItems.length)} 공격 (도전 기회 {hearts.left}번)">
-    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" aria-label="힌트" data-k="hint" onclick={() => (helpNow ? (helpOpen = true) : onhint?.())}><i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
+    {#snippet left()}{#if v4 && (onhint || helpNow)}<button type="button" class="side hint" class:nudge aria-label="힌트" data-k="hint" onclick={() => { useHint(); if (helpNow) helpOpen = true; else onhint?.(); }}>{#if nudge}<span class="nudgebub" data-k="hint-nudge">막히면 눌러 봐</span>{/if}<i>💡</i>{helpNow ? '도움' : '힌트'}</button>{/if}{/snippet}
     {#snippet right()}{#if extWr}{@render extBtn()}{:else if canPhoto}{@render wrBtn()}{:else if v4}<button type="button" class="side wr" disabled aria-label="서술형 (이 문제는 사진 채점 준비 중)">✍ 서술형<small>준비 중</small></button>{/if}{/snippet}
     {#snippet main()}<span>{pw(`${stName(stage, pItems.length)} ${prac ? (v4 ? '한 번 더 ' : '연습 ') : ''}공격`)}</span>{#if v4 && prac}{#if !dummy}<Hearts mode="energy" left={rec.tokLeft} lock />{/if}{:else if v4}{#if !dummy}<Hearts total={rec.slots} left={rec.left} memo={`${code}|${mid}|${uid}`} />{/if}{:else}<Slots total={hearts.total} marks={chainMarks(hearts.total, hearts.left)} />{/if}{/snippet}
   </BottomAction>

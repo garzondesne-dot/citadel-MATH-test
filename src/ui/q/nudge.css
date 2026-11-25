@@ -1,0 +1,7 @@
+/* 💡 실마리 말풍선 (📜 11/25) = 같은 소문제 2번 틀림 → 💡 단추 은은히 빛남 + 위에 「막히면 눌러 봐」 · MonsterForm · ChainView 공용 */
+.side.hint.nudge { position: relative; overflow: visible; border-color: var(--accent) !important; animation: hnudge 1.6s ease-in-out 3; }
+@keyframes hnudge { 0%, 100% { box-shadow: 0 3px 0 var(--accent-sh, #6b4a10), 0 0 0 rgba(245, 184, 74, 0); } 50% { box-shadow: 0 3px 0 var(--accent-sh, #6b4a10), 0 0 16px rgba(245, 184, 74, 0.85); } }
+.side.hint .nudgebub { position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 5; white-space: nowrap; padding: 6px 10px; border-radius: 10px; background: var(--accent); color: var(--on-accent, #1d1406); font: 800 14px var(--font); box-shadow: 0 3px 0 var(--accent-sh, #6b4a10); pointer-events: none; animation: hbub 0.18s ease-out; }
+.side.hint .nudgebub::after { content: ''; position: absolute; left: 18px; top: 100%; border: 6px solid transparent; border-top-color: var(--accent); }
+@keyframes hbub { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .side.hint.nudge, .side.hint .nudgebub { animation: none; } }

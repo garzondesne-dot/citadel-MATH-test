@@ -96,7 +96,7 @@ describe(`정식과 같음 (${fx.from})`, () => {
       for (const [u, p] of Object.entries(ex.players || {})) base[u] = { ...base[u], ...p, nick: '', seen: 1000 };
       const R: Room = { meta: meta('CH'), state: { step: 7, stepAt: 0 }, players: base, chain: { [c.mid]: c.chain as unknown as NonNullable<Room['chain']>[string] },
         ...(ex.chainOk ? { chainOk: { [c.mid]: ex.chainOk } } : {}), ...(ex.heals ? { heals: { [c.mid]: ex.heals } } : {}) };
-      const { items: _i, pItems: _p, ...rec } = chainRecord(L, R, c.mid, 'u1');
+      const { items: _i, pItems: _p, wrongN: _w, ...rec } = chainRecord(L, R, c.mid, 'u1'); // wrongN = 베타 💡 말풍선(11/25) 덧붙임 · 정식 값은 그대로
       expect(JSON.parse(JSON.stringify(rec)), `${c.mid} ${c.name}`).toEqual(c.rec);
       expect(monsterHp(L, R, c.mid, 1000), `${c.mid} ${c.name}: 체력`).toEqual(c.hp);
       expect(chainDown(L, R, c.mid, 1000), `${c.mid} ${c.name}: 졸개 쓰러짐`).toEqual(c.down);
