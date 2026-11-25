@@ -451,6 +451,9 @@
   // 🌟 나의 빛나는 순위 (📜 11/25 머리 🔨): 나만 · 12/5 00:00 KST 부터(🧪 = 날짜 무시) · 학교판 · 체험판 숨김 · 폰에서 셈 · 누르면 갈래 설명 한 줄
   const shine = $derived.by(() => { void sheet; void chVer; if (trial || SCHOOL_BUILD || !shineOn(Date.now(), !!me.test)) return null; try { const b = meBound(); return shineBand(b ? titleData(b.S, b.cls, b.num) : {}, Date.now()); } catch { return null; } });
   let shineSay = $state(false), shineT = 0;
+  let bandsOpen = $state(false); // 🐞 11/25 위 띠 한 줄 알약 · 누르면 펼침
+  const exShort = $derived(exBand.replace('무지의 마왕까지 ', '').replace('무지의 마왕 · 내일이다', '내일')); // 📄 D-15
+  const shShort = $derived(shine ? ([...shine.text][0] ?? '') : ''); // 접힌 알약 = 아이콘만 (성채 x 150~ 를 비키려고 왼쪽 136px 안) · 글은 펼치면
   const shineTap = () => { sfx('click', 0.5); shineSay = !shineSay; clearTimeout(shineT); if (shineSay) shineT = window.setTimeout(() => (shineSay = false), 5000) as unknown as number; };
   const e7Ready = $derived.by(() => { void chVer; try { return reviewPlaysOf(chalCtx()) >= 100; } catch { return false; } });
   $effect(() => { if (!e7Ready || sheet || castleGo != null || achQ.length) return; untrack(() => { if (!eggHave('e7')) setTimeout(() => eggGo('e7'), 600); }); });
@@ -602,8 +605,15 @@
       <button type="button" class="gear" aria-label="설정" onclick={() => (sheet = 'set')}>⚙</button>
     </div>
     {#if teach}<div class="tchips" role="group" aria-label="반" data-k="t-cls">{#each ['', ...T_CLASSES] as c (c)}<button type="button" class:on={tCls === c} aria-pressed={tCls === c} onclick={() => (tCls = c)}>{c || '전체'}</button>{/each}</div>{/if}
-    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i>{#if !sheet}<button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); sheet = 'exam'; }}>{exBand}</button>{/if}{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
-    {#if shine && !sheet}<div class="shine" class:low={exOn} data-k="shine" data-step={shine.step}><button type="button" class="shineb" data-k="shine-band" aria-expanded={shineSay} onclick={shineTap}>{shine.text}</button>{#if shineSay}<p class="shinesay" data-k="shine-say">{shine.say}</p>{/if}</div>{/if}
+    {#if exOn}<i class="exsky" style:background="linear-gradient(180deg, {skyColor(exSky)}, transparent 55%)" data-lv={exSky.toFixed(2)} style:mix-blend-mode={EXAM_TXT.sky.blend} aria-hidden="true" data-k="exam-sky"></i>{/if}<!-- ⚔ 기말 대비 (📜 11/25) -->
+    <!-- 🐞 11/25 「너무 배너가 많아서 성채 가려」: 📄 기말 D-day · 🙋 빛나는 순위 = 반 탭 아래 작은 알약 한 줄 · 누르면 두 줄 펼침 -->
+    {#if (exOn || shine) && !sheet}<div class="bands" class:tt={teach}>
+      <button type="button" class="bpill" data-k="bands" aria-expanded={bandsOpen} onclick={() => { sfx('click', 0.5); bandsOpen = !bandsOpen; }}>{#if exOn}<b class="bx">{exShort}</b>{/if}{#if exOn && shine}<i class="bdot" aria-hidden="true">·</i>{/if}{#if shine}<b class="bs">{shShort}</b>{/if}<i class="bcar" aria-hidden="true">{bandsOpen ? '▴' : '▾'}</i></button>
+      {#if bandsOpen}<div class="bopen" data-k="bands-open">
+        {#if exOn}<button type="button" class="exband" data-k="exam-band" onclick={() => { sfx('click', 0.5); bandsOpen = false; sheet = 'exam'; }}>{exBand} ›</button>{/if}
+        {#if shine}<div class="shine" data-k="shine" data-step={shine.step}><button type="button" class="shineb" data-k="shine-band" aria-expanded={shineSay} onclick={shineTap}>{shine.text}</button>{#if shineSay}<p class="shinesay" data-k="shine-say">{shine.say}</p>{/if}</div>{/if}
+      </div>{/if}
+    </div>{/if}
     {#if svBand && svNo && !svSent}<button type="button" class="svband" data-k="sv-band" onclick={() => { svBand = false; sheet = 'survey'; }}>📝 설문이 있어요 · {svLabel(svNo)} · 눌러서 답하기 ›</button>{/if}
     {#if mailToast}<p class="gtoast mail" role="status">{mailToast}</p>{:else if giftToast}<p class="gtoast" role="status">{giftToast}</p>{/if}
   </div>
@@ -973,12 +983,19 @@
   .nextbtn i { font-style: normal; color: var(--text-2); }
   .nextbtn:active { transform: translateY(2px); box-shadow: none; }
   .bdot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 4px; background: var(--gem); }
-  .shine { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 28; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: calc(100% - 32px); }
-  .shine.low { top: 100px; }
+  /* 🐞 11/25 위 띠 = 반 탭 아래 작은 알약 한 줄 · 누르면 펼침 (반 탭 · 성채 안 가림) */
+  .bands { position: absolute; left: 12px; top: calc(var(--bar-top) + 2px); z-index: 28; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: calc(100% - 24px); }
+  .bands.tt { top: calc(var(--bar-top) + 40px); }
+  .bpill { display: inline-flex; align-items: center; gap: 6px; height: 28px; max-width: 136px; padding: 0 10px 0 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.28); background: rgba(10, 9, 14, 0.55); color: #fff; font: 700 14px var(--font); white-space: nowrap; overflow: hidden; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .bpill:active { transform: translateY(1px); }
+  .bpill b { font-weight: 800; overflow: hidden; text-overflow: ellipsis; } .bpill .bx { color: #ff9e9e; flex: none; } .bpill .bs { color: #ffe29a; min-width: 0; }
+  .bpill i { font-style: normal; opacity: 0.7; flex: none; } .bpill .bcar { font-size: 12px; }
+  .bopen { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; animation: svin2 0.16s ease-out; } @keyframes svin2 { from { opacity: 0; transform: translateY(-6px); } }
+  .shine { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%; }
   .shineb { min-height: 32px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #ffe29a; background: linear-gradient(90deg, #7a5a12, #c99a2e, #7a5a12); color: #fff8e0; font: 800 14px var(--font); box-shadow: 0 3px 0 #3d2a05; white-space: nowrap; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); }
   .shineb:active { transform: translateY(2px); box-shadow: none; }
   .shinesay { margin: 0; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; padding: 6px 12px; border-radius: 10px; background: rgba(20, 16, 6, 0.88); color: #ffe9b0; font: 600 14px var(--font); text-align: center; }
-  .exband { position: absolute; left: 50%; top: 58px; transform: translateX(-50%); z-index: 29; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 2px solid #ff8a8a; background: linear-gradient(90deg, #7a0d12, #c8232a, #7a0d12); color: #fff; font: 800 15px var(--font); box-shadow: 0 3px 0 #3a0003, 0 0 14px rgba(255, 60, 60, 0.6); white-space: nowrap; animation: exb 2.4s ease-in-out infinite; } /* ⚔ 기말 D-day 띠 */
+  .exband { min-height: 36px; padding: 0 16px; border-radius: 999px; border: 2px solid #ff8a8a; background: linear-gradient(90deg, #7a0d12, #c8232a, #7a0d12); color: #fff; font: 800 15px var(--font); box-shadow: 0 3px 0 #3a0003, 0 0 14px rgba(255, 60, 60, 0.6); white-space: nowrap; animation: exb 2.4s ease-in-out infinite; } /* ⚔ 기말 D-day 띠 */
   @keyframes exb { 0%, 100% { box-shadow: 0 3px 0 #3a0003, 0 0 8px rgba(255, 60, 60, 0.45); } 50% { box-shadow: 0 3px 0 #3a0003, 0 0 20px rgba(255, 60, 60, 0.9); } }
   .exsky { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
   .svband { position: absolute; left: 50%; top: 104px; transform: translateX(-50%); z-index: 30; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--accent); color: var(--on-accent); font: 800 16px var(--font); box-shadow: 0 3px 0 var(--accent-sh); white-space: nowrap; animation: svin 0.2s ease-out; } @keyframes svin { from { transform: translate(-50%, -8px); opacity: 0; } }
