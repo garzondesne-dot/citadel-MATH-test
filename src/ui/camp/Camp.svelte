@@ -44,6 +44,8 @@
   import { activePet } from '../../model/pets';
   import ExamCutin from '../exam/ExamCutin.svelte';
   import MockExam from '../exam/MockExam.svelte';
+  import AbcSheet from '../exam/AbcSheet.svelte';
+  import { ABC_TXT, abcKeys, abcOpen, abcOpenAny, abcRecPath, abcStep, type AbcRec } from '../../school/abcSheet';
   import { SCHOOL_BUILD } from '../../channel';
   import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut, skyColor, skyLevel } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
@@ -131,6 +133,10 @@
   let exCut = $state(untrack(() => exOn && !cutSeen(exWho, exDate)));
   const mockOn = exOn && !SCHOOL_BUILD; // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
   let mockGo = $state(false);
+  // 🚪 던전 문 1차 · 📄 기말 대비 답안지 (📜 11/25 · 머리 🔨): 학생 = 선생님이 내 반을 열어 둔 동안만 · 🧪 테스트 · 교사 = 정답표가 있거나 어느 반이든 열려 있으면 · 체험판 = 숨김
+  let abcGo = $state(false);
+  const abcShow = $derived.by(() => { void tVer; void sheet; if (trial) return false; if (realStu && pupil) return abcOpen(S, pupil.cls); return abcOpenAny(S).length > 0 || Object.keys(abcKeys(S)).length > 0; });
+  const abcPassed = $derived.by(() => { void tVer; void sheet; void abcGo; return realStu && pupil ? abcStep(S.get<AbcRec>(abcRecPath(bonusBase(pupil.cls, pupil.num)))).kind === 'done' : false; });
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
@@ -260,6 +266,7 @@
     const t: Record<string, string> = {}, rv = feat('scarecrow') ? reviewNow() : { left: 0, gem: 0 }, cn = feat('citadel') ? castleLeft() : 0, rc = feat('board') ? portal.recruit : null;
     if (rv.left > 0) t.scare = `복습 ${rv.left}${rv.gem ? ` · 💎+${rv.gem}` : ''}`;
     if (cn > 0) t.castle = `새 방 ${cn}`;
+    if (abcShow && !abcPassed) t.castle = '📄 답안지 · 지금!'; // 🚪 던전 문 1차 (📜 11/25)
     if (mailN > 0) t.mail = `소식 ${mailN}`;
     if (feat('forge') && wishN > 0) t.anvil = `카드 ${wishN}`;
     if (open && !trial) t.gate = '⚔ 수업 열림 · 입장!'; // 👩‍🏫 체험판 = 차원문 = 「다른 차시」 이름표만
@@ -305,6 +312,7 @@
     const t: Record<string, { n: string; gem?: number }> = {}, rv = feat('scarecrow') ? reviewNow() : { left: 0, gem: 0 }, cn = feat('citadel') ? castleLeft() : 0, rc = feat('board') ? portal.recruit : null;
     if (rv.left > 0) t.scare = { n: String(rv.left), gem: rv.gem || undefined };
     if (cn > 0) t.castle = { n: String(cn) };
+    if (abcShow && !abcPassed) t.castle = { n: '📄' }; // 🚪 던전 문 1차
     if (mailN > 0) t.mail = { n: String(mailN) };
     if (feat('forge') && wishN > 0) t.anvil = { n: String(wishN) };
     if (rc) t.dummy = { n: `${rc.n}/${rc.max}` };
@@ -541,6 +549,7 @@
       {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
       {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{visibleCastles().length ? `${visibleCastles().map((f) => `${f.floor}층`).join(' · ')} 평가` : '평가'} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
       {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
+      {#if abcShow && !abcPassed}<li><button type="button" data-todo="abc" onclick={() => (abcGo = true)}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{ABC_TXT.name}</b><small>종이로 푼 답 입력 · {ABC_TXT.door}</small></span><em>지금</em></button></li>{/if}
       {#if svNo && !svSent}<li><button type="button" data-todo="survey" onclick={() => (sheet = 'survey')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>수업 설문 ({svLabel(svNo)})</b><small>3분 · 이름 없이 · +{REWARD.xp} EXP · 💎+{REWARD.gem}</small></span><em>지금</em></button></li>{/if}
       <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
     </ul>
@@ -649,6 +658,7 @@
   </BottomAction>
 </div>
 
+{#if abcGo}<AbcSheet {S} base={realStu && pupil ? bonusBase(pupil.cls, pupil.num) : null} cls={realStu && pupil ? pupil.cls : null} oncastle={() => { abcGo = false; sheet = 'castle'; }} onclose={() => (abcGo = false)} />{/if}<!-- 🚪 던전 문 1차 (📜 11/25) -->
 {#if mockGo}<MockExam {S} packs={PACKS} reach={pupil ? doneNo(S, pupil.cls) : 99} base={realStu && pupil ? bonusBase(pupil.cls, pupil.num) : null} {me} save={M.save} onclose={() => (mockGo = false)} onreview={() => { mockGo = false; sheet = 'review'; }} />{/if}<!-- 📄 모의 시험지 (📜 11/25) -->
 {#if exCut && exDate}<ExamCutin date={exDate} ondone={() => { markCut(exWho, exDate); exCut = false; }} />{/if}<!-- ⚔ 출정 컷인 (📜 11/25) -->
 {#if awkPop !== null}<AwakenPop hero={awkPop} onclose={() => { markAwkSeen(awkPop!, S); awkPop = null; }} />{/if}
@@ -667,6 +677,7 @@
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
     {#snippet title()}🏰 성채 던전{/snippet}
+    {#if abcShow}<button type="button" class="floor mockf abcf" data-k="castle-abc" onclick={() => { sheet = null; abcGo = true; }}><span class="no">📄</span><span><b>{ABC_TXT.name}{abcPassed ? ' · ✔ 통과' : ''}</b><span>{ABC_TXT.door} · 종이로 푼 답 입력</span></span></button>{/if}<!-- 🚪 11/25 -->
     {#if mockOn}<button type="button" class="floor mockf" data-k="castle-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="no">📄</span><span><b>{EXAM_TXT.mock.name}</b><span>성채 입구 옆 · 문제 은행 무작위 10문항 · 연습</span></span></button>{/if}<!-- 📄 11/25 -->
     {#each visibleCastles() as f (f.id)}<button type="button" class="floor" data-floor={f.id} onclick={() => { castleGo = f.id; sheet = null; }}><span class="no">{f.floor}</span><span><b>{floorName(f)}</b><span>방 {f.rooms.length}개 · 열림 {spanOf(f)}</span></span></button>{:else}<div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요 · 선생님이 성채 팩을 올리면 열려요</p></div>{/each}
   </Sheet>
@@ -723,6 +734,7 @@
     {#snippet title()}{exBand}{/snippet}
     <p class="exsub" data-k="exam-sub">{EXAM_TXT.bandSub}</p>
     <div class="exgo">
+      {#if abcShow}<button type="button" class="item" data-k="exam-go-abc" onclick={() => { sheet = null; abcGo = true; }}><span class="ic">📄</span><span class="tx"><b>{ABC_TXT.name}{abcPassed ? ' · ✔ 통과' : ''}</b><small>{ABC_TXT.door}</small></span></button>{/if}
       {#if feat('citadel')}<button type="button" class="item" data-k="exam-go-castle" onclick={() => (sheet = 'castle')}><span class="ic">🏰</span><span class="tx"><b>성채</b><small>방마다 문제 하나</small></span></button>{/if}
       {#if feat('scarecrow')}<button type="button" class="item" data-k="exam-go-scare" onclick={() => (sheet = 'review')}><span class="ic">🎯</span><span class="tx"><b>허수아비</b><small>차시 복습 · 숫자 바뀐 판</small></span></button>{/if}
       {#if mockOn}<button type="button" class="item" data-k="exam-go-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="ic">📄</span><span class="tx"><b>{EXAM_TXT.mock.name}</b><small>문제 은행 무작위 10문항 · 연습</small></span></button>{/if}

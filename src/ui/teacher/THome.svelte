@@ -16,6 +16,8 @@
   import { estimate, LIMIT, ltimePath, timeSig } from '../../school/ltime';
   import { fixedKey, KEYMODE, keyModeOf, type KeyMode } from '../../school/openLesson';
   import TToday from './TToday.svelte';
+  import AbcPanel from './AbcPanel.svelte';
+  import { ABC_PATH, ABC_TXT, abcKeys, abcOpen, abcOpenAny, abcTally } from '../../school/abcSheet';
   import { nextNo } from '../../school/progress';
 
   // ⚔ 수업 탭 수동 열기 (📜 2026-11-17 #21 · 시안 Uj7jgeePofh2x9fmKzjqGZ ① · DECISIONS 「⚔ 교사 수업 탭 정리」): 펼침 창 없이 위에서 아래로 한 칸씩
@@ -93,6 +95,11 @@
   // ⬇ 새 칸이 열리면 그 칸까지 저절로 내려감 (위에서 아래로 한 칸씩 · 작은 폰에서 아래 칸이 화면 밖에 열리지 않게)
   $effect(() => { const k = `${cls}|${lessonId}|${tmode}|${keyEdit}`; if (!cls) return; void k; requestAnimationFrame(() => { const el = document.querySelector(lessonId ? '[data-k="summary"], [data-k="step3"]' : '.pk3'); el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }); });
   function go() { if (!L) return; openAsk = false; if (isTest) ontest(L, tmode as TestMode, botN, undefined, null, keyPick); else onopen(cls, L, undefined, carry, keyPick); }
+  // 🚪 던전 문 1차 (📜 11/25 · 머리 🔨): 고른 반의 📄 기말 답안지 열기 · 닫기 + 통과 수 · 정답표 · 모든 반 = 아래 시트 (정답표를 ⚙ 에 넣었거나 어느 반이든 열려 있을 때만 보임)
+  let abcVer = $state(0), abcSheet = $state(false); { const t = setInterval(() => abcVer++, 3000); onDestroy(() => clearInterval(t)); }
+  const abcOn = $derived.by(() => { void abcVer; return Object.keys(abcKeys(S)).length > 0 || abcOpenAny(S).length > 0; });
+  const abcMine = $derived.by(() => { void abcVer; if (!cls || cls === TEST) return null; return abcTally(S, [cls])[0] ?? { cls, pass: 0, total: 0, beta: false, open: abcOpen(S, cls) }; });
+  const abcFlip = (c: string, on: boolean) => { S.set(`${ABC_PATH}/open/${c.replace(/[.#$/[\]]/g, '_')}`, on ? true : null); abcVer++; };
 </script>
 
 <div class="tbar"><div class="t">수업 열기</div>{#if cls}<button type="button" class="tlink" data-k="reset" onclick={reset}>↺ 처음부터</button>{/if}</div>
@@ -106,6 +113,13 @@
     </div>
     {#if flash}<p class="flash" role="status" data-k="flash">{flash}</p>{:else if cls && !isTest}<p class="hint">{cls}반 마지막 수업 · {#if last}<b>{last.no}차시</b> ({md(last.at)} · {last.done ? '끝까지' : '이어서 남음'}){:else}아직 없음{/if}</p>{:else if isTest}<p class="hint">기록 · 💎 안 남아요 · 어느 차시든</p>{/if}
   </div>
+  {#if abcOn && abcMine}
+    <div class="card abcc" data-k="abc-card">
+      <span class="lab">{ABC_TXT.name} · {cls}반 · 통과 {abcMine.pass} / {abcMine.total}</span>
+      <div class="oarow"><button type="button" class={abcMine.open ? 'btn2' : 'btn'} data-k="abc-flip" aria-pressed={abcMine.open} onclick={() => abcFlip(cls, !abcMine.open)}>{abcMine.open ? '⏹ 답안지 닫기' : '▶ 답안지 열기'}</button><button type="button" class="btn2" data-k="abc-more" onclick={() => (abcSheet = true)}>모든 반 · 정답표</button></div>
+      {#if abcMine.open}<p class="hint">🟢 {cls}반 학생이 지금 답을 낼 수 있어요 · 수업이 끝나면 닫아 주세요</p>{/if}
+    </div>
+  {/if}
   {#if cls && isOpen(cls)}
     <div class="card live1" data-k="open-now">
       <span class="lab">🟢 지금 수업 중 · {openText}</span>
@@ -167,6 +181,7 @@
   {/if}
 </div>
 
+{#if abcSheet}<Sheet onclose={() => (abcSheet = false)} mainText="닫기" onmain={() => (abcSheet = false)}>{#snippet title()}🚪 던전 문 · 기말 답안지{/snippet}<AbcPanel {S} /></Sheet>{/if}
 {#if openAsk && L}
   <Sheet onclose={() => (openAsk = false)}>
     {#snippet title()}{isTest ? '이 테스트를 열까요?' : '이 수업을 열까요?'}{/snippet}

@@ -2,6 +2,8 @@
   import PetSprite from '../cos/PetSprite.svelte';
   import { petFromTag } from '../../model/pets';
   import { bandText, examDateOf } from '../../school/examEvent';
+  import AbcDoorTV from './AbcDoorTV.svelte';
+  import { abcOpenAny } from '../../school/abcSheet';
   import NameTag from '../cos/NameTag.svelte';
   import { cosClean } from '../../model/cosmetics';
   import WarBar from '../board/WarBar.svelte';
@@ -378,7 +380,7 @@
             <b class="ecls" data-k="entry-cls">입장 대기</b>
           {/if}
           <p class="ewait" data-k="entry-wait">선생님이 수업을 열면 시작해요</p>
-          {#if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}
+          {#if (void now, abcOpenAny(S).length)}<div class="eabc"><AbcDoorTV {S} {now} admin={tvAdm(now)} /></div>{:else if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}<!-- 🚪 던전 문 1차 (📜 11/25) · 답안지를 연 반이 있으면 대항전 줄 대신 -->
           {#if nxa}<p class="eauto" data-k="entry-auto">⏰ 다음 자동 열기 {nxa.hm} · {nxa.cls}반 {nxa.L?.no}차시<br /><small>{tvAdm(now) ? '이 PC (교사 로그인) · 교사 폰 중 먼저 켜진 쪽이 열어요' : AUTO_PC_NOTE}</small></p>{/if}
         {/if}
         <div class="ebtn">
@@ -735,4 +737,5 @@
   .demoban { position: absolute; left: 34%; transform: translateX(-50%); top: 9cqh; z-index: 8; padding: 0.6cqh 1.6cqw; border-radius: 999px; background: rgba(10, 12, 18, 0.82); color: #ffe7a8; font: 800 2.2cqh var(--font); letter-spacing: 0.02em; box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.55); pointer-events: none; white-space: nowrap; }
   .expl { margin: 0.6cqh 0 0; font: 700 2.6cqh var(--font); color: #ffc070; } /* 🔥 #67 */
   .ewar :global(.wl) { font-size: 22px; margin-top: 12px; }
+  .eabc { margin-top: 12px; }
 </style>
