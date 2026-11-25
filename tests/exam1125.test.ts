@@ -1,6 +1,6 @@
 // ⚔ 기말 대비 기간 (📜 2026-11-25 · 머리 🔨): 시험 날짜 · KST 날짜 셈 · 기간 15일 · 띠 글
 import { describe, expect, it } from 'vitest';
-import { EXAM_DEFAULT, EXAM_PATH, bandText, daysLeft, examDateOf, inPeriod, kstDate, skyLevel } from '../src/school/examEvent';
+import { EXAM_DEFAULT, EXAM_PATH, EXAM_TXT, bandText, daysLeft, examDateOf, inPeriod, kstDate, skyLevel } from '../src/school/examEvent';
 
 const at = (iso: string) => Date.parse(iso); // UTC 시각
 const S = (v: unknown) => ({ get: <T,>(p: string) => (p === EXAM_PATH ? (v as T) : (null as T)) });
@@ -17,7 +17,7 @@ describe('⚔ 기말 대비 기간', () => {
     expect(bandText('2026-12-10', at('2026-12-09T14:59:00Z'))).toBe('📄 무지의 마왕 · 내일이다');
     expect(bandText('2026-12-10', at('2026-12-10T15:00:00Z'))).toBe(''); // KST 12/11
   });
-  it('시험 날짜: 서버 값 · off = 끔 · 없으면 우리 학교 12/10 · 학교판 = 비어 있음 · 이상한 값 = 처음 값', () => {
+  it('시험 날짜: 서버 값 · off = 끔 · 없으면 우리 학교 12/11 · 학교판 = 비어 있음 · 이상한 값 = 처음 값', () => {
     expect(examDateOf(S('2026-12-12'), false)).toBe('2026-12-12');
     expect(examDateOf(S('off'), false)).toBe('');
     expect(examDateOf(S(null), false)).toBe(EXAM_DEFAULT);
@@ -39,5 +39,12 @@ describe('⚔ 기말 대비 기간', () => {
     expect(lv('2026-12-10T08:59:00Z')).toBe(1); // 시험 날 KST 17:59
     expect(lv('2026-12-10T09:00:00Z')).toBe(0); // KST 18:00 걷힘
     expect(lv('2026-11-20T00:00:00Z')).toBe(0);
+  });
+  it('📜 11/26 수학 기말 = 12월 11일(금): 처음 값 · 컷인 대사 · 11/26 D-15', () => {
+    expect(EXAM_DEFAULT).toBe('2026-12-11');
+    expect(EXAM_TXT.cut[2].say(EXAM_DEFAULT)).toContain('12월 11일');
+    expect(bandText(EXAM_DEFAULT, at('2026-11-25T15:00:00Z'))).toBe('📄 무지의 마왕까지 D-15'); // KST 11/26
+    expect(bandText(EXAM_DEFAULT, at('2026-12-10T15:00:00Z'))).toMatch(/D-DAY/); // KST 12/11
+    expect(bandText(EXAM_DEFAULT, at('2026-12-11T15:00:00Z'))).toBe(''); // KST 12/12
   });
 });
