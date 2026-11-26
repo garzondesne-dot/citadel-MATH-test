@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChargeBtn from './ChargeBtn.svelte';
   import { petriPop } from './petriPop.svelte';
   import { setSymPack } from '../battle/symsheet.svelte';
   import { helpOf } from '../../school/help';
@@ -164,6 +165,7 @@
   <GradeTable rows={reveal ? revealRows : lastRows} gold={reveal ? reveal.flash : lastGold} still={!reveal} />
   <div class="bcard">
     <div class="okline"><span class="ic" aria-label="맞음">✔</span><span><b>{no} · {items.length}문제 모두 맞혔어요</b>{#if !paperOn()}<span>데미지 {rec.best} · {v4 ? `⚔ 공격 기회 다 썼어요 · 🔥 한 판 더 풀 수 있어요 · ⚡ ${rec.tokLeft}` : '남은 기회는 연습'}</span>{/if}</span></div>
+    {#if !(R.meta as { dummy?: boolean }).dummy}<ChargeBtn {S} {L} {R} {code} {uid} />{/if}
     {#if !v4}<EnergyCard {S} {L} {R} {code} {mid} {uid} {now} />{/if}
   </div>
   {#if v4}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={() => { practice = true; tableHold = false; }} />{:else}

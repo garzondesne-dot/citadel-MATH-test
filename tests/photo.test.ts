@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Room, Store } from '../src/model/types';
 import { memoryStore } from '../src/store/device';
 import { PROFILES } from '../src/model/profiles';
-import { heartbeat, nextStep, openRoom, photoScroll, roomPath, snapEnd, snapStart, chainPhotoFill, chainSubmit } from '../src/raid/actions';
+import { heartbeat, nextStep, openRoom, photoScroll, roomPath, snapEnd, snapStart, chainPhotoFill, chainSubmit, chargeOf, tcutN, tcutOf, useCharge, TCUT_MAX } from '../src/raid/actions';
 import { answerOf, chainRecord, isChain, petrify, stepOf } from '../src/raid/raid';
 import { packOf } from '../src/engine/packs';
 import { codeRubrics, coolSec, daily, errMsg, leftToday, needs, pack, pendState, precheckOf, raidMax, ready, roomMax, rubricLesson, usage, day, allRows } from '../src/school/photo';
@@ -93,13 +93,26 @@ describe('⚔ 수업 소레이드 ✍ → 📸', () => {
     expect(photoScroll(S, 'a', L.id, mid)).toBe(true); expect(photoScroll(S, 'a', L.id, mid)).toBe(false);
     expect(S.get<{ s: number }>(`gifts/a/ult_${L.id}_${mid}`)!.s).toBe(1);
   });
-  it('이미 석화 = 효과 없이 done · ⏳ 확인 = 장 수 안 셈(앞 장만) · pp 에 결과 id · 창만 닫음 = 0장', () => {
+  it('이미 석화 = 📜 v0.9 #26 C 되살림: 금빛 컷인만(cut · 몬스터당 3명) · ⏳ 확인 = 장 수 안 셈(앞 장만) · pp 에 결과 id · 창만 닫음 = 0장', () => {
     const { S, L, R, mid } = room();
     snapEnd(S, L, 'P1', 'a', mid, { status: 'pass', scores: [3] });
-    expect(snapEnd(S, L, 'P1', 'b', mid, { status: 'pass', scores: [3] })).toBe('done');
+    expect(snapEnd(S, L, 'P1', 'b', mid, { status: 'pass', scores: [3] })).toBe('cut'); expect(tcutOf(R(), 'b')[mid]).toBeTruthy(); expect(petrify(R(), mid)?.by).toBe('a');
     snapEnd(S, L, 'P1', 'b', mid, null); expect((R().players!.b as unknown as { ph: Record<string, number> }).ph[mid]).toBe(1);
     snapEnd(S, L, 'P1', 'b', mid, { status: 'check', id: 'c9', scores: [1, 2] });
     const b = R().players!.b as unknown as { ph: Record<string, number>; pp: Record<string, string> }; expect(b.ph[mid]).toBe(2); expect(b.pp[mid]).toBe('c9');
+  });
+  it('📜 #26 C: 금빛 컷인 = 몬스터당 3명 · 같은 학생 두 번 없음 · 지난 몬스터 통과 = ⚡ 충전 +1 → 다음 몬스터에서 쓰면 🌟 석화 · 충전 −1', () => {
+    const { S, L, R, mid } = room();
+    for (const u of ['c', 'd', 'e', 'f']) heartbeat(S, 'P1', u, 9, u);
+    snapEnd(S, L, 'P1', 'a', mid, { status: 'pass', scores: [3] });
+    const outs = ['b', 'c', 'd', 'e'].map((u) => snapEnd(S, L, 'P1', u, mid, { status: 'pass', scores: [3] }));
+    expect(outs).toEqual(['cut', 'cut', 'cut', 'done']); expect(tcutN(R(), mid)).toBe(TCUT_MAX);
+    expect(useCharge(S, L, 'P1', 'f')).toMatch(/없어요/);
+    for (let i = 0; i < 40 && stepOf(L, R())?.id === mid; i++) nextStep(S, L, 'P1');
+    for (let i = 0; i < 40 && !['monster', 'boss'].includes(stepOf(L, R())?.kind ?? ''); i++) nextStep(S, L, 'P1');
+    expect(snapEnd(S, L, 'P1', 'f', mid, { status: 'pass', scores: [3] })).toBe('charge'); expect(chargeOf(R(), 'f')).toBe(1);
+    const st = stepOf(L, R())!, now = st.kind === 'boss' ? 'boss' : st.id;
+    expect(useCharge(S, L, 'P1', 'f')).toBeNull(); expect(petrify(R(), now)?.by).toBe('f'); expect(chargeOf(R(), 'f')).toBe(0);
   });
   it('연습 쓰기(풀이 보기) 통과 = wr peek · 🌟 없음', () => {
     const { S, L, R, mid } = room();

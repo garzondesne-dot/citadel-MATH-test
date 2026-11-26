@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChargeBtn from './ChargeBtn.svelte';
   import { hintUsed, markHintUsed, nudgeOn } from '../../raid/hintNudge';
   import './nudge.css';
   import { petriPop } from './petriPop.svelte';
@@ -112,7 +113,7 @@
   const pendPh = $derived(!!pendId && wrOk !== 'ok' && cls ? pendState(PS, cls, num, rl, mid, String(pendId)) : null);
   let wm = $state<{ peek: boolean } | null>(null), shot = $state(false), peekAsk = $state(false);
   $effect(() => { if (pendPh === 'ok' && wrOk !== 'ok') untrack(() => { const out = snapEnd(S, L, code, uid, mid, { status: 'pass' }); if (out) { photoScroll(PS, uid, rl, mid); if (!rec.done) chainPhotoFill(S, L, code, uid, mid); toast = '✔ 선생님이 서술형을 인정했어요 — 🌟'; } }); }); // ⏳ 선생님 ✔ 처치 인정 → 통과와 같은 길
-  function snapOpen() { if (!wm || phN >= phMax) return; if (!trialPh) snapStart(S, code, uid, mid); sfx('block', 0.5); shot = true; }
+  function snapOpen() { if (!wm || phN >= phMax) return; if (!demo) snapStart(S, code, uid, mid); /* ⚡ 종합실 「진필살기 충전 중」 = 🧪 테스트 · 체험판도 (🐞 11/26 · 시연만 빼고) */ sfx('block', 0.5); shot = true; }
   function snapDone(res: PhotoOut | null) {
     shot = false; const peek = !!wm?.peek;
     if (trialPh && demo) { if (res?.status === 'pass') { wm = null; toast = '🌟 서술형 통과! (시연 · 데미지 · 기록 없음)'; } return; }
@@ -122,7 +123,7 @@
     if (res?.status === 'pass') {
       const nFill = !peek && !rec.done ? chainPhotoFill(S, L, code, uid, mid) : 0;
       wm = null;
-      toast = peek ? '✍ 연습 쓰기 통과! (진필살기 없음)' : out === 'true' ? '🌟 진필살기 발동! 몬스터가 돌로 굳어요' : '🌟 서술형 통과!';
+      toast = peek ? '✍ 연습 쓰기 통과! (진필살기 없음)' : out === 'true' ? '🌟 진필살기 발동! 몬스터가 돌로 굳어요' : out === 'cut' ? '🌟 진필살기! (이미 굳은 몬스터 · 종합실에 금빛 컷인)' : out === 'charge' ? '⚡ 진필살기 충전! 다음 몬스터에서 「⚡ 충전된 진필살기 쓰기」' : '🌟 서술형 통과!';
       const more = [nFill ? `✍ 남은 ${nFill}단계 모두 처치!` : '', missOf(res).length ? `✏ ${missOf(res).join(' · ')} 단계는 학습지에 다시 정리해 둬요` : ''].filter(Boolean).join(' · ');
       if (more) setTimeout(() => (toast = more), 3500);
     } else if (res?.steps && missOf(res).length) toast = `✏ 빠진 단계: ${missOf(res).join(' · ')} — 그 졸개만 다시 고쳐 써요`;
@@ -165,6 +166,7 @@
     {#if !v4}<p class="muted">숫자만 바뀐 새 문제 · 판마다 도전 칸 4개 · 데미지 0</p>{/if}
   </div>
   {#if canPhoto && !pFail}<div class="wrrow">{@render wrBtn()}</div>{/if}
+  {#if !(R.meta as { dummy?: boolean }).dummy}<ChargeBtn {S} {L} {R} {code} {uid} />{/if}
   {#if v4}{#if !dummy}<SkillCards {S} {L} {R} {code} {mid} {uid} {now} onround={again} />{/if}{:else if !prac && rec.done}<div class="bcard"><EnergyCard {S} {L} {R} {code} {mid} {uid} {now} /></div>{/if}
 {:else if rec.locked && !prac}
   <ChainStage items={pItems} stage={pItems.length} {says} {title} value={null} onchange={() => {}} />

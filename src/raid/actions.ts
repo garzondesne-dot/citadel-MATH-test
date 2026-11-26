@@ -343,7 +343,7 @@ export function spendEnergy(S: Store, L: LessonPack, code: string, mid: string, 
 /** 찰칵 = 예고 (TV ⚡ 충전 중 게이지) */
 export const snapStart = (S: Store, code: string, me: string, mid: string) => S.set(`${roomPath(code)}/players/${me}/snap`, { mid, at: S.now() });
 /** 창이 닫힘 → 쓴 장 수(⏳ 선생님 확인으로 넘어간 장 · 창만 닫은 경우는 안 셈) · 확인 기다림 · 통과 표시 → 통과면 🌟 */
-export function snapEnd(S: Store, L: LessonPack, code: string, me: string, mid: string, res: { status: string; id?: string; scores?: number[] } | null, peek = false): 'true' | 'done' | null {
+export function snapEnd(S: Store, L: LessonPack, code: string, me: string, mid: string, res: { status: string; id?: string; scores?: number[] } | null, peek = false): 'true' | 'cut' | 'charge' | 'done' | null {
   const R = getRoom(S, code); if (!R) return null;
   const p = R.players?.[me] as { ph?: Record<string, number> } | undefined, sc = res?.scores || [];
   const used = res && (res.status === 'check' || res.status === 'appeal') ? Math.max(0, sc.length - 1) : Math.max(res ? 1 : 0, sc.length);
@@ -355,11 +355,30 @@ export function snapEnd(S: Store, L: LessonPack, code: string, me: string, mid: 
   return photoTrue(S, L, code, me, mid);
 }
 /** 🌟 통과 = 살아 있고 아직 안 굳은 몬스터면 '!true@' (파티 힐 + 🗿 석화) · 아니면 'done' (정식 금빛 컷인 '!tcut@' 은 베타 TV 에 아직 없음 → 효과 없이 📜 만) */
-export function photoTrue(S: Store, L: LessonPack, code: string, me: string, mid: string): 'true' | 'done' {
+export function photoTrue(S: Store, L: LessonPack, code: string, me: string, mid: string): 'true' | 'cut' | 'charge' | 'done' {
   const R = getRoom(S, code); if (!R) return 'done';
-  const step = stepOf(L, R), alive = !!step && step.id === mid && !cleared(L, R, mid, gameNow(R, S.now()));
+  const step = stepOf(L, R), here = !!step && step.id === mid, alive = here && !cleared(L, R, mid, gameNow(R, S.now()));
   if (alive && !petrify(R, mid)) { S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, `!true@${S.now()}`); return 'true'; }
-  return 'done';
+  // 📜 v0.9 #26 C 되살림 (🐞 11/26 v1 에서 빠졌던 것): 이미 굳은 몬스터 = 다음 통과자 금빛 컷인만(몬스터당 3명) · 이미 쓰러졌으면 ⚡ 충전 +1 → 다음 몬스터에서 「⚡ 충전된 진필살기 쓰기」
+  if (alive) { if (tcutN(R, mid) < TCUT_MAX && !tcutOf(R, me)[mid]) { S.set(`${roomPath(code)}/players/${me}/tcut/${mid}`, S.now()); return 'cut'; } return 'done'; }
+  S.set(`${roomPath(code)}/players/${me}/charge`, chargeOf(R, me) + 1); return 'charge';
+}
+/** 🌟 금빛 컷인만 (진필살기 다음 통과자) = 몬스터당 최대 */
+export const TCUT_MAX = 3;
+export const tcutOf = (R: Room, u: string): Record<string, number> => ((R.players?.[u] as { tcut?: Record<string, number> } | undefined)?.tcut) || {};
+export const tcutN = (R: Room, mid: string) => Object.keys(R.players || {}).filter((u) => tcutOf(R, u)[mid]).length;
+/** ⚡ 충전된 진필살기 (서술형을 통과했는데 몬스터가 이미 쓰러짐) */
+export const chargeOf = (R: Room, u: string) => Math.max(0, Number((R.players?.[u] as { charge?: number } | undefined)?.charge) || 0);
+/** ⚡ 충전 쓰기 = 지금 몬스터에 🌟 진필살기(석화 · 파티 힐) · 못 쓰면 까닭 */
+export function useCharge(S: Store, L: LessonPack, code: string, me: string): string | null {
+  const R = getRoom(S, code); if (!R) return '방이 없어요';
+  const step = stepOf(L, R); if (!step || !['monster', 'boss'].includes(step.kind)) return '몬스터가 나왔을 때 쓸 수 있어요';
+  const mid = step.kind === 'boss' ? BOSS_ID : step.id, n = chargeOf(R, me);
+  if (!n) return '충전된 진필살기가 없어요';
+  if (cleared(L, R, mid, gameNow(R, S.now()))) return '이미 쓰러진 몬스터예요';
+  if (petrify(R, mid)) return '이미 돌로 굳었어요 · 풀리면 다시';
+  S.set(`${roomPath(code)}/heals/${mid}/${me}/${healsGiven(R, mid, me)}`, `!true@${S.now()}`); S.set(`${roomPath(code)}/players/${me}/charge`, n - 1 || null);
+  return null;
 }
 /** ✍ #50 ③ 졸개를 다 풀기 전에 서술형 통과 = 남은 단계 모두 푼 것으로 (첫 판만 · 학습지 숫자 · 퍼펙트 아님) → 처치한 단계 수 */
 export function chainPhotoFill(S: Store, L: LessonPack, code: string, me: string, mid: string): number {

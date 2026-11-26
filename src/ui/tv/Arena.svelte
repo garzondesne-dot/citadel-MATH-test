@@ -273,6 +273,20 @@
     const mb = document.createElement('div'); mb.style.cssText = `position:absolute;left:${box.mon.cx - box.mon.size / 2}px;top:${box.mon.top}px;width:${box.mon.size}px;height:${box.mon.size}px`; lay.appendChild(mb);
     await ultFor(lay, mb, fxk, hero, (c, ms) => A?.monTint(c, ms)); mb.remove();
   }
+  // ⚡ 진필살기 충전 중 · 🌟 다음 통과자 금빛 컷인 (📜 v0.9 #26 C 되살림 · 🐞 11/26 선생님 「예전엔 서술형 스캔하면 에너지 모으는 중 · 성공하면 필살기」)
+  //   players/{uid}/snap = 📸 찍는 중(그 몬스터) → 금빛 게이지(동시 3명 · +n명) · 찰칵 · 채점 끝나면 사라짐(실패 연출 없음) / players/{uid}/tcut/{몬스터} = 이미 굳은 몬스터 통과 = 금빛 컷인만(몬스터당 3명)
+  const snapMid = $derived(step ? (step.kind === 'boss' ? BOSS_ID : step.id) : '');
+  const charging = $derived(Object.entries(R.players || {}).filter(([, p]) => { const sn = (p as { snap?: { mid?: string; at?: number } }).snap; return !!sn && sn.mid === snapMid && now - Number(sn.at || 0) < 180000; }).map(([u, p]) => ({ u, at: Number((p as { snap?: { at?: number } }).snap?.at) || 0 })).sort((a, b) => a.at - b.at));
+  let snapSeen = new Set<string>();
+  $effect(() => { const keys = charging.map((c) => `${c.u}|${c.at}`); untrack(() => { if (keys.some((k) => !snapSeen.has(k)) && !quiet) sfx('energy-card', 0.7); snapSeen = new Set(keys); }); });
+  const tcutSeen = new Set<string>();
+  $effect(() => {
+    const mid = snapMid; if (!mid) return;
+    for (const [u, p] of Object.entries(R.players || {})) {
+      const at = Number((p as { tcut?: Record<string, number> }).tcut?.[mid]) || 0, key = `${mid}|${u}|${at}`; if (!at || tcutSeen.has(key)) continue;
+      untrack(() => { tcutSeen.add(key); if (at < born - 2000 || serverNow() - at > 8000) return; const p0 = R.players?.[u], hero = p0?.hero ?? 0; void cutin(hero, p0?.fx || ladder(hero)[3]!, { gold: true, who: whoOf(u) }); });
+    }
+  });
   (globalThis as { __tvTrue?: (k: number) => void }).__tvTrue = (k) => { const u = ids[k]; if (u) void tvTrue(u); };
   (globalThis as { __tvGuard?: (k: number) => void }).__tvGuard = (k) => { const u = ids[k]; if (u) void tvGuard([u]); }; // 시험 고리
   preloadFaces(); // 눈빛 얼굴 그림은 TV 가 열릴 때 미리
@@ -367,6 +381,7 @@
   {#each sparks as z (z.k)}<i class="spk" class:w={z.w} data-k="heal-spark" style:left="{z.x}px" style:top="{z.y}px" style:--dx="{z.dx}px" style:--dy="{z.dy}px" style:--s="{z.s}px" style:animation-delay="{z.dl}ms"></i>{/each}
   {#if mhitTv && W}{#key mhitTv.k}{#each slots as sl, k (k)}<MonHit kind={mhitTv.kind} x={sl.x} y={sl.y - 34 * sl.s} size={HERO.h * sl.s} {boss} left={!sl.flip} target={mode === 'dom' ? host?.querySelector<HTMLElement>(`.hr[data-u="${heroes[k]?.u}"] .art`) ?? null : null} z={5000} />{/each}{/key}{/if}
   {#each domFx as f (f.k)}<b class="pop {f.cls}" style:left="{f.x}px" style:top="{f.y}px">{f.text}</b>{/each} <!-- 숫자 · PERFECT! = DOM · Pixi 장면 둘 다 (📜 2026-11-16 c3) -->
+  {#if charging.length && step}<div class="chg" data-k="tv-charge">{#each charging.slice(0, 3) as c (c.u)}<div class="cg"><b>⚡ {whoOf(c.u)} 진필살기 충전 중…</b><i style:animation-delay="{-Math.min(9, (now - c.at) / 1000)}s"></i></div>{/each}{#if charging.length > 3}<small>+{charging.length - 3}명</small>{/if}</div>{/if}
   {#if stoneLeft > 0 && step}<div class="stonelab" style:left="{box.mon.cx}px" style:top="{box.mon.top + box.mon.size * 0.9}px">🗿 {stoneNow?.holy ? '홀리 방패' : '진필살기'} 석화 {stoneLeft}초</div>{/if}
   {#if pracN > 0 && step && hp && !shadow}<div class="pracn" style:left="{box.hp.x + box.hp.w + 10}px" style:top="{box.hp.y + box.hp.h / 2}px">🔥 연습 타격 {pracN}</div>{/if}
   <div class="tvfx" bind:this={fxLayer} aria-hidden="true"></div>
@@ -427,4 +442,11 @@
   @keyframes spk { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(70deg); } }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
+  .chg { position: absolute; left: 1.2%; top: 14%; z-index: 30; display: grid; gap: 0.4em; font-size: clamp(12px, 1.2vw, 22px); pointer-events: none; }
+  .chg .cg { display: grid; gap: 0.25em; padding: 0.35em 0.7em; border-radius: 0.6em; background: rgba(30, 20, 4, 0.82); border: 2px solid #f5b84a; box-shadow: 0 0 14px rgba(255, 210, 90, 0.45); }
+  .chg b { font: 800 1em var(--font); color: #ffd25a; white-space: nowrap; }
+  .chg i { display: block; height: 0.45em; border-radius: 999px; background: linear-gradient(90deg, #c98a1c, #fff3a0); transform-origin: left; animation: chgFill 10s linear forwards; }
+  .chg small { font: 800 0.9em var(--font); color: #ffd25a; }
+  @keyframes chgFill { from { transform: scaleX(0.05); } to { transform: scaleX(1); } }
+  @media (prefers-reduced-motion: reduce) { .chg i { animation: none; } }
 </style>
