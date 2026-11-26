@@ -30,12 +30,12 @@ export function isStale(R: Room | null | undefined, now: number, liveCode: strin
   return startOf(R) >= since && now - last > STALE_MS;
 }
 /** 한 바퀴: 멈춘 방 닫기 + 빠진 반 기록 쓰기 → 채운 방 수 (교사 로그인 기기만) */
-export async function fillRecords(S: Store, packs: readonly LessonPack[], since = RECFILL_SINCE): Promise<number> {
+export async function fillRecords(S: Store, packs: readonly LessonPack[], since = RECFILL_SINCE, only?: readonly string[]): Promise<number> {
   if (!isAdm(S)) return 0;
   // 후보 = 반마다 마지막 수업 방(school/last/{반}.code) + 지금 수업(school/live) — 다음 수업을 열기 직전에도 돌아서 바뀌기 전에 채움 · 방 전체를 읽지 않음(무거움)
   const lastAll = (S.fetch ? await S.fetch<Record<string, { code?: string }>>('school/last').catch(() => null) : S.get<Record<string, { code?: string }>>('school/last')) || {};
   const live = S.get<{ code?: string }>('school/live')?.code ?? null, now = S.now();
-  const codes = [...new Set([...Object.values(lastAll).map((v) => v?.code).filter((c): c is string => !!c), ...(live ? [live] : [])])];
+  const codes = only ? [...only] : [...new Set([...Object.values(lastAll).map((v) => v?.code).filter((c): c is string => !!c), ...(live ? [live] : [])])];
   let n = 0;
   for (const code of codes) {
     const R0 = (S.fetch ? await S.fetch<Room>(roomPath(code)).catch(() => null) : null) ?? S.get<Room>(roomPath(code)); if (!R0) continue;
@@ -48,4 +48,12 @@ export async function fillRecords(S: Store, packs: readonly LessonPack[], since 
     if (k >= 0) { S.set(`${roomPath(code)}/state/recAt`, S.now()); n++; }
   }
   return n;
+}
+
+/** 🧩 지난 수업 한 번 채우기 (📜 선생님 「지난 수업 기록 채워」 · 이 판 전 · TV 가 닫아 반 기록이 빠진 수업 = 운영 읽기로 찾은 5개 · 2026-11-26) — 교사 ⚙ 단추 한 번 · 다 하면 school/recFillPast = 시각 */
+export const RECFILL_PAST = ['926576', '379092', '758258', '294683', '624623'] as const;
+export const RECFILL_PAST_DONE = 'school/recFillPast';
+export async function fillPast(S: Store, packs: readonly LessonPack[]): Promise<number> {
+  const n = await fillRecords(S, packs, 0, RECFILL_PAST);
+  S.set(RECFILL_PAST_DONE, { at: S.now(), n }); return n;
 }

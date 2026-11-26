@@ -135,7 +135,7 @@
     {/if}
   {/if}
   <!-- ⚙ 설정 창 = .tp 안 (🐞 11/17: 밖에 그려져 .tp .item 카드 모양이 안 먹던 것) -->
-  {#if setOpen}<TSettings {S} login0={setOpen === 'login'} onclose={() => (setOpen = '')} />{/if}
+  {#if setOpen}<TSettings {S} {packs} login0={setOpen === 'login'} onclose={() => (setOpen = '')} />{/if}
 </div>
 
 {#if soon && soonKey !== soonSeen}

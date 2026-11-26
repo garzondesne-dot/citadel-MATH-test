@@ -5,7 +5,7 @@ import type { Room, Store } from '../src/model/types';
 import { PROFILES } from '../src/model/profiles';
 import { packOf, PACKS } from '../src/engine/packs';
 import { heartbeat, nextStep, openRoom, roomPath } from '../src/raid/actions';
-import { fillRecords, needFill, isStale, RECFILL_SINCE, STALE_MS } from '../src/school/recFill';
+import { fillRecords, fillPast, needFill, isStale, RECFILL_SINCE, RECFILL_PAST, RECFILL_PAST_DONE, STALE_MS } from '../src/school/recFill';
 
 const mk = (now: number) => { let t = now; const S: Store & { tick: (ms: number) => void } = { ...memoryStore(), kind: 'memory', now: () => t, tick: (ms: number) => { t += ms; } } as never; return S; };
 function room(S: Store, code: string, cls = '1-2', closed = true) {
@@ -36,5 +36,11 @@ describe('🧩 빠진 수업 기록 채우기', () => {
     expect(isStale(S.get<Room>(roomPath('A3')), S.now(), 'A3', 'A3')).toBe(false);
     expect(await fillRecords(S, PACKS)).toBe(1);
     expect(S.get<boolean>(`${roomPath('A3')}/state/closed`)).toBe(true);
+  });
+  it('📜 지난 수업 한 번 채우기 = 정한 방만(이 판 전이어도) · 끝 표시', async () => {
+    const S = mk(RECFILL_SINCE - 86400e3); const L = room(S, RECFILL_PAST[0]); room(S, 'OTHER', '1-4');
+    expect(await fillPast(S, PACKS)).toBe(1);
+    expect(S.get(`records/1-2/3/${L.id}`)).toBeTruthy(); expect(S.get('records/1-4')).toBeNull();
+    expect(S.get<{ n: number }>(RECFILL_PAST_DONE)?.n).toBe(1);
   });
 });

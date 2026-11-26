@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fillPast, RECFILL_PAST, RECFILL_PAST_DONE } from '../../school/recFill';
+  import type { LessonPack } from '../../model/types';
   import { untrack } from 'svelte';
   import { APP_NAME, BETA } from '../../channel';
   import { teacherIn as teacherIn0, toTitle as toTitle0 } from './teacherAuth';
@@ -18,7 +20,11 @@
 
   // ⚙ 교사 폰 상시 설정 (📜 2026-11-17 #21 A · 시안 92y5uHBaWvACKgsCQWU6VF): 모든 탭 오른쪽 위 ⚙ → 아래 시트 하나
   //   교사 계정 · 소리 · 테마 · 앱 설치 · 로그아웃 · 📅 시간표(쓰는 중이면 끄기 한 줄 · 수업 길이) — 옛 「나」 탭 줄을 옮김 (기능 · 저장 그대로)
-  const { S, onclose, login0 = false }: { S: Store; onclose: () => void; login0?: boolean } = $props();
+  const { S, onclose, login0 = false, packs = [] }: { S: Store; onclose: () => void; login0?: boolean; packs?: LessonPack[] } = $props();
+  // 🧩 지난 수업 기록 채우기 (📜 11/26 선생님 「지난 수업 기록 채워」 · 운영 DB 쓰기 = 선생님이 이 단추를 누를 때만 · 한 번)
+  let fillMsg = $state(''), filling = $state(false);
+  const pastDone = $derived.by(() => { void ver; return S.get<{ at?: number; n?: number }>(RECFILL_PAST_DONE); });
+  async function goFill() { filling = true; fillMsg = '채우는 중…'; try { const n = await fillPast(S, packs); fillMsg = `🧩 ${n}개 수업 기록을 채웠어요 · 대시보드를 다시 열어 보세요`; } catch { fillMsg = '⚠ 채우지 못했어요 · 교사 로그인 확인'; } filling = false; ver++; }
   // svelte-ignore state_referenced_locally
   let page = $state<'main' | 'login' | 'sound' | 'theme' | 'app' | 'out' | 'sched' | 'war' | 'exam' | 'abc'>(login0 ? 'login' : 'main'), ver = $state(0);
   const sound = $derived.by(() => { void ver; return S.get<string>('school/teacher/sound') || '보통'; });
@@ -52,6 +58,7 @@
       {#if sched}<button type="button" class="item" data-k="set-sched" onclick={() => (page = 'sched')}><span class="ic">📅</span><span class="tx"><b>시간표 쓰는 중</b><small>수업 길이 {len}분 · 끄기</small></span></button>{/if}
       {#if srv && admin}<button type="button" class="item" data-k="set-war" onclick={() => (page = 'war')}><span class="ic">⚔</span><span class="tx"><b>기사단 토벌 주간</b><small>반 이름 · 문장 · 💎 지급 {pay ? '켬' : '끔'}</small></span></button>{/if}
       <button type="button" class="item" data-k="set-exam" onclick={() => (page = 'exam')}><span class="ic">📄</span><span class="tx"><b>기말 대비 기간</b><small>{exam ? `시험 ${exam} · ${bandText(exam, Date.now()) || '기간 밖'}` : '끔'}</small></span></button>
+      {#if packs.length && !pastDone}<button type="button" class="item" data-k="set-recfill" disabled={filling} onclick={goFill}><span class="ic">🧩</span><span class="tx"><b>지난 수업 기록 채우기 · 한 번</b><small>{fillMsg || `TV 가 닫아 대시보드에서 빠진 수업 ${RECFILL_PAST.length}개`}</small></span></button>{:else if fillMsg}<p class="outq sm" data-k="recfill-msg">{fillMsg}</p>{/if}
       <button type="button" class="item" data-k="set-abc" onclick={() => (page = 'abc')}><span class="ic">🚪</span><span class="tx"><b>{ABC_TXT.name}</b><small>{(void ver, abcOpenAny(S).length) ? `열린 반 ${abcOpenAny(S).join(' · ')}` : '반마다 열기 · 정답표'}</small></span></button>
       <button type="button" class="item" data-k="out" onclick={() => (page = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
     </div>
