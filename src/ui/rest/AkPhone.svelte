@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import type { Room, Store } from '../../model/types';
-  import { AK, powerOf, predict, rankAk, viewAt, type Ak, type Stone } from '../../rest/alkkagi';
+  import { AK, akSmoother, powerOf, predict, rankAk, viewAt, type Ak, type Stone } from '../../rest/alkkagi';
   import { akJoin, akShoot } from '../../rest/run';
   import { drawAk, fitCam, type Cam, type Dust } from './akDraw';
   import { AK_ART, artUrl } from '../manifest';
@@ -18,7 +18,7 @@
   const top = $derived(rankAk(f).order.slice(0, 3));
   const myRank = $derived(f.rank?.[uid] ?? rankAk(f).rank[uid]);
 
-  let cv = $state<HTMLCanvasElement>(), raf = 0, view: Record<string, Stone> = {};
+  let cv = $state<HTMLCanvasElement>(), raf = 0, view: Record<string, Stone> = {}; const smooth = akSmoother(); // 🐞 11/26 18명 렉 · 순간이동 = 박자 너머 이어 그림 + 어긋남 메움
   let drag: { x: number; y: number; cx: number; cy: number } | null = $state(null), sent = $state(0);
   /** 보기: follow = 내 알 따라가기 · all = 판 전체 · zoom = ＋ / － / 두 손가락 배율 */
   let mode = $state<'follow' | 'all'>('follow'), zoom = $state(1);
@@ -38,18 +38,20 @@
     const s = mine()!, k = Math.max(fit.k, ((59 * dpr()) / (2 * ar)) * zoom);
     return { cx: s.x * 0.6, cy: s.y * 0.6, k };
   }
+  /** 발사가 들어가는 때(다음 박자 · 지금 받은 판에서 이어 그림) 판 */
+  const shotFrom = (t: number) => (f.phase === 'play' ? viewAt(f, f.t0 + f.bm * Math.max(1, Math.ceil((t + 250 - f.t0) / f.bm))).st : view); // 보내는 데 0.25초 · 그 뒤 첫 박자 경계
   function frame() {
     raf = requestAnimationFrame(frame);
     const c = cv; if (!c) return; fit(c); const g = c.getContext('2d'); if (!g) return;
-    const W = c.width, H = c.height, t = S.now(), v = viewAt(f, t);
+    const W = c.width, H = c.height, t = S.now(), v = smooth(f, t, performance.now());
     view = v.st;
-    for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.beat}|${e.u}|${e.t}`; if (!seenFall.has(key)) { seenFall.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } }
+    for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.g}|${e.u}|${Math.round(e.t * 10)}`; if (!seenFall.has(key)) { seenFall.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } }
     dust = dust.filter((d) => performance.now() - d.t0 < 800);
     const cam = (camNow = camOf(W, H));
     let path = null;
     if (drag && canShoot()) {
       const dx = (drag.x - drag.cx) / dpr(), dy = (drag.y - drag.cy) / dpr(), p = powerOf(Math.hypot(dx, dy));
-      if (p >= 0) path = predict(view, f.R, uid, Math.atan2(dy, dx), p, ar);
+      if (p >= 0) path = predict(shotFrom(t), f.R, uid, Math.atan2(dy, dx), p, ar); // 🐞 11/26 「혼자 떨어짐」: 발사는 다음 박자에 들어감 → 그때 내 알 · 친구 알 자리에서 미리 보기
     }
     const s = mine();
     drawAk(g, W, H, f.R, view, { me: uid, crown: f.crown, path, ar, cam, dpr: dpr(), edges: mode === 'follow', dust, now: performance.now(), ring: s?.on ? 1 - Math.min(1, s.cd / AK.cool) : undefined, label: (u) => (u === uid ? '나' : nick(u)) });
@@ -108,7 +110,7 @@
         {#if mode === 'all'}<p class="tip">내 알을 누르면 다시 따라가요</p>{/if}
         {#if backIn}<div class="fall" data-k="ak-fall"><b>{backIn}</b><span>{fallMsg || '떨어졌어요'}</span></div>{/if}
       </div>
-      <p class="hint" data-k="ak-hint">{f.phase === 'ready' ? '곧 시작해요' : isOut ? '📵 이번 판은 끝 · 친구들 판을 구경해요' : !me.on ? '곧 다시 나와요 (나온 뒤 2초 무적)' : sent > me.n ? '🚀 날아가는 중…' : me.cd > 0 ? `🔄 ${Math.ceil(me.cd)}초 쉬는 중` : '👆 판을 누르고 뒤로 당겼다 놓아요'}</p>
+      <p class="hint" data-k="ak-hint">{f.phase === 'ready' ? '곧 시작해요' : isOut ? '📵 이번 판은 끝 · 친구들 판을 구경해요' : !me.on ? `곧 다시 나와요 (나온 뒤 ${AK.inv}초 무적)` : sent > me.n ? '🚀 날아가는 중…' : me.cd > 0 ? `🔄 ${Math.ceil(me.cd)}초 쉬는 중` : '👆 판을 누르고 뒤로 당겼다 놓아요'}</p>
       <ol class="top">{#each top as u, i (u)}<li class:me={u === uid}><b>{i + 1}</b><span>{nick(u)}{f.crown === u ? ' 👑' : ''}</span><em>{f.sc?.[u] ?? 0}점</em></li>{/each}</ol>
     {/if}
   {/if}

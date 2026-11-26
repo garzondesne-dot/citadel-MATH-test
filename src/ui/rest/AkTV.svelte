@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import type { Room } from '../../model/types';
-  import { AK, rankAk, viewAt, type Ak } from '../../rest/alkkagi';
+  import { AK, akSmoother, rankAk, type Ak } from '../../rest/alkkagi';
   import { drawAk, fullCam, type Dust } from './akDraw';
   // 🥏 알까기 난장판 · 종합실 (📜 2026-11-24 · 시안 v3 alk-tv): 왼쪽 = 판 전체(알마다 이름표 · 👑 1등 · 떨어짐 먼지) · 오른쪽 = 남은 시간 · 순위 5줄 · 떨어뜨림 소식
   const { R, f, now, nameOf, clock }: { R: Room; f: Ak; now: number; nameOf: (u: string) => string; clock: () => number } = $props();
@@ -11,11 +11,11 @@
   const rk = $derived(rankAk(f));
   /** 📜 11/24 알마다 이름표 (번호 · 🤖 뺀 이름) */
   const short = (u: string) => nameOf(u).replace(/^\d+\s*/, '').replace(/^🤖/, '') || '?';
-  let dust: Dust[] = []; const seen = new Set<string>();
+  let dust: Dust[] = []; const seen = new Set<string>(); const smooth = akSmoother(); // 🐞 11/26 박자 사이 끊김 · 순간이동 메움
   const feed = $derived([...(f.ev || [])].filter((e) => e.k === 'fall' && e.by).slice(-4).reverse());
   let cv = $state<HTMLCanvasElement>(), raf = 0;
   const fit = (c: HTMLCanvasElement) => { const r = c.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1), w = Math.round(r.width * d), h = Math.round(r.height * d); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } };
-  function frame() { raf = requestAnimationFrame(frame); const c = cv; if (!c) return; fit(c); const g = c.getContext('2d'); if (!g) return; const v = viewAt(f, clock()); for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.beat}|${e.u}|${e.t}`; if (!seen.has(key)) { seen.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } } dust = dust.filter((d) => performance.now() - d.t0 < 800); drawAk(g, c.width, c.height, f.R, v.st, { cam: fullCam(c.width, c.height, f.R), crown: f.crown, label: short, ar: f.ar, dpr: Math.min(2, devicePixelRatio || 1), dust, now: performance.now() }); }
+  function frame() { raf = requestAnimationFrame(frame); const c = cv; if (!c) return; fit(c); const g = c.getContext('2d'); if (!g) return; const v = smooth(f, clock(), performance.now()); for (const e of v.ev) if (e.k === 'fall' && e.x != null) { const key = `${f.g}|${e.u}|${Math.round(e.t * 10)}`; if (!seen.has(key)) { seen.add(key); dust.push({ x: e.x, y: e.y ?? 0, t0: performance.now() }); } } dust = dust.filter((d) => performance.now() - d.t0 < 800); drawAk(g, c.width, c.height, f.R, v.st, { cam: fullCam(c.width, c.height, f.R), crown: f.crown, label: short, ar: f.ar, dpr: Math.min(2, devicePixelRatio || 1), dust, now: performance.now() }); }
   onMount(() => { raf = requestAnimationFrame(frame); });
   onDestroy(() => cancelAnimationFrame(raf));
 </script>

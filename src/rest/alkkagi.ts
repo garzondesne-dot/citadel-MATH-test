@@ -1,6 +1,6 @@
 // 🥏 쉼터 놀이 「알까기 난장판」 (📜 2026-11-24 선생님 컨펌 · 설계 = claude/adoring-dijkstra-sup5zs docs/handoff/design/alkkagi/DESIGN-v1.md · sim.py)
 //   머리가 정한 것: 쉼터 놀이 7번째 · 선생님이 엶(리모컨 ▶ 시작 = 모이기 → 폰 🙋 참가 → ▶ 출발 · 2명부터) · 중간 참가 됨
-//   반 전체 한 판 · 150초 점수제(떨어뜨리기 +3 · 맞히기 +1 · 👑 1등 알 떨어뜨리기 +5) · 쏜 뒤 4초 쉼 · 떨어지면 3초 뒤 빈자리에 되살아남 + 무적 2초(서로 통과 · 쏘면 끝)
+//   반 전체 한 판 · 150초 점수제(떨어뜨리기 +3 · 맞히기 +1 · 👑 1등 알 떨어뜨리기 +5) · 쏜 뒤 4초 쉼 · 떨어지면 3초 뒤 빈자리에 되살아남 + 무적 3초(📜 11/26 손발 2 → 3 · 서로 통과 · 쏘면 끝)
 //   「1초 박자」: 시계 맡은 기기(TV · 교사 폰)가 1초마다 ① 지난 1초 움직임 계산 ② 그사이 들어온 발사 넣기 ③ 되살리기 · 왕관 → 판 상태(st)를 내려 줌
 //     폰 · TV 는 그 st 에서 같은 식(simBeat)으로 1초를 그 자리에서 그림 → 통신은 1초에 한 번 · 1초 늦음은 쉬는 4초에 묻힘
 //   학생 = 발사만 rooms/{코드}/fv/ak{g}/{uid} = { a 각도, p 세기 0 ~ 2, n 번호 } · 참가 = fv/ak{g}_j/{uid} (이미 열린 칸 · 규칙 바뀜 없음)
@@ -9,7 +9,7 @@
 /** ⚙ 값 한 곳 */
 export const AK = {
   readyMs: 5000, playSec: 150, endMs: 15000, beatMs: 1000, dt: 0.04, steps: 25,
-  r: 0.9, fric: 9, pow: [7 * Math.SQRT2, 11 * Math.SQRT2, 15 * Math.SQRT2] as const, ring: 0.5, cool: 4, inv: 2, back: 3, credit: 3,
+  r: 0.9, fric: 9, pow: [7 * Math.SQRT2, 11 * Math.SQRT2, 15 * Math.SQRT2] as const, ring: 0.5, cool: 4, inv: 3, back: 3, credit: 3,
   knock: 3, hit: 1, crown: 5, minPlayers: 2, gem1: 30, gem23: 20, gemJoin: 10, dayMax: 3,
 } as const;
 /** 시간 (🧪 화면 시험만 globalThis.__AK_SPEED 로 줄임 · 박자 길이만 바뀜 = 판 안 1초는 그대로) */
@@ -154,11 +154,36 @@ export function stepAk(f: Ak, joins: Record<string, unknown> | null, shots: Reco
   return { ...f, st: pack(st), sc, kn, fall, gt, ev, beat: f.beat + 1, t0: now, to: now + (AK.playSec - gt) * f.bm, crown: crownOf(sc, f.crown), total: Object.keys(st).length };
 }
 
-/** 지금 보이는 판 (폰 · TV) = 박자 시작 상태에서 지난 시간만큼 */
+/** 지금 보이는 판 (폰 · TV) = 박자 시작 상태에서 지난 시간만큼
+ *  🐞 11/26 18명 「렉 · 순간이동」: 전엔 박자 끝(1초)에서 멈춰 다음 박자를 기다렸다가(서버 지연 0.2 ~ 0.5초) 받는 순간 그만큼 튐
+ *  → 박자 너머로도 같은 식으로 이어 그림(최대 2박자 · 새 발사가 없으면 다음 박자 시작과 똑같음) */
 export function viewAt(f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar'>, now: number) {
   if (f.phase !== 'play') return { st: f.st, ev: [] as AkEv[], k: 0 };
-  const k = Math.max(0, Math.min(AK.steps, Math.floor(((now - f.t0) / f.bm) * AK.steps)));
+  const k = Math.max(0, Math.min(AK.steps * 3, Math.floor(((now - f.t0) / f.bm) * AK.steps)));
   const b = simBeat(f.st, f.R, f.gt, f.crown, k, f.ar ?? AK.r); return { st: b.st, ev: b.ev, k };
+}
+
+/** 🐞 11/26 화면 이음매 메우기: 새 박자를 받는 순간 (새 발사 · 부딪힘 때문에) 그리던 자리와 새 자리가 어긋나면 그 차이를 0.12초에 걸쳐 줄임 (순간이동 대신 미끄러짐)
+ *  떨어짐 · 되살아남 · 6 넘게 어긋남 = 바로 · wall = 화면 시계(performance.now) */
+export function akSmoother(tau = 120) {
+  let key = '', shown: Record<string, Stone> = {}, lt = -1;
+  const off: Record<string, [number, number]> = {};
+  return (f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar' | 'g' | 'beat'>, now: number, wall: number): { st: Record<string, Stone>; ev: AkEv[]; k: number } => {
+    const v = viewAt(f, now), k2 = `${f.g}|${f.beat}|${f.phase}`;
+    if (k2 !== key) {
+      const same = key.split('|')[0] === String(f.g); key = k2;
+      for (const u of Object.keys(off)) delete off[u];
+      if (same && f.phase === 'play') for (const [u, s] of Object.entries(v.st)) { const p = shown[u]; if (!p || !p.on || !s.on) continue; const dx = p.x - s.x, dy = p.y - s.y; if (Math.hypot(dx, dy) < 6) off[u] = [dx, dy]; }
+    }
+    const dt = lt < 0 ? 0 : Math.max(0, wall - lt), dec = Math.exp(-dt / tau); lt = wall;
+    const st: Record<string, Stone> = {};
+    for (const [u, s] of Object.entries(v.st)) {
+      const o = off[u]; if (!o || !s.on) { delete off[u]; st[u] = s; continue; }
+      o[0] *= dec; o[1] *= dec; if (Math.hypot(o[0], o[1]) < 0.005) { delete off[u]; st[u] = s; continue; }
+      st[u] = { ...s, x: s.x + o[0], y: s.y + o[1] };
+    }
+    shown = st; return { st, ev: v.ev, k: v.k };
+  };
 }
 
 /** 궤적 미리 보기 (내 폰 · 서버에 안 물음 · 지금 판 기준 예상): 내 알 혼자 미끄러짐 → 멈출 자리 / 판 밖 / 처음 부딪히는 알과 그 알이 밀려갈 방향 */
