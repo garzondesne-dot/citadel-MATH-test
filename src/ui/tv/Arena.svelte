@@ -442,9 +442,9 @@
   @keyframes spk { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.6) rotate(70deg); } }
   @keyframes up { to { transform: translate(-50%, -180%); opacity: 0; } }
   .ban { position: absolute; top: 50%; transform: translate(-50%, -50%); font-size: var(--tv-big); font-weight: 700; color: #ffd166; padding: 1.6cqh 3cqw; border-radius: 2cqh; background: rgba(8, 9, 12, 0.78); border: 3px solid #f5b84a; white-space: pre; text-align: center; }
-  .chg { position: absolute; left: 1.2%; top: 14%; z-index: 30; display: grid; gap: 0.4em; font-size: clamp(12px, 1.2vw, 22px); pointer-events: none; }
+  .chg { position: absolute; left: 1.2%; top: 14%; z-index: 30; display: grid; gap: 0.4em; width: max-content; max-width: 46%; font-size: clamp(12px, 1.2vw, 22px); pointer-events: none; }
   .chg .cg { display: grid; gap: 0.25em; padding: 0.35em 0.7em; border-radius: 0.6em; background: rgba(30, 20, 4, 0.82); border: 2px solid #f5b84a; box-shadow: 0 0 14px rgba(255, 210, 90, 0.45); }
-  .chg b { font: 800 1em var(--font); color: #ffd25a; white-space: nowrap; }
+  .chg b { font: 800 1em var(--font); color: #ffd25a; white-space: nowrap; overflow: visible; }
   .chg i { display: block; height: 0.45em; border-radius: 999px; background: linear-gradient(90deg, #c98a1c, #fff3a0); transform-origin: left; animation: chgFill 10s linear forwards; }
   .chg small { font: 800 0.9em var(--font); color: #ffd25a; }
   @keyframes chgFill { from { transform: scaleX(0.05); } to { transform: scaleX(1); } }
