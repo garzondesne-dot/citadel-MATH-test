@@ -11,7 +11,7 @@
   import { castles } from '../../school/castles.svelte';
   import { bonusBase, castleState, manualOf, progressOf, withLegacy, type CastleRec } from '../../school/castle';
   import { rewriteOf, cfgOf, post } from '../../school/photo';
-  import { CHANGES, GRADE_IC, GRADE_NAME, HALL, QUEST, REASON, hallSolveClaim, nameOptPath, questClaim, questPath, solveClaims, QBOARD, type QPlay, type QuestRec } from '../../school/quest';
+  import { CHANGES, GRADE_IC, GRADE_NAME, HALL, QUEST, REASON, hallSolveClaim, questFloorOk, nameOptPath, questClaim, questPath, solveClaims, QBOARD, type QPlay, type QuestRec } from '../../school/quest';
   import { jpegOf, openImage, rectify } from '../../school/questImg';
   // ✏ #75 출제 공방 (📜 2026-11-18 · QUEST-PHOTO-PLAN · AI-JUDGE) — 캠프 오른쪽 아래 책상
   //   탭 3: 📸 내 문제 올리기 · 📜 내가 낸 문제 · 🏛 명예의 전당
@@ -31,7 +31,7 @@
   type Base = { pack: string; room: string; floor: number; no: number; label: string; text: string; answer: string };
   const bases = $derived.by((): Base[] => {
     const out: Base[] = [], rec0 = untrack(() => (cls && num ? S.get<Record<string, unknown>>(`records/${cls}/${num}`) : null) || {}), upto = progressOf(S, cls, rec0, test);
-    for (const P of castles.list.filter((x) => !x.hide)) {
+    for (const P of castles.list.filter((x) => !x.hide && questFloorOk(x.floor))) { // 📜 1~3층만
       const recs = withLegacy(P.id, (S.get<Record<string, CastleRec>>(`${bonusBase(cls, num)}/${P.id}`) || {}) as Record<string, CastleRec>);
       for (const r of castleState(P, upto, recs, test, manualOf(S, P.id, cls)).open) { const w = rewriteOf(r.vers[0] ?? []); out.push({ pack: P.id, room: r.id, floor: P.floor, no: r.no, label: `${P.floor}층 ${r.title}`, text: [w.stem, ...w.lines].filter(Boolean).join(' / ').slice(0, 1200), answer: String(w.ph[0]?.answer ?? '') }); }
     }

@@ -17,6 +17,9 @@ export const GRADE_NAME: Record<Grade, string> = { green: '숫자 바꿈', blue:
 export const REASON: Record<string, string> = { not_from_base: '고른 성채 방 문제와 관계가 없어 보여요 — 바탕 방 문제를 바꿔서 만들어요', wrong_answer: '적은 정답이 AI 두 번 풀이와 달라요', unsolvable: '조건이 서로 부딪히거나 답이 하나로 안 나와요', unreadable: '사진 글씨를 읽기 어려워요 — 밝은 곳에서 반듯하게 다시 찍어요', inappropriate: '어울리지 않는 내용이 있어요' };
 export const CHANGES: [string, string][] = [['num', '숫자'], ['cond', '조건'], ['ask', '묻는 것'], ['story', '상황 · 이야기']];
 export const QUEST = { daily: 3, green: { g: 3, perDay: 2 }, blue: { g: 8, s: 1, perDay: 2 }, purple: { g: 20, s: 2 }, authorSolve: { g: 1, perWeek: 10 }, hallSolve: { g: 2, perDay: 5 } } as const;
+/** 🏰 바탕 방 = 성채 1~3층만 (📜 2026-11-27 선생님 「1~3층만」 · 진도로 4층이 열려도 출제 바탕에서는 뺌 · 성채 · 허수아비 · 차원문의 4층은 그대로) */
+export const QUEST_FLOORS = 3;
+export const questFloorOk = (floor: number) => floor >= 1 && floor <= QUEST_FLOORS;
 export const questPath = (cls: string, num: number) => `quest/${String(cls).replace(/[.#$/[\]]/g, "_")}/${num}`;
 const kday = (t: number) => { const d = new Date(t + 9 * 3600e3); return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`; };
 /** 월요일 시작 주 (KST) */
