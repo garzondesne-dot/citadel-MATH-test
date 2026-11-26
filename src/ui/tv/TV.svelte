@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isBot as isBotU } from '../../raid/bots';
   import PetSprite from '../cos/PetSprite.svelte';
   import { petFromTag } from '../../model/pets';
   import { bandText, examDateOf } from '../../school/examEvent';
@@ -100,7 +101,7 @@
   $effect(() => { applyTheme(tvTheme, { tv: true }); });
   function pickTv(t: Theme) { tvTheme = t; try { localStorage.setItem(TVK, t); } catch { /* 무시 */ } themeOpen = false; }
   // 🧙 선생님 용사 (이 기기 · 학생 폰 「내 용사」와 같은 창)
-  const pupils = $derived.by(() => { const nm = (R?.meta as { names?: Record<string, string> } | undefined)?.names || {}; const film = (R?.meta as { film?: boolean } | undefined)?.film === true; return live ? roster(live.cls, S).map((p) => { const n = nm[p.uid] ?? p.name; return { ...p, name: film ? maskName(n) : n }; }) : []; }); // 🎥 #150 촬영 모드 = 가린 이름 // 📜 2026-11-16 전체 이름 = 방 meta/names (교사가 열 때 적음)
+  const pupils = $derived.by(() => { const nm = (R?.meta as { names?: Record<string, string> } | undefined)?.names || {}; const film = (R?.meta as { film?: boolean } | undefined)?.film === true; if (!live) return []; const bots = Object.entries(R?.players || {}).filter(([u]) => isBotU(u, R)).map(([u, p]) => ({ cls: live.cls, num: Number((p as { num?: number }).num) || 101, name: `🤖${(p as { nick?: string }).nick ?? ''}`, uid: u })); return [...roster(live.cls, S).map((p) => { const n = nm[p.uid] ?? p.name; return { ...p, name: film ? maskName(n) : n }; }), ...bots]; }); // 🤖 가상 학생도 셈 (🐞 11/26 체험판 「참여 20 / 0」 · 리모컨과 같게) // 🎥 #150 촬영 모드 = 가린 이름 // 📜 2026-11-16 전체 이름 = 방 meta/names (교사가 열 때 적음)
   const ids = $derived(R ? activeIds(R, now) : []);
   const inSet = $derived(new Set(ids));
   const absent = $derived(R?.absent || {});
