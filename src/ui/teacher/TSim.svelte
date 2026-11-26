@@ -7,7 +7,7 @@
   import { PROFILES } from '../../model/profiles';
   import { openRoom, roomPath } from '../../raid/actions';
   import { setBots, botsOff } from '../../raid/botRun.svelte';
-  import { clock } from '../clock.svelte';
+  import { clock, useClock } from '../clock.svelte';
   import type { Live } from '../../school/school';
   import TV from '../tv/TV.svelte';
   import TLive from './TLive.svelte';
@@ -17,8 +17,9 @@
   const S: Store = untrack(() => ({ ...memoryStore(), kind: 'memory' as const }));
   const code = untrack(() => `SIM${L.no}${Math.floor(Math.random() * 1e4)}`);
   const live: Live = untrack(() => ({ code, cls: 'test', lesson: L.id, test: true }));
-  untrack(() => { openRoom(S, L, code, PROFILES.test); S.set(`${roomPath(code)}/meta/solve`, 15); S.set(`${roomPath(code)}/meta/cls`, 'test'); S.set('school/live', live); prep?.(S, code); if (bots > 0) setBots(S, L, code, true, bots); });
-  onDestroy(botsOff);
+  untrack(() => { openRoom(S, L, code, PROFILES.test); S.set(`${roomPath(code)}/meta/solve`, 15); S.set(`${roomPath(code)}/meta/cls`, 'test'); S.set('school/live', live); if (trial) S.set('roster/test', { 0: '' }); /* 🐞 11/26 체험판 = 가상 학생만 (빈 명단 · 가짜 이름 1 ~ 15번 칸 안 보임) */ prep?.(S, code); if (bots > 0) setBots(S, L, code, true, bots); });
+  const stopClock = useClock(); // 🐞 11/26 체험판 교사 판 = 화면 시계가 안 돌아 정찰 「등장까지 305초」 멈춤 · 남은 시간 · 몬스터 공격이 서 있었음 (학생 판 · 교사 폰은 켬)
+  onDestroy(() => { botsOff(); stopClock(); });
   let big = $state(false);
 </script>
 
