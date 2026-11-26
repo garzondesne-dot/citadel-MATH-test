@@ -333,7 +333,7 @@
 
   <!-- 위 막대 (#119 덧붙임 3 · 7 · 9): 반 칩 · n차시 + 소단원 주제 · 흐름도(리모컨 단계 막대와 같은 함수) · 🚪 코드 · ⛺ 내 캠프 / 아래 가장자리 = 남은 시간 선 -->
   <header class="top">
-    <span class="ttl">{#if view === 'camp' && (!R || R.state.closed)}📺 입장 대기{:else}{#if live}<span class="cls">{clsLabel(S, live.cls)}</span>{/if}{#if view === 'camp'}📺 입장 대기 · {/if}{L.no}차시 <b>{topic}</b>{/if}</span>
+    <span class="ttl">{#if view === 'camp' && (!R || R.state.closed)}📺 입장 대기{:else}{#if live}<span class="cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))}</span>{/if}{#if view === 'camp'}📺 입장 대기 · {/if}{L.no}차시 <b>{topic}</b>{/if}</span>
     <div class="tflow" class:dim={view === 'lobby'} class:hide={view === 'camp'} aria-label="오늘 흐름">
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>
@@ -366,7 +366,7 @@
       <div class="einfo">
         {#if R && !R.state.closed && live}
           <span class="etag">오늘 수업</span>
-          <b class="ecls" data-k="entry-cls">{clsLabel(S, live.cls)} · {L.no}차시</b>
+          <b class="ecls" data-k="entry-cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))} · {L.no}차시</b>
           <span class="ettl">{topic}</span>
           <div class="ein" data-k="entry-n">들어온 학생 <b>{box?.n ?? 0}</b><small> / {box?.m ?? 0}</small></div>
           <p class="ewait">선생님이 「⚔ 던전 입장」을 누르면 시작해요</p>

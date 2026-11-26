@@ -95,6 +95,7 @@
   const stuckNow = $derived.by(() => { if (!R || !mid || R.state.rest) return null; const c = stuckCells(L, R, mid, ids); const i = c.findIndex((n, k) => n >= STUCK_N && !stuckSeen[`${mid}|${k}`]); return i < 0 ? null : { i, n: c[i]! }; });
   const circ = (i: number) => '①②③④⑤⑥⑦⑧⑨⑩'[i] ?? `${i + 1}`;
   const scout = $derived(R ? solveLock(L, R, now) : null);
+  const trialRm = $derived(!!(R?.meta as { trial?: boolean } | undefined)?.trial); // 👩‍🏫 체험판 = 「테스트」 낱말 빼기 (#60-5 학생 판과 같게 · 🐞 11/26 교사 판)
   const hp = $derived(R && mid ? monsterHp(L, R, mid, now) : R && step?.kind === 'boss' && L.boss ? bossHp(L, R, now) : null);
   const subd = $derived.by(() => {
     if (!R || !step) return [] as string[];
@@ -274,7 +275,7 @@
 {#if R}
   <div class="tbar">
     <button type="button" class="back" aria-label="수업 열기로" onclick={onhome}>‹</button>
-    <div class="t">{live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
+    <div class="t">{trialRm ? '👩‍🏫 체험판' : live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
     <button type="button" class="film" class:on={filmOn} data-k="tl-film" aria-pressed={filmOn} onclick={() => S.set(`${roomPath(code)}/meta/film`, filmOn ? null : true)}>🎥<small>{filmOn ? '촬영 중' : '촬영'}</small></button>
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
@@ -339,7 +340,7 @@
     {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
     {@render keyLine()}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
-    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
     <!-- ⑭ 리모컨 -->
     <div class="mid rem">
@@ -398,7 +399,7 @@
       <button type="button" data-slot="heal" data-k="heal-first" class:hot={!!order.length} disabled={!order.length} aria-label={order.length ? `⚔ 보급 · 🙋① ${nl(numOf(order[0]!))}번 ${pname(order[0]!)}` : '⚔ 보급 · 도움 요청 없음'} onclick={() => order[0] && release(order[0])}><i>⚔</i>보급</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" data-k="main" onclick={() => (funJoin ? goFun() : main())}>{mainText}</button></div>
-    <div class="lbar"><i class="live"></i><span>{live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
