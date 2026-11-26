@@ -111,9 +111,14 @@
     queue.splice(at < 0 ? queue.length : at, 0, ...ults); queue.push(...rest);
   }
   const dropQueue = () => { const keep = queue.filter((h) => h.ult); queue.length = 0; queue.push(...keep); };
+  /** 🐞 11/26 1-3반 「공격하면 그림자 분신술」: 같은 학생 공격이 겹쳐 재생되면(간격 0.14 ~ 0.35초 < 공격 1초 남짓) 대역이 둘 · 먼저 끝난 쪽이 숨긴 용사를 다시 보이게 함 → 한 학생은 하나씩 */
+  const busyU = new Set<string>();
   function play() {
     if (qT) return;
-    const h = queue.shift(); if (!h) return;
+    if (!queue.length) return;
+    const i = queue.findIndex((x) => !busyU.has(x.u));
+    if (i < 0) { qT = setTimeout(() => { qT = undefined; play(); }, 120); return; } // 남은 것이 모두 공격 중인 학생 = 잠깐 뒤에
+    const h = queue.splice(i, 1)[0]!;
     if (fxLayer && W && tvAttack(h)) { /* ⚔ 정식 attack.js (DOM 층) */ }
     else if (A) A.hit(h.u, h.dmg, h.kind);
     else { lunge = { ...lunge, [h.u]: true }; setTimeout(() => (lunge = { ...lunge, [h.u]: false }), 380); const b = arenaBox(W, H, boss, split); if (h.kind !== 'miss') domPop(h.kind === 'hit' ? `-${h.dmg}` : '연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, h.kind === 'hit' ? 'dmg' : 'miss'); /* 틀림 = 글자 없음(돌진 · 튕김만) */ }
@@ -163,10 +168,11 @@
     const pose = (q: Pose) => rowAnim(rowEl, q);
     if (h.kind !== 'hit') setTimeout(() => { if (A) A.monHit(0, h.kind); else { const b = arenaBox(W, H, boss, split); if (h.kind === 'practice') domPop('연습', b.mon.cx, b.mon.top + b.mon.size * 0.4, 'miss'); } }, 420);
     const custom = NEWFX && A && famIdOf(fxk) ? (B: { cx: number; cy: number; w: number; h: number }, dir: number, q: { ult: boolean }) => !!A?.slash({ x: B.cx, y: B.cy, w: B.w, h: B.h, dir, tier: q.ult || fxk === 'twin' ? 3 : Math.min(2, tierIdx(fxk)), fam: 'cut', seed: (k + 1) * 97, skill: NEW_SKILLS.includes(fxk) && !q.ult ? fxk : undefined }, () => void place(lay, fxk, { body: { x0: B.cx - B.w / 2, y0: B.cy - B.h / 2, x1: B.cx + B.w / 2, y1: B.cy + B.h / 2, ...B }, dir })) : undefined;
+    busyU.add(h.u);
     void attack(lay, { hue: fxHueOf(cosClean((p as { cos?: unknown } | undefined)?.cos)), who: whoOf(h.u), custom, tint: (c, ms) => A?.monTint(c, ms), suck: A ? () => A?.monSuck() : undefined, heroBox, monBox, hero, fx: fxk, miss: h.kind === 'miss', noDmg: true, rest: 'idle', hits: h.kind === 'practice' ? 1 : Math.max(1, h.dmg), ultimate: ult, pose,
       heroArt: (id) => `<i class="art hero" style="position:absolute;inset:0;background:url(${heroUrl(id)}) 0 0/${HERO.cols * 100}% ${HERO.rows * 100}% no-repeat;image-rendering:pixelated"></i>`,
       onHit: (q) => { if (h.kind !== 'hit') return; const last = !q || q.k === q.n - 1; if (last && !quiet) tvHurt(); /* 🔊 #43 맞는 순간 */ if (A) A.monHit(last ? h.dmg : 0, 'hit', { perfect: last && (h.perfect || ult), ult: last && ult }); else if (last) { const b = arenaBox(W, H, boss, split); domPop(`-${h.dmg}`, b.mon.cx, b.mon.top + b.mon.size * 0.4, 'dmg'); } } })
-      .finally(() => { tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
+      .finally(() => { busyU.delete(h.u); tmp.forEach((e) => e.remove()); A?.heroVisible(h.u, true); heroBox.style.translate = ''; if (!art && rowEl) { for (const an of rowEl.getAnimations()) if (an.id === 'hrow') an.cancel(); rowEl.style.backgroundPositionX = ''; rowEl.style.backgroundPositionY = ''; } if (h.kind === 'miss') tvPose(h.u, 'hit', 500); });
     return true;
   }
   // 🧑‍🏫 선생님 일격 (📜 2026-11-14 「교사 시연은 학생이랑 달라 · 퍼펙트 뜨면 필살기 공격」 · 정식 hall.js teacherStrike): 왼쪽에서 등장 → 몬스터로 돌진 → 팍(필살기 = 컷인 + 광역)
