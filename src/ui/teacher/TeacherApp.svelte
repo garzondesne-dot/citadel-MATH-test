@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fillRecords } from '../../school/recFill';
   import { closeWeek } from '../../board/war';
   import { BETA } from '../../channel';
   import { withCarry, carryOfRoom, type Carry } from '../../school/carry';
@@ -61,6 +62,8 @@
   const needAdmin = () => !!(S as AS).auth && !(S as AS).isAdmin?.();
   // ⚔ #51 주간 마감 (서버 함수 없음): 교사 로그인한 폰이 켜질 때 · 그 뒤 1시간마다 지난주 done 이 없으면 확정 (두 기기 = transaction 한 번)
   $effect(() => { if (!(S as AS).auth || S.kind === 'memory') return; const go = () => { if ((S as AS).isAdmin?.()) void closeWeek(S).catch(() => null); }; const t0 = setTimeout(go, 5000), t1 = setInterval(go, 3600e3); return () => { clearTimeout(t0); clearInterval(t1); }; });
+  // 🧩 빠진 수업 기록 채우기 (🐞 11/26 「수업 종료를 안 누르면 대시보드 기록 누락」 · school/recFill): 교사 로그인한 폰이 켜질 때 · 2분마다 · 수업을 열 때
+  $effect(() => { if (S.kind === 'memory') return; const go = () => { if (!(S as AS).auth || (S as AS).isAdmin?.()) void fillRecords(S, packs).catch(() => 0); }; const t0 = setTimeout(go, 4000), t1 = setInterval(go, 120e3); return () => { clearTimeout(t0); clearInterval(t1); }; });
   let loginAsk = $state(false), setOpen = $state<'' | 'main' | 'login'>(''); // ⚙ 상시 설정 (📜 2026-11-17 #21 A)
   const gate = needAdmin(); // 🔐 입구 (📜 2026-11-13 밤 선생님 「진행」): 서버인데 교사 로그인 안 한 폰 = 교사 화면 대신 로그인 화면만 (로그인하면 새로 고침)
   // 🆕 바뀐 것 (📜 2026-11-15 · school/changes.ts): 교사 로그인한 폰 · 정식 = 못 본 판을 아래 창으로(확인했어요 = 본 판) + 소식 탭 한 통씩 / 베타 = 창 없이 소식 탭 한 통씩(그 자리에서 본 판)
@@ -73,6 +76,7 @@
   let sim = $state<{ kind: 'tv' | 'stu'; L: LessonPack; n: number } | null>(null);
   function open(cls: string, L: LessonPack, test = false, from?: { step: number; fresh: string | null }, carry?: Carry | null, keyMode?: KeyMode, bots = 0) {
     if (needAdmin()) { loginAsk = true; return; }
+    if (S.kind !== 'memory') void fillRecords(S, packs).catch(() => 0); // 🧩 지난 방이 닫히지 않았거나 반 기록이 빠졌으면 먼저
     const code = openLesson(S, cls, L, { test, from, carry, keyMode });
     if (test && bots > 0) setBots(S, L, code, true, bots);
     page = 'live';

@@ -156,7 +156,7 @@ export function endClass(S: Store, L: LessonPack, code: string): void {
     const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
     S.set(lastClosePath(R.meta.cls, test), S.now());
     S.set(lastLessonPath(R.meta.cls, test), { lesson: L.id, no: L.no, code, boss: bossOpened(L, R), at: S.now() }); // 📝 #35 A 다음 수업 도입 「지난 차시 형성평가 미제출 n명」
-    if (!test) { const R2 = getRoom(S, code); if (R2) void classRecords(S, L, R2, code).catch((e) => { console.warn('수업 기록', e); return 0; }); } // 📜 #39 교사 폰이 반 전체 수업 기록 (형성평가에서 바로 닫아도 · 학생 폰 없이)
+    if (!test) { const R2 = getRoom(S, code), adm = S.kind !== 'server' || !!(S as Store & { isAdmin?: () => boolean }).isAdmin?.(); if (R2 && adm) void classRecords(S, L, R2, code).then(() => S.set(`${roomPath(code)}/state/recAt`, S.now())).catch((e) => { console.warn('수업 기록', e); return 0; }); } // 🐞 11/26 TV(교사 로그인 아님)는 학생 기록을 쓸 권한이 없음 → 쓰지 않고 recAt 도 없음 = 교사 기기가 school/recFill 로 채움 // 📜 #39 교사 폰이 반 전체 수업 기록 (형성평가에서 바로 닫아도 · 학생 폰 없이)
     if (!test && R.meta.t0) recordTime(S, L.id, code, Number(R.meta.t0), S.now(), timeSig((id) => feat(id as never))); // ⏱ 실측 (📜 2026-11-16 · 성적 아님 · 같은 차시 · 같은 기능 3번 이상 = 실측 평균)
   } // ⚔ 선제 공격 기준 시각 = 그 반 마지막 수업 닫힌 시각
 }
