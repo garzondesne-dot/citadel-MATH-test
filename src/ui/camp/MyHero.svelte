@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { awkSeen } from '../../school/awakenSeen';
   import { auraName } from '../fx/aura';
   import AwakenPop from './AwakenPop.svelte';
   import { earnedFrom, titleData } from '../../model/titles';
@@ -44,7 +45,7 @@
   const W = $derived(me.wallet);
   const lv = $derived(L0.enh + P.enh);
   // 🌟 #29 각성한 로안 = 보이는 모습만 (고른 그대로 · 저장 전 미리 보기도 금발) · 조건 3 체크
-  const lkM = $derived(lookId({ hero: look.hero, enh: lv, fx: equipOf(look), title: look.title }));
+  const lkM = $derived(lookId({ hero: look.hero, enh: lv, fx: equipOf(look), title: look.title, had: awkSeen(Number(look.hero) || 0) })); // 📜 11/26 한 번 각성 = 유지
   // ⚡ #83 고른 용사 카드의 각성 칸 = 그 용사 조건 4 (출전 · +10 · 그 용사 Ⅳ 장착 · 전용 칭호 장착)
   let awkRe = $state<number | null>(null); // ⚡ #94 각성 연출 다시 보기
   const aChecks = $derived(awakenChecks({ hero: look.hero, enh: lv, fx: equipOf({ ...look, hero: pickH }), title: look.title }, pickH));

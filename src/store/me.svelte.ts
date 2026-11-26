@@ -1,3 +1,4 @@
+import { awkSeen } from '../school/awakenSeen';
 import { lookId } from '../model/hero';
 import { equipOf, type Look } from '../model/draft';
 import { cosWorn, type CosOn } from '../model/cosmetics';
@@ -175,16 +176,16 @@ export function teacherLook(v: Partial<TLook> | null | undefined): Looked {
 }
 /** 🌟 #29 보이는 모습 — hero = 보이는 모습(각성한 로안이면 16) · base = 고른 용사 */
 export type Looked = { hero: number; base: number; enh: number; fx: string };
-export const looked = (base: number, enh: number, fx: string, title?: string | null): Looked => ({ hero: lookId({ hero: base, enh, fx, title }), base, enh, fx });
+export const looked = (base: number, enh: number, fx: string, title?: string | null, had?: boolean): Looked => ({ hero: lookId({ hero: base, enh, fx, title, had }), base, enh, fx });
 /** 캠프 · 내 용사 = 지금 장착 그대로의 보이는 모습 */
-export const meLookId = (m: Pick<Me, 'hero' | 'enh' | 'socket' | 'title'>) => lookId({ hero: m.hero, enh: m.enh, fx: equipOf({ hero: m.hero, socket: m.socket || {} } as Look), title: m.title });
+export const meLookId = (m: Pick<Me, 'hero' | 'enh' | 'socket' | 'title'>) => lookId({ hero: m.hero, enh: m.enh, fx: equipOf({ hero: m.hero, socket: m.socket || {} } as Look), title: m.title, had: !asTeacher && awkSeen(Number(m.hero) || 0) }); // 📜 11/26 한 번 각성 = 유지
 /** 출전 용사 · 강화 (전투 장면이 읽음 · 없으면 로안) — 서버에 묶였으면 서버 값 */
 export function savedLook(): Looked {
   if (asTeacher) return teacherLook(tCache); // 👩‍🏫 교사 탭 = 서버 교사 용사 하나 (없으면 현자 7)
   const b = meBound();
-  if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return looked(hero, Number(sv.enh) || 0, equipOf({ hero, socket: sv.socket || {} } as Look), sv.title); }
+  if (b) { const sv = fromServer(b); const hero = Number(sv.hero) || 0; return looked(hero, Number(sv.enh) || 0, equipOf({ hero, socket: sv.socket || {} } as Look), sv.title, awkSeen(hero)); }
   const m = readLocal(KEY), hero = Number(m?.hero) || 0;
-  return looked(hero, Number(m?.enh) || 0, equipOf({ hero, socket: m?.socket || {} } as Look), m?.title); // ⚔ 끼운 스킬 (빈 칸 = 내 속성 Ⅰ)
+  return looked(hero, Number(m?.enh) || 0, equipOf({ hero, socket: m?.socket || {} } as Look), m?.title, awkSeen(hero)); // ⚔ 끼운 스킬 (빈 칸 = 내 속성 Ⅰ)
 }
 /** 🎨 옷장 입은 것 (📜 2026-11-25) — 서버 학생 = accounts/…/cos · 이 기기 = 폰 저장 · 교사 = 없음 · 산 기록이 없는 칸은 벗김 */
 export function savedCos(): import('../model/cosmetics').CosOn {

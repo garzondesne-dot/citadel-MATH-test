@@ -32,7 +32,7 @@
   const get = async <T,>(p: string): Promise<T | null> => { try { return S.fetch ? await S.fetch<T>(p) : S.get<T>(p); } catch { return null; } };
   const rows = (v: unknown): [number, Record<string, unknown>][] => (v && typeof v === 'object' ? Object.entries(v as Record<string, unknown>).filter(([k, x]) => Number(k) > 0 && x && typeof x === 'object').map(([k, x]) => [Number(k), x as Record<string, unknown>]) : []);
   const mk = (c: Cand & { enh?: number; today?: string }, name: string): F => ({ num: c.num, look: lookId({ hero: c.hero, enh: c.enh ?? 0, fx: c.fx, title: c.title }), base: c.hero, name, title: c.title, fx: c.fx, enh: c.enh ?? 0, today: c.today ?? '' });
-  const withCos = (acc: Record<string, unknown> | null, n: number, f: F): F => { const row = acc?.[String(n)] as { cos?: unknown; pet?: unknown } | undefined, c = cosClean(row?.cos), pt = activePet(row?.pet as PetState); return { ...f, ...(Object.keys(c).length ? { cos: c } : {}), ...(pt ? { pet: pt } : {}) }; };
+  const withCos = (acc: Record<string, unknown> | null, n: number, f0: F): F => { const row = acc?.[String(n)] as { cos?: unknown; pet?: unknown; awk?: Record<string, unknown> } | undefined, f = row?.awk?.[String(f0.base)] ? { ...f0, look: lookId({ hero: f0.base, enh: f0.enh, fx: f0.fx, title: f0.title, had: true }) } : f0 /* 📜 11/26 친구도 한 번 각성 = 유지 */, c = cosClean(row?.cos), pt = activePet(row?.pet as PetState); return { ...f, ...(Object.keys(c).length ? { cos: c } : {}), ...(pt ? { pet: pt } : {}) }; };
   let alive = true; onDestroy(() => (alive = false));
   untrack(() => { if (feat('campfire')) void load(); });
   async function load() {

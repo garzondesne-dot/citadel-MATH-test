@@ -50,7 +50,7 @@ export const setCraftOn = (f: () => boolean) => { craftOn = f; };
 export const awakenBlocked = (hero: number) => AWAKEN_T[hero]?.[1] === 'craft' && !craftOn();
 export const BLOND = { base: 0, to: 16, enh: 10, fx: 'twin', title: 'slash10k' } as const; // 📜 11/17 옛 🌟 각성한 로안 (모습 id 16 은 그대로)
 export const AWK_ENH = 10;
-export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null; title?: string | null };
+export type LookIn = { hero?: number | null; enh?: number | null; fx?: string | null; title?: string | null; /** 📜 11/26 이 용사로 각성한 적 있음(accounts/…/awk/{용사}) = 호칭 · 스킬을 바꿔도 각성 유지 */ had?: boolean | null };
 /** 각성 모습 id (그 용사가 각성했을 때) */
 export const awkId = (hero: number) => (hero === 0 ? BLOND.to : 100 + hero);
 /** 모습 id → 원래 용사 (각성 아니면 그대로) */
@@ -68,7 +68,7 @@ export const awakenChecks = (p: LookIn, hero: number = Number(p.hero) || 0) => {
     { k: 'title', t: `🏅 호칭 「${(t && titleOf(t)?.name) || '?'}」 장착`, ok: !!t && p.title === t },
   ];
 };
-export const isAwakened = (p: LookIn) => { const h = Number(p.hero) || 0; return !!awkTitle(h) && !awakenBlocked(h) && awakenChecks(p, h).every((c) => c.ok); };
+export const isAwakened = (p: LookIn) => { const h = Number(p.hero) || 0; return !!awkTitle(h) && !awakenBlocked(h) && (!!p.had || awakenChecks(p, h).every((c) => c.ok)); }; // 📜 11/26 선생님 「한 번 각성하면 유지」(B) · 첫 각성 = 4칸 그대로
 /** 옛 이름 (로안 칸) */
 export const blondChecks = (p: LookIn) => awakenChecks(p, 0);
 export const isBlond = (p: LookIn) => Number(p.hero) === 0 && isAwakened(p);
