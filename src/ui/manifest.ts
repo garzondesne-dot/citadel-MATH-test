@@ -257,6 +257,8 @@ export const lgTilePos = (c: number, star: boolean) => `${(star ? 5 : c + 1) * 2
 /** 🏆 쉼터 놀이 결과 시상대 (🎨 11/24 mg-o-podium 코덱스 · 1/4 도트) */
 export const PODIUM_ART = 'art/minigame/podium-v1.webp';
 /** 📄 기말 · 시험지 마왕 그림 (🎨 11/25 exam-boss v2 4칸 = 대기 A · 대기 B · 수식 기호 빛 · 재로 흩어짐(쓰러짐) · exam-bg = 밤 교실) */
+/** 🌀 마왕성 차원문 (📜 11/28 · 1376 × 768 홀 · 문 = 300 × 420 칸을 1.9배로 (403, −124) · 문 안 = (570, 163) 240 × 490 · hole = 문 안쪽 모양(흰 알파 · 소용돌이 가면) · 마왕성(open)은 🌀 문 열기에서만) — 그림은 여기서만 이름 */
+export const GATE_ART = { bg: `${import.meta.env.BASE_URL}art/gate/gate-bg-empty-v1.webp`, done: `${import.meta.env.BASE_URL}art/gate/gate-done-v1.webp`, hole: `${import.meta.env.BASE_URL}art/gate/gate-hole-v1.webp`, open: `${import.meta.env.BASE_URL}art/gate/gate-open-v1.webp`, video: '' as string, W: 1376, H: 768, cell: { w: 300, h: 420, s: 1.9, x: 403, y: -124 }, box: { x: 570, y: 163, w: 240, h: 490 } } as const;
 export const EXAM_ART = { boss: `${import.meta.env.BASE_URL}art/exam/exam-boss-v2.webp`, bg: `${import.meta.env.BASE_URL}art/exam/exam-bg-v1.webp`, cols: 4 } as const;
 export const FUN_BG: Record<string, string> = { bal: 'art/fun/fun-arena-v1.webp', rev: 'art/fun/fun-dorm-v1.webp', quiz: 'art/fun/fun-ox-safe-v1.webp', nun: 'art/fun/fun-arena-v1.webp', ...(AK_ART.bg ? { ak: AK_ART.bg } : {}), aj: 'art/minigame/ajae-stage-v3.webp' /* 🎨 11/24 mg-o-ajae-stage · 왼쪽 아래 둥근 무대 = 현자 자리 */ };
 /** 새 그림 배경(🥏 · 😆)은 어둡게 덮지 않음 (그림 자체가 어두운 쪽을 비워 둠) */
