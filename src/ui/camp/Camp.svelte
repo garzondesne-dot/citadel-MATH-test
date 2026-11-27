@@ -45,8 +45,8 @@
   import { activePet } from '../../model/pets';
   import ExamCutin from '../exam/ExamCutin.svelte';
   import MockExam from '../exam/MockExam.svelte';
-  import AbcSheet from '../exam/AbcSheet.svelte';
-  import { ABC_TXT, abcKeys, abcOpen, abcOpenAny, abcRecPath, abcStep, type AbcRec } from '../../school/abcSheet';
+  import GateEnergy from '../gate/GateEnergy.svelte';
+  import { GATE_PATH, GATE_TXT, gateOpened } from '../../school/gate';
   import { SCHOOL_BUILD } from '../../channel';
   import { EXAM_TXT, bandText, cutSeen, examDateOf, inPeriod, markCut, skyColor, skyLevel } from '../../school/examEvent';
   import NameTag from '../cos/NameTag.svelte';
@@ -135,9 +135,11 @@
   const mockOn = exOn && !SCHOOL_BUILD; // 📄 모의 시험지 = 기간 중 · 학교판 · 체험판 숨김
   let mockGo = $state(false);
   // 🚪 던전 문 1차 · 📄 기말 대비 답안지 (📜 11/25 · 머리 🔨): 학생 = 선생님이 내 반을 열어 둔 동안만 · 🧪 테스트 · 교사 = 정답표가 있거나 어느 반이든 열려 있으면 · 체험판 = 숨김
-  let abcGo = $state(false);
-  const abcShow = $derived.by(() => { void tVer; void sheet; if (trial) return false; if (realStu && pupil) return abcOpen(S, pupil.cls); return abcOpenAny(S).length > 0 || Object.keys(abcKeys(S)).length > 0; });
-  const abcPassed = $derived.by(() => { void tVer; void sheet; void abcGo; return realStu && pupil ? abcStep(S.get<AbcRec>(abcRecPath(bonusBase(pupil.cls, pupil.num)))).kind === 'done' : false; });
+  // 🌀 마왕성 차원문 (📜 11/28): 그 반이 차원문 수업을 연 뒤 = 캠프 문 이름표 「🌀 마왕성 차원문」 · 누르면 ⚡ 에너지 화면 (수업이 열려 있으면 「입장!」 그대로)
+  let gateGo = $state(false), gateV = $state(0);
+  onDestroy(S.watch(`${GATE_PATH}/opened`, () => gateV++));
+  const gateCls = untrack(() => (!trial && !fromMe0 && pupil ? pupil.cls : ''));
+  const gateOn = $derived.by(() => { void gateV; void tVer; return !!gateCls && gateOpened(S, gateCls); });
   const realStu = untrack(() => !fromMe0 && !!pupil && !!meBound() && !isExcluded(S, pupil.cls, pupil.num));
   const M = realStu ? useMe(0, 0, false, false) : trial ? useMe(TRIAL_GEM[0], 0, false, false) : useMe(typeof P.reward.gem === 'number' ? P.reward.gem : 0, typeof P.reward.scroll === 'number' ? P.reward.scroll : 0, true, fromMe0);
   const me = M.me;
@@ -279,7 +281,6 @@
     const t: Record<string, string> = {}, rv = feat('scarecrow') ? reviewNow() : { left: 0, gem: 0 }, cn = feat('citadel') ? castleLeft() : 0, rc = feat('board') ? portal.recruit : null;
     if (rv.left > 0) t.scare = `복습 ${rv.left}${rv.gem ? ` · 💎+${rv.gem}` : ''}`;
     if (cn > 0) t.castle = `새 방 ${cn}`;
-    if (abcShow && !abcPassed) t.castle = '📄 답안지 · 지금!'; // 🚪 던전 문 1차 (📜 11/25)
     if (mailN > 0) t.mail = `소식 ${mailN}`;
     if (feat('forge') && wishN > 0) t.anvil = `카드 ${wishN}`;
     if (open && !trial) t.gate = '⚔ 수업 열림 · 입장!'; // 👩‍🏫 체험판 = 차원문 = 「다른 차시」 이름표만
@@ -325,7 +326,6 @@
     const t: Record<string, { n: string; gem?: number }> = {}, rv = feat('scarecrow') ? reviewNow() : { left: 0, gem: 0 }, cn = feat('citadel') ? castleLeft() : 0, rc = feat('board') ? portal.recruit : null;
     if (rv.left > 0) t.scare = { n: String(rv.left), gem: rv.gem || undefined };
     if (cn > 0) t.castle = { n: String(cn) };
-    if (abcShow && !abcPassed) t.castle = { n: '📄' }; // 🚪 던전 문 1차
     if (mailN > 0) t.mail = { n: String(mailN) };
     if (feat('forge') && wishN > 0) t.anvil = { n: String(wishN) };
     if (rc) t.dummy = { n: `${rc.n}/${rc.max}` };
@@ -367,7 +367,7 @@
   function ground() { showAll = true; if (allTimer) clearTimeout(allTimer); allTimer = setTimeout(() => (showAll = false), 2000); }
   const wishN = $derived(wishLeft(me.wishes, me.cards));
   const NAME: Record<string, string> = { nest: '둥지', wardrobe: '옷장', tentdeco: '기록 텐트', gate: '던전 문', castle: '성채', tent: '출제 공방', anvil: '모루', dummy: '게시판', scare: '허수아비', mail: '우편함', hero: '내 용사' }; // 🏷 #72 이름표 = 2~4글자 · 아이콘 없음 (부제 「복습 n~m차시」 = 그 창 맨 위)
-  const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : '차시 던전 · 닫힘');
+  const gateText = $derived(trial ? '다른 차시' : open ? `${L.no}차시 던전` : gateOn ? GATE_TXT.name : '차시 던전 · 닫힘');
 
   // 🔁 새로 고침돼도 보던 시트로 (📜 2026-11-14 모든 판 공통 화면 규칙 ①): 이 탭에서 10분 안 · 열린 시트 이름만 기억
   const SK = 'citadel-camp-sheet';
@@ -500,7 +500,7 @@
     M.mark(id);
     if (id === 'gate' && trial) { trial.ongate(); return; }
     if (id === 'mail' && teach) { tPanel = 'mail'; return; } // 🐞 #153 교사 우편함 = 교사 소식함 하나(학생 빈 우편함 + 「선생님 칸」 📮 두 겹 없앰)
-    if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else sheet = 'gate'; return; }
+    if (id === 'gate') { if (open) location.href = `?role=student&room=${encodeURIComponent(code)}`; else if (gateOn) gateGo = true; else sheet = 'gate'; return; } // 🌀 차원문을 연 반 = ⚡ 에너지 화면
     if (id === 'scare') { sheet = 'review'; return; }
     if (id === 'tentdeco') { sheet = 'rec'; return; } // ⛺ #73 기록 텐트 // 🎯 #71 허수아비 = 복습만 (#66 배움터 두 단추 없앰)
     if (id === 'dummy') boardJoin = portal.recruit?.pid ?? ''; // 🌀 모집 중 방 = 그 방에 바로 참여 (캠프 A)
@@ -562,7 +562,6 @@
       {#if feat('scarecrow')}<li><button type="button" data-todo="scare" onclick={() => tap('scare')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>복습 (허수아비)</b><small>지난 차시 문제 · 숫자를 바꿔서</small></span></button></li>{/if}
       {#if feat('citadel')}<li><button type="button" data-todo="castle" onclick={() => tap('castle')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{visibleCastles().length ? `${visibleCastles().map((f) => `${f.floor}층`).join(' · ')} 평가` : '평가'} (성채 던전)</b><small>방 하나 = 문항 하나</small></span></button></li>{/if}
       {#if feat('author')}<li><button type="button" data-todo="tent" onclick={() => tap('tent')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>문제 만들기 (출제 공방)</b><small>내가 만든 문제를 친구가 풀어요</small></span></button></li>{/if}
-      {#if abcShow && !abcPassed}<li><button type="button" data-todo="abc" onclick={() => (abcGo = true)}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>{ABC_TXT.name}</b><small>종이로 푼 답 입력 · {ABC_TXT.door}</small></span><em>지금</em></button></li>{/if}
       {#if svNo && !svSent}<li><button type="button" data-todo="survey" onclick={() => (sheet = 'survey')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>수업 설문 ({svLabel(svNo)})</b><small>3분 · 이름 없이 · +{REWARD.xp} EXP · 💎+{REWARD.gem}</small></span><em>지금</em></button></li>{/if}
       <li><button type="button" data-todo="mail" onclick={() => tap('mail')}><span class="ck" aria-hidden="true">□</span><span class="tx"><b>선생님 소식 (우편함)</b><small>선생님이 보낸 글</small></span></button></li>
     </ul>
@@ -599,7 +598,7 @@
     {#snippet tag(k: string)}
       {@const gOpen = k === 'gate' && open && !trial}
       {@const td = todoN[k]}
-      {#if tagOn(k) || gOpen}<span class="tag" class:todo={!!td || gOpen} data-k="tag-{k}"><b>{gOpen ? '입장!' : k === 'gate' && trial ? '다른 차시' : NAME[k]}</b>{#if teach && tTodo[k === 'tentdeco' ? '' : k]}<i class="cnt tc" data-k="tcnt-{k}" title="선생님 할 일">{tTodo[k]}</i>{:else if td}<i class="cnt" data-k="cnt-{k}">{td.n}</i>{/if}</span>{#if td?.gem}<span class="gchip" data-k="gem-{k}">💎+{td.gem}</span>{/if}{/if}
+      {#if tagOn(k) || gOpen || (k === 'gate' && gateOn)}<span class="tag" class:todo={!!td || gOpen} data-k="tag-{k}"><b>{gOpen ? '입장!' : k === 'gate' && trial ? '다른 차시' : k === 'gate' && gateOn ? GATE_TXT.name : NAME[k]}</b>{#if teach && tTodo[k === 'tentdeco' ? '' : k]}<i class="cnt tc" data-k="tcnt-{k}" title="선생님 할 일">{tTodo[k]}</i>{:else if td}<i class="cnt" data-k="cnt-{k}">{td.n}</i>{/if}</span>{#if td?.gem}<span class="gchip" data-k="gem-{k}">💎+{td.gem}</span>{/if}{/if}
     {/snippet}
     {#each ['castle', 'gate'].filter((k) => k === 'gate' || feat('citadel')) as k (k)}
       <button type="button" class="zone {hl(k)}" class:tp={!!tapN[k]} class:rm={RM} data-zone={k} style={zoneStyle(k)} aria-label={k === 'gate' ? gateText : NAME[k]} onclick={(e) => go(k, e)}>
@@ -671,11 +670,11 @@
   </BottomAction>
 </div>
 
-{#if abcGo}<AbcSheet {S} base={realStu && pupil ? bonusBase(pupil.cls, pupil.num) : null} cls={realStu && pupil ? pupil.cls : null} oncastle={() => { abcGo = false; sheet = 'castle'; }} onclose={() => (abcGo = false)} />{/if}<!-- 🚪 던전 문 1차 (📜 11/25) -->
 {#if mockGo}<MockExam {S} packs={PACKS} reach={pupil ? doneNo(S, pupil.cls) : 99} base={realStu && pupil ? bonusBase(pupil.cls, pupil.num) : null} {me} save={M.save} onclose={() => (mockGo = false)} onreview={() => { mockGo = false; sheet = 'review'; }} />{/if}<!-- 📄 모의 시험지 (📜 11/25) -->
 {#if exCut && exDate}<ExamCutin date={exDate} ondone={() => { markCut(exWho, exDate); exCut = false; }} />{/if}<!-- ⚔ 출정 컷인 (📜 11/25) -->
 {#if awkPop !== null}<AwakenPop hero={awkPop} onclose={() => { markAwkSeen(awkPop!, S); awkPop = null; }} />{/if}
 {#if achQ.length}<AchievePop list={achQ} more={achMore} claim={achClaim} ondone={() => { achQ = []; achMore = 0; }} />{/if}<!-- 🏆 #73 -->
+{#if gateGo}<GateEnergy {S} {me} save={M.save} uid={castleWho.uid} num={castleWho.num} cls={gateCls} onclose={() => (gateGo = false)} />{/if}<!-- 🌀 마왕성 차원문 ⚡ (📜 11/28) -->
 {#if castleGo != null}
   <!-- 🏰 성채 던전 (📜 2026-11-14 · 올린 성채 팩 · 방 = 몬스터 한 마리 · 학생 레이드 화면 그대로) -->
   {#await loadCastle() then K}<K.default {S} {me} save={M.save} all={fromMe0 || !!trial} uid={castleWho.uid} num={castleWho.num} cls={castleWho.cls} floor={castleGo} onclose={() => (castleGo = null)} />{/await}
@@ -690,7 +689,6 @@
   <!-- 🏰 성채 시트 = 올린 성채 팩 중 보이는 층 (층 순서 · 📜 2026-11-14) · 층을 누르면 그 층 방 목록 -->
   <Sheet onclose={() => (sheet = null)} mainText={visibleCastles().length ? '🏰 성채 들어가기' : '닫기'} onmain={visibleCastles().length ? () => { castleGo = visibleCastles().length === 1 ? visibleCastles()[0]!.id : ''; sheet = null; } : undefined}>
     {#snippet title()}🏰 성채 던전{/snippet}
-    {#if abcShow}<button type="button" class="floor mockf abcf" data-k="castle-abc" onclick={() => { sheet = null; abcGo = true; }}><span class="no">📄</span><span><b>{ABC_TXT.name}{abcPassed ? ' · ✔ 통과' : ''}</b><span>{ABC_TXT.door} · 종이로 푼 답 입력</span></span></button>{/if}<!-- 🚪 11/25 -->
     {#if mockOn}<button type="button" class="floor mockf" data-k="castle-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="no">📄</span><span><b>{EXAM_TXT.mock.name}</b><span>성채 입구 옆 · 문제 은행 무작위 10문항 · 연습</span></span></button>{/if}<!-- 📄 11/25 -->
     {#each visibleCastles() as f (f.id)}<button type="button" class="floor" data-floor={f.id} onclick={() => { castleGo = f.id; sheet = null; }}><span class="no">{f.floor}</span><span><b>{floorName(f)}</b><span>방 {f.rooms.length}개 · 열림 {spanOf(f)}</span></span></button>{:else}<div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요 · 선생님이 성채 팩을 올리면 열려요</p></div>{/each}
   </Sheet>
@@ -747,7 +745,6 @@
     {#snippet title()}{exBand}{/snippet}
     <p class="exsub" data-k="exam-sub">{EXAM_TXT.bandSub}</p>
     <div class="exgo">
-      {#if abcShow}<button type="button" class="item" data-k="exam-go-abc" onclick={() => { sheet = null; abcGo = true; }}><span class="ic">📄</span><span class="tx"><b>{ABC_TXT.name}{abcPassed ? ' · ✔ 통과' : ''}</b><small>{ABC_TXT.door}</small></span></button>{/if}
       {#if feat('citadel')}<button type="button" class="item" data-k="exam-go-castle" onclick={() => (sheet = 'castle')}><span class="ic">🏰</span><span class="tx"><b>성채</b><small>방마다 문제 하나</small></span></button>{/if}
       {#if feat('scarecrow')}<button type="button" class="item" data-k="exam-go-scare" onclick={() => (sheet = 'review')}><span class="ic">🎯</span><span class="tx"><b>허수아비</b><small>차시 복습 · 숫자 바뀐 판</small></span></button>{/if}
       {#if mockOn}<button type="button" class="item" data-k="exam-go-mock" onclick={() => { sheet = null; mockGo = true; }}><span class="ic">📄</span><span class="tx"><b>{EXAM_TXT.mock.name}</b><small>문제 은행 무작위 10문항 · 연습</small></span></button>{/if}
