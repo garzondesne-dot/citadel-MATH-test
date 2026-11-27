@@ -9,7 +9,7 @@ const hit = (a, b) => !!(a && b && a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && 
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   for (const w of [375, 360]) for (const who of ['교사', '학생']) {
     const p = await (await b.newContext({ viewport: { width: w, height: 760 } })).newPage(); p.on('pageerror', (e) => errs.push(String(e)));
-    await p.goto(B + '?role=camp&from=me'); await p.evaluate(() => { localStorage.setItem('atb-e2e-nointro', '1'); for (const w of ['me', 'teacher']) localStorage.setItem(`citadel-exam-cut|${w}|2026-12-11`, '1'); }); await p.reload(); await p.waitForTimeout(2500);
+    await p.goto(B + '?role=camp&from=me'); await p.evaluate(() => { localStorage.setItem('atb-e2e-nointro', '1'); for (const w of ['me', 'teacher']) localStorage.setItem(`citadel-exam-cut|${w}|2026-12-10`, '1'); }); await p.reload(); await p.waitForTimeout(2500);
     if (who === '학생') { await p.click('[data-k="as-stu"]').catch(() => {}); await p.waitForTimeout(800); }
     const B0 = { tabs: await box(p, '[data-k="t-cls"]'), ex: await box(p, '[data-k="exam-band"]'), sh: await box(p, '[data-k="shine-band"]'), one: await box(p, '[data-k="bands"]'), castle: await box(p, '[data-prop="castle"], .obj.castle') };
     const bands = [B0.ex, B0.sh, B0.one].filter(Boolean);

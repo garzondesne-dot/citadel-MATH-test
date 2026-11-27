@@ -9,7 +9,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const b = await chromium.launch(), errs = [], ok = (t, c, d = '') => { console.log(`${c ? '✅' : '❌'} ${t}${d ? ` · ${d}` : ''}`); if (!c) errs.push(t); };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push('캠프 ' + e));
-  await p.goto(B + '?role=camp&room=NE'); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-exam-cut|me|2026-12-11', '1'); }); await p.reload(); await p.waitForTimeout(2000);
+  await p.goto(B + '?role=camp&room=NE'); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-exam-cut|me|2026-12-10', '1'); }); await p.reload(); await p.waitForTimeout(2000);
   const gem = async () => Number(((await p.textContent('[data-k="wallet-gem"]')) || '').replace(/[^0-9]/g, ''));
   const g0 = await gem();
   await p.click('[data-prop="nest"]'); await p.waitForTimeout(500);

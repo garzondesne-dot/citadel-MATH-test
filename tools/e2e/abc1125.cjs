@@ -27,7 +27,7 @@ const K = { A: '1111111', B: '2222222', C: '3412341' };
   await t.screenshot({ path: `${SHOTS}/abc-teacher-card.png` });
   // ② 학생 캠프 (테스트 꼴 = 정답표가 있으면 보임 · 기록 = 이 화면만)
   const s = await ctx.newPage(); s.on('pageerror', (e) => errs.push('학생 ' + e));
-  await s.goto(B + '?role=camp&from=me'); await s.evaluate(() => { localStorage.setItem('atb-e2e-nointro', '1'); for (const w of ['me', 'teacher']) localStorage.setItem(`citadel-exam-cut|${w}|2026-12-11`, '1'); }); await s.reload(); await s.waitForTimeout(2500);
+  await s.goto(B + '?role=camp&from=me'); await s.evaluate(() => { localStorage.setItem('atb-e2e-nointro', '1'); for (const w of ['me', 'teacher']) localStorage.setItem(`citadel-exam-cut|${w}|2026-12-10`, '1'); }); await s.reload(); await s.waitForTimeout(2500);
   await s.click('[data-k="as-stu"]').catch(() => {}); await s.waitForTimeout(800);
   await s.click('[data-zone="castle"]'); await s.waitForSelector('[data-k="castle-abc"]', { timeout: 6000 });
   ok('② 🏰 성채 시트 맨 위 = 📄 답안지', true);

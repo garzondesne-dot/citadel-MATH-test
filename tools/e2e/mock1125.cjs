@@ -10,7 +10,7 @@ const SHOTS = process.argv[2] || '.', B = process.argv[3] || 'http://localhost:4
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   await ctx.addInitScript(() => { const T = Date.parse('2026-11-25T03:00:00Z'), D0 = Date, off = T - D0.now(); class FD extends D0 { constructor(...a) { super(...(a.length ? a : [D0.now() + off])); } static now() { return D0.now() + off; } } globalThis.Date = FD; });
   const p = await ctx.newPage(); p.on('pageerror', (e) => errs.push('캠프 ' + e));
-  await p.goto(B + '?role=camp&room=MX'); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-exam-cut|me|2026-12-11', '1'); }); await p.reload(); await p.waitForTimeout(1500);
+  await p.goto(B + '?role=camp&room=MX'); await p.evaluate(() => { localStorage.clear(); localStorage.setItem('citadel-exam-cut|me|2026-12-10', '1'); }); await p.reload(); await p.waitForTimeout(1500);
   await p.click('[data-k="exam-band"]'); await p.waitForTimeout(300);
   ok('① 띠 시트에 📄 무지의 마왕 모의전', !!(await p.$('[data-k="exam-go-mock"]')));
   await p.click('[data-k="exam-go-mock"]'); await p.waitForTimeout(500);

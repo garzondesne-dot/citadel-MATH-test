@@ -14,7 +14,7 @@ const SHOTS = process.argv[2] || '.', B = (process.argv[3] || 'http://localhost:
     await p.waitForTimeout(800); await p.click('[data-k="try-close"]'); await p.waitForTimeout(900);
   };
   await p.goto(B); await p.waitForSelector('[data-k="trial"]');
-  await p.evaluate(() => sessionStorage.setItem('citadel-exam-cut|me|2026-12-11', '1'));
+  await p.evaluate(() => sessionStorage.setItem('citadel-exam-cut|me|2026-12-10', '1'));
   await p.fill('[data-k="trial-name"]', '체험이'); await p.click('[data-k="trial-stu"]');
   await p.waitForSelector('[data-k="first-hero"]', { timeout: 5000 }).catch(() => {});
   await p.click('[data-k="first-hero"] .ba-main, [data-k="first-hero"] button:has-text("시작")'); await p.waitForTimeout(400);
