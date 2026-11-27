@@ -8,14 +8,15 @@
   // 🚪 던전 문 1차 · 📄 기말 대비 답안지 (📜 11/25 · 머리 🔨): 종이로 푼 답을 7줄 × ① ~ ④ 로 고름 → 「정말 낼까요?」 → 채점
   //   7 / 7 = 통과(던전 문 돌) · 아니면 틀린 번호만(정답 안 보임) + 다음 세트 · C 뒤 = 틀린 번호만 다시 입력
   //   열림 = 선생님이 그 반을 열어 둔 동안(open) · base 없음(🧪 테스트 · 교사) = 이 화면 안에서만 기록
-  const { S, base = null, cls = null, oncastle, onclose }: { S: Store; base?: string | null; /** 반 (null = 🧪 테스트 · 교사 = 늘 열림) */ cls?: string | null; oncastle?: () => void; onclose: () => void } = $props();
+  //   🌀 차원문 수업 (📜 11/28): inline = 수업 화면 안(닫기 없음) · live = 그 반 차원문 수업 중(열림) · practice = 📄 B세트부터 연습(기록 · 보상 없음 · 판 수만) · onsubmit = 낸 뒤 (통과 → 부모가 통과 화면)
+  const { S, base = null, cls = null, oncastle, onclose, inline = false, live = null, practice = false, onsubmit }: { S: Store; base?: string | null; /** 반 (null = 🧪 테스트 · 교사 = 늘 열림) */ cls?: string | null; oncastle?: () => void; onclose: () => void; inline?: boolean; live?: boolean | null; practice?: boolean; onsubmit?: (r: { pass: boolean; practice: boolean }) => void } = $props();
   let ver = $state(0); { const tk = setInterval(() => ver++, 2000); onDestroy(() => clearInterval(tk)); } // 서버 칸(열림 · 정답표)이 늦게 와도 따라감
-  const open = $derived.by(() => { void ver; return cls == null || abcOpen(S, cls); });
+  const open = $derived.by(() => { void ver; return live != null ? live : cls == null || abcOpen(S, cls); });
   const T = ABC_TXT, CIRC = ['①', '②', '③', '④'];
   // 기록 = 서버 거울에서 늘 다시 읽음(늦게 와도 · 다른 기기에서 낸 것도) · 🧪 테스트 = 이 화면 안(local)
-  let local = $state<AbcRec | null>(null), saved = $state(0);
-  const rec = $derived.by<AbcRec | null>(() => { void ver; void saved; return base ? (S.get<AbcRec>(abcRecPath(base)) ?? null) : local; });
-  const ready = $derived.by(() => { void ver; return !base || !S.loaded || S.loaded(abcRecPath(base)) || S.loaded(base); }); // 🐞 내 기록이 오기 전엔 못 냄(낸 세트를 다시 내는 일 막기)
+  let local = $state<AbcRec | null>(untrack(() => (practice ? { A: { nums: [], g: '', wrong: [], at: 0 } } : null))), saved = $state(0); // 📄 연습 = A 를 건너뛴 채 B 부터 (이 화면 안에만)
+  const rec = $derived.by<AbcRec | null>(() => { void ver; void saved; return base && !practice ? (S.get<AbcRec>(abcRecPath(base)) ?? null) : local; });
+  const ready = $derived.by(() => { void ver; return practice || !base || !S.loaded || S.loaded(abcRecPath(base)) || S.loaded(base); }); // 🐞 내 기록이 오기 전엔 못 냄(낸 세트를 다시 내는 일 막기)
   let given = $state<number[]>([]), ask = $state(false), res = $state<{ ok: number; total: number; wrong: number[]; title: string } | null>(null);
   const st = $derived<AbcStep>(abcStep(rec));
   const key = $derived.by(() => { void ver; return keyFor(st, abcKeys(S)); });
@@ -27,18 +28,19 @@
     if (!key || !open || !ready) return;
     if (!ask) { ask = true; return; }
     const at = Date.now(), r = submitAbc(rec, key, given.slice(), at), t = title;
-    if (base) { S.set(abcRecPath(base), r.rec); saved++; } else local = r.rec;
+    if (base && !practice) { S.set(abcRecPath(base), r.rec); saved++; } else local = r.rec;
     res = { ok: r.ok, total: r.total, wrong: r.wrong, title: t }; ask = false; given = [];
     sfx(r.wrong.length ? 'smash' : 'finish', 0.6); scrollTo?.({ top: 0 });
+    onsubmit?.({ pass: !r.wrong.length, practice });
   }
   const why = $derived(!open ? T.closed : !key ? T.noKey : !ready ? '내 기록 불러오는 중…' : '');
   const mainText = $derived(ask ? (blanks ? `빈칸 ${blanks}개 · 정말 낼까요?` : '정말 낼까요? · 세트마다 한 번') : '📝 제출');
 </script>
 
-<div class="ab" data-k="abc-sheet" data-step={st.kind} data-set={st.kind === 'set' ? st.set : st.kind} style:--bg="url({EXAM_ART.bg})">
+<div class="ab" class:inline data-k="abc-sheet" data-step={st.kind} data-set={st.kind === 'set' ? st.set : st.kind} data-practice={practice ? '1' : '0'} style:--bg="url({EXAM_ART.bg})">
   <header class="top">
     <button type="button" class="back" aria-label="닫기" onclick={onclose}>‹</button>
-    <b class="ttl">{T.name}</b>
+    <b class="ttl">{practice ? '📄 연습 · 기록 안 남아요' : T.name}</b>
   </header>
 
   {#if res}
@@ -46,8 +48,8 @@
       <p class="rt">{res.title}</p>
       {#if !res.wrong.length}
         <div class="stones" aria-hidden="true">{#each Array(7) as _, i (i)}<i style="--i:{i}">🪨</i>{/each}</div>
-        <p class="big ok" data-k="abc-pass">{T.pass}</p>
-        <p class="sub">{T.after}</p>
+        <p class="big ok" data-k="abc-pass">{practice ? '7 / 7 · 연습 통과!' : T.pass}</p>
+        <p class="sub">{practice ? '연습은 기록 · 조각 · 에너지 · 보상이 없어요' : T.after}</p>
       {:else}
         <p class="big" data-k="abc-score">{T.fail(res.ok, res.total)}</p>
         <p class="sub">{T.wrongLine}</p>
@@ -55,8 +57,8 @@
         {#if st.kind === 'redo' && st.round > ABC_HELP_AT}<p class="help" data-k="abc-help">{T.help}</p>{/if}
       {/if}
     </section>
-    {#if st.kind === 'done'}
-      <BottomAction dock={false} mainLabel="🏰 성채 던전으로" text="🏰 성채 던전으로" onmain={() => (oncastle ? oncastle() : onclose())} />
+    {#if st.kind === 'done' || (practice && st.kind === 'redo')}
+      <BottomAction dock={false} mainLabel={practice ? '연습 끝' : '🏰 성채 던전으로'} text={practice ? '◀ 연습 끝' : '🏰 성채 던전으로'} onmain={() => (oncastle ? oncastle() : onclose())} />
     {:else}
       <BottomAction dock={false} mainLabel={st.kind === 'set' ? T.next(st.set) : T.redo} text={st.kind === 'set' ? T.next(st.set) : T.redo} onmain={() => { res = null; scrollTo?.({ top: 0 }); }} />
     {/if}
@@ -86,6 +88,8 @@
 </div>
 
 <style>
+  .ab.inline:not([data-practice='1']) .back { visibility: hidden; }
+  .ab.inline { position: relative; inset: auto; z-index: auto; min-height: 100%; max-width: none; }
   .ab { position: fixed; inset: 0; z-index: 40; overflow-y: auto; background: #120a1c var(--bg) center top / cover no-repeat; color: var(--text); display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; }
   .top { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 12px; background: rgba(18, 10, 28, 0.92); }
   .back { width: 44px; height: 44px; border: 0; background: none; color: #fff; font-size: 28px; }

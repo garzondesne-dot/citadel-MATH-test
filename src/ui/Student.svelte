@@ -69,6 +69,8 @@
   import { solvedN } from '../raid/raid';
   import { analyze } from '../raid/combo';
   import { petriToast } from './q/petriPop.svelte';
+  import GatePhone from './gate/GatePhone.svelte';
+  import { gateOf, isGatePack } from '../school/gate';
 
   // 📱 학생 폰 (탭 B) — ②B 틀: 장면 띠 → 카드(정찰 · 문제 · 결과 · 틀림이 같은 자리) → 주요 단추 1
   //   다시 그려도 스크롤 · 입력이 날아가지 않음: 화면 조각은 그대로 두고 바뀐 칸만 고침 (정식 paint() 원칙)
@@ -219,7 +221,8 @@
   // 📚 수업 끝 기록 = 시험 서버 records/{반}/{번호}/{차시} = 정식 꼴 (#141 · 그 학생으로 로그인한 폰만 · 한 수업에 한 번 · 다시 끝나면 덮어씀)
   const closedMid = $derived(!!R && !!R.state.closed && !isLobby(R) && !isEnd(L, R)); // 🎯 수업을 중간에 닫음 = 기록도 남김(남은 몬스터 = 복습으로 · 📜 2026-11-16)
   // 🐞 11/20 ① 받기 전 빈 값: 내 기록 · 지갑 · EXP · held 칸을 받기 전에 쓰면 = 옛 기록을 null 로 · 받은 보상을 다시 · 💎 total 을 「0 + 보상」으로 덮어씀 → 받은 뒤에 씀
-  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); feedLesson(); /* 🐾 수업 한 차시 끝까지 = 펫 먹이 +5 (차시마다 한 번 · 📜 11/25) · 🐞 11/26 보상 앞에 · 따로 */ payReward(b, before); }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
+  const gatePack = untrack(() => isGatePack(L)); // 🌀 차원문 차시 = 수업 기록 · 수업 보상 · 펫 먹이 없음 (보상 = 답안지 통과 한 번 · 성채 그대로)
+  $effect(() => { const b = meBound(); if (!(result || closedMid) || !b || board || !R || gatePack) return; const go = () => untrack(() => { if (!R) return; const path = `records/${b.cls}/${b.num}/${L.id}`; const before = b.S.get<Record<string, { code?: string; firstXp?: number } | null>>(`records/${b.cls}/${b.num}`) || {}; b.S.set(path, summaryOf(L, R, uid, code, S.now(), b.S.get(path))); if (L.carryOf) carryRecords(L, carryStates(L, R, uid, S.now()), `records/${b.cls}/${b.num}`, (p) => b.S.get(p), (p, v) => b.S.set(p, v)); feedLesson(); /* 🐾 수업 한 차시 끝까지 = 펫 먹이 +5 (차시마다 한 번 · 📜 11/25) · 🐞 11/26 보상 앞에 · 따로 */ payReward(b, before); }); const need = [`records/${b.cls}/${b.num}`, `gem/${b.cls}/${b.num}`, `xp/${b.cls}/${b.num}`, `held/${b.cls.replace(/[.#$/[\]]/g, '_')}`]; if (need.every((x) => isReady(b.S, x))) go(); else void whenReady(b.S, need, 120000).then((ok) => { if (ok) go(); else rewardLine = '⚠ 서버가 느려 기록을 아직 못 남겼어요 · 다시 들어오면 남겨요'; }); }); // 정식 꼴 (#163 ③ · school/records.ts)
   // 🐾 👩‍🏫 체험판 = 서버 기록이 없어도 수업 끝(결과)이면 펫 먹이 (📜 11/25 #둥지-1 B · 차시마다 한 번 · ×5 는 petFeedNow 안)
   $effect(() => { if (!TRIAL || !result || board) return; untrack(() => feedLesson()); });
   // 🐞 11/26 1-1반 「끝났는데 먹이 5 가 안 들어와요」: 먹이를 줘도 수업 끝 화면에 아무 표시가 없었음 + 보상 계산 뒤에 붙어 있어 앞에서 멈추면 같이 빠짐 → 따로 · 먼저 · 끝 화면에 한 줄
@@ -268,7 +271,8 @@
   }); });
   const inEnd = $derived(!!result); // 값이 바뀔 때만 (결과 객체는 R 이 바뀔 때마다 새로 만들어져 타이머가 밀리지 않게)
   $effect(() => { const c = inEnd; untrack(() => { clearTimeout(armT); if (c) armT = setTimeout(() => (campArm = true), 1500); else campArm = false; }); });
-  const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn());
+  const gate = $derived(step ? gateOf(step) : null); // 🌀 차원문 단계 = 「TV 를 봐요」 대신 그 화면
+  const talk = $derived(!!R && !isLobby(R) && !result && !R.state.closed && !!step && (step.kind === 'concept' || step.kind === 'intro') && !paperOn() && !gate);
   $effect(() => { void step?.id; vidOn = ''; });
   const cptId = $derived(step && (step.kind === 'monster' || step.kind === 'boss') ? conceptOf(L, step.id) : null);
   // 📝 공부 증거 한 줄 (B · 2026-11-14): 수업 끝 = 이 수업에서 낸 소문제 수를 그날 칸에 적고 「오늘 푼 문제 n개 · 지난주보다 +k」
@@ -297,7 +301,7 @@
 {:else if talk && R && !board}
   <!-- 📣 도입 · 개념 (📜 2026-11-15 선생님 「빈 화면 · 고장 난 것 같아」): 위 = 그 차시 던전 배경 + 내 용사(오라 · 숨쉬기) + 설명 중 띠 · 몬스터 단계와 같은 장면 부품 -->
   <Scene noMon theme={L.theme} sprite={Object.values(L.monsters).find((m) => m.sprite)?.sprite ?? L.boss?.sprite ?? ''} {gem} note="👩‍🏫 선생님 설명 중 · TV 를 봐요" />
-{:else if R && !board}
+{:else if R && !board && !gate}
   <div class="gtop"><ModeSwitch /></div><!-- 📝 장면이 없는 화면(대기 · 개념 · 결과)에도 「게임 | 제출」 -->
 {/if}
 <section class="body" class:battle use:keepScroll>
@@ -312,6 +316,9 @@
     <KeyGate {S} {L} {R} {code} {uid} /><!-- 🔑 #59 대기실 열쇠 얻기 -->
     {#if R.meta.profile === 'test'}<button type="button" class="tbtn" data-k="test-explore" disabled={!!expOf(R, uid)} onclick={() => S.set(`rooms/${code}/players/${uid}/exp`, { n: 2, m: {}, test: true })}>{(R.meta as { trial?: boolean }).trial ? (expOf(R, uid) ? '🔥 탐사대예요' : '✔ 탐사대로 보기') : expOf(R, uid) ? '🔥 탐사대예요 (테스트)' : '✔ 테스트: 탐사대로 보기'}</button>{/if}<!-- 🔥 #67 테스트 · 체험판 = 예습 없이 탐사대 -->
     <BottomAction text="⏳ 시작을 기다려요" why="선생님이 시작하면 바로 시작해요" />
+  {:else if result && gatePack}
+    <div class="bcard" data-k="gate-end"><span class="lab acc">🌀 마왕성 차원문</span><p>오늘 지은 차원문은 캠프 🌀 에서 다시 볼 수 있어요 · ⚡ 에너지는 캠프에서도 모을 수 있어요</p></div>
+    {#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" />{:else}<BottomAction text="🏁 마무리" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}
   {:else if result}
     <Loot {S} {L} {R} {uid} {code} {nick} {gem} me={meBound()} />
     {#if proof || petLine}<div class="bcard">{#if proof}<p class="proof" data-k="proof">{proof}</p>{/if}{#if rewardLine}<p class="rwd" data-k="reward">{rewardLine}</p>{/if}{#if petLine}<p class="rwd" data-k="pet-feed">{petLine}</p>{/if}</div>{/if}
@@ -326,6 +333,8 @@
     <!-- 🐞 갑자기 넘어감 (📜 2026-11-15): 선생님이 수업을 닫는 순간 「마무리 중」(눌리지 않음) 자리가 「🏕 내 캠프로」 링크로 바뀌어 · 화면을 만지던 손가락이 그대로 눌러 캠프로 감
          → 닫혀도 결과 화면은 그대로 · 단추는 바뀐 뒤 1.5초 동안 눌리지 않음(🏁 수업이 끝났어요) · 그다음에만 캠프로 -->
     {#if campArm}<BottomAction href="?" text="🏕 내 캠프로" mainLabel="내 캠프로" why={R.state.closed ? '🏁 수업이 끝났어요' : '수업이 열려 있으면 캠프 🌀 차원문으로 다시 와요'} />{:else}<BottomAction text="🏁 마무리" why="잠시 뒤 캠프로 갈 수 있어요" />{/if}
+  {:else if step && gate && !R.state.closed}
+    <GatePhone {S} {R} {code} kind={gate} {cls} {num} {uid} /><!-- 🌀 마왕성 차원문 (📜 11/28) -->
   {:else if step && (step.kind === 'concept' || step.kind === 'intro')}
     <!-- 📣 정식 student.js 개념 단계(「📣 알림 · 선생님에게 주목하세요 · 단계 이름 · 말」) + 칸 그림 · 영상 · 도입 = 🔁 전시 확인 칸 그림 · 🐞 그 전엔 도입(intro) 단계를 그리지 않아 빈 화면 -->
     {#if step.kind === 'concept' && step.check && ccRan(R, step)}<ConceptCheckCard {S} {R} {code} {uid} {step} {now} />{/if}<!-- ✔ 개념 체크 (📜 2026-11-15 · 리모컨이 열 때만) -->

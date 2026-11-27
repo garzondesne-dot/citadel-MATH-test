@@ -23,12 +23,15 @@
   import { GEM, kstDay } from '../../board/board';
   import Student from '../Student.svelte';
   import BottomAction from '../battle/BottomAction.svelte';
+  import type { Snippet } from 'svelte';
+  import { GATE_TXT, pickRoom } from '../../school/gate';
 
   // 🏰 성채 던전 (📜 2026-11-14 · DECISIONS 「🏰 성채던전 팩 · ➕ 추가 팩 관리」 · 정식 js/raid/bonus.js)
   //   층 목록 → 방 목록 → 방 하나 = 몬스터 한 마리(1:1 · 혼자) · 전투 = 학생 레이드 화면(Student · MonsterForm · ChainView · 룬 키패드) 그대로 🪞
   //   열림 = 반 진도 ≥ 방 no · 👑 = 열린 방 60%(올림) 처치 · 기회 4 · 틀린 소문제만 다음 판 숫자 · 실패 = 💧 벌 없음
   //   preview = 👁 선생님 미리 보기: 모든 방 열림 · 기록 · 데미지 없음 · 처치 기록 = bonus/{반}/{번호}/{팩}/{방}
-  const { S, me = null, save: persist = () => {}, uid, num = 0, cls = '', preview = false, all = false, floor = '', onclose }: { S: Store; /** 👩‍🏫 교사 캠프 = 모든 방 열림(기록은 남음) */ all?: boolean; me?: Me | null; /** 💎 · EXP 저장 (캠프 M.save) */ save?: () => void; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void } = $props();
+  //   🌀 차원문 ⚡ 에너지 (📜 11/28): gate = 이 화면에서 연 방을 맞히면 onwin(⚡ +1 · 성채 기록 · 💎 · EXP 는 그대로) · top = 맨 위 반 카드 · 🎲 무작위 한 문제 · noBack = 수업 안(닫기 없음)
+  const { S, me = null, save: persist = () => {}, uid, num = 0, cls = '', preview = false, all = false, floor = '', onclose, gate = null, top, noBack = false }: { S: Store; /** 👩‍🏫 교사 캠프 = 모든 방 열림(기록은 남음) */ all?: boolean; me?: Me | null; /** 💎 · EXP 저장 (캠프 M.save) */ save?: () => void; uid: string; num?: number; cls?: string; preview?: boolean; floor?: string; onclose: () => void; gate?: { onwin: () => void } | null; top?: Snippet; noBack?: boolean } = $props();
   const floors = $derived(preview ? castles.list : visibleCastles());
   // 🧑 기록 자리 = 그 학생으로 로그인한 폰이면 서버 정식 경로 · 아니면 이 기기(테스트 · 체험)
   const RS = untrack(() => meBound()?.S ?? S);
@@ -181,6 +184,7 @@
   function finish(x: NonNullable<typeof run>, RR: Room) {
     if (drive) clearInterval(drive); drive = null;
     const runs0 = Number(recs[x.r.id]?.runs) || (Number(recs[x.r.id]?.tries) ? 1 : 0), o0 = outcome(x, RR);
+    if (gate && !preview && o0.clear) gate.onwin(); // 🌀 ⚡ 에너지 화면에서 연 방 + 맞힘 = +1 (다시 맞혀도)
     const phAsk = o0.clear && !!x.r.photo && !x.r.chain && phOn(x.P, x.r) && !recs[x.r.id]?.clear; // 📷 답을 맞힘 → 처치는 사진 통과 뒤
     let ans: CastleRec['ans'];
     if (phAsk) { const pr = plainRecord(x.L, RR, x.r.id, uid), at = pr.tries.find((t) => t.total > 0 && t.correct === t.total)?.attempt ?? 0; ans = { items: phItemsOf(itemsFor(x.L, RR, x.r.id, uid, at)) }; }
@@ -208,8 +212,14 @@
   const sealedOf = (f: CastlePack) => f.rooms.some((r) => r.boss && recsOf(f)[r.id]?.clear);
   const seals = $derived(floors.filter((f) => sealedOf(f)).length);
   const anyClear = $derived(floors.some((f) => Object.values(recsOf(f)).some((v) => v?.clear)));
+  /** 🎲 무작위 한 문제 = 모든 층의 열린 방 중 아직 처치 안 한 방 먼저 */
+  function randomGo() {
+    const all2 = floors.flatMap((f) => { const rc = recsOf(f), s2 = castleState(f, upto, rc, preview, manOf(f)); return f.rooms.map((r) => ({ f, r, open: s2.isOpen(r), clear: !!rc[r.id]?.clear })); });
+    const p = pickRoom(all2); if (!p) { toast = '열린 방이 없어요'; setTimeout(() => (toast = ''), 2400); return; }
+    fid = p.f.id; pickR = p.r.id; sfx('click', 0.4); start();
+  }
   function tile(r: CastleRoom) { if (!st?.isOpen(r)) { toast = lineOf(r); sfx('click', 0.3); setTimeout(() => (toast = ''), 2600); return; } pickR = r.id; start(); }
-  const title = $derived('🏰 성채던전');
+  const title = $derived(gate ? '⚡ 에너지 · 성채' : '🏰 성채던전');
   (globalThis as { __castle?: unknown }).__castle = { upto, base }; // 화면 시험 고리 (학생 화면엔 안 보임)
 </script>
 
@@ -223,7 +233,7 @@
 {:else}
 <div class="cs" role="dialog" aria-modal="true" aria-label="성채 던전" data-k="castle">
   <header class="bar">
-    <button type="button" class="back" aria-label="뒤로" onclick={back}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+    <button type="button" class="back" class:hide={noBack && !res} aria-label="뒤로" onclick={back}><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M14 4 7 11l7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
     <b class="t" class:long={!res && title.length > 9}>{res ? (res.clear ? '⚔ 처치!' : '💧 이번엔 여기까지') : title}</b>{#if !res}<span class="pill seal" data-k="castle-seal">🏆 업적 {seals}개</span>{/if}
     {#if me && !preview}<span class="pill" aria-label="마정석 {me.wallet.gem}개"><i class="wic" aria-hidden="true">💎</i>{me.wallet.gem.toLocaleString()}</span>
     {#if res}<span class="pill" aria-label="서술 조각 {me.wallet.scroll}개"><i class="wic" aria-hidden="true">📜</i>{me.wallet.scroll}</span>{/if}{:else if preview}<span class="pill pv2">👁 미리 보기</span>{/if}
@@ -240,9 +250,11 @@
         {#if P && st && !preview}<p class="sub">처치 {st.cleared} / 열린 방 {st.plain.length}{st.boss ? ` · 👑 ${st.bossOpen ? '보스 방 열림' : `${st.need}방 처치하면 보스`}` : ''}</p>{/if}
       </div>
     {:else}
+      {#if top}{@render top()}{/if}
+      {#if gate && floors.length}<button type="button" class="rnd" data-k="gate-random" onclick={randomGo}><b>{GATE_TXT.random}</b><small>{GATE_TXT.randomSub}</small></button><p class="fxl">아래에서 직접 골라도 돼요</p>{/if}
       <!-- 🏰 옛 정식 「게임처럼」 배치 (📜 2026-11-17 #16 · js/raid/bonus.js render): 큰 띠(보스 방 배경 + 소개) → 💎 보상 줄 → 🌀 층 포털 → 그 층 방 지도(몬스터 · 번호 · 이름 · 상태 · 💎) · 값 · 열림 규칙은 그대로 -->
-      <div class="cshero" style:background-image="url({dungeonOf('citadel-boss')})" data-k="castle-hero"><p>교과서 평가 문제를 숫자만 바꾼 문제 · <b>방 하나에 몬스터 한 마리</b><br /><small>순서 없이 아무 방이나 · 그 차시 진도를 나가면 방이 열려요 · 👑 보스 방은 열린 방의 60%를 처치하면!</small></p></div>
-      <p class="fxl">✨ 🏆 업적 {seals}개 · 층마다 👑 보스 방을 처음 처치하면 업적 +1 (🎯 허수아비 형성평가 재대결도)</p>
+      {#if !gate}<div class="cshero" style:background-image="url({dungeonOf('citadel-boss')})" data-k="castle-hero"><p>교과서 평가 문제를 숫자만 바꾼 문제 · <b>방 하나에 몬스터 한 마리</b><br /><small>순서 없이 아무 방이나 · 그 차시 진도를 나가면 방이 열려요 · 👑 보스 방은 열린 방의 60%를 처치하면!</small></p></div>{/if}
+      {#if !gate}<p class="fxl">✨ 🏆 업적 {seals}개 · 층마다 👑 보스 방을 처음 처치하면 업적 +1 (🎯 허수아비 형성평가 재대결도)</p>{/if}
       {#if !preview}<p class="gml" data-k="castle-gem">💎 방을 처음 처치하면 <b>+{CASTLE_GEM.room}</b> · 👑 보스 방 <b>+{CASTLE_GEM.roomBoss}</b> + 🏆 업적 <b>+{CASTLE_GEM.seal}</b>{anyClear ? '' : ` · 🎁 첫 방은 +${CASTLE_GEM.first} 더!`}</p>{/if}
       {#if !floors.length}
         <div class="empty"><span class="ic" aria-hidden="true">🏰</span><p>아직 열린 층이 없어요</p><small>선생님이 성채 팩을 올리면 열려요</small></div>
@@ -301,6 +313,9 @@
 <style>
   .cs { position: fixed; inset: 0; z-index: 20; max-width: 430px; margin: 0 auto; background: var(--bg); display: flex; flex-direction: column; }
   .bar { flex: none; height: var(--bar-top); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s3) 0 var(--s2); }
+  .back.hide { visibility: hidden; }
+  .rnd { display: grid; justify-items: center; gap: 2px; min-height: 64px; padding: 10px 14px; border-radius: var(--r); border: 0; background: var(--accent); color: var(--on-accent, #1d1406); font: 900 20px var(--font); box-shadow: 0 4px 0 var(--press-sh, #a3741f); }
+  .rnd small { font: 700 13px var(--font); opacity: 0.85; } .rnd:active { transform: translateY(2px); box-shadow: none; }
   .back { flex: none; width: var(--tap); height: var(--tap); border: 0; background: none; color: var(--text); display: grid; place-items: center; }
   /* 📜 2026-11-17 #17 「성채 층 제목 잘림」: 한 줄 … → 두 줄까지 (긴 층 이름 = 17px) */
   .t { flex: 1; min-width: 0; font-size: var(--fs-title); line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; word-break: keep-all; }
