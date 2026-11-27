@@ -29,6 +29,7 @@
   import CampProp from './CampProp.svelte';
   import { portalOf } from './portal.svelte';
   import { meLookId, petCatchUp, setTeacherSink, useMe } from '../../store/me.svelte';
+  import { raidCatchUp } from '../../school/rewardCatch';
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -180,7 +181,17 @@
   }
   // ✉ 선생님 메시지 · 답장 (#130 · 테스트 판 = 학생 우편함 대신 폰 알림 한 줄) — 안 본 것을 읽음으로 · 붙은 💎 는 지갑에
   // 🐞 11/27 🐾 놓친 수업 먹이 (수업 끝 화면을 못 본 차시 · 펫을 들인 뒤 · 차시마다 +5 한 번) = 캠프에 들어오면 채움 (내 기록 · 펫을 받은 뒤 · 한 번)
-  onMount(() => { if (!pupil || trial) return; const t = setTimeout(() => { void petCatchUp().then((n) => { if (n > 0) { giftToast = `🐾 지난 수업 펫 먹이 +${n}`; setTimeout(() => (giftToast = ''), 2600); } }).catch(() => {}); }, 2500); return () => clearTimeout(t); });
+  onMount(() => {
+    if (!pupil || trial) return;
+    const t = setTimeout(async () => {
+      // 💎 놓친 수업 보상 (📜 11/27 · DECISIONS 266e46a · 끝 화면과 같은 계산 · 같은 받음 칸) → 🐾 놓친 수업 먹이 (181448d) · 그 학생으로 로그인한 폰만
+      const b = meBound(), lines: string[] = [];
+      if (b && pupil) { const r = await raidCatchUp(b.S, b.cls, b.num, { packOf: (id) => PACKS.find((x) => x.id === id) ?? null, lessons: SUBJ.lessonList, uid: pupil.uid, today: kstDay(S.now()), now: S.now() }).catch((e) => { console.warn("수업 보상 채우기", e); return { gem: 0, xp: 0, n: 0 }; }); if (r.gem || r.xp) lines.push(`⚔ 지난 수업 보상${r.gem ? ` +💎 ${r.gem}` : ''}${r.xp ? ` · EXP ${r.xp}` : ''}`); }
+      const pf = await petCatchUp().catch(() => 0); if (pf > 0) lines.push(`🐾 지난 수업 펫 먹이 +${pf}`);
+      if (lines.length) { giftToast = lines.join(' · '); setTimeout(() => (giftToast = ''), 3200); }
+    }, 2500);
+    return () => clearTimeout(t);
+  });
   let mailToast = $state('');
   const mu = untrack(() => pupil)?.uid ?? '';
   const mv = untrack(() => liveValue<Record<string, Mail>>(S, mu ? `mail/${mu}` : 'mail/_none'));
