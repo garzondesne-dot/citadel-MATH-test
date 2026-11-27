@@ -96,6 +96,20 @@ export function feed(st: PetState, why: { lesson: string } | { scare: string }, 
   const n = st.day?.d === why.scare ? st.day.n : 0; if (n >= PET_CFG.scareDay) return 0;
   st.day = { d: why.scare, n: n + 1 }; a.food += PET_CFG.scare * mul; return PET_CFG.scare * mul;
 }
+/** 🐞 11/27 「수업 끝나도 5 가 안 찬다」: 수업 먹이는 그 학생 폰이 수업 끝 화면을 볼 때만 들어갔음 → 중간에 나감 · 폰이 꺼짐 · 종합실이 시간으로 닫음 = 못 받음
+ *  → 캠프에 들어오면 놓친 차시를 채움 (규칙 그대로: 차시마다 +5 한 번 · 펫을 들인 뒤 수업만 · 정식 둥지가 열린 뒤만)
+ *  PET_SINCE = 정식 b244 (둥지 첫 판) 올린 시각 · 들인 시각 = 펫 id 꼬리(36진수 시각) 중 가장 이른 것 */
+export const PET_SINCE = Date.UTC(2026, 10, 25, 5, 38);
+export function adoptedAt(st: PetState): number {
+  const ts = Object.keys(st.list || {}).map((id) => parseInt(id.slice(id.lastIndexOf('_') + 1), 36)).filter((t) => t > 1e12 && t < 4e12);
+  return Math.max(PET_SINCE, ts.length ? Math.min(...ts) : PET_SINCE);
+}
+/** 놓친 수업 먹이 고르기: lessons = 내 수업 기록 { 차시 id: 수업을 연 시각 } → 먹일 차시 id (아직 안 먹인 · 들인 뒤) */
+export function missedLessons(st: PetState, lessons: Record<string, number>): string[] {
+  if (!(st.on && st.list?.[st.on])) return [];
+  const from = adoptedAt(st);
+  return Object.entries(lessons).filter(([l, t]) => t >= from && !st.fed?.[l.replace(/[.#$/[\]]/g, '_')]).map(([l]) => l).sort();
+}
 /** 방 명단 꼬리표 「종류|먹이|꾸미기」 → 펫 (종합실 대기 줄) */
 export function petFromTag(tag: unknown): Pick<Pet, 'kind' | 'food' | 'cos'> | null {
   if (typeof tag !== 'string') return null;

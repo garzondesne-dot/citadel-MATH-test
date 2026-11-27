@@ -2,7 +2,7 @@ import { awkSeen } from '../school/awakenSeen';
 import { lookId } from '../model/hero';
 import { equipOf, type Look } from '../model/draft';
 import { cosWorn, type CosOn } from '../model/cosmetics';
-import { PET_TRIAL, activePet, feed, petClean, type PetState } from '../model/pets';
+import { PET_TRIAL, activePet, feed, missedLessons, petClean, type PetState } from '../model/pets';
 import { TRIAL } from '../channel';
 import { ECON_VER, migrate, type Wallet } from '../model/wallet';
 import { meBound, p, type Bound } from './meSync';
@@ -201,6 +201,23 @@ export function petFeedNow(why: { lesson: string } | { scare: string }): number 
   if (b) { const st = petClean(b.S.get(p(b, 'accounts') + '/pet')); const n = feed(st, why, TRIAL ? PET_TRIAL.foodMul : 1); if (n) b.S.set(p(b, 'accounts') + '/pet', st); return n; }
   const m = readLocal(KEY); if (!m) return 0;
   const st = petClean(m.pet); const n = feed(st, why, TRIAL ? PET_TRIAL.foodMul : 1); if (n) { try { localStorage.setItem(KEY, JSON.stringify({ ...m, pet: st })); } catch { /* 무시 */ } }
+  return n;
+}
+/** 🐞 11/27 🐾 놓친 수업 먹이 채우기 (캠프에 들어올 때 · 그 학생으로 로그인한 폰만) → 준 먹이 수 · 수업 연 시각 = rooms/{코드}/meta/created */
+export async function petCatchUp(): Promise<number> {
+  const b = meBound(); if (!b || asTeacher || TRIAL) return 0;
+  const recs = b.S.get<Record<string, { code?: string; at?: number } | null>>(p(b, 'records')) || {}, st0 = petClean(b.S.get(p(b, 'accounts') + '/pet'));
+  if (!activePet(st0)) return 0;
+  const when: Record<string, number> = {};
+  for (const [l, r] of Object.entries(recs)) {
+    if (!r || typeof r !== 'object' || !r.code || st0.fed?.[l]) continue;
+    const path = `rooms/${String(r.code)}/meta/created`;
+    const t = Number(b.S.fetch ? await b.S.fetch<number>(path).catch(() => null) : b.S.get<number>(path)) || 0;
+    if (t) when[l] = t;
+  }
+  const st = petClean(b.S.get(p(b, 'accounts') + '/pet')); let n = 0; // 기다리는 사이 바뀐 것까지 다시 읽고
+  for (const l of missedLessons(st, when)) n += feed(st, { lesson: l });
+  if (n) b.S.set(p(b, 'accounts') + '/pet', st);
   return n;
 }
 /** 🐾 데리고 다니는 펫 (방 명단 · 종합실 대기 줄에 싣는 것 = 종류 · 먹이 · 꾸미기만) */

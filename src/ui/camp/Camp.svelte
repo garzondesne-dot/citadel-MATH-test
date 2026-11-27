@@ -12,7 +12,7 @@
   import { bgm } from '../bgm';
   import { BUILD, REV } from '../../build';
   import { BETA, CREDIT_NAME, showCredit } from '../../channel';
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import type { LessonPack, Room, Store } from '../../model/types';
   import { PROFILES } from '../../model/profiles';
   import { AURA_NAMES, famOfHero, HERO_NAMES, awkFx, ladder, level, rungs, TIER_NAMES, titleOf } from '../../model/hero';
@@ -28,7 +28,7 @@
   import { fly } from 'svelte/transition';
   import CampProp from './CampProp.svelte';
   import { portalOf } from './portal.svelte';
-  import { meLookId, setTeacherSink, useMe } from '../../store/me.svelte';
+  import { meLookId, petCatchUp, setTeacherSink, useMe } from '../../store/me.svelte';
   import { liveRoom, liveValue } from '../room.svelte';
   import { mailLine, type Mail } from '../../school/mail';
   import BottomAction from '../battle/BottomAction.svelte';
@@ -179,6 +179,8 @@
     if (u && fresh0.length) { const S0 = untrack(() => S); if (S0.kind === 'server') void Promise.all(fresh0.map(async ([k, x]) => { const c = await claimOnce(S0, u, k, () => take([[k, x]] as typeof fresh0)); return c && c !== 'later' ? ([k, x] as (typeof fresh0)[number]) : null; })).then((r) => take(r.filter((v): v is (typeof fresh0)[number] => !!v))); /* 🐞 #83-11 끊겨 늦게 받힌 선물 = 그때 지갑에 */ else take(fresh0); }
   }
   // ✉ 선생님 메시지 · 답장 (#130 · 테스트 판 = 학생 우편함 대신 폰 알림 한 줄) — 안 본 것을 읽음으로 · 붙은 💎 는 지갑에
+  // 🐞 11/27 🐾 놓친 수업 먹이 (수업 끝 화면을 못 본 차시 · 펫을 들인 뒤 · 차시마다 +5 한 번) = 캠프에 들어오면 채움 (내 기록 · 펫을 받은 뒤 · 한 번)
+  onMount(() => { if (!pupil || trial) return; const t = setTimeout(() => { void petCatchUp().then((n) => { if (n > 0) { giftToast = `🐾 지난 수업 펫 먹이 +${n}`; setTimeout(() => (giftToast = ''), 2600); } }).catch(() => {}); }, 2500); return () => clearTimeout(t); });
   let mailToast = $state('');
   const mu = untrack(() => pupil)?.uid ?? '';
   const mv = untrack(() => liveValue<Record<string, Mail>>(S, mu ? `mail/${mu}` : 'mail/_none'));
