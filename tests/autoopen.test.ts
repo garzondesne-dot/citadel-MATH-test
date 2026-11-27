@@ -19,7 +19,7 @@ describe('⏰ 오늘 시간표', () => {
     const r = todaySlots(S, kst(10, 30), PACKS);
     expect(r.map((x) => x.cls)).toEqual(['1-3', '1-4']); // 1-6 = 테스트 반
     expect(r[0]!.done).toBe(true); expect(r[1]!.next).toBe(true);
-    expect(r[1]!.L?.no).toBe(6); expect(starPack(S, '1-3', PACKS)?.no).toBe(PACKS.map((p) => p.no).sort((a, b) => a - b)[0]);
+    expect(r[1]!.L?.no).toBe(6); expect(starPack(S, '1-3', PACKS)?.no).toBe(PACKS.filter((p) => p.no > 0).map((p) => p.no).sort((a, b) => a - b)[0]); // 🌀 차원문 차시(no 0) = ⭐ 아님
   });
   it('자동 열기: 기본 끔 · 켜면 1분 전 알림 · 시작종 ~ 5분 열 칸 · 건너뛰기 · 이날은 끔 · 연 칸은 다시 안 엶', () => {
     const S = mk(); S.set('school/sched', { 1: { 3: '1-4' } });

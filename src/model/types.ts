@@ -84,6 +84,8 @@ export interface Step {
   /** 보강 · 복습 몬스터 (정식 special · review) */
   special?: boolean;
   review?: boolean;
+  /** 🌀 마왕성 차원문 (📜 11/28) · 도입(intro) 단계에만 = 폰은 그 화면(답안지 · 에너지 · 문 열기) · TV 는 차원문 장면 · 점수 계산 없음 */
+  gate?: 'sheet' | 'energy' | 'door';
 }
 
 /** 👑 보스(형성평가): 문항마다 시도 0 = 원문 · 1~ = 생성기 새 값 · 체력 = hpItems 기준 */
@@ -226,6 +228,7 @@ export interface Room {
     video?: string | null; /** 📷 종합실 입장 QR (🔨 #9) */ qr?: boolean | null; sheet?: string | null; bubble?: string | null; gift?: { at: number; n: number; g: number } | null; reload?: Record<string, number>;
     /** 수업 끝 (닫힘) · ⏯ 닫힌 그때 이어서 자리 */ closed?: boolean; stop?: { step: number; fresh: string | null; done: boolean } | null;
     /** 교실 TV: 교사 캠프 → 「⚔ 던전 입장」 누르면 던전 대기실 */ hall?: 'lobby' | null;
+    /** 🌀 마왕성 차원문 「🌀 문 열기」 누른 시각 (📜 11/28 · 문 단계) */ gateOpen?: number | null;
   };
   /** absent[uid] = 결석 (대기실에서 안 온 번호를 누름 · 인원에서 빠짐) */
   absent?: Record<string, boolean>;

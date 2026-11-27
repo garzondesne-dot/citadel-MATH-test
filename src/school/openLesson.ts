@@ -4,6 +4,7 @@ import { openRoom, roomPath } from '../raid/actions';
 import { HALLKEY, newCode, newKey, roster, setLast, setLastTest, setLive } from './school';
 import type { Carry } from './carry';
 import { rdunMeta } from '../ui/rdun';
+import { isGatePack, markOpened } from './gate';
 
 // 🔑 수업 열기 한 입구 (📜 2026-11-17 #21) — 교사 폰 「▶ 수업 열기」 · 📅 「▶ 바로 열기」 · ⏰ 자동 열기(종합실 입장 대기 화면)가 같은 함수
 //   종합실 키 방식 = school/teacher/keyMode ('new' 수업마다 새로 · 'fixed' 고정 = secrets/fixed/hallKey) · 없으면 고정 번호가 있을 때 고정 (옛 판 그대로)
@@ -27,6 +28,7 @@ export function openLesson(S: Store, cls: string, L: LessonPack, o: OpenOpt = {}
   if (!test) S.set(`${roomPath(code)}/meta/limit`, true);
   if (carry && !from) S.set(`${roomPath(code)}/meta/carry`, carry); // 📦 B 지난 차시에서 넘어온 몬스터
   { const rd = rdunMeta(S, L); if (rd) S.set(`${roomPath(code)}/meta/rdun`, rd); } // 🎲 던전 = 교사 설정을 방에 (📜 2026-11-17 #22 · 학생 · TV 가 같은 값)
+  if (isGatePack(L)) markOpened(S, cls); // 🌀 차원문 차시를 연 반 = 캠프 🌀 · 수업 밖 ⚡ 에너지 열림 (📜 11/28 · 처음 연 때)
   setLive(S, { code, cls, lesson: L.id, ...(test ? { test: true } : {}) });
   (test ? setLastTest : setLast)(S, cls, { lesson: L.id, no: L.no, at: S.now(), done: false, code }); // ⏯ 🧪 테스트도 이어서 (#133 · 따로 저장)
   return code;

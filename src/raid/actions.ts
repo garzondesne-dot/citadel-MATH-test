@@ -46,7 +46,7 @@ export function nextStep(S: Store, L: LessonPack, code: string): void {
   // 📕 그 반이 게임으로 수업한 차시 = held/{반}/{차시} (정식 actions.js 수업 시작 · 🔁 연속 참여 💎 · 오답노트 불참 판단) · 🧪 테스트 수업은 안 적음
   if (isLobby(R) && R.meta.cls) {
     const lv = S.get<{ code?: string; test?: boolean }>('school/live'), test = !!(lv && lv.code === code && lv.test);
-    if (!test) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true);
+    if (!test && !L.steps.some((x) => x.gate)) S.set(`held/${R.meta.cls.replace(/[.#$/[\]]/g, '_')}/${L.id}`, true); // 🌀 차원문 차시 = 진도 아님 (성채 방 열림 · 연속 참여에 안 셈)
     if (!R.meta.t0) S.set(`${roomPath(code)}/meta/t0`, S.now()); // ⏱ 수업 시작 시각 (📜 2026-11-16 · 실측 시간)
     if (feat('pre') && !R.meta.castle && !(R.meta as { dummy?: boolean }).dummy && !R.meta.pre) void armPre(S, L, code, R.meta.cls, test); // ⚔ 선제 공격 (📜 2026-11-16 · 🌊 ③ · 첫 몬스터 체력)
   }

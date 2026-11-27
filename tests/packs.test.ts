@@ -54,7 +54,7 @@ it('7차시 = 6차시 팩의 문제 4부터 (정식 parts)', () => {
   expect(L7.no).toBe(7); expect(L7.partOf).toBe('set-06');
   expect(L7.steps.map((s) => s.id)).toEqual(['u4', 'u5', 'u6', 'u7', 'boss']);
   expect(chainItems(L7, 'x', 'u4', 0)).toEqual(chainItems(L6, 'x', 'u4', 0));
-  expect(PACKS.map((p) => p.no)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  expect(PACKS.filter((p) => p.id !== 'gate-1').map((p) => p.no)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10]); // 🌀 gate-1 = no 0 (차원문 · 진도 밖)
 });
 it('차시 팩 목록 = 차시 번호 순 · id 겹침 없음', () => {
   expect(PACKS.map((p) => p.no)).toEqual([...PACKS.map((p) => p.no)].sort((a, b) => a - b));
