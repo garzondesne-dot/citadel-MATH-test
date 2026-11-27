@@ -16,7 +16,7 @@
   import { KNIGHTS, WAR_CFG, knightOf, payOn, warClasses } from '../../board/war';
   import { EXAM_PATH, EXAM_SPAN, bandText, examDateOf } from '../../school/examEvent';
   import AbcPanel from './AbcPanel.svelte';
-  import { ABC_TXT, abcOpenAny } from '../../school/abcSheet';
+  import { ABC_TXT } from '../../school/abcSheet';
 
   // ⚙ 교사 폰 상시 설정 (📜 2026-11-17 #21 A · 시안 92y5uHBaWvACKgsCQWU6VF): 모든 탭 오른쪽 위 ⚙ → 아래 시트 하나
   //   교사 계정 · 소리 · 테마 · 앱 설치 · 로그아웃 · 📅 시간표(쓰는 중이면 끄기 한 줄 · 수업 길이) — 옛 「나」 탭 줄을 옮김 (기능 · 저장 그대로)
@@ -59,7 +59,7 @@
       {#if srv && admin}<button type="button" class="item" data-k="set-war" onclick={() => (page = 'war')}><span class="ic">⚔</span><span class="tx"><b>기사단 토벌 주간</b><small>반 이름 · 문장 · 💎 지급 {pay ? '켬' : '끔'}</small></span></button>{/if}
       <button type="button" class="item" data-k="set-exam" onclick={() => (page = 'exam')}><span class="ic">📄</span><span class="tx"><b>기말 대비 기간</b><small>{exam ? `시험 ${exam} · ${bandText(exam, Date.now()) || '기간 밖'}` : '끔'}</small></span></button>
       {#if packs.length && !pastDone}<button type="button" class="item" data-k="set-recfill" disabled={filling} onclick={goFill}><span class="ic">🧩</span><span class="tx"><b>지난 수업 기록 채우기 · 한 번</b><small>{fillMsg || `TV 가 닫아 대시보드에서 빠진 수업 ${RECFILL_PAST.length}개`}</small></span></button>{:else if fillMsg}<p class="outq sm" data-k="recfill-msg">{fillMsg}</p>{/if}
-      <button type="button" class="item" data-k="set-abc" onclick={() => (page = 'abc')}><span class="ic">🚪</span><span class="tx"><b>{ABC_TXT.name}</b><small>{(void ver, abcOpenAny(S).length) ? `열린 반 ${abcOpenAny(S).join(' · ')}` : '반마다 열기 · 정답표'}</small></span></button>
+      <button type="button" class="item" data-k="set-abc" onclick={() => (page = 'abc')}><span class="ic">🚪</span><span class="tx"><b>{ABC_TXT.name}</b><small>정답표 A · B · C · 🌀 차원문 수업에서 써요</small></span></button>
       <button type="button" class="item" data-k="out" onclick={() => (page = 'out')}><span class="ic">🚪</span><span class="tx"><b>로그아웃 · 처음 화면</b><small>{admin ? who : '학생 · 교사 고르는 첫 화면으로'}</small></span></button>
     </div>
   {:else if page === 'login'}

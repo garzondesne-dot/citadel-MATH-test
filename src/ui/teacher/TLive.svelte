@@ -41,6 +41,8 @@
   import { AJ } from '../../rest/ajae';
   import { boardCols, boardScroll, cellOf, givenName, swordDots, todayCols, todayRow, type Cell } from '../../school/stuBoard';
   import { kstToday0 } from '../../school/noteDiff';
+  import { doorPending, enteredOf, gateCard, gateOf, gateRoster, isGatePack, myGatePath, gateBase, openDoor, publishTally } from '../../school/gate';
+  import { abcRecPath, type AbcRec } from '../../school/abcSheet';
 
   // ⑬ 대기실 · ⑭ 리모컨 (#119 · DECISIONS 「대기실 확정」 「리모컨 칸 고정」 「도구 두 줄 맞춤」) — 같은 틀: 위 막대 · 가운데(스크롤 없음) · 주요 단추 68 · 수업 중 막대 62
   //   리모컨 칸 고정: 지금 단계 카드 = 배지 한 줄 · 제출 n / m · 미제출 · 높이 48 칸(정찰 중 −30초 · 등장까지 · +30초 → 등장 뒤 −5% · 체력 · +5%) · 🔒 · 🔄 칩 자리 늘 2줄 · 도구 여섯 칸 52 · 「다음 ▶」
@@ -80,6 +82,13 @@
   const mmss = (ms: number) => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
   const i = $derived(R ? stepIdx(R) : -1);
   const step = $derived(R ? stepOf(L, R) : null);
+  const gk = $derived(gateOf(step));
+  // 🌀 차원문 차시 (📜 11/28): 단계 줄 = 🧱 n / 명단 통과 · ⚡ n / 108 · 교사 폰이 반 합을 세어 school/gate/tally 에 (학생 폰이 읽음)
+  const gatePack = untrack(() => isGatePack(L));
+  const gT = $derived.by(() => { void now; return gatePack && R && !R.state.closed ? publishTally(S, live.cls) : null; });
+  const gCard = $derived(gT && R ? gateCard(gk, gT, enteredOf(R), ids.length) : null);
+  // 👥 학생판 칸 (🧱 = ✔ 통과 · ↻ 다시 · ⚡ = 그 학생 에너지 작게 · 순위 없음)
+  const gMark = $derived.by(() => { void now; const m: Record<string, string> = {}; if (!gatePack || !gk || gk === 'door') return m; for (const p of gateRoster(S, live.cls)) { const b = gateBase(live.cls, p.num); if (gk === 'energy') m[p.uid] = `⚡${Number(S.get<{ e?: number }>(myGatePath(b))?.e) || 0}`; else { const r = S.get<AbcRec>(abcRecPath(b)); m[p.uid] = r?.pass ? '✔' : r && (r.A || r.B || r.C) ? '↻' : ''; } } return m; });
   const steps = $derived(L.steps.map((s, k) => ({ s, k })).filter((x) => !x.s.later));
   const restMin = $derived(steps.filter((x) => x.k > i).reduce((a, x) => a + minOf(L, R, x.s), 0) + (step ? Math.ceil(minOf(L, R, step) / 2) : 0));
   const endAt = $derived(isLobby(R as Room) ? now + mins * 60e3 : now + restMin * 60e3);
@@ -257,6 +266,7 @@
     if (scout?.on) { appearNow(S, L, code); return; }
     if (isEnd(L, R)) { sheet = 'ask'; return; }
     if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「다음 ▶」 = 쉼터 끝 + 수업으로
+    else if (doorPending(step, R)) { openDoor(S, code); return; } // 🌀 문 단계 = 먼저 「🌀 문 열기 (영상)」
     if (nextStepObj?.kind === 'boss' && L.boss?.links?.length && bossLive(L, R).items <= 1 && !bossAsked) { sheet = 'bossask'; return; } // 👑 #27 ④ 남은 문항 ≤ 1 = 형성평가도 복습으로?
     nextStep(S, L, code);
   }
@@ -267,7 +277,7 @@
     return { icon: k === 'ak' ? '🥏' : '🏁', n: Object.keys(((R as unknown as { fv?: Record<string, Record<string, unknown>> }).fv?.[`${k}${fun.g}_j`]) || {}).length };
   });
   function goFun() { if (!funJoin) return; if (funJoin.n < 2) { say('2명부터 시작해요 · 학생 폰에서 참가를 기다려요'); return; } lgGo(S, code); }
-  const mainText = $derived(!R ? '' : funJoin ? `▶ ${funJoin.icon} 출발 ${funJoin.n}명` : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
+  const mainText = $derived(!R ? '' : funJoin ? `▶ ${funJoin.icon} 출발 ${funJoin.n}명` : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : isEnd(L, R) ? '■ 수업 닫기' : !R.state.rest && doorPending(step, R) ? '🌀 문 열기 (영상)' : nextStepObj ? `다음 ▶ ${short(nextStepObj)}` : '다음 ▶ 마무리');
   function plus5() { sfx('plus5', 0.8); const e = extendTime(S, code); say(e ? `⏰ ${e}` : '⏰ 5분 늘렸어요'); }
   const flex = (s: { s: { id: string } }) => Math.max(1, minOf(L, R, s.s as never));
 </script>
@@ -275,7 +285,7 @@
 {#if R}
   <div class="tbar">
     <button type="button" class="back" aria-label="수업 열기로" onclick={onhome}>‹</button>
-    <div class="t">{trialRm ? '👩‍🏫 체험판' : live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
+    <div class="t">{trialRm ? '👩‍🏫 체험판' : live.cls === 'test' ? '🧪 테스트' : `${live.cls}반`} · {L.no ? `${L.no}차시` : '🌀'}{live.test && live.cls !== 'test' ? ' · 🧪' : ''}<small>{isLobby(R) ? '대기실' : left != null ? `⏳ 남은 시간 ${mmss(left)}` : '시간 제한 없음'}</small></div>
     <button type="button" class="film" class:on={filmOn} data-k="tl-film" aria-pressed={filmOn} onclick={() => S.set(`${roomPath(code)}/meta/film`, filmOn ? null : true)}>🎥<small>{filmOn ? '촬영 중' : '촬영'}</small></button>
     <span class="codek" aria-label="수업 코드 {code} · 종합실 키 {hallKeyOf(S, code)}"><b>코드 {code}</b><small>종합실 키 {hallKeyOf(S, code)}</small></span>
   </div>
@@ -309,10 +319,11 @@
         <div class="nums c{bCols}" class:scr={bScroll} role="group" aria-label="학생 칸">
           {#each pupils as p (p.uid)}
             {@const st = stOf(p.uid)}{@const c = cells[p.uid]}{@const lf = lfOf(p)}{@const rdy = scouting && !!readyIds[p.uid]}{@const dots = c && !c.noSword ? swordDots(c) : null}
-            <button type="button" class="n {st}" class:lost={st === 'no' && !!R.players?.[p.uid]} class:scr={st === 'no' && !!R.players?.[p.uid] && offKind(R, p.uid) === 'scr'} class:old={isOldU(p.uid)} class:sel={who === p.uid} class:zero={!!c?.zero} class:lf={lf > 0} class:rdy class:fl={!!flash[p.uid]} class:stmp={stampOn && stamped(R, p.uid)} class:stmpnew={stampOn && !!stampNew[p.uid]} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? `도움 요청 ${order.indexOf(p.uid) + 1}번째` : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : R.players?.[p.uid] ? (offKind(R, p.uid) === 'scr' ? '📵 화면 꺼짐 · 다른 앱' : '📶 연결 끊김') : lf ? `안 들어옴 · 로그인 실패 ${lf}번` : '안 옴'}{c && !c.noSword ? ` · 칼 ${c.left}` : ''}{c ? ` · 맞힘 ${c.got}/${c.of}` : ''}{rdy ? ' · 준비 완료' : ''}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapCell(p.uid)}>
+            <button type="button" class="n {st}" class:lost={st === 'no' && !!R.players?.[p.uid]} class:scr={st === 'no' && !!R.players?.[p.uid] && offKind(R, p.uid) === 'scr'} class:old={isOldU(p.uid)} class:sel={who === p.uid} class:zero={!!c?.zero} class:lf={lf > 0} class:rdy class:fl={!!flash[p.uid]} class:stmp={stampOn && stamped(R, p.uid)} class:stmpnew={stampOn && !!stampNew[p.uid]} class:gpass={gMark[p.uid] === '✔'} class:gretry={gMark[p.uid] === '↻'} data-n={p.num} aria-label="{nl(p.num)}번 {p.name} · {st === 'in' ? '들어옴' : st === 'ok' ? '다 맞힘' : st === 'help' ? `도움 요청 ${order.indexOf(p.uid) + 1}번째` : st === 'idle' ? '멈춤' : st === 'ab' ? '결석' : R.players?.[p.uid] ? (offKind(R, p.uid) === 'scr' ? '📵 화면 꺼짐 · 다른 앱' : '📶 연결 끊김') : lf ? `안 들어옴 · 로그인 실패 ${lf}번` : '안 옴'}{c && !c.noSword ? ` · 칼 ${c.left}` : ''}{c ? ` · 맞힘 ${c.got}/${c.of}` : ''}{rdy ? ' · 준비 완료' : ''}{isOldU(p.uid) ? ' · 옛 판' : ''}" onclick={() => tapCell(p.uid)}>
               <span class="nm"><b>{nl(p.num)}</b><s>{givenName(p.name)}</s></span>
               {#if dots}<span class="sw" aria-hidden="true">{#if feat('sword')}{#each Array.from({ length: dots.on }) as _, k (k)}<i></i>{/each}{#each Array.from({ length: dots.off }) as _, k (k)}<i class="u"></i>{/each}{#if dots.more}<small>+{dots.more}</small>{/if}{:else}<small>{c!.left}번</small>{/if}</span>{/if}
               {#if c}<span class="pg" aria-hidden="true"><i style:width="{Math.round(c.prog * 100)}%"></i></span>{/if}
+              {#if gMark[p.uid]}<em class="gm" class:gok={gMark[p.uid] === '✔'} class:gre={gMark[p.uid] === '↻'} data-k="gate-mark">{gMark[p.uid]}</em>{/if}
               {#if stampOn && stamped(R, p.uid)}<em class="bd g" data-k="stamped">✅</em>{:else if stampOn && stampBlocked(L, R, p.uid)}<em class="bd y" data-k="stamp-boss">👑</em>{:else if st === 'help'}<em class="bd r">🙋{ordNo(p.uid)}</em>{:else if c?.zero}<em class="bd r">⚔0</em>{:else if lf}<em class="bd o">🔑{lf}</em>{:else if rdy}<em class="bd y">📝</em>{/if}
             </button>
           {/each}
@@ -340,7 +351,7 @@
     {#if ccSt}<p class="ccline" data-k="cc-stats">✔ 개념 체크 · 맞힘 <b>{ccSt.ok}</b> / {ids.length}{ccSt.n < ids.length ? ` (낸 ${ccSt.n})` : ''}{#if ccSt.wrong.length} · 많이 고른 오답 「{ccSt.wrong[0]!.label}」 {ccSt.wrong[0]!.n}명{/if}</p>{/if}
     {@render keyLine()}
     <div class="tact"><button type="button" class="btn" disabled={!ids.length} onclick={main}>▶ 수업 시작<small>들어온 학생 {ids.length} / {expected.length}</small></button></div>
-    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no ? `${L.no}차시` : '🌀'} · <b>대기실</b></span><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {:else}
     <!-- ⑭ 리모컨 -->
     <div class="mid rem">
@@ -360,7 +371,7 @@
         {:else}
         <div class="rs1"><span class="lab acc" data-k="now-lab">{isEnd(L, R) ? '마무리' : step?.kind === 'boss' && bossNote(L, R) ? `지금 · ${bossNote(L, R)}` : `지금 · ${short(step)}`}</span>
           {#if doorAsk}<span class="badge boss">👑 문 닫는 중</span>{:else if boss5 && left != null}<span class="badge boss">👑 <b>{mmss(left)}</b></span>{:else if scout?.on}<span class="badge sc">🌫 정찰</span>{:else if R.state.focus}<span class="badge fo">⏸ 집중</span>{:else if R.state.rest}<span class="badge fo">🏕 {funLine || '쉼터'}</span>{/if}
-          <span class="unsub">{#if scout?.on}{''}{:else if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
+          <span class="unsub">{#if scout?.on}{''}{:else if mid || step?.kind === 'boss'}{unsub.length ? `미제출 ${unsub.length}명` : '미제출 없음'}{:else if gk && gCard}<b data-k="gate-line">{gCard.k} · {gCard.n} / {gCard.m}</b>{:else}{step?.kind === 'concept' ? '개념 설명 중' : ''}{/if}</span>
           {#if scout?.on}<span class="sub rdy" data-k="ready-n">📝 준비 완료 <b>{ids.filter((u) => readyIds[u]).length}</b> / {ids.length}</span>{:else}<span class="sub" data-k="sub-n"><b>{mid || step?.kind === 'boss' ? subd.length : ids.length}</b> / {ids.length} {mid || step?.kind === 'boss' ? '제출' : '접속'}</span>{/if}
         {#if guide && gFold}<button type="button" class="gdot" data-k="guide-dot" aria-label="📊 길잡이 다시 보기" onclick={() => (gAt = { ...gAt, [guide.key]: Date.now() })}>📊</button>{/if}</div>{/if}
         <!-- 📌 「지금」 칸 = 높이 고정 · 이 자리에서만 내용 교체 (🧱 막힘 띠가 먼저 · 닫으면 원래 내용) -->
@@ -373,6 +384,11 @@
           <div class="adj" aria-label="정찰 시간 조정"><button type="button" aria-label="정찰 30초 줄이기" onclick={() => scoutAdd(S, L, code, -30)}>−30초</button>
             <div class="hpl"><div class="b sc"><i style:width="{Math.min(100, (scout.left / ((scout.end - scout.t0) || 1)) * 100)}%"></i></div><small>등장까지 <b>{Math.ceil(scout.left / 1000)}초</b></small></div>
             <button type="button" aria-label="정찰 30초 늘리기" onclick={() => scoutAdd(S, L, code, 30)}>+30초</button></div>
+        {:else if gk && gCard}
+          <!-- 🌀 차원문 (📜 11/28 시안 0): 체력 칸 자리 = TV 카드와 같은 막대 · 한 줄 -->
+          <div class="adj talk" aria-label="차원문 현황" data-k="gate-now"><div class="hpl"><div class="b"><i style:width="{gCard.bar * 100}%" style:background={gk === 'energy' ? 'linear-gradient(90deg,#5a7dff,#b78cff)' : gk === 'sheet' ? '#c98a5a' : ''}></i></div><small>{gCard.line}</small></div></div>
+        {:else if !gk && gatePack && step?.kind === 'intro'}
+          <div class="adj talk" aria-label="말할 거리"><p><b>💬</b> {step.say ?? ''}</p></div>
         {:else if step?.kind === 'concept' && talkOf(step.say ?? '')}
           <!-- 💬 말할 거리 (선생님 「A 말할 거리로 보이게」 2026-11-14): 개념 단계엔 체력 칸 대신 · 같은 높이 44px · 2줄 · 길면 「더 보기」 -->
           <div class="adj talk" aria-label="말할 거리"><p><b>💬</b> {talkOf(step.say ?? '')}</p><button type="button" onclick={() => (talkOpen = true)}>더 보기</button></div>
@@ -399,7 +415,7 @@
       <button type="button" data-slot="heal" data-k="heal-first" class:hot={!!order.length} disabled={!order.length} aria-label={order.length ? `⚔ 보급 · 🙋① ${nl(numOf(order[0]!))}번 ${pname(order[0]!)}` : '⚔ 보급 · 도움 요청 없음'} onclick={() => order[0] && release(order[0])}><i>⚔</i>보급</button>
     </div>
     <div class="tact"><button type="button" class="btn2" aria-label="앞 단계" disabled={i <= 0} onclick={() => prevStep(S, L, code)}>◀</button><button type="button" class="btn" data-k="main" onclick={() => (funJoin ? goFun() : main())}>{mainText}</button></div>
-    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no}차시 · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
+    <div class="lbar"><i class="live"></i><span>{trialRm ? '👩‍🏫 체험판' : live.test ? '🧪 테스트' : `${live.cls}반`} · {L.no ? `${L.no}차시` : '🌀'} · <b>수업 중</b>{left != null ? ` · ${mmss(left)}` : ''}</span><button type="button" data-k="qr-open" onclick={() => (sheet = 'qr')}>📷 입장 QR</button><button type="button" onclick={() => (sheet = 'ask')}>수업 닫기</button></div>
   {/if}
 
   {#if undoU}<p class="toast utoast" role="status">✔ {numOf(undoU.u)} {pname(undoU.u)} ⚔ 보급했어요 (칼 +1)<button type="button" onclick={undo}>되돌리기</button></p>{/if}
@@ -569,6 +585,10 @@
   .att .hd { min-height: 28px; }
   .bots { display: flex; align-items: center; gap: 6px; margin: 2px 0 8px; } .bsw { flex: 1; min-height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 700 14px var(--font); text-align: left; padding: 0 12px; box-shadow: 0 3px 0 var(--surface); } .bsw b { float: right; color: var(--text-3); } .bsw.on { border-color: var(--accent); } .bsw.on b { color: var(--accent); } .bst { width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: 800 18px var(--font); } .bst:disabled { opacity: 0.4; } .bn { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
   .cnt { font-size: 18px; font-variant-numeric: tabular-nums; } .cnt small { font-size: 12px; color: var(--text-2); }
+  /* 🌀 차원문 학생판 (📜 11/28 시안 0) */
+  .n.gpass { background: #1f3a2c; } .n.gretry { background: #3a2422; }
+  .gm { position: absolute; right: 3px; bottom: 2px; font: 800 11px var(--font); font-style: normal; color: #b78cff; } .gm.gok { color: #7ee2a8; } .gm.gre { color: #f3a39e; }
+  .gline { display: block; font-size: 12px; color: var(--text-2); }
   /* 👥 학생판 (📜 #24): 늘 4줄 · 칸 높이 46 · 한 줄 5~7칸 · 29명부터 판 안 세로 밀기 · 이름 = 글자 줄이기 먼저 → 그래도 좁으면 숨김(번호만) */
   .att { container-type: inline-size; }
   /* 📌 리모컨: 학생판 = 남는 높이 안에서 4줄(칸 38~46px) · 다른 칸은 높이 고정 → 단계가 바뀌어도 자리 그대로 · 아주 짧은 폰만 가운데 밀기 */

@@ -3,8 +3,8 @@
   import PetSprite from '../cos/PetSprite.svelte';
   import { petFromTag } from '../../model/pets';
   import { bandText, examDateOf } from '../../school/examEvent';
-  import AbcDoorTV from './AbcDoorTV.svelte';
-  import { abcOpenAny } from '../../school/abcSheet';
+  import GateTV from '../gate/GateTV.svelte';
+  import { doorPending, isGatePack, openDoor } from '../../school/gate';
   import NameTag from '../cos/NameTag.svelte';
   import { cosClean } from '../../model/cosmetics';
   import WarBar from '../board/WarBar.svelte';
@@ -137,7 +137,7 @@
   const nxa = $derived(feat('schedule') ? nextAuto(S, now, PACKS) : null);
   /** ⏰ 이 PC 가 교사 로그인인지 (now 따라 다시 봄 = 로그인하면 새로 고침 없이 바뀜) */
   const tvAdm = (_t: number) => S.kind !== 'server' || !!(S as Store & { isAdmin?: () => boolean }).isAdmin?.();
-  const view = $derived(!R || R.state.closed ? (R && showRes ? 'end' : 'camp') : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
+  const view = $derived(!R || R.state.closed ? (R && showRes ? 'end' : 'camp') : isLobby(R) ? (R.state.hall === 'lobby' ? 'lobby' : 'camp') : isEnd(L, R) ? 'end' : step?.kind === 'intro' && isGatePack(L) ? 'gate' : step?.kind === 'concept' || step?.kind === 'intro' ? 'concept' : 'battle'); // 🌀 차원문 차시 도입 단계 = 차원문 장면 (📜 11/28) // 📜 2026-11-16 도입 = 학습지 칸 그림(생각 열기 · 전시 확인)도 TV 에 (예전엔 배경 + 용사만)
   let demo = $state(false), tstrike = $state<{ ult: boolean; at: number; hero: number; fx: string; key?: string } | null>(null); // 🧑‍🏫 선생님 일격
   let ink = $state(false);
   // ✏ 판서 = 단계가 바뀌면(다음 ▶ · ◀ · 리모컨 · TV 어디서든) 저절로 꺼짐 (📜 11/17 선생님 「다음으로 누르면 필기 모드가 알아서 풀렸으면」 · ⓗ)
@@ -217,6 +217,7 @@
       return { ic: '🧍', lab: '살아남음', n: Object.keys(fun.alive || {}).length, m: nn ? Object.keys(nn.alive || {}).length + Object.keys(nn.zz || {}).length : ff?.total ?? 0, sub: '' };
     }
     if (R.state.rest && view !== 'camp') return { ic: '📱', lab: '입장', n: ids.length, m: expected.length, sub: '' };
+    if (view === 'gate') return null; // 🌀 차원문 = 같은 자리에 차원문 카드 (GateTV)
     if (view === 'concept') return null;
     if (view === 'camp') return { ic: '📱', lab: '입장한 학생', n: ids.length, m: expected.length, sub: '' };
     if (view === 'lobby') return { ic: '⚔', lab: '들어온 학생', n: ids.length, m: expected.length, sub: [keysOf(L).length ? `🔑 열쇠 ${keyBoard(L, R, ids).all} / ${ids.length}` : '', oldIds.length ? `🔄 옛 판 ${oldIds.map(nameOf).join(' · ')}` : '', expected.length > ids.length ? `⏳ ${expected.filter((p) => !inSet.has(p.uid)).map((p) => p.name).slice(0, 4).join(' · ')}${expected.length - ids.length > 4 ? ' …' : ''}` : ''].filter(Boolean).join('  ') };
@@ -260,13 +261,14 @@
   const dockOn = true; // 🚨 2026-11-16 핫픽스(정식 b210) 선생님 「리모컨 안 나와 · 리모컨은 그냥 계속 표시되게」 = 조작 막대 늘 보임 · 늘 누름 (마우스 없는 터치 교실 PC)
   const poke = () => (dockAt = Date.now());
   let offTip = $state(''); $effect(() => { if (!offTip) return; const t = setTimeout(() => (offTip = ''), 1800); return () => clearTimeout(t); }); // 꺼진 칸 누름 = 「⚙ 기능에서 켜요」
-  const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : '앞으로 ▶'); // 🌫 정찰 중 = 리모컨과 같게 「⚔ 지금 등장」 (🐞 2026-11-14 · 예전엔 몬스터를 건너뜀)
-  const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
+  const goLabel = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '⚔ 던전 입장' : isLobby(R) ? '▶ 수업 시작' : scout?.on ? '⚔ 지금 등장' : !R.state.rest && doorPending(step, R) ? '🌀 문 열기' : '앞으로 ▶'); // 🌫 정찰 중 = 리모컨과 같게 「⚔ 지금 등장」 (🐞 2026-11-14 · 예전엔 몬스터를 건너뜀)
+  const goSub = $derived(!R ? '' : view === 'camp' && isLobby(R) ? '반 전체 던전 대기실로' : !R.state.rest && doorPending(step, R) ? '영상' : scout?.on ? `정찰 끝 · ${short(step)}` : short(L.steps[R.meta.resumeFrom != null && isLobby(R) ? R.meta.resumeFrom : nextIdx(L, R)]) || '마무리');
   function go() {
     if (!R) return;
     if (view === 'camp' && isLobby(R)) { hallLobby(S, code); return; }
     if (R.state.rest) endRest(S, code); // 🏕 쉼터 중 「앞으로 ▶」 = 쉼터 끝 + 수업으로 (#142)
     else if (scout?.on) { appearNow(S, L, code); return; } // 🌫 정찰 중 = 지금 등장
+    else if (doorPending(step, R)) { openDoor(S, code); return; } // 🌀 문 단계 = 먼저 문 열기 (영상 → 열린 그림)
     nextStep(S, L, code);
   }
   function full() { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen?.().catch(() => {}); }
@@ -334,7 +336,7 @@
 
   <!-- 위 막대 (#119 덧붙임 3 · 7 · 9): 반 칩 · n차시 + 소단원 주제 · 흐름도(리모컨 단계 막대와 같은 함수) · 🚪 코드 · ⛺ 내 캠프 / 아래 가장자리 = 남은 시간 선 -->
   <header class="top">
-    <span class="ttl">{#if view === 'camp' && (!R || R.state.closed)}📺 입장 대기{:else}{#if live}<span class="cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))}</span>{/if}{#if view === 'camp'}📺 입장 대기 · {/if}{L.no}차시 <b>{topic}</b>{/if}</span>
+    <span class="ttl">{#if view === 'camp' && (!R || R.state.closed)}📺 입장 대기{:else}{#if live}<span class="cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))}</span>{/if}{#if view === 'camp'}📺 입장 대기 · {/if}{L.no ? `${L.no}차시 ` : ''}<b>{topic}</b>{/if}</span>
     <div class="tflow" class:dim={view === 'lobby'} class:hide={view === 'camp'} aria-label="오늘 흐름">
       {#each flowSteps as x (x.s.id)}<span class="fs" class:ok={x.k < i} class:now={x.k === i} style:flex={Math.max(1, minOf(L, R, x.s))} style:--c={COLOR[kindOf(L, R, x.s)]}><i></i><em>{x.s.kind === 'boss' ? '👑 형성평가' : short(x.s)}</em></span>{/each}
     </div>
@@ -367,7 +369,7 @@
       <div class="einfo">
         {#if R && !R.state.closed && live}
           <span class="etag">오늘 수업</span>
-          <b class="ecls" data-k="entry-cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))} · {L.no}차시</b>
+          <b class="ecls" data-k="entry-cls">{((R?.meta as { trial?: boolean } | undefined)?.trial ? '👩‍🏫 체험판' : clsLabel(S, live.cls))} · {L.no ? `${L.no}차시` : '🌀'}</b>
           <span class="ettl">{topic}</span>
           <div class="ein" data-k="entry-n">들어온 학생 <b>{box?.n ?? 0}</b><small> / {box?.m ?? 0}</small></div>
           <p class="ewait">선생님이 「⚔ 던전 입장」을 누르면 시작해요</p>
@@ -381,7 +383,7 @@
             <b class="ecls" data-k="entry-cls">입장 대기</b>
           {/if}
           <p class="ewait" data-k="entry-wait">선생님이 수업을 열면 시작해요</p>
-          {#if (void now, abcOpenAny(S).length)}<div class="eabc"><AbcDoorTV {S} {now} admin={tvAdm(now)} /></div>{:else if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}<!-- 🚪 던전 문 1차 (📜 11/25) · 답안지를 연 반이 있으면 대항전 줄 대신 -->
+          {#if S.kind !== 'memory'}<div class="ewar"><WarBar {S} line /></div>{/if}<!-- 🚪 옛 던전 문 판 = 🌀 차원문 수업으로 옮김 (📜 11/28) -->
           {#if nxa}<p class="eauto" data-k="entry-auto">⏰ 다음 자동 열기 {nxa.hm} · {nxa.cls}반 {nxa.L?.no}차시<br /><small>{tvAdm(now) ? '이 PC (교사 로그인) · 교사 폰 중 먼저 켜진 쪽이 열어요' : AUTO_PC_NOTE}</small></p>{/if}
         {/if}
         <div class="ebtn">
@@ -398,6 +400,8 @@
       <div class="rows">{#each expected as p (p.uid)}<div class="h" class:nin={!inSet.has(p.uid)}><HeroSprite id={R?.players?.[p.uid]?.hero ?? 0} scale={stuK} dim={!inSet.has(p.uid)} /><span>{expOf(R, p.uid) ? '🔥 ' : ''}{p.num} <NameTag name={p.name} on={cosClean((R?.players?.[p.uid] as { cos?: unknown } | undefined)?.cos)} tv />{#if petFromTag((R?.players?.[p.uid] as { cos?: { pet?: string } } | undefined)?.cos?.pet)}<PetSprite pet={petFromTag((R?.players?.[p.uid] as { cos?: { pet?: string } } | undefined)?.cos?.pet)!} size={Math.round(28 * stuK)} still />{/if}</span></div>{/each}{#each others as u (u)}<div class="h oth"><HeroSprite id={R?.players?.[u]?.hero ?? 0} scale={stuK} /><span><NameTag name={nameOf(u)} on={cosClean((R?.players?.[u] as { cos?: unknown } | undefined)?.cos)} tv /></span></div>{/each}</div>
       <div class="tchr"><HeroSprite id={meLookId(M.me)} scale={tchK} aura={M.me.enh} pose="idle" /><div class="tside"><em class="bub">{R?.state.bubble || `${L.no}차시 던전에 온 걸 환영하네!`}</em><span>🧙 선생님</span></div></div>
     </div>
+  {:else if view === 'gate' && step && R && live}
+    <div class="gpane"><GateTV {S} {R} {step} {now} admin={tvAdm(now)} cls={live.cls} /></div><!-- 🌀 마왕성 차원문 (📜 11/28) -->
   {:else if view === 'concept' && step}
     <!-- 📖 개념 = 2분할 (왼 개념 · 오른 문제 · 누르면 크게) -->
     <div class="split" class:z1={zoom === 1} class:z2={zoom === 2}>
@@ -624,6 +628,7 @@
   .h { display: flex; flex-direction: column; align-items: center; gap: 0.3cqh; }
   .h span { font-size: var(--tv-small); font-weight: 700; background: rgba(8, 9, 12, 0.72); padding: 0.2cqh 0.7cqw; border-radius: 999px; white-space: nowrap; }
   .h.nin { opacity: 0.4; }
+  .gpane { position: absolute; inset: 0; z-index: 0; }
   .split { position: absolute; left: 2cqw; right: 2cqw; top: 13cqh; bottom: 16cqh; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw; }
   /* 🐞 2026-11-15 「문제 1번 확대 = 좁은 세로 띠」: 0fr 1fr + 첫 칸 숨김 = 남은 칸이 0 폭 첫 줄로 들어감 → 확대 = 한 칸 1fr */
   .split.z1, .split.z2 { grid-template-columns: 1fr; }
@@ -738,5 +743,4 @@
   .demoban { position: absolute; left: 34%; transform: translateX(-50%); top: 9cqh; z-index: 8; padding: 0.6cqh 1.6cqw; border-radius: 999px; background: rgba(10, 12, 18, 0.82); color: #ffe7a8; font: 800 2.2cqh var(--font); letter-spacing: 0.02em; box-shadow: 0 0 0 2px rgba(255, 210, 120, 0.55); pointer-events: none; white-space: nowrap; }
   .expl { margin: 0.6cqh 0 0; font: 700 2.6cqh var(--font); color: #ffc070; } /* 🔥 #67 */
   .ewar :global(.wl) { font-size: 22px; margin-top: 12px; }
-  .eabc { margin-top: 12px; }
 </style>
