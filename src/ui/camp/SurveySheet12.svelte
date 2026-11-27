@@ -5,7 +5,7 @@
   import { blank12, firstGap12, check12, INTRO12, NONE, Q12S, SCALE, SECS, submit12 } from '../../school/survey12';
   import { sfx } from '../sound.svelte';
 
-  // 📝 12월 마무리 설문 창 (📜 11/23 · 22문항 · 아래 시트 · 이름 없이) — 생김새 = 11/17 설문 창과 같은 부품 · 눈금 같음
+  // 📝 12월 마무리 설문 창 (📜 11/23 · 24문항 · 아래 시트 · 이름 없이) — 생김새 = 11/17 설문 창과 같은 부품 · 눈금 같음
   //   보내기 = 빈칸이면 그 문항으로 · 보상 +5 EXP · 💎 +10 (한 번 · 한도 밖)
   const { S, cls, num, excluded, onpaid, onclose }: { S: Store; cls: string; num: number; excluded: boolean; onpaid: (gem: number, xp: number) => void; onclose: () => void } = $props();
   const a = $state(blank12());
@@ -40,7 +40,7 @@
           {#if q.kind === 'scale0'}<button type="button" class="none" class:on={a.v[q.n] === 0} aria-pressed={a.v[q.n] === 0} data-sv="{q.n}-0" onclick={() => setV(q.n, 0)}>{a.v[q.n] === 0 ? '✓ ' : ''}{NONE}</button>{/if}
         {:else if q.kind === 'pick'}
           <div class="chips">{#each q.opts ?? [] as t, k (k)}<button type="button" class:on={a.v[q.n] === k} aria-pressed={a.v[q.n] === k} data-pk="{q.n}-{k}" onclick={() => setV(q.n, k)}>{a.v[q.n] === k ? '✓ ' : ''}{t}</button>{/each}</div>
-        {:else if q.n === 21}
+        {:else if q.n === 23}
           <textarea maxlength={MAXT} rows="2" bind:value={a.say} data-k="sv12-say"></textarea>
         {:else}
           <textarea maxlength={MAXT} rows="2" bind:value={a.want} data-k="sv12-want"></textarea>

@@ -1,8 +1,8 @@
 // 📝 12월 마무리 설문 (📜 11/23 선생님 「진행」 · 미래교육상 보고서 근거 · 받는 기간 12/1 ~ 12/4)
-//   22문항 = A 5점 7 (11/17 설문 A 와 글자 그대로 · 이번엔 「지금」 하나만) · B 5점 4 + 고르기 1 · C 5점 6 (+ 「안 써 봤다」) · D 고르기 2 · E 자유 2
+//   24문항 (📜 11/27 선생님 「두 문항 더해서」 · DECISIONS 28c1647 · C 끝에 19 · 20 · 옛 19 ~ 22 → 21 ~ 24) = A 5점 7 (11/17 설문 A 와 글자 그대로 · 이번엔 「지금」 하나만) · B 5점 4 + 고르기 1 · C 5점 8 (+ 「안 써 봤다」) · D 고르기 2 · E 자유 2
 //   열기 = 지금 설문과 같은 칸 survey/{반} = { open, no: 100 } (no 100 = 마무리 설문 표시 · 규칙 그대로)
 //   저장 = surveyA/{반}/{무작위} 같은 칸 · 규칙이 요구하는 no · r · pick · cmp 를 맞춤 + v: 2
-//     r = 5점 17문항(1~5 · C 13 ~ 18 의 「안 써 봤다」 = 0) · pick = [12번, 19번, 20번] 고른 칸 번호 · cmp = 20번 · say / want = 21 · 22번 (100자)
+//     r = 5점 19문항(1~5 · C 13 ~ 20 의 「안 써 봤다」 = 0 · 차례 = 문항 차례라 새 19 · 20 은 r 끝 두 칸) · pick = [12번, 21번, 22번] 고른 칸 번호 · cmp = 22번 · say / want = 23 · 24번 (100자) · v 3 = 24문항 판 (v 2 = 22문항 판 · 같은 칸 차례라 섞여도 읽힘)
 //   한 번만 = 학생 자기 EXP 칸 xp/{반}/{번호}/log/survey12 (보상 기록이 곧 「12월 했음」 · 11/17 의 surveyDone 은 이미 true 라 못 씀)
 //   보상 = 11/17 과 같음 (+5 EXP · 💎 +10 한도 밖 · 한 번) · 11/17 과 비교 = 반 단위만 (11/17 응답은 학생과 이어지지 않게 저장했음)
 import type { Store } from '../model/types';
@@ -33,13 +33,15 @@ export const Q12S: readonly Q12[] = [
   { n: 16, sec: 'C', kind: 'scale0', t: '수업 밖 협동 던전에서 친구를 돕거나 도움을 받았다' },
   { n: 17, sec: 'C', kind: 'scale0', t: '실마리와 해설 덕분에 내 속도에 맞춰 배울 수 있었다' },
   { n: 18, sec: 'C', kind: 'scale0', t: '반 전체가 같이 하니까 혼자 할 때보다 끝까지 하게 됐다' },
-  { n: 19, sec: 'D', kind: 'pick', t: '수업 속도는', opts: ['너무 빨라 혼자 생각할 시간이 부족했다', '알맞았다', '느렸다'] },
-  { n: 20, sec: 'D', kind: 'pick', t: '다음 단원도 이렇게 배우고 싶다', opts: ['그렇다', '잘 모르겠다', '아니다'] },
-  { n: 21, sec: 'E', kind: 'text', t: '이 수업에서 나에게 가장 달라진 점 한 가지' },
-  { n: 22, sec: 'E', kind: 'text', t: '바꾸었으면 하는 점 한 가지' },
+  { n: 19, sec: 'C', kind: 'scale0', t: '함수 단원에 와서도 이 방식이 도움이 됐다' },
+  { n: 20, sec: 'C', kind: 'scale0', t: '직접 문제를 만들어 보니 그 개념을 더 잘 알게 됐다' },
+  { n: 21, sec: 'D', kind: 'pick', t: '수업 속도는', opts: ['너무 빨라 혼자 생각할 시간이 부족했다', '알맞았다', '느렸다'] },
+  { n: 22, sec: 'D', kind: 'pick', t: '다음 단원도 이렇게 배우고 싶다', opts: ['그렇다', '잘 모르겠다', '아니다'] },
+  { n: 23, sec: 'E', kind: 'text', t: '이 수업에서 나에게 가장 달라진 점 한 가지' },
+  { n: 24, sec: 'E', kind: 'text', t: '바꾸었으면 하는 점 한 가지' },
 ];
-export const SCALES = Q12S.filter((q) => q.kind === 'scale' || q.kind === 'scale0'); // 17
-export const PICKQ = Q12S.filter((q) => q.kind === 'pick'); // 12 · 19 · 20
+export const SCALES = Q12S.filter((q) => q.kind === 'scale' || q.kind === 'scale0'); // 19
+export const PICKQ = Q12S.filter((q) => q.kind === 'pick'); // 12 · 21 · 22
 export { SCALE };
 
 /** 답 = 문항 번호 → 값 (5점 = 1~5 · 「안 써 봤다」 = 0 · 고르기 = 보기 번호 · 빈칸 = -1) */
@@ -50,16 +52,16 @@ const okVal = (q: Q12, x: number | undefined) => Number.isInteger(x) && (q.kind 
 export const firstGap12 = (a: Answer12) => Q12S.find((q) => q.kind !== 'text' && !okVal(q, a.v[q.n]))?.n ?? 0;
 export function check12(a: Answer12 | null | undefined): string { if (!a) return '모든 문항에 답해 주세요.'; const g = firstGap12(a); return g ? `${g}번을 골라 주세요.` : ''; }
 
-export interface Saved12 { no: number; v: 2; r: number[]; pick: number[]; cmp: number; say: string; want: string }
+export interface Saved12 { no: number; v: 2 | 3; r: number[]; pick: number[]; cmp: number; say: string; want: string }
 export function clean12(a: Answer12): Saved12 {
   const t = (s: unknown) => cleanWords(s, MAXT).text.trim();
-  return { no: NO12, v: 2, r: SCALES.map((q) => a.v[q.n]!), pick: PICKQ.map((q) => a.v[q.n]!), cmp: a.v[20]!, say: t(a.say), want: t(a.want) };
+  return { no: NO12, v: 3, r: SCALES.map((q) => a.v[q.n]!), pick: PICKQ.map((q) => a.v[q.n]!), cmp: a.v[22]!, say: t(a.say), want: t(a.want) };
 }
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).sort((x, y) => Number(x) - Number(y)).map((k) => (v as Record<string, unknown>)[k]) : []);
 export function norm12(x: unknown): Saved12 | null {
   if (!x || typeof x !== 'object') return null; const o = x as Record<string, unknown>;
   if (!is12(Number(o.no))) return null;
-  return { no: NO12, v: 2, r: arr(o.r).map(Number), pick: arr(o.pick).map(Number), cmp: Number(o.cmp), say: String(o.say ?? ''), want: String(o.want ?? '') };
+  return { no: NO12, v: Number(o.v) === 2 ? 2 : 3, r: arr(o.r).map(Number), pick: arr(o.pick).map(Number), cmp: Number(o.cmp), say: String(o.say ?? ''), want: String(o.want ?? '') };
 }
 
 // ── 한 번만 · 보상 ──
@@ -124,7 +126,7 @@ export function sheets12(byCls: Record<string, (Saved12 | null)[]>): SheetData[]
     s.picks.forEach((x) => sum.push([`${x.n}. ${x.t}`, ...x.opts.map((o) => `${o.o} ${o.c}`)]));
     sum.push([]);
   }
-  const head: Cell[] = ['반', ...SCALES.map((q) => `${q.n}`), ...PICKQ.map((q) => `${q.n}`), '21 달라진 점', '22 바꿨으면'];
+  const head: Cell[] = ['반', ...SCALES.map((q) => `${q.n}`), ...PICKQ.map((q) => `${q.n}`), '23 달라진 점', '24 바꿨으면'];
   const rows: Cell[][] = [head];
   for (const c of Object.keys(byCls).sort()) for (const a of byCls[c] || []) if (a) rows.push([c, ...a.r.map((x) => (x === 0 ? NONE : x)), ...PICKQ.map((q, i) => q.opts?.[a.pick[i] ?? -1] ?? ''), a.say, a.want]);
   return [{ name: '12월 요약', rows: sum }, { name: '12월 응답', rows }];

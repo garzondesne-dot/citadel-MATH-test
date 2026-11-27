@@ -1,5 +1,5 @@
 // 📝 12월 마무리 설문 (에뮬레이터 · 📜 11/23): 학생 1-3 · 3번 가입 → 교사 소식 ☐ 12월 마무리 → 1-3 열기 → 학생 캠프 📝 「12월 마무리」
-//   → 빈칸 보내기 = 막힘 → 22문항 채워 보내기 → surveyA v2 1건 · EXP log survey12 · 💎 +10 → 단추 사라짐 · 11/17 surveyDone 은 안 건드림
+//   → 빈칸 보내기 = 막힘 → 24문항 채워 보내기 → surveyA v3 1건 · EXP log survey12 · 💎 +10 → 단추 사라짐 · 11/17 surveyDone 은 안 건드림
 const { chromium } = require('playwright');
 const { rest, asAdmin } = require('./_emu.cjs');
 const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127.0.0.1';
@@ -28,17 +28,17 @@ const SHOTS = process.argv[2] || '.', B = 'http://localhost:4173/', E = 'emu=127
   const btn = await p.$eval('[data-k="sv-open"]', (x) => x.textContent).catch(() => ''); ok('학생 📝 단추 「12월 마무리」 (11/17 했어도)', btn.includes('12월 마무리'), btn.replace(/\s+/g, ' ').trim());
   await p.click('[data-k="sv-open"]'); await p.waitForSelector('[data-k="survey12"]');
   const intro = await p.$eval('[data-k="survey12"] .anon', (x) => x.textContent); ok('첫 안내 글', intro.includes('성적과 상관없고, 안 해도 불이익 없어요. 선생님은 누가 무엇을 답했는지 볼 수 없어요.'));
-  const nq = await p.$$eval('[data-k="survey12"] [data-q]', (x) => x.length); ok('문항 22', nq === 22, String(nq));
+  const nq = await p.$$eval('[data-k="survey12"] [data-q]', (x) => x.length); ok('문항 24 (📜 11/27 C 에 19 · 20)', nq === 24, String(nq));
   await p.screenshot({ path: `${SHOTS}/sv12-sheet-top.png` });
   await p.click('.sheet button:has-text("보내기")'); await p.waitForTimeout(600);
   ok('빈칸 보내기 = 막힘', !(await rest('surveyA/1-3')) && ((await p.$eval('.sheet', (x) => x.textContent)) || '').includes('1번을 골라'));
-  for (let n = 1; n <= 18; n++) if (n !== 12) await p.click(`[data-sv="${n}-${n === 13 ? 0 : 4}"]`);
-  for (const [n, k] of [[12, 0], [19, 1], [20, 0]]) await p.click(`[data-pk="${n}-${k}"]`);
+  for (let n = 1; n <= 20; n++) if (n !== 12) await p.click(`[data-sv="${n}-${n === 13 || n === 20 ? 0 : 4}"]`);
+  for (const [n, k] of [[12, 0], [21, 1], [22, 0]]) await p.click(`[data-pk="${n}-${k}"]`);
   await p.fill('[data-k="sv12-say"]', '틀린 문제를 다시 풀게 됐어요');
   await p.locator('[data-q="13"]').scrollIntoViewIfNeeded(); await p.screenshot({ path: `${SHOTS}/sv12-sheet-c.png` });
   await p.click('.sheet button:has-text("보내기")'); await p.waitForTimeout(2000);
   const A = (await rest('surveyA/1-3')) || {}, ks = Object.keys(A), a = A[ks[0]] || {};
-  ok('surveyA 1건 · v2 · no 100 · r 17 · 13번 0 · pick 3 · 이름 없음', ks.length === 1 && a.v === 2 && a.no === 100 && a.r?.length === 17 && a.r[11] === 0 && a.pick?.length === 3 && !('n' in a) && !('name' in a), JSON.stringify({ ...a, say: a.say?.length }));
+  ok('surveyA 1건 · v3 · no 100 · r 19 · 13번 0 · 20번 0(안 해 봤다) · pick 3 · 이름 없음', ks.length === 1 && a.v === 3 && a.no === 100 && a.r?.length === 19 && a.r[11] === 0 && a.r[18] === 0 && a.pick?.length === 3 && !('n' in a) && !('name' in a), JSON.stringify({ ...a, say: a.say?.length }));
   const xl = await rest('xp/1-3/3/log/survey12'), gl = await rest('gem/1-3/3/log/survey12');
   ok('EXP log survey12 +5 · 💎 +10', xl?.xp === 5 && gl?.g === 10, JSON.stringify({ xl, gl }));
   ok('11/17 응답 표시는 그대로', (await rest('surveyDone/1-3/3')) === true);
