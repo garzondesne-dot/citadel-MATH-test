@@ -7,6 +7,9 @@ import { GATE_ART } from '../manifest';
 import { E_BASE, REGIONS, RUNES, regionAt, pieceOrder, runesOn, type Region } from '../../school/gate';
 
 const C = GATE_ART.cell, BX = GATE_ART.box;
+const SW_PX = 4; // 소용돌이 도트 한 칸 = 화면 4px
+const SW_PAL = [[14, 31, 92], [29, 79, 184], [61, 143, 232], [127, 208, 255], [230, 251, 255]] as const;
+const SW_A = [0, 0.35, 0.6, 0.85, 1];
 type Img = HTMLImageElement;
 const cache = new Map<string, Promise<Img>>();
 const load = (src: string): Promise<Img> => {
@@ -70,6 +73,8 @@ export class GateDraw {
   /** 에너지 (그림이 부드럽게 따라감) · 맥박 · 소용돌이 각도 · 켜진 룬 (새로 켜질 때 반짝) */
   private eA = 0; private pulse = 0; private ang = 0; private runeN = 0; private runeFlash: number[] = [];
   private swirl = mkCv(BX.w, BX.h);
+  /** 📜 11/28 「도트 느낌으로」 = 소용돌이를 1/4 로 그려 5색 · 5단 투명으로 깎은 뒤 4배 키움(이웃 픽셀 그대로) */
+  private swirlLo = mkCv(Math.ceil(BX.w / SW_PX), Math.ceil(BX.h / SW_PX));
   /** 조각이 놓인 때 (🧩 용사 반응 2차 자리) */
   onLand: ((k: number, sage: boolean) => void) | null = null;
   constructor(private cv: HTMLCanvasElement, private o: { anim: boolean; crop?: [number, number, number, number] } = { anim: true }) {
@@ -169,8 +174,8 @@ export class GateDraw {
   }
   /** 문 안 소용돌이 한 장 (문 안 모양 가면 · 크기 = 에너지 · 맥박 = 밝게) */
   private drawSwirl(lvl: number, pl: number) {
-    const c = this.swirl.getContext('2d')!, W = BX.w, H = BX.h, cx = W / 2, cy = H * 0.55, R = (0.12 + 0.98 * lvl) * Math.hypot(W, H) * 0.55;
-    c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, W, H);
+    const lo = this.swirlLo, c = lo.getContext('2d', { willReadFrequently: true })!, k = 1 / SW_PX, W = BX.w, H = BX.h, cx = W / 2, cy = H * 0.55, R = (0.12 + 0.98 * lvl) * Math.hypot(W, H) * 0.55;
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, lo.width, lo.height); c.setTransform(k, 0, 0, k, 0, 0);
     const g = c.createRadialGradient(cx, cy, 0, cx, cy, R);
     g.addColorStop(0, `rgba(220,250,255,${0.85 * Math.min(1, lvl * 1.6) + 0.15 * pl})`); g.addColorStop(0.35, `rgba(70,190,255,${0.75 * Math.min(1, lvl * 1.4)})`); g.addColorStop(0.75, `rgba(40,70,200,${0.5 * lvl})`); g.addColorStop(1, 'rgba(10,20,60,0)');
     c.fillStyle = g; c.fillRect(0, 0, W, H);
@@ -180,7 +185,16 @@ export class GateDraw {
       for (let s = 0; s <= 40; s++) { const u = s / 40, a = this.ang + arm * (Math.PI / 2) + u * 4.2, r = u * R; const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r * 1.15; if (s) c.lineTo(x, y); else c.moveTo(x, y); }
       c.strokeStyle = `rgba(180,240,255,${(0.25 + 0.45 * lvl + 0.3 * pl).toFixed(3)})`; c.lineWidth = 3 + 7 * lvl; c.stroke();
     }
-    c.globalCompositeOperation = 'destination-in'; c.drawImage(this.img.hole!, 0, 0, W, H); c.globalCompositeOperation = 'source-over';
+    c.globalCompositeOperation = 'destination-in'; c.drawImage(this.img.hole!, 0, 0, W, H); c.globalCompositeOperation = 'source-over'; c.setTransform(1, 0, 0, 1, 0, 0);
+    // 깎기: 밝기 → 5색 · 투명 → 5단
+    const im = c.getImageData(0, 0, lo.width, lo.height), d = im.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3]! / 255; if (a < 0.12) { d[i + 3] = 0; continue; }
+      const L = (0.3 * d[i]! + 0.55 * d[i + 1]! + 0.15 * d[i + 2]!) / 255, b = Math.min(4, Math.floor(L * 5)), col = SW_PAL[b]!;
+      d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = Math.round(SW_A[Math.max(b >= 3 ? 4 : 0, Math.min(4, Math.round(a * 4)))]! * 255); // 밝은 두 색 = 늘 불투명(회색으로 바래지 않게)
+    }
+    c.putImageData(im, 0, 0);
+    const o = this.swirl.getContext('2d')!; o.clearRect(0, 0, W, H); o.imageSmoothingEnabled = false; o.drawImage(lo, 0, 0, W, H);
   }
   private glows = new Map<string, HTMLCanvasElement>();
   /** 테두리 빛 (문 모양을 흐리게 · 색마다 한 번 만들어 둠) */
