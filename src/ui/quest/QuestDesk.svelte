@@ -48,7 +48,7 @@
   const why = $derived(!bases.length ? '열린 성채 방이 아직 없어요 · 수업을 들으면 열려요' : !base ? '바탕 방을 골라요' : !qtype ? '객관식 / 주관식을 골라요' : used >= daily ? `오늘 ${daily}번 다 냈어요 · 내일 또 내요` : '');
 
   // ── 사진 → 펴기 → 이름 띠 가림 → 보내기 ──
-  let fileEl = $state<HTMLInputElement | null>(null), shot = $state(''), img: string | null = null, busy = $state(false), err = $state('');
+  let fileEl = $state<HTMLInputElement | null>(null), shot = $state(''), img = $state<string | null>(null), busy = $state(false), err = $state('');
   let rot = 0, im: HTMLImageElement | null = null;
   function choose(cam: boolean) { if (!fileEl) return; if (cam) fileEl.setAttribute('capture', 'environment'); else fileEl.removeAttribute('capture'); fileEl.value = ''; fileEl.click(); }
   async function picked() {
@@ -62,9 +62,10 @@
   const ERRS: Record<string, string> = { off: '선생님이 출제 분석을 잠깐 꺼 두었어요', quota: `오늘 ${daily}번 다 냈어요 · 내일 또 내요`, busy: '지금 친구들이 한꺼번에 보내요 · 30초 뒤 다시', api: 'AI 가 잠깐 바빠요 · 조금 뒤 다시 (횟수는 그대로)', auth: '로그인이 풀렸어요 · 다시 로그인', who: '이 기기 로그인과 계정이 달라요', bad: '사진을 보내지 못했어요 · 다시 찍어요', net: '인터넷이 끊겼거나 오래 걸렸어요 · 다시 보내요' };
   async function send() {
     if (!base || !qtype || !img || busy) return; busy = true; err = '';
-    const r = (await post(cfg.url || '', { kind: 'quest', idToken: await token(), c: cls, n: num, base: { pack: base.pack, room: base.room, text: base.text, answer: base.answer }, type: qtype, changed: Object.keys(changed).filter((k) => changed[k]), image: img })) as unknown as { ok: boolean; err?: string; id?: string };
+    const r = (await post(cfg.url || '', { kind: 'quest', idToken: await token(), c: cls || '_test', n: num || 1, base: { pack: base.pack, room: base.room, text: base.text, answer: base.answer }, type: qtype, changed: Object.keys(changed).filter((k) => changed[k]), image: img, ...(test ? { test: true } : {}) })) as unknown as { ok: boolean; err?: string; id?: string };
     busy = false;
     if (!r?.ok) { err = `⚠ ${ERRS[r?.err || 'net'] || ERRS.net}`; return; }
+    { const x = r as unknown as { id?: string; rec?: QuestRec }; if (test && x.rec) { S.set(`${qp}/${x.id || `t${Date.now().toString(36)}`}`, { ...x.rec, test: true }); ver++; } } // 🧪 테스트 = 중계소가 서버에 안 적음(교사 토큰 · 「_test」 칸) → 받은 판단을 이 기기 테스트 기록으로 (학생과 같은 다음 화면)
     done();
   }
   /** 🧪 테스트: 사진 · 중계소 없이 판단 결과 하나 (학생과 같은 다음 화면) */
@@ -127,18 +128,19 @@
       <span class="lab">③ 무엇을 바꿨나 (여러 개)</span>
       <div class="chips">{#each CHANGES as [k, t] (k)}<button type="button" aria-pressed={!!changed[k]} class:on={!!changed[k]} data-k="quest-ch-{k}" onclick={() => (changed = { ...changed, [k]: !changed[k] })}>{changed[k] ? '✓ ' : ''}{t}</button>{/each}</div>
       <span class="lab">④ 양식 뒷면 사진 1장</span>
-      {#if test}
-        <div class="tst" data-k="quest-test"><b>✔ 테스트: 판단 결과로 보기</b><small>사진 · AI 없이 · 이 기기 기록 (학생과 같은 다음 화면)</small>
-          <div class="g4">{#each ['green', 'blue', 'purple', 'gray'] as g (g)}<button type="button" disabled={!ready} data-k="quest-fake-{g}" onclick={() => fake(g as QuestRec['grade'])}>{GRADE_IC[g as QuestRec['grade']]} {GRADE_NAME[g as QuestRec['grade']]}</button>{/each}</div>
-        </div>
-      {:else if !relayOn}
+      {#if !relayOn}
         <p class="why">📴 선생님이 아직 출제 분석을 켜지 않았어요</p>
       {:else}
         <input bind:this={fileEl} type="file" accept="image/*" hidden onchange={picked} />
         {#if shot}<img class="shot" src={shot} alt="반듯하게 편 양식 뒷면 (이름 칸 가림)" /><div class="row2"><button type="button" class="b2" onclick={turn}>🔄 돌리기</button><button type="button" class="b2" onclick={() => choose(true)}>📷 다시 찍기</button></div>
         {:else}<div class="row2"><button type="button" class="b2" data-k="quest-cam" disabled={!ready} onclick={() => choose(true)}>📷 찍기</button><button type="button" class="b2" disabled={!ready} onclick={() => choose(false)}>🖼 앨범</button></div>
           <p class="tip">📐 네 귀퉁이 ㄱ 표시가 다 보이게 · 맨 위 이름 칸은 앱이 가려서 보내요 · 사진은 저장하지 않아요</p>{/if}
-        <button type="button" class="go" data-k="quest-send" disabled={!ready || !img || busy} onclick={send}>{busy ? '🤖 살펴보는 중… (20초쯤)' : '📨 출제 분석 보내기'}</button>
+        <button type="button" class="go" data-k="quest-send" disabled={!ready || !img || busy} onclick={send}>{busy ? '🤖 살펴보는 중… (20초쯤)' : (test ? '📨 실제 AI 판단 받기 (🧪 기록 안 남김)' : '📨 출제 분석 보내기')}</button>
+      {/if}
+      {#if test}<!-- 🐞 11/27 선생님 「사진 찍는 칸이 어디에도 없다」: 🧪 테스트 = 학생과 같은 📷 찍기 · 보내기(실제 AI · 교사 토큰 · 서버 기록 안 남김) + 아래 「✔ 판단 결과로 보기」 (서술형 📸 와 같은 꼴) -->
+        <div class="tst" data-k="quest-test"><b>✔ 테스트: 판단 결과로 보기</b><small>사진 · AI 없이 · 이 기기 기록 (학생과 같은 다음 화면)</small>
+          <div class="g4">{#each ['green', 'blue', 'purple', 'gray'] as g (g)}<button type="button" disabled={!ready} data-k="quest-fake-{g}" onclick={() => fake(g as QuestRec['grade'])}>{GRADE_IC[g as QuestRec['grade']]} {GRADE_NAME[g as QuestRec['grade']]}</button>{/each}</div>
+        </div>
       {/if}
       {#if err}<p class="err" role="alert">{err}</p>{/if}
       {#if why}<p class="why">{why}</p>{/if}
