@@ -11,8 +11,8 @@
   //   도입 = 빈 터 + 현자 말 · 🧱 = 조각 날아옴 · ⚡ = 소용돌이 · 룬 · 테두리 빛 (마왕성 안 보임) · 🌀 = 「🌀 문 열기」 누르면 영상(있으면) → 열린 그림(마왕성 처음) + 몫 + 현자 말
   const { S, R, step, now, admin, cls }: { S: Store; R: Room; step: Step; now: number; admin: boolean; cls: string } = $props();
   const kind = $derived(gateOf(step));
-  const t = $derived.by<Tally>(() => { void now; return admin ? publishTally(S, cls) : tallyOf(S, cls); });
-  const fr = $derived(frameOf(t.n, t.pass));
+  const t = $derived.by<Tally>(() => { void now; return admin ? publishTally(S, cls, kind === 'energy' || kind === 'door') : tallyOf(S, cls); });
+  const fr = $derived(frameOf(t.n, t.pass, !!t.s || kind === 'energy' || kind === 'door'));
   const en = $derived(energyOf(t.e));
   const opened = $derived(doorOpenAt(R));
   let tick = $state(0); { const iv = setInterval(() => { if (kind === 'door' && opened) tick = Date.now(); }, 100); onDestroy(() => clearInterval(iv)); }

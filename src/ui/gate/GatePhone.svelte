@@ -28,7 +28,7 @@
   const passed = $derived(st.kind === 'done');
   const t = $derived.by(() => { void ver; return tallyOf(S, cls); });
   // 반 합은 교사 기기가 적음 → 내가 방금 통과했는데 아직 안 셌으면 +1
-  const fr = $derived(frameOf(t.n, passed && (t.at || 0) < (st.kind === 'done' ? st.at : 0) ? t.pass + 1 : t.pass));
+  const fr = $derived(frameOf(t.n, passed && (t.at || 0) < (st.kind === 'done' ? st.at : 0) ? t.pass + 1 : t.pass, !!t.s));
   const notch = $derived(fr.target ? Math.floor(Math.min(1, fr.pass / fr.target) * 10) : 0);
   let view = $state<'main' | 'energy' | 'practice' | 'mock'>(untrack(() => (kind === 'energy' ? 'energy' : 'main'))), mine = $state(false), got = $state('');
   $effect(() => { const k = kind; untrack(() => { view = k === 'energy' ? 'energy' : 'main'; }); });

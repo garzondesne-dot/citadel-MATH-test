@@ -20,7 +20,7 @@
   $effect(() => { const e = t.e; untrack(() => { if (e !== lastE) { lastE = e; plus = 0; } }); });
   const classE = $derived(t.e + plus);
   const k = $derived.by(() => { void ver; return Number(myGate(RS, base).e) || 0; });
-  const fr = $derived(frameOf(t.n, t.pass));
+  const fr = $derived(frameOf(t.n, t.pass, !!t.s));
   let toast = $state(''), tT: ReturnType<typeof setTimeout> | undefined, mine = $state(false);
   onDestroy(() => clearTimeout(tT));
   function onwin() {

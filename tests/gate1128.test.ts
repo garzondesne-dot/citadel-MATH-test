@@ -20,6 +20,9 @@ describe('🧱 뼈대', () => {
     expect(frameOf(17, 14)).toMatchObject({ target: 14, sage: 3, full: true });
     expect(frameOf(19, 19)).toMatchObject({ placed: 19, sage: 0, full: true });
     expect(frameOf(0, 0)).toMatchObject({ target: 0, full: false });
+    // 📜 11/28 「넘어갈 때 현자가 채움」 = ⚡ 단계로 넘어가면 목표 전이어도 남은 조각을 현자가
+    expect(frameOf(18, 5, true)).toMatchObject({ target: 15, placed: 5, sage: 13, full: true });
+    expect(frameOf(0, 0, true)).toMatchObject({ full: false });
   });
   it('반 합 = 명단 중 통과 수 · 에너지 합 · 시험 계정 빠짐', () => {
     const S = mk(); roster(S, '1-2', 18);
@@ -30,8 +33,12 @@ describe('🧱 뼈대', () => {
     S.set('bonus/1-2/99/gate', { e: 100 }); // 명단 밖 = 안 셈
     S.set('tester/1-2/5', true); // 시험 계정 = 안 셈
     expect(gateTally(S, '1-2')).toEqual({ n: 17, pass: 2, e: 5 });
-    expect(publishTally(S, '1-2')).toEqual({ n: 17, pass: 2, e: 5 });
-    expect(tallyOf(S, '1-2')).toMatchObject({ n: 17, pass: 2, e: 5, at: 1000 });
+    expect(publishTally(S, '1-2')).toEqual({ n: 17, pass: 2, e: 5, s: 0 });
+    expect(tallyOf(S, '1-2')).toMatchObject({ n: 17, pass: 2, e: 5, at: 1000, s: 0 });
+    // ⚡ 단계로 넘어감 = 현자 채움 표시 · 한 번 켜지면 그대로
+    expect(publishTally(S, '1-2', true)).toMatchObject({ s: 1 });
+    expect(publishTally(S, '1-2')).toMatchObject({ s: 1 });
+    expect(tallyOf(S, '1-2').s).toBe(1);
   });
 });
 

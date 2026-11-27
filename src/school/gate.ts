@@ -32,9 +32,9 @@ export const gateOf = (s: Step | null | undefined) => (s?.kind === 'intro' && s.
 
 // ── 🧱 뼈대 ──
 export interface Frame { total: number; target: number; pass: number; placed: number; sage: number; full: boolean }
-/** total = 명단 수 · pass = 통과 수 */
-export function frameOf(total: number, pass: number): Frame {
-  const n = Math.max(0, total | 0), p = Math.max(0, pass | 0), target = n ? Math.ceil(n * FRAME_PCT) : 0, placed = Math.min(n, p), full = n > 0 && p >= target;
+/** total = 명단 수 · pass = 통과 수 · sage = 📜 선생님 11/28 「넘어갈 때 현자가 채움」(⚡ 에너지 단계로 넘어간 반 = 목표 전이어도 남은 조각을 현자가 채움) */
+export function frameOf(total: number, pass: number, sage = false): Frame {
+  const n = Math.max(0, total | 0), p = Math.max(0, pass | 0), target = n ? Math.ceil(n * FRAME_PCT) : 0, placed = Math.min(n, p), full = n > 0 && (p >= target || sage);
   return { total: n, target, pass: p, placed, sage: full ? n - placed : 0, full };
 }
 
@@ -92,7 +92,7 @@ export const kstDay = (t: number) => { const d = new Date(t + 9 * 3600e3); retur
 export interface MyGate { e?: number; p?: number; d?: Record<string, number> }
 /** 명단 (시험 계정 빼고 · 🧪 시험 반은 모두 = abcTally 와 같음) */
 export const gateRoster = (S: Store, cls: string) => roster(cls, S).filter((p) => !isExcluded(S, cls, p.num) || isBeta(S, cls));
-export interface Tally { n: number; pass: number; e: number; at?: number }
+export interface Tally { n: number; pass: number; e: number; at?: number; /** 1 = ⚡ 단계로 넘어가 현자가 뼈대를 채움 (한 번 켜지면 그대로) */ s?: number }
 /** 반 합 = 명단 · 통과 · 에너지 (교사 · 교사 로그인 TV 만 다른 학생 칸을 읽음) */
 export function gateTally(S: Store, cls: string): Tally {
   const st = gateRoster(S, cls);
@@ -105,13 +105,13 @@ export function gateTally(S: Store, cls: string): Tally {
   return { n: st.length, pass, e };
 }
 /** 교사 기기가 센 반 합을 school/gate/tally/{반} 에 (바뀐 때만) → 학생 폰이 읽음 */
-export function publishTally(S: Store, cls: string): Tally {
-  const t = gateTally(S, cls), cur = S.get<Tally>(tallyPath(cls));
-  if (!cur || cur.n !== t.n || cur.pass !== t.pass || cur.e !== t.e) S.set(tallyPath(cls), { ...t, at: S.now() });
+export function publishTally(S: Store, cls: string, sage = false): Tally {
+  const cur = S.get<Tally>(tallyPath(cls)), t: Tally = { ...gateTally(S, cls), s: cur?.s || sage ? 1 : 0 };
+  if (!cur || cur.n !== t.n || cur.pass !== t.pass || cur.e !== t.e || (Number(cur.s) || 0) !== t.s) S.set(tallyPath(cls), { ...t, at: S.now() });
   return t;
 }
 /** 학생 폰이 보는 반 합 (교사 기기가 적은 값 · 없으면 0) */
-export const tallyOf = (S: Pick<Store, 'get'>, cls: string): Tally => { const v = S.get<Tally>(tallyPath(cls)); return { n: Number(v?.n) || 0, pass: Number(v?.pass) || 0, e: Number(v?.e) || 0, at: Number(v?.at) || 0 }; };
+export const tallyOf = (S: Pick<Store, 'get'>, cls: string): Tally => { const v = S.get<Tally>(tallyPath(cls)); return { n: Number(v?.n) || 0, pass: Number(v?.pass) || 0, e: Number(v?.e) || 0, at: Number(v?.at) || 0, s: Number(v?.s) ? 1 : 0 }; };
 /** 이 반이 차원문 수업을 연 적 있나 (캠프 🌀 · 수업 밖 에너지) */
 export const gateOpened = (S: Pick<Store, 'get'>, cls: string) => !!cls && !!S.get(openedPath(cls));
 /** 교사가 차원문 차시를 열 때 (처음 한 번만 시각) */
@@ -172,7 +172,7 @@ export const markEnter = (S: Store, code: string, uid: string) => S.set(`rooms/$
 export const enteredOf = (R: { players?: Record<string, unknown> } | null | undefined) => Object.values(R?.players || {}).filter((p) => !!(p as { gin?: number } | null)?.gin).length;
 /** 카드 · 리모컨 같은 숫자 */
 export function gateCard(kind: 'sheet' | 'energy' | 'door' | null, t: Tally, entered = 0, online = 0): { k: string; n: number; m: number; bar: number; line: string } | null {
-  if (kind === 'sheet') { const f = frameOf(t.n, t.pass); return { k: '🧱 답안지 통과', n: Math.min(t.pass, f.target), m: f.target, bar: f.target ? Math.min(1, t.pass / f.target) : 0, line: f.full ? `🧙 뼈대 완성 · 명단 ${t.n}명` : `목표 = ${t.n}명의 80% · 남은 ${Math.max(0, f.target - t.pass)}명` }; }
+  if (kind === 'sheet') { const f = frameOf(t.n, t.pass, !!t.s); return { k: '🧱 답안지 통과', n: Math.min(t.pass, f.target), m: f.target, bar: f.target ? Math.min(1, t.pass / f.target) : 0, line: f.full ? `🧙 뼈대 완성 · 명단 ${t.n}명` : `목표 = ${t.n}명의 80% · 남은 ${Math.max(0, f.target - t.pass)}명` }; }
   if (kind === 'energy') { const r = runesOn(t.e), left = Math.max(0, E_BASE - t.e), en = energyOf(t.e); return { k: `⚡ 에너지 · 기준 ${E_BASE}`, n: t.e, m: E_BASE, bar: Math.min(1, t.e / E_BASE), line: `룬 ${r} / 10${left ? ` · 기준까지 +${left}` : en.stage >= 2 ? ` · ✨ ${en.name}` : ' · 기준 달성!'}` }; }
   if (kind === 'door') return { k: '🚪 차원문으로 들어감', n: entered, m: online, bar: online ? Math.min(1, entered / online) : 0, line: '각자 폰 「🌀 들어가기」 → 모의전' };
   return null;

@@ -85,7 +85,7 @@
   const gk = $derived(gateOf(step));
   // 🌀 차원문 차시 (📜 11/28): 단계 줄 = 🧱 n / 명단 통과 · ⚡ n / 108 · 교사 폰이 반 합을 세어 school/gate/tally 에 (학생 폰이 읽음)
   const gatePack = untrack(() => isGatePack(L));
-  const gT = $derived.by(() => { void now; return gatePack && R && !R.state.closed ? publishTally(S, live.cls) : null; });
+  const gT = $derived.by(() => { void now; return gatePack && R && !R.state.closed ? publishTally(S, live.cls, gk === 'energy' || gk === 'door') : null; });
   const gCard = $derived(gT && R ? gateCard(gk, gT, enteredOf(R), ids.length) : null);
   // 👥 학생판 칸 (🧱 = ✔ 통과 · ↻ 다시 · ⚡ = 그 학생 에너지 작게 · 순위 없음)
   const gMark = $derived.by(() => { void now; const m: Record<string, string> = {}; if (!gatePack || !gk || gk === 'door') return m; for (const p of gateRoster(S, live.cls)) { const b = gateBase(live.cls, p.num); if (gk === 'energy') m[p.uid] = `⚡${Number(S.get<{ e?: number }>(myGatePath(b))?.e) || 0}`; else { const r = S.get<AbcRec>(abcRecPath(b)); m[p.uid] = r?.pass ? '✔' : r && (r.A || r.B || r.C) ? '↻' : ''; } } return m; });
