@@ -66,49 +66,55 @@ export function deal(f: Ak, joined: string[], now: number, rnd: Rnd = Math.rando
   return { ...f, phase: 'ready', to: now + AK.readyMs * spd(), R: r3(R), ring: r3(ring), ar: r3(ar), st, sc: Object.fromEntries(joined.map((u) => [u, 0])), kn: {}, fall: {}, total: joined.length, t0: now, beat: 0, gt: 0, bm: Math.round(AK.beatMs * spd()) };
 }
 
-/** 1초(박자 하나) 움직임 — 폰 · TV · 시계 기기가 모두 같은 식 · steps = 그릴 걸음 수(0 ~ 25) · 점수 · 사건은 결과로 */
-export function simBeat(st0: Record<string, Stone>, R: number, gt0: number, crown: string | undefined, steps: number = AK.steps, ar: number = AK.r): { st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>; ev: AkEv[] } {
+type SimRun = { st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>; ev: AkEv[]; U: string[]; t: number; k: number; R: number; crown: string | undefined; D: number };
+/** 박자 하나 시작 상태 (판 초 gt0) → 한 걸음씩 나아가는 계산기 (simBeat · 화면 이어 그림이 같은 식) */
+function simStart(st0: Record<string, Stone>, R: number, gt0: number, crown: string | undefined, ar: number): SimRun {
   const st: Record<string, Stone> = {}; for (const u of ids(st0)) st[u] = { ...st0[u]! };
-  const sc: Record<string, number> = {}, kn: Record<string, number> = {}, fall: Record<string, number> = {}, ev: AkEv[] = [];
+  return { st, sc: {}, kn: {}, fall: {}, ev: [], U: ids(st), t: gt0, k: 0, R, crown, D: 2 * ar };
+}
+function simStep(run: SimRun) {
+  const { st, sc, kn, fall, ev, U, R, crown, D } = run, dt = AK.dt;
   const add = (o: Record<string, number>, u: string, v: number) => { o[u] = (o[u] || 0) + v; };
-  const U = ids(st), dt = AK.dt, D = 2 * ar;
-  let t = gt0;
-  for (let k = 0; k < steps; k++) {
-    t += dt;
-    for (const u of U) {
-      const s = st[u]!;
-      if (!s.on) { s.back -= dt; continue; }
-      s.cd = Math.max(0, s.cd - dt); s.inv = Math.max(0, s.inv - dt);
-      const v = Math.hypot(s.vx, s.vy);
-      if (v > 0.05) {
-        const nv = Math.max(0, v - AK.fric * dt); s.vx *= nv / v; s.vy *= nv / v; s.x += s.vx * dt; s.y += s.vy * dt;
-        if (Math.hypot(s.x, s.y) > R) {
-          s.on = 0; s.back = AK.back; s.vx = s.vy = 0; s.f = 0; add(fall, u, 1);
-          const by = s.l && s.l !== u && t - s.lt <= AK.credit ? s.l : '';
-          const pts = by ? (crown === u ? AK.crown : AK.knock) : 0;
-          if (by) { add(sc, by, pts); add(kn, by, 1); }
-          ev.push({ k: 'fall', u, by, pts, t: r3(t), x: r3(s.x), y: r3(s.y) }); s.l = '';
-        }
-      } else { s.vx = 0; s.vy = 0; s.f = 0; }
-    }
-    for (let i = 0; i < U.length; i++) {
-      const a = st[U[i]!]!; if (!a.on) continue;
-      for (let j = i + 1; j < U.length; j++) {
-        const b = st[U[j]!]!; if (!b.on) continue;
-        const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-        if (!(d > 0 && d < D)) continue;
-        if (a.inv > 0 || b.inv > 0) continue; // 무적 = 서로 통과
-        const nx = dx / d, ny = dy / d, rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-        if (rel > 0) {
-          a.vx -= rel * nx; a.vy -= rel * ny; b.vx += rel * nx; b.vy += rel * ny;
-          a.l = U[j]!; a.lt = t; b.l = U[i]!; b.lt = t;
-          for (const [s, u] of [[a, U[i]!], [b, U[j]!]] as const) if (s.f) { s.f = 0; add(sc, u, AK.hit); ev.push({ k: 'hit', u, t: r3(t) }); } // 맞히기 = 쏜 알이 처음 부딪힐 때 +1
-        }
-        const ov = (D - d) / 2; a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+  run.t += dt; run.k++;
+  const t = run.t;
+  for (const u of U) {
+    const s = st[u]!;
+    if (!s.on) { s.back -= dt; continue; }
+    s.cd = Math.max(0, s.cd - dt); s.inv = Math.max(0, s.inv - dt);
+    const v = Math.hypot(s.vx, s.vy);
+    if (v > 0.05) {
+      const nv = Math.max(0, v - AK.fric * dt); s.vx *= nv / v; s.vy *= nv / v; s.x += s.vx * dt; s.y += s.vy * dt;
+      if (Math.hypot(s.x, s.y) > R) {
+        s.on = 0; s.back = AK.back; s.vx = s.vy = 0; s.f = 0; add(fall, u, 1);
+        const by = s.l && s.l !== u && t - s.lt <= AK.credit ? s.l : '';
+        const pts = by ? (crown === u ? AK.crown : AK.knock) : 0;
+        if (by) { add(sc, by, pts); add(kn, by, 1); }
+        ev.push({ k: 'fall', u, by, pts, t: r3(t), x: r3(s.x), y: r3(s.y) }); s.l = '';
       }
+    } else { s.vx = 0; s.vy = 0; s.f = 0; }
+  }
+  for (let i = 0; i < U.length; i++) {
+    const a = st[U[i]!]!; if (!a.on) continue;
+    for (let j = i + 1; j < U.length; j++) {
+      const b = st[U[j]!]!; if (!b.on) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+      if (!(d > 0 && d < D)) continue;
+      if (a.inv > 0 || b.inv > 0) continue; // 무적 = 서로 통과
+      const nx = dx / d, ny = dy / d, rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+      if (rel > 0) {
+        a.vx -= rel * nx; a.vy -= rel * ny; b.vx += rel * nx; b.vy += rel * ny;
+        a.l = U[j]!; a.lt = t; b.l = U[i]!; b.lt = t;
+        for (const [s, u] of [[a, U[i]!], [b, U[j]!]] as const) if (s.f) { s.f = 0; add(sc, u, AK.hit); ev.push({ k: 'hit', u, t: r3(t) }); } // 맞히기 = 쏜 알이 처음 부딪힐 때 +1
+      }
+      const ov = (D - d) / 2; a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
     }
   }
-  return { st, sc, kn, fall, ev };
+}
+/** 1초(박자 하나) 움직임 — 폰 · TV · 시계 기기가 모두 같은 식 · steps = 그릴 걸음 수(0 ~ 25) · 점수 · 사건은 결과로 */
+export function simBeat(st0: Record<string, Stone>, R: number, gt0: number, crown: string | undefined, steps: number = AK.steps, ar: number = AK.r): { st: Record<string, Stone>; sc: Record<string, number>; kn: Record<string, number>; fall: Record<string, number>; ev: AkEv[] } {
+  const run = simStart(st0, R, gt0, crown, ar);
+  for (let k = 0; k < steps; k++) simStep(run);
+  return { st: run.st, sc: run.sc, kn: run.kn, fall: run.fall, ev: run.ev };
 }
 /** 서버에 적을 꼴 (소수 셋째 자리) */
 const pack = (st: Record<string, Stone>) => Object.fromEntries(ids(st).map((u) => { const s = st[u]!; return [u, { x: r3(s.x), y: r3(s.y), vx: r3(s.vx), vy: r3(s.vy), on: s.on, cd: r3(s.cd), inv: r3(s.inv), back: r3(s.back), l: s.l, lt: r3(s.lt), f: s.f, n: s.n }]; })) as Record<string, Stone>;
@@ -157,19 +163,34 @@ export function stepAk(f: Ak, joins: Record<string, unknown> | null, shots: Reco
 /** 지금 보이는 판 (폰 · TV) = 박자 시작 상태에서 지난 시간만큼
  *  🐞 11/26 18명 「렉 · 순간이동」: 전엔 박자 끝(1초)에서 멈춰 다음 박자를 기다렸다가(서버 지연 0.2 ~ 0.5초) 받는 순간 그만큼 튐
  *  → 박자 너머로도 같은 식으로 이어 그림(최대 2박자 · 새 발사가 없으면 다음 박자 시작과 똑같음) */
-export function viewAt(f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar'>, now: number) {
+type ViewF = Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar'>;
+const viewK = (f: ViewF, now: number) => Math.max(0, Math.min(AK.steps * 3, Math.floor(((now - f.t0) / f.bm) * AK.steps)));
+export function viewAt(f: ViewF, now: number) {
   if (f.phase !== 'play') return { st: f.st, ev: [] as AkEv[], k: 0 };
-  const k = Math.max(0, Math.min(AK.steps * 3, Math.floor(((now - f.t0) / f.bm) * AK.steps)));
+  const k = viewK(f, now);
   const b = simBeat(f.st, f.R, f.gt, f.crown, k, f.ar ?? AK.r); return { st: b.st, ev: b.ev, k };
+}
+/** 🐞 11/27 알까기 렉: 화면마다 viewAt 과 같은 값 · 매 프레임 박자 처음부터 다시 셈(최대 75걸음 × 알 짝 전부) 대신 지난 프레임에서 이어 셈
+ *  같은 박자(같은 st) 안에서 k 가 늘면 그만큼만 나아감 · 줄거나 새 박자 = 처음부터 · 돌려주는 알 = 복사본(그린 뒤 바뀌지 않게) */
+export function viewRunner() {
+  let run: SimRun | null = null, src: ViewF['st'] | null = null, gt = NaN;
+  return (f: ViewF, now: number): { st: Record<string, Stone>; ev: AkEv[]; k: number } => {
+    if (f.phase !== 'play') { run = null; return { st: f.st, ev: [], k: 0 }; }
+    const k = viewK(f, now);
+    if (!run || src !== f.st || gt !== f.gt || run.k > k || run.R !== f.R || run.crown !== f.crown) { run = simStart(f.st, f.R, f.gt, f.crown, f.ar ?? AK.r); src = f.st; gt = f.gt; }
+    while (run.k < k) simStep(run);
+    const st: Record<string, Stone> = {}; for (const u of run.U) st[u] = { ...run.st[u]! };
+    return { st, ev: run.ev.slice(), k };
+  };
 }
 
 /** 🐞 11/26 화면 이음매 메우기: 새 박자를 받는 순간 (새 발사 · 부딪힘 때문에) 그리던 자리와 새 자리가 어긋나면 그 차이를 0.12초에 걸쳐 줄임 (순간이동 대신 미끄러짐)
  *  떨어짐 · 되살아남 · 6 넘게 어긋남 = 바로 · wall = 화면 시계(performance.now) */
 export function akSmoother(tau = 120) {
-  let key = '', shown: Record<string, Stone> = {}, lt = -1;
+  const view = viewRunner(); let key = '', shown: Record<string, Stone> = {}, lt = -1;
   const off: Record<string, [number, number]> = {};
   return (f: Pick<Ak, 'st' | 'R' | 'gt' | 'crown' | 't0' | 'bm' | 'phase' | 'ar' | 'g' | 'beat'>, now: number, wall: number): { st: Record<string, Stone>; ev: AkEv[]; k: number } => {
-    const v = viewAt(f, now), k2 = `${f.g}|${f.beat}|${f.phase}`;
+    const v = view(f, now), k2 = `${f.g}|${f.beat}|${f.phase}`;
     if (k2 !== key) {
       const same = key.split('|')[0] === String(f.g); key = k2;
       for (const u of Object.keys(off)) delete off[u];

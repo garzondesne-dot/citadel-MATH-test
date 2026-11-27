@@ -22,6 +22,9 @@ export const fitCam = (W: number, H: number, R: number): Cam => ({ cx: 0, cy: 0,
 export const fullCam = (W: number, H: number, R: number): Cam => ({ cx: 0, cy: 0, k: ((Math.min(W, H) / 2) * AK_ART.ring * 0.99) / R });
 
 let boardImg: HTMLImageElement | null = null;
+/** 이름표 글자 너비 (글꼴 · 글자 같으면 다시 안 잼) */
+const tw0 = new Map<string, number>();
+const textW = (g: CanvasRenderingContext2D, t: string) => { const k = `${g.font}|${t}`; let w = tw0.get(k); if (w == null) { w = g.measureText(t).width; if (tw0.size > 500) tw0.clear(); tw0.set(k, w); } return w; };
 const board = () => { if (!boardImg && typeof Image !== 'undefined') { boardImg = new Image(); boardImg.src = `${import.meta.env.BASE_URL}${AK_ART.board}`; } return boardImg; };
 
 export function drawAk(g: CanvasRenderingContext2D, W: number, H: number, R: number, st: Record<string, Stone>, o: DrawOpt = {}) {
@@ -64,7 +67,7 @@ export function drawAk(g: CanvasRenderingContext2D, W: number, H: number, R: num
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = colorOf(order.indexOf(u)); g.fill();
     g.lineWidth = mine ? Math.max(3 * dpr, r * 0.2) : Math.max(1.5 * dpr, r * 0.08); g.strokeStyle = mine ? '#ffd34d' : 'rgba(255,255,255,0.85)'; g.stroke();
     const lab = o.label?.(u);
-    if (lab) { g.font = `800 ${fs}px system-ui, sans-serif`; const tw = g.measureText(lab).width + 8 * dpr; g.fillStyle = mine ? 'rgba(245,184,74,0.95)' : 'rgba(10,12,16,0.72)'; g.fillRect(x - tw / 2, y + r + 2 * dpr, tw, fs + 4 * dpr); g.fillStyle = mine ? '#1a1206' : '#fff'; g.fillText(lab, x, y + r + 2 * dpr + (fs + 4 * dpr) / 2 + 1); }
+    if (lab) { g.font = `800 ${fs}px system-ui, sans-serif`; const tw = textW(g, lab) + 8 * dpr; g.fillStyle = mine ? 'rgba(245,184,74,0.95)' : 'rgba(10,12,16,0.72)'; g.fillRect(x - tw / 2, y + r + 2 * dpr, tw, fs + 4 * dpr); g.fillStyle = mine ? '#1a1206' : '#fff'; g.fillText(lab, x, y + r + 2 * dpr + (fs + 4 * dpr) / 2 + 1); }
     if (u === o.crown) { g.font = `${Math.max(14 * dpr, r * 0.9)}px system-ui, sans-serif`; g.fillText('👑', x, y - r * 1.3); }
     if (mine && o.ring != null && o.ring < 1) { g.beginPath(); g.arc(x, y, r * 1.35, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * o.ring); g.lineWidth = 3 * dpr; g.strokeStyle = '#6cc6ff'; g.stroke(); }
     g.globalAlpha = 1;
