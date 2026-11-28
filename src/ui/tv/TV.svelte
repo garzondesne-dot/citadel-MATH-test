@@ -5,6 +5,7 @@
   import { bandText, examDateOf } from '../../school/examEvent';
   import GateTV from '../gate/GateTV.svelte';
   import { doorPending, isGatePack, openDoor } from '../../school/gate';
+  import { clearDoorVideo, doorVideo, pickDoorVideo } from '../gate/localVideo';
   import NameTag from '../cos/NameTag.svelte';
   import { cosClean } from '../../model/cosmetics';
   import WarBar from '../board/WarBar.svelte';
@@ -131,6 +132,9 @@
   const oldIds = $derived(R ? ids.filter((u) => isOld(R.players?.[u]?.ver)) : []);
 
   // ── 어떤 장면인가 ──
+  // 🎬 차원문 교실 재생판 = 이 PC 의 mp4 (📜 11/28 「TV 컴퓨터에서 파일 고르기」 · 서버에 안 올림)
+  let gateVid = $state(''); $effect(() => { if (setOpen) doorVideo().then((v) => (gateVid = v?.name ?? '')).catch(() => {}); });
+  const pickGateVid = async (e: Event) => { const f = (e.currentTarget as HTMLInputElement).files?.[0]; if (!f) return; await pickDoorVideo(f); gateVid = f.name; };
   let setOpen = $state(false), showRes = $state(false); // 🏫 학급 결과 = 끝난 수업의 마무리 화면 다시 (입장 대기 화면 단추)
   // 📅 입장 대기 화면: 다음 수업 · ⏰ 자동 열기 (📜 2026-11-17 #21 C · E)
   const nx = $derived(feat('schedule') ? todaySlots(S, now, PACKS).find((r) => r.next) ?? null : null);
@@ -542,6 +546,8 @@
         <button type="button" role="menuitemcheckbox" aria-checked={sound} onclick={() => (sound = !sound)}>{sound ? '🔊' : '🔇'}<span>소리 {sound ? '켬' : '끔'}</span></button>
         {#if R && code && !R.state.closed}{@const film = (R.meta as { film?: boolean } | undefined)?.film === true}<!-- 🎥 #150 촬영 모드 = 교사 폰 리모컨과 같은 칸(방 meta/film · 어느 쪽에서 켜도 같은 상태 · 수업이 끝나면 저절로 꺼짐) · 📜 11/24 「종합실엔 녹화 모드가 없어 · 설정에 넣어 줘」 · TV 에 따로 촬영 표시는 안 함 -->
         <button type="button" role="menuitemcheckbox" aria-checked={film} data-k="tvfilm" onclick={() => S.set(`${roomPath(code)}/meta/film`, film ? null : true)}>🎥<span>촬영 모드 {film ? '켬 · 친구 이름 가림' : '끔'}</span></button>{/if}
+        {#if isGatePack(L)}<label class="sbl" data-k="tv-gate-vid">🎬<span>문 여는 영상 · {gateVid ? `이 PC: ${gateVid}` : '고르기 (이 PC 의 mp4 · 서버에 안 올라감)'}</span><input type="file" accept="video/mp4,video/*" hidden onchange={pickGateVid} /></label>
+        {#if gateVid}<button type="button" role="menuitem" data-k="tv-gate-vid-clear" onclick={async () => { await clearDoorVideo(); gateVid = ''; }}>✕<span>고른 영상 지우기 (게임판으로)</span></button>{/if}{/if}
         <button type="button" role="menuitem" data-k="out" onclick={() => { if (confirm('🚪 처음 화면으로 갈까요? (교실 TV 로그인만 끝나요 · 수업 기록은 그대로)')) location.replace(location.pathname); }}>🚪<span>처음으로</span></button>
       </div>
     </div>

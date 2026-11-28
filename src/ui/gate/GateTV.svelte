@@ -6,6 +6,7 @@
   import { GATE_ART } from '../manifest';
   import { sfx } from '../sound.svelte';
   import { activeIds } from '../../raid/raid';
+  import { doorVideo } from './localVideo';
   // 🌀 마왕성 차원문 · 교실 TV 장면 (📜 11/28 · 시안 0 = 평소 차시 던전 틀 그대로) — 위 막대 · 조작 막대는 TV.svelte 그대로 · 이 칸 = 전투 장면 자리 + 오른쪽 위 현황 카드(「제출」 자리) + 위 가운데 띠
   //   교사 로그인 PC(admin) = 학생 기록을 직접 셈 + 학생 폰용 반 합을 적음 · 아니면 교사 기기가 적은 반 합을 읽음 · 이름 없음
   //   도입 = 빈 터 + 현자 말 · 🧱 = 조각 날아옴 · ⚡ = 소용돌이 · 룬 · 테두리 빛 (마왕성 안 보임) · 🌀 = 「🌀 문 열기」 누르면 영상(있으면) → 열린 그림(마왕성 처음) + 몫 + 현자 말
@@ -17,7 +18,14 @@
   const opened = $derived(doorOpenAt(R));
   let tick = $state(0); { const iv = setInterval(() => { if (kind === 'door' && opened) tick = Date.now(); }, 100); onDestroy(() => clearInterval(iv)); }
   let vidEnd = $state(false);
-  const open = $derived(kind === 'door' && opened && (!GATE_ART.video || vidEnd) ? Math.max(0, Math.min(1, ((tick || Date.now()) - opened) / 2500)) : 0);
+  // 🎬 영상 = 이 컴퓨터에서 고른 파일(교실 재생판 · 📜 11/28) → 없으면 게임판 GATE_ART.video → 없으면 그림 전환
+  let localVid = $state<string | null>(null);
+  $effect(() => { void kind; void opened; doorVideo().then((v) => (localVid = v?.url ?? null)).catch(() => {}); }); // 문 열기 순간 다시 봄(그 사이 ⚙ 에서 골랐을 수도)
+  const vidSrc = $derived(localVid || GATE_ART.video || '');
+  let needTap = $state(false);
+  /** 소리 있게 재생 · 막히면(자동 재생 제한) 소리 없이 + 「🔊 소리 켜기」 */
+  const playVid = (v: HTMLVideoElement) => { v.muted = false; v.play().catch(() => { v.muted = true; needTap = true; v.play().catch(() => (vidEnd = true)); }); };
+  const open = $derived(kind === 'door' && opened && (!vidSrc || vidEnd) ? Math.max(0, Math.min(1, ((tick || Date.now()) - opened) / 2500)) : 0);
   const ids = $derived(activeIds(R, now));
   const card = $derived(R.state.rest ? null : gateCard(kind, t, enteredOf(R), ids.length));
   // 🧱 · ⚡ 늘어난 만큼 띠 (줄 서기 · 0.6초 간격 · 2초)
@@ -47,7 +55,9 @@
 
 <div class="gtv" data-k="tv-gate" data-kind={kind ?? 'intro'} data-pass={t.pass} data-n={t.n} data-e={t.e}>
   <div class="art"><GateArt v={{ n: fr.total, placed: fr.placed, full: fr.full, e: t.e, open }} {light} label="{GATE_TXT.name} · 뼈대 {fr.pass} / {fr.target} · 에너지 {t.e}" /></div>
-  {#if kind === 'door' && opened && GATE_ART.video && !vidEnd}<video class="vid" src={GATE_ART.video} autoplay muted playsinline onended={() => (vidEnd = true)}></video>{/if}
+  {#if kind === 'door' && opened && vidSrc && !vidEnd}<!-- svelte-ignore a11y_media_has_caption --><video class="vid" data-k="tv-gate-video" data-local={localVid ? '1' : '0'} src={vidSrc} playsinline use:playVid onended={() => (vidEnd = true)} onerror={() => (vidEnd = true)}></video>
+    {#if needTap}<button type="button" class="vtap" data-k="tv-gate-sound" onclick={(e) => { const v = (e.currentTarget as HTMLElement).previousElementSibling as HTMLVideoElement | null; if (v) v.muted = false; needTap = false; }}>🔊 소리 켜기</button>{/if}
+    <button type="button" class="vskip" data-k="tv-gate-skip" onclick={() => (vidEnd = true)}>건너뛰기 ⏭</button>{/if}
   {#if card}
     <div class="card" data-k="tv-gate-card"><small>{card.k}</small><b>{card.n}<span> / {card.m}</span></b><i class="bar" class:e={kind === 'energy'}><i style:width="{card.bar * 100}%"></i></i><em>{card.line}</em>
       {#if kind === 'energy'}<span class="marks" data-k="tv-gate-energy">{#each E_STAGES as x, k (x)}<u class:on={t.e >= x}>{['Ⅰ', 'Ⅱ', 'Ⅲ'][k]} {x}</u>{/each}</span>{/if}
@@ -65,7 +75,9 @@
   .gtv { position: absolute; inset: 0; overflow: hidden; background: #07060c; color: #fff; }
   .art { position: absolute; inset: 0; }
   .art :global(canvas) { width: 100%; height: 100%; object-fit: cover; }
-  .vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .vid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; z-index: 5; }
+  .vtap, .vskip { position: absolute; z-index: 6; bottom: 14%; padding: 10px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(10, 8, 18, 0.75); color: #fff; font: 800 18px var(--font); }
+  .vtap { left: 50%; transform: translateX(-50%); border-color: #ffd25a; } .vskip { right: 2%; }
   /* 오른쪽 위 = 평소 「제출」 카드 자리 (TV .nbox 와 같은 자리 · 같은 글자 크기) */
   .card { position: absolute; right: 1.5cqw; top: 11cqh; z-index: 3; width: 17cqw; border-radius: 1.6cqh; background: rgba(8, 9, 12, 0.78); border: 1px solid rgba(255, 255, 255, 0.18); padding: 1.2cqh 1.2cqw; display: flex; flex-direction: column; gap: 0.6cqh; }
   .card small { font-size: var(--tv-small); font-weight: 700; color: #d6d9e0; }

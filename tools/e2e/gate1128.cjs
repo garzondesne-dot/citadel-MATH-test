@@ -121,8 +121,16 @@ fs.mkdirSync(SHOTS, { recursive: true });
   await t.screenshot({ path: `${SHOTS}/remote-4-door-before.png` });
   await s.bringToFront(); await s.waitForTimeout(800); ok('⑤ 폰 열리기 전 = 「곧 문이 열려요」', /곧 문이 열려요/.test(await txt(s, '[data-k="gate-door"]'))); await s.screenshot({ path: `${SHOTS}/ph-8a-door-wait.png` });
   await tv.bringToFront(); await tv.mouse.move(600, 400); await tv.waitForTimeout(400); await tv.screenshot({ path: `${SHOTS}/tv-5a-door-before.png` });
+  // 🎬 교실 재생판 = TV ⚙ 에서 이 PC 의 mp4 고르기 (📜 11/28 · 서버에 안 올림 · IndexedDB) — ffmpeg 로 2초짜리 시험 영상
+  let vidOk = false; try { const mp4 = require('path').join(SHOTS, 'door-test.webm'); require('child_process').execSync(`ffmpeg -y -loglevel error -f lavfi -i color=c=purple:s=320x180:d=2 -f lavfi -i sine=f=440:d=2 -shortest -c:v libvpx-vp9 -c:a libopus ${mp4}`); // 시험 크롬 = H.264 못 틂 → webm (교실 크롬은 mp4 됨)
+    await tv.click('[data-k="tvset"]'); await tv.setInputFiles('[data-k="tv-gate-vid"] input', mp4); await tv.waitForTimeout(500);
+    ok('🎬 TV ⚙ 영상 고르기 = 이름 보임', /door-test\.webm/.test(await txt(tv, '[data-k="tv-gate-vid"]')), await txt(tv, '[data-k="tv-gate-vid"]'));
+    await tv.keyboard.press('Escape'); await tv.mouse.click(5, 300); vidOk = true; } catch (e) { console.log('🎬 시험 영상 못 만듦 · 건너뜀', String(e).slice(0, 80)); }
   await t.bringToFront(); await t.click('[data-k="main"]'); await t.waitForTimeout(800);
   ok('⑤ 연 뒤 큰 단추 = 다음 ▶ 마무리', /마무리/.test(await txt(t, '[data-k="main"]')), await txt(t, '[data-k="main"]'));
+  if (vidOk) { await tv.bringToFront(); const v = await tv.waitForSelector('[data-k="tv-gate-video"]', { timeout: 5000 }).catch(() => null);
+    ok('🎬 문 열기 = 이 PC 에서 고른 영상 재생', !!v && (await v.getAttribute('data-local')) === '1'); await tv.waitForTimeout(300); await tv.screenshot({ path: `${SHOTS}/tv-5v-video.png` });
+    await tv.waitForSelector('[data-k="tv-gate-video"]', { state: 'detached', timeout: 8000 }).catch(() => {}); ok('🎬 영상 끝 → 열린 문으로', !(await tv.$('[data-k="tv-gate-video"]'))); }
   await tv.bringToFront(); await tv.waitForSelector('[data-k="tv-gate-door"]', { timeout: 8000 }).catch(() => {});
   ok('⑤ TV 문 열림 · 「우리 반 100%」 · 현자 말', /우리 반 100%/.test(await txt(tv, '[data-k="tv-gate-share"]')) && /12월 10일/.test(await txt(tv, '[data-k="tv-gate-door"]')), await txt(tv, '[data-k="tv-gate-door"]'));
   await tv.waitForTimeout(400); await tv.screenshot({ path: `${SHOTS}/tv-5-door.png` });
